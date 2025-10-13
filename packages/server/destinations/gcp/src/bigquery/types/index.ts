@@ -1,19 +1,9 @@
 import type { DestinationServer } from '@walkeros/server-core';
-import type { Mapping as WalkerOSMapping } from '@walkeros/core';
+import type {
+  Mapping as WalkerOSMapping,
+  Destination as CoreDestination,
+} from '@walkeros/core';
 import type { BigQuery, BigQueryOptions } from '@google-cloud/bigquery';
-
-export interface Env extends DestinationServer.Env {
-  BigQuery?: typeof BigQuery;
-}
-
-export interface Destination
-  extends DestinationServer.Destination<Settings, Mapping, Env> {
-  init: DestinationServer.InitFn<Settings, Mapping, Env>;
-}
-
-export type Config = {
-  settings: Settings;
-} & DestinationServer.Config<Settings, Mapping, Env>;
 
 export interface Settings {
   client: BigQuery;
@@ -24,18 +14,26 @@ export interface Settings {
   bigquery?: BigQueryOptions;
 }
 
-export interface Mapping {
-  // Custom destination event mapping properties
+export interface Mapping {}
+
+export interface Env extends DestinationServer.Env {
+  BigQuery?: typeof BigQuery;
 }
 
-export type InitFn = DestinationServer.InitFn<Settings, Mapping, Env>;
-export type PushFn = DestinationServer.PushFn<Settings, Mapping, Env>;
+export type Types = CoreDestination.Types<Settings, Mapping, Env>;
 
-export type PartialConfig = DestinationServer.PartialConfig<
-  Settings,
-  Mapping,
-  Env
->;
+export interface Destination extends DestinationServer.Destination<Types> {
+  init: DestinationServer.InitFn<Types>;
+}
+
+export type Config = {
+  settings: Settings;
+} & DestinationServer.Config<Types>;
+
+export type InitFn = DestinationServer.InitFn<Types>;
+export type PushFn = DestinationServer.PushFn<Types>;
+
+export type PartialConfig = DestinationServer.PartialConfig<Types>;
 
 export type PushEvents = DestinationServer.PushEvents<Mapping>;
 

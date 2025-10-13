@@ -1,4 +1,8 @@
-import type { Mapping as WalkerOSMapping, WalkerOS } from '@walkeros/core';
+import type {
+  Mapping as WalkerOSMapping,
+  WalkerOS,
+  Destination as CoreDestination,
+} from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
 
 declare global {
@@ -12,28 +16,26 @@ export type Plausible = (
   options?: { props?: WalkerOS.AnyObject },
 ) => void;
 
-// Environment interface for type-safe external dependency injection
+export interface Settings {
+  domain?: string;
+}
+
+export interface Mapping {}
+
 export interface Env extends DestinationWeb.Env {
   window: {
     plausible: Plausible & { q?: IArguments[] };
   };
 }
 
-export type Destination = DestinationWeb.Destination<Settings, Mapping, Env>;
-export type Config = DestinationWeb.Config<Settings, Mapping, Env>;
+export type Types = CoreDestination.Types<Settings, Mapping, Env>;
 
-// Plausible-specific destination type with environment support
+export type Destination = DestinationWeb.Destination<Types>;
+export type Config = DestinationWeb.Config<Types>;
+
 export interface PlausibleDestination extends Destination {
   env?: Env;
 }
-
-// Destination-specific settings (internal usage)
-export interface Settings {
-  domain?: string; // Name of the domain to be tracked
-}
-
-// Single event transformation rule
-export interface Mapping {}
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;

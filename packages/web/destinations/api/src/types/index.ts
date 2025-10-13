@@ -2,18 +2,11 @@ import type {
   Mapping as WalkerOSMapping,
   SendDataValue,
   SendHeaders,
+  Destination as CoreDestination,
 } from '@walkeros/core';
 import type { DestinationWeb, sendWeb } from '@walkeros/web-core';
 import type { SendWebTransport } from '@walkeros/web-core';
 
-export interface Env extends DestinationWeb.Env {
-  sendWeb?: typeof sendWeb;
-}
-
-export type Destination = DestinationWeb.Destination<Settings, Mapping, Env>;
-export type Config = DestinationWeb.Config<Settings, Mapping, Env>;
-
-// Destination-specific settings (internal usage)
 export interface Settings {
   url: string;
   headers?: SendHeaders;
@@ -22,8 +15,16 @@ export interface Settings {
   transport?: SendWebTransport;
 }
 
-// Single event transformation rule
 export interface Mapping {}
+
+export interface Env extends DestinationWeb.Env {
+  sendWeb?: typeof sendWeb;
+}
+
+export type Types = CoreDestination.Types<Settings, Mapping, Env>;
+
+export type Destination = DestinationWeb.Destination<Types>;
+export type Config = DestinationWeb.Config<Types>;
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;

@@ -16,19 +16,24 @@ export interface InitSettings extends Record<string, unknown> {
 
 // Settings: resolved configuration (required fields are actually required)
 export interface Settings extends Record<string, unknown> {
-  prefix: string; // Always required after resolution
-  scope?: Element | Document; // Optional to support Node.js environments
-  pageview: boolean; // Always required after resolution (defaults to false)
-  session: boolean | SessionConfig; // Always required after resolution (defaults to false)
-  elb: string; // Always required after resolution (defaults to '')
-  elbLayer: boolean | string | Elb.Layer; // Always required after resolution (defaults to false)
+  prefix: string;
+  scope?: Element | Document;
+  pageview: boolean;
+  session: boolean | SessionConfig;
+  elb: string;
+  elbLayer: boolean | string | Elb.Layer;
 }
 
-// Browser-specific environment interface
-export interface Env extends Source.Env {
-  window?: typeof window;
-  document?: typeof document;
+export interface Mapping {}
+
+export type Push = Elb.Fn;
+
+export interface Env extends Source.BaseEnv {
+  window?: Window & typeof globalThis;
+  document?: Document;
 }
+
+export type Types = Source.Types<Settings, Mapping, Push, Env>;
 
 // Context for translation functions with elb and settings
 export interface Context {

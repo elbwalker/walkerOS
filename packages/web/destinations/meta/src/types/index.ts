@@ -1,4 +1,7 @@
-import type { Mapping as WalkerOSMapping } from '@walkeros/core';
+import type {
+  Mapping as WalkerOSMapping,
+  Destination as CoreDestination,
+} from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
 
 declare global {
@@ -8,7 +11,15 @@ declare global {
   }
 }
 
-// Meta-specific environment interface
+export interface Settings {
+  pixelId?: string;
+}
+
+export interface Mapping {
+  track?: StandardEventNames;
+  trackCustom?: string;
+}
+
 export interface Env extends DestinationWeb.Env {
   window: {
     fbq: facebook.Pixel.Event;
@@ -20,19 +31,10 @@ export interface Env extends DestinationWeb.Env {
   };
 }
 
-export type Destination = DestinationWeb.Destination<Settings, Mapping, Env>;
-export type Config = DestinationWeb.Config<Settings, Mapping, Env>;
+export type Types = CoreDestination.Types<Settings, Mapping, Env>;
 
-// Destination-specific settings (internal usage)
-export interface Settings {
-  pixelId?: string; // Required pixel id
-}
-
-// Single event transformation rule
-export interface Mapping {
-  track?: StandardEventNames; // Name of a standard event to track
-  trackCustom?: string; // Name of a custom event to track
-}
+export type Destination = DestinationWeb.Destination<Types>;
+export type Config = DestinationWeb.Config<Types>;
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;

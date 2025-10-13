@@ -1,11 +1,5 @@
 import { sourceCloudFunction } from '../index';
-import type {
-  EventRequest,
-  Request,
-  Response,
-  Settings,
-  Mapping,
-} from '../types';
+import type { EventRequest, Request, Response, Types } from '../types';
 import type { WalkerOS, Source } from '@walkeros/core';
 
 // Mock request/response for testing
@@ -88,7 +82,7 @@ describe('sourceCloudFunction', () => {
     });
 
     it('should merge custom settings with defaults', async () => {
-      const config: Partial<Source.Config<Settings, Mapping>> = {
+      const config: Partial<Source.Config<Types>> = {
         settings: {
           cors: false,
         },

@@ -7,6 +7,7 @@ import type {
   Request,
   Response,
   Mapping,
+  Types,
 } from './types';
 import type { Source } from '@walkeros/core';
 import { isEventRequest, setCorsHeaders } from './utils';
@@ -23,7 +24,7 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 export const sourceCloudFunction = async (
-  config: Partial<Source.Config<Settings, Mapping>> = {},
+  config: Partial<Source.Config<Types>> = {},
   env: Env,
 ): Promise<CloudFunctionSource> => {
   const { elb } = env;
@@ -39,7 +40,7 @@ export const sourceCloudFunction = async (
     ...(config.settings || {}),
   };
 
-  const fullConfig: Source.Config<Settings, Mapping> = {
+  const fullConfig: Source.Config<Types> = {
     ...config,
     settings,
   };

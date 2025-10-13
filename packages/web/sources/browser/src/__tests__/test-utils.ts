@@ -1,6 +1,6 @@
 import type { Source, Collector } from '@walkeros/core';
 import { sourceBrowser } from '../index';
-import type { Settings } from '../types';
+import type { Types } from '../types';
 
 /**
  * Test helper to create browser sources for testing
@@ -8,14 +8,14 @@ import type { Settings } from '../types';
  */
 export async function createBrowserSource(
   collector: Collector.Instance,
-  settings: Partial<Settings> = {},
-): Promise<Source.Instance<Settings> & { elb: Function }> {
-  const config: Partial<Source.Config<Settings>> = {
+  settings: Partial<Source.Settings<Types>> = {},
+): Promise<Source.Instance<Types> & { elb: Function }> {
+  const config: Partial<Source.Config<Types>> = {
     settings: {
       prefix: 'data-elb',
       scope: document,
-      pageview: false, // Disabled by default in tests to avoid extra walker on calls
-      session: false, // Disabled by default in tests to avoid extra events
+      pageview: false,
+      session: false,
       elb: 'elb',
       elbLayer: 'elbLayer',
       ...settings,
@@ -23,7 +23,7 @@ export async function createBrowserSource(
   };
 
   // Use Source.Env with collector's elb function and browser globals
-  const env: Source.Env = {
+  const env: Source.Env<Types> = {
     elb: collector.push,
     window,
     document,

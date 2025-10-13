@@ -7,31 +7,27 @@ import { assign } from './assign';
  * This utility enables elegant destination configuration while avoiding config side-effects
  * that could occur when reusing destination objects across multiple collector instances.
  *
- * @template Settings - The destination settings type
- * @template Mapping - The destination mapping type
  * @param baseDestination - The base destination to extend
  * @param config - Additional configuration to merge with the base destination's config
  * @returns A new destination instance with merged configuration
  *
  * @example
  * ```typescript
- * // Instead of:
- * elb('walker destination', destinationGtag, {
- *   settings: { ga4: { measurementId: 'G-123' } }
- * });
- *
- * // You can use:
+ * // Types are inferred automatically from destinationGtag
  * elb('walker destination', createDestination(destinationGtag, {
  *   settings: { ga4: { measurementId: 'G-123' } }
  * }));
  * ```
  */
-export function createDestination<Settings = unknown, Mapping = unknown>(
-  baseDestination: Destination.Instance<Settings, Mapping>,
-  config: Partial<Destination.Config<Settings, Mapping>>,
-): Destination.Instance<Settings, Mapping> {
+export function createDestination<I extends Destination.Instance>(
+  baseDestination: I,
+  config: Partial<Destination.Config<Destination.TypesOf<I>>>,
+): I {
   // Create a shallow copy of the base destination to avoid mutations
   const newDestination = { ...baseDestination };
+
+  // Extract types for clean usage
+  type T = Destination.TypesOf<I>;
 
   // Deep merge the config, handling nested objects like settings and mapping
   newDestination.config = assign(baseDestination.config, config, {
@@ -46,7 +42,7 @@ export function createDestination<Settings = unknown, Mapping = unknown>(
       baseDestination.config.settings as object,
       config.settings as object,
       { shallow: true, merge: true, extend: true },
-    ) as Settings;
+    ) as typeof newDestination.config.settings;
   }
 
   // Handle nested mapping merging if both have mapping
@@ -55,7 +51,7 @@ export function createDestination<Settings = unknown, Mapping = unknown>(
       baseDestination.config.mapping as object,
       config.mapping as object,
       { shallow: true, merge: true, extend: true },
-    ) as Destination.Config<Settings, Mapping>['mapping'];
+    ) as typeof newDestination.config.mapping;
   }
 
   return newDestination;
