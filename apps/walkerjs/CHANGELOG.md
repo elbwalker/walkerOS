@@ -1,5 +1,20 @@
 # @walkeros/walker.js
 
+## 0.2.0
+
+### Minor Changes
+
+- env
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/web-source-datalayer@0.2.0
+  - @walkeros/web-source-browser@0.2.0
+  - @walkeros/collector@0.2.0
+  - @walkeros/web-core@0.2.0
+  - @walkeros/core@0.2.0
+
 ## 0.1.2
 
 ### Patch Changes
