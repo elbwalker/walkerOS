@@ -1,12 +1,16 @@
 {
   "name": "@walkeros/storybook-addon",
   "version": "0.1.3",
-  "description": "Integrate walkerOS tagging support for data collection",
+  "description": "Visualize, debug, and validate walkerOS event tracking in your Storybook stories. Real-time event capture with visual DOM highlighting for data-attribute based tagging.",
   "keywords": [
+    "storybook-addons",
+    "data",
     "tracking",
     "data collection",
     "tagging",
-    "storybook-addons"
+    "analytics",
+    "events",
+    "walkeros"
   ],
   "repository": {
     "type": "git",
@@ -108,8 +112,13 @@
     "displayName": "walkerOS",
     "supportedFrameworks": [
       "react",
+      "vue",
+      "angular",
+      "svelte",
+      "preact",
+      "web-components",
       "html"
     ],
-    "icon": "https://user-images.githubusercontent.com/321738/63501763-88dbf600-c4cc-11e9-96cd-94adadc2fd72.png"
+    "icon": "https://www.elbwalker.com/img/elbwalker_logo.png"
   }
 }
