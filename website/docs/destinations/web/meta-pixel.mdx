@@ -49,10 +49,10 @@ npm install @walkeros/web-destination-meta
 ## Setup
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/web-destination-meta';
 
-const { collector, elb } = await createCollector({
+const { collector, elb } = await startFlow({
   destinations: {
     meta: {
       code: destinationMeta,

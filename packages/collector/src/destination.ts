@@ -477,9 +477,9 @@ export async function initDestinations(
  * Config env takes precedence over destination env for overrides
  */
 function mergeEnvironments(
-  destinationEnv?: Destination.Environment,
-  configEnv?: Destination.Environment,
-): Destination.Environment {
+  destinationEnv?: Destination.Env,
+  configEnv?: Destination.Env,
+): Destination.Env {
   // If neither environment exists, return empty object
   if (!destinationEnv && !configEnv) return {};
 

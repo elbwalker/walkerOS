@@ -1,35 +1,30 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Source as WalkerOSSource } from '@walkeros/core';
 
-export interface Source<Settings = unknown, Mapping = unknown>
-  extends WalkerOSSource.Instance<Settings, Mapping> {}
+export type TypesGeneric = WalkerOSSource.TypesGeneric;
 
-export type Config<
-  Settings = unknown,
-  Mapping = unknown,
-> = WalkerOSSource.Config<Settings, Mapping>;
+export interface Source<T extends TypesGeneric = WalkerOSSource.Types>
+  extends WalkerOSSource.Instance<T> {}
 
-export type PartialConfig<
-  Settings = unknown,
-  Mapping = unknown,
-> = WalkerOSSource.PartialConfig<Settings, Mapping>;
+export type Config<T extends TypesGeneric = WalkerOSSource.Types> =
+  WalkerOSSource.Config<T>;
 
-export type Init<Settings = unknown, Mapping = unknown> = WalkerOSSource.Init<
-  Settings,
-  Mapping
->;
+export type PartialConfig<T extends TypesGeneric = WalkerOSSource.Types> =
+  WalkerOSSource.PartialConfig<T>;
 
-export type InitSource<
-  Settings = unknown,
-  Mapping = unknown,
-> = WalkerOSSource.InitSource<Settings, Mapping>;
+export type Init<T extends TypesGeneric = WalkerOSSource.Types> =
+  WalkerOSSource.Init<T>;
+
+export type InitSource<T extends TypesGeneric = WalkerOSSource.Types> =
+  WalkerOSSource.InitSource<T>;
 
 /**
  * Server-specific environment requirements interface
  *
- * Extends the core Environment interface for server-side sources.
+ * Extends the core BaseEnv interface for server-side sources.
  * Used for dependency injection of SDK classes and external APIs.
  */
-export interface Environment extends WalkerOSSource.Environment {
+export interface Env extends WalkerOSSource.BaseEnv {
   // Server environments can include SDK constructors, API clients, etc.
   // Each source extends this further with specific requirements
 }

@@ -13,7 +13,10 @@ import PackageLink from '@site/src/components/docs/package-link';
   github="packages/web/sources/datalayer"
   npm="@walkeros/web-source-datalayer"
 />
+
 # DataLayer Source
+
+Integrates with existing Google Analytics 4 and GTM dataLayer implementations by intercepting `dataLayer.push()` calls.
 
 ## Installation
 
@@ -23,14 +26,47 @@ npm install @walkeros/web-source-datalayer
 
 ## Basic Setup
 
-```js
-import { elb } from '@walkeros/collector';
+```typescript
+import { startFlow } from '@walkeros/collector';
 import { sourceDataLayer } from '@walkeros/web-source-datalayer';
 
-sourceDataLayer({ elb });
+const { collector, elb } = await startFlow({
+  sources: {
+    dataLayer: {
+      code: sourceDataLayer,
+      config: {
+        settings: {
+          name: 'dataLayer', // Name of global dataLayer array
+          prefix: 'dataLayer', // Event prefix for filtering
+        },
+      },
+    },
+  },
+  destinations: {
+    // Your destinations
+  },
+});
 ```
 
-## Configuration reference
+## How It Works
+
+The dataLayer source intercepts `dataLayer.push()` calls and transforms them into walkerOS events:
+
+1. **Intercepts** existing `dataLayer.push()` calls
+2. **Filters** events based on prefix or custom filter function
+3. **Transforms** dataLayer format to walkerOS event format
+4. **Forwards** to collector for processing
+
+```javascript
+// Existing dataLayer code (unchanged)
+window.dataLayer = window.dataLayer || [];
+dataLayer.push({ event: 'purchase', value: 99.99 });
+
+// Automatically captured and transformed by sourceDataLayer
+// → Sent to walkerOS collector as standard event
+```
+
+## Configuration
 
 <SettingsTable
   properties={[
@@ -45,17 +81,80 @@ sourceDataLayer({ elb });
       name: 'prefix',
       type: 'string',
       description:
-        'Event prefix for filtering dataLayer events (default: "gtag")',
+        'Event prefix for filtering (default: "dataLayer")',
       required: false,
       example: "'gtag'",
     },
     {
       name: 'filter',
-      type: '(event: unknown) => WalkerOS.PromiseOrValue<boolean>',
-      description: 'Function to filter which dataLayer events to process',
+      type: '(event: unknown) => boolean',
+      description: 'Custom function to filter which events to process',
       required: false,
       example: '(event) => event && typeof event === "object"',
     },
   ]}
 />
+
+## Custom Filtering
+
+Filter which dataLayer events get processed:
+
+```typescript
+const { elb } = await startFlow({
+  sources: {
+    dataLayer: {
+      code: sourceDataLayer,
+      config: {
+        settings: {
+          filter: (event) => {
+            // Only process purchase and add_to_cart events
+            if (typeof event === 'object' && event !== null) {
+              const e = event as { event?: string };
+              return e.event === 'purchase' || e.event === 'add_to_cart';
+            }
+            return false;
+          },
+        },
+      },
+    },
+  },
+});
 ```
+
+## Migration Strategy
+
+Use the dataLayer source for gradual migration from GA4/GTM:
+
+1. **Phase 1**: Add walkerOS alongside existing dataLayer
+   ```typescript
+   // Existing code continues to work
+   dataLayer.push({ event: 'purchase', value: 99.99 });
+   // Now also captured by walkerOS
+   ```
+
+2. **Phase 2**: Map dataLayer events to walkerOS destinations
+   ```typescript
+   destinations: {
+     ga4: {
+       code: destinationGtag,
+       config: {
+         mapping: {
+           // Map dataLayer purchase to GA4 format
+         }
+       }
+     }
+   }
+   ```
+
+3. **Phase 3**: Gradually replace dataLayer.push with elb()
+   ```typescript
+   // Old
+   dataLayer.push({ event: 'purchase', value: 99.99 });
+   // New
+   elb('order complete', { total: 99.99 });
+   ```
+
+## Next Steps
+
+- Review [event mapping](/docs/destinations/event-mapping) for transforming dataLayer events
+- Check [GA4 destination](/docs/destinations/web/gtag) for Google Analytics integration

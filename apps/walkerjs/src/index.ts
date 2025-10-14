@@ -1,6 +1,6 @@
 import type { Config, Instance } from './types';
 import type { Collector, Elb, WalkerOS } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { assign, isObject } from '@walkeros/core';
 import {
   sourceBrowser,
@@ -37,7 +37,7 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
   const fullConfig = assign(defaultConfig, config);
 
   // Build collector config with sources
-  const collectorConfig: Partial<Collector.Config> = {
+  const collectorConfig: Collector.InitConfig = {
     ...fullConfig.collector,
     sources: {
       browser: {
@@ -69,28 +69,15 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
     }
   }
 
-  const { collector } = await createCollector(collectorConfig);
-
-  // Use browser source push method for browser-specific operations
-  // Browser source should always be available in walker.js
-  if (!collector.sources.browser) {
-    throw new Error('Browser source not initialized in walker.js');
-  }
-  const browserPush = collector.sources.browser
-    .push as SourceBrowser.BrowserPush;
-
-  const instance: Instance = {
-    collector,
-    elb: browserPush,
-  };
+  const flow = await startFlow<SourceBrowser.BrowserPush>(collectorConfig);
 
   // Set up global variables if configured (only in browser environments)
   if (typeof window !== 'undefined') {
-    if (fullConfig.elb) window[fullConfig.elb] = browserPush;
-    if (fullConfig.name) window[fullConfig.name] = collector;
+    if (fullConfig.elb) window[fullConfig.elb] = flow.elb;
+    if (fullConfig.name) window[fullConfig.name] = flow.collector;
   }
 
-  return instance;
+  return flow;
 }
 
 // Export factory function as default

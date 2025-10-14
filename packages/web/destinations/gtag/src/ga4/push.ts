@@ -4,16 +4,16 @@ import type { DestinationWeb } from '@walkeros/web-core';
 import { isObject } from '@walkeros/core';
 import { getParamsInclude } from '../shared/parameters';
 import { normalizeEventName } from '../shared/mapping';
-import { getEnvironment } from '@walkeros/web-core';
+import { getEnv } from '@walkeros/web-core';
 
 export function pushGA4Event(
   event: WalkerOS.Event,
   settings: GA4Settings,
   mapping: GA4Mapping = {},
   data: WalkerOS.AnyObject,
-  env?: DestinationWeb.Environment,
+  env?: DestinationWeb.Env,
 ): void {
-  const { window } = getEnvironment(env);
+  const { window } = getEnv(env);
 
   if (!settings.measurementId) return;
 

@@ -1,6 +1,6 @@
 import type { Collector } from '@walkeros/core';
 import type { Destination, WalkerOS } from '@walkeros/core';
-import { createCollector } from '..';
+import { startFlow } from '..';
 import { commonHandleCommand } from '../handle';
 
 describe('Handle Commands', () => {
@@ -23,7 +23,7 @@ describe('Handle Commands', () => {
 
   describe('walker destination command', () => {
     test('adds destination without config', async () => {
-      const { elb, collector } = await createCollector({});
+      const { elb, collector } = await startFlow({});
 
       // Initially no destinations
       expect(Object.keys(collector.destinations)).toHaveLength(0);
@@ -39,7 +39,7 @@ describe('Handle Commands', () => {
     });
 
     test('adds destination with config including custom id', async () => {
-      const { elb, collector } = await createCollector({});
+      const { elb, collector } = await startFlow({});
 
       const customConfig: Destination.Config = {
         id: 'my-custom-id',
@@ -66,7 +66,7 @@ describe('Handle Commands', () => {
     });
 
     test('adds destination with config and stores it properly', async () => {
-      const { elb, collector } = await createCollector({});
+      const { elb, collector } = await startFlow({});
 
       const customConfig: Destination.Config = {
         id: 'test-destination',
@@ -84,7 +84,7 @@ describe('Handle Commands', () => {
     });
 
     test('handles destination config through commonHandleCommand', async () => {
-      const { collector } = await createCollector({});
+      const { collector } = await startFlow({});
 
       const customConfig: Destination.Config = {
         id: 'cmd-test',

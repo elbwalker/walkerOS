@@ -1,4 +1,4 @@
-import type { Environment } from '../types';
+import type { Env } from '../types';
 
 /**
  * Example environment configurations for API destination
@@ -10,17 +10,17 @@ import type { Environment } from '../types';
 // Simple no-op function for mocking
 const noop = () => {};
 
-export const init: Environment | undefined = {
+export const init: Env | undefined = {
   // Environment before initialization (sendWeb not configured yet)
   sendWeb: undefined,
 };
 
-export const standard: Environment = {
+export const push: Env = {
   // Standard mock environment for testing
   sendWeb: Object.assign(noop, {
     // Add any specific properties if needed for sendWeb
-  }) as unknown as Environment['sendWeb'],
+  }) as unknown as Env['sendWeb'],
 };
 
 // Future: error scenarios (v2)
-// export const error: Environment = { ... };
+// export const error: Env = { ... };

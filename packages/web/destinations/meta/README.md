@@ -30,10 +30,10 @@ npm install @walkeros/web-destination-meta
 Here's a basic example of how to use the Meta Pixel destination:
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/web-destination-meta';
 
-const { elb } = await createCollector();
+const { elb } = await startFlow();
 
 elb('walker destination', destinationMeta, {
   settings: {

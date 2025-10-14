@@ -10,93 +10,91 @@ Sources are the **entry points** for event data in walkerOS. They capture events
 from different environments and formats, then transform them into standardized
 events that the collector can process.
 
-In a typical application, events can come from many different places:
-
-- DOM interactions in the browser (clicks, form submissions, page views)
-- dataLayer pushes from other tracking tools
-- Server-side events from APIs
-- Custom application events
-
-Each of these has its own format and structure. Sources provide a clean
-separation between:
-
-- **Event capture** - How events are detected and collected
-- **Event processing** - How events are enriched, filtered, and sent to
-  destinations
-
-This separation makes walkerOS flexible and maintainable, allowing you to add
-new event sources without changing your destination configurations.
-
-:::note
-
-walkerOS is primarily build to capture events directly from the browser.
-
-:::
-
 ## How sources work
 
-### Basic flow
+Sources capture events in their native format and send them to the collector:
 
-1. **Capture**: Sources listen for or capture events in their native format
-2. **Transform**: Convert the captured data into walkerOS event format
-3. **Send**: Push the standardized event to the collector for processing
-
-### Setup within walkerOS
-
-```typescript
-import { createCollector } from '@walkeros/collector';
-import { createSource, sourceBrowser } from '@walkeros/core';
-
-// Create a collector
-const { collector } = await createCollector({
-  destinations: {
-    /* your destinations */
-  },
-});
-
-// Add a browser source
-const { elb } = await createSource(collector, sourceBrowser, {
-  session: true,
-  pageview: true,
-});
-
-// The source captures browser events and sends them to your collector
-```
+1. **Capture**: Listen for events (DOM clicks, API calls, player actions)
+2. **Transform**: Convert to walkerOS event format (`entity action`, data)
+3. **Send**: Forward to collector via `elb` function for processing
 
 ## Available Sources
 
 ### Browser
 
-The browser source captures events from web pages:
+Captures events from web pages using DOM attributes:
 
-- **DOM interactions**: All sorts of user behavior like clicks, form
-  submissions, views etc.
-- **Automatic tracking**: Page views, session management
-- **Flexible configuration**: Customize what gets tracked and how
+- DOM interactions (clicks, form submissions, visibility)
+- Automatic session and pageview tracking
+- Custom data attributes (`data-elb-*`)
+
+[Learn more →](./web/browser/)
 
 ### dataLayer
 
-The dataLayer source works with existing analytics implementations:
+Integrates with existing analytics implementations:
 
-- **Legacy integration**: Works with existing GA4 and dataLayer implementations
-- **Event mapping**: Transform dataLayer events to walkerOS format
-- **Migration friendly**: Gradual transition from existing setups
+- Works with GA4 and GTM dataLayer
+- Event transformation and filtering
+- Gradual migration support
 
-## Using Sources
+[Learn more →](./web/dataLayer/)
 
-### Basic Setup
+## Basic Setup
 
-Every source follows the same pattern:
+Sources are configured in `startFlow`:
 
-1. **Create a collector** with your destination configuration
-2. **Add sources** using `createSource` with the source type and configuration
-3. **Use the returned `elb` function** to trigger events manually when needed
+```typescript
+import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
 
-## Advanced Source Configuration
+const { collector, elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          pageview: true,
+          session: true,
+          prefix: 'data-elb',
+        },
+      },
+    },
+  },
+  destinations: {
+    /* your destinations */
+  },
+});
 
-### Reactive Event Handling
+// elb is now browser.push (enhanced with DOM commands)
+// Use elb for manual event tracking
+await elb('product view', { id: 'P123', name: 'Laptop' });
+```
 
-Sources can implement an optional `on` method to react to collector events. This enables responsive behavior to consent changes, session updates, and collector state without polling.
+## Primary Source
+
+`startFlow` returns an `elb` function based on your sources:
+
+- **With sources**: Returns first source's `push` method (enhanced features)
+- **Multiple sources**: First source is primary by default
+- **No sources**: Returns `collector.push` (basic functionality)
+
+### Override Primary Source
+
+```typescript
+const { elb } = await startFlow({
+  sources: {
+    browser: { code: sourceBrowser },
+    dataLayer: { code: sourceDataLayer, primary: true }, // Override
+  },
+});
+
+// elb is now dataLayer.push instead of browser.push
+```
+
+## Reactive Event Handling
+
+Sources can react to collector events via the optional `on` method:
 
 ```typescript
 const mySource: Source.Init = async (config, env) => {
@@ -104,15 +102,8 @@ const mySource: Source.Init = async (config, env) => {
     type: 'custom',
     config,
     on: async (event, context) => {
-      switch (event) {
-        case 'consent':
-          // React to consent changes
-          handleConsentUpdate(context);
-          break;
-        case 'session':
-          // React to session events  
-          updateSessionBehavior(context);
-          break;
+      if (event === 'consent') {
+        // React to consent changes
       }
     },
   };
@@ -120,16 +111,18 @@ const mySource: Source.Init = async (config, env) => {
 ```
 
 **Available Events:**
-- `consent` - Consent state changes (context: consent object)
-- `session` - Session lifecycle events (context: session data)
-- `ready` - Collector ready state  
+
+- `consent` - Consent state changes
+- `session` - Session lifecycle events
+- `ready` - Collector ready state
 - `run` - Collector run events
 
-This keeps sources stateless and reactive to collector changes.
+## Creating Custom Sources
+
+See [Create Your Own Source](./create-your-own) for a complete guide to building custom sources.
 
 ## Next Steps
 
-Choose the source that matches your environment for more details:
-
-- **[Browser](./web/browser/)** - For web applications and websites
-- **[dataLayer](./web/dataLayer/)** - For integration with existing analytics
+- **[Browser Source](./web/browser/)** - DOM-based tracking
+- **[DataLayer Source](./web/dataLayer/)** - Legacy integration
+- **[Create Your Own](./create-your-own)** - Custom source guide

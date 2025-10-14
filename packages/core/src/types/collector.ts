@@ -14,24 +14,12 @@ import type {
 export interface Config {
   /** Whether to run collector automatically */
   run?: boolean;
-  /** Initial consent state */
-  consent?: WalkerOS.Consent;
-  /** Initial user data */
-  user?: WalkerOS.User;
   /** Version for event tagging */
   tagging: number;
-  /** Initial global properties */
-  globals?: WalkerOS.Properties;
   /** Static global properties even on a new run */
   globalsStatic: WalkerOS.Properties;
   /** Static session data even on a new run */
   sessionStatic: Partial<SessionData>;
-  /** Source configurations */
-  sources?: Source.InitSources;
-  /** Destination configurations */
-  destinations?: Destination.InitDestinations;
-  /** Initial custom properties */
-  custom?: WalkerOS.Properties;
   /** Enable verbose logging */
   verbose: boolean;
   /** Error handler */
@@ -40,7 +28,23 @@ export interface Config {
   onLog?: Handler.Log;
 }
 
-export type InitConfig = Partial<Config>;
+/**
+ * Initialization configuration that extends Config with initial state
+ */
+export interface InitConfig extends Partial<Config> {
+  /** Initial consent state */
+  consent?: WalkerOS.Consent;
+  /** Initial user data */
+  user?: WalkerOS.User;
+  /** Initial global properties */
+  globals?: WalkerOS.Properties;
+  /** Source configurations */
+  sources?: Source.InitSources;
+  /** Destination configurations */
+  destinations?: Destination.InitDestinations;
+  /** Initial custom properties */
+  custom?: WalkerOS.Properties;
+}
 
 export interface SessionData extends WalkerOS.Properties {
   isStart: boolean;

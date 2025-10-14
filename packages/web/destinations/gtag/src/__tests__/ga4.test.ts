@@ -5,7 +5,7 @@ import type { GA4Settings } from '../types';
 
 describe('GA4 Implementation', () => {
   const mockGtag = jest.fn();
-  const mockEnv = clone(examples.env.standard);
+  const mockEnv = clone(examples.env.push);
   mockEnv.window.gtag = mockGtag;
 
   beforeEach(() => {

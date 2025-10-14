@@ -1,32 +1,27 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Collector, WalkerOS, Source as CoreSource } from '@walkeros/core';
 
-export interface Source<
-  Settings extends Record<string, unknown> = Record<string, unknown>,
-  Mapping = unknown,
-> extends CoreSource.Instance<Settings, Mapping> {
-  settings?: Settings;
-  mapping?: Mapping;
+export type TypesGeneric = CoreSource.TypesGeneric;
+
+export interface Source<T extends TypesGeneric = CoreSource.Types>
+  extends CoreSource.Instance<T> {
+  settings?: CoreSource.Settings<T>;
+  mapping?: CoreSource.Mapping<T>;
 }
 
 export type Init = Partial<Omit<Source, 'init'>> & Pick<Source, 'type'>;
 
-export type Config<
-  Settings extends Record<string, unknown> = Record<string, unknown>,
-  Mapping = unknown,
-> = CoreSource.Instance<Settings, Mapping> & {
-  settings: Settings;
-  mapping?: Mapping;
-};
+export type Config<T extends TypesGeneric = CoreSource.Types> =
+  CoreSource.Instance<T> & {
+    settings: CoreSource.Settings<T>;
+    mapping?: CoreSource.Mapping<T>;
+  };
 
-export type PartialConfig<
-  Settings extends Record<string, unknown> = Record<string, unknown>,
-  Mapping = unknown,
-> = Partial<Config<Settings, Mapping>>;
+export type PartialConfig<T extends TypesGeneric = CoreSource.Types> = Partial<
+  Config<T>
+>;
 
-export type InitFn<
-  Settings extends Record<string, unknown> = Record<string, unknown>,
-  Mapping = unknown,
-> = (
+export type InitFn<T extends TypesGeneric = CoreSource.Types> = (
   collector: Collector.Instance,
-  config: Config<Settings, Mapping>,
+  config: Config<T>,
 ) => void | Promise<void>;

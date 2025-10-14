@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { DestinationPiwikPro } from '.';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { getEvent } from '@walkeros/core';
 import { examples } from '.';
 
@@ -17,11 +17,12 @@ describe('Destination PiwikPro', () => {
   const appId = 'XXX-XXX-XXX-XXX-XXX';
   const url = 'https://your_account_name.piwik.pro/';
 
+  const mockPaq: Array<unknown> = [];
+  mockPaq.push = mockFn;
+
   const testEnv = {
     window: {
-      _paq: {
-        push: mockFn,
-      },
+      _paq: mockPaq,
     },
     document: {
       createElement: jest.fn(() => ({
@@ -43,7 +44,7 @@ describe('Destination PiwikPro', () => {
 
     jest.clearAllMocks();
 
-    ({ elb } = await createCollector({
+    ({ elb } = await startFlow({
       tagging: 2,
     }));
   });

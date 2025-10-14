@@ -70,7 +70,7 @@ const browserSource = createSource(sourceBrowser, {
 });
 
 // Use in collector
-const { collector } = await createCollector({
+const { collector } = await startFlow({
   sources: {
     browser: browserSource,
   },

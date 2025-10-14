@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { WalkerOS, Collector } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationAPI } from '@walkeros/web-destination-api';
 import { taggingRegistry } from '@site/src/components/organisms/tagging';
@@ -21,7 +21,7 @@ export const DataCollection = () => {
   useEffect(() => {
     // Setup demo walkerjs using new collector pattern
     if (!window.walkerjs) {
-      createCollector({
+      startFlow({
         sources: {
           browser: {
             code: sourceBrowser,
@@ -64,7 +64,7 @@ export const DataCollection = () => {
 
     // Setup internal analytics collector
     if (!window.alstCollector) {
-      createCollector({
+      startFlow({
         sources: {
           browser: {
             code: sourceBrowser,

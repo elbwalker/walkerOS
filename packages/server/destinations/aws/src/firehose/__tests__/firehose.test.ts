@@ -1,4 +1,4 @@
-import type { Config, Settings, Destination, Environment } from '../types';
+import type { Config, Settings, Destination, Env } from '../types';
 import type { WalkerOS, Collector } from '@walkeros/core';
 import { createEvent, mockEnv } from '@walkeros/core';
 import { examples } from '../';
@@ -11,7 +11,7 @@ describe('Firehose', () => {
   let destination: Destination;
   let settingsConfig: Settings;
   let calls: Array<{ path: string[]; args: unknown[] }>;
-  let testEnv: Environment;
+  let testEnv: Env;
 
   const streamName = 'demo';
 
@@ -34,7 +34,7 @@ describe('Firehose', () => {
     calls = [];
 
     // Use the example environment directly (no proxy for constructor functions)
-    testEnv = env.env.push;
+    testEnv = env.push;
 
     // Store the original constructor and replace with a version that uses mocked send
     const OriginalFirehoseClient = testEnv.AWS.FirehoseClient;

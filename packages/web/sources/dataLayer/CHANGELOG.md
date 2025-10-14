@@ -1,5 +1,17 @@
 # @walkeros/web-source-datalayer
 
+## 0.2.0
+
+### Minor Changes
+
+- env
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/collector@0.2.0
+  - @walkeros/core@0.2.0
+
 ## 0.1.2
 
 ### Patch Changes

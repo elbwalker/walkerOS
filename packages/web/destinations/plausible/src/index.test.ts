@@ -1,7 +1,7 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { DestinationPlausible } from '.';
 import type { DestinationWeb } from '@walkeros/web-core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { getEvent, mockEnv } from '@walkeros/core';
 import { examples } from '.';
 
@@ -12,7 +12,7 @@ describe('destination plausible', () => {
   let destination: DestinationPlausible.Destination;
 
   let calls: Array<{ path: string[]; args: unknown[] }>;
-  let testEnv: DestinationWeb.Environment;
+  let testEnv: DestinationWeb.Env;
   let createElementMock: jest.Mock;
   let appendChildMock: jest.Mock;
 
@@ -35,7 +35,7 @@ describe('destination plausible', () => {
     appendChildMock = jest.fn();
 
     // Create test environment using example env with call interceptor
-    testEnv = mockEnv(examples.env.standard, (path, args) => {
+    testEnv = mockEnv(examples.env.push, (path, args) => {
       calls.push({ path, args });
     });
 
@@ -47,7 +47,7 @@ describe('destination plausible', () => {
       testEnv.document.querySelector = jest.fn();
     }
 
-    ({ elb } = await createCollector({
+    ({ elb } = await startFlow({
       tagging: 2,
     }));
   });
@@ -73,8 +73,12 @@ describe('destination plausible', () => {
   test('init with script load', async () => {
     // For now, skip complex document mocking and focus on core functionality
     // TODO: Fix document mocking with environment injection
+    const mockPlausible = jest.fn();
     const simpleEnv = {
       ...testEnv,
+      window: {
+        plausible: mockPlausible,
+      },
       document: {
         createElement: createElementMock,
         head: { appendChild: appendChildMock },
@@ -106,8 +110,12 @@ describe('destination plausible', () => {
     };
     createElementMock.mockReturnValue(mockScript);
 
+    const mockPlausible = jest.fn();
     const simpleEnv = {
       ...testEnv,
+      window: {
+        plausible: mockPlausible,
+      },
       document: {
         createElement: createElementMock,
         head: { appendChild: appendChildMock },
@@ -132,7 +140,7 @@ describe('destination plausible', () => {
   test('event entity action', async () => {
     const destinationWithEnv = {
       ...destination,
-      env: testEnv,
+      env: testEnv as DestinationPlausible.Env,
     };
     elb('walker destination', destinationWithEnv, {
       mapping: mapping.config,
@@ -151,7 +159,7 @@ describe('destination plausible', () => {
     const event = getEvent('order complete');
     const destinationWithEnv = {
       ...destination,
-      env: testEnv,
+      env: testEnv as DestinationPlausible.Env,
     };
     elb('walker destination', destinationWithEnv, {
       mapping: mapping.config,

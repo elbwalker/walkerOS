@@ -1,5 +1,5 @@
 import type { Source, Elb } from '@walkeros/core';
-import type { Settings } from './types';
+import type { Types } from './types';
 import { interceptDataLayer, processExistingEvents } from './interceptor';
 
 // Export types for external usage
@@ -9,40 +9,28 @@ export * as SourceDataLayer from './types';
 export * from './examples';
 
 /**
- * DataLayer-specific environment interface
- */
-interface DataLayerEnvironment extends Source.Environment {
-  window?: typeof window;
-}
-
-/**
  * DataLayer source implementation using environment injection.
  *
  * This source intercepts dataLayer.push calls and transforms them to WalkerOS events.
  * It works by replacing the dataLayer.push method with a custom handler.
  */
-export const sourceDataLayer: Source.Init<Settings> = async (
-  config: Partial<Source.Config<Settings>>,
-  env?: Source.Environment,
+export const sourceDataLayer: Source.Init<Types> = async (
+  config: Partial<Source.Config<Types>>,
+  env: Source.Env<Types>,
 ) => {
   try {
-    // Extract and validate environment dependencies
-    const dataLayerEnv = (env || {}) as DataLayerEnvironment;
-    const { elb, window: envWindow } = dataLayerEnv;
-
-    if (!elb) {
-      throw new Error('DataLayer source requires elb function in environment');
-    }
+    // Extract environment dependencies
+    const { elb, window: envWindow } = env;
 
     // Default configuration, merged with provided config
-    const settings: Settings = {
+    const settings: Source.Settings<Types> = {
       name: 'dataLayer',
       prefix: 'dataLayer',
       ...config?.settings,
     };
 
     // Full configuration with defaults
-    const fullConfig: Source.Config<Settings> = {
+    const fullConfig: Source.Config<Types> = {
       settings,
     };
 

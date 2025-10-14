@@ -1,6 +1,6 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { DestinationMeta } from '.';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { getEvent, clone } from '@walkeros/core';
 import { examples } from '.';
 
@@ -16,7 +16,7 @@ describe('Destination Meta Pixel', () => {
   const pixelId = '1234567890';
 
   // Create test environment using clone and modify fbq function
-  const testEnv = clone(examples.env.standard);
+  const testEnv = clone(examples.env.push);
   testEnv.window.fbq = mockFn;
   testEnv.window._fbq = mockFn;
 
@@ -25,7 +25,7 @@ describe('Destination Meta Pixel', () => {
 
     jest.clearAllMocks();
 
-    ({ elb } = await createCollector({
+    ({ elb } = await startFlow({
       tagging: 2,
     }));
   });
@@ -62,7 +62,7 @@ describe('Destination Meta Pixel', () => {
 
   test('init with load script', async () => {
     // Use Jest spies on the cloned environment
-    const scriptEnv = clone(examples.env.standard);
+    const scriptEnv = clone(examples.env.push);
     const createElementSpy = jest.fn(
       () =>
         ({

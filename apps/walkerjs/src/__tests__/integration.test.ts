@@ -80,26 +80,38 @@ describe('Walker.js Integration Tests', () => {
         <div data-elbglobals="site:test"></div>
       `;
 
-      // Initialize walker.js with simple mock destination
+      // Initialize walker.js with mock destination to capture events
       const instance = await createWalkerjs({
         browser: {
           session: false,
           pageview: false,
           run: false,
         },
+        collector: {
+          destinations: {
+            mock: {
+              code: {
+                type: 'mock',
+                config: {},
+                push: mockPush,
+              },
+            },
+          },
+        },
       });
-
-      // Mock collector.push to capture events from sources
-      instance.collector.push = mockPush;
 
       // Simulate button click by calling elb directly (simpler than DOM events)
-      await instance.elb('product add', {
-        id: 123,
-        name: 'Test Product',
-        quantity: 1,
+      // Browser push signature: (event?, data?, options?, context?, nested?, custom?)
+      await instance.elb({
+        name: 'product add',
+        data: {
+          id: 123,
+          name: 'Test Product',
+          quantity: 1,
+        },
       });
 
-      // Should have collected event
+      // Should have collected event at destination level
       expect(mockPush).toHaveBeenCalled();
       const event = mockPush.mock.calls[0][0] as unknown as WalkerOS.Event;
 
@@ -120,16 +132,27 @@ describe('Walker.js Integration Tests', () => {
           pageview: false,
           run: false,
         },
+        collector: {
+          destinations: {
+            mock: {
+              code: {
+                type: 'mock',
+                config: {},
+                push: mockPush,
+              },
+            },
+          },
+        },
       });
 
-      // Mock collector.push to capture events from sources
-      instance.collector.push = mockPush;
-
       // Track a manual event
-      await instance.elb('order complete', {
-        transaction_id: 'TRX123',
-        value: 99.99,
-        currency: 'EUR',
+      await instance.elb({
+        name: 'order complete',
+        data: {
+          transaction_id: 'TRX123',
+          value: 99.99,
+          currency: 'EUR',
+        },
       });
 
       expect(mockPush).toHaveBeenCalled();

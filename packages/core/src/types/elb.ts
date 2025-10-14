@@ -18,10 +18,10 @@ export interface Fn<R = Promise<PushResult>, Config = unknown>
 export interface WalkerCommands<R = Promise<PushResult>, Config = unknown> {
   (event: 'walker config', config: Partial<Config>): R;
   (event: 'walker consent', consent: WalkerOS.Consent): R;
-  <S, M>(
+  <T extends Destination.Types>(
     event: 'walker destination',
-    destination: Destination.Init<S, M> | Destination.Instance<S, M>,
-    config?: Destination.Config<S, M>,
+    destination: Destination.Init<T> | Destination.Instance<T>,
+    config?: Destination.Config<T>,
   ): R;
   <K extends keyof Hooks.Functions>(
     event: 'walker hook',

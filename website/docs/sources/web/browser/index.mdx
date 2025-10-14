@@ -18,74 +18,67 @@ import PackageLink from '@site/src/components/docs/package-link';
 
 # Browser Source
 
-The Browser Source is walkerOS's primary web tracking solution that you can use
-to capture user interactions directly from the browsers DOM.
+Captures user interactions directly from the DOM using data attributes.
 
-## What It Does
+## Features
 
-The Browser Source transforms your website into a comprehensive tracking
-environment by:
-
-- **Data attribute reading**: Extracts custom tracking data from HTML `data-elb`
-  attributes
-- **Session management**: Detects and handles user sessions automatically
+- **Data attribute reading**: Extracts tracking data from `data-elb-*` attributes
+- **Session management**: Automatic session detection and handling
+- **Pageview tracking**: Automatic or manual page view events
+- **DOM commands**: Enhanced `elb` function with `walker init` support
 
 ## Installation
 
 <Tabs>
   <TabItem value="npm" label="npm" default>
-Install the source via npm
 
 ```bash
 npm install @walkeros/web-source-browser
 ```
 
-Setup in your project
-
 ```js
-import { createCollector } from '@walkeros/collector';
-import { createSource } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
-const { collector } = await createCollector({
+const { collector, elb } = await startFlow({
   sources: {
-    browser: createSource(sourceBrowser, {
-      settings: {
-        pageview: true,
-        session: true,
-        elb: 'elb', // Browser source will set window.elb automatically
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          pageview: true,
+          session: true,
+          prefix: 'data-elb',
+        },
       },
-    }),
+    },
   },
 });
 ```
 
 </TabItem>
 <TabItem value="script" label="script">
-Load the source via dynamic import
 
 ```html
 <script>
-  // Load the collector, core utilities, and source
-  const { createCollector } = await import(
+  const { startFlow } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
-  );
-  const { createSource } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs'
   );
   const { sourceBrowser } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
   );
 
-  const { collector, elb } = await createCollector({
+  const { collector, elb } = await startFlow({
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          prefix: 'data-elb',
-          pageview: true,
-          session: true,
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+          },
         },
-      }),
+      },
     },
   });
 </script>
@@ -94,14 +87,14 @@ Load the source via dynamic import
 </TabItem>
 </Tabs>
 
-## Configuration reference
+## Configuration
 
 <SettingsTable
   properties={[
     {
       name: 'prefix',
       type: 'string',
-      description: 'Prefix for data attributes used in DOM tracking',
+      description: 'Prefix for data attributes (default: "data-elb")',
       required: false,
       example: "'data-elb'",
     },
@@ -122,21 +115,21 @@ Load the source via dynamic import
     {
       name: 'session',
       type: 'boolean',
-      description: 'Enable session tracking and management',
+      description: 'Enable session tracking',
       required: false,
       example: 'true',
     },
     {
       name: 'elb',
       type: 'string',
-      description: 'Custom name for the global elb function',
+      description: 'Name for global elb function (e.g., window.elb)',
       required: false,
       example: "'elb'",
     },
     {
       name: 'name',
       type: 'string',
-      description: 'Custom name for the browser source instance',
+      description: 'Custom name for source instance',
       required: false,
       example: "'mySource'",
     },
@@ -150,30 +143,30 @@ Load the source via dynamic import
   ]}
 />
 
-### elb
+## Enhanced elb Function
 
-:::tip
+The browser source returns an enhanced `elb` function with additional features:
 
-Two Different elb Functions
+```typescript
+// Collector elb: Basic event tracking
+collector.push('product view', { id: 'P123' });
 
-:::
-
-The collector provides **two different elb functions**:
-
-1. **Collector elb** (`elb` from `createCollector`): Basic event tracking that
-   works with all sources and destinations
-2. **Browser Source elb** (`collector.sources.browser.elb` or direct from
-   `createSource`): Enhanced function with browser-specific features
+// Browser source elb: Enhanced with DOM commands
+elb('walker init', { scope: document.querySelector('#app') });
+elb('product view', { id: 'P123' }); // Also tracks events
+```
 
 **Browser Source elb adds:**
 
-- **DOM Commands**: `walker init` for asynchronous loading of DOM elements
+- **DOM Commands**: `walker init` for asynchronous DOM element loading
 - **Flexible Arguments**: Support for multiple argument patterns
 - **elbLayer Integration**: Automatic processing of queued commands
-- **Element parameters**: Support for element parameters in DOM commands
+- **Element Parameters**: Support for element parameters in commands
 
-Use **separate source creation** for direct access to the enhanced elb function,
-or access it via `collector.sources.browser.elb` in the unified API.
+See [Commands](/docs/sources/web/browser/commands) for complete API documentation.
 
-See [Commands](/docs/sources/web/browser/commands) for full browser source API
-documentation.
+## Next Steps
+
+- [Tagging Guide](/docs/sources/web/browser/tagging) - Learn about data attributes
+- [Commands Reference](/docs/sources/web/browser/commands) - Full API documentation
+- [Tagger Tool](/docs/sources/web/browser/tagger) - Visual tagging tool

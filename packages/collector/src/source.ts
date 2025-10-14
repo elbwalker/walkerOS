@@ -14,9 +14,9 @@ export async function initSources(
   const result: Collector.Sources = {};
 
   for (const [sourceId, sourceDefinition] of Object.entries(sources)) {
-    const { code, config = {}, env = {} } = sourceDefinition;
+    const { code, config = {}, env = {}, primary } = sourceDefinition;
 
-    const cleanEnv: Source.Environment = {
+    const cleanEnv: Source.Env = {
       elb: ((...args: Parameters<typeof collector.push>) =>
         collector.push(...args)) as typeof collector.push, // Dynamic reference to collector.push
       ...env,
@@ -26,6 +26,11 @@ export async function initSources(
     const sourceInstance = await tryCatchAsync(code)(config, cleanEnv);
 
     if (!sourceInstance) continue; // Skip failed source initialization
+
+    // Store the primary flag in the source config for later access
+    if (primary) {
+      sourceInstance.config = { ...sourceInstance.config, primary };
+    }
 
     result[sourceId] = sourceInstance;
   }

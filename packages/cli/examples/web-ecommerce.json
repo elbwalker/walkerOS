@@ -2,7 +2,7 @@
   "platform": "web",
   "packages": {
     "@walkeros/collector": {
-      "imports": ["createCollector"]
+      "imports": ["startFlow"]
     },
     "@walkeros/web-source-browser": {
       "imports": ["sourceBrowser"]

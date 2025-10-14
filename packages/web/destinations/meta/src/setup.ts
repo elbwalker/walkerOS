@@ -1,11 +1,11 @@
 import type { DestinationWeb } from '@walkeros/web-core';
-import { getEnvironment } from '@walkeros/web-core';
+import { getEnv } from '@walkeros/web-core';
 
 export function addScript(
-  env?: DestinationWeb.Environment,
+  env?: DestinationWeb.Env,
   src = 'https://connect.facebook.net/en_US/fbevents.js',
 ) {
-  const { document } = getEnvironment(env);
+  const { document } = getEnv(env);
   const script = (document as Document).createElement('script');
   script.src = src;
   script.async = true;
@@ -21,8 +21,8 @@ interface FBQFunction {
   version: string;
 }
 
-export function setup(env?: DestinationWeb.Environment) {
-  const { window } = getEnvironment(env);
+export function setup(env?: DestinationWeb.Env) {
+  const { window } = getEnv(env);
   const w = window as unknown as {
     fbq?: FBQFunction;
     _fbq?: FBQFunction;

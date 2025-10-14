@@ -287,7 +287,7 @@ export async function setupGA4Complete(): Promise<{
   collector: Collector.Instance;
   elb: WalkerOS.Elb;
 }> {
-  const { collector, elb } = await createCollector({
+  const { collector, elb } = await startFlow({
     destinations: {
       gtag: {
         ...destinationGtag,
@@ -503,7 +503,7 @@ it('sends correct data to gtag', async () => {
 // Test collector with mocked boundaries
 it('processes events correctly', async () => {
   const mockDestination = { push: jest.fn() };
-  const collector = createCollector({
+  const collector = startFlow({
     destinations: { test: mockDestination },
   });
   await collector.push('page view', {});

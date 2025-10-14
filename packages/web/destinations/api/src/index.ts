@@ -1,6 +1,6 @@
-import type { Settings, Destination, Environment } from './types';
+import type { Settings, Destination, Env } from './types';
 import { isDefined } from '@walkeros/core';
-import { getEnvironment, sendWeb } from '@walkeros/web-core';
+import { getEnv, sendWeb } from '@walkeros/web-core';
 
 // Types
 export * as DestinationAPI from './types';
@@ -24,7 +24,7 @@ export const destinationAPI: Destination = {
       ? transform(eventData, config, mapping) // Transform event data
       : JSON.stringify(eventData);
 
-    const sendWebFn = (env as Environment)?.sendWeb || sendWeb;
+    const sendWebFn = (env as Env)?.sendWeb || sendWeb;
     sendWebFn(url, body, { headers, method, transport });
   },
 };

@@ -30,10 +30,10 @@ npm install @walkeros/web-destination-plausible
 Here's a basic example of how to use the Plausible destination:
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationPlausible } from '@walkeros/web-destination-plausible';
 
-const { elb } = await createCollector();
+const { elb } = await startFlow();
 
 elb('walker destination', destinationPlausible, {
   settings: {

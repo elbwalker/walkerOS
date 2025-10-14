@@ -1,7 +1,7 @@
 import type { Settings, Destination } from './types';
 import { addScript, setup } from './setup';
 import { isObject } from '@walkeros/core';
-import { getEnvironment } from '@walkeros/web-core';
+import { getEnv } from '@walkeros/web-core';
 
 // Types
 export * as DestinationMeta from './types';
@@ -27,7 +27,7 @@ export const destinationMeta: Destination = {
     // fbq function setup
     setup(env);
 
-    const { window } = getEnvironment(env);
+    const { window } = getEnv(env);
     const fbq = window.fbq as facebook.Pixel.Event;
     fbq('init', pixelId);
 
@@ -36,7 +36,7 @@ export const destinationMeta: Destination = {
 
   push(event, { config, mapping = {}, data, env }) {
     const { track, trackCustom } = mapping.settings || {};
-    const { window } = getEnvironment(env);
+    const { window } = getEnv(env);
     const fbq = window.fbq as facebook.Pixel.Event;
 
     // page view

@@ -58,7 +58,7 @@ import type { WalkerOS } from '@elbwalker/types';
 **After:**
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 import type { WalkerOS } from '@walkeros/core';
@@ -80,7 +80,7 @@ const walker = Walkerjs({
 import { createSource, createDestination } from '@walkeros/core';
 
 // Single big config file approach
-const { elb } = await createCollector({
+const { elb } = await startFlow({
   sources: {
     browser: createSource(sourceBrowser, {
       settings: { scope: document.body },
@@ -104,7 +104,7 @@ elb(
 ### 1. Unified Collector
 
 - Single `@walkeros/collector` package works across all platforms
-- Use `createCollector()` instead of `Walkerjs()` or `createSourceNode()`
+- Use `startFlow()` instead of `Walkerjs()` or `createSourceNode()`
 
 ### 2. Modular Sources
 
@@ -149,7 +149,7 @@ const trackingConfig = {
   },
 };
 
-const { elb } = await createCollector(trackingConfig);
+const { elb } = await startFlow(trackingConfig);
 
 elb(
   'walker destination',
@@ -181,7 +181,7 @@ elb(
 ### Code Updates
 
 - [ ] Update all imports to new packages
-- [ ] Replace collector initialization with `createCollector()`
+- [ ] Replace collector initialization with `startFlow()`
 - [ ] Update type imports to use `@walkeros/core`
 - [ ] Test functionality after migration
 
@@ -191,7 +191,7 @@ elb(
 Solution: Use `@walkeros/collector` + `@walkeros/web-source-browser`
 
 **"elb is not defined"**  
-Solution: `elb` is returned by `createCollector()` function
+Solution: `elb` is returned by `startFlow()` function
 
 **TypeScript cannot find types**  
 Solution: Import types from `@walkeros/core`
@@ -200,9 +200,11 @@ Solution: Import types from `@walkeros/core`
 
 ### Breaking Change in @walkeros packages
 
-The behavior of `data-elbaction` has changed to improve performance and provide more precise entity targeting:
+The behavior of `data-elbaction` has changed to improve performance and provide
+more precise entity targeting:
 
-- **@elbwalker behavior**: `data-elbaction` applied to **all entities** in the DOM hierarchy
+- **@elbwalker behavior**: `data-elbaction` applied to **all entities** in the
+  DOM hierarchy
 - **@walkeros behavior**: `data-elbaction` applies to **nearest entity only**
 
 ### Migration Strategy
@@ -243,11 +245,13 @@ Use `data-elbaction` for more precise, performance-optimized tracking:
 ### When to Use Each
 
 **Use `data-elbaction` (nearest entity) when:**
+
 - You want precise tracking of only the specific entity
 - Performance is critical (fewer events)
 - Implementing new features
 
 **Use `data-elbactions` (all entities) when:**
+
 - Migrating from @elbwalker and need same behavior
 - You need context from parent entities
 - Analytics requires full DOM hierarchy
@@ -258,10 +262,10 @@ The tagger also provides both methods:
 
 ```typescript
 // Nearest entity only (data-elbaction)
-tagger().action('click', 'select').get()
+tagger().action('click', 'select').get();
 
-// All entities (data-elbactions)  
-tagger().actions('click', 'select').get()
+// All entities (data-elbactions)
+tagger().actions('click', 'select').get();
 ```
 
 ## visible vs impression Triggers
@@ -270,8 +274,10 @@ tagger().actions('click', 'select').get()
 
 The visibility trigger names have been updated to better reflect their behavior:
 
-- **`visible` trigger**: Now fires **multiple times** when element re-enters viewport (was `visibles`)
-- **`impression` trigger**: Fires **once only** when element first becomes visible (was `visible`)
+- **`visible` trigger**: Now fires **multiple times** when element re-enters
+  viewport (was `visibles`)
+- **`impression` trigger**: Fires **once only** when element first becomes
+  visible (was `visible`)
 
 ### Migration Strategy
 
@@ -299,11 +305,13 @@ If you keep using the old names, understand the behavior has changed:
 ### When to Use Each
 
 **Use `impression` trigger when:**
+
 - You want to track when content is first seen
 - Measuring ad impressions or content views
 - One-time engagement metrics
 
-**Use `visible` trigger when:**  
+**Use `visible` trigger when:**
+
 - You want to track repeated interactions
 - Measuring scroll behavior or re-engagement
 - Analytics requires multiple visibility events
@@ -314,8 +322,8 @@ The tagger supports both trigger types:
 
 ```typescript
 // Single impression (fires once)
-tagger().action('impression', 'view').get()
+tagger().action('impression', 'view').get();
 
 // Multiple visibility (fires each time visible)
-tagger().action('visible', 'track').get()
+tagger().action('visible', 'track').get();
 ```

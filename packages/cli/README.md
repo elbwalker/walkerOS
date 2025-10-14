@@ -83,7 +83,7 @@ Create a `bundle.config.json` file:
     {
       "name": "@walkeros/core",
       "version": "^0.1.2",
-      "imports": ["createCollector", "createEvent"]
+      "imports": ["startFlow", "createEvent"]
     },
     {
       "name": "@walkeros/web-destinations-gtag",

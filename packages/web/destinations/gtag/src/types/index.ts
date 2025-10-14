@@ -1,4 +1,7 @@
-import type { Mapping as WalkerOSMapping } from '@walkeros/core';
+import type {
+  Mapping as WalkerOSMapping,
+  Destination as CoreDestination,
+} from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
 
 // Extend Window interface with specific dataLayer typing
@@ -16,7 +19,7 @@ declare global {
 }
 
 // Gtag-specific environment interface
-export interface Environment extends DestinationWeb.Environment {
+export interface Env extends DestinationWeb.Env {
   window: {
     gtag: Gtag.Gtag;
     dataLayer: unknown[];
@@ -44,8 +47,11 @@ export interface ConsentMapping {
   [walkerOSConsentGroup: string]: string | string[];
 }
 
-export type Destination = DestinationWeb.Destination<Settings, Mapping>;
-export type Config = DestinationWeb.Config<Settings, Mapping>;
+// Type bundle
+export type Types = CoreDestination.Types<Settings, Mapping, Env>;
+
+export type Destination = DestinationWeb.Destination<Types>;
+export type Config = DestinationWeb.Config<Types>;
 
 // Base settings interface with data field
 export interface BaseSettings {

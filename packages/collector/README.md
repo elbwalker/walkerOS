@@ -80,7 +80,7 @@ npm install @walkeros/collector
 ### Basic setup
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 
 const config = {
   run: true,
@@ -91,15 +91,15 @@ const config = {
   },
 };
 
-const { collector, elb } = await createCollector(config);
+const { collector, elb } = await startFlow(config);
 ```
 
 ### Advanced setup
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 
-const { collector, elb } = await createCollector({
+const { collector, elb } = await startFlow({
   run: true,
   consent: { functional: true },
   sources: [

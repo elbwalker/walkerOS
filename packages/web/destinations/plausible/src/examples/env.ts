@@ -1,4 +1,4 @@
-import type { Environment } from '../types';
+import type { Env } from '../types';
 
 /**
  * Example environment configurations for Plausible destination
@@ -10,9 +10,9 @@ import type { Environment } from '../types';
 // Simple no-op function for mocking
 const noop = () => {};
 
-export const init: Environment | undefined = {
+export const init: Env | undefined = {
   window: {
-    plausible: undefined as unknown as Environment['window']['plausible'],
+    plausible: undefined as unknown as Env['window']['plausible'],
   },
   document: {
     createElement: () => ({
@@ -26,12 +26,12 @@ export const init: Environment | undefined = {
   },
 };
 
-export const standard: Environment = {
+export const push: Env = {
   window: {
     plausible: Object.assign(noop, {
       // Add queue property for analytics loading pattern
       q: [] as IArguments[],
-    }) as unknown as Environment['window']['plausible'],
+    }) as unknown as Env['window']['plausible'],
   },
   document: {
     createElement: () => ({
@@ -46,4 +46,4 @@ export const standard: Environment = {
 };
 
 // Future: error scenarios (v2)
-// export const error: Environment = { ... };
+// export const error: Env = { ... };

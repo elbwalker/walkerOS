@@ -3,12 +3,7 @@
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   "image": "mcr.microsoft.com/devcontainers/typescript-node:latest",
   // Features to add to the dev container. More info: https://containers.dev/features.
-  "features": {
-    "ghcr.io/devcontainers-extra/features/jest:2": {},
-    "ghcr.io/devcontainers-extra/features/turborepo-npm:1": {},
-    "ghcr.io/devcontainers-extra/features/http-server:1": {},
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
-  },
+  "features": {},
   "customizations": {
     "vscode": {
       "extensions": [
@@ -39,18 +34,7 @@
   // "forwardPorts": [],
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "npm install && ln -s /workspaces/walkerOS/node_modules /workspaces/walkerOS/website/node_modules && npm run build",
-  "portsAttributes": {
-    "3000": {
-      "label": "3000 - website"
-    },
-    "5173": {
-      "label": "8080 - apps/demo/tagging"
-    },
-    "8002": {
-      "label": "8002 - apps/demo/react"
-    }
-  }
+  "postCreateCommand": "npm install && npm install -g @anthropic-ai/claude-code @google/gemini-cli @openai/codex && npm run build"
 
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
   // "remoteUser": "root"

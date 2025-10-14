@@ -1,4 +1,4 @@
-import { createCollector } from '../collector';
+import { startFlow } from '../flow';
 import type { Source, WalkerOS } from '@walkeros/core';
 
 describe('Source Create Flow Integration', () => {
@@ -26,7 +26,7 @@ describe('Source Create Flow Integration', () => {
       };
     };
 
-    const { collector, elb } = await createCollector({
+    const { collector, elb } = await startFlow({
       sources: {
         mockSource: {
           code: mockSource,

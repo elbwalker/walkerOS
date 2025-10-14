@@ -54,10 +54,10 @@ npm install @walkeros/collector
 ## Basic setup
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
-const { collector, elb } = await createCollector({
+const { collector, elb } = await startFlow({
   run: true,
   consent: { functional: true },
   sources: {
@@ -144,11 +144,11 @@ const { collector, elb } = await createCollector({
 ## Advanced setup
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
-const { collector, elb } = await createCollector({
+const { collector, elb } = await startFlow({
   run: true,
   consent: { functional: true },
   sources: {

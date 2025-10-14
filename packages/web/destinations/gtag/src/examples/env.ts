@@ -1,4 +1,4 @@
-import type { Environment } from '../types';
+import type { Env } from '../types';
 
 /**
  * Example environment configurations for Gtag destination
@@ -10,9 +10,9 @@ import type { Environment } from '../types';
 // Simple no-op function for mocking
 const noop = () => {};
 
-export const init: Environment | undefined = {
+export const init: Env | undefined = {
   window: {
-    gtag: undefined as unknown as Environment['window']['gtag'],
+    gtag: undefined as unknown as Env['window']['gtag'],
     dataLayer: [],
   },
   document: {
@@ -25,11 +25,11 @@ export const init: Environment | undefined = {
   },
 };
 
-export const standard: Environment = {
+export const push: Env = {
   window: {
     gtag: Object.assign(noop, {
       // Add any gtag-specific properties if needed
-    }) as unknown as Environment['window']['gtag'],
+    }) as unknown as Env['window']['gtag'],
     dataLayer: [] as unknown[],
   },
   document: {

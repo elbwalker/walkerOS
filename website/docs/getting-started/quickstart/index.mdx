@@ -27,13 +27,13 @@ npm install @walkeros/collector @walkeros/web-source-browser
 
 ```javascript
 import type { Collector, WalkerOS } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createSource } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 // Initialize walkerOS
 export async function initializeWalker(): Promise<void> {
-  const { collector } = await createCollector({
+  const { collector } = await startFlow({
     sources: {
       browser: createSource(sourceBrowser, {
         settings: {
@@ -60,14 +60,14 @@ export async function initializeWalker(): Promise<void> {
 Install destination packages and add them to your setup:
 
 ```javascript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createSource } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 export async function initializeWalker(): Promise<void> {
-  const { collector } = await createCollector({
+  const { collector } = await startFlow({
     sources: {
       browser: createSource(sourceBrowser, {
         settings: {
@@ -110,7 +110,7 @@ Add consent requirements to your destinations:
 
 ```javascript
 export async function initializeWalker(): Promise<void> {
-  const { collector } = await createCollector({
+  const { collector } = await startFlow({
     sources: {
       browser: createSource(sourceBrowser, {
         settings: {

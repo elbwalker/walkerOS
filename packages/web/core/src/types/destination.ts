@@ -1,29 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Destination as WalkerOSDestination } from '@walkeros/core';
 
-export interface Destination<Settings = unknown, Mapping = unknown>
-  extends WalkerOSDestination.Instance<Settings, Mapping> {}
+export type TypesGeneric = WalkerOSDestination.TypesGeneric;
+
+export interface Destination<T extends TypesGeneric = WalkerOSDestination.Types>
+  extends WalkerOSDestination.Instance<T> {}
 
 export type Init = WalkerOSDestination.Init;
 
-export type Config<
-  Settings = unknown,
-  Mapping = unknown,
-> = WalkerOSDestination.Config<Settings, Mapping>;
+export type Config<T extends TypesGeneric = WalkerOSDestination.Types> =
+  WalkerOSDestination.Config<T>;
 
-export type PartialConfig<
-  Settings = unknown,
-  Mapping = unknown,
-> = WalkerOSDestination.PartialConfig<Settings, Mapping>;
+export type PartialConfig<T extends TypesGeneric = WalkerOSDestination.Types> =
+  WalkerOSDestination.PartialConfig<T>;
 
-export type InitFn<
-  Settings = unknown,
-  Mapping = unknown,
-> = WalkerOSDestination.InitFn<Settings, Mapping>;
+export type InitFn<T extends TypesGeneric = WalkerOSDestination.Types> =
+  WalkerOSDestination.InitFn<T>;
 
-export type PushFn<
-  Settings = unknown,
-  Mapping = unknown,
-> = WalkerOSDestination.PushFn<Settings, Mapping>;
+export type PushFn<T extends TypesGeneric = WalkerOSDestination.Types> =
+  WalkerOSDestination.PushFn<T>;
 
 export type PushEvent<Mapping = unknown> =
   WalkerOSDestination.PushEvent<Mapping>;
@@ -34,10 +29,10 @@ export type PushEvents<Mapping = unknown> =
 /**
  * Web-specific environment requirements interface
  *
- * Extends the core Environment interface with web-specific
+ * Extends the core Env interface with web-specific
  * globals like window and document for browser destinations.
  */
-export interface Environment extends WalkerOSDestination.Environment {
+export interface Env extends WalkerOSDestination.BaseEnv {
   /**
    * Properties to be added to the global `window` object
    *

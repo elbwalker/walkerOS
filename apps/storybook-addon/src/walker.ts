@@ -1,5 +1,5 @@
 import type { Collector, WalkerOS, Destination } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { addons } from 'storybook/preview-api';
 import { EVENTS } from './constants';
@@ -71,7 +71,7 @@ export async function initializeWalker(config?: {
     }
 
     // Create collector with browser source and destinations
-    const result = await createCollector({
+    const result = await startFlow({
       run: true,
       consent: { functional: true },
       sources: {
@@ -80,7 +80,8 @@ export async function initializeWalker(config?: {
           config: {
             settings: {
               pageview: true,
-              session: false, // Disable session for Storybook
+              session: false,
+              elbLayer: '__storybookElbLayer',
               elb: '__storybookElb',
               prefix: config?.prefix || 'data-elb',
               scope: iframeDoc.body || iframeDoc, // Set scope to iframe document

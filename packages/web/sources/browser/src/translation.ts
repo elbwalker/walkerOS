@@ -8,9 +8,6 @@ import type {
 import type { Context } from './types';
 import { getEntities, getGlobals } from './walker';
 
-// Initialize timing for performance measurements
-const startTime = performance.now();
-
 /**
  * Translation layer that converts flexible browser source inputs
  * to the strict core collector format
@@ -98,7 +95,6 @@ export function translateToCoreCollector(
     nested,
     custom,
     trigger: isString(options) ? options : '',
-    timing: Math.round((performance.now() - startTime) / 10) / 100,
     source: getBrowserSource(),
   };
 

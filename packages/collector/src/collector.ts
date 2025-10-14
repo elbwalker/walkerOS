@@ -1,33 +1,13 @@
 import type { Collector, WalkerOS, Elb } from '@walkeros/core';
-import type { CreateCollector } from './types';
 import { assign, onLog } from '@walkeros/core';
 import { commonHandleCommand } from './handle';
 import { initDestinations, createPush } from './destination';
 import { initSources } from './source';
 
-export async function createCollector<
-  TConfig extends Partial<Collector.Config> = Partial<Collector.Config>,
->(initConfig: TConfig = {} as TConfig): Promise<CreateCollector> {
-  const instance = await collector(initConfig);
-  const { consent, user, globals, custom } = initConfig;
-
-  if (consent) await instance.push('walker consent', consent);
-  if (user) await instance.push('walker user', user);
-  if (globals) Object.assign(instance.globals, globals);
-  if (custom) Object.assign(instance.custom, custom);
-
-  if (instance.config.run) await instance.push('walker run');
-
-  return {
-    collector: instance,
-    elb: instance.push,
-  };
-}
-
 declare const __VERSION__: string;
 
-async function collector(
-  initConfig: Partial<Collector.Config>,
+export async function collector(
+  initConfig: Collector.InitConfig,
 ): Promise<Collector.Instance> {
   const version = __VERSION__;
 
@@ -38,12 +18,6 @@ async function collector(
     verbose: false,
     onLog: log,
     run: true,
-    sources: {},
-    destinations: {},
-    consent: {},
-    user: {},
-    globals: {},
-    custom: {},
   };
 
   const config: Collector.Config = assign(defaultConfig, initConfig, {
@@ -57,14 +31,14 @@ async function collector(
   config.onLog = log;
 
   // Enhanced globals with static globals from config
-  const finalGlobals = { ...config.globalsStatic, ...config.globals };
+  const finalGlobals = { ...config.globalsStatic, ...initConfig.globals };
 
   const collector: Collector.Instance = {
     allowed: false,
     config,
-    consent: config.consent || {},
+    consent: initConfig.consent || {},
     count: 0,
-    custom: config.custom || {},
+    custom: initConfig.custom || {},
     destinations: {},
     globals: finalGlobals,
     group: '',
@@ -74,7 +48,7 @@ async function collector(
     round: 0,
     session: undefined,
     timing: Date.now(),
-    user: config.user || {},
+    user: initConfig.user || {},
     version,
     sources: {},
     push: undefined as unknown as Elb.Fn, // Placeholder, will be set below
@@ -93,10 +67,10 @@ async function collector(
   );
 
   // Initialize sources and destinations after collector is fully created
-  collector.sources = await initSources(collector, config.sources);
+  collector.sources = await initSources(collector, initConfig.sources || {});
   collector.destinations = await initDestinations(
     collector,
-    config.destinations,
+    initConfig.destinations || {},
   );
 
   return collector;

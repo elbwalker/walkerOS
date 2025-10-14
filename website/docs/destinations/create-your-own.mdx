@@ -123,10 +123,10 @@ To use your custom destination, add it to the `destinations` object in your
 collector configuration.
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationWebhook } from './destinationWebhook';
 
-const { elb } = await createCollector({
+const { elb } = await startFlow({
   destinations: {
     myWebhook: {
       destination: destinationWebhook,
@@ -210,3 +210,116 @@ declare global {
   }
 }
 ```
+
+## Environment Dependencies (Testing)
+
+The `env` parameter enables dependency injection for external APIs and SDKs. This allows you to test your destination logic without making actual API calls or requiring real browser globals.
+
+**Use Cases:**
+- Mock external SDKs (Google Analytics, Facebook Pixel, AWS SDK)
+- Test without network requests
+- Simulate different API responses
+- Run tests in any environment (Node.js, browser, CI)
+
+### Defining an Environment
+
+Define the external dependencies your destination needs:
+
+```typescript
+// types.ts - Web destination
+import type { DestinationWeb } from '@walkeros/web-core';
+
+export interface Env extends DestinationWeb.Env {
+  window: {
+    gtag: (command: string, ...args: unknown[]) => void;
+  };
+}
+
+// types.ts - Server destination
+import type { DestinationServer } from '@walkeros/server-core';
+import type { BigQuery } from '@google-cloud/bigquery';
+
+export interface Env extends DestinationServer.Env {
+  BigQuery?: typeof BigQuery;
+}
+```
+
+### Using Environment in Your Destination
+
+Use the 3rd generic parameter for type safety, then access env in `init` or `push`:
+
+```typescript
+import type { DestinationWeb } from '@walkeros/web-core';
+import { getEnv } from '@walkeros/web-core';
+
+interface Settings { /* ... */ }
+interface Mapping { /* ... */ }
+interface Env extends DestinationWeb.Env {
+  window: { customAPI: (event: string) => void };
+}
+
+// Add Env as 3rd generic parameter for proper typing
+export const destination: DestinationWeb.Destination<Settings, Mapping, Env> = {
+  type: 'custom',
+  config: {},
+
+  async init({ config, env }) {
+    // Initialize SDK using env, falls back to real APIs
+    const { window } = getEnv(env);
+    window.customAPI('init');
+    return config;
+  },
+
+  push(event, { config, env }) {
+    const { window } = getEnv(env);
+    window.customAPI(event.name);
+  },
+};
+```
+
+### Creating Test Environments
+
+Create reusable mock environments in an `examples/env.ts` file:
+
+```typescript
+// examples/env.ts
+import type { Env } from '../types';
+
+export const push: Env = {
+  window: {
+    customAPI: jest.fn(),
+  },
+};
+```
+
+Export from your examples index:
+
+```typescript
+// examples/index.ts
+export * as env from './env';
+```
+
+### Using in Tests
+
+```typescript
+import { clone } from '@walkeros/core';
+import { examples } from './index';
+
+describe('My Destination', () => {
+  it('calls custom API', async () => {
+    // Clone the example env to avoid mutations
+    const testEnv = clone(examples.env.push);
+
+    await destination.push(event, { config, env: testEnv });
+
+    expect(testEnv.window.customAPI).toHaveBeenCalledWith('page view');
+  });
+});
+```
+
+**Key Points:**
+- **Production**: No `env` needed, uses real APIs (window, fetch, SDKs)
+- **Testing**: Provide `env` with mocks for isolated testing
+- **Type Safety**: 3rd generic parameter gives full autocomplete
+- **Fallback**: `getEnv(env)` automatically uses real APIs if env not provided
+- **Reusable**: Store mock environments in `examples/env.ts` for consistency

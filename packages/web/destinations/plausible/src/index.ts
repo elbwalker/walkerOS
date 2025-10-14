@@ -1,7 +1,7 @@
 import type { Config, Destination } from './types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { isObject } from '@walkeros/core';
-import { getEnvironment } from '@walkeros/web-core';
+import { getEnv } from '@walkeros/web-core';
 
 // Types
 export * as DestinationPlausible from './types';
@@ -15,7 +15,7 @@ export const destinationPlausible: Destination = {
   config: {},
 
   init({ config, env }) {
-    const { window } = getEnvironment(env);
+    const { window } = getEnv(env);
     const w = window as Window;
     const settings = config.settings || {};
 
@@ -33,7 +33,7 @@ export const destinationPlausible: Destination = {
   push(event, { config, data, env }) {
     const params = isObject(data) ? data : {};
 
-    const { window } = getEnvironment(env);
+    const { window } = getEnv(env);
     const plausible = (window as Window).plausible!;
     plausible(`${event.name}`, params);
   },
@@ -41,10 +41,10 @@ export const destinationPlausible: Destination = {
 
 function addScript(
   domain?: string,
-  env?: DestinationWeb.Environment,
+  env?: DestinationWeb.Env,
   src = 'https://plausible.io/js/script.manual.js',
 ) {
-  const { document } = getEnvironment(env);
+  const { document } = getEnv(env);
   const doc = document as Document;
   const script = doc.createElement('script');
   script.src = src;

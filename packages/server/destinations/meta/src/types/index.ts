@@ -1,21 +1,8 @@
-import type { Mapping as WalkerOSMapping } from '@walkeros/core';
+import type {
+  Mapping as WalkerOSMapping,
+  Destination as CoreDestination,
+} from '@walkeros/core';
 import type { DestinationServer, sendServer } from '@walkeros/server-core';
-
-export interface Destination
-  extends DestinationServer.Destination<Settings, Mapping> {
-  init: DestinationServer.InitFn<Settings, Mapping>;
-}
-
-export type Config = {
-  settings: Settings;
-} & DestinationServer.Config<Settings, Mapping>;
-
-export type InitFn = DestinationServer.InitFn<Settings, Mapping>;
-export type PushFn = DestinationServer.PushFn<Settings, Mapping>;
-
-export type PartialConfig = DestinationServer.PartialConfig<Settings, Mapping>;
-
-export type PushEvents = DestinationServer.PushEvents<Mapping>;
 
 export interface Settings {
   accessToken: string;
@@ -29,9 +16,26 @@ export interface Settings {
 
 export interface Mapping {}
 
-export interface Environment {
-  sendServer: typeof sendServer;
+export interface Env extends DestinationServer.Env {
+  sendServer?: typeof sendServer;
 }
+
+export type Types = CoreDestination.Types<Settings, Mapping, Env>;
+
+export interface Destination extends DestinationServer.Destination<Types> {
+  init: DestinationServer.InitFn<Types>;
+}
+
+export type Config = {
+  settings: Settings;
+} & DestinationServer.Config<Types>;
+
+export type InitFn = DestinationServer.InitFn<Types>;
+export type PushFn = DestinationServer.PushFn<Types>;
+
+export type PartialConfig = DestinationServer.PartialConfig<Types>;
+
+export type PushEvents = DestinationServer.PushEvents<Mapping>;
 
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;

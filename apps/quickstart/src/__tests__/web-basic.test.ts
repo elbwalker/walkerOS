@@ -1,7 +1,7 @@
 import type { SendWebOptions } from '@walkeros/web-core';
 import type { WalkerOS, Mapping } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import sourceBrowser from '@walkeros/web-source-browser';
 import destinationAPI from '@walkeros/web-destination-api';
 import destinationGtag from '@walkeros/web-destination-gtag';
@@ -19,8 +19,8 @@ describe('walkerOS Web Basic Example', () => {
     });
     const consoleEvents: string[] = [];
 
-    // Create complete collector setup - demonstrates exact createCollector usage
-    const { elb } = await createCollector({
+    // Create complete collector setup - demonstrates exact startFlow usage
+    const { elb } = await startFlow({
       // Browser source for DOM events, sessions, pageviews
       sources: {
         browser: {

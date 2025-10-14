@@ -4,7 +4,7 @@ import type {
   CustomerInformationParameters,
   PushFn,
   ServerEventParameters,
-  Environment,
+  Env,
 } from './types';
 import { getMappingValue, isObject } from '@walkeros/core';
 import { sendServer } from '@walkeros/server-core';
@@ -69,8 +69,8 @@ export const push: PushFn = async function (
   // Test event code
   if (test_event_code) body.test_event_code = test_event_code;
 
-  const { sendServer } = env as unknown as Environment;
-  const result = await sendServer(
+  const sendServerFn = env?.sendServer || sendServer;
+  const result = await sendServerFn(
     `${url}${pixelId}/events?access_token=${accessToken}`,
     JSON.stringify(body),
   );

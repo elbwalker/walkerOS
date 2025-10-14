@@ -1,0 +1,367 @@
+---
+title: Create Your Own Source
+description: Guide to building custom sources for walkerOS
+sidebar_position: 99
+---
+
+import Link from '@docusaurus/Link';
+
+# Create Your Own Source
+
+A source captures events from an environment (browser, server, third-party API) and forwards them to the walkerOS collector.
+
+## The Source Interface
+
+Sources are async functions that receive configuration and environment, then return a source instance:
+
+```typescript
+type Source.Init<Types> = (
+  config: Partial<Source.Config<Types>>,
+  env: Source.Env<Types>,
+) => Promise<Source.Instance<Types>>;
+```
+
+The returned instance must implement:
+
+```typescript
+interface Source.Instance {
+  type: string; // Unique identifier
+  config: Source.Config; // Merged configuration
+  push: Elb.Fn; // Function to send events (forwards to env.elb)
+  destroy?(): void | Promise<void>; // Optional cleanup
+  on?(event, context): void | Promise<void>; // Optional reactive hooks
+}
+```
+
+## Types Bundle
+
+Sources use a `Types` interface to bundle all TypeScript types:
+
+```typescript
+import type { Source, Elb } from '@walkeros/core';
+
+// 1. Define your settings
+interface Settings {
+  captureClicks?: boolean;
+  prefix?: string;
+}
+
+// 2. Define environment dependencies
+interface Env extends Source.BaseEnv {
+  customAPI?: YourAPIType;
+}
+
+// 3. Bundle them together
+interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}
+```
+
+**The 4 type parameters**:
+
+1. **Settings**: Source configuration options
+2. **Mapping**: Event mapping (usually `never` for sources)
+3. **Push**: Push function type (typically `Elb.Fn`)
+4. **Env**: Environment dependencies (extends `Source.BaseEnv`)
+
+## Environment Parameter
+
+The `env` parameter is always provided by the collector and contains:
+
+- **`elb`**: Required - function to send events to collector (provided automatically)
+- **Custom dependencies**: Optional - any APIs your source needs (you provide via config)
+
+```typescript
+export const mySource: Source.Init<Types> = async (config, env) => {
+  const { elb, customAPI } = env;
+
+  // elb is guaranteed to exist (provided by collector)
+  // customAPI validation only needed if required by your source
+  if (!customAPI) {
+    throw new Error('Source requires customAPI in environment');
+  }
+
+  // Use elb to send events to collector
+  elb('my event', { data: 'value' });
+};
+```
+
+The collector always provides `env.elb`. You provide other dependencies (like `window`, `document`, custom APIs) when configuring the source.
+
+## Minimal Example
+
+```typescript
+import type { Source, Elb } from '@walkeros/core';
+
+interface Settings {
+  prefix?: string;
+}
+
+interface Env extends Source.BaseEnv {}
+
+interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}
+
+export const sourceCustom: Source.Init<Types> = async (config, env) => {
+  const { elb } = env;
+
+  const settings: Source.Settings<Types> = {
+    prefix: 'custom',
+    ...config?.settings,
+  };
+
+  const fullConfig: Source.Config<Types> = {
+    ...config,
+    settings,
+  };
+
+  return {
+    type: 'custom',
+    config: fullConfig,
+    push: elb,
+  };
+};
+```
+
+## Complete Example: Event API Source
+
+Capturing events from a third-party API with event listeners:
+
+```typescript
+import type { Source, Elb } from '@walkeros/core';
+
+// Your external API interface
+interface ExternalAPI {
+  on(event: string, handler: (data: unknown) => void): void;
+  off(event: string, handler: (data: unknown) => void): void;
+}
+
+interface Settings {
+  captureInteractions?: boolean;
+  captureErrors?: boolean;
+  prefix?: string;
+}
+
+interface Env extends Source.BaseEnv {
+  api?: ExternalAPI;
+}
+
+interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}
+
+export const sourceEventAPI: Source.Init<Types> = async (config, env) => {
+  const { elb, api } = env;
+
+  if (!api) throw new Error('Source requires api instance');
+
+  const settings: Source.Settings<Types> = {
+    captureInteractions: true,
+    captureErrors: true,
+    prefix: 'app',
+    ...config?.settings,
+  };
+
+  const handlers = new Map<string, (data: unknown) => void>();
+
+  // Register event handler
+  const register = (
+    event: string,
+    transform: (data: unknown) => { name: string; data: unknown },
+  ) => {
+    const handler = (data: unknown) => {
+      const transformed = transform(data);
+      elb(transformed.name, transformed.data);
+    };
+    api.on(event, handler);
+    handlers.set(event, handler);
+  };
+
+  // Set up event listeners based on settings
+  if (settings.captureInteractions) {
+    register('userAction', (data) => ({
+      name: `${settings.prefix} interaction`,
+      data,
+    }));
+  }
+
+  if (settings.captureErrors) {
+    register('error', (data) => ({
+      name: `${settings.prefix} error`,
+      data,
+    }));
+  }
+
+  return {
+    type: 'event-api',
+    config: { ...config, settings },
+    push: elb,
+    destroy: async () => {
+      handlers.forEach((handler, event) => api.off(event, handler));
+    },
+  };
+};
+```
+
+## Using Your Source
+
+```typescript
+import { startFlow } from '@walkeros/collector';
+import { sourceEventAPI } from './sourceEventAPI';
+
+const externalAPI = getYourAPI();
+
+const { elb } = await startFlow({
+  sources: {
+    eventAPI: {
+      code: sourceEventAPI,
+      config: {
+        settings: {
+          captureInteractions: true,
+          prefix: 'myapp',
+        },
+      },
+      env: {
+        api: externalAPI, // Collector provides elb automatically
+      },
+    },
+  },
+});
+```
+
+## Testing Your Source
+
+### Test Utilities
+
+```typescript
+// __tests__/test-utils.ts
+import type { Elb } from '@walkeros/core';
+
+export function createMockElb(): jest.MockedFunction<Elb.Fn> {
+  const mock = jest.fn();
+  mock.mockResolvedValue({
+    ok: true,
+    successful: [],
+    queued: [],
+    failed: [],
+  });
+  return mock as jest.MockedFunction<Elb.Fn>;
+}
+
+export function createMockAPI() {
+  return {
+    on: jest.fn(),
+    off: jest.fn(),
+  };
+}
+```
+
+### Test Example
+
+```typescript
+import { sourceEventAPI } from '../index';
+import { createMockElb, createMockAPI } from './test-utils';
+
+describe('Event API Source', () => {
+  it('validates required dependencies', async () => {
+    const elb = createMockElb();
+
+    await expect(
+      sourceEventAPI({ settings: {} }, { elb } as any)
+    ).rejects.toThrow('requires api');
+  });
+
+  it('registers event listeners', async () => {
+    const api = createMockAPI();
+    const elb = createMockElb();
+
+    await sourceEventAPI(
+      { settings: { captureInteractions: true } },
+      { elb, api }
+    );
+
+    expect(api.on).toHaveBeenCalledWith('userAction', expect.any(Function));
+  });
+
+  it('transforms and forwards events', async () => {
+    const api = createMockAPI();
+    const elb = createMockElb();
+
+    await sourceEventAPI({ settings: {} }, { elb, api });
+
+    // Simulate event
+    const handler = api.on.mock.calls[0][1];
+    handler({ action: 'click' });
+
+    expect(elb).toHaveBeenCalledWith('app interaction', { action: 'click' });
+  });
+
+  it('cleans up on destroy', async () => {
+    const api = createMockAPI();
+    const elb = createMockElb();
+
+    const source = await sourceEventAPI({ settings: {} }, { elb, api });
+    await source.destroy?.();
+
+    expect(api.off).toHaveBeenCalled();
+  });
+});
+```
+
+## Common Patterns
+
+### Polling for API Readiness
+
+When the external API isn't immediately available:
+
+```typescript
+async function waitForAPI<T>(getter: () => T | null): Promise<T> {
+  return new Promise((resolve) => {
+    const check = () => {
+      const instance = getter();
+      if (instance) resolve(instance);
+      else setTimeout(check, 100);
+    };
+    check();
+  });
+}
+
+// Usage
+const api = await waitForAPI(() => window.myAPI || null);
+```
+
+### Conditional Feature Setup
+
+```typescript
+if (settings.captureClicks && document) {
+  document.addEventListener('click', (e) => {
+    elb('element click', { tag: (e.target as HTMLElement).tagName });
+  });
+}
+```
+
+### Error Event Handling
+
+```typescript
+register('error', (data) => {
+  const error = data as { message: string; code?: number };
+  return {
+    name: `${settings.prefix} error`,
+    data: {
+      message: error.message,
+      code: error.code,
+      timestamp: Date.now(),
+    },
+  };
+});
+```
+
+## Key Concepts
+
+- **env is always provided**: Collector ensures env exists with elb
+- **Validate custom dependencies**: Only check optional env properties your source needs
+- **Types bundle**: Use 4-parameter pattern for full type safety
+- **Forward events**: Source's `push` typically just forwards to `elb`
+- **Cleanup**: Implement `destroy()` to remove listeners
+- **Stateless**: Let collector manage state
+
+## Next Steps
+
+- Review <Link to="/docs/sources/web/browser">Browser Source</Link> for DOM patterns
+- Review <Link to="/docs/sources/web/dataLayer">DataLayer Source</Link> for interception patterns
+- Learn about <Link to="/docs/destinations/create-your-own">creating destinations</Link>

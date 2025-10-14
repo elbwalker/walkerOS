@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type {
   Collector,
   Handler,
@@ -6,89 +7,132 @@ import type {
   WalkerOS,
 } from '.';
 
-export interface Instance<Settings = unknown, Mapping = unknown> {
-  config: Config<Settings, Mapping>; // Configuration settings for the destination
-  queue?: WalkerOS.Events; // Non processed events yet and reset with each new run
-  dlq?: DLQ; // Failed events
-  type?: string; // The type of the destination
-  env?: Environment; // Environment requirements (browser APIs, globals, etc.)
-  init?: InitFn<Settings, Mapping>;
-  push: PushFn<Settings, Mapping>;
-  pushBatch?: PushBatchFn<Settings, Mapping>;
+/**
+ * Base environment requirements interface for walkerOS destinations
+ *
+ * This defines the core interface that destinations can use to declare
+ * their runtime environment requirements. Platform-specific extensions
+ * should extend this interface.
+ */
+export interface BaseEnv {
+  /**
+   * Generic global properties that destinations may require
+   * Platform-specific implementations can extend this interface
+   */
+  [key: string]: unknown;
+}
+
+/**
+ * Type bundle for destination generics.
+ * Groups Settings, Mapping, and Env into a single type parameter.
+ */
+export interface Types<S = unknown, M = unknown, E = BaseEnv> {
+  settings: S;
+  mapping: M;
+  env: E;
+}
+
+/**
+ * Generic constraint for Types - ensures T has required properties for indexed access
+ */
+export type TypesGeneric = { settings: any; mapping: any; env: any };
+
+/**
+ * Type extractors for consistent usage with Types bundle
+ */
+export type Settings<T extends TypesGeneric = Types> = T['settings'];
+export type Mapping<T extends TypesGeneric = Types> = T['mapping'];
+export type Env<T extends TypesGeneric = Types> = T['env'];
+
+/**
+ * Inference helper: Extract Types from Instance
+ */
+export type TypesOf<I> = I extends Instance<infer T> ? T : never;
+
+export interface Instance<T extends TypesGeneric = Types> {
+  config: Config<T>;
+  queue?: WalkerOS.Events;
+  dlq?: DLQ;
+  type?: string;
+  env?: Env<T>;
+  init?: InitFn<T>;
+  push: PushFn<T>;
+  pushBatch?: PushBatchFn<T>;
   on?: On.OnFn;
 }
 
-export interface Config<Settings = unknown, Mapping = unknown> {
-  consent?: WalkerOS.Consent; // Required consent states to init and push events
-  settings?: Settings; // Destination-specific configuration settings
-  data?: WalkerOSMapping.Value | WalkerOSMapping.Values; // Mapping of event data
-  env?: Environment; // Environment override for testing/simulation
-  id?: string; // A unique key for the destination
-  init?: boolean; // If the destination has been initialized by calling the init method
-  loadScript?: boolean; // If an additional script to work should be loaded
-  mapping?: WalkerOSMapping.Rules<WalkerOSMapping.Rule<Mapping>>; // A map to handle events individually
-  policy?: Policy; // Rules for processing events
-  queue?: boolean; // Disable processing of previously pushed events
-  verbose?: boolean; // Enable verbose logging
-  onError?: Handler.Error; // Custom error handler
-  onLog?: Handler.Log; // Custom log handler
+export interface Config<T extends TypesGeneric = Types> {
+  consent?: WalkerOS.Consent;
+  settings?: Settings<T>;
+  data?: WalkerOSMapping.Value | WalkerOSMapping.Values;
+  env?: Env<T>;
+  id?: string;
+  init?: boolean;
+  loadScript?: boolean;
+  mapping?: WalkerOSMapping.Rules<WalkerOSMapping.Rule<Mapping<T>>>;
+  policy?: Policy;
+  queue?: boolean;
+  verbose?: boolean;
+  onError?: Handler.Error;
+  onLog?: Handler.Log;
 }
 
-export type PartialConfig<Settings = unknown, Mapping = unknown> = Config<
-  Partial<Settings> | Settings,
-  Partial<Mapping> | Mapping
+export type PartialConfig<T extends TypesGeneric = Types> = Config<
+  Types<
+    Partial<Settings<T>> | Settings<T>,
+    Partial<Mapping<T>> | Mapping<T>,
+    Env<T>
+  >
 >;
 
 export interface Policy {
   [key: string]: WalkerOSMapping.Value;
 }
 
-export type Init<Settings = unknown, Mapping = unknown> = {
-  code: Instance<Settings, Mapping>;
-  config?: Partial<Config<Settings, Mapping>>;
-  env?: Partial<Environment>;
+export type Init<T extends TypesGeneric = Types> = {
+  code: Instance<T>;
+  config?: Partial<Config<T>>;
+  env?: Partial<Env<T>>;
 };
 
 export interface InitDestinations {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: Init<any, any>;
+  [key: string]: Init<any>;
 }
 
 export interface Destinations {
   [key: string]: Instance;
 }
 
-// Context interfaces for destination functions
-export interface Context<Settings = unknown, Mapping = unknown> {
+export interface Context<T extends TypesGeneric = Types> {
   collector: Collector.Instance;
-  config: Config<Settings, Mapping>;
+  config: Config<T>;
   data?: Data;
-  env: Environment;
+  env: Env<T>;
 }
 
-export interface PushContext<Settings = unknown, Mapping = unknown>
-  extends Context<Settings, Mapping> {
-  mapping?: WalkerOSMapping.Rule<Mapping>;
+export interface PushContext<T extends TypesGeneric = Types>
+  extends Context<T> {
+  mapping?: WalkerOSMapping.Rule<Mapping<T>>;
 }
 
-export interface PushBatchContext<Settings = unknown, Mapping = unknown>
-  extends Context<Settings, Mapping> {
-  mapping?: WalkerOSMapping.Rule<Mapping>;
+export interface PushBatchContext<T extends TypesGeneric = Types>
+  extends Context<T> {
+  mapping?: WalkerOSMapping.Rule<Mapping<T>>;
 }
 
-// Updated function signatures with context-based parameters
-export type InitFn<Settings, Mapping> = (
-  context: Context<Settings, Mapping>,
-) => WalkerOS.PromiseOrValue<void | false | Config<Settings, Mapping>>;
+export type InitFn<T extends TypesGeneric = Types> = (
+  context: Context<T>,
+) => WalkerOS.PromiseOrValue<void | false | Config<T>>;
 
-export type PushFn<Settings, Mapping> = (
+export type PushFn<T extends TypesGeneric = Types> = (
   event: WalkerOS.Event,
-  context: PushContext<Settings, Mapping>,
+  context: PushContext<T>,
 ) => WalkerOS.PromiseOrValue<void>;
 
-export type PushBatchFn<Settings, Mapping> = (
-  batch: Batch<Mapping>,
-  context: PushBatchContext<Settings, Mapping>,
+export type PushBatchFn<T extends TypesGeneric = Types> = (
+  batch: Batch<Mapping<T>>,
+  context: PushBatchContext<T>,
 ) => void;
 
 export type PushEvent<Mapping = unknown> = {
@@ -126,18 +170,3 @@ export type Result = {
   queued: Array<Ref>;
   failed: Array<Ref>;
 };
-
-/**
- * Base environment requirements interface for walkerOS destinations
- *
- * This defines the core interface that destinations can use to declare
- * their runtime environment requirements. Platform-specific extensions
- * should extend this interface.
- */
-export interface Environment {
-  /**
-   * Generic global properties that destinations may require
-   * Platform-specific implementations can extend this interface
-   */
-  [key: string]: unknown;
-}

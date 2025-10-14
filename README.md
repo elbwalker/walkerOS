@@ -47,13 +47,13 @@ npm install @walkeros/collector @walkeros/web-source-browser
 Initialize walkerOS in your project:
 
 ```javascript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createSource } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 // Initialize walkerOS
 export async function initializeWalker() {
-  const { collector } = await createCollector({
+  const { collector } = await startFlow({
     sources: {
       browser: createSource(sourceBrowser, {
         settings: {
@@ -79,7 +79,7 @@ For websites without build tools, you can install from a CDN:
 ```html
 <script>
   // Load the collector, core utilities, and source
-  const { createCollector } = await import(
+  const { startFlow } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
   );
   const { createSource } = await import(
@@ -90,7 +90,7 @@ For websites without build tools, you can install from a CDN:
   );
 
   // Initialize walkerOS
-  const { collector, elb } = await createCollector({
+  const { collector, elb } = await startFlow({
     destinations: {
       console: {
         push: (event) => console.log('Event:', event),
@@ -118,7 +118,7 @@ Here's a quick look at how to integrate walkerOS into a React application.
 ```tsx
 // src/walker.ts
 import type { Collector, WalkerOS } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createSource } from '@walkeros/core';
 import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
 
@@ -132,7 +132,7 @@ declare global {
 export async function initializeWalker(): Promise<void> {
   if (window.walker) return;
 
-  const { collector } = await createCollector({
+  const { collector } = await startFlow({
     run: false, // Defer run to handle route changes
     sources: {
       browser: createSource(sourceBrowser, {

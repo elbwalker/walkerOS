@@ -2,14 +2,14 @@ import type { WalkerOS } from '@walkeros/core';
 import type { GA4Settings } from '../types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { addScript, initializeGtag } from '../shared/gtag';
-import { getEnvironment } from '@walkeros/web-core';
+import { getEnv } from '@walkeros/web-core';
 
 export function initGA4(
   settings: GA4Settings,
   loadScript?: boolean,
-  env?: DestinationWeb.Environment,
+  env?: DestinationWeb.Env,
 ): void {
-  const { window, document } = getEnvironment(env);
+  const { window, document } = getEnv(env);
   const { measurementId, transport_url, server_container_url, pageview } =
     settings;
 

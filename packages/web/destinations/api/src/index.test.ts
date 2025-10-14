@@ -1,6 +1,6 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { DestinationAPI } from '.';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createEvent, clone } from '@walkeros/core';
 import { examples } from '.';
 
@@ -12,7 +12,7 @@ describe('Destination API', () => {
   const url = 'https://api.example.com/';
 
   // Create test environment using clone and modify sendWeb function
-  const testEnv = clone(examples.env.standard);
+  const testEnv = clone(examples.env.push);
   testEnv.sendWeb = mockSendWeb;
 
   beforeEach(async () => {
@@ -20,7 +20,7 @@ describe('Destination API', () => {
 
     destination = jest.requireActual('.').default;
     event = createEvent();
-    await createCollector({
+    await startFlow({
       tagging: 2,
     });
   });

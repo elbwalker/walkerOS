@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationAPI } from '@walkeros/web-destination-api';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
@@ -18,7 +18,7 @@ export async function setupWebBasic(): Promise<{
   collector: unknown;
   elb: WalkerOS.Elb;
 }> {
-  const { collector, elb } = await createCollector({
+  const { collector, elb } = await startFlow({
     // Browser source captures DOM events, handles sessions and pageviews
     sources: {
       browser: {

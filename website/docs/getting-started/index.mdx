@@ -50,12 +50,12 @@ Initialize walkerOS in your project. See the quickstart guides for more details.
 
 ```javascript
 import type { WalkerOS } from '@walkeros/core';
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 // Initialize walkerOS
 export async function initializeWalker(): Promise<void> {
-  const { collector, elb } = await createCollector({
+  const { collector, elb } = await startFlow({
     sources: {
       browser: {
         code: sourceBrowser,
@@ -88,7 +88,7 @@ For websites without build tools install from CDN or host the files yourself:
 ```html
 <script>
   // Load the collector and source
-  const { createCollector } = await import(
+  const { startFlow } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
   );
   const { sourceBrowser } = await import(
@@ -96,7 +96,7 @@ For websites without build tools install from CDN or host the files yourself:
   );
 
   // Initialize walkerOS
-  const { collector, elb } = await createCollector({
+  const { collector, elb } = await startFlow({
     sources: {
       browser: {
         code: sourceBrowser,

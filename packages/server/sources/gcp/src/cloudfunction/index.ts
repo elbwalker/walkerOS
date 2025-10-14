@@ -1,5 +1,5 @@
 import type {
-  Environment,
+  Env,
   CloudFunctionSource,
   Settings,
   EventResponse,
@@ -7,6 +7,7 @@ import type {
   Request,
   Response,
   Mapping,
+  Types,
 } from './types';
 import type { Source } from '@walkeros/core';
 import { isEventRequest, setCorsHeaders } from './utils';
@@ -14,14 +15,17 @@ import { processEvent } from './push';
 
 export * as SourceCloudFunction from './types';
 
+// Export examples
+export * as examples from './examples';
+
 const DEFAULT_SETTINGS: Settings = {
   cors: true,
   timeout: 30000,
 };
 
 export const sourceCloudFunction = async (
-  config: Partial<Source.Config<Settings, Mapping>> = {},
-  env: Environment,
+  config: Partial<Source.Config<Types>> = {},
+  env: Env,
 ): Promise<CloudFunctionSource> => {
   const { elb } = env;
 
@@ -36,7 +40,7 @@ export const sourceCloudFunction = async (
     ...(config.settings || {}),
   };
 
-  const fullConfig: Source.Config<Settings, Mapping> = {
+  const fullConfig: Source.Config<Types> = {
     ...config,
     settings,
   };

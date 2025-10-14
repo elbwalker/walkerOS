@@ -1,4 +1,4 @@
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
 import { initElbLayer } from '../elbLayer';
 import type { WalkerOS, Collector, On } from '@walkeros/core';
@@ -43,7 +43,7 @@ describe('Elb Layer', () => {
     }) as jest.MockedFunction<Collector.Instance['push']>;
 
     // Initialize collector
-    ({ collector } = await createCollector());
+    ({ collector } = await startFlow());
 
     // Override push with mock
     collector.push = mockPush;

@@ -1,4 +1,4 @@
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { createBrowserSource } from './test-utils';
 import type { WalkerOS, Collector } from '@walkeros/core';
 
@@ -26,7 +26,7 @@ describe('Browser Source Integration Tests', () => {
     }) as jest.MockedFunction<Collector.Instance['push']>;
 
     // Initialize collector without any sources to avoid initial triggers
-    ({ collector } = await createCollector());
+    ({ collector } = await startFlow());
 
     // Override push with mock
     collector.push = mockPush;

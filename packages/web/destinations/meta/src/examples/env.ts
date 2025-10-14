@@ -1,4 +1,4 @@
-import type { Environment } from '../types';
+import type { Env } from '../types';
 
 /**
  * Example environment configurations for Meta Pixel destination
@@ -10,10 +10,10 @@ import type { Environment } from '../types';
 // Simple no-op function for mocking
 const noop = () => {};
 
-export const init: Environment | undefined = {
+export const init: Env | undefined = {
   // Environment before initialization (fbq not loaded yet)
   window: {
-    fbq: undefined as unknown as Environment['window']['fbq'],
+    fbq: undefined as unknown as Env['window']['fbq'],
     _fbq: undefined,
   },
   document: {
@@ -28,7 +28,7 @@ export const init: Environment | undefined = {
   },
 };
 
-export const standard: Environment = {
+export const push: Env = {
   // Standard mock environment for testing
   window: {
     fbq: Object.assign(noop, {
@@ -38,14 +38,14 @@ export const standard: Environment = {
       push: noop,
       loaded: true,
       version: '2.0',
-    }) as unknown as Environment['window']['fbq'],
+    }) as unknown as Env['window']['fbq'],
     _fbq: Object.assign(noop, {
       callMethod: noop,
       queue: [] as unknown[],
       push: noop,
       loaded: true,
       version: '2.0',
-    }) as unknown as Environment['window']['_fbq'],
+    }) as unknown as Env['window']['_fbq'],
   },
   document: {
     createElement: () =>
@@ -60,4 +60,4 @@ export const standard: Environment = {
 };
 
 // Future: error scenarios (v2)
-// export const error: Environment = { ... };
+// export const error: Env = { ... };

@@ -5,7 +5,7 @@ import type { AdsSettings, AdsMapping } from '../types';
 
 describe('Google Ads Implementation', () => {
   const mockGtag = jest.fn();
-  const mockEnv = clone(examples.env.standard);
+  const mockEnv = clone(examples.env.push);
   mockEnv.window.gtag = mockGtag;
 
   beforeEach(() => {

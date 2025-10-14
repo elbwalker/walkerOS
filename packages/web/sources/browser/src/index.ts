@@ -1,5 +1,5 @@
 import type { Source, WalkerOS, On } from '@walkeros/core';
-import type { Scope, Settings, Environment } from './types';
+import type { Scope, Types } from './types';
 import type {
   BrowserPushData,
   BrowserPushOptions,
@@ -7,7 +7,6 @@ import type {
   BrowserPush,
 } from './types/elb';
 import { isString } from '@walkeros/core';
-import { getEnvironment } from '@walkeros/web-core';
 import { initTriggers, processLoadTriggers, ready } from './trigger';
 import { destroyVisibilityTracking } from './triggerVisible';
 import { initElbLayer } from './elbLayer';
@@ -17,6 +16,9 @@ import { getPageViewData } from './walker';
 import { getConfig } from './config';
 
 export * as SourceBrowser from './types';
+
+// Export examples
+export * as examples from './examples';
 
 // Export walker utility functions
 export {
@@ -37,29 +39,34 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
  * This source captures DOM events, manages sessions, handles pageviews,
  * and processes the elbLayer for browser environments.
  */
-export const sourceBrowser: Source.Init<Settings> = async (
-  config: Partial<Source.Config<Settings>>,
-  env?: Source.Environment,
+export const sourceBrowser: Source.Init<Types> = async (
+  config: Partial<Source.Config<Types>>,
+  env: Source.Env<Types>,
 ) => {
   try {
-    // Extract and validate environment dependencies
-    const browserEnv = (env || {}) as Environment;
-    const { elb } = browserEnv;
-
-    if (!elb) {
-      throw new Error('Browser source requires elb function in environment');
-    }
+    // Extract environment dependencies
+    const { elb, window, document } = env;
 
     // Get configuration from config parameter, merged with defaults
     const userSettings = config?.settings || {};
-    const { window, document } = getEnvironment(env);
-    const settings: Settings = getConfig(
+    const actualWindow =
+      window ||
+      (typeof globalThis.window !== 'undefined'
+        ? globalThis.window
+        : undefined);
+    const actualDocument =
+      document ||
+      (typeof globalThis.document !== 'undefined'
+        ? globalThis.document
+        : undefined);
+
+    const settings: Source.Settings<Types> = getConfig(
       userSettings,
-      document as Document | undefined,
+      actualDocument as Document | undefined,
     );
 
     // Full configuration with defaults
-    const fullConfig: Source.Config<Settings> = {
+    const fullConfig: Source.Config<Types> = {
       settings,
     };
 
@@ -72,13 +79,13 @@ export const sourceBrowser: Source.Init<Settings> = async (
     // Initialize features if environment is available
     // Skip all DOM-related functionality when not in browser environment
 
-    if (window && document) {
+    if (actualWindow && actualDocument) {
       // Initialize ELB Layer for async command handling
       if (settings.elbLayer !== false) {
         initElbLayer(elb, {
           name: isString(settings.elbLayer) ? settings.elbLayer : 'elbLayer',
           prefix: settings.prefix,
-          window: window as Window,
+          window: actualWindow as Window,
         });
       }
 
@@ -117,7 +124,7 @@ export const sourceBrowser: Source.Init<Settings> = async (
 
       // Set up automatic window.elb assignment if configured
       if (isString(settings.elb) && settings.elb) {
-        (window as unknown as Record<string, unknown>)[settings.elb] = (
+        (actualWindow as unknown as Record<string, unknown>)[settings.elb] = (
           ...args: unknown[]
         ) => {
           const [event, data, options, context, nested, custom] = args;
@@ -159,7 +166,7 @@ export const sourceBrowser: Source.Init<Settings> = async (
 
         case 'run':
           // React to collector run events - re-process load triggers
-          if (document && window) {
+          if (actualDocument && actualWindow) {
             processLoadTriggers(translationContext, settings);
 
             // Send pageview if enabled
@@ -205,8 +212,10 @@ export const sourceBrowser: Source.Init<Settings> = async (
       push,
       destroy: async () => {
         // Cleanup visibility tracking and other resources
-        if (document) {
-          destroyVisibilityTracking(settings.scope || (document as Document));
+        if (actualDocument) {
+          destroyVisibilityTracking(
+            settings.scope || (actualDocument as Document),
+          );
         }
       },
       on: handleEvent,

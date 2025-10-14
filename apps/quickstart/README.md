@@ -59,9 +59,9 @@ npm run lint
 
 ```typescript
 // Minimal configuration only
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 
-const collector = createCollector({
+const collector = startFlow({
   // Only required parameters
 });
 
