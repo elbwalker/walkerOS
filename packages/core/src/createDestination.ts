@@ -1,4 +1,5 @@
 import type { Destination } from './types';
+import type { TypesOf, Config } from './types/destination';
 import { assign } from './assign';
 
 /**
@@ -21,13 +22,10 @@ import { assign } from './assign';
  */
 export function createDestination<I extends Destination.Instance>(
   baseDestination: I,
-  config: Partial<Destination.Config<Destination.TypesOf<I>>>,
+  config: Partial<Config<TypesOf<I>>>,
 ): I {
   // Create a shallow copy of the base destination to avoid mutations
   const newDestination = { ...baseDestination };
-
-  // Extract types for clean usage
-  type T = Destination.TypesOf<I>;
 
   // Deep merge the config, handling nested objects like settings and mapping
   newDestination.config = assign(baseDestination.config, config, {
