@@ -25,6 +25,7 @@ describe('Elb Layer', () => {
   let collectedEvents: WalkerOS.Event[];
   let collector: Collector.Instance;
   let mockPush: jest.MockedFunction<Collector.Instance['push']>;
+  let mockElb: jest.MockedFunction<any>;
 
   beforeEach(async () => {
     // Clear any existing elbLayer
@@ -32,7 +33,7 @@ describe('Elb Layer', () => {
     collectedEvents = [];
 
     // Create mock push function
-    mockPush = jest.fn().mockImplementation((...args: unknown[]) => {
+    mockPush = jest.fn().mockImplementation((...args: any[]) => {
       collectedEvents.push(args[0] as WalkerOS.Event);
       return Promise.resolve({
         ok: true,
@@ -42,11 +43,21 @@ describe('Elb Layer', () => {
       });
     }) as jest.MockedFunction<Collector.Instance['push']>;
 
+    // Create mock elb function that handles both events and commands
+    mockElb = jest.fn().mockImplementation((arg1: any, arg2?: any) => {
+      // Pass through to mockPush with all arguments
+      return arg2 !== undefined ? mockPush(arg1, arg2) : mockPush(arg1);
+    }) as jest.MockedFunction<any>;
+
     // Initialize collector
     ({ collector } = await startFlow());
 
     // Override push with mock
     collector.push = mockPush;
+    // Ensure elb source exists for tests
+    if (collector.sources.elb) {
+      collector.sources.elb.push = mockElb;
+    }
   });
 
   afterEach(() => {
@@ -59,7 +70,7 @@ describe('Elb Layer', () => {
     test('creates elbLayer array on window', () => {
       expect(getWindowElbLayer()).toBeUndefined();
 
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       expect(getWindowElbLayer()).toBeDefined();
       expect(Array.isArray(getWindowElbLayer())).toBe(true);
@@ -71,7 +82,7 @@ describe('Elb Layer', () => {
         (window as Window & { customLayer?: unknown }).customLayer,
       ).toBeUndefined();
 
-      initElbLayer(collector.push, { name: 'customLayer' });
+      initElbLayer(mockElb, { name: 'customLayer' });
 
       expect(
         (window as Window & { customLayer?: unknown }).customLayer,
@@ -87,7 +98,7 @@ describe('Elb Layer', () => {
     test('preserves existing elbLayer if present', () => {
       setWindowElbLayer([['existing', 'commands'] as unknown[]]);
 
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       expect(getWindowElbLayer()).toBeDefined();
       expect(Array.isArray(getWindowElbLayer())).toBe(true);
@@ -104,7 +115,7 @@ describe('Elb Layer', () => {
         ['product click', { id: 'test' }] as unknown[],
       ]);
 
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       expect(mockPush).toHaveBeenCalledTimes(2);
       expect(getWindowElbLayer()).toHaveLength(0); // Commands cleared after processing
@@ -118,7 +129,7 @@ describe('Elb Layer', () => {
         ['walker user', { id: 'user123' }] as unknown[], // Walker command
       ]);
 
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       // All commands should be processed, including walker run
       expect(mockPush).toHaveBeenCalledTimes(4);
@@ -147,7 +158,7 @@ describe('Elb Layer', () => {
         ['test event', { key: 'value' }, 'load'] as unknown[],
       ]);
 
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith(
@@ -168,7 +179,7 @@ describe('Elb Layer', () => {
 
       setWindowElbLayer([eventObject as unknown]);
 
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       expect(mockPush).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith(eventObject);
@@ -181,7 +192,7 @@ describe('Elb Layer', () => {
         {} as unknown, // Empty object
       ]);
 
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       // Should not throw and should not call push for invalid commands
       expect(mockPush).not.toHaveBeenCalled();
@@ -247,7 +258,7 @@ describe('Elb Layer', () => {
         ['entity name', { prop: 'value' }, 'trigger_type'] as unknown[],
       ]);
 
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -268,7 +279,7 @@ describe('Elb Layer', () => {
         ] as unknown[],
       ]);
 
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       expect(mockPush).toHaveBeenCalledWith('walker user', { id: 'user123' });
     });
@@ -288,7 +299,7 @@ describe('Elb Layer', () => {
 
       // Should not throw
       expect(() => {
-        initElbLayer(collector.push);
+        initElbLayer(mockElb);
       }).not.toThrow();
 
       // Commands should still be cleared
@@ -302,7 +313,7 @@ describe('Elb Layer', () => {
       setWindowElbLayer([['test event', circular] as unknown[]]);
 
       expect(() => {
-        initElbLayer(collector.push);
+        initElbLayer(mockElb);
       }).not.toThrow();
     });
   });
@@ -315,7 +326,7 @@ describe('Elb Layer', () => {
 
       testElb('test event', { key: 'value' }, 'load');
 
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -327,7 +338,7 @@ describe('Elb Layer', () => {
     });
 
     test('enhanced elbLayer.push processes arguments immediately', () => {
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       function testElb(...args: unknown[]) {
         pushToElbLayer(arguments);
@@ -358,7 +369,7 @@ describe('Elb Layer', () => {
 
       setWindowElbLayer([['product', element] as unknown[]]);
 
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -379,7 +390,7 @@ describe('Elb Layer', () => {
 
       setWindowElbLayer([['page view'] as unknown[]]);
 
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
 
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -443,7 +454,7 @@ describe('Elb Layer', () => {
       setWindowElbLayer(commands as unknown[]);
 
       const startTime = performance.now();
-      initElbLayer(collector.push);
+      initElbLayer(mockElb);
       const endTime = performance.now();
 
       expect(endTime - startTime).toBeLessThan(100); // Should process in under 100ms

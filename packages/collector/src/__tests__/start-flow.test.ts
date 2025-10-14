@@ -2,13 +2,14 @@ import { startFlow } from '../flow';
 import type { Source, WalkerOS, Elb } from '@walkeros/core';
 
 describe('Source Start Flow Integration', () => {
-  it('should return collector.push as elb when no sources', async () => {
+  it('should return ELB source push as elb when no sources', async () => {
     const { collector, elb } = await startFlow({
       run: false,
     });
 
-    // elb should be collector.push when no sources exist
-    expect(elb).toBe(collector.push);
+    // elb should be the ELB source's push function
+    expect(collector.sources.elb).toBeDefined();
+    expect(elb).toBe(collector.sources.elb.push);
   });
 
   it('should return first source push as elb by default', async () => {
@@ -126,7 +127,10 @@ describe('Source Start Flow Integration', () => {
         },
       });
 
-      expect(env).toEqual({
+      expect(env).toMatchObject({
+        push: expect.any(Function),
+        command: expect.any(Function),
+        sources: expect.any(Object),
         elb: expect.any(Function),
         foo: 'bar',
       });
@@ -136,7 +140,7 @@ describe('Source Start Flow Integration', () => {
         config: {
           settings: config.settings || {},
         },
-        push: env!.elb, // Required push method
+        push: env!.push as Elb.Fn, // Required push method
       };
     };
 
@@ -168,15 +172,14 @@ describe('Source Start Flow Integration', () => {
       },
     });
 
-    expect(collector.sources).toEqual({
-      mockSource: {
-        type: 'mock',
-        config: {
-          settings: { test: 'value' },
-        },
-        push: expect.any(Function), // Sources now include push method
+    expect(collector.sources.mockSource).toEqual({
+      type: 'mock',
+      config: {
+        settings: { test: 'value' },
       },
+      push: expect.any(Function),
     });
+    expect(collector.sources.elb).toBeDefined();
 
     await elb({ name: 'manual event', data: { test: 'data' } });
 

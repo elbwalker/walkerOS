@@ -2,22 +2,61 @@ import type { WalkerOS, Elb, Collector, Source } from '@walkeros/core';
 import { sourceDataLayer } from '../index';
 import type { Types } from '../types';
 
-// Test utility for creating properly typed mock elb function
+// Test utility for creating properly typed mock push function
 export function createMockPush(collectedEvents: WalkerOS.Event[]) {
-  const mockElb = jest.fn();
+  const mockPush = jest.fn();
 
-  // Handle the different overloads of Elb.Fn
-  mockElb.mockImplementation((event: unknown, ...args: unknown[]) => {
-    collectedEvents.push(event as WalkerOS.Event);
+  // Handle Collector.PushFn signature: (event: DeepPartialEvent, context?) => Promise<PushResult>
+  mockPush.mockImplementation((event: WalkerOS.DeepPartialEvent) => {
+    // Create a full event from partial event
+    // Extract entity/action from name
+    const nameParts = (event.name || '').split(' ');
+    const entity = nameParts[0] || '';
+    const action = nameParts.slice(1).join(' ') || '';
+
+    const fullEvent: WalkerOS.Event = {
+      id: `test-${Date.now()}-${Math.random()}`,
+      name: event.name || 'unknown',
+      entity,
+      action,
+      data: event.data || {},
+      context: event.context || {},
+      globals: event.globals || {},
+      user: event.user || {},
+      nested: (event.nested || []).filter(
+        (n): n is WalkerOS.Entity => n !== undefined,
+      ),
+      consent: Object.entries(event.consent || {}).reduce((acc, [key, val]) => {
+        if (val !== undefined) acc[key] = val;
+        return acc;
+      }, {} as WalkerOS.Consent),
+      custom: event.custom || {},
+      trigger: event.trigger || '',
+      timestamp: event.timestamp || Date.now(),
+      timing: event.timing || 0,
+      group: event.group || '',
+      count: event.count || 0,
+      version: {
+        source: event.version?.source || '1.0.0',
+        tagging: event.version?.tagging || 2,
+      },
+      source: {
+        type: event.source?.type || 'dataLayer',
+        id: event.source?.id || '',
+        previous_id: event.source?.previous_id || '',
+      },
+    };
+    collectedEvents.push(fullEvent);
     return Promise.resolve({
       ok: true,
+      event: fullEvent,
       successful: [],
       queued: [],
       failed: [],
     });
   });
 
-  return mockElb as jest.MockedFunction<Elb.Fn>;
+  return mockPush as jest.MockedFunction<Collector.PushFn>;
 }
 
 // Type assertion for dataLayer
@@ -31,7 +70,9 @@ export async function createDataLayerSource(
   config?: Partial<Source.Config<Types>>,
 ): Promise<Source.Instance<Types>> {
   return await sourceDataLayer(config || {}, {
-    elb: collector.push.bind(collector),
+    push: collector.push.bind(collector),
+    command: collector.command.bind(collector),
+    elb: collector.sources.elb.push,
     window,
   });
 }

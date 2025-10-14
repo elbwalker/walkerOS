@@ -1,4 +1,4 @@
-import type { Source, Elb } from '@walkeros/core';
+import type { Source, Elb, Collector } from '@walkeros/core';
 import type { SessionConfig, SessionCallback } from '@walkeros/web-core';
 
 // Export browser-specific elb types
@@ -29,15 +29,15 @@ export interface Mapping {}
 export type Push = Elb.Fn;
 
 export interface Env extends Source.BaseEnv {
+  elb: Elb.Fn;
   window?: Window & typeof globalThis;
   document?: Document;
 }
 
 export type Types = Source.Types<Settings, Mapping, Push, Env>;
 
-// Context for translation functions with elb and settings
 export interface Context {
-  elb: Elb.Fn; // Direct elb access
+  elb: Elb.Fn;
   settings: Settings;
 }
 

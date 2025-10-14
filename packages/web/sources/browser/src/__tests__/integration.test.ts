@@ -148,15 +148,12 @@ describe('Browser Source Integration Tests', () => {
       // Initialize source - should process existing commands
       await createBrowserSource(collector, { pageview: false });
 
-      // Should process the 3 commands (no walker on registration anymore)
-      expect(mockPush).toHaveBeenCalledTimes(3);
+      // Should process the 2 events (walker command goes to collector.command)
+      expect(mockPush).toHaveBeenCalledTimes(2);
 
-      // Walker commands are processed first, then events
-      expect(mockPush).toHaveBeenNthCalledWith(1, 'walker run', {
-        consent: { marketing: true },
-      });
+      // Events are processed in order
       expect(mockPush).toHaveBeenNthCalledWith(
-        2,
+        1,
         expect.objectContaining({
           name: 'page view',
           data: expect.objectContaining({ title: 'Home' }),
@@ -164,13 +161,80 @@ describe('Browser Source Integration Tests', () => {
         }),
       );
       expect(mockPush).toHaveBeenNthCalledWith(
-        3,
+        2,
         expect.objectContaining({
           name: 'product click',
           data: expect.objectContaining({ id: '123' }),
           trigger: 'click',
         }),
       );
+    });
+
+    test('routes walker commands to collector.command (not collector.push)', async () => {
+      // Mock collector.command to verify routing
+      const mockCommand = jest.fn().mockResolvedValue({
+        ok: true,
+        successful: [],
+        queued: [],
+        failed: [],
+      });
+      collector.command = mockCommand;
+
+      // Pre-populate elbLayer with walker commands and events
+      window.elbLayer = [
+        ['walker run', { consent: { marketing: true } }],
+        ['walker user', { id: 'user123' }],
+        ['page view', { title: 'Test Page' }],
+      ];
+
+      // Clear mockPush to verify clean separation
+      mockPush.mockClear();
+
+      // Initialize source
+      await createBrowserSource(collector, { pageview: false });
+
+      // Walker commands should go to collector.command (2 commands)
+      expect(mockCommand).toHaveBeenCalledTimes(2);
+      expect(mockCommand).toHaveBeenNthCalledWith(
+        1,
+        'run',
+        { consent: { marketing: true } },
+        undefined,
+      );
+      expect(mockCommand).toHaveBeenNthCalledWith(
+        2,
+        'user',
+        { id: 'user123' },
+        undefined,
+      );
+
+      // Events should go to collector.push (1 event)
+      expect(mockPush).toHaveBeenCalledTimes(1);
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'page view',
+          data: expect.objectContaining({ title: 'Test Page' }),
+        }),
+      );
+
+      // Verify clean separation: commands never hit push, events never hit command
+      const pushCalls = mockPush.mock.calls;
+      const commandCalls = mockCommand.mock.calls;
+
+      pushCalls.forEach((call) => {
+        const firstArg = call[0];
+        // Ensure no walker commands in push calls
+        if (typeof firstArg === 'string') {
+          expect(firstArg).not.toMatch(/^walker /);
+        }
+      });
+
+      commandCalls.forEach((call) => {
+        const [command] = call;
+        // Ensure all command calls are from walker commands (no 'walker ' prefix after extraction)
+        expect(command).not.toMatch(/^walker /);
+        expect(['run', 'user']).toContain(command);
+      });
     });
   });
 

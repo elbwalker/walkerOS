@@ -1,19 +1,20 @@
-import type { Mapping, WalkerOS } from './types';
-import { getByPath } from './byPath';
+import type { Mapping, WalkerOS, Collector } from './types';
+import { getByPath, setByPath } from './byPath';
 import { isArray, isDefined, isString, isObject } from './is';
 import { castToProperty } from './property';
 import { tryCatchAsync } from './tryCatch';
 import { getGrantedConsent } from './consent';
+import { assign } from './assign';
 
 /**
  * Gets the mapping for an event.
  *
- * @param event The event to get the mapping for.
+ * @param event The event to get the mapping for (can be partial or full).
  * @param mapping The mapping rules.
  * @returns The mapping result.
  */
 export async function getMappingEvent(
-  event: WalkerOS.PartialEvent,
+  event: WalkerOS.DeepPartialEvent | WalkerOS.PartialEvent | WalkerOS.Event,
   mapping?: Mapping.Rules,
 ): Promise<Mapping.Result> {
   const [entity, action] = (event.name || '').split(' ');
@@ -189,4 +190,74 @@ async function processMappingValue(
     },
     Promise.resolve(undefined as WalkerOS.Property | undefined),
   );
+}
+
+/**
+ * Processes an event through mapping configuration.
+ *
+ * This is the unified mapping logic used by both sources and destinations.
+ * It applies transformations in this order:
+ * 1. Policy - modifies the event itself
+ * 2. Mapping rules - finds matching rule, checks ignore, overrides name
+ * 3. Data transformation - creates context data
+ *
+ * Sources can pass partial events, destinations pass full events.
+ * getMappingValue works with both partial and full events.
+ *
+ * @param event - The event to process (can be partial or full, will be mutated by policy)
+ * @param config - Mapping configuration (mapping, data, policy, consent)
+ * @param collector - Collector instance for context
+ * @returns Object with transformed event, data, mapping rule, and ignore flag
+ */
+export async function processEventMapping<
+  T extends WalkerOS.DeepPartialEvent | WalkerOS.Event,
+>(
+  event: T,
+  config: Mapping.Config,
+  collector: Collector.Instance,
+): Promise<{
+  event: T;
+  data?: WalkerOS.Property;
+  mapping?: Mapping.Rule;
+  ignore: boolean;
+}> {
+  // Step 1: Apply policy (modifies event)
+  if (config.policy) {
+    await Promise.all(
+      Object.entries(config.policy).map(async ([key, mapping]) => {
+        const value = await getMappingValue(event, mapping, { collector });
+        event = setByPath(event, key, value);
+      }),
+    );
+  }
+
+  // Step 2: Get event mapping rule
+  const { eventMapping } = await getMappingEvent(event, config.mapping);
+
+  // Step 3: Transform global data
+  let data =
+    config.data && (await getMappingValue(event, config.data, { collector }));
+
+  if (eventMapping) {
+    // Check if event should be ignored
+    if (eventMapping.ignore) {
+      return { event, data, mapping: eventMapping, ignore: true };
+    }
+
+    // Override event name if specified
+    if (eventMapping.name) event.name = eventMapping.name;
+
+    // Transform event-specific data
+    if (eventMapping.data) {
+      const dataEvent =
+        eventMapping.data &&
+        (await getMappingValue(event, eventMapping.data, { collector }));
+      data =
+        isObject(data) && isObject(dataEvent) // Only merge objects
+          ? assign(data, dataEvent)
+          : dataEvent;
+    }
+  }
+
+  return { event, data, mapping: eventMapping, ignore: false };
 }

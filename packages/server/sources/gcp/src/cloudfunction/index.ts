@@ -27,11 +27,11 @@ export const sourceCloudFunction = async (
   config: Partial<Source.Config<Types>> = {},
   env: Env,
 ): Promise<CloudFunctionSource> => {
-  const { elb } = env;
+  const { push: envPush } = env;
 
-  if (!elb) {
+  if (!envPush) {
     throw new Error(
-      'Cloud Function source requires elb function in environment',
+      'Cloud Function source requires push function in environment',
     );
   }
 
@@ -73,7 +73,7 @@ export const sourceCloudFunction = async (
       const body = req.body as RequestBody;
 
       if (isEventRequest(body)) {
-        const result = await processEvent(body, elb);
+        const result = await processEvent(body, envPush);
 
         if (result.error) {
           res.status(400).json({

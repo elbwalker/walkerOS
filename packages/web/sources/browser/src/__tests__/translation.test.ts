@@ -18,6 +18,7 @@ describe('Translation Layer', () => {
   let collector: Collector.Instance;
   let collectedEvents: WalkerOS.Event[];
   let mockPush: jest.MockedFunction<Collector.Instance['push']>;
+  let mockElb: jest.MockedFunction<any>;
 
   beforeEach(async () => {
     collectedEvents = [];
@@ -36,7 +37,7 @@ describe('Translation Layer', () => {
     });
 
     // Create mock push function
-    mockPush = jest.fn((...args: unknown[]) => {
+    mockPush = jest.fn((...args: any[]) => {
       collectedEvents.push(args[0] as WalkerOS.Event);
       return Promise.resolve({
         ok: true,
@@ -45,6 +46,11 @@ describe('Translation Layer', () => {
         failed: [],
       });
     }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
+
+    // Create simple mock elb that just passes through to mockPush
+    mockElb = jest.fn((arg1, arg2) =>
+      arg2 !== undefined ? mockPush(arg1, arg2) : mockPush(arg1),
+    );
 
     // Initialize collector
     ({ collector } = await startFlow());
@@ -57,7 +63,7 @@ describe('Translation Layer', () => {
     test('adds source information to string events', async () => {
       // Test direct translation call
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -81,7 +87,7 @@ describe('Translation Layer', () => {
     test('adds source information to flexible format events', async () => {
       // Test with number as event (falls through to flexible format)
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         123,
         { value: 'test' },
         undefined,
@@ -105,7 +111,7 @@ describe('Translation Layer', () => {
     test('normalizes non-object data to empty object (legacy behavior)', async () => {
       // Test with primitive data - should become empty object
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         'test event',
         'primitive string data',
         undefined,
@@ -126,10 +132,35 @@ describe('Translation Layer', () => {
       );
     });
 
+    test('passes walker commands to elb for routing', async () => {
+      // Test that walker commands are passed to elb (which handles routing to collector.command)
+      const isolatedMockElb = jest.fn().mockResolvedValue({
+        ok: true,
+        successful: [],
+        queued: [],
+        failed: [],
+      });
+
+      await translateToCoreCollector(
+        { elb: isolatedMockElb, settings: createTestSettings() },
+        'walker run',
+        { consent: { marketing: true } },
+      );
+
+      // Verify browser source called elb correctly (routing responsibility)
+      expect(isolatedMockElb).toHaveBeenCalledWith('walker run', {
+        consent: { marketing: true },
+      });
+
+      // Verify it's a walker command (starts with 'walker ')
+      const [command] = isolatedMockElb.mock.calls[0];
+      expect(command).toMatch(/^walker /);
+    });
+
     test('does not add source information to walker commands', async () => {
       // Test walker command
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         'walker config',
         {
           verbose: true,
@@ -149,7 +180,7 @@ describe('Translation Layer', () => {
       };
 
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         eventObject,
       );
 
@@ -165,7 +196,7 @@ describe('Translation Layer', () => {
       });
 
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         'test event',
         { id: 123 },
       );
@@ -191,7 +222,7 @@ describe('Translation Layer', () => {
       });
 
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         'navigation event',
         {
           page: 'test',
@@ -281,7 +312,7 @@ describe('Translation Layer', () => {
   describe('Context Normalization', () => {
     test('handles undefined context', async () => {
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -302,7 +333,7 @@ describe('Translation Layer', () => {
       element.className = 'test-class';
 
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -318,7 +349,7 @@ describe('Translation Layer', () => {
 
     test('handles empty object context', async () => {
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -339,7 +370,7 @@ describe('Translation Layer', () => {
       };
 
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         'test event',
         { id: 123 },
         undefined,
@@ -363,7 +394,7 @@ describe('Translation Layer', () => {
       });
 
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         'test event',
         { id: 123 },
       );
@@ -382,7 +413,7 @@ describe('Translation Layer', () => {
     test('handles malformed events with source', async () => {
       // Test with empty string event
       await translateToCoreCollector(
-        { elb: collector.push, settings: createTestSettings() },
+        { elb: mockElb, settings: createTestSettings() },
         '',
         { test: true },
       );

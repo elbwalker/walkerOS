@@ -20,7 +20,7 @@ export const sourceDataLayer: Source.Init<Types> = async (
 ) => {
   try {
     // Extract environment dependencies
-    const { elb, window: envWindow } = env;
+    const { push: envPush, window: envWindow } = env;
 
     // Default configuration, merged with provided config
     const settings: Source.Settings<Types> = {
@@ -37,15 +37,15 @@ export const sourceDataLayer: Source.Init<Types> = async (
     // Initialize dataLayer interception if window is available
     if (envWindow) {
       // Process existing events in dataLayer
-      processExistingEvents(elb, fullConfig);
+      processExistingEvents(envPush, fullConfig);
 
       // Set up interception for new events
-      interceptDataLayer(elb, fullConfig);
+      interceptDataLayer(envPush, fullConfig);
     }
 
     // DataLayer sources typically intercept existing dataLayer.push calls
-    // The push method here forwards to the core collector elb function
-    const push: Elb.Fn = elb;
+    // The push method here forwards to the core collector push function
+    const push: Elb.Fn = envPush as Elb.Fn;
 
     // Return stateless source instance
     return {

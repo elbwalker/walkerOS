@@ -167,7 +167,6 @@ function pushCommand(
           return;
         }
 
-        // Regular events go through translation
         translateToCoreCollector(
           {
             elb,

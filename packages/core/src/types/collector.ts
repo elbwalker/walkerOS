@@ -6,6 +6,7 @@ import type {
   Hooks,
   On,
   WalkerOS,
+  Mapping,
 } from '.';
 
 /**
@@ -83,9 +84,65 @@ export type CommandType =
   | 'walker'
   | string;
 
+/**
+ * Context passed to collector.push for source mapping
+ */
+export interface PushContext {
+  mapping?: Mapping.Config;
+}
+
+/**
+ * Push function signature - handles events only
+ */
+export interface PushFn {
+  (
+    event: WalkerOS.DeepPartialEvent,
+    context?: PushContext,
+  ): Promise<ElbTypes.PushResult>;
+}
+
+/**
+ * Command function signature - handles walker commands only
+ */
+export interface CommandFn {
+  (command: 'config', config: Partial<Config>): Promise<ElbTypes.PushResult>;
+  (command: 'consent', consent: WalkerOS.Consent): Promise<ElbTypes.PushResult>;
+  <T extends Destination.Types>(
+    command: 'destination',
+    destination: Destination.Init<T> | Destination.Instance<T>,
+    config?: Destination.Config<T>,
+  ): Promise<ElbTypes.PushResult>;
+  <K extends keyof Hooks.Functions>(
+    command: 'hook',
+    name: K,
+    hookFn: Hooks.Functions[K],
+  ): Promise<ElbTypes.PushResult>;
+  (
+    command: 'on',
+    type: On.Types,
+    rules: WalkerOS.SingleOrArray<On.Options>,
+  ): Promise<ElbTypes.PushResult>;
+  (command: 'user', user: WalkerOS.User): Promise<ElbTypes.PushResult>;
+  (
+    command: 'run',
+    runState?: {
+      consent?: WalkerOS.Consent;
+      user?: WalkerOS.User;
+      globals?: WalkerOS.Properties;
+      custom?: WalkerOS.Properties;
+    },
+  ): Promise<ElbTypes.PushResult>;
+  (
+    command: string,
+    data?: unknown,
+    options?: unknown,
+  ): Promise<ElbTypes.PushResult>;
+}
+
 // Main Collector interface
 export interface Instance {
-  push: ElbTypes.Fn;
+  push: PushFn;
+  command: CommandFn;
   allowed: boolean;
   config: Config;
   consent: WalkerOS.Consent;

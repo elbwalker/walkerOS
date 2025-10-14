@@ -57,11 +57,18 @@ function createMockResponse(): Response & {
 }
 
 describe('sourceCloudFunction', () => {
-  let mockElb: jest.MockedFunction<(...args: unknown[]) => unknown>;
+  let mockPush: jest.MockedFunction<(...args: unknown[]) => unknown>;
+  let mockCommand: jest.MockedFunction<(...args: unknown[]) => unknown>;
 
   beforeEach(() => {
-    mockElb = jest.fn().mockResolvedValue({
+    mockPush = jest.fn().mockResolvedValue({
       event: { id: 'test-id' },
+      ok: true,
+      successful: [],
+      queued: [],
+      failed: [],
+    });
+    mockCommand = jest.fn().mockResolvedValue({
       ok: true,
       successful: [],
       queued: [],
@@ -71,7 +78,14 @@ describe('sourceCloudFunction', () => {
 
   describe('initialization', () => {
     it('should initialize with default settings', async () => {
-      const source = await sourceCloudFunction({}, { elb: mockElb as never });
+      const source = await sourceCloudFunction(
+        {},
+        {
+          push: mockPush as never,
+          command: mockCommand as never,
+          elb: jest.fn() as never,
+        },
+      );
 
       expect(source.type).toBe('cloudfunction');
       expect(source.config.settings).toEqual({
@@ -89,7 +103,9 @@ describe('sourceCloudFunction', () => {
       };
 
       const source = await sourceCloudFunction(config, {
-        elb: mockElb as never,
+        push: mockPush as never,
+        command: mockCommand as never,
+        elb: jest.fn() as never,
       });
 
       expect(source.config.settings).toEqual({
@@ -98,18 +114,32 @@ describe('sourceCloudFunction', () => {
       });
     });
 
-    it('should throw error when elb is not provided', async () => {
+    it('should throw error when push is not provided', async () => {
       await expect(
-        sourceCloudFunction({}, { elb: undefined as never }),
+        sourceCloudFunction(
+          {},
+          {
+            push: undefined as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+          },
+        ),
       ).rejects.toThrow(
-        'Cloud Function source requires elb function in environment',
+        'Cloud Function source requires push function in environment',
       );
     });
   });
 
   describe('handler functionality', () => {
     it('should handle OPTIONS requests for CORS', async () => {
-      const source = await sourceCloudFunction({}, { elb: mockElb as never });
+      const source = await sourceCloudFunction(
+        {},
+        {
+          push: mockPush as never,
+          command: mockCommand as never,
+          elb: jest.fn() as never,
+        },
+      );
       const req = createMockRequest('OPTIONS');
       const res = createMockResponse();
 
@@ -117,11 +147,18 @@ describe('sourceCloudFunction', () => {
 
       expect(res.status).toHaveBeenCalledWith(204);
       expect(res.send).toHaveBeenCalled();
-      expect(mockElb).not.toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
     });
 
     it('should reject non-POST methods', async () => {
-      const source = await sourceCloudFunction({}, { elb: mockElb as never });
+      const source = await sourceCloudFunction(
+        {},
+        {
+          push: mockPush as never,
+          command: mockCommand as never,
+          elb: jest.fn() as never,
+        },
+      );
       const req = createMockRequest('GET');
       const res = createMockResponse();
 
@@ -135,7 +172,14 @@ describe('sourceCloudFunction', () => {
     });
 
     it('should require request body', async () => {
-      const source = await sourceCloudFunction({}, { elb: mockElb as never });
+      const source = await sourceCloudFunction(
+        {},
+        {
+          push: mockPush as never,
+          command: mockCommand as never,
+          elb: jest.fn() as never,
+        },
+      );
       const req = createMockRequest('POST', undefined);
       const res = createMockResponse();
 
@@ -151,7 +195,14 @@ describe('sourceCloudFunction', () => {
 
   describe('single event processing', () => {
     it('should process valid single event', async () => {
-      const source = await sourceCloudFunction({}, { elb: mockElb as never });
+      const source = await sourceCloudFunction(
+        {},
+        {
+          push: mockPush as never,
+          command: mockCommand as never,
+          elb: jest.fn() as never,
+        },
+      );
       const eventRequest: EventRequest = {
         event: 'page view',
         data: { title: 'Test Page' },
@@ -162,7 +213,14 @@ describe('sourceCloudFunction', () => {
 
       await source.push(req, res);
 
-      expect(mockElb).toHaveBeenCalledWith('page view', { title: 'Test Page' });
+      expect(mockPush).toHaveBeenCalledWith({
+        name: 'page view',
+        data: { title: 'Test Page' },
+        context: undefined,
+        user: undefined,
+        globals: undefined,
+        consent: undefined,
+      });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         success: true,
@@ -171,10 +229,17 @@ describe('sourceCloudFunction', () => {
     });
 
     it('should handle event processing errors', async () => {
-      const errorElb = jest
+      const errorPush = jest
         .fn()
         .mockRejectedValue(new Error('Processing failed'));
-      const source = await sourceCloudFunction({}, { elb: errorElb });
+      const source = await sourceCloudFunction(
+        {},
+        {
+          push: errorPush,
+          command: mockCommand as never,
+          elb: jest.fn() as never,
+        },
+      );
       const eventRequest: EventRequest = {
         event: 'error event',
         data: { test: true },
@@ -197,7 +262,11 @@ describe('sourceCloudFunction', () => {
     it('should set default CORS headers when enabled', async () => {
       const source = await sourceCloudFunction(
         { settings: { cors: true } },
-        { elb: mockElb as never },
+        {
+          push: mockPush as never,
+          command: mockCommand as never,
+          elb: jest.fn() as never,
+        },
       );
 
       const req = createMockRequest('OPTIONS');
@@ -229,7 +298,11 @@ describe('sourceCloudFunction', () => {
             },
           },
         },
-        { elb: mockElb as never },
+        {
+          push: mockPush as never,
+          command: mockCommand as never,
+          elb: jest.fn() as never,
+        },
       );
 
       const req = createMockRequest('OPTIONS');
@@ -259,7 +332,11 @@ describe('sourceCloudFunction', () => {
     it('should not set CORS headers when disabled', async () => {
       const source = await sourceCloudFunction(
         { settings: { cors: false } },
-        { elb: mockElb as never },
+        {
+          push: mockPush as never,
+          command: mockCommand as never,
+          elb: jest.fn() as never,
+        },
       );
 
       const req = createMockRequest('OPTIONS');
@@ -273,7 +350,14 @@ describe('sourceCloudFunction', () => {
 
   describe('error handling', () => {
     it('should handle invalid request format', async () => {
-      const source = await sourceCloudFunction({}, { elb: mockElb as never });
+      const source = await sourceCloudFunction(
+        {},
+        {
+          push: mockPush as never,
+          command: mockCommand as never,
+          elb: jest.fn() as never,
+        },
+      );
       const req = createMockRequest('POST', { invalid: 'format' });
       const res = createMockResponse();
 
@@ -289,7 +373,14 @@ describe('sourceCloudFunction', () => {
 
   describe('destroy', () => {
     it('should complete destroy without errors', async () => {
-      const source = await sourceCloudFunction({}, { elb: mockElb as never });
+      const source = await sourceCloudFunction(
+        {},
+        {
+          push: mockPush as never,
+          command: mockCommand as never,
+          elb: jest.fn() as never,
+        },
+      );
 
       // Cloud Functions are stateless, so destroy should complete without action
       expect(source.destroy).toBeUndefined();

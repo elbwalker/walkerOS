@@ -9,70 +9,82 @@ import {
   getMappingValue,
   isDefined,
   isObject,
+  processEventMapping,
   setByPath,
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
 import { createEventOrCommand } from './handle';
 
-export type HandleCommandFn<T extends Collector.Instance> = (
-  collector: T,
-  action: string,
-  data?: Elb.PushData,
-  options?: unknown,
-) => Promise<Elb.PushResult>;
-
 /**
- * Creates the main push function for the collector.
+ * Creates the push function for the collector.
+ * Handles events only (commands go through collector.command).
  *
- * @template T, F
- * @param collector - The walkerOS collector instance.
- * @param handleCommand - TBD.
- * @param prepareEvent - TBD.
- * @returns The push function.
+ * @param collector - The walkerOS collector instance
+ * @param prepareEvent - Function to enrich partial events
+ * @returns The push function
  */
 export function createPush<T extends Collector.Instance>(
   collector: T,
-  handleCommand: HandleCommandFn<T>,
   prepareEvent: (event: WalkerOS.DeepPartialEvent) => WalkerOS.PartialEvent,
-): Elb.Fn {
+): Collector.PushFn {
   return useHooks(
     async (
-      eventOrCommand: unknown,
-      data?: Elb.PushData,
-      options?: unknown,
+      event: WalkerOS.DeepPartialEvent,
+      context: Collector.PushContext = {},
     ): Promise<Elb.PushResult> => {
       return await tryCatchAsync(
         async (): Promise<Elb.PushResult> => {
-          // Handle simplified core collector interface
-          if (
-            typeof eventOrCommand === 'string' &&
-            eventOrCommand.startsWith('walker ')
-          ) {
-            // Walker command format: 'walker action', data, options
-            const command = eventOrCommand.replace('walker ', '');
-            return await handleCommand(collector, command, data, options);
-          } else {
-            // Event format: event object or string
-            const partialEvent =
-              typeof eventOrCommand === 'string'
-                ? { name: eventOrCommand }
-                : (eventOrCommand as WalkerOS.DeepPartialEvent);
+          let partialEvent = event;
 
-            const enrichedEvent = prepareEvent(partialEvent);
-
-            const { event, command } = createEventOrCommand(
+          // Apply source mapping if provided in context
+          if (context.mapping) {
+            const processed = await processEventMapping(
+              partialEvent,
+              context.mapping,
               collector,
-              enrichedEvent.name,
-              enrichedEvent,
             );
 
-            const result = command
-              ? await handleCommand(collector, command, data, options)
-              : await pushToDestinations(collector, event);
+            // Check ignore flag
+            if (processed.ignore) {
+              return createPushResult({ ok: true });
+            }
 
-            return result;
+            // Check consent requirements
+            if (context.mapping.consent) {
+              const grantedConsent = getGrantedConsent(
+                context.mapping.consent,
+                collector.consent,
+                processed.event.consent as WalkerOS.Consent | undefined,
+              );
+
+              if (!grantedConsent) {
+                return createPushResult({ ok: true });
+              }
+            }
+
+            partialEvent = processed.event;
           }
+
+          // Prepare event (add timing, source info)
+          const enrichedEvent = prepareEvent(partialEvent);
+
+          // Create full event
+          const { event: fullEvent, command } = createEventOrCommand(
+            collector,
+            enrichedEvent.name,
+            enrichedEvent,
+          );
+
+          // Commands should not come through push
+          if (command) {
+            throw new Error(
+              `Command "${command}" should use collector.command() instead of collector.push()`,
+            );
+          }
+
+          // Push to destinations
+          return await pushToDestinations(collector, fullEvent);
         },
         () => {
           return createPushResult({ ok: false });
@@ -81,7 +93,7 @@ export function createPush<T extends Collector.Instance>(
     },
     'Push',
     collector.hooks,
-  ) as Elb.Fn;
+  ) as Collector.PushFn;
 }
 
 /**
@@ -163,19 +175,9 @@ export async function pushToDestinations(
       // Add event to queue stack
       if (event) {
         // Clone the event to avoid mutating the original event
-        let currentEvent = clone(event);
+        const currentEvent = clone(event);
 
-        // Policy check
-        await Promise.all(
-          Object.entries(destination.config.policy || []).map(
-            async ([key, mapping]) => {
-              const value = await getMappingValue(event, mapping, {
-                collector,
-              });
-              currentEvent = setByPath(currentEvent, key, value);
-            },
-          ),
-        );
+        // Note: Policy is now applied in processEventMapping() within destinationPush()
 
         // Add event to queue stack
         currentQueue.push(currentEvent);
@@ -335,38 +337,23 @@ export async function destinationPush<Destination extends Destination.Instance>(
   event: WalkerOS.Event,
 ): Promise<boolean> {
   const { config } = destination;
+
+  // Use extracted mapping function (SAME code, now reusable)
   const { eventMapping, mappingKey } = await getMappingEvent(
     event,
     config.mapping,
   );
+  const processed = await processEventMapping(event, config, collector);
 
-  let data =
-    config.data && (await getMappingValue(event, config.data, { collector }));
+  // Ignore event if mapping says so
+  if (processed.ignore) return false;
 
-  if (eventMapping) {
-    // Check if event should be processed or ignored
-    if (eventMapping.ignore) return false;
-
-    // Check to use specific event names
-    if (eventMapping.name) event.name = eventMapping.name;
-
-    // Transform event to a custom data
-    if (eventMapping.data) {
-      const dataEvent =
-        eventMapping.data &&
-        (await getMappingValue(event, eventMapping.data, { collector }));
-      data =
-        isObject(data) && isObject(dataEvent) // Only merge objects
-          ? assign(data, dataEvent)
-          : dataEvent;
-    }
-  }
-
+  // Use processed event and data
   const context: Destination.PushContext = {
     collector,
     config,
-    data,
-    mapping: eventMapping,
+    data: processed.data,
+    mapping: processed.mapping,
     env: mergeEnvironments(destination.env, config.env),
   };
 
@@ -376,8 +363,8 @@ export async function destinationPush<Destination extends Destination.Instance>(
       events: [],
       data: [],
     };
-    batched.events.push(event);
-    if (isDefined(data)) batched.data.push(data);
+    batched.events.push(processed.event);
+    if (isDefined(processed.data)) batched.data.push(processed.data);
 
     eventMapping.batchFn =
       eventMapping.batchFn ||
@@ -385,7 +372,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
         const batchContext: Destination.PushBatchContext = {
           collector,
           config,
-          data,
+          data: processed.data,
           mapping: eventMapping,
           env: mergeEnvironments(destination.env, config.env),
         };
@@ -409,7 +396,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
       destination.push,
       'DestinationPush',
       collector.hooks,
-    )(event, context);
+    )(processed.event, context);
   }
 
   return true;

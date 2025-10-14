@@ -1,5 +1,5 @@
-import type { Source, WalkerOS, On } from '@walkeros/core';
-import type { Scope, Types } from './types';
+import type { Source, WalkerOS, On, Elb } from '@walkeros/core';
+import type { Scope, Types, Env } from './types';
 import type {
   BrowserPushData,
   BrowserPushOptions,
@@ -41,13 +41,11 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
  */
 export const sourceBrowser: Source.Init<Types> = async (
   config: Partial<Source.Config<Types>>,
-  env: Source.Env<Types>,
+  env: Env,
 ) => {
   try {
-    // Extract environment dependencies
     const { elb, window, document } = env;
 
-    // Get configuration from config parameter, merged with defaults
     const userSettings = config?.settings || {};
     const actualWindow =
       window ||
@@ -65,12 +63,10 @@ export const sourceBrowser: Source.Init<Types> = async (
       actualDocument as Document | undefined,
     );
 
-    // Full configuration with defaults
     const fullConfig: Source.Config<Types> = {
       settings,
     };
 
-    // Create translation context
     const translationContext = {
       elb,
       settings,
@@ -81,7 +77,7 @@ export const sourceBrowser: Source.Init<Types> = async (
 
     if (actualWindow && actualDocument) {
       // Initialize ELB Layer for async command handling
-      if (settings.elbLayer !== false) {
+      if (settings.elbLayer !== false && elb) {
         initElbLayer(elb, {
           name: isString(settings.elbLayer) ? settings.elbLayer : 'elbLayer',
           prefix: settings.prefix,
@@ -90,7 +86,7 @@ export const sourceBrowser: Source.Init<Types> = async (
       }
 
       // Initialize session if enabled
-      if (settings.session) {
+      if (settings.session && elb) {
         const sessionConfig =
           typeof settings.session === 'boolean' ? {} : settings.session;
         sessionStart(elb, sessionConfig);
@@ -147,7 +143,7 @@ export const sourceBrowser: Source.Init<Types> = async (
         case 'consent':
           // React to consent changes - sources can implement specific consent handling
           // For browser source, we might want to re-evaluate session settings
-          if (settings.session && context) {
+          if (settings.session && context && elb) {
             const sessionConfig =
               typeof settings.session === 'boolean' ? {} : settings.session;
             sessionStart(elb, sessionConfig);

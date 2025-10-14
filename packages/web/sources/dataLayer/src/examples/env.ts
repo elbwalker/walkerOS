@@ -30,6 +30,12 @@ const createMockWindow = () => ({
  * without requiring a real browser environment.
  */
 export const push: DataLayerEnv = {
+  get push() {
+    return jest.fn();
+  },
+  get command() {
+    return jest.fn();
+  },
   get elb() {
     return jest.fn();
   },

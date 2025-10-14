@@ -46,7 +46,10 @@ describe('Server Collector', () => {
     const { elb, collector: instance } = await getCollector();
     expect(elb).toBeDefined();
     expect(instance).toBeDefined();
-    expect(elb).toBe(instance.push);
+    // ELB is now the ELB source's push function, not the collector's push
+    expect(instance.sources.elb).toBeDefined();
+    expect(instance.push).toBeDefined();
+    expect(instance.command).toBeDefined();
   });
 
   test('add destination', async () => {
@@ -162,13 +165,13 @@ describe('Server Collector', () => {
 
     ({ collector } = await getCollector({ globalsStatic: { foo: 'bar' } }));
     collector.globals.a = 1;
-    await collector.push('walker globals', { b: 2 });
-    let result = await collector.push('e a');
+    await collector.command('globals', { b: 2 });
+    let result = await collector.push({ name: 'e a' });
     expect(result.event).toHaveProperty('count', 1);
     expect(result.event).toHaveProperty('globals', { foo: 'bar', a: 1, b: 2 });
 
-    await collector.push('walker run', { globals: { c: 3 } });
-    result = await collector.push('e a');
+    await collector.command('run', { globals: { c: 3 } });
+    result = await collector.push({ name: 'e a' });
     expect(result.event).toHaveProperty('count', 1);
     expect(result.event).toHaveProperty('globals', { foo: 'bar', c: 3 });
   });

@@ -22,10 +22,10 @@ export function translateToCoreCollector(
   custom?: WalkerOS.Properties,
 ): Promise<Elb.PushResult> {
   const { elb, settings } = context;
-  // Handle walker commands - pass through directly to elb
+
+  // Handle walker commands - pass through directly to elb (it will route to command)
   if (isString(eventOrCommand) && eventOrCommand.startsWith('walker ')) {
-    const result = elb(eventOrCommand, data as WalkerOS.Properties);
-    return result;
+    return elb(eventOrCommand, data as WalkerOS.Properties);
   }
 
   // Handle event objects - add source and globals if missing
