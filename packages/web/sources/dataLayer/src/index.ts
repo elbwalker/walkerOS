@@ -16,15 +16,11 @@ export * from './examples';
  */
 export const sourceDataLayer: Source.Init<Types> = async (
   config: Partial<Source.Config<Types>>,
-  env?: Source.Env<Types>,
+  env: Source.Env<Types>,
 ) => {
   try {
-    // Extract and validate environment dependencies
-    const { elb, window: envWindow } = env || {};
-
-    if (!elb) {
-      throw new Error('DataLayer source requires elb function in environment');
-    }
+    // Extract environment dependencies
+    const { elb, window: envWindow } = env;
 
     // Default configuration, merged with provided config
     const settings: Source.Settings<Types> = {

@@ -41,15 +41,11 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
  */
 export const sourceBrowser: Source.Init<Types> = async (
   config: Partial<Source.Config<Types>>,
-  env?: Source.Env<Types>,
+  env: Source.Env<Types>,
 ) => {
   try {
-    // Extract and validate environment dependencies
-    const { elb, window, document } = env || {};
-
-    if (!elb) {
-      throw new Error('Browser source requires elb function in environment');
-    }
+    // Extract environment dependencies
+    const { elb, window, document } = env;
 
     // Get configuration from config parameter, merged with defaults
     const userSettings = config?.settings || {};
