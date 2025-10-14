@@ -10,32 +10,34 @@ import type { Env } from '../types';
 /**
  * Mock BigQuery client class that simulates dataset/table operations
  */
-class MockBigQuery {
-  mockFn: jest.Mock;
-  options: unknown;
+function createMockBigQuery() {
+  return class MockBigQuery {
+    mockFn: jest.Mock;
+    options: unknown;
 
-  constructor(options?: unknown) {
-    this.options = options;
-    this.mockFn = jest.fn();
-    // Expose mockFn for test assertions - needed for test access pattern
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this as any).mockFn = this.mockFn;
-  }
+    constructor(options?: unknown) {
+      this.options = options;
+      this.mockFn = jest.fn();
+      // Expose mockFn for test assertions - needed for test access pattern
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (this as any).mockFn = this.mockFn;
+    }
 
-  dataset(datasetId: string) {
-    this.mockFn('dataset', datasetId);
-    return this;
-  }
+    dataset(datasetId: string) {
+      this.mockFn('dataset', datasetId);
+      return this;
+    }
 
-  table(tableId: string) {
-    this.mockFn('table', tableId);
-    return this;
-  }
+    table(tableId: string) {
+      this.mockFn('table', tableId);
+      return this;
+    }
 
-  async insert(rows: unknown[]) {
-    this.mockFn('insert', rows);
-    return Promise.resolve();
-  }
+    async insert(rows: unknown[]) {
+      this.mockFn('insert', rows);
+      return Promise.resolve();
+    }
+  };
 }
 
 /**
@@ -45,5 +47,7 @@ class MockBigQuery {
  * to actual GCP infrastructure.
  */
 export const push: Env = {
-  BigQuery: MockBigQuery as unknown as Env['BigQuery'],
+  get BigQuery() {
+    return createMockBigQuery() as unknown as Env['BigQuery'];
+  },
 };

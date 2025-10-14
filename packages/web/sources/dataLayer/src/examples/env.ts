@@ -17,11 +17,11 @@ interface DataLayerEnv extends Source.Env {
 /**
  * Mock window object with dataLayer array
  */
-const mockWindow = {
+const createMockWindow = () => ({
   dataLayer: [] as unknown[],
   addEventListener: jest.fn(),
   removeEventListener: jest.fn(),
-};
+});
 
 /**
  * Standard mock environment for testing dataLayer source
@@ -30,6 +30,10 @@ const mockWindow = {
  * without requiring a real browser environment.
  */
 export const push: DataLayerEnv = {
-  elb: jest.fn(),
-  window: mockWindow as unknown as typeof window,
+  get elb() {
+    return jest.fn();
+  },
+  get window() {
+    return createMockWindow() as unknown as typeof window;
+  },
 };

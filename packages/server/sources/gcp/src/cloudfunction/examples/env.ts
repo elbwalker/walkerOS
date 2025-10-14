@@ -14,5 +14,7 @@ import type { Env } from '../types';
  * without requiring a real GCP Cloud Function environment.
  */
 export const push: Env = {
-  elb: jest.fn(),
+  get elb() {
+    return jest.fn();
+  },
 };

@@ -10,7 +10,7 @@ import type { Env } from '../types';
 /**
  * Mock window object with common browser APIs
  */
-const mockWindow = {
+const createMockWindow = () => ({
   addEventListener: jest.fn(),
   removeEventListener: jest.fn(),
   location: {
@@ -38,12 +38,12 @@ const mockWindow = {
   pageYOffset: 0,
   scrollX: 0,
   scrollY: 0,
-};
+});
 
 /**
  * Mock document object with DOM methods
  */
-const mockDocument = {
+const createMockDocument = () => ({
   addEventListener: jest.fn(),
   removeEventListener: jest.fn(),
   querySelector: jest.fn(),
@@ -69,7 +69,7 @@ const mockDocument = {
   title: 'Test Page',
   referrer: '',
   cookie: '',
-};
+});
 
 /**
  * Standard mock environment for testing browser source
@@ -78,7 +78,13 @@ const mockDocument = {
  * without requiring a real browser environment.
  */
 export const push: Env = {
-  elb: jest.fn(),
-  window: mockWindow as unknown as typeof window,
-  document: mockDocument as unknown as typeof document,
+  get elb() {
+    return jest.fn();
+  },
+  get window() {
+    return createMockWindow() as unknown as typeof window;
+  },
+  get document() {
+    return createMockDocument() as unknown as typeof document;
+  },
 };
