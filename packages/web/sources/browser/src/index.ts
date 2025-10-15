@@ -1,4 +1,4 @@
-import type { Source, WalkerOS, On, Elb } from '@walkeros/core';
+import type { Source, WalkerOS, On } from '@walkeros/core';
 import type { Scope, Types, Env } from './types';
 import type {
   BrowserPushData,
@@ -187,8 +187,7 @@ export const sourceBrowser: Source.Init<Types> = async (
       }
     };
 
-    // Create browser-specific push method using translateToCoreCollector
-    const push = ((...args: Parameters<BrowserPush>) => {
+    const push: BrowserPush = ((...args: Parameters<BrowserPush>) => {
       const [event, data, options, context, nested, custom] = args;
       return translateToCoreCollector(
         translationContext,
@@ -199,7 +198,7 @@ export const sourceBrowser: Source.Init<Types> = async (
         nested,
         custom,
       );
-    }) as BrowserPush;
+    }) satisfies BrowserPush;
 
     // Return stateless source instance with event handler and push method
     const instance = {

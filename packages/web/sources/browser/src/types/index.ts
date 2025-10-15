@@ -3,6 +3,7 @@ import type { SessionConfig, SessionCallback } from '@walkeros/web-core';
 
 // Export browser-specific elb types
 export * from './elb';
+import type { BrowserPush } from './elb';
 
 // InitSettings: what users provide (all optional)
 export interface InitSettings extends Record<string, unknown> {
@@ -26,7 +27,7 @@ export interface Settings extends Record<string, unknown> {
 
 export interface Mapping {}
 
-export type Push = Elb.Fn;
+export type Push = BrowserPush;
 
 export interface Env extends Source.BaseEnv {
   elb: Elb.Fn;

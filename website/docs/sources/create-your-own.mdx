@@ -59,8 +59,8 @@ interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}
 
 1. **Settings**: Source configuration options
 2. **Mapping**: Event mapping (usually `never` for sources)
-3. **Push**: Push function type (typically `Elb.Fn`)
-4. **Env**: Environment dependencies (extends `Source.BaseEnv`)
+3. **Push**: External push signature (what `source.push` exposes)
+4. **Env**: Internal dependencies (what source calls via `env.elb`)
 
 ## Environment Parameter
 
@@ -351,12 +351,46 @@ register('error', (data) => {
 });
 ```
 
+## Source as Adapter Pattern
+
+Sources bridge external systems and the collector:
+
+```
+External System  ←→  Source (Adapter)  ←→  Collector
+```
+
+**Two interfaces:**
+
+1. **External (`source.push`)**: Platform-specific signature
+   - Browser: `push(elem, data, options)` → Returns `Promise<PushResult>`
+   - Server: `push(req, res)` → Returns `Promise<void>` (writes HTTP response)
+   - Your choice: Match your environment's needs
+
+2. **Internal (`env.elb`)**: Standard collector interface
+   - Always `Elb.Fn` - same across all sources
+   - Sources translate external inputs → standard events → `env.elb(event)`
+
+**Example signatures:**
+
+```typescript
+// Browser source
+export type Push = (elem?: Element, data?: Properties) => Promise<PushResult>;
+
+// HTTP handler source
+export type Push = (req: Request, res: Response) => Promise<void>;
+
+// Standard event source
+export type Push = Elb.Fn;
+```
+
+The `Push` type parameter defines what your source exposes externally. Internally, all sources use `env.elb` to forward to the collector.
+
 ## Key Concepts
 
 - **env is always provided**: Collector ensures env exists with elb
 - **Validate custom dependencies**: Only check optional env properties your source needs
 - **Types bundle**: Use 4-parameter pattern for full type safety
-- **Forward events**: Source's `push` typically just forwards to `elb`
+- **Adapter pattern**: External push adapts to environment, internal env.elb stays standard
 - **Cleanup**: Implement `destroy()` to remove listeners
 - **Stateless**: Let collector manage state
 
