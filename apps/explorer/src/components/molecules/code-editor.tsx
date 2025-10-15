@@ -8,6 +8,7 @@ export interface CodeEditorProps {
   disabled?: boolean;
   language?: string;
   className?: string;
+  theme?: 'light' | 'dark';
 }
 
 export function CodeEditor({
@@ -16,12 +17,15 @@ export function CodeEditor({
   disabled = false,
   language = 'javascript',
   className,
+  theme = 'light',
 }: CodeEditorProps) {
   const handleChange = (value: string | undefined) => {
     if (onChange && value !== undefined) {
       onChange(value);
     }
   };
+
+  const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs-light';
 
   const MonacoEditor = Editor as ComponentType<any>;
 
@@ -32,17 +36,23 @@ export function CodeEditor({
         language={language}
         value={value}
         onChange={handleChange}
-        theme="vs-dark"
+        theme={monacoTheme}
         options={{
           readOnly: disabled,
           minimap: { enabled: false },
-          fontSize: 14,
+          fontSize: 13,
           lineNumbers: 'on',
           lineNumbersMinChars: 2,
           scrollBeyondLastLine: false,
           automaticLayout: true,
           tabSize: 2,
           wordWrap: 'off',
+          fixedOverflowWidgets: true,
+          scrollbar: {
+            vertical: 'auto',
+            horizontal: 'auto',
+            alwaysConsumeMouseWheel: false,
+          },
         }}
       />
     </div>
