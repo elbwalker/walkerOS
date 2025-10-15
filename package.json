@@ -16,6 +16,7 @@
     "apps/storybook-addon",
     "apps/demos/react",
     "apps/demos/storybook",
+    "apps/explorer",
     "website"
   ],
   "scripts": {
