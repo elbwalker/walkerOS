@@ -88,6 +88,7 @@ export function LiveCode({
         value={input}
         onChange={disableInput ? undefined : setInput}
         disabled={disableInput}
+        language="json"
       />
 
       {config && (
@@ -96,6 +97,7 @@ export function LiveCode({
           value={config}
           onChange={disableConfig ? undefined : setConfig}
           disabled={disableConfig}
+          language="json"
         />
       )}
 
@@ -103,7 +105,7 @@ export function LiveCode({
         label={labelOutput}
         value={output[0] || emptyText}
         disabled
-        language="javascript"
+        language="json"
       />
     </div>
   );

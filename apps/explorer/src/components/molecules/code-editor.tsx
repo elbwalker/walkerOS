@@ -35,6 +35,7 @@ export function CodeEditor({
           minimap: { enabled: false },
           fontSize: 14,
           lineNumbers: 'on',
+          lineNumbersMinChars: 2,
           scrollBeyondLastLine: false,
           automaticLayout: true,
           tabSize: 2,

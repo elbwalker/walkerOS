@@ -5,36 +5,35 @@ import type { Mapping } from '@walkeros/core';
 
 export function MappingDemo() {
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ padding: '20px', minHeight: '100vh' }}>
       <h1>Mapping Demo</h1>
       <LiveCode
-        input={`{ id: 'P123', name: 'Laptop', price: 999 }`}
+        input={`{
+  "id": "P123",
+  "productName": "Laptop",
+  "price": 999
+}`}
         config={`{
-  product: {
-    view: {
-      name: 'view_item',
-      data: {
-        map: {
-          item_id: 'data.id',
-          item_name: 'data.name',
-          price: 'data.price',
-          currency: { value: 'USD' }
+  "product": {
+    "view": {
+      "name": "view_item",
+      "data": {
+        "map": {
+          "item_id": "data.id",
+          "item_name": "data.productName",
+          "price": "data.price",
+          "currency": { "value": "USD" }
         }
       }
     }
   }
 }`}
         fn={async (inputStr, configStr, log) => {
-          const data = eval(`(${inputStr})`);
-          const mapping = eval(`(${configStr})`) as Mapping.Rules;
+          const data = JSON.parse(inputStr as string);
+          const mapping = JSON.parse(configStr as string) as Mapping.Rules;
 
-          // Create full event
           const event = createEvent({ name: 'product view', data });
-
-          // Get mapping
           const mappingResult = await getMappingEvent(event, mapping);
-
-          // Transform data
           const result = await getMappingValue(
             event,
             mappingResult.eventMapping?.data,
@@ -43,11 +42,7 @@ export function MappingDemo() {
             },
           );
 
-          log({
-            original: data,
-            mapped: result,
-            newName: mappingResult.eventMapping?.name,
-          });
+          log(result);
         }}
         labelInput="Event Data"
         labelConfig="Mapping Config"
