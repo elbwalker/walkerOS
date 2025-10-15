@@ -1,13 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import type {
-  WalkerOS,
-  Mapping,
-  Destination,
-  Collector,
-  Elb,
+import type { WalkerOS, Mapping, Destination } from '@walkeros/core';
+import {
+  createEvent,
+  tryCatchAsync,
+  processEventMapping,
 } from '@walkeros/core';
-import { createEvent, tryCatchAsync } from '@walkeros/core';
-import { destinationPush } from '@walkeros/collector';
 import { CodePanel } from '../molecules/code-panel';
 
 // Auto-import CSS
@@ -23,121 +20,68 @@ export interface DestinationDemoProps {
   labelMapping?: string;
   labelOutput?: string;
   theme?: 'light' | 'dark';
+  fn?: (
+    event: WalkerOS.Event,
+    context: Destination.PushContext,
+  ) => Promise<string>; // Custom output function
 }
 
 /**
  * DestinationDemo - Interactive destination testing component
  *
- * Tests destination integration by intercepting function calls and showing output.
- * Uses the same pattern as website's DestinationPush but with Monaco Editor.
+ * Simple, generic component that calls destination.push() and captures output.
+ * The website provides the destination with a mock env that logs function calls.
  *
  * Props:
- * - destination: Destination instance to test
+ * - destination: Destination instance (website provides with mock env)
  * - event: walkerOS event to process
- * - mapping: Optional mapping rules (can be wrapped generically)
+ * - mapping: Optional mapping rules
  * - settings: Destination-specific settings
  * - generic: If true, wraps mapping in { '*': { '*': mapping } }
+ * - fnName: Function name to capture (optional, for generic logging)
  * - theme: Light or dark theme
  *
  * Example:
  * ```tsx
+ * // Website creates destination with capture function
+ * const destination = {
+ *   ...destinationPlausible,
+ *   env: {
+ *     window: {
+ *       plausible: (...args) => {
+ *         // Capture and format args
+ *       }
+ *     }
+ *   }
+ * };
+ *
  * <DestinationDemo
- *   destination={destinationPlausible}
+ *   destination={destination}
  *   event={getEvent('order complete')}
  *   mapping={examples.mapping.purchase}
  *   settings={{ domain: 'elbwalker.com' }}
  *   generic={true}
- *   theme="light"
+ *   fnName="plausible"
  * />
  * ```
  */
 
-// Create minimal mock collector
-const createMockCollector = (): Collector.Instance => {
-  const mockPushResult: Elb.PushResult = {
-    successful: [],
-    queued: [],
-    failed: [],
-    event: undefined,
-    ok: true,
-  };
-
-  return {
-    push: () => Promise.resolve(mockPushResult),
-    allowed: true,
-    config: {
-      tagging: 0,
-      globalsStatic: {},
-      sessionStatic: {},
-      verbose: false,
-    },
-    consent: {},
-    count: 0,
-    custom: {},
-    sources: {},
-    destinations: {},
-    globals: {},
-    group: 'demo',
-    hooks: {},
-    on: {},
-    queue: [],
-    round: 1,
-    session: undefined,
-    timing: Date.now(),
-    user: {},
-    version: '1.0.0',
-  } satisfies Collector.Instance;
-};
-
-// Generic interceptor to capture function calls
-const createGenericInterceptor = (baseEnv: Destination.Environment = {}) => {
-  const capturedCalls: string[] = [];
-
-  const formatArgs = (args: unknown[]): string => {
-    return args
+// Generic capture function creator
+export function createCaptureFn(
+  fnName: string,
+  onCapture: (output: string) => void,
+) {
+  return (...args: unknown[]) => {
+    const formattedArgs = args
       .map((arg) => {
         if (typeof arg === 'string') return `"${arg}"`;
         return JSON.stringify(arg, null, 2);
       })
       .join(', ');
+
+    onCapture(`${fnName}(${formattedArgs});`);
   };
-
-  const interceptFunction = (name: string, originalFn?: Function) => {
-    return (...args: unknown[]) => {
-      capturedCalls.push(`${name}(${formatArgs(args)});`);
-      return originalFn?.(...args);
-    };
-  };
-
-  const createProxy = (target: unknown): unknown => {
-    if (typeof target !== 'object' || target === null) {
-      return target;
-    }
-
-    return new Proxy(target as Record<string, unknown>, {
-      get(obj: Record<string, unknown>, prop: string) {
-        const value = obj[prop];
-
-        if (typeof value === 'function') {
-          return interceptFunction(prop, value);
-        }
-
-        if (typeof value === 'object' && value !== null) {
-          return createProxy(value);
-        }
-
-        return value;
-      },
-    });
-  };
-
-  const interceptedEnv = createProxy(baseEnv) as Destination.Environment;
-
-  return {
-    env: interceptedEnv,
-    getCapturedCalls: () => capturedCalls,
-  };
-};
+}
 
 export function DestinationDemo({
   destination,
@@ -149,6 +93,7 @@ export function DestinationDemo({
   labelMapping = 'Mapping',
   labelOutput = 'Result',
   theme = 'light',
+  fn,
 }: DestinationDemoProps) {
   const [eventInput, setEventInput] = useState(
     JSON.stringify(initialEvent, null, 2),
@@ -171,37 +116,40 @@ export function DestinationDemo({
         const wrappedMapping =
           generic && mappingData ? { '*': { '*': mappingData } } : mappingData;
 
-        // Create interceptor based on destination's env
-        const { env, getCapturedCalls } = createGenericInterceptor(
-          destination.env,
-        );
-
-        // Configure destination with mapping
-        const configuredDestination = {
-          ...destination,
-          config: {
-            settings: settings || {},
-            mapping: wrappedMapping,
-          },
-          env,
+        // Build config
+        const config: Destination.Config = {
+          settings: settings || {},
+          mapping: wrappedMapping,
         };
 
-        // Create mock collector
-        const mockCollector = createMockCollector();
+        // Process event mapping (applies mapping transformations)
+        const processed = await processEventMapping(event, config, {
+          globals: {},
+          user: {},
+        });
 
-        // Use collector's destinationPush to apply mapping transformations
-        await destinationPush(mockCollector, configuredDestination, event);
+        // Build context for destination.push()
+        const context: Destination.PushContext = {
+          collector: { globals: {}, user: {} } as any, // Minimal mock
+          config,
+          data: processed.data,
+          mapping: processed.mapping,
+          env: destination.env || {},
+        };
 
-        const calls = getCapturedCalls();
-        if (calls.length > 0) {
-          setOutput(calls.join('\n'));
+        // If custom function provided, use it to capture output
+        if (fn) {
+          const result = await fn(processed.event, context);
+          setOutput(result);
         } else {
-          setOutput('No function calls captured');
+          // Otherwise just call destination.push()
+          await destination.push(processed.event, context);
+          setOutput('Function called (output captured by mock env)');
         }
       },
       (error) => setOutput(`Error: ${error}`),
     )();
-  }, [eventInput, mappingInput, destination, settings, generic]);
+  }, [eventInput, mappingInput, destination, settings, generic, fn]);
 
   useEffect(() => {
     const timeoutId = setTimeout(executeDestination, 500);

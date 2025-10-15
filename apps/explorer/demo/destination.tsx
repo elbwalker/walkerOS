@@ -5,6 +5,7 @@ import {
   mockDestination,
   exampleMapping,
   exampleEvent,
+  captureDestinationOutput,
 } from './mocks/destination';
 
 const App = () => {
@@ -82,6 +83,7 @@ const App = () => {
           destination={mockDestination}
           event={exampleEvent}
           mapping={exampleMapping}
+          fn={captureDestinationOutput}
           generic={true}
           theme={theme}
         />
