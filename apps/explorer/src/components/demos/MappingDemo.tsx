@@ -119,6 +119,7 @@ function CodeBox({
             tabSize: 2,
             scrollBeyondLastLine: false,
             wordWrap: 'off',
+            fixedOverflowWidgets: true,
             scrollbar: {
               vertical: 'auto',
               horizontal: 'auto',
