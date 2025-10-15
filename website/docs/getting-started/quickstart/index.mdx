@@ -26,26 +26,31 @@ npm install @walkeros/collector @walkeros/web-source-browser
 ## 2. Create basic setup
 
 ```javascript
-import type { Collector, WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { createSource } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 // Initialize walkerOS
 export async function initializeWalker(): Promise<void> {
-  const { collector } = await startFlow({
+  const { collector, elb } = await startFlow({
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          pageview: true,
-          session: true,
-          elb: 'elb', // Browser source will set window.elb automatically
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb', // Makes elb available as window.elb
+          },
         },
-      }),
+      },
     },
     destinations: {
       console: {
-        push: (event) => console.log('Event:', event),
+        code: {
+          type: 'console',
+          config: {},
+          push: (event) => console.log('Event:', event),
+        },
       },
     },
   });
@@ -61,26 +66,28 @@ Install destination packages and add them to your setup:
 
 ```javascript
 import { startFlow } from '@walkeros/collector';
-import { createSource } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 export async function initializeWalker(): Promise<void> {
-  const { collector } = await startFlow({
+  const { collector, elb } = await startFlow({
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          pageview: true,
-          session: true,
-          elb: 'elb', // Browser source will set window.elb automatically
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb',
+          },
         },
-      }),
+      },
     },
     destinations: {
       // Send events to your API
       api: {
-        ...destinationAPI,
+        code: destinationAPI,
         config: {
           settings: {
             url: 'https://your-api.com/events',
@@ -90,7 +97,7 @@ export async function initializeWalker(): Promise<void> {
 
       // Send to Google Analytics 4
       ga4: {
-        ...destinationGtag,
+        code: destinationGtag,
         config: {
           settings: {
             ga4: { measurementId: 'G-XXXXXXXXXX' },
@@ -110,20 +117,23 @@ Add consent requirements to your destinations:
 
 ```javascript
 export async function initializeWalker(): Promise<void> {
-  const { collector } = await startFlow({
+  const { collector, elb } = await startFlow({
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          pageview: true,
-          session: true,
-          elb: 'elb', // Browser source will set window.elb automatically
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb',
+          },
         },
-      }),
+      },
     },
     destinations: {
       // API destination - requires functional consent
       api: {
-        ...destinationAPI,
+        code: destinationAPI,
         config: {
           settings: {
             url: 'https://your-api.com/events',
@@ -134,9 +144,9 @@ export async function initializeWalker(): Promise<void> {
         },
       },
 
-      // GA4 - requires e.g. analytics consent
+      // GA4 - requires analytics consent
       ga4: {
-        ...destinationGtag,
+        code: destinationGtag,
         config: {
           settings: {
             ga4: { measurementId: 'G-XXXXXXXXXX' },
@@ -154,7 +164,7 @@ export async function initializeWalker(): Promise<void> {
   // Set consent when user accepts/denies
   // This would typically come from your consent banner
   function handleConsentAccept() {
-    window.elb('walker consent', {
+    elb('walker consent', {
       functional: true,
       analytics: true,
       marketing: true,
@@ -162,7 +172,7 @@ export async function initializeWalker(): Promise<void> {
   }
 
   function handleConsentDeny() {
-    window.elb('walker consent', {
+    elb('walker consent', {
       functional: true,
       analytics: false,
       marketing: false,
@@ -175,5 +185,5 @@ export async function initializeWalker(): Promise<void> {
 
 - **[DOM-based tagging](https://elbwalker.com/docs/sources/web/browser/tagging)**:
   Add data-elb attributes to HTML elements for automatic tracking
-- **[Event mapping](https://elbwalker.com/docs/destinations/event-mapping)**:
+- **[Event mapping](https://elbwalker.com/docs/mapping)**:
   Transform events before sending to destinations

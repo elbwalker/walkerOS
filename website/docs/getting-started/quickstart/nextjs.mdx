@@ -1,6 +1,6 @@
 ---
 title: Next.js
-description: Get started with walkerOS Next.js applications
+description: Get started with walkerOS in Next.js applications
 sidebar_position: 2
 ---
 
@@ -12,10 +12,10 @@ for more details.
 
 ## Installation
 
-Same as React - install the required packages:
+Install the required packages:
 
 ```bash
-npm install @walkeros/core @walkeros/collector @walkeros/web-source-browser
+npm install @walkeros/collector @walkeros/web-source-browser
 ```
 
 ## Setup
@@ -27,7 +27,6 @@ Create the walker initialization file:
 ```tsx title="walker/index.ts"
 import type { Collector, WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { createSource } from '@walkeros/core';
 import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
 
 // Global type declarations
@@ -43,23 +42,30 @@ export async function initializeWalker(): Promise<void> {
   if (window.walker) return;
 
   // Create collector with run: false for manual pageview control
-  const { collector } = await startFlow({
+  const { collector, elb } = await startFlow({
     run: false,
     consent: { functional: true },
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          pageview: true,
-          session: true,
-          elb: 'elb',
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb',
+          },
         },
-      }),
+      },
     },
     destinations: {
       // Your destinations - add console for testing
       console: {
-        push(event, data) {
-          console.log('Event:', event, data);
+        code: {
+          type: 'console',
+          config: {},
+          push(event, data) {
+            console.log('Event:', event, data);
+          },
         },
       },
     },
@@ -208,12 +214,12 @@ chain.
 
 ## Testing
 
-During #1-walker-initialization, we added a console destination. This will
+During walker initialization, we added a console destination. This will
 output events to the console. Open your browser's developer console to see
 tracked events:
 
 ```
-  Event: "product view", { id: 123, name: "Premium Chocolate", price: 12.99 }
+Event: "product view", { id: 123, name: "Premium Chocolate", price: 12.99 }
 ```
 
 ## Best Practices
@@ -236,7 +242,7 @@ tracked events:
 
 ### Route changes not tracked
 
-1. Check that `walker run` is called on route changes in `window.elbLayer`
+1. Check that `walker run` is called on route changes
 2. Ensure firstRun logic is preventing double execution on initial load
 3. Verify router event listeners are working correctly
 

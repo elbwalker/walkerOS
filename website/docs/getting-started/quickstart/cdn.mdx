@@ -28,22 +28,28 @@ Use ES6 modules for loading walkerOS packages:
 ```html
 <script type="module">
   import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
-  import { createSource } from 'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs';
   import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
 
-  const { collector } = await startFlow({
+  const { collector, elb } = await startFlow({
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          pageview: true,
-          session: true,
-          elb: 'elb',
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb',
+          },
         },
-      }),
+      },
     },
     destinations: {
       console: {
-        push: (event) => console.log('Event:', event),
+        code: {
+          type: 'console',
+          config: {},
+          push: (event) => console.log('Event:', event),
+        },
       },
     },
   });
@@ -62,22 +68,28 @@ Complete HTML page with walkerOS tracking:
   <head>
     <script type="module">
       import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
-      import { createSource } from 'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs';
       import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
 
-      const { collector } = await startFlow({
+      const { collector, elb } = await startFlow({
         sources: {
-          browser: createSource(sourceBrowser, {
-            settings: {
-              pageview: true,
-              session: true,
-              elb: 'elb',
+          browser: {
+            code: sourceBrowser,
+            config: {
+              settings: {
+                pageview: true,
+                session: true,
+                elb: 'elb',
+              },
             },
-          }),
+          },
         },
         destinations: {
           console: {
-            push: (event) => console.log('Event:', event),
+            code: {
+              type: 'console',
+              config: {},
+              push: (event) => console.log('Event:', event),
+            },
           },
         },
       });
@@ -101,17 +113,25 @@ Add tracking attributes to your HTML elements:
   <head>
     <script type="module">
       import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
-      import { createSource } from 'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs';
       import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
 
       await startFlow({
         sources: {
-          browser: createSource(sourceBrowser, {
-            settings: { elb: 'elb' },
-          }),
+          browser: {
+            code: sourceBrowser,
+            config: {
+              settings: { elb: 'elb' },
+            },
+          },
         },
         destinations: {
-          console: { push: (event) => console.log('Event:', event) },
+          console: {
+            code: {
+              type: 'console',
+              config: {},
+              push: (event) => console.log('Event:', event),
+            },
+          },
         },
       });
     </script>
@@ -158,9 +178,6 @@ Use modern ES6 modules:
   const { startFlow } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
   );
-  const { createSource } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs'
-  );
   const { sourceBrowser } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
   );
@@ -168,23 +185,30 @@ Use modern ES6 modules:
     'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.mjs'
   );
 
-  // Setup tracking with proper createSource pattern
-  const { collector } = await startFlow({
+  // Setup tracking
+  const { collector, elb } = await startFlow({
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          pageview: true,
-          session: true,
-          elb: 'elb', // Browser source sets window.elb
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb',
+          },
         },
-      }),
+      },
     },
     destinations: {
       console: {
-        push: (event) => console.log('Event:', event),
+        code: {
+          type: 'console',
+          config: {},
+          push: (event) => console.log('Event:', event),
+        },
       },
       ga4: {
-        ...destinationGtag.default,
+        code: destinationGtag.default,
         config: {
           settings: {
             ga4: { measurementId: 'G-XXXXXXXXXX' },
@@ -196,7 +220,7 @@ Use modern ES6 modules:
 
   // window.elb is automatically set by browser source
   // Track custom events
-  window.elb('page view', { title: document.title });
+  elb('page view', { title: document.title });
 </script>
 ```
 
@@ -207,19 +231,33 @@ Add Google Analytics or other destinations:
 ```html
 <script type="module">
   import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
-  import { createSource } from 'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs';
   import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
   import destinationGtag from 'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.mjs';
 
   await startFlow({
     sources: {
-      browser: createSource(sourceBrowser, { settings: { elb: 'elb' } }),
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: { elb: 'elb' },
+        },
+      },
     },
     destinations: {
-      console: { push: (event) => console.log('Event:', event) },
+      console: {
+        code: {
+          type: 'console',
+          config: {},
+          push: (event) => console.log('Event:', event),
+        },
+      },
       ga4: {
-        ...destinationGtag,
-        config: { settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } } },
+        code: destinationGtag,
+        config: {
+          settings: {
+            ga4: { measurementId: 'G-XXXXXXXXXX' },
+          },
+        },
       },
     },
   });

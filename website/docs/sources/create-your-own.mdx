@@ -325,32 +325,6 @@ async function waitForAPI<T>(getter: () => T | null): Promise<T> {
 const api = await waitForAPI(() => window.myAPI || null);
 ```
 
-### Conditional Feature Setup
-
-```typescript
-if (settings.captureClicks && document) {
-  document.addEventListener('click', (e) => {
-    elb('element click', { tag: (e.target as HTMLElement).tagName });
-  });
-}
-```
-
-### Error Event Handling
-
-```typescript
-register('error', (data) => {
-  const error = data as { message: string; code?: number };
-  return {
-    name: `${settings.prefix} error`,
-    data: {
-      message: error.message,
-      code: error.code,
-      timestamp: Date.now(),
-    },
-  };
-});
-```
-
 ## Source as Adapter Pattern
 
 Sources bridge external systems and the collector:
