@@ -1,7 +1,8 @@
 import type { Collector, WalkerOS } from '@walkeros/core';
 import { assign, onLog } from '@walkeros/core';
 import { commonHandleCommand } from './handle';
-import { initDestinations, createPush } from './destination';
+import { initDestinations } from './destination';
+import { createPush } from './push';
 import { createCommand } from './command';
 import { initSources } from './source';
 
