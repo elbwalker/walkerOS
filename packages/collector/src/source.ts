@@ -6,6 +6,7 @@ import { tryCatchAsync } from '@walkeros/core';
  *
  * @param collector - The WalkerOS collector instance
  * @param sources - Map of source definitions with code/config/env
+ * @returns Initialized sources
  */
 export async function initSources(
   collector: Collector.Instance,
@@ -16,9 +17,23 @@ export async function initSources(
   for (const [sourceId, sourceDefinition] of Object.entries(sources)) {
     const { code, config = {}, env = {}, primary } = sourceDefinition;
 
+    // Create wrapped push that auto-applies source mapping config
+    const wrappedPush: Collector.PushFn = (
+      event: WalkerOS.DeepPartialEvent,
+      context: Collector.PushContext = {},
+    ) => {
+      // Pass source config as mapping in context
+      return collector.push(event, {
+        ...context,
+        mapping: config,
+      });
+    };
+
     const cleanEnv: Source.Env = {
-      elb: ((...args: Parameters<typeof collector.push>) =>
-        collector.push(...args)) as typeof collector.push, // Dynamic reference to collector.push
+      push: wrappedPush,
+      command: collector.command,
+      sources: collector.sources, // Provide access to all sources for chaining
+      elb: collector.sources.elb.push, // ELB source is always available
       ...env,
     };
 

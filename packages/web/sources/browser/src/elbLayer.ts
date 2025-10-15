@@ -12,8 +12,7 @@ export function initElbLayer(
   config: ELBLayerConfig & { prefix?: string; window?: Window } = {},
 ): void {
   const layerName = config.name || 'elbLayer';
-  const windowObj =
-    config.window || (typeof window !== 'undefined' ? window : undefined);
+  const windowObj = config.window || window;
 
   if (!windowObj) {
     return; // Skip if no window available
@@ -167,7 +166,6 @@ function pushCommand(
           return;
         }
 
-        // Regular events go through translation
         translateToCoreCollector(
           {
             elb,

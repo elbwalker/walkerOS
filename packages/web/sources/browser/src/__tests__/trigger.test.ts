@@ -147,6 +147,8 @@ describe('Trigger System', () => {
     // Call initScopeTrigger - it should not throw
     expect(() => {
       const context = {
+        push: jest.fn(),
+        command: jest.fn(),
         elb: mockElb,
         settings: createTestSettings('data-elb'),
       };

@@ -1,5 +1,5 @@
 import type { WalkerOS } from './types';
-import { isArray, isDefined } from './is';
+import { isArray, isDefined, isObject } from './is';
 import { clone } from './clone';
 
 /**
@@ -49,19 +49,17 @@ export function getByPath(
 /**
  * Sets a value in an object by a dot-notation string.
  *
- * @param event - The object to set the value in.
+ * @param obj - The object to set the value in.
  * @param key - The dot-notation string.
  * @param value - The value to set.
  * @returns A new object with the updated value.
  */
-export function setByPath(
-  event: WalkerOS.Event,
-  key: string,
-  value: unknown,
-): WalkerOS.Event {
-  const clonedEvent = clone(event);
+export function setByPath<T = unknown>(obj: T, key: string, value: unknown): T {
+  if (!isObject(obj)) return obj;
+
+  const clonedObj = clone(obj);
   const keys = key.split('.');
-  let current: WalkerOS.AnyObject | WalkerOS.Event = clonedEvent;
+  let current: WalkerOS.AnyObject = clonedObj;
 
   for (let i = 0; i < keys.length; i++) {
     const k = keys[i] as keyof typeof current;
@@ -84,5 +82,5 @@ export function setByPath(
     }
   }
 
-  return clonedEvent;
+  return clonedObj as T;
 }

@@ -63,22 +63,30 @@ describe('sessionStart', () => {
 
     // Simulate granted consent call from walker.js collector
     // Granted
+    const mockCollector = {
+      command: jest.fn(),
+      push: jest.fn(),
+    } as unknown as Collector.Instance;
+
     expect(mockSessionStorage).toHaveBeenCalledTimes(0);
-    consent[consentName]({} as unknown as Collector.Instance, {
+    consent[consentName](mockCollector, {
       [consentName]: true,
     });
     expect(mockSessionStorage).toHaveBeenCalledWith(config);
 
     // Denied
     expect(mockSessionWindow).toHaveBeenCalledTimes(0);
-    consent[consentName]({} as unknown as Collector.Instance, {
+    consent[consentName](mockCollector, {
       [consentName]: false,
     });
     expect(mockSessionWindow).toHaveBeenCalledWith(config);
   });
 
   test('Callback without consent', () => {
-    const collector = {} as unknown as Collector.Instance;
+    const collector = {
+      command: jest.fn(),
+      push: jest.fn(),
+    } as unknown as Collector.Instance;
     const mockCb = jest.fn();
     const config = { cb: mockCb, collector, storage: false };
     sessionStart(config);
@@ -95,7 +103,10 @@ describe('sessionStart', () => {
 
   test('Callback with consent', () => {
     const consentName = 'foo';
-    const collector = {} as unknown as Collector.Instance;
+    const collector = {
+      command: jest.fn(),
+      push: jest.fn(),
+    } as unknown as Collector.Instance;
     const mockCb = jest.fn();
     const config = { cb: mockCb, consent: consentName, storage: true };
     sessionStart(config);

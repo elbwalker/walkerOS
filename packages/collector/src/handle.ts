@@ -1,8 +1,8 @@
 import type { Collector, WalkerOS, Destination, Elb, On } from '@walkeros/core';
-import { Commands, Const } from './constants';
+import { Const } from './constants';
 import { addDestination, pushToDestinations } from './destination';
 import { assign, getId, isFunction, isString } from '@walkeros/core';
-import { isObject, isSameType } from '@walkeros/core';
+import { isObject } from '@walkeros/core';
 import { setConsent } from './consent';
 import { on, onApply } from './on';
 import type { RunState } from './types/collector';
@@ -106,48 +106,29 @@ export async function commonHandleCommand(
 }
 
 /**
- * Creates an event or a command from a partial event.
+ * Creates a full event from a partial event.
  *
  * @param collector The walkerOS collector instance.
- * @param nameOrEvent The name of the event or a partial event.
- * @param defaults The default values for the event.
- * @returns An object with the event or the command.
+ * @param partialEvent The partial event to transform.
+ * @returns The full event.
  */
-export function createEventOrCommand(
+export function createEvent(
   collector: Collector.Instance,
-  nameOrEvent: unknown,
-  defaults: WalkerOS.PartialEvent = {},
-): { event?: WalkerOS.Event; command?: string } {
-  // Determine the partial event
-  const partialEvent: WalkerOS.PartialEvent = isSameType(
-    nameOrEvent,
-    '' as string,
-  )
-    ? { name: nameOrEvent, ...defaults }
-    : { ...defaults, ...(nameOrEvent || {}) };
-
+  partialEvent: WalkerOS.PartialEvent,
+): WalkerOS.Event {
   if (!partialEvent.name) throw new Error('Event name is required');
 
-  // Check for valid entity and action event format
   const [entityValue, actionValue] = partialEvent.name.split(' ');
   if (!entityValue || !actionValue) throw new Error('Event name is invalid');
 
-  // It's a walker command
-  if (entityValue === Commands.Walker) {
-    return { command: actionValue };
-  }
-
-  // Regular event
   ++collector.count;
 
-  // Values that are eventually used by other properties
   const {
     timestamp = Date.now(),
     group = collector.group,
     count = collector.count,
   } = partialEvent;
 
-  // Extract properties with default fallbacks
   const {
     name = `${entityValue} ${actionValue}`,
     data = {},
@@ -169,7 +150,7 @@ export function createEventOrCommand(
     source = { type: 'collector', id: '', previous_id: '' },
   } = partialEvent;
 
-  const fullEvent: WalkerOS.Event = {
+  return {
     name,
     data,
     context,
@@ -189,8 +170,6 @@ export function createEventOrCommand(
     version,
     source,
   };
-
-  return { event: fullEvent };
 }
 
 /**

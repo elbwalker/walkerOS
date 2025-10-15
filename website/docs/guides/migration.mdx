@@ -77,26 +77,26 @@ const walker = Walkerjs({
 **After:**
 
 ```typescript
-import { createSource, createDestination } from '@walkeros/core';
-
-// Single big config file approach
 const { elb } = await startFlow({
   sources: {
-    browser: createSource(sourceBrowser, {
-      settings: { scope: document.body },
-    }),
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: { scope: document.body },
+      },
+    },
+  },
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        settings: {
+          ga4: { measurementId: 'G-XXXXXXXXXX' },
+        },
+      },
+    },
   },
 });
-
-// Add destination with configuration
-elb(
-  'walker destination',
-  createDestination(destinationGtag, {
-    settings: {
-      ga4: { measurementId: 'G-XXXXXXXXXX' },
-    },
-  }),
-);
 ```
 
 ## Breaking Changes
@@ -123,51 +123,39 @@ elb(
 
 ## Destination Configuration Patterns
 
-### Option 1: Traditional Configuration (Current)
+### Unified Configuration Approach
+
+Configure all sources and destinations in a single `startFlow` call:
 
 ```typescript
-elb('walker destination', destinationGtag, {
-  settings: {
-    ga4: { measurementId: 'G-XXXXXXXXXX' },
+const { elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: { scope: document.body, session: true },
+      },
+    },
+  },
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        settings: {
+          ga4: { measurementId: 'G-XXXXXXXXXX' },
+        },
+      },
+    },
   },
 });
 ```
 
-### Option 2: Using createSource and createDestination (New)
+**Benefits:**
 
-For a more elegant API and to avoid config side-effects in tests:
-
-```typescript
-import { createSource, createDestination } from '@walkeros/core';
-
-// Complete tracking setup in one config
-const trackingConfig = {
-  sources: {
-    browser: createSource(sourceBrowser, {
-      settings: { scope: document.body, session: true },
-    }),
-  },
-};
-
-const { elb } = await startFlow(trackingConfig);
-
-elb(
-  'walker destination',
-  createDestination(destinationGtag, {
-    settings: {
-      ga4: { measurementId: 'G-XXXXXXXXXX' },
-    },
-  }),
-);
-```
-
-**Benefits of createSource and createDestination:**
-
-- Creates fresh instances (no config side-effects)
-- Enables single-config-file setups describing entire tracking
-- Maintains full type safety with proper config linking
-- Consistent API pattern for sources and destinations
-- No more `{ code, config }` complexity
+- Single configuration describing entire tracking setup
+- Full type safety with proper config linking
+- No manual destination registration needed
+- Clean separation between code and configuration
 
 ## Migration Checklist
 

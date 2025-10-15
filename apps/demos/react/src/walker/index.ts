@@ -87,13 +87,13 @@ export async function initializeWalker(): Promise<void> {
   const storedConsent = localStorage.getItem(consentKey);
 
   if (storedConsent === 'accepted') {
-    await collector.push('walker consent', {
+    await collector.command('consent', {
       functional: true,
       analytics: true,
       marketing: true,
     });
   } else if (storedConsent === 'denied') {
-    await collector.push('walker consent', {
+    await collector.command('consent', {
       functional: true,
       analytics: false,
       marketing: false,

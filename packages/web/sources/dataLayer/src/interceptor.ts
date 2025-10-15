@@ -1,4 +1,4 @@
-import type { WalkerOS, Source } from '@walkeros/core';
+import type { WalkerOS, Source, Collector } from '@walkeros/core';
 import { isArray, isObject, isString, tryCatch } from '@walkeros/core';
 
 // Global flag to prevent infinite loops
@@ -8,7 +8,7 @@ let isProcessing = false;
  * DataLayer interceptor - handles dataLayer.push interception and event transformation
  */
 export function interceptDataLayer(
-  elb: Source.Env['elb'],
+  push: Collector.PushFn,
   config: Source.Config,
 ): void {
   const settings = config.settings as {
@@ -40,7 +40,7 @@ export function interceptDataLayer(
     try {
       // Process each argument
       for (const arg of args) {
-        processEvent(elb, settings, arg);
+        processEvent(push, settings, arg);
       }
     } finally {
       isProcessing = false;
@@ -55,7 +55,7 @@ export function interceptDataLayer(
  * Process existing events on initialization
  */
 export function processExistingEvents(
-  elb: Source.Env['elb'],
+  push: Collector.PushFn,
   config: Source.Config,
 ): void {
   const settings = config.settings as {
@@ -75,7 +75,7 @@ export function processExistingEvents(
   try {
     // Process all existing events
     for (const event of dataLayer) {
-      processEvent(elb, settings, event);
+      processEvent(push, settings, event);
     }
   } finally {
     isProcessing = false;
@@ -86,7 +86,7 @@ export function processExistingEvents(
  * Process a single event - handles filtering, transformation, and WalkerOS event creation
  */
 function processEvent(
-  elb: Source.Env['elb'],
+  push: Collector.PushFn,
   settings: { prefix?: string; filter?: (event: unknown) => boolean } = {},
   rawEvent: unknown,
 ): void {
@@ -111,35 +111,16 @@ function processEvent(
   const prefix = settings.prefix || 'dataLayer';
   const eventName = `${prefix} ${transformedEvent.name}`;
 
-  // Create WalkerOS event structure
-  const walkerEvent: WalkerOS.Event = {
+  // Create partial WalkerOS event structure (collector will enrich it)
+  const { name: _name, ...data } = transformedEvent;
+  const partialEvent: WalkerOS.DeepPartialEvent = {
     name: eventName,
-    data: transformedEvent as WalkerOS.Properties,
-    context: {},
-    globals: {},
-    custom: {},
-    consent: {},
-    nested: [],
-    user: {},
-    id: generateId(),
-    trigger: '',
-    entity: '',
-    action: '',
-    timestamp: Date.now(),
-    timing: 0,
-    group: '',
-    count: 0,
-    version: { source: '1.0.0', tagging: 2 },
-    source: {
-      type: 'dataLayer',
-      id: '',
-      previous_id: '',
-    },
+    data: data as WalkerOS.Properties,
   };
 
-  // Push to elb
+  // Push to collector
   tryCatch(
-    () => elb(walkerEvent),
+    () => push(partialEvent),
     () => {}, // Silently handle push errors
   )();
 }
@@ -252,11 +233,4 @@ function isGtagArguments(obj: unknown): boolean {
     typeof (obj as ArrayLike<unknown>).length === 'number' &&
     (obj as ArrayLike<unknown>).length > 0
   );
-}
-
-/**
- * Generate simple ID
- */
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 15);
 }

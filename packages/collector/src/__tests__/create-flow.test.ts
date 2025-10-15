@@ -1,5 +1,5 @@
 import { startFlow } from '../flow';
-import type { Source, WalkerOS } from '@walkeros/core';
+import type { Source, WalkerOS, Elb } from '@walkeros/core';
 
 describe('Source Create Flow Integration', () => {
   it('should initialize complete setup from flow config', async () => {
@@ -12,7 +12,10 @@ describe('Source Create Flow Integration', () => {
         },
       });
 
-      expect(env).toEqual({
+      expect(env).toMatchObject({
+        push: expect.any(Function),
+        command: expect.any(Function),
+        sources: expect.any(Object),
         elb: expect.any(Function),
         foo: 'bar',
       });
@@ -22,7 +25,7 @@ describe('Source Create Flow Integration', () => {
         config: {
           settings: config.settings || {},
         },
-        push: env!.elb, // Required push method
+        push: env!.push as Elb.Fn, // Required push method
       };
     };
 
@@ -54,15 +57,14 @@ describe('Source Create Flow Integration', () => {
       },
     });
 
-    expect(collector.sources).toEqual({
-      mockSource: {
-        type: 'mock',
-        config: {
-          settings: { test: 'value' },
-        },
-        push: expect.any(Function), // Sources now include push method
+    expect(collector.sources.mockSource).toEqual({
+      type: 'mock',
+      config: {
+        settings: { test: 'value' },
       },
+      push: expect.any(Function),
     });
+    expect(collector.sources.elb).toBeDefined();
 
     await elb({ name: 'manual event', data: { test: 'data' } });
 

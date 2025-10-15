@@ -1,4 +1,4 @@
-import type { Collector, Source, On, WalkerOS } from '@walkeros/core';
+import type { Collector, Source, On, WalkerOS, Elb } from '@walkeros/core';
 import { startFlow } from '../flow';
 import { initSources } from '../source';
 
@@ -7,15 +7,15 @@ const mockSource: Source.Init = async (
   config: Partial<Source.Config>,
   env: Source.Env,
 ) => {
-  const { elb } = env;
+  const { push } = env;
 
-  if (!elb) {
-    throw new Error('Mock source requires elb function');
+  if (!push) {
+    throw new Error('Mock source requires push function');
   }
 
   // Simulate some source activity
   setTimeout(() => {
-    elb('mock event', { source: 'mock' });
+    push({ name: 'mock event', data: { source: 'mock' } });
   }, 10);
 
   return {
@@ -24,7 +24,7 @@ const mockSource: Source.Init = async (
       ...config,
       settings: config.settings || { test: true },
     } as Source.Config,
-    push: elb, // Required push method - forwards to collector
+    push: push as Elb.Fn, // Required push method - forwards to collector
     destroy: async () => {
       // Cleanup
     },
@@ -93,8 +93,10 @@ describe('Source', () => {
         config: Partial<Source.Config>,
         env: Source.Env,
       ) => {
-        expect(env!.elb).toBeDefined();
-        expect(typeof env!.elb).toBe('function');
+        expect(env!.push).toBeDefined();
+        expect(typeof env!.push).toBe('function');
+        expect(env!.command).toBeDefined();
+        expect(typeof env!.command).toBe('function');
         // The elb function should be a wrapper that calls collector.push
         // Don't test strict equality since it's wrapped
 
@@ -104,7 +106,7 @@ describe('Source', () => {
             ...config,
             settings: config.settings || {},
           } as Source.Config,
-          push: env!.elb, // Required push method
+          push: env!.push as Elb.Fn, // Required push method
         };
       };
 
@@ -128,7 +130,8 @@ describe('Source', () => {
         config: Partial<Source.Config>,
         env: Source.Env,
       ) => {
-        expect(env!.elb).toBeDefined();
+        expect(env!.push).toBeDefined();
+        expect(env!.command).toBeDefined();
         expect(env!.customProp).toBe('customValue');
         expect(env!.window).toBeDefined();
 
@@ -138,7 +141,7 @@ describe('Source', () => {
             ...config,
             settings: config.settings || {},
           } as Source.Config,
-          push: env!.elb, // Required push method
+          push: env!.push as Elb.Fn, // Required push method
         };
       };
 
@@ -220,7 +223,9 @@ describe('Source', () => {
       });
 
       expect(testCollector.sources).toBeDefined();
-      expect(Object.keys(testCollector.sources)).toHaveLength(0);
+      // ELB source is always present
+      expect(Object.keys(testCollector.sources)).toHaveLength(1);
+      expect(testCollector.sources.elb).toBeDefined();
     });
   });
 
@@ -239,7 +244,7 @@ describe('Source', () => {
             ...config,
             settings: config.settings || {},
           } as Source.Config,
-          push: env!.elb, // Required push method
+          push: env!.push as Elb.Fn, // Required push method
           on: onMock,
         };
       };
@@ -258,7 +263,7 @@ describe('Source', () => {
       collector.sources = await initSources(collector, sources);
 
       // Trigger consent event
-      await collector.push('walker consent', { marketing: true });
+      await collector.command('consent', { marketing: true });
 
       // Verify the source's on method was called
       expect(onMock).toHaveBeenCalledWith('consent', { marketing: true });
@@ -277,7 +282,7 @@ describe('Source', () => {
             ...config,
             settings: config.settings || {},
           } as Source.Config,
-          push: env!.elb, // Required push method
+          push: env!.push as Elb.Fn, // Required push method
           on: onMock,
         };
       };
@@ -297,7 +302,7 @@ describe('Source', () => {
         storage: false,
         device: 'test',
       };
-      await collector.push('walker session');
+      await collector.command('session');
 
       // Verify the source's on method was called with session context
       expect(onMock).toHaveBeenCalledWith('session', collector.session);
@@ -314,7 +319,7 @@ describe('Source', () => {
             ...config,
             settings: config.settings || {},
           } as Source.Config,
-          push: env!.elb, // Required push method
+          push: env!.push as Elb.Fn, // Required push method
           // No on method
         };
       };
@@ -329,7 +334,7 @@ describe('Source', () => {
 
       // Should not throw error even without on method
       expect(async () => {
-        await collector.push('walker consent', { marketing: true });
+        await collector.command('consent', { marketing: true });
       }).not.toThrow();
     });
 
@@ -346,7 +351,7 @@ describe('Source', () => {
             ...config,
             settings: config.settings || {},
           } as Source.Config,
-          push: env!.elb, // Required push method
+          push: env!.push as Elb.Fn, // Required push method
           on: onMock,
         };
       };
@@ -360,8 +365,8 @@ describe('Source', () => {
       });
 
       // Test different event types
-      await collector.push('walker ready');
-      await collector.push('walker run');
+      await collector.command('ready');
+      await collector.command('run');
 
       expect(onMock).toHaveBeenCalledWith('ready', undefined);
       expect(onMock).toHaveBeenCalledWith('run', undefined);

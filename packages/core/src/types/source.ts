@@ -5,6 +5,7 @@ import type {
   On,
   Handler,
   Mapping as WalkerOSMapping,
+  Collector,
 } from './index';
 
 /**
@@ -14,8 +15,11 @@ import type {
  * making them platform-agnostic and easily testable.
  */
 export interface BaseEnv {
-  elb: Elb.Fn; // Collector ingest function - sources push events via this
-  [key: string]: unknown; // Platform-specific APIs (window, document, etc.)
+  [key: string]: unknown;
+  push: Collector.PushFn;
+  command: Collector.CommandFn;
+  sources?: Collector.Sources;
+  elb: Elb.Fn;
 }
 
 /**
@@ -52,7 +56,8 @@ export type Env<T extends TypesGeneric = Types> = T['env'];
  */
 export type TypesOf<I> = I extends Instance<infer T> ? T : never;
 
-export interface Config<T extends TypesGeneric = Types> {
+export interface Config<T extends TypesGeneric = Types>
+  extends WalkerOSMapping.Config<Mapping<T>> {
   settings?: Settings<T>;
   env?: Env<T>;
   id?: string;
@@ -69,10 +74,6 @@ export type PartialConfig<T extends TypesGeneric = Types> = Config<
     Env<T>
   >
 >;
-
-export interface Policy {
-  [key: string]: WalkerOSMapping.Value;
-}
 
 export interface Instance<T extends TypesGeneric = Types> {
   type: string;

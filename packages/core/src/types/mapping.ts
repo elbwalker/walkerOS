@@ -1,5 +1,20 @@
 import type { Collector, Destination, WalkerOS } from '.';
 
+/**
+ * Shared mapping configuration interface.
+ * Used by both Source.Config and Destination.Config.
+ */
+export interface Config<T = unknown> {
+  consent?: WalkerOS.Consent; // Required consent to process events
+  data?: Value | Values; // Global data transformation
+  mapping?: Rules<Rule<T>>; // Event-specific mapping rules
+  policy?: Policy; // Pre-processing rules
+}
+
+export interface Policy {
+  [key: string]: Value;
+}
+
 export interface Rules<T = Rule> {
   [entity: string]: Record<string, T | Array<T>> | undefined;
 }

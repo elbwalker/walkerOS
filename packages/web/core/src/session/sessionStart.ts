@@ -22,7 +22,6 @@ export function sessionStart(
   config: SessionConfig = {},
 ): Collector.SessionData | void {
   const { cb, consent, collector, storage } = config;
-  const elb = collector?.push || elbOrg;
   const sessionFn: SessionFunction = storage ? sessionStorage : sessionWindow;
 
   // Consent
@@ -36,7 +35,12 @@ export function sessionStart(
       {},
     );
     // Register consent handlers with the collector
-    elb('walker on', 'consent', consentConfig);
+    if (collector) {
+      collector.command('on', 'consent', consentConfig);
+    } else {
+      // Fallback to elbLayer
+      elbOrg('walker on', 'consent', consentConfig);
+    }
   } else {
     // just do it
     return callFuncAndCb(sessionFn(config), collector, cb);
@@ -90,7 +94,6 @@ const defaultCb: SessionCallback = (
   session,
   collector,
 ): Collector.SessionData => {
-  const elb = collector?.push || elbOrg;
   const user: WalkerOS.User = {};
 
   // User.session is the session ID
@@ -99,15 +102,28 @@ const defaultCb: SessionCallback = (
   // Set device ID only in storage mode
   if (session.storage && session.device) user.device = session.device;
 
-  // Set user IDs - using unknown cast for type safety
-  elb('walker user', user);
+  // Set user IDs
+  if (collector) {
+    collector.command('user', user);
+  } else {
+    // Fallback to elbLayer
+    elbOrg('walker user', user);
+  }
 
   if (session.isStart) {
     // Convert session start to an event object
-    elb({
-      name: 'session start',
-      data: session,
-    });
+    if (collector) {
+      collector.push({
+        name: 'session start',
+        data: session,
+      });
+    } else {
+      // Fallback to elbLayer
+      elbOrg({
+        name: 'session start',
+        data: session,
+      });
+    }
   }
 
   return session;

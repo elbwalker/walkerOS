@@ -52,34 +52,34 @@ elb({event: "entity action", data: { foo: "bar"}});
 
 ## config
 
-Configure the browser source during initialization using `createSource`. These
+Configure the browser source during initialization through `startFlow`. These
 settings control browser-specific behavior:
 
 ```js
-import { createSource } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
-const browserSource = createSource(sourceBrowser, {
-  settings: {
-    elb: 'elb', // Name to assign the elb function to the window
-    elbLayer: true, // Enable elbLayer for async command queuing
-    pageview: true, // Trigger a page view event by default
-    prefix: 'data-elb', // Attributes prefix used by the walker for DOM scanning
-    session: true, // Enable session tracking
-  },
-});
-
-// Use in collector
 const { collector } = await startFlow({
   sources: {
-    browser: browserSource,
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          elb: 'elb', // Name to assign the elb function to the window
+          elbLayer: true, // Enable elbLayer for async command queuing
+          pageview: true, // Trigger a page view event by default
+          prefix: 'data-elb', // Attributes prefix used by the walker for DOM scanning
+          session: true, // Enable session tracking
+        },
+      },
+    },
   },
 });
 ```
 
 :::note
 
-Browser source configuration must be done during `createSource` initialization.
+Browser source configuration must be done during initialization.
 Settings like `prefix` and `elbLayer` cannot be changed after the source is
 created.
 
@@ -134,8 +134,7 @@ destinations, consent, and user data.
 
 Common workflow:
 
-1. Configure browser source during `createSource`
-2. Create collector with configured browser source
-3. Browser source automatically initializes (or use `walker run` for manual
+1. Configure browser source in `startFlow`
+2. Browser source automatically initializes (or use `walker run` for manual
    control)
-4. Use `walker init` for dynamic content
+3. Use `walker init` for dynamic content

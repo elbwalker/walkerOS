@@ -5,84 +5,12 @@ import {
   debounce,
   getId,
   getGrantedConsent,
-  getMappingEvent,
-  getMappingValue,
   isDefined,
   isObject,
-  setByPath,
+  processEventMapping,
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
-import { createEventOrCommand } from './handle';
-
-export type HandleCommandFn<T extends Collector.Instance> = (
-  collector: T,
-  action: string,
-  data?: Elb.PushData,
-  options?: unknown,
-) => Promise<Elb.PushResult>;
-
-/**
- * Creates the main push function for the collector.
- *
- * @template T, F
- * @param collector - The walkerOS collector instance.
- * @param handleCommand - TBD.
- * @param prepareEvent - TBD.
- * @returns The push function.
- */
-export function createPush<T extends Collector.Instance>(
-  collector: T,
-  handleCommand: HandleCommandFn<T>,
-  prepareEvent: (event: WalkerOS.DeepPartialEvent) => WalkerOS.PartialEvent,
-): Elb.Fn {
-  return useHooks(
-    async (
-      eventOrCommand: unknown,
-      data?: Elb.PushData,
-      options?: unknown,
-    ): Promise<Elb.PushResult> => {
-      return await tryCatchAsync(
-        async (): Promise<Elb.PushResult> => {
-          // Handle simplified core collector interface
-          if (
-            typeof eventOrCommand === 'string' &&
-            eventOrCommand.startsWith('walker ')
-          ) {
-            // Walker command format: 'walker action', data, options
-            const command = eventOrCommand.replace('walker ', '');
-            return await handleCommand(collector, command, data, options);
-          } else {
-            // Event format: event object or string
-            const partialEvent =
-              typeof eventOrCommand === 'string'
-                ? { name: eventOrCommand }
-                : (eventOrCommand as WalkerOS.DeepPartialEvent);
-
-            const enrichedEvent = prepareEvent(partialEvent);
-
-            const { event, command } = createEventOrCommand(
-              collector,
-              enrichedEvent.name,
-              enrichedEvent,
-            );
-
-            const result = command
-              ? await handleCommand(collector, command, data, options)
-              : await pushToDestinations(collector, event);
-
-            return result;
-          }
-        },
-        () => {
-          return createPushResult({ ok: false });
-        },
-      )();
-    },
-    'Push',
-    collector.hooks,
-  ) as Elb.Fn;
-}
 
 /**
  * Adds a new destination to the collector.
@@ -163,19 +91,9 @@ export async function pushToDestinations(
       // Add event to queue stack
       if (event) {
         // Clone the event to avoid mutating the original event
-        let currentEvent = clone(event);
+        const currentEvent = clone(event);
 
-        // Policy check
-        await Promise.all(
-          Object.entries(destination.config.policy || []).map(
-            async ([key, mapping]) => {
-              const value = await getMappingValue(event, mapping, {
-                collector,
-              });
-              currentEvent = setByPath(currentEvent, key, value);
-            },
-          ),
-        );
+        // Note: Policy is now applied in processEventMapping() within destinationPush()
 
         // Add event to queue stack
         currentQueue.push(currentEvent);
@@ -335,49 +253,28 @@ export async function destinationPush<Destination extends Destination.Instance>(
   event: WalkerOS.Event,
 ): Promise<boolean> {
   const { config } = destination;
-  const { eventMapping, mappingKey } = await getMappingEvent(
-    event,
-    config.mapping,
-  );
 
-  let data =
-    config.data && (await getMappingValue(event, config.data, { collector }));
+  const processed = await processEventMapping(event, config, collector);
 
-  if (eventMapping) {
-    // Check if event should be processed or ignored
-    if (eventMapping.ignore) return false;
-
-    // Check to use specific event names
-    if (eventMapping.name) event.name = eventMapping.name;
-
-    // Transform event to a custom data
-    if (eventMapping.data) {
-      const dataEvent =
-        eventMapping.data &&
-        (await getMappingValue(event, eventMapping.data, { collector }));
-      data =
-        isObject(data) && isObject(dataEvent) // Only merge objects
-          ? assign(data, dataEvent)
-          : dataEvent;
-    }
-  }
+  if (processed.ignore) return false;
 
   const context: Destination.PushContext = {
     collector,
     config,
-    data,
-    mapping: eventMapping,
+    data: processed.data,
+    mapping: processed.mapping,
     env: mergeEnvironments(destination.env, config.env),
   };
 
+  const eventMapping = processed.mapping;
   if (eventMapping?.batch && destination.pushBatch) {
     const batched = eventMapping.batched || {
-      key: mappingKey || '',
+      key: processed.mappingKey || '',
       events: [],
       data: [],
     };
-    batched.events.push(event);
-    if (isDefined(data)) batched.data.push(data);
+    batched.events.push(processed.event);
+    if (isDefined(processed.data)) batched.data.push(processed.data);
 
     eventMapping.batchFn =
       eventMapping.batchFn ||
@@ -385,7 +282,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
         const batchContext: Destination.PushBatchContext = {
           collector,
           config,
-          data,
+          data: processed.data,
           mapping: eventMapping,
           env: mergeEnvironments(destination.env, config.env),
         };
@@ -396,7 +293,6 @@ export async function destinationPush<Destination extends Destination.Instance>(
           (collector as Collector.Instance).hooks,
         )(batched, batchContext);
 
-        // Reset the batched queues
         batched.events = [];
         batched.data = [];
       }, eventMapping.batch);
@@ -409,7 +305,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
       destination.push,
       'DestinationPush',
       collector.hooks,
-    )(event, context);
+    )(processed.event, context);
   }
 
   return true;

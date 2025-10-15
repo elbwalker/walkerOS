@@ -15,3 +15,6 @@ export * as WalkerOS from './walkeros';
 // Export storage types directly
 export type { StorageType } from './storage';
 export { Const } from './storage';
+
+// Export send types directly
+export type { SendDataValue, SendHeaders, SendResponse } from './send';

@@ -1,15 +1,19 @@
-import type { Elb, WalkerOS } from '@walkeros/core';
+import type { Collector, WalkerOS } from '@walkeros/core';
 import type { EventRequest } from './types';
 
 export async function processEvent(
   eventReq: EventRequest,
-  elb: Elb.Fn,
+  push: Collector.PushFn,
 ): Promise<{ id?: string; error?: string }> {
   try {
-    const result = await elb(
-      eventReq.event,
-      (eventReq.data || {}) as WalkerOS.Properties,
-    );
+    const result = await push({
+      name: eventReq.event,
+      data: (eventReq.data || {}) as WalkerOS.Properties,
+      context: eventReq.context as WalkerOS.OrderedProperties | undefined,
+      user: eventReq.user as WalkerOS.User | undefined,
+      globals: eventReq.globals as WalkerOS.Properties | undefined,
+      consent: eventReq.consent as WalkerOS.Consent | undefined,
+    });
 
     return { id: result?.event?.id };
   } catch (error) {

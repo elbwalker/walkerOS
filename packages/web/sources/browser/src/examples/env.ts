@@ -78,6 +78,12 @@ const createMockDocument = () => ({
  * without requiring a real browser environment.
  */
 export const push: Env = {
+  get push() {
+    return jest.fn();
+  },
+  get command() {
+    return jest.fn();
+  },
   get elb() {
     return jest.fn();
   },

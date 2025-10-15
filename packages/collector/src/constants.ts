@@ -1,26 +1,5 @@
 import type { Collector } from '@walkeros/core';
-import type { WalkerOS } from '@walkeros/core';
-
-export type CommandTypes =
-  | 'Action'
-  | 'Actions'
-  | 'Config'
-  | 'Consent'
-  | 'Context'
-  | 'Custom'
-  | 'Destination'
-  | 'Elb'
-  | 'Globals'
-  | 'Hook'
-  | 'Init'
-  | 'Link'
-  | 'On'
-  | 'Prefix'
-  | 'Ready'
-  | 'Run'
-  | 'Session'
-  | 'User'
-  | 'Walker';
+import type { CommandTypes, StorageType } from './types/collector';
 
 export const Commands: Record<CommandTypes, Collector.CommandType> = {
   Action: 'action',
@@ -43,8 +22,6 @@ export const Commands: Record<CommandTypes, Collector.CommandType> = {
   User: 'user',
   Walker: 'walker',
 } as const;
-
-export type StorageType = 'cookie' | 'local' | 'session';
 
 const UtilsStorage: { [key: string]: StorageType } = {
   Cookie: 'cookie',

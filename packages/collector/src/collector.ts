@@ -1,7 +1,9 @@
-import type { Collector, WalkerOS, Elb } from '@walkeros/core';
+import type { Collector, WalkerOS } from '@walkeros/core';
 import { assign, onLog } from '@walkeros/core';
 import { commonHandleCommand } from './handle';
-import { initDestinations, createPush } from './destination';
+import { initDestinations } from './destination';
+import { createPush } from './push';
+import { createCommand } from './command';
 import { initSources } from './source';
 
 declare const __VERSION__: string;
@@ -51,13 +53,13 @@ export async function collector(
     user: initConfig.user || {},
     version,
     sources: {},
-    push: undefined as unknown as Elb.Fn, // Placeholder, will be set below
+    push: undefined as unknown as Collector.PushFn, // Placeholder, will be set below
+    command: undefined as unknown as Collector.CommandFn, // Placeholder, will be set below
   };
 
-  // Set the push function with the collector reference
+  // Set the push and command functions with the collector reference
   collector.push = createPush(
     collector,
-    commonHandleCommand,
     (event: WalkerOS.DeepPartialEvent): WalkerOS.PartialEvent =>
       ({
         timing: Math.round((Date.now() - collector.timing) / 10) / 100,
@@ -66,8 +68,10 @@ export async function collector(
       }) as WalkerOS.PartialEvent,
   );
 
-  // Initialize sources and destinations after collector is fully created
-  collector.sources = await initSources(collector, initConfig.sources || {});
+  collector.command = createCommand(collector, commonHandleCommand);
+
+  // Initialize destinations after collector is fully created
+  // Sources are initialized in startFlow after ELB source is created
   collector.destinations = await initDestinations(
     collector,
     initConfig.destinations || {},

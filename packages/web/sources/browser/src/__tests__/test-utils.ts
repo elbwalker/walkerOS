@@ -22,9 +22,11 @@ export async function createBrowserSource(
     },
   };
 
-  // Use Source.Env with collector's elb function and browser globals
+  // Use Source.Env with collector functions and browser globals
   const env: Source.Env<Types> = {
-    elb: collector.push,
+    push: collector.push,
+    command: collector.command,
+    elb: collector.sources.elb.push,
     window,
     document,
   };
