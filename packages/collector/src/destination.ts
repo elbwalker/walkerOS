@@ -5,7 +5,6 @@ import {
   debounce,
   getId,
   getGrantedConsent,
-  getMappingEvent,
   isDefined,
   isObject,
   processEventMapping,
@@ -325,17 +324,10 @@ export async function destinationPush<Destination extends Destination.Instance>(
 ): Promise<boolean> {
   const { config } = destination;
 
-  // Use extracted mapping function (SAME code, now reusable)
-  const { eventMapping, mappingKey } = await getMappingEvent(
-    event,
-    config.mapping,
-  );
   const processed = await processEventMapping(event, config, collector);
 
-  // Ignore event if mapping says so
   if (processed.ignore) return false;
 
-  // Use processed event and data
   const context: Destination.PushContext = {
     collector,
     config,
@@ -344,9 +336,10 @@ export async function destinationPush<Destination extends Destination.Instance>(
     env: mergeEnvironments(destination.env, config.env),
   };
 
+  const eventMapping = processed.mapping;
   if (eventMapping?.batch && destination.pushBatch) {
     const batched = eventMapping.batched || {
-      key: mappingKey || '',
+      key: processed.mappingKey || '',
       events: [],
       data: [],
     };
@@ -370,7 +363,6 @@ export async function destinationPush<Destination extends Destination.Instance>(
           (collector as Collector.Instance).hooks,
         )(batched, batchContext);
 
-        // Reset the batched queues
         batched.events = [];
         batched.data = [];
       }, eventMapping.batch);

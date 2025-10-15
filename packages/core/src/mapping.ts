@@ -219,6 +219,7 @@ export async function processEventMapping<
   event: T;
   data?: WalkerOS.Property;
   mapping?: Mapping.Rule;
+  mappingKey?: string;
   ignore: boolean;
 }> {
   // Step 1: Apply policy (modifies event)
@@ -232,7 +233,10 @@ export async function processEventMapping<
   }
 
   // Step 2: Get event mapping rule
-  const { eventMapping } = await getMappingEvent(event, config.mapping);
+  const { eventMapping, mappingKey } = await getMappingEvent(
+    event,
+    config.mapping,
+  );
 
   // Step 3: Transform global data
   let data =
@@ -241,7 +245,7 @@ export async function processEventMapping<
   if (eventMapping) {
     // Check if event should be ignored
     if (eventMapping.ignore) {
-      return { event, data, mapping: eventMapping, ignore: true };
+      return { event, data, mapping: eventMapping, mappingKey, ignore: true };
     }
 
     // Override event name if specified
@@ -259,5 +263,5 @@ export async function processEventMapping<
     }
   }
 
-  return { event, data, mapping: eventMapping, ignore: false };
+  return { event, data, mapping: eventMapping, mappingKey, ignore: false };
 }
