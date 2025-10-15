@@ -30,18 +30,63 @@ async function transformMapping(
   }
 }
 
-const App = () => (
-  <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
-    <h1 style={{ marginBottom: '2rem' }}>walkerOS Explorer - Mapping Demos</h1>
+const App = () => {
+  const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
+    // Check system preference
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches
+    ) {
+      return 'dark';
+    }
+    return 'light';
+  });
 
-    <section style={{ marginBottom: '3rem' }}>
-      <h2>MappingCode - Built-in walkerOS Mapping Logic</h2>
-      <p style={{ marginBottom: '1rem', color: '#666' }}>
-        Execute code with getMappingEvent, getMappingValue, and createEvent
-        available
-      </p>
-      <MappingCode
-        input={`await getMappingEvent(
+  React.useEffect(() => {
+    // Apply theme to html element
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  };
+
+  return (
+    <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '2rem',
+        }}
+      >
+        <h1 style={{ margin: 0 }}>walkerOS Explorer - Mapping Demos</h1>
+        <button
+          onClick={toggleTheme}
+          style={{
+            padding: '0.5rem 1rem',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            background: 'transparent',
+            cursor: 'pointer',
+            fontSize: '1rem',
+          }}
+          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+        >
+          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+        </button>
+      </div>
+
+      <section style={{ marginBottom: '3rem' }}>
+        <h2>MappingCode - Built-in walkerOS Mapping Logic</h2>
+        <p style={{ marginBottom: '1rem', color: '#666' }}>
+          Execute code with getMappingEvent, getMappingValue, and createEvent
+          available
+        </p>
+        <MappingCode
+          theme={theme}
+          input={`await getMappingEvent(
   { name: 'product view' },
   {
     product: {
@@ -57,21 +102,22 @@ const App = () => (
     }
   }
 );`}
-      />
-    </section>
+        />
+      </section>
 
-    <section>
-      <h2>MappingDemo - Custom Transformation Function</h2>
-      <p style={{ marginBottom: '1rem', color: '#666' }}>
-        Generic dual-editor component with custom transformation logic
-      </p>
-      <MappingDemo
-        input={`{
+      <section>
+        <h2>MappingDemo - Custom Transformation Function</h2>
+        <p style={{ marginBottom: '1rem', color: '#666' }}>
+          Generic dual-editor component with custom transformation logic
+        </p>
+        <MappingDemo
+          theme={theme}
+          input={`{
   "id": "P123",
   "productName": "Laptop",
   "price": 999
 }`}
-        config={`{
+          config={`{
   "product": {
     "view": {
       "name": "view_item",
@@ -86,14 +132,15 @@ const App = () => (
     }
   }
 }`}
-        labelInput="Event Data"
-        labelConfig="Mapping Config"
-        labelOutput="Transformed Result"
-        fn={transformMapping}
-      />
-    </section>
-  </div>
-);
+          labelInput="Event Data"
+          labelConfig="Mapping Config"
+          labelOutput="Transformed Result"
+          fn={transformMapping}
+        />
+      </section>
+    </div>
+  );
+};
 
 const root = createRoot(document.getElementById('root')!);
 root.render(

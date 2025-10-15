@@ -14,6 +14,7 @@ export interface MappingDemoProps {
   labelConfig?: string;
   labelOutput?: string;
   fn?: (input: string, config: string) => Promise<string>;
+  theme?: 'light' | 'dark' | 'vs' | 'vs-dark';
 }
 
 /**
@@ -53,9 +54,19 @@ interface CodeBoxProps {
   value: string;
   onChange?: (value: string) => void;
   disabled?: boolean;
+  theme?: string;
 }
 
-function CodeBox({ label, value, onChange, disabled = false }: CodeBoxProps) {
+function CodeBox({
+  label,
+  value,
+  onChange,
+  disabled = false,
+  theme = 'light',
+}: CodeBoxProps) {
+  // Map theme names: light/dark → vs-light/vs-dark for Monaco
+  const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs-light';
+
   const formatJson = () => {
     if (disabled || !onChange) return;
     try {
@@ -98,7 +109,7 @@ function CodeBox({ label, value, onChange, disabled = false }: CodeBoxProps) {
           language="json"
           value={value}
           onChange={(val) => onChange?.(val || '')}
-          theme="vs-light"
+          theme={monacoTheme}
           options={{
             readOnly: disabled,
             minimap: { enabled: false },
@@ -126,6 +137,7 @@ export function MappingDemo({
   labelConfig = 'Config',
   labelOutput = 'Output',
   fn,
+  theme = 'light',
 }: MappingDemoProps = {}) {
   const [input, setInput] = useState(initialInput);
   const [config, setConfig] = useState(initialConfig);
@@ -156,9 +168,19 @@ export function MappingDemo({
   return (
     <div className="elb-explorer-mapping">
       <div className="elb-explorer-mapping-grid">
-        <CodeBox label={labelInput} value={input} onChange={setInput} />
-        <CodeBox label={labelConfig} value={config} onChange={setConfig} />
-        <CodeBox label={labelOutput} value={output} disabled />
+        <CodeBox
+          label={labelInput}
+          value={input}
+          onChange={setInput}
+          theme={theme}
+        />
+        <CodeBox
+          label={labelConfig}
+          value={config}
+          onChange={setConfig}
+          theme={theme}
+        />
+        <CodeBox label={labelOutput} value={output} disabled theme={theme} />
       </div>
     </div>
   );

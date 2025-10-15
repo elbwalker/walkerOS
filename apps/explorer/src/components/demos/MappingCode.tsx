@@ -11,6 +11,7 @@ export interface MappingCodeProps {
   config?: string;
   labelInput?: string;
   labelOutput?: string;
+  theme?: 'light' | 'dark' | 'vs' | 'vs-dark';
 }
 
 /**
@@ -46,6 +47,7 @@ interface CodeBoxProps {
   onChange?: (value: string) => void;
   disabled?: boolean;
   language?: string;
+  theme?: string;
 }
 
 function CodeBox({
@@ -54,7 +56,11 @@ function CodeBox({
   onChange,
   disabled = false,
   language = 'json',
+  theme = 'light',
 }: CodeBoxProps) {
+  // Map theme names: light/dark → vs-light/vs-dark for Monaco
+  const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs-light';
+
   const formatJson = () => {
     if (disabled || !onChange || language !== 'json') return;
     try {
@@ -97,7 +103,7 @@ function CodeBox({
           language={language}
           value={value}
           onChange={(val) => onChange?.(val || '')}
-          theme="vs-light"
+          theme={monacoTheme}
           options={{
             readOnly: disabled,
             minimap: { enabled: false },
@@ -123,6 +129,7 @@ export function MappingCode({
   config,
   labelInput = 'Configuration',
   labelOutput = 'Result',
+  theme = 'light',
 }: MappingCodeProps) {
   const [input, setInput] = useState(initialInput);
   const [output, setOutput] = useState('');
@@ -169,8 +176,15 @@ export function MappingCode({
           value={input}
           onChange={setInput}
           language="javascript"
+          theme={theme}
         />
-        <CodeBox label={labelOutput} value={output} disabled language="json" />
+        <CodeBox
+          label={labelOutput}
+          value={output}
+          disabled
+          language="json"
+          theme={theme}
+        />
       </div>
     </div>
   );

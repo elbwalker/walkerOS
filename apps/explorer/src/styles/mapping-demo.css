@@ -135,6 +135,38 @@
   min-width: 32px !important;
 }
 
+/* Dark mode styles */
+[data-theme='dark'] .elb-explorer-mapping {
+  color: #e0e0e0;
+}
+
+[data-theme='dark'] .elb-explorer-mapping-box {
+  background: #1e1e1e;
+  border-color: #3c3c3c;
+}
+
+[data-theme='dark'] .elb-explorer-mapping-header {
+  background: #252526;
+  border-bottom-color: #3c3c3c;
+}
+
+[data-theme='dark'] .elb-explorer-mapping-label {
+  color: #cccccc;
+}
+
+[data-theme='dark'] .elb-explorer-mapping-btn {
+  color: #cccccc;
+}
+
+[data-theme='dark'] .elb-explorer-mapping-btn:hover {
+  background: #2a2d2e;
+  color: #ffffff;
+}
+
+[data-theme='dark'] .elb-explorer-mapping-toggle {
+  color: #999;
+}
+
 /* Responsive: stack on smaller screens */
 @media (max-width: 1024px) {
   .elb-explorer-mapping-grid {
