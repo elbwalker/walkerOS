@@ -6,15 +6,13 @@ import {
   getId,
   getGrantedConsent,
   getMappingEvent,
-  getMappingValue,
   isDefined,
   isObject,
   processEventMapping,
-  setByPath,
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
-import { createEventOrCommand } from './handle';
+import { createEvent } from './handle';
 
 /**
  * Creates the push function for the collector.
@@ -70,18 +68,7 @@ export function createPush<T extends Collector.Instance>(
           const enrichedEvent = prepareEvent(partialEvent);
 
           // Create full event
-          const { event: fullEvent, command } = createEventOrCommand(
-            collector,
-            enrichedEvent.name,
-            enrichedEvent,
-          );
-
-          // Commands should not come through push
-          if (command) {
-            throw new Error(
-              `Command "${command}" should use collector.command() instead of collector.push()`,
-            );
-          }
+          const fullEvent = createEvent(collector, enrichedEvent);
 
           // Push to destinations
           return await pushToDestinations(collector, fullEvent);

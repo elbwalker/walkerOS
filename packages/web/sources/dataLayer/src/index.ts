@@ -1,4 +1,4 @@
-import type { Source, Elb } from '@walkeros/core';
+import type { Source } from '@walkeros/core';
 import type { Types } from './types';
 import { interceptDataLayer, processExistingEvents } from './interceptor';
 
@@ -19,39 +19,27 @@ export const sourceDataLayer: Source.Init<Types> = async (
   env: Source.Env<Types>,
 ) => {
   try {
-    // Extract environment dependencies
-    const { push: envPush, window: envWindow } = env;
+    const { elb, window: envWindow } = env;
 
-    // Default configuration, merged with provided config
     const settings: Source.Settings<Types> = {
       name: 'dataLayer',
       prefix: 'dataLayer',
       ...config?.settings,
     };
 
-    // Full configuration with defaults
     const fullConfig: Source.Config<Types> = {
       settings,
     };
 
-    // Initialize dataLayer interception if window is available
     if (envWindow) {
-      // Process existing events in dataLayer
-      processExistingEvents(envPush, fullConfig);
-
-      // Set up interception for new events
-      interceptDataLayer(envPush, fullConfig);
+      processExistingEvents(elb, fullConfig);
+      interceptDataLayer(elb, fullConfig);
     }
 
-    // DataLayer sources typically intercept existing dataLayer.push calls
-    // The push method here forwards to the core collector push function
-    const push: Elb.Fn = envPush as Elb.Fn;
-
-    // Return stateless source instance
     return {
       type: 'dataLayer',
       config: fullConfig,
-      push,
+      push: elb,
       destroy: async () => {
         // Cleanup: restore original dataLayer.push if possible
         const dataLayerName = settings.name || 'dataLayer';
