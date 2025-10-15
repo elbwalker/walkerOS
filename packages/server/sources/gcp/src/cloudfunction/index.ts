@@ -29,12 +29,6 @@ export const sourceCloudFunction = async (
 ): Promise<CloudFunctionSource> => {
   const { push: envPush } = env;
 
-  if (!envPush) {
-    throw new Error(
-      'Cloud Function source requires push function in environment',
-    );
-  }
-
   const settings: Settings = {
     ...DEFAULT_SETTINGS,
     ...(config.settings || {}),

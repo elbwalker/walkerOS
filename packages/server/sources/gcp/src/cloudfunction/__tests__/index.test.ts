@@ -113,21 +113,6 @@ describe('sourceCloudFunction', () => {
         timeout: 30000,
       });
     });
-
-    it('should throw error when push is not provided', async () => {
-      await expect(
-        sourceCloudFunction(
-          {},
-          {
-            push: undefined as never,
-            command: mockCommand as never,
-            elb: jest.fn() as never,
-          },
-        ),
-      ).rejects.toThrow(
-        'Cloud Function source requires push function in environment',
-      );
-    });
   });
 
   describe('handler functionality', () => {
