@@ -1,13 +1,7 @@
 import type { Collector, Elb } from '@walkeros/core';
+import type { HandleCommandFn } from './types/collector';
 import { useHooks, tryCatchAsync } from '@walkeros/core';
 import { createPushResult } from './destination';
-
-export type HandleCommandFn<T extends Collector.Instance> = (
-  collector: T,
-  action: string,
-  data?: unknown,
-  options?: unknown,
-) => Promise<Elb.PushResult>;
 
 /**
  * Creates the command function for the collector.

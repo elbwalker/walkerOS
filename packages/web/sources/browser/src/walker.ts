@@ -74,9 +74,7 @@ export function getAllEvents(
   scope?: Scope,
   prefix: string = Const.Commands.Prefix,
 ): Walker.Events {
-  // Handle default scope inside the function to avoid Node.js issues
-  const actualScope =
-    scope || (typeof document !== 'undefined' ? document.body : undefined);
+  const actualScope = scope || document.body;
   if (!actualScope) return [];
   let events: Walker.Events = [];
   const action = Const.Commands.Action;
@@ -92,7 +90,7 @@ export function getAllEvents(
 
   // Check if the scope element itself has action attributes
   if (
-    actualScope !== (typeof document !== 'undefined' ? document : null) &&
+    actualScope !== document &&
     (actualScope as Element).matches?.(actionSelector)
   ) {
     processElementEvents(actualScope as Element);

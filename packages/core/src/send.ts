@@ -1,15 +1,8 @@
-import type { WalkerOS } from './types';
+import type { SendDataValue, SendHeaders } from './types/send';
 import { isSameType } from './is';
 import { assign } from './assign';
 
-export type SendDataValue = WalkerOS.Property | WalkerOS.Properties;
-export type SendHeaders = { [key: string]: string };
-
-export interface SendResponse {
-  ok: boolean;
-  data?: unknown;
-  error?: string;
-}
+export type { SendDataValue, SendHeaders, SendResponse } from './types/send';
 
 /**
  * Transforms data to a string.
