@@ -1,8 +1,13 @@
 // Ready-to-use demos
 export { MappingDemo } from './components/demos/MappingDemo';
 export { MappingCode } from './components/demos/MappingCode';
+export { DestinationDemo } from './components/demos/DestinationDemo';
 export type { MappingDemoProps } from './components/demos/MappingDemo';
 export type { MappingCodeProps } from './components/demos/MappingCode';
+export type { DestinationDemoProps } from './components/demos/DestinationDemo';
+
+// Alias for backward compatibility with website
+export { DestinationDemo as DestinationPush } from './components/demos/DestinationDemo';
 
 // Main components
 export { LiveCode } from './components/organisms/live-code';

@@ -1,20 +1,11 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { DestinationDemo } from '../src/components/demos/DestinationDemo';
-import { getEvent } from '@walkeros/core';
-import destinationPlausible, {
-  examples,
-} from '@walkeros/web-destination-plausible';
-
-// Mock window.plausible for demo purposes
-const documentationPlausible = {
-  ...destinationPlausible,
-  env: {
-    window: {
-      plausible: () => {},
-    },
-  },
-};
+import {
+  mockDestination,
+  exampleMapping,
+  exampleEvent,
+} from './mocks/destination';
 
 const App = () => {
   const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
@@ -74,42 +65,23 @@ const App = () => {
       </div>
 
       <section style={{ marginBottom: '3rem' }}>
-        <h2>Plausible - Purchase Event</h2>
+        <h2>Example Destination Demo</h2>
         <p
           style={{
             marginBottom: '1rem',
             color: theme === 'dark' ? '#cccccc' : '#666',
           }}
         >
-          Test Plausible Analytics destination with e-commerce revenue tracking.
-          The destination transforms walkerOS events into Plausible function
-          calls.
+          This demonstrates how DestinationDemo works with a mock destination.
+          The component intercepts function calls from the destination's push
+          method and displays them. In production, the website would import real
+          destinations (like Plausible, Meta Pixel, etc.) and pass them to this
+          component.
         </p>
         <DestinationDemo
-          destination={documentationPlausible}
-          event={getEvent('order complete')}
-          mapping={examples.mapping.purchase}
-          settings={{ domain: 'elbwalker.com' }}
-          generic={true}
-          theme={theme}
-        />
-      </section>
-
-      <section style={{ marginBottom: '3rem' }}>
-        <h2>Plausible - Custom Event</h2>
-        <p
-          style={{
-            marginBottom: '1rem',
-            color: theme === 'dark' ? '#cccccc' : '#666',
-          }}
-        >
-          Send custom events to Plausible with properties and revenue data.
-        </p>
-        <DestinationDemo
-          destination={documentationPlausible}
-          event={getEvent()}
-          mapping={examples.mapping.customEvent}
-          settings={{ domain: 'elbwalker.com' }}
+          destination={mockDestination}
+          event={exampleEvent}
+          mapping={exampleMapping}
           generic={true}
           theme={theme}
         />
