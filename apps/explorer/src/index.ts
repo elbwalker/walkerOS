@@ -1,5 +1,8 @@
 // Ready-to-use demos
 export { MappingDemo } from './components/demos/MappingDemo';
+export { MappingCode } from './components/demos/MappingCode';
+export type { MappingDemoProps } from './components/demos/MappingDemo';
+export type { MappingCodeProps } from './components/demos/MappingCode';
 
 // Main components
 export { LiveCode } from './components/organisms/live-code';

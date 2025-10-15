@@ -1,49 +1,41 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Editor } from '@monaco-editor/react';
+import { getMappingEvent, getMappingValue, createEvent } from '@walkeros/core';
+import type { Mapping, WalkerOS } from '@walkeros/core';
 
 // Auto-import CSS
 import '../../styles/mapping-demo.css';
 
-// NOTE: Monaco Editor configuration (workers, etc.) must be handled by the consuming application.
-// See apps/explorer/demo/main.tsx for an example with Vite
-
-export interface MappingDemoProps {
-  input?: string;
+export interface MappingCodeProps {
+  input: string;
   config?: string;
   labelInput?: string;
-  labelConfig?: string;
   labelOutput?: string;
-  fn?: (input: string, config: string) => Promise<string>;
 }
 
 /**
- * MappingDemo - Interactive dual-editor component with Monaco Editor
+ * MappingCode - Specialized component for walkerOS mapping demonstrations
  *
- * A generic component with two editable JSON editors and one output display.
- * Requires a transformation function to process input+config into output.
+ * Similar to LiveCode but specifically for mapping transformations.
+ * Shows input code and output result side-by-side with built-in mapping logic.
  *
  * Props:
- * - input: Initial JSON string for left editor (default: '{}')
- * - config: Initial JSON string for middle editor (default: '{}')
- * - labelInput: Label for input editor (default: "Input")
- * - labelConfig: Label for config editor (default: "Config")
- * - labelOutput: Label for output editor (default: "Output")
- * - fn: Transformation function (input, config) => Promise<string> (required for output)
+ * - input: Code string to execute (can use await getMappingEvent, getMappingValue)
+ * - config: Optional mapping configuration JSON
+ * - labelInput: Label for input editor (default: "Configuration")
+ * - labelOutput: Label for output display (default: "Result")
  *
  * Example:
  * ```tsx
- * <MappingDemo
- *   input='{ "name": "example" }'
- *   config='{ "transform": "uppercase" }'
- *   labelInput="Data"
- *   labelConfig="Rules"
- *   labelOutput="Result"
- *   fn={async (input, config) => {
- *     const data = JSON.parse(input);
- *     const rules = JSON.parse(config);
- *     // Your transformation logic
- *     return JSON.stringify(result, null, 2);
- *   }}
+ * <MappingCode
+ *   input={`await getMappingEvent(
+ *     { name: 'product view' },
+ *     {
+ *       product: {
+ *         view: { name: 'product_viewed' }
+ *       }
+ *     }
+ *   );`}
  * />
  * ```
  */
@@ -53,11 +45,18 @@ interface CodeBoxProps {
   value: string;
   onChange?: (value: string) => void;
   disabled?: boolean;
+  language?: string;
 }
 
-function CodeBox({ label, value, onChange, disabled = false }: CodeBoxProps) {
+function CodeBox({
+  label,
+  value,
+  onChange,
+  disabled = false,
+  language = 'json',
+}: CodeBoxProps) {
   const formatJson = () => {
-    if (disabled || !onChange) return;
+    if (disabled || !onChange || language !== 'json') return;
     try {
       const parsed = JSON.parse(value);
       const formatted = JSON.stringify(parsed, null, 2);
@@ -71,7 +70,7 @@ function CodeBox({ label, value, onChange, disabled = false }: CodeBoxProps) {
     <div className="elb-explorer-mapping-box">
       <div className="elb-explorer-mapping-header">
         <span className="elb-explorer-mapping-label">{label}</span>
-        {!disabled && (
+        {!disabled && language === 'json' && (
           <button
             className="elb-explorer-mapping-btn"
             onClick={formatJson}
@@ -95,7 +94,7 @@ function CodeBox({ label, value, onChange, disabled = false }: CodeBoxProps) {
         {/* @ts-expect-error - Monaco Editor React type mismatch */}
         <Editor
           height="100%"
-          language="json"
+          language={language}
           value={value}
           onChange={(val) => onChange?.(val || '')}
           theme="vs-light"
@@ -119,46 +118,59 @@ function CodeBox({ label, value, onChange, disabled = false }: CodeBoxProps) {
   );
 }
 
-export function MappingDemo({
-  input: initialInput = '{}',
-  config: initialConfig = '{}',
-  labelInput = 'Input',
-  labelConfig = 'Config',
-  labelOutput = 'Output',
-  fn,
-}: MappingDemoProps = {}) {
+export function MappingCode({
+  input: initialInput,
+  config,
+  labelInput = 'Configuration',
+  labelOutput = 'Result',
+}: MappingCodeProps) {
   const [input, setInput] = useState(initialInput);
-  const [config, setConfig] = useState(initialConfig);
   const [output, setOutput] = useState('');
 
-  const updateOutput = useCallback(async () => {
+  const executeCode = useCallback(async () => {
     try {
-      if (fn) {
-        // Use custom function if provided
-        const result = await fn(input, config);
-        setOutput(result);
-      } else {
-        // Default behavior: just show the parsed JSON
-        setOutput('No transformation function provided');
-      }
+      // Wrap input in async function and execute
+      const asyncFunction = new Function(
+        'getMappingEvent',
+        'getMappingValue',
+        'createEvent',
+        `return (async () => {
+          return ${input}
+        })();`,
+      );
+
+      const result = await asyncFunction(
+        getMappingEvent,
+        getMappingValue,
+        createEvent,
+      );
+
+      setOutput(JSON.stringify(result, null, 2));
     } catch (error) {
       setOutput(
         `Error: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-  }, [input, config, fn]);
+  }, [input, config]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(updateOutput, 500);
+    const timeoutId = setTimeout(executeCode, 500);
     return () => clearTimeout(timeoutId);
-  }, [updateOutput]);
+  }, [executeCode]);
 
   return (
     <div className="elb-explorer-mapping">
-      <div className="elb-explorer-mapping-grid">
-        <CodeBox label={labelInput} value={input} onChange={setInput} />
-        <CodeBox label={labelConfig} value={config} onChange={setConfig} />
-        <CodeBox label={labelOutput} value={output} disabled />
+      <div
+        className="elb-explorer-mapping-grid"
+        style={{ gridTemplateColumns: '1fr 1fr' }}
+      >
+        <CodeBox
+          label={labelInput}
+          value={input}
+          onChange={setInput}
+          language="javascript"
+        />
+        <CodeBox label={labelOutput} value={output} disabled language="json" />
       </div>
     </div>
   );
