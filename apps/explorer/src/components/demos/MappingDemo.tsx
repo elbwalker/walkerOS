@@ -122,6 +122,7 @@ function CodeBox({
             scrollbar: {
               vertical: 'auto',
               horizontal: 'auto',
+              alwaysConsumeMouseWheel: false,
             },
           }}
         />
