@@ -41,6 +41,7 @@ const sidebars: SidebarsConfig = {
           ],
         },
         'sources/web/dataLayer/index',
+        'sources/create-your-own',
       ],
     },
     {
@@ -52,6 +53,7 @@ const sidebars: SidebarsConfig = {
       },
       items: ['collector/commands'],
     },
+    'mapping',
     {
       type: 'category',
       label: 'Destinations',
@@ -83,7 +85,6 @@ const sidebars: SidebarsConfig = {
         'destinations/server/gcp',
         'destinations/server/meta-capi',
         'destinations/create-your-own',
-        'destinations/event-mapping',
       ],
     },
     {
