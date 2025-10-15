@@ -21,5 +21,9 @@ export { cn } from './lib/utils';
 
 // Sub-components
 export { Button } from './components/ui/button';
+export { PanelHeader } from './components/atoms/panel-header';
 export { CodeEditor } from './components/molecules/code-editor';
 export { CodePanel } from './components/molecules/code-panel';
+export { HtmlPreview } from './components/molecules/html-preview';
+export type { PanelHeaderProps } from './components/atoms/panel-header';
+export type { HtmlPreviewProps } from './components/molecules/html-preview';

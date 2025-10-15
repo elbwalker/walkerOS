@@ -149,6 +149,43 @@ const App = () => {
             <li>Live mapping transformations</li>
           </ul>
         </a>
+
+        <a
+          href="/preview.html"
+          style={cardStyle}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-4px)';
+            e.currentTarget.style.boxShadow =
+              theme === 'dark'
+                ? '0 8px 16px rgba(0,0,0,0.4)'
+                : '0 8px 16px rgba(0,0,0,0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>HTML Preview</h2>
+          <p
+            style={{
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+              marginBottom: '1rem',
+            }}
+          >
+            Interactive HTML preview with data attribute highlighting
+          </p>
+          <ul
+            style={{
+              paddingLeft: '1.5rem',
+              margin: 0,
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+            }}
+          >
+            <li>Render HTML with live preview</li>
+            <li>Highlight walkerOS data attributes</li>
+            <li>Auto-mark entity properties</li>
+          </ul>
+        </a>
       </div>
 
       <footer

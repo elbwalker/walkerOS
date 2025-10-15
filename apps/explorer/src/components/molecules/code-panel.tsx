@@ -1,5 +1,5 @@
-import { Label } from '../ui/label';
 import { CodeEditor } from './code-editor';
+import { PanelHeader } from '../atoms/panel-header';
 
 export interface CodePanelProps {
   label: string;
@@ -34,8 +34,7 @@ export function CodePanel({
 
   return (
     <div className="elb-explorer-mapping-box">
-      <div className="elb-explorer-mapping-header">
-        <span className="elb-explorer-mapping-label">{label}</span>
+      <PanelHeader label={label}>
         {!disabled && language === 'json' && (
           <button
             className="elb-explorer-mapping-btn"
@@ -57,7 +56,7 @@ export function CodePanel({
             </svg>
           </button>
         )}
-      </div>
+      </PanelHeader>
       <div className="elb-explorer-mapping-editor">
         <CodeEditor
           value={value}

@@ -1,0 +1,212 @@
+/* HTML Preview Highlighting Styles */
+/* Copied from website/src/css/highlighting.scss and converted to CSS */
+
+/* Highlight colors */
+:root {
+  --highlight-globals: #4fc3f7cc;
+  --highlight-context: #ffbd44cc;
+  --highlight-entity: #00ca4ecc;
+  --highlight-property: #ff605ccc;
+  --highlight-action: #9900ffcc;
+  --highlight-background: #1f2937;
+  --highlight-text: #9ca3af;
+  --highlight-hover: rgba(255, 255, 255, 0.05);
+  --highlight-separator: rgba(255, 255, 255, 0.05);
+}
+
+/* Preview wrapper */
+.elb-preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.elb-preview-content {
+  flex: 1;
+  overflow: auto;
+}
+
+.elb-preview-iframe {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: none;
+  display: block;
+}
+
+.token.attr-name {
+  color: white !important;
+}
+
+.token.attr-name[data-elb],
+.token.attr-name[data-elbaction],
+.token.attr-name[data-elbglobals],
+.token.attr-name[data-elbcontext],
+.token.attr-name[data-elbproperty] {
+  color: var(--highlight-property) !important;
+}
+
+.elb-highlight.highlight-globals [data-elbglobals] {
+  box-shadow: 0 0 0 2px var(--highlight-globals);
+}
+
+.elb-highlight.highlight-context [data-elbcontext] {
+  box-shadow: 0 0 0 2px var(--highlight-context);
+}
+
+.elb-highlight.highlight-entity [data-elb] {
+  box-shadow: 0 0 0 2px var(--highlight-entity);
+}
+
+.elb-highlight.highlight-property [data-elbproperty] {
+  box-shadow: 0 0 0 2px var(--highlight-property);
+}
+
+.elb-highlight.highlight-action [data-elbaction] {
+  box-shadow: 0 0 0 2px var(--highlight-action);
+}
+
+/* Combined highlights with layered solid borders */
+.elb-highlight.highlight-entity.highlight-action [data-elb][data-elbaction] {
+  box-shadow:
+    0 0 0 2px var(--highlight-action),
+    0 0 0 4px var(--highlight-entity);
+}
+
+.elb-highlight.highlight-entity.highlight-context [data-elb][data-elbcontext] {
+  box-shadow:
+    0 0 0 2px var(--highlight-entity),
+    0 0 0 4px var(--highlight-context);
+}
+
+.elb-highlight.highlight-entity.highlight-property
+  [data-elb][data-elbproperty] {
+  box-shadow:
+    0 0 0 2px var(--highlight-entity),
+    0 0 0 4px var(--highlight-property);
+}
+
+.elb-highlight.highlight-action.highlight-context
+  [data-elbaction][data-elbcontext] {
+  box-shadow:
+    0 0 0 2px var(--highlight-action),
+    0 0 0 4px var(--highlight-context);
+}
+
+.elb-highlight.highlight-context.highlight-property
+  [data-elbcontext][data-elbproperty] {
+  box-shadow:
+    0 0 0 2px var(--highlight-context),
+    0 0 0 4px var(--highlight-property);
+}
+
+.elb-highlight.highlight-action.highlight-property
+  [data-elbaction][data-elbproperty] {
+  box-shadow:
+    0 0 0 2px var(--highlight-action),
+    0 0 0 4px var(--highlight-property);
+}
+
+/* Triple combinations with distinct layers */
+.elb-highlight.highlight-entity.highlight-action.highlight-context
+  [data-elb][data-elbaction][data-elbcontext] {
+  box-shadow:
+    0 0 0 2px var(--highlight-action),
+    0 0 0 4px var(--highlight-entity),
+    0 0 0 6px var(--highlight-context);
+}
+
+/* Triple combinations with property */
+.elb-highlight.highlight-entity.highlight-action.highlight-property
+  [data-elb][data-elbaction][data-elbproperty] {
+  box-shadow:
+    0 0 0 2px var(--highlight-action),
+    0 0 0 4px var(--highlight-entity),
+    0 0 0 6px var(--highlight-property);
+}
+
+.elb-highlight.highlight-entity.highlight-context.highlight-property
+  [data-elb][data-elbcontext][data-elbproperty] {
+  box-shadow:
+    0 0 0 2px var(--highlight-context),
+    0 0 0 4px var(--highlight-entity),
+    0 0 0 6px var(--highlight-property);
+}
+
+.elb-highlight.highlight-action.highlight-context.highlight-property
+  [data-elbaction][data-elbcontext][data-elbproperty] {
+  box-shadow:
+    0 0 0 2px var(--highlight-action),
+    0 0 0 4px var(--highlight-context),
+    0 0 0 6px var(--highlight-property);
+}
+
+/* Quadruple combination */
+.elb-highlight.highlight-entity.highlight-action.highlight-context.highlight-property
+  [data-elb][data-elbaction][data-elbcontext][data-elbproperty] {
+  box-shadow:
+    0 0 0 2px var(--highlight-action),
+    0 0 0 4px var(--highlight-entity),
+    0 0 0 6px var(--highlight-context),
+    0 0 0 8px var(--highlight-property);
+}
+
+/* Button styles - separated from highlight effects */
+.elb-highlight-buttons {
+  display: flex;
+  background: var(--highlight-background);
+}
+
+.elb-highlight-buttons button {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--highlight-text);
+  border: 0;
+  background: transparent;
+  transition: all 0.2s ease;
+  position: relative;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.elb-highlight-buttons button:hover {
+  color: white;
+  background: var(--highlight-hover);
+}
+
+.elb-highlight-buttons button:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 20%;
+  height: 60%;
+  width: 1px;
+  background: var(--highlight-separator);
+}
+
+.elb-highlight-buttons button.highlight-globals,
+.elb-highlight-buttons button.btn-globals.highlight-globals {
+  color: var(--highlight-globals);
+}
+
+.elb-highlight-buttons button.highlight-context,
+.elb-highlight-buttons button.btn-context.highlight-context {
+  color: var(--highlight-context);
+}
+
+.elb-highlight-buttons button.highlight-entity,
+.elb-highlight-buttons button.btn-entity.highlight-entity {
+  color: var(--highlight-entity);
+}
+
+.elb-highlight-buttons button.highlight-property,
+.elb-highlight-buttons button.btn-property.highlight-property {
+  color: var(--highlight-property);
+}
+
+.elb-highlight-buttons button.highlight-action,
+.elb-highlight-buttons button.btn-action.highlight-action {
+  color: var(--highlight-action);
+}
