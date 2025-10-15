@@ -17,9 +17,9 @@ export function CodePanel({
   language,
 }: CodePanelProps) {
   return (
-    <div className="explorer-panel explorer-flex-1 flex flex-col">
+    <div className="explorer-panel">
       <Label>{label}</Label>
-      <div className="explorer-flex-1" style={{ overflow: 'visible' }}>
+      <div className="explorer-editor-wrapper">
         <CodeEditor
           value={value}
           onChange={onChange}

@@ -1,0 +1,143 @@
+/* walkerOS Explorer - Mapping Demo Styles */
+
+.elb-explorer-mapping {
+  width: 100%;
+  max-width: 100%;
+  background: transparent;
+  padding: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #000;
+  box-sizing: border-box;
+}
+
+/* Reset nested elements to prevent host styles from leaking */
+.elb-explorer-mapping *,
+.elb-explorer-mapping *::before,
+.elb-explorer-mapping *::after {
+  box-sizing: border-box;
+}
+
+.elb-explorer-mapping-controls {
+  padding: 8px 0 12px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.elb-explorer-mapping-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  user-select: none;
+}
+
+.elb-explorer-mapping-toggle input[type='checkbox'] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.elb-explorer-mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.elb-explorer-mapping-box {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 400px;
+}
+
+.elb-explorer-mapping-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+  min-height: 28px;
+}
+
+.elb-explorer-mapping-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #424242;
+  user-select: none;
+}
+
+.elb-explorer-mapping-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #616161;
+  transition: all 0.15s;
+}
+
+.elb-explorer-mapping-btn:hover {
+  background: #e8e8e8;
+  color: #424242;
+}
+
+.elb-explorer-mapping-editor {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: transparent;
+}
+
+/* Monaco Editor will fill this container */
+.elb-explorer-mapping-editor > div {
+  height: 100%;
+}
+
+/* Monaco Editor customizations */
+.elb-explorer-mapping-editor .monaco-editor {
+  background: transparent !important;
+}
+
+/* Reduce line number width */
+.elb-explorer-mapping-editor .monaco-editor .margin {
+  background: transparent !important;
+}
+
+.elb-explorer-mapping-editor .monaco-editor .monaco-editor-background {
+  background: transparent !important;
+}
+
+/* Customize line numbers to be narrower */
+.elb-explorer-mapping-editor .monaco-editor .line-numbers {
+  width: 32px !important;
+  min-width: 32px !important;
+}
+
+.elb-explorer-mapping-editor
+  .monaco-editor
+  .margin-view-overlays
+  .line-numbers {
+  width: 32px !important;
+  min-width: 32px !important;
+}
+
+/* Responsive: stack on smaller screens */
+@media (max-width: 1024px) {
+  .elb-explorer-mapping-grid {
+    grid-template-columns: 1fr;
+  }
+}

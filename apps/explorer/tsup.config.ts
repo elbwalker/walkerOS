@@ -11,7 +11,7 @@ export default defineConfig([
     },
     dts: true,
     sourcemap: true,
-    external: ['react', 'react-dom'],
+    external: ['react', 'react-dom', '@monaco-editor/react', 'monaco-editor'],
     esbuildOptions(options) {
       options.banner = { js: '"use client"' }; // Next.js client component compat
     },

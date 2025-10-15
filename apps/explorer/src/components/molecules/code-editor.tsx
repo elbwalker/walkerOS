@@ -1,5 +1,6 @@
 import { Editor } from '@monaco-editor/react';
 import { cn } from '@/lib/utils';
+import type { ComponentType } from 'react';
 
 export interface CodeEditorProps {
   value: string;
@@ -22,9 +23,11 @@ export function CodeEditor({
     }
   };
 
+  const MonacoEditor = Editor as ComponentType<any>;
+
   return (
     <div className={cn('explorer-code-editor', className)}>
-      <Editor
+      <MonacoEditor
         height="100%"
         language={language}
         value={value}
@@ -39,7 +42,7 @@ export function CodeEditor({
           scrollBeyondLastLine: false,
           automaticLayout: true,
           tabSize: 2,
-          wordWrap: 'on',
+          wordWrap: 'off',
         }}
       />
     </div>
