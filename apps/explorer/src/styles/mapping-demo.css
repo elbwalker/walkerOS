@@ -168,6 +168,61 @@
   color: #999;
 }
 
+/* Header Button and Button Group Styles */
+.elb-header-button {
+  padding: 0.25rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+  min-width: 50px;
+}
+
+.elb-header-button:hover {
+  color: #374151;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.elb-header-button.active {
+  background: #ffffff;
+  color: #1f2937;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-weight: 600;
+}
+
+.elb-button-group {
+  display: flex;
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 1px;
+  border: 1px solid #d1d5db;
+}
+
+/* Dark mode for header buttons */
+[data-theme='dark'] .elb-header-button {
+  color: #cccccc;
+}
+
+[data-theme='dark'] .elb-header-button:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .elb-header-button.active {
+  background: #1e1e1e;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .elb-button-group {
+  background: #2a2d2e;
+  border-color: #3c3c3c;
+}
+
 /* Responsive: stack on smaller screens */
 @media (max-width: 1024px) {
   .elb-explorer-mapping-grid {

@@ -25,15 +25,21 @@ export { cn } from './lib/utils';
 export { Button } from './components/ui/button';
 export { Box } from './components/atoms/box';
 export { PanelHeader } from './components/atoms/panel-header';
+export { HeaderButton } from './components/atoms/header-button';
 export { Preview } from './components/molecules/preview';
 export { CodeEditor } from './components/molecules/code-editor';
 export { CodePanel } from './components/molecules/code-panel';
 export { CollectorBox } from './components/molecules/collector-box';
+export { ButtonGroup } from './components/molecules/button-group';
+export { BrowserBox } from './components/molecules/browser-box';
 export { HtmlPreview } from './components/molecules/html-preview';
 export type { BoxProps } from './components/atoms/box';
 export type { PanelHeaderProps } from './components/atoms/panel-header';
+export type { HeaderButtonProps } from './components/atoms/header-button';
 export type { PreviewProps } from './components/molecules/preview';
 export type { CollectorBoxProps } from './components/molecules/collector-box';
+export type { ButtonGroupProps } from './components/molecules/button-group';
+export type { BrowserBoxProps } from './components/molecules/browser-box';
 export type { HtmlPreviewProps } from './components/molecules/html-preview';
 
 // Destination helpers
