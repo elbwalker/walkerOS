@@ -2,29 +2,36 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { WalkerOS } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { startFlow } from '@walkeros/collector';
-import { PanelHeader } from '../atoms/panel-header';
-import '../../styles/mapping-demo.css';
 import '../../styles/html-preview.css';
 
-export interface HtmlPreviewProps {
+export interface PreviewProps {
   html: string;
   css?: string;
   theme?: 'light' | 'dark';
-  label?: string;
-  className?: string;
   onEvent?: (event: WalkerOS.Event) => void;
 }
 
 type HighlightType = 'context' | 'entity' | 'property' | 'action';
 
-export function HtmlPreview({
+/**
+ * Preview - Pure preview component
+ *
+ * Renders HTML in an isolated iframe with highlight buttons.
+ * When onEvent is provided, initializes walkerOS to capture events.
+ *
+ * @example
+ * // Read-only preview
+ * <Preview html={html} css={css} theme="dark" />
+ *
+ * // Interactive preview with event capture
+ * <Preview html={html} css={css} onEvent={(event) => console.log(event)} />
+ */
+export function Preview({
   html,
   css = '',
   theme = 'light',
-  label = 'Preview',
-  className = '',
   onEvent,
-}: HtmlPreviewProps) {
+}: PreviewProps) {
   const [highlights, setHighlights] = useState<Set<HighlightType>>(new Set());
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
@@ -206,46 +213,43 @@ export function HtmlPreview({
   }, [html, css, theme, highlights, autoMarkProperties, initializeWalker]);
 
   return (
-    <div className={`elb-explorer-mapping-box ${className}`}>
-      <PanelHeader label={label} />
-      <div className="elb-explorer-mapping-editor elb-preview-wrapper">
-        <div className="elb-preview-content">
-          <iframe
-            ref={iframeRef}
-            className="elb-preview-iframe"
-            title="HTML Preview"
-          />
-        </div>
-        <div className="elb-highlight-buttons">
-          <button
-            className={`btn-context ${highlights.has('context') ? 'highlight-context' : ''}`}
-            onClick={() => toggleHighlight('context')}
-            type="button"
-          >
-            Context
-          </button>
-          <button
-            className={`btn-entity ${highlights.has('entity') ? 'highlight-entity' : ''}`}
-            onClick={() => toggleHighlight('entity')}
-            type="button"
-          >
-            Entity
-          </button>
-          <button
-            className={`btn-property ${highlights.has('property') ? 'highlight-property' : ''}`}
-            onClick={() => toggleHighlight('property')}
-            type="button"
-          >
-            Property
-          </button>
-          <button
-            className={`btn-action ${highlights.has('action') ? 'highlight-action' : ''}`}
-            onClick={() => toggleHighlight('action')}
-            type="button"
-          >
-            Action
-          </button>
-        </div>
+    <div className="elb-preview-wrapper">
+      <div className="elb-preview-content">
+        <iframe
+          ref={iframeRef}
+          className="elb-preview-iframe"
+          title="HTML Preview"
+        />
+      </div>
+      <div className="elb-highlight-buttons">
+        <button
+          className={`btn-context ${highlights.has('context') ? 'highlight-context' : ''}`}
+          onClick={() => toggleHighlight('context')}
+          type="button"
+        >
+          Context
+        </button>
+        <button
+          className={`btn-entity ${highlights.has('entity') ? 'highlight-entity' : ''}`}
+          onClick={() => toggleHighlight('entity')}
+          type="button"
+        >
+          Entity
+        </button>
+        <button
+          className={`btn-property ${highlights.has('property') ? 'highlight-property' : ''}`}
+          onClick={() => toggleHighlight('property')}
+          type="button"
+        >
+          Property
+        </button>
+        <button
+          className={`btn-action ${highlights.has('action') ? 'highlight-action' : ''}`}
+          onClick={() => toggleHighlight('action')}
+          type="button"
+        >
+          Action
+        </button>
       </div>
     </div>
   );

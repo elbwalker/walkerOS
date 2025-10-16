@@ -46,6 +46,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   width: 100%;
+  grid-auto-rows: minmax(400px, 1fr);
 }
 
 .elb-explorer-mapping-box {

@@ -32,6 +32,7 @@
     "@monaco-editor/react": "^4.7.0-rc.0",
     "@walkeros/collector": "0.2.0",
     "@walkeros/core": "0.2.0",
+    "@walkeros/web-source-browser": "0.2.0",
     "clsx": "^2.1.1",
     "monaco-editor": "^0.54.0",
     "tailwind-merge": "^2.5.5"
@@ -51,6 +52,7 @@
     "@walkeros/jest": "*",
     "@walkeros/tsconfig": "*",
     "@walkeros/tsup": "*",
+    "identity-obj-proxy": "^3.0.0",
     "vite": "^6.0.7"
   },
   "repository": {

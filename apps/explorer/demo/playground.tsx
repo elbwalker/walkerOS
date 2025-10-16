@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { createRoot } from 'react-dom/client';
-import { HtmlPreview } from '../src/components/molecules/html-preview';
+import { Box } from '../src/components/atoms/box';
+import { Preview } from '../src/components/molecules/preview';
 
 const sampleHtml = `<div
   data-elb="product"
@@ -201,7 +202,9 @@ function App() {
           {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
         </button>
       </div>
-      <HtmlPreview html={sampleHtml} css={sampleCss} theme={theme} />
+      <Box header="Preview">
+        <Preview html={sampleHtml} css={sampleCss} theme={theme} />
+      </Box>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import React from 'react';
 import { CodeEditor } from './code-editor';
 import { PanelHeader } from '../atoms/panel-header';
 
