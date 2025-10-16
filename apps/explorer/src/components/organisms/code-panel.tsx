@@ -8,7 +8,6 @@ export interface CodePanelProps {
   onChange?: (value: string) => void;
   disabled?: boolean;
   language?: string;
-  theme?: 'light' | 'dark';
   onFormat?: () => void;
 }
 
@@ -18,7 +17,6 @@ export function CodePanel({
   onChange,
   disabled = false,
   language,
-  theme = 'light',
   onFormat,
 }: CodePanelProps) {
   const handleFormat = () => {
@@ -62,7 +60,6 @@ export function CodePanel({
         onChange={onChange}
         disabled={disabled}
         language={language}
-        theme={theme}
       />
     </Box>
   );

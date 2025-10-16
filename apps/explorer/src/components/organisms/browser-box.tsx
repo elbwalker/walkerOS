@@ -13,7 +13,6 @@ export interface BrowserBoxProps {
   onJsChange?: (value: string) => void;
   showPreview?: boolean;
   label?: string;
-  theme?: 'light' | 'dark';
   className?: string;
   initialTab?: 'preview' | 'html' | 'css' | 'js';
 }
@@ -42,7 +41,6 @@ export function BrowserBox({
   onJsChange,
   showPreview = true,
   label = 'Code',
-  theme = 'light',
   className = '',
   initialTab,
 }: BrowserBoxProps) {
@@ -117,13 +115,12 @@ export function BrowserBox({
       className={className}
     >
       {activeTab === 'preview' ? (
-        <Preview html={html || ''} css={css || ''} theme={theme} />
+        <Preview html={html || ''} css={css || ''} />
       ) : (
         <CodeEditor
           value={content}
           onChange={onChange}
           language={language}
-          theme={theme}
           disabled={!onChange}
         />
       )}

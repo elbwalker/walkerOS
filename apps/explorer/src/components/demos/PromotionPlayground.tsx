@@ -18,7 +18,6 @@ export interface PromotionPlaygroundProps {
   labelEvents?: string;
   labelMapping?: string;
   labelResult?: string;
-  theme?: 'light' | 'dark';
   destination?: DestinationCode;
 }
 
@@ -159,7 +158,6 @@ export function PromotionPlayground({
   labelEvents = 'Events',
   labelMapping = 'Mapping',
   labelResult = 'Result',
-  theme = 'light',
   destination = createGtagDestination(),
 }: PromotionPlaygroundProps) {
   const [content, setContent] = useState(initialHtml);
@@ -191,12 +189,11 @@ export function PromotionPlayground({
           value={content}
           onChange={setContent}
           language="html"
-          theme={theme}
         />
 
         {/* Column 2: Preview */}
         <Box header={labelPreview}>
-          <Preview html={html} css={css} theme={theme} onEvent={handleEvent} />
+          <Preview html={html} css={css} onEvent={handleEvent} />
         </Box>
 
         {/* Column 3: Events */}
@@ -205,7 +202,6 @@ export function PromotionPlayground({
           value={eventDisplay}
           disabled
           language="json"
-          theme={theme}
         />
 
         {/* Column 4: Mapping */}
@@ -214,7 +210,6 @@ export function PromotionPlayground({
           value={mappingInput}
           onChange={setMappingInput}
           language="json"
-          theme={theme}
         />
 
         {/* Column 5: Result */}
@@ -223,7 +218,6 @@ export function PromotionPlayground({
           mapping={mappingInput}
           destination={destination}
           label={labelResult}
-          theme={theme}
         />
       </div>
     </div>

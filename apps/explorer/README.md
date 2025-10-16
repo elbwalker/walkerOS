@@ -48,7 +48,6 @@ Interactive three-panel editor: input → config → output transformation.
     const rules = JSON.parse(config);
     return JSON.stringify(result, null, 2);
   }}
-  theme="dark"
 />
 ```
 
@@ -104,7 +103,6 @@ Monaco editor with label and formatting controls.
   value='{"key": "value"}'
   language="json"
   onChange={setValue}
-  theme="dark"
 />
 ```
 
@@ -187,6 +185,25 @@ gtag.env = { elb: (output) => console.log(output) };
 ```tsx
 import '@walkeros/explorer/styles.css';
 ```
+
+### Theme Support
+
+Components automatically detect theme from `data-theme` attribute on `<html>` or
+`<body>`:
+
+```html
+<!-- Light theme (default) -->
+<html>
+  ...
+</html>
+
+<!-- Dark theme -->
+<html data-theme="dark">
+  ...
+</html>
+```
+
+Monaco Editor and all UI components automatically adapt to the theme.
 
 ### CSS Variables
 

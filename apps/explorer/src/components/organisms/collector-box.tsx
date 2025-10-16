@@ -9,7 +9,6 @@ export interface CollectorBoxProps {
   mapping: string;
   destination: DestinationCode;
   label?: string;
-  theme?: 'light' | 'dark';
 }
 
 /**
@@ -31,7 +30,6 @@ export function CollectorBox({
   mapping,
   destination,
   label = 'Result',
-  theme = 'light',
 }: CollectorBoxProps) {
   const [output, setOutput] = useState(
     '// Click elements in the preview to see function call',
@@ -73,7 +71,7 @@ export function CollectorBox({
 
   return (
     <Box header={label}>
-      <CodeEditor value={output} disabled language="javascript" theme={theme} />
+      <CodeEditor value={output} disabled language="javascript" />
     </Box>
   );
 }

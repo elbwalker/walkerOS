@@ -6,7 +6,6 @@ import '../../styles/html-preview.css';
 export interface PreviewProps {
   html: string;
   css?: string;
-  theme?: 'light' | 'dark';
   onEvent?: (event: WalkerOS.Event) => void;
 }
 
@@ -20,17 +19,12 @@ type HighlightType = 'context' | 'entity' | 'property' | 'action';
  *
  * @example
  * // Read-only preview
- * <Preview html={html} css={css} theme="dark" />
+ * <Preview html={html} css={css} />
  *
  * // Interactive preview with event capture
  * <Preview html={html} css={css} onEvent={(event) => console.log(event)} />
  */
-export function Preview({
-  html,
-  css = '',
-  theme = 'light',
-  onEvent,
-}: PreviewProps) {
+export function Preview({ html, css = '', onEvent }: PreviewProps) {
   const [highlights, setHighlights] = useState<Set<HighlightType>>(new Set());
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
@@ -95,9 +89,16 @@ export function Preview({
               * { margin: 0; padding: 0; box-sizing: border-box; }
               body {
                 padding: 1.5rem;
-                background: ${theme === 'dark' ? '#1f2937' : '#f9fafb'};
-                color: ${theme === 'dark' ? '#e5e7eb' : '#111827'};
+                background: #f9fafb;
+                color: #111827;
                 min-height: 100vh;
+              }
+
+              @media (prefers-color-scheme: dark) {
+                body {
+                  background: #1f2937;
+                  color: #e5e7eb;
+                }
               }
 
               /* User CSS */
@@ -228,7 +229,7 @@ export function Preview({
         sourceInstanceRef.current.destroy?.();
       }
     };
-  }, [html, css, theme, highlights, autoMarkProperties]);
+  }, [html, css, highlights, autoMarkProperties]);
 
   return (
     <div className="elb-preview-wrapper">

@@ -11,7 +11,6 @@ export interface MappingCodeProps {
   config?: string;
   labelInput?: string;
   labelOutput?: string;
-  theme?: 'light' | 'dark' | 'vs' | 'vs-dark';
 }
 
 /**
@@ -46,7 +45,6 @@ export function MappingCode({
   config,
   labelInput = 'Configuration',
   labelOutput = 'Result',
-  theme = 'light',
 }: MappingCodeProps) {
   const [input, setInput] = useState(initialInput);
   const [output, setOutput] = useState('');
@@ -82,10 +80,6 @@ export function MappingCode({
     return () => clearTimeout(timeoutId);
   }, [executeCode]);
 
-  // Normalize theme to 'light' or 'dark' for CodePanel
-  const normalizedTheme =
-    theme === 'vs' || theme === 'light' ? 'light' : 'dark';
-
   return (
     <div className="elb-explorer">
       <div
@@ -97,14 +91,12 @@ export function MappingCode({
           value={input}
           onChange={setInput}
           language="javascript"
-          theme={normalizedTheme}
         />
         <CodePanel
           label={labelOutput}
           value={output}
           disabled
           language="json"
-          theme={normalizedTheme}
         />
       </div>
     </div>

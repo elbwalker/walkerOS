@@ -1,4 +1,4 @@
-import React, { type ComponentType } from 'react';
+import React, { type ComponentType, useEffect, useState } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { cn } from '@/lib/utils';
 
@@ -8,7 +8,6 @@ export interface CodeEditorProps {
   disabled?: boolean;
   language?: string;
   className?: string;
-  theme?: 'light' | 'dark';
 }
 
 export function CodeEditor({
@@ -17,15 +16,37 @@ export function CodeEditor({
   disabled = false,
   language = 'javascript',
   className,
-  theme = 'light',
 }: CodeEditorProps) {
+  const [monacoTheme, setMonacoTheme] = useState('vs-light');
+
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDark =
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        document.body.getAttribute('data-theme') === 'dark';
+      setMonacoTheme(isDark ? 'vs-dark' : 'vs-light');
+    };
+
+    checkTheme();
+
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   const handleChange = (value: string | undefined) => {
     if (onChange && value !== undefined) {
       onChange(value);
     }
   };
-
-  const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs-light';
 
   const MonacoEditor = Editor as ComponentType<{
     height: string;

@@ -20,7 +20,6 @@ export interface DestinationDemoProps {
   labelEvent?: string;
   labelMapping?: string;
   labelOutput?: string;
-  theme?: 'light' | 'dark';
   fn?: (
     event: WalkerOS.Event,
     context: Destination.PushContext,
@@ -93,7 +92,6 @@ export function DestinationDemo({
   labelEvent = 'Event',
   labelMapping = 'Mapping',
   labelOutput = 'Result',
-  theme = 'light',
   fn,
 }: DestinationDemoProps) {
   const [eventInput, setEventInput] = useState(
@@ -165,21 +163,18 @@ export function DestinationDemo({
           value={eventInput}
           onChange={setEventInput}
           language="json"
-          theme={theme}
         />
         <CodePanel
           label={labelMapping}
           value={mappingInput}
           onChange={setMappingInput}
           language="json"
-          theme={theme}
         />
         <CodePanel
           label={labelOutput}
           value={output}
           disabled
           language="javascript"
-          theme={theme}
         />
       </div>
     </div>

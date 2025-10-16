@@ -14,7 +14,6 @@ export interface MappingDemoProps {
   labelConfig?: string;
   labelOutput?: string;
   fn?: (input: string, config: string) => Promise<string>;
-  theme?: 'light' | 'dark' | 'vs' | 'vs-dark';
 }
 
 /**
@@ -56,7 +55,6 @@ export function MappingDemo({
   labelConfig = 'Config',
   labelOutput = 'Output',
   fn,
-  theme = 'light',
 }: MappingDemoProps = {}) {
   const [input, setInput] = useState(initialInput);
   const [config, setConfig] = useState(initialConfig);
@@ -84,10 +82,6 @@ export function MappingDemo({
     return () => clearTimeout(timeoutId);
   }, [updateOutput]);
 
-  // Normalize theme to 'light' or 'dark' for CodePanel
-  const normalizedTheme =
-    theme === 'vs' || theme === 'light' ? 'light' : 'dark';
-
   return (
     <div className="elb-explorer">
       <div className="elb-explorer-grid">
@@ -96,21 +90,18 @@ export function MappingDemo({
           value={input}
           onChange={setInput}
           language="json"
-          theme={normalizedTheme}
         />
         <CodePanel
           label={labelConfig}
           value={config}
           onChange={setConfig}
           language="json"
-          theme={normalizedTheme}
         />
         <CodePanel
           label={labelOutput}
           value={output}
           disabled
           language="json"
-          theme={normalizedTheme}
         />
       </div>
     </div>
