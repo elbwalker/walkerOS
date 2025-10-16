@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Box } from '../atoms/box';
 import { ButtonGroup } from './button-group';
 import { CodeEditor } from './code-editor';
+import { Preview } from './preview';
 
 export interface BrowserBoxProps {
   html?: string;
@@ -10,10 +11,11 @@ export interface BrowserBoxProps {
   onHtmlChange?: (value: string) => void;
   onCssChange?: (value: string) => void;
   onJsChange?: (value: string) => void;
+  showPreview?: boolean;
   label?: string;
   theme?: 'light' | 'dark';
   className?: string;
-  initialTab?: 'html' | 'css' | 'js';
+  initialTab?: 'preview' | 'html' | 'css' | 'js';
 }
 
 /**
@@ -38,6 +40,7 @@ export function BrowserBox({
   onHtmlChange,
   onCssChange,
   onJsChange,
+  showPreview = true,
   label = 'Code',
   theme = 'light',
   className = '',
@@ -46,18 +49,20 @@ export function BrowserBox({
   // Determine available tabs
   const availableTabs = useMemo(() => {
     const tabs: Array<{ label: string; value: string }> = [];
+    if (showPreview && html !== undefined)
+      tabs.push({ label: 'Preview', value: 'preview' });
     if (html !== undefined) tabs.push({ label: 'HTML', value: 'html' });
     if (css !== undefined) tabs.push({ label: 'CSS', value: 'css' });
     if (js !== undefined) tabs.push({ label: 'JS', value: 'js' });
     return tabs;
-  }, [html, css, js]);
+  }, [html, css, js, showPreview]);
 
   // Set initial active tab
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (initialTab && availableTabs.some((t) => t.value === initialTab)) {
       return initialTab;
     }
-    return availableTabs[0]?.value || 'html';
+    return availableTabs[0]?.value || 'preview';
   });
 
   // Get current content and language
@@ -111,13 +116,17 @@ export function BrowserBox({
       }
       className={className}
     >
-      <CodeEditor
-        value={content}
-        onChange={onChange}
-        language={language}
-        theme={theme}
-        disabled={!onChange}
-      />
+      {activeTab === 'preview' ? (
+        <Preview html={html || ''} css={css || ''} theme={theme} />
+      ) : (
+        <CodeEditor
+          value={content}
+          onChange={onChange}
+          language={language}
+          theme={theme}
+          disabled={!onChange}
+        />
+      )}
     </Box>
   );
 }
