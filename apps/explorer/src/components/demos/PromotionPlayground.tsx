@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import type { WalkerOS } from '@walkeros/core';
-import { getMappingEvent, getMappingValue } from '@walkeros/core';
+import React, { useState, useCallback } from 'react';
+import type { WalkerOS, Destination } from '@walkeros/core';
 import { Box } from '../atoms/box';
 import { Preview } from '../molecules/preview';
 import { CodePanel } from '../molecules/code-panel';
+import { CollectorBox } from '../molecules/collector-box';
+import { createGtagDestination } from '../../helpers/destinations';
 import '../../styles/mapping-demo.css';
 
 export interface PromotionPlaygroundProps {
@@ -13,7 +14,9 @@ export interface PromotionPlaygroundProps {
   labelPreview?: string;
   labelEvents?: string;
   labelMapping?: string;
+  labelResult?: string;
   theme?: 'light' | 'dark';
+  destination?: Destination.Code;
 }
 
 const defaultContent = `<style>
@@ -152,62 +155,22 @@ export function PromotionPlayground({
   labelPreview = 'Preview',
   labelEvents = 'Events',
   labelMapping = 'Mapping',
+  labelResult = 'Result',
   theme = 'light',
+  destination = createGtagDestination(),
 }: PromotionPlaygroundProps) {
   const [content, setContent] = useState(initialHtml);
   const [mappingInput, setMappingInput] = useState(initialMapping);
   const [capturedEvent, setCapturedEvent] = useState<WalkerOS.Event | null>(
     null,
   );
-  const [mappedOutput, setMappedOutput] = useState('');
 
   const { html, css } = parseHtmlContent(content);
 
   // Handle events from preview
-  const handleEvent = useCallback(
-    (event: WalkerOS.Event) => {
-      setCapturedEvent(event);
-
-      // Process event through mapping
-      (async () => {
-        try {
-          const mappingConfig = JSON.parse(mappingInput);
-          const mappingResult = await getMappingEvent(event, mappingConfig);
-
-          if (!mappingResult || !mappingResult.eventMapping) {
-            setMappedOutput('// No mapping found for this event');
-            return;
-          }
-
-          const mappedData = await getMappingValue(
-            event,
-            mappingResult.eventMapping.data,
-            { collector: { id: 'demo' } as any },
-          );
-
-          const mappedName = mappingResult.eventMapping.name || event.name;
-          const output = {
-            event: mappedName,
-            data: mappedData,
-          };
-
-          setMappedOutput(JSON.stringify(output, null, 2));
-        } catch (error) {
-          setMappedOutput(
-            `Error: ${error instanceof Error ? error.message : String(error)}`,
-          );
-        }
-      })();
-    },
-    [mappingInput],
-  );
-
-  // Reprocess event when mapping changes
-  useEffect(() => {
-    if (capturedEvent) {
-      handleEvent(capturedEvent);
-    }
-  }, [mappingInput]); // Only reprocess when mapping changes, not when capturedEvent changes
+  const handleEvent = useCallback((event: WalkerOS.Event) => {
+    setCapturedEvent(event);
+  }, []);
 
   const eventDisplay = capturedEvent
     ? JSON.stringify(capturedEvent, null, 2)
@@ -217,7 +180,7 @@ export function PromotionPlayground({
     <div className="elb-explorer-mapping">
       <div
         className="elb-explorer-mapping-grid"
-        style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}
+        style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}
       >
         {/* Column 1: HTML Editor */}
         <CodePanel
@@ -242,12 +205,21 @@ export function PromotionPlayground({
           theme={theme}
         />
 
-        {/* Column 4: Mapping with Output */}
+        {/* Column 4: Mapping */}
         <CodePanel
           label={labelMapping}
           value={mappingInput}
           onChange={setMappingInput}
           language="json"
+          theme={theme}
+        />
+
+        {/* Column 5: Result */}
+        <CollectorBox
+          event={capturedEvent ? JSON.stringify(capturedEvent) : '{}'}
+          mapping={mappingInput}
+          destination={destination}
+          label={labelResult}
           theme={theme}
         />
       </div>

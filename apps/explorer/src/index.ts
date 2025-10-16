@@ -28,8 +28,17 @@ export { PanelHeader } from './components/atoms/panel-header';
 export { Preview } from './components/molecules/preview';
 export { CodeEditor } from './components/molecules/code-editor';
 export { CodePanel } from './components/molecules/code-panel';
+export { CollectorBox } from './components/molecules/collector-box';
 export { HtmlPreview } from './components/molecules/html-preview';
 export type { BoxProps } from './components/atoms/box';
 export type { PanelHeaderProps } from './components/atoms/panel-header';
 export type { PreviewProps } from './components/molecules/preview';
+export type { CollectorBoxProps } from './components/molecules/collector-box';
 export type { HtmlPreviewProps } from './components/molecules/html-preview';
+
+// Destination helpers
+export {
+  createGtagDestination,
+  createFbqDestination,
+  createPlausibleDestination,
+} from './helpers/destinations';
