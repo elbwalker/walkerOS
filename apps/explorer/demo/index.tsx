@@ -225,6 +225,163 @@ const App = () => {
             <li>Destination output visualization</li>
           </ul>
         </a>
+
+        <a
+          href="/header-toggle-demo.html"
+          style={cardStyle}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-4px)';
+            e.currentTarget.style.boxShadow =
+              theme === 'dark'
+                ? '0 8px 16px rgba(0,0,0,0.4)'
+                : '0 8px 16px rgba(0,0,0,0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>
+            Header Toggle Styles
+          </h2>
+          <p
+            style={{
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+              marginBottom: '1rem',
+            }}
+          >
+            Three different header toggle styles for content switching
+          </p>
+          <ul
+            style={{
+              paddingLeft: '1.5rem',
+              margin: 0,
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+            }}
+          >
+            <li>Segmented Control - iOS-style toggles</li>
+            <li>Tab Pills - Icon-based pill buttons</li>
+            <li>Minimal Toggle - Clean underline tabs</li>
+          </ul>
+        </a>
+
+        <a
+          href="/enhanced-header-demo.html"
+          style={cardStyle}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-4px)';
+            e.currentTarget.style.boxShadow =
+              theme === 'dark'
+                ? '0 8px 16px rgba(0,0,0,0.4)'
+                : '0 8px 16px rgba(0,0,0,0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>
+            Enhanced Header Demo
+          </h2>
+          <p
+            style={{
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+              marginBottom: '1rem',
+            }}
+          >
+            Integration examples with existing Box component
+          </p>
+          <ul
+            style={{
+              paddingLeft: '1.5rem',
+              margin: 0,
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+            }}
+          >
+            <li>Enhanced Box with header actions</li>
+            <li>New ToggleBox component</li>
+            <li>Usage examples and code snippets</li>
+          </ul>
+        </a>
+
+        <a
+          href="/code-toggle-demo.html"
+          style={cardStyle}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-4px)';
+            e.currentTarget.style.boxShadow =
+              theme === 'dark'
+                ? '0 8px 16px rgba(0,0,0,0.4)'
+                : '0 8px 16px rgba(0,0,0,0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>
+            Code Toggle Box
+          </h2>
+          <p
+            style={{
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+              marginBottom: '1rem',
+            }}
+          >
+            Segmented control with regular code boxes and language highlighting
+          </p>
+          <ul
+            style={{
+              paddingLeft: '1.5rem',
+              margin: 0,
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+            }}
+          >
+            <li>Compact segmented control</li>
+            <li>Monaco Editor with syntax highlighting</li>
+            <li>Configurable tab visibility (showHTML, showCSS, showJS)</li>
+          </ul>
+        </a>
+
+        <a
+          href="/manual-demo.html"
+          style={cardStyle}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-4px)';
+            e.currentTarget.style.boxShadow =
+              theme === 'dark'
+                ? '0 8px 16px rgba(0,0,0,0.4)'
+                : '0 8px 16px rgba(0,0,0,0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>
+            Manual Live Demo
+          </h2>
+          <p
+            style={{
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+              marginBottom: '1rem',
+            }}
+          >
+            Interactive demo with different tab configurations
+          </p>
+          <ul
+            style={{
+              paddingLeft: '1.5rem',
+              margin: 0,
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+            }}
+          >
+            <li>All tabs (HTML, CSS, JS)</li>
+            <li>CSS and JS only</li>
+            <li>HTML only (read-only)</li>
+            <li>JavaScript only</li>
+          </ul>
+        </a>
       </div>
 
       <footer

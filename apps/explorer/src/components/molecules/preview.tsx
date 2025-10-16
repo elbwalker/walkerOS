@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { WalkerOS } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
-import { startFlow } from '@walkeros/collector';
 import '../../styles/html-preview.css';
 
 export interface PreviewProps {
@@ -17,7 +16,7 @@ type HighlightType = 'context' | 'entity' | 'property' | 'action';
  * Preview - Pure preview component
  *
  * Renders HTML in an isolated iframe with highlight buttons.
- * When onEvent is provided, initializes walkerOS to capture events.
+ * When onEvent is provided, initializes walkerOS browser source in iframe.
  *
  * @example
  * // Read-only preview
@@ -36,54 +35,12 @@ export function Preview({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
   const onEventRef = useRef(onEvent);
-  const collectorRef = useRef<any>(null);
+  const sourceInstanceRef = useRef<any>(null);
 
   // Keep onEventRef in sync
   useEffect(() => {
     onEventRef.current = onEvent;
   }, [onEvent]);
-
-  // Initialize walkerOS scoped to iframe content
-  const initializeWalker = useCallback(async (scope: HTMLElement) => {
-    if (!onEventRef.current) return;
-
-    // Cleanup previous collector
-    if (collectorRef.current) {
-      try {
-        await collectorRef.current.destroy?.();
-      } catch (e) {
-        // Ignore
-      }
-    }
-
-    try {
-      const { collector, elb } = await startFlow({
-        sources: {
-          browser: {
-            code: sourceBrowser,
-            config: {
-              settings: {
-                pageview: false,
-                session: false,
-                prefix: 'data-elb',
-              },
-            },
-          },
-        },
-        destinations: {},
-        on: {
-          event: (event: WalkerOS.Event) => {
-            onEventRef.current?.(event);
-          },
-        },
-      });
-
-      collectorRef.current = collector;
-      await elb('walker init', { scope });
-    } catch (error) {
-      console.error('Failed to initialize walker:', error);
-    }
-  }, []);
 
   const toggleHighlight = (type: HighlightType) => {
     setHighlights((prev) => {
@@ -194,12 +151,48 @@ export function Preview({
 
       autoMarkProperties(doc);
 
-      // Initialize walkerOS in parent but scoped to iframe if onEvent provided
-      if (onEventRef.current && doc.body) {
-        // Small delay to ensure iframe DOM is fully ready
-        setTimeout(() => {
-          if (doc.body) {
-            initializeWalker(doc.body);
+      // Initialize browser source in iframe
+      if (
+        onEventRef.current &&
+        iframe.contentWindow &&
+        iframe.contentDocument
+      ) {
+        setTimeout(async () => {
+          // Cleanup previous source instance
+          if (sourceInstanceRef.current) {
+            try {
+              await sourceInstanceRef.current.destroy?.();
+            } catch (e) {
+              // Ignore cleanup errors
+            }
+          }
+
+          try {
+            // Initialize browser source directly in iframe
+            const sourceInstance = await sourceBrowser(
+              {
+                settings: {
+                  pageview: true,
+                  session: false,
+                  prefix: 'data-elb',
+                  elb: 'elb',
+                },
+              },
+              {
+                elb: (event: WalkerOS.DeepPartialEvent) => {
+                  if (onEventRef.current) {
+                    onEventRef.current(event as WalkerOS.Event);
+                  }
+                  return Promise.resolve({ ok: true });
+                },
+                window: iframe.contentWindow,
+                document: iframe.contentDocument,
+              },
+            );
+
+            sourceInstanceRef.current = sourceInstance;
+          } catch (error) {
+            console.error('Failed to initialize browser source:', error);
           }
         }, 50);
       }
@@ -209,8 +202,13 @@ export function Preview({
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
+
+      // Cleanup source instance
+      if (sourceInstanceRef.current) {
+        sourceInstanceRef.current.destroy?.();
+      }
     };
-  }, [html, css, theme, highlights, autoMarkProperties, initializeWalker]);
+  }, [html, css, theme, highlights, autoMarkProperties]);
 
   return (
     <div className="elb-preview-wrapper">
