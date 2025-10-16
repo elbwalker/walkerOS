@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Box } from '../atoms/box';
-import { ButtonGroup } from './button-group';
-import { CodeEditor } from './code-editor';
-import { Preview } from './preview';
+import { ButtonGroup } from '../atoms/button-group';
+import { CodeEditor } from '../molecules/code-editor';
+import { Preview } from '../molecules/preview';
 
 export interface BrowserBoxProps {
   html?: string;

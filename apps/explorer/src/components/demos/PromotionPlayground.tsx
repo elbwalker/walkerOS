@@ -1,10 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import type { WalkerOS, Destination } from '@walkeros/core';
+import type { WalkerOS } from '@walkeros/core';
 import { Box } from '../atoms/box';
 import { Preview } from '../molecules/preview';
-import { CodePanel } from '../molecules/code-panel';
-import { CollectorBox } from '../molecules/collector-box';
-import { createGtagDestination } from '../../helpers/destinations';
+import { CodePanel } from '../organisms/code-panel';
+import { CollectorBox } from '../organisms/collector-box';
+import {
+  createGtagDestination,
+  type DestinationCode,
+} from '../../helpers/destinations';
 import '../../styles/mapping-demo.css';
 
 export interface PromotionPlaygroundProps {
@@ -16,7 +19,7 @@ export interface PromotionPlaygroundProps {
   labelMapping?: string;
   labelResult?: string;
   theme?: 'light' | 'dark';
-  destination?: Destination.Code;
+  destination?: DestinationCode;
 }
 
 const defaultContent = `<style>
@@ -177,9 +180,9 @@ export function PromotionPlayground({
     : '// Click elements in the preview to see events';
 
   return (
-    <div className="elb-explorer-mapping">
+    <div className="elb-explorer">
       <div
-        className="elb-explorer-mapping-grid"
+        className="elb-explorer-grid"
         style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}
       >
         {/* Column 1: HTML Editor */}

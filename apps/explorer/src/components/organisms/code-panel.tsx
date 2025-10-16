@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box } from '../atoms/box';
-import { CodeEditor } from './code-editor';
+import { CodeEditor } from '../molecules/code-editor';
 
 export interface CodePanelProps {
   label: string;
@@ -35,7 +35,7 @@ export function CodePanel({
 
   const formatButton = !disabled && language === 'json' && (
     <button
-      className="elb-explorer-mapping-btn"
+      className="elb-explorer-btn"
       onClick={onFormat || handleFormat}
       title="Format JSON"
     >

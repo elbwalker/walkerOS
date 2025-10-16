@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { getMappingEvent, getMappingValue, createEvent } from '@walkeros/core';
 import type { Mapping, WalkerOS } from '@walkeros/core';
-import { CodePanel } from '../molecules/code-panel';
+import { CodePanel } from '../organisms/code-panel';
 
 // Auto-import CSS
 import '../../styles/mapping-demo.css';
@@ -82,10 +82,14 @@ export function MappingCode({
     return () => clearTimeout(timeoutId);
   }, [executeCode]);
 
+  // Normalize theme to 'light' or 'dark' for CodePanel
+  const normalizedTheme =
+    theme === 'vs' || theme === 'light' ? 'light' : 'dark';
+
   return (
-    <div className="elb-explorer-mapping">
+    <div className="elb-explorer">
       <div
-        className="elb-explorer-mapping-grid"
+        className="elb-explorer-grid"
         style={{ gridTemplateColumns: '1fr 1fr' }}
       >
         <CodePanel
@@ -93,14 +97,14 @@ export function MappingCode({
           value={input}
           onChange={setInput}
           language="javascript"
-          theme={theme}
+          theme={normalizedTheme}
         />
         <CodePanel
           label={labelOutput}
           value={output}
           disabled
           language="json"
-          theme={theme}
+          theme={normalizedTheme}
         />
       </div>
     </div>

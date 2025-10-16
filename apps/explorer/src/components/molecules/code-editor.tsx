@@ -1,6 +1,6 @@
+import React, { type ComponentType } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { cn } from '@/lib/utils';
-import type { ComponentType } from 'react';
 
 export interface CodeEditorProps {
   value: string;
@@ -27,7 +27,14 @@ export function CodeEditor({
 
   const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs-light';
 
-  const MonacoEditor = Editor as ComponentType<any>;
+  const MonacoEditor = Editor as ComponentType<{
+    height: string;
+    language: string;
+    value: string;
+    onChange: (value: string | undefined) => void;
+    theme: string;
+    options: Record<string, unknown>;
+  }>;
 
   return (
     <div className={cn('explorer-code-editor', className)}>

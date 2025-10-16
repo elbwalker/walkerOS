@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { WalkerOS } from '@walkeros/core';
 import { debounce, isString, tryCatchAsync } from '@walkeros/core';
-import { CodePanel } from '../molecules/code-panel';
+import { CodePanel } from './code-panel';
 import { cn } from '@/lib/utils';
 
 export interface LiveCodeProps {

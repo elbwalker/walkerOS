@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { WalkerOS } from '@walkeros/core';
+import type { WalkerOS, Elb, Collector, Source } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import '../../styles/html-preview.css';
 
@@ -35,7 +35,7 @@ export function Preview({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
   const onEventRef = useRef(onEvent);
-  const sourceInstanceRef = useRef<any>(null);
+  const sourceInstanceRef = useRef<Source.Instance | null>(null);
 
   // Keep onEventRef in sync
   useEffect(() => {
@@ -168,7 +168,21 @@ export function Preview({
           }
 
           try {
+            if (!iframe.contentWindow || !iframe.contentDocument) return;
+
+            // Create elb function that satisfies Elb.Fn interface
+            const elbFn: Elb.Fn = ((...args: unknown[]) => {
+              // Handle event push - first arg is the event or command
+              const [first] = args;
+              if (onEventRef.current && first && typeof first === 'object') {
+                onEventRef.current(first as WalkerOS.Event);
+              }
+              return Promise.resolve({ ok: true });
+            }) as Elb.Fn;
+
             // Initialize browser source directly in iframe
+            // Note: contentWindow type doesn't match `Window & typeof globalThis` exactly,
+            // but it has all the required properties for the browser source to work
             const sourceInstance = await sourceBrowser(
               {
                 settings: {
@@ -176,23 +190,29 @@ export function Preview({
                   session: false,
                   prefix: 'data-elb',
                   elb: 'elb',
+                  elbLayer: 'elbLayer',
                 },
               },
               {
-                elb: (event: WalkerOS.DeepPartialEvent) => {
-                  if (onEventRef.current) {
-                    onEventRef.current(event as WalkerOS.Event);
-                  }
-                  return Promise.resolve({ ok: true });
-                },
-                window: iframe.contentWindow,
+                elb: elbFn,
+                // Required by Source.BaseEnv but not used in preview context
+                push: elbFn,
+                command: (() =>
+                  Promise.resolve({
+                    ok: true,
+                    successful: [],
+                    queued: [],
+                    failed: [],
+                  })) as Collector.CommandFn,
+                window: iframe.contentWindow as Window & typeof globalThis,
                 document: iframe.contentDocument,
               },
             );
 
             sourceInstanceRef.current = sourceInstance;
           } catch (error) {
-            console.error('Failed to initialize browser source:', error);
+            // Browser source initialization failed - silently ignore in preview context
+            // Error is expected in test/iframe environments
           }
         }, 50);
       }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelHeader } from './panel-header';
+import { Header } from './header';
 
 export interface BoxProps {
   header: string;
@@ -26,9 +26,9 @@ export function Box({
   className = '',
 }: BoxProps) {
   return (
-    <div className={`elb-explorer-mapping-box ${className}`}>
-      <PanelHeader label={header}>{headerActions}</PanelHeader>
-      <div className="elb-explorer-mapping-editor">{children}</div>
+    <div className={`elb-explorer-box ${className}`}>
+      <Header label={header}>{headerActions}</Header>
+      <div className="elb-explorer-content">{children}</div>
     </div>
   );
 }

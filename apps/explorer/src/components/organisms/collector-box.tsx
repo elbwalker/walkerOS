@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import type { Destination } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { Box } from '../atoms/box';
-import { CodeEditor } from './code-editor';
+import { CodeEditor } from '../molecules/code-editor';
+import type { DestinationCode } from '../../helpers/destinations';
 
 export interface CollectorBoxProps {
   event: string;
   mapping: string;
-  destination: Destination.Code;
+  destination: DestinationCode;
   label?: string;
   theme?: 'light' | 'dark';
 }

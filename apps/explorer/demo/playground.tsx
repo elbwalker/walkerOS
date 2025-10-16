@@ -1,7 +1,8 @@
-import * as React from 'react';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Box } from '../src/components/atoms/box';
 import { Preview } from '../src/components/molecules/preview';
+import '../src/styles/mapping-demo.css';
 
 const sampleHtml = `<div
   data-elb="product"
@@ -202,7 +203,7 @@ function App() {
           {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
         </button>
       </div>
-      <Box header="Preview">
+      <Box header="Preview" className="preview-box-container">
         <Preview html={sampleHtml} css={sampleCss} theme={theme} />
       </Box>
     </div>

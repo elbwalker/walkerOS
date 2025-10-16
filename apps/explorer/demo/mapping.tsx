@@ -21,7 +21,7 @@ async function transformMapping(
       event,
       mappingResult.eventMapping?.data,
       {
-        collector: { id: 'demo' } as any,
+        collector: { id: 'demo' } as unknown as Collector.Instance,
       },
     );
     return JSON.stringify(result, null, 2);

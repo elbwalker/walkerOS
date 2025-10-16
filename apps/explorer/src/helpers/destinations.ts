@@ -1,10 +1,19 @@
-import type { Destination } from '@walkeros/core';
+import type { Destination, WalkerOS } from '@walkeros/core';
+
+// Demo destination type with elb function in env
+export interface DemoEnv extends Destination.BaseEnv {
+  elb: (output: string) => void;
+}
+
+export type DestinationCode = Destination.Instance<
+  Destination.Types<unknown, unknown, DemoEnv>
+>;
 
 /**
  * Creates a gtag-style destination for demo purposes.
  * Formats output as: gtag('event', 'event_name', { data })
  */
-export function createGtagDestination(): Destination.Code {
+export function createGtagDestination(): DestinationCode {
   return {
     type: 'gtag',
     config: {},
@@ -22,7 +31,7 @@ export function createGtagDestination(): Destination.Code {
  * Creates a Facebook Pixel-style destination for demo purposes.
  * Formats output as: fbq('track', 'EventName', { data })
  */
-export function createFbqDestination(): Destination.Code {
+export function createFbqDestination(): DestinationCode {
   return {
     type: 'fbq',
     config: {},
@@ -40,7 +49,7 @@ export function createFbqDestination(): Destination.Code {
  * Creates a Plausible-style destination for demo purposes.
  * Formats output as: plausible('event_name', { props: { data } })
  */
-export function createPlausibleDestination(): Destination.Code {
+export function createPlausibleDestination(): DestinationCode {
   return {
     type: 'plausible',
     config: {},

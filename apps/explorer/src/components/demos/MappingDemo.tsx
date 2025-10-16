@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { CodePanel } from '../molecules/code-panel';
+import { CodePanel } from '../organisms/code-panel';
 
 // Auto-import CSS
 import '../../styles/mapping-demo.css';
@@ -84,29 +84,33 @@ export function MappingDemo({
     return () => clearTimeout(timeoutId);
   }, [updateOutput]);
 
+  // Normalize theme to 'light' or 'dark' for CodePanel
+  const normalizedTheme =
+    theme === 'vs' || theme === 'light' ? 'light' : 'dark';
+
   return (
-    <div className="elb-explorer-mapping">
-      <div className="elb-explorer-mapping-grid">
+    <div className="elb-explorer">
+      <div className="elb-explorer-grid">
         <CodePanel
           label={labelInput}
           value={input}
           onChange={setInput}
           language="json"
-          theme={theme}
+          theme={normalizedTheme}
         />
         <CodePanel
           label={labelConfig}
           value={config}
           onChange={setConfig}
           language="json"
-          theme={theme}
+          theme={normalizedTheme}
         />
         <CodePanel
           label={labelOutput}
           value={output}
           disabled
           language="json"
-          theme={theme}
+          theme={normalizedTheme}
         />
       </div>
     </div>

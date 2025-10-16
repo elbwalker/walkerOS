@@ -1,5 +1,5 @@
 import React from 'react';
-import { HeaderButton } from '../atoms/header-button';
+import { Button } from './button';
 
 export interface ButtonGroupProps {
   buttons: Array<{
@@ -23,15 +23,15 @@ export function ButtonGroup({
   className = '',
 }: ButtonGroupProps) {
   return (
-    <div className={`elb-button-group ${className}`}>
+    <div className={`elb-explorer-button-group ${className}`}>
       {buttons.map((button) => (
-        <HeaderButton
+        <Button
           key={button.value}
           active={button.active}
           onClick={() => onButtonClick(button.value)}
         >
           {button.label}
-        </HeaderButton>
+        </Button>
       ))}
     </div>
   );

@@ -5,7 +5,8 @@ import {
   tryCatchAsync,
   processEventMapping,
 } from '@walkeros/core';
-import { CodePanel } from '../molecules/code-panel';
+import { startFlow } from '@walkeros/collector';
+import { CodePanel } from '../organisms/code-panel';
 
 // Auto-import CSS
 import '../../styles/mapping-demo.css';
@@ -122,15 +123,15 @@ export function DestinationDemo({
           mapping: wrappedMapping,
         };
 
+        // Create minimal collector for mapping processing
+        const { collector } = await startFlow({});
+
         // Process event mapping (applies mapping transformations)
-        const processed = await processEventMapping(event, config, {
-          globals: {},
-          user: {},
-        });
+        const processed = await processEventMapping(event, config, collector);
 
         // Build context for destination.push()
         const context: Destination.PushContext = {
-          collector: { globals: {}, user: {} } as any, // Minimal mock
+          collector,
           config,
           data: processed.data,
           mapping: processed.mapping,
@@ -157,8 +158,8 @@ export function DestinationDemo({
   }, [executeDestination]);
 
   return (
-    <div className="elb-explorer-mapping">
-      <div className="elb-explorer-mapping-grid">
+    <div className="elb-explorer">
+      <div className="elb-explorer-grid">
         <CodePanel
           label={labelEvent}
           value={eventInput}
