@@ -16,16 +16,16 @@ async function testMapping() {
   const { elb, collector } = await startFlow({
     destinations: {
       console: {
-        code: async (config, env) => ({
+        code: {
           type: 'console',
-          config,
+          config: {},
           push: async (event, context) => {
             console.log('\n📦 Destination received event:');
             console.log('  Name:', event.name);
             console.log('  Data:', JSON.stringify(event.data, null, 2));
             console.log('  Mapping applied:', context.mapping?.name || 'none');
           },
-        }),
+        },
         config: {
           // Destination-level mapping
           mapping: {
@@ -61,7 +61,8 @@ async function testMapping() {
                     currency: { value: 'USD' },
                     // Custom function
                     tax: {
-                      fn: (event: WalkerOS.Event) => {
+                      fn: (value) => {
+                        const event = value as WalkerOS.Event;
                         const total = (event.data?.total as number) || 0;
                         return total * 0.1;
                       },
@@ -113,10 +114,11 @@ async function testMapping() {
   const { elb: sourceElb } = await startFlow({
     sources: {
       custom: {
-        code: async (config, env) => ({
+        code: (config, env) => ({
           type: 'custom',
           config,
-          push: env.elb,
+          push: (event: WalkerOS.Event, _data?: WalkerOS.Properties) =>
+            env.elb(event),
         }),
         config: {
           // Source-level mapping
@@ -138,15 +140,15 @@ async function testMapping() {
     },
     destinations: {
       console: {
-        code: async (config, env) => ({
+        code: {
           type: 'console',
-          config,
+          config: {},
           push: async (event) => {
             console.log('\n📦 Event with source mapping:');
             console.log('  Name:', event.name);
             console.log('  Data:', JSON.stringify(event.data, null, 2));
           },
-        }),
+        },
         config: {},
       },
     },
