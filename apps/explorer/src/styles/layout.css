@@ -57,7 +57,8 @@
 
   /* Typography */
   --font-family-base:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+    'Helvetica Neue', sans-serif;
   --font-size-base: 14px;
   --font-size-label: 13px;
   --font-size-toggle: 12px;
@@ -430,8 +431,8 @@
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  max-height: 240px;
-  overflow-y: auto;
+  max-height: fit-content;
+  overflow-y: visible;
   background: var(--bg-dropdown);
   border: 1px solid var(--border-input);
   border-radius: var(--radius-button);
@@ -439,9 +440,16 @@
   z-index: 1000;
 }
 
+.elb-auto-select-dropdown.scrollable {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
 .elb-auto-select-option {
   padding: 8px 12px;
+  font-family: var(--font-family-base);
   font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
   color: var(--color-text);
   cursor: pointer;
   transition: background 0.15s;
@@ -462,6 +470,12 @@
 
 .elb-auto-select-option.elb-auto-select-no-results:hover {
   background: transparent;
+}
+
+.elb-auto-select-create-label {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: 0.9em;
 }
 
 /* === MAPPING EDITOR === */
@@ -494,15 +508,31 @@
   flex-shrink: 0;
 }
 
-.elb-mapping-editor-add-btn:hover {
+.elb-mapping-editor-add-btn:hover:not(:disabled) {
   background: var(--bg-button-hover);
   color: var(--color-text-button-hover);
+}
+
+.elb-mapping-editor-add-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .elb-mapping-editor-preview {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+}
+
+.elb-mapping-editor-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 200px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+  font-style: italic;
 }
 
 /* === RESPONSIVE === */

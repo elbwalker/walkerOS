@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 
 export interface AutoSelectProps {
   options: string[];
-  onSelect: (value: string) => void;
+  onSelect: (value: string, isNew?: boolean) => void;
   placeholder?: string;
   value?: string;
   className?: string;
@@ -12,15 +12,18 @@ export interface AutoSelectProps {
  * AutoSelect - Autocomplete dropdown component
  *
  * Features:
- * - Filter options as user types
+ * - Shows all entries on click/focus
+ * - Filters only when user types (starts from first character)
+ * - Scrollable list when more than 5 items
  * - Keyboard navigation (ArrowUp, ArrowDown, Enter, Escape)
  * - Mouse click selection
+ * - Shows "(create)" indicator for valid new rules (entity action format)
  * - Theme-aware styling via CSS variables
  *
  * @example
  * <AutoSelect
  *   options={['product view', 'product add', 'order complete']}
- *   onSelect={(value) => console.log(value)}
+ *   onSelect={(value, isNew) => console.log(value, isNew)}
  *   placeholder="Select mapping rule..."
  * />
  */
@@ -34,17 +37,40 @@ export function AutoSelect({
   const [inputValue, setInputValue] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [userHasTyped, setUserHasTyped] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Filter options based on input value
-  const filteredOptions = options.filter((option) =>
-    option.toLowerCase().includes(inputValue.toLowerCase()),
-  );
+  // Filter options only when user has typed
+  const filteredOptions =
+    userHasTyped && inputValue.trim() !== ''
+      ? options.filter((option) =>
+          option.toLowerCase().startsWith(inputValue.toLowerCase().trim()),
+        )
+      : options;
+
+  // Show scrollbar when more than 5 items
+  const displayOptions = filteredOptions;
+
+  // Validate entity action format (must have exactly one space)
+  const isValidFormat = (text: string): boolean => {
+    const trimmed = text.trim();
+    const parts = trimmed.split(' ');
+    return parts.length === 2 && parts[0] !== '' && parts[1] !== '';
+  };
+
+  // Check if input value is a new rule (not in existing options and valid format)
+  const isNewRule =
+    inputValue.trim() !== '' &&
+    isValidFormat(inputValue.trim()) &&
+    !options.some(
+      (option) => option.toLowerCase() === inputValue.toLowerCase().trim(),
+    );
 
   // Update input value when prop changes
   useEffect(() => {
     setInputValue(value);
+    setUserHasTyped(false);
   }, [value]);
 
   // Reset highlighted index when filtered options change
@@ -60,6 +86,7 @@ export function AutoSelect({
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
+        setUserHasTyped(false);
       }
     };
 
@@ -72,31 +99,39 @@ export function AutoSelect({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
-    setIsOpen(true);
+    setUserHasTyped(true);
+    if (!isOpen) {
+      setIsOpen(true);
+    }
   };
 
   const handleInputFocus = () => {
     setIsOpen(true);
+    setUserHasTyped(false); // Show all options on focus
   };
 
-  const handleOptionClick = (option: string) => {
+  const handleOptionClick = (option: string, isNew = false) => {
     setInputValue(option);
     setIsOpen(false);
-    onSelect(option);
+    setUserHasTyped(false);
+    onSelect(option, isNew);
     inputRef.current?.blur();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       setIsOpen(true);
+      setUserHasTyped(false);
       return;
     }
+
+    const totalOptions = displayOptions.length + (isNewRule ? 1 : 0);
 
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
         setHighlightedIndex((prev) =>
-          prev < filteredOptions.length - 1 ? prev + 1 : prev,
+          prev < totalOptions - 1 ? prev + 1 : prev,
         );
         break;
       case 'ArrowUp':
@@ -105,13 +140,17 @@ export function AutoSelect({
         break;
       case 'Enter':
         e.preventDefault();
-        if (filteredOptions[highlightedIndex]) {
-          handleOptionClick(filteredOptions[highlightedIndex]);
+        if (isNewRule && highlightedIndex === displayOptions.length) {
+          // Create new rule
+          handleOptionClick(inputValue.trim(), true);
+        } else if (displayOptions[highlightedIndex]) {
+          handleOptionClick(displayOptions[highlightedIndex]);
         }
         break;
       case 'Escape':
         e.preventDefault();
         setIsOpen(false);
+        setUserHasTyped(false);
         inputRef.current?.blur();
         break;
     }
@@ -145,9 +184,11 @@ export function AutoSelect({
         placeholder={placeholder}
         autoComplete="off"
       />
-      {isOpen && filteredOptions.length > 0 && (
-        <div className="elb-auto-select-dropdown">
-          {filteredOptions.map((option, index) => (
+      {isOpen && (displayOptions.length > 0 || isNewRule) && (
+        <div
+          className={`elb-auto-select-dropdown ${displayOptions.length > 5 ? 'scrollable' : ''}`}
+        >
+          {displayOptions.map((option, index) => (
             <div
               key={option}
               data-index={index}
@@ -160,9 +201,22 @@ export function AutoSelect({
               {option}
             </div>
           ))}
+          {isNewRule && (
+            <div
+              data-index={displayOptions.length}
+              className={`elb-auto-select-option ${
+                highlightedIndex === displayOptions.length ? 'highlighted' : ''
+              }`}
+              onClick={() => handleOptionClick(inputValue.trim(), true)}
+              onMouseEnter={() => setHighlightedIndex(displayOptions.length)}
+            >
+              <span>{inputValue.trim()}</span>
+              <span className="elb-auto-select-create-label"> (create)</span>
+            </div>
+          )}
         </div>
       )}
-      {isOpen && filteredOptions.length === 0 && inputValue && (
+      {isOpen && displayOptions.length === 0 && !isNewRule && userHasTyped && (
         <div className="elb-auto-select-dropdown">
           <div className="elb-auto-select-option elb-auto-select-no-results">
             No results found

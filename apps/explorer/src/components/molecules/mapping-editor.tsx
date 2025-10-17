@@ -15,10 +15,12 @@ export interface MappingEditorProps {
  * - Add button to create new rules
  * - CodeBox display of selected rule
  * - Converts mapping object to entity-action list
+ * - Create new rules via dropdown or plus button
+ * - Placeholder when no rule selected
  *
  * Layout (within Box content):
  * Row 1: [AutoSelect] [+ Button]
- * Row 2: [CodeBox showing selected rule]
+ * Row 2: [CodeBox showing selected rule or placeholder]
  *
  * @example
  * <MappingEditor
@@ -26,6 +28,7 @@ export interface MappingEditorProps {
  *     product: { view: { name: 'view_item' } },
  *     order: { complete: { name: 'purchase' } }
  *   }}
+ *   onMappingChange={setMapping}
  * />
  */
 export function MappingEditor({
@@ -59,13 +62,42 @@ export function MappingEditor({
     return null;
   }, [selectedRule, mapping]);
 
-  const handleRuleSelect = (rule: string) => {
-    setSelectedRule(rule);
+  const createNewRule = (ruleName: string) => {
+    if (!onMappingChange || !ruleName.trim()) return;
+
+    const [entity, action] = ruleName.trim().split(' ');
+    if (!entity || !action) {
+      console.warn('Invalid rule name format. Expected "entity action"');
+      return;
+    }
+
+    // Create new rule with default configuration
+    const newMapping = { ...mapping };
+    if (!newMapping[entity]) {
+      newMapping[entity] = {};
+    }
+
+    // Only create if it doesn't exist
+    if (!newMapping[entity][action]) {
+      newMapping[entity][action] = {
+        name: `${entity}_${action}`,
+      };
+      onMappingChange(newMapping);
+      setSelectedRule(ruleName.trim());
+    }
+  };
+
+  const handleRuleSelect = (rule: string, isNew?: boolean) => {
+    if (isNew) {
+      createNewRule(rule);
+    } else {
+      setSelectedRule(rule);
+    }
   };
 
   const handleAddRule = () => {
-    // Placeholder for add functionality
-    console.log('Add new rule');
+    if (!selectedRule.trim()) return;
+    createNewRule(selectedRule);
   };
 
   const selectedRuleJson = selectedRuleConfig
@@ -85,6 +117,7 @@ export function MappingEditor({
           className="elb-mapping-editor-add-btn"
           onClick={handleAddRule}
           title="Add new rule"
+          disabled={!onMappingChange || !selectedRule.trim()}
         >
           <svg
             width="16"
@@ -102,15 +135,21 @@ export function MappingEditor({
         </button>
       </div>
       <div className="elb-mapping-editor-preview">
-        <CodeBox
-          code={selectedRuleJson}
-          language="json"
-          label={selectedRule || 'Rule Configuration'}
-          disabled={!onMappingChange}
-          autoHeight
-          minHeight={150}
-          maxHeight={400}
-        />
+        {selectedRuleConfig ? (
+          <CodeBox
+            code={selectedRuleJson}
+            language="json"
+            label={selectedRule}
+            disabled={!onMappingChange}
+            autoHeight
+            minHeight={150}
+            maxHeight={400}
+          />
+        ) : (
+          <div className="elb-mapping-editor-placeholder">
+            Add or select mapping rule
+          </div>
+        )}
       </div>
     </div>
   );
