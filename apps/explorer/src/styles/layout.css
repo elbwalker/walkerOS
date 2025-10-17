@@ -224,7 +224,7 @@
   position: relative;
   background: transparent;
   overflow: auto;
-  padding: 12px;
+  padding: 0;
 }
 
 .elb-explorer-content > div:only-child {
@@ -504,6 +504,7 @@
   gap: 12px;
   min-height: 0;
   height: auto;
+  padding: 12px;
 }
 
 .elb-mapping-editor-select {
