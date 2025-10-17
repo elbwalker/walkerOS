@@ -43,6 +43,18 @@
   --spacing-button-group: 1px;
   --spacing-grid-gap: 12px;
 
+  /* Input & Dropdown Colors */
+  --bg-input: #ffffff;
+  --bg-input-hover: #f9f9f9;
+  --bg-dropdown: #ffffff;
+  --bg-dropdown-option-hover: #f0f0f0;
+  --bg-dropdown-option-highlighted: #e3f2fd;
+  --border-input: #d1d5db;
+  --border-input-focus: #3b82f6;
+  --color-text-input: #000;
+  --color-text-placeholder: #9ca3af;
+  --shadow-dropdown: 0 4px 6px rgba(0, 0, 0, 0.1);
+
   /* Typography */
   --font-family-base:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
@@ -92,6 +104,18 @@
 
   /* Shadows */
   --shadow-button-active: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+  /* Input & Dropdown Colors */
+  --bg-input: #252526;
+  --bg-input-hover: #2a2d2e;
+  --bg-dropdown: #252526;
+  --bg-dropdown-option-hover: #2a2d2e;
+  --bg-dropdown-option-highlighted: #1e3a5f;
+  --border-input: #3c3c3c;
+  --border-input-focus: #4a90e2;
+  --color-text-input: #e0e0e0;
+  --color-text-placeholder: #666;
+  --shadow-dropdown: 0 4px 6px rgba(0, 0, 0, 0.5);
 }
 
 /* === BASE STYLES === */
@@ -366,6 +390,119 @@
 .token.attr-name[data-elbcontext],
 .token.attr-name[data-elbproperty] {
   color: var(--highlight-property) !important;
+}
+
+/* === AUTO SELECT === */
+
+.elb-auto-select {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.elb-auto-select-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-text-input);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  outline: none;
+  transition: all 0.15s;
+}
+
+.elb-auto-select-input:hover {
+  background: var(--bg-input-hover);
+}
+
+.elb-auto-select-input:focus {
+  border-color: var(--border-input-focus);
+}
+
+.elb-auto-select-input::placeholder {
+  color: var(--color-text-placeholder);
+}
+
+.elb-auto-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--bg-dropdown);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  box-shadow: var(--shadow-dropdown);
+  z-index: 1000;
+}
+
+.elb-auto-select-option {
+  padding: 8px 12px;
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.elb-auto-select-option:hover {
+  background: var(--bg-dropdown-option-hover);
+}
+
+.elb-auto-select-option.highlighted {
+  background: var(--bg-dropdown-option-highlighted);
+}
+
+.elb-auto-select-option.elb-auto-select-no-results {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.elb-auto-select-option.elb-auto-select-no-results:hover {
+  background: transparent;
+}
+
+/* === MAPPING EDITOR === */
+
+.elb-mapping-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+  gap: 12px;
+}
+
+.elb-mapping-editor-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.elb-mapping-editor-add-btn {
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-button);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.elb-mapping-editor-add-btn:hover {
+  background: var(--bg-button-hover);
+  color: var(--color-text-button-hover);
+}
+
+.elb-mapping-editor-preview {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* === RESPONSIVE === */

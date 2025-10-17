@@ -114,6 +114,19 @@ const App = () => {
             <li>Perfect for documentation examples</li>
           </ul>
         </a>
+
+        <a href="/mapping-box-demo.html" className="demo-card">
+          <h2 className="demo-card-title">MappingBox Demo</h2>
+          <p className="demo-card-description">
+            Interactive mapping editor with autocomplete dropdown
+          </p>
+          <ul className="demo-card-list">
+            <li>Toggle between Editor and Code views</li>
+            <li>Autocomplete dropdown for mapping rules</li>
+            <li>Keyboard navigation support</li>
+            <li>Real GA4 mapping examples</li>
+          </ul>
+        </a>
       </div>
 
       <footer className="demo-footer">
