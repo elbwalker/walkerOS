@@ -8,13 +8,13 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
  * Current fields:
  * - name: Custom event name (string)
  * - batch: Bundle events (number)
+ * - data: Value mapping (object - ValueConfig)
  * - consent: Required consent states (object)
  * - condition: Function to conditionally apply mapping (string)
  *
  * Note: ignore field is handled separately in the footer, not in the form
  *
  * Future expansion will add:
- * - data: Value mapping (complex)
  * - settings: Custom settings (varies by destination)
  */
 export const mappingRuleSchema: RJSFSchema = {
@@ -30,6 +30,11 @@ export const mappingRuleSchema: RJSFSchema = {
       title: 'Batch',
       description: 'Milliseconds to wait before sending',
       minimum: 1,
+    },
+    data: {
+      type: 'object',
+      title: 'Data',
+      description: 'Transform event data',
     },
     consent: {
       type: 'object',
@@ -51,7 +56,7 @@ export const mappingRuleSchema: RJSFSchema = {
  * UI Schema for Mapping.Rule
  *
  * Customizes widget usage and layout
- * Layout: Name (50%), Batch (50%)
+ * Layout: Name (50%), Batch (50%), Data (full width), Consent (50%), Condition (50%)
  */
 export const mappingRuleUiSchema: UiSchema = {
   name: {
@@ -61,6 +66,9 @@ export const mappingRuleUiSchema: UiSchema = {
   batch: {
     'ui:widget': 'mappingNumber',
     'ui:placeholder': 'Milliseconds',
+  },
+  data: {
+    'ui:field': 'mappingData',
   },
   consent: {
     'ui:field': 'mappingConsent',

@@ -954,6 +954,26 @@
   flex-shrink: 0;
 }
 
+/* === DATA WIDGET === */
+
+/* Wrapper for entire data widget */
+.elb-data-widget-wrapper {
+  width: 100%;
+}
+
+/* Nested form container inside data widget */
+.elb-data-widget-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Full-width button variant for adding data */
+.elb-data-add-button {
+  width: 100%;
+  justify-content: center;
+}
+
 /* === CHECKBOX COLLAPSIBLE === */
 
 .elb-checkbox-collapsible {
