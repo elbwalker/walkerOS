@@ -10,6 +10,8 @@ import {
 export interface MappingEditorProps {
   mapping: Record<string, Record<string, unknown>>;
   onMappingChange?: (mapping: Record<string, Record<string, unknown>>) => void;
+  selectedRule?: string;
+  onSelectedRuleChange?: (rule: string) => void;
 }
 
 /**
@@ -17,10 +19,11 @@ export interface MappingEditorProps {
  *
  * Features:
  * - AutoSelect dropdown to choose entity-action pairs
- * - CodeBox display of selected rule with editing capability
+ * - RJSF form display of selected rule with editing capability
  * - Delete and Save action buttons (only visible when rule selected)
  * - Create new rules via dropdown (create) option
  * - Placeholder when no rule selected
+ * - Supports controlled selectedRule state for persistence across mode changes
  *
  * @example
  * <MappingEditor
@@ -29,13 +32,24 @@ export interface MappingEditorProps {
  *     order: { complete: { name: 'purchase' } }
  *   }}
  *   onMappingChange={setMapping}
+ *   selectedRule={selectedRule}
+ *   onSelectedRuleChange={setSelectedRule}
  * />
  */
 export function MappingEditor({
   mapping,
   onMappingChange,
+  selectedRule: controlledSelectedRule,
+  onSelectedRuleChange,
 }: MappingEditorProps) {
-  const [selectedRule, setSelectedRule] = useState('');
+  const [internalSelectedRule, setInternalSelectedRule] = useState('');
+
+  // Use controlled state if provided, otherwise use internal state
+  const selectedRule =
+    controlledSelectedRule !== undefined
+      ? controlledSelectedRule
+      : internalSelectedRule;
+  const setSelectedRule = onSelectedRuleChange || setInternalSelectedRule;
 
   // Convert mapping object to entity-action list
   const ruleOptions = useMemo(() => {

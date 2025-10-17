@@ -9,16 +9,17 @@ export interface MappingBoxProps {
   onMappingChange?: (mapping: Record<string, Record<string, unknown>>) => void;
   label?: string;
   className?: string;
-  initialTab?: 'code' | 'editor';
+  initialTab?: 'code' | 'visual';
 }
 
 /**
- * MappingBox - Mapping configuration viewer/editor with code/editor toggle
+ * MappingBox - Mapping configuration viewer/editor with code/visual toggle
  *
  * Features:
- * - Toggle between Code and Editor views via ButtonGroup
+ * - Toggle between Code and Visual views via ButtonGroup
  * - Code view: Display mapping JSON with CodeBox
- * - Editor view: Interactive mapping rule editor with AutoSelect
+ * - Visual view: Interactive mapping rule editor with AutoSelect
+ * - Persists selected rule when switching between views
  * - Theme automatically handled by CSS variables
  *
  * @example
@@ -43,9 +44,10 @@ export function MappingBox({
   onMappingChange,
   label = 'Mapping',
   className = '',
-  initialTab = 'editor',
+  initialTab = 'visual',
 }: MappingBoxProps) {
-  const [activeTab, setActiveTab] = useState<'code' | 'editor'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'code' | 'visual'>(initialTab);
+  const [selectedRule, setSelectedRule] = useState('');
 
   // Convert mapping object to JSON string
   const mappingJson = useMemo(
@@ -57,9 +59,9 @@ export function MappingBox({
   const buttons = useMemo(
     () => [
       {
-        label: 'Editor',
-        value: 'editor',
-        active: activeTab === 'editor',
+        label: 'Visual',
+        value: 'visual',
+        active: activeTab === 'visual',
       },
       {
         label: 'Code',
@@ -71,7 +73,7 @@ export function MappingBox({
   );
 
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab as 'code' | 'editor');
+    setActiveTab(tab as 'code' | 'visual');
   };
 
   const handleMappingJsonChange = (json: string) => {
@@ -102,7 +104,12 @@ export function MappingBox({
           showFormat={!!onMappingChange}
         />
       ) : (
-        <MappingEditor mapping={mapping} onMappingChange={onMappingChange} />
+        <MappingEditor
+          mapping={mapping}
+          onMappingChange={onMappingChange}
+          selectedRule={selectedRule}
+          onSelectedRuleChange={setSelectedRule}
+        />
       )}
     </Box>
   );
