@@ -785,6 +785,129 @@
   }
 }
 
+/* === COLLAPSIBLE SECTION === */
+
+.elb-collapsible {
+  width: 100%;
+}
+
+.elb-collapsible-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-text-label);
+  transition: all 0.15s;
+}
+
+.elb-collapsible-description {
+  margin-left: 8px;
+  font-size: calc(var(--font-size-base) - 1px);
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-normal);
+}
+
+.elb-collapsible-content {
+  margin-top: 8px;
+}
+
+/* === CONSENT WIDGET === */
+
+/* Wrapper for entire consent widget with border and background */
+.elb-consent-widget-wrapper {
+  padding: 12px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  background: var(--bg-input);
+  position: relative;
+}
+
+/* Full-width button variants */
+.elb-consent-add-button,
+.elb-consent-add-row-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.elb-consent-add-row-button {
+  margin-top: 8px;
+}
+
+/* Consent rows container */
+.elb-consent-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Single consent row - 4 columns: input, checkbox+label, spacer, button */
+.elb-consent-row {
+  display: grid;
+  grid-template-columns: 200px auto 1fr auto;
+  column-gap: 12px;
+  align-items: center;
+}
+
+/* Checkbox wrapper in second column */
+.elb-consent-checkbox-wrapper {
+  grid-column: 2;
+}
+
+/* Trash button in fourth column */
+.elb-consent-row > :last-child {
+  grid-column: 4;
+}
+
+.elb-consent-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-text-input);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  outline: none;
+  transition: all 0.15s;
+  box-sizing: border-box;
+}
+
+.elb-consent-input:hover {
+  background: var(--bg-input-hover);
+}
+
+.elb-consent-input:focus {
+  background: var(--bg-input);
+  border-color: var(--color-button-primary);
+}
+
+.elb-consent-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.elb-consent-label {
+  font-size: var(--font-size-base);
+  color: var(--color-text-label);
+  user-select: none;
+}
+
+/* Icon-only button in consent row - small square */
+.elb-consent-row .elb-icon-button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
 /* === RESPONSIVE === */
 
 @media (max-width: 1023px) {

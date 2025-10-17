@@ -1,0 +1,36 @@
+import type { RegistryFieldsType } from '@rjsf/utils';
+import { MappingConsentField } from '../atoms/mapping-consent-field';
+
+/**
+ * Field Registry for RJSF Mapping Forms
+ *
+ * Central registry of all custom fields used in react-jsonschema-form.
+ * Fields are used for complex types (like objects) while widgets are for primitives.
+ * Fields are referenced in uiSchema via 'ui:field' property.
+ *
+ * @example
+ * // In uiSchema:
+ * const uiSchema = {
+ *   consent: {
+ *     'ui:field': 'mappingConsent'
+ *   }
+ * }
+ *
+ * @example
+ * // In Form component:
+ * <Form
+ *   schema={schema}
+ *   fields={mappingFields}
+ *   ...
+ * />
+ */
+
+/**
+ * Mapping Fields Registry
+ *
+ * Available fields:
+ * - mappingConsent: Collapsible consent requirements editor for object types
+ */
+export const mappingFields: RegistryFieldsType = {
+  mappingConsent: MappingConsentField,
+};

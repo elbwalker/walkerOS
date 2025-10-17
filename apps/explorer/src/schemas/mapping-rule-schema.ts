@@ -5,14 +5,14 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
  *
  * Based on packages/core/src/types/mapping.ts
  *
- * Starting with basic fields only:
+ * Current fields:
  * - name: Custom event name (string)
  * - ignore: Skip processing (boolean)
  * - batch: Bundle events (number)
+ * - consent: Required consent states (object)
  *
  * Future expansion will add:
  * - data: Value mapping (complex)
- * - consent: Required consent states (object)
  * - settings: Custom settings (varies by destination)
  */
 export const mappingRuleSchema: RJSFSchema = {
@@ -34,6 +34,14 @@ export const mappingRuleSchema: RJSFSchema = {
       description: 'Milliseconds to wait before sending',
       minimum: 1,
     },
+    consent: {
+      type: 'object',
+      title: 'Consent',
+      description: 'Required consent states to process the event',
+      additionalProperties: {
+        type: 'boolean',
+      },
+    },
   },
 };
 
@@ -54,6 +62,9 @@ export const mappingRuleUiSchema: UiSchema = {
   batch: {
     'ui:widget': 'mappingNumber',
     'ui:placeholder': 'Milliseconds',
+  },
+  consent: {
+    'ui:field': 'mappingConsent',
   },
   'ui:layout': '2fr 1fr 1fr',
   'ui:responsive': true,

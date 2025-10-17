@@ -2,6 +2,7 @@ import type { RegistryWidgetsType } from '@rjsf/utils';
 import { MappingStringWidget } from '../atoms/mapping-string';
 import { MappingNumberWidget } from '../atoms/mapping-number';
 import { MappingBooleanWidget } from '../atoms/mapping-boolean';
+import { MappingConsentWidget } from '../atoms/mapping-consent';
 
 /**
  * Widget Registry for RJSF Mapping Forms
@@ -39,9 +40,11 @@ import { MappingBooleanWidget } from '../atoms/mapping-boolean';
  * - mappingString: Text input for string values
  * - mappingNumber: Number input with min/max validation
  * - mappingBoolean: Checkbox for boolean values
+ * - mappingConsent: Collapsible consent requirements editor
  */
 export const mappingWidgets: RegistryWidgetsType = {
   mappingString: MappingStringWidget,
   mappingNumber: MappingNumberWidget,
   mappingBoolean: MappingBooleanWidget,
+  mappingConsent: MappingConsentWidget,
 };

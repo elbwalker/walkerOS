@@ -3,6 +3,7 @@ import Form from '@rjsf/core';
 import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
 import { mappingWidgets } from './widget-registry';
+import { mappingFields } from './field-registry';
 import { MappingGrid } from '../atoms/mapping-grid';
 
 export interface MappingFormWrapperProps {
@@ -67,6 +68,7 @@ export function MappingFormWrapper({
         formData={formData}
         validator={validator}
         widgets={mappingWidgets}
+        fields={mappingFields}
         onChange={handleChange}
         onSubmit={handleSubmit}
         templates={{
@@ -109,15 +111,20 @@ function CustomFieldTemplate(props: any) {
     return <div className="elb-rjsf-field-hidden">{children}</div>;
   }
 
+  // For object fields (like consent), hide label and description as the widget handles them
+  const showLabelAndDescription = schema.type !== 'object';
+
   return (
     <div className={`elb-rjsf-field ${classNames || ''}`} id={id}>
-      {label && (
+      {showLabelAndDescription && label && (
         <label htmlFor={id} className="elb-rjsf-label">
           {label}
           {required && <span className="elb-rjsf-required"> *</span>}
         </label>
       )}
-      {description && <div className="elb-rjsf-description">{description}</div>}
+      {showLabelAndDescription && description && (
+        <div className="elb-rjsf-description">{description}</div>
+      )}
       {children}
       {errors}
       {help && <div className="elb-rjsf-help">{help}</div>}
