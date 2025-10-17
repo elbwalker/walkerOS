@@ -26,10 +26,15 @@ export function MappingValueWidget(props: WidgetProps) {
   const title = schema?.title || label || 'Value';
   const description = schema?.description || 'Static value to return';
 
-  // Determine type from actual value, default to string
-  const getCurrentType = (): 'string' | 'number' | 'boolean' | 'object' => {
-    // Explicit undefined/null check - default to string for empty values
-    if (value === undefined || value === null || value === '') return 'string';
+  // Determine type from actual value, default to none if undefined
+  const getCurrentType = ():
+    | 'none'
+    | 'string'
+    | 'number'
+    | 'boolean'
+    | 'object' => {
+    // Explicit undefined/null check - default to none for empty values
+    if (value === undefined || value === null) return 'none';
 
     const valueType = typeof value;
 
@@ -41,28 +46,46 @@ export function MappingValueWidget(props: WidgetProps) {
     if (valueType === 'string') return 'string';
 
     // Default fallback
-    return 'string';
+    return 'none';
   };
 
   const [selectedType, setSelectedType] = useState<
-    'string' | 'number' | 'boolean' | 'object'
+    'none' | 'string' | 'number' | 'boolean' | 'object'
   >(getCurrentType);
 
-  // Sync selectedType with value changes from outside (e.g., RJSF initialization)
+  // Track previous value to detect external changes (not user typing)
+  const prevValueRef = React.useRef(value);
+
+  // Sync selectedType only when value changes externally (e.g., loading new rule)
   useEffect(() => {
-    const detectedType = getCurrentType();
-    if (detectedType !== selectedType) {
+    // Detect if this is an external change by checking if value type changed
+    const prevType = typeof prevValueRef.current;
+    const currentType = typeof value;
+
+    // Only update selectedType if the JavaScript type changed
+    // This allows switching between rules but ignores user typing
+    if (
+      prevType !== currentType ||
+      (value === undefined && prevValueRef.current !== undefined) ||
+      (value !== undefined && prevValueRef.current === undefined)
+    ) {
+      const detectedType = getCurrentType();
       setSelectedType(detectedType);
     }
+
+    prevValueRef.current = value;
   }, [value]);
 
   const handleTypeChange = (
-    newType: 'string' | 'number' | 'boolean' | 'object',
+    newType: 'none' | 'string' | 'number' | 'boolean' | 'object',
   ) => {
     setSelectedType(newType);
 
     // Set default value for new type
     switch (newType) {
+      case 'none':
+        onChange(undefined);
+        break;
       case 'string':
         onChange('');
         break;
@@ -113,6 +136,7 @@ export function MappingValueWidget(props: WidgetProps) {
             onChange={(e) => handleTypeChange(e.target.value as any)}
             disabled={disabled || readonly}
           >
+            <option value="none">None</option>
             <option value="string">String</option>
             <option value="number">Number</option>
             <option value="boolean">Boolean</option>

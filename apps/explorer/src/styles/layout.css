@@ -1030,7 +1030,9 @@
 .elb-value-widget-type-select {
   flex-shrink: 0;
   align-self: flex-start;
-  padding: 4px 8px;
+  padding: 8px 12px;
+  padding-right: 32px;
+  min-width: 120px;
   font-family: var(--font-family-base);
   font-size: var(--font-size-base);
   color: var(--color-text-input);
@@ -1040,10 +1042,17 @@
   outline: none;
   transition: all 0.15s;
   cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
 }
 
 .elb-value-widget-type-select:hover {
-  background: var(--bg-input-hover);
+  background-color: var(--bg-input-hover);
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
 }
 
 .elb-value-widget-type-select:focus {
