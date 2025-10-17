@@ -1,5 +1,98 @@
-/* walkerOS Explorer - Unified Layout System */
+/* walkerOS Explorer - CSS Variable-Based Theme System */
 /* Single source of truth for all explorer component styling */
+
+/* === THEME VARIABLES === */
+
+:root {
+  /* Text Colors */
+  --color-text: #000;
+  --color-text-label: #424242;
+  --color-text-button: #616161;
+  --color-text-button-hover: #424242;
+  --color-text-button-active: #1f2937;
+  --color-text-muted: #666;
+  --color-text-toggle: #666;
+
+  /* Background Colors */
+  --bg-box: #ffffff;
+  --bg-header: #f5f5f5;
+  --bg-footer: #f5f5f5;
+  --bg-button-hover: #e8e8e8;
+  --bg-button-active: #ffffff;
+  --bg-button-group: #f3f4f6;
+
+  /* Border Colors */
+  --border-box: #e0e0e0;
+  --border-header: #e0e0e0;
+  --border-footer: #e0e0e0;
+  --border-button-group: #d1d5db;
+
+  /* Shadows */
+  --shadow-button-active: 0 1px 2px rgba(0, 0, 0, 0.1);
+
+  /* Border Radius */
+  --radius-box: 4px;
+  --radius-button: 3px;
+  --radius-button-group: 4px;
+  --radius-highlight-button: 6px;
+
+  /* Spacing */
+  --spacing-header: 6px 10px;
+  --spacing-footer: 6px 10px;
+  --spacing-button: 4px 8px;
+  --spacing-button-group: 1px;
+  --spacing-grid-gap: 12px;
+
+  /* Typography */
+  --font-family-base:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  --font-size-base: 14px;
+  --font-size-label: 13px;
+  --font-size-toggle: 12px;
+  --font-size-highlight-button: 0.75rem;
+  --line-height-base: 1.5;
+  --font-weight-normal: 400;
+  --font-weight-semibold: 600;
+
+  /* Syntax Highlighting Colors */
+  --highlight-globals: #4fc3f7cc;
+  --highlight-context: #ffbd44cc;
+  --highlight-entity: #00ca4ecc;
+  --highlight-property: #ff605ccc;
+  --highlight-action: #9900ffcc;
+  --highlight-background: #1f2937;
+  --highlight-text: #9ca3af;
+  --highlight-hover: rgba(255, 255, 255, 0.05);
+  --highlight-separator: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='dark'] {
+  /* Text Colors */
+  --color-text: #e0e0e0;
+  --color-text-label: #cccccc;
+  --color-text-button: #cccccc;
+  --color-text-button-hover: #ffffff;
+  --color-text-button-active: #ffffff;
+  --color-text-muted: #999;
+  --color-text-toggle: #999;
+
+  /* Background Colors */
+  --bg-box: #1e1e1e;
+  --bg-header: #252526;
+  --bg-footer: #252526;
+  --bg-button-hover: #2a2d2e;
+  --bg-button-active: #1e1e1e;
+  --bg-button-group: #2a2d2e;
+
+  /* Border Colors */
+  --border-box: #3c3c3c;
+  --border-header: #3c3c3c;
+  --border-footer: #3c3c3c;
+  --border-button-group: #3c3c3c;
+
+  /* Shadows */
+  --shadow-button-active: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
 
 /* === BASE STYLES === */
 
@@ -8,15 +101,13 @@
   max-width: 100%;
   background: transparent;
   padding: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #000;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text);
   box-sizing: border-box;
 }
 
-/* Reset nested elements to prevent host styles from leaking */
 .elb-explorer *,
 .elb-explorer *::before,
 .elb-explorer *::after {
@@ -28,7 +119,7 @@
 .elb-explorer-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: var(--spacing-grid-gap);
   width: 100%;
   grid-auto-rows: minmax(400px, auto);
 }
@@ -44,9 +135,9 @@
 .elb-explorer-box {
   display: flex;
   flex-direction: column;
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  background: var(--bg-box);
+  border: 1px solid var(--border-box);
+  border-radius: var(--radius-box);
   overflow: hidden;
   min-width: 0;
   height: 400px;
@@ -61,17 +152,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
+  padding: var(--spacing-header);
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-header);
   flex-shrink: 0;
   min-height: 28px;
 }
 
 .elb-explorer-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #424242;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-label);
   user-select: none;
 }
 
@@ -79,9 +170,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  background: #f5f5f5;
-  border-top: 1px solid #e0e0e0;
+  padding: var(--spacing-footer);
+  background: var(--bg-footer);
+  border-top: 1px solid var(--border-footer);
   flex-shrink: 0;
   min-height: 28px;
 }
@@ -117,7 +208,6 @@
   background: transparent !important;
 }
 
-/* Customize line numbers to be narrower */
 .elb-explorer-content .monaco-editor .line-numbers {
   width: 32px !important;
   min-width: 32px !important;
@@ -131,37 +221,36 @@
 /* === BUTTONS === */
 
 .elb-explorer-btn {
-  padding: 4px 8px;
+  padding: var(--spacing-button);
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-button);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #616161;
+  color: var(--color-text-button);
   transition: all 0.15s;
 }
 
 .elb-explorer-btn:hover {
-  background: #e8e8e8;
-  color: #424242;
+  background: var(--bg-button-hover);
+  color: var(--color-text-button-hover);
 }
 
 .elb-explorer-btn.active {
-  background: #ffffff;
-  color: #1f2937;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  font-weight: 600;
+  background: var(--bg-button-active);
+  color: var(--color-text-button-active);
+  box-shadow: var(--shadow-button-active);
+  font-weight: var(--font-weight-semibold);
 }
 
-/* Button Group Styles */
 .elb-explorer-button-group {
   display: flex;
-  background: #f3f4f6;
-  border-radius: 4px;
-  padding: 1px;
-  border: 1px solid #d1d5db;
+  background: var(--bg-button-group);
+  border-radius: var(--radius-button-group);
+  padding: var(--spacing-button-group);
+  border: 1px solid var(--border-button-group);
 }
 
 /* === CONTROLS === */
@@ -176,8 +265,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: #666;
+  font-size: var(--font-size-toggle);
+  color: var(--color-text-toggle);
   cursor: pointer;
   user-select: none;
 }
@@ -188,19 +277,6 @@
 }
 
 /* === HTML PREVIEW === */
-
-/* Highlight colors */
-:root {
-  --highlight-globals: #4fc3f7cc;
-  --highlight-context: #ffbd44cc;
-  --highlight-entity: #00ca4ecc;
-  --highlight-property: #ff605ccc;
-  --highlight-action: #9900ffcc;
-  --highlight-background: #1f2937;
-  --highlight-text: #9ca3af;
-  --highlight-hover: rgba(255, 255, 255, 0.05);
-  --highlight-separator: rgba(255, 255, 255, 0.05);
-}
 
 .elb-preview-content {
   flex: 1;
@@ -228,14 +304,14 @@
 .elb-highlight-buttons button {
   flex: 1;
   padding: 6px 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-highlight-button);
   font-weight: 500;
   color: var(--highlight-text);
   border: 0;
   background: transparent;
   transition: all 0.2s ease;
   position: relative;
-  border-radius: 6px;
+  border-radius: var(--radius-highlight-button);
   cursor: pointer;
 }
 
@@ -292,58 +368,8 @@
   color: var(--highlight-property) !important;
 }
 
-/* === DARK MODE === */
-
-[data-theme='dark'] .elb-explorer {
-  color: #e0e0e0;
-}
-
-[data-theme='dark'] .elb-explorer-box {
-  background: #1e1e1e;
-  border-color: #3c3c3c;
-}
-
-[data-theme='dark'] .elb-explorer-header {
-  background: #252526;
-  border-bottom-color: #3c3c3c;
-}
-
-[data-theme='dark'] .elb-explorer-label {
-  color: #cccccc;
-}
-
-[data-theme='dark'] .elb-explorer-footer {
-  background: #252526;
-  border-top-color: #3c3c3c;
-}
-
-[data-theme='dark'] .elb-explorer-btn {
-  color: #cccccc;
-}
-
-[data-theme='dark'] .elb-explorer-btn:hover {
-  background: #2a2d2e;
-  color: #ffffff;
-}
-
-[data-theme='dark'] .elb-explorer-btn.active {
-  background: #1e1e1e;
-  color: #ffffff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-[data-theme='dark'] .elb-explorer-toggle {
-  color: #999;
-}
-
-[data-theme='dark'] .elb-explorer-button-group {
-  background: #2a2d2e;
-  border-color: #3c3c3c;
-}
-
 /* === RESPONSIVE === */
 
-/* Mobile: stack vertically with max-height and scroll */
 @media (max-width: 1023px) {
   .elb-explorer-box {
     max-height: 600px;

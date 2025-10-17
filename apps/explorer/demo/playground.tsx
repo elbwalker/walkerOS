@@ -2,7 +2,8 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Box } from '../src/components/atoms/box';
 import { Preview } from '../src/components/molecules/preview';
-import '../src/styles/layout.css';
+import '../src/styles/index.css';
+import './demo.css';
 
 const sampleHtml = `<div
   data-elb="product"
@@ -179,32 +180,15 @@ function App() {
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem',
-        }}
-      >
-        <h1>HTML Preview Demo</h1>
-        <button
-          onClick={toggleTheme}
-          style={{
-            padding: '8px 16px',
-            cursor: 'pointer',
-            borderRadius: '6px',
-            border: '1px solid #ccc',
-            background: theme === 'dark' ? '#333' : '#fff',
-            color: theme === 'dark' ? '#fff' : '#000',
-          }}
-        >
+    <div className="demo-container demo-container-narrow">
+      <div className="demo-header">
+        <h1 className="demo-title">HTML Preview Demo</h1>
+        <button onClick={toggleTheme} className="demo-theme-toggle">
           {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
         </button>
       </div>
       <Box header="Preview" className="preview-box-container">
-        <Preview html={sampleHtml} css={sampleCss} theme={theme} />
+        <Preview html={sampleHtml} css={sampleCss} />
       </Box>
     </div>
   );

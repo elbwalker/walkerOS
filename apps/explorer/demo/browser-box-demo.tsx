@@ -1,7 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserBox } from '../src/components/organisms/browser-box';
-import '../src/styles/layout.css';
+import '../src/styles/index.css';
+import './demo.css';
 
 const sampleHtml = `<div data-elb="product" data-elbaction="load:view">
   <h1 data-elb-product="name:#innerText">Product Name</h1>
@@ -48,42 +49,23 @@ function App() {
   }, [theme]);
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem',
-        }}
-      >
+    <div className="demo-container">
+      <div className="demo-header">
         <div>
-          <h1 style={{ margin: 0, marginBottom: '0.5rem' }}>BrowserBox Demo</h1>
-          <p style={{ margin: 0, color: theme === 'dark' ? '#ccc' : '#666' }}>
+          <h1 className="demo-title">BrowserBox Demo</h1>
+          <p className="demo-subtitle">
             Modular code editor with HTML/CSS/JS toggle buttons
           </p>
         </div>
         <button
           onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-          style={{
-            padding: '0.5rem 1rem',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            background: 'transparent',
-            cursor: 'pointer',
-          }}
+          className="demo-theme-toggle"
         >
           {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
         </button>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: '1rem',
-        }}
-      >
+      <div className="demo-browser-box-grid">
         <BrowserBox
           html={html}
           css={css}
@@ -92,22 +74,19 @@ function App() {
           onCssChange={setCss}
           onJsChange={setJs}
           label="All Tabs (Editable)"
-          theme={theme}
         />
 
         <BrowserBox
           html={sampleHtml}
           css={sampleCss}
           label="HTML & CSS Only (Read-only)"
-          theme={theme}
         />
 
-        <BrowserBox js={sampleJs} label="JS Only" theme={theme} />
+        <BrowserBox js={sampleJs} label="JS Only" />
 
         <BrowserBox
           html={sampleHtml}
           label="HTML Only (Read-only)"
-          theme={theme}
           initialTab="html"
         />
       </div>

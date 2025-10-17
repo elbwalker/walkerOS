@@ -1,5 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import '../src/styles/index.css';
+import './demo.css';
 
 const App = () => {
   const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
@@ -20,245 +22,79 @@ const App = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
-  const cardStyle: React.CSSProperties = {
-    border: theme === 'dark' ? '1px solid #3c3c3c' : '1px solid #e0e0e0',
-    borderRadius: '8px',
-    padding: '2rem',
-    textDecoration: 'none',
-    color: 'inherit',
-    display: 'block',
-    transition: 'all 0.2s',
-    background: theme === 'dark' ? '#252526' : '#f9f9f9',
-  };
-
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '3rem',
-        }}
-      >
+    <div className="demo-container">
+      <div className="demo-header">
         <div>
-          <h1 style={{ margin: 0, marginBottom: '0.5rem' }}>
-            walkerOS Explorer
-          </h1>
-          <p
-            style={{ margin: 0, color: theme === 'dark' ? '#cccccc' : '#666' }}
-          >
+          <h1 className="demo-title">walkerOS Explorer</h1>
+          <p className="demo-subtitle">
             Interactive demos and testing tools for walkerOS
           </p>
         </div>
         <button
           onClick={toggleTheme}
-          style={{
-            padding: '0.5rem 1rem',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            background: 'transparent',
-            cursor: 'pointer',
-            fontSize: '1rem',
-          }}
+          className="demo-theme-toggle"
           title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
         >
           {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
         </button>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '2rem',
-        }}
-      >
-        <a
-          href="/mapping.html"
-          style={cardStyle}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px)';
-            e.currentTarget.style.boxShadow =
-              theme === 'dark'
-                ? '0 8px 16px rgba(0,0,0,0.4)'
-                : '0 8px 16px rgba(0,0,0,0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>Mapping Demos</h2>
-          <p
-            style={{
-              color: theme === 'dark' ? '#b3b3b3' : '#666',
-              marginBottom: '1rem',
-            }}
-          >
+      <div className="demo-grid">
+        <a href="/mapping.html" className="demo-card">
+          <h2 className="demo-card-title">Mapping Demos</h2>
+          <p className="demo-card-description">
             Interactive mapping transformation examples
           </p>
-          <ul
-            style={{
-              paddingLeft: '1.5rem',
-              margin: 0,
-              color: theme === 'dark' ? '#b3b3b3' : '#666',
-            }}
-          >
+          <ul className="demo-card-list">
             <li>MappingCode - Execute code with built-in functions</li>
             <li>MappingDemo - Custom transformation functions</li>
             <li>Live editing with Monaco Editor</li>
           </ul>
         </a>
 
-        <a
-          href="/destination.html"
-          style={cardStyle}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px)';
-            e.currentTarget.style.boxShadow =
-              theme === 'dark'
-                ? '0 8px 16px rgba(0,0,0,0.4)'
-                : '0 8px 16px rgba(0,0,0,0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>
-            Destination Demos
-          </h2>
-          <p
-            style={{
-              color: theme === 'dark' ? '#b3b3b3' : '#666',
-              marginBottom: '1rem',
-            }}
-          >
+        <a href="/destination.html" className="demo-card">
+          <h2 className="demo-card-title">Destination Demos</h2>
+          <p className="demo-card-description">
             Test destination integrations with real examples
           </p>
-          <ul
-            style={{
-              paddingLeft: '1.5rem',
-              margin: 0,
-              color: theme === 'dark' ? '#b3b3b3' : '#666',
-            }}
-          >
+          <ul className="demo-card-list">
             <li>Plausible Analytics integration</li>
             <li>Function call interception</li>
             <li>Live mapping transformations</li>
           </ul>
         </a>
 
-        <a
-          href="/preview.html"
-          style={cardStyle}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px)';
-            e.currentTarget.style.boxShadow =
-              theme === 'dark'
-                ? '0 8px 16px rgba(0,0,0,0.4)'
-                : '0 8px 16px rgba(0,0,0,0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>HTML Preview</h2>
-          <p
-            style={{
-              color: theme === 'dark' ? '#b3b3b3' : '#666',
-              marginBottom: '1rem',
-            }}
-          >
+        <a href="/preview.html" className="demo-card">
+          <h2 className="demo-card-title">HTML Preview</h2>
+          <p className="demo-card-description">
             Interactive HTML preview with data attribute highlighting
           </p>
-          <ul
-            style={{
-              paddingLeft: '1.5rem',
-              margin: 0,
-              color: theme === 'dark' ? '#b3b3b3' : '#666',
-            }}
-          >
+          <ul className="demo-card-list">
             <li>Render HTML with live preview</li>
             <li>Highlight walkerOS data attributes</li>
             <li>Auto-mark entity properties</li>
           </ul>
         </a>
 
-        <a
-          href="/playground.html"
-          style={cardStyle}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px)';
-            e.currentTarget.style.boxShadow =
-              theme === 'dark'
-                ? '0 8px 16px rgba(0,0,0,0.4)'
-                : '0 8px 16px rgba(0,0,0,0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>
-            Promotion Playground
-          </h2>
-          <p
-            style={{
-              color: theme === 'dark' ? '#b3b3b3' : '#666',
-              marginBottom: '1rem',
-            }}
-          >
+        <a href="/playground.html" className="demo-card">
+          <h2 className="demo-card-title">Promotion Playground</h2>
+          <p className="demo-card-description">
             Complete walkerOS flow demonstration
           </p>
-          <ul
-            style={{
-              paddingLeft: '1.5rem',
-              margin: 0,
-              color: theme === 'dark' ? '#b3b3b3' : '#666',
-            }}
-          >
+          <ul className="demo-card-list">
             <li>HTML editor → preview chain</li>
             <li>Event generation → mapping</li>
             <li>Destination output visualization</li>
           </ul>
         </a>
 
-        <a
-          href="/browser-box-demo.html"
-          style={cardStyle}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px)';
-            e.currentTarget.style.boxShadow =
-              theme === 'dark'
-                ? '0 8px 16px rgba(0,0,0,0.4)'
-                : '0 8px 16px rgba(0,0,0,0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>
-            BrowserBox Demo
-          </h2>
-          <p
-            style={{
-              color: theme === 'dark' ? '#b3b3b3' : '#666',
-              marginBottom: '1rem',
-            }}
-          >
+        <a href="/browser-box-demo.html" className="demo-card">
+          <h2 className="demo-card-title">BrowserBox Demo</h2>
+          <p className="demo-card-description">
             Modular code editor with HTML/CSS/JS toggle buttons
           </p>
-          <ul
-            style={{
-              paddingLeft: '1.5rem',
-              margin: 0,
-              color: theme === 'dark' ? '#b3b3b3' : '#666',
-            }}
-          >
+          <ul className="demo-card-list">
             <li>Atomic design: HeaderButton + ButtonGroup</li>
             <li>Dynamic tab visibility</li>
             <li>Clean API with Box composition</li>
@@ -266,37 +102,12 @@ const App = () => {
           </ul>
         </a>
 
-        <a
-          href="/code.html"
-          style={cardStyle}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px)';
-            e.currentTarget.style.boxShadow =
-              theme === 'dark'
-                ? '0 8px 16px rgba(0,0,0,0.4)'
-                : '0 8px 16px rgba(0,0,0,0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>Code Component</h2>
-          <p
-            style={{
-              color: theme === 'dark' ? '#b3b3b3' : '#666',
-              marginBottom: '1rem',
-            }}
-          >
+        <a href="/code.html" className="demo-card">
+          <h2 className="demo-card-title">Code Component</h2>
+          <p className="demo-card-description">
             Static code examples with syntax highlighting
           </p>
-          <ul
-            style={{
-              paddingLeft: '1.5rem',
-              margin: 0,
-              color: theme === 'dark' ? '#b3b3b3' : '#666',
-            }}
-          >
+          <ul className="demo-card-list">
             <li>Read-only code display</li>
             <li>Multiple language support</li>
             <li>Copy to clipboard functionality</li>
@@ -305,25 +116,13 @@ const App = () => {
         </a>
       </div>
 
-      <footer
-        style={{
-          marginTop: '4rem',
-          paddingTop: '2rem',
-          borderTop:
-            theme === 'dark' ? '1px solid #3c3c3c' : '1px solid #e0e0e0',
-        }}
-      >
-        <p
-          style={{
-            color: theme === 'dark' ? '#b3b3b3' : '#888',
-            textAlign: 'center',
-          }}
-        >
+      <footer className="demo-footer">
+        <p className="demo-footer-text">
           <a
             href="https://github.com/elbwalker/walkerOS"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: 'inherit', textDecoration: 'none' }}
+            className="demo-footer-link"
           >
             walkerOS
           </a>{' '}
