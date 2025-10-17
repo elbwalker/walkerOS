@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Header } from './header';
 
 export interface BoxProps {
@@ -11,6 +11,7 @@ export interface BoxProps {
   minHeight?: number | string;
   maxHeight?: number | string;
   tiny?: boolean;
+  resizable?: boolean;
 }
 
 /**
@@ -45,6 +46,7 @@ export function Box({
   minHeight,
   maxHeight,
   tiny = false,
+  resizable = false,
 }: BoxProps) {
   const boxStyle: React.CSSProperties = { ...style };
 
@@ -64,6 +66,11 @@ export function Box({
   if (maxHeight !== undefined) {
     boxStyle.maxHeight =
       typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight;
+  }
+
+  if (resizable) {
+    boxStyle.resize = 'vertical';
+    boxStyle.overflow = 'auto';
   }
 
   return (

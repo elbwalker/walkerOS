@@ -174,6 +174,7 @@ function App() {
           onMappingChange={setEditableMapping}
           label="GA4 E-Commerce Mapping"
           initialTab="editor"
+          resizable
         />
       </div>
 

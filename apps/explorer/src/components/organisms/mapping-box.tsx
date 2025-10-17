@@ -10,6 +10,7 @@ export interface MappingBoxProps {
   label?: string;
   className?: string;
   initialTab?: 'code' | 'visual';
+  resizable?: boolean;
 }
 
 /**
@@ -45,6 +46,7 @@ export function MappingBox({
   label = 'Mapping',
   className = '',
   initialTab = 'visual',
+  resizable = false,
 }: MappingBoxProps) {
   const [activeTab, setActiveTab] = useState<'code' | 'visual'>(initialTab);
   const [selectedRule, setSelectedRule] = useState('');
@@ -94,6 +96,7 @@ export function MappingBox({
         <ButtonGroup buttons={buttons} onButtonClick={handleTabChange} />
       }
       className={className}
+      resizable={resizable}
     >
       {activeTab === 'code' ? (
         <CodeBox
