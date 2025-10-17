@@ -6,10 +6,11 @@ import {
   processEventMapping,
 } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { CodePanel } from '../organisms/code-panel';
+import { CodeBox } from '../organisms/code-box';
+import { Grid } from '../atoms/grid';
 
 // Auto-import CSS
-import '../../styles/mapping-demo.css';
+import '../../styles/layout.css';
 
 export interface DestinationDemoProps {
   destination: Destination.Instance;
@@ -156,27 +157,27 @@ export function DestinationDemo({
   }, [executeDestination]);
 
   return (
-    <div className="elb-explorer">
-      <div className="elb-explorer-grid">
-        <CodePanel
-          label={labelEvent}
-          value={eventInput}
-          onChange={setEventInput}
-          language="json"
-        />
-        <CodePanel
-          label={labelMapping}
-          value={mappingInput}
-          onChange={setMappingInput}
-          language="json"
-        />
-        <CodePanel
-          label={labelOutput}
-          value={output}
-          disabled
-          language="javascript"
-        />
-      </div>
-    </div>
+    <Grid columns={3}>
+      <CodeBox
+        label={labelEvent}
+        code={eventInput}
+        onChange={setEventInput}
+        language="json"
+        showFormat
+      />
+      <CodeBox
+        label={labelMapping}
+        code={mappingInput}
+        onChange={setMappingInput}
+        language="json"
+        showFormat
+      />
+      <CodeBox
+        label={labelOutput}
+        code={output}
+        disabled
+        language="javascript"
+      />
+    </Grid>
   );
 }

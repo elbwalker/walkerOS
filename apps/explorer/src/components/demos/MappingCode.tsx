@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { getMappingEvent, getMappingValue, createEvent } from '@walkeros/core';
 import type { Mapping, WalkerOS } from '@walkeros/core';
-import { CodePanel } from '../organisms/code-panel';
+import { CodeBox } from '../organisms/code-box';
+import { Grid } from '../atoms/grid';
 
 // Auto-import CSS
-import '../../styles/mapping-demo.css';
+import '../../styles/layout.css';
 
 export interface MappingCodeProps {
   input: string;
@@ -81,24 +82,14 @@ export function MappingCode({
   }, [executeCode]);
 
   return (
-    <div className="elb-explorer">
-      <div
-        className="elb-explorer-grid"
-        style={{ gridTemplateColumns: '1fr 1fr' }}
-      >
-        <CodePanel
-          label={labelInput}
-          value={input}
-          onChange={setInput}
-          language="javascript"
-        />
-        <CodePanel
-          label={labelOutput}
-          value={output}
-          disabled
-          language="json"
-        />
-      </div>
-    </div>
+    <Grid columns={2}>
+      <CodeBox
+        label={labelInput}
+        code={input}
+        onChange={setInput}
+        language="javascript"
+      />
+      <CodeBox label={labelOutput} code={output} disabled language="json" />
+    </Grid>
   );
 }

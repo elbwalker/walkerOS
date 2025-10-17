@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Box } from '../src/components/atoms/box';
 import { Preview } from '../src/components/molecules/preview';
-import '../src/styles/mapping-demo.css';
+import '../src/styles/layout.css';
 
 const sampleHtml = `<div
   data-elb="product"

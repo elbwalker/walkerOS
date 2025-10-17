@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, type ComponentType } from 'react';
+import { Editor } from '@monaco-editor/react';
 import { startFlow } from '@walkeros/collector';
 import { Box } from '../atoms/box';
-import { CodeEditor } from '../molecules/code-editor';
 import type { DestinationCode } from '../../helpers/destinations';
 
 export interface CollectorBoxProps {
@@ -34,6 +34,31 @@ export function CollectorBox({
   const [output, setOutput] = useState(
     '// Click elements in the preview to see function call',
   );
+  const [monacoTheme, setMonacoTheme] = useState('vs-light');
+
+  // Theme detection
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDark =
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        document.body.getAttribute('data-theme') === 'dark';
+      setMonacoTheme(isDark ? 'vs-dark' : 'vs-light');
+    };
+
+    checkTheme();
+
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -69,9 +94,41 @@ export function CollectorBox({
     })();
   }, [event, mapping, destination]);
 
+  const MonacoEditor = Editor as ComponentType<{
+    height: string;
+    language: string;
+    value: string;
+    onChange: (value: string | undefined) => void;
+    theme: string;
+    options: Record<string, unknown>;
+  }>;
+
   return (
     <Box header={label}>
-      <CodeEditor value={output} disabled language="javascript" />
+      <MonacoEditor
+        height="100%"
+        language="javascript"
+        value={output}
+        onChange={() => {}}
+        theme={monacoTheme}
+        options={{
+          readOnly: true,
+          minimap: { enabled: false },
+          fontSize: 13,
+          lineNumbers: 'on',
+          lineNumbersMinChars: 2,
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+          tabSize: 2,
+          wordWrap: 'off',
+          fixedOverflowWidgets: true,
+          scrollbar: {
+            vertical: 'auto',
+            horizontal: 'auto',
+            alwaysConsumeMouseWheel: false,
+          },
+        }}
+      />
     </Box>
   );
 }

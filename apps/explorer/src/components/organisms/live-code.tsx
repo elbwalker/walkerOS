@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { WalkerOS } from '@walkeros/core';
 import { debounce, isString, tryCatchAsync } from '@walkeros/core';
-import { CodePanel } from './code-panel';
+import { CodeBox } from './code-box';
+import { Grid } from '../atoms/grid';
 import { cn } from '@/lib/utils';
 
 export interface LiveCodeProps {
@@ -82,33 +83,33 @@ export function LiveCode({
   }, [input, config, options, updateOutput]);
 
   return (
-    <div className={cn('walkeros-explorer', className)}>
-      <div className="explorer-grid">
-        <CodePanel
-          label={labelInput}
-          value={input}
-          onChange={disableInput ? undefined : setInput}
-          disabled={disableInput}
-          language="json"
-        />
+    <Grid columns={3} className={className}>
+      <CodeBox
+        label={labelInput}
+        code={input}
+        onChange={disableInput ? undefined : setInput}
+        disabled={disableInput}
+        language="json"
+        showFormat={!disableInput}
+      />
 
-        {config && (
-          <CodePanel
-            label={labelConfig}
-            value={config}
-            onChange={disableConfig ? undefined : setConfig}
-            disabled={disableConfig}
-            language="json"
-          />
-        )}
-
-        <CodePanel
-          label={labelOutput}
-          value={output[0] || emptyText}
-          disabled
+      {config && (
+        <CodeBox
+          label={labelConfig}
+          code={config}
+          onChange={disableConfig ? undefined : setConfig}
+          disabled={disableConfig}
           language="json"
+          showFormat={!disableConfig}
         />
-      </div>
-    </div>
+      )}
+
+      <CodeBox
+        label={labelOutput}
+        code={output[0] || emptyText}
+        disabled
+        language="json"
+      />
+    </Grid>
   );
 }

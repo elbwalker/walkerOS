@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { WalkerOS, Elb, Collector, Source } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
-import '../../styles/html-preview.css';
+import '../../styles/layout.css';
 
 export interface PreviewProps {
   html: string;
@@ -232,7 +232,7 @@ export function Preview({ html, css = '', onEvent }: PreviewProps) {
   }, [html, css, highlights, autoMarkProperties]);
 
   return (
-    <div className="elb-preview-wrapper">
+    <>
       <div className="elb-preview-content">
         <iframe
           ref={iframeRef}
@@ -270,6 +270,6 @@ export function Preview({ html, css = '', onEvent }: PreviewProps) {
           Action
         </button>
       </div>
-    </div>
+    </>
   );
 }

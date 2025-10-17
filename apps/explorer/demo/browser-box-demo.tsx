@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserBox } from '../src/components/organisms/browser-box';
-import '../src/styles/mapping-demo.css';
+import '../src/styles/layout.css';
 
 const sampleHtml = `<div data-elb="product" data-elbaction="load:view">
   <h1 data-elb-product="name:#innerText">Product Name</h1>

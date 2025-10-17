@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { CodePanel } from '../organisms/code-panel';
+import { CodeBox } from '../organisms/code-box';
+import { Grid } from '../atoms/grid';
 
 // Auto-import CSS
-import '../../styles/mapping-demo.css';
+import '../../styles/layout.css';
 
 // NOTE: Monaco Editor configuration (workers, etc.) must be handled by the consuming application.
 // See apps/explorer/demo/main.tsx for an example with Vite
@@ -83,27 +84,22 @@ export function MappingDemo({
   }, [updateOutput]);
 
   return (
-    <div className="elb-explorer">
-      <div className="elb-explorer-grid">
-        <CodePanel
-          label={labelInput}
-          value={input}
-          onChange={setInput}
-          language="json"
-        />
-        <CodePanel
-          label={labelConfig}
-          value={config}
-          onChange={setConfig}
-          language="json"
-        />
-        <CodePanel
-          label={labelOutput}
-          value={output}
-          disabled
-          language="json"
-        />
-      </div>
-    </div>
+    <Grid columns={3}>
+      <CodeBox
+        label={labelInput}
+        code={input}
+        onChange={setInput}
+        language="json"
+        showFormat
+      />
+      <CodeBox
+        label={labelConfig}
+        code={config}
+        onChange={setConfig}
+        language="json"
+        showFormat
+      />
+      <CodeBox label={labelOutput} code={output} disabled language="json" />
+    </Grid>
   );
 }

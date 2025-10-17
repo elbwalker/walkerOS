@@ -1,14 +1,15 @@
 import React, { useState, useCallback } from 'react';
 import type { WalkerOS } from '@walkeros/core';
 import { Box } from '../atoms/box';
+import { Grid } from '../atoms/grid';
 import { Preview } from '../molecules/preview';
-import { CodePanel } from '../organisms/code-panel';
+import { CodeBox } from '../organisms/code-box';
 import { CollectorBox } from '../organisms/collector-box';
 import {
   createGtagDestination,
   type DestinationCode,
 } from '../../helpers/destinations';
-import '../../styles/mapping-demo.css';
+import '../../styles/layout.css';
 
 export interface PromotionPlaygroundProps {
   initialHtml?: string;
@@ -96,7 +97,7 @@ const defaultContent = `<style>
     <button data-elbaction="click:more" class="btn btn-secondary">
       Learn more
     </button>
-  </div>
+    </>
 </div>`;
 
 const defaultMapping = `{
@@ -178,48 +179,43 @@ export function PromotionPlayground({
     : '// Click elements in the preview to see events';
 
   return (
-    <div className="elb-explorer">
-      <div
-        className="elb-explorer-grid"
-        style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}
-      >
-        {/* Column 1: HTML Editor */}
-        <CodePanel
-          label={labelHtml}
-          value={content}
-          onChange={setContent}
-          language="html"
-        />
+    <Grid columns={5}>
+      {/* Column 1: HTML Editor */}
+      <CodeBox
+        label={labelHtml}
+        code={content}
+        onChange={setContent}
+        language="html"
+      />
 
-        {/* Column 2: Preview */}
-        <Box header={labelPreview}>
-          <Preview html={html} css={css} onEvent={handleEvent} />
-        </Box>
+      {/* Column 2: Preview */}
+      <Box header={labelPreview}>
+        <Preview html={html} css={css} onEvent={handleEvent} />
+      </Box>
 
-        {/* Column 3: Events */}
-        <CodePanel
-          label={labelEvents}
-          value={eventDisplay}
-          disabled
-          language="json"
-        />
+      {/* Column 3: Events */}
+      <CodeBox
+        label={labelEvents}
+        code={eventDisplay}
+        disabled
+        language="json"
+      />
 
-        {/* Column 4: Mapping */}
-        <CodePanel
-          label={labelMapping}
-          value={mappingInput}
-          onChange={setMappingInput}
-          language="json"
-        />
+      {/* Column 4: Mapping */}
+      <CodeBox
+        label={labelMapping}
+        code={mappingInput}
+        onChange={setMappingInput}
+        language="json"
+      />
 
-        {/* Column 5: Result */}
-        <CollectorBox
-          event={capturedEvent ? JSON.stringify(capturedEvent) : '{}'}
-          mapping={mappingInput}
-          destination={destination}
-          label={labelResult}
-        />
-      </div>
-    </div>
+      {/* Column 5: Result */}
+      <CollectorBox
+        event={capturedEvent ? JSON.stringify(capturedEvent) : '{}'}
+        mapping={mappingInput}
+        destination={destination}
+        label={labelResult}
+      />
+    </Grid>
   );
 }

@@ -16,27 +16,29 @@ export { DestinationDemo as DestinationPush } from './components/demos/Destinati
 
 // Organisms
 export { LiveCode } from './components/organisms/live-code';
-export { CodePanel } from './components/organisms/code-panel';
+export { CodeBox } from './components/organisms/code-box';
 export { CollectorBox } from './components/organisms/collector-box';
 export { BrowserBox } from './components/organisms/browser-box';
 export type { LiveCodeProps } from './components/organisms/live-code';
-export type { CodePanelProps } from './components/organisms/code-panel';
+export type { CodeBoxProps } from './components/organisms/code-box';
 export type { CollectorBoxProps } from './components/organisms/collector-box';
 export type { BrowserBoxProps } from './components/organisms/browser-box';
 
 // Molecules
 export { Preview } from './components/molecules/preview';
-export { CodeEditor } from './components/molecules/code-editor';
 export type { PreviewProps } from './components/molecules/preview';
-export type { CodeEditorProps } from './components/molecules/code-editor';
 
 // Atoms
 export { Box } from './components/atoms/box';
+export { Grid } from './components/atoms/grid';
 export { Header } from './components/atoms/header';
+export { Footer } from './components/atoms/footer';
 export { Button } from './components/atoms/button';
 export { ButtonGroup } from './components/atoms/button-group';
 export type { BoxProps } from './components/atoms/box';
+export type { GridProps } from './components/atoms/grid';
 export type { HeaderProps } from './components/atoms/header';
+export type { FooterProps } from './components/atoms/footer';
 export type { ButtonProps } from './components/atoms/button';
 export type { ButtonGroupProps } from './components/atoms/button-group';
 

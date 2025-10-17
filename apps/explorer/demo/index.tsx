@@ -265,6 +265,44 @@ const App = () => {
             <li>Multiple configuration examples</li>
           </ul>
         </a>
+
+        <a
+          href="/code.html"
+          style={cardStyle}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-4px)';
+            e.currentTarget.style.boxShadow =
+              theme === 'dark'
+                ? '0 8px 16px rgba(0,0,0,0.4)'
+                : '0 8px 16px rgba(0,0,0,0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>Code Component</h2>
+          <p
+            style={{
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+              marginBottom: '1rem',
+            }}
+          >
+            Static code examples with syntax highlighting
+          </p>
+          <ul
+            style={{
+              paddingLeft: '1.5rem',
+              margin: 0,
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+            }}
+          >
+            <li>Read-only code display</li>
+            <li>Multiple language support</li>
+            <li>Copy to clipboard functionality</li>
+            <li>Perfect for documentation examples</li>
+          </ul>
+        </a>
       </div>
 
       <footer

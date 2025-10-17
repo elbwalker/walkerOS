@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, type ComponentType } from 'react';
+import { Editor } from '@monaco-editor/react';
 import { Box } from '../atoms/box';
 import { ButtonGroup } from '../atoms/button-group';
-import { CodeEditor } from '../molecules/code-editor';
 import { Preview } from '../molecules/preview';
 
 export interface BrowserBoxProps {
@@ -44,6 +44,32 @@ export function BrowserBox({
   className = '',
   initialTab,
 }: BrowserBoxProps) {
+  const [monacoTheme, setMonacoTheme] = useState('vs-light');
+
+  // Theme detection
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDark =
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        document.body.getAttribute('data-theme') === 'dark';
+      setMonacoTheme(isDark ? 'vs-dark' : 'vs-light');
+    };
+
+    checkTheme();
+
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   // Determine available tabs
   const availableTabs = useMemo(() => {
     const tabs: Array<{ label: string; value: string }> = [];
@@ -104,6 +130,21 @@ export function BrowserBox({
     [availableTabs, activeTab],
   );
 
+  const MonacoEditor = Editor as ComponentType<{
+    height: string;
+    language: string;
+    value: string;
+    onChange: (value: string | undefined) => void;
+    theme: string;
+    options: Record<string, unknown>;
+  }>;
+
+  const handleChange = (value: string | undefined) => {
+    if (onChange && value !== undefined) {
+      onChange(value);
+    }
+  };
+
   return (
     <Box
       header={label}
@@ -117,11 +158,29 @@ export function BrowserBox({
       {activeTab === 'preview' ? (
         <Preview html={html || ''} css={css || ''} />
       ) : (
-        <CodeEditor
-          value={content}
-          onChange={onChange}
+        <MonacoEditor
+          height="100%"
           language={language}
-          disabled={!onChange}
+          value={content}
+          onChange={handleChange}
+          theme={monacoTheme}
+          options={{
+            readOnly: !onChange,
+            minimap: { enabled: false },
+            fontSize: 13,
+            lineNumbers: 'on',
+            lineNumbersMinChars: 2,
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            tabSize: 2,
+            wordWrap: 'off',
+            fixedOverflowWidgets: true,
+            scrollbar: {
+              vertical: 'auto',
+              horizontal: 'auto',
+              alwaysConsumeMouseWheel: false,
+            },
+          }}
         />
       )}
     </Box>
