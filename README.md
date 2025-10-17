@@ -4,18 +4,30 @@
   </a>
 </p>
 
-# walkerOS: Open-Source tagging and event data collection
+# Open-source data collection and tag management
 
 <div align="left">
-  <a href="https://github.com/elbwalker/walkerOS/blob/main/LICENSE"><img src="https://img.shields.io/github/license/elbwalker/walkerOS" /></a>
-  <a href="https://www.elbwalker.com/docs/"><img src="https://img.shields.io/badge/docs-www.elbwalker.com/docs-yellow" alt="walkerOS Documentation"></a>
-  <a href="https://github.com/elbwalker/walkerOS/tree/main/apps/demos/react"><img src="https://img.shields.io/badge/React_demo-blue" alt="React demo"></a>
+  <a href="https://github.com/elbwalker/walkerOS/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/elbwalker/walkerOS" alt="License" />
+  </a>
+  <a href="https://www.walkeros.io/docs/">
+    <img src="https://img.shields.io/badge/docs-www.walkeros.io/docs-yellow" alt="walkerOS Documentation" />
+  </a>
+  <a href="https://github.com/elbwalker/walkerOS/tree/main/apps/demos/react">
+    <img src="https://img.shields.io/badge/React_demo-blue" alt="React demo" />
+  </a>
+  <a href="https://storybook.walkeros.io/">
+    <img src="https://img.shields.io/badge/Storybook_demo-pink" alt="Storybook demo" />
+  </a>
+  <a href="https://www.npmjs.com/package/@walkeros/collector">
+    <img src="https://img.shields.io/npm/v/@walkeros/collector" alt="npm version" />
+  </a>
 </div>
 
 walkerOS captures, structures, and routes events with built-in support for
 consent management — all directly in your code. No fragile UI configs. No
-black-box logic. Just **tracking infrastructure** you can version, test, and
-trust.
+black-box logic. Just **tracking infrastructure** you can **version**, **test**,
+and **trust**.
 
 ## Why walkerOS?
 
@@ -48,27 +60,36 @@ Initialize walkerOS in your project:
 
 ```javascript
 import { startFlow } from '@walkeros/collector';
-import { createSource } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 // Initialize walkerOS
-export async function initializeWalker() {
-  const { collector } = await startFlow({
+export async function initializeWalker(): Promise<void> {
+  const { collector, elb } = await startFlow({
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          pageview: true,
-          session: true,
-          elb: 'elb', // Browser source will set window.elb automatically
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb', // Makes elb available as window.elb
+          },
         },
-      }),
+      },
     },
     destinations: {
       console: {
-        push: (event) => console.log('Event:', event),
+        code: {
+          type: 'console',
+          config: {},
+          push: (event) => console.log('Event:', event),
+        },
       },
     },
   });
+
+  // Make collector available globally
+  window.walker = collector;
 }
 ```
 
@@ -77,35 +98,35 @@ export async function initializeWalker() {
 For websites without build tools, you can install from a CDN:
 
 ```html
-<script>
-  // Load the collector, core utilities, and source
-  const { startFlow } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
-  );
-  const { createSource } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs'
-  );
-  const { sourceBrowser } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
-  );
+<script type="module">
+  import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
+  import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
 
-  // Initialize walkerOS
   const { collector, elb } = await startFlow({
-    destinations: {
-      console: {
-        push: (event) => console.log('Event:', event),
+    sources: {
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb',
+          },
+        },
       },
     },
-    sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          prefix: 'data-elb',
-          pageview: true,
-          session: true,
+    destinations: {
+      console: {
+        code: {
+          type: 'console',
+          config: {},
+          push: (event) => console.log('Event:', event),
         },
-      }),
+      },
     },
   });
+
+  window.walker = collector;
 </script>
 ```
 
@@ -116,12 +137,12 @@ Here's a quick look at how to integrate walkerOS into a React application.
 **1. Create a walker setup file:**
 
 ```tsx
-// src/walker.ts
 import type { Collector, WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { createSource } from '@walkeros/core';
+
 import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
 
+// Global type declarations
 declare global {
   interface Window {
     elb: WalkerOS.Elb;
@@ -130,24 +151,42 @@ declare global {
 }
 
 export async function initializeWalker(): Promise<void> {
+  // Skip initialization if already done
   if (window.walker) return;
 
+  // Create collector with run: false for manual pageview control
   const { collector } = await startFlow({
-    run: false, // Defer run to handle route changes
+    run: false,
+    consent: { functional: true },
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: { pageview: true, session: true, elb: 'elb' },
-      }),
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            pageview: true,
+            session: true,
+            elb: 'elb',
+          },
+        },
+      },
     },
     destinations: {
-      console: { push: (event) => console.log('Event:', event) },
+      // Your destinations - add console for testing
+      console: {
+        push(event, data) {
+          console.log('Event:', event, data);
+        },
+      },
     },
   });
 
+  // Set global window object
   window.walker = collector;
 }
 
+// Tagger helper for easy component tagging
 const taggerInstance = createTagger();
+
 export function tagger(entity?: string) {
   return taggerInstance(entity);
 }
@@ -156,8 +195,7 @@ export function tagger(entity?: string) {
 **2. Integrate into your App component:**
 
 ```tsx
-// src/App.tsx
-import { useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { initializeWalker } from './walker';
 
@@ -175,29 +213,66 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Use walker run to trigger page views on route changes
+    // Skip first run to prevent double page views
     if (firstRun.current) {
       firstRun.current = false;
       return;
     }
+
     window.elb('walker run');
   }, [location]);
 
-  // ... your app routes
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/category" element={<Category />} />
+        <Route path="/product/:id" element={<Detail />} />
+      </Routes>
+    </div>
+  );
 }
+
+export default App;
 ```
 
 **3. Tag your components:**
 
 ```tsx
-// src/components/ProductDetail.tsx
 import { tagger } from '../walker';
 
-function ProductDetail({ product }) {
+function ProductDetail({ productId }: { productId: string }) {
+  const product = getProductById(parseInt(productId));
+
   return (
-    <div {...tagger('product').data('id', product.id).get()}>
-      <h1>{product.name}</h1>
-      <button {...tagger().action('click', 'add').get()}>Add to Cart</button>
+    <div
+      {...tagger()
+        .entity('product')
+        .action('load', 'view')
+        .data('productId', productId)
+        .get()}
+      className="bg-white rounded-lg shadow p-8"
+    >
+      <h1
+        {...tagger('product').data('name', product.name).get()}
+        className="text-3xl font-bold mb-2"
+      >
+        {product.name}
+      </h1>
+
+      <p
+        {...tagger('product').data('price', product.price).get()}
+        className="text-3xl font-bold text-blue-600"
+      >
+        €{product.price}
+      </p>
+
+      <button
+        {...tagger().action('click', 'add').get()}
+        className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg"
+      >
+        Add to Cart
+      </button>
     </div>
   );
 }
@@ -206,7 +281,7 @@ function ProductDetail({ product }) {
 ## Destinations
 
 Destinations are the endpoints where walkerOS sends your processed events. They
-transform standardized walkerOS events into the specific formats required by
+transform standardized walkerOS events into specific formats required by
 analytics platforms, marketing tools, and data warehouses.
 
 #### Web Destinations
