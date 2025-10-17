@@ -250,8 +250,16 @@ export function MappingEditor({
           </div>
         </>
       ) : (
-        <div className="elb-mapping-editor-placeholder">
-          Add or select mapping rule
+        <div className="elb-mapping-editor-grid">
+          {ruleOptions.map((rule) => (
+            <button
+              key={rule}
+              className="elb-mapping-editor-tile"
+              onClick={() => handleRuleSelect(rule)}
+            >
+              {rule}
+            </button>
+          ))}
         </div>
       )}
     </div>

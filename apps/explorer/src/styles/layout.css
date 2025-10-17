@@ -522,14 +522,29 @@
   flex-shrink: 0;
 }
 
-.elb-mapping-editor-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
-  color: var(--color-text-muted);
+.elb-mapping-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.elb-mapping-editor-tile {
+  padding: 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  color: var(--color-text);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-base);
-  font-style: italic;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.elb-mapping-editor-tile:hover {
+  background: var(--bg-input-hover);
+  border-color: var(--border-input-focus);
 }
 
 .elb-mapping-editor-actions {
