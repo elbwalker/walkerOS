@@ -1,7 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { AutoSelect } from './auto-select';
-import { CodeBox } from '../organisms/code-box';
 import { IconButton } from '../atoms/icon-button';
+import { MappingFormWrapper } from '../forms/mapping-form-wrapper';
+import {
+  mappingRuleSchema,
+  mappingRuleUiSchema,
+} from '../../schemas/mapping-rule-schema';
 
 export interface MappingEditorProps {
   mapping: Record<string, Record<string, unknown>>;
@@ -111,15 +115,28 @@ export function MappingEditor({
     }
   };
 
-  const handleSave = () => {
-    if (!onMappingChange) return;
-    // Placeholder for future save functionality
-    console.log('Save mapping', mapping);
+  const handleFormChange = (formData: unknown) => {
+    if (!onMappingChange || !selectedRule) return;
+
+    const [entity, action] = selectedRule.split(' ');
+    if (!entity || !action) return;
+
+    // Clean up formData - remove undefined, false booleans, and empty values
+    const cleanedData = cleanFormData(formData as Record<string, unknown>);
+
+    const newMapping = { ...mapping };
+    newMapping[entity] = {
+      ...newMapping[entity],
+      [action]: cleanedData,
+    };
+
+    onMappingChange(newMapping);
   };
 
-  const selectedRuleJson = selectedRuleConfig
-    ? JSON.stringify(selectedRuleConfig, null, 2)
-    : '{}';
+  const handleSave = () => {
+    if (!onMappingChange) return;
+    console.log('Mapping saved', mapping);
+  };
 
   return (
     <div className="elb-mapping-editor">
@@ -135,15 +152,11 @@ export function MappingEditor({
       {selectedRuleConfig ? (
         <>
           <div className="elb-mapping-editor-content">
-            <CodeBox
-              code={selectedRuleJson}
-              language="json"
-              label={selectedRule}
-              onChange={onMappingChange ? undefined : undefined}
-              showFormat={false}
-              autoHeight
-              minHeight={150}
-              maxHeight={400}
+            <MappingFormWrapper
+              schema={mappingRuleSchema}
+              uiSchema={mappingRuleUiSchema}
+              formData={selectedRuleConfig}
+              onChange={handleFormChange}
             />
           </div>
           <div className="elb-mapping-editor-actions">
@@ -174,4 +187,27 @@ export function MappingEditor({
       )}
     </div>
   );
+}
+
+/**
+ * Clean form data by removing undefined values and false booleans
+ */
+function cleanFormData(data: Record<string, unknown>): Record<string, unknown> {
+  const cleaned: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    // Skip undefined values
+    if (value === undefined) continue;
+
+    // Skip false boolean values for ignore field
+    if (key === 'ignore' && value === false) continue;
+
+    // Skip zero or undefined for batch
+    if (key === 'batch' && (!value || value === 0)) continue;
+
+    // Keep all other values
+    cleaned[key] = value;
+  }
+
+  return cleaned;
 }
