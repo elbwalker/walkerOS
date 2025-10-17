@@ -1035,26 +1035,62 @@
   border-color: var(--border-input-focus);
 }
 
-.elb-value-widget-boolean {
+/* === TOGGLE COMPONENT === */
+
+.elb-toggle-container {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-input);
-  border-radius: var(--radius-button);
+  gap: 12px;
 }
 
-.elb-value-widget-boolean input[type='checkbox'] {
+.elb-toggle {
+  position: relative;
+  width: 48px;
+  height: 24px;
+  background: var(--color-primary, #3b82f6);
+  border: none;
+  border-radius: 12px;
   cursor: pointer;
+  transition: background-color 0.2s ease;
+  padding: 0;
+  outline: none;
 }
 
-.elb-value-widget-boolean label {
-  cursor: pointer;
-  user-select: none;
+.elb-toggle:focus-visible {
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 59, 130, 246), 0.2);
+}
+
+.elb-toggle-checked {
+  background: var(--border-input);
+}
+
+.elb-toggle-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.elb-toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.elb-toggle-checked .elb-toggle-slider {
+  transform: translateX(24px);
+}
+
+.elb-toggle-label {
   font-family: var(--font-family-base);
   font-size: var(--font-size-base);
   color: var(--color-text);
+  user-select: none;
+  cursor: pointer;
 }
 
 /* === CHECKBOX COLLAPSIBLE === */

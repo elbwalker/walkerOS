@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { WidgetProps } from '@rjsf/utils';
 import { CodeBox } from '../organisms/code-box';
 import { FieldHeader } from './field-header';
+import { Toggle } from './toggle';
 
 /**
  * MappingValueWidget - Widget for static PropertyType values
@@ -86,8 +87,8 @@ export function MappingValueWidget(props: WidgetProps) {
     onChange(isNaN(num) ? 0 : num);
   };
 
-  const handleBooleanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.checked);
+  const handleBooleanChange = (checked: boolean) => {
+    onChange(checked);
   };
 
   const handleObjectChange = (code: string) => {
@@ -146,18 +147,12 @@ export function MappingValueWidget(props: WidgetProps) {
       )}
 
       {selectedType === 'boolean' && (
-        <div className="elb-value-widget-boolean">
-          <input
-            type="checkbox"
-            checked={(value as boolean) || false}
-            onChange={handleBooleanChange}
-            disabled={disabled || readonly}
-            id="value-boolean-checkbox"
-          />
-          <label htmlFor="value-boolean-checkbox">
-            {(value as boolean) ? 'true' : 'false'}
-          </label>
-        </div>
+        <Toggle
+          checked={!Boolean(value)}
+          onChange={(checked) => handleBooleanChange(!checked)}
+          disabled={disabled || readonly}
+          label={value ? 'true' : 'false'}
+        />
       )}
 
       {selectedType === 'object' && (
