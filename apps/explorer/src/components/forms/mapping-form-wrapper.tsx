@@ -5,6 +5,7 @@ import validator from '@rjsf/validator-ajv8';
 import { mappingWidgets } from './widget-registry';
 import { mappingFields } from './field-registry';
 import { MappingGrid } from '../atoms/mapping-grid';
+import { FieldHeader } from '../atoms/field-header';
 
 export interface MappingFormWrapperProps {
   schema: RJSFSchema;
@@ -115,19 +116,20 @@ function CustomFieldTemplate(props: any) {
   // Hide label and description if:
   // 1. Object fields (like consent) - widget handles them
   // 2. Custom fields (ui:field) - field component handles them
+  // 3. mappingValue widget - renders its own header
   const hasCustomField = uiSchema?.['ui:field'];
-  const showLabelAndDescription = schema.type !== 'object' && !hasCustomField;
+  const isValueWidget = uiSchema?.['ui:widget'] === 'mappingValue';
+  const showLabelAndDescription =
+    schema.type !== 'object' && !hasCustomField && !isValueWidget;
 
   return (
     <div className={`elb-rjsf-field ${classNames || ''}`} id={id}>
-      {showLabelAndDescription && label && (
-        <label htmlFor={id} className="elb-rjsf-label">
-          {label}
-          {required && <span className="elb-rjsf-required"> *</span>}
-        </label>
-      )}
-      {showLabelAndDescription && description && (
-        <div className="elb-rjsf-description">{description}</div>
+      {showLabelAndDescription && (
+        <FieldHeader
+          title={label}
+          description={description}
+          required={required}
+        />
       )}
       {children}
       {errors}

@@ -7,13 +7,13 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
  *
  * Current fields (Phase 1):
  * - key: String path to extract value from event (e.g., 'data.id', 'user.email')
+ * - value: Static value (string, number, boolean, or JSON object)
  * - validate: Function to validate the result
  * - condition: Conditionally apply this mapping (reuses existing widget)
  * - consent: Required consent to return value (reuses existing widget)
  *
  * Future fields (not yet implemented):
  * - fn: Custom transformation function
- * - value: Static value
  * - map: Object transformation
  * - set: Array of values
  * - loop: Array processing
@@ -25,6 +25,11 @@ export const valueConfigSchema: RJSFSchema = {
       type: 'string',
       title: 'Key',
       description: 'Extract value from event path (e.g., data.id, user.email)',
+    },
+    value: {
+      type: ['string', 'number', 'boolean', 'object'],
+      title: 'Value',
+      description: 'Static value to return',
     },
     validate: {
       type: 'string',
@@ -56,6 +61,9 @@ export const valueConfigUiSchema: UiSchema = {
   key: {
     'ui:widget': 'mappingString',
     'ui:placeholder': 'e.g., data.id, user.email',
+  },
+  value: {
+    'ui:widget': 'mappingValue',
   },
   validate: {
     'ui:field': 'mappingValidate',

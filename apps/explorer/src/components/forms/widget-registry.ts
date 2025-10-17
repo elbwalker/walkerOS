@@ -3,6 +3,7 @@ import { MappingStringWidget } from '../atoms/mapping-string';
 import { MappingNumberWidget } from '../atoms/mapping-number';
 import { MappingBooleanWidget } from '../atoms/mapping-boolean';
 import { MappingConsentWidget } from '../atoms/mapping-consent';
+import { MappingValueWidget } from '../atoms/mapping-value';
 
 /**
  * Widget Registry for RJSF Mapping Forms
@@ -41,10 +42,12 @@ import { MappingConsentWidget } from '../atoms/mapping-consent';
  * - mappingNumber: Number input with min/max validation
  * - mappingBoolean: Checkbox for boolean values
  * - mappingConsent: Collapsible consent requirements editor
+ * - mappingValue: Multi-type static value editor (string/number/boolean/object)
  */
 export const mappingWidgets: RegistryWidgetsType = {
   mappingString: MappingStringWidget,
   mappingNumber: MappingNumberWidget,
   mappingBoolean: MappingBooleanWidget,
   mappingConsent: MappingConsentWidget,
+  mappingValue: MappingValueWidget,
 };
