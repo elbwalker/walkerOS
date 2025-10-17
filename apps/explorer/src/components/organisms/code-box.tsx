@@ -3,6 +3,7 @@ import { Editor } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import { Box } from '../atoms/box';
 import { useMonacoHeight } from '../../hooks/useMonacoHeight';
+import { registerPalenightTheme } from '../../themes/palenight';
 
 export interface CodeBoxProps {
   code: string;
@@ -79,7 +80,7 @@ export function CodeBox({
       const isDark =
         document.documentElement.getAttribute('data-theme') === 'dark' ||
         document.body.getAttribute('data-theme') === 'dark';
-      setMonacoTheme(isDark ? 'vs-dark' : 'vs-light');
+      setMonacoTheme(isDark ? 'palenight' : 'vs-light');
     };
 
     checkTheme();
@@ -188,11 +189,16 @@ export function CodeBox({
     </>
   );
 
+  const handleBeforeMount = (monaco: typeof import('monaco-editor')) => {
+    registerPalenightTheme(monaco);
+  };
+
   const MonacoEditor = Editor as ComponentType<{
     height: string;
     language: string;
     value: string;
     onChange: (value: string | undefined) => void;
+    beforeMount?: (monaco: typeof import('monaco-editor')) => void;
     onMount?: (editor: editor.IStandaloneCodeEditor) => void;
     theme: string;
     options: Record<string, unknown>;
@@ -226,6 +232,7 @@ export function CodeBox({
         language={language}
         value={code}
         onChange={handleChange}
+        beforeMount={handleBeforeMount}
         onMount={handleEditorMount}
         theme={monacoTheme}
         options={{

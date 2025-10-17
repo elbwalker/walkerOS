@@ -3,6 +3,7 @@ import { Editor } from '@monaco-editor/react';
 import { startFlow } from '@walkeros/collector';
 import { Box } from '../atoms/box';
 import type { DestinationCode } from '../../helpers/destinations';
+import { registerPalenightTheme } from '../../themes/palenight';
 
 export interface CollectorBoxProps {
   event: string;
@@ -42,7 +43,7 @@ export function CollectorBox({
       const isDark =
         document.documentElement.getAttribute('data-theme') === 'dark' ||
         document.body.getAttribute('data-theme') === 'dark';
-      setMonacoTheme(isDark ? 'vs-dark' : 'vs-light');
+      setMonacoTheme(isDark ? 'palenight' : 'vs-light');
     };
 
     checkTheme();
@@ -94,11 +95,16 @@ export function CollectorBox({
     })();
   }, [event, mapping, destination]);
 
+  const handleBeforeMount = (monaco: typeof import('monaco-editor')) => {
+    registerPalenightTheme(monaco);
+  };
+
   const MonacoEditor = Editor as ComponentType<{
     height: string;
     language: string;
     value: string;
     onChange: (value: string | undefined) => void;
+    beforeMount?: (monaco: typeof import('monaco-editor')) => void;
     theme: string;
     options: Record<string, unknown>;
   }>;
@@ -110,6 +116,7 @@ export function CollectorBox({
         language="javascript"
         value={output}
         onChange={() => {}}
+        beforeMount={handleBeforeMount}
         theme={monacoTheme}
         options={{
           readOnly: true,
