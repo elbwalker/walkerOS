@@ -1,6 +1,8 @@
 import React, { type ComponentType, useEffect, useState } from 'react';
 import { Editor } from '@monaco-editor/react';
+import type { editor } from 'monaco-editor';
 import { Box } from '../atoms/box';
+import { useMonacoHeight } from '../../hooks/useMonacoHeight';
 
 export interface CodeBoxProps {
   code: string;
@@ -13,6 +15,8 @@ export interface CodeBoxProps {
   className?: string;
   height?: number | string;
   minHeight?: number | string;
+  maxHeight?: number | string;
+  autoHeight?: boolean;
 }
 
 /**
@@ -21,6 +25,12 @@ export interface CodeBoxProps {
  * Combines functionality of Code, CodePanel, and CodeEditor into one component.
  * Can be used for both editable and read-only code display.
  *
+ * Height Behavior:
+ * - Default: Fixed 400px height (from CSS)
+ * - autoHeight: Dynamically adjusts to content (min: 100px, max: 800px)
+ * - height prop: Custom fixed height
+ * - minHeight/maxHeight: Constraints for autoHeight mode
+ *
  * @example
  * // Read-only display
  * <CodeBox code="const x = 1;" language="javascript" label="Example" />
@@ -28,8 +38,11 @@ export interface CodeBoxProps {
  * // Editable
  * <CodeBox code={value} onChange={setValue} language="json" label="Config" showFormat />
  *
- * // With copy button
- * <CodeBox code="const x = 1;" showCopy label="Code" />
+ * // Auto-height for short content
+ * <CodeBox code={shortCode} autoHeight label="Snippet" />
+ *
+ * // Custom height constraints
+ * <CodeBox code={code} autoHeight minHeight={150} maxHeight={500} />
  */
 export function CodeBox({
   code,
@@ -42,9 +55,23 @@ export function CodeBox({
   className,
   height,
   minHeight,
+  maxHeight,
+  autoHeight = false,
 }: CodeBoxProps) {
   const [monacoTheme, setMonacoTheme] = useState('vs-light');
   const [copied, setCopied] = useState(false);
+
+  // Auto-height calculation
+  const minHeightNum = typeof minHeight === 'number' ? minHeight : 100;
+  const maxHeightNum = typeof maxHeight === 'number' ? maxHeight : 800;
+  const defaultHeightNum = typeof height === 'number' ? height : 400;
+
+  const [calculatedHeight, setEditor] = useMonacoHeight({
+    enabled: autoHeight,
+    minHeight: minHeightNum,
+    maxHeight: maxHeightNum,
+    defaultHeight: defaultHeightNum,
+  });
 
   // Theme detection
   useEffect(() => {
@@ -166,18 +193,26 @@ export function CodeBox({
     language: string;
     value: string;
     onChange: (value: string | undefined) => void;
+    onMount?: (editor: editor.IStandaloneCodeEditor) => void;
     theme: string;
     options: Record<string, unknown>;
   }>;
 
   const boxStyle: React.CSSProperties = {};
-  if (height !== undefined) {
+  if (autoHeight) {
+    // Use calculated height from hook
+    boxStyle.height = `${calculatedHeight}px`;
+  } else if (height !== undefined) {
+    // Use custom height
     boxStyle.height = typeof height === 'number' ? `${height}px` : height;
   }
-  if (minHeight !== undefined) {
-    boxStyle.minHeight =
-      typeof minHeight === 'number' ? `${minHeight}px` : minHeight;
-  }
+  // Note: minHeight/maxHeight only used in autoHeight mode, not applied to box directly
+
+  const handleEditorMount = (monacoEditor: editor.IStandaloneCodeEditor) => {
+    if (autoHeight) {
+      setEditor(monacoEditor);
+    }
+  };
 
   return (
     <Box
@@ -191,6 +226,7 @@ export function CodeBox({
         language={language}
         value={code}
         onChange={handleChange}
+        onMount={handleEditorMount}
         theme={monacoTheme}
         options={{
           readOnly: disabled || !onChange,

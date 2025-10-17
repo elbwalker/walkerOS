@@ -112,6 +112,10 @@ await getMappingValue(
   }
 );`;
 
+const shortExample = `const x = 1;
+const y = 2;
+return x + y;`;
+
 function App() {
   const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
     if (
@@ -122,6 +126,8 @@ function App() {
     }
     return 'light';
   });
+
+  const [editableCode, setEditableCode] = React.useState(shortExample);
 
   React.useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -172,12 +178,13 @@ function App() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <section>
-          <h2>TypeScript Event Example</h2>
+          <h2>TypeScript Event Example (with autoHeight)</h2>
           <CodeBox
             code={typescriptExample}
             language="typescript"
             label="Event Structure"
             showCopy={true}
+            autoHeight={true}
           />
         </section>
 
@@ -222,12 +229,40 @@ function App() {
         </section>
 
         <section style={{ marginTop: '2rem' }}>
+          <h2>Auto-Height Feature</h2>
+          <p
+            style={{
+              color: theme === 'dark' ? '#b3b3b3' : '#666',
+              marginBottom: '1rem',
+            }}
+          >
+            Use <code>autoHeight</code> prop to dynamically size boxes based on
+            content. Try editing the code below - it will automatically adjust
+            height as you type! Combine with <code>maxHeight</code> to limit
+            maximum size (this one has max 300px).
+          </p>
+          <CodeBox
+            code={editableCode}
+            language="javascript"
+            label="Editable (autoHeight, max 300px)"
+            autoHeight={true}
+            maxHeight={300}
+            onChange={setEditableCode}
+            showCopy={true}
+          />
+        </section>
+
+        <section style={{ marginTop: '2rem' }}>
           <h2>Component Features</h2>
           <ul style={{ color: theme === 'dark' ? '#b3b3b3' : '#666' }}>
             <li>Read-only code display with syntax highlighting</li>
             <li>Multiple language support (TypeScript, JavaScript, JSON)</li>
             <li>Optional copy-to-clipboard functionality</li>
             <li>Automatic theme detection (light/dark)</li>
+            <li>
+              <strong>Auto-height mode</strong> - dynamically adjusts to content
+              size
+            </li>
             <li>Perfect for documentation and static examples</li>
           </ul>
         </section>
