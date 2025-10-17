@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/storybook-addon",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Visualize, debug, and validate walkerOS event tracking in your Storybook stories. Real-time event capture with visual DOM highlighting for data-attribute based tagging.",
   "keywords": [
     "storybook-addons",
@@ -12,9 +12,13 @@
     "events",
     "walkeros"
   ],
+  "homepage": "https://github.com/elbwalker/walkerOS/tree/main/apps/storybook-addon",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/elbwalker/walkerOS",
+    "url": "https://github.com/elbwalker/walkerOS.git",
     "directory": "apps/storybook-addon"
   },
   "type": "module",
@@ -39,7 +43,8 @@
     "dist/**/*",
     "README.md",
     "*.js",
-    "*.d.ts"
+    "*.d.ts",
+    "!src/**/*"
   ],
   "scripts": {
     "build": "tsup",
