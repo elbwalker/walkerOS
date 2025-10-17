@@ -55,6 +55,14 @@
   --color-text-placeholder: #9ca3af;
   --shadow-dropdown: 0 4px 6px rgba(0, 0, 0, 0.1);
 
+  /* Button Colors */
+  --color-button-primary: #3b82f6;
+  --color-button-primary-hover: #2563eb;
+  --color-button-primary-text: #ffffff;
+  --color-button-danger: #ef4444;
+  --color-button-danger-hover: #dc2626;
+  --color-button-danger-text: #ffffff;
+
   /* Typography */
   --font-family-base:
     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
@@ -117,6 +125,14 @@
   --color-text-input: #e0e0e0;
   --color-text-placeholder: #666;
   --shadow-dropdown: 0 4px 6px rgba(0, 0, 0, 0.5);
+
+  /* Button Colors */
+  --color-button-primary: #4a90e2;
+  --color-button-primary-hover: #357abd;
+  --color-button-primary-text: #ffffff;
+  --color-button-danger: #ef4444;
+  --color-button-danger-hover: #dc2626;
+  --color-button-danger-text: #ffffff;
 }
 
 /* === BASE STYLES === */
@@ -208,6 +224,7 @@
   position: relative;
   background: transparent;
   overflow: auto;
+  padding: 12px;
 }
 
 .elb-explorer-content > div:only-child {
@@ -397,12 +414,12 @@
 
 .elb-auto-select {
   position: relative;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
 }
 
 .elb-auto-select-input {
   width: 100%;
+  max-width: 100%;
   padding: 8px 12px;
   font-family: var(--font-family-base);
   font-size: var(--font-size-base);
@@ -412,6 +429,7 @@
   border-radius: var(--radius-button);
   outline: none;
   transition: all 0.15s;
+  box-sizing: border-box;
 }
 
 .elb-auto-select-input:hover {
@@ -483,56 +501,91 @@
 .elb-mapping-editor {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  padding: 12px;
   gap: 12px;
+  min-height: 0;
+  padding-bottom: 0;
 }
 
-.elb-mapping-editor-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.elb-mapping-editor-add-btn {
-  padding: 8px 12px;
-  background: transparent;
-  border: 1px solid var(--border-input);
-  border-radius: var(--radius-button);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-button);
-  transition: all 0.15s;
+.elb-mapping-editor-select {
   flex-shrink: 0;
 }
 
-.elb-mapping-editor-add-btn:hover:not(:disabled) {
-  background: var(--bg-button-hover);
-  color: var(--color-text-button-hover);
-}
-
-.elb-mapping-editor-add-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.elb-mapping-editor-preview {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+.elb-mapping-editor-content {
+  flex-shrink: 0;
 }
 
 .elb-mapping-editor-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
   min-height: 200px;
   color: var(--color-text-muted);
   font-size: var(--font-size-base);
   font-style: italic;
+}
+
+.elb-mapping-editor-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding-bottom: 12px;
+}
+
+/* === ICON BUTTON === */
+
+.elb-icon-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  transition: all 0.15s;
+}
+
+.elb-icon-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.elb-icon-button-default {
+  background: transparent;
+  color: var(--color-text-button);
+  border: 1px solid var(--border-input);
+}
+
+.elb-icon-button-default:hover:not(:disabled) {
+  background: var(--bg-button-hover);
+  color: var(--color-text-button-hover);
+}
+
+.elb-icon-button-primary {
+  background: var(--color-button-primary);
+  color: var(--color-button-primary-text);
+  border: 1px solid var(--color-button-primary);
+}
+
+.elb-icon-button-primary:hover:not(:disabled) {
+  background: var(--color-button-primary-hover);
+  border-color: var(--color-button-primary-hover);
+}
+
+.elb-icon-button-danger {
+  background: var(--color-button-danger);
+  color: var(--color-button-danger-text);
+  border: 1px solid var(--color-button-danger);
+}
+
+.elb-icon-button-danger:hover:not(:disabled) {
+  background: var(--color-button-danger-hover);
+  border-color: var(--color-button-danger-hover);
 }
 
 /* === RESPONSIVE === */

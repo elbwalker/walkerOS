@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { AutoSelect } from './auto-select';
 import { CodeBox } from '../organisms/code-box';
+import { IconButton } from '../atoms/icon-button';
 
 export interface MappingEditorProps {
   mapping: Record<string, Record<string, unknown>>;
@@ -12,15 +13,10 @@ export interface MappingEditorProps {
  *
  * Features:
  * - AutoSelect dropdown to choose entity-action pairs
- * - Add button to create new rules
- * - CodeBox display of selected rule
- * - Converts mapping object to entity-action list
- * - Create new rules via dropdown or plus button
+ * - CodeBox display of selected rule with editing capability
+ * - Delete and Save action buttons (only visible when rule selected)
+ * - Create new rules via dropdown (create) option
  * - Placeholder when no rule selected
- *
- * Layout (within Box content):
- * Row 1: [AutoSelect] [+ Button]
- * Row 2: [CodeBox showing selected rule or placeholder]
  *
  * @example
  * <MappingEditor
@@ -95,9 +91,30 @@ export function MappingEditor({
     }
   };
 
-  const handleAddRule = () => {
-    if (!selectedRule.trim()) return;
-    createNewRule(selectedRule);
+  const handleDelete = () => {
+    if (!onMappingChange || !selectedRule) return;
+
+    const [entity, action] = selectedRule.split(' ');
+    if (!entity || !action) return;
+
+    const newMapping = { ...mapping };
+    if (newMapping[entity]?.[action]) {
+      delete newMapping[entity][action];
+
+      // Remove entity if no actions left
+      if (Object.keys(newMapping[entity]).length === 0) {
+        delete newMapping[entity];
+      }
+
+      onMappingChange(newMapping);
+      setSelectedRule('');
+    }
+  };
+
+  const handleSave = () => {
+    if (!onMappingChange) return;
+    // Placeholder for future save functionality
+    console.log('Save mapping', mapping);
   };
 
   const selectedRuleJson = selectedRuleConfig
@@ -106,51 +123,55 @@ export function MappingEditor({
 
   return (
     <div className="elb-mapping-editor">
-      <div className="elb-mapping-editor-controls">
+      <div className="elb-mapping-editor-select">
         <AutoSelect
           options={ruleOptions}
           onSelect={handleRuleSelect}
           value={selectedRule}
           placeholder="Select mapping rule..."
         />
-        <button
-          className="elb-mapping-editor-add-btn"
-          onClick={handleAddRule}
-          title="Add new rule"
-          disabled={!onMappingChange || !selectedRule.trim()}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
       </div>
-      <div className="elb-mapping-editor-preview">
-        {selectedRuleConfig ? (
-          <CodeBox
-            code={selectedRuleJson}
-            language="json"
-            label={selectedRule}
-            disabled={!onMappingChange}
-            autoHeight
-            minHeight={150}
-            maxHeight={400}
-          />
-        ) : (
-          <div className="elb-mapping-editor-placeholder">
-            Add or select mapping rule
+
+      {selectedRuleConfig ? (
+        <>
+          <div className="elb-mapping-editor-content">
+            <CodeBox
+              code={selectedRuleJson}
+              language="json"
+              label={selectedRule}
+              onChange={onMappingChange ? undefined : undefined}
+              showFormat={false}
+              autoHeight
+              minHeight={150}
+              maxHeight={400}
+            />
           </div>
-        )}
-      </div>
+          <div className="elb-mapping-editor-actions">
+            <IconButton
+              icon="delete"
+              variant="danger"
+              onClick={handleDelete}
+              disabled={!onMappingChange}
+              title="Delete rule"
+            >
+              Delete
+            </IconButton>
+            <IconButton
+              icon="save"
+              variant="primary"
+              onClick={handleSave}
+              disabled={!onMappingChange}
+              title="Save mapping"
+            >
+              Save
+            </IconButton>
+          </div>
+        </>
+      ) : (
+        <div className="elb-mapping-editor-placeholder">
+          Add or select mapping rule
+        </div>
+      )}
     </div>
   );
 }
