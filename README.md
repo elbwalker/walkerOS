@@ -4,22 +4,24 @@
   </a>
 </p>
 
-Open-source event data collection and tag management
+# Open-source data collection and tag management
 
 <div align="left">
   <a href="https://github.com/elbwalker/walkerOS/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/elbwalker/walkerOS" alt="License" />
   </a>
-  <a href="https://www.elbwalker.com/docs/">
-    <img src="https://img.shields.io/badge/docs-www.elbwalker.com/docs-yellow" alt="walkerOS Documentation" />
+  <a href="https://www.walkeros.io/docs/">
+    <img src="https://img.shields.io/badge/docs-www.walkeros.io/docs-yellow" alt="walkerOS Documentation" />
   </a>
   <a href="https://github.com/elbwalker/walkerOS/tree/main/apps/demos/react">
     <img src="https://img.shields.io/badge/React_demo-blue" alt="React demo" />
   </a>
+  <a href="https://storybook.walkeros.io/">
+    <img src="https://img.shields.io/badge/Storybook_demo-pink" alt="Storybook demo" />
+  </a>
   <a href="https://www.npmjs.com/package/@walkeros/walker.js">
     <img src="https://img.shields.io/npm/v/@walkeros/collector" alt="npm version" />
   </a>
-  <img src="https://img.shields.io/bundlephobia/minzip/@walkeros/walker.js" alt="npm bundle size (minified + gzip)" />
 </div>
 
 walkerOS captures, structures, and routes events with built-in support for
