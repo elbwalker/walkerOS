@@ -10,6 +10,7 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
  * - ignore: Skip processing (boolean)
  * - batch: Bundle events (number)
  * - consent: Required consent states (object)
+ * - condition: Function to conditionally apply mapping (string)
  *
  * Future expansion will add:
  * - data: Value mapping (complex)
@@ -42,6 +43,11 @@ export const mappingRuleSchema: RJSFSchema = {
         type: 'boolean',
       },
     },
+    condition: {
+      type: 'string',
+      title: 'Condition',
+      description: 'Conditionally apply this mapping rule',
+    },
   },
 };
 
@@ -65,6 +71,9 @@ export const mappingRuleUiSchema: UiSchema = {
   },
   consent: {
     'ui:field': 'mappingConsent',
+  },
+  condition: {
+    'ui:field': 'mappingCondition',
   },
   'ui:layout': '2fr 1fr 1fr',
   'ui:responsive': true,

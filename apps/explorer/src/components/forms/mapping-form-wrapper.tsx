@@ -105,14 +105,18 @@ function CustomFieldTemplate(props: any) {
     children,
     hidden,
     schema,
+    uiSchema,
   } = props;
 
   if (hidden) {
     return <div className="elb-rjsf-field-hidden">{children}</div>;
   }
 
-  // For object fields (like consent), hide label and description as the widget handles them
-  const showLabelAndDescription = schema.type !== 'object';
+  // Hide label and description if:
+  // 1. Object fields (like consent) - widget handles them
+  // 2. Custom fields (ui:field) - field component handles them
+  const hasCustomField = uiSchema?.['ui:field'];
+  const showLabelAndDescription = schema.type !== 'object' && !hasCustomField;
 
   return (
     <div className={`elb-rjsf-field ${classNames || ''}`} id={id}>

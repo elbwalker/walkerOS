@@ -772,6 +772,14 @@
 
 .elb-rjsf-object-property {
   width: 100%;
+  align-self: start;
+}
+
+/* Make condition field span 2 columns (50% width in 2fr 1fr 1fr layout) */
+.elb-rjsf-object-property:has(
+  > .elb-rjsf-field > .elb-rjsf-widget > .elb-checkbox-collapsible
+) {
+  grid-column: span 2;
 }
 
 /* Mapping grid - responsive behavior */
@@ -906,6 +914,56 @@
   height: 34px;
   padding: 0;
   flex-shrink: 0;
+}
+
+/* === CHECKBOX COLLAPSIBLE === */
+
+.elb-checkbox-collapsible {
+  padding: 12px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  background: var(--bg-input);
+}
+
+.elb-checkbox-collapsible-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.elb-checkbox-collapsible-checkbox {
+  flex-shrink: 0;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.elb-checkbox-collapsible-label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.elb-checkbox-collapsible-title {
+  font-size: var(--font-size-base);
+  color: var(--color-text-label);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.4;
+}
+
+.elb-checkbox-collapsible-description {
+  font-size: calc(var(--font-size-base) - 1px);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.elb-checkbox-collapsible-content {
+  margin-top: 12px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 /* === RESPONSIVE === */

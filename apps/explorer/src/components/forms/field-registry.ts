@@ -1,5 +1,6 @@
 import type { RegistryFieldsType } from '@rjsf/utils';
 import { MappingConsentField } from '../atoms/mapping-consent-field';
+import { MappingConditionField } from '../atoms/mapping-condition-field';
 
 /**
  * Field Registry for RJSF Mapping Forms
@@ -30,7 +31,9 @@ import { MappingConsentField } from '../atoms/mapping-consent-field';
  *
  * Available fields:
  * - mappingConsent: Collapsible consent requirements editor for object types
+ * - mappingCondition: Checkbox-collapsible condition function editor for string types
  */
 export const mappingFields: RegistryFieldsType = {
   mappingConsent: MappingConsentField,
+  mappingCondition: MappingConditionField,
 };
