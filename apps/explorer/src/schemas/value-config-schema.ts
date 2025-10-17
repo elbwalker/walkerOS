@@ -30,6 +30,7 @@ export const valueConfigSchema: RJSFSchema = {
       type: ['string', 'number', 'boolean', 'object'],
       title: 'Value',
       description: 'Static value to return',
+      default: '',
     },
     validate: {
       type: 'string',
@@ -64,6 +65,10 @@ export const valueConfigUiSchema: UiSchema = {
   },
   value: {
     'ui:widget': 'mappingValue',
+    'ui:emptyValue': '',
+    'ui:options': {
+      emptyValue: '',
+    },
   },
   validate: {
     'ui:field': 'mappingValidate',

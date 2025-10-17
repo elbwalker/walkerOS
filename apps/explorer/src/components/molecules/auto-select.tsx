@@ -6,6 +6,7 @@ export interface AutoSelectProps {
   placeholder?: string;
   value?: string;
   className?: string;
+  onClear?: () => void;
 }
 
 /**
@@ -33,6 +34,7 @@ export function AutoSelect({
   placeholder = 'Select...',
   value = '',
   className = '',
+  onClear,
 }: AutoSelectProps) {
   const [inputValue, setInputValue] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
@@ -171,19 +173,39 @@ export function AutoSelect({
     }
   }, [highlightedIndex, isOpen]);
 
+  const handleClear = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setInputValue('');
+    setUserHasTyped(false);
+    setIsOpen(false);
+    onClear?.();
+  };
+
   return (
     <div className={`elb-auto-select ${className}`} ref={dropdownRef}>
-      <input
-        ref={inputRef}
-        type="text"
-        className="elb-auto-select-input"
-        value={inputValue}
-        onChange={handleInputChange}
-        onFocus={handleInputFocus}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        autoComplete="off"
-      />
+      <div className="elb-auto-select-input-wrapper">
+        <input
+          ref={inputRef}
+          type="text"
+          className="elb-auto-select-input"
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          autoComplete="off"
+        />
+        {onClear && inputValue && (
+          <button
+            type="button"
+            className="elb-auto-select-clear"
+            onClick={handleClear}
+            title="Clear selection"
+          >
+            ×
+          </button>
+        )}
+      </div>
       {isOpen && (displayOptions.length > 0 || isNewRule) && (
         <div
           className={`elb-auto-select-dropdown ${displayOptions.length > 5 ? 'scrollable' : ''}`}

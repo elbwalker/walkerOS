@@ -135,8 +135,12 @@ export function MappingEditor({
     const [entity, action] = selectedRule.split(' ');
     if (!entity || !action) return;
 
+    console.log('RJSF formData before cleaning:', formData);
+
     // Clean up formData - remove undefined, false booleans, and empty values
     const cleanedData = cleanFormData(formData as Record<string, unknown>);
+
+    console.log('formData after cleaning:', cleanedData);
 
     const newMapping = { ...mapping };
     newMapping[entity] = {
@@ -196,6 +200,7 @@ export function MappingEditor({
           onSelect={handleRuleSelect}
           value={selectedRule}
           placeholder="Select mapping rule..."
+          onClear={() => setSelectedRule('')}
         />
       </div>
 
@@ -281,6 +286,13 @@ function cleanFormData(data: Record<string, unknown>): Record<string, unknown> {
 
     // Skip zero or undefined for batch
     if (key === 'batch' && (!value || value === 0)) continue;
+
+    // Always keep the 'value' field, even if it's an empty string
+    // This ensures value: "" is preserved in the mapping
+    if (key === 'value' && value === '') {
+      cleaned[key] = value;
+      continue;
+    }
 
     // Keep all other values
     cleaned[key] = value;

@@ -417,10 +417,16 @@
   width: 100%;
 }
 
+.elb-auto-select-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
 .elb-auto-select-input {
   width: 100%;
   max-width: 100%;
   padding: 8px 12px;
+  padding-right: 36px;
   font-family: var(--font-family-base);
   font-size: var(--font-size-base);
   color: var(--color-text-input);
@@ -430,6 +436,32 @@
   outline: none;
   transition: all 0.15s;
   box-sizing: border-box;
+}
+
+.elb-auto-select-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.elb-auto-select-clear:hover {
+  color: var(--color-text);
+  background: var(--bg-input-hover);
 }
 
 .elb-auto-select-input:hover {

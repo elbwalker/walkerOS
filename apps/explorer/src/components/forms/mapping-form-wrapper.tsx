@@ -77,6 +77,8 @@ export function MappingFormWrapper({
           ObjectFieldTemplate: CustomObjectFieldTemplate,
         }}
         showErrorList={false}
+        liveOmit={false}
+        omitExtraData={false}
       >
         {/* Hide default submit button - we use custom Save button in parent */}
         <div style={{ display: 'none' }} />

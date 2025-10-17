@@ -19,12 +19,15 @@ import { Toggle } from './toggle';
  * - Title and description rendered in widget (not by FieldTemplate)
  */
 export function MappingValueWidget(props: WidgetProps) {
-  const { value, onChange, disabled, readonly, schema, label } = props;
+  const { value, onChange, disabled, readonly, schema, label, options } = props;
 
   // Extract title and description from schema or props
   // When using oneOf, RJSF may not pass description through schema
   const title = schema?.title || label || 'Value';
   const description = schema?.description || 'Static value to return';
+
+  // Get emptyValue from options if specified
+  const emptyValue = options?.emptyValue;
 
   // Determine type from actual value, default to none if undefined
   const getCurrentType = ():
@@ -33,6 +36,11 @@ export function MappingValueWidget(props: WidgetProps) {
     | 'number'
     | 'boolean'
     | 'object' => {
+    // If value matches emptyValue, treat as string (to preserve empty strings)
+    if (emptyValue !== undefined && value === emptyValue) {
+      return 'string';
+    }
+
     // Explicit undefined/null check - default to none for empty values
     if (value === undefined || value === null) return 'none';
 
@@ -53,6 +61,9 @@ export function MappingValueWidget(props: WidgetProps) {
     'none' | 'string' | 'number' | 'boolean' | 'object'
   >(getCurrentType);
 
+  // Track if user manually selected a type (to prevent auto-switching)
+  const userSelectedTypeRef = React.useRef(false);
+
   // Track previous value to detect external changes (not user typing)
   const prevValueRef = React.useRef(value);
 
@@ -62,15 +73,20 @@ export function MappingValueWidget(props: WidgetProps) {
     const prevType = typeof prevValueRef.current;
     const currentType = typeof value;
 
-    // Only update selectedType if the JavaScript type changed
-    // This allows switching between rules but ignores user typing
-    if (
+    // Check if this is a major type change (switching rules)
+    const isMajorTypeChange =
       prevType !== currentType ||
       (value === undefined && prevValueRef.current !== undefined) ||
-      (value !== undefined && prevValueRef.current === undefined)
-    ) {
+      (value !== undefined && prevValueRef.current === undefined);
+
+    if (isMajorTypeChange) {
+      // Reset the user selection flag when loading new rule
+      userSelectedTypeRef.current = false;
       const detectedType = getCurrentType();
       setSelectedType(detectedType);
+    } else if (userSelectedTypeRef.current) {
+      // User manually selected a type, keep it even if value changes
+      // This allows empty string to stay as 'string' type
     }
 
     prevValueRef.current = value;
@@ -79,6 +95,8 @@ export function MappingValueWidget(props: WidgetProps) {
   const handleTypeChange = (
     newType: 'none' | 'string' | 'number' | 'boolean' | 'object',
   ) => {
+    // Mark that user manually selected a type
+    userSelectedTypeRef.current = true;
     setSelectedType(newType);
 
     // Set default value for new type
@@ -102,7 +120,12 @@ export function MappingValueWidget(props: WidgetProps) {
   };
 
   const handleStringChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
+    // Always pass the string value, even if empty
+    // Use emptyValue if specified and value is empty, otherwise use the actual value
+    const stringValue = e.target.value;
+    const valueToSend =
+      stringValue === '' && emptyValue !== undefined ? emptyValue : stringValue;
+    onChange(valueToSend);
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
