@@ -1057,6 +1057,11 @@
   display: block;
 }
 
+/* Override line-height for description in field header with action */
+.elb-field-header-with-action .elb-rjsf-description {
+  line-height: 1.3;
+}
+
 /* === VALUE WIDGET === */
 
 .elb-value-widget-type-select {
