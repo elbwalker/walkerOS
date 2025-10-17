@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { WidgetProps } from '@rjsf/utils';
-import { CollapsibleSection } from './mapping-collapsible';
+import { MappingCollapsible } from './mapping-collapsible';
 import { ConsentRow } from '../molecules/mapping-consent-row';
 import { IconButton } from './icon-button';
 
@@ -107,52 +107,51 @@ export function MappingConsentWidget(props: WidgetProps) {
 
   return (
     <div className="elb-rjsf-widget">
-      <div className="elb-consent-widget-wrapper">
-        <CollapsibleSection
-          title={title}
-          description={description}
-          isExpanded={isExpanded}
-          onToggle={setIsExpanded}
-        >
-          {hasConsent ? (
-            <div className="elb-consent-rows">
-              {Object.entries(consentData).map(([key, granted], index) => (
-                <ConsentRow
-                  key={index}
-                  consentType={key}
-                  granted={granted}
-                  onConsentTypeChange={(newKey) =>
-                    handleUpdateConsentType(key, newKey)
-                  }
-                  onGrantedChange={(newGranted) =>
-                    handleUpdateGranted(key, newGranted)
-                  }
-                  onRemove={() => handleRemove(key)}
-                />
-              ))}
-              <IconButton
-                icon="add"
-                variant="default"
-                onClick={handleAddConsent}
-                disabled={disabled || readonly}
-                className="elb-consent-add-row-button"
-              >
-                Add consent
-              </IconButton>
-            </div>
-          ) : (
+      <MappingCollapsible
+        mode="toggle"
+        title={title}
+        description={description}
+        isExpanded={isExpanded}
+        onToggle={setIsExpanded}
+      >
+        {hasConsent ? (
+          <div className="elb-consent-rows">
+            {Object.entries(consentData).map(([key, granted], index) => (
+              <ConsentRow
+                key={index}
+                consentType={key}
+                granted={granted}
+                onConsentTypeChange={(newKey) =>
+                  handleUpdateConsentType(key, newKey)
+                }
+                onGrantedChange={(newGranted) =>
+                  handleUpdateGranted(key, newGranted)
+                }
+                onRemove={() => handleRemove(key)}
+              />
+            ))}
             <IconButton
               icon="add"
               variant="default"
               onClick={handleAddConsent}
               disabled={disabled || readonly}
-              className="elb-consent-add-button"
+              className="elb-consent-add-row-button"
             >
-              Require consent
+              Add consent
             </IconButton>
-          )}
-        </CollapsibleSection>
-      </div>
+          </div>
+        ) : (
+          <IconButton
+            icon="add"
+            variant="default"
+            onClick={handleAddConsent}
+            disabled={disabled || readonly}
+            className="elb-consent-add-button"
+          >
+            Require consent
+          </IconButton>
+        )}
+      </MappingCollapsible>
       {hasError && (
         <div className="elb-rjsf-error">
           {rawErrors.map((error, index) => (

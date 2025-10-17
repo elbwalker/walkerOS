@@ -1,6 +1,6 @@
 import React from 'react';
 import type { WidgetProps } from '@rjsf/utils';
-import { MappingCheckboxCollapsible } from './mapping-checkbox-collapsible';
+import { MappingCollapsible } from './mapping-collapsible';
 import { CodeBox } from '../organisms/code-box';
 
 /**
@@ -83,7 +83,8 @@ export function MappingConditionWidget(props: WidgetProps) {
 
   return (
     <div className="elb-rjsf-widget">
-      <MappingCheckboxCollapsible
+      <MappingCollapsible
+        mode="checkbox"
         title={title}
         description={description}
         checked={hasCondition}
@@ -102,7 +103,7 @@ export function MappingConditionWidget(props: WidgetProps) {
           folding={false}
           disabled={disabled || readonly}
         />
-      </MappingCheckboxCollapsible>
+      </MappingCollapsible>
       {hasError && (
         <div className="elb-rjsf-error">
           {rawErrors.map((error, index) => (
