@@ -19,7 +19,7 @@
   <a href="https://storybook.walkeros.io/">
     <img src="https://img.shields.io/badge/Storybook_demo-pink" alt="Storybook demo" />
   </a>
-  <a href="https://www.npmjs.com/package/@walkeros/walker.js">
+  <a href="https://www.npmjs.com/package/@walkeros/collector">
     <img src="https://img.shields.io/npm/v/@walkeros/collector" alt="npm version" />
   </a>
 </div>
