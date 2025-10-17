@@ -147,10 +147,46 @@ export function MappingEditor({
     onMappingChange(newMapping);
   };
 
+  const handleIgnoreChange = (ignore: boolean) => {
+    if (!onMappingChange || !selectedRule) return;
+
+    const [entity, action] = selectedRule.split(' ');
+    if (!entity || !action) return;
+
+    const newMapping = { ...mapping };
+    const currentConfig = newMapping[entity]?.[action] as Record<
+      string,
+      unknown
+    >;
+
+    if (ignore) {
+      // Set ignore to true
+      newMapping[entity] = {
+        ...newMapping[entity],
+        [action]: { ...currentConfig, ignore: true },
+      };
+    } else {
+      // Remove ignore from config
+      const { ignore: _removed, ...rest } = currentConfig || {};
+      newMapping[entity] = {
+        ...newMapping[entity],
+        [action]: rest,
+      };
+    }
+
+    onMappingChange(newMapping);
+  };
+
   const handleSave = () => {
     if (!onMappingChange) return;
     console.log('Mapping saved', mapping);
   };
+
+  // Get current ignore state
+  const isIgnored = useMemo(() => {
+    if (!selectedRuleConfig) return false;
+    return (selectedRuleConfig as Record<string, unknown>)?.ignore === true;
+  }, [selectedRuleConfig]);
 
   return (
     <div className="elb-mapping-editor">
@@ -183,6 +219,25 @@ export function MappingEditor({
             >
               Delete
             </IconButton>
+            <div className="elb-mapping-editor-ignore">
+              <input
+                type="checkbox"
+                id="mapping-ignore-checkbox"
+                className="elb-rjsf-checkbox"
+                checked={isIgnored}
+                onChange={(e) => handleIgnoreChange(e.target.checked)}
+                disabled={!onMappingChange}
+              />
+              <label
+                htmlFor="mapping-ignore-checkbox"
+                className="elb-mapping-editor-ignore-label"
+              >
+                <div className="elb-mapping-editor-ignore-title">Ignore</div>
+                <div className="elb-mapping-editor-ignore-description">
+                  Skip processing this event
+                </div>
+              </label>
+            </div>
             <IconButton
               icon="save"
               variant="primary"

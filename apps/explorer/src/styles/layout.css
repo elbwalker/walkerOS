@@ -541,6 +541,41 @@
   padding-bottom: 12px;
 }
 
+/* Ignore checkbox in footer */
+.elb-mapping-editor-ignore {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.elb-mapping-editor-ignore input[type='checkbox'] {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.elb-mapping-editor-ignore-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--font-family-base);
+}
+
+.elb-mapping-editor-ignore-title {
+  font-size: var(--font-size-base);
+  color: var(--color-text-label);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.4;
+}
+
+.elb-mapping-editor-ignore-description {
+  font-size: calc(var(--font-size-base) - 1px);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
 /* === ICON BUTTON === */
 
 .elb-icon-button {
@@ -773,13 +808,6 @@
 .elb-rjsf-object-property {
   width: 100%;
   align-self: start;
-}
-
-/* Make condition field span 2 columns (50% width in 2fr 1fr 1fr layout) */
-.elb-rjsf-object-property:has(
-  > .elb-rjsf-field > .elb-rjsf-widget > .elb-checkbox-collapsible
-) {
-  grid-column: span 2;
 }
 
 /* Mapping grid - responsive behavior */

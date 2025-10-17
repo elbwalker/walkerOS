@@ -7,10 +7,11 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
  *
  * Current fields:
  * - name: Custom event name (string)
- * - ignore: Skip processing (boolean)
  * - batch: Bundle events (number)
  * - consent: Required consent states (object)
  * - condition: Function to conditionally apply mapping (string)
+ *
+ * Note: ignore field is handled separately in the footer, not in the form
  *
  * Future expansion will add:
  * - data: Value mapping (complex)
@@ -23,11 +24,6 @@ export const mappingRuleSchema: RJSFSchema = {
       type: 'string',
       title: 'Name',
       description: 'Custom name for the mapped event',
-    },
-    ignore: {
-      type: 'boolean',
-      title: 'Ignore',
-      description: 'Skip processing this event',
     },
     batch: {
       type: 'number',
@@ -55,15 +51,12 @@ export const mappingRuleSchema: RJSFSchema = {
  * UI Schema for Mapping.Rule
  *
  * Customizes widget usage and layout
- * Layout: Name (50%), Ignore (25%), Batch (25%)
+ * Layout: Name (50%), Batch (50%)
  */
 export const mappingRuleUiSchema: UiSchema = {
   name: {
     'ui:widget': 'mappingString',
     'ui:placeholder': 'e.g., view_item',
-  },
-  ignore: {
-    'ui:widget': 'mappingBoolean',
   },
   batch: {
     'ui:widget': 'mappingNumber',
@@ -75,6 +68,6 @@ export const mappingRuleUiSchema: UiSchema = {
   condition: {
     'ui:field': 'mappingCondition',
   },
-  'ui:layout': '2fr 1fr 1fr',
+  'ui:layout': '1fr 1fr',
   'ui:responsive': true,
 };
