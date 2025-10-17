@@ -14,6 +14,7 @@ export interface CodeBoxProps {
   showCopy?: boolean;
   showFormat?: boolean;
   lineNumbers?: boolean;
+  folding?: boolean;
   className?: string;
   height?: number | string;
   minHeight?: number | string;
@@ -55,6 +56,7 @@ export function CodeBox({
   showCopy = false,
   showFormat = false,
   lineNumbers = false,
+  folding = false,
   className,
   height,
   minHeight,
@@ -243,6 +245,7 @@ export function CodeBox({
           fontSize: 13,
           lineNumbers: lineNumbers ? 'on' : 'off',
           lineNumbersMinChars: 2,
+          folding: folding,
           scrollBeyondLastLine: false,
           automaticLayout: true,
           tabSize: 2,
