@@ -13,6 +13,7 @@ export interface CodeBoxProps {
   disabled?: boolean;
   showCopy?: boolean;
   showFormat?: boolean;
+  lineNumbers?: boolean;
   className?: string;
   height?: number | string;
   minHeight?: number | string;
@@ -53,6 +54,7 @@ export function CodeBox({
   disabled = false,
   showCopy = false,
   showFormat = false,
+  lineNumbers = false,
   className,
   height,
   minHeight,
@@ -239,7 +241,7 @@ export function CodeBox({
           readOnly: disabled || !onChange,
           minimap: { enabled: false },
           fontSize: 13,
-          lineNumbers: 'on',
+          lineNumbers: lineNumbers ? 'on' : 'off',
           lineNumbersMinChars: 2,
           scrollBeyondLastLine: false,
           automaticLayout: true,
