@@ -3,6 +3,7 @@ import { MappingConsentField } from '../atoms/mapping-consent-field';
 import { MappingConditionField } from '../atoms/mapping-condition-field';
 import { MappingValidateField } from '../atoms/mapping-validate-field';
 import { MappingDataField } from '../atoms/mapping-data-field';
+import { MappingMapField } from '../molecules/mapping-map-field';
 
 /**
  * Field Registry for RJSF Mapping Forms
@@ -36,10 +37,12 @@ import { MappingDataField } from '../atoms/mapping-data-field';
  * - mappingCondition: Checkbox-collapsible condition function editor for string types
  * - mappingValidate: Checkbox-collapsible validate function editor for string types
  * - mappingData: Toggle-collapsible data transformation editor for object types
+ * - mappingMap: Key-value pair editor for object transformation mapping
  */
 export const mappingFields: RegistryFieldsType = {
   mappingConsent: MappingConsentField,
   mappingCondition: MappingConditionField,
   mappingValidate: MappingValidateField,
   mappingData: MappingDataField,
+  mappingMap: MappingMapField,
 };

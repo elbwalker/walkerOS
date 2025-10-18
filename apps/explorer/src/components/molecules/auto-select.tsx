@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface AutoSelectProps {
   options: string[];
@@ -40,8 +41,14 @@ export function AutoSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [userHasTyped, setUserHasTyped] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Filter options only when user has typed
   const filteredOptions =
@@ -80,12 +87,36 @@ export function AutoSelect({
     setHighlightedIndex(0);
   }, [filteredOptions.length]);
 
+  // Update dropdown position when opened or on scroll/resize
+  useEffect(() => {
+    const updatePosition = () => {
+      if (containerRef.current && isOpen) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          top: rect.bottom + 4,
+          left: rect.left,
+          width: rect.width,
+        });
+      }
+    };
+
+    if (isOpen) {
+      updatePosition();
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+      return () => {
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+  }, [isOpen]);
+
   // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
         setUserHasTyped(false);
@@ -182,7 +213,7 @@ export function AutoSelect({
   };
 
   return (
-    <div className={`elb-auto-select ${className}`} ref={dropdownRef}>
+    <div className={`elb-auto-select ${className}`} ref={containerRef}>
       <div className="elb-auto-select-input-wrapper">
         <input
           ref={inputRef}
@@ -206,45 +237,68 @@ export function AutoSelect({
           </button>
         )}
       </div>
-      {isOpen && (displayOptions.length > 0 || isNewRule) && (
-        <div
-          className={`elb-auto-select-dropdown ${displayOptions.length > 5 ? 'scrollable' : ''}`}
-        >
-          {displayOptions.map((option, index) => (
-            <div
-              key={option}
-              data-index={index}
-              className={`elb-auto-select-option ${
-                index === highlightedIndex ? 'highlighted' : ''
-              }`}
-              onClick={() => handleOptionClick(option)}
-              onMouseEnter={() => setHighlightedIndex(index)}
-            >
-              {option}
+      {isOpen &&
+        (displayOptions.length > 0 || isNewRule) &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            className={`elb-auto-select-dropdown elb-auto-select-dropdown-fixed ${displayOptions.length > 5 ? 'scrollable' : ''}`}
+            style={{
+              top: `${dropdownPosition.top}px`,
+              left: `${dropdownPosition.left}px`,
+              width: `${dropdownPosition.width}px`,
+            }}
+          >
+            {displayOptions.map((option, index) => (
+              <div
+                key={option}
+                data-index={index}
+                className={`elb-auto-select-option ${
+                  index === highlightedIndex ? 'highlighted' : ''
+                }`}
+                onClick={() => handleOptionClick(option)}
+                onMouseEnter={() => setHighlightedIndex(index)}
+              >
+                {option}
+              </div>
+            ))}
+            {isNewRule && (
+              <div
+                data-index={displayOptions.length}
+                className={`elb-auto-select-option ${
+                  highlightedIndex === displayOptions.length
+                    ? 'highlighted'
+                    : ''
+                }`}
+                onClick={() => handleOptionClick(inputValue.trim(), true)}
+                onMouseEnter={() => setHighlightedIndex(displayOptions.length)}
+              >
+                <span>{inputValue.trim()}</span>
+                <span className="elb-auto-select-create-label"> (create)</span>
+              </div>
+            )}
+          </div>,
+          document.body,
+        )}
+      {isOpen &&
+        displayOptions.length === 0 &&
+        !isNewRule &&
+        userHasTyped &&
+        createPortal(
+          <div
+            className="elb-auto-select-dropdown elb-auto-select-dropdown-fixed"
+            style={{
+              top: `${dropdownPosition.top}px`,
+              left: `${dropdownPosition.left}px`,
+              width: `${dropdownPosition.width}px`,
+            }}
+          >
+            <div className="elb-auto-select-option elb-auto-select-no-results">
+              No results found
             </div>
-          ))}
-          {isNewRule && (
-            <div
-              data-index={displayOptions.length}
-              className={`elb-auto-select-option ${
-                highlightedIndex === displayOptions.length ? 'highlighted' : ''
-              }`}
-              onClick={() => handleOptionClick(inputValue.trim(), true)}
-              onMouseEnter={() => setHighlightedIndex(displayOptions.length)}
-            >
-              <span>{inputValue.trim()}</span>
-              <span className="elb-auto-select-create-label"> (create)</span>
-            </div>
-          )}
-        </div>
-      )}
-      {isOpen && displayOptions.length === 0 && !isNewRule && userHasTyped && (
-        <div className="elb-auto-select-dropdown">
-          <div className="elb-auto-select-option elb-auto-select-no-results">
-            No results found
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

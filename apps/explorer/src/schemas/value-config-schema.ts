@@ -50,6 +50,12 @@ export const valueConfigSchema: RJSFSchema = {
         type: 'boolean',
       },
     },
+    map: {
+      type: 'object',
+      title: 'Map',
+      description: 'Transform object properties',
+      additionalProperties: true,
+    },
   },
 };
 
@@ -78,6 +84,9 @@ export const valueConfigUiSchema: UiSchema = {
   },
   consent: {
     'ui:field': 'mappingConsent',
+  },
+  map: {
+    'ui:field': 'mappingMap',
   },
   'ui:layout': '1fr',
   'ui:responsive': true,
