@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import type { FieldProps } from '@rjsf/utils';
 import { MappingMapEntry, MapEntry } from '../atoms/mapping-map-entry';
+import { MappingCollapsible } from '../atoms/mapping-collapsible';
+import { IconButton } from '../atoms/icon-button';
 
 /**
  * MappingMapField - Custom field for object transformation mapping
@@ -66,10 +68,20 @@ export function MappingMapField(props: FieldProps) {
     objectToEntries(formData),
   );
 
+  const hasEntries = entries.length > 0;
+
+  // Start expanded if we have existing data
+  const [isExpanded, setIsExpanded] = useState(hasEntries);
+
   // Sync external changes to internal state
   useEffect(() => {
     setEntries(objectToEntries(formData));
   }, [formData]);
+
+  // Update expanded state when data changes (e.g., switching between mapping rules)
+  useEffect(() => {
+    setIsExpanded(hasEntries);
+  }, [hasEntries]);
 
   // Track duplicate keys for warnings
   const duplicateKeys = new Set<string>();
@@ -108,47 +120,64 @@ export function MappingMapField(props: FieldProps) {
       tempId: `temp-${Date.now()}-${Math.random()}`,
     };
     handleEntriesChange([...entries, newEntry]);
+    if (!isExpanded) {
+      setIsExpanded(true);
+    }
   };
 
   const title = schema?.title || 'Map';
   const description = schema?.description || 'Transform object properties';
 
   return (
-    <div className="elb-mapping-map">
-      {/* Header */}
-      <div className="elb-mapping-map-header">
-        <label className="elb-rjsf-label">{title}</label>
-        {description && (
-          <div className="elb-rjsf-description">{description}</div>
+    <div className="elb-rjsf-widget">
+      <MappingCollapsible
+        mode="toggle"
+        title={title}
+        description={description}
+        isExpanded={isExpanded}
+        onToggle={setIsExpanded}
+      >
+        {hasEntries ? (
+          <div className="elb-mapping-map-content">
+            <div className="elb-mapping-map-entries">
+              {entries.map((entry, index) => (
+                <MappingMapEntry
+                  key={entry.tempId || `entry-${index}`}
+                  entry={entry}
+                  onChange={(newEntry) => handleEntryChange(index, newEntry)}
+                  onRemove={() => handleEntryRemove(index)}
+                  hasEmptyKey={!entry.key || !entry.key.trim()}
+                  hasDuplicateKey={
+                    entry.key ? duplicateKeys.has(entry.key) : false
+                  }
+                />
+              ))}
+            </div>
+            {!disabled && !readonly && (
+              <IconButton
+                icon="add"
+                variant="default"
+                onClick={handleAddEntry}
+                className="elb-mapping-map-add-row-button"
+              >
+                Add key
+              </IconButton>
+            )}
+          </div>
+        ) : (
+          !disabled &&
+          !readonly && (
+            <IconButton
+              icon="add"
+              variant="default"
+              onClick={handleAddEntry}
+              className="elb-mapping-map-add-button"
+            >
+              Add key-value pair
+            </IconButton>
+          )
         )}
-      </div>
-
-      {/* Entries */}
-      {entries.length > 0 && (
-        <div className="elb-mapping-map-entries">
-          {entries.map((entry, index) => (
-            <MappingMapEntry
-              key={entry.tempId || `entry-${index}`}
-              entry={entry}
-              onChange={(newEntry) => handleEntryChange(index, newEntry)}
-              onRemove={() => handleEntryRemove(index)}
-              hasEmptyKey={!entry.key || !entry.key.trim()}
-              hasDuplicateKey={entry.key ? duplicateKeys.has(entry.key) : false}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Add button */}
-      {!disabled && !readonly && (
-        <button
-          type="button"
-          className="elb-mapping-map-add"
-          onClick={handleAddEntry}
-        >
-          + Add Key
-        </button>
-      )}
+      </MappingCollapsible>
     </div>
   );
 }

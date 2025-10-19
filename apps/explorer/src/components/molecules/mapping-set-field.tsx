@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import type { FieldProps } from '@rjsf/utils';
 import { MappingSetEntry, SetEntry } from '../atoms/mapping-set-entry';
+import { MappingCollapsible } from '../atoms/mapping-collapsible';
+import { IconButton } from '../atoms/icon-button';
 
 /**
  * MappingSetField - Custom field for array of values
@@ -59,6 +61,11 @@ export function MappingSetField(props: FieldProps) {
     arrayToEntries(formData),
   );
 
+  const hasEntries = entries.length > 0;
+
+  // Start expanded if we have existing data
+  const [isExpanded, setIsExpanded] = useState(hasEntries);
+
   // Sync external changes to internal state, preserving tempIds
   useEffect(() => {
     if (!formData || !Array.isArray(formData)) {
@@ -92,6 +99,11 @@ export function MappingSetField(props: FieldProps) {
     setEntries(newEntries);
   }, [formData]);
 
+  // Update expanded state when data changes (e.g., switching between mapping rules)
+  useEffect(() => {
+    setIsExpanded(hasEntries);
+  }, [hasEntries]);
+
   const handleEntriesChange = (newEntries: SetEntry[]) => {
     setEntries(newEntries);
     const arr = entriesToArray(newEntries);
@@ -115,6 +127,9 @@ export function MappingSetField(props: FieldProps) {
       tempId: `set-${Date.now()}-${Math.random()}`,
     };
     handleEntriesChange([...entries, newEntry]);
+    if (!isExpanded) {
+      setIsExpanded(true);
+    }
   };
 
   // Drag and drop state
@@ -168,51 +183,63 @@ export function MappingSetField(props: FieldProps) {
   const description = schema?.description || 'Array of static values';
 
   return (
-    <div className="elb-mapping-set">
-      {/* Header */}
-      <div className="elb-mapping-set-header">
-        <label className="elb-rjsf-label">{title}</label>
-        {description && (
-          <div className="elb-rjsf-description">{description}</div>
-        )}
-      </div>
-
-      {/* Entries */}
-      {entries.length > 0 && (
-        <div className="elb-mapping-set-entries">
-          {entries.map((entry, index) => (
-            <div
-              key={entry.tempId}
-              draggable={!disabled && !readonly}
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, index)}
-              onDragEnd={handleDragEnd}
-            >
-              <MappingSetEntry
-                entry={entry}
-                onChange={(newEntry) => handleEntryChange(index, newEntry)}
-                onRemove={() => handleEntryRemove(index)}
-                index={index}
-                isDragging={draggedIndex === index}
-                isDragOver={dragOverIndex === index}
-              />
+    <div className="elb-rjsf-widget">
+      <MappingCollapsible
+        mode="toggle"
+        title={title}
+        description={description}
+        isExpanded={isExpanded}
+        onToggle={setIsExpanded}
+      >
+        {hasEntries ? (
+          <div className="elb-mapping-set-content">
+            <div className="elb-mapping-set-entries">
+              {entries.map((entry, index) => (
+                <div
+                  key={entry.tempId}
+                  draggable={!disabled && !readonly}
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                >
+                  <MappingSetEntry
+                    entry={entry}
+                    onChange={(newEntry) => handleEntryChange(index, newEntry)}
+                    onRemove={() => handleEntryRemove(index)}
+                    index={index}
+                    isDragging={draggedIndex === index}
+                    isDragOver={dragOverIndex === index}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Add button */}
-      {!disabled && !readonly && (
-        <button
-          type="button"
-          className="elb-mapping-set-add"
-          onClick={handleAddEntry}
-        >
-          + Add Value
-        </button>
-      )}
+            {!disabled && !readonly && (
+              <IconButton
+                icon="add"
+                variant="default"
+                onClick={handleAddEntry}
+                className="elb-mapping-set-add-row-button"
+              >
+                Add value
+              </IconButton>
+            )}
+          </div>
+        ) : (
+          !disabled &&
+          !readonly && (
+            <IconButton
+              icon="add"
+              variant="default"
+              onClick={handleAddEntry}
+              className="elb-mapping-set-add-button"
+            >
+              Add value
+            </IconButton>
+          )
+        )}
+      </MappingCollapsible>
     </div>
   );
 }
