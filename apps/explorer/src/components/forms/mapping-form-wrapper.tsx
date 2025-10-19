@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import Form from '@rjsf/core';
 import type {
   RJSFSchema,
@@ -71,13 +71,20 @@ export function MappingFormWrapper({
   children,
   nested = false,
 }: MappingFormWrapperProps) {
-  const handleChange = (event: { formData: unknown }) => {
-    onChange?.(event.formData);
-  };
+  // Memoize callbacks to prevent child component re-renders and infinite loops
+  const handleChange = useCallback(
+    (event: { formData?: unknown }) => {
+      onChange?.(event.formData);
+    },
+    [onChange],
+  );
 
-  const handleSubmit = (event: { formData: unknown }) => {
-    onSubmit?.(event.formData);
-  };
+  const handleSubmit = useCallback(
+    (event: { formData?: unknown }) => {
+      onSubmit?.(event.formData);
+    },
+    [onSubmit],
+  );
 
   // For nested usage, render fields directly without <form> wrapper
   if (nested) {

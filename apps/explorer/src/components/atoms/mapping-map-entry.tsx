@@ -5,6 +5,7 @@ import {
   valueConfigSchema,
   valueConfigUiSchema,
 } from '../../schemas/value-config-schema';
+import { cleanFormData } from '../../utils/clean-form-data';
 
 export interface MapEntry {
   key: string;
@@ -81,7 +82,10 @@ export function MappingMapEntry({
   };
 
   const handleAdvancedValueChange = (data: unknown) => {
-    onChange({ ...entry, value: data as Record<string, unknown> });
+    // Clean the nested ValueConfig data to remove empty values
+    const cleaned = cleanFormData(data as Record<string, unknown>);
+    const finalValue = Object.keys(cleaned).length > 0 ? cleaned : {};
+    onChange({ ...entry, value: finalValue });
   };
 
   const keyClassName = `elb-mapping-map-key ${

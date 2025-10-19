@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { FieldProps } from '@rjsf/utils';
 import { MappingMapEntry, MapEntry } from '../atoms/mapping-map-entry';
 import { MappingCollapsible } from '../atoms/mapping-collapsible';
@@ -73,8 +73,17 @@ export function MappingMapField(props: FieldProps) {
   // Start expanded if we have existing data
   const [isExpanded, setIsExpanded] = useState(hasEntries);
 
+  // Track previous formData to avoid redundant updates
+  const prevFormDataRef = useRef<unknown>(formData);
+
   // Sync external changes to internal state
   useEffect(() => {
+    // Only sync if formData actually changed from external source
+    if (prevFormDataRef.current === formData) {
+      return;
+    }
+    prevFormDataRef.current = formData;
+
     setEntries(objectToEntries(formData));
   }, [formData]);
 
@@ -99,6 +108,9 @@ export function MappingMapField(props: FieldProps) {
   const handleEntriesChange = (newEntries: MapEntry[]) => {
     setEntries(newEntries);
     const obj = entriesToObject(newEntries);
+
+    // Update ref before calling onChange to prevent sync loop
+    prevFormDataRef.current = obj;
     onChange(obj);
   };
 

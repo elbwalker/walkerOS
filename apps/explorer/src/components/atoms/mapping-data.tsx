@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { WidgetProps } from '@rjsf/utils';
 import { MappingCollapsible } from './mapping-collapsible';
 import { MappingFormWrapper } from '../forms/mapping-form-wrapper';
@@ -7,6 +7,7 @@ import {
   valueConfigUiSchema,
 } from '../../schemas/value-config-schema';
 import { IconButton } from './icon-button';
+import { cleanFormData } from '../../utils/clean-form-data';
 
 /**
  * MappingDataWidget - RJSF widget for data transformation
@@ -57,30 +58,44 @@ export function MappingDataWidget(props: WidgetProps) {
   const title = schema?.title || 'Data';
   const description = schema?.description;
 
-  // Start expanded if we have existing data
+  // Track if user wants to show the form (either has data or clicked add button)
+  const [showForm, setShowForm] = useState(hasData);
+
+  // Start expanded if we have existing data or form is shown
   const [isExpanded, setIsExpanded] = useState(hasData);
 
-  // Update expanded state when data changes (e.g., switching between mapping rules)
+  // Track previous value to avoid redundant updates
+  const prevValueRef = useRef<unknown>(value);
+
+  // Update state when value changes externally (e.g., switching between mapping rules)
   useEffect(() => {
-    setIsExpanded(hasData);
-  }, [hasData]);
+    const newHasData =
+      value && typeof value === 'object' && Object.keys(value).length > 0;
+    setShowForm(!!newHasData);
+    setIsExpanded(!!newHasData);
+  }, [value]);
 
   const handleAddData = () => {
-    // Add initial data configuration with empty key
-    const newData = { key: '' };
-    onChange(newData);
-    if (!isExpanded) {
-      setIsExpanded(true);
-    }
+    // Show the form without initializing data
+    setShowForm(true);
+    setIsExpanded(true);
   };
 
-  const handleFormChange = (formData: unknown) => {
-    const newData = cleanFormData(formData as Record<string, unknown>);
+  const handleFormChange = useCallback(
+    (formData: unknown) => {
+      const newData = cleanFormData(formData as Record<string, unknown>);
 
-    // If all fields are empty, set to undefined
-    const finalData = Object.keys(newData).length > 0 ? newData : undefined;
-    onChange(finalData);
-  };
+      // If all fields are empty, set to undefined
+      const finalData = Object.keys(newData).length > 0 ? newData : undefined;
+
+      // Only call onChange if data actually changed
+      if (prevValueRef.current !== finalData) {
+        prevValueRef.current = finalData;
+        onChange(finalData);
+      }
+    },
+    [onChange],
+  );
 
   const hasError = rawErrors && rawErrors.length > 0;
 
@@ -94,12 +109,12 @@ export function MappingDataWidget(props: WidgetProps) {
           isExpanded={isExpanded}
           onToggle={setIsExpanded}
         >
-          {hasData ? (
+          {showForm ? (
             <div className="elb-data-widget-form">
               <MappingFormWrapper
                 schema={valueConfigSchema}
                 uiSchema={valueConfigUiSchema}
-                formData={dataConfig}
+                formData={hasData ? dataConfig : undefined}
                 onChange={handleFormChange}
                 nested={true}
               />
@@ -126,32 +141,4 @@ export function MappingDataWidget(props: WidgetProps) {
       )}
     </div>
   );
-}
-
-/**
- * Clean form data by removing undefined and empty values
- */
-function cleanFormData(data: Record<string, unknown>): Record<string, unknown> {
-  const cleaned: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(data)) {
-    // Skip undefined values
-    if (value === undefined) continue;
-
-    // Skip empty strings
-    if (value === '') continue;
-
-    // Skip empty objects
-    if (
-      typeof value === 'object' &&
-      value !== null &&
-      Object.keys(value).length === 0
-    )
-      continue;
-
-    // Keep all other values
-    cleaned[key] = value;
-  }
-
-  return cleaned;
 }

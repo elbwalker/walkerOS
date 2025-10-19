@@ -53,102 +53,21 @@ export function MappingLoopField(props: FieldProps) {
   const { formData, onChange, schema, disabled, readonly } = props;
 
   // Parse loop tuple [source, transform] - pure function, no state
-  const parseFormData = (data: unknown): [string, Record<string, unknown>] => {
+  const parseFormData = (
+    data: unknown,
+  ): [string, Record<string, unknown> | undefined] => {
     if (Array.isArray(data) && data.length === 2) {
-      return [
-        (data[0] as string) || '',
-        (data[1] as Record<string, unknown>) || {},
-      ];
+      const source = (data[0] as string) || '';
+      const transform = (data[1] as Record<string, unknown>) || undefined;
+      return [source, transform];
     }
-    return ['', {}];
-  };
-
-  // Internal state to manage loop data
-  const [source, setSource] = useState<string>(
-    () => parseFormData(formData)[0],
-  );
-  const [transform, setTransform] = useState<Record<string, unknown>>(
-    () => parseFormData(formData)[1],
-  );
-
-  // UI state - start collapsed
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  // Track last serialized formData to detect real changes
-  const lastFormDataRef = useRef<string>();
-  // Track last onChange value to prevent redundant calls
-  const lastOnChangeRef = useRef<string>();
-
-  // Sync external changes to internal state, with change detection
-  useEffect(() => {
-    const currentSerialized = JSON.stringify(formData);
-
-    // Skip if formData hasn't actually changed
-    if (currentSerialized === lastFormDataRef.current) {
-      return;
-    }
-    lastFormDataRef.current = currentSerialized;
-
-    if (!formData) {
-      if (source !== '' || Object.keys(transform).length > 0) {
-        setSource('');
-        setTransform({});
-      }
-      return;
-    }
-
-    const [newSource, newTransform] = parseFormData(formData);
-
-    // Only update if data actually changed
-    if (
-      newSource !== source ||
-      JSON.stringify(newTransform) !== JSON.stringify(transform)
-    ) {
-      setSource(newSource);
-      setTransform(newTransform);
-    }
-  }, [formData, source, transform]);
-
-  // Clear loop when source is empty
-  useEffect(() => {
-    // If source is empty, ensure we're not setting an invalid loop
-    if (!source || source.trim().length === 0) {
-      // Only call onChange if we need to clear an existing value
-      if (formData !== undefined) {
-        callOnChange(undefined);
-      }
-    }
-  }, [source, formData]);
-
-  // Helper to call onChange only when value actually changes
-  const callOnChange = (
-    value: [string, Record<string, unknown>] | undefined,
-  ) => {
-    const serialized = JSON.stringify(value);
-    if (serialized !== lastOnChangeRef.current) {
-      lastOnChangeRef.current = serialized;
-      onChange(value);
-    }
-  };
-
-  const handleSourceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSource = e.target.value;
-    setSource(newSource);
-    const validLoop = validateLoop(newSource, transform);
-    callOnChange(validLoop);
-  };
-
-  const handleTransformChange = (newTransform: unknown) => {
-    const newTransformObj = newTransform as Record<string, unknown>;
-    setTransform(newTransformObj);
-    const validLoop = validateLoop(source, newTransformObj);
-    callOnChange(validLoop);
+    return ['', undefined];
   };
 
   // Validate loop data and return undefined if invalid/empty
   const validateLoop = (
     sourceValue: string,
-    transformValue: Record<string, unknown>,
+    transformValue: Record<string, unknown> | undefined,
   ): [string, Record<string, unknown>] | undefined => {
     // Source must be a non-empty string
     const hasValidSource =
@@ -166,6 +85,80 @@ export function MappingLoopField(props: FieldProps) {
     }
 
     return undefined;
+  };
+
+  // Internal state to manage loop data
+  const [source, setSource] = useState<string>(
+    () => parseFormData(formData)[0],
+  );
+  const [transform, setTransform] = useState<
+    Record<string, unknown> | undefined
+  >(() => parseFormData(formData)[1]);
+
+  // UI state - start collapsed
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Track previous formData to avoid redundant updates
+  const prevFormDataRef = useRef<unknown>(formData);
+
+  // Sync external changes to internal state
+  useEffect(() => {
+    // Only sync if formData actually changed from external source
+    if (prevFormDataRef.current === formData) {
+      return;
+    }
+    prevFormDataRef.current = formData;
+
+    if (!formData) {
+      if (source !== '' || transform !== undefined) {
+        setSource('');
+        setTransform(undefined);
+      }
+      return;
+    }
+
+    const [newSource, newTransform] = parseFormData(formData);
+
+    // Only update if data actually changed (prevent infinite loops)
+    if (
+      newSource !== source ||
+      JSON.stringify(newTransform) !== JSON.stringify(transform)
+    ) {
+      setSource(newSource);
+      setTransform(newTransform);
+    }
+  }, [formData]);
+
+  const handleSourceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSource = e.target.value;
+    setSource(newSource);
+
+    // If source becomes empty, clear transform and send undefined
+    if (!newSource || newSource.trim().length === 0) {
+      setTransform(undefined);
+      prevFormDataRef.current = undefined;
+      onChange(undefined);
+      return;
+    }
+
+    // Validate and send current state
+    const validLoop = validateLoop(newSource, transform);
+
+    // Update ref before calling onChange to prevent sync loop
+    prevFormDataRef.current = validLoop;
+    onChange(validLoop);
+  };
+
+  const handleTransformChange = (newTransform: unknown) => {
+    const newTransformObj = newTransform as Record<string, unknown> | undefined;
+    setTransform(newTransformObj);
+
+    // Validate and update formData
+    const validLoop = validateLoop(source, newTransformObj);
+
+    // Update ref before calling onChange to prevent sync loop
+    prevFormDataRef.current = validLoop;
+    onChange(validLoop);
   };
 
   const title = schema?.title || 'Loop';
@@ -202,8 +195,8 @@ export function MappingLoopField(props: FieldProps) {
             </div>
           </div>
 
-          {/* Transform section - only show when source is set */}
-          {hasSource ? (
+          {/* Transform section - only visible when source is valid */}
+          {hasSource && (
             <div className="elb-mapping-loop-transform">
               <div className="elb-mapping-loop-transform-header">
                 <label className="elb-mapping-loop-label">
@@ -222,10 +215,6 @@ export function MappingLoopField(props: FieldProps) {
                   nested={true}
                 />
               </div>
-            </div>
-          ) : (
-            <div className="elb-mapping-loop-notice">
-              Enter a source array path above to configure the transformation
             </div>
           )}
         </div>

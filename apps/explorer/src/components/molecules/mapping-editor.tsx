@@ -6,6 +6,7 @@ import {
   mappingRuleSchema,
   mappingRuleUiSchema,
 } from '../../schemas/mapping-rule-schema';
+import { cleanMappingRuleData } from '../../utils/clean-form-data';
 
 export interface MappingEditorProps {
   mapping: Record<string, Record<string, unknown>>;
@@ -139,7 +140,9 @@ export function MappingEditor({
     if (!entity || !action) return;
 
     // Clean up formData - remove undefined, false booleans, and empty values
-    const cleanedData = cleanFormData(formData as Record<string, unknown>);
+    const cleanedData = cleanMappingRuleData(
+      formData as Record<string, unknown>,
+    );
 
     // Check if cleanedData actually changed from last time
     const serialized = JSON.stringify(cleanedData);
@@ -280,47 +283,4 @@ export function MappingEditor({
       )}
     </div>
   );
-}
-
-/**
- * Clean form data by removing undefined, empty arrays, empty objects, and false booleans
- */
-function cleanFormData(data: Record<string, unknown>): Record<string, unknown> {
-  const cleaned: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(data)) {
-    // Skip undefined values
-    if (value === undefined) continue;
-
-    // Skip empty arrays
-    if (Array.isArray(value) && value.length === 0) continue;
-
-    // Skip empty objects (but not arrays)
-    if (
-      value &&
-      typeof value === 'object' &&
-      !Array.isArray(value) &&
-      Object.keys(value).length === 0
-    ) {
-      continue;
-    }
-
-    // Skip false boolean values for ignore field
-    if (key === 'ignore' && value === false) continue;
-
-    // Skip zero or undefined for batch
-    if (key === 'batch' && (!value || value === 0)) continue;
-
-    // Always keep the 'value' field, even if it's an empty string
-    // This ensures value: "" is preserved in the mapping
-    if (key === 'value' && value === '') {
-      cleaned[key] = value;
-      continue;
-    }
-
-    // Keep all other values
-    cleaned[key] = value;
-  }
-
-  return cleaned;
 }
