@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { FieldProps } from '@rjsf/utils';
 import { MappingCollapsible } from '../atoms/mapping-collapsible';
 import { IconButton } from '../atoms/icon-button';
@@ -71,14 +71,24 @@ export function MappingLoopField(props: FieldProps) {
     () => parseFormData(formData)[1],
   );
 
-  const hasLoop =
-    Array.isArray(formData) && formData.length === 2 && formData[0];
+  // UI state - start collapsed
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  // UI state
-  const [isExpanded, setIsExpanded] = useState(hasLoop);
+  // Track last serialized formData to detect real changes
+  const lastFormDataRef = useRef<string>();
+  // Track last onChange value to prevent redundant calls
+  const lastOnChangeRef = useRef<string>();
 
   // Sync external changes to internal state, with change detection
   useEffect(() => {
+    const currentSerialized = JSON.stringify(formData);
+
+    // Skip if formData hasn't actually changed
+    if (currentSerialized === lastFormDataRef.current) {
+      return;
+    }
+    lastFormDataRef.current = currentSerialized;
+
     if (!formData) {
       if (source !== '' || Object.keys(transform).length > 0) {
         setSource('');
@@ -97,42 +107,42 @@ export function MappingLoopField(props: FieldProps) {
       setSource(newSource);
       setTransform(newTransform);
     }
-  }, [formData]);
+  }, [formData, source, transform]);
 
-  // Update expanded state when data changes
+  // Clear loop when source is empty
   useEffect(() => {
-    setIsExpanded(hasLoop);
-  }, [hasLoop]);
-
-  const handleAddLoop = () => {
-    const newSource = 'nested';
-    const newTransform = {};
-    setSource(newSource);
-    setTransform(newTransform);
-    onChange([newSource, newTransform]);
-    if (!isExpanded) {
-      setIsExpanded(true);
+    // If source is empty, ensure we're not setting an invalid loop
+    if (!source || source.trim().length === 0) {
+      // Only call onChange if we need to clear an existing value
+      if (formData !== undefined) {
+        callOnChange(undefined);
+      }
     }
-  };
+  }, [source, formData]);
 
-  const handleRemoveLoop = () => {
-    setSource('');
-    setTransform({});
-    onChange(undefined);
+  // Helper to call onChange only when value actually changes
+  const callOnChange = (
+    value: [string, Record<string, unknown>] | undefined,
+  ) => {
+    const serialized = JSON.stringify(value);
+    if (serialized !== lastOnChangeRef.current) {
+      lastOnChangeRef.current = serialized;
+      onChange(value);
+    }
   };
 
   const handleSourceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSource = e.target.value;
     setSource(newSource);
     const validLoop = validateLoop(newSource, transform);
-    onChange(validLoop);
+    callOnChange(validLoop);
   };
 
   const handleTransformChange = (newTransform: unknown) => {
     const newTransformObj = newTransform as Record<string, unknown>;
     setTransform(newTransformObj);
     const validLoop = validateLoop(source, newTransformObj);
-    onChange(validLoop);
+    callOnChange(validLoop);
   };
 
   // Validate loop data and return undefined if invalid/empty
@@ -163,6 +173,9 @@ export function MappingLoopField(props: FieldProps) {
     schema?.description ||
     'Process arrays by applying transformation to each item';
 
+  // Check if source has a value
+  const hasSource = source && source.trim().length > 0;
+
   return (
     <div className="elb-rjsf-widget">
       <MappingCollapsible
@@ -172,27 +185,25 @@ export function MappingLoopField(props: FieldProps) {
         isExpanded={isExpanded}
         onToggle={setIsExpanded}
       >
-        {hasLoop ? (
-          <div className="elb-mapping-loop-content">
-            {/* Source input */}
-            <div className="elb-mapping-loop-source">
-              <label className="elb-mapping-loop-label">
-                Source array path
-              </label>
-              <input
-                type="text"
-                className="elb-mapping-loop-source-input"
-                value={source}
-                onChange={handleSourceChange}
-                placeholder="e.g., nested, data.items, or 'this'"
-                disabled={disabled || readonly}
-              />
-              <div className="elb-mapping-loop-hint">
-                Path to array in event, or 'this' for current value
-              </div>
+        <div className="elb-mapping-loop-content">
+          {/* Source input - always visible */}
+          <div className="elb-mapping-loop-source">
+            <label className="elb-mapping-loop-label">Source array path</label>
+            <input
+              type="text"
+              className="elb-mapping-loop-source-input"
+              value={source}
+              onChange={handleSourceChange}
+              placeholder="e.g., nested, data.items, or 'this'"
+              disabled={disabled || readonly}
+            />
+            <div className="elb-mapping-loop-hint">
+              Path to array in event, or 'this' for current value
             </div>
+          </div>
 
-            {/* Transform section */}
+          {/* Transform section - only show when source is set */}
+          {hasSource ? (
             <div className="elb-mapping-loop-transform">
               <div className="elb-mapping-loop-transform-header">
                 <label className="elb-mapping-loop-label">
@@ -212,32 +223,12 @@ export function MappingLoopField(props: FieldProps) {
                 />
               </div>
             </div>
-
-            {/* Remove button */}
-            {!disabled && !readonly && (
-              <IconButton
-                icon="delete"
-                variant="danger"
-                onClick={handleRemoveLoop}
-                className="elb-mapping-loop-remove-button"
-              >
-                Remove loop
-              </IconButton>
-            )}
-          </div>
-        ) : (
-          !disabled &&
-          !readonly && (
-            <IconButton
-              icon="add"
-              variant="default"
-              onClick={handleAddLoop}
-              className="elb-mapping-loop-add-button"
-            >
-              Add loop transformation
-            </IconButton>
-          )
-        )}
+          ) : (
+            <div className="elb-mapping-loop-notice">
+              Enter a source array path above to configure the transformation
+            </div>
+          )}
+        </div>
       </MappingCollapsible>
     </div>
   );

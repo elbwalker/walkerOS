@@ -90,7 +90,10 @@ export function MappingFormWrapper({
           validator={validator}
           onChange={handleChange}
           tagName="div"
-        />
+        >
+          {/* RJSF renders submit button by default - hide it */}
+          <div style={{ display: 'none' }} />
+        </ThemedForm>
       </div>
     );
   }
@@ -115,7 +118,7 @@ export function MappingFormWrapper({
         liveOmit={false}
         omitExtraData={false}
       >
-        {/* Hide default submit button - we use custom Save button in parent */}
+        {/* RJSF renders submit button by default - hide it */}
         <div style={{ display: 'none' }} />
       </Form>
     </div>

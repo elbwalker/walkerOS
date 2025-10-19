@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { AutoSelect } from './auto-select';
 import { IconButton } from '../atoms/icon-button';
 import { MappingFormWrapper } from '../forms/mapping-form-wrapper';
@@ -50,6 +50,9 @@ export function MappingEditor({
       ? controlledSelectedRule
       : internalSelectedRule;
   const setSelectedRule = onSelectedRuleChange || setInternalSelectedRule;
+
+  // Track last cleaned formData to prevent redundant onChange calls
+  const lastCleanedDataRef = useRef<Record<string, string>>({}); // Keyed by selectedRule
 
   // Convert mapping object to entity-action list
   const ruleOptions = useMemo(() => {
@@ -135,12 +138,20 @@ export function MappingEditor({
     const [entity, action] = selectedRule.split(' ');
     if (!entity || !action) return;
 
-    console.log('RJSF formData before cleaning:', formData);
-
     // Clean up formData - remove undefined, false booleans, and empty values
     const cleanedData = cleanFormData(formData as Record<string, unknown>);
 
-    console.log('formData after cleaning:', cleanedData);
+    // Check if cleanedData actually changed from last time
+    const serialized = JSON.stringify(cleanedData);
+    const lastSerialized = lastCleanedDataRef.current[selectedRule];
+
+    if (serialized === lastSerialized) {
+      // Data hasn't changed, skip update to prevent render loop
+      return;
+    }
+
+    // Store the new serialized data
+    lastCleanedDataRef.current[selectedRule] = serialized;
 
     const newMapping = { ...mapping };
     newMapping[entity] = {
@@ -272,7 +283,7 @@ export function MappingEditor({
 }
 
 /**
- * Clean form data by removing undefined values and false booleans
+ * Clean form data by removing undefined, empty arrays, empty objects, and false booleans
  */
 function cleanFormData(data: Record<string, unknown>): Record<string, unknown> {
   const cleaned: Record<string, unknown> = {};
@@ -280,6 +291,19 @@ function cleanFormData(data: Record<string, unknown>): Record<string, unknown> {
   for (const [key, value] of Object.entries(data)) {
     // Skip undefined values
     if (value === undefined) continue;
+
+    // Skip empty arrays
+    if (Array.isArray(value) && value.length === 0) continue;
+
+    // Skip empty objects (but not arrays)
+    if (
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === 0
+    ) {
+      continue;
+    }
 
     // Skip false boolean values for ignore field
     if (key === 'ignore' && value === false) continue;
