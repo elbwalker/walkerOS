@@ -136,6 +136,7 @@ export function MappingMapEntry({
             uiSchema={valueConfigUiSchema}
             formData={entry.value as Record<string, unknown>}
             onChange={handleAdvancedValueChange}
+            nested={true}
           />
         </div>
       )}

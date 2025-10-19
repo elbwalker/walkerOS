@@ -1478,6 +1478,86 @@
   overflow: hidden;
 }
 
+/* === MAPPING LOOP === */
+
+.elb-mapping-loop-add-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.elb-mapping-loop-remove-button {
+  width: 100%;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.elb-mapping-loop-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.elb-mapping-loop-label {
+  display: block;
+  font-size: var(--font-size-base);
+  color: var(--color-text-label);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: 8px;
+}
+
+.elb-mapping-loop-hint {
+  font-size: calc(var(--font-size-base) - 1px);
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.elb-mapping-loop-source {
+  display: flex;
+  flex-direction: column;
+}
+
+.elb-mapping-loop-source-input {
+  padding: 8px 12px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-text-input);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  outline: none;
+  transition: all 0.15s;
+}
+
+.elb-mapping-loop-source-input:hover {
+  background: var(--bg-input-hover);
+}
+
+.elb-mapping-loop-source-input:focus {
+  border-color: var(--border-input-focus);
+}
+
+.elb-mapping-loop-source-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.elb-mapping-loop-transform {
+  display: flex;
+  flex-direction: column;
+}
+
+.elb-mapping-loop-transform-header {
+  margin-bottom: 12px;
+}
+
+.elb-mapping-loop-transform-form {
+  padding: 16px;
+  background: var(--bg-box);
+  border: 1px dashed var(--border-input);
+  border-radius: var(--radius-button);
+}
+
 /* === RESPONSIVE === */
 
 @media (max-width: 1023px) {

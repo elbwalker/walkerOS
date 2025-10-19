@@ -13,10 +13,10 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
  * - consent: Required consent to return value
  * - map: Object transformation
  * - set: Array of values
+ * - loop: Array processing with transformation
  *
  * Future fields (not yet implemented):
  * - fn: Custom transformation function
- * - loop: Array processing
  */
 export const valueConfigSchema: RJSFSchema = {
   type: 'object',
@@ -64,6 +64,81 @@ export const valueConfigSchema: RJSFSchema = {
         oneOf: [{ type: 'string' }, { type: 'object' }],
       },
     },
+    loop: {
+      type: 'array',
+      title: 'Loop',
+      description: 'Process arrays by applying transformation to each item',
+      minItems: 2,
+      maxItems: 2,
+      items: [
+        {
+          type: 'string',
+          title: 'Source',
+          description: 'Path to array or "this"',
+        },
+        {
+          type: 'object',
+          title: 'Transform',
+          description: 'Mapping for each item',
+        },
+      ],
+    },
+  },
+};
+
+/**
+ * Nested ValueConfig Schema (excludes loop to prevent infinite recursion)
+ *
+ * Used within loop field transform section to prevent recursive rendering.
+ * Contains all ValueConfig fields except 'loop' itself.
+ */
+export const valueConfigNestedSchema: RJSFSchema = {
+  type: 'object',
+  properties: {
+    key: {
+      type: 'string',
+      title: 'Key',
+      description: 'Extract value from event path (e.g., data.id, user.email)',
+    },
+    value: {
+      type: ['string', 'number', 'boolean', 'object'],
+      title: 'Value',
+      description: 'Static value to return',
+      default: '',
+    },
+    validate: {
+      type: 'string',
+      title: 'Validate',
+      description: 'Validate the result',
+    },
+    condition: {
+      type: 'string',
+      title: 'Condition',
+      description: 'Conditionally apply this mapping',
+    },
+    consent: {
+      type: 'object',
+      title: 'Consent',
+      description: 'Required consent to return value',
+      additionalProperties: {
+        type: 'boolean',
+      },
+    },
+    map: {
+      type: 'object',
+      title: 'Map',
+      description: 'Transform object properties',
+      additionalProperties: true,
+    },
+    set: {
+      type: 'array',
+      title: 'Set',
+      description: 'Array of static values',
+      items: {
+        oneOf: [{ type: 'string' }, { type: 'object' }],
+      },
+    },
+    // NOTE: 'loop' is intentionally excluded to prevent infinite recursion
   },
 };
 
@@ -99,6 +174,44 @@ export const valueConfigUiSchema: UiSchema = {
   set: {
     'ui:field': 'mappingSet',
   },
+  loop: {
+    'ui:field': 'mappingLoop',
+  },
+  'ui:layout': '1fr',
+  'ui:responsive': true,
+};
+
+/**
+ * Nested UI Schema (matches nested schema, excludes loop)
+ */
+export const valueConfigNestedUiSchema: UiSchema = {
+  key: {
+    'ui:widget': 'mappingString',
+    'ui:placeholder': 'e.g., data.id, user.email',
+  },
+  value: {
+    'ui:widget': 'mappingValue',
+    'ui:emptyValue': '',
+    'ui:options': {
+      emptyValue: '',
+    },
+  },
+  validate: {
+    'ui:field': 'mappingValidate',
+  },
+  condition: {
+    'ui:field': 'mappingCondition',
+  },
+  consent: {
+    'ui:field': 'mappingConsent',
+  },
+  map: {
+    'ui:field': 'mappingMap',
+  },
+  set: {
+    'ui:field': 'mappingSet',
+  },
+  // NOTE: 'loop' is intentionally excluded to prevent infinite recursion
   'ui:layout': '1fr',
   'ui:responsive': true,
 };

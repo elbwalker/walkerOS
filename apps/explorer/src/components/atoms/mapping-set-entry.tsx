@@ -143,6 +143,7 @@ export function MappingSetEntry({
             uiSchema={valueConfigUiSchema}
             formData={entry.value as Record<string, unknown>}
             onChange={handleAdvancedValueChange}
+            nested={true}
           />
         </div>
       )}

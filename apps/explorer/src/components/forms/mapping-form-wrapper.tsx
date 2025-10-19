@@ -1,6 +1,12 @@
 import React from 'react';
 import Form from '@rjsf/core';
-import type { RJSFSchema, UiSchema } from '@rjsf/utils';
+import type {
+  RJSFSchema,
+  UiSchema,
+  FormContextType,
+  RJSFValidationError,
+} from '@rjsf/utils';
+import { withTheme } from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
 import { mappingWidgets } from './widget-registry';
 import { mappingFields } from './field-registry';
@@ -14,6 +20,7 @@ export interface MappingFormWrapperProps {
   onChange?: (data: unknown) => void;
   onSubmit?: (data: unknown) => void;
   children?: React.ReactNode;
+  nested?: boolean; // When true, renders without <form> wrapper to prevent nested forms
 }
 
 /**
@@ -45,6 +52,16 @@ export interface MappingFormWrapperProps {
  *   onChange={setData}
  * />
  */
+// Create themed version with our custom templates
+const ThemedForm = withTheme({
+  widgets: mappingWidgets,
+  fields: mappingFields,
+  templates: {
+    FieldTemplate: CustomFieldTemplate,
+    ObjectFieldTemplate: CustomObjectFieldTemplate,
+  },
+});
+
 export function MappingFormWrapper({
   schema,
   uiSchema,
@@ -52,6 +69,7 @@ export function MappingFormWrapper({
   onChange,
   onSubmit,
   children,
+  nested = false,
 }: MappingFormWrapperProps) {
   const handleChange = (event: { formData: unknown }) => {
     onChange?.(event.formData);
@@ -61,6 +79,23 @@ export function MappingFormWrapper({
     onSubmit?.(event.formData);
   };
 
+  // For nested usage, render fields directly without <form> wrapper
+  if (nested) {
+    return (
+      <div className="elb-rjsf-nested-wrapper">
+        <ThemedForm
+          schema={schema}
+          uiSchema={uiSchema}
+          formData={formData}
+          validator={validator}
+          onChange={handleChange}
+          tagName="div"
+        />
+      </div>
+    );
+  }
+
+  // For top-level usage, render full Form component
   return (
     <div className="elb-rjsf-form-wrapper">
       <Form

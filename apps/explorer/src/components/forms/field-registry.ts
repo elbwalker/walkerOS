@@ -5,6 +5,7 @@ import { MappingValidateField } from '../atoms/mapping-validate-field';
 import { MappingDataField } from '../atoms/mapping-data-field';
 import { MappingMapField } from '../molecules/mapping-map-field';
 import { MappingSetField } from '../molecules/mapping-set-field';
+import { MappingLoopField } from '../molecules/mapping-loop-field';
 
 /**
  * Field Registry for RJSF Mapping Forms
@@ -40,6 +41,7 @@ import { MappingSetField } from '../molecules/mapping-set-field';
  * - mappingData: Toggle-collapsible data transformation editor for object types
  * - mappingMap: Key-value pair editor for object transformation mapping
  * - mappingSet: Array of values editor for static value arrays
+ * - mappingLoop: Array processing with transformation editor for loop tuples
  */
 export const mappingFields: RegistryFieldsType = {
   mappingConsent: MappingConsentField,
@@ -48,4 +50,5 @@ export const mappingFields: RegistryFieldsType = {
   mappingData: MappingDataField,
   mappingMap: MappingMapField,
   mappingSet: MappingSetField,
+  mappingLoop: MappingLoopField,
 };

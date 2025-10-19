@@ -101,6 +101,7 @@ export function MappingDataWidget(props: WidgetProps) {
                 uiSchema={valueConfigUiSchema}
                 formData={dataConfig}
                 onChange={handleFormChange}
+                nested={true}
               />
             </div>
           ) : (
