@@ -1358,6 +1358,159 @@
   border-color: var(--border-input-focus);
 }
 
+/* === MAPPING SET === */
+
+.elb-mapping-set {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.elb-mapping-set-header {
+  margin-bottom: 8px;
+}
+
+.elb-mapping-set-header .elb-rjsf-description {
+  line-height: 1.3;
+}
+
+.elb-mapping-set-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.elb-mapping-set-entry {
+  display: grid;
+  grid-template-columns: auto minmax(100px, 120px) 1fr auto;
+  gap: 12px;
+  align-items: start;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+
+.elb-mapping-set-entry-dragging {
+  opacity: 0.4;
+}
+
+.elb-mapping-set-entry-drag-over {
+  border-top: 2px solid var(--color-button-primary);
+  padding-top: 4px;
+}
+
+.elb-mapping-set-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 38px;
+  color: var(--color-text-muted);
+  cursor: grab;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.elb-mapping-set-drag-handle:hover {
+  color: var(--color-text-primary);
+}
+
+.elb-mapping-set-drag-handle:active {
+  cursor: grabbing;
+}
+
+.elb-mapping-set-type-select {
+  padding: 8px 12px;
+  padding-right: 32px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-text-input);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  outline: none;
+  transition: all 0.15s;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.elb-mapping-set-type-select:hover {
+  background-color: var(--bg-input-hover);
+}
+
+.elb-mapping-set-type-select:focus {
+  border-color: var(--border-input-focus);
+}
+
+.elb-mapping-set-value-simple {
+  padding: 8px 12px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-text-input);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  outline: none;
+  transition: all 0.15s;
+}
+
+.elb-mapping-set-value-simple:hover {
+  background: var(--bg-input-hover);
+}
+
+.elb-mapping-set-value-simple:focus {
+  border-color: var(--border-input-focus);
+}
+
+.elb-mapping-set-delete-wrapper {
+  display: flex;
+  align-items: flex-start;
+}
+
+.elb-mapping-set-entry-advanced {
+  grid-template-rows: auto auto;
+}
+
+.elb-mapping-set-entry-advanced .elb-mapping-set-delete-wrapper {
+  grid-row: 1;
+  grid-column: 4;
+}
+
+.elb-mapping-set-entry-advanced .elb-mapping-set-drag-handle {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.elb-mapping-set-value-advanced {
+  grid-column: 2 / -1;
+  grid-row: 2;
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--bg-box);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+}
+
+.elb-mapping-set-add {
+  padding: 8px 16px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.elb-mapping-set-add:hover {
+  background: var(--bg-input-hover);
+  border-color: var(--border-input-focus);
+}
+
 .elb-checkbox-collapsible-content {
   margin-top: 12px;
   width: 100%;

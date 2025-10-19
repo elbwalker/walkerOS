@@ -5,17 +5,17 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
  *
  * Based on packages/core/src/types/mapping.ts
  *
- * Current fields (Phase 1):
+ * Implemented fields:
  * - key: String path to extract value from event (e.g., 'data.id', 'user.email')
  * - value: Static value (string, number, boolean, or JSON object)
  * - validate: Function to validate the result
- * - condition: Conditionally apply this mapping (reuses existing widget)
- * - consent: Required consent to return value (reuses existing widget)
+ * - condition: Conditionally apply this mapping
+ * - consent: Required consent to return value
+ * - map: Object transformation
+ * - set: Array of values
  *
  * Future fields (not yet implemented):
  * - fn: Custom transformation function
- * - map: Object transformation
- * - set: Array of values
  * - loop: Array processing
  */
 export const valueConfigSchema: RJSFSchema = {
@@ -56,6 +56,14 @@ export const valueConfigSchema: RJSFSchema = {
       description: 'Transform object properties',
       additionalProperties: true,
     },
+    set: {
+      type: 'array',
+      title: 'Set',
+      description: 'Array of static values',
+      items: {
+        oneOf: [{ type: 'string' }, { type: 'object' }],
+      },
+    },
   },
 };
 
@@ -87,6 +95,9 @@ export const valueConfigUiSchema: UiSchema = {
   },
   map: {
     'ui:field': 'mappingMap',
+  },
+  set: {
+    'ui:field': 'mappingSet',
   },
   'ui:layout': '1fr',
   'ui:responsive': true,
