@@ -16,6 +16,7 @@ export interface BrowserBoxProps {
   label?: string;
   className?: string;
   initialTab?: 'preview' | 'html' | 'css' | 'js';
+  lineNumbers?: boolean;
 }
 
 /**
@@ -44,6 +45,7 @@ export function BrowserBox({
   label = 'Code',
   className = '',
   initialTab,
+  lineNumbers = false,
 }: BrowserBoxProps) {
   const [monacoTheme, setMonacoTheme] = useState('vs-light');
 
@@ -175,8 +177,9 @@ export function BrowserBox({
             readOnly: !onChange,
             minimap: { enabled: false },
             fontSize: 13,
-            lineNumbers: 'on',
+            lineNumbers: lineNumbers ? 'on' : 'off',
             lineNumbersMinChars: 2,
+            folding: false,
             scrollBeyondLastLine: false,
             automaticLayout: true,
             tabSize: 2,

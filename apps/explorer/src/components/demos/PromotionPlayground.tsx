@@ -177,6 +177,7 @@ export function PromotionPlayground({
         onJsChange={setJs}
         showPreview={false}
         initialTab="html"
+        lineNumbers={false}
       />
 
       {/* Column 2: Preview */}
