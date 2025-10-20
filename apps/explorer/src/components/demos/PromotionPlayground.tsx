@@ -3,6 +3,7 @@ import type { WalkerOS } from '@walkeros/core';
 import { Box } from '../atoms/box';
 import { Grid } from '../atoms/grid';
 import { Preview } from '../molecules/preview';
+import { BrowserBox } from '../organisms/browser-box';
 import { CodeBox } from '../organisms/code-box';
 import { CollectorBox } from '../organisms/collector-box';
 import {
@@ -13,8 +14,10 @@ import '../../styles/layout.css';
 
 export interface PromotionPlaygroundProps {
   initialHtml?: string;
+  initialCss?: string;
+  initialJs?: string;
   initialMapping?: string;
-  labelHtml?: string;
+  labelCode?: string;
   labelPreview?: string;
   labelEvents?: string;
   labelMapping?: string;
@@ -22,8 +25,30 @@ export interface PromotionPlaygroundProps {
   destination?: DestinationCode;
 }
 
-const defaultContent = `<style>
-* {
+const defaultHtml = `<div
+  data-elb="promotion"
+  data-elbaction="visible"
+  data-elb-promotion="category:analytics"
+  data-elbcontext="test:live_demo"
+  class="hero-section"
+>
+  <div class="hero-content">
+    <h2 data-elb-promotion="name:#innerText" class="hero-title">
+      Setting up tracking easily
+    </h2>
+    <p class="hero-text">
+      Click a button to trigger more events.
+    </p>
+    <button data-elbaction="click:start" class="btn btn-primary">
+      Get Started
+    </button>
+    <button data-elbaction="click:more" class="btn btn-secondary">
+      Learn more
+    </button>
+  </div>
+</div>`;
+
+const defaultCss = `* {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -74,31 +99,7 @@ const defaultContent = `<style>
 .btn-secondary {
   background: white;
   color: #667eea;
-}
-</style>
-
-<div
-  data-elb="promotion"
-  data-elbaction="visible"
-  data-elb-promotion="category:analytics"
-  data-elbcontext="test:live_demo"
-  class="hero-section"
->
-  <div class="hero-content">
-    <h2 data-elb-promotion="name:#innerText" class="hero-title">
-      Setting up tracking easily
-    </h2>
-    <p class="hero-text">
-      Click a button to trigger more events.
-    </p>
-    <button data-elbaction="click:start" class="btn btn-primary">
-      Get Started
-    </button>
-    <button data-elbaction="click:more" class="btn btn-secondary">
-      Learn more
-    </button>
-    </>
-</div>`;
+}`;
 
 const defaultMapping = `{
   "promotion": {
@@ -125,49 +126,34 @@ const defaultMapping = `{
 }`;
 
 /**
- * Parse HTML content to extract styles and body HTML
- */
-function parseHtmlContent(content: string): { html: string; css: string } {
-  const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
-  let css = '';
-  let match;
-
-  while ((match = styleRegex.exec(content)) !== null) {
-    css += match[1] + '\n';
-  }
-
-  // Remove style tags from HTML
-  const html = content.replace(styleRegex, '').trim();
-
-  return { html, css };
-}
-
-/**
- * PromotionPlayground - Full walkerOS demonstration with live HTML editing
+ * PromotionPlayground - Full walkerOS demonstration with live code editing
  *
  * Shows the complete chain:
- * 1. HTML Editor - Edit HTML with walkerOS data attributes (includes <style> tags)
- * 2. Preview - Live rendered HTML that captures real events
+ * 1. Code Editor - Edit HTML/CSS/JS with walkerOS data attributes
+ * 2. Preview - Live rendered output that captures real events
  * 3. Events - Real events captured from preview interactions
  * 4. Mapping - Apply transformations and see destination output
+ * 5. Result - Final destination function calls
  */
 export function PromotionPlayground({
-  initialHtml = defaultContent,
+  initialHtml = defaultHtml,
+  initialCss = defaultCss,
+  initialJs = '',
   initialMapping = defaultMapping,
-  labelHtml = 'HTML',
+  labelCode = 'Code',
   labelPreview = 'Preview',
   labelEvents = 'Events',
   labelMapping = 'Mapping',
   labelResult = 'Result',
   destination = createGtagDestination(),
 }: PromotionPlaygroundProps) {
-  const [content, setContent] = useState(initialHtml);
+  const [html, setHtml] = useState(initialHtml);
+  const [css, setCss] = useState(initialCss);
+  const [js, setJs] = useState(initialJs);
   const [mappingInput, setMappingInput] = useState(initialMapping);
   const [capturedEvent, setCapturedEvent] = useState<WalkerOS.Event | null>(
     null,
   );
-
-  const { html, css } = parseHtmlContent(content);
 
   // Handle events from preview
   const handleEvent = useCallback((event: WalkerOS.Event) => {
@@ -180,12 +166,17 @@ export function PromotionPlayground({
 
   return (
     <Grid columns={5}>
-      {/* Column 1: HTML Editor */}
-      <CodeBox
-        label={labelHtml}
-        code={content}
-        onChange={setContent}
-        language="html"
+      {/* Column 1: Code Editor with HTML/CSS/JS tabs */}
+      <BrowserBox
+        label={labelCode}
+        html={html}
+        css={css}
+        js={js}
+        onHtmlChange={setHtml}
+        onCssChange={setCss}
+        onJsChange={setJs}
+        showPreview={false}
+        initialTab="html"
       />
 
       {/* Column 2: Preview */}
