@@ -8,15 +8,13 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
  * Implemented fields:
  * - key: String path to extract value from event (e.g., 'data.id', 'user.email')
  * - value: Static value (string, number, boolean, or JSON object)
+ * - fn: Custom transformation function
  * - validate: Function to validate the result
  * - condition: Conditionally apply this mapping
  * - consent: Required consent to return value
  * - map: Object transformation
  * - set: Array of values
  * - loop: Array processing with transformation
- *
- * Future fields (not yet implemented):
- * - fn: Custom transformation function
  */
 export const valueConfigSchema: RJSFSchema = {
   type: 'object',
@@ -31,6 +29,11 @@ export const valueConfigSchema: RJSFSchema = {
       title: 'Value',
       description: 'Static value to return',
       default: '',
+    },
+    fn: {
+      type: 'string',
+      title: 'Function',
+      description: 'Custom transformation function',
     },
     validate: {
       type: 'string',
@@ -106,6 +109,11 @@ export const valueConfigNestedSchema: RJSFSchema = {
       description: 'Static value to return',
       default: '',
     },
+    fn: {
+      type: 'string',
+      title: 'Function',
+      description: 'Custom transformation function',
+    },
     validate: {
       type: 'string',
       title: 'Validate',
@@ -159,6 +167,9 @@ export const valueConfigUiSchema: UiSchema = {
       emptyValue: '',
     },
   },
+  fn: {
+    'ui:field': 'mappingFn',
+  },
   validate: {
     'ui:field': 'mappingValidate',
   },
@@ -195,6 +206,9 @@ export const valueConfigNestedUiSchema: UiSchema = {
     'ui:options': {
       emptyValue: '',
     },
+  },
+  fn: {
+    'ui:field': 'mappingFn',
   },
   validate: {
     'ui:field': 'mappingValidate',
