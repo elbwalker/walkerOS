@@ -1,12 +1,29 @@
 /**
  * Palenight Theme for Monaco Editor
  *
- * Colors and token mappings based on prism-react-renderer palenight theme
- * Source: https://github.com/FormidableLabs/prism-react-renderer/blob/master/packages/prism-react-renderer/src/themes/palenight.ts
+ * Based on official prism-react-renderer palenight theme.
+ * Source: https://github.com/FormidableLabs/prism-react-renderer
  *
- * This theme provides consistent syntax highlighting between:
- * - Website (using prism-react-renderer palenight)
- * - Explorer (using Monaco Editor with this theme)
+ * Note: Monaco Editor creates more granular token types than Prism. This theme adapts
+ * the official palenight colors to Monaco's token system. Key difference: Prism doesn't
+ * distinguish JSON keys from strings, but Monaco does - we force them to use string color.
+ *
+ * Token Color Mappings (matching official palenight):
+ * - comment: #697098 - gray, italic
+ * - string/inserted: #c3e88d - green
+ * - number: #f78c6c - orange
+ * - builtin/char/constant/function: #82aaff - blue
+ * - punctuation/selector: #c792ea - purple
+ * - variable: #bfc7d5 - light gray
+ * - class-name: #ffcb6b - yellow/gold
+ * - attr-name: #c3e88d - green (Monaco-specific: matching string color)
+ * - tag/deleted: #ff5572 - red/pink
+ * - operator: #89ddff - cyan
+ * - boolean: #ff5874 - red
+ * - keyword: italic
+ * - doctype: #c792ea - purple, italic
+ * - namespace: #b2ccd6 - blue-gray
+ * - url: #dddddd - white
  */
 
 import type { editor } from 'monaco-editor';
@@ -85,9 +102,9 @@ export const palenightTheme: editor.IStandaloneThemeData = {
     { token: 'meta.tag', foreground: 'ff5572' },
     { token: 'entity.name.tag', foreground: 'ff5572' },
 
-    // Tag Attributes
-    { token: 'attribute.name', foreground: 'ffcb6b' },
-    { token: 'entity.other.attribute-name', foreground: 'ffcb6b' },
+    // Tag Attributes (using string color for consistency with how Prism treats attributes)
+    { token: 'attribute.name', foreground: 'c3e88d' },
+    { token: 'entity.other.attribute-name', foreground: 'c3e88d' },
 
     // Namespaces
     { token: 'namespace', foreground: 'b2ccd6' },
@@ -103,15 +120,11 @@ export const palenightTheme: editor.IStandaloneThemeData = {
       fontStyle: 'italic',
     },
 
-    // JSON Keys (using string color - green like other string values)
+    // JSON Keys - Monaco creates special tokens for JSON keys, but in Prism they're just strings
+    // Force them to use string color (green) to match official palenight behavior
     { token: 'support.type.property-name', foreground: 'c3e88d' },
-    { token: 'string.key', foreground: 'c3e88d' },
-    { token: 'string.key.json', foreground: 'c3e88d' },
     { token: 'support.type.property-name.json', foreground: 'c3e88d' },
-    {
-      token: 'meta.structure.dictionary.json string.quoted.double.json',
-      foreground: 'c3e88d',
-    },
+    { token: 'string.key.json', foreground: 'c3e88d' },
 
     // Markdown
     { token: 'markup.bold', fontStyle: 'bold' },
@@ -130,7 +143,7 @@ export const palenightTheme: editor.IStandaloneThemeData = {
 
     // Language-Specific: HTML
     { token: 'entity.name.tag.html', foreground: 'ff5572' },
-    { token: 'entity.other.attribute-name.html', foreground: 'ffcb6b' },
+    { token: 'entity.other.attribute-name.html', foreground: 'c3e88d' },
     { token: 'meta.tag.html', foreground: 'bfc7d5' },
     { token: 'punctuation.definition.tag.html', foreground: 'c792ea' },
 
