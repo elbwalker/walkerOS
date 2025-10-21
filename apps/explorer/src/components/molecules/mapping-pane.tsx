@@ -5,6 +5,7 @@ import { MappingKeyPaneView } from './mapping-key-pane-view';
 import { MappingConditionPaneView } from './mapping-condition-pane-view';
 import { MappingNamePaneView } from './mapping-name-pane-view';
 import { MappingBatchPaneView } from './mapping-batch-pane-view';
+import { MappingIgnorePaneView } from './mapping-ignore-pane-view';
 import { MappingTypeGrid } from './mapping-type-grid';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { MappingState } from '../../hooks/useMappingState';
@@ -21,6 +22,7 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * - 'rule' → MappingRuleOverview - Shows rule properties grid
  * - 'name' → MappingNamePaneView - Simple string input for event name override
  * - 'batch' → MappingBatchPaneView - Number input for batch size configuration
+ * - 'ignore' → MappingIgnorePaneView - Boolean toggle to ignore rule
  * - 'property' → MappingTypeGrid - Shows type selection grid
  * - 'valueConfig' → MappingValueConfigPaneView - Full ValueConfig editor
  * - 'key' → MappingKeyPaneView - Focused key property editor
@@ -100,6 +102,16 @@ export function MappingPane({
       // MappingBatchPaneView uses standard .elb-mapping-pane structure
       return (
         <MappingBatchPaneView
+          path={path}
+          mappingState={mappingState}
+          className={className}
+        />
+      );
+
+    case 'ignore':
+      // MappingIgnorePaneView uses standard .elb-mapping-pane structure
+      return (
+        <MappingIgnorePaneView
           path={path}
           mappingState={mappingState}
           className={className}

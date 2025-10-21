@@ -170,6 +170,7 @@ export function MappingEditorTabs({
               | 'rule'
               | 'name'
               | 'batch'
+              | 'ignore'
               | 'property'
               | 'valueConfig'
               | 'map';
@@ -190,14 +191,14 @@ export function MappingEditorTabs({
               } else if (propertyName === 'batch') {
                 // batch is a number
                 nodeType = 'batch';
+              } else if (propertyName === 'ignore') {
+                // ignore is a boolean
+                nodeType = 'ignore';
               } else if (
                 ['data', 'consent', 'policy', 'settings'].includes(propertyName)
               ) {
                 // Complex transformations
                 nodeType = 'map';
-              } else if (propertyName === 'ignore') {
-                // Simple boolean value
-                nodeType = 'valueConfig';
               } else {
                 // Unknown property - show type grid
                 nodeType = 'property';

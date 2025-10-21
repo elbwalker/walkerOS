@@ -10,6 +10,7 @@ export type NodeType =
   | 'rule'
   | 'name'
   | 'batch'
+  | 'ignore'
   | 'property'
   | 'valueConfig'
   | 'map'

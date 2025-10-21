@@ -168,11 +168,14 @@ export function MappingRuleOverview({
     } else if (key === 'batch') {
       // Batch is a number - use dedicated batch pane
       navigation.openTab([...path, key], 'batch');
+    } else if (key === 'ignore') {
+      // Ignore is a boolean - use dedicated ignore pane
+      navigation.openTab([...path, key], 'ignore');
     } else if (complexProperties.includes(key)) {
       // Complex transformations - show coming soon
       navigation.openTab([...path, key], 'map');
     } else {
-      // ignore - use value config
+      // Unknown properties - use value config
       navigation.openTab([...path, key], 'valueConfig');
     }
   };
