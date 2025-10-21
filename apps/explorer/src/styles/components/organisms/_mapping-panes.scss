@@ -1,36 +1,7 @@
 // Overview Pane
-.elb-mapping-overview-pane {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: var(--bg-box);
-  overflow: hidden;
-}
-
 .elb-mapping-overview {
-  &-header {
-    flex-shrink: 0;
-    padding: 16px 16px 12px;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  &-title {
-    font-size: 18px;
-    font-weight: var(--font-weight-semibold);
-    margin: 0 0 4px 0;
-    color: var(--color-text);
-  }
-
-  &-description {
-    font-size: 12px;
-    margin: 0;
-    color: var(--color-text-muted);
-  }
-
   &-input-section {
-    flex-shrink: 0;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 24px;
   }
 
   &-input {
@@ -60,18 +31,11 @@
     }
   }
 
-  &-content {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: var(--spacing-grid-gap);
-    padding-bottom: 50vh; // Extra bottom padding for comfortable scrolling
-  }
-
   &-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 8px;
+    margin-bottom: 24px;
   }
 
   &-tile {
@@ -125,40 +89,14 @@
 
 // Entity Pane
 .elb-mapping-entity-pane {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: var(--bg-box);
-  overflow: hidden;
-
-  &-header {
-    flex-shrink: 0;
-    padding: 16px 16px 12px;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  &-title {
-    font-size: 18px;
-    font-weight: var(--font-weight-semibold);
-    margin: 0 0 4px 0;
-    color: var(--color-text);
-  }
-
-  &-description {
-    font-size: 12px;
-    margin: 0;
-    color: var(--color-text-muted);
-  }
-
-  &-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--spacing-grid-gap);
-    padding-bottom: 50vh; // Extra bottom padding for comfortable scrolling
+  &-body {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
   }
 
   &-new-action {
-    margin-bottom: 24px;
+    // Styling handled by standard form elements
   }
 
   &-input {

@@ -2,28 +2,11 @@
  * Mapping Consent Pane Styles
  *
  * Dedicated pane for consent property with tile grid.
+ * Header styling handled by PaneHeader component.
  */
 
 .elb-mapping-consent-pane {
   // No padding - parent .elb-mapping-pane-content handles it
-}
-
-.elb-mapping-consent-header {
-  margin-bottom: 24px;
-}
-
-.elb-mapping-consent-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0 0 8px 0;
-}
-
-.elb-mapping-consent-description {
-  font-size: 14px;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-  margin: 0;
 }
 
 // Consent State Tiles Grid

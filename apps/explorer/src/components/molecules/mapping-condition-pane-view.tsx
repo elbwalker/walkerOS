@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import { CodeBox } from '../organisms/code-box';
+import { PaneHeader } from '../atoms/pane-header';
 import { normalizeCode } from '../../utils/code-normalizer';
 
 /**
@@ -68,24 +69,15 @@ export function MappingConditionPaneView({
       <div className="elb-mapping-pane-content">
         <div className="elb-mapping-condition-pane">
           {/* Header */}
-          <div className="elb-mapping-condition-header">
-            <div className="elb-mapping-condition-header-content">
-              <h3 className="elb-mapping-condition-title">
-                Condition Function
-              </h3>
-              <p className="elb-mapping-condition-description">
-                Define when this mapping rule should apply to an event
-              </p>
-            </div>
-            <button
-              type="button"
-              className="elb-mapping-condition-reset"
-              onClick={handleReset}
-              title="Reset to default"
-            >
-              Reset
-            </button>
-          </div>
+          <PaneHeader
+            title="Condition Function"
+            description="Define when this mapping rule should apply to an event"
+            action={{
+              label: 'Reset',
+              onClick: handleReset,
+              title: 'Reset to default',
+            }}
+          />
 
           {/* Code Editor */}
           <div className="elb-mapping-condition-editor">

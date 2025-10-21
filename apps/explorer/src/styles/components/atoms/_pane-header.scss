@@ -1,0 +1,56 @@
+/**
+ * Pane Header Styles
+ *
+ * Standardized header for all pane views
+ */
+
+.elb-pane-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.elb-pane-header-content {
+  flex: 1;
+}
+
+.elb-pane-header-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 6px 0;
+}
+
+.elb-pane-header-description {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.elb-pane-header-action {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-button);
+  background: var(--bg-box);
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--bg-button-hover);
+    border-color: var(--color-text);
+    color: var(--color-text-button-hover);
+  }
+
+  &:active {
+    background: var(--bg-button-active);
+    box-shadow: var(--shadow-button-active);
+  }
+}

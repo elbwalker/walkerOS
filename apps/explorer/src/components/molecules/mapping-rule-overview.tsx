@@ -2,6 +2,7 @@ import React from 'react';
 import type { UseMappingState } from '../../hooks/useMappingState';
 import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
 import { RuleTile, type RuleTileStatus } from '../atoms/rule-tile';
+import { PaneHeader } from '../atoms/pane-header';
 
 export interface MappingRuleOverviewProps {
   path: string[];
@@ -207,14 +208,10 @@ export function MappingRuleOverview({
       <div className="elb-mapping-pane-content">
         {/* Rule Configuration Section */}
         <div className="elb-mapping-rule-section">
-          <div className="elb-mapping-rule-section-header">
-            <div className="elb-mapping-rule-section-title">
-              Rule Configuration
-            </div>
-            <div className="elb-mapping-rule-section-description">
-              Configure how this event is transformed
-            </div>
-          </div>
+          <PaneHeader
+            title="Rule Configuration"
+            description="Configure how this event is transformed"
+          />
           <div className="elb-mapping-rule-section-grid">
             {configurationTiles.map((tile) => (
               <RuleTile
@@ -230,14 +227,10 @@ export function MappingRuleOverview({
 
         {/* Processing Options Section */}
         <div className="elb-mapping-rule-section">
-          <div className="elb-mapping-rule-section-header">
-            <div className="elb-mapping-rule-section-title">
-              Processing Options
-            </div>
-            <div className="elb-mapping-rule-section-description">
-              Control when and how this event is processed
-            </div>
-          </div>
+          <PaneHeader
+            title="Processing Options"
+            description="Control when and how this event is processed"
+          />
           <div className="elb-mapping-rule-section-grid">
             {optionsTiles.map((tile) => (
               <RuleTile

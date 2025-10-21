@@ -3,28 +3,11 @@
  *
  * Dedicated pane for the ignore property (boolean).
  * Shows toggle control with status indicator.
+ * Header styling handled by PaneHeader component.
  */
 
 .elb-mapping-ignore-pane {
   // No padding - parent .elb-mapping-pane-content handles it
-}
-
-.elb-mapping-ignore-header {
-  margin-bottom: 24px;
-}
-
-.elb-mapping-ignore-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0 0 8px 0;
-}
-
-.elb-mapping-ignore-description {
-  font-size: 14px;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-  margin: 0;
 }
 
 // Toggle Control

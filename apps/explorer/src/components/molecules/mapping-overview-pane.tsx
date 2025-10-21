@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import type { MappingState } from '../../hooks/useMappingState';
 import type { MappingNavigation } from '../../hooks/useMappingNavigation';
+import { PaneHeader } from '../atoms/pane-header';
 
 /**
  * Overview Pane - Shows all entity-action pairs as tiles
@@ -85,31 +86,31 @@ export function MappingOverviewPane({
   };
 
   return (
-    <div className={`elb-mapping-overview-pane ${className}`}>
-      <div className="elb-mapping-overview-header">
-        <h2 className="elb-mapping-overview-title">Overview</h2>
-        <p className="elb-mapping-overview-description">
-          {rules.length === 0
-            ? 'No rules yet. Create an entity to get started.'
-            : `${rules.length} rule${rules.length === 1 ? '' : 's'}`}
-        </p>
-      </div>
-
-      <div className="elb-mapping-overview-input-section">
-        <input
-          ref={inputRef}
-          type="text"
-          className={`elb-mapping-overview-input ${entityExists ? 'is-existing' : ''}`}
-          placeholder="Type entity name to create or select..."
-          value={newEntityName}
-          onChange={(e) => handleEntityInputChange(e.target.value)}
-          onKeyDown={handleEntityKeyDown}
-          onBlur={handleEntityBlur}
+    <div className={`elb-mapping-pane ${className}`}>
+      <div className="elb-mapping-pane-content">
+        <PaneHeader
+          title="Overview"
+          description={
+            rules.length === 0
+              ? 'No rules yet. Create an entity to get started.'
+              : `${rules.length} rule${rules.length === 1 ? '' : 's'}`
+          }
         />
-      </div>
 
-      {rules.length > 0 && (
-        <div className="elb-mapping-overview-content">
+        <div className="elb-mapping-overview-input-section">
+          <input
+            ref={inputRef}
+            type="text"
+            className={`elb-mapping-overview-input ${entityExists ? 'is-existing' : ''}`}
+            placeholder="Type entity name to create or select..."
+            value={newEntityName}
+            onChange={(e) => handleEntityInputChange(e.target.value)}
+            onKeyDown={handleEntityKeyDown}
+            onBlur={handleEntityBlur}
+          />
+        </div>
+
+        {rules.length > 0 && (
           <div className="elb-mapping-overview-grid">
             {rules.map(({ entity, action }) => (
               <button
@@ -123,17 +124,17 @@ export function MappingOverviewPane({
               </button>
             ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {rules.length === 0 && (
-        <div className="elb-mapping-overview-empty">
-          <p>
-            Use the tree sidebar or breadcrumb to create your first entity and
-            action.
-          </p>
-        </div>
-      )}
+        {rules.length === 0 && (
+          <div className="elb-mapping-overview-empty">
+            <p>
+              Use the tree sidebar or breadcrumb to create your first entity and
+              action.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

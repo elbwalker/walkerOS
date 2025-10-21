@@ -4,22 +4,6 @@
     margin-top: 32px; // Space between sections only
   }
 
-  &-header {
-    margin-bottom: 16px;
-  }
-
-  &-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--color-text);
-    margin-bottom: 4px;
-  }
-
-  &-description {
-    font-size: 13px;
-    color: var(--color-text-muted);
-  }
-
   &-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

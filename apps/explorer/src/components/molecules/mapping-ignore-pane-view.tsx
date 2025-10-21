@@ -1,4 +1,5 @@
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
+import { PaneHeader } from '../atoms/pane-header';
 
 /**
  * Mapping Ignore Pane View
@@ -37,14 +38,10 @@ export function MappingIgnorePaneView({
     <div className={`elb-mapping-pane ${className}`}>
       <div className="elb-mapping-pane-content">
         <div className="elb-mapping-ignore-pane">
-          {/* Header */}
-          <div className="elb-mapping-ignore-header">
-            <h3 className="elb-mapping-ignore-title">Ignore Event</h3>
-            <p className="elb-mapping-ignore-description">
-              When enabled, events matching this mapping will be ignored and not
-              processed by the destination.
-            </p>
-          </div>
+          <PaneHeader
+            title="Ignore Event"
+            description="When enabled, events matching this mapping will be ignored and not processed by the destination."
+          />
 
           {/* Toggle Control */}
           <div className="elb-mapping-ignore-control">
