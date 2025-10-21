@@ -82,6 +82,12 @@ function buildPropertyTree(obj: unknown, basePath: string[]): TreeNode[] {
       const value = record[key];
       const propertyPath = [...basePath, key];
 
+      // Skip consent states at rule level (entity.action.consent.stateName)
+      // The consent pane handles these internally
+      if (basePath.length === 3 && basePath[2] === 'consent') {
+        return; // Don't add consent state children to tree
+      }
+
       // Check if this is a transformation type (map, loop, fn, set)
       if (typeof value === 'object' && value !== null) {
         const valueRecord = value as Record<string, unknown>;
@@ -260,12 +266,16 @@ function buildPropertyTree(obj: unknown, basePath: string[]): TreeNode[] {
           // Regular object - might have nested properties
           const children = buildPropertyTree(value, propertyPath);
 
+          // Special case: rule-level consent should not be expandable
+          // It's handled by the consent pane which shows state tiles
+          const isRuleLevelConsent = basePath.length === 2 && key === 'consent';
+
           nodes.push({
             path: propertyPath,
             label: key,
             type: 'property',
             children,
-            isExpandable: children.length > 0,
+            isExpandable: !isRuleLevelConsent && children.length > 0,
           });
         }
       } else {

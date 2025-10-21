@@ -171,6 +171,7 @@ export function MappingEditorTabs({
               | 'name'
               | 'batch'
               | 'ignore'
+              | 'consent'
               | 'property'
               | 'valueConfig'
               | 'map';
@@ -194,8 +195,11 @@ export function MappingEditorTabs({
               } else if (propertyName === 'ignore') {
                 // ignore is a boolean
                 nodeType = 'ignore';
+              } else if (propertyName === 'consent') {
+                // consent is a map of state names
+                nodeType = 'consent';
               } else if (
-                ['data', 'consent', 'policy', 'settings'].includes(propertyName)
+                ['data', 'policy', 'settings'].includes(propertyName)
               ) {
                 // Complex transformations
                 nodeType = 'map';

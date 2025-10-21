@@ -108,9 +108,9 @@ function getTileStatus(
     }
 
     case 'batch':
-      return value === true
-        ? { enabled: true, text: 'Enabled' }
-        : { enabled: false, text: 'Disabled' };
+      return typeof value === 'number' && value > 0
+        ? { enabled: true, text: `${value} ms` }
+        : { enabled: false, text: 'Not set' };
 
     case 'ignore':
       return value === true
@@ -160,7 +160,7 @@ export function MappingRuleOverview({
     | undefined;
 
   const handleTileClick = (key: string) => {
-    const complexProperties = ['data', 'consent', 'policy', 'settings'];
+    const complexProperties = ['data', 'policy', 'settings'];
 
     if (key === 'name') {
       // Name is a simple string - use dedicated name pane
@@ -171,6 +171,9 @@ export function MappingRuleOverview({
     } else if (key === 'ignore') {
       // Ignore is a boolean - use dedicated ignore pane
       navigation.openTab([...path, key], 'ignore');
+    } else if (key === 'consent') {
+      // Consent is a map of state names - use dedicated consent pane
+      navigation.openTab([...path, key], 'consent');
     } else if (complexProperties.includes(key)) {
       // Complex transformations - show coming soon
       navigation.openTab([...path, key], 'map');

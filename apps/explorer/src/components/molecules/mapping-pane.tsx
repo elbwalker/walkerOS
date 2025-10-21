@@ -6,6 +6,7 @@ import { MappingConditionPaneView } from './mapping-condition-pane-view';
 import { MappingNamePaneView } from './mapping-name-pane-view';
 import { MappingBatchPaneView } from './mapping-batch-pane-view';
 import { MappingIgnorePaneView } from './mapping-ignore-pane-view';
+import { MappingConsentPaneView } from './mapping-consent-pane-view';
 import { MappingTypeGrid } from './mapping-type-grid';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { MappingState } from '../../hooks/useMappingState';
@@ -23,6 +24,7 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * - 'name' → MappingNamePaneView - Simple string input for event name override
  * - 'batch' → MappingBatchPaneView - Number input for batch size configuration
  * - 'ignore' → MappingIgnorePaneView - Boolean toggle to ignore rule
+ * - 'consent' → MappingConsentPaneView - Consent state tiles with discovery
  * - 'property' → MappingTypeGrid - Shows type selection grid
  * - 'valueConfig' → MappingValueConfigPaneView - Full ValueConfig editor
  * - 'key' → MappingKeyPaneView - Focused key property editor
@@ -33,7 +35,6 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * - 'value' → (Coming soon) - Static value editor
  * - 'fn' → (Coming soon) - Function editor
  * - 'validate' → (Coming soon) - Validate function editor
- * - 'consent' → (Coming soon) - Consent requirements editor
  *
  * @example
  * <MappingPane
@@ -118,6 +119,16 @@ export function MappingPane({
         />
       );
 
+    case 'consent':
+      // MappingConsentPaneView uses standard .elb-mapping-pane structure
+      return (
+        <MappingConsentPaneView
+          path={path}
+          mappingState={mappingState}
+          className={className}
+        />
+      );
+
     case 'key':
       // MappingKeyPaneView has its own structure
       return (
@@ -147,7 +158,6 @@ export function MappingPane({
     case 'value':
     case 'fn':
     case 'validate':
-    case 'consent':
     default: {
       let content: React.ReactNode;
 
@@ -175,8 +185,7 @@ export function MappingPane({
         nodeType === 'set' ||
         nodeType === 'value' ||
         nodeType === 'fn' ||
-        nodeType === 'validate' ||
-        nodeType === 'consent'
+        nodeType === 'validate'
       ) {
         content = (
           <div className="elb-mapping-pane-info">
