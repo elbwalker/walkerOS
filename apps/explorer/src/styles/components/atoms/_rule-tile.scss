@@ -3,14 +3,14 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  padding: 12px;
   background: var(--bg-header);
   border: 1px solid var(--border-box);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
-  min-height: 140px;
+  min-height: 100px;
 
   &:hover {
     border-color: var(--color-text);
@@ -27,12 +27,12 @@
   &-header {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 6px;
+    margin-bottom: 8px;
   }
 
   &-label {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--color-text);
   }
@@ -60,7 +60,7 @@
   }
 
   &-status-text {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     color: var(--color-text);
     font-family: var(--font-mono);
