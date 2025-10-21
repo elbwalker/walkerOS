@@ -9,6 +9,7 @@ export type NodeType =
   | 'entity'
   | 'rule'
   | 'name'
+  | 'batch'
   | 'property'
   | 'valueConfig'
   | 'map'

@@ -165,11 +165,14 @@ export function MappingRuleOverview({
     if (key === 'name') {
       // Name is a simple string - use dedicated name pane
       navigation.openTab([...path, key], 'name');
+    } else if (key === 'batch') {
+      // Batch is a number - use dedicated batch pane
+      navigation.openTab([...path, key], 'batch');
     } else if (complexProperties.includes(key)) {
       // Complex transformations - show coming soon
       navigation.openTab([...path, key], 'map');
     } else {
-      // batch, ignore - use value config
+      // ignore - use value config
       navigation.openTab([...path, key], 'valueConfig');
     }
   };
