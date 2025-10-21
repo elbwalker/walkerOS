@@ -44,19 +44,22 @@
     align-items: center;
     justify-content: center;
     padding: 20px 12px;
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
+    background: var(--bg-header);
+    border: 1px solid var(--border-box);
+    border-radius: 8px;
     cursor: pointer;
     text-align: center;
     transition:
       background-color 0.15s ease,
-      border-color 0.15s ease;
+      border-color 0.15s ease,
+      transform 0.2s ease;
     gap: 4px;
 
     &:hover {
-      background: var(--bg-button-hover);
+      background: var(--bg-box);
       border-color: var(--color-text);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     }
 
     &-entity {

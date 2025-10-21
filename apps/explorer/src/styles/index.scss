@@ -30,9 +30,10 @@
 @use './components/atoms/consent-widget';
 @use './components/atoms/data-widget';
 @use './components/atoms/value-widget';
-@use './components/atoms/rule-tile';
+@use './components/atoms/config-tile';
 @use './components/atoms/consent-state-tile';
 @use './components/atoms/pane-header';
+@use './components/atoms/mapping-input';
 
 // Components - Molecules
 @use './components/molecules/auto-select';
@@ -49,6 +50,7 @@
 @use './components/molecules/mapping-ignore-pane';
 @use './components/molecules/mapping-consent-pane';
 @use './components/molecules/mapping-condition-pane';
+@use './components/molecules/mapping-value-type-pane';
 @use './components/molecules/rjsf-form';
 @use './components/molecules/explorer-controls';
 @use './components/molecules/collapsible';

@@ -172,8 +172,7 @@ export function MappingEditorTabs({
               | 'batch'
               | 'ignore'
               | 'consent'
-              | 'property'
-              | 'valueConfig'
+              | 'valueType'
               | 'map';
 
             if (path.length === 1) {
@@ -204,12 +203,12 @@ export function MappingEditorTabs({
                 // Complex transformations
                 nodeType = 'map';
               } else {
-                // Unknown property - show type grid
-                nodeType = 'property';
+                // Unknown property - use valueType pane
+                nodeType = 'valueType';
               }
             } else {
-              // Nested properties (depth > 3)
-              nodeType = 'property';
+              // Nested properties (depth > 3) - use valueType pane
+              nodeType = 'valueType';
             }
 
             navigation.openTab(path, nodeType);
@@ -267,7 +266,7 @@ export function MappingEditorTabs({
                 // Navigate to parent
                 navigation.openTab(
                   path.slice(0, -1),
-                  path.length === 3 ? 'rule' : 'property',
+                  path.length === 3 ? 'rule' : 'valueType',
                 );
               }
             }
@@ -319,7 +318,7 @@ export function MappingEditorTabs({
               onToggle={treeState.togglePath}
               onNavigate={(path) => {
                 // Determine node type from path
-                let nodeType: 'entity' | 'rule' | 'property' | 'valueConfig';
+                let nodeType: 'entity' | 'rule' | 'valueType' | 'valueConfig';
                 if (path.length === 1) {
                   // entity only = entity pane
                   nodeType = 'entity';
@@ -330,8 +329,8 @@ export function MappingEditorTabs({
                   path.length === 3 ||
                   (path.length > 3 && path[path.length - 1] !== 'map')
                 ) {
-                  // First property level or nested properties = show type grid
-                  nodeType = 'property';
+                  // First property level or nested properties = use valueType pane
+                  nodeType = 'valueType';
                 } else {
                   // Deep nested or specific transformations
                   nodeType = 'valueConfig';

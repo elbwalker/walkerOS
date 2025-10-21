@@ -1,13 +1,13 @@
 import { MappingEntityPane } from './mapping-entity-pane';
 import { MappingRuleOverview } from './mapping-rule-overview';
 import { MappingValueConfigPaneView } from './mapping-value-config-pane-view';
+import { MappingValueTypePaneView } from './mapping-value-type-pane-view';
 import { MappingKeyPaneView } from './mapping-key-pane-view';
 import { MappingConditionPaneView } from './mapping-condition-pane-view';
 import { MappingNamePaneView } from './mapping-name-pane-view';
 import { MappingBatchPaneView } from './mapping-batch-pane-view';
 import { MappingIgnorePaneView } from './mapping-ignore-pane-view';
 import { MappingConsentPaneView } from './mapping-consent-pane-view';
-import { MappingTypeGrid } from './mapping-type-grid';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { MappingState } from '../../hooks/useMappingState';
 import type { MappingNavigation } from '../../hooks/useMappingNavigation';
@@ -25,8 +25,8 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * - 'batch' → MappingBatchPaneView - Number input for batch size configuration
  * - 'ignore' → MappingIgnorePaneView - Boolean toggle to ignore rule
  * - 'consent' → MappingConsentPaneView - Consent state tiles with discovery
- * - 'property' → MappingTypeGrid - Shows type selection grid
  * - 'valueConfig' → MappingValueConfigPaneView - Full ValueConfig editor
+ * - 'valueType' → MappingValueTypePaneView - String or ValueConfig editor (replaces old property/type-grid)
  * - 'key' → MappingKeyPaneView - Focused key property editor
  * - 'condition' → MappingConditionPaneView - Condition function editor
  * - 'map' → (Coming soon) - Map transformation editor
@@ -149,8 +149,18 @@ export function MappingPane({
         />
       );
 
+    case 'valueType':
+      // MappingValueTypePaneView for string | ValueConfig
+      return (
+        <MappingValueTypePaneView
+          path={path}
+          mappingState={mappingState}
+          navigation={navigation}
+          className={className}
+        />
+      );
+
     // All other cases use the standard pane wrapper with scrolling content
-    case 'property':
     case 'valueConfig':
     case 'map':
     case 'loop':
@@ -161,16 +171,7 @@ export function MappingPane({
     default: {
       let content: React.ReactNode;
 
-      if (nodeType === 'property') {
-        content = (
-          <MappingTypeGrid
-            path={path}
-            mappingState={mappingState}
-            onSelectType={handleSelectType}
-            className=""
-          />
-        );
-      } else if (nodeType === 'valueConfig') {
+      if (nodeType === 'valueConfig') {
         content = (
           <MappingValueConfigPaneView
             path={path}

@@ -1,5 +1,5 @@
-// Rule Tile - Reusable component for rule configuration options
-.elb-rule-tile {
+// Config Tile - Reusable component for configuration options (rules, valueConfig, etc.)
+.elb-config-tile {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -93,4 +93,9 @@
     line-height: 1.4;
     flex: 1;
   }
+}
+
+// Legacy class name for backward compatibility
+.elb-rule-tile {
+  @extend .elb-config-tile;
 }

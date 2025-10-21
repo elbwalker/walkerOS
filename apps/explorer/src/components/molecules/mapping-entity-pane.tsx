@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { MappingState } from '../../hooks/useMappingState';
 import type { MappingNavigation } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
+import { MappingInput } from '../atoms/mapping-input';
 
 /**
  * Entity Pane - Shows actions for an entity
@@ -25,7 +26,6 @@ export function MappingEntityPane({
 }: MappingEntityPaneProps) {
   const [newActionName, setNewActionName] = useState('');
   const [actionExists, setActionExists] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const entity = path[0];
   const entityConfig = mappingState.actions.getValue([entity]) as
@@ -46,8 +46,19 @@ export function MappingEntityPane({
     }
   }, [newActionName, actions]);
 
-  const handleActionInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewActionName(e.target.value);
+  const handleActionInput = (value: string) => {
+    setNewActionName(value);
+  };
+
+  const handleActionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleActionSubmit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setNewActionName('');
+      setActionExists(false);
+    }
   };
 
   const handleActionSubmit = () => {
@@ -66,17 +77,6 @@ export function MappingEntityPane({
       mappingState.actions.createRule(entity, newActionName.trim(), {});
       navigation.openTab([entity, newActionName.trim()], 'rule');
       setNewActionName('');
-    }
-  };
-
-  const handleActionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleActionSubmit();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      setNewActionName('');
-      setActionExists(false);
     }
   };
 
@@ -101,15 +101,13 @@ export function MappingEntityPane({
         <div className="elb-mapping-entity-pane-body">
           {/* New action input */}
           <div className="elb-mapping-entity-pane-new-action">
-            <input
-              ref={inputRef}
-              type="text"
-              className={`elb-mapping-entity-pane-input ${actionExists ? 'is-error' : ''}`}
+            <MappingInput
               value={newActionName}
               onChange={handleActionInput}
               onKeyDown={handleActionKeyDown}
               onBlur={handleActionBlur}
               placeholder="Type action name to create or select..."
+              className={actionExists ? 'is-error' : ''}
             />
             {actionExists && (
               <span className="elb-mapping-entity-pane-hint">

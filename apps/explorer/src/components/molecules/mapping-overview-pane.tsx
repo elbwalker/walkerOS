@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { MappingState } from '../../hooks/useMappingState';
 import type { MappingNavigation } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
+import { MappingInput } from '../atoms/mapping-input';
 
 /**
  * Overview Pane - Shows all entity-action pairs as tiles
@@ -22,7 +23,6 @@ export function MappingOverviewPane({
   const config = mappingState.config;
   const [newEntityName, setNewEntityName] = useState('');
   const [entityExists, setEntityExists] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // Build list of all entity-action pairs
   const rules: Array<{ entity: string; action: string }> = [];
@@ -98,15 +98,13 @@ export function MappingOverviewPane({
         />
 
         <div className="elb-mapping-overview-input-section">
-          <input
-            ref={inputRef}
-            type="text"
-            className={`elb-mapping-overview-input ${entityExists ? 'is-existing' : ''}`}
-            placeholder="Type entity name to create or select..."
+          <MappingInput
             value={newEntityName}
-            onChange={(e) => handleEntityInputChange(e.target.value)}
+            onChange={handleEntityInputChange}
             onKeyDown={handleEntityKeyDown}
             onBlur={handleEntityBlur}
+            placeholder="Type entity name to create or select..."
+            className={entityExists ? 'is-existing' : ''}
           />
         </div>
 

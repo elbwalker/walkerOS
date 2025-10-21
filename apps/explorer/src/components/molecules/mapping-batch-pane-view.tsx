@@ -1,6 +1,7 @@
 import React from 'react';
 import type { UseMappingState } from '../../hooks/useMappingState';
 import { PaneHeader } from '../atoms/pane-header';
+import { MappingInput } from '../atoms/mapping-input';
 
 export interface MappingBatchPaneViewProps {
   path: string[];
@@ -43,14 +44,10 @@ export function MappingBatchPaneView({
           description="Specify the batch size in milliseconds (time-based) or event count."
         />
         <div className="elb-mapping-pane-field">
-          <input
-            id="batch-input"
+          <MappingInput
             type="number"
-            min="1"
-            step="1"
-            className="elb-mapping-batch-input"
-            value={batchValue}
-            onChange={(e) => handleChange(e.target.value)}
+            value={String(batchValue)}
+            onChange={handleChange}
             placeholder="e.g., 200, 1000, 5000"
           />
           <div className="elb-mapping-pane-hint">

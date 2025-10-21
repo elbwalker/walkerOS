@@ -1,6 +1,7 @@
 import React from 'react';
 import type { UseMappingState } from '../../hooks/useMappingState';
 import { PaneHeader } from '../atoms/pane-header';
+import { MappingInput } from '../atoms/mapping-input';
 
 export interface MappingNamePaneViewProps {
   path: string[];
@@ -40,12 +41,9 @@ export function MappingNamePaneView({
           description="Override the destination event name with a custom string"
         />
         <div className="elb-mapping-pane-field">
-          <input
-            id="name-input"
-            type="text"
-            className="elb-mapping-name-input"
+          <MappingInput
             value={nameValue}
-            onChange={(e) => handleChange(e.target.value)}
+            onChange={handleChange}
             placeholder="e.g., page_view, product_click, order_complete"
           />
           <div className="elb-mapping-pane-hint">

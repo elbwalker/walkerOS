@@ -1,0 +1,73 @@
+// MappingInput - Standardized input for all mapping panes
+.elb-mapping-input {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  color: var(--color-text-input);
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--bg-input-hover);
+  }
+
+  &:focus {
+    border-color: var(--border-input-focus);
+    background: var(--bg-input);
+  }
+
+  &::placeholder {
+    color: var(--color-text-placeholder);
+    opacity: 0.6;
+  }
+
+  &.is-disabled,
+  &:disabled {
+    background: var(--bg-header);
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+    border-color: var(--border-box);
+  }
+
+  // Convertible state (e.g., ValueConfig with only 'key' - clickable to convert back)
+  &.is-convertible {
+    cursor: pointer;
+    background: rgba(59, 130, 246, 0.05);
+    border-color: var(--color-primary);
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.1);
+    }
+  }
+
+  // Existing entity/action warning state
+  &.is-existing {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+  }
+
+  // Error state for inputs
+  &.is-error {
+    border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.05);
+  }
+
+  // Number input specific styles
+  &[type='number'] {
+    // Remove spinner buttons in webkit browsers
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    // Remove spinner in Firefox
+    -moz-appearance: textfield;
+  }
+}
