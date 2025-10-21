@@ -8,6 +8,7 @@ import type { BreadcrumbSegment } from '../utils/mapping-path';
 export type NodeType =
   | 'entity'
   | 'rule'
+  | 'name'
   | 'property'
   | 'valueConfig'
   | 'map'

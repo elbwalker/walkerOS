@@ -164,24 +164,45 @@ export function MappingEditorTabs({
           visible={navigation.treeVisible}
           onToggle={treeState.togglePath}
           onNavigate={(path) => {
-            // Determine node type from path
-            let nodeType: 'entity' | 'rule' | 'property' | 'valueConfig';
+            // Determine node type from path semantically
+            let nodeType:
+              | 'entity'
+              | 'rule'
+              | 'name'
+              | 'property'
+              | 'valueConfig'
+              | 'map';
+
             if (path.length === 1) {
               // entity only = entity pane
               nodeType = 'entity';
             } else if (path.length === 2) {
               // entity + action = rule overview
               nodeType = 'rule';
-            } else if (
-              path.length === 3 ||
-              (path.length > 3 && path[path.length - 1] !== 'map')
-            ) {
-              // First property level or nested properties = show type grid
-              nodeType = 'property';
+            } else if (path.length === 3) {
+              // Third level - recognize known rule properties
+              const propertyName = path[2];
+
+              if (propertyName === 'name') {
+                // name is a simple string
+                nodeType = 'name';
+              } else if (
+                ['data', 'consent', 'policy', 'settings'].includes(propertyName)
+              ) {
+                // Complex transformations
+                nodeType = 'map';
+              } else if (['batch', 'ignore'].includes(propertyName)) {
+                // Simple boolean values
+                nodeType = 'valueConfig';
+              } else {
+                // Unknown property - show type grid
+                nodeType = 'property';
+              }
             } else {
-              // Deep nested or specific transformations
-              nodeType = 'valueConfig';
+              // Nested properties (depth > 3)
+              nodeType = 'property';
             }
+
             navigation.openTab(path, nodeType);
           }}
           onAddAction={(entity, action) => {

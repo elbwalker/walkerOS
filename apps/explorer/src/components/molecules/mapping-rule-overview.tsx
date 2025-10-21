@@ -162,9 +162,14 @@ export function MappingRuleOverview({
   const handleTileClick = (key: string) => {
     const complexProperties = ['data', 'consent', 'policy', 'settings'];
 
-    if (complexProperties.includes(key)) {
+    if (key === 'name') {
+      // Name is a simple string - use dedicated name pane
+      navigation.openTab([...path, key], 'name');
+    } else if (complexProperties.includes(key)) {
+      // Complex transformations - show coming soon
       navigation.openTab([...path, key], 'map');
     } else {
+      // batch, ignore - use value config
       navigation.openTab([...path, key], 'valueConfig');
     }
   };

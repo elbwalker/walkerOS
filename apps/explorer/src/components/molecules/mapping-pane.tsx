@@ -3,6 +3,7 @@ import { MappingRuleOverview } from './mapping-rule-overview';
 import { MappingValueConfigPaneView } from './mapping-value-config-pane-view';
 import { MappingKeyPaneView } from './mapping-key-pane-view';
 import { MappingConditionPaneView } from './mapping-condition-pane-view';
+import { MappingNamePaneView } from './mapping-name-pane-view';
 import { MappingTypeGrid } from './mapping-type-grid';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { MappingState } from '../../hooks/useMappingState';
@@ -17,6 +18,7 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * Supported node types:
  * - 'entity' → MappingEntityPane - Shows list of actions
  * - 'rule' → MappingRuleOverview - Shows rule properties grid
+ * - 'name' → MappingNamePaneView - Simple string input for event name override
  * - 'property' → MappingTypeGrid - Shows type selection grid
  * - 'valueConfig' → MappingValueConfigPaneView - Full ValueConfig editor
  * - 'key' → MappingKeyPaneView - Focused key property editor
@@ -78,6 +80,16 @@ export function MappingPane({
           path={path}
           mappingState={mappingState}
           navigation={navigation}
+          className={className}
+        />
+      );
+
+    case 'name':
+      // MappingNamePaneView uses standard .elb-mapping-pane structure
+      return (
+        <MappingNamePaneView
+          path={path}
+          mappingState={mappingState}
           className={className}
         />
       );
