@@ -1,0 +1,94 @@
+// Rule Section - Content component (NO padding - parent handles it)
+.elb-mapping-rule-section {
+  & + & {
+    margin-top: 32px; // Space between sections only
+  }
+
+  &-header {
+    margin-bottom: 16px;
+  }
+
+  &-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 4px;
+  }
+
+  &-description {
+    font-size: 13px;
+    color: var(--color-text-muted);
+  }
+
+  &-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+  }
+}
+
+// Map Overview - Lean Tabs
+.elb-mapping-map-overview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-box);
+}
+
+.elb-mapping-key-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-box);
+  overflow-x: auto;
+}
+
+.elb-mapping-key-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--bg-box);
+    border-color: var(--border-box);
+  }
+
+  &.is-active {
+    background: var(--bg-box);
+    border-color: var(--color-primary);
+    color: var(--color-text);
+  }
+
+  &-close {
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--color-text-muted);
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: var(--color-button-danger);
+    }
+  }
+}
+
+.elb-mapping-key-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}

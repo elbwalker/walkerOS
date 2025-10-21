@@ -1,0 +1,37 @@
+@use '../../foundation/responsive' as *;
+
+.elb-mapping-grid {
+  display: grid;
+  align-items: center;
+  width: 100%;
+
+  &-row {
+    grid-template-columns: auto;
+  }
+
+  &-cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  &-gap-8 {
+    gap: 8px;
+  }
+
+  &-gap-12 {
+    gap: 12px;
+  }
+
+  &-gap-16 {
+    gap: 16px;
+  }
+
+  &-gap-20 {
+    gap: 20px;
+  }
+
+  @media (max-width: 767px) {
+    &-responsive {
+      grid-template-columns: 1fr !important;
+    }
+  }
+}

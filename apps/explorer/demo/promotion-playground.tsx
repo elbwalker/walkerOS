@@ -1,6 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { PromotionPlayground } from '../src/components/demos/PromotionPlayground';
+import '../src/styles/index.scss';
+import './demo.css';
 
 function App() {
   const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
@@ -22,67 +24,34 @@ function App() {
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem',
-        }}
-      >
+    <div className="demo-container">
+      <div className="demo-header">
         <div>
-          <h1 style={{ margin: 0 }}>walkerOS Promotion Playground</h1>
-          <p
-            style={{
-              margin: '0.5rem 0 0 0',
-              color: theme === 'dark' ? '#aaa' : '#666',
-            }}
-          >
+          <h1 className="demo-title">walkerOS Promotion Playground</h1>
+          <p className="demo-subtitle">
             Interactive demo showing the complete walkerOS flow: HTML → Preview
             → Events → Mapping → Destination
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <a href="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <div className="demo-header-actions">
+          <a href="/" className="demo-header-link">
             Home
           </a>
-          <a
-            href="/mapping.html"
-            style={{ textDecoration: 'none', color: 'inherit' }}
-          >
+          <a href="/mapping.html" className="demo-header-link">
             Mapping
           </a>
-          <a
-            href="/destination.html"
-            style={{ textDecoration: 'none', color: 'inherit' }}
-          >
+          <a href="/destination.html" className="demo-header-link">
             Destination
           </a>
-          <button
-            onClick={toggleTheme}
-            style={{
-              padding: '8px 16px',
-              cursor: 'pointer',
-              borderRadius: '6px',
-              border: '1px solid #ccc',
-              background: theme === 'dark' ? '#333' : '#fff',
-              color: theme === 'dark' ? '#fff' : '#000',
-            }}
-          >
+          <button onClick={toggleTheme} className="demo-theme-toggle">
             {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
           </button>
         </div>
       </div>
 
-      <section style={{ marginBottom: '2rem' }}>
+      <section className="demo-section">
         <h2>How to Use</h2>
-        <ul
-          style={{
-            color: theme === 'dark' ? '#ccc' : '#666',
-            lineHeight: '1.6',
-          }}
-        >
+        <ul className="demo-instruction-list">
           <li>
             <strong>Edit HTML:</strong> Modify the HTML code with walkerOS data
             attributes (data-elb, data-elbaction, etc.)

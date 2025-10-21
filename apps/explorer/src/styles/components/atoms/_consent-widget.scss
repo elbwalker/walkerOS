@@ -1,0 +1,69 @@
+.elb-consent-add-button,
+.elb-consent-add-row-button {
+  width: 100%;
+  justify-content: center;
+}
+
+.elb-consent-add-row-button {
+  margin-top: 8px;
+}
+
+.elb-consent-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.elb-consent-row {
+  display: grid;
+  grid-template-columns: 200px auto 1fr auto;
+  column-gap: 12px;
+  align-items: center;
+
+  .elb-icon-button {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  > :last-child {
+    grid-column: 4;
+  }
+}
+
+.elb-consent-checkbox-wrapper {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.elb-consent-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-text-input);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  outline: none;
+  transition: all 0.15s;
+  box-sizing: border-box;
+
+  &:hover {
+    background: var(--bg-input-hover);
+  }
+
+  &:focus {
+    background: var(--bg-input);
+    border-color: var(--color-button-primary);
+  }
+}
+
+.elb-consent-label {
+  font-size: var(--font-size-base);
+  color: var(--color-text-label);
+  user-select: none;
+}

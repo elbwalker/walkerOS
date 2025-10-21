@@ -1,0 +1,96 @@
+// Rule Tile - Reusable component for rule configuration options
+.elb-rule-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: var(--bg-header);
+  border: 1px solid var(--border-box);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  min-height: 140px;
+
+  &:hover {
+    border-color: var(--color-text);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  &.is-enabled {
+    background: var(--bg-box);
+    border-color: var(--color-text);
+  }
+
+  // Top section - Label and status
+  &-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  &-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  &-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 20px;
+  }
+
+  &-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &.is-enabled {
+      background: var(--color-status-enabled);
+    }
+
+    &.is-disabled {
+      background: var(--color-status-disabled);
+    }
+  }
+
+  &-status-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    overflow: hidden;
+    position: relative;
+    max-width: 100%;
+
+    &.is-long {
+      // Fade effect for long text
+      mask-image: linear-gradient(
+        to right,
+        black 0%,
+        black 70%,
+        transparent 100%
+      );
+      -webkit-mask-image: linear-gradient(
+        to right,
+        black 0%,
+        black 70%,
+        transparent 100%
+      );
+    }
+  }
+
+  // Middle section - Description
+  &-description {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+    flex: 1;
+  }
+}

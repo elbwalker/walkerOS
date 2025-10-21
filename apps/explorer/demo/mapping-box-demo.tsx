@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { MappingBox } from '../src/components/organisms/mapping-box';
-import '../src/styles/index.css';
+import '../src/styles/index.scss';
 import './demo.css';
 
 // GA4 mapping example from packages/web/destinations/gtag/src/examples/mapping.ts

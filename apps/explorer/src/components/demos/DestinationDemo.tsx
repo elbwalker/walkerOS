@@ -9,9 +9,6 @@ import { startFlow } from '@walkeros/collector';
 import { CodeBox } from '../organisms/code-box';
 import { Grid } from '../atoms/grid';
 
-// Auto-import CSS
-import '../../styles/layout.css';
-
 export interface DestinationDemoProps {
   destination: Destination.Instance;
   event: WalkerOS.PartialEvent;

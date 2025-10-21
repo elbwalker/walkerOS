@@ -1,0 +1,49 @@
+.elb-collapsible {
+  padding: 12px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  background: var(--bg-input);
+
+  &-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-family-base);
+    transition: all 0.15s;
+    user-select: none;
+
+    svg {
+      flex-shrink: 0;
+      color: var(--color-text-label);
+    }
+  }
+
+  &-label {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+
+    .elb-rjsf-label {
+      font-size: var(--font-size-base);
+      color: var(--color-text-label);
+      font-weight: var(--font-weight-semibold);
+      line-height: 1.4;
+    }
+  }
+
+  &-description {
+    font-size: calc(var(--font-size-base) - 1px);
+    color: var(--color-text-muted);
+    line-height: 1.4;
+  }
+
+  &-content {
+    margin-top: 12px;
+  }
+}

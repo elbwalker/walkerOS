@@ -2,9 +2,6 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { CodeBox } from '../organisms/code-box';
 import { Grid } from '../atoms/grid';
 
-// Auto-import CSS
-import '../../styles/layout.css';
-
 // NOTE: Monaco Editor configuration (workers, etc.) must be handled by the consuming application.
 // See apps/explorer/demo/main.tsx for an example with Vite
 

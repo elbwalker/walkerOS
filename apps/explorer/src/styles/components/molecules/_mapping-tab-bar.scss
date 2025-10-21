@@ -1,0 +1,32 @@
+.elb-mapping-tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border-box);
+  background: var(--bg-header);
+  overflow: hidden;
+
+  &-scroll {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    padding-bottom: 2px;
+
+    &::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: var(--bg-header);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--border-box);
+      border-radius: 3px;
+
+      &:hover {
+        background: var(--border-box);
+      }
+    }
+  }
+}

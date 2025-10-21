@@ -62,7 +62,7 @@ export function MappingPane({
   // Route to appropriate pane based on node type
   switch (nodeType) {
     case 'entity':
-      // Show entity pane with action list
+      // MappingEntityPane has its own .elb-mapping-entity-pane structure
       return (
         <MappingEntityPane
           path={path}
@@ -73,7 +73,7 @@ export function MappingPane({
       );
 
     case 'rule':
-      // Show clean overview grid
+      // MappingRuleOverview uses standard .elb-mapping-pane structure
       return (
         <MappingRuleOverview
           path={path}
@@ -83,36 +83,10 @@ export function MappingPane({
         />
       );
 
-    case 'property':
-      // Show type selection grid for properties
-      return (
-        <div className={`elb-mapping-pane ${className}`}>
-          <MappingTypeGrid
-            path={path}
-            mappingState={mappingState}
-            onSelectType={handleSelectType}
-            className=""
-          />
-        </div>
-      );
-
-    case 'valueConfig':
-      // Simple value editor (no header, just the editor)
-      return (
-        <div className={`elb-mapping-pane ${className}`}>
-          <MappingValueConfigPaneView
-            path={path}
-            mappingState={mappingState}
-            navigation={navigation}
-            className=""
-          />
-        </div>
-      );
-
     case 'map':
     case 'loop':
     case 'set':
-      // Show transformation tabs (map/loop/fn/set)
+      // MappingTransformationTabs has its own structure
       return (
         <MappingTransformationTabs
           path={path}
@@ -122,7 +96,7 @@ export function MappingPane({
       );
 
     case 'key':
-      // Show focused key editor
+      // MappingKeyPaneView has its own structure
       return (
         <MappingKeyPaneView
           path={path}
@@ -132,7 +106,7 @@ export function MappingPane({
       );
 
     case 'condition':
-      // Show focused condition editor
+      // MappingConditionPaneView has its own structure
       return (
         <MappingConditionPaneView
           path={path}
@@ -141,26 +115,59 @@ export function MappingPane({
         />
       );
 
+    // All other cases use the standard pane wrapper with scrolling content
+    case 'property':
+    case 'valueConfig':
     case 'value':
     case 'fn':
     case 'validate':
     case 'consent':
-      // TODO: Create dedicated pane views for each property type
-      return (
-        <div className={`elb-mapping-pane ${className}`}>
+    default: {
+      let content: React.ReactNode;
+
+      if (nodeType === 'property') {
+        content = (
+          <MappingTypeGrid
+            path={path}
+            mappingState={mappingState}
+            onSelectType={handleSelectType}
+            className=""
+          />
+        );
+      } else if (nodeType === 'valueConfig') {
+        content = (
+          <MappingValueConfigPaneView
+            path={path}
+            mappingState={mappingState}
+            navigation={navigation}
+            className=""
+          />
+        );
+      } else if (
+        nodeType === 'value' ||
+        nodeType === 'fn' ||
+        nodeType === 'validate' ||
+        nodeType === 'consent'
+      ) {
+        content = (
           <div className="elb-mapping-pane-info">
             {nodeType} editor - Coming soon
           </div>
-        </div>
-      );
-
-    default:
-      return (
-        <div className={`elb-mapping-pane ${className}`}>
+        );
+      } else {
+        content = (
           <div className="elb-mapping-pane-error">
             Unknown node type: {nodeType}
           </div>
+        );
+      }
+
+      // Standard pane structure with scrollable content for all remaining types
+      return (
+        <div className={`elb-mapping-pane ${className}`}>
+          <div className="elb-mapping-pane-content">{content}</div>
         </div>
       );
+    }
   }
 }

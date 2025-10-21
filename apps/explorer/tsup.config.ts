@@ -1,4 +1,6 @@
 import { defineConfig } from '@walkeros/tsup';
+import * as sass from 'sass';
+import * as path from 'path';
 
 export default defineConfig([
   // Build main module
@@ -17,10 +19,26 @@ export default defineConfig([
     },
   },
 
-  // Build CSS separately
+  // Build SCSS separately
   {
-    entry: { styles: 'src/styles/index.css' },
+    entry: { styles: 'src/styles/index.scss' },
     outDir: 'dist',
     clean: false, // Don't clean between builds
+    esbuildPlugins: [
+      {
+        name: 'sass',
+        setup(build) {
+          build.onLoad({ filter: /\.scss$/ }, async (args) => {
+            const result = sass.compile(args.path, {
+              loadPaths: [path.dirname(args.path)],
+            });
+            return {
+              contents: result.css,
+              loader: 'css',
+            };
+          });
+        },
+      },
+    ],
   },
 ]);

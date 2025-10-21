@@ -1,0 +1,57 @@
+// walkerOS Explorer - SCSS Architecture
+// Single entry point for all styles
+
+// Theme (always first)
+@use './theme/tokens';
+@use './theme/variables';
+@use './theme/dark';
+
+// Foundation
+@use './foundation/reset';
+@use './foundation/typography';
+@use './foundation/layout';
+@use './foundation/spacing';
+@use './foundation/responsive';
+@use './foundation/grid';
+
+// Utilities
+@use './utilities/scrollbar';
+@use './utilities/helpers';
+
+// Components - Atoms
+@use './components/atoms/button';
+@use './components/atoms/toggle';
+@use './components/atoms/icon-button';
+@use './components/atoms/field-header';
+@use './components/atoms/mapping-grid';
+@use './components/atoms/panel-hints';
+@use './components/atoms/checkbox-collapsible';
+@use './components/atoms/mapping-confirm-button';
+@use './components/atoms/consent-widget';
+@use './components/atoms/data-widget';
+@use './components/atoms/value-widget';
+@use './components/atoms/rule-tile';
+
+// Components - Molecules
+@use './components/molecules/auto-select';
+@use './components/molecules/mapping-editor';
+@use './components/molecules/mapping-map';
+@use './components/molecules/mapping-set';
+@use './components/molecules/mapping-loop';
+@use './components/molecules/mapping-breadcrumb';
+@use './components/molecules/mapping-tab';
+@use './components/molecules/mapping-tab-bar';
+@use './components/molecules/mapping-navigation-header';
+@use './components/molecules/rjsf-form';
+@use './components/molecules/explorer-controls';
+@use './components/molecules/collapsible';
+@use './components/molecules/type-selector';
+@use './components/molecules/property-panel';
+
+// Components - Organisms
+@use './components/organisms/box';
+@use './components/organisms/code-box';
+@use './components/organisms/mapping-panes';
+@use './components/organisms/tree-sidebar';
+@use './components/organisms/mapping-editor-tabs';
+@use './components/organisms/mapping-overviews';

@@ -118,3 +118,37 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
 }
+
+.demo-header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.demo-header-link {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s;
+}
+
+.demo-header-link:hover {
+  color: var(--color-button-primary);
+}
+
+.demo-instruction-list {
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.demo-feature-list {
+  color: var(--color-text-muted);
+  line-height: 1.8;
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.demo-feature-list strong {
+  color: var(--color-text);
+}

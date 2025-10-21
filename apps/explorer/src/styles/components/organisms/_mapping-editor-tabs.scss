@@ -1,0 +1,81 @@
+// Mapping Editor Tabs - Main editor container with tabs
+.elb-mapping-editor-tabs {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  background: var(--bg-box);
+  position: relative;
+  overflow: hidden;
+}
+
+.elb-mapping-editor-sidebar {
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-box);
+}
+
+.elb-mapping-editor-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.elb-mapping-editor-content {
+  flex: 1;
+  min-height: 0;
+  background: var(--bg-box);
+  // Each child pane handles its own scrolling independently
+}
+
+.elb-mapping-editor-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px 20px;
+
+  &-content {
+    text-align: center;
+    max-width: 500px;
+
+    h3 {
+      font-size: 18px;
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text);
+      margin: 0 0 12px 0;
+    }
+
+    p {
+      font-size: var(--font-size-base);
+      color: var(--color-text-muted);
+      margin: 0 0 20px 0;
+      line-height: 1.5;
+    }
+  }
+
+  &-hint {
+    padding: 12px 16px;
+    background: var(--bg-header);
+    border: 1px solid var(--border-box);
+    border-radius: var(--radius-button);
+    font-size: var(--font-size-label);
+    color: var(--color-text);
+    text-align: left;
+
+    strong {
+      color: var(--color-button-primary);
+      font-weight: var(--font-weight-semibold);
+    }
+  }
+}
+
+.elb-mapping-editor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}

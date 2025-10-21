@@ -10,7 +10,6 @@ import {
   createGtagDestination,
   type DestinationCode,
 } from '../../helpers/destinations';
-import '../../styles/layout.css';
 
 export interface PromotionPlaygroundProps {
   initialHtml?: string;

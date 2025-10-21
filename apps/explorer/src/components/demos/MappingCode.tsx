@@ -4,9 +4,6 @@ import type { Mapping, WalkerOS } from '@walkeros/core';
 import { CodeBox } from '../organisms/code-box';
 import { Grid } from '../atoms/grid';
 
-// Auto-import CSS
-import '../../styles/layout.css';
-
 export interface MappingCodeProps {
   input: string;
   config?: string;

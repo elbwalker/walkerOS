@@ -1,1 +1,10 @@
-@import './layout.css';
+/* walkerOS Explorer - CSS Entry Point */
+/* Phase 6 Complete: Full SCSS migration complete - using modular SCSS architecture */
+
+/*
+ * For consumers: Import the compiled CSS from the package:
+ *   import '@walkeros/explorer/styles.css'
+ *
+ * For development: This file is used by Vite dev server to load SCSS on the fly
+ * The actual styles are in index.scss which compiles to dist/styles.css
+ */

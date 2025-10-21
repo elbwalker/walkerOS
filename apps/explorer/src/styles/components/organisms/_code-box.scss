@@ -1,0 +1,87 @@
+.elb-preview-content {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.elb-preview-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.elb-highlight-buttons {
+  display: flex;
+  flex-shrink: 0;
+  background: var(--highlight-background);
+
+  button {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: var(--font-size-highlight-button);
+    font-weight: 500;
+    color: var(--highlight-text);
+    border: 0;
+    background: transparent;
+    transition: all 0.2s ease;
+    position: relative;
+    border-radius: var(--radius-highlight-button);
+    cursor: pointer;
+
+    &:hover {
+      color: white;
+      background: var(--highlight-hover);
+    }
+
+    &:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 20%;
+      height: 60%;
+      width: 1px;
+      background: var(--highlight-separator);
+    }
+
+    &.highlight-globals,
+    &.btn-globals.highlight-globals {
+      color: var(--highlight-globals);
+    }
+
+    &.highlight-context,
+    &.btn-context.highlight-context {
+      color: var(--highlight-context);
+    }
+
+    &.highlight-entity,
+    &.btn-entity.highlight-entity {
+      color: var(--highlight-entity);
+    }
+
+    &.highlight-property,
+    &.btn-property.highlight-property {
+      color: var(--highlight-property);
+    }
+
+    &.highlight-action,
+    &.btn-action.highlight-action {
+      color: var(--highlight-action);
+    }
+  }
+}
+
+.token.attr-name {
+  color: white !important;
+
+  &[data-elb],
+  &[data-elbaction],
+  &[data-elbglobals],
+  &[data-elbcontext],
+  &[data-elbproperty] {
+    color: var(--highlight-property) !important;
+  }
+}

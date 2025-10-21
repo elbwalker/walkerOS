@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { MappingCode } from '../src/components/demos/MappingCode';
 import { MappingDemo } from '../src/components/demos/MappingDemo';
 import { getMappingEvent, getMappingValue, createEvent } from '@walkeros/core';
-import '../src/styles/index.css';
+import '../src/styles/index.scss';
 import './demo.css';
 
 async function transformMapping(

@@ -1,0 +1,27 @@
+@use '../config' as *;
+
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == 'compact' {
+    @media (max-width: map-get($breakpoints, 'compact')) {
+      @content;
+    }
+  } @else if $breakpoint == 'medium' {
+    @media (min-width: map-get($breakpoints, 'medium')) and (max-width: 1199px) {
+      @content;
+    }
+  } @else if $breakpoint == 'wide' {
+    @media (min-width: map-get($breakpoints, 'wide')) {
+      @content;
+    }
+  }
+}
+
+@mixin responsive-columns($mobile: 1fr, $desktop: 1fr 1fr) {
+  display: grid;
+  grid-template-columns: $mobile;
+  gap: 20px;
+
+  @include respond-to('wide') {
+    grid-template-columns: $desktop;
+  }
+}
