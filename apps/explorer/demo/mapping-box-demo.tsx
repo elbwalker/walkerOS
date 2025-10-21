@@ -104,26 +104,6 @@ const ga4Mapping = {
   },
 };
 
-// Simpler mapping for read-only example
-const simplifiedMapping = {
-  page: {
-    view: {
-      name: 'page_view',
-    },
-  },
-  product: {
-    view: {
-      name: 'view_item',
-      data: {
-        map: {
-          item_id: 'data.id',
-          item_name: 'data.name',
-        },
-      },
-    },
-  },
-};
-
 function App() {
   const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
     if (
@@ -151,7 +131,7 @@ function App() {
         <div>
           <h1 className="demo-title">MappingBox Demo</h1>
           <p className="demo-subtitle">
-            Interactive mapping editor with autocomplete dropdown
+            New tabbed editor with tree navigation vs. original dropdown editor
           </p>
         </div>
         <button
@@ -164,58 +144,67 @@ function App() {
       </div>
 
       <div className="demo-section">
-        <h2>Editable GA4 Mapping</h2>
+        <h2>GA4 Mapping - New Layout</h2>
         <p className="demo-section-description">
-          Full GA4 mapping configuration with editor and code toggle. Try
-          selecting different rules from the dropdown!
+          New tabbed editor with tree sidebar, breadcrumb navigation, and
+          pane-based editing
         </p>
         <MappingBox
           mapping={editableMapping}
           onMappingChange={setEditableMapping}
-          label="GA4 E-Commerce Mapping"
+          label="GA4 E-Commerce Mapping (New Layout)"
+          initialTab="editor"
+          resizable
+          useNewEditor
+        />
+      </div>
+
+      <div className="demo-section">
+        <h2>GA4 Mapping - Old Layout (For Comparison)</h2>
+        <p className="demo-section-description">
+          Original autocomplete dropdown editor for comparison
+        </p>
+        <MappingBox
+          mapping={editableMapping}
+          onMappingChange={setEditableMapping}
+          label="GA4 E-Commerce Mapping (Old Layout)"
           initialTab="editor"
           resizable
         />
       </div>
 
       <div className="demo-section">
-        <h2>Read-Only Simplified Mapping</h2>
-        <p className="demo-section-description">
-          Simplified mapping configuration in read-only mode
-        </p>
-        <MappingBox
-          mapping={simplifiedMapping}
-          label="Basic Mapping (Read-only)"
-          initialTab="code"
-        />
-      </div>
-
-      <div className="demo-section">
-        <h2>Features</h2>
+        <h2>New Editor Features</h2>
         <ul className="demo-feature-list">
           <li>
-            <strong>Editor View:</strong> Interactive autocomplete dropdown to
-            select mapping rules
+            <strong>Tree Sidebar:</strong> Hierarchical view of all entities,
+            actions, and rules
           </li>
           <li>
-            <strong>Code View:</strong> Full JSON display with syntax
-            highlighting
+            <strong>Multi-Tab Navigation:</strong> Open multiple rules/values
+            simultaneously with tabs
           </li>
           <li>
-            <strong>Auto-complete:</strong> Filter rules by typing (e.g., type
-            "product" to see all product rules)
+            <strong>Breadcrumb Trail:</strong> Navigate back through nested
+            levels
           </li>
           <li>
-            <strong>Keyboard Navigation:</strong> Use arrow keys, Enter to
-            select, Escape to close
+            <strong>Pane-Based Editing:</strong> Specialized editors for rules,
+            maps, loops, and value configs
           </li>
           <li>
-            <strong>Theme Support:</strong> Automatically adapts to light/dark
-            theme
+            <strong>Type Selector:</strong> Choose value types (key, value, map,
+            loop, function, set)
           </li>
           <li>
-            <strong>Rule Display:</strong> View complete JSON configuration for
-            selected rule
+            <strong>Responsive Layout:</strong> Adapts to compact/medium/wide
+            screens
+          </li>
+          <li>
+            <strong>Theme Support:</strong> Full light/dark theme compatibility
+          </li>
+          <li>
+            <strong>Code View:</strong> Toggle to JSON with syntax highlighting
           </li>
         </ul>
       </div>

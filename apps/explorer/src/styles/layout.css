@@ -135,6 +135,35 @@
   --color-button-danger-text: #ffffff;
 }
 
+/* === SCROLLBAR STYLES === */
+
+/* Global scrollbar styling - clean and consistent, no hover effects */
+.elb-explorer ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.elb-explorer ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.elb-explorer ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.elb-explorer ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='dark'] .elb-explorer ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme='dark'] .elb-explorer ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 /* === BASE STYLES === */
 
 .elb-explorer {
@@ -718,8 +747,8 @@
   color: var(--color-text-label);
   user-select: none;
   line-height: 1.2;
-  margin-bottom: 0;
-  display: inline-block;
+  margin-bottom: 4px;
+  display: block;
 }
 
 .elb-rjsf-required {
@@ -826,7 +855,8 @@
 .elb-rjsf-description {
   font-size: calc(var(--font-size-base) - 1px);
   color: var(--color-text-muted);
-  line-height: 0;
+  line-height: 1.4;
+  margin-bottom: 8px;
 }
 
 .elb-rjsf-help {
@@ -881,7 +911,35 @@
 
 /* Mapping grid - responsive behavior */
 .elb-mapping-grid {
+  display: grid;
+  align-items: center;
   width: 100%;
+}
+
+/* Grid layout variants */
+.elb-mapping-grid-row {
+  grid-template-columns: auto;
+}
+
+.elb-mapping-grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Gap sizes */
+.elb-mapping-grid-gap-8 {
+  gap: 8px;
+}
+
+.elb-mapping-grid-gap-12 {
+  gap: 12px;
+}
+
+.elb-mapping-grid-gap-16 {
+  gap: 16px;
+}
+
+.elb-mapping-grid-gap-20 {
+  gap: 20px;
 }
 
 @media (max-width: 767px) {
@@ -1163,10 +1221,9 @@
 /* === CHECKBOX COLLAPSIBLE === */
 
 .elb-checkbox-collapsible {
-  padding: 12px;
-  border: 1px solid var(--border-input);
-  border-radius: var(--radius-button);
-  background: var(--bg-input);
+  padding: 0;
+  border: none;
+  background: transparent;
 }
 
 .elb-checkbox-collapsible-header {
@@ -1201,6 +1258,7 @@
   font-size: calc(var(--font-size-base) - 1px);
   color: var(--color-text-muted);
   line-height: 1.4;
+  margin-top: 2px;
 }
 
 /* === MAPPING MAP === */
@@ -1472,9 +1530,10 @@
 }
 
 .elb-checkbox-collapsible-content {
-  margin-top: 12px;
-  width: 100%;
-  max-width: 100%;
+  margin-top: 16px;
+  margin-left: 24px;
+  width: calc(100% - 24px);
+  max-width: calc(100% - 24px);
   overflow: hidden;
 }
 
@@ -1558,6 +1617,1676 @@
   border-radius: var(--radius-button);
 }
 
+/* === TAB-BASED MAPPING EDITOR (Phase 2) === */
+
+/* Breadcrumb Navigation */
+.elb-mapping-breadcrumb {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.elb-mapping-breadcrumb-list {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 8px;
+}
+
+.elb-mapping-breadcrumb-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.elb-mapping-breadcrumb-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: normal;
+  font-family: var(--font-family-base);
+  text-decoration: none;
+}
+
+.elb-mapping-breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.elb-mapping-breadcrumb-link.is-root {
+  font-weight: normal;
+}
+
+.elb-mapping-breadcrumb-current {
+  padding: 0;
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.elb-mapping-breadcrumb-separator {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  user-select: none;
+}
+
+/* Tab Component */
+.elb-mapping-tab {
+  display: flex;
+  align-items: center;
+  background: var(--bg-box);
+  border: 1px solid var(--border-box);
+  border-bottom: none;
+  border-radius: var(--radius-button) var(--radius-button) 0 0;
+  margin-right: 2px;
+  overflow: hidden;
+  min-width: 120px;
+  max-width: 200px;
+}
+
+.elb-mapping-tab.is-active {
+  background: var(--bg-button-active);
+  border-bottom: 2px solid var(--color-button-primary);
+  z-index: 1;
+}
+
+.elb-mapping-tab-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-label);
+  font-family: var(--font-family-base);
+  color: var(--color-text-button);
+  text-align: left;
+  transition: color 0.15s ease;
+}
+
+.elb-mapping-tab.is-active .elb-mapping-tab-button {
+  color: var(--color-text-button-active);
+}
+
+.elb-mapping-tab-button:hover {
+  color: var(--color-text-button-hover);
+}
+
+.elb-mapping-tab-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elb-mapping-tab-type {
+  font-size: 10px;
+  padding: 2px 4px;
+  background: var(--bg-button-group);
+  border-radius: 3px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.elb-mapping-tab-close {
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  transition: color 0.15s ease;
+}
+
+.elb-mapping-tab-close:hover {
+  color: var(--color-button-danger);
+}
+
+/* Tab Bar */
+.elb-mapping-tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border-box);
+  background: var(--bg-header);
+  overflow: hidden;
+}
+
+.elb-mapping-tab-bar-scroll {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+
+.elb-mapping-tab-bar-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.elb-mapping-tab-bar-scroll::-webkit-scrollbar-track {
+  background: var(--bg-header);
+}
+
+.elb-mapping-tab-bar-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-box);
+  border-radius: 3px;
+}
+
+.elb-mapping-tab-bar-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--border-box);
+}
+
+/* Navigation Header */
+.elb-mapping-navigation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-box);
+  gap: 12px;
+}
+
+.elb-mapping-navigation-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.elb-mapping-navigation-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.elb-mapping-pane-type {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  padding-left: 6px;
+  opacity: 0.5;
+  text-transform: lowercase;
+}
+
+.elb-mapping-tree-toggle-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-text);
+}
+
+.elb-mapping-tree-toggle-button:hover {
+  background: var(--bg-button-hover);
+}
+
+/* Code Toggle Button */
+.elb-mapping-code-toggle-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 10px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-family-base);
+  font-weight: 500;
+  color: var(--color-text-button);
+  transition: all 0.15s ease;
+}
+
+.elb-mapping-code-toggle-button:hover {
+  background: var(--bg-button-hover);
+  color: var(--color-text-button-hover);
+}
+
+.elb-mapping-code-toggle-button.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.elb-mapping-code-toggle-button.is-active:hover {
+  background: var(--color-button-primary-hover);
+  border-color: var(--color-button-primary-hover);
+}
+
+/* Confirm Button Component */
+.elb-mapping-confirm-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: all 0.15s ease;
+  font-size: 12px;
+  font-family: var(--font-family-base);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.elb-mapping-confirm-button:hover {
+  background: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+}
+
+.elb-mapping-confirm-button svg {
+  display: block;
+}
+
+/* Confirming state */
+.elb-mapping-confirm-button.is-confirming {
+  padding: 0 10px;
+  background: #e74c3c;
+  color: #ffffff;
+  border: 1px solid #c0392b;
+}
+
+.elb-mapping-confirm-button.is-confirming:hover {
+  background: #c0392b;
+  color: #ffffff;
+}
+
+/* Delete button is now just a specific instance of confirm button */
+.elb-mapping-delete-button {
+  /* Uses all styles from .elb-mapping-confirm-button */
+}
+
+.elb-mapping-close-level {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg-box);
+  border: 1px solid var(--border-box);
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  font-size: var(--font-size-label);
+  font-family: var(--font-family-base);
+  color: var(--color-text-button);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.elb-mapping-close-level:hover {
+  background: var(--color-button-danger);
+  border-color: var(--color-button-danger);
+  color: var(--color-button-danger-text);
+}
+
+.elb-mapping-close-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.elb-mapping-close-label {
+  font-size: var(--font-size-label);
+}
+
+/* Type Button */
+.elb-mapping-type-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 12px;
+  background: var(--bg-box);
+  border: 2px solid var(--border-box);
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  font-family: var(--font-family-base);
+}
+
+.elb-mapping-type-button:hover {
+  border-color: var(--border-input-focus);
+  background: var(--bg-button-hover);
+}
+
+.elb-mapping-type-button.is-active {
+  border-color: var(--color-button-primary);
+  background: var(--bg-dropdown-option-highlighted);
+}
+
+.elb-mapping-type-button-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.elb-mapping-type-label {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.elb-mapping-type-description {
+  font-size: var(--font-size-toggle);
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+/* Type Selector */
+.elb-mapping-type-selector {
+  margin-bottom: 16px;
+}
+
+.elb-mapping-type-selector-legend {
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-label);
+  margin-bottom: 12px;
+}
+
+/* Type Selector - Grid Layout */
+.elb-mapping-type-selector--grid .elb-mapping-type-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+/* Type Selector - Radio Layout */
+.elb-mapping-type-selector--radio .elb-mapping-type-selector-radio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.elb-mapping-type-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-box);
+  border: 2px solid var(--border-box);
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.elb-mapping-type-radio-label:hover {
+  border-color: var(--border-input-focus);
+  background: var(--bg-button-hover);
+}
+
+.elb-mapping-type-radio-label.is-selected {
+  border-color: var(--color-button-primary);
+  background: var(--bg-dropdown-option-highlighted);
+}
+
+.elb-mapping-type-radio-input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-button-primary);
+}
+
+.elb-mapping-type-radio-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.elb-mapping-type-radio-label .elb-mapping-type-label {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.elb-mapping-type-radio-label .elb-mapping-type-description {
+  font-size: var(--font-size-toggle);
+  color: var(--color-text-muted);
+}
+
+/* Type Selector - Responsive Layout */
+.elb-mapping-type-selector--responsive .elb-mapping-type-selector-radio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.elb-mapping-type-selector--responsive .elb-mapping-type-selector-grid {
+  display: none;
+}
+
+@media (min-width: 800px) {
+  .elb-mapping-type-selector--responsive .elb-mapping-type-selector-radio-list {
+    display: none;
+  }
+
+  .elb-mapping-type-selector--responsive .elb-mapping-type-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+}
+
+/* Tree Sidebar */
+.elb-mapping-tree-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+  height: 100%;
+  background: var(--bg-box);
+  border-right: 1px solid var(--border-box);
+  overflow: hidden;
+}
+
+.elb-mapping-tree-content {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.elb-mapping-tree-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.elb-mapping-tree-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.elb-mapping-tree-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.elb-mapping-tree-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='dark'] .elb-mapping-tree-content {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+[data-theme='dark'] .elb-mapping-tree-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme='dark'] .elb-mapping-tree-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.elb-mapping-tree-node {
+  user-select: none;
+  position: relative;
+}
+
+.elb-mapping-tree-node-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  transition: background-color 0.15s ease;
+}
+
+.elb-mapping-tree-node-content:hover {
+  background: var(--bg-button-hover);
+}
+
+.elb-mapping-tree-node-content.is-selected {
+  background: var(--bg-dropdown-option-highlighted);
+}
+
+.elb-mapping-tree-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  transition:
+    color 0.15s ease,
+    transform 0.15s ease;
+  transform: rotate(0deg);
+}
+
+.elb-mapping-tree-toggle.is-expanded {
+  transform: rotate(90deg);
+}
+
+.elb-mapping-tree-toggle:hover {
+  color: var(--color-text);
+}
+
+.elb-mapping-tree-spacer {
+  width: 20px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* Tree node - minimal padding + sticky headers */
+.elb-mapping-tree-node--level-0 > .elb-mapping-tree-node-content {
+  padding-left: 4px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg-box);
+}
+
+.elb-mapping-tree-node--level-1 > .elb-mapping-tree-node-content {
+  padding-left: 16px;
+  position: sticky;
+  top: 28px;
+  z-index: 4;
+  background: var(--bg-box);
+}
+
+.elb-mapping-tree-node--level-2 > .elb-mapping-tree-node-content {
+  padding-left: 28px;
+  position: sticky;
+  top: 56px;
+  z-index: 3;
+  background: var(--bg-box);
+}
+
+.elb-mapping-tree-node--level-3 > .elb-mapping-tree-node-content {
+  padding-left: 40px;
+  position: sticky;
+  top: 84px;
+  z-index: 2;
+  background: var(--bg-box);
+}
+
+.elb-mapping-tree-node--level-4 > .elb-mapping-tree-node-content {
+  padding-left: 52px;
+  position: sticky;
+  top: 112px;
+  z-index: 1;
+  background: var(--bg-box);
+}
+
+/* Row container - whole row clickable */
+.elb-mapping-tree-node-content {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+  padding-right: 8px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.elb-mapping-tree-node-content:hover {
+  background: var(--bg-button-hover);
+}
+
+.elb-mapping-tree-node-content.is-selected {
+  background: var(--bg-button-hover);
+}
+
+.elb-mapping-tree-node-content.is-selected:hover {
+  background: var(--bg-button-hover);
+}
+
+/* Entity button - full width, same as rules */
+.elb-mapping-tree-entity-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  min-height: 26px;
+}
+
+/* Tree labels - consistent style */
+.elb-mapping-tree-label {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: 13px;
+  font-family: var(--font-family-base);
+  color: var(--color-text);
+  text-align: left;
+  flex: 1;
+}
+
+/* All node types same size - no bold except selected */
+.elb-mapping-tree-label--entity,
+.elb-mapping-tree-label--rule,
+.elb-mapping-tree-label--property {
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: normal;
+}
+
+/* Selected state - bold only */
+.elb-mapping-tree-node-content.is-selected .elb-mapping-tree-label {
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Ancestor state - bold for parent items in selected path */
+.elb-mapping-tree-node-content.is-ancestor .elb-mapping-tree-label {
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Add button for entities - appears on hover */
+.elb-mapping-tree-add-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--color-text);
+  opacity: 0.6;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.elb-mapping-tree-node-content.is-entity:hover .elb-mapping-tree-add-button {
+  display: flex;
+}
+
+.elb-mapping-tree-add-button:hover {
+  opacity: 1;
+  background: var(--bg-button-hover);
+}
+
+.elb-mapping-tree-add-button:active {
+  background: var(--bg-dropdown-option-highlighted);
+}
+
+/* Add action container - aligns with entity level */
+.elb-mapping-tree-add-action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 4px;
+  min-height: 28px;
+}
+
+/* Add action input */
+.elb-mapping-tree-add-input {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 4px 8px;
+  background: var(--bg-box);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.elb-mapping-tree-add-input:focus {
+  border-color: var(--color-primary);
+}
+
+.elb-mapping-tree-add-input.is-error {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.elb-mapping-tree-add-input::placeholder {
+  color: #999;
+  opacity: 0.6;
+}
+
+/* Add entity button */
+.elb-mapping-tree-add-entity-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px;
+  margin-top: 24px;
+  margin-bottom: 48px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-text);
+  opacity: 0.7;
+  transition:
+    opacity 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.elb-mapping-tree-add-entity-button:hover {
+  opacity: 1;
+  border-color: var(--color-text);
+}
+
+/* Add entity container */
+.elb-mapping-tree-add-entity {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 4px;
+  margin-top: 4px;
+}
+
+/* Add entity input */
+.elb-mapping-tree-add-entity-input {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 4px 8px;
+  background: var(--bg-box);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.elb-mapping-tree-add-entity-input:focus {
+  border-color: var(--color-primary);
+}
+
+.elb-mapping-tree-add-entity-input.is-error {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.elb-mapping-tree-add-entity-input::placeholder {
+  color: #999;
+  opacity: 0.6;
+}
+
+/* Bottom padding for scrolling */
+.elb-mapping-tree-bottom-padding {
+  height: 200px;
+  flex-shrink: 0;
+}
+
+.elb-mapping-tree-children {
+  margin-left: 0;
+}
+
+/* Tree type badge */
+.elb-mapping-tree-type-badge {
+  margin-left: 4px;
+  font-size: 9px;
+  padding: 0 2px;
+  background: transparent;
+  color: #999;
+  text-transform: lowercase;
+  font-weight: normal;
+}
+
+/* === PANE EDITORS (Phase 3) === */
+
+/* Overview Pane */
+.elb-mapping-overview-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-box);
+  overflow: hidden;
+}
+
+.elb-mapping-overview-header {
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.elb-mapping-overview-title {
+  font-size: 18px;
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 4px 0;
+  color: var(--color-text);
+}
+
+.elb-mapping-overview-description {
+  font-size: 12px;
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.elb-mapping-overview-input-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.elb-mapping-overview-input {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 10px 12px;
+  background: var(--bg-box);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.elb-mapping-overview-input:focus {
+  border-color: var(--color-primary);
+}
+
+.elb-mapping-overview-input.is-existing {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.elb-mapping-overview-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.elb-mapping-overview-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.elb-mapping-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.elb-mapping-overview-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 12px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+  gap: 4px;
+}
+
+.elb-mapping-overview-tile:hover {
+  background: var(--bg-button-hover);
+  border-color: var(--color-text);
+}
+
+.elb-mapping-overview-tile-entity {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+.elb-mapping-overview-tile-action {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  word-break: break-word;
+}
+
+.elb-mapping-overview-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.elb-mapping-overview-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* Entity Pane */
+.elb-mapping-entity-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-box);
+  overflow: hidden;
+}
+
+.elb-mapping-entity-pane-header {
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.elb-mapping-entity-pane-title {
+  font-size: 18px;
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 4px 0;
+  color: var(--color-text);
+}
+
+.elb-mapping-entity-pane-description {
+  font-size: 12px;
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.elb-mapping-entity-pane-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.elb-mapping-entity-pane-new-action {
+  margin-bottom: 24px;
+}
+
+.elb-mapping-entity-pane-input {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 10px 12px;
+  background: var(--bg-box);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.elb-mapping-entity-pane-input:focus {
+  border-color: var(--color-primary);
+}
+
+.elb-mapping-entity-pane-input.is-error {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.05);
+}
+
+.elb-mapping-entity-pane-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.elb-mapping-entity-pane-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.elb-mapping-entity-pane-section-title {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin: 0 0 8px 0;
+}
+
+.elb-mapping-entity-pane-action-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.elb-mapping-entity-pane-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-text);
+  text-align: center;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.elb-mapping-entity-pane-action-button:hover {
+  background: var(--bg-button-hover);
+  border-color: var(--color-text);
+}
+
+.elb-mapping-entity-pane-action-name {
+  word-break: break-word;
+}
+
+.elb-mapping-entity-pane-action-arrow {
+  display: none;
+}
+
+.elb-mapping-entity-pane-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.elb-mapping-entity-pane-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* Pane Container */
+.elb-mapping-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-box);
+  overflow: hidden;
+}
+
+/* Pane Header */
+.elb-mapping-pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-box);
+}
+
+.elb-mapping-pane-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+/* Pane Content */
+.elb-mapping-pane-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* Field Layouts */
+.elb-mapping-pane-field {
+  margin-bottom: 20px;
+}
+
+.elb-mapping-pane-field:last-child {
+  margin-bottom: 0;
+}
+
+.elb-mapping-pane-label {
+  display: block;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-label);
+  margin-bottom: 6px;
+}
+
+.elb-mapping-pane-required {
+  color: var(--color-button-danger);
+  margin-left: 2px;
+}
+
+.elb-mapping-pane-description {
+  font-size: var(--font-size-toggle);
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.elb-mapping-pane-hint {
+  font-size: var(--font-size-toggle);
+  color: var(--color-text-muted);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+.elb-mapping-pane-hint--warning {
+  color: #f59e0b;
+}
+
+/* Input Elements */
+.elb-mapping-pane-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family-base);
+  color: var(--color-text-input);
+  transition: border-color 0.15s ease;
+}
+
+.elb-mapping-pane-input:hover {
+  background: var(--bg-input-hover);
+}
+
+.elb-mapping-pane-input:focus {
+  outline: none;
+  border-color: var(--border-input-focus);
+}
+
+.elb-mapping-pane-input--inline {
+  padding: 6px 8px;
+  font-size: var(--font-size-label);
+}
+
+.elb-mapping-pane-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  font-size: var(--font-size-label);
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  color: var(--color-text-input);
+  resize: vertical;
+  transition: border-color 0.15s ease;
+}
+
+.elb-mapping-pane-textarea:hover {
+  background: var(--bg-input-hover);
+}
+
+.elb-mapping-pane-textarea:focus {
+  outline: none;
+  border-color: var(--border-input-focus);
+}
+
+/* Checkbox */
+.elb-mapping-pane-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+}
+
+.elb-mapping-pane-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-button-primary);
+}
+
+/* Buttons */
+.elb-mapping-pane-button {
+  padding: 8px 14px;
+  background: var(--bg-box);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-button);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family-base);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.elb-mapping-pane-button:hover:not(:disabled) {
+  background: var(--bg-button-hover);
+  border-color: var(--border-input-focus);
+}
+
+.elb-mapping-pane-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.elb-mapping-pane-button--primary {
+  background: var(--color-button-primary);
+  border-color: var(--color-button-primary);
+  color: var(--color-button-primary-text);
+}
+
+.elb-mapping-pane-button--primary:hover:not(:disabled) {
+  background: var(--color-button-primary-hover);
+  border-color: var(--color-button-primary-hover);
+}
+
+.elb-mapping-pane-button--danger {
+  background: var(--color-button-danger);
+  border-color: var(--color-button-danger);
+  color: var(--color-button-danger-text);
+}
+
+.elb-mapping-pane-button--danger:hover:not(:disabled) {
+  background: var(--color-button-danger-hover);
+  border-color: var(--color-button-danger-hover);
+}
+
+.elb-mapping-pane-button--small {
+  padding: 4px 10px;
+  font-size: var(--font-size-toggle);
+}
+
+/* Type Badge */
+.elb-mapping-pane-type-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  background: var(--bg-button-group);
+  border: 1px solid var(--border-button-group);
+  border-radius: 3px;
+  font-size: var(--font-size-toggle);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+/* Error and Info Boxes */
+.elb-mapping-pane-error {
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-button);
+  color: #991b1b;
+  font-size: var(--font-size-base);
+}
+
+[data-theme='dark'] .elb-mapping-pane-error {
+  background: #450a0a;
+  border-color: #991b1b;
+  color: #fca5a5;
+}
+
+.elb-mapping-pane-info-box {
+  padding: 12px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-button);
+  color: #1e3a8a;
+  font-size: var(--font-size-base);
+}
+
+[data-theme='dark'] .elb-mapping-pane-info-box {
+  background: #1e3a8a;
+  border-color: #3b82f6;
+  color: #bfdbfe;
+}
+
+.elb-mapping-pane-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.elb-mapping-pane-code {
+  background: var(--bg-header);
+  padding: 12px;
+  border-radius: var(--radius-button);
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: var(--font-size-toggle);
+  overflow-x: auto;
+  margin: 8px 0 0 0;
+}
+
+/* Actions Section */
+.elb-mapping-pane-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-box);
+}
+
+/* Advanced Section */
+.elb-mapping-pane-advanced {
+  padding: 16px;
+  border-top: 1px solid var(--border-box);
+  background: var(--bg-header);
+}
+
+.elb-mapping-pane-section-title {
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-label);
+  margin-bottom: 12px;
+}
+
+.elb-mapping-pane-advanced-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.elb-mapping-pane-advanced-button {
+  padding: 6px 12px;
+  background: var(--bg-box);
+  border: 1px dashed var(--border-input);
+  border-radius: var(--radius-button);
+  font-size: var(--font-size-toggle);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.elb-mapping-pane-advanced-button:hover:not(:disabled) {
+  border-color: var(--color-button-primary);
+  color: var(--color-button-primary);
+  border-style: solid;
+}
+
+.elb-mapping-pane-advanced-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Map Table */
+.elb-mapping-map-table {
+  overflow-x: auto;
+}
+
+.elb-mapping-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-base);
+}
+
+.elb-mapping-table th {
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--bg-header);
+  border-bottom: 2px solid var(--border-box);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-label);
+  font-size: var(--font-size-label);
+}
+
+.elb-mapping-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-box);
+  vertical-align: middle;
+}
+
+.elb-mapping-table tbody tr:hover {
+  background: var(--bg-button-hover);
+}
+
+.elb-mapping-table-key {
+  width: 30%;
+}
+
+.elb-mapping-table-value {
+  width: 50%;
+}
+
+.elb-mapping-table-actions {
+  width: 20%;
+  text-align: right;
+}
+
+.elb-mapping-table-complex {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.elb-mapping-table-type-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--bg-button-group);
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+/* Loop Transform */
+.elb-mapping-loop-transform {
+  padding: 12px;
+  background: var(--bg-header);
+  border: 1px solid var(--border-box);
+  border-radius: var(--radius-button);
+}
+
+.elb-mapping-loop-transform-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.elb-mapping-loop-transform-summary {
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+}
+
+.elb-mapping-loop-transform-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Value Complex (for map/loop buttons in value pane) */
+.elb-mapping-value-complex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--bg-header);
+  border: 1px solid var(--border-box);
+  border-radius: var(--radius-button);
+}
+
+.elb-mapping-value-complex-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* === MAPPING EDITOR TABS (Phase 4 - Integration) === */
+
+/* Main Editor Container */
+.elb-mapping-editor-tabs {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  background: var(--bg-box);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.elb-mapping-editor-sidebar {
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-box);
+}
+
+/* Main Editor Area */
+.elb-mapping-editor-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Allow flexbox to shrink */
+  overflow: hidden;
+}
+
+/* Editor Content Area (where panes render) */
+.elb-mapping-editor-content {
+  flex: 1;
+  overflow: hidden;
+  background: var(--bg-box);
+}
+
+/* Empty State */
+.elb-mapping-editor-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px 20px;
+}
+
+.elb-mapping-editor-empty-content {
+  text-align: center;
+  max-width: 500px;
+}
+
+.elb-mapping-editor-empty-content h3 {
+  font-size: 18px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0 0 12px 0;
+}
+
+.elb-mapping-editor-empty-content p {
+  font-size: var(--font-size-base);
+  color: var(--color-text-muted);
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+.elb-mapping-editor-empty-hint {
+  padding: 12px 16px;
+  background: var(--bg-header);
+  border: 1px solid var(--border-box);
+  border-radius: var(--radius-button);
+  font-size: var(--font-size-label);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.elb-mapping-editor-empty-hint strong {
+  color: var(--color-button-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Overlay (for compact mode tree) */
+.elb-mapping-editor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 0;
+}
+
+[data-theme='dark'] .elb-mapping-editor-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.elb-mapping-editor-overlay-content {
+  background: var(--bg-box);
+  height: 100%;
+  width: 320px;
+  max-width: 90%;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  animation: slideInLeft 0.2s ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* === RESPONSIVE LAYOUTS === */
+
+/* Compact Layout (< 800px): Tree button only, full-screen overlay */
+.elb-mapping-editor-tabs--compact {
+  /* Tree sidebar hidden, shown as overlay when toggled */
+}
+
+.elb-mapping-editor-tabs--compact .elb-mapping-editor-sidebar {
+  display: none;
+}
+
+/* Medium Layout (800-1200px): Tree button, side overlay */
+.elb-mapping-editor-tabs--medium .elb-mapping-editor-sidebar {
+  width: 280px;
+  transition: margin-left 0.2s ease;
+}
+
+.elb-mapping-editor-tabs--medium
+  .elb-mapping-editor-sidebar:not([data-visible='true']) {
+  margin-left: -280px;
+}
+
+/* Wide Layout (> 1200px): Tree sidebar, collapsible */
+.elb-mapping-editor-tabs--wide .elb-mapping-editor-sidebar {
+  width: 320px;
+  transition: margin-left 0.2s ease;
+}
+
+.elb-mapping-editor-tabs--wide
+  .elb-mapping-editor-sidebar:not([data-visible='true']) {
+  margin-left: -320px;
+}
+
+/* Responsive Layout: Automatic breakpoints */
+@media (max-width: 799px) {
+  .elb-mapping-editor-tabs--responsive {
+    /* Use compact layout */
+  }
+
+  .elb-mapping-editor-tabs--responsive .elb-mapping-editor-sidebar {
+    display: none;
+  }
+}
+
+@media (min-width: 800px) and (max-width: 1199px) {
+  .elb-mapping-editor-tabs--responsive .elb-mapping-editor-sidebar {
+    width: 280px;
+    transition: margin-left 0.2s ease;
+  }
+
+  .elb-mapping-editor-tabs--responsive
+    .elb-mapping-editor-sidebar:not([data-visible='true']) {
+    margin-left: -280px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .elb-mapping-editor-tabs--responsive .elb-mapping-editor-sidebar {
+    width: 320px;
+  }
+}
+
 /* === RESPONSIVE === */
 
 @media (max-width: 1023px) {
@@ -1568,4 +3297,566 @@
   .elb-explorer-content {
     overflow: auto;
   }
+}
+
+/* === CLEAN REDESIGN - MAC-LIKE INTERFACE === */
+
+/* Modern typography - system fonts for clean look */
+.elb-mapping-editor-tabs,
+.elb-mapping-rule-overview,
+.elb-mapping-map-overview,
+.elb-mapping-key-tabs,
+.elb-mapping-tree-sidebar {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* === RULE OVERVIEW - CLEAN GRID === */
+
+.elb-mapping-rule-overview {
+  padding: 24px;
+  background: var(--bg-box);
+}
+
+.elb-mapping-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.elb-mapping-overview-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 20px 16px;
+  background: var(--bg-header);
+  border: 2px solid var(--border-box);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.elb-mapping-overview-tile:hover {
+  border-color: var(--color-primary);
+  background: var(--bg-box);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.elb-mapping-overview-tile.is-set {
+  border-color: var(--color-primary);
+  background: var(--bg-box);
+}
+
+.elb-mapping-overview-tile.is-set::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary);
+  border-radius: 50%;
+}
+
+.elb-mapping-overview-tile-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.elb-mapping-overview-tile-description {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.elb-mapping-overview-tile-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: var(--color-primary);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* === MAP OVERVIEW - LEAN TABS === */
+
+.elb-mapping-map-overview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-box);
+}
+
+.elb-mapping-key-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-box);
+  overflow-x: auto;
+}
+
+.elb-mapping-key-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.elb-mapping-key-tab:hover {
+  background: var(--bg-button-hover);
+  color: var(--color-text);
+}
+
+.elb-mapping-key-tab.is-active {
+  background: var(--bg-box);
+  border-color: var(--border-box);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.elb-mapping-key-tab-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s ease;
+}
+
+.elb-mapping-key-tab:hover .elb-mapping-key-tab-delete {
+  opacity: 1;
+}
+
+.elb-mapping-key-tab-delete:hover {
+  background: var(--bg-button-hover);
+  color: var(--color-error);
+}
+
+.elb-mapping-key-tab-add {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px dashed var(--border-box);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.elb-mapping-key-tab-add:hover {
+  background: var(--bg-button-hover);
+  border-style: solid;
+  color: var(--color-text);
+}
+
+.elb-mapping-key-tab-add-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.elb-mapping-key-tab-add-text {
+  font-size: 13px;
+}
+
+.elb-mapping-key-tab-add-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.elb-mapping-key-tab-add-input {
+  padding: 6px 10px;
+  background: var(--bg-box);
+  border: 1px solid var(--border-box);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--color-text);
+  outline: none;
+  min-width: 120px;
+}
+
+.elb-mapping-key-tab-add-input:focus {
+  border-color: var(--color-primary);
+}
+
+.elb-mapping-key-tab-add-confirm,
+.elb-mapping-key-tab-add-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: var(--bg-button-hover);
+  border: 1px solid var(--border-box);
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.elb-mapping-key-tab-add-confirm:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.elb-mapping-key-tab-add-cancel:hover {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: white;
+}
+
+/* Key editor */
+.elb-mapping-key-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.elb-mapping-key-editor-header {
+  margin-bottom: 16px;
+}
+
+.elb-mapping-key-editor-label {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.elb-mapping-key-editor-content {
+  flex: 1;
+}
+
+.elb-mapping-key-editor-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-box);
+  border: 1px solid var(--border-box);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.elb-mapping-key-editor-input:focus {
+  border-color: var(--color-primary);
+}
+
+.elb-mapping-map-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.elb-mapping-map-empty p {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+}
+
+.elb-mapping-map-empty-add {
+  padding: 8px 16px;
+  background: var(--bg-button-hover);
+  border: 1px solid var(--border-box);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.elb-mapping-map-empty-add:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+/* === TRANSFORMATION TABS === */
+
+.elb-mapping-transformation-tabs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-box);
+}
+
+.elb-mapping-transformation-editor {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.elb-mapping-transformation-content {
+  padding: 24px;
+}
+
+/* === TYPE SELECTION GRID === */
+
+.elb-mapping-type-grid {
+  padding: 24px;
+}
+
+/* Property Path Field */
+.elb-mapping-property-path {
+  margin-bottom: 32px;
+}
+
+.elb-mapping-property-path-label {
+  display: block;
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.elb-mapping-property-path-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-box);
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: var(--font-family-base);
+  color: var(--color-text);
+  background: var(--bg-box);
+  outline: none;
+}
+
+.elb-mapping-property-path-input:focus {
+  border-color: var(--border-input-focus);
+}
+
+.elb-mapping-property-path-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* Grid Title */
+.elb-mapping-type-grid-title {
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0 0 16px 0;
+}
+
+/* Grid Container */
+.elb-mapping-type-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+/* Tile - Base (Unconfigured) */
+.elb-mapping-type-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 12px;
+  background: var(--bg-box);
+  border: 1px dashed #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 100px;
+}
+
+.elb-mapping-type-tile:hover {
+  background: var(--bg-button-hover);
+  border-color: #999;
+}
+
+/* Tile - Configured (Transformation Types) */
+.elb-mapping-type-tile.is-configured.is-transformation {
+  border: 2px solid #666;
+  border-style: solid;
+  background: var(--bg-box);
+}
+
+/* Tile - Configured (Advanced Types) */
+.elb-mapping-type-tile.is-configured.is-advanced {
+  border: 2px double #666;
+  background: var(--bg-box);
+}
+
+.elb-mapping-type-tile.is-configured:hover {
+  background: var(--bg-button-hover);
+}
+
+/* Checkmark */
+.elb-mapping-type-tile-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* Label */
+.elb-mapping-type-tile-label {
+  font-size: 13px;
+  font-weight: normal;
+  color: #999;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.elb-mapping-type-tile.is-configured .elb-mapping-type-tile-label {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+/* Description */
+.elb-mapping-type-tile-description {
+  font-size: 11px;
+  color: #ccc;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.elb-mapping-type-tile.is-configured .elb-mapping-type-tile-description {
+  color: var(--color-text-muted);
+}
+
+/* Action button in breadcrumb */
+.elb-mapping-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  background: none;
+  border: 1px solid var(--border-box);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-family-base);
+  color: var(--color-text);
+  font-weight: normal;
+}
+
+.elb-mapping-action-button:hover {
+  background: var(--bg-button-hover);
+  border-color: var(--border-input);
+}
+
+/* === PROPERTY PANEL LAYOUT === */
+
+/* Clean, modern panel container */
+.elb-property-panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-content: start;
+  height: 100%;
+  padding: 20px;
+  padding-bottom: 50vh;
+  overflow-y: auto;
+}
+
+/* Two-column layout on wider screens */
+@media (min-width: 900px) {
+  .elb-property-panel {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* First child (form) takes first column */
+  .elb-property-panel > :first-child {
+    grid-column: 1;
+  }
+
+  /* Second child (hints) takes second column, aligned to first row */
+  .elb-property-panel > :nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+/* === PANEL HINTS COMPONENT === */
+
+/* Minimal hints box with subtle background */
+.elb-panel-hints {
+  margin-top: 4px;
+  padding: 0;
+  background: transparent;
+}
+
+.elb-panel-hints-title {
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.elb-panel-hints-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.elb-panel-hints-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 4px 0;
+}
+
+.elb-panel-hints-code {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+.elb-panel-hints-desc {
+  color: var(--color-text-muted);
+  font-size: 12px;
 }

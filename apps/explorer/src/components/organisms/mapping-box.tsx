@@ -3,6 +3,9 @@ import { Box } from '../atoms/box';
 import { ButtonGroup } from '../atoms/button-group';
 import { CodeBox } from './code-box';
 import { MappingEditor } from '../molecules/mapping-editor';
+import { MappingEditorTabs } from './mapping-editor-tabs';
+import type { NodeType } from '../hooks/useMappingNavigation';
+import type { Mapping } from '@walkeros/core';
 
 export interface MappingBoxProps {
   mapping: Record<string, Record<string, unknown>>;
@@ -11,6 +14,9 @@ export interface MappingBoxProps {
   className?: string;
   initialTab?: 'code' | 'visual';
   resizable?: boolean;
+  useNewEditor?: boolean; // Enable new tab-based editor (Phase 4)
+  showTree?: boolean; // Show tree sidebar in new editor (default: true)
+  showHeader?: boolean; // Show box header with code/visual toggle (default: true)
 }
 
 /**
@@ -19,7 +25,9 @@ export interface MappingBoxProps {
  * Features:
  * - Toggle between Code and Visual views via ButtonGroup
  * - Code view: Display mapping JSON with CodeBox
- * - Visual view: Interactive mapping rule editor with AutoSelect
+ * - Visual view: Interactive mapping rule editor
+ *   - Legacy: Old form-based editor (default)
+ *   - New: Tab-based editor with tree sidebar (useNewEditor=true)
  * - Persists selected rule when switching between views
  * - Theme automatically handled by CSS variables
  *
@@ -33,11 +41,12 @@ export interface MappingBoxProps {
  * />
  *
  * @example
- * // Editable with onChange
+ * // Editable with new tab-based editor
  * <MappingBox
  *   mapping={mappingConfig}
  *   onMappingChange={setMappingConfig}
  *   label="Edit Mapping"
+ *   useNewEditor={true}
  * />
  */
 export function MappingBox({
@@ -47,9 +56,19 @@ export function MappingBox({
   className = '',
   initialTab = 'visual',
   resizable = false,
+  useNewEditor = false,
+  showTree = true,
+  showHeader = true,
 }: MappingBoxProps) {
   const [activeTab, setActiveTab] = useState<'code' | 'visual'>(initialTab);
   const [selectedRule, setSelectedRule] = useState('');
+
+  // Persist navigation state for new editor across view switches
+  const [persistedNavigationState, setPersistedNavigationState] = useState<{
+    currentPath: string[];
+    nodeType: NodeType;
+    expandedPaths: string[][];
+  } | null>(null);
 
   // Convert mapping object to JSON string
   const mappingJson = useMemo(
@@ -97,6 +116,7 @@ export function MappingBox({
       }
       className={className}
       resizable={resizable}
+      showHeader={showHeader}
     >
       {activeTab === 'code' ? (
         <CodeBox
@@ -105,6 +125,17 @@ export function MappingBox({
           label={label}
           onChange={onMappingChange ? handleMappingJsonChange : undefined}
           showFormat={!!onMappingChange}
+        />
+      ) : useNewEditor ? (
+        <MappingEditorTabs
+          initialMapping={mapping as Mapping.Config}
+          onChange={
+            onMappingChange as ((config: Mapping.Config) => void) | undefined
+          }
+          layout="responsive"
+          showTree={showTree}
+          initialNavigationState={persistedNavigationState || undefined}
+          onNavigationStateChange={setPersistedNavigationState}
         />
       ) : (
         <MappingEditor

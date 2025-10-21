@@ -239,68 +239,77 @@ export function AutoSelect({
           </button>
         )}
       </div>
-      {isOpen &&
-        (displayOptions.length > 0 || isNewRule) &&
-        createPortal(
-          <div
-            ref={dropdownRef}
-            className={`elb-auto-select-dropdown elb-auto-select-dropdown-fixed ${displayOptions.length > 5 ? 'scrollable' : ''}`}
-            style={{
-              top: `${dropdownPosition.top}px`,
-              left: `${dropdownPosition.left}px`,
-              width: `${dropdownPosition.width}px`,
-            }}
-          >
-            {displayOptions.map((option, index) => (
-              <div
-                key={option}
-                data-index={index}
-                className={`elb-auto-select-option ${
-                  index === highlightedIndex ? 'highlighted' : ''
-                }`}
-                onClick={() => handleOptionClick(option)}
-                onMouseEnter={() => setHighlightedIndex(index)}
-              >
-                {option}
+      {
+        (isOpen &&
+          (displayOptions.length > 0 || isNewRule) &&
+          createPortal(
+            <div
+              ref={dropdownRef}
+              className={`elb-auto-select-dropdown elb-auto-select-dropdown-fixed ${displayOptions.length > 5 ? 'scrollable' : ''}`}
+              style={{
+                top: `${dropdownPosition.top}px`,
+                left: `${dropdownPosition.left}px`,
+                width: `${dropdownPosition.width}px`,
+              }}
+            >
+              {displayOptions.map((option, index) => (
+                <div
+                  key={option}
+                  data-index={index}
+                  className={`elb-auto-select-option ${
+                    index === highlightedIndex ? 'highlighted' : ''
+                  }`}
+                  onClick={() => handleOptionClick(option)}
+                  onMouseEnter={() => setHighlightedIndex(index)}
+                >
+                  {option}
+                </div>
+              ))}
+              {isNewRule && (
+                <div
+                  data-index={displayOptions.length}
+                  className={`elb-auto-select-option ${
+                    highlightedIndex === displayOptions.length
+                      ? 'highlighted'
+                      : ''
+                  }`}
+                  onClick={() => handleOptionClick(inputValue.trim(), true)}
+                  onMouseEnter={() =>
+                    setHighlightedIndex(displayOptions.length)
+                  }
+                >
+                  <span>{inputValue.trim()}</span>
+                  <span className="elb-auto-select-create-label">
+                    {' '}
+                    (create)
+                  </span>
+                </div>
+              )}
+            </div>,
+            document.body,
+          )) as React.ReactNode
+      }
+      {
+        (isOpen &&
+          displayOptions.length === 0 &&
+          !isNewRule &&
+          userHasTyped &&
+          createPortal(
+            <div
+              className="elb-auto-select-dropdown elb-auto-select-dropdown-fixed"
+              style={{
+                top: `${dropdownPosition.top}px`,
+                left: `${dropdownPosition.left}px`,
+                width: `${dropdownPosition.width}px`,
+              }}
+            >
+              <div className="elb-auto-select-option elb-auto-select-no-results">
+                No results found
               </div>
-            ))}
-            {isNewRule && (
-              <div
-                data-index={displayOptions.length}
-                className={`elb-auto-select-option ${
-                  highlightedIndex === displayOptions.length
-                    ? 'highlighted'
-                    : ''
-                }`}
-                onClick={() => handleOptionClick(inputValue.trim(), true)}
-                onMouseEnter={() => setHighlightedIndex(displayOptions.length)}
-              >
-                <span>{inputValue.trim()}</span>
-                <span className="elb-auto-select-create-label"> (create)</span>
-              </div>
-            )}
-          </div>,
-          document.body,
-        )}
-      {isOpen &&
-        displayOptions.length === 0 &&
-        !isNewRule &&
-        userHasTyped &&
-        createPortal(
-          <div
-            className="elb-auto-select-dropdown elb-auto-select-dropdown-fixed"
-            style={{
-              top: `${dropdownPosition.top}px`,
-              left: `${dropdownPosition.left}px`,
-              width: `${dropdownPosition.width}px`,
-            }}
-          >
-            <div className="elb-auto-select-option elb-auto-select-no-results">
-              No results found
-            </div>
-          </div>,
-          document.body,
-        )}
+            </div>,
+            document.body,
+          )) as React.ReactNode
+      }
     </div>
   );
 }

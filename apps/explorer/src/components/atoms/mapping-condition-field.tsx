@@ -41,5 +41,6 @@ export function MappingConditionField(props: FieldProps) {
     readonly: readonly || false,
   };
 
+  // @ts-expect-error - Old Phase 1 component, RJSF WidgetProps type mismatch to be fixed in Phase 5
   return <MappingConditionWidget {...widgetProps} />;
 }

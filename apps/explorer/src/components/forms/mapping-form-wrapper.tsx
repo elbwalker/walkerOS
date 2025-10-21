@@ -90,6 +90,7 @@ export function MappingFormWrapper({
   if (nested) {
     return (
       <div className="elb-rjsf-nested-wrapper">
+        {/* @ts-expect-error - Old Phase 1 component, RJSF type incompatibility to be fixed in Phase 5 */}
         <ThemedForm
           schema={schema}
           uiSchema={uiSchema}
@@ -108,6 +109,7 @@ export function MappingFormWrapper({
   // For top-level usage, render full Form component
   return (
     <div className="elb-rjsf-form-wrapper">
+      {/* @ts-expect-error - Old Phase 1 component, RJSF type incompatibility to be fixed in Phase 5 */}
       <Form
         schema={schema}
         uiSchema={uiSchema}
@@ -141,6 +143,7 @@ export function MappingFormWrapper({
  * - Error display
  * - Help text support
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomFieldTemplate(props: any) {
   const {
     id,
@@ -192,6 +195,7 @@ function CustomFieldTemplate(props: any) {
  * Properties are arranged in a 2-column layout on larger screens,
  * single column on mobile.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomObjectFieldTemplate(props: any) {
   const { title, description, properties, uiSchema } = props;
 
@@ -206,6 +210,7 @@ function CustomObjectFieldTemplate(props: any) {
         <div className="elb-rjsf-object-description">{description}</div>
       )}
       <MappingGrid layout={layout} responsive={responsive} gap={16}>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         {properties.map((element: any) => (
           <div key={element.name} className="elb-rjsf-object-property">
             {element.content}

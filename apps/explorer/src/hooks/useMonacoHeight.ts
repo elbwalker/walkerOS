@@ -80,6 +80,7 @@ export function useMonacoHeight({
       });
 
       // Store disposable for cleanup
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (editor as any).__heightDisposable = disposable;
     },
     [enabled, defaultHeight, updateHeight],

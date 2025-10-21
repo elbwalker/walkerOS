@@ -2,6 +2,7 @@ import type { RegistryFieldsType } from '@rjsf/utils';
 import { MappingConsentField } from '../atoms/mapping-consent-field';
 import { MappingConditionField } from '../atoms/mapping-condition-field';
 import { MappingFnField } from '../atoms/mapping-fn-field';
+import { MappingKeyField } from '../atoms/mapping-key-field';
 import { MappingValidateField } from '../atoms/mapping-validate-field';
 import { MappingDataField } from '../atoms/mapping-data-field';
 import { MappingMapField } from '../molecules/mapping-map-field';
@@ -39,6 +40,7 @@ import { MappingLoopField } from '../molecules/mapping-loop-field';
  * - mappingConsent: Collapsible consent requirements editor for object types
  * - mappingCondition: Checkbox-collapsible condition function editor for string types
  * - mappingFn: Checkbox-collapsible custom transformation function editor for string types
+ * - mappingKey: Simple text input for event path extraction (e.g., 'data.id', 'user.email')
  * - mappingValidate: Checkbox-collapsible validate function editor for string types
  * - mappingData: Toggle-collapsible data transformation editor for object types
  * - mappingMap: Key-value pair editor for object transformation mapping
@@ -49,6 +51,7 @@ export const mappingFields: RegistryFieldsType = {
   mappingConsent: MappingConsentField,
   mappingCondition: MappingConditionField,
   mappingFn: MappingFnField,
+  mappingKey: MappingKeyField,
   mappingValidate: MappingValidateField,
   mappingData: MappingDataField,
   mappingMap: MappingMapField,

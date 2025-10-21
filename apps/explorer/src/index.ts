@@ -19,10 +19,12 @@ export { LiveCode } from './components/organisms/live-code';
 export { CodeBox } from './components/organisms/code-box';
 export { CollectorBox } from './components/organisms/collector-box';
 export { BrowserBox } from './components/organisms/browser-box';
+export { MappingEditorTabs } from './components/organisms/mapping-editor-tabs';
 export type { LiveCodeProps } from './components/organisms/live-code';
 export type { CodeBoxProps } from './components/organisms/code-box';
 export type { CollectorBoxProps } from './components/organisms/collector-box';
 export type { BrowserBoxProps } from './components/organisms/browser-box';
+export type { MappingEditorTabsProps } from './components/organisms/mapping-editor-tabs';
 
 // Molecules
 export { Preview } from './components/molecules/preview';
@@ -35,12 +37,16 @@ export { Header } from './components/atoms/header';
 export { Footer } from './components/atoms/footer';
 export { Button } from './components/atoms/button';
 export { ButtonGroup } from './components/atoms/button-group';
+export { MappingKeyWidget } from './components/atoms/mapping-key';
+export { MappingKeyField } from './components/atoms/mapping-key-field';
+export { PanelHints } from './components/atoms/panel-hints';
 export type { BoxProps } from './components/atoms/box';
 export type { GridProps } from './components/atoms/grid';
 export type { HeaderProps } from './components/atoms/header';
 export type { FooterProps } from './components/atoms/footer';
 export type { ButtonProps } from './components/atoms/button';
 export type { ButtonGroupProps } from './components/atoms/button-group';
+export type { PanelHintsProps, HintItem } from './components/atoms/panel-hints';
 
 // Utility
 export { cn } from './lib/utils';

@@ -1,28 +1,28 @@
 import React from 'react';
 import type { FieldProps } from '@rjsf/utils';
-import { MappingValidateWidget } from './mapping-validate';
+import { MappingKeyWidget } from './mapping-key';
 
 /**
- * MappingValidateField - RJSF field wrapper for validate
+ * MappingKeyField - RJSF field wrapper for key property
  *
- * Bridges RJSF FieldProps to our custom MappingValidateWidget.
- * Required because RJSF uses fields (not widgets) for complex types.
+ * Bridges RJSF FieldProps to our custom MappingKeyWidget.
+ * Required because RJSF uses fields (not widgets) for custom field rendering.
  *
  * @example
  * // Register in field registry:
  * export const mappingFields: RegistryFieldsType = {
- *   mappingValidate: MappingValidateField,
+ *   mappingKey: MappingKeyField,
  * };
  *
  * @example
  * // Use in uiSchema:
  * const uiSchema = {
- *   validate: {
- *     'ui:field': 'mappingValidate'
+ *   key: {
+ *     'ui:field': 'mappingKey'
  *   }
  * };
  */
-export function MappingValidateField(props: FieldProps) {
+export function MappingKeyField(props: FieldProps) {
   const {
     formData,
     onChange,
@@ -43,8 +43,9 @@ export function MappingValidateField(props: FieldProps) {
     rawErrors: rawErrors || [],
     disabled: disabled || false,
     readonly: readonly || false,
+    placeholder: uiSchema?.['ui:placeholder'] as string | undefined,
   };
 
-  // @ts-expect-error - Old Phase 1 component, RJSF WidgetProps type mismatch to be fixed in Phase 5
-  return <MappingValidateWidget {...widgetProps} />;
+  // @ts-expect-error - RJSF WidgetProps type mismatch, will be fixed in Phase 5
+  return <MappingKeyWidget {...widgetProps} />;
 }

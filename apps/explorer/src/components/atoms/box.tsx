@@ -12,6 +12,7 @@ export interface BoxProps {
   maxHeight?: number | string;
   tiny?: boolean;
   resizable?: boolean;
+  showHeader?: boolean; // Hide header (default: true)
 }
 
 /**
@@ -47,6 +48,7 @@ export function Box({
   maxHeight,
   tiny = false,
   resizable = false,
+  showHeader = true,
 }: BoxProps) {
   const boxStyle: React.CSSProperties = { ...style };
 
@@ -75,7 +77,7 @@ export function Box({
 
   return (
     <div className={`elb-explorer-box ${className}`} style={boxStyle}>
-      <Header label={header}>{headerActions}</Header>
+      {showHeader && <Header label={header}>{headerActions}</Header>}
       <div className="elb-explorer-content">{children}</div>
       {footer && <div className="elb-explorer-footer">{footer}</div>}
     </div>

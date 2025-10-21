@@ -157,7 +157,7 @@ export const valueConfigNestedSchema: RJSFSchema = {
  */
 export const valueConfigUiSchema: UiSchema = {
   key: {
-    'ui:widget': 'mappingString',
+    'ui:field': 'mappingKey',
     'ui:placeholder': 'e.g., data.id, user.email',
   },
   value: {
@@ -197,7 +197,7 @@ export const valueConfigUiSchema: UiSchema = {
  */
 export const valueConfigNestedUiSchema: UiSchema = {
   key: {
-    'ui:widget': 'mappingString',
+    'ui:field': 'mappingKey',
     'ui:placeholder': 'e.g., data.id, user.email',
   },
   value: {

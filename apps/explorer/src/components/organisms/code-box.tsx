@@ -20,6 +20,7 @@ export interface CodeBoxProps {
   minHeight?: number | string;
   maxHeight?: number | string;
   autoHeight?: boolean;
+  showHeader?: boolean; // Show box header (default: true)
 }
 
 /**
@@ -62,6 +63,7 @@ export function CodeBox({
   minHeight,
   maxHeight,
   autoHeight = false,
+  showHeader = true,
 }: CodeBoxProps) {
   const [monacoTheme, setMonacoTheme] = useState('vs-light');
   const [copied, setCopied] = useState(false);
@@ -230,6 +232,7 @@ export function CodeBox({
       headerActions={actions}
       className={className}
       style={Object.keys(boxStyle).length > 0 ? boxStyle : undefined}
+      showHeader={showHeader}
     >
       <MonacoEditor
         height="100%"

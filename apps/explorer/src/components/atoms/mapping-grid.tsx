@@ -50,32 +50,59 @@ export function MappingGrid({
   responsive = true,
   className = '',
 }: MappingGridProps) {
-  // Convert layout shortcuts to grid template columns
-  const getGridTemplateColumns = () => {
+  // Convert layout shortcuts to CSS classes
+  const getLayoutClass = () => {
     switch (layout) {
       case 'row':
-        return 'auto'; // Auto-fit columns in a row
+        return 'elb-mapping-grid-row';
       case 'cols-2':
-        return 'repeat(2, 1fr)';
+        return 'elb-mapping-grid-cols-2';
       default:
-        return layout; // Custom value (e.g., "1fr 2fr")
+        // For custom grid-template-columns, use inline style as fallback
+        return '';
     }
   };
 
-  const gridTemplateColumns = getGridTemplateColumns();
-  const gridGap = typeof gap === 'number' ? `${gap}px` : gap;
+  // Convert gap to CSS class
+  const getGapClass = () => {
+    const gapNum = typeof gap === 'number' ? gap : parseInt(gap, 10);
+    if ([8, 12, 16, 20].includes(gapNum)) {
+      return `elb-mapping-grid-gap-${gapNum}`;
+    }
+    return ''; // Fallback to inline style for custom gaps
+  };
 
+  const layoutClass = getLayoutClass();
+  const gapClass = getGapClass();
   const responsiveClass = responsive ? 'elb-mapping-grid-responsive' : '';
+
+  // Build class list
+  const classes = [
+    'elb-mapping-grid',
+    layoutClass,
+    gapClass,
+    responsiveClass,
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  // Only use inline styles for custom layouts/gaps not covered by CSS classes
+  const needsCustomLayout = !layoutClass && layout !== 'row';
+  const needsCustomGap = !gapClass;
+
+  const inlineStyle: React.CSSProperties = {};
+  if (needsCustomLayout) {
+    inlineStyle.gridTemplateColumns = layout;
+  }
+  if (needsCustomGap) {
+    inlineStyle.gap = typeof gap === 'number' ? `${gap}px` : gap;
+  }
 
   return (
     <div
-      className={`elb-mapping-grid ${responsiveClass} ${className}`.trim()}
-      style={{
-        display: 'grid',
-        gridTemplateColumns,
-        gap: gridGap,
-        alignItems: 'center',
-      }}
+      className={classes}
+      style={Object.keys(inlineStyle).length > 0 ? inlineStyle : undefined}
     >
       {children}
     </div>

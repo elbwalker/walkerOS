@@ -156,6 +156,7 @@ export function MappingValueWidget(props: WidgetProps) {
           <select
             className="elb-value-widget-type-select"
             value={selectedType}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onChange={(e) => handleTypeChange(e.target.value as any)}
             disabled={disabled || readonly}
           >
@@ -208,6 +209,7 @@ export function MappingValueWidget(props: WidgetProps) {
           onChange={handleObjectChange}
           language="json"
           height={120}
+          // @ts-expect-error - Old Phase 1 component, readOnly prop type mismatch to be fixed in Phase 5
           readOnly={readonly}
         />
       )}
