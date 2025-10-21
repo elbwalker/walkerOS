@@ -140,7 +140,7 @@ export function MappingPane({
       );
 
     case 'condition':
-      // MappingConditionPaneView has its own structure
+      // MappingConditionPaneView uses standard .elb-mapping-pane structure
       return (
         <MappingConditionPaneView
           path={path}

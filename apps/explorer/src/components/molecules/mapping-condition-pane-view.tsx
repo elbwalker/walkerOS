@@ -1,106 +1,167 @@
-import React from 'react';
-import { MappingFormWrapper } from '../forms/mapping-form-wrapper';
-import { PanelHints } from '../atoms/panel-hints';
-import type { RJSFSchema } from '@rjsf/utils';
-import type { MappingState } from '../../hooks/useMappingState';
+import { useState, useEffect } from 'react';
+import type { UseMappingStateReturn } from '../../hooks/useMappingState';
+import { CodeBox } from '../organisms/code-box';
+import { normalizeCode } from '../../utils/code-normalizer';
 
 /**
- * Condition Pane View - Pure Presentation Component
+ * Mapping Condition Pane View
  *
- * Focused editor for the 'condition' property of ValueConfig.
- * Shows a checkbox collapsible with a code editor for JavaScript functions
- * that determine whether a mapping should be applied.
+ * Dedicated pane for the 'condition' property - a function that determines
+ * if the mapping rule should apply to an event.
  *
- * Uses RJSF with custom MappingConditionField to render:
- * - Checkbox to enable/disable condition
- * - Code editor with syntax highlighting
- * - Default template with function signature
- *
- * @example
- * <MappingConditionPaneView
- *   path={['product', 'view', 'data', 'condition']}
- *   mappingState={mappingState}
- * />
+ * Returns true to apply the rule, false to skip it.
  */
 export interface MappingConditionPaneViewProps {
   path: string[];
-  mappingState: MappingState;
+  mappingState: UseMappingStateReturn;
   className?: string;
 }
+
+const DEFAULT_CONDITION = `(value, mapping, collector) => {
+  // Return true to apply this rule
+  return true;
+}`;
 
 export function MappingConditionPaneView({
   path,
   mappingState,
   className = '',
 }: MappingConditionPaneViewProps) {
-  const value = mappingState.actions.getValue(path) as string | undefined;
+  // Get current condition value
+  const value = mappingState.actions.getValue(path);
+  const initialCode = typeof value === 'string' ? value : DEFAULT_CONDITION;
 
-  // Simple schema for condition property
-  const schema: RJSFSchema = {
-    type: 'object',
-    properties: {
-      condition: {
-        type: 'string',
-        title: 'Condition',
-        description:
-          'Function that returns true to apply this mapping, false to skip it',
-      },
-    },
-  };
+  const [code, setCode] = useState(initialCode);
 
-  const uiSchema = {
-    'ui:layout': 'row', // Single column layout for the form
-    condition: {
-      'ui:field': 'mappingCondition',
-    },
-  };
+  // Update local state if external value changes
+  useEffect(() => {
+    const currentValue = mappingState.actions.getValue(path);
+    const newCode =
+      typeof currentValue === 'string' ? currentValue : DEFAULT_CONDITION;
+    setCode(newCode);
+  }, [path, mappingState]);
 
-  const formData = {
-    condition: value || undefined,
-  };
+  const handleCodeChange = (newCode: string) => {
+    setCode(newCode);
 
-  const handleChange = (data: { formData?: { condition?: string } }) => {
-    const newCondition = data.formData?.condition;
+    // Check if code is different from default (normalized comparison)
+    const isDefault =
+      normalizeCode(newCode) === normalizeCode(DEFAULT_CONDITION);
 
-    // When condition is cleared (empty or undefined), delete it from mapping
-    if (!newCondition) {
+    if (isDefault) {
+      // Remove the condition property if it's the default
       mappingState.actions.deleteValue(path);
     } else {
-      // Otherwise set the new condition value
-      mappingState.actions.setValue(path, newCondition);
+      // Save the modified code
+      mappingState.actions.setValue(path, newCode);
     }
   };
 
-  return (
-    <div className={`elb-property-panel ${className}`}>
-      <MappingFormWrapper
-        schema={schema}
-        uiSchema={uiSchema}
-        formData={formData}
-        onChange={handleChange}
-        nested={true}
-      />
+  const handleReset = () => {
+    // Reset to default and remove from mapping
+    setCode(DEFAULT_CONDITION);
+    mappingState.actions.deleteValue(path);
+  };
 
-      <PanelHints
-        hints={[
-          {
-            code: 'value.data?.price > 100',
-            description: 'Check event property value',
-          },
-          {
-            code: 'value.user?.type === "premium"',
-            description: 'Check user attributes',
-          },
-          {
-            code: 'value.context?.stage?.[0] === "checkout"',
-            description: 'Check context state',
-          },
-          {
-            code: 'value.consent?.marketing === true',
-            description: 'Check consent status',
-          },
-        ]}
-      />
+  return (
+    <div className={`elb-mapping-pane ${className}`}>
+      <div className="elb-mapping-pane-content">
+        <div className="elb-mapping-condition-pane">
+          {/* Header */}
+          <div className="elb-mapping-condition-header">
+            <div className="elb-mapping-condition-header-content">
+              <h3 className="elb-mapping-condition-title">
+                Condition Function
+              </h3>
+              <p className="elb-mapping-condition-description">
+                Define when this mapping rule should apply to an event
+              </p>
+            </div>
+            <button
+              type="button"
+              className="elb-mapping-condition-reset"
+              onClick={handleReset}
+              title="Reset to default"
+            >
+              Reset
+            </button>
+          </div>
+
+          {/* Code Editor */}
+          <div className="elb-mapping-condition-editor">
+            <CodeBox
+              code={code}
+              language="javascript"
+              onChange={handleCodeChange}
+              showFormat={true}
+              showHeader={false}
+              label=""
+            />
+          </div>
+
+          {/* Help Section */}
+          <div className="elb-mapping-condition-help">
+            <div className="elb-mapping-condition-help-section">
+              <h4 className="elb-mapping-condition-help-title">Parameters</h4>
+              <ul className="elb-mapping-condition-help-list">
+                <li>
+                  <code>value</code> - The event or current value being
+                  processed
+                </li>
+                <li>
+                  <code>mapping</code> - The mapping configuration
+                </li>
+                <li>
+                  <code>collector</code> - The collector instance
+                </li>
+              </ul>
+            </div>
+
+            <div className="elb-mapping-condition-help-section">
+              <h4 className="elb-mapping-condition-help-title">Return Value</h4>
+              <ul className="elb-mapping-condition-help-list">
+                <li>
+                  <code>true</code> - Apply this mapping rule
+                </li>
+                <li>
+                  <code>false</code> - Skip this mapping rule
+                </li>
+              </ul>
+            </div>
+
+            <div className="elb-mapping-condition-help-section">
+              <h4 className="elb-mapping-condition-help-title">Examples</h4>
+              <div className="elb-mapping-condition-examples">
+                <div className="elb-mapping-condition-example">
+                  <div className="elb-mapping-condition-example-label">
+                    Only for high-value orders:
+                  </div>
+                  <code className="elb-mapping-condition-example-code">
+                    (value) =&gt; value.data?.total &gt; 100
+                  </code>
+                </div>
+                <div className="elb-mapping-condition-example">
+                  <div className="elb-mapping-condition-example-label">
+                    Only for specific user segment:
+                  </div>
+                  <code className="elb-mapping-condition-example-code">
+                    (value) =&gt; value.user?.segment === 'premium'
+                  </code>
+                </div>
+                <div className="elb-mapping-condition-example">
+                  <div className="elb-mapping-condition-example-label">
+                    Only during business hours:
+                  </div>
+                  <code className="elb-mapping-condition-example-code">
+                    () =&gt; new Date().getHours() &gt;= 9 && new
+                    Date().getHours() &lt; 17
+                  </code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

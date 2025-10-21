@@ -49,6 +49,12 @@ const RULE_TILES: RuleTileConfig[] = [
     section: 'options',
   },
   {
+    key: 'condition',
+    label: 'Condition',
+    description: 'When to apply this rule',
+    section: 'options',
+  },
+  {
     key: 'consent',
     label: 'Consent',
     description: 'Required consent states',
@@ -117,6 +123,11 @@ function getTileStatus(
         ? { enabled: true, text: 'Active' }
         : { enabled: false, text: 'Disabled' };
 
+    case 'condition':
+      return typeof value === 'string' && value.trim()
+        ? { enabled: true, text: 'Active' }
+        : { enabled: false, text: 'Not set' };
+
     case 'consent': {
       if (!value) return { enabled: false, text: 'Not set' };
       const count = Object.keys(value as Record<string, unknown>).length;
@@ -171,6 +182,9 @@ export function MappingRuleOverview({
     } else if (key === 'ignore') {
       // Ignore is a boolean - use dedicated ignore pane
       navigation.openTab([...path, key], 'ignore');
+    } else if (key === 'condition') {
+      // Condition is a function - use dedicated condition pane
+      navigation.openTab([...path, key], 'condition');
     } else if (key === 'consent') {
       // Consent is a map of state names - use dedicated consent pane
       navigation.openTab([...path, key], 'consent');
