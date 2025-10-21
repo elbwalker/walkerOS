@@ -54,9 +54,8 @@
 
 // Code toggle button
 .elb-mapping-code-toggle-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: relative;
+  display: inline-grid;
   height: 28px;
   padding: 0 10px;
   background: none;
@@ -69,20 +68,26 @@
   color: var(--color-text-button);
   transition: all 0.15s ease;
 
+  // Use grid to overlay both texts in same space
+  // This ensures button width fits the longest text
+  &::before {
+    content: 'Visual'; // Longest text
+    grid-area: 1 / 1;
+    visibility: hidden;
+  }
+
+  // Actual text content - overlays in same grid cell
+  span {
+    grid-area: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   &:hover {
     background: var(--bg-button-hover);
     color: var(--color-text-button-hover);
-  }
-
-  &.is-active {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: #ffffff;
-
-    &:hover {
-      background: var(--color-button-primary-hover);
-      border-color: var(--color-button-primary-hover);
-    }
+    border-color: var(--color-text);
   }
 }
 

@@ -208,9 +208,7 @@ export function MappingEditorTabs({
           showTreeButton={showTree}
           showCodeButton={true}
           codeViewActive={codeViewActive}
-          showDeleteButton={
-            !codeViewActive && activeTab && activeTab.path.length > 0
-          }
+          showDeleteButton={activeTab && activeTab.path.length > 0}
           onNavigate={(path) => {
             if (path.length === 0) {
               navigation.closeAllTabs();

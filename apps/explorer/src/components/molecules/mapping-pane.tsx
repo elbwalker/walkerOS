@@ -1,6 +1,5 @@
 import { MappingEntityPane } from './mapping-entity-pane';
 import { MappingRuleOverview } from './mapping-rule-overview';
-import { MappingTransformationTabs } from './mapping-transformation-tabs';
 import { MappingValueConfigPaneView } from './mapping-value-config-pane-view';
 import { MappingKeyPaneView } from './mapping-key-pane-view';
 import { MappingConditionPaneView } from './mapping-condition-pane-view';
@@ -20,14 +19,14 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * - 'rule' → MappingRuleOverview - Shows rule properties grid
  * - 'property' → MappingTypeGrid - Shows type selection grid
  * - 'valueConfig' → MappingValueConfigPaneView - Full ValueConfig editor
- * - 'map' → MappingTransformationTabs - Map/Loop/Set transformation tabs
- * - 'loop' → MappingTransformationTabs - Map/Loop/Set transformation tabs
- * - 'set' → MappingTransformationTabs - Map/Loop/Set transformation tabs
  * - 'key' → MappingKeyPaneView - Focused key property editor
+ * - 'condition' → MappingConditionPaneView - Condition function editor
+ * - 'map' → (Coming soon) - Map transformation editor
+ * - 'loop' → (Coming soon) - Loop transformation editor
+ * - 'set' → (Coming soon) - Set transformation editor
  * - 'value' → (Coming soon) - Static value editor
  * - 'fn' → (Coming soon) - Function editor
  * - 'validate' → (Coming soon) - Validate function editor
- * - 'condition' → (Coming soon) - Condition function editor
  * - 'consent' → (Coming soon) - Consent requirements editor
  *
  * @example
@@ -83,18 +82,6 @@ export function MappingPane({
         />
       );
 
-    case 'map':
-    case 'loop':
-    case 'set':
-      // MappingTransformationTabs has its own structure
-      return (
-        <MappingTransformationTabs
-          path={path}
-          mappingState={mappingState}
-          className={className}
-        />
-      );
-
     case 'key':
       // MappingKeyPaneView has its own structure
       return (
@@ -118,6 +105,9 @@ export function MappingPane({
     // All other cases use the standard pane wrapper with scrolling content
     case 'property':
     case 'valueConfig':
+    case 'map':
+    case 'loop':
+    case 'set':
     case 'value':
     case 'fn':
     case 'validate':
@@ -144,6 +134,9 @@ export function MappingPane({
           />
         );
       } else if (
+        nodeType === 'map' ||
+        nodeType === 'loop' ||
+        nodeType === 'set' ||
         nodeType === 'value' ||
         nodeType === 'fn' ||
         nodeType === 'validate' ||

@@ -70,7 +70,7 @@ export function MappingNavigationHeader({
             aria-label={codeViewActive ? 'Show visual view' : 'Show code view'}
             title={codeViewActive ? 'Show visual view' : 'Show code view'}
           >
-            {codeViewActive ? 'Visual' : 'Code'}
+            <span>{codeViewActive ? 'Visual' : 'Code'}</span>
           </button>
         )}
 
