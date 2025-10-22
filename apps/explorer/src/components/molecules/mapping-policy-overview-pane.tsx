@@ -111,7 +111,16 @@ export function MappingPolicyOverviewPane({
       if (typeof val === 'string') return `"${val}"`;
       if (typeof val === 'number' || typeof val === 'boolean')
         return String(val);
-      if (Array.isArray(val)) return val.length > 0 ? `[${val.length}]` : '[]';
+      if (Array.isArray(val)) {
+        if (val.length === 0) return '[]';
+        // For arrays, show the first item (useful for loop/set arrays)
+        const firstItem = val[0];
+        if (typeof firstItem === 'string') return `"${firstItem}"`;
+        if (typeof firstItem === 'number' || typeof firstItem === 'boolean')
+          return String(firstItem);
+        // For complex first items, show count
+        return `[${val.length}]`;
+      }
       if (typeof val === 'object' && val !== null)
         return Object.keys(val).length > 0
           ? `{${Object.keys(val).length}}`

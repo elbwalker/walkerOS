@@ -123,11 +123,38 @@ export function MappingMapPaneView({
     const props: Array<{ prop: string; value: string; isLong: boolean }> = [];
     const obj = value as Record<string, unknown>;
 
+    // Check if this is a ValueConfig with ONLY a key property
+    // In this case, display it as a simple value without the "key:" label
+    const objKeys = Object.keys(obj);
+    if (
+      objKeys.length === 1 &&
+      'key' in obj &&
+      obj.key &&
+      typeof obj.key === 'string'
+    ) {
+      return [
+        {
+          prop: '', // No label, just show the key value
+          value: `"${obj.key}"`,
+          isLong: obj.key.length > 20,
+        },
+      ];
+    }
+
     const formatValue = (val: unknown): string => {
       if (typeof val === 'string') return `"${val}"`;
       if (typeof val === 'number' || typeof val === 'boolean')
         return String(val);
-      if (Array.isArray(val)) return val.length > 0 ? `[${val.length}]` : '[]';
+      if (Array.isArray(val)) {
+        if (val.length === 0) return '[]';
+        // For arrays, show the first item (useful for loop/set arrays)
+        const firstItem = val[0];
+        if (typeof firstItem === 'string') return `"${firstItem}"`;
+        if (typeof firstItem === 'number' || typeof firstItem === 'boolean')
+          return String(firstItem);
+        // For complex first items, show count
+        return `[${val.length}]`;
+      }
       if (typeof val === 'object' && val !== null)
         return Object.keys(val).length > 0
           ? `{${Object.keys(val).length}}`

@@ -15,6 +15,55 @@ import type { Mapping } from '@walkeros/core';
 import { getValueAtPath } from '../../utils/mapping-path';
 
 /**
+ * Determines the appropriate NodeType based on the path
+ */
+function getNodeTypeFromPath(path: string[]): NodeType {
+  // Policy paths
+  if (path.length === 1 && path[0] === 'policy') {
+    return 'policy';
+  }
+  if (path.length >= 2 && path[0] === 'policy') {
+    return 'valueConfig';
+  }
+
+  // Entity and rule paths
+  if (path.length === 1) {
+    return 'entity';
+  }
+  if (path.length === 2) {
+    return 'rule';
+  }
+
+  // Depth 3 - rule properties
+  if (path.length === 3) {
+    const propertyName = path[2];
+    if (propertyName === 'name') return 'name';
+    if (propertyName === 'batch') return 'batch';
+    if (propertyName === 'ignore') return 'ignore';
+    if (propertyName === 'consent') return 'consent';
+    // data, settings, etc. are ValueType
+    return 'valueType';
+  }
+
+  // Depth 4+ - check the last segment to determine the editor type
+  // This handles cases like: ['page', 'view', 'data', 'map']
+  const lastSegment = path[path.length - 1];
+
+  if (lastSegment === 'map') return 'map';
+  if (lastSegment === 'loop') return 'loop';
+  if (lastSegment === 'set') return 'set';
+  if (lastSegment === 'consent') return 'consent';
+  if (lastSegment === 'fn') return 'valueType';
+  if (lastSegment === 'key') return 'valueType';
+  if (lastSegment === 'value') return 'valueType';
+  if (lastSegment === 'condition') return 'valueType';
+  if (lastSegment === 'validate') return 'valueType';
+
+  // For arbitrary keys within maps/loops/sets, use valueType
+  return 'valueType';
+}
+
+/**
  * Mapping Editor Tabs - Main Editor Organism
  *
  * This is the complete tab-based mapping editor that combines all pieces:
@@ -164,56 +213,8 @@ export function MappingEditorTabs({
           visible={navigation.treeVisible}
           onToggle={treeState.togglePath}
           onNavigate={(path) => {
-            // Determine node type from path semantically
-            let nodeType:
-              | 'entity'
-              | 'rule'
-              | 'name'
-              | 'batch'
-              | 'ignore'
-              | 'consent'
-              | 'policy'
-              | 'valueType'
-              | 'valueConfig';
-
-            // Check if this is a policy path
-            if (path.length === 1 && path[0] === 'policy') {
-              // Root policy node = policy overview
-              nodeType = 'policy';
-            } else if (path.length >= 2 && path[0] === 'policy') {
-              // policy.{path} = individual policy rule (uses ValueConfig pane)
-              nodeType = 'valueConfig';
-            } else if (path.length === 1) {
-              // entity only = entity pane
-              nodeType = 'entity';
-            } else if (path.length === 2) {
-              // entity + action = rule overview
-              nodeType = 'rule';
-            } else if (path.length === 3) {
-              // Third level - recognize known rule properties
-              const propertyName = path[2];
-
-              if (propertyName === 'name') {
-                // name is a simple string
-                nodeType = 'name';
-              } else if (propertyName === 'batch') {
-                // batch is a number
-                nodeType = 'batch';
-              } else if (propertyName === 'ignore') {
-                // ignore is a boolean
-                nodeType = 'ignore';
-              } else if (propertyName === 'consent') {
-                // consent is a map of state names
-                nodeType = 'consent';
-              } else {
-                // All other properties (data, settings, etc.) use valueType pane
-                nodeType = 'valueType';
-              }
-            } else {
-              // Nested properties (depth > 3) - use valueType pane
-              nodeType = 'valueType';
-            }
-
+            // Determine the node type from the path structure
+            const nodeType = getNodeTypeFromPath(path);
             navigation.openTab(path, nodeType);
           }}
           onAddAction={(entity, action) => {

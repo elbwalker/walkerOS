@@ -57,7 +57,16 @@ export function MappingSetPaneView({
     const formatValue = (v: unknown): string => {
       if (typeof v === 'string') return `"${v}"`;
       if (typeof v === 'number' || typeof v === 'boolean') return String(v);
-      if (Array.isArray(v)) return v.length > 0 ? `[${v.length}]` : '[]';
+      if (Array.isArray(v)) {
+        if (v.length === 0) return '[]';
+        // For arrays, show the first item (useful for loop/set arrays)
+        const firstItem = v[0];
+        if (typeof firstItem === 'string') return `"${firstItem}"`;
+        if (typeof firstItem === 'number' || typeof firstItem === 'boolean')
+          return String(firstItem);
+        // For complex first items, show count
+        return `[${v.length}]`;
+      }
       if (typeof v === 'object' && v !== null)
         return Object.keys(v).length > 0 ? `{${Object.keys(v).length}}` : '{}';
       return '';
