@@ -1,0 +1,111 @@
+/**
+ * Mapping Function Pane Styles (Generic)
+ *
+ * Shared styles for all function-based panes (condition, fn, validate).
+ * Each pane uses the same structure:
+ * - Header with reset button (PaneHeader component)
+ * - Code editor section (CodeBox component)
+ * - Help section (parameters, return value, examples)
+ *
+ * Usage: Add class .elb-mapping-function-pane to your pane container
+ */
+
+.elb-mapping-function-pane {
+  // No padding - parent .elb-mapping-pane-content handles it
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+// Code Editor Section
+.elb-mapping-function-editor {
+  flex: 1;
+  min-height: 200px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+// Help Section
+.elb-mapping-function-help {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-box);
+  padding-top: 20px;
+}
+
+.elb-mapping-function-help-section {
+  margin-bottom: 20px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.elb-mapping-function-help-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 8px 0;
+}
+
+.elb-mapping-function-help-list {
+  margin: 0;
+  padding-left: 20px;
+  list-style: none;
+
+  li {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin-bottom: 4px;
+    position: relative;
+
+    &:before {
+      content: '•';
+      position: absolute;
+      left: -12px;
+      color: var(--color-text-muted);
+    }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--bg-header);
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: var(--color-text);
+    }
+  }
+}
+
+// Examples
+.elb-mapping-function-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.elb-mapping-function-example {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.elb-mapping-function-example-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.elb-mapping-function-example-code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text);
+  background: var(--bg-header);
+  padding: 8px 12px;
+  border-radius: 4px;
+  display: block;
+  border: 1px solid var(--border-box);
+}

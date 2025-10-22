@@ -5,32 +5,34 @@ import { PaneHeader } from '../atoms/pane-header';
 import { normalizeCode } from '../../utils/code-normalizer';
 
 /**
- * Mapping Condition Pane View
+ * Mapping Fn Pane View
  *
- * Dedicated pane for the 'condition' property - a function that determines
- * if the mapping rule should apply to an event.
+ * Dedicated pane for the 'fn' property - a transformation function that
+ * processes event data and returns a transformed value.
  *
- * Returns true to apply the rule, false to skip it.
+ * Function signature: (value, mapping, options) => any
  */
-export interface MappingConditionPaneViewProps {
+export interface MappingFnPaneViewProps {
   path: string[];
   mappingState: MappingState;
   className?: string;
 }
 
-const DEFAULT_CONDITION = `(value, mapping, collector) => {
-  // Return true to apply this rule
-  return true;
+const DEFAULT_FN = `(value, mapping, options) => {
+  // Transform and return the value
+  // Access event data: value.data, value.user, value.globals
+  // Access collector: options.collector
+  return value.data;
 }`;
 
-export function MappingConditionPaneView({
+export function MappingFnPaneView({
   path,
   mappingState,
   className = '',
-}: MappingConditionPaneViewProps) {
-  // Get current condition value
+}: MappingFnPaneViewProps) {
+  // Get current fn value
   const value = mappingState.actions.getValue(path);
-  const initialCode = typeof value === 'string' ? value : DEFAULT_CONDITION;
+  const initialCode = typeof value === 'string' ? value : DEFAULT_FN;
 
   const [code, setCode] = useState(initialCode);
 
@@ -38,7 +40,7 @@ export function MappingConditionPaneView({
   useEffect(() => {
     const currentValue = mappingState.actions.getValue(path);
     const newCode =
-      typeof currentValue === 'string' ? currentValue : DEFAULT_CONDITION;
+      typeof currentValue === 'string' ? currentValue : DEFAULT_FN;
     setCode(newCode);
   }, [path, mappingState]);
 
@@ -46,11 +48,10 @@ export function MappingConditionPaneView({
     setCode(newCode);
 
     // Check if code is different from default (normalized comparison)
-    const isDefault =
-      normalizeCode(newCode) === normalizeCode(DEFAULT_CONDITION);
+    const isDefault = normalizeCode(newCode) === normalizeCode(DEFAULT_FN);
 
     if (isDefault) {
-      // Remove the condition property if it's the default
+      // Remove the fn property if it's the default
       mappingState.actions.deleteValue(path);
     } else {
       // Save the modified code
@@ -60,7 +61,7 @@ export function MappingConditionPaneView({
 
   const handleReset = () => {
     // Reset to default and remove from mapping
-    setCode(DEFAULT_CONDITION);
+    setCode(DEFAULT_FN);
     mappingState.actions.deleteValue(path);
   };
 
@@ -70,8 +71,8 @@ export function MappingConditionPaneView({
         <div className="elb-mapping-function-pane">
           {/* Header */}
           <PaneHeader
-            title="Condition Function"
-            description="Define when this mapping rule should apply to an event"
+            title="Transformation Function"
+            description="Transform event data before sending to destination"
             action={{
               label: 'Reset',
               onClick: handleReset,
@@ -100,10 +101,22 @@ export function MappingConditionPaneView({
                   processed
                 </li>
                 <li>
-                  <code>mapping</code> - The mapping configuration
+                  <code>mapping</code> - The mapping configuration for this
+                  property
                 </li>
                 <li>
-                  <code>collector</code> - The collector instance
+                  <code>options</code> - Additional options
+                  <ul>
+                    <li>
+                      <code>options.collector</code> - The collector instance
+                    </li>
+                    <li>
+                      <code>options.consent</code> - Current consent states
+                    </li>
+                    <li>
+                      <code>options.props</code> - Custom properties
+                    </li>
+                  </ul>
                 </li>
               </ul>
             </div>
@@ -112,11 +125,12 @@ export function MappingConditionPaneView({
               <h4 className="elb-mapping-function-help-title">Return Value</h4>
               <ul className="elb-mapping-function-help-list">
                 <li>
-                  <code>true</code> - Apply this mapping rule
+                  Return the transformed value (string, number, object, array)
                 </li>
                 <li>
-                  <code>false</code> - Skip this mapping rule
+                  Return <code>undefined</code> to skip this property
                 </li>
+                <li>Can be async (return Promise)</li>
               </ul>
             </div>
 
@@ -125,27 +139,58 @@ export function MappingConditionPaneView({
               <div className="elb-mapping-function-examples">
                 <div className="elb-mapping-function-example">
                   <div className="elb-mapping-function-example-label">
-                    Only for high-value orders:
+                    Extract nested property:
                   </div>
                   <code className="elb-mapping-function-example-code">
-                    (value) =&gt; value.data?.total &gt; 100
+                    (value) =&gt; value.data?.product?.id
                   </code>
                 </div>
                 <div className="elb-mapping-function-example">
                   <div className="elb-mapping-function-example-label">
-                    Only for specific user segment:
+                    Format currency:
                   </div>
                   <code className="elb-mapping-function-example-code">
-                    (value) =&gt; value.user?.segment === 'premium'
+                    (value) =&gt; &#123;{'\n'}
+                    {'  '}const price = value.data?.price || 0;{'\n'}
+                    {'  '}return price.toFixed(2);{'\n'}
+                    &#125;
                   </code>
                 </div>
                 <div className="elb-mapping-function-example">
                   <div className="elb-mapping-function-example-label">
-                    Only during business hours:
+                    Combine multiple fields:
                   </div>
                   <code className="elb-mapping-function-example-code">
-                    () =&gt; new Date().getHours() &gt;= 9 && new
-                    Date().getHours() &lt; 17
+                    (value) =&gt; `$&#123;value.data?.firstName&#125;
+                    $&#123;value.data?.lastName&#125;`
+                  </code>
+                </div>
+                <div className="elb-mapping-function-example">
+                  <div className="elb-mapping-function-example-label">
+                    Conditional transformation with consent:
+                  </div>
+                  <code className="elb-mapping-function-example-code">
+                    (value, mapping, options) =&gt; &#123;{'\n'}
+                    {'  '}if (options.consent?.marketing) &#123;{'\n'}
+                    {'    '}return value.user?.email;{'\n'}
+                    {'  '}&#125;{'\n'}
+                    {'  '}return undefined;{'\n'}
+                    &#125;
+                  </code>
+                </div>
+                <div className="elb-mapping-function-example">
+                  <div className="elb-mapping-function-example-label">
+                    Use collector for context:
+                  </div>
+                  <code className="elb-mapping-function-example-code">
+                    (value, mapping, options) =&gt; &#123;{'\n'}
+                    {'  '}const sessionId = options.collector?.session?.id;
+                    {'\n'}
+                    {'  '}return &#123;{'\n'}
+                    {'    '}eventId: value.id,{'\n'}
+                    {'    '}sessionId: sessionId,{'\n'}
+                    {'  '}&#125;;{'\n'}
+                    &#125;
                   </code>
                 </div>
               </div>

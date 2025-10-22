@@ -4,6 +4,7 @@ import { MappingValueConfigPaneView } from './mapping-value-config-pane-view';
 import { MappingValueTypePaneView } from './mapping-value-type-pane-view';
 import { MappingValuePaneView } from './mapping-value-pane-view';
 import { MappingConditionPaneView } from './mapping-condition-pane-view';
+import { MappingFnPaneView } from './mapping-fn-pane-view';
 import { MappingNamePaneView } from './mapping-name-pane-view';
 import { MappingBatchPaneView } from './mapping-batch-pane-view';
 import { MappingIgnorePaneView } from './mapping-ignore-pane-view';
@@ -30,10 +31,10 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * - 'key' → MappingKeyPaneView - Focused key property editor
  * - 'condition' → MappingConditionPaneView - Condition function editor
  * - 'value' → MappingValuePaneView - Primitive value editor (string, number, boolean)
+ * - 'fn' → MappingFnPaneView - Transformation function editor
  * - 'map' → (Coming soon) - Map transformation editor
  * - 'loop' → (Coming soon) - Loop transformation editor
  * - 'set' → (Coming soon) - Set transformation editor
- * - 'fn' → (Coming soon) - Function editor
  * - 'validate' → (Coming soon) - Validate function editor
  *
  * @example
@@ -149,6 +150,16 @@ export function MappingPane({
         />
       );
 
+    case 'fn':
+      // MappingFnPaneView uses standard .elb-mapping-pane structure
+      return (
+        <MappingFnPaneView
+          path={path}
+          mappingState={mappingState}
+          className={className}
+        />
+      );
+
     case 'valueType':
       // MappingValueTypePaneView for string | ValueConfig
       return (
@@ -165,7 +176,6 @@ export function MappingPane({
     case 'map':
     case 'loop':
     case 'set':
-    case 'fn':
     case 'validate':
     default: {
       let content: React.ReactNode;
@@ -183,7 +193,6 @@ export function MappingPane({
         nodeType === 'map' ||
         nodeType === 'loop' ||
         nodeType === 'set' ||
-        nodeType === 'fn' ||
         nodeType === 'validate'
       ) {
         content = (

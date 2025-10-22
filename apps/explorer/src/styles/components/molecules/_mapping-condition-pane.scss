@@ -2,105 +2,55 @@
  * Mapping Condition Pane Styles
  *
  * Dedicated pane for condition property with code editor.
- * Header styling handled by PaneHeader component.
+ * Uses generic function pane styles from _mapping-function-pane.scss
+ *
+ * Legacy class names kept for backward compatibility:
+ * - .elb-mapping-condition-pane (alias for .elb-mapping-function-pane)
+ * - .elb-mapping-condition-editor (alias for .elb-mapping-function-editor)
+ * - .elb-mapping-condition-help (alias for .elb-mapping-function-help)
+ * - etc.
  */
 
+// Import generic function pane styles
+@import './mapping-function-pane';
+
+// Backward compatibility aliases
 .elb-mapping-condition-pane {
-  // No padding - parent .elb-mapping-pane-content handles it
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+  @extend .elb-mapping-function-pane;
 }
 
-// Code Editor Section
 .elb-mapping-condition-editor {
-  flex: 1;
-  min-height: 200px;
-  margin-bottom: 24px;
-  overflow: hidden;
+  @extend .elb-mapping-function-editor;
 }
 
-// Help Section
 .elb-mapping-condition-help {
-  flex-shrink: 0;
-  border-top: 1px solid var(--border-box);
-  padding-top: 20px;
+  @extend .elb-mapping-function-help;
 }
 
 .elb-mapping-condition-help-section {
-  margin-bottom: 20px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
+  @extend .elb-mapping-function-help-section;
 }
 
 .elb-mapping-condition-help-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0 0 8px 0;
+  @extend .elb-mapping-function-help-title;
 }
 
 .elb-mapping-condition-help-list {
-  margin: 0;
-  padding-left: 20px;
-  list-style: none;
-
-  li {
-    font-size: 13px;
-    color: var(--color-text-muted);
-    line-height: 1.6;
-    margin-bottom: 4px;
-    position: relative;
-
-    &:before {
-      content: '•';
-      position: absolute;
-      left: -12px;
-      color: var(--color-text-muted);
-    }
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-
-    code {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      background: var(--bg-header);
-      padding: 2px 6px;
-      border-radius: 3px;
-      color: var(--color-text);
-    }
-  }
+  @extend .elb-mapping-function-help-list;
 }
 
-// Examples
 .elb-mapping-condition-examples {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  @extend .elb-mapping-function-examples;
 }
 
 .elb-mapping-condition-example {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  @extend .elb-mapping-function-example;
 }
 
 .elb-mapping-condition-example-label {
-  font-size: 12px;
-  color: var(--color-text-muted);
+  @extend .elb-mapping-function-example-label;
 }
 
 .elb-mapping-condition-example-code {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--color-text);
-  background: var(--bg-header);
-  padding: 8px 12px;
-  border-radius: 4px;
-  display: block;
-  border: 1px solid var(--border-box);
+  @extend .elb-mapping-function-example-code;
 }
