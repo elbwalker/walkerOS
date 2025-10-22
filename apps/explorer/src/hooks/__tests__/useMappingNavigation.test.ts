@@ -7,7 +7,7 @@ describe('useMappingNavigation', () => {
 
     expect(result.current.openTabs).toEqual([]);
     expect(result.current.activeTabId).toBe('');
-    expect(result.current.treeVisible).toBe(false);
+    expect(result.current.treeVisible).toBe(true); // Changed: tree now visible by default
   });
 
   describe('openTab', () => {
@@ -174,7 +174,7 @@ describe('useMappingNavigation', () => {
       const { result } = renderHook(() => useMappingNavigation());
 
       expect(result.current.breadcrumb).toEqual([
-        { label: 'Root', path: [], nodeType: 'root' },
+        { label: 'Overview', path: [], nodeType: 'root' }, // Changed: "Root" -> "Overview"
       ]);
     });
 
@@ -189,15 +189,16 @@ describe('useMappingNavigation', () => {
       });
 
       expect(result.current.breadcrumb).toEqual([
-        { label: 'Root', path: [], nodeType: 'root' },
-        { label: 'product view', path: ['product', 'view'], nodeType: 'rule' },
+        { label: 'Overview', path: [], nodeType: 'root' },
+        { label: 'product', path: ['product'], nodeType: 'rule' },
+        { label: 'view', path: ['product', 'view'], nodeType: 'rule' },
         {
-          label: 'Data',
+          label: 'data',
           path: ['product', 'view', 'data'],
           nodeType: 'property',
         },
         {
-          label: 'Map',
+          label: 'map',
           path: ['product', 'view', 'data', 'map'],
           nodeType: 'nested',
         },
@@ -237,6 +238,12 @@ describe('useMappingNavigation', () => {
     it('toggles tree visibility', () => {
       const { result } = renderHook(() => useMappingNavigation());
 
+      expect(result.current.treeVisible).toBe(true); // Changed: tree now visible by default
+
+      act(() => {
+        result.current.toggleTree();
+      });
+
       expect(result.current.treeVisible).toBe(false);
 
       act(() => {
@@ -244,12 +251,6 @@ describe('useMappingNavigation', () => {
       });
 
       expect(result.current.treeVisible).toBe(true);
-
-      act(() => {
-        result.current.toggleTree();
-      });
-
-      expect(result.current.treeVisible).toBe(false);
     });
   });
 

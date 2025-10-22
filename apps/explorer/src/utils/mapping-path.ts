@@ -40,12 +40,37 @@ export function getValueAtPath(obj: unknown, path: string[]): unknown {
 }
 
 /**
- * Deep clone using JSON (works in all environments)
- * Note: Does not handle functions, symbols, undefined, etc.
- * Sufficient for mapping config which is JSON-serializable
+ * Deep clone that preserves all value types including function strings
+ *
+ * In the explorer, functions are stored as strings (e.g., fn: "(event) => event.data")
+ * so they need to be preserved during cloning operations.
+ *
+ * This implementation:
+ * - Handles primitives, arrays, objects
+ * - Preserves function strings
+ * - Handles nested structures recursively
+ * - Creates new object references (true immutability)
  */
 function deepClone<T>(obj: T): T {
-  return JSON.parse(JSON.stringify(obj));
+  // Handle primitives and null
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map((item) => deepClone(item)) as unknown as T;
+  }
+
+  // Handle objects
+  const cloned: Record<string, unknown> = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      cloned[key] = deepClone((obj as Record<string, unknown>)[key]);
+    }
+  }
+
+  return cloned as T;
 }
 
 /**

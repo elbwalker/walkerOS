@@ -277,6 +277,59 @@ export function useMappingNavigation() {
     setTreeVisible((prev) => !prev);
   }, []);
 
+  /**
+   * Navigate to a path using dot notation
+   *
+   * Enables deep linking by parsing a string path and opening all intermediate tabs.
+   *
+   * @param dotPath - Path in dot notation (e.g., "page.view.data.map.items.consent")
+   *
+   * @example
+   * navigation.navigateToPath('page.view.consent');
+   * // Opens: page entity → view rule → consent property
+   *
+   * @example
+   * navigation.navigateToPath('product.add.data.map.items.key');
+   * // Opens all intermediate tabs leading to the key property
+   */
+  const navigateToPath = useCallback(
+    (dotPath: string) => {
+      const pathArray = dotPath.split('.').filter((s) => s.trim());
+
+      if (pathArray.length < 2) {
+        console.warn('Invalid path for navigation:', dotPath);
+        return;
+      }
+
+      // Open entity tab
+      if (pathArray.length >= 1) {
+        openTab([pathArray[0]], 'entity');
+      }
+
+      // Open rule tab
+      if (pathArray.length >= 2) {
+        openTab([pathArray[0], pathArray[1]], 'rule');
+      }
+
+      // Open deeper tabs
+      for (let i = 3; i <= pathArray.length; i++) {
+        const subPath = pathArray.slice(0, i);
+        // Determine node type - for now use generic, could be enhanced with path analyzer
+        const nodeType: NodeType =
+          subPath[subPath.length - 1] === 'consent'
+            ? 'consent'
+            : subPath[subPath.length - 1] === 'condition'
+              ? 'condition'
+              : subPath[subPath.length - 1] === 'map'
+                ? 'map'
+                : 'valueConfig';
+
+        openTab(subPath, nodeType);
+      }
+    },
+    [openTab],
+  );
+
   return {
     // State
     openTabs,
@@ -291,6 +344,7 @@ export function useMappingNavigation() {
     closeLevel,
     closeAllTabs,
     navigateToBreadcrumb,
+    navigateToPath,
     toggleTree,
     setTreeVisible,
 

@@ -3,6 +3,7 @@ import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import { ConsentStateTile } from '../atoms/consent-state-tile';
 import { scanMappingForConsentStates } from '../../utils/consent-scanner';
 import { PaneHeader } from '../atoms/pane-header';
+import { getPathDescription } from '../../utils/path-analyzer';
 
 /**
  * Mapping Consent Pane View
@@ -86,14 +87,17 @@ export function MappingConsentPaneView({
     }
   };
 
+  // Get context-aware title and description
+  const { title, description } = useMemo(
+    () => getPathDescription(path, mappingState.config),
+    [path, mappingState.config],
+  );
+
   return (
     <div className={`elb-mapping-pane ${className}`}>
       <div className="elb-mapping-pane-content">
         <div className="elb-mapping-consent-pane">
-          <PaneHeader
-            title="Required Consent States"
-            description="Select which consent states must be granted for this event to be processed"
-          />
+          <PaneHeader title={title} description={description} />
 
           {/* Consent State Tiles Grid */}
           <div className="elb-mapping-consent-grid">

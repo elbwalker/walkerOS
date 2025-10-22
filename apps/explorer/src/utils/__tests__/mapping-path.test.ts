@@ -162,24 +162,25 @@ describe('mapping-path utilities', () => {
       ]);
 
       expect(segments).toEqual([
-        { label: 'Root', path: [], nodeType: 'root' },
+        { label: 'Overview', path: [], nodeType: 'root' },
+        { label: 'product', path: ['product'], nodeType: 'rule' },
         {
-          label: 'product view',
+          label: 'view',
           path: ['product', 'view'],
           nodeType: 'rule',
         },
         {
-          label: 'Data',
+          label: 'data',
           path: ['product', 'view', 'data'],
           nodeType: 'property',
         },
         {
-          label: 'Map',
+          label: 'map',
           path: ['product', 'view', 'data', 'map'],
           nodeType: 'nested',
         },
         {
-          label: 'Items',
+          label: 'items',
           path: ['product', 'view', 'data', 'map', 'items'],
           nodeType: 'nested',
         },
@@ -190,9 +191,10 @@ describe('mapping-path utilities', () => {
       const segments = buildBreadcrumbSegments(['product', 'view']);
 
       expect(segments).toEqual([
-        { label: 'Root', path: [], nodeType: 'root' },
+        { label: 'Overview', path: [], nodeType: 'root' },
+        { label: 'product', path: ['product'], nodeType: 'rule' },
         {
-          label: 'product view',
+          label: 'view',
           path: ['product', 'view'],
           nodeType: 'rule',
         },
@@ -202,10 +204,12 @@ describe('mapping-path utilities', () => {
     it('handles empty path', () => {
       const segments = buildBreadcrumbSegments([]);
 
-      expect(segments).toEqual([{ label: 'Root', path: [], nodeType: 'root' }]);
+      expect(segments).toEqual([
+        { label: 'Overview', path: [], nodeType: 'root' },
+      ]);
     });
 
-    it('capitalizes labels', () => {
+    it('uses lowercase labels for path segments', () => {
       const segments = buildBreadcrumbSegments([
         'product',
         'view',
@@ -213,8 +217,8 @@ describe('mapping-path utilities', () => {
         'map',
       ]);
 
-      expect(segments[2].label).toBe('Data');
-      expect(segments[3].label).toBe('Map');
+      expect(segments[3].label).toBe('data'); // Changed: labels are now lowercase
+      expect(segments[4].label).toBe('map'); // Changed: labels are now lowercase
     });
   });
 
