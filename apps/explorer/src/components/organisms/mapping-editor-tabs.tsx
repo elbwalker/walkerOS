@@ -172,10 +172,19 @@ export function MappingEditorTabs({
               | 'batch'
               | 'ignore'
               | 'consent'
+              | 'policy'
               | 'valueType'
+              | 'valueConfig'
               | 'map';
 
-            if (path.length === 1) {
+            // Check if this is a policy path
+            if (path.length === 1 && path[0] === 'policy') {
+              // Root policy node = policy overview
+              nodeType = 'policy';
+            } else if (path.length >= 2 && path[0] === 'policy') {
+              // policy.{path} = individual policy rule (uses ValueConfig pane)
+              nodeType = 'valueConfig';
+            } else if (path.length === 1) {
               // entity only = entity pane
               nodeType = 'entity';
             } else if (path.length === 2) {
@@ -197,9 +206,7 @@ export function MappingEditorTabs({
               } else if (propertyName === 'consent') {
                 // consent is a map of state names
                 nodeType = 'consent';
-              } else if (
-                ['data', 'policy', 'settings'].includes(propertyName)
-              ) {
+              } else if (['data', 'settings'].includes(propertyName)) {
                 // Complex transformations
                 nodeType = 'map';
               } else {

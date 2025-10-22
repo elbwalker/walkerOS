@@ -11,6 +11,7 @@ export type NodeType =
   | 'name'
   | 'batch'
   | 'ignore'
+  | 'policy'
   | 'valueConfig'
   | 'valueType'
   | 'map'

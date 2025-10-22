@@ -1,5 +1,6 @@
 import { MappingEntityPane } from './mapping-entity-pane';
 import { MappingRuleOverview } from './mapping-rule-overview';
+import { MappingPolicyOverviewPane } from './mapping-policy-overview-pane';
 import { MappingValueConfigPaneView } from './mapping-value-config-pane-view';
 import { MappingValueTypePaneView } from './mapping-value-type-pane-view';
 import { MappingValuePaneView } from './mapping-value-pane-view';
@@ -23,6 +24,7 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * Supported node types:
  * - 'entity' → MappingEntityPane - Shows list of actions
  * - 'rule' → MappingRuleOverview - Shows rule properties grid
+ * - 'policy' → MappingPolicyOverviewPane - Shows list of policy rules with badges
  * - 'name' → MappingNamePaneView - Simple string input for event name override
  * - 'batch' → MappingBatchPaneView - Number input for batch size configuration
  * - 'ignore' → MappingIgnorePaneView - Boolean toggle to ignore rule
@@ -127,6 +129,17 @@ export function MappingPane({
         <MappingConsentPaneView
           path={path}
           mappingState={mappingState}
+          className={className}
+        />
+      );
+
+    case 'policy':
+      // MappingPolicyOverviewPane shows list of policy rules
+      return (
+        <MappingPolicyOverviewPane
+          path={path}
+          mappingState={mappingState}
+          navigation={navigation}
           className={className}
         />
       );

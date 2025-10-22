@@ -302,13 +302,65 @@ function buildPropertyTree(obj: unknown, basePath: string[]): TreeNode[] {
  * Now includes nested properties and map keys.
  */
 export function buildTreeFromMapping(config: Mapping.Config): TreeNode[] {
-  const entities: TreeNode[] = [];
+  const nodes: TreeNode[] = [];
+
+  // Add policy node if policy exists and has keys
+  const configRecord = config as Record<string, Record<string, unknown>>;
+  if (
+    config.policy &&
+    typeof config.policy === 'object' &&
+    Object.keys(config.policy).length > 0
+  ) {
+    const policyChildren: TreeNode[] = [];
+
+    // Build children for each policy path
+    Object.keys(config.policy)
+      .sort()
+      .forEach((policyPath) => {
+        const policyValue = (config.policy as Record<string, unknown>)[
+          policyPath
+        ];
+
+        // Build tree for this policy value's properties
+        const valueChildren = buildPropertyTree(policyValue, [
+          'policy',
+          policyPath,
+        ]);
+
+        policyChildren.push({
+          path: ['policy', policyPath],
+          label: policyPath,
+          type: 'property',
+          valueType: undefined,
+          children: valueChildren,
+          isExpandable: valueChildren.length > 0,
+        });
+      });
+
+    nodes.push({
+      path: ['policy'],
+      label: 'Policy',
+      type: 'property',
+      valueType: undefined,
+      children: policyChildren,
+      isExpandable: true,
+    });
+  }
 
   // Build entity and rule nodes
-  const configRecord = config as Record<string, Record<string, unknown>>;
   Object.keys(config)
     .sort()
     .forEach((entity) => {
+      // Skip special properties that aren't entities
+      if (
+        entity === 'policy' ||
+        entity === 'consent' ||
+        entity === 'data' ||
+        entity === 'mapping'
+      ) {
+        return;
+      }
+
       const entityNode: TreeNode = {
         path: [entity],
         label: entity,
@@ -343,10 +395,10 @@ export function buildTreeFromMapping(config: Mapping.Config): TreeNode[] {
           });
       }
 
-      entities.push(entityNode);
+      nodes.push(entityNode);
     });
 
-  return entities;
+  return nodes;
 }
 
 /**

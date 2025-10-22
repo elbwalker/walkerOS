@@ -172,7 +172,7 @@ export function MappingRuleOverview({
     | undefined;
 
   const handleTileClick = (key: string) => {
-    const complexProperties = ['data', 'policy', 'settings'];
+    const complexProperties = ['data', 'settings'];
 
     if (key === 'name') {
       // Name is a simple string - use dedicated name pane
@@ -189,6 +189,9 @@ export function MappingRuleOverview({
     } else if (key === 'consent') {
       // Consent is a map of state names - use dedicated consent pane
       navigation.openTab([...path, key], 'consent');
+    } else if (key === 'policy') {
+      // Policy is event-level policy rules - use policy overview pane
+      navigation.openTab([...path, key], 'policy');
     } else if (complexProperties.includes(key)) {
       // Complex transformations - show coming soon
       navigation.openTab([...path, key], 'map');

@@ -85,6 +85,11 @@ export function MappingOverviewPane({
     }, 150);
   };
 
+  // Check if config-level policy exists
+  const policyCount = config.policy
+    ? Object.keys(config.policy as Record<string, unknown>).length
+    : 0;
+
   return (
     <div className={`elb-mapping-pane ${className}`}>
       <div className="elb-mapping-pane-content">
@@ -106,6 +111,22 @@ export function MappingOverviewPane({
             placeholder="Type entity name to create or select..."
             className={entityExists ? 'is-existing' : ''}
           />
+        </div>
+
+        {/* Always show policy button */}
+        <div className="elb-mapping-overview-policy-section">
+          <button
+            type="button"
+            className="elb-mapping-overview-policy-button"
+            onClick={() => navigation.openTab(['policy'], 'policy')}
+          >
+            <div className="elb-mapping-overview-policy-label">Policy</div>
+            <div className="elb-mapping-overview-policy-count">
+              {policyCount > 0
+                ? `${policyCount} ${policyCount === 1 ? 'rule' : 'rules'}`
+                : 'Add global policies'}
+            </div>
+          </button>
         </div>
 
         {rules.length > 0 && (
