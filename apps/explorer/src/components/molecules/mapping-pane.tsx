@@ -5,6 +5,7 @@ import { MappingValueTypePaneView } from './mapping-value-type-pane-view';
 import { MappingValuePaneView } from './mapping-value-pane-view';
 import { MappingConditionPaneView } from './mapping-condition-pane-view';
 import { MappingFnPaneView } from './mapping-fn-pane-view';
+import { MappingValidatePaneView } from './mapping-validate-pane-view';
 import { MappingNamePaneView } from './mapping-name-pane-view';
 import { MappingBatchPaneView } from './mapping-batch-pane-view';
 import { MappingIgnorePaneView } from './mapping-ignore-pane-view';
@@ -32,10 +33,10 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * - 'condition' → MappingConditionPaneView - Condition function editor
  * - 'value' → MappingValuePaneView - Primitive value editor (string, number, boolean)
  * - 'fn' → MappingFnPaneView - Transformation function editor
+ * - 'validate' → MappingValidatePaneView - Validation function editor
  * - 'map' → (Coming soon) - Map transformation editor
  * - 'loop' → (Coming soon) - Loop transformation editor
  * - 'set' → (Coming soon) - Set transformation editor
- * - 'validate' → (Coming soon) - Validate function editor
  *
  * @example
  * <MappingPane
@@ -160,6 +161,16 @@ export function MappingPane({
         />
       );
 
+    case 'validate':
+      // MappingValidatePaneView uses standard .elb-mapping-pane structure
+      return (
+        <MappingValidatePaneView
+          path={path}
+          mappingState={mappingState}
+          className={className}
+        />
+      );
+
     case 'valueType':
       // MappingValueTypePaneView for string | ValueConfig
       return (
@@ -176,7 +187,6 @@ export function MappingPane({
     case 'map':
     case 'loop':
     case 'set':
-    case 'validate':
     default: {
       let content: React.ReactNode;
 
@@ -192,8 +202,7 @@ export function MappingPane({
       } else if (
         nodeType === 'map' ||
         nodeType === 'loop' ||
-        nodeType === 'set' ||
-        nodeType === 'validate'
+        nodeType === 'set'
       ) {
         content = (
           <div className="elb-mapping-pane-info">
