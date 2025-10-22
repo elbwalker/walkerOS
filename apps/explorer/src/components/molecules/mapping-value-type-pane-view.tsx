@@ -98,8 +98,8 @@ export function MappingValueTypePaneView({
       : '';
 
   const handleStringChange = (newValue: string) => {
-    if (isString) {
-      // String mode: just set the string
+    if (isString || value === undefined) {
+      // String mode or undefined: set as string value
       mappingState.actions.setValue(path, newValue);
     } else if (isValueConfig) {
       // ValueConfig mode: update the key property using the sub-path
@@ -113,6 +113,9 @@ export function MappingValueTypePaneView({
     // This preserves the string value as the 'key' property
     if (isString && displayValue) {
       mappingState.actions.setValue(path, { key: displayValue });
+    } else if (value === undefined) {
+      // If value is undefined, initialize as empty object so tile properties can be set
+      mappingState.actions.setValue(path, {});
     }
 
     // Determine the appropriate nodeType based on the property

@@ -11,6 +11,8 @@ import { MappingNamePaneView } from './mapping-name-pane-view';
 import { MappingBatchPaneView } from './mapping-batch-pane-view';
 import { MappingIgnorePaneView } from './mapping-ignore-pane-view';
 import { MappingConsentPaneView } from './mapping-consent-pane-view';
+import { MappingSetPaneView } from './mapping-set-pane-view';
+import { MappingLoopPaneView } from './mapping-loop-pane-view';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { MappingState } from '../../hooks/useMappingState';
 import type { MappingNavigation } from '../../hooks/useMappingNavigation';
@@ -36,9 +38,9 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * - 'value' → MappingValuePaneView - Primitive value editor (string, number, boolean)
  * - 'fn' → MappingFnPaneView - Transformation function editor
  * - 'validate' → MappingValidatePaneView - Validation function editor
+ * - 'set' → MappingSetPaneView - Array of values with drag-and-drop
  * - 'map' → (Coming soon) - Map transformation editor
  * - 'loop' → (Coming soon) - Loop transformation editor
- * - 'set' → (Coming soon) - Set transformation editor
  *
  * @example
  * <MappingPane
@@ -195,11 +197,31 @@ export function MappingPane({
         />
       );
 
+    case 'set':
+      // MappingSetPaneView uses standard .elb-mapping-pane structure
+      return (
+        <MappingSetPaneView
+          path={path}
+          mappingState={mappingState}
+          navigation={navigation}
+          className={className}
+        />
+      );
+
+    case 'loop':
+      // MappingLoopPaneView uses standard .elb-mapping-pane structure
+      return (
+        <MappingLoopPaneView
+          path={path}
+          mappingState={mappingState}
+          navigation={navigation}
+          className={className}
+        />
+      );
+
     // All other cases use the standard pane wrapper with scrolling content
     case 'valueConfig':
     case 'map':
-    case 'loop':
-    case 'set':
     default: {
       let content: React.ReactNode;
 
@@ -212,15 +234,9 @@ export function MappingPane({
             className=""
           />
         );
-      } else if (
-        nodeType === 'map' ||
-        nodeType === 'loop' ||
-        nodeType === 'set'
-      ) {
+      } else if (nodeType === 'map') {
         content = (
-          <div className="elb-mapping-pane-info">
-            {nodeType} editor - Coming soon
-          </div>
+          <div className="elb-mapping-pane-info">map editor - Coming soon</div>
         );
       } else {
         content = (

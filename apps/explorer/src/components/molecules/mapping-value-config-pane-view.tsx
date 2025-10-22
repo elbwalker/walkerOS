@@ -45,9 +45,9 @@ export function MappingValueConfigPaneView({
   const getCurrentType = (): ValueConfigType | null => {
     // Strings (including empty strings) are 'key' type
     if (typeof value === 'string') return 'key';
-    // undefined or other primitives default to 'value' type
+    // undefined or other primitives - return null so pathLabel can determine type
     if (value === undefined || typeof value !== 'object' || value === null)
-      return 'value';
+      return null;
     // Check object properties
     if ('map' in value) return 'map';
     if ('loop' in value) return 'loop';
@@ -60,7 +60,8 @@ export function MappingValueConfigPaneView({
 
   const currentType = getCurrentType();
 
-  // If currentType is null but we're at a 'key' path, assume it's a key type
+  // Use pathLabel to determine type when value is undefined/null
+  // This ensures correct editor when navigating to a specific property path
   const effectiveType = currentType || (pathLabel === 'key' ? 'key' : 'value');
 
   // Type change handler - converts value to new type

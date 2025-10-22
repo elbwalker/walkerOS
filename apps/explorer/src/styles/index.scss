@@ -41,6 +41,7 @@
 @use './components/molecules/mapping-map';
 @use './components/molecules/mapping-set';
 @use './components/molecules/mapping-loop';
+@use './components/molecules/mapping-loop-pane';
 @use './components/molecules/mapping-breadcrumb';
 @use './components/molecules/mapping-tab';
 @use './components/molecules/mapping-tab-bar';
@@ -51,6 +52,7 @@
 @use './components/molecules/mapping-consent-pane';
 @use './components/molecules/mapping-condition-pane';
 @use './components/molecules/mapping-policy-pane';
+@use './components/molecules/mapping-set-pane';
 @use './components/molecules/mapping-value-type-pane';
 @use './components/molecules/rjsf-form';
 @use './components/molecules/explorer-controls';

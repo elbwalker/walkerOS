@@ -1,203 +1,131 @@
-import type { MappingState } from '../../hooks/useMappingState';
-import type { MappingNavigation } from '../../hooks/useMappingNavigation';
+import type { UseMappingState } from '../../hooks/useMappingState';
+import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
+import { PaneHeader } from '../atoms/pane-header';
+import { MappingInput } from '../atoms/mapping-input';
+import { MappingValueTypePaneView } from './mapping-value-type-pane-view';
+
+export interface MappingLoopPaneViewProps {
+  path: string[];
+  mappingState: UseMappingState;
+  navigation: UseMappingNavigation;
+  className?: string;
+}
 
 /**
- * Loop Pane View - Pure Presentation Component
+ * Loop Pane View - Array iteration with transformation
  *
- * Edits loop array transformations:
- * {
- *   loop: [
- *     'nested',           // Source array path
- *     { map: {...} }      // Item transformation
- *   ]
- * }
+ * Simple two-part interface:
+ * 1. Input field for scope (array path to iterate over)
+ * 2. Reused ValueTypePaneView for item mapping configuration
  *
- * Provides:
- * - Input for source array path
- * - Display of current transformation type
- * - Button to open transformation in new tab
+ * Loop structure: [scope, itemMapping]
+ * - scope: String path to array (e.g., 'nested') or 'this' for current value
+ * - itemMapping: Value transformation applied to each array item
  *
  * @example
  * <MappingLoopPaneView
- *   path={['product', 'view', 'data', 'items']}
+ *   path={['product', 'view', 'data', 'items', 'loop']}
  *   mappingState={mappingState}
  *   navigation={navigation}
  * />
  */
-export interface MappingLoopPaneViewProps {
-  path: string[];
-  mappingState: MappingState;
-  navigation: MappingNavigation;
-  className?: string;
-}
-
 export function MappingLoopPaneView({
   path,
   mappingState,
   navigation,
   className = '',
 }: MappingLoopPaneViewProps) {
-  // Get current loop value
-  const loopValue = mappingState.actions.getValue(path) as
-    | unknown[]
-    | undefined;
+  const value = mappingState.actions.getValue(path);
+  const loopArray = Array.isArray(value) && value.length === 2 ? value : null;
 
-  if (!Array.isArray(loopValue) || loopValue.length !== 2) {
+  const [scope, itemMapping] = loopArray || ['', undefined];
+
+  const handleScopeChange = (newScope: string) => {
+    // Only create loop array if scope has a value
+    if (!newScope || newScope.trim() === '') {
+      // If scope is empty, delete the loop entirely
+      mappingState.actions.deleteValue(path);
+      return;
+    }
+
+    // Update scope (first array element) while preserving item mapping
+    mappingState.actions.setValue(path, [newScope, itemMapping]);
+  };
+
+  // If not initialized, show setup interface
+  if (!loopArray) {
     return (
-      <div className={`elb-mapping-pane elb-mapping-loop-pane ${className}`}>
-        <div className="elb-mapping-pane-error">
-          Invalid loop configuration at path: {path.join(' > ')}
-          <div className="elb-mapping-pane-hint">
-            Loop must be an array with exactly 2 elements: [sourcePath,
-            transformation]
+      <div className={`elb-mapping-pane ${className}`}>
+        <div className="elb-mapping-pane-content">
+          <PaneHeader
+            title="Loop Array"
+            description="Process arrays by applying transformation to each item"
+          />
+
+          {/* Scope Input */}
+          <div className="elb-mapping-pane-field">
+            <label className="elb-mapping-pane-label">
+              Array Path <span className="elb-mapping-pane-required">*</span>
+            </label>
+            <MappingInput
+              value={typeof scope === 'string' ? scope : ''}
+              onChange={handleScopeChange}
+              placeholder="nested"
+              autoFocus
+            />
+            <div className="elb-mapping-pane-hint">
+              Path to the array in the event (e.g., "nested", "data.items") or
+              "this" for current value
+            </div>
+          </div>
+
+          {/* Item Mapping - Reuse ValueTypePaneView */}
+          <div className="elb-loop-item-mapping-section">
+            <MappingValueTypePaneView
+              path={[...path, '1']}
+              mappingState={mappingState}
+              navigation={navigation}
+              className=""
+            />
           </div>
         </div>
       </div>
     );
   }
 
-  const [sourcePath, transformation] = loopValue;
-  const pathLabel = path[path.length - 1] || 'Loop';
-
-  // Get transformation type
-  const getTransformationType = (value: unknown): string => {
-    if (typeof value === 'string') return 'key';
-    if (typeof value !== 'object' || value === null) return 'value';
-    if ('map' in value) return 'map';
-    if ('loop' in value) return 'loop';
-    if ('fn' in value) return 'function';
-    if ('key' in value) return 'key';
-    if ('value' in value) return 'value';
-    if ('set' in value) return 'set';
-    return 'object';
-  };
-
-  const transformationType = getTransformationType(transformation);
-
-  // Handlers
-  const handleSourcePathChange = (value: string) => {
-    mappingState.actions.setValue(path, [value, transformation]);
-  };
-
-  const handleOpenTransformation = () => {
-    // Create a temporary path for the transformation
-    // We'll open it in a tab so user can edit it
-    const nodeType: 'map' | 'loop' | 'valueConfig' =
-      transformationType === 'map'
-        ? 'map'
-        : transformationType === 'loop'
-          ? 'loop'
-          : 'valueConfig';
-
-    // Open with a special path indicating it's a loop transformation
-    navigation.openTab([...path, 'transform'], nodeType);
-  };
-
-  const handleResetTransformation = () => {
-    // Reset to simple key extraction
-    mappingState.actions.setValue(path, [sourcePath, 'this']);
-  };
-
+  // Configured loop - show scope input + item mapping editor
   return (
-    <div className={`elb-mapping-pane elb-mapping-loop-pane ${className}`}>
-      {/* Pane Header */}
-      <div className="elb-mapping-pane-header">
-        <h3 className="elb-mapping-pane-title">{pathLabel}</h3>
-        <span className="elb-mapping-pane-type">Loop Transformation</span>
-      </div>
-
-      {/* Pane Content */}
+    <div className={`elb-mapping-pane ${className}`}>
       <div className="elb-mapping-pane-content">
-        {/* Source Array Path */}
+        <PaneHeader
+          title="Loop Array"
+          description="Process arrays by applying transformation to each item"
+        />
+
+        {/* Scope Input */}
         <div className="elb-mapping-pane-field">
-          <label htmlFor="loop-source" className="elb-mapping-pane-label">
-            Source Array Path{' '}
-            <span className="elb-mapping-pane-required">*</span>
+          <label className="elb-mapping-pane-label">
+            Array Path <span className="elb-mapping-pane-required">*</span>
           </label>
-          <div className="elb-mapping-pane-description">
-            Path to the array in the event to loop over (e.g., "nested" or
-            "data.items")
-          </div>
-          <input
-            id="loop-source"
-            type="text"
-            className="elb-mapping-pane-input"
-            value={typeof sourcePath === 'string' ? sourcePath : ''}
-            onChange={(e) => handleSourcePathChange(e.target.value)}
+          <MappingInput
+            value={typeof scope === 'string' ? scope : ''}
+            onChange={handleScopeChange}
             placeholder="nested"
           />
-          {sourcePath === 'this' && (
-            <div className="elb-mapping-pane-hint">
-              Using "this" means the current value is already an array
-            </div>
-          )}
-        </div>
-
-        {/* Item Transformation */}
-        <div className="elb-mapping-pane-field">
-          <div className="elb-mapping-pane-label">Item Transformation</div>
-          <div className="elb-mapping-pane-description">
-            How to transform each item in the array
-          </div>
-
-          <div className="elb-mapping-loop-transform">
-            <div className="elb-mapping-loop-transform-info">
-              <span className="elb-mapping-pane-type-badge">
-                {transformationType}
-              </span>
-              <span className="elb-mapping-loop-transform-summary">
-                {transformationType === 'key' &&
-                  'Extract property from each item'}
-                {transformationType === 'value' &&
-                  'Replace each item with static value'}
-                {transformationType === 'map' &&
-                  'Transform each item with map object'}
-                {transformationType === 'loop' && 'Nested loop transformation'}
-                {transformationType === 'function' &&
-                  'Custom function per item'}
-                {transformationType === 'set' &&
-                  'Array of static values per item'}
-              </span>
-            </div>
-
-            <div className="elb-mapping-loop-transform-actions">
-              <button
-                type="button"
-                className="elb-mapping-pane-button elb-mapping-pane-button--primary"
-                onClick={handleOpenTransformation}
-              >
-                Edit Transformation →
-              </button>
-              <button
-                type="button"
-                className="elb-mapping-pane-button"
-                onClick={handleResetTransformation}
-                title="Reset to simple property extraction"
-              >
-                Reset
-              </button>
-            </div>
+          <div className="elb-mapping-pane-hint">
+            Path to the array in the event (e.g., "nested", "data.items") or
+            "this" for current value
           </div>
         </div>
 
-        {/* Example Output */}
-        <div className="elb-mapping-pane-field">
-          <div className="elb-mapping-pane-label">How it Works</div>
-          <div className="elb-mapping-pane-info-box">
-            <strong>Example:</strong>
-            <pre className="elb-mapping-pane-code">
-              {`// Input event
-{
-  ${sourcePath}: [
-    { id: 1, name: "Item 1" },
-    { id: 2, name: "Item 2" }
-  ]
-}
-
-// Output: Array of transformed items
-// Each item processed by the ${transformationType} transformation`}
-            </pre>
-          </div>
+        {/* Item Mapping - Reuse ValueTypePaneView */}
+        <div className="elb-loop-item-mapping-section">
+          <MappingValueTypePaneView
+            path={[...path, '1']}
+            mappingState={mappingState}
+            navigation={navigation}
+            className=""
+          />
         </div>
       </div>
     </div>

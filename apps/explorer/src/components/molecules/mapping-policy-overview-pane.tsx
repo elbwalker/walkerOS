@@ -61,17 +61,9 @@ export function MappingPolicyOverviewPane({
       return;
     }
 
-    if (pathExists) {
-      // Navigate to existing policy rule
-      navigation.openTab([...path, policyPath], 'valueType');
-    } else {
-      // Create new policy rule with default key mapping
-      mappingState.actions.setValue(
-        [...path, policyPath],
-        `data.${policyPath.split('.').pop()}`,
-      );
-      navigation.openTab([...path, policyPath], 'valueType');
-    }
+    // Navigate to the policy rule (creates path in navigation)
+    // Don't pre-populate value - let user configure it
+    navigation.openTab([...path, policyPath], 'valueType');
 
     setNewPolicyPath('');
     setPathExists(false);
@@ -187,10 +179,9 @@ export function MappingPolicyOverviewPane({
                   {/* Actions */}
                   <div className="elb-policy-row-actions">
                     <MappingConfirmButton
-                      icon={<span>×</span>}
                       confirmLabel="Delete?"
-                      onConfirm={() => handleDeleteClick(policyPath)}
-                      ariaLabel={`Delete policy rule ${policyPath}`}
+                      onConfirm={() => handleDeleteClick(path)}
+                      ariaLabel={`Delete policy rule ${path}`}
                       className="elb-mapping-delete-button"
                     />
                   </div>
