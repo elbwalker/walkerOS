@@ -39,8 +39,8 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * - 'fn' → MappingFnPaneView - Transformation function editor
  * - 'validate' → MappingValidatePaneView - Validation function editor
  * - 'set' → MappingSetPaneView - Array of values with drag-and-drop
- * - 'map' → (Coming soon) - Map transformation editor
- * - 'loop' → (Coming soon) - Loop transformation editor
+ * - 'map' → MappingValueTypePaneView - Used for Data and Settings (ValueType)
+ * - 'loop' → MappingLoopPaneView - Loop transformation editor
  *
  * @example
  * <MappingPane
@@ -235,8 +235,14 @@ export function MappingPane({
           />
         );
       } else if (nodeType === 'map') {
+        // Data and Settings are ValueType (string | ValueConfig)
         content = (
-          <div className="elb-mapping-pane-info">map editor - Coming soon</div>
+          <MappingValueTypePaneView
+            path={path}
+            mappingState={mappingState}
+            navigation={navigation}
+            className=""
+          />
         );
       } else {
         content = (
