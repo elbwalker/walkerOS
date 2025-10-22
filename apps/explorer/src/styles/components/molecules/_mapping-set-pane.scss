@@ -74,6 +74,9 @@
       display: flex;
       align-items: center;
       min-height: 28px;
+      cursor: pointer;
+      flex: 1;
+      min-width: 0;
     }
 
     &-badges {
@@ -107,33 +110,6 @@
 
     &:active {
       cursor: grabbing;
-    }
-  }
-
-  &-value-text {
-    font-family: var(--font-mono);
-    font-size: 13px;
-    color: var(--color-text);
-    word-break: break-word;
-  }
-
-  &-edit-button {
-    padding: 6px 12px;
-    font-family: var(--font-sans);
-    font-size: 12px;
-    font-weight: var(--font-weight-medium);
-    background: var(--bg-header);
-    border: 1px solid var(--border-box);
-    border-radius: 4px;
-    color: var(--color-text);
-    cursor: pointer;
-    transition:
-      background-color 0.15s ease,
-      border-color 0.15s ease;
-
-    &:hover {
-      background: var(--bg-box);
-      border-color: var(--color-text);
     }
   }
 

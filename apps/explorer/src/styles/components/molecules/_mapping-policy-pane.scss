@@ -71,6 +71,7 @@
   &-badge {
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     padding: 4px 8px;
     font-family: var(--font-mono);
     font-size: 11px;
@@ -84,6 +85,7 @@
       background-color 0.15s ease,
       border-color 0.15s ease,
       transform 0.1s ease;
+    max-width: 200px;
 
     &:hover {
       background: var(--bg-box);
@@ -93,6 +95,33 @@
 
     &:active {
       transform: translateY(0);
+    }
+
+    &-label {
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    &-value {
+      white-space: nowrap;
+      overflow: hidden;
+      position: relative;
+
+      &.is-long {
+        // Fade effect for long values
+        mask-image: linear-gradient(
+          to right,
+          black 0%,
+          black 70%,
+          transparent 100%
+        );
+        -webkit-mask-image: linear-gradient(
+          to right,
+          black 0%,
+          black 70%,
+          transparent 100%
+        );
+      }
     }
   }
 

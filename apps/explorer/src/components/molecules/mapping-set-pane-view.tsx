@@ -46,21 +46,42 @@ export function MappingSetPaneView({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Get configured properties from a value (for badges)
-  const getConfiguredProperties = (val: unknown): string[] => {
+  const getConfiguredProperties = (
+    val: unknown,
+  ): Array<{ prop: string; value: string; isLong: boolean }> => {
     if (!val || typeof val !== 'object') return [];
 
-    const props: string[] = [];
+    const props: Array<{ prop: string; value: string; isLong: boolean }> = [];
     const obj = val as Record<string, unknown>;
 
-    if ('fn' in obj && obj.fn) props.push('fn');
-    if ('key' in obj && obj.key) props.push('key');
-    if ('value' in obj && obj.value !== undefined) props.push('value');
-    if ('map' in obj && obj.map) props.push('map');
-    if ('loop' in obj && obj.loop) props.push('loop');
-    if ('set' in obj && obj.set) props.push('set');
-    if ('consent' in obj && obj.consent) props.push('consent');
-    if ('condition' in obj && obj.condition) props.push('condition');
-    if ('validate' in obj && obj.validate) props.push('validate');
+    const formatValue = (v: unknown): string => {
+      if (typeof v === 'string') return `"${v}"`;
+      if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+      if (Array.isArray(v)) return v.length > 0 ? `[${v.length}]` : '[]';
+      if (typeof v === 'object' && v !== null)
+        return Object.keys(v).length > 0 ? `{${Object.keys(v).length}}` : '{}';
+      return '';
+    };
+
+    const addProp = (prop: string, v: unknown) => {
+      const formatted = formatValue(v);
+      props.push({
+        prop,
+        value: formatted,
+        isLong: formatted.length > 20,
+      });
+    };
+
+    if ('fn' in obj && obj.fn) addProp('fn', obj.fn);
+    if ('key' in obj && obj.key) addProp('key', obj.key);
+    if ('value' in obj && obj.value !== undefined) addProp('value', obj.value);
+    if ('map' in obj && obj.map) addProp('map', obj.map);
+    if ('loop' in obj && obj.loop) addProp('loop', obj.loop);
+    if ('set' in obj && obj.set) addProp('set', obj.set);
+    if ('consent' in obj && obj.consent) addProp('consent', obj.consent);
+    if ('condition' in obj && obj.condition)
+      addProp('condition', obj.condition);
+    if ('validate' in obj && obj.validate) addProp('validate', obj.validate);
 
     return props;
   };
@@ -68,10 +89,13 @@ export function MappingSetPaneView({
   // Handlers
   const handleAdd = () => {
     const newArray = [...setArray, ''];
+    const newIndex = newArray.length - 1;
     mappingState.actions.setValue(path, newArray);
+    // Navigate to the new entry
+    navigation.openTab([...path, newIndex.toString()], 'valueType');
   };
 
-  const handleEdit = (index: number) => {
+  const handleRowClick = (index: number) => {
     navigation.openTab([...path, index.toString()], 'valueType');
   };
 
@@ -185,33 +209,37 @@ export function MappingSetPaneView({
                     </svg>
                   </div>
 
-                  {/* Value display */}
-                  <div className="elb-set-row-value">
-                    {isSimple ? (
-                      <span className="elb-set-value-text">
-                        {val as string}
-                      </span>
-                    ) : (
-                      <div className="elb-set-row-badges">
-                        {configuredProps.map((prop) => (
-                          <span key={prop} className="elb-policy-badge">
-                            {prop}
+                  {/* Value display - clickable */}
+                  <div
+                    className="elb-set-row-value"
+                    onClick={() => handleRowClick(index)}
+                  >
+                    <div className="elb-set-row-badges">
+                      {isSimple ? (
+                        <span className="elb-policy-badge">
+                          <span className="elb-policy-badge-value">
+                            "{val as string}"
                           </span>
-                        ))}
-                      </div>
-                    )}
+                        </span>
+                      ) : (
+                        configuredProps.map(({ prop, value, isLong }) => (
+                          <span key={prop} className="elb-policy-badge">
+                            <span className="elb-policy-badge-label">
+                              {prop}:
+                            </span>
+                            <span
+                              className={`elb-policy-badge-value ${isLong ? 'is-long' : ''}`}
+                            >
+                              {value}
+                            </span>
+                          </span>
+                        ))
+                      )}
+                    </div>
                   </div>
 
                   {/* Actions */}
                   <div className="elb-set-row-actions">
-                    <button
-                      type="button"
-                      className="elb-set-edit-button"
-                      onClick={() => handleEdit(index)}
-                      title={`Edit value ${index + 1}`}
-                    >
-                      Edit
-                    </button>
                     <MappingConfirmButton
                       confirmLabel="Delete?"
                       onConfirm={() => handleDelete(index)}

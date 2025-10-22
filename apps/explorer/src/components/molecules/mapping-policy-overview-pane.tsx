@@ -99,21 +99,45 @@ export function MappingPolicyOverviewPane({
   };
 
   // Determine which properties are configured for a policy value
-  const getConfiguredProperties = (value: unknown): string[] => {
+  const getConfiguredProperties = (
+    value: unknown,
+  ): Array<{ prop: string; value: string; isLong: boolean }> => {
     if (!value || typeof value !== 'object') return [];
 
-    const props: string[] = [];
+    const props: Array<{ prop: string; value: string; isLong: boolean }> = [];
     const obj = value as Record<string, unknown>;
 
-    if ('fn' in obj && obj.fn) props.push('fn');
-    if ('key' in obj && obj.key) props.push('key');
-    if ('value' in obj && obj.value !== undefined) props.push('value');
-    if ('map' in obj && obj.map) props.push('map');
-    if ('loop' in obj && obj.loop) props.push('loop');
-    if ('set' in obj && obj.set) props.push('set');
-    if ('consent' in obj && obj.consent) props.push('consent');
-    if ('condition' in obj && obj.condition) props.push('condition');
-    if ('validate' in obj && obj.validate) props.push('validate');
+    const formatValue = (val: unknown): string => {
+      if (typeof val === 'string') return `"${val}"`;
+      if (typeof val === 'number' || typeof val === 'boolean')
+        return String(val);
+      if (Array.isArray(val)) return val.length > 0 ? `[${val.length}]` : '[]';
+      if (typeof val === 'object' && val !== null)
+        return Object.keys(val).length > 0
+          ? `{${Object.keys(val).length}}`
+          : '{}';
+      return '';
+    };
+
+    const addProp = (prop: string, val: unknown) => {
+      const formatted = formatValue(val);
+      props.push({
+        prop,
+        value: formatted,
+        isLong: formatted.length > 20,
+      });
+    };
+
+    if ('fn' in obj && obj.fn) addProp('fn', obj.fn);
+    if ('key' in obj && obj.key) addProp('key', obj.key);
+    if ('value' in obj && obj.value !== undefined) addProp('value', obj.value);
+    if ('map' in obj && obj.map) addProp('map', obj.map);
+    if ('loop' in obj && obj.loop) addProp('loop', obj.loop);
+    if ('set' in obj && obj.set) addProp('set', obj.set);
+    if ('consent' in obj && obj.consent) addProp('consent', obj.consent);
+    if ('condition' in obj && obj.condition)
+      addProp('condition', obj.condition);
+    if ('validate' in obj && obj.validate) addProp('validate', obj.validate);
 
     return props;
   };
@@ -163,15 +187,20 @@ export function MappingPolicyOverviewPane({
 
                   {/* Badges */}
                   <div className="elb-policy-row-badges">
-                    {configuredProps.map((prop) => (
+                    {configuredProps.map(({ prop, value, isLong }) => (
                       <button
                         key={prop}
                         type="button"
                         className="elb-policy-badge"
                         onClick={() => handleBadgeClick(path, prop)}
-                        title={`Edit ${prop}`}
+                        title={`${prop}: ${value}`}
                       >
-                        {prop}
+                        <span className="elb-policy-badge-label">{prop}:</span>
+                        <span
+                          className={`elb-policy-badge-value ${isLong ? 'is-long' : ''}`}
+                        >
+                          {value}
+                        </span>
                       </button>
                     ))}
                   </div>
