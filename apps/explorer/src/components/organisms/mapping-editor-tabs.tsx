@@ -174,8 +174,7 @@ export function MappingEditorTabs({
               | 'consent'
               | 'policy'
               | 'valueType'
-              | 'valueConfig'
-              | 'map';
+              | 'valueConfig';
 
             // Check if this is a policy path
             if (path.length === 1 && path[0] === 'policy') {
@@ -206,11 +205,8 @@ export function MappingEditorTabs({
               } else if (propertyName === 'consent') {
                 // consent is a map of state names
                 nodeType = 'consent';
-              } else if (['data', 'settings'].includes(propertyName)) {
-                // Complex transformations
-                nodeType = 'map';
               } else {
-                // Unknown property - use valueType pane
+                // All other properties (data, settings, etc.) use valueType pane
                 nodeType = 'valueType';
               }
             } else {

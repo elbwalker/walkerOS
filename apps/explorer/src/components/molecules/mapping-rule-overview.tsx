@@ -193,8 +193,8 @@ export function MappingRuleOverview({
       // Policy is event-level policy rules - use policy overview pane
       navigation.openTab([...path, key], 'policy');
     } else if (complexProperties.includes(key)) {
-      // Complex transformations - show coming soon
-      navigation.openTab([...path, key], 'map');
+      // Data and Settings are ValueType (string | ValueConfig)
+      navigation.openTab([...path, key], 'valueType');
     } else {
       // Unknown properties - use value config
       navigation.openTab([...path, key], 'valueConfig');

@@ -39,7 +39,6 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * - 'fn' → MappingFnPaneView - Transformation function editor
  * - 'validate' → MappingValidatePaneView - Validation function editor
  * - 'set' → MappingSetPaneView - Array of values with drag-and-drop
- * - 'map' → MappingValueTypePaneView - Used for Data and Settings (ValueType)
  * - 'loop' → MappingLoopPaneView - Loop transformation editor
  *
  * @example
@@ -228,16 +227,6 @@ export function MappingPane({
       if (nodeType === 'valueConfig') {
         content = (
           <MappingValueConfigPaneView
-            path={path}
-            mappingState={mappingState}
-            navigation={navigation}
-            className=""
-          />
-        );
-      } else if (nodeType === 'map') {
-        // Data and Settings are ValueType (string | ValueConfig)
-        content = (
-          <MappingValueTypePaneView
             path={path}
             mappingState={mappingState}
             navigation={navigation}
