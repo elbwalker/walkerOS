@@ -72,6 +72,8 @@ const VALUE_CONFIG_TILES: ValueConfigTileConfig[] = [
  *
  * Smart Conversions:
  * - Clicking any tile in String mode converts to { key: "string value" }
+ * - All tiles (including Key) are clickable and open their respective editors
+ * - Conversion happens automatically before opening the editor
  */
 export function MappingValueTypePaneView({
   path,
@@ -107,12 +109,8 @@ export function MappingValueTypePaneView({
   };
 
   const handleTileClick = (tileKey: string) => {
-    // Key tile does nothing - use Quick Value input to edit key
-    if (tileKey === 'key') {
-      return;
-    }
-
-    // If in string mode, convert to ValueConfig first
+    // If in string mode, convert to ValueConfig first (for all tiles)
+    // This preserves the string value as the 'key' property
     if (isString && displayValue) {
       mappingState.actions.setValue(path, { key: displayValue });
     }
@@ -122,6 +120,9 @@ export function MappingValueTypePaneView({
     // Properties that hold ValueConfig objects get the generic valueConfig editor
     let nodeType: string;
     switch (tileKey) {
+      case 'key':
+        nodeType = 'valueConfig'; // Key is a string, use valueConfig editor in 'key' mode
+        break;
       case 'value':
         nodeType = 'value'; // Primitive value editor
         break;
@@ -154,15 +155,13 @@ export function MappingValueTypePaneView({
   };
 
   const getTileStatus = (tileKey: string): ConfigTileStatus => {
-    // Special case for 'key' tile - show string value even in string mode
+    // For 'key' tile: only enabled if we have a ValueConfig with a key property
     if (tileKey === 'key') {
       if (isString) {
-        // In string mode, show the string value as preview
-        return displayValue
-          ? { enabled: true, text: displayValue }
-          : { enabled: false, text: 'Not set' };
+        // In string mode, there is no ValueConfig and no key property
+        return { enabled: false, text: 'Not set' };
       } else if (isValueConfig) {
-        // In ValueConfig mode, show the key property
+        // In ValueConfig mode, show the key property status
         const keyValue = valueConfig.key;
         return typeof keyValue === 'string' && keyValue
           ? { enabled: true, text: keyValue }
