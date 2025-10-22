@@ -13,6 +13,7 @@ import { MappingIgnorePaneView } from './mapping-ignore-pane-view';
 import { MappingConsentPaneView } from './mapping-consent-pane-view';
 import { MappingSetPaneView } from './mapping-set-pane-view';
 import { MappingLoopPaneView } from './mapping-loop-pane-view';
+import { MappingMapPaneView } from './mapping-map-pane-view';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { MappingState } from '../../hooks/useMappingState';
 import type { MappingNavigation } from '../../hooks/useMappingNavigation';
@@ -40,6 +41,7 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * - 'validate' → MappingValidatePaneView - Validation function editor
  * - 'set' → MappingSetPaneView - Array of values with drag-and-drop
  * - 'loop' → MappingLoopPaneView - Loop transformation editor
+ * - 'map' → MappingMapPaneView - Map object editor (key-value pairs)
  *
  * @example
  * <MappingPane
@@ -218,9 +220,18 @@ export function MappingPane({
         />
       );
 
+    case 'map':
+      return (
+        <MappingMapPaneView
+          path={path}
+          mappingState={mappingState}
+          navigation={navigation}
+          className={className}
+        />
+      );
+
     // All other cases use the standard pane wrapper with scrolling content
     case 'valueConfig':
-    case 'map':
     default: {
       let content: React.ReactNode;
 

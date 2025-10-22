@@ -1,20 +1,23 @@
-import type { MappingState } from '../../hooks/useMappingState';
-import type { MappingNavigation } from '../../hooks/useMappingNavigation';
+import { useState } from 'react';
+import type { UseMappingState } from '../../hooks/useMappingState';
+import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
+import { PaneHeader } from '../atoms/pane-header';
+import { MappingInput } from '../atoms/mapping-input';
+import { MappingConfirmButton } from '../atoms/mapping-confirm-button';
 
 /**
- * Map Pane View - Pure Presentation Component
+ * Map Pane View - Overview of key-value mappings
  *
- * Edits map object transformations:
- * {
- *   map: {
- *     key1: 'value1',
- *     key2: { map: {...} },
- *     key3: { loop: [...] }
- *   }
- * }
+ * Shows all map keys as a list with badges for configured properties.
+ * Map is an object where each key maps to a Value (string | ValueConfig).
  *
- * Displays as a table with inline editing for simple values.
- * Complex values (nested map/loop) get "Open in Tab" buttons.
+ * Features:
+ * - Add new key-value pairs
+ * - View configured properties as badges
+ * - Navigate to individual key editors (ValueType pane)
+ * - Delete keys
+ *
+ * Structure: { [key: string]: Value }
  *
  * @example
  * <MappingMapPaneView
@@ -25,8 +28,8 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  */
 export interface MappingMapPaneViewProps {
   path: string[];
-  mappingState: MappingState;
-  navigation: MappingNavigation;
+  mappingState: UseMappingState;
+  navigation: UseMappingNavigation;
   className?: string;
 }
 
@@ -36,190 +39,218 @@ export function MappingMapPaneView({
   navigation,
   className = '',
 }: MappingMapPaneViewProps) {
-  // Get current map value
-  const mapValue = mappingState.actions.getValue(path) as
-    | Record<string, unknown>
-    | undefined;
+  const [newKey, setNewKey] = useState('');
+  const [keyExists, setKeyExists] = useState(false);
 
-  if (!mapValue || typeof mapValue !== 'object') {
-    return (
-      <div className={`elb-mapping-pane elb-mapping-map-pane ${className}`}>
-        <div className="elb-mapping-pane-error">
-          Invalid map configuration at path: {path.join(' > ')}
-        </div>
-      </div>
-    );
-  }
+  // Get map from the current path
+  const mapValue = mappingState.actions.getValue(path);
+  const map =
+    mapValue && typeof mapValue === 'object' && !Array.isArray(mapValue)
+      ? (mapValue as Record<string, unknown>)
+      : {};
 
-  const entries = Object.entries(mapValue);
-  const pathLabel = path[path.length - 1] || 'Map';
+  // Get sorted list of map keys
+  const mapKeys = Object.keys(map).sort();
 
-  // Check if value is simple (string) or complex (object)
-  const isSimpleValue = (value: unknown): boolean => {
-    return (
-      typeof value === 'string' ||
-      typeof value === 'number' ||
-      typeof value === 'boolean'
-    );
+  const handleKeyInputChange = (value: string) => {
+    setNewKey(value);
+    setKeyExists(map[value] !== undefined);
   };
 
-  // Get type label for complex values
-  const getValueType = (value: unknown): string => {
-    if (typeof value !== 'object' || value === null) return 'string';
-    if ('map' in value) return 'map';
-    if ('loop' in value) return 'loop';
-    if ('fn' in value) return 'function';
-    if ('key' in value) return 'key';
-    if ('value' in value) return 'value';
-    if ('set' in value) return 'set';
-    return 'object';
-  };
-
-  // Handlers
-  const handleAddEntry = () => {
-    const newKey = `new_key_${Date.now()}`;
-    mappingState.actions.setValue([...path, newKey], '');
-  };
-
-  const handleDeleteEntry = (key: string) => {
-    mappingState.actions.deleteValue([...path, key]);
-  };
-
-  const handleKeyChange = (oldKey: string, newKey: string) => {
-    if (oldKey === newKey) return;
-
-    // Check if new key already exists
-    if (mapValue[newKey] !== undefined) {
-      alert(`Key "${newKey}" already exists`);
+  const handleKeySubmit = () => {
+    const key = newKey.trim();
+    if (!key) {
+      setNewKey('');
       return;
     }
 
-    // Copy value to new key and delete old key
-    const value = mapValue[oldKey];
-    mappingState.actions.setValue([...path, newKey], value);
-    mappingState.actions.deleteValue([...path, oldKey]);
+    // Navigate to the key (creates path in navigation)
+    // Initialize with empty string if new
+    if (!keyExists) {
+      mappingState.actions.setValue([...path, key], '');
+    }
+    navigation.openTab([...path, key], 'valueType');
+
+    setNewKey('');
+    setKeyExists(false);
   };
 
-  const handleSimpleValueChange = (key: string, value: string) => {
-    mappingState.actions.setValue([...path, key], value);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleKeySubmit();
+    } else if (e.key === 'Escape') {
+      setNewKey('');
+      setKeyExists(false);
+    }
   };
 
-  const handleOpenInTab = (key: string, value: unknown) => {
-    const valueType = getValueType(value);
-    const nodeType: 'map' | 'loop' | 'valueConfig' =
-      valueType === 'map'
-        ? 'map'
-        : valueType === 'loop'
-          ? 'loop'
-          : 'valueConfig';
-    navigation.openTab([...path, key], nodeType);
+  const handleKeyBlur = () => {
+    setTimeout(() => {
+      handleKeySubmit();
+    }, 150);
+  };
+
+  const handleKeyClick = (key: string) => {
+    navigation.openTab([...path, key], 'valueType');
+  };
+
+  const handleBadgeClick = (key: string) => {
+    // Navigate to the ValueType pane
+    navigation.openTab([...path, key], 'valueType');
+  };
+
+  const handleDeleteClick = (key: string) => {
+    mappingState.actions.deleteValue([...path, key]);
+  };
+
+  // Determine which properties are configured for a value
+  const getConfiguredProperties = (
+    value: unknown,
+  ): Array<{ prop: string; value: string; isLong: boolean }> => {
+    // Simple string value - return without prop label
+    if (typeof value === 'string') {
+      return [
+        {
+          prop: '', // Empty prop means no label, just show the value
+          value: `"${value}"`,
+          isLong: value.length > 20,
+        },
+      ];
+    }
+
+    if (!value || typeof value !== 'object') return [];
+
+    const props: Array<{ prop: string; value: string; isLong: boolean }> = [];
+    const obj = value as Record<string, unknown>;
+
+    const formatValue = (val: unknown): string => {
+      if (typeof val === 'string') return `"${val}"`;
+      if (typeof val === 'number' || typeof val === 'boolean')
+        return String(val);
+      if (Array.isArray(val)) return val.length > 0 ? `[${val.length}]` : '[]';
+      if (typeof val === 'object' && val !== null)
+        return Object.keys(val).length > 0
+          ? `{${Object.keys(val).length}}`
+          : '{}';
+      return '';
+    };
+
+    const addProp = (prop: string, val: unknown) => {
+      const formatted = formatValue(val);
+      props.push({
+        prop,
+        value: formatted,
+        isLong: formatted.length > 20,
+      });
+    };
+
+    if ('fn' in obj && obj.fn) addProp('fn', obj.fn);
+    if ('key' in obj && obj.key) addProp('key', obj.key);
+    if ('value' in obj && obj.value !== undefined) addProp('value', obj.value);
+    if ('map' in obj && obj.map) addProp('map', obj.map);
+    if ('loop' in obj && obj.loop) addProp('loop', obj.loop);
+    if ('set' in obj && obj.set) addProp('set', obj.set);
+    if ('consent' in obj && obj.consent) addProp('consent', obj.consent);
+    if ('condition' in obj && obj.condition)
+      addProp('condition', obj.condition);
+    if ('validate' in obj && obj.validate) addProp('validate', obj.validate);
+
+    return props;
   };
 
   return (
-    <div className={`elb-mapping-pane elb-mapping-map-pane ${className}`}>
-      {/* Pane Header */}
-      <div className="elb-mapping-pane-header">
-        <h3 className="elb-mapping-pane-title">{pathLabel}</h3>
-        <span className="elb-mapping-pane-type">
-          Map Object ({entries.length} keys)
-        </span>
-      </div>
-
-      {/* Pane Content */}
+    <div className={`elb-mapping-pane ${className}`}>
       <div className="elb-mapping-pane-content">
-        {entries.length === 0 ? (
-          <div className="elb-mapping-pane-empty">
-            No entries in this map. Click "Add Entry" to create one.
-          </div>
-        ) : (
-          <div className="elb-mapping-map-table">
-            <table className="elb-mapping-table">
-              <thead>
-                <tr>
-                  <th>Key</th>
-                  <th>Value</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map(([key, value]) => {
-                  const simple = isSimpleValue(value);
-                  const valueType = getValueType(value);
+        <PaneHeader
+          title="Map"
+          description={
+            mapKeys.length === 0
+              ? 'No keys yet. Add keys to transform event data.'
+              : `${mapKeys.length} ${mapKeys.length === 1 ? 'key' : 'keys'}`
+          }
+        />
 
-                  return (
-                    <tr key={key}>
-                      {/* Key Column */}
-                      <td className="elb-mapping-table-key">
-                        <input
-                          type="text"
-                          className="elb-mapping-pane-input elb-mapping-pane-input--inline"
-                          value={key}
-                          onChange={(e) => handleKeyChange(key, e.target.value)}
-                          onBlur={(e) => {
-                            if (!e.target.value.trim()) {
-                              handleDeleteEntry(key);
-                            }
-                          }}
-                        />
-                      </td>
+        {/* Add new key input */}
+        <div className="elb-policy-input-section">
+          <MappingInput
+            value={newKey}
+            onChange={handleKeyInputChange}
+            onKeyDown={handleKeyDown}
+            onBlur={handleKeyBlur}
+            placeholder="Type key name to create or select (e.g., currency)..."
+            className={keyExists ? 'is-existing' : ''}
+          />
+        </div>
 
-                      {/* Value Column */}
-                      <td className="elb-mapping-table-value">
-                        {simple ? (
-                          <input
-                            type="text"
-                            className="elb-mapping-pane-input elb-mapping-pane-input--inline"
-                            value={String(value)}
-                            onChange={(e) =>
-                              handleSimpleValueChange(key, e.target.value)
-                            }
-                            placeholder="data.property"
-                          />
-                        ) : (
-                          <div className="elb-mapping-table-complex">
-                            <span className="elb-mapping-table-type-badge">
-                              {valueType}
-                            </span>
-                            <button
-                              type="button"
-                              className="elb-mapping-pane-button elb-mapping-pane-button--small"
-                              onClick={() => handleOpenInTab(key, value)}
-                            >
-                              Open in Tab →
-                            </button>
-                          </div>
+        {/* Map keys list */}
+        {mapKeys.length > 0 && (
+          <div className="elb-policy-list">
+            {mapKeys.map((key) => {
+              const value = map[key];
+              const configuredProps = getConfiguredProperties(value);
+
+              return (
+                <div key={key} className="elb-policy-row">
+                  {/* Key */}
+                  <button
+                    type="button"
+                    className="elb-policy-row-path"
+                    onClick={() => handleKeyClick(key)}
+                    title="Click to edit this mapping"
+                  >
+                    {key}
+                  </button>
+
+                  {/* Badges */}
+                  <div className="elb-policy-row-badges">
+                    {configuredProps.map(({ prop, value, isLong }, index) => (
+                      <button
+                        key={prop || index}
+                        type="button"
+                        className="elb-policy-badge"
+                        onClick={() => handleBadgeClick(key)}
+                        title={prop ? `${prop}: ${value}` : value}
+                      >
+                        {prop && (
+                          <span className="elb-policy-badge-label">
+                            {prop}:
+                          </span>
                         )}
-                      </td>
-
-                      {/* Actions Column */}
-                      <td className="elb-mapping-table-actions">
-                        <button
-                          type="button"
-                          className="elb-mapping-pane-button elb-mapping-pane-button--danger elb-mapping-pane-button--small"
-                          onClick={() => handleDeleteEntry(key)}
-                          title="Delete entry"
+                        <span
+                          className={`elb-policy-badge-value ${isLong ? 'is-long' : ''}`}
                         >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          {value}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="elb-policy-row-actions">
+                    <MappingConfirmButton
+                      confirmLabel="Delete?"
+                      onConfirm={() => handleDeleteClick(key)}
+                      ariaLabel={`Delete key ${key}`}
+                      className="elb-mapping-delete-button"
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
-        {/* Add Entry Button */}
-        <div className="elb-mapping-pane-actions">
-          <button
-            type="button"
-            className="elb-mapping-pane-button elb-mapping-pane-button--primary"
-            onClick={handleAddEntry}
-          >
-            + Add Entry
-          </button>
-        </div>
+        {/* Empty state */}
+        {mapKeys.length === 0 && (
+          <div className="elb-policy-empty">
+            <p>Map transforms event data by mapping keys to values.</p>
+            <ul>
+              <li>Each key becomes a property in the output</li>
+              <li>Values can be simple strings or complex transformations</li>
+              <li>Example: currency → "USD", item_id → "data.id"</li>
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
