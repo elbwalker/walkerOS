@@ -2,6 +2,8 @@ import { MappingTypeSelector } from './mapping-type-selector';
 import type { ValueConfigType } from '../atoms/mapping-type-button';
 import type { MappingState } from '../../hooks/useMappingState';
 import type { MappingNavigation } from '../../hooks/useMappingNavigation';
+import { PaneHeader } from '../atoms/pane-header';
+import { MappingInput } from '../atoms/mapping-input';
 
 /**
  * ValueConfig Pane View - Pure Presentation Component
@@ -41,8 +43,12 @@ export function MappingValueConfigPaneView({
 
   // Determine current type
   const getCurrentType = (): ValueConfigType | null => {
+    // Strings (including empty strings) are 'key' type
     if (typeof value === 'string') return 'key';
-    if (typeof value !== 'object' || value === null) return 'value';
+    // undefined or other primitives default to 'value' type
+    if (value === undefined || typeof value !== 'object' || value === null)
+      return 'value';
+    // Check object properties
     if ('map' in value) return 'map';
     if ('loop' in value) return 'loop';
     if ('fn' in value) return 'function';
@@ -53,6 +59,9 @@ export function MappingValueConfigPaneView({
   };
 
   const currentType = getCurrentType();
+
+  // If currentType is null but we're at a 'key' path, assume it's a key type
+  const effectiveType = currentType || (pathLabel === 'key' ? 'key' : 'value');
 
   // Type change handler - converts value to new type
   const handleTypeChange = (newType: ValueConfigType) => {
@@ -86,6 +95,7 @@ export function MappingValueConfigPaneView({
   };
 
   const handleStaticValueChange = (newValue: string) => {
+    // When the entire ValueConfig at 'path' is { value: X }, update it to { value: newValue }
     mappingState.actions.setValue(path, { value: newValue });
   };
 
@@ -105,29 +115,27 @@ export function MappingValueConfigPaneView({
 
   // Render type-specific editor
   const renderEditor = () => {
-    switch (currentType) {
+    switch (effectiveType) {
       case 'key':
+        const keyValue = typeof value === 'string' ? value : '';
         return (
-          <div className="elb-mapping-pane-field">
-            <label htmlFor="value-key" className="elb-mapping-pane-label">
-              Property Path
-            </label>
-            <div className="elb-mapping-pane-description">
-              Path to extract from event (e.g., "data.id", "user.email",
-              "globals.currency")
-            </div>
-            <input
-              id="value-key"
-              type="text"
-              className="elb-mapping-pane-input"
-              value={typeof value === 'string' ? value : ''}
-              onChange={(e) => handleKeyValueChange(e.target.value)}
-              placeholder="data.property"
+          <>
+            <PaneHeader
+              title="Property Path"
+              description="Path to extract from event (e.g., data.id, user.email, globals.currency)"
             />
-            <div className="elb-mapping-pane-hint">
-              Common paths: data.*, globals.*, user.*, context.*
+            <div className="elb-mapping-pane-field">
+              <MappingInput
+                value={keyValue}
+                onChange={handleKeyValueChange}
+                placeholder="data.property"
+                autoFocus
+              />
+              <div className="elb-mapping-pane-hint">
+                Common paths: data.*, globals.*, user.*, context.*
+              </div>
             </div>
-          </div>
+          </>
         );
 
       case 'value':
@@ -136,25 +144,22 @@ export function MappingValueConfigPaneView({
             ? ((value as Record<string, unknown>).value as string) || ''
             : '';
         return (
-          <div className="elb-mapping-pane-field">
-            <label htmlFor="value-static" className="elb-mapping-pane-label">
-              Static Value
-            </label>
-            <div className="elb-mapping-pane-description">
-              Fixed value that will be used (string, number, or boolean)
-            </div>
-            <input
-              id="value-static"
-              type="text"
-              className="elb-mapping-pane-input"
-              value={String(staticValue)}
-              onChange={(e) => handleStaticValueChange(e.target.value)}
-              placeholder="USD"
+          <>
+            <PaneHeader
+              title="Static Value"
+              description="Fixed value that will be used (string, number, or boolean)"
             />
-            <div className="elb-mapping-pane-hint">
-              Use for constant values like currency codes, fixed IDs, etc.
+            <div className="elb-mapping-pane-field">
+              <MappingInput
+                value={String(staticValue)}
+                onChange={handleStaticValueChange}
+                placeholder="USD"
+              />
+              <div className="elb-mapping-pane-hint">
+                Use for constant values like currency codes, fixed IDs, etc.
+              </div>
             </div>
-          </div>
+          </>
         );
 
       case 'map':
@@ -167,27 +172,29 @@ export function MappingValueConfigPaneView({
             : {};
         const mapKeyCount = Object.keys(mapObj).length;
         return (
-          <div className="elb-mapping-pane-field">
-            <div className="elb-mapping-pane-label">Map Object</div>
-            <div className="elb-mapping-pane-description">
-              Transform event data into an object with multiple keys
-            </div>
-            <div className="elb-mapping-value-complex">
-              <div className="elb-mapping-value-complex-info">
-                <span className="elb-mapping-pane-type-badge">map</span>
-                <span>
-                  {mapKeyCount} {mapKeyCount === 1 ? 'key' : 'keys'} defined
-                </span>
+          <>
+            <PaneHeader
+              title="Map Object"
+              description="Transform event data into an object with multiple keys"
+            />
+            <div className="elb-mapping-pane-field">
+              <div className="elb-mapping-value-complex">
+                <div className="elb-mapping-value-complex-info">
+                  <span className="elb-mapping-pane-type-badge">map</span>
+                  <span>
+                    {mapKeyCount} {mapKeyCount === 1 ? 'key' : 'keys'} defined
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="elb-mapping-pane-button elb-mapping-pane-button--primary"
+                  onClick={handleOpenComplex}
+                >
+                  Edit Map →
+                </button>
               </div>
-              <button
-                type="button"
-                className="elb-mapping-pane-button elb-mapping-pane-button--primary"
-                onClick={handleOpenComplex}
-              >
-                Edit Map →
-              </button>
             </div>
-          </div>
+          </>
         );
 
       case 'loop':
@@ -199,25 +206,27 @@ export function MappingValueConfigPaneView({
           Array.isArray(loopArr) && loopArr.length > 0 ? loopArr[0] : 'nested'
         ) as string;
         return (
-          <div className="elb-mapping-pane-field">
-            <div className="elb-mapping-pane-label">Loop Array</div>
-            <div className="elb-mapping-pane-description">
-              Process an array of items from the event
-            </div>
-            <div className="elb-mapping-value-complex">
-              <div className="elb-mapping-value-complex-info">
-                <span className="elb-mapping-pane-type-badge">loop</span>
-                <span>Source: {loopSource}</span>
+          <>
+            <PaneHeader
+              title="Loop Array"
+              description="Process an array of items from the event"
+            />
+            <div className="elb-mapping-pane-field">
+              <div className="elb-mapping-value-complex">
+                <div className="elb-mapping-value-complex-info">
+                  <span className="elb-mapping-pane-type-badge">loop</span>
+                  <span>Source: {loopSource}</span>
+                </div>
+                <button
+                  type="button"
+                  className="elb-mapping-pane-button elb-mapping-pane-button--primary"
+                  onClick={handleOpenComplex}
+                >
+                  Edit Loop →
+                </button>
               </div>
-              <button
-                type="button"
-                className="elb-mapping-pane-button elb-mapping-pane-button--primary"
-                onClick={handleOpenComplex}
-              >
-                Edit Loop →
-              </button>
             </div>
-          </div>
+          </>
         );
 
       case 'function':
@@ -227,26 +236,25 @@ export function MappingValueConfigPaneView({
               '(event) => event.data'
             : '(event) => event.data';
         return (
-          <div className="elb-mapping-pane-field">
-            <label htmlFor="value-function" className="elb-mapping-pane-label">
-              Custom Function
-            </label>
-            <div className="elb-mapping-pane-description">
-              JavaScript function that receives the event and returns
-              transformed value
-            </div>
-            <textarea
-              id="value-function"
-              className="elb-mapping-pane-textarea"
-              value={String(fnValue)}
-              onChange={(e) => handleFunctionChange(e.target.value)}
-              placeholder="(event) => event.data.id"
-              rows={6}
+          <>
+            <PaneHeader
+              title="Custom Function"
+              description="JavaScript function that receives the event and returns transformed value"
             />
-            <div className="elb-mapping-pane-hint">
-              Function signature: (event: WalkerOS.Event) =&gt; any
+            <div className="elb-mapping-pane-field">
+              <textarea
+                id="value-function"
+                className="elb-mapping-pane-textarea"
+                value={String(fnValue)}
+                onChange={(e) => handleFunctionChange(e.target.value)}
+                placeholder="(event) => event.data.id"
+                rows={6}
+              />
+              <div className="elb-mapping-pane-hint">
+                Function signature: (event: WalkerOS.Event) =&gt; any
+              </div>
             </div>
-          </div>
+          </>
         );
 
       case 'set':
@@ -256,29 +264,31 @@ export function MappingValueConfigPaneView({
             : [];
         const setCount = Array.isArray(setArr) ? setArr.length : 0;
         return (
-          <div className="elb-mapping-pane-field">
-            <div className="elb-mapping-pane-label">Static Array</div>
-            <div className="elb-mapping-pane-description">
-              Array of static values
-            </div>
-            <div className="elb-mapping-value-complex">
-              <div className="elb-mapping-value-complex-info">
-                <span className="elb-mapping-pane-type-badge">set</span>
-                <span>
-                  {setCount} {setCount === 1 ? 'item' : 'items'}
-                </span>
+          <>
+            <PaneHeader
+              title="Static Array"
+              description="Array of static values"
+            />
+            <div className="elb-mapping-pane-field">
+              <div className="elb-mapping-value-complex">
+                <div className="elb-mapping-value-complex-info">
+                  <span className="elb-mapping-pane-type-badge">set</span>
+                  <span>
+                    {setCount} {setCount === 1 ? 'item' : 'items'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="elb-mapping-pane-button elb-mapping-pane-button--primary"
+                  onClick={handleOpenComplex}
+                  disabled
+                  title="Coming soon"
+                >
+                  Edit Set →
+                </button>
               </div>
-              <button
-                type="button"
-                className="elb-mapping-pane-button elb-mapping-pane-button--primary"
-                onClick={handleOpenComplex}
-                disabled
-                title="Coming soon"
-              >
-                Edit Set →
-              </button>
             </div>
-          </div>
+          </>
         );
 
       default:

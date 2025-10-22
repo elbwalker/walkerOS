@@ -2,7 +2,7 @@ import { MappingEntityPane } from './mapping-entity-pane';
 import { MappingRuleOverview } from './mapping-rule-overview';
 import { MappingValueConfigPaneView } from './mapping-value-config-pane-view';
 import { MappingValueTypePaneView } from './mapping-value-type-pane-view';
-import { MappingKeyPaneView } from './mapping-key-pane-view';
+import { MappingValuePaneView } from './mapping-value-pane-view';
 import { MappingConditionPaneView } from './mapping-condition-pane-view';
 import { MappingNamePaneView } from './mapping-name-pane-view';
 import { MappingBatchPaneView } from './mapping-batch-pane-view';
@@ -29,10 +29,10 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
  * - 'valueType' → MappingValueTypePaneView - String or ValueConfig editor (replaces old property/type-grid)
  * - 'key' → MappingKeyPaneView - Focused key property editor
  * - 'condition' → MappingConditionPaneView - Condition function editor
+ * - 'value' → MappingValuePaneView - Primitive value editor (string, number, boolean)
  * - 'map' → (Coming soon) - Map transformation editor
  * - 'loop' → (Coming soon) - Loop transformation editor
  * - 'set' → (Coming soon) - Set transformation editor
- * - 'value' → (Coming soon) - Static value editor
  * - 'fn' → (Coming soon) - Function editor
  * - 'validate' → (Coming soon) - Validate function editor
  *
@@ -129,20 +129,20 @@ export function MappingPane({
         />
       );
 
-    case 'key':
-      // MappingKeyPaneView has its own structure
+    case 'condition':
+      // MappingConditionPaneView uses standard .elb-mapping-pane structure
       return (
-        <MappingKeyPaneView
+        <MappingConditionPaneView
           path={path}
           mappingState={mappingState}
           className={className}
         />
       );
 
-    case 'condition':
-      // MappingConditionPaneView uses standard .elb-mapping-pane structure
+    case 'value':
+      // MappingValuePaneView uses standard .elb-mapping-pane structure
       return (
-        <MappingConditionPaneView
+        <MappingValuePaneView
           path={path}
           mappingState={mappingState}
           className={className}
@@ -165,7 +165,6 @@ export function MappingPane({
     case 'map':
     case 'loop':
     case 'set':
-    case 'value':
     case 'fn':
     case 'validate':
     default: {
@@ -184,7 +183,6 @@ export function MappingPane({
         nodeType === 'map' ||
         nodeType === 'loop' ||
         nodeType === 'set' ||
-        nodeType === 'value' ||
         nodeType === 'fn' ||
         nodeType === 'validate'
       ) {

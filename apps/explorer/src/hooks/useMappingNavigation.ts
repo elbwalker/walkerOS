@@ -16,7 +16,6 @@ export type NodeType =
   | 'map'
   | 'loop'
   | 'set'
-  | 'key'
   | 'value'
   | 'fn'
   | 'validate'

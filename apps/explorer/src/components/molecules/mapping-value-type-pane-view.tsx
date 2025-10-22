@@ -64,14 +64,14 @@ const VALUE_CONFIG_TILES: ValueConfigTileConfig[] = [
 /**
  * ValueType Pane - Edit ValueType (string | ValueConfig)
  *
- * Two modes:
- * 1. Simple String Mode - User types a value directly
- * 2. ValueConfig Mode - User selects advanced configuration tiles
+ * Simple logic:
+ * - String mode: Quick Value input edits the string directly
+ * - Object mode: Quick Value input ALWAYS edits the 'key' property
+ * - Input is NEVER disabled
+ * - Quick Value and Key tile are always synced
  *
- * Smart Sync:
- * - When in ValueConfig mode with only 'key' set, input shows key value
- * - Input becomes disabled when ValueConfig is active
- * - Clicking disabled input (with only key) converts back to string
+ * Smart Conversions:
+ * - Clicking any tile in String mode converts to { key: "string value" }
  */
 export function MappingValueTypePaneView({
   path,
@@ -86,56 +86,91 @@ export function MappingValueTypePaneView({
   const isValueConfig = typeof value === 'object' && value !== null;
   const valueConfig = isValueConfig ? (value as Record<string, unknown>) : {};
 
-  // Check if only 'key' is set (eligible for easy conversion back to string)
-  const isOnlyKey =
-    isValueConfig &&
-    Object.keys(valueConfig).length === 1 &&
-    'key' in valueConfig;
-
   // Display value for the input
-  // - If simple string: use the string value
-  // - If ValueConfig with only 'key': show the key value (disabled)
-  // - If ValueConfig with other props: show empty (disabled)
+  // - If string: show the string value
+  // - If object: show the key property value (or empty if no key)
   const displayValue = isString
     ? (value as string)
-    : isOnlyKey
-      ? String(valueConfig.key)
+    : typeof valueConfig.key === 'string'
+      ? valueConfig.key
       : '';
 
   const handleStringChange = (newValue: string) => {
-    // Only allow changes when NOT in ValueConfig mode
-    if (!isValueConfig) {
+    if (isString) {
+      // String mode: just set the string
       mappingState.actions.setValue(path, newValue);
-    }
-  };
-
-  const handleInputClick = () => {
-    // If only 'key' is set, convert back to simple string
-    if (isOnlyKey) {
-      mappingState.actions.setValue(path, displayValue);
+    } else if (isValueConfig) {
+      // ValueConfig mode: update the key property using the sub-path
+      // This works whether it's key-only or has multiple properties
+      mappingState.actions.setValue([...path, 'key'], newValue);
     }
   };
 
   const handleTileClick = (tileKey: string) => {
+    // Key tile does nothing - use Quick Value input to edit key
     if (tileKey === 'key') {
-      // Special case: 'key' - convert string to ValueConfig with key
-      if (isString) {
-        mappingState.actions.setValue(path, { key: displayValue || '' });
-      } else if (isOnlyKey) {
-        // Already has key, navigate to edit it
-        navigation.openTab([...path, 'key'], 'key');
-      } else {
-        // Has other ValueConfig properties, navigate to key
-        navigation.openTab([...path, 'key'], 'key');
-      }
-    } else {
-      // Other tiles - navigate to their respective panes
-      // For now, use placeholder for unimplemented panes
-      navigation.openTab([...path, tileKey], 'valueConfig');
+      return;
     }
+
+    // If in string mode, convert to ValueConfig first
+    if (isString && displayValue) {
+      mappingState.actions.setValue(path, { key: displayValue });
+    }
+
+    // Determine the appropriate nodeType based on the property
+    // Properties that hold primitives get dedicated editors
+    // Properties that hold ValueConfig objects get the generic valueConfig editor
+    let nodeType: string;
+    switch (tileKey) {
+      case 'value':
+        nodeType = 'value'; // Primitive value editor
+        break;
+      case 'fn':
+        nodeType = 'fn'; // Function editor (placeholder for now)
+        break;
+      case 'validate':
+        nodeType = 'validate'; // Validate function editor (placeholder for now)
+        break;
+      case 'condition':
+        nodeType = 'condition'; // Condition function editor (already implemented)
+        break;
+      case 'consent':
+        nodeType = 'consent'; // Consent editor (already implemented)
+        break;
+      case 'map':
+        nodeType = 'map'; // Map editor (placeholder for now)
+        break;
+      case 'loop':
+        nodeType = 'loop'; // Loop editor (placeholder for now)
+        break;
+      case 'set':
+        nodeType = 'set'; // Set editor (placeholder for now)
+        break;
+      default:
+        nodeType = 'valueConfig'; // Fallback to generic editor
+    }
+
+    navigation.openTab([...path, tileKey], nodeType as any);
   };
 
   const getTileStatus = (tileKey: string): ConfigTileStatus => {
+    // Special case for 'key' tile - show string value even in string mode
+    if (tileKey === 'key') {
+      if (isString) {
+        // In string mode, show the string value as preview
+        return displayValue
+          ? { enabled: true, text: displayValue }
+          : { enabled: false, text: 'Not set' };
+      } else if (isValueConfig) {
+        // In ValueConfig mode, show the key property
+        const keyValue = valueConfig.key;
+        return typeof keyValue === 'string' && keyValue
+          ? { enabled: true, text: keyValue }
+          : { enabled: false, text: 'Not set' };
+      }
+    }
+
+    // For all other tiles, only show status if in ValueConfig mode
     if (!isValueConfig) {
       return { enabled: false, text: 'Not set' };
     }
@@ -144,29 +179,52 @@ export function MappingValueTypePaneView({
 
     switch (tileKey) {
       case 'key':
-        return typeof configValue === 'string' && configValue
-          ? { enabled: true, text: configValue }
-          : { enabled: false, text: 'Not set' };
+        // Already handled above
+        return { enabled: false, text: 'Not set' };
 
       case 'value':
-        return configValue !== undefined
-          ? {
-              enabled: true,
-              text:
-                typeof configValue === 'string'
-                  ? configValue
-                  : typeof configValue === 'number'
-                    ? String(configValue)
-                    : typeof configValue === 'boolean'
-                      ? String(configValue)
-                      : 'Set',
-            }
-          : { enabled: false, text: 'Not set' };
+        if (configValue !== undefined) {
+          let displayText: string;
+          if (typeof configValue === 'string') {
+            displayText = configValue;
+          } else if (typeof configValue === 'number') {
+            displayText = String(configValue);
+          } else if (typeof configValue === 'boolean') {
+            displayText = String(configValue);
+          } else if (configValue === null) {
+            displayText = 'null';
+          } else if (Array.isArray(configValue)) {
+            displayText = `[${configValue.length} items]`;
+          } else if (typeof configValue === 'object') {
+            // Show only values, not keys
+            const values = Object.values(
+              configValue as Record<string, unknown>,
+            );
+            displayText = values
+              .map((v) => (typeof v === 'string' ? v : JSON.stringify(v)))
+              .join(', ');
+          } else {
+            displayText = String(configValue);
+          }
+          // Truncate if too long
+          const preview =
+            displayText.length > 40
+              ? displayText.substring(0, 40) + '...'
+              : displayText;
+          return { enabled: true, text: preview };
+        }
+        return { enabled: false, text: 'Not set' };
 
       case 'fn':
-        return typeof configValue === 'string' && configValue
-          ? { enabled: true, text: 'Active' }
-          : { enabled: false, text: 'Not set' };
+        if (typeof configValue === 'string' && configValue) {
+          // Show preview of function (first 40 chars)
+          const preview =
+            configValue.length > 40
+              ? configValue.substring(0, 40) + '...'
+              : configValue;
+          return { enabled: true, text: preview };
+        }
+        return { enabled: false, text: 'Not set' };
 
       case 'map':
         if (!configValue) return { enabled: false, text: 'Not set' };
@@ -181,9 +239,12 @@ export function MappingValueTypePaneView({
           : { enabled: false, text: 'Not set' };
 
       case 'loop':
-        return Array.isArray(configValue) && configValue.length === 2
-          ? { enabled: true, text: 'Active' }
-          : { enabled: false, text: 'Not set' };
+        if (Array.isArray(configValue) && configValue.length >= 1) {
+          // Show the source array path
+          const source = String(configValue[0] || 'nested');
+          return { enabled: true, text: `Source: ${source}` };
+        }
+        return { enabled: false, text: 'Not set' };
 
       case 'set':
         return Array.isArray(configValue) && configValue.length > 0
@@ -206,24 +267,29 @@ export function MappingValueTypePaneView({
           : { enabled: false, text: 'Not set' };
 
       case 'validate':
-        return typeof configValue === 'string' && configValue
-          ? { enabled: true, text: 'Active' }
-          : { enabled: false, text: 'Not set' };
+        if (typeof configValue === 'string' && configValue) {
+          // Show preview of validation function (first 40 chars)
+          const preview =
+            configValue.length > 40
+              ? configValue.substring(0, 40) + '...'
+              : configValue;
+          return { enabled: true, text: preview };
+        }
+        return { enabled: false, text: 'Not set' };
 
       default:
         return { enabled: false, text: 'Not set' };
     }
   };
 
-  const isInputDisabled = isValueConfig;
-  const inputPlaceholder = isInputDisabled
-    ? 'Using advanced configuration'
-    : 'Type property path or static value';
-  const inputTitle = isOnlyKey
-    ? 'Click to convert back to simple string'
-    : isInputDisabled
-      ? 'Disabled - using ValueConfig'
-      : 'Enter a simple string value';
+  // Input is ALWAYS enabled
+  const inputPlaceholder = isString
+    ? 'Type property path or static value'
+    : 'Edit key property';
+
+  const inputTitle = isString
+    ? 'Enter a simple string value'
+    : 'Edit the key property';
 
   return (
     <div className={`elb-mapping-pane ${className}`}>
@@ -241,21 +307,16 @@ export function MappingValueTypePaneView({
           <MappingInput
             value={displayValue}
             onChange={handleStringChange}
-            onClick={handleInputClick}
-            disabled={isInputDisabled && !isOnlyKey}
             placeholder={inputPlaceholder}
             title={inputTitle}
-            className={isOnlyKey ? 'is-convertible' : ''}
           />
           <div className="elb-mapping-value-type-hint">
-            {isOnlyKey ? (
-              <span className="is-info">
-                Click input to convert back to simple string
-              </span>
-            ) : isInputDisabled ? (
-              <span>Using advanced configuration below</span>
-            ) : (
+            {isString ? (
               <span>Type a property path or static value</span>
+            ) : (
+              <span className="is-info">
+                Editing key property - synced with Key tile
+              </span>
             )}
           </div>
         </div>
