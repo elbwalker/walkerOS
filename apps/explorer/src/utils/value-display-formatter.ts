@@ -32,8 +32,12 @@ export function formatValueForDisplay(val: unknown): string {
     return `[${val.length}]`;
   }
 
-  if (typeof val === 'object' && val !== null)
-    return Object.keys(val).length > 0 ? `{${Object.keys(val).length}}` : '{}';
+  if (typeof val === 'object' && val !== null) {
+    const keys = Object.keys(val);
+    if (keys.length === 0) return '{}';
+    // For objects (like map), show the keys in curly braces
+    return `{ ${keys.join(', ')} }`;
+  }
 
   return '';
 }

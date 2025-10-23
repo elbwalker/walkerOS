@@ -42,16 +42,77 @@
       font-size: 13px;
       color: var(--color-text);
       text-align: left;
-      cursor: pointer;
-      background: none;
-      border: none;
-      padding: 0;
+      padding: 2px 0; // Match input height to prevent row resize
       transition: color 0.15s ease;
       word-break: break-word;
 
-      &:hover {
-        color: var(--color-primary);
+      &-rename {
+        // Wrapper for rename input - match button styling without layout shift
+        flex: 1;
+        min-width: 0; // Allow shrinking
+
+        // Override wrapper gap
+        .elb-mapping-input-with-button {
+          gap: 0; // Remove 8px gap
+        }
+
+        // Override input styles to blend with row
+        .elb-mapping-input {
+          font-family: var(--font-mono);
+          font-size: 13px;
+          padding: 2px 0; // Match button padding for consistent height
+          margin: 0;
+          background: transparent;
+          border: none;
+          height: auto;
+          line-height: inherit;
+          transition: all 0.15s ease;
+
+          &:hover {
+            background: var(--bg-input-hover);
+          }
+
+          &:focus {
+            background: var(--bg-input);
+            border: 1px solid var(--border-input);
+            padding: 6px 8px;
+          }
+        }
+
+        // Override button styles to be minimal
+        .elb-mapping-input-button {
+          font-family: var(--font-mono);
+          font-size: 13px;
+          font-weight: var(--font-weight-medium);
+          min-width: auto;
+          padding: 2px 8px;
+          background: transparent;
+          border: 1px solid transparent;
+          color: var(--color-text-muted);
+
+          &:hover:not(:disabled) {
+            background: var(--bg-button-hover);
+            border-color: transparent;
+            color: var(--color-text);
+          }
+
+          &:active:not(:disabled) {
+            background: var(--bg-button-active);
+          }
+        }
       }
+
+      &-with-edit {
+        // Container for path button + edit icon in first column
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+      }
+    }
+
+    &:hover &-path {
+      color: var(--color-primary);
     }
 
     &-badges {
@@ -83,18 +144,12 @@
     cursor: pointer;
     transition:
       background-color 0.15s ease,
-      border-color 0.15s ease,
-      transform 0.1s ease;
+      border-color 0.15s ease;
     max-width: 200px;
 
     &:hover {
       background: var(--bg-box);
       border-color: var(--color-primary);
-      transform: translateY(-1px);
-    }
-
-    &:active {
-      transform: translateY(0);
     }
 
     &-label {

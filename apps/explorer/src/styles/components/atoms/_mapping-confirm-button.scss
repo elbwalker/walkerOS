@@ -41,3 +41,27 @@
 .elb-mapping-delete-button {
   /* Uses all styles from .elb-mapping-confirm-button */
 }
+
+.elb-mapping-edit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--bg-button-hover);
+    color: var(--color-text);
+  }
+
+  svg {
+    display: block;
+  }
+}
