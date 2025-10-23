@@ -58,11 +58,11 @@
     }
 
     &-empty {
-      border-color: var(--color-warning, #f59e0b);
+      border-color: var(--color-status-warning);
     }
 
     &-duplicate {
-      border-color: var(--color-warning, #f59e0b);
+      border-color: var(--color-status-warning);
     }
   }
 

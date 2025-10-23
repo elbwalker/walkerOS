@@ -17,8 +17,8 @@
   white-space: nowrap;
 
   &:hover {
-    background: rgba(231, 76, 60, 0.1);
-    color: #e74c3c;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-button-danger);
   }
 
   svg {
@@ -27,13 +27,13 @@
 
   &.is-confirming {
     padding: 0 10px;
-    background: #e74c3c;
-    color: #ffffff;
-    border: 1px solid #c0392b;
+    background: var(--color-button-danger);
+    color: var(--color-button-danger-text);
+    border: 1px solid var(--color-button-danger-hover);
 
     &:hover {
-      background: #c0392b;
-      color: #ffffff;
+      background: var(--color-button-danger-hover);
+      color: var(--color-button-danger-text);
     }
   }
 }

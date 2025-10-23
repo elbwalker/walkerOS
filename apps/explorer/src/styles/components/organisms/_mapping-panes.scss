@@ -21,7 +21,7 @@
     }
 
     &.is-existing {
-      border-color: #f59e0b;
+      border-color: var(--color-status-warning);
       background: rgba(245, 158, 11, 0.1);
     }
 
@@ -159,8 +159,8 @@
     }
 
     &.is-error {
-      border-color: #e74c3c;
-      background: rgba(231, 76, 60, 0.05);
+      border-color: var(--color-button-danger);
+      background: rgba(239, 68, 68, 0.05);
     }
 
     &::placeholder {
@@ -301,7 +301,7 @@
     font-style: italic;
 
     &--warning {
-      color: #f59e0b;
+      color: var(--color-status-warning);
     }
   }
 }
