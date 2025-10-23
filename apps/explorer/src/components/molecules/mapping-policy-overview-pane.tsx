@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
-import type { MappingNavigation } from '../../hooks/useMappingNavigation';
+import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
 import { MappingInput } from '../atoms/mapping-input';
 import { MappingConfirmButton } from '../atoms/mapping-confirm-button';
@@ -25,7 +25,7 @@ import { getConfiguredProperties } from '../../utils/value-display-formatter';
 export interface MappingPolicyOverviewPaneProps {
   path?: string[];
   mappingState: UseMappingStateReturn;
-  navigation: MappingNavigation;
+  navigation: UseMappingNavigationReturn;
   className?: string;
 }
 

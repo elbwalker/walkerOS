@@ -453,4 +453,23 @@ export function useMappingNavigation() {
   };
 }
 
-export type MappingNavigation = ReturnType<typeof useMappingNavigation>;
+/**
+ * Return type of useMappingNavigation hook
+ *
+ * Provides tab-based navigation state management with:
+ * - State: openTabs, activeTabId, treeVisible, breadcrumb, navigationHistory
+ * - Actions: openTab, closeTab, navigateToPath, goBack, etc.
+ * - Queries: getActiveTab, canGoBack
+ *
+ * @example
+ * const navigation: UseMappingNavigationReturn = useMappingNavigation();
+ */
+export type UseMappingNavigationReturn = ReturnType<
+  typeof useMappingNavigation
+>;
+
+/**
+ * @deprecated Use UseMappingNavigationReturn instead
+ * This alias is kept for backward compatibility and will be removed in the next major version.
+ */
+export type MappingNavigation = UseMappingNavigationReturn;

@@ -11,8 +11,8 @@
  * - etc.
  */
 
-// Import generic function pane styles
-@import './mapping-function-pane';
+// Use generic function pane styles
+@use './mapping-function-pane';
 
 // Backward compatibility aliases
 .elb-mapping-condition-pane {

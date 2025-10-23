@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import type { UseMappingState } from '../../hooks/useMappingState';
+import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 
 export interface MappingMapOverviewProps {
   path: string[];
-  mappingState: UseMappingState;
+  mappingState: UseMappingStateReturn;
   className?: string;
 }
 

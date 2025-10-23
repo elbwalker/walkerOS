@@ -1,5 +1,5 @@
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
-import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
+import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
 
 /**
@@ -14,7 +14,7 @@ import { PaneHeader } from '../atoms/pane-header';
 export interface MappingIgnorePaneViewProps {
   path: string[];
   mappingState: UseMappingStateReturn;
-  navigation: UseMappingNavigation;
+  navigation: UseMappingNavigationReturn;
   className?: string;
 }
 

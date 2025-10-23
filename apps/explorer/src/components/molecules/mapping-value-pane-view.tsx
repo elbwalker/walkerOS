@@ -1,5 +1,5 @@
-import type { MappingState } from '../../hooks/useMappingState';
-import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
+import type { UseMappingStateReturn } from '../../hooks/useMappingState';
+import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
 import { MappingInput } from '../atoms/mapping-input';
 
@@ -23,8 +23,8 @@ import { MappingInput } from '../atoms/mapping-input';
  */
 export interface MappingValuePaneViewProps {
   path: string[];
-  mappingState: MappingState;
-  navigation: UseMappingNavigation;
+  mappingState: UseMappingStateReturn;
+  navigation: UseMappingNavigationReturn;
   className?: string;
 }
 

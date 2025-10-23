@@ -1,5 +1,5 @@
-import type { MappingState } from '../../hooks/useMappingState';
-import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
+import type { UseMappingStateReturn } from '../../hooks/useMappingState';
+import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import {
   MappingFunctionPaneBase,
   type HelpSection,
@@ -15,8 +15,8 @@ import {
  */
 export interface MappingConditionPaneViewProps {
   path: string[];
-  mappingState: MappingState;
-  navigation: UseMappingNavigation;
+  mappingState: UseMappingStateReturn;
+  navigation: UseMappingNavigationReturn;
   className?: string;
 }
 

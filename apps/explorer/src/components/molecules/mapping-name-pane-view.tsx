@@ -1,13 +1,13 @@
 import React from 'react';
-import type { UseMappingState } from '../../hooks/useMappingState';
-import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
+import type { UseMappingStateReturn } from '../../hooks/useMappingState';
+import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
 import { MappingInput } from '../atoms/mapping-input';
 
 export interface MappingNamePaneViewProps {
   path: string[];
-  mappingState: UseMappingState;
-  navigation: UseMappingNavigation;
+  mappingState: UseMappingStateReturn;
+  navigation: UseMappingNavigationReturn;
   className?: string;
 }
 

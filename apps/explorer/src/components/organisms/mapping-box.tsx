@@ -4,7 +4,7 @@ import { ButtonGroup } from '../atoms/button-group';
 import { CodeBox } from './code-box';
 import { MappingEditor } from '../molecules/mapping-editor';
 import { MappingEditorTabs } from './mapping-editor-tabs';
-import type { NodeType } from '../hooks/useMappingNavigation';
+import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { Mapping } from '@walkeros/core';
 
 export interface MappingBoxProps {

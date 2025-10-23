@@ -15,8 +15,8 @@ import { MappingSetPaneView } from './mapping-set-pane-view';
 import { MappingLoopPaneView } from './mapping-loop-pane-view';
 import { MappingMapPaneView } from './mapping-map-pane-view';
 import type { NodeType } from '../../hooks/useMappingNavigation';
-import type { MappingState } from '../../hooks/useMappingState';
-import type { MappingNavigation } from '../../hooks/useMappingNavigation';
+import type { UseMappingStateReturn } from '../../hooks/useMappingState';
+import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 
 /**
  * Mapping Pane Router - Pure Presentation Component
@@ -54,8 +54,8 @@ import type { MappingNavigation } from '../../hooks/useMappingNavigation';
 export interface MappingPaneProps {
   nodeType: NodeType;
   path: string[];
-  mappingState: MappingState;
-  navigation: MappingNavigation;
+  mappingState: UseMappingStateReturn;
+  navigation: UseMappingNavigationReturn;
   className?: string;
 }
 

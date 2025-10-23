@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { MappingState } from '../../hooks/useMappingState';
+import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 
 /**
  * Type option definition
@@ -85,7 +85,7 @@ const TYPE_OPTIONS: TypeOption[] = [
  */
 export interface MappingTypeGridProps {
   path: string[];
-  mappingState: MappingState;
+  mappingState: UseMappingStateReturn;
   onSelectType: (type: string) => void;
   className?: string;
 }

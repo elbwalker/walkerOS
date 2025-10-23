@@ -1,7 +1,7 @@
 import { MappingTypeSelector } from './mapping-type-selector';
 import type { ValueConfigType } from '../atoms/mapping-type-button';
-import type { MappingState } from '../../hooks/useMappingState';
-import type { MappingNavigation } from '../../hooks/useMappingNavigation';
+import type { UseMappingStateReturn } from '../../hooks/useMappingState';
+import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
 import { MappingInput } from '../atoms/mapping-input';
 
@@ -27,8 +27,8 @@ import { MappingInput } from '../atoms/mapping-input';
  */
 export interface MappingValueConfigPaneViewProps {
   path: string[];
-  mappingState: MappingState;
-  navigation: MappingNavigation;
+  mappingState: UseMappingStateReturn;
+  navigation: UseMappingNavigationReturn;
   className?: string;
 }
 

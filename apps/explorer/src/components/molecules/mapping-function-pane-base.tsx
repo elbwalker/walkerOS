@@ -1,6 +1,6 @@
 import { useState, useEffect, type ReactNode } from 'react';
-import type { MappingState } from '../../hooks/useMappingState';
-import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
+import type { UseMappingStateReturn } from '../../hooks/useMappingState';
+import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { CodeBox } from '../organisms/code-box';
 import { PaneHeader } from '../atoms/pane-header';
 import { normalizeCode } from '../../utils/code-normalizer';
@@ -39,8 +39,8 @@ export interface MappingFunctionPaneBaseProps {
   defaultCode: string; // Default function code
   helpSections: HelpSection[]; // Array of help sections to display
   path: string[];
-  mappingState: MappingState;
-  navigation: UseMappingNavigation;
+  mappingState: UseMappingStateReturn;
+  navigation: UseMappingNavigationReturn;
   className?: string;
 }
 

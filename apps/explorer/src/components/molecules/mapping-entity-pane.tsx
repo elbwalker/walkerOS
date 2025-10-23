@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { MappingState } from '../../hooks/useMappingState';
-import type { MappingNavigation } from '../../hooks/useMappingNavigation';
+import type { UseMappingStateReturn } from '../../hooks/useMappingState';
+import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
 import { MappingInput } from '../atoms/mapping-input';
 
@@ -13,8 +13,8 @@ import { MappingInput } from '../atoms/mapping-input';
  */
 export interface MappingEntityPaneProps {
   path: string[]; // Should be [entity]
-  mappingState: MappingState;
-  navigation: MappingNavigation;
+  mappingState: UseMappingStateReturn;
+  navigation: UseMappingNavigationReturn;
   className?: string;
 }
 

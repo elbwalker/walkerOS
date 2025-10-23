@@ -1,4 +1,4 @@
-import type { MappingState } from '../../hooks/useMappingState';
+import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 
 /**
  * Rule Pane View - Pure Presentation Component
@@ -19,7 +19,7 @@ import type { MappingState } from '../../hooks/useMappingState';
  */
 export interface MappingRulePaneViewProps {
   path: string[]; // Must be exactly 2 elements: [entity, action]
-  mappingState: MappingState;
+  mappingState: UseMappingStateReturn;
   className?: string;
 }
 

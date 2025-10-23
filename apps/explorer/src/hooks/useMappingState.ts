@@ -204,4 +204,20 @@ export function useMappingState(
   };
 }
 
-export type MappingState = ReturnType<typeof useMappingState>;
+/**
+ * Return type of useMappingState hook
+ *
+ * Provides centralized mapping state management with:
+ * - config: Current mapping configuration
+ * - actions: CRUD operations for mapping state
+ *
+ * @example
+ * const mappingState: UseMappingStateReturn = useMappingState(initialConfig);
+ */
+export type UseMappingStateReturn = ReturnType<typeof useMappingState>;
+
+/**
+ * @deprecated Use UseMappingStateReturn instead
+ * This alias is kept for backward compatibility and will be removed in the next major version.
+ */
+export type MappingState = UseMappingStateReturn;
