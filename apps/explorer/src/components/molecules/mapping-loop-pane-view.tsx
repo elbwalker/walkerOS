@@ -1,6 +1,6 @@
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { MappingInput } from '../atoms/mapping-input';
 import { MappingValueTypePaneView } from './mapping-value-type-pane-view';
 
@@ -55,57 +55,12 @@ export function MappingLoopPaneView({
   // If not initialized, show setup interface
   if (!loopArray) {
     return (
-      <div className={`elb-mapping-pane ${className}`}>
-        <div className="elb-mapping-pane-content">
-          <PaneHeader
-            title="Loop Array"
-            description="Process arrays by applying transformation to each item"
-            onBack={navigation.goBack}
-            canGoBack={navigation.canGoBack()}
-          />
-
-          {/* Scope Input */}
-          <div className="elb-mapping-pane-field">
-            <label className="elb-mapping-pane-label">
-              Array Path <span className="elb-mapping-pane-required">*</span>
-            </label>
-            <MappingInput
-              value={typeof scope === 'string' ? scope : ''}
-              onChange={handleScopeChange}
-              placeholder="nested"
-              autoFocus
-            />
-            <div className="elb-mapping-pane-hint">
-              Path to the array in the event (e.g., "nested", "data.items") or
-              "this" for current value
-            </div>
-          </div>
-
-          {/* Item Mapping - Reuse ValueTypePaneView */}
-          <div className="elb-loop-item-mapping-section">
-            <MappingValueTypePaneView
-              path={[...path, '1']}
-              mappingState={mappingState}
-              navigation={navigation}
-              className=""
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Configured loop - show scope input + item mapping editor
-  return (
-    <div className={`elb-mapping-pane ${className}`}>
-      <div className="elb-mapping-pane-content">
-        <PaneHeader
-          title="Loop Array"
-          description="Process arrays by applying transformation to each item"
-          onBack={navigation.goBack}
-          canGoBack={navigation.canGoBack()}
-        />
-
+      <BaseMappingPane
+        title="Loop Array"
+        description="Process arrays by applying transformation to each item"
+        navigation={navigation}
+        className={className}
+      >
         {/* Scope Input */}
         <div className="elb-mapping-pane-field">
           <label className="elb-mapping-pane-label">
@@ -115,6 +70,7 @@ export function MappingLoopPaneView({
             value={typeof scope === 'string' ? scope : ''}
             onChange={handleScopeChange}
             placeholder="nested"
+            autoFocus
           />
           <div className="elb-mapping-pane-hint">
             Path to the array in the event (e.g., "nested", "data.items") or
@@ -122,7 +78,7 @@ export function MappingLoopPaneView({
           </div>
         </div>
 
-        {/* Item Mapping - Reuse ValueTypePaneView */}
+        {/* Item Mapping - Reuse ValueTypePaneView without header */}
         <div className="elb-loop-item-mapping-section">
           <MappingValueTypePaneView
             path={[...path, '1']}
@@ -131,7 +87,43 @@ export function MappingLoopPaneView({
             className=""
           />
         </div>
+      </BaseMappingPane>
+    );
+  }
+
+  // Configured loop - show scope input + item mapping editor
+  return (
+    <BaseMappingPane
+      title="Loop Array"
+      description="Process arrays by applying transformation to each item"
+      navigation={navigation}
+      className={className}
+    >
+      {/* Scope Input */}
+      <div className="elb-mapping-pane-field">
+        <label className="elb-mapping-pane-label">
+          Array Path <span className="elb-mapping-pane-required">*</span>
+        </label>
+        <MappingInput
+          value={typeof scope === 'string' ? scope : ''}
+          onChange={handleScopeChange}
+          placeholder="nested"
+        />
+        <div className="elb-mapping-pane-hint">
+          Path to the array in the event (e.g., "nested", "data.items") or
+          "this" for current value
+        </div>
       </div>
-    </div>
+
+      {/* Item Mapping - Reuse ValueTypePaneView without header */}
+      <div className="elb-loop-item-mapping-section">
+        <MappingValueTypePaneView
+          path={[...path, '1']}
+          mappingState={mappingState}
+          navigation={navigation}
+          className=""
+        />
+      </div>
+    </BaseMappingPane>
   );
 }

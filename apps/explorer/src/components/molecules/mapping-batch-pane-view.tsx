@@ -1,7 +1,7 @@
 import React from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { MappingInput } from '../atoms/mapping-input';
 
 export interface MappingBatchPaneViewProps {
@@ -40,53 +40,50 @@ export function MappingBatchPaneView({
   };
 
   return (
-    <div className={`elb-mapping-pane ${className}`}>
-      <div className="elb-mapping-pane-content">
-        <PaneHeader
-          title="Batch Size"
-          description="Specify the batch size in milliseconds (time-based) or event count."
-          onBack={navigation.goBack}
-          canGoBack={navigation.canGoBack()}
+    <BaseMappingPane
+      title="Batch Size"
+      description="Specify the batch size in milliseconds (time-based) or event count."
+      navigation={navigation}
+      className={className}
+    >
+      <div className="elb-mapping-pane-field">
+        <MappingInput
+          type="number"
+          value={String(batchValue)}
+          onChange={handleChange}
+          placeholder="e.g., 200, 1000, 5000"
         />
-        <div className="elb-mapping-pane-field">
-          <MappingInput
-            type="number"
-            value={String(batchValue)}
-            onChange={handleChange}
-            placeholder="e.g., 200, 1000, 5000"
-          />
-          <div className="elb-mapping-pane-hint">
-            Events will be collected and sent in batches. Use time (ms) for
-            timed batches or count for event-based batches. Leave empty to
-            disable batching.
-          </div>
-        </div>
-
-        <div className="elb-mapping-batch-examples">
-          <div className="elb-mapping-batch-examples-title">
-            Common Use Cases:
-          </div>
-          <ul className="elb-mapping-batch-examples-list">
-            <li>
-              <code>200</code> - Send every 200ms (frequent updates)
-            </li>
-            <li>
-              <code>1000</code> - Send every second (balanced)
-            </li>
-            <li>
-              <code>5000</code> - Send every 5 seconds (reduced requests)
-            </li>
-            <li>
-              <code>10</code> - Send every 10 events (event-based batching)
-            </li>
-          </ul>
-          <div className="elb-mapping-batch-note">
-            <strong>Note:</strong> Batching reduces network requests by grouping
-            multiple events together. Lower values = more frequent sends, higher
-            values = fewer requests but longer delays.
-          </div>
+        <div className="elb-mapping-pane-hint">
+          Events will be collected and sent in batches. Use time (ms) for timed
+          batches or count for event-based batches. Leave empty to disable
+          batching.
         </div>
       </div>
-    </div>
+
+      <div className="elb-mapping-batch-examples">
+        <div className="elb-mapping-batch-examples-title">
+          Common Use Cases:
+        </div>
+        <ul className="elb-mapping-batch-examples-list">
+          <li>
+            <code>200</code> - Send every 200ms (frequent updates)
+          </li>
+          <li>
+            <code>1000</code> - Send every second (balanced)
+          </li>
+          <li>
+            <code>5000</code> - Send every 5 seconds (reduced requests)
+          </li>
+          <li>
+            <code>10</code> - Send every 10 events (event-based batching)
+          </li>
+        </ul>
+        <div className="elb-mapping-batch-note">
+          <strong>Note:</strong> Batching reduces network requests by grouping
+          multiple events together. Lower values = more frequent sends, higher
+          values = fewer requests but longer delays.
+        </div>
+      </div>
+    </BaseMappingPane>
   );
 }

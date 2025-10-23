@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { MappingConfirmButton } from '../atoms/mapping-confirm-button';
 import { getConfiguredProperties } from '../../utils/value-display-formatter';
 
@@ -114,118 +114,114 @@ export function MappingSetPaneView({
   };
 
   return (
-    <div className={`elb-mapping-pane ${className}`}>
-      <div className="elb-mapping-pane-content">
-        <PaneHeader
-          title="Set Array"
-          description="Array of values - each value is processed independently and all results are collected"
-          onBack={navigation.goBack}
-          canGoBack={navigation.canGoBack()}
-        />
+    <BaseMappingPane
+      title="Set Array"
+      description="Array of values - each value is processed independently and all results are collected"
+      navigation={navigation}
+      className={className}
+    >
+      {/* Add button */}
+      <div className="elb-set-input-section">
+        <button
+          type="button"
+          className="elb-set-add-button"
+          onClick={handleAdd}
+        >
+          + Add Value
+        </button>
+      </div>
 
-        {/* Add button */}
-        <div className="elb-set-input-section">
-          <button
-            type="button"
-            className="elb-set-add-button"
-            onClick={handleAdd}
-          >
-            + Add Value
-          </button>
-        </div>
+      {/* Set entries list */}
+      {setArray.length > 0 && (
+        <div className="elb-set-list">
+          {setArray.map((val, index) => {
+            const configuredProps = getConfiguredProperties(val);
+            const isSimple = typeof val === 'string';
 
-        {/* Set entries list */}
-        {setArray.length > 0 && (
-          <div className="elb-set-list">
-            {setArray.map((val, index) => {
-              const configuredProps = getConfiguredProperties(val);
-              const isSimple = typeof val === 'string';
-
-              return (
-                <div
-                  key={index}
-                  className={`elb-set-row ${
-                    draggedIndex === index ? 'elb-set-row-dragging' : ''
-                  } ${dragOverIndex === index ? 'elb-set-row-drag-over' : ''}`}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, index)}
-                  onDragEnd={handleDragEnd}
-                >
-                  {/* Drag handle */}
-                  <div className="elb-set-drag-handle" title="Drag to reorder">
-                    <svg
-                      width="12"
-                      height="16"
-                      viewBox="0 0 12 16"
-                      fill="currentColor"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle cx="3" cy="4" r="1.5" />
-                      <circle cx="9" cy="4" r="1.5" />
-                      <circle cx="3" cy="8" r="1.5" />
-                      <circle cx="9" cy="8" r="1.5" />
-                      <circle cx="3" cy="12" r="1.5" />
-                      <circle cx="9" cy="12" r="1.5" />
-                    </svg>
-                  </div>
-
-                  {/* Value display - clickable */}
-                  <div
-                    className="elb-set-row-value"
-                    onClick={() => handleRowClick(index)}
+            return (
+              <div
+                key={index}
+                className={`elb-set-row ${
+                  draggedIndex === index ? 'elb-set-row-dragging' : ''
+                } ${dragOverIndex === index ? 'elb-set-row-drag-over' : ''}`}
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, index)}
+                onDragEnd={handleDragEnd}
+              >
+                {/* Drag handle */}
+                <div className="elb-set-drag-handle" title="Drag to reorder">
+                  <svg
+                    width="12"
+                    height="16"
+                    viewBox="0 0 12 16"
+                    fill="currentColor"
+                    xmlns="http://www.w3.org/2000/svg"
                   >
-                    <div className="elb-set-row-badges">
-                      {isSimple ? (
-                        <span className="elb-policy-badge">
-                          <span className="elb-policy-badge-value">
-                            "{val as string}"
+                    <circle cx="3" cy="4" r="1.5" />
+                    <circle cx="9" cy="4" r="1.5" />
+                    <circle cx="3" cy="8" r="1.5" />
+                    <circle cx="9" cy="8" r="1.5" />
+                    <circle cx="3" cy="12" r="1.5" />
+                    <circle cx="9" cy="12" r="1.5" />
+                  </svg>
+                </div>
+
+                {/* Value display - clickable */}
+                <div
+                  className="elb-set-row-value"
+                  onClick={() => handleRowClick(index)}
+                >
+                  <div className="elb-set-row-badges">
+                    {isSimple ? (
+                      <span className="elb-policy-badge">
+                        <span className="elb-policy-badge-value">
+                          "{val as string}"
+                        </span>
+                      </span>
+                    ) : (
+                      configuredProps.map(({ prop, value, isLong }) => (
+                        <span key={prop} className="elb-policy-badge">
+                          <span className="elb-policy-badge-label">
+                            {prop}:
+                          </span>
+                          <span
+                            className={`elb-policy-badge-value ${isLong ? 'is-long' : ''}`}
+                          >
+                            {value}
                           </span>
                         </span>
-                      ) : (
-                        configuredProps.map(({ prop, value, isLong }) => (
-                          <span key={prop} className="elb-policy-badge">
-                            <span className="elb-policy-badge-label">
-                              {prop}:
-                            </span>
-                            <span
-                              className={`elb-policy-badge-value ${isLong ? 'is-long' : ''}`}
-                            >
-                              {value}
-                            </span>
-                          </span>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="elb-set-row-actions">
-                    <MappingConfirmButton
-                      confirmLabel="Delete?"
-                      onConfirm={() => handleDelete(index)}
-                      ariaLabel={`Delete value ${index + 1}`}
-                      className="elb-mapping-delete-button"
-                    />
+                      ))
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
 
-        {/* Empty state */}
-        {setArray.length === 0 && (
-          <div className="elb-set-empty">
-            <p>No values in this set. Click "Add Value" to create one.</p>
-            <p className="elb-set-empty-hint">
-              Each value will be processed independently.
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
+                {/* Actions */}
+                <div className="elb-set-row-actions">
+                  <MappingConfirmButton
+                    confirmLabel="Delete?"
+                    onConfirm={() => handleDelete(index)}
+                    ariaLabel={`Delete value ${index + 1}`}
+                    className="elb-mapping-delete-button"
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {setArray.length === 0 && (
+        <div className="elb-set-empty">
+          <p>No values in this set. Click "Add Value" to create one.</p>
+          <p className="elb-set-empty-hint">
+            Each value will be processed independently.
+          </p>
+        </div>
+      )}
+    </BaseMappingPane>
   );
 }

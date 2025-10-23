@@ -1,6 +1,6 @@
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { MappingInput } from '../atoms/mapping-input';
 
 /**
@@ -79,31 +79,27 @@ export function MappingValuePaneView({
     value === null ? 'null' : value === undefined ? 'undefined' : typeof value;
 
   return (
-    <div className={`elb-mapping-pane ${className}`}>
-      <div className="elb-mapping-pane-content">
-        <PaneHeader
-          title="Static Value"
-          description="Fixed value that will be used (string, number, or boolean)"
-          onBack={navigation.goBack}
-          canGoBack={navigation.canGoBack()}
+    <BaseMappingPane
+      title="Static Value"
+      description="Fixed value that will be used (string, number, or boolean)"
+      navigation={navigation}
+      className={className}
+    >
+      <div className="elb-mapping-pane-field">
+        <MappingInput
+          value={stringValue}
+          onChange={handleChange}
+          placeholder="USD"
+          autoFocus
         />
-
-        <div className="elb-mapping-pane-field">
-          <MappingInput
-            value={stringValue}
-            onChange={handleChange}
-            placeholder="USD"
-            autoFocus
-          />
-          <div className="elb-mapping-pane-hint">
-            Current type: <strong>{currentType}</strong>
-            <br />
-            Use for constant values like currency codes, fixed IDs, etc.
-            <br />
-            Examples: "USD" (string), 123 (number), true (boolean), null
-          </div>
+        <div className="elb-mapping-pane-hint">
+          Current type: <strong>{currentType}</strong>
+          <br />
+          Use for constant values like currency codes, fixed IDs, etc.
+          <br />
+          Examples: "USD" (string), 123 (number), true (boolean), null
         </div>
       </div>
-    </div>
+    </BaseMappingPane>
   );
 }

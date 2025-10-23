@@ -241,6 +241,18 @@
   height: 100%;
   background: var(--bg-box);
 
+  // Sticky header wrapper (used by BaseMappingPane)
+  &-header--sticky {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    flex-shrink: 0; // Don't shrink header
+    padding: 8px 16px 8px 16px; // Minimal top/bottom, sides for alignment
+    background: var(--bg-header); // Ensure background covers scrolled content
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); // Subtle shadow for depth
+  }
+
+  // Legacy header (kept for backward compatibility)
   &-header {
     flex-shrink: 0;
     display: flex;
@@ -259,11 +271,12 @@
   }
 
   &-content {
-    flex: 1;
-    min-height: 0;
+    flex: 1 1 auto; // Allow grow and shrink
+    min-height: 0; // Critical for flexbox scrolling to work
     overflow-y: auto;
-    padding: var(--spacing-grid-gap);
-    padding-bottom: 50vh; // Extra bottom padding for comfortable scrolling
+    overflow-x: hidden; // Prevent horizontal scroll
+    padding: 16px; // Consistent padding on all sides
+    padding-bottom: 20vh; // Reduced bottom padding (was 50vh - too much)
   }
 
   &-field {

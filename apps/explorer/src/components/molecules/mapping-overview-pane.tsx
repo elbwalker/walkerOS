@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { MappingInputWithButton } from '../atoms/mapping-input-with-button';
 
 /**
@@ -79,57 +79,53 @@ export function MappingOverviewPane({
   };
 
   return (
-    <div className={`elb-mapping-pane ${className}`}>
-      <div className="elb-mapping-pane-content">
-        <PaneHeader
-          title="Overview"
-          description={
-            rules.length === 0
-              ? 'No rules yet. Create an entity to get started.'
-              : `${rules.length} rule${rules.length === 1 ? '' : 's'}`
-          }
-          onBack={navigation.goBack}
-          canGoBack={navigation.canGoBack()}
+    <BaseMappingPane
+      title="Overview"
+      description={
+        rules.length === 0
+          ? 'No rules yet. Create an entity to get started.'
+          : `${rules.length} rule${rules.length === 1 ? '' : 's'}`
+      }
+      navigation={navigation}
+      className={className}
+    >
+      <div className="elb-mapping-overview-input-section">
+        <MappingInputWithButton
+          value={newEntityName}
+          onChange={handleEntityInputChange}
+          onSubmit={handleEntitySubmit}
+          onKeyDown={handleEntityKeyDown}
+          buttonLabel={entityExists ? 'Open' : 'Create'}
+          showButton={true}
+          placeholder="Type entity name to create or select..."
+          className={entityExists ? 'is-existing' : ''}
         />
-
-        <div className="elb-mapping-overview-input-section">
-          <MappingInputWithButton
-            value={newEntityName}
-            onChange={handleEntityInputChange}
-            onSubmit={handleEntitySubmit}
-            onKeyDown={handleEntityKeyDown}
-            buttonLabel={entityExists ? 'Open' : 'Create'}
-            showButton={true}
-            placeholder="Type entity name to create or select..."
-            className={entityExists ? 'is-existing' : ''}
-          />
-        </div>
-
-        {rules.length > 0 && (
-          <div className="elb-mapping-overview-grid">
-            {rules.map(({ entity, action }) => (
-              <button
-                key={`${entity}.${action}`}
-                type="button"
-                className="elb-mapping-overview-tile"
-                onClick={() => handleRuleClick(entity, action)}
-              >
-                <div className="elb-mapping-overview-tile-entity">{entity}</div>
-                <div className="elb-mapping-overview-tile-action">{action}</div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {rules.length === 0 && (
-          <div className="elb-mapping-overview-empty">
-            <p>
-              Use the tree sidebar or breadcrumb to create your first entity and
-              action.
-            </p>
-          </div>
-        )}
       </div>
-    </div>
+
+      {rules.length > 0 && (
+        <div className="elb-mapping-overview-grid">
+          {rules.map(({ entity, action }) => (
+            <button
+              key={`${entity}.${action}`}
+              type="button"
+              className="elb-mapping-overview-tile"
+              onClick={() => handleRuleClick(entity, action)}
+            >
+              <div className="elb-mapping-overview-tile-entity">{entity}</div>
+              <div className="elb-mapping-overview-tile-action">{action}</div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {rules.length === 0 && (
+        <div className="elb-mapping-overview-empty">
+          <p>
+            Use the tree sidebar or breadcrumb to create your first entity and
+            action.
+          </p>
+        </div>
+      )}
+    </BaseMappingPane>
   );
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { MappingInputWithButton } from '../atoms/mapping-input-with-button';
 
 /**
@@ -82,63 +82,59 @@ export function MappingEntityPane({
   };
 
   return (
-    <div className={`elb-mapping-pane ${className}`}>
-      <div className="elb-mapping-pane-content">
-        <PaneHeader
-          title={entity}
-          description="Select an action or create a new one"
-          onBack={navigation.goBack}
-          canGoBack={navigation.canGoBack()}
-        />
-
-        <div className="elb-mapping-entity-pane-body">
-          {/* New action input */}
-          <div className="elb-mapping-entity-pane-new-action">
-            <MappingInputWithButton
-              value={newActionName}
-              onChange={handleActionInput}
-              onSubmit={handleActionSubmit}
-              onKeyDown={handleActionKeyDown}
-              buttonLabel={actionExists ? 'Open' : 'Create'}
-              showButton={true}
-              placeholder="Type action name to create or select..."
-              className={actionExists ? 'is-existing' : ''}
-            />
-          </div>
-
-          {/* Existing actions list */}
-          {actions.length > 0 && (
-            <div className="elb-mapping-entity-pane-actions">
-              <h3 className="elb-mapping-entity-pane-section-title">
-                Existing Actions
-              </h3>
-              <div className="elb-mapping-entity-pane-action-list">
-                {actions.map((action) => (
-                  <button
-                    key={action}
-                    type="button"
-                    className="elb-mapping-entity-pane-action-button"
-                    onClick={() => handleActionClick(action)}
-                  >
-                    <span className="elb-mapping-entity-pane-action-name">
-                      {action}
-                    </span>
-                    <span className="elb-mapping-entity-pane-action-arrow">
-                      ›
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {actions.length === 0 && !newActionName && (
-            <div className="elb-mapping-entity-pane-empty">
-              <p>No actions yet. Type above to create the first action.</p>
-            </div>
-          )}
+    <BaseMappingPane
+      title={entity}
+      description="Select an action or create a new one"
+      navigation={navigation}
+      className={className}
+    >
+      <div className="elb-mapping-entity-pane-body">
+        {/* New action input */}
+        <div className="elb-mapping-entity-pane-new-action">
+          <MappingInputWithButton
+            value={newActionName}
+            onChange={handleActionInput}
+            onSubmit={handleActionSubmit}
+            onKeyDown={handleActionKeyDown}
+            buttonLabel={actionExists ? 'Open' : 'Create'}
+            showButton={true}
+            placeholder="Type action name to create or select..."
+            className={actionExists ? 'is-existing' : ''}
+          />
         </div>
+
+        {/* Existing actions list */}
+        {actions.length > 0 && (
+          <div className="elb-mapping-entity-pane-actions">
+            <h3 className="elb-mapping-entity-pane-section-title">
+              Existing Actions
+            </h3>
+            <div className="elb-mapping-entity-pane-action-list">
+              {actions.map((action) => (
+                <button
+                  key={action}
+                  type="button"
+                  className="elb-mapping-entity-pane-action-button"
+                  onClick={() => handleActionClick(action)}
+                >
+                  <span className="elb-mapping-entity-pane-action-name">
+                    {action}
+                  </span>
+                  <span className="elb-mapping-entity-pane-action-arrow">
+                    ›
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {actions.length === 0 && !newActionName && (
+          <div className="elb-mapping-entity-pane-empty">
+            <p>No actions yet. Type above to create the first action.</p>
+          </div>
+        )}
       </div>
-    </div>
+    </BaseMappingPane>
   );
 }

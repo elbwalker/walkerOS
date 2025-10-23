@@ -2,7 +2,7 @@ import { MappingTypeSelector } from './mapping-type-selector';
 import type { ValueConfigType } from '../atoms/mapping-type-button';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { MappingInput } from '../atoms/mapping-input';
 
 /**
@@ -120,13 +120,11 @@ export function MappingValueConfigPaneView({
       case 'key':
         const keyValue = typeof value === 'string' ? value : '';
         return (
-          <>
-            <PaneHeader
-              title="Property Path"
-              description="Path to extract from event (e.g., data.id, user.email, globals.currency)"
-              onBack={navigation.goBack}
-              canGoBack={navigation.canGoBack()}
-            />
+          <BaseMappingPane
+            title="Property Path"
+            description="Path to extract from event (e.g., data.id, user.email, globals.currency)"
+            navigation={navigation}
+          >
             <div className="elb-mapping-pane-field">
               <MappingInput
                 value={keyValue}
@@ -138,7 +136,7 @@ export function MappingValueConfigPaneView({
                 Common paths: data.*, globals.*, user.*, context.*
               </div>
             </div>
-          </>
+          </BaseMappingPane>
         );
 
       case 'value':
@@ -147,13 +145,11 @@ export function MappingValueConfigPaneView({
             ? ((value as Record<string, unknown>).value as string) || ''
             : '';
         return (
-          <>
-            <PaneHeader
-              title="Static Value"
-              description="Fixed value that will be used (string, number, or boolean)"
-              onBack={navigation.goBack}
-              canGoBack={navigation.canGoBack()}
-            />
+          <BaseMappingPane
+            title="Static Value"
+            description="Fixed value that will be used (string, number, or boolean)"
+            navigation={navigation}
+          >
             <div className="elb-mapping-pane-field">
               <MappingInput
                 value={String(staticValue)}
@@ -164,7 +160,7 @@ export function MappingValueConfigPaneView({
                 Use for constant values like currency codes, fixed IDs, etc.
               </div>
             </div>
-          </>
+          </BaseMappingPane>
         );
 
       case 'map':
@@ -177,13 +173,11 @@ export function MappingValueConfigPaneView({
             : {};
         const mapKeyCount = Object.keys(mapObj).length;
         return (
-          <>
-            <PaneHeader
-              title="Map Object"
-              description="Transform event data into an object with multiple keys"
-              onBack={navigation.goBack}
-              canGoBack={navigation.canGoBack()}
-            />
+          <BaseMappingPane
+            title="Map Object"
+            description="Transform event data into an object with multiple keys"
+            navigation={navigation}
+          >
             <div className="elb-mapping-pane-field">
               <div className="elb-mapping-value-complex">
                 <div className="elb-mapping-value-complex-info">
@@ -201,7 +195,7 @@ export function MappingValueConfigPaneView({
                 </button>
               </div>
             </div>
-          </>
+          </BaseMappingPane>
         );
 
       case 'loop':
@@ -213,13 +207,11 @@ export function MappingValueConfigPaneView({
           Array.isArray(loopArr) && loopArr.length > 0 ? loopArr[0] : 'nested'
         ) as string;
         return (
-          <>
-            <PaneHeader
-              title="Loop Array"
-              description="Process an array of items from the event"
-              onBack={navigation.goBack}
-              canGoBack={navigation.canGoBack()}
-            />
+          <BaseMappingPane
+            title="Loop Array"
+            description="Process an array of items from the event"
+            navigation={navigation}
+          >
             <div className="elb-mapping-pane-field">
               <div className="elb-mapping-value-complex">
                 <div className="elb-mapping-value-complex-info">
@@ -235,7 +227,7 @@ export function MappingValueConfigPaneView({
                 </button>
               </div>
             </div>
-          </>
+          </BaseMappingPane>
         );
 
       case 'function':
@@ -245,13 +237,11 @@ export function MappingValueConfigPaneView({
               '(event) => event.data'
             : '(event) => event.data';
         return (
-          <>
-            <PaneHeader
-              title="Custom Function"
-              description="JavaScript function that receives the event and returns transformed value"
-              onBack={navigation.goBack}
-              canGoBack={navigation.canGoBack()}
-            />
+          <BaseMappingPane
+            title="Custom Function"
+            description="JavaScript function that receives the event and returns transformed value"
+            navigation={navigation}
+          >
             <div className="elb-mapping-pane-field">
               <textarea
                 id="value-function"
@@ -265,7 +255,7 @@ export function MappingValueConfigPaneView({
                 Function signature: (event: WalkerOS.Event) =&gt; any
               </div>
             </div>
-          </>
+          </BaseMappingPane>
         );
 
       case 'set':
@@ -275,13 +265,11 @@ export function MappingValueConfigPaneView({
             : [];
         const setCount = Array.isArray(setArr) ? setArr.length : 0;
         return (
-          <>
-            <PaneHeader
-              title="Static Array"
-              description="Array of static values"
-              onBack={navigation.goBack}
-              canGoBack={navigation.canGoBack()}
-            />
+          <BaseMappingPane
+            title="Static Array"
+            description="Array of static values"
+            navigation={navigation}
+          >
             <div className="elb-mapping-pane-field">
               <div className="elb-mapping-value-complex">
                 <div className="elb-mapping-value-complex-info">
@@ -301,7 +289,7 @@ export function MappingValueConfigPaneView({
                 </button>
               </div>
             </div>
-          </>
+          </BaseMappingPane>
         );
 
       default:
@@ -313,10 +301,5 @@ export function MappingValueConfigPaneView({
     }
   };
 
-  return (
-    <div className={`elb-mapping-value-pane ${className}`}>
-      {/* No type selector - just the clean editor */}
-      <div className="elb-mapping-pane-content">{renderEditor()}</div>
-    </div>
-  );
+  return renderEditor();
 }

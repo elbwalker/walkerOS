@@ -2,7 +2,7 @@ import React from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { RuleTile, type RuleTileStatus } from '../atoms/config-tile';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 
 export interface MappingRuleOverviewProps {
   path: string[];
@@ -207,48 +207,45 @@ export function MappingRuleOverview({
   const optionsTiles = RULE_TILES.filter((tile) => tile.section === 'options');
 
   return (
-    <div className={`elb-mapping-pane ${className}`}>
-      <div className="elb-mapping-pane-content">
-        {/* Rule Configuration Section */}
-        <div className="elb-mapping-rule-section">
-          <PaneHeader
-            title="Rule Configuration"
-            description="Configure how this event is transformed"
-            onBack={navigation.goBack}
-            canGoBack={navigation.canGoBack()}
-          />
-          <div className="elb-mapping-rule-section-grid">
-            {configurationTiles.map((tile) => (
-              <RuleTile
-                key={tile.key}
-                label={tile.label}
-                description={tile.description}
-                status={getTileStatus(tile.key, rule)}
-                onClick={() => handleTileClick(tile.key)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Processing Options Section */}
-        <div className="elb-mapping-rule-section">
-          <PaneHeader
-            title="Processing Options"
-            description="Control when and how this event is processed"
-          />
-          <div className="elb-mapping-rule-section-grid">
-            {optionsTiles.map((tile) => (
-              <RuleTile
-                key={tile.key}
-                label={tile.label}
-                description={tile.description}
-                status={getTileStatus(tile.key, rule)}
-                onClick={() => handleTileClick(tile.key)}
-              />
-            ))}
-          </div>
+    <BaseMappingPane
+      title="Rule Configuration"
+      description="Configure how this event is transformed"
+      navigation={navigation}
+      className={className}
+    >
+      {/* Rule Configuration Section */}
+      <div className="elb-mapping-rule-section">
+        <div className="elb-mapping-rule-section-grid">
+          {configurationTiles.map((tile) => (
+            <RuleTile
+              key={tile.key}
+              label={tile.label}
+              description={tile.description}
+              status={getTileStatus(tile.key, rule)}
+              onClick={() => handleTileClick(tile.key)}
+            />
+          ))}
         </div>
       </div>
-    </div>
+
+      {/* Processing Options Section */}
+      <div className="elb-mapping-rule-section">
+        <h3 className="elb-mapping-rule-section-title">Processing Options</h3>
+        <p className="elb-mapping-rule-section-description">
+          Control when and how this event is processed
+        </p>
+        <div className="elb-mapping-rule-section-grid">
+          {optionsTiles.map((tile) => (
+            <RuleTile
+              key={tile.key}
+              label={tile.label}
+              description={tile.description}
+              status={getTileStatus(tile.key, rule)}
+              onClick={() => handleTileClick(tile.key)}
+            />
+          ))}
+        </div>
+      </div>
+    </BaseMappingPane>
   );
 }

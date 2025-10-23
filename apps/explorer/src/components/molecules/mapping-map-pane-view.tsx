@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { MappingInputWithButton } from '../atoms/mapping-input-with-button';
 import { MappingConfirmButton } from '../atoms/mapping-confirm-button';
 import { getConfiguredProperties } from '../../utils/value-display-formatter';
@@ -99,103 +99,97 @@ export function MappingMapPaneView({
 
   // Determine which properties are configured for a value
   return (
-    <div className={`elb-mapping-pane ${className}`}>
-      <div className="elb-mapping-pane-content">
-        <PaneHeader
-          title="Map"
-          description={
-            mapKeys.length === 0
-              ? 'No keys yet. Add keys to transform event data.'
-              : `${mapKeys.length} ${mapKeys.length === 1 ? 'key' : 'keys'}`
-          }
-          onBack={navigation.goBack}
-          canGoBack={navigation.canGoBack()}
+    <BaseMappingPane
+      title="Map"
+      description={
+        mapKeys.length === 0
+          ? 'No keys yet. Add keys to transform event data.'
+          : `${mapKeys.length} ${mapKeys.length === 1 ? 'key' : 'keys'}`
+      }
+      navigation={navigation}
+      className={className}
+    >
+      {/* Add new key input */}
+      <div className="elb-policy-input-section">
+        <MappingInputWithButton
+          value={newKey}
+          onChange={handleKeyInputChange}
+          onSubmit={handleKeySubmit}
+          onKeyDown={handleKeyDown}
+          buttonLabel={keyExists ? 'Open' : 'Add Key'}
+          showButton={true}
+          placeholder="Type key name to create or select (e.g., currency)..."
+          className={keyExists ? 'is-existing' : ''}
         />
-
-        {/* Add new key input */}
-        <div className="elb-policy-input-section">
-          <MappingInputWithButton
-            value={newKey}
-            onChange={handleKeyInputChange}
-            onSubmit={handleKeySubmit}
-            onKeyDown={handleKeyDown}
-            buttonLabel={keyExists ? 'Open' : 'Add Key'}
-            showButton={true}
-            placeholder="Type key name to create or select (e.g., currency)..."
-            className={keyExists ? 'is-existing' : ''}
-          />
-        </div>
-
-        {/* Map keys list */}
-        {mapKeys.length > 0 && (
-          <div className="elb-policy-list">
-            {mapKeys.map((key) => {
-              const value = map[key];
-              const configuredProps = getConfiguredProperties(value);
-
-              return (
-                <div key={key} className="elb-policy-row">
-                  {/* Key */}
-                  <button
-                    type="button"
-                    className="elb-policy-row-path"
-                    onClick={() => handleKeyClick(key)}
-                    title="Click to edit this mapping"
-                  >
-                    {key}
-                  </button>
-
-                  {/* Badges */}
-                  <div className="elb-policy-row-badges">
-                    {configuredProps.map(({ prop, value, isLong }, index) => (
-                      <button
-                        key={prop || index}
-                        type="button"
-                        className="elb-policy-badge"
-                        onClick={() => handleBadgeClick(key)}
-                        title={prop ? `${prop}: ${value}` : value}
-                      >
-                        {prop && (
-                          <span className="elb-policy-badge-label">
-                            {prop}:
-                          </span>
-                        )}
-                        <span
-                          className={`elb-policy-badge-value ${isLong ? 'is-long' : ''}`}
-                        >
-                          {value}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="elb-policy-row-actions">
-                    <MappingConfirmButton
-                      confirmLabel="Delete?"
-                      onConfirm={() => handleDeleteClick(key)}
-                      ariaLabel={`Delete key ${key}`}
-                      className="elb-mapping-delete-button"
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Empty state */}
-        {mapKeys.length === 0 && (
-          <div className="elb-policy-empty">
-            <p>Map transforms event data by mapping keys to values.</p>
-            <ul>
-              <li>Each key becomes a property in the output</li>
-              <li>Values can be simple strings or complex transformations</li>
-              <li>Example: currency → "USD", item_id → "data.id"</li>
-            </ul>
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* Map keys list */}
+      {mapKeys.length > 0 && (
+        <div className="elb-policy-list">
+          {mapKeys.map((key) => {
+            const value = map[key];
+            const configuredProps = getConfiguredProperties(value);
+
+            return (
+              <div key={key} className="elb-policy-row">
+                {/* Key */}
+                <button
+                  type="button"
+                  className="elb-policy-row-path"
+                  onClick={() => handleKeyClick(key)}
+                  title="Click to edit this mapping"
+                >
+                  {key}
+                </button>
+
+                {/* Badges */}
+                <div className="elb-policy-row-badges">
+                  {configuredProps.map(({ prop, value, isLong }, index) => (
+                    <button
+                      key={prop || index}
+                      type="button"
+                      className="elb-policy-badge"
+                      onClick={() => handleBadgeClick(key)}
+                      title={prop ? `${prop}: ${value}` : value}
+                    >
+                      {prop && (
+                        <span className="elb-policy-badge-label">{prop}:</span>
+                      )}
+                      <span
+                        className={`elb-policy-badge-value ${isLong ? 'is-long' : ''}`}
+                      >
+                        {value}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Actions */}
+                <div className="elb-policy-row-actions">
+                  <MappingConfirmButton
+                    confirmLabel="Delete?"
+                    onConfirm={() => handleDeleteClick(key)}
+                    ariaLabel={`Delete key ${key}`}
+                    className="elb-mapping-delete-button"
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {mapKeys.length === 0 && (
+        <div className="elb-policy-empty">
+          <p>Map transforms event data by mapping keys to values.</p>
+          <ul>
+            <li>Each key becomes a property in the output</li>
+            <li>Values can be simple strings or complex transformations</li>
+            <li>Example: currency → "USD", item_id → "data.id"</li>
+          </ul>
+        </div>
+      )}
+    </BaseMappingPane>
   );
 }

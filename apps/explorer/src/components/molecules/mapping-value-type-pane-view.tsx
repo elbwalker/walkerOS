@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { ConfigTile, type ConfigTileStatus } from '../atoms/config-tile';
 import { MappingInput } from '../atoms/mapping-input';
 
@@ -10,6 +10,11 @@ export interface MappingValueTypePaneViewProps {
   mappingState: UseMappingStateReturn;
   navigation: UseMappingNavigationReturn;
   className?: string;
+
+  // Optional: Override or suppress header (for nested use in loop pane)
+  title?: string;
+  description?: string;
+  hideNavigation?: boolean;
 }
 
 interface ValueConfigTileConfig {
@@ -80,6 +85,9 @@ export function MappingValueTypePaneView({
   mappingState,
   navigation,
   className = '',
+  title,
+  description,
+  hideNavigation = false,
 }: MappingValueTypePaneViewProps) {
   const value = mappingState.actions.getValue(path);
 
@@ -290,55 +298,52 @@ export function MappingValueTypePaneView({
   const inputTitle = 'Enter a property path to extract data from the event';
 
   return (
-    <div className={`elb-mapping-pane ${className}`}>
-      <div className="elb-mapping-pane-content">
-        <PaneHeader
-          title="Value Configuration"
-          description="Configure how this value is resolved"
-          onBack={navigation.goBack}
-          canGoBack={navigation.canGoBack()}
-        />
-
-        {/* Quick Value Section */}
-        <div className="elb-mapping-value-type-quick-section">
-          <div className="elb-mapping-value-type-section-title">
-            Dynamic Value
-          </div>
-          <MappingInput
-            value={displayValue}
-            onChange={handleStringChange}
-            placeholder={inputPlaceholder}
-            title={inputTitle}
-          />
-          <div className="elb-mapping-value-type-hint">
-            {isString ? (
-              <span>Property path to extract data from the event</span>
-            ) : (
-              <span className="is-info">
-                Editing property path - synced with Key tile
-              </span>
-            )}
-          </div>
+    <BaseMappingPane
+      title={title}
+      description={description}
+      navigation={navigation}
+      hideNavigation={hideNavigation}
+      className={className}
+    >
+      {/* Quick Value Section */}
+      <div className="elb-mapping-value-type-quick-section">
+        <div className="elb-mapping-value-type-section-title">
+          Dynamic Value
         </div>
-
-        {/* Advanced Configuration Section */}
-        <div className="elb-mapping-value-type-advanced-section">
-          <div className="elb-mapping-value-type-section-title">
-            Advanced Configuration
-          </div>
-          <div className="elb-mapping-value-type-tiles-grid">
-            {VALUE_CONFIG_TILES.map((tile) => (
-              <ConfigTile
-                key={tile.key}
-                label={tile.label}
-                description={tile.description}
-                status={getTileStatus(tile.key)}
-                onClick={() => handleTileClick(tile.key)}
-              />
-            ))}
-          </div>
+        <MappingInput
+          value={displayValue}
+          onChange={handleStringChange}
+          placeholder={inputPlaceholder}
+          title={inputTitle}
+        />
+        <div className="elb-mapping-value-type-hint">
+          {isString ? (
+            <span>Property path to extract data from the event</span>
+          ) : (
+            <span className="is-info">
+              Editing property path - synced with Key tile
+            </span>
+          )}
         </div>
       </div>
-    </div>
+
+      {/* Advanced Configuration Section */}
+      <div className="elb-mapping-value-type-advanced-section">
+        <div className="elb-mapping-value-type-section-title">
+          Advanced Configuration
+        </div>
+        <div className="elb-mapping-value-type-tiles-grid">
+          {VALUE_CONFIG_TILES.map((tile) => (
+            <ConfigTile
+              key={tile.key}
+              label={tile.label}
+              description={tile.description}
+              status={getTileStatus(tile.key)}
+              onClick={() => handleTileClick(tile.key)}
+            />
+          ))}
+        </div>
+      </div>
+    </BaseMappingPane>
   );
 }

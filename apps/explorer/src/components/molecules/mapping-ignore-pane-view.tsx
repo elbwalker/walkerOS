@@ -1,6 +1,6 @@
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 
 /**
  * Mapping Ignore Pane View
@@ -38,44 +38,36 @@ export function MappingIgnorePaneView({
   };
 
   return (
-    <div className={`elb-mapping-pane ${className}`}>
-      <div className="elb-mapping-pane-content">
-        <div className="elb-mapping-ignore-pane">
-          <PaneHeader
-            title="Ignore Event"
-            description="When enabled, events matching this mapping will be ignored and not processed by the destination."
-            onBack={navigation.goBack}
-            canGoBack={navigation.canGoBack()}
-          />
+    <BaseMappingPane
+      title="Ignore Event"
+      description="When enabled, events matching this mapping will be ignored and not processed by the destination."
+      navigation={navigation}
+      className={className}
+    >
+      <div className="elb-mapping-ignore-pane">
+        {/* Toggle Control */}
+        <div className="elb-mapping-ignore-control">
+          <label className="elb-mapping-ignore-label">
+            <input
+              type="checkbox"
+              checked={isIgnored}
+              onChange={handleToggle}
+              className="elb-mapping-ignore-checkbox"
+            />
+            <span className="elb-mapping-ignore-label-text">Ignore events</span>
+          </label>
+        </div>
 
-          {/* Toggle Control */}
-          <div className="elb-mapping-ignore-control">
-            <label className="elb-mapping-ignore-label">
-              <input
-                type="checkbox"
-                checked={isIgnored}
-                onChange={handleToggle}
-                className="elb-mapping-ignore-checkbox"
-              />
-              <span className="elb-mapping-ignore-label-text">
-                Ignore events
-              </span>
-            </label>
-          </div>
-
-          {/* Status Indicator */}
-          <div
-            className={`elb-mapping-ignore-status ${isIgnored ? 'is-active' : ''}`}
-          >
-            <div className="elb-mapping-ignore-status-indicator" />
-            <div className="elb-mapping-ignore-status-text">
-              {isIgnored
-                ? 'Events will be ignored'
-                : 'Events will be processed'}
-            </div>
+        {/* Status Indicator */}
+        <div
+          className={`elb-mapping-ignore-status ${isIgnored ? 'is-active' : ''}`}
+        >
+          <div className="elb-mapping-ignore-status-indicator" />
+          <div className="elb-mapping-ignore-status-text">
+            {isIgnored ? 'Events will be ignored' : 'Events will be processed'}
           </div>
         </div>
       </div>
-    </div>
+    </BaseMappingPane>
   );
 }

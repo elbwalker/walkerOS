@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import { ConsentStateTile } from '../atoms/consent-state-tile';
 import { scanMappingForConsentStates } from '../../utils/consent-scanner';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { getPathDescription } from '../../utils/path-analyzer';
 import { MappingInputWithButton } from '../atoms/mapping-input-with-button';
 
@@ -95,51 +95,49 @@ export function MappingConsentPaneView({
   );
 
   return (
-    <div className={`elb-mapping-pane ${className}`}>
-      <div className="elb-mapping-pane-content">
-        <div className="elb-mapping-consent-pane">
-          <PaneHeader title={title} description={description} />
+    <BaseMappingPane
+      title={title}
+      description={description}
+      hideNavigation={true}
+      className={className}
+    >
+      <div className="elb-mapping-consent-pane">
+        {/* Consent State Tiles Grid */}
+        <div className="elb-mapping-consent-grid">
+          {discoveredStates.map((stateName) => (
+            <ConsentStateTile
+              key={stateName}
+              label={stateName}
+              checked={currentConsent[stateName] === true}
+              onClick={() => handleToggleState(stateName)}
+            />
+          ))}
 
-          {/* Consent State Tiles Grid */}
-          <div className="elb-mapping-consent-grid">
-            {discoveredStates.map((stateName) => (
-              <ConsentStateTile
-                key={stateName}
-                label={stateName}
-                checked={currentConsent[stateName] === true}
-                onClick={() => handleToggleState(stateName)}
-              />
-            ))}
+          {/* Add New State Input - Always visible */}
+          <MappingInputWithButton
+            value={newStateName}
+            onChange={handleInputChange}
+            onSubmit={handleAddNewState}
+            onKeyDown={handleKeyDown}
+            buttonLabel="Add"
+            showButton={true}
+            placeholder="Add new consent state"
+          />
+        </div>
 
-            {/* Add New State Input Tile - Always visible */}
-            <div className="elb-mapping-consent-input-tile">
-              <MappingInputWithButton
-                value={newStateName}
-                onChange={handleInputChange}
-                onSubmit={handleAddNewState}
-                onKeyDown={handleKeyDown}
-                buttonLabel="Add"
-                showButton={true}
-                placeholder="Add new consent state"
-                className="elb-mapping-consent-input-inner"
-              />
-            </div>
-          </div>
-
-          {/* Help Section */}
-          <div className="elb-mapping-consent-help">
-            <h4 className="elb-mapping-consent-help-title">How it works</h4>
-            <ul className="elb-mapping-consent-help-list">
-              <li>Checked states are required for processing</li>
-              <li>Events queue until required consent is granted</li>
-              <li>
-                Consent states are discovered from your entire mapping
-                configuration
-              </li>
-            </ul>
-          </div>
+        {/* Help Section */}
+        <div className="elb-mapping-consent-help">
+          <h4 className="elb-mapping-consent-help-title">How it works</h4>
+          <ul className="elb-mapping-consent-help-list">
+            <li>Checked states are required for processing</li>
+            <li>Events queue until required consent is granted</li>
+            <li>
+              Consent states are discovered from your entire mapping
+              configuration
+            </li>
+          </ul>
         </div>
       </div>
-    </div>
+    </BaseMappingPane>
   );
 }
