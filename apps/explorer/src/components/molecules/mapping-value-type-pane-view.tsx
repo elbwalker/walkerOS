@@ -285,13 +285,9 @@ export function MappingValueTypePaneView({
   };
 
   // Input is ALWAYS enabled
-  const inputPlaceholder = isString
-    ? 'Type property path or static value'
-    : 'Edit key property';
+  const inputPlaceholder = 'e.g., data.productId, user.email';
 
-  const inputTitle = isString
-    ? 'Enter a simple string value'
-    : 'Edit the key property';
+  const inputTitle = 'Enter a property path to extract data from the event';
 
   return (
     <div className={`elb-mapping-pane ${className}`}>
@@ -306,7 +302,7 @@ export function MappingValueTypePaneView({
         {/* Quick Value Section */}
         <div className="elb-mapping-value-type-quick-section">
           <div className="elb-mapping-value-type-section-title">
-            Quick Value (String)
+            Dynamic Value
           </div>
           <MappingInput
             value={displayValue}
@@ -316,10 +312,10 @@ export function MappingValueTypePaneView({
           />
           <div className="elb-mapping-value-type-hint">
             {isString ? (
-              <span>Type a property path or static value</span>
+              <span>Property path to extract data from the event</span>
             ) : (
               <span className="is-info">
-                Editing key property - synced with Key tile
+                Editing property path - synced with Key tile
               </span>
             )}
           </div>
@@ -328,7 +324,7 @@ export function MappingValueTypePaneView({
         {/* Advanced Configuration Section */}
         <div className="elb-mapping-value-type-advanced-section">
           <div className="elb-mapping-value-type-section-title">
-            Advanced Configuration (ValueConfig)
+            Advanced Configuration
           </div>
           <div className="elb-mapping-value-type-tiles-grid">
             {VALUE_CONFIG_TILES.map((tile) => (
