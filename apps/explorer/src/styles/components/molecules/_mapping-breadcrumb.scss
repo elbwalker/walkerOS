@@ -19,9 +19,17 @@
     flex-wrap: nowrap;
     overflow: hidden;
 
-    // Mobile: Tighter spacing
+    // Mobile: Enable horizontal scrolling with swipe
     @include mobile {
       gap: 4px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch; // Smooth momentum scrolling on iOS
+      scrollbar-width: none; // Hide scrollbar on Firefox
+
+      &::-webkit-scrollbar {
+        display: none; // Hide scrollbar on Chrome/Safari
+      }
     }
   }
 
@@ -34,6 +42,7 @@
 
     @include mobile {
       gap: 4px;
+      flex-shrink: 0; // Don't shrink on mobile - allow scrolling instead
     }
   }
 
@@ -51,9 +60,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
 
-    // Mobile: Truncate long breadcrumbs
+    // Mobile: Don't truncate - allow scrolling to see full breadcrumb
     @include mobile {
-      max-width: 60px;
+      max-width: none;
+      overflow: visible;
+      text-overflow: clip;
     }
 
     &:hover {

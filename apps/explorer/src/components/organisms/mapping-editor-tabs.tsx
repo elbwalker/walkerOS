@@ -242,32 +242,40 @@ export function MappingEditorTabs({
       className={`elb-mapping-editor-tabs elb-mapping-editor-tabs--${layout} ${className}`}
       data-layout={layout}
     >
-      {/* Tree Sidebar (optional, collapsible) */}
-      {showTree && layout !== 'compact' && (
-        <MappingTreeSidebar
-          config={mappingState.config}
-          currentPath={activeTab?.path || []}
-          expandedPaths={treeState.expandedPaths}
-          visible={navigation.treeVisible}
-          onToggle={treeState.togglePath}
-          onNavigate={(path) => {
-            // Determine the node type from the path structure
-            const nodeType = getNodeTypeFromPath(path);
-            navigation.openTab(path, nodeType);
-          }}
-          onAddAction={(entity, action) => {
-            // Create new rule with empty config and navigate to it
-            mappingState.actions.createRule(entity, action, {});
-            navigation.openTab([entity, action], 'rule');
-          }}
-          onAddEntity={(entity) => {
-            // Create new empty entity and expand it
-            mappingState.actions.setValue([entity], {});
-            treeState.expandPath([entity]);
-          }}
-          onClose={() => navigation.setTreeVisible(false)}
-          className="elb-mapping-editor-sidebar"
-        />
+      {/* Tree Sidebar (optional, collapsible) - with mobile backdrop */}
+      {showTree && layout !== 'compact' && navigation.treeVisible && (
+        <>
+          {/* Mobile backdrop for click-outside */}
+          <div
+            className="elb-mapping-editor-mobile-backdrop"
+            onClick={() => navigation.setTreeVisible(false)}
+            aria-hidden="true"
+          />
+          <MappingTreeSidebar
+            config={mappingState.config}
+            currentPath={activeTab?.path || []}
+            expandedPaths={treeState.expandedPaths}
+            visible={navigation.treeVisible}
+            onToggle={treeState.togglePath}
+            onNavigate={(path) => {
+              // Determine the node type from the path structure
+              const nodeType = getNodeTypeFromPath(path);
+              navigation.openTab(path, nodeType);
+            }}
+            onAddAction={(entity, action) => {
+              // Create new rule with empty config and navigate to it
+              mappingState.actions.createRule(entity, action, {});
+              navigation.openTab([entity, action], 'rule');
+            }}
+            onAddEntity={(entity) => {
+              // Create new empty entity and expand it
+              mappingState.actions.setValue([entity], {});
+              treeState.expandPath([entity]);
+            }}
+            onClose={() => navigation.setTreeVisible(false)}
+            className="elb-mapping-editor-sidebar"
+          />
+        </>
       )}
 
       {/* Main Editor Area */}

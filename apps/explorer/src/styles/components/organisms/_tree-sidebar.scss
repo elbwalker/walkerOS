@@ -9,6 +9,7 @@
   background: var(--bg-box);
   border-right: 1px solid var(--border-box);
   overflow: hidden;
+  position: relative; // For absolute positioning of close button
 
   // Mobile: 80% width overlay
   @include mobile {
@@ -301,28 +302,37 @@
   }
 }
 
-// Full-width add entity button at bottom of tree
+// Full-width add entity button - sticky at bottom
 .elb-mapping-tree-add-entity-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  padding: 8px;
-  margin-top: 24px;
-  margin-bottom: 48px;
-  background: none;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
+  gap: 6px;
+  width: calc(100% - 48px);
+  margin: 24px;
+  padding: 10px 16px;
+  background: var(--bg-box);
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
   cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: 13px;
+  font-family: var(--font-family-base);
+  font-size: 14px;
+  font-weight: var(--font-weight-medium);
   color: var(--color-text);
-  opacity: 0.7;
   transition: all 0.15s ease;
+  position: sticky;
+  bottom: 8px;
+  z-index: 6; // Above tree nodes sticky headers
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
 
   &:hover {
-    opacity: 1;
+    background: var(--bg-button-hover);
     border-color: var(--color-text);
+  }
+
+  &:active {
+    background: var(--bg-button-active);
+    transform: scale(0.98);
   }
 }
 
@@ -378,4 +388,40 @@
   color: #999;
   text-transform: lowercase;
   font-weight: normal;
+}
+
+// Mobile close button - clean icon at top right corner
+.elb-mapping-tree-close-button {
+  display: none; // Hidden on desktop
+
+  @include mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: all 0.2s ease;
+    z-index: 10; // Above tree nodes (which have z-index up to 5)
+
+    &:hover {
+      color: var(--color-text);
+      transform: scale(1.1);
+    }
+
+    &:active {
+      transform: scale(0.9);
+    }
+
+    svg {
+      display: block;
+    }
+  }
 }

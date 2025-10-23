@@ -13,6 +13,43 @@
 .elb-mapping-editor-sidebar {
   flex-shrink: 0;
   border-right: 1px solid var(--border-box);
+
+  // Mobile: Convert to overlay instead of inline (absolute within parent container)
+  @include mobile {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 101;
+    width: 80vw;
+    max-width: 320px;
+    box-shadow: 2px 0 24px rgba(0, 0, 0, 0.25);
+    animation: slideInFromLeft 0.25s ease-out;
+  }
+}
+
+// Mobile overlay backdrop (will be added via React when sidebar is visible)
+.elb-mapping-editor-mobile-backdrop {
+  @include mobile {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(2px);
+    z-index: 100;
+    animation: fadeIn 0.2s ease;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .elb-mapping-editor-main {
@@ -73,7 +110,7 @@
 }
 
 .elb-mapping-editor-overlay {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -88,8 +125,21 @@
 }
 
 .elb-mapping-editor-overlay-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 101;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+
   // Slide-in animation from left
-  animation: slideInFromLeft 0.2s ease-out;
+  animation: slideInFromLeft 0.25s ease-out;
+
+  // Mobile: Full height overlay with stronger shadow
+  @include mobile {
+    height: 100%;
+    box-shadow: 2px 0 24px rgba(0, 0, 0, 0.25);
+  }
 }
 
 @keyframes slideInFromLeft {
@@ -98,5 +148,28 @@
   }
   to {
     transform: translateX(0);
+  }
+}
+
+@keyframes slideOutToLeft {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+// Mobile-specific: Ensure overlay system works
+@include mobile {
+  // Force overlay behavior on mobile regardless of layout prop
+  .elb-mapping-editor-overlay {
+    display: block;
+  }
+
+  // Main content should take full width on mobile
+  .elb-mapping-editor-main {
+    width: 100%;
+    flex: 1;
   }
 }

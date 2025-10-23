@@ -782,7 +782,7 @@ export function MappingTreeSidebar({
             className="elb-mapping-tree-add-entity-button"
             onClick={handleAddEntityClick}
           >
-            + add entity
+            <span>+</span> Add Entity
           </button>
         )}
 
@@ -805,6 +805,33 @@ export function MappingTreeSidebar({
         {/* Bottom padding for scrolling */}
         <div className="elb-mapping-tree-bottom-padding" />
       </div>
+
+      {/* Mobile close button - absolute at bottom right */}
+      {onClose && (
+        <button
+          type="button"
+          className="elb-mapping-tree-close-button"
+          onClick={onClose}
+          aria-label="Close tree sidebar"
+          title="Close sidebar"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M15 18L9 12L15 6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      )}
     </aside>
   );
 }
