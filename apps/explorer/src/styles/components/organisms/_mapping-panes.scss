@@ -1,3 +1,5 @@
+@use '../../foundation/responsive' as *;
+
 // Overview Pane
 .elb-mapping-overview {
   &-input-section {
@@ -76,6 +78,12 @@
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 8px;
     margin-bottom: 24px;
+
+    // Mobile: Smaller minimum width and tighter gap
+    @include mobile {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 6px;
+    }
   }
 
   &-tile {
@@ -189,6 +197,12 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 8px;
+
+    // Mobile: Smaller minimum width
+    @include mobile {
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 6px;
+    }
   }
 
   &-action-button {
@@ -277,6 +291,12 @@
     overflow-x: hidden; // Prevent horizontal scroll
     padding: 16px; // Consistent padding on all sides
     padding-bottom: 20vh; // Reduced bottom padding (was 50vh - too much)
+
+    // Mobile: Reduced padding
+    @include mobile {
+      padding: 12px;
+      padding-bottom: 10vh;
+    }
   }
 
   &-field {
@@ -284,6 +304,11 @@
 
     &:last-child {
       margin-bottom: 0;
+    }
+
+    // Mobile: Slightly reduced spacing
+    @include mobile {
+      margin-bottom: 16px;
     }
   }
 
@@ -293,6 +318,11 @@
     font-weight: var(--font-weight-semibold);
     color: var(--color-text-label);
     margin-bottom: 6px;
+
+    // Mobile: Slightly smaller labels
+    @include mobile {
+      font-size: 12px;
+    }
   }
 
   &-required {

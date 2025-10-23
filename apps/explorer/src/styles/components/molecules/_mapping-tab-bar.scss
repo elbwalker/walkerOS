@@ -1,3 +1,5 @@
+@use '../../foundation/responsive' as *;
+
 .elb-mapping-tab-bar {
   display: flex;
   border-bottom: 1px solid var(--border-box);
@@ -11,6 +13,15 @@
     scroll-behavior: smooth;
     scrollbar-width: thin;
     padding-bottom: 2px;
+
+    // Mobile: Hide scrollbar for cleaner look
+    @include mobile {
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
 
     &::-webkit-scrollbar {
       height: 6px;

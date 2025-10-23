@@ -1,18 +1,40 @@
 @use '../config' as *;
+@use 'sass:map';
 
 @mixin respond-to($breakpoint) {
   @if $breakpoint == 'compact' {
-    @media (max-width: map-get($breakpoints, 'compact')) {
+    @media (max-width: map.get($breakpoints, 'compact')) {
       @content;
     }
   } @else if $breakpoint == 'medium' {
-    @media (min-width: map-get($breakpoints, 'medium')) and (max-width: 1199px) {
+    @media (min-width: map.get($breakpoints, 'medium')) and (max-width: 1199px) {
       @content;
     }
   } @else if $breakpoint == 'wide' {
-    @media (min-width: map-get($breakpoints, 'wide')) {
+    @media (min-width: map.get($breakpoints, 'wide')) {
       @content;
     }
+  }
+}
+
+// Convenient mobile-specific mixin (alias for compact)
+@mixin mobile {
+  @media (max-width: map.get($breakpoints, 'compact')) {
+    @content;
+  }
+}
+
+// Tablet and mobile combined
+@mixin mobile-and-tablet {
+  @media (max-width: 1199px) {
+    @content;
+  }
+}
+
+// Desktop only
+@mixin desktop {
+  @media (min-width: map-get($breakpoints, 'wide')) {
+    @content;
   }
 }
 

@@ -1,3 +1,5 @@
+@use '../../foundation/responsive' as *;
+
 .elb-mapping-confirm-button {
   display: flex;
   align-items: center;
@@ -15,6 +17,12 @@
   font-family: var(--font-family-base);
   font-weight: 500;
   white-space: nowrap;
+
+  // Mobile: Touch-friendly sizing
+  @include mobile {
+    min-width: 44px;
+    min-height: 44px;
+  }
 
   &:hover {
     background: rgba(239, 68, 68, 0.1);
@@ -55,6 +63,12 @@
   cursor: pointer;
   color: var(--color-text-muted);
   transition: all 0.15s ease;
+
+  // Mobile: Touch-friendly sizing
+  @include mobile {
+    min-width: 44px;
+    min-height: 44px;
+  }
 
   &:hover {
     background: var(--bg-button-hover);

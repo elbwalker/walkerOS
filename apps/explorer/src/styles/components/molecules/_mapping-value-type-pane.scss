@@ -1,3 +1,5 @@
+@use '../../foundation/responsive' as *;
+
 // ValueType Pane - Two-section layout for string vs ValueConfig
 .elb-mapping-value-type {
   &-quick-section,
@@ -70,5 +72,11 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 16px;
+
+    // Mobile: Force 2-column layout for better touch targets
+    @include mobile {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
   }
 }

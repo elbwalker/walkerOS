@@ -1,3 +1,5 @@
+@use '../../foundation/responsive' as *;
+
 .elb-mapping-navigation-header {
   display: flex;
   align-items: center;
@@ -6,6 +8,13 @@
   background: var(--bg-header);
   border-bottom: 1px solid var(--border-box);
   gap: 12px;
+
+  // Mobile: Reduce padding and allow wrapping if needed
+  @include mobile {
+    padding: 6px 8px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 }
 
 .elb-mapping-navigation-left {

@@ -119,6 +119,34 @@ export function MappingEditorTabs({
   const treeState = useTreeState(initialNavigationState?.expandedPaths || [[]]);
   const [codeViewActive, setCodeViewActive] = useState(false);
 
+  // Touch gesture support for swipe-to-dismiss tree sidebar on mobile
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Minimum swipe distance (in px) to be considered a swipe
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null); // Reset touch end
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+
+    // Close tree sidebar on left swipe
+    if (isLeftSwipe && navigation.treeVisible) {
+      navigation.setTreeVisible(false);
+    }
+  };
+
   // Get active tab for rendering
   const activeTab = navigation.openTabs.find(
     (tab) => tab.id === navigation.activeTabId,
@@ -323,6 +351,9 @@ export function MappingEditorTabs({
           <div
             className="elb-mapping-editor-overlay-content"
             onClick={(e) => e.stopPropagation()}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
           >
             <MappingTreeSidebar
               config={mappingState.config}

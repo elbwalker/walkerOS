@@ -1,4 +1,6 @@
 // Tree Sidebar - Hierarchical navigation for mapping editor
+@use '../../foundation/responsive' as *;
+
 .elb-mapping-tree-sidebar {
   display: flex;
   flex-direction: column;
@@ -7,6 +9,12 @@
   background: var(--bg-box);
   border-right: 1px solid var(--border-box);
   overflow: hidden;
+
+  // Mobile: 80% width overlay
+  @include mobile {
+    width: 80vw;
+    max-width: 320px;
+  }
 }
 
 .elb-mapping-tree-content {

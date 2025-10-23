@@ -1,3 +1,5 @@
+@use '../../foundation/responsive' as *;
+
 .elb-mapping-set {
   &-add-button,
   &-add-row-button {
@@ -30,6 +32,12 @@
       opacity 0.2s,
       transform 0.2s;
 
+    // Mobile: Stack all fields vertically
+    @include mobile {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
     &-dragging {
       opacity: 0.4;
     }
@@ -42,14 +50,28 @@
     &-advanced {
       grid-template-rows: auto auto;
 
+      @include mobile {
+        grid-template-columns: 1fr;
+      }
+
       .elb-mapping-set-delete-wrapper {
         grid-row: 1;
         grid-column: 4;
+
+        @include mobile {
+          grid-row: auto;
+          grid-column: auto;
+        }
       }
 
       .elb-mapping-set-drag-handle {
         grid-row: 1;
         grid-column: 1;
+
+        @include mobile {
+          grid-row: auto;
+          grid-column: auto;
+        }
       }
     }
   }
@@ -64,6 +86,12 @@
     cursor: grab;
     user-select: none;
     transition: color 0.15s;
+
+    // Mobile: Touch-friendly sizing
+    @include mobile {
+      width: 44px;
+      height: 44px;
+    }
 
     &:hover {
       color: var(--color-text-primary);
@@ -91,6 +119,14 @@
     background-repeat: no-repeat;
     background-position: right 8px center;
 
+    // Mobile: Touch-friendly sizing
+    @include mobile {
+      min-height: 44px;
+      font-size: 16px;
+      padding: 12px;
+      padding-right: 40px;
+    }
+
     &:hover {
       background-color: var(--bg-input-hover);
     }
@@ -112,6 +148,13 @@
       outline: none;
       transition: all 0.15s;
 
+      // Mobile: Touch-friendly sizing
+      @include mobile {
+        min-height: 44px;
+        font-size: 16px;
+        padding: 12px;
+      }
+
       &:hover {
         background: var(--bg-input-hover);
       }
@@ -129,6 +172,12 @@
       background: var(--bg-box);
       border: 1px solid var(--border-input);
       border-radius: var(--radius-button);
+
+      @include mobile {
+        grid-column: auto;
+        grid-row: auto;
+        margin-top: 0;
+      }
     }
   }
 

@@ -1,3 +1,5 @@
+@use '../../foundation/responsive' as *;
+
 // MappingInputWithButton - Input group with inline action button
 .elb-mapping-input-with-button {
   display: flex;
@@ -29,6 +31,12 @@
     border-color 0.15s ease,
     color 0.15s ease;
   white-space: nowrap;
+
+  // Mobile: Touch-friendly sizing
+  @include mobile {
+    min-height: 44px;
+    padding: 0 16px;
+  }
 
   &:hover:not(:disabled) {
     background: var(--bg-button-hover);

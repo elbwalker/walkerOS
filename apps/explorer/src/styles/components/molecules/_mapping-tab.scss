@@ -1,3 +1,5 @@
+@use '../../foundation/responsive' as *;
+
 .elb-mapping-tab {
   display: flex;
   align-items: center;
@@ -9,6 +11,13 @@
   overflow: hidden;
   min-width: 120px;
   max-width: 200px;
+  flex-shrink: 0; // Don't shrink tabs
+
+  // Mobile: Smaller tabs
+  @include mobile {
+    min-width: 80px;
+    max-width: 120px;
+  }
 
   &.is-active {
     background: var(--bg-button-active);

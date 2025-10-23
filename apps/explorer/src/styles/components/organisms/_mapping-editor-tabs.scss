@@ -1,3 +1,5 @@
+@use '../../foundation/responsive' as *;
+
 // Mapping Editor Tabs - Main editor container with tabs
 .elb-mapping-editor-tabs {
   display: flex;
@@ -78,4 +80,23 @@
   bottom: 0;
   background: rgba(0, 0, 0, 0.3);
   z-index: 100;
+
+  // Mobile: Add backdrop blur for modern effect
+  @include mobile {
+    backdrop-filter: blur(2px);
+  }
+}
+
+.elb-mapping-editor-overlay-content {
+  // Slide-in animation from left
+  animation: slideInFromLeft 0.2s ease-out;
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }

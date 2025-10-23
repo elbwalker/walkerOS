@@ -1,3 +1,5 @@
+@use '../../foundation/responsive' as *;
+
 /**
  * Mapping Consent Pane Styles
  *
@@ -15,6 +17,12 @@
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
   margin-bottom: 24px;
+
+  // Mobile: Single column for better readability
+  @include mobile {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 }
 
 // Add New State Input Tile

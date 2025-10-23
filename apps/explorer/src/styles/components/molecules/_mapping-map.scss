@@ -1,3 +1,5 @@
+@use '../../foundation/responsive' as *;
+
 .elb-mapping-map {
   &-add-button,
   &-add-row-button {
@@ -27,13 +29,28 @@
     gap: 12px;
     align-items: start;
 
+    // Mobile: Stack all fields vertically
+    @include mobile {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
     &-advanced {
       grid-template-columns: minmax(120px, 200px) minmax(100px, 120px) 1fr auto;
       grid-template-rows: auto auto;
 
+      @include mobile {
+        grid-template-columns: 1fr;
+      }
+
       .elb-mapping-map-delete-wrapper {
         grid-row: 1;
         grid-column: 4;
+
+        @include mobile {
+          grid-row: auto;
+          grid-column: auto;
+        }
       }
     }
   }
@@ -48,6 +65,13 @@
     border-radius: var(--radius-button);
     outline: none;
     transition: all 0.15s;
+
+    // Mobile: Touch-friendly sizing
+    @include mobile {
+      min-height: 44px;
+      font-size: 16px;
+      padding: 12px;
+    }
 
     &:hover {
       background: var(--bg-input-hover);
@@ -83,6 +107,14 @@
     background-repeat: no-repeat;
     background-position: right 8px center;
 
+    // Mobile: Touch-friendly sizing
+    @include mobile {
+      min-height: 44px;
+      font-size: 16px;
+      padding: 12px;
+      padding-right: 40px;
+    }
+
     &:hover {
       background-color: var(--bg-input-hover);
     }
@@ -104,6 +136,13 @@
       outline: none;
       transition: all 0.15s;
 
+      // Mobile: Touch-friendly sizing
+      @include mobile {
+        min-height: 44px;
+        font-size: 16px;
+        padding: 12px;
+      }
+
       &:hover {
         background: var(--bg-input-hover);
       }
@@ -121,6 +160,12 @@
       background: var(--bg-box);
       border: 1px solid var(--border-input);
       border-radius: var(--radius-button);
+
+      @include mobile {
+        grid-column: auto;
+        grid-row: auto;
+        margin-top: 0;
+      }
     }
   }
 

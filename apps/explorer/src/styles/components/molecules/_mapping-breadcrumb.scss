@@ -1,9 +1,13 @@
+@use '../../foundation/responsive' as *;
+
 .elb-mapping-breadcrumb {
   display: flex;
   align-items: center;
   font-size: 11px;
   text-transform: lowercase;
   letter-spacing: 0.02em;
+  flex: 1;
+  min-width: 0; // Allow shrinking
 
   &-list {
     display: flex;
@@ -12,12 +16,25 @@
     margin: 0;
     padding: 0;
     gap: 8px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+
+    // Mobile: Tighter spacing
+    @include mobile {
+      gap: 4px;
+    }
   }
 
   &-item {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 1;
+    min-width: 0;
+
+    @include mobile {
+      gap: 4px;
+    }
   }
 
   &-link {
@@ -30,6 +47,14 @@
     font-weight: normal;
     font-family: var(--font-family-base);
     text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    // Mobile: Truncate long breadcrumbs
+    @include mobile {
+      max-width: 60px;
+    }
 
     &:hover {
       text-decoration: underline;

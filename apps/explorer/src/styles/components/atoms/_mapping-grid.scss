@@ -29,7 +29,8 @@
     gap: 20px;
   }
 
-  @media (max-width: 767px) {
+  // Mobile: Stack responsive grids
+  @include mobile {
     &-responsive {
       grid-template-columns: 1fr !important;
     }
