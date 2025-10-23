@@ -43,8 +43,6 @@ export function MappingValueConfigPaneView({
 
   // Determine current type
   const getCurrentType = (): ValueConfigType | null => {
-    // Strings (including empty strings) are 'key' type
-    if (typeof value === 'string') return 'key';
     // undefined or other primitives - return null so pathLabel can determine type
     if (value === undefined || typeof value !== 'object' || value === null)
       return null;
@@ -52,7 +50,6 @@ export function MappingValueConfigPaneView({
     if ('map' in value) return 'map';
     if ('loop' in value) return 'loop';
     if ('fn' in value) return 'function';
-    if ('key' in value) return 'key';
     if ('value' in value) return 'value';
     if ('set' in value) return 'set';
     return null;
@@ -62,16 +59,13 @@ export function MappingValueConfigPaneView({
 
   // Use pathLabel to determine type when value is undefined/null
   // This ensures correct editor when navigating to a specific property path
-  const effectiveType = currentType || (pathLabel === 'key' ? 'key' : 'value');
+  const effectiveType = currentType || 'value';
 
   // Type change handler - converts value to new type
   const handleTypeChange = (newType: ValueConfigType) => {
     if (newType === currentType) return;
 
     switch (newType) {
-      case 'key':
-        mappingState.actions.setValue(path, 'data.property');
-        break;
       case 'value':
         mappingState.actions.setValue(path, { value: '' });
         break;
@@ -91,10 +85,6 @@ export function MappingValueConfigPaneView({
   };
 
   // Type-specific value handlers
-  const handleKeyValueChange = (newValue: string) => {
-    mappingState.actions.setValue(path, newValue);
-  };
-
   const handleStaticValueChange = (newValue: string) => {
     // When the entire ValueConfig at 'path' is { value: X }, update it to { value: newValue }
     mappingState.actions.setValue(path, { value: newValue });
@@ -117,28 +107,6 @@ export function MappingValueConfigPaneView({
   // Render type-specific editor
   const renderEditor = () => {
     switch (effectiveType) {
-      case 'key':
-        const keyValue = typeof value === 'string' ? value : '';
-        return (
-          <BaseMappingPane
-            title="Property Path"
-            description="Path to extract from event (e.g., data.id, user.email, globals.currency)"
-            navigation={navigation}
-          >
-            <div className="elb-mapping-pane-field">
-              <MappingInput
-                value={keyValue}
-                onChange={handleKeyValueChange}
-                placeholder="data.property"
-                autoFocus
-              />
-              <div className="elb-mapping-pane-hint">
-                Common paths: data.*, globals.*, user.*, context.*
-              </div>
-            </div>
-          </BaseMappingPane>
-        );
-
       case 'value':
         const staticValue =
           typeof value === 'object' && value !== null && 'value' in value

@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { CodeBox } from '../organisms/code-box';
-import { PaneHeader } from '../atoms/pane-header';
+import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { normalizeCode } from '../../utils/code-normalizer';
 
 /**
@@ -101,78 +101,73 @@ export function MappingFunctionPaneBase({
   };
 
   return (
-    <div className={`elb-mapping-pane ${className}`}>
-      <div className="elb-mapping-pane-content">
-        <div className="elb-mapping-function-pane">
-          {/* Header */}
-          <PaneHeader
-            title={title}
-            description={description}
-            onBack={navigation.goBack}
-            canGoBack={navigation.canGoBack()}
-            action={{
-              label: 'Reset',
-              onClick: handleReset,
-              title: 'Reset to default',
-            }}
+    <BaseMappingPane
+      title={title}
+      description={description}
+      navigation={navigation}
+      headerAction={{
+        label: 'Reset',
+        onClick: handleReset,
+        title: 'Reset to default',
+      }}
+      className={className}
+    >
+      <div className="elb-mapping-function-pane">
+        {/* Code Editor */}
+        <div className="elb-mapping-function-editor">
+          <CodeBox
+            code={code}
+            language="javascript"
+            onChange={handleCodeChange}
+            showHeader={false}
+            label=""
           />
+        </div>
 
-          {/* Code Editor */}
-          <div className="elb-mapping-function-editor">
-            <CodeBox
-              code={code}
-              language="javascript"
-              onChange={handleCodeChange}
-              showHeader={false}
-              label=""
-            />
-          </div>
+        {/* Help Section */}
+        <div className="elb-mapping-function-help">
+          {helpSections.map((section, sectionIndex) => (
+            <div
+              key={sectionIndex}
+              className="elb-mapping-function-help-section"
+            >
+              <h4 className="elb-mapping-function-help-title">
+                {section.title}
+              </h4>
 
-          {/* Help Section */}
-          <div className="elb-mapping-function-help">
-            {helpSections.map((section, sectionIndex) => (
-              <div
-                key={sectionIndex}
-                className="elb-mapping-function-help-section"
-              >
-                <h4 className="elb-mapping-function-help-title">
-                  {section.title}
-                </h4>
+              {/* Render items (parameters, return values, etc.) */}
+              {section.items && section.items.length > 0 && (
+                <ul className="elb-mapping-function-help-list">
+                  {section.items.map((item, itemIndex) => (
+                    <li key={itemIndex}>
+                      <code>{item.code}</code> - {item.description}
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-                {/* Render items (parameters, return values, etc.) */}
-                {section.items && section.items.length > 0 && (
-                  <ul className="elb-mapping-function-help-list">
-                    {section.items.map((item, itemIndex) => (
-                      <li key={itemIndex}>
-                        <code>{item.code}</code> - {item.description}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {/* Render examples */}
-                {section.examples && section.examples.length > 0 && (
-                  <div className="elb-mapping-function-examples">
-                    {section.examples.map((example, exampleIndex) => (
-                      <div
-                        key={exampleIndex}
-                        className="elb-mapping-function-example"
-                      >
-                        <div className="elb-mapping-function-example-label">
-                          {example.label}
-                        </div>
-                        <code className="elb-mapping-function-example-code">
-                          {example.code}
-                        </code>
+              {/* Render examples */}
+              {section.examples && section.examples.length > 0 && (
+                <div className="elb-mapping-function-examples">
+                  {section.examples.map((example, exampleIndex) => (
+                    <div
+                      key={exampleIndex}
+                      className="elb-mapping-function-example"
+                    >
+                      <div className="elb-mapping-function-example-label">
+                        {example.label}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                      <code className="elb-mapping-function-example-code">
+                        {example.code}
+                      </code>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+    </BaseMappingPane>
   );
 }

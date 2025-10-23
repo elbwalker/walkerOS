@@ -1,5 +1,33 @@
 @use '../../foundation/responsive' as *;
 
+// Shared tile grid layout (used by overview and entity panes)
+.elb-mapping-tile {
+  &-section {
+    margin-bottom: 24px;
+  }
+
+  &-title {
+    font-size: 11px;
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin: 0 0 8px 0;
+  }
+
+  &-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+
+    // Mobile: Smaller minimum width and tighter gap
+    @include mobile {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 6px;
+    }
+  }
+}
+
 // Overview Pane
 .elb-mapping-overview {
   &-input-section {
@@ -74,16 +102,7 @@
   }
 
   &-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 8px;
-    margin-bottom: 24px;
-
-    // Mobile: Smaller minimum width and tighter gap
-    @include mobile {
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      gap: 6px;
-    }
+    @extend .elb-mapping-tile-grid;
   }
 
   &-tile {
@@ -184,56 +203,67 @@
     color: var(--color-text-muted);
   }
 
-  &-section-title {
-    font-size: 11px;
-    font-weight: var(--font-weight-semibold);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-text-muted);
-    margin: 0 0 8px 0;
-  }
-
   &-action-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 8px;
-
-    // Mobile: Smaller minimum width
-    @include mobile {
-      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-      gap: 6px;
-    }
+    @extend .elb-mapping-tile-grid;
   }
 
-  &-action-button {
+  &-action-tile {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 16px 12px;
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
+    padding: 20px 12px;
+    background: var(--bg-header);
+    border: 1px solid var(--border-box);
+    border-radius: 8px;
     cursor: pointer;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    color: var(--color-text);
     text-align: center;
     transition:
       background-color 0.15s ease,
-      border-color 0.15s ease;
+      border-color 0.15s ease,
+      transform 0.2s ease;
+    gap: 4px;
 
     &:hover {
-      background: var(--bg-button-hover);
+      background: var(--bg-box);
       border-color: var(--color-text);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     }
-  }
 
-  &-action-name {
-    word-break: break-word;
-  }
+    &-action {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text);
+      word-break: break-word;
+    }
 
-  &-action-arrow {
-    display: none;
+    &-preview {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--color-text-muted);
+      word-break: break-word;
+      max-width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+
+      &.is-long {
+        // Blur fade effect for long preview text
+        mask-image: linear-gradient(
+          to right,
+          black 0%,
+          black 70%,
+          transparent 100%
+        );
+        -webkit-mask-image: linear-gradient(
+          to right,
+          black 0%,
+          black 70%,
+          transparent 100%
+        );
+      }
+    }
   }
 
   &-empty {

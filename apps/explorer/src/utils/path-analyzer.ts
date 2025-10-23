@@ -282,14 +282,6 @@ export function getPathDescription(
     };
   }
 
-  if (analysis.propertyName === 'condition') {
-    return {
-      title: 'Condition',
-      description:
-        'Function that determines whether to process this rule or include this value',
-    };
-  }
-
   // Default descriptions
   return {
     title: `Editing ${analysis.propertyName || 'Value'}`,

@@ -302,14 +302,28 @@
   }
 }
 
-// Full-width add entity button - sticky at bottom
+// Sticky section for add entity button and input
+.elb-mapping-tree-add-entity-section {
+  position: sticky;
+  bottom: 0;
+  z-index: 6; // Above tree nodes sticky headers
+  padding: 30px 24px 8px 24px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--bg-box) 20px,
+    var(--bg-box) 100%
+  );
+  pointer-events: none; // Allow clicks through the padding area
+}
+
+// Full-width add entity button
 .elb-mapping-tree-add-entity-button {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: calc(100% - 48px);
-  margin: 24px;
+  width: 100%;
   padding: 10px 16px;
   background: var(--bg-box);
   border: 1px solid var(--border-input);
@@ -320,10 +334,8 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-text);
   transition: all 0.15s ease;
-  position: sticky;
-  bottom: 8px;
-  z-index: 6; // Above tree nodes sticky headers
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+  pointer-events: auto; // Re-enable clicks on the button
 
   &:hover {
     background: var(--bg-button-hover);
@@ -340,8 +352,8 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px 4px 4px;
-  margin-top: 4px;
+  width: 100%;
+  pointer-events: auto; // Re-enable clicks on the input
 }
 
 .elb-mapping-tree-add-entity-input {

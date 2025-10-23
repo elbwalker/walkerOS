@@ -103,18 +103,21 @@ export function MappingOverviewPane({
       </div>
 
       {rules.length > 0 && (
-        <div className="elb-mapping-overview-grid">
-          {rules.map(({ entity, action }) => (
-            <button
-              key={`${entity}.${action}`}
-              type="button"
-              className="elb-mapping-overview-tile"
-              onClick={() => handleRuleClick(entity, action)}
-            >
-              <div className="elb-mapping-overview-tile-entity">{entity}</div>
-              <div className="elb-mapping-overview-tile-action">{action}</div>
-            </button>
-          ))}
+        <div className="elb-mapping-tile-section">
+          <h3 className="elb-mapping-tile-title">Existing Mapping Rules</h3>
+          <div className="elb-mapping-overview-grid">
+            {rules.map(({ entity, action }) => (
+              <button
+                key={`${entity}.${action}`}
+                type="button"
+                className="elb-mapping-overview-tile"
+                onClick={() => handleRuleClick(entity, action)}
+              >
+                <div className="elb-mapping-overview-tile-entity">{entity}</div>
+                <div className="elb-mapping-overview-tile-action">{action}</div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

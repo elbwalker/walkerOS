@@ -84,6 +84,7 @@ export function MappingLoopPaneView({
             path={[...path, '1']}
             mappingState={mappingState}
             navigation={navigation}
+            hideNavigation={true}
             className=""
           />
         </div>
@@ -121,6 +122,7 @@ export function MappingLoopPaneView({
           path={[...path, '1']}
           mappingState={mappingState}
           navigation={navigation}
+          hideNavigation={true}
           className=""
         />
       </div>

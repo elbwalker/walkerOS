@@ -109,10 +109,9 @@ export function BaseMappingPane({
           <PaneHeader
             title={title || ''}
             description={description || ''}
-            onBack={hideNavigation ? undefined : navigation?.goBack}
-            canGoBack={
-              hideNavigation ? false : (navigation?.canGoBack() ?? false)
-            }
+            onBack={navigation?.goBack}
+            canGoBack={navigation?.canGoBack() ?? false}
+            hideBackButton={hideNavigation}
             action={headerAction}
           />
         </div>

@@ -4,6 +4,7 @@ import { MappingPolicyOverviewPane } from './mapping-policy-overview-pane';
 import { MappingValueConfigPaneView } from './mapping-value-config-pane-view';
 import { MappingValueTypePaneView } from './mapping-value-type-pane-view';
 import { MappingValuePaneView } from './mapping-value-pane-view';
+import { MappingKeyPaneView } from './mapping-key-pane-view';
 import { MappingConditionPaneView } from './mapping-condition-pane-view';
 import { MappingFnPaneView } from './mapping-fn-pane-view';
 import { MappingValidatePaneView } from './mapping-validate-pane-view';
@@ -135,6 +136,7 @@ export function MappingPane({
         <MappingConsentPaneView
           path={path}
           mappingState={mappingState}
+          navigation={navigation}
           className={className}
         />
       );
@@ -165,6 +167,17 @@ export function MappingPane({
       // MappingValuePaneView uses standard .elb-mapping-pane structure
       return (
         <MappingValuePaneView
+          path={path}
+          mappingState={mappingState}
+          navigation={navigation}
+          className={className}
+        />
+      );
+
+    case 'key':
+      // MappingKeyPaneView uses standard .elb-mapping-pane structure
+      return (
+        <MappingKeyPaneView
           path={path}
           mappingState={mappingState}
           navigation={navigation}

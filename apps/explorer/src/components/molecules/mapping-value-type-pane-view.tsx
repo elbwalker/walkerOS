@@ -85,8 +85,8 @@ export function MappingValueTypePaneView({
   mappingState,
   navigation,
   className = '',
-  title,
-  description,
+  title = 'Value Configuration',
+  description = 'Configure how to extract or transform data',
   hideNavigation = false,
 }: MappingValueTypePaneViewProps) {
   const value = mappingState.actions.getValue(path);
@@ -132,7 +132,7 @@ export function MappingValueTypePaneView({
     let nodeType: string;
     switch (tileKey) {
       case 'key':
-        nodeType = 'valueConfig'; // Key is a string, use valueConfig editor in 'key' mode
+        nodeType = 'key'; // Key property editor
         break;
       case 'value':
         nodeType = 'value'; // Primitive value editor

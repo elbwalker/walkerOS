@@ -775,32 +775,33 @@ export function MappingTreeSidebar({
           />
         ))}
 
-        {/* Add Entity Button */}
-        {!isAddingEntity && onAddEntity && (
-          <button
-            type="button"
-            className="elb-mapping-tree-add-entity-button"
-            onClick={handleAddEntityClick}
-          >
-            <span>+</span> Add Entity
-          </button>
-        )}
+        {/* Add Entity Section - sticky container */}
+        <div className="elb-mapping-tree-add-entity-section">
+          {!isAddingEntity && onAddEntity && (
+            <button
+              type="button"
+              className="elb-mapping-tree-add-entity-button"
+              onClick={handleAddEntityClick}
+            >
+              <span>+</span> Add Entity
+            </button>
+          )}
 
-        {/* Add Entity Input */}
-        {isAddingEntity && (
-          <div className="elb-mapping-tree-add-entity">
-            <input
-              ref={entityInputRef}
-              type="text"
-              className={`elb-mapping-tree-add-entity-input ${entityExists ? 'is-error' : ''}`}
-              value={newEntityName}
-              onChange={handleEntityInput}
-              onKeyDown={handleEntityKeyDown}
-              onBlur={handleEntityBlur}
-              placeholder="entity"
-            />
-          </div>
-        )}
+          {isAddingEntity && (
+            <div className="elb-mapping-tree-add-entity">
+              <input
+                ref={entityInputRef}
+                type="text"
+                className={`elb-mapping-tree-add-entity-input ${entityExists ? 'is-error' : ''}`}
+                value={newEntityName}
+                onChange={handleEntityInput}
+                onKeyDown={handleEntityKeyDown}
+                onBlur={handleEntityBlur}
+                placeholder="entity"
+              />
+            </div>
+          )}
+        </div>
 
         {/* Bottom padding for scrolling */}
         <div className="elb-mapping-tree-bottom-padding" />

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
+import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { ConsentStateTile } from '../atoms/consent-state-tile';
 import { scanMappingForConsentStates } from '../../utils/consent-scanner';
 import { BaseMappingPane } from '../atoms/base-mapping-pane';
@@ -15,12 +16,14 @@ import { MappingInputWithButton } from '../atoms/mapping-input-with-button';
 export interface MappingConsentPaneViewProps {
   path: string[];
   mappingState: UseMappingStateReturn;
+  navigation: UseMappingNavigationReturn;
   className?: string;
 }
 
 export function MappingConsentPaneView({
   path,
   mappingState,
+  navigation,
   className = '',
 }: MappingConsentPaneViewProps) {
   const [newStateName, setNewStateName] = useState('');
@@ -98,7 +101,7 @@ export function MappingConsentPaneView({
     <BaseMappingPane
       title={title}
       description={description}
-      hideNavigation={true}
+      navigation={navigation}
       className={className}
     >
       <div className="elb-mapping-consent-pane">

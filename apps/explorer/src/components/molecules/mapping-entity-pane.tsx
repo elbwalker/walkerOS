@@ -81,6 +81,17 @@ export function MappingEntityPane({
     navigation.openTab([entity, action], 'rule');
   };
 
+  // Get the preview text for an action (the name value from the rule or fallback)
+  const getActionPreview = (action: string): string => {
+    const rule = mappingState.actions.getValue([entity, action]) as
+      | Record<string, unknown>
+      | undefined;
+    if (rule && typeof rule.name === 'string' && rule.name) {
+      return rule.name;
+    }
+    return `${entity} ${action}`;
+  };
+
   return (
     <BaseMappingPane
       title={entity}
@@ -105,26 +116,30 @@ export function MappingEntityPane({
 
         {/* Existing actions list */}
         {actions.length > 0 && (
-          <div className="elb-mapping-entity-pane-actions">
-            <h3 className="elb-mapping-entity-pane-section-title">
-              Existing Actions
-            </h3>
+          <div className="elb-mapping-tile-section">
+            <h3 className="elb-mapping-tile-title">Existing Actions</h3>
             <div className="elb-mapping-entity-pane-action-list">
-              {actions.map((action) => (
-                <button
-                  key={action}
-                  type="button"
-                  className="elb-mapping-entity-pane-action-button"
-                  onClick={() => handleActionClick(action)}
-                >
-                  <span className="elb-mapping-entity-pane-action-name">
-                    {action}
-                  </span>
-                  <span className="elb-mapping-entity-pane-action-arrow">
-                    ›
-                  </span>
-                </button>
-              ))}
+              {actions.map((action) => {
+                const preview = getActionPreview(action);
+                const isLongPreview = preview.length > 20;
+                return (
+                  <button
+                    key={action}
+                    type="button"
+                    className="elb-mapping-entity-pane-action-tile"
+                    onClick={() => handleActionClick(action)}
+                  >
+                    <div className="elb-mapping-entity-pane-action-tile-action">
+                      {action}
+                    </div>
+                    <div
+                      className={`elb-mapping-entity-pane-action-tile-preview ${isLongPreview ? 'is-long' : ''}`}
+                    >
+                      {preview}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

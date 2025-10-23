@@ -101,7 +101,7 @@ export function MappingMapPaneView({
     // Map each property to its corresponding node type and path
     const propToNodeType: Record<string, string> = {
       fn: 'fn',
-      key: 'valueConfig', // Navigate to valueConfig editor for key property
+      key: 'key',
       value: 'value',
       map: 'map',
       loop: 'loop',
