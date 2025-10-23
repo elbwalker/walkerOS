@@ -18,6 +18,7 @@ import { MappingMapPaneView } from './mapping-map-pane-view';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
+import type { DestinationSchemas } from '../organisms/mapping-box';
 
 /**
  * Mapping Pane Router - Pure Presentation Component
@@ -58,6 +59,8 @@ export interface MappingPaneProps {
   mappingState: UseMappingStateReturn;
   navigation: UseMappingNavigationReturn;
   className?: string;
+  /** Destination schemas for type-aware settings editing */
+  schemas?: DestinationSchemas;
 }
 
 export function MappingPane({
@@ -66,6 +69,7 @@ export function MappingPane({
   mappingState,
   navigation,
   className = '',
+  schemas,
 }: MappingPaneProps) {
   // Handle type selection from grid
   const handleSelectType = (type: string) => {
@@ -94,6 +98,7 @@ export function MappingPane({
           mappingState={mappingState}
           navigation={navigation}
           className={className}
+          schemas={schemas}
         />
       );
 

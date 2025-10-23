@@ -6,6 +6,21 @@ import { MappingEditor } from '../molecules/mapping-editor';
 import { MappingEditorTabs } from './mapping-editor-tabs';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { Mapping } from '@walkeros/core';
+import type { RJSFSchema, UiSchema } from '@rjsf/utils';
+
+/**
+ * Destination schema bundle for runtime provision
+ */
+export interface DestinationSchemas {
+  /** Config-level settings schema (not used in mapping editor) */
+  settings?: RJSFSchema;
+  /** Config-level settings UI schema */
+  settingsUi?: UiSchema;
+  /** Rule-level mapping settings schema */
+  mapping?: RJSFSchema;
+  /** Rule-level mapping settings UI schema */
+  mappingUi?: UiSchema;
+}
 
 export interface MappingBoxProps {
   mapping: Record<string, Record<string, unknown>>;
@@ -17,6 +32,8 @@ export interface MappingBoxProps {
   useNewEditor?: boolean; // Enable new tab-based editor (Phase 4)
   showTree?: boolean; // Show tree sidebar in new editor (default: true)
   showHeader?: boolean; // Show box header with code/visual toggle (default: true)
+  /** Destination schemas for type-aware editing (Phase 1: Settings implementation) */
+  schemas?: DestinationSchemas;
 }
 
 /**
@@ -59,6 +76,7 @@ export function MappingBox({
   useNewEditor = false,
   showTree = true,
   showHeader = true,
+  schemas,
 }: MappingBoxProps) {
   const [activeTab, setActiveTab] = useState<'code' | 'visual'>(initialTab);
   const [selectedRule, setSelectedRule] = useState('');
@@ -136,6 +154,7 @@ export function MappingBox({
           showTree={showTree}
           initialNavigationState={persistedNavigationState || undefined}
           onNavigationStateChange={setPersistedNavigationState}
+          schemas={schemas}
         />
       ) : (
         <MappingEditor
@@ -143,6 +162,7 @@ export function MappingBox({
           onMappingChange={onMappingChange}
           selectedRule={selectedRule}
           onSelectedRuleChange={setSelectedRule}
+          schemas={schemas}
         />
       )}
     </Box>

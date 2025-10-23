@@ -7,12 +7,15 @@ import {
   mappingRuleUiSchema,
 } from '../../schemas/mapping-rule-schema';
 import { cleanMappingRuleData } from '../../utils/clean-form-data';
+import type { DestinationSchemas } from '../organisms/mapping-box';
 
 export interface MappingEditorProps {
   mapping: Record<string, Record<string, unknown>>;
   onMappingChange?: (mapping: Record<string, Record<string, unknown>>) => void;
   selectedRule?: string;
   onSelectedRuleChange?: (rule: string) => void;
+  /** Destination schemas for type-aware settings editing */
+  schemas?: DestinationSchemas;
 }
 
 /**
@@ -42,6 +45,7 @@ export function MappingEditor({
   onMappingChange,
   selectedRule: controlledSelectedRule,
   onSelectedRuleChange,
+  schemas,
 }: MappingEditorProps) {
   const [internalSelectedRule, setInternalSelectedRule] = useState('');
 
@@ -79,6 +83,22 @@ export function MappingEditor({
     }
     return null;
   }, [selectedRule, mapping]);
+
+  // Enhance uiSchema with destination schemas for settings field
+  const enhancedUiSchema = useMemo(() => {
+    if (!schemas?.mapping) return mappingRuleUiSchema;
+
+    return {
+      ...mappingRuleUiSchema,
+      settings: {
+        ...mappingRuleUiSchema.settings,
+        'ui:options': {
+          schema: schemas.mapping,
+          uiSchema: schemas.mappingUi,
+        },
+      },
+    };
+  }, [schemas]);
 
   const createNewRule = (ruleName: string) => {
     if (!onMappingChange || !ruleName.trim()) return;
@@ -223,7 +243,7 @@ export function MappingEditor({
           <div className="elb-mapping-editor-content">
             <MappingFormWrapper
               schema={mappingRuleSchema}
-              uiSchema={mappingRuleUiSchema}
+              uiSchema={enhancedUiSchema}
               formData={selectedRuleConfig}
               onChange={handleFormChange}
             />

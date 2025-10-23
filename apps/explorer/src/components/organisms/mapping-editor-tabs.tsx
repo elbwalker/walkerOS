@@ -13,6 +13,7 @@ import { MappingOverviewPane } from '../molecules/mapping-overview-pane';
 import { CodeBox } from '../organisms/code-box';
 import type { Mapping } from '@walkeros/core';
 import { getValueAtPath } from '../../utils/mapping-path';
+import type { DestinationSchemas } from './mapping-box';
 
 /**
  * Determines the appropriate NodeType based on the path
@@ -102,6 +103,8 @@ export interface MappingEditorTabsProps {
     nodeType: NodeType;
     expandedPaths: string[][];
   }) => void;
+  /** Destination schemas for type-aware settings editing */
+  schemas?: DestinationSchemas;
 }
 
 export function MappingEditorTabs({
@@ -112,6 +115,7 @@ export function MappingEditorTabs({
   showTree = true,
   initialNavigationState,
   onNavigationStateChange,
+  schemas,
 }: MappingEditorTabsProps) {
   // Phase 1: State management hooks
   const mappingState = useMappingState(initialMapping, onChange);
@@ -340,6 +344,7 @@ export function MappingEditorTabs({
               path={activeTab.path}
               mappingState={mappingState}
               navigation={navigation}
+              schemas={schemas}
             />
           ) : (
             <MappingOverviewPane

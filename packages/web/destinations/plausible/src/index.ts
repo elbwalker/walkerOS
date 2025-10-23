@@ -9,6 +9,9 @@ export * as DestinationPlausible from './types';
 // Examples
 export * as examples from './examples';
 
+// Schemas
+export * as schema from './schema';
+
 export const destinationPlausible: Destination = {
   type: 'plausible',
 

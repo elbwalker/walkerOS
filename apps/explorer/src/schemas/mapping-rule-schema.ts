@@ -11,11 +11,9 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
  * - data: Value mapping (object - ValueConfig)
  * - consent: Required consent states (object)
  * - condition: Function to conditionally apply mapping (string)
+ * - settings: Destination-specific settings (object - varies by destination)
  *
  * Note: ignore field is handled separately in the footer, not in the form
- *
- * Future expansion will add:
- * - settings: Custom settings (varies by destination)
  */
 export const mappingRuleSchema: RJSFSchema = {
   type: 'object',
@@ -49,6 +47,12 @@ export const mappingRuleSchema: RJSFSchema = {
       title: 'Condition',
       description: 'Conditionally apply this mapping rule',
     },
+    settings: {
+      type: 'object',
+      title: 'Settings',
+      description: 'Destination-specific configuration overrides',
+      additionalProperties: true,
+    },
   },
 };
 
@@ -75,6 +79,9 @@ export const mappingRuleUiSchema: UiSchema = {
   },
   condition: {
     'ui:field': 'mappingCondition',
+  },
+  settings: {
+    'ui:field': 'mappingSettings',
   },
   'ui:layout': '1fr 1fr',
   'ui:responsive': true,

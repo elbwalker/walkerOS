@@ -408,16 +408,20 @@ When contributing components:
 - Use theme-specific selectors in component files
 - Use magic numbers (use CSS variables instead)
 
-### SCSS Architecture (Phase 1 Complete)
+### SCSS Architecture (CRITICAL - Must Follow Exactly)
 
-The explorer now uses a modular SCSS architecture:
+**IMPORTANCE**: The explorer uses a strict, modular SCSS architecture. All new
+components MUST follow the established patterns. Non-compliance breaks the
+design system.
+
+**Architecture:**
 
 ```
 src/styles/
-├── index.scss              # Main entry point
+├── index.scss              # Main entry point (import new components here)
 ├── theme/
-│   ├── _tokens.scss        # Design tokens
-│   ├── _variables.scss     # CSS variables (light)
+│   ├── _tokens.scss        # SCSS tokens ($spacing-md: 12px, $radius-sm: 3px)
+│   ├── _variables.scss     # CSS variables (--bg-input, --color-text, etc.)
 │   └── _dark.scss          # Dark theme overrides
 ├── foundation/
 │   ├── _reset.scss
@@ -426,10 +430,113 @@ src/styles/
 │   ├── _spacing.scss       # Spacing mixins
 │   └── _responsive.scss    # Breakpoint mixins
 └── components/
-    ├── atoms/
-    ├── molecules/
-    └── organisms/
+    ├── atoms/              # _button.scss, _consent-widget.scss, etc.
+    ├── molecules/          # _rjsf-form.scss, _mapping-editor.scss, etc.
+    └── organisms/          # _box.scss, _mapping-box.scss, etc.
 ```
+
+#### SCSS Compliance Rules (MANDATORY)
+
+**✅ DO:**
+
+1. **Use ONLY defined CSS variables** from `theme/_variables.scss`:
+   - `--bg-input`, `--border-input`, `--radius-button` (standard form elements)
+   - `--color-text`, `--color-text-muted`, `--color-text-label` (typography)
+   - `--font-family-base`, `--font-mono` (fonts)
+   - `--font-size-base` (base font size)
+2. **Use `calc()` for font size variations**:
+   - Small text: `calc(var(--font-size-base) - 1px)` (NOT `--font-size-sm`)
+   - Tiny text: `calc(var(--font-size-base) - 2px)` (NOT `--font-size-xs`)
+3. **Follow BEM naming**: `elb-{component}-{element}--{modifier}`
+   - Example: `.elb-settings-widget-wrapper`, `.elb-settings-widget-form`
+4. **Use standard gaps**: `12px` for vertical spacing in flex/grid layouts
+5. **One file per component**: Create `_component-name.scss` in appropriate
+   directory
+6. **Import alphabetically**: Add `@use './components/atoms/your-widget';` in
+   `index.scss`
+
+**❌ DON'T:**
+
+1. **NEVER use undefined CSS variables**:
+   - ❌ `--bg-secondary`, `--bg-code`, `--border-subtle`, `--radius-base` (don't
+     exist)
+   - ❌ `--font-size-sm`, `--font-size-xs` (don't exist as CSS variables)
+   - ❌ `--font-family-mono` (should be `--font-mono`)
+2. **NEVER hardcode values** that have CSS variable equivalents
+3. **NEVER skip the wrapper pattern**: All widgets need `elb-rjsf-widget` →
+   `elb-{name}-widget-wrapper`
+4. **NEVER create duplicate styles** - check existing components first
+
+#### CSS Variable Reference (Commonly Used)
+
+```scss
+// Backgrounds
+--bg-input: #ffffff; // Form inputs, fallback containers
+--bg-input-hover: #f9f9f9; // Hover states
+
+// Borders
+--border-input: #d1d5db; // Form inputs, containers
+--border-input-focus: #3b82f6; // Focus states
+
+// Border Radius
+--radius-button: 3px; // Forms, small elements
+--radius-box: 4px; // Boxes, containers
+
+// Typography
+--color-text: #000; // Primary text
+--color-text-muted: #666; // Secondary/hint text
+--color-text-label: #424242; // Labels
+--font-family-base: system-ui, ...; // Body text
+--font-mono: 'SF Mono', ...; // Code blocks
+--font-size-base: 14px; // Base size
+
+// Buttons
+--color-button-primary: #3b82f6; // Primary actions
+--color-button-danger: #ef4444; // Destructive actions
+```
+
+**Full list**: See `src/styles/theme/_variables.scss`
+
+#### Example: Widget SCSS (Correct Pattern)
+
+```scss
+// _my-widget.scss
+.elb-my-widget-wrapper {
+  width: 100%;
+}
+
+.elb-my-widget-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; // Standard gap
+}
+
+.elb-my-widget-hint {
+  font-size: calc(var(--font-size-base) - 1px); // ✅ Correct
+  color: var(--color-text-muted); // ✅ Defined variable
+  margin: 0;
+}
+
+.elb-my-widget-code {
+  padding: 12px;
+  background-color: var(--bg-input); // ✅ Defined variable
+  border: 1px solid var(--border-input); // ✅ Defined variable
+  border-radius: var(--radius-button); // ✅ Defined variable
+  font-family: var(--font-mono); // ✅ Correct variable name
+}
+```
+
+#### Verification Checklist
+
+Before submitting SCSS changes:
+
+- [ ] All CSS variables exist in `theme/_variables.scss`
+- [ ] No hardcoded colors, spacing, or font sizes (use CSS variables)
+- [ ] BEM naming convention followed (`elb-{component}-{element}`)
+- [ ] File imported in `index.scss` (alphabetical order)
+- [ ] Build succeeds: `npm run build`
+- [ ] Component matches pattern of similar existing components
+- [ ] Tested in both light and dark themes
 
 See [LAYOUT.md](./LAYOUT.md) for the complete SCSS migration plan.
 
@@ -455,17 +562,80 @@ Follow these principles when creating new components:
 4. **No Inline Styles**: All styling via CSS classes
 5. **TypeScript**: Strict typing, export all public types
 6. **Accessibility**: Semantic HTML, ARIA attributes, keyboard navigation
+7. **RJSF Patterns**: Follow Field/Widget separation for RJSF components (see
+   [PATTERNS.md](./PATTERNS.md))
+
+### RJSF Component Architecture (CRITICAL)
+
+**When creating RJSF custom components, you MUST follow the Field/Widget
+separation pattern.**
+
+See [PATTERNS.md](./PATTERNS.md) for comprehensive documentation of:
+
+- **Field/Widget Separation**: Mandatory two-layer architecture
+- **Component Composition**: MappingCollapsible, MappingFormWrapper, IconButton
+- **State Management**: Controlled state, external sync, deduplication
+- **Data Flow**: Schema passing via `ui:options`, props threading
+- **CSS Conventions**: BEM with `elb-` prefix
+- **Common Utilities**: `cleanFormData`, type guards, validators
+- **Anti-Patterns**: What NOT to do (with examples)
+
+**Quick Reference - All RJSF Components:**
+
+| Field                   | Widget                   | Purpose                   |
+| ----------------------- | ------------------------ | ------------------------- |
+| `MappingConsentField`   | `MappingConsentWidget`   | Consent states (checkbox) |
+| `MappingConditionField` | `MappingConditionWidget` | Condition code editor     |
+| `MappingDataField`      | `MappingDataWidget`      | Data transformation rows  |
+| `MappingGlobalsField`   | `MappingGlobalsWidget`   | Global properties         |
+| `MappingContextField`   | `MappingContextWidget`   | Context properties        |
+| `MappingNestedField`    | `MappingNestedWidget`    | Nested entities           |
+| `MappingSettingsField`  | `MappingSettingsWidget`  | Destination settings      |
+
+**Field responsibilities** (~20 lines):
+
+- Convert `FieldProps` → `WidgetProps`
+- Pass through props (id, value, onChange, schema, uiSchema, rawErrors,
+  disabled, readonly)
+- No UI logic
+
+**Widget responsibilities** (100-300 lines):
+
+- Implement full UI using standard building blocks
+- Manage component state (expand/collapse, show/hide, previous values)
+- Handle form changes and cleanup
+- Sync with external value changes via `useEffect`
+- Use `MappingCollapsible` for toggle/checkbox UI
+- Use `MappingFormWrapper` for nested forms
+- Use `IconButton` for actions
+- Use `cleanFormData` to remove empty values
+
+See [PATTERNS.md](./PATTERNS.md) for detailed examples and implementation
+checklist.
 
 ### Component Checklist
 
-- [ ] Component placed in correct atomic layer
-- [ ] TypeScript types exported
-- [ ] CSS uses variables (no hardcoded values)
+**Before submitting any component:**
+
+- [ ] Component placed in correct atomic layer (atoms/molecules/organisms)
+- [ ] TypeScript types exported from component file
+- [ ] **SCSS compliance verified** (see SCSS Architecture section above):
+  - [ ] All CSS variables exist in `theme/_variables.scss`
+  - [ ] BEM naming: `elb-{component}-{element}`
+  - [ ] SCSS file created in correct directory (`atoms/`, `molecules/`,
+        `organisms/`)
+  - [ ] SCSS imported in `index.scss` (alphabetical order)
+  - [ ] No hardcoded values (colors, spacing, fonts)
+  - [ ] Uses `calc(var(--font-size-base) - Npx)` for size variations
 - [ ] Light and dark theme tested
-- [ ] No inline styles
+- [ ] No inline `style` attributes
 - [ ] Responsive design considered
-- [ ] Reuses existing components where possible
-- [ ] Exported from `src/index.ts`
+- [ ] Reuses existing components where possible (MappingCollapsible, IconButton,
+      etc.)
+- [ ] **RJSF components follow Field/Widget separation pattern** (see
+      [PATTERNS.md](./PATTERNS.md))
+- [ ] Build succeeds: `npm run build`
+- [ ] Exported from `src/index.ts` (if public API)
 
 ## Browser Support
 
