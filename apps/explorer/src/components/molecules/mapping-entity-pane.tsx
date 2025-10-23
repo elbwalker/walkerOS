@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
-import { MappingInput } from '../atoms/mapping-input';
+import { MappingInputWithButton } from '../atoms/mapping-input-with-button';
 
 /**
  * Entity Pane - Shows actions for an entity
@@ -51,10 +51,7 @@ export function MappingEntityPane({
   };
 
   const handleActionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleActionSubmit();
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Escape') {
       e.preventDefault();
       setNewActionName('');
       setActionExists(false);
@@ -80,12 +77,6 @@ export function MappingEntityPane({
     }
   };
 
-  const handleActionBlur = () => {
-    setTimeout(() => {
-      handleActionSubmit();
-    }, 150);
-  };
-
   const handleActionClick = (action: string) => {
     navigation.openTab([entity, action], 'rule');
   };
@@ -103,19 +94,16 @@ export function MappingEntityPane({
         <div className="elb-mapping-entity-pane-body">
           {/* New action input */}
           <div className="elb-mapping-entity-pane-new-action">
-            <MappingInput
+            <MappingInputWithButton
               value={newActionName}
               onChange={handleActionInput}
+              onSubmit={handleActionSubmit}
               onKeyDown={handleActionKeyDown}
-              onBlur={handleActionBlur}
+              buttonLabel={actionExists ? 'Open' : 'Create'}
+              showButton={true}
               placeholder="Type action name to create or select..."
-              className={actionExists ? 'is-error' : ''}
+              className={actionExists ? 'is-existing' : ''}
             />
-            {actionExists && (
-              <span className="elb-mapping-entity-pane-hint">
-                Action exists - press Enter to open
-              </span>
-            )}
           </div>
 
           {/* Existing actions list */}

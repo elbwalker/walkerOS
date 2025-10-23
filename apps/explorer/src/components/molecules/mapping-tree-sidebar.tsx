@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Mapping } from '@walkeros/core';
+import { MappingInputWithButton } from '../atoms/mapping-input-with-button';
 
 /**
  * Tree node representation
@@ -501,23 +502,12 @@ function TreeNodeComponent({
 
   // Handle action input key down
   const handleActionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleActionSubmit();
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Escape') {
       e.preventDefault();
       setIsAddingAction(false);
       setNewActionName('');
       setActionExists(false);
     }
-  };
-
-  // Handle action input blur - submit on blur (when clicking away)
-  const handleActionBlur = () => {
-    // Small delay to allow click events to fire, then submit
-    setTimeout(() => {
-      handleActionSubmit();
-    }, 150);
   };
 
   // Handle row click
@@ -618,16 +608,22 @@ function TreeNodeComponent({
           {isAddingAction && node.type === 'entity' && (
             <div className="elb-mapping-tree-add-action">
               <span className="elb-mapping-tree-spacer" />
-              <input
-                ref={inputRef}
-                type="text"
-                className={`elb-mapping-tree-add-input ${actionExists ? 'is-error' : ''}`}
-                value={newActionName}
-                onChange={handleActionInput}
-                onKeyDown={handleActionKeyDown}
-                onBlur={handleActionBlur}
-                placeholder="action"
-              />
+              <div
+                ref={inputRef as any}
+                className="elb-mapping-tree-add-input-wrapper"
+              >
+                <MappingInputWithButton
+                  value={newActionName}
+                  onChange={(val) => setNewActionName(val)}
+                  onSubmit={handleActionSubmit}
+                  onKeyDown={handleActionKeyDown}
+                  buttonLabel={actionExists ? 'Open' : 'Create'}
+                  showButton={true}
+                  placeholder="action"
+                  className={`elb-mapping-tree-add-input ${actionExists ? 'is-existing' : ''}`}
+                  autoFocus={true}
+                />
+              </div>
             </div>
           )}
         </div>

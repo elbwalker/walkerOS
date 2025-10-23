@@ -4,6 +4,7 @@ import { ConsentStateTile } from '../atoms/consent-state-tile';
 import { scanMappingForConsentStates } from '../../utils/consent-scanner';
 import { PaneHeader } from '../atoms/pane-header';
 import { getPathDescription } from '../../utils/path-analyzer';
+import { MappingInputWithButton } from '../atoms/mapping-input-with-button';
 
 /**
  * Mapping Consent Pane View
@@ -58,8 +59,8 @@ export function MappingConsentPaneView({
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewStateName(e.target.value);
+  const handleInputChange = (value: string) => {
+    setNewStateName(value);
   };
 
   const handleAddNewState = () => {
@@ -81,9 +82,9 @@ export function MappingConsentPaneView({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Escape') {
       e.preventDefault();
-      handleAddNewState();
+      setNewStateName('');
     }
   };
 
@@ -112,14 +113,15 @@ export function MappingConsentPaneView({
 
             {/* Add New State Input Tile - Always visible */}
             <div className="elb-mapping-consent-input-tile">
-              <input
-                type="text"
-                className="elb-mapping-consent-input"
-                placeholder="Add new consent state"
+              <MappingInputWithButton
                 value={newStateName}
                 onChange={handleInputChange}
+                onSubmit={handleAddNewState}
                 onKeyDown={handleKeyDown}
-                onBlur={handleAddNewState}
+                buttonLabel="Add"
+                showButton={true}
+                placeholder="Add new consent state"
+                className="elb-mapping-consent-input-inner"
               />
             </div>
           </div>

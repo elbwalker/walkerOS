@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
-import { MappingInput } from '../atoms/mapping-input';
+import { MappingInputWithButton } from '../atoms/mapping-input-with-button';
 import { MappingConfirmButton } from '../atoms/mapping-confirm-button';
 import { getConfiguredProperties } from '../../utils/value-display-formatter';
 
@@ -77,18 +77,11 @@ export function MappingMapPaneView({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleKeySubmit();
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Escape') {
+      e.preventDefault();
       setNewKey('');
       setKeyExists(false);
     }
-  };
-
-  const handleKeyBlur = () => {
-    setTimeout(() => {
-      handleKeySubmit();
-    }, 150);
   };
 
   const handleKeyClick = (key: string) => {
@@ -121,11 +114,13 @@ export function MappingMapPaneView({
 
         {/* Add new key input */}
         <div className="elb-policy-input-section">
-          <MappingInput
+          <MappingInputWithButton
             value={newKey}
             onChange={handleKeyInputChange}
+            onSubmit={handleKeySubmit}
             onKeyDown={handleKeyDown}
-            onBlur={handleKeyBlur}
+            buttonLabel={keyExists ? 'Open' : 'Add Key'}
+            showButton={true}
             placeholder="Type key name to create or select (e.g., currency)..."
             className={keyExists ? 'is-existing' : ''}
           />

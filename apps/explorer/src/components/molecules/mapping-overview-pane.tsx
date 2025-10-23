@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
-import { MappingInput } from '../atoms/mapping-input';
+import { MappingInputWithButton } from '../atoms/mapping-input-with-button';
 
 /**
  * Overview Pane - Shows all entity-action pairs as tiles
@@ -71,18 +71,11 @@ export function MappingOverviewPane({
   };
 
   const handleEntityKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleEntitySubmit();
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Escape') {
+      e.preventDefault();
       setNewEntityName('');
       setEntityExists(false);
     }
-  };
-
-  const handleEntityBlur = () => {
-    setTimeout(() => {
-      handleEntitySubmit();
-    }, 150);
   };
 
   return (
@@ -100,11 +93,13 @@ export function MappingOverviewPane({
         />
 
         <div className="elb-mapping-overview-input-section">
-          <MappingInput
+          <MappingInputWithButton
             value={newEntityName}
             onChange={handleEntityInputChange}
+            onSubmit={handleEntitySubmit}
             onKeyDown={handleEntityKeyDown}
-            onBlur={handleEntityBlur}
+            buttonLabel={entityExists ? 'Open' : 'Create'}
+            showButton={true}
             placeholder="Type entity name to create or select..."
             className={entityExists ? 'is-existing' : ''}
           />
