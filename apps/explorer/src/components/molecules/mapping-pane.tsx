@@ -102,6 +102,7 @@ export function MappingPane({
         <MappingNamePaneView
           path={path}
           mappingState={mappingState}
+          navigation={navigation}
           className={className}
         />
       );
@@ -112,6 +113,7 @@ export function MappingPane({
         <MappingBatchPaneView
           path={path}
           mappingState={mappingState}
+          navigation={navigation}
           className={className}
         />
       );
@@ -122,6 +124,7 @@ export function MappingPane({
         <MappingIgnorePaneView
           path={path}
           mappingState={mappingState}
+          navigation={navigation}
           className={className}
         />
       );
@@ -153,6 +156,7 @@ export function MappingPane({
         <MappingConditionPaneView
           path={path}
           mappingState={mappingState}
+          navigation={navigation}
           className={className}
         />
       );
@@ -163,6 +167,7 @@ export function MappingPane({
         <MappingValuePaneView
           path={path}
           mappingState={mappingState}
+          navigation={navigation}
           className={className}
         />
       );
@@ -173,6 +178,7 @@ export function MappingPane({
         <MappingFnPaneView
           path={path}
           mappingState={mappingState}
+          navigation={navigation}
           className={className}
         />
       );
@@ -183,6 +189,7 @@ export function MappingPane({
         <MappingValidatePaneView
           path={path}
           mappingState={mappingState}
+          navigation={navigation}
           className={className}
         />
       );

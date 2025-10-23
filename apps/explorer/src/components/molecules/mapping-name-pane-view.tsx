@@ -1,11 +1,13 @@
 import React from 'react';
 import type { UseMappingState } from '../../hooks/useMappingState';
+import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
 import { MappingInput } from '../atoms/mapping-input';
 
 export interface MappingNamePaneViewProps {
   path: string[];
   mappingState: UseMappingState;
+  navigation: UseMappingNavigation;
   className?: string;
 }
 
@@ -19,6 +21,7 @@ export interface MappingNamePaneViewProps {
 export function MappingNamePaneView({
   path,
   mappingState,
+  navigation,
   className = '',
 }: MappingNamePaneViewProps) {
   const value = mappingState.actions.getValue(path);
@@ -39,6 +42,8 @@ export function MappingNamePaneView({
         <PaneHeader
           title="Event Name Override"
           description="Override the destination event name with a custom string"
+          onBack={navigation.goBack}
+          canGoBack={navigation.canGoBack()}
         />
         <div className="elb-mapping-pane-field">
           <MappingInput

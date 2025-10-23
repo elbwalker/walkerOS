@@ -1,4 +1,5 @@
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
+import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
 
 /**
@@ -13,12 +14,14 @@ import { PaneHeader } from '../atoms/pane-header';
 export interface MappingIgnorePaneViewProps {
   path: string[];
   mappingState: UseMappingStateReturn;
+  navigation: UseMappingNavigation;
   className?: string;
 }
 
 export function MappingIgnorePaneView({
   path,
   mappingState,
+  navigation,
   className = '',
 }: MappingIgnorePaneViewProps) {
   const value = mappingState.actions.getValue(path);
@@ -41,6 +44,8 @@ export function MappingIgnorePaneView({
           <PaneHeader
             title="Ignore Event"
             description="When enabled, events matching this mapping will be ignored and not processed by the destination."
+            onBack={navigation.goBack}
+            canGoBack={navigation.canGoBack()}
           />
 
           {/* Toggle Control */}

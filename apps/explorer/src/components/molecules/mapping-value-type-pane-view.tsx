@@ -299,6 +299,8 @@ export function MappingValueTypePaneView({
         <PaneHeader
           title="Value Configuration"
           description="Configure how this value is resolved"
+          onBack={navigation.goBack}
+          canGoBack={navigation.canGoBack()}
         />
 
         {/* Quick Value Section */}

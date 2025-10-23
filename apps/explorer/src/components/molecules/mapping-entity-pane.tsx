@@ -96,6 +96,8 @@ export function MappingEntityPane({
         <PaneHeader
           title={entity}
           description="Select an action or create a new one"
+          onBack={navigation.goBack}
+          canGoBack={navigation.canGoBack()}
         />
 
         <div className="elb-mapping-entity-pane-body">

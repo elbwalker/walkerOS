@@ -195,6 +195,8 @@ export function MappingMapPaneView({
               ? 'No keys yet. Add keys to transform event data.'
               : `${mapKeys.length} ${mapKeys.length === 1 ? 'key' : 'keys'}`
           }
+          onBack={navigation.goBack}
+          canGoBack={navigation.canGoBack()}
         />
 
         {/* Add new key input */}

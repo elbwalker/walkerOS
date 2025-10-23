@@ -167,6 +167,8 @@ export function MappingSetPaneView({
         <PaneHeader
           title="Set Array"
           description="Array of values - each value is processed independently and all results are collected"
+          onBack={navigation.goBack}
+          canGoBack={navigation.canGoBack()}
         />
 
         {/* Add button */}

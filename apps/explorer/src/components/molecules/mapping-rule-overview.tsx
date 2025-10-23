@@ -214,6 +214,8 @@ export function MappingRuleOverview({
           <PaneHeader
             title="Rule Configuration"
             description="Configure how this event is transformed"
+            onBack={navigation.goBack}
+            canGoBack={navigation.canGoBack()}
           />
           <div className="elb-mapping-rule-section-grid">
             {configurationTiles.map((tile) => (

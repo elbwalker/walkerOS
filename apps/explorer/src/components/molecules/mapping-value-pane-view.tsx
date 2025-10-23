@@ -1,4 +1,5 @@
 import type { MappingState } from '../../hooks/useMappingState';
+import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
 import { PaneHeader } from '../atoms/pane-header';
 import { MappingInput } from '../atoms/mapping-input';
 
@@ -17,17 +18,20 @@ import { MappingInput } from '../atoms/mapping-input';
  * <MappingValuePaneView
  *   path={['page', 'view', 'data', 'map', 'currency', 'value']}
  *   mappingState={mappingState}
+ *   navigation={navigation}
  * />
  */
 export interface MappingValuePaneViewProps {
   path: string[];
   mappingState: MappingState;
+  navigation: UseMappingNavigation;
   className?: string;
 }
 
 export function MappingValuePaneView({
   path,
   mappingState,
+  navigation,
   className = '',
 }: MappingValuePaneViewProps) {
   const value = mappingState.actions.getValue(path);
@@ -80,6 +84,8 @@ export function MappingValuePaneView({
         <PaneHeader
           title="Static Value"
           description="Fixed value that will be used (string, number, or boolean)"
+          onBack={navigation.goBack}
+          canGoBack={navigation.canGoBack()}
         />
 
         <div className="elb-mapping-pane-field">

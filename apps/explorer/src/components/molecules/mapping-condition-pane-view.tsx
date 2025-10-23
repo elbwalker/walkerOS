@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { MappingState } from '../../hooks/useMappingState';
+import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
 import { CodeBox } from '../organisms/code-box';
 import { PaneHeader } from '../atoms/pane-header';
 import { normalizeCode } from '../../utils/code-normalizer';
@@ -15,6 +16,7 @@ import { normalizeCode } from '../../utils/code-normalizer';
 export interface MappingConditionPaneViewProps {
   path: string[];
   mappingState: MappingState;
+  navigation: UseMappingNavigation;
   className?: string;
 }
 
@@ -26,6 +28,7 @@ const DEFAULT_CONDITION = `(value, mapping, collector) => {
 export function MappingConditionPaneView({
   path,
   mappingState,
+  navigation,
   className = '',
 }: MappingConditionPaneViewProps) {
   // Get current condition value
@@ -72,6 +75,8 @@ export function MappingConditionPaneView({
           <PaneHeader
             title="Condition Function"
             description="Define when this mapping rule should apply to an event"
+            onBack={navigation.goBack}
+            canGoBack={navigation.canGoBack()}
             action={{
               label: 'Reset',
               onClick: handleReset,

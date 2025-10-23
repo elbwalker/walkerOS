@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { MappingState } from '../../hooks/useMappingState';
+import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
 import { CodeBox } from '../organisms/code-box';
 import { PaneHeader } from '../atoms/pane-header';
 import { normalizeCode } from '../../utils/code-normalizer';
@@ -15,6 +16,7 @@ import { normalizeCode } from '../../utils/code-normalizer';
 export interface MappingFnPaneViewProps {
   path: string[];
   mappingState: MappingState;
+  navigation: UseMappingNavigation;
   className?: string;
 }
 
@@ -28,6 +30,7 @@ const DEFAULT_FN = `(value, mapping, options) => {
 export function MappingFnPaneView({
   path,
   mappingState,
+  navigation,
   className = '',
 }: MappingFnPaneViewProps) {
   // Get current fn value
@@ -73,6 +76,8 @@ export function MappingFnPaneView({
           <PaneHeader
             title="Transformation Function"
             description="Transform event data before sending to destination"
+            onBack={navigation.goBack}
+            canGoBack={navigation.canGoBack()}
             action={{
               label: 'Reset',
               onClick: handleReset,

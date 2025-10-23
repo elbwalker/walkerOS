@@ -161,6 +161,8 @@ export function MappingPolicyOverviewPane({
               ? 'No policy rules yet. Add rules to pre-process events before mapping.'
               : `${policyPaths.length} rule${policyPaths.length === 1 ? '' : 's'}`
           }
+          onBack={navigation.goBack}
+          canGoBack={navigation.canGoBack()}
         />
 
         {/* Add new policy rule input */}

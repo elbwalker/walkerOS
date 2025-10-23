@@ -124,6 +124,8 @@ export function MappingValueConfigPaneView({
             <PaneHeader
               title="Property Path"
               description="Path to extract from event (e.g., data.id, user.email, globals.currency)"
+              onBack={navigation.goBack}
+              canGoBack={navigation.canGoBack()}
             />
             <div className="elb-mapping-pane-field">
               <MappingInput
@@ -149,6 +151,8 @@ export function MappingValueConfigPaneView({
             <PaneHeader
               title="Static Value"
               description="Fixed value that will be used (string, number, or boolean)"
+              onBack={navigation.goBack}
+              canGoBack={navigation.canGoBack()}
             />
             <div className="elb-mapping-pane-field">
               <MappingInput
@@ -177,6 +181,8 @@ export function MappingValueConfigPaneView({
             <PaneHeader
               title="Map Object"
               description="Transform event data into an object with multiple keys"
+              onBack={navigation.goBack}
+              canGoBack={navigation.canGoBack()}
             />
             <div className="elb-mapping-pane-field">
               <div className="elb-mapping-value-complex">
@@ -211,6 +217,8 @@ export function MappingValueConfigPaneView({
             <PaneHeader
               title="Loop Array"
               description="Process an array of items from the event"
+              onBack={navigation.goBack}
+              canGoBack={navigation.canGoBack()}
             />
             <div className="elb-mapping-pane-field">
               <div className="elb-mapping-value-complex">
@@ -241,6 +249,8 @@ export function MappingValueConfigPaneView({
             <PaneHeader
               title="Custom Function"
               description="JavaScript function that receives the event and returns transformed value"
+              onBack={navigation.goBack}
+              canGoBack={navigation.canGoBack()}
             />
             <div className="elb-mapping-pane-field">
               <textarea
@@ -269,6 +279,8 @@ export function MappingValueConfigPaneView({
             <PaneHeader
               title="Static Array"
               description="Array of static values"
+              onBack={navigation.goBack}
+              canGoBack={navigation.canGoBack()}
             />
             <div className="elb-mapping-pane-field">
               <div className="elb-mapping-value-complex">

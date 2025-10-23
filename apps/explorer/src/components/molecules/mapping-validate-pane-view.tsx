@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { MappingState } from '../../hooks/useMappingState';
+import type { UseMappingNavigation } from '../../hooks/useMappingNavigation';
 import { CodeBox } from '../organisms/code-box';
 import { PaneHeader } from '../atoms/pane-header';
 import { normalizeCode } from '../../utils/code-normalizer';
@@ -16,6 +17,7 @@ import { normalizeCode } from '../../utils/code-normalizer';
 export interface MappingValidatePaneViewProps {
   path: string[];
   mappingState: MappingState;
+  navigation: UseMappingNavigation;
   className?: string;
 }
 
@@ -28,6 +30,7 @@ const DEFAULT_VALIDATE = `(value) => {
 export function MappingValidatePaneView({
   path,
   mappingState,
+  navigation,
   className = '',
 }: MappingValidatePaneViewProps) {
   // Get current validate value
@@ -74,6 +77,8 @@ export function MappingValidatePaneView({
           <PaneHeader
             title="Validation Function"
             description="Validate if the transformed value should be included"
+            onBack={navigation.goBack}
+            canGoBack={navigation.canGoBack()}
             action={{
               label: 'Reset',
               onClick: handleReset,

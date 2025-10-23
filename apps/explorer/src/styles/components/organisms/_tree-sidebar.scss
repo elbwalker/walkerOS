@@ -186,7 +186,10 @@
     font-size: 12px;
   }
 
-  &--entity {
+  // Make labels bold when node is selected or is an ancestor of selected node
+  // This applies to all node types (entities, rules, properties, nested)
+  .is-selected &,
+  .is-ancestor & {
     font-weight: var(--font-weight-semibold);
   }
 }

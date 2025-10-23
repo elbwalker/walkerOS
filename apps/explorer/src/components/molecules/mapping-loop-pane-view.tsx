@@ -60,6 +60,8 @@ export function MappingLoopPaneView({
           <PaneHeader
             title="Loop Array"
             description="Process arrays by applying transformation to each item"
+            onBack={navigation.goBack}
+            canGoBack={navigation.canGoBack()}
           />
 
           {/* Scope Input */}
@@ -100,6 +102,8 @@ export function MappingLoopPaneView({
         <PaneHeader
           title="Loop Array"
           description="Process arrays by applying transformation to each item"
+          onBack={navigation.goBack}
+          canGoBack={navigation.canGoBack()}
         />
 
         {/* Scope Input */}

@@ -58,10 +58,13 @@ export interface NavigationTab {
  * // Close current level
  * navigation.closeLevel(); // Closes current tab and goes to parent
  */
+const MAX_HISTORY_LENGTH = 50;
+
 export function useMappingNavigation() {
   const [openTabs, setOpenTabs] = useState<NavigationTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>('');
   const [treeVisible, setTreeVisible] = useState<boolean>(true);
+  const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
 
   /**
    * Generate unique tab ID from path
@@ -135,6 +138,21 @@ export function useMappingNavigation() {
         return [...prev, newTab];
       });
 
+      // Add to navigation history (only if switching to different tab)
+      setNavigationHistory((prev) => {
+        // Don't add if it's the same as current active tab
+        if (prev.length > 0 && prev[prev.length - 1] === tabId) {
+          return prev;
+        }
+
+        // Add and limit to MAX_HISTORY_LENGTH
+        const newHistory = [...prev, tabId];
+        if (newHistory.length > MAX_HISTORY_LENGTH) {
+          return newHistory.slice(-MAX_HISTORY_LENGTH);
+        }
+        return newHistory;
+      });
+
       // Always set as active (separate state update)
       setActiveTabId(tabId);
     },
@@ -145,6 +163,21 @@ export function useMappingNavigation() {
    * Switch to existing tab
    */
   const switchToTab = useCallback((tabId: string) => {
+    // Add to navigation history when switching tabs
+    setNavigationHistory((prev) => {
+      // Don't add if it's the same as current active tab
+      if (prev.length > 0 && prev[prev.length - 1] === tabId) {
+        return prev;
+      }
+
+      // Add and limit to MAX_HISTORY_LENGTH
+      const newHistory = [...prev, tabId];
+      if (newHistory.length > MAX_HISTORY_LENGTH) {
+        return newHistory.slice(-MAX_HISTORY_LENGTH);
+      }
+      return newHistory;
+    });
+
     setActiveTabId(tabId);
   }, []);
 
@@ -272,6 +305,68 @@ export function useMappingNavigation() {
   );
 
   /**
+   * Go back to previous tab in navigation history
+   *
+   * Validates that the previous tab still exists before navigating.
+   * If deleted, keeps going back until a valid tab is found.
+   * If no valid history, does nothing (button will be disabled).
+   */
+  const goBack = useCallback(() => {
+    setNavigationHistory((prevHistory) => {
+      if (prevHistory.length <= 1) {
+        // No history to go back to
+        return prevHistory;
+      }
+
+      // Remove current tab from history (last item)
+      let workingHistory = prevHistory.slice(0, -1);
+      let foundValidTab = false;
+
+      // Keep popping until we find a valid tab or run out of history
+      while (workingHistory.length > 0 && !foundValidTab) {
+        const previousTabId = workingHistory[workingHistory.length - 1];
+
+        // Special case: empty tab ID means Overview
+        if (previousTabId === '') {
+          setActiveTabId(''); // This will trigger Overview pane to show
+          foundValidTab = true;
+          return workingHistory;
+        }
+
+        const previousTab = openTabs.find((t) => t.id === previousTabId);
+
+        if (previousTab) {
+          // Found valid tab - switch to it
+          setActiveTabId(previousTabId);
+          foundValidTab = true;
+          return workingHistory;
+        } else {
+          // Tab was deleted, remove from history and try again
+          workingHistory = workingHistory.slice(0, -1);
+        }
+      }
+
+      // No valid tabs found in history - clear history
+      return [];
+    });
+  }, [openTabs]);
+
+  /**
+   * Check if back navigation is available
+   */
+  const canGoBack = useCallback((): boolean => {
+    if (navigationHistory.length <= 1) return false;
+
+    // Check if there's at least one valid tab in history (excluding current)
+    const historyWithoutCurrent = navigationHistory.slice(0, -1);
+    return historyWithoutCurrent.some(
+      (tabId) =>
+        // Empty tab ID (Overview) is always valid, or tab exists in openTabs
+        tabId === '' || openTabs.some((tab) => tab.id === tabId),
+    );
+  }, [navigationHistory, openTabs]);
+
+  /**
    * Toggle tree visibility
    */
   const toggleTree = useCallback(() => {
@@ -337,6 +432,7 @@ export function useMappingNavigation() {
     activeTabId,
     treeVisible,
     breadcrumb: getBreadcrumb(),
+    navigationHistory,
 
     // Actions
     openTab,
@@ -348,10 +444,12 @@ export function useMappingNavigation() {
     navigateToPath,
     toggleTree,
     setTreeVisible,
+    goBack,
 
     // Queries
     findTab,
     hasTab,
+    canGoBack,
   };
 }
 

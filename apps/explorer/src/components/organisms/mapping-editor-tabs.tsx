@@ -164,13 +164,23 @@ export function MappingEditorTabs({
     }
   };
 
-  // Restore initial navigation state on mount
+  // Initialize navigation history with Overview
   useEffect(() => {
-    if (initialNavigationState && navigation.openTabs.length === 0) {
-      navigation.openTab(
-        initialNavigationState.currentPath,
-        initialNavigationState.nodeType,
-      );
+    if (navigation.navigationHistory.length === 0) {
+      // Manually add Overview to history (empty tab ID = Overview)
+      // This ensures back button works when navigating from Overview
+      navigation.switchToTab(''); // Empty string = Overview tab ID
+
+      // Then restore initial state if provided
+      if (
+        initialNavigationState &&
+        initialNavigationState.currentPath.length > 0
+      ) {
+        navigation.openTab(
+          initialNavigationState.currentPath,
+          initialNavigationState.nodeType,
+        );
+      }
     }
   }, []);
 

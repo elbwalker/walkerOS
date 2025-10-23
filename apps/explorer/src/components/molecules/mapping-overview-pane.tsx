@@ -95,6 +95,8 @@ export function MappingOverviewPane({
               ? 'No rules yet. Create an entity to get started.'
               : `${rules.length} rule${rules.length === 1 ? '' : 's'}`
           }
+          onBack={navigation.goBack}
+          canGoBack={navigation.canGoBack()}
         />
 
         <div className="elb-mapping-overview-input-section">
