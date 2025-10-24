@@ -42,7 +42,8 @@ function getNodeTypeFromPath(path: string[]): NodeType {
     if (propertyName === 'batch') return 'batch';
     if (propertyName === 'ignore') return 'ignore';
     if (propertyName === 'consent') return 'consent';
-    // data, settings, etc. are ValueType
+    if (propertyName === 'settings') return 'map'; // Settings are objects, use map pane
+    // data, etc. are ValueType
     return 'valueType';
   }
 

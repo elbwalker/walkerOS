@@ -192,8 +192,20 @@ export function MappingRuleOverview({
     } else if (key === 'policy') {
       // Policy is event-level policy rules - use policy overview pane
       navigation.openTab([...path, key], 'policy');
+    } else if (key === 'settings') {
+      // Settings are objects - ensure empty object exists and use map pane
+      const currentValue = rule?.[key];
+      if (
+        !currentValue ||
+        typeof currentValue !== 'object' ||
+        Array.isArray(currentValue)
+      ) {
+        // Initialize with empty object if not set or invalid
+        mappingState.actions.setValue([...path, key], {});
+      }
+      navigation.openTab([...path, key], 'map');
     } else if (complexProperties.includes(key)) {
-      // Data and Settings are ValueType (string | ValueConfig)
+      // Data is ValueType (string | ValueConfig)
       navigation.openTab([...path, key], 'valueType');
     } else {
       // Unknown properties - use value config

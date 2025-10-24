@@ -12,6 +12,7 @@ export type NodeType =
   | 'batch'
   | 'ignore'
   | 'policy'
+  | 'consent'
   | 'valueConfig'
   | 'valueType'
   | 'map'
@@ -20,8 +21,7 @@ export type NodeType =
   | 'value'
   | 'fn'
   | 'validate'
-  | 'condition'
-  | 'consent';
+  | 'condition';
 
 /**
  * Navigation tab representing an open editing context

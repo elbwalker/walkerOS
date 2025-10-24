@@ -14,7 +14,7 @@ import { MappingIgnorePaneView } from './mapping-ignore-pane-view';
 import { MappingConsentPaneView } from './mapping-consent-pane-view';
 import { MappingSetPaneView } from './mapping-set-pane-view';
 import { MappingLoopPaneView } from './mapping-loop-pane-view';
-import { MappingMapPaneView } from './mapping-map-pane-view';
+import { MappingMapPaneViewRJSF } from './mapping-map-pane-view-rjsf';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
@@ -247,7 +247,7 @@ export function MappingPane({
 
     case 'map':
       return (
-        <MappingMapPaneView
+        <MappingMapPaneViewRJSF
           path={path}
           mappingState={mappingState}
           navigation={navigation}

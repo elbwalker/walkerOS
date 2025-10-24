@@ -4,6 +4,7 @@ import { MappingNumberWidget } from '../atoms/mapping-number';
 import { MappingBooleanWidget } from '../atoms/mapping-boolean';
 import { MappingConsentWidget } from '../atoms/mapping-consent';
 import { MappingValueWidget } from '../atoms/mapping-value';
+import { MappingObjectExplorerWidget } from '../atoms/mapping-object-explorer';
 
 /**
  * Widget Registry for RJSF Mapping Forms
@@ -43,6 +44,7 @@ import { MappingValueWidget } from '../atoms/mapping-value';
  * - mappingBoolean: Checkbox for boolean values
  * - mappingConsent: Collapsible consent requirements editor
  * - mappingValue: Multi-type static value editor (string/number/boolean/object)
+ * - objectExplorer: Generic object key-value explorer with add/rename/delete/navigate
  */
 export const mappingWidgets: RegistryWidgetsType = {
   mappingString: MappingStringWidget,
@@ -50,4 +52,5 @@ export const mappingWidgets: RegistryWidgetsType = {
   mappingBoolean: MappingBooleanWidget,
   mappingConsent: MappingConsentWidget,
   mappingValue: MappingValueWidget,
+  objectExplorer: MappingObjectExplorerWidget,
 };

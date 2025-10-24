@@ -1,0 +1,66 @@
+@use '../../foundation/responsive' as *;
+
+/**
+ * Mapping Settings Pane Styles
+ *
+ * Dedicated pane for settings property with schema-aware RJSF form.
+ * Header styling handled by BaseMappingPane component.
+ */
+
+.elb-mapping-settings-pane {
+  // No padding - parent .elb-mapping-pane-content handles it
+}
+
+// Settings Form Container
+.elb-mapping-settings-form {
+  margin-bottom: 16px;
+
+  // RJSF form styling is handled by MappingFormWrapper
+  // This provides spacing context for the form
+}
+
+// Clear Settings Button
+.elb-mapping-settings-clear-button {
+  margin-top: 16px;
+  padding: 8px 16px;
+  background: var(--bg-button-secondary);
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--bg-input-hover);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  // Mobile: Full width for better touch target
+  @include mobile {
+    width: 100%;
+  }
+}
+
+// Empty State (no schema provided)
+.elb-mapping-settings-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-muted);
+  background: var(--bg-input);
+  border-radius: 6px;
+
+  p {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    line-height: 1.5;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}

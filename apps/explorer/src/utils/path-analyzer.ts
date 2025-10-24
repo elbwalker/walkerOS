@@ -282,6 +282,13 @@ export function getPathDescription(
     };
   }
 
+  if (analysis.propertyName === 'settings') {
+    return {
+      title: 'Settings',
+      description: 'Configure destination-specific settings for this rule',
+    };
+  }
+
   // Default descriptions
   return {
     title: `Editing ${analysis.propertyName || 'Value'}`,

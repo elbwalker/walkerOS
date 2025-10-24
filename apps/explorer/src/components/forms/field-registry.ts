@@ -6,6 +6,7 @@ import { MappingKeyField } from '../atoms/mapping-key-field';
 import { MappingValidateField } from '../atoms/mapping-validate-field';
 import { MappingDataField } from '../atoms/mapping-data-field';
 import { MappingSettingsField } from '../atoms/mapping-settings-field';
+import { MappingObjectExplorerField } from '../atoms/mapping-object-explorer-field';
 import { MappingMapField } from '../molecules/mapping-map-field';
 import { MappingSetField } from '../molecules/mapping-set-field';
 import { MappingLoopField } from '../molecules/mapping-loop-field';
@@ -45,6 +46,7 @@ import { MappingLoopField } from '../molecules/mapping-loop-field';
  * - mappingValidate: Checkbox-collapsible validate function editor for string types
  * - mappingData: Toggle-collapsible data transformation editor for object types
  * - mappingSettings: Destination-specific settings editor (schema-aware or JSON fallback)
+ * - objectExplorer: Generic object key-value explorer with add/rename/delete/navigate
  * - mappingMap: Key-value pair editor for object transformation mapping
  * - mappingSet: Array of values editor for static value arrays
  * - mappingLoop: Array processing with transformation editor for loop tuples
@@ -57,6 +59,7 @@ export const mappingFields: RegistryFieldsType = {
   mappingValidate: MappingValidateField,
   mappingData: MappingDataField,
   mappingSettings: MappingSettingsField,
+  objectExplorer: MappingObjectExplorerField,
   mappingMap: MappingMapField,
   mappingSet: MappingSetField,
   mappingLoop: MappingLoopField,

@@ -21,6 +21,7 @@ export interface MappingFormWrapperProps {
   onSubmit?: (data: unknown) => void;
   children?: React.ReactNode;
   nested?: boolean; // When true, renders without <form> wrapper to prevent nested forms
+  formContext?: FormContextType; // Context passed to all widgets (navigation, mappingState, etc.)
 }
 
 /**
@@ -70,6 +71,7 @@ export function MappingFormWrapper({
   onSubmit,
   children,
   nested = false,
+  formContext,
 }: MappingFormWrapperProps) {
   // Memoize callbacks to prevent child component re-renders and infinite loops
   const handleChange = useCallback(
@@ -97,6 +99,7 @@ export function MappingFormWrapper({
           formData={formData}
           validator={validator}
           onChange={handleChange}
+          formContext={formContext}
           tagName="div"
         >
           {/* RJSF renders submit button by default - hide it */}
@@ -119,6 +122,7 @@ export function MappingFormWrapper({
         fields={mappingFields}
         onChange={handleChange}
         onSubmit={handleSubmit}
+        formContext={formContext}
         templates={{
           FieldTemplate: CustomFieldTemplate,
           ObjectFieldTemplate: CustomObjectFieldTemplate,
