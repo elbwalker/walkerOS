@@ -67,6 +67,10 @@ export const mappingSchemaGenerated: RJSFSchema = createObjectSchema(
       type: 'string',
       description: 'Custom event name for trackCustom',
     },
+    enabled: {
+      type: 'boolean',
+      description: 'Enable or disable this tracking rule',
+    },
   },
   'Meta Pixel Mapping',
 );

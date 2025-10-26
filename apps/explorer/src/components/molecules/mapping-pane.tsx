@@ -16,6 +16,7 @@ import { MappingSetPaneView } from './mapping-set-pane-view';
 import { MappingLoopPaneView } from './mapping-loop-pane-view';
 import { MappingMapPaneViewRJSF } from './mapping-map-pane-view-rjsf';
 import { MappingEnumPaneView } from './mapping-enum-pane-view';
+import { MappingBooleanPaneView } from './mapping-boolean-pane-view';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
@@ -38,6 +39,7 @@ import type { DestinationSchemas } from '../organisms/mapping-box';
  * - 'valueConfig' → MappingValueConfigPaneView - Full ValueConfig editor
  * - 'valueType' → MappingValueTypePaneView - String or ValueConfig editor (replaces old property/type-grid)
  * - 'enum' → MappingEnumPaneView - Dropdown selector for schema-defined enum fields
+ * - 'boolean' → MappingBooleanPaneView - Toggle switch for boolean settings
  * - 'key' → MappingKeyPaneView - Focused key property editor
  * - 'condition' → MappingConditionPaneView - Condition function editor
  * - 'value' → MappingValuePaneView - Primitive value editor (string, number, boolean)
@@ -233,6 +235,17 @@ export function MappingPane({
           mappingState={mappingState}
           navigation={navigation}
           schemas={schemas}
+          className={className}
+        />
+      );
+
+    case 'boolean':
+      // MappingBooleanPaneView for boolean toggle fields
+      return (
+        <MappingBooleanPaneView
+          path={path}
+          mappingState={mappingState}
+          navigation={navigation}
           className={className}
         />
       );

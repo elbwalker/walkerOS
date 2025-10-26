@@ -222,12 +222,13 @@ export function detectFromJsonSchema(schema: RJSFSchema): NodeType {
     return 'map';
   }
 
-  // Primitives → check for enum before defaulting to valueType
-  if (
-    schema.type === 'string' ||
-    schema.type === 'number' ||
-    schema.type === 'boolean'
-  ) {
+  // Boolean type → boolean pane with toggle
+  if (schema.type === 'boolean') {
+    return 'boolean';
+  }
+
+  // String/number primitives → check for enum before defaulting to valueType
+  if (schema.type === 'string' || schema.type === 'number') {
     // Enum detection: schema has enum property with values
     if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
       return 'enum';
@@ -297,16 +298,24 @@ export function detectNodeType(
   path: string[],
   schemas?: DestinationSchemas,
 ): NodeType {
-  // Priority 1: Check for enum in schema (even when value exists)
-  // This handles cases like track='Purchase' where value exists but should show enum dropdown
+  // Priority 1: Check schema type for primitives (even when value exists)
   if (schemas?.mapping && path.includes('settings')) {
     const schema = navigateJsonSchema(path, schemas.mapping);
+
+    // Boolean type → always use boolean pane (for both true/false values and undefined)
+    if (
+      schema?.type === 'boolean' &&
+      (typeof value === 'boolean' || value === undefined || value === null)
+    ) {
+      return 'boolean';
+    }
+
+    // Enum detection for string/number values
     if (schema?.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
       // Value is primitive and schema defines enum → use enum pane
       if (
         typeof value === 'string' ||
         typeof value === 'number' ||
-        typeof value === 'boolean' ||
         value === undefined ||
         value === null
       ) {
