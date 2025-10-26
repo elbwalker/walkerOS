@@ -257,8 +257,8 @@ describe('detectFromJsonSchema', () => {
       expect(detectFromJsonSchema({ type: 'number' })).toBe('valueType');
     });
 
-    it('detects boolean as valueType', () => {
-      expect(detectFromJsonSchema({ type: 'boolean' })).toBe('valueType');
+    it('detects boolean as boolean', () => {
+      expect(detectFromJsonSchema({ type: 'boolean' })).toBe('boolean');
     });
   });
 
@@ -387,7 +387,7 @@ describe('detectNodeType (universal detection)', () => {
     it('uses schema for nested settings', () => {
       const path = ['product', 'view', 'settings', 'ga4', 'sendPageView'];
 
-      expect(detectNodeType(undefined, path, mockSchemas)).toBe('valueType');
+      expect(detectNodeType(undefined, path, mockSchemas)).toBe('boolean');
     });
 
     it('detects map from object schema', () => {

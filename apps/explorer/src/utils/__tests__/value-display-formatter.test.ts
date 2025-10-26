@@ -37,8 +37,8 @@ describe('formatValueForDisplay', () => {
     expect(formatValueForDisplay({})).toBe('{}');
   });
 
-  it('formats objects with count', () => {
-    expect(formatValueForDisplay({ a: 1, b: 2 })).toBe('{2}');
+  it('formats objects with keys', () => {
+    expect(formatValueForDisplay({ a: 1, b: 2 })).toBe('{ a, b }');
   });
 });
 
