@@ -17,8 +17,10 @@
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
-  "dependencies": {},
-  "devDependencies": {},
+  "dependencies": {
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.24.6"
+  },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/core"

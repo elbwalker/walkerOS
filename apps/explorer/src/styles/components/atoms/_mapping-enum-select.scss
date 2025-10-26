@@ -1,0 +1,125 @@
+@use '../../foundation/responsive' as *;
+
+// MappingEnumSelect - Autocomplete dropdown for enum fields
+.elb-mapping-enum-select {
+  position: relative;
+  width: 100%;
+
+  &-input {
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    padding: 10px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-input);
+    border-radius: 4px;
+    color: var(--color-text-input);
+    outline: none;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+
+    // Mobile: Touch-friendly sizing, prevent iOS zoom
+    @include mobile {
+      min-height: 44px;
+      font-size: 16px; // Prevents iOS zoom on focus
+      padding: 12px;
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--bg-input-hover);
+    }
+
+    &:focus,
+    &.is-open {
+      border-color: var(--border-input-focus);
+      background: var(--bg-input);
+    }
+
+    &::placeholder {
+      color: var(--color-text-placeholder);
+      opacity: 0.6;
+    }
+
+    &:disabled {
+      background: var(--bg-header);
+      color: var(--color-text-muted);
+      cursor: not-allowed;
+      border-color: var(--border-box);
+    }
+  }
+
+  &-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--bg-dropdown);
+    border: 1px solid var(--border-input);
+    border-radius: 4px;
+    box-shadow:
+      0 4px 6px rgba(0, 0, 0, 0.1),
+      0 2px 4px rgba(0, 0, 0, 0.06);
+    z-index: 1000;
+    max-height: fit-content;
+    overflow-y: visible;
+
+    &.scrollable {
+      max-height: 200px;
+      overflow-y: auto;
+
+      @include mobile {
+        max-height: 160px;
+      }
+    }
+  }
+
+  &-option {
+    padding: 10px 12px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    border-bottom: 1px solid var(--border-box);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover,
+    &.is-highlighted {
+      background: var(--bg-input-hover);
+    }
+
+    &.is-selected {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--color-primary);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    &:active {
+      background: var(--bg-header);
+    }
+
+    @include mobile {
+      padding: 12px;
+      font-size: 16px; // Prevent iOS zoom
+      min-height: 44px; // Touch-friendly
+    }
+  }
+
+  &-empty {
+    padding: 16px 12px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    font-style: italic;
+
+    @include mobile {
+      padding: 18px 12px;
+      font-size: 14px;
+    }
+  }
+}

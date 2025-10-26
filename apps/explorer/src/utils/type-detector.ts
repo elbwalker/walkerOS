@@ -1,20 +1,30 @@
 import type { NodeType } from '../hooks/useMappingNavigation';
+import type { RJSFSchema } from '@rjsf/utils';
+import type { DestinationSchemas } from '../components/organisms/mapping-box';
 
 /**
  * Type Detector - Universal type detection for mapping values
  *
- * Detects the appropriate editor pane type by introspecting the actual value.
- * This replaces fragile path-based detection with reliable value-based detection.
+ * Detects the appropriate editor pane type using a three-tier detection strategy:
+ * 1. Value introspection (most reliable - actual structure)
+ * 2. JSON Schema detection (fallback - type hints for undefined values)
+ * 3. Default valueType (final fallback - let user define)
  *
  * Core Principle: VALUE IS THE SOURCE OF TRUTH
  * - If a value exists, inspect its structure to determine the type
- * - No path patterns, no heuristics, just structural analysis
+ * - If value is undefined, use JSON Schema as hint
+ * - No path patterns, no fragile heuristics
  *
  * @example
+ * // Priority 1: Value introspection
  * detectFromValue({ map: { currency: 'USD' } }) // → 'map'
  * detectFromValue(['nested', { map: {...} }]) // → 'loop'
  * detectFromValue(['value1', 'value2']) // → 'set'
  * detectFromValue('data.id') // → 'valueType'
+ *
+ * // Priority 2: JSON Schema detection
+ * detectFromJsonSchema({ type: 'array', minItems: 2, maxItems: 2 }) // → 'loop'
+ * detectFromJsonSchema({ type: 'object' }) // → 'map'
  */
 
 /**
@@ -175,6 +185,151 @@ function detectObjectType(obj: Record<string, unknown>): NodeType {
   // - { ga4: {...}, ads: {...} } → map
   // - { item_id: 'data.id' } → map
   return 'map';
+}
+
+/**
+ * Detect NodeType from JSON Schema
+ *
+ * Used as fallback when value is undefined. Reads type hints from JSON Schema
+ * to determine the appropriate editor pane.
+ *
+ * This enables type detection for settings that haven't been defined yet,
+ * using destination-provided schemas as guidance.
+ *
+ * JSON Schema → NodeType mappings:
+ * - type: 'array' + minItems: 2 + maxItems: 2 → 'loop' (tuple pattern)
+ * - type: 'array' → 'set' (generic array)
+ * - type: 'object' → 'map' (object editor)
+ * - type: 'string'/'number'/'boolean' → 'valueType' (simple value)
+ *
+ * @param schema - JSON Schema definition
+ * @returns NodeType for this schema
+ */
+export function detectFromJsonSchema(schema: RJSFSchema): NodeType {
+  // Array types - distinguish loop (tuple) from set
+  if (schema.type === 'array') {
+    // Loop pattern: tuple with exactly 2 items
+    // Zod's z.tuple([a, b]) converts to: { type: 'array', minItems: 2, maxItems: 2 }
+    if (schema.minItems === 2 && schema.maxItems === 2) {
+      return 'loop';
+    }
+    // Generic array → set
+    return 'set';
+  }
+
+  // Object type → map editor
+  if (schema.type === 'object') {
+    return 'map';
+  }
+
+  // Primitives → check for enum before defaulting to valueType
+  if (
+    schema.type === 'string' ||
+    schema.type === 'number' ||
+    schema.type === 'boolean'
+  ) {
+    // Enum detection: schema has enum property with values
+    if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
+      return 'enum';
+    }
+    return 'valueType';
+  }
+
+  // Unknown/complex types → valueType (let user define)
+  return 'valueType';
+}
+
+/**
+ * Navigate JSON Schema path to find nested schema
+ *
+ * Walks through nested object properties following the path array.
+ * Used to find schema for deeply nested settings (e.g., settings.ga4.include).
+ *
+ * @param path - Path array to navigate (e.g., ['product', 'view', 'settings', 'ga4', 'include'])
+ * @param rootSchema - Root JSON Schema to navigate from
+ * @returns Schema at path, or null if not found
+ */
+export function navigateJsonSchema(
+  path: string[],
+  rootSchema: RJSFSchema,
+): RJSFSchema | null {
+  let schema: RJSFSchema = rootSchema;
+
+  // Skip first segments until we reach 'settings'
+  // Path format: [entity, action, 'settings', ...nestedPath]
+  const settingsIndex = path.indexOf('settings');
+  if (settingsIndex === -1) {
+    return null; // Not a settings path
+  }
+
+  // Navigate from settings onwards
+  for (let i = settingsIndex + 1; i < path.length; i++) {
+    const key = path[i];
+
+    // Check if current schema has properties
+    if (!schema.properties || !(key in schema.properties)) {
+      return null; // Path doesn't exist in schema
+    }
+
+    // Navigate to nested property
+    schema = schema.properties[key] as RJSFSchema;
+  }
+
+  return schema;
+}
+
+/**
+ * Universal type detection with schema fallback
+ *
+ * Enhanced three-tier detection strategy:
+ * 1. Schema enum detection (for primitive values with schema enums)
+ * 2. Value introspection (if value exists and not enum)
+ * 3. JSON Schema detection (if schemas provided and value undefined)
+ * 4. Default valueType (final fallback)
+ *
+ * @param value - The value to inspect
+ * @param path - Path to the value (for schema navigation)
+ * @param schemas - Optional destination schemas
+ * @returns NodeType for editing this value
+ */
+export function detectNodeType(
+  value: unknown,
+  path: string[],
+  schemas?: DestinationSchemas,
+): NodeType {
+  // Priority 1: Check for enum in schema (even when value exists)
+  // This handles cases like track='Purchase' where value exists but should show enum dropdown
+  if (schemas?.mapping && path.includes('settings')) {
+    const schema = navigateJsonSchema(path, schemas.mapping);
+    if (schema?.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
+      // Value is primitive and schema defines enum → use enum pane
+      if (
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        typeof value === 'boolean' ||
+        value === undefined ||
+        value === null
+      ) {
+        return 'enum';
+      }
+    }
+  }
+
+  // Priority 2: Value introspection (most reliable for complex types)
+  if (value !== undefined && value !== null) {
+    return detectFromValue(value);
+  }
+
+  // Priority 3: JSON Schema detection (for undefined settings)
+  if (schemas?.mapping && path.includes('settings')) {
+    const schema = navigateJsonSchema(path, schemas.mapping);
+    if (schema) {
+      return detectFromJsonSchema(schema);
+    }
+  }
+
+  // Priority 4: Default fallback
+  return 'valueType';
 }
 
 /**

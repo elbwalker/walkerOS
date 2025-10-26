@@ -17,25 +17,30 @@ import { CodeBox } from '../organisms/code-box';
 import type { Mapping } from '@walkeros/core';
 import { getValueAtPath } from '../../utils/mapping-path';
 import type { DestinationSchemas } from './mapping-box';
-import { detectFromValue } from '../../utils/type-detector';
+import { detectNodeType as detectNodeTypeFromValueAndSchema } from '../../utils/type-detector';
 
 /**
- * Determines the appropriate NodeType based on path and value
+ * Determines the appropriate NodeType based on path, value, and schemas
  *
  * Detection strategy:
  * 1. Structure nodes (entity, rule, policy) - based on path depth
  * 2. Rule properties with dedicated panes (name, batch, ignore) - based on property name
- * 3. Everything else - VALUE INTROSPECTION via type detector
+ * 3. Everything else - UNIVERSAL TYPE DETECTION via three-tier strategy:
+ *    a) Value introspection (if value exists)
+ *    b) JSON Schema detection (if schemas provided and value undefined)
+ *    c) Default valueType (final fallback)
  *
- * This replaces fragile path-based heuristics with reliable value-based detection.
+ * This replaces fragile path-based heuristics with intelligent type detection.
  *
  * @param path - Navigation path array
  * @param mappingState - Mapping state for accessing values
+ * @param schemas - Optional destination schemas for type hints
  * @returns Appropriate NodeType for this path
  */
 function getNodeTypeFromPath(
   path: string[],
   mappingState: UseMappingStateReturn,
+  schemas?: DestinationSchemas,
 ): NodeType {
   // Policy paths (structure nodes)
   if (path.length === 1 && path[0] === 'policy') {
@@ -61,14 +66,14 @@ function getNodeTypeFromPath(
     if (propertyName === 'ignore') return 'ignore';
     if (propertyName === 'consent') return 'consent';
 
-    // For data, settings, condition, etc. - use value introspection
-    // Fall through to universal type detection below
+    // For data, settings, condition, etc. - use universal type detection
+    // Fall through to three-tier detection below
   }
 
   // Universal type detection for depth 3+ values
-  // Get the actual value and inspect its structure
+  // Three-tier strategy: value → schema → default
   const value = mappingState.actions.getValue(path);
-  return detectFromValue(value);
+  return detectNodeTypeFromValueAndSchema(value, path, schemas);
 }
 
 /**
@@ -269,8 +274,8 @@ export function MappingEditorTabs({
             visible={navigation.treeVisible}
             onToggle={treeState.togglePath}
             onNavigate={(path) => {
-              // Determine the node type from path and value
-              const nodeType = getNodeTypeFromPath(path, mappingState);
+              // Determine the node type from path, value, and schemas
+              const nodeType = getNodeTypeFromPath(path, mappingState, schemas);
               navigation.openTab(path, nodeType);
             }}
             onAddAction={(entity, action) => {

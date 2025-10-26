@@ -21,7 +21,8 @@ export type NodeType =
   | 'value'
   | 'fn'
   | 'validate'
-  | 'condition';
+  | 'condition'
+  | 'enum';
 
 /**
  * Navigation tab representing an open editing context

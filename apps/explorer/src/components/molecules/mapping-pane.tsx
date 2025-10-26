@@ -15,6 +15,7 @@ import { MappingConsentPaneView } from './mapping-consent-pane-view';
 import { MappingSetPaneView } from './mapping-set-pane-view';
 import { MappingLoopPaneView } from './mapping-loop-pane-view';
 import { MappingMapPaneViewRJSF } from './mapping-map-pane-view-rjsf';
+import { MappingEnumPaneView } from './mapping-enum-pane-view';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
@@ -36,6 +37,7 @@ import type { DestinationSchemas } from '../organisms/mapping-box';
  * - 'consent' → MappingConsentPaneView - Consent state tiles with discovery
  * - 'valueConfig' → MappingValueConfigPaneView - Full ValueConfig editor
  * - 'valueType' → MappingValueTypePaneView - String or ValueConfig editor (replaces old property/type-grid)
+ * - 'enum' → MappingEnumPaneView - Dropdown selector for schema-defined enum fields
  * - 'key' → MappingKeyPaneView - Focused key property editor
  * - 'condition' → MappingConditionPaneView - Condition function editor
  * - 'value' → MappingValuePaneView - Primitive value editor (string, number, boolean)
@@ -219,6 +221,18 @@ export function MappingPane({
           path={path}
           mappingState={mappingState}
           navigation={navigation}
+          className={className}
+        />
+      );
+
+    case 'enum':
+      // MappingEnumPaneView for schema-defined enum fields
+      return (
+        <MappingEnumPaneView
+          path={path}
+          mappingState={mappingState}
+          navigation={navigation}
+          schemas={schemas}
           className={className}
         />
       );
