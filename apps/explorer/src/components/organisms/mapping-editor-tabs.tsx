@@ -1,5 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useMappingState } from '../../hooks/useMappingState';
+import {
+  useMappingState,
+  type UseMappingStateReturn,
+} from '../../hooks/useMappingState';
 import {
   useMappingNavigation,
   type NodeType,
@@ -14,12 +17,27 @@ import { CodeBox } from '../organisms/code-box';
 import type { Mapping } from '@walkeros/core';
 import { getValueAtPath } from '../../utils/mapping-path';
 import type { DestinationSchemas } from './mapping-box';
+import { detectFromValue } from '../../utils/type-detector';
 
 /**
- * Determines the appropriate NodeType based on the path
+ * Determines the appropriate NodeType based on path and value
+ *
+ * Detection strategy:
+ * 1. Structure nodes (entity, rule, policy) - based on path depth
+ * 2. Rule properties with dedicated panes (name, batch, ignore) - based on property name
+ * 3. Everything else - VALUE INTROSPECTION via type detector
+ *
+ * This replaces fragile path-based heuristics with reliable value-based detection.
+ *
+ * @param path - Navigation path array
+ * @param mappingState - Mapping state for accessing values
+ * @returns Appropriate NodeType for this path
  */
-function getNodeTypeFromPath(path: string[]): NodeType {
-  // Policy paths
+function getNodeTypeFromPath(
+  path: string[],
+  mappingState: UseMappingStateReturn,
+): NodeType {
+  // Policy paths (structure nodes)
   if (path.length === 1 && path[0] === 'policy') {
     return 'policy';
   }
@@ -27,7 +45,7 @@ function getNodeTypeFromPath(path: string[]): NodeType {
     return 'valueConfig';
   }
 
-  // Entity and rule paths
+  // Entity and rule paths (structure nodes)
   if (path.length === 1) {
     return 'entity';
   }
@@ -35,34 +53,22 @@ function getNodeTypeFromPath(path: string[]): NodeType {
     return 'rule';
   }
 
-  // Depth 3 - rule properties
+  // Depth 3 - rule properties with dedicated panes
   if (path.length === 3) {
     const propertyName = path[2];
     if (propertyName === 'name') return 'name';
     if (propertyName === 'batch') return 'batch';
     if (propertyName === 'ignore') return 'ignore';
     if (propertyName === 'consent') return 'consent';
-    if (propertyName === 'settings') return 'map'; // Settings are objects, use map pane
-    // data, etc. are ValueType
-    return 'valueType';
+
+    // For data, settings, condition, etc. - use value introspection
+    // Fall through to universal type detection below
   }
 
-  // Depth 4+ - check the last segment to determine the editor type
-  // This handles cases like: ['page', 'view', 'data', 'map']
-  const lastSegment = path[path.length - 1];
-
-  if (lastSegment === 'map') return 'map';
-  if (lastSegment === 'loop') return 'loop';
-  if (lastSegment === 'set') return 'set';
-  if (lastSegment === 'consent') return 'consent';
-  if (lastSegment === 'fn') return 'valueType';
-  if (lastSegment === 'key') return 'valueType';
-  if (lastSegment === 'value') return 'valueType';
-  if (lastSegment === 'condition') return 'valueType';
-  if (lastSegment === 'validate') return 'valueType';
-
-  // For arbitrary keys within maps/loops/sets, use valueType
-  return 'valueType';
+  // Universal type detection for depth 3+ values
+  // Get the actual value and inspect its structure
+  const value = mappingState.actions.getValue(path);
+  return detectFromValue(value);
 }
 
 /**
@@ -263,8 +269,8 @@ export function MappingEditorTabs({
             visible={navigation.treeVisible}
             onToggle={treeState.togglePath}
             onNavigate={(path) => {
-              // Determine the node type from the path structure
-              const nodeType = getNodeTypeFromPath(path);
+              // Determine the node type from path and value
+              const nodeType = getNodeTypeFromPath(path, mappingState);
               navigation.openTab(path, nodeType);
             }}
             onAddAction={(entity, action) => {
