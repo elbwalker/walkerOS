@@ -19,6 +19,10 @@ export interface DestinationSchemas {
   mapping?: RJSFSchema;
   /** Rule-level mapping settings UI schema */
   mappingUi?: UiSchema;
+  /** Expected data properties schema for destination events */
+  data?: RJSFSchema;
+  /** Data properties UI schema */
+  dataUi?: UiSchema;
 }
 
 export interface MappingBoxProps {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { WidgetProps } from '@rjsf/utils';
+import type { WidgetProps, RJSFSchema } from '@rjsf/utils';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type {
   UseMappingNavigationReturn,
@@ -8,6 +8,7 @@ import type {
 import { MappingInputWithButton } from './mapping-input-with-button';
 import { MappingConfirmButton } from './mapping-confirm-button';
 import { getConfiguredProperties } from '../../utils/value-display-formatter';
+import { PropertySuggestions } from '../molecules/property-suggestions';
 
 /**
  * Form context interface for object explorer widget
@@ -29,6 +30,7 @@ export interface ObjectExplorerOptions {
   childNodeType?: NodeType; // Node type for child navigation (default: 'valueType')
   emptyMessage?: string; // Empty state message
   placeholder?: string; // Input placeholder text
+  propertySuggestionsSchema?: RJSFSchema; // Schema for property suggestions
 }
 
 /**
@@ -72,7 +74,9 @@ export function MappingObjectExplorerWidget(props: WidgetProps) {
     {}) as ObjectExplorerFormContext;
 
   // Extract options with defaults
-  const config: Required<ObjectExplorerOptions> = {
+  const config: Required<
+    Omit<ObjectExplorerOptions, 'propertySuggestionsSchema'>
+  > & { propertySuggestionsSchema?: RJSFSchema } = {
     allowAdd: options?.allowAdd !== false,
     allowRename: options?.allowRename !== false,
     allowDelete: options?.allowDelete !== false,
@@ -83,6 +87,9 @@ export function MappingObjectExplorerWidget(props: WidgetProps) {
     placeholder:
       options?.placeholder ||
       'Type key name to create or select (e.g., currency)...',
+    propertySuggestionsSchema: options?.propertySuggestionsSchema as
+      | RJSFSchema
+      | undefined,
   };
 
   // State for add/rename operations
@@ -237,6 +244,20 @@ export function MappingObjectExplorerWidget(props: WidgetProps) {
     }, 150);
   };
 
+  // Property suggestion selection handler
+  const handlePropertySelect = (propertyName: string, nodeType: NodeType) => {
+    // Initialize with empty string if new
+    if (map[propertyName] === undefined) {
+      const newMap = { ...map, [propertyName]: '' };
+      onChange(newMap);
+    }
+
+    // Navigate to the property editor using the schema-detected NodeType
+    if (navigation) {
+      navigation.openTab([...path, propertyName], nodeType);
+    }
+  };
+
   return (
     <div className="elb-object-explorer">
       {/* Add new key input */}
@@ -254,6 +275,19 @@ export function MappingObjectExplorerWidget(props: WidgetProps) {
           />
         </div>
       )}
+
+      {/* Property suggestions from schema */}
+      {config.allowAdd &&
+        config.propertySuggestionsSchema &&
+        typeof config.propertySuggestionsSchema === 'object' &&
+        'properties' in config.propertySuggestionsSchema && (
+          <PropertySuggestions
+            schema={config.propertySuggestionsSchema}
+            existingKeys={mapKeys}
+            currentValue={map}
+            onSelect={handlePropertySelect}
+          />
+        )}
 
       {/* Map keys list */}
       {mapKeys.length > 0 && (

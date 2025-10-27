@@ -2,9 +2,10 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { MappingBox } from '../src/components/organisms/mapping-box';
 import { DemoTemplate } from './shared/DemoTemplate';
+import { schema as metaSchema } from '@walkeros/web-destination-meta';
 
-// Mock Meta Pixel schema for settings demo (Phase 1 + Widget Showcase)
-// Based on @walkeros/web-destination-meta/src/schema.ts with extensions
+// Extended Meta Pixel schema for widget showcase demo
+// Uses real schemas from @walkeros/web-destination-meta plus additional examples
 const metaPixelMockSchema = {
   mappingSchema: {
     type: 'object',
@@ -13,8 +14,8 @@ const metaPixelMockSchema = {
       // Standard select widget (enum)
       track: {
         type: 'string',
-        title: '1. Standard Event (Dropdown)',
-        description: 'Built-in RJSF SelectWidget for string enums',
+        title: 'Standard Event',
+        description: 'Meta Pixel standard event name',
         enum: [
           'PageView',
           'AddPaymentInfo',
@@ -40,15 +41,15 @@ const metaPixelMockSchema = {
       // Text input widget
       trackCustom: {
         type: 'string',
-        title: '2. Custom Event (Text Input)',
-        description: 'MappingStringWidget for simple text',
+        title: 'Custom Event',
+        description: 'Custom event name for trackCustom',
       },
 
       // TagInput widget - string array
       categories: {
         type: 'array',
-        title: '3. Categories (Tag Input)',
-        description: 'TagInputWidget for managing string arrays with chips',
+        title: 'Categories',
+        description: 'Event categories for filtering and organization',
         items: {
           type: 'string',
           enum: [
@@ -66,8 +67,8 @@ const metaPixelMockSchema = {
 
       // MultiInput widget - string OR string[]
       emails: {
-        title: '4. Email(s) (Multi Input)',
-        description: 'MultiInputWidget for string | string[] union type',
+        title: 'Email(s)',
+        description: 'Email address or list of email addresses',
         oneOf: [
           {
             type: 'string',
@@ -83,8 +84,8 @@ const metaPixelMockSchema = {
 
       // UnionTypeSwitcher widget - boolean OR object
       advancedTracking: {
-        title: '5. Advanced Tracking (Union Type)',
-        description: 'UnionTypeSwitcherWidget for boolean | object union',
+        title: 'Advanced Tracking',
+        description: 'Enable advanced tracking or configure tracking settings',
         oneOf: [
           {
             type: 'boolean',
@@ -110,15 +111,15 @@ const metaPixelMockSchema = {
       // CodeEditor widget - function string
       dataTransform: {
         type: 'string',
-        title: '6. Data Transform (Code Editor)',
-        description: 'CodeEditorWidget for editing function code',
+        title: 'Data Transform',
+        description: 'Function to transform event data before sending',
       },
 
       // Number widget
       priority: {
         type: 'number',
-        title: '7. Priority (Number Input)',
-        description: 'MappingNumberWidget for numeric values',
+        title: 'Priority',
+        description: 'Event priority level (1-10)',
         minimum: 1,
         maximum: 10,
       },
@@ -126,8 +127,8 @@ const metaPixelMockSchema = {
       // Boolean widget
       enabled: {
         type: 'boolean',
-        title: '8. Enabled (Checkbox)',
-        description: 'MappingBooleanWidget for toggles',
+        title: 'Enabled',
+        description: 'Enable or disable this tracking rule',
       },
     },
   },
@@ -284,6 +285,8 @@ function App() {
           schemas={{
             mapping: metaPixelMockSchema.mappingSchema,
             mappingUi: metaPixelMockSchema.mappingUiSchema,
+            data: metaSchema.dataSchema,
+            dataUi: metaSchema.dataUiSchema,
           }}
         />
       </div>

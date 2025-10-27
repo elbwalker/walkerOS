@@ -265,6 +265,7 @@ export function MappingPane({
           path={path}
           mappingState={mappingState}
           navigation={navigation}
+          schemas={schemas}
           className={className}
         />
       );

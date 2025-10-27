@@ -1,0 +1,43 @@
+// Property Suggestions - Matches rule overview grid pattern
+
+.elb-property-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+
+  &-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+  }
+
+  &-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-box);
+    }
+
+    span {
+      flex-shrink: 0;
+    }
+  }
+}
