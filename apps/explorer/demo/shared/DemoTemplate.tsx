@@ -76,7 +76,16 @@ export function DemoTemplate({
         </button>
       </div>
 
-      <div style={{ padding: '2rem' }}>{children}</div>
+      <div className="demo-dual-view">
+        <div className="demo-view-desktop">
+          <div className="demo-view-label">Desktop View</div>
+          <div className="demo-view-content">{children}</div>
+        </div>
+        <div className="demo-view-mobile">
+          <div className="demo-view-label">Mobile View (375px)</div>
+          <div className="demo-view-content">{children}</div>
+        </div>
+      </div>
     </div>
   );
 }

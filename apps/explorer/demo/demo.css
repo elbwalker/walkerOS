@@ -152,3 +152,39 @@
 .demo-feature-list strong {
   color: var(--color-text);
 }
+
+/* Dual View Layout */
+.demo-dual-view {
+  display: flex;
+  flex-direction: column;
+  gap: 5rem;
+  padding: 2rem;
+}
+
+.demo-view-desktop,
+.demo-view-mobile {
+  width: 100%;
+}
+
+.demo-view-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.demo-view-content {
+  /* Just a width/height constraint, no visual styling */
+}
+
+.demo-view-mobile .demo-view-content {
+  width: 375px;
+  height: 667px;
+}
+
+/* Make boxes fill the mobile container */
+.demo-view-mobile .elb-explorer-box {
+  height: 667px;
+}
