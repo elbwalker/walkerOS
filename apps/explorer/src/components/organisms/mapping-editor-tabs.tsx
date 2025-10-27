@@ -300,7 +300,7 @@ export function MappingEditorTabs({
           breadcrumb={navigation.breadcrumb}
           paneType={codeViewActive ? undefined : activeTab?.nodeType}
           showTreeButton={showTree}
-          showCodeButton={true}
+          showCodeButton={!!activeTab}
           codeViewActive={codeViewActive}
           showDeleteButton={activeTab && activeTab.path.length > 0}
           onNavigate={(path) => {
