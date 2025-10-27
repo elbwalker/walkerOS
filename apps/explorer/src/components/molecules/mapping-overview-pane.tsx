@@ -87,6 +87,7 @@ export function MappingOverviewPane({
           : `${rules.length} rule${rules.length === 1 ? '' : 's'}`
       }
       navigation={navigation}
+      hideNavigation={true}
       className={className}
     >
       <div className="elb-mapping-overview-input-section">
@@ -104,7 +105,9 @@ export function MappingOverviewPane({
 
       {rules.length > 0 && (
         <div className="elb-mapping-tile-section">
-          <h3 className="elb-mapping-tile-title">Existing Mapping Rules</h3>
+          <h3 className="elb-mapping-tile-title">
+            Existing Mapping Rules for Standard Events
+          </h3>
           <div className="elb-mapping-overview-grid">
             {rules.map(({ entity, action }) => (
               <button

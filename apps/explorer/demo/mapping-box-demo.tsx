@@ -3,15 +3,6 @@ import { createRoot } from 'react-dom/client';
 import { MappingBox } from '../src/components/organisms/mapping-box';
 import '../src/styles/index.scss';
 import './demo.css';
-import {
-  gtagMappingSchema,
-  gtagMappingUiSchema,
-  gtagMappingExample,
-} from './gtag-schema';
-import {
-  mappingSchemaGenerated,
-  mappingUiSchemaGenerated,
-} from '@walkeros/web-destination-meta';
 
 // Mock Meta Pixel schema for settings demo (Phase 1 + Widget Showcase)
 // Based on @walkeros/web-destination-meta/src/schema.ts with extensions
@@ -185,106 +176,6 @@ const metaPixelMockSchema = {
   },
 };
 
-// GA4 mapping example from packages/web/destinations/gtag/src/examples/mapping.ts
-const ga4Mapping = {
-  page: {
-    view: {
-      name: 'page_view',
-      data: {
-        map: {
-          page_title: 'data.title',
-          page_location: 'data.url',
-        },
-      },
-    },
-  },
-  product: {
-    view: {
-      name: 'view_item',
-      settings: {
-        ga4: {
-          include: ['data'],
-        },
-      },
-      data: {
-        map: {
-          currency: { value: 'USD', key: 'data.currency' },
-          value: 'data.price',
-          items: {
-            loop: [
-              'this',
-              {
-                map: {
-                  item_id: 'data.id',
-                  item_name: 'data.name',
-                  item_category: 'data.category',
-                },
-              },
-            ],
-          },
-        },
-      },
-    },
-    add: {
-      name: 'add_to_cart',
-      settings: {
-        ga4: {
-          include: ['data'],
-        },
-      },
-      data: {
-        map: {
-          currency: { value: 'USD', key: 'data.currency' },
-          value: 'data.price',
-          items: {
-            loop: [
-              'this',
-              {
-                map: {
-                  item_id: 'data.id',
-                  item_variant: 'data.color',
-                  quantity: { value: 1, key: 'data.quantity' },
-                },
-              },
-            ],
-          },
-        },
-      },
-    },
-  },
-  order: {
-    complete: {
-      name: 'purchase',
-      settings: {
-        ga4: {
-          include: ['data', 'context'],
-        },
-      },
-      data: {
-        map: {
-          transaction_id: 'data.id',
-          value: 'data.total',
-          tax: 'data.taxes',
-          shipping: 'data.shipping',
-          currency: { key: 'data.currency', value: 'USD' },
-          items: {
-            loop: [
-              'nested',
-              {
-                map: {
-                  item_id: 'data.id',
-                  item_name: 'data.name',
-                  quantity: { key: 'data.quantity', value: 1 },
-                },
-              },
-            ],
-          },
-        },
-      },
-    },
-  },
-};
-
 // Meta Pixel mapping example with settings (Phase 1 Demo)
 // Meta Pixel mapping - COMPREHENSIVE WIDGET SHOWCASE
 // Each rule demonstrates different widget combinations
@@ -385,11 +276,8 @@ function App() {
     return 'light';
   });
 
-  const [editableMapping, setEditableMapping] = React.useState(ga4Mapping);
   const [editableMetaMapping, setEditableMetaMapping] =
     React.useState(metaMapping);
-  const [editableGtagMapping, setEditableGtagMapping] =
-    React.useState(gtagMappingExample);
 
   React.useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -403,10 +291,10 @@ function App() {
     <div className="demo-container">
       <div className="demo-header">
         <div>
-          <h1 className="demo-title">MappingBox Demo</h1>
+          <h1 className="demo-title">Meta Pixel Mapping Demo</h1>
           <p className="demo-subtitle">
-            New editor with settings (Phase 1), tree navigation, and comparison
-            to original
+            Flat Settings Demo (Phase 1) - Schema-aware configuration with
+            widget showcase
           </p>
         </div>
         <button
@@ -419,186 +307,18 @@ function App() {
       </div>
 
       <div className="demo-section">
-        <h2>GA4 Mapping - New Layout</h2>
-        <p className="demo-section-description">
-          New tabbed editor with tree sidebar, breadcrumb navigation, and
-          pane-based editing
-        </p>
-        <MappingBox
-          mapping={editableMapping}
-          onMappingChange={setEditableMapping}
-          label="GA4 E-Commerce Mapping (New Layout)"
-          initialTab="editor"
-          resizable
-          useNewEditor
-        />
-      </div>
-
-      <div className="demo-section">
-        <h2>Gtag Mapping - Nested Settings Demo (Phase 2C)</h2>
-        <p className="demo-section-description">
-          Demonstrates nested settings navigation for destinations with multiple
-          sub-configurations (GA4, Google Ads, GTM). Navigate to any rule's
-          settings to see navigable list of ga4/ads/gtm options.
-        </p>
-        <MappingBox
-          mapping={editableGtagMapping}
-          onMappingChange={setEditableGtagMapping}
-          label="Gtag Mapping (Nested Settings Navigation)"
-          initialTab="editor"
-          resizable
-          useNewEditor
-          schemas={{
-            mapping: gtagMappingSchema,
-            mappingUi: gtagMappingUiSchema,
-          }}
-        />
-        <div
-          className="demo-phase-info"
-          style={{
-            marginTop: '16px',
-            padding: '16px',
-            background: 'var(--bg-header)',
-            borderRadius: '4px',
-            border: '1px solid var(--border-box)',
-          }}
-        >
-          <h3 style={{ marginTop: 0, fontSize: '16px' }}>Phase 2C Features:</h3>
-          <ul className="demo-feature-list" style={{ marginBottom: 0 }}>
-            <li>
-              <strong>Nested Settings Navigation:</strong> Navigate to any rule
-              (e.g., "product → view") and click "Settings"
-            </li>
-            <li>
-              <strong>Object Explorer:</strong> Settings shows navigable list:
-              ga4, ads, gtm
-            </li>
-            <li>
-              <strong>Deep Navigation:</strong> Click "ga4" to open GA4-specific
-              form (include, measurementId, etc.)
-            </li>
-            <li>
-              <strong>Breadcrumb Navigation:</strong> Use breadcrumb or back
-              button to return to settings list
-            </li>
-            <li>
-              <strong>Schema Extraction:</strong> Each nested object extracts
-              its own schema from parent
-            </li>
-            <li>
-              <strong>Multiple Configs:</strong> Test ads and gtm settings on
-              different rules
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="demo-section">
-        <h2>Meta Pixel Mapping - Flat Settings Demo (Phase 1)</h2>
-        <p className="demo-section-description">
-          Demonstrates flat settings (single form) for destinations without
-          nested structure. Navigate to any rule's settings to see inline form.
-        </p>
         <MappingBox
           mapping={editableMetaMapping}
           onMappingChange={setEditableMetaMapping}
-          label="Meta Pixel Mapping (Flat Settings)"
+          label="Meta Pixel Mapping"
           initialTab="editor"
           resizable
           useNewEditor
           schemas={{
-            mapping: mappingSchemaGenerated,
-            mappingUi: mappingUiSchemaGenerated,
+            mapping: metaPixelMockSchema.mappingSchema,
+            mappingUi: metaPixelMockSchema.mappingUiSchema,
           }}
         />
-        <div
-          className="demo-phase-info"
-          style={{
-            marginTop: '16px',
-            padding: '16px',
-            background: 'var(--bg-header)',
-            borderRadius: '4px',
-            border: '1px solid var(--border-box)',
-          }}
-        >
-          <h3 style={{ marginTop: 0, fontSize: '16px' }}>Phase 1 Features:</h3>
-          <ul className="demo-feature-list" style={{ marginBottom: 0 }}>
-            <li>
-              <strong>Schema-Aware Settings:</strong> Navigate to any rule
-              (e.g., "product → view") and expand "Settings"
-            </li>
-            <li>
-              <strong>Inline Form:</strong> All settings render as single form
-              (no nesting)
-            </li>
-            <li>
-              <strong>Widget Showcase:</strong> Demonstrates 8 different widget
-              types in one schema
-            </li>
-            <li>
-              <strong>Live Updates:</strong> Switch to "Code" view to see JSON
-              update in real-time
-            </li>
-            <li>
-              <strong>Clear Settings:</strong> Button to remove all
-              configuration
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="demo-section">
-        <h2>GA4 Mapping - Old Layout (For Comparison)</h2>
-        <p className="demo-section-description">
-          Original autocomplete dropdown editor for comparison
-        </p>
-        <MappingBox
-          mapping={editableMapping}
-          onMappingChange={setEditableMapping}
-          label="GA4 E-Commerce Mapping (Old Layout)"
-          initialTab="editor"
-          resizable
-        />
-      </div>
-
-      <div className="demo-section">
-        <h2>New Editor Features</h2>
-        <ul className="demo-feature-list">
-          <li>
-            <strong>Tree Sidebar:</strong> Hierarchical view of all entities,
-            actions, and rules
-          </li>
-          <li>
-            <strong>Multi-Tab Navigation:</strong> Open multiple rules/values
-            simultaneously with tabs
-          </li>
-          <li>
-            <strong>Breadcrumb Trail:</strong> Navigate back through nested
-            levels
-          </li>
-          <li>
-            <strong>Pane-Based Editing:</strong> Specialized editors for rules,
-            maps, loops, and value configs
-          </li>
-          <li>
-            <strong>Type Selector:</strong> Choose value types (key, value, map,
-            loop, function, set)
-          </li>
-          <li>
-            <strong>Responsive Layout:</strong> Adapts to compact/medium/wide
-            screens
-          </li>
-          <li>
-            <strong>Theme Support:</strong> Full light/dark theme compatibility
-          </li>
-          <li>
-            <strong>Settings Field (Phase 1):</strong> Destination-specific
-            configuration with schema-aware dropdowns (see Meta Pixel demo)
-          </li>
-          <li>
-            <strong>Code View:</strong> Toggle to JSON with syntax highlighting
-          </li>
-        </ul>
       </div>
     </div>
   );
