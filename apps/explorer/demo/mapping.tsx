@@ -3,8 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { MappingCode } from '../src/components/demos/MappingCode';
 import { MappingDemo } from '../src/components/demos/MappingDemo';
 import { getMappingEvent, getMappingValue, createEvent } from '@walkeros/core';
-import '../src/styles/index.scss';
-import './demo.css';
+import { DemoTemplate } from './shared/DemoTemplate';
 
 async function transformMapping(
   input: string,
@@ -29,45 +28,34 @@ async function transformMapping(
 }
 
 const App = () => {
-  const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
-    if (
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-    ) {
-      return 'dark';
-    }
-    return 'light';
-  });
-
-  React.useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
-  };
-
   return (
-    <div className="demo-container">
-      <div className="demo-header">
-        <h1 className="demo-title">walkerOS Explorer - Mapping Demos</h1>
-        <button
-          onClick={toggleTheme}
-          className="demo-theme-toggle"
-          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-      </div>
-
-      <section className="demo-section">
-        <h2>MappingCode - Built-in walkerOS Mapping Logic</h2>
-        <p className="demo-section-description">
-          Execute code with getMappingEvent, getMappingValue, and createEvent
-          available
-        </p>
-        <MappingCode
-          input={`await getMappingEvent(
+    <DemoTemplate
+      title="Mapping Transformation"
+      componentName="MappingCode + MappingDemo"
+      description="Live mapping examples with transformation functions"
+    >
+      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <section style={{ marginBottom: '3rem' }}>
+          <h2
+            style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              marginBottom: '0.5rem',
+            }}
+          >
+            Built-in walkerOS Mapping
+          </h2>
+          <p
+            style={{
+              color: '#666',
+              marginBottom: '1rem',
+              fontSize: '0.875rem',
+            }}
+          >
+            Execute code with getMappingEvent, getMappingValue, and createEvent
+          </p>
+          <MappingCode
+            input={`await getMappingEvent(
   { name: 'product view' },
   {
     product: {
@@ -83,21 +71,35 @@ const App = () => {
     }
   }
 );`}
-        />
-      </section>
+          />
+        </section>
 
-      <section className="demo-section">
-        <h2>MappingDemo - Custom Transformation Function</h2>
-        <p className="demo-section-description">
-          Generic dual-editor component with custom transformation logic
-        </p>
-        <MappingDemo
-          input={`{
+        <section>
+          <h2
+            style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              marginBottom: '0.5rem',
+            }}
+          >
+            Custom Transformation
+          </h2>
+          <p
+            style={{
+              color: '#666',
+              marginBottom: '1rem',
+              fontSize: '0.875rem',
+            }}
+          >
+            Generic dual-editor with custom transformation logic
+          </p>
+          <MappingDemo
+            input={`{
   "id": "P123",
   "productName": "Laptop",
   "price": 999
 }`}
-          config={`{
+            config={`{
   "product": {
     "view": {
       "name": "view_item",
@@ -112,19 +114,16 @@ const App = () => {
     }
   }
 }`}
-          labelInput="Event Data"
-          labelConfig="Mapping Config"
-          labelOutput="Transformed Result"
-          fn={transformMapping}
-        />
-      </section>
-    </div>
+            labelInput="Event Data"
+            labelConfig="Mapping Config"
+            labelOutput="Transformed Result"
+            fn={transformMapping}
+          />
+        </section>
+      </div>
+    </DemoTemplate>
   );
 };
 
 const root = createRoot(document.getElementById('root')!);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+root.render(<App />);

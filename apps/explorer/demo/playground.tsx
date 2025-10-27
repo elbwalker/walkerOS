@@ -2,8 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Box } from '../src/components/atoms/box';
 import { Preview } from '../src/components/molecules/preview';
-import '../src/styles/index.scss';
-import './demo.css';
+import { DemoTemplate } from './shared/DemoTemplate';
 
 const sampleHtml = `<div
   data-elb="product"
@@ -161,36 +160,16 @@ const sampleCss = `
 `;
 
 function App() {
-  const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
-    if (
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-    ) {
-      return 'dark';
-    }
-    return 'light';
-  });
-
-  React.useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
-
   return (
-    <div className="demo-container demo-container-narrow">
-      <div className="demo-header">
-        <h1 className="demo-title">HTML Preview Demo</h1>
-        <button onClick={toggleTheme} className="demo-theme-toggle">
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-      </div>
-      <Box header="Preview" className="preview-box-container">
+    <DemoTemplate
+      title="HTML Preview"
+      componentName="Preview"
+      description="Interactive HTML preview with walkerOS data attribute highlighting"
+    >
+      <Box header="Preview">
         <Preview html={sampleHtml} css={sampleCss} />
       </Box>
-    </div>
+    </DemoTemplate>
   );
 }
 

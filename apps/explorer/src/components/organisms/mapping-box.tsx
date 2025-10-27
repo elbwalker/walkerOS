@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { Box } from '../atoms/box';
 import { ButtonGroup } from '../atoms/button-group';
 import { CodeBox } from './code-box';
-import { MappingEditor } from '../molecules/mapping-editor';
 import { MappingEditorTabs } from './mapping-editor-tabs';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { Mapping } from '@walkeros/core';
@@ -29,8 +28,7 @@ export interface MappingBoxProps {
   className?: string;
   initialTab?: 'code' | 'visual';
   resizable?: boolean;
-  useNewEditor?: boolean; // Enable new tab-based editor (Phase 4)
-  showTree?: boolean; // Show tree sidebar in new editor (default: true)
+  showTree?: boolean; // Show tree sidebar in visual editor (default: true)
   showHeader?: boolean; // Show box header with code/visual toggle (default: true)
   /** Destination schemas for type-aware editing (Phase 1: Settings implementation) */
   schemas?: DestinationSchemas;
@@ -42,10 +40,8 @@ export interface MappingBoxProps {
  * Features:
  * - Toggle between Code and Visual views via ButtonGroup
  * - Code view: Display mapping JSON with CodeBox
- * - Visual view: Interactive mapping rule editor
- *   - Legacy: Old form-based editor (default)
- *   - New: Tab-based editor with tree sidebar (useNewEditor=true)
- * - Persists selected rule when switching between views
+ * - Visual view: Interactive tab-based editor with tree sidebar
+ * - Persists navigation state when switching between views
  * - Theme automatically handled by CSS variables
  *
  * @example
@@ -58,12 +54,12 @@ export interface MappingBoxProps {
  * />
  *
  * @example
- * // Editable with new tab-based editor
+ * // Editable with schemas
  * <MappingBox
  *   mapping={mappingConfig}
  *   onMappingChange={setMappingConfig}
  *   label="Edit Mapping"
- *   useNewEditor={true}
+ *   schemas={{ mapping: schema, mappingUi: uiSchema }}
  * />
  */
 export function MappingBox({
@@ -73,15 +69,13 @@ export function MappingBox({
   className = '',
   initialTab = 'visual',
   resizable = false,
-  useNewEditor = false,
   showTree = true,
   showHeader = true,
   schemas,
 }: MappingBoxProps) {
   const [activeTab, setActiveTab] = useState<'code' | 'visual'>(initialTab);
-  const [selectedRule, setSelectedRule] = useState('');
 
-  // Persist navigation state for new editor across view switches
+  // Persist navigation state across view switches
   const [persistedNavigationState, setPersistedNavigationState] = useState<{
     currentPath: string[];
     nodeType: NodeType;
@@ -144,7 +138,7 @@ export function MappingBox({
           onChange={onMappingChange ? handleMappingJsonChange : undefined}
           showFormat={!!onMappingChange}
         />
-      ) : useNewEditor ? (
+      ) : (
         <MappingEditorTabs
           initialMapping={mapping as Mapping.Config}
           onChange={
@@ -154,14 +148,6 @@ export function MappingBox({
           showTree={showTree}
           initialNavigationState={persistedNavigationState || undefined}
           onNavigationStateChange={setPersistedNavigationState}
-          schemas={schemas}
-        />
-      ) : (
-        <MappingEditor
-          mapping={mapping}
-          onMappingChange={onMappingChange}
-          selectedRule={selectedRule}
-          onSelectedRuleChange={setSelectedRule}
           schemas={schemas}
         />
       )}

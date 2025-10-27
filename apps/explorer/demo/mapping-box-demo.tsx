@@ -1,8 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { MappingBox } from '../src/components/organisms/mapping-box';
-import '../src/styles/index.scss';
-import './demo.css';
+import { DemoTemplate } from './shared/DemoTemplate';
 
 // Mock Meta Pixel schema for settings demo (Phase 1 + Widget Showcase)
 // Based on @walkeros/web-destination-meta/src/schema.ts with extensions
@@ -266,66 +265,31 @@ const metaMapping = {
 };
 
 function App() {
-  const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
-    if (
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-    ) {
-      return 'dark';
-    }
-    return 'light';
-  });
-
-  const [editableMetaMapping, setEditableMetaMapping] =
-    React.useState(metaMapping);
-
-  React.useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
-  };
+  const [mappingValue, setMappingValue] =
+    React.useState<Record<string, Record<string, unknown>>>(metaMapping);
 
   return (
-    <div className="demo-container">
-      <div className="demo-header">
-        <div>
-          <h1 className="demo-title">Meta Pixel Mapping Demo</h1>
-          <p className="demo-subtitle">
-            Flat Settings Demo (Phase 1) - Schema-aware configuration with
-            widget showcase
-          </p>
-        </div>
-        <button
-          onClick={toggleTheme}
-          className="demo-theme-toggle"
-          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-      </div>
-
-      <div className="demo-section">
+    <DemoTemplate
+      title="Meta Pixel Mapping - Widget Showcase"
+      componentName="MappingBox"
+      description="Schema-aware configuration with comprehensive widget demonstrations"
+    >
+      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <MappingBox
-          mapping={editableMetaMapping}
-          onMappingChange={setEditableMetaMapping}
+          mapping={mappingValue}
+          onMappingChange={setMappingValue}
           label="Meta Pixel Mapping"
-          initialTab="editor"
+          initialTab="visual"
           resizable
-          useNewEditor
           schemas={{
             mapping: metaPixelMockSchema.mappingSchema,
             mappingUi: metaPixelMockSchema.mappingUiSchema,
           }}
         />
       </div>
-    </div>
+    </DemoTemplate>
   );
 }
 
-const container = document.getElementById('root');
-if (container) {
-  const root = createRoot(container);
-  root.render(<App />);
-}
+const root = createRoot(document.getElementById('root')!);
+root.render(<App />);
