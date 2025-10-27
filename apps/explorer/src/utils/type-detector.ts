@@ -1,6 +1,7 @@
 import type { NodeType } from '../hooks/useMappingNavigation';
 import type { RJSFSchema } from '@rjsf/utils';
 import type { DestinationSchemas } from '../components/organisms/mapping-box';
+import { destinationConfigStructureSchema } from '../schemas/destination-config-structure';
 
 /**
  * Type Detector - Universal type detection for mapping values
@@ -227,13 +228,14 @@ export function detectFromJsonSchema(schema: RJSFSchema): NodeType {
     return 'boolean';
   }
 
-  // String/number primitives → check for enum before defaulting to valueType
+  // String/number primitives → check for enum, then use primitive pane
   if (schema.type === 'string' || schema.type === 'number') {
     // Enum detection: schema has enum property with values
     if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
       return 'enum';
     }
-    return 'valueType';
+    // Schema-defined primitives use the primitive pane (no ValueConfig conversion tiles)
+    return 'primitive';
   }
 
   // Unknown/complex types → valueType (let user define)
@@ -241,29 +243,66 @@ export function detectFromJsonSchema(schema: RJSFSchema): NodeType {
 }
 
 /**
- * Navigate JSON Schema path to find nested schema
+ * Navigate JSON Schema path for config-level settings
  *
- * Walks through nested object properties following the path array.
- * Used to find schema for deeply nested settings (e.g., settings.ga4.include).
+ * Handles paths like: ['settings', 'pixelId'] or ['settings', 'ga4', 'measurementId']
+ * Uses the config-level settings schema (schemas.settings)
  *
- * @param path - Path array to navigate (e.g., ['product', 'view', 'settings', 'ga4', 'include'])
- * @param rootSchema - Root JSON Schema to navigate from
+ * @param path - Path array starting with 'settings'
+ * @param settingsSchema - Config-level settings schema
  * @returns Schema at path, or null if not found
  */
-export function navigateJsonSchema(
+export function navigateSettingsSchema(
   path: string[],
-  rootSchema: RJSFSchema,
+  settingsSchema: RJSFSchema,
 ): RJSFSchema | null {
-  let schema: RJSFSchema = rootSchema;
+  // Path should start with 'settings'
+  if (path.length === 0 || path[0] !== 'settings') {
+    return null;
+  }
 
-  // Skip first segments until we reach 'settings'
-  // Path format: [entity, action, 'settings', ...nestedPath]
+  // Start from settings schema
+  let schema: RJSFSchema = settingsSchema;
+
+  // Navigate from second element onwards (skip 'settings' itself)
+  for (let i = 1; i < path.length; i++) {
+    const key = path[i];
+
+    // Check if current schema has properties
+    if (!schema.properties || !(key in schema.properties)) {
+      return null; // Path doesn't exist in schema
+    }
+
+    // Navigate to nested property
+    schema = schema.properties[key] as RJSFSchema;
+  }
+
+  return schema;
+}
+
+/**
+ * Navigate JSON Schema path for rule-level mapping settings
+ *
+ * Handles paths like: ['mapping', 'product', 'view', 'settings', 'track']
+ * Uses the rule-level mapping schema (schemas.mapping)
+ *
+ * @param path - Path array with 'settings' somewhere after mapping/entity/action
+ * @param mappingSchema - Rule-level mapping settings schema
+ * @returns Schema at path, or null if not found
+ */
+export function navigateMappingSettingsSchema(
+  path: string[],
+  mappingSchema: RJSFSchema,
+): RJSFSchema | null {
+  let schema: RJSFSchema = mappingSchema;
+
+  // Find where 'settings' appears in the path
   const settingsIndex = path.indexOf('settings');
   if (settingsIndex === -1) {
     return null; // Not a settings path
   }
 
-  // Navigate from settings onwards
+  // Navigate from settings onwards (skip entity/action parts)
   for (let i = settingsIndex + 1; i < path.length; i++) {
     const key = path[i];
 
@@ -280,13 +319,26 @@ export function navigateJsonSchema(
 }
 
 /**
+ * @deprecated Use navigateMappingSettingsSchema instead
+ * Legacy alias for backward compatibility
+ */
+export const navigateJsonSchema = navigateMappingSettingsSchema;
+
+/**
  * Universal type detection with schema fallback
  *
- * Enhanced three-tier detection strategy:
- * 1. Schema enum detection (for primitive values with schema enums)
- * 2. Value introspection (if value exists and not enum)
- * 3. JSON Schema detection (if schemas provided and value undefined)
- * 4. Default valueType (final fallback)
+ * SCHEMA-FIRST detection strategy:
+ * 1. Determine correct schema based on path structure
+ * 2. Schema enum/boolean detection (for primitive values with schema hints)
+ * 3. Value introspection (if value exists and not primitive)
+ * 4. JSON Schema detection (for undefined values)
+ * 5. Default valueType (final fallback)
+ *
+ * Path-to-Schema Routing:
+ * - ['settings', ...] → schemas.settings (config-level)
+ * - ['mapping', entity, action, 'settings', ...] → schemas.mapping (rule-level)
+ * - ['data'] → schemas.data
+ * - ['id'], ['loadScript'], etc. → destinationConfigStructureSchema
  *
  * @param value - The value to inspect
  * @param path - Path to the value (for schema navigation)
@@ -298,20 +350,38 @@ export function detectNodeType(
   path: string[],
   schemas?: DestinationSchemas,
 ): NodeType {
-  // Priority 1: Check schema type for primitives (even when value exists)
-  if (schemas?.mapping && path.includes('settings')) {
-    const schema = navigateJsonSchema(path, schemas.mapping);
+  let schema: RJSFSchema | null = null;
 
-    // Boolean type → always use boolean pane (for both true/false values and undefined)
+  // SCHEMA-FIRST: Determine which schema to use based on path structure
+  if (path.length === 1 && destinationConfigStructureSchema.properties) {
+    // Root-level config properties (id, loadScript, queue, verbose, consent, policy, etc.)
+    const propSchema = destinationConfigStructureSchema.properties[path[0]];
+    schema = propSchema as RJSFSchema | null;
+  } else if (path.length >= 2 && path[0] === 'settings' && schemas?.settings) {
+    // Config-level settings: ['settings', 'pixelId'] or ['settings', 'ga4', 'measurementId']
+    schema = navigateSettingsSchema(path, schemas.settings);
+  } else if (path.includes('settings') && schemas?.mapping) {
+    // Rule-level mapping settings: ['mapping', 'product', 'view', 'settings', 'track']
+    schema = navigateMappingSettingsSchema(path, schemas.mapping);
+  } else if (path.length >= 2 && path[0] === 'data' && schemas?.data) {
+    // Data transformations - schemas.data describes expected event data properties
+    // Note: This is for DATA PROPERTIES not ValueConfig transformations
+    // ValueConfig (map/loop/fn) is detected via value introspection
+    schema = schemas.data;
+  }
+
+  // Priority 1: Schema type detection for primitives (ALWAYS check schema first for primitives)
+  if (schema) {
+    // Boolean type → always use boolean pane
     if (
-      schema?.type === 'boolean' &&
+      schema.type === 'boolean' &&
       (typeof value === 'boolean' || value === undefined || value === null)
     ) {
       return 'boolean';
     }
 
     // Enum detection for string/number values
-    if (schema?.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
+    if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
       // Value is primitive and schema defines enum → use enum pane
       if (
         typeof value === 'string' ||
@@ -322,19 +392,37 @@ export function detectNodeType(
         return 'enum';
       }
     }
-  }
 
-  // Priority 2: Value introspection (most reliable for complex types)
-  if (value !== undefined && value !== null) {
-    return detectFromValue(value);
-  }
-
-  // Priority 3: JSON Schema detection (for undefined settings)
-  if (schemas?.mapping && path.includes('settings')) {
-    const schema = navigateJsonSchema(path, schemas.mapping);
-    if (schema) {
+    // String/Number primitives with schema → use schema-driven editor
+    // This ensures string fields like 'pixelId' use proper string input, not valueType tiles
+    if (
+      (schema.type === 'string' || schema.type === 'number') &&
+      (typeof value === 'string' ||
+        typeof value === 'number' ||
+        value === undefined ||
+        value === null)
+    ) {
       return detectFromJsonSchema(schema);
     }
+  }
+
+  // Priority 2: Value introspection (for complex types like map, loop, fn, etc.)
+  if (value !== undefined && value !== null) {
+    const detectedType = detectFromValue(value);
+    // If value is a primitive but we have a schema, prefer schema detection
+    // This prevents string values from showing valueType tiles when schema exists
+    if (
+      schema &&
+      (detectedType === 'valueType' || detectedType === 'boolean')
+    ) {
+      return detectFromJsonSchema(schema);
+    }
+    return detectedType;
+  }
+
+  // Priority 3: JSON Schema detection (for undefined values or when value detection unclear)
+  if (schema) {
+    return detectFromJsonSchema(schema);
   }
 
   // Priority 4: Default fallback

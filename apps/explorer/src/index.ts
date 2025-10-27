@@ -20,11 +20,18 @@ export { CodeBox } from './components/organisms/code-box';
 export { CollectorBox } from './components/organisms/collector-box';
 export { BrowserBox } from './components/organisms/browser-box';
 export { MappingEditorTabs } from './components/organisms/mapping-editor-tabs';
+export { DestinationBox } from './components/organisms/destination-box';
 export type { LiveCodeProps } from './components/organisms/live-code';
 export type { CodeBoxProps } from './components/organisms/code-box';
 export type { CollectorBoxProps } from './components/organisms/collector-box';
 export type { BrowserBoxProps } from './components/organisms/browser-box';
 export type { MappingEditorTabsProps } from './components/organisms/mapping-editor-tabs';
+export type {
+  DestinationBoxProps,
+  DestinationConfig,
+  DestinationSchemas,
+  DestinationBoxSections,
+} from './components/organisms/destination-box';
 
 // Molecules
 export { Preview } from './components/molecules/preview';

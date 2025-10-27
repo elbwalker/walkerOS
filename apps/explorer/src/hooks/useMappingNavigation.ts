@@ -12,8 +12,11 @@ export type NodeType =
   | 'batch'
   | 'policy'
   | 'consent'
+  | 'settings' // Config-level settings overview
+  | 'options' // Config-level options (loadScript, queue, etc.)
   | 'valueConfig'
   | 'valueType'
+  | 'primitive' // Schema-defined string/number primitives (no ValueConfig conversion)
   | 'map'
   | 'loop'
   | 'set'

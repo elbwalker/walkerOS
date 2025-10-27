@@ -16,10 +16,65 @@ import { MappingLoopPaneView } from './mapping-loop-pane-view';
 import { MappingMapPaneViewRJSF } from './mapping-map-pane-view-rjsf';
 import { MappingEnumPaneView } from './mapping-enum-pane-view';
 import { MappingBooleanPaneView } from './mapping-boolean-pane-view';
+import { MappingPrimitivePaneView } from './mapping-primitive-pane-view';
+import { SettingsOverviewPane } from './settings-overview-pane';
 import type { NodeType } from '../../hooks/useMappingNavigation';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import type { DestinationSchemas } from '../organisms/mapping-box';
+import type { RJSFSchema, UiSchema } from '@rjsf/utils';
+import {
+  navigateSettingsSchema,
+  navigateMappingSettingsSchema,
+} from '../../utils/type-detector';
+
+/**
+ * Get JSON Schema for a given path
+ */
+function getSchemaForPath(
+  path: string[],
+  schemas?: DestinationSchemas,
+): RJSFSchema | undefined {
+  if (!schemas) return undefined;
+
+  // Config-level settings: ['settings', 'pixelId']
+  if (path.length >= 2 && path[0] === 'settings' && schemas.settings) {
+    return navigateSettingsSchema(path, schemas.settings) || undefined;
+  }
+
+  // Rule-level mapping settings: ['mapping', 'product', 'view', 'settings', 'track']
+  if (path.includes('settings') && schemas.mapping) {
+    return navigateMappingSettingsSchema(path, schemas.mapping) || undefined;
+  }
+
+  return undefined;
+}
+
+/**
+ * Get UI Schema for a given path
+ */
+function getUiSchemaForPath(
+  path: string[],
+  schemas?: DestinationSchemas,
+): UiSchema | undefined {
+  if (!schemas) return undefined;
+
+  // Config-level settings UI schema
+  if (path.length >= 2 && path[0] === 'settings' && schemas.settingsUi) {
+    // Navigate to the property in UI schema
+    const propertyKey = path[path.length - 1];
+    return schemas.settingsUi[propertyKey];
+  }
+
+  // Rule-level mapping settings UI schema
+  if (path.includes('settings') && schemas.mappingUi) {
+    // Navigate to the property in UI schema
+    const propertyKey = path[path.length - 1];
+    return schemas.mappingUi[propertyKey];
+  }
+
+  return undefined;
+}
 
 /**
  * Mapping Pane Router - Pure Presentation Component
@@ -236,6 +291,18 @@ export function MappingPane({
           className={className}
         />
       );
+    case 'primitive':
+      // MappingPrimitivePaneView for schema-defined string/number primitives
+      return (
+        <MappingPrimitivePaneView
+          path={path}
+          mappingState={mappingState}
+          navigation={navigation}
+          schema={getSchemaForPath(path, schemas)}
+          uiSchema={getUiSchemaForPath(path, schemas)}
+          className={className}
+        />
+      );
 
     case 'set':
       // MappingSetPaneView uses standard .elb-mapping-pane structure
@@ -266,6 +333,18 @@ export function MappingPane({
           mappingState={mappingState}
           navigation={navigation}
           schemas={schemas}
+          className={className}
+        />
+      );
+
+    case 'settings':
+      // SettingsOverviewPane shows config-level settings as tiles
+      return (
+        <SettingsOverviewPane
+          path={path}
+          mappingState={mappingState}
+          navigation={navigation}
+          schema={schemas?.settings}
           className={className}
         />
       );

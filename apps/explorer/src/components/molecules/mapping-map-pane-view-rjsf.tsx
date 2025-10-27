@@ -62,8 +62,21 @@ export function MappingMapPaneViewRJSF({
   schemas,
   className = '',
 }: MappingMapPaneViewRJSFProps) {
+  // Determine the actual map path
+  // If path points to a ValueConfig container (value has 'map' property),
+  // we need to append 'map' to get to the actual map contents
+  const value = mappingState.actions.getValue(path);
+  const isValueConfigContainer =
+    value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    'map' in value;
+
+  // Actual path to the map object
+  const mapPath = isValueConfigContainer ? [...path, 'map'] : path;
+
   // Get current map value
-  const mapValue = mappingState.actions.getValue(path);
+  const mapValue = mappingState.actions.getValue(mapPath);
   const map =
     mapValue && typeof mapValue === 'object' && !Array.isArray(mapValue)
       ? (mapValue as Record<string, unknown>)
@@ -141,23 +154,24 @@ export function MappingMapPaneViewRJSF({
   };
 
   // Form context - provides navigation and state to widget
+  // Use mapPath so child navigation works correctly
   const formContext = {
     navigation,
     mappingState,
-    path,
+    path: mapPath,
   };
 
   // Handle changes from widget
   const handleChange = (newValue: unknown) => {
     if (newValue && typeof newValue === 'object' && !Array.isArray(newValue)) {
-      mappingState.actions.setValue(path, newValue);
+      mappingState.actions.setValue(mapPath, newValue);
     } else if (
       newValue === null ||
       newValue === undefined ||
       (typeof newValue === 'object' && Object.keys(newValue).length === 0)
     ) {
       // Handle empty object or deletion
-      mappingState.actions.deleteValue(path);
+      mappingState.actions.deleteValue(mapPath);
     }
   };
 

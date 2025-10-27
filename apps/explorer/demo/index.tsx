@@ -81,6 +81,14 @@ const App = () => {
             Grouped Component Demos
           </h2>
           <div className="demo-grid">
+            <a href="/destination-box-demo.html" className="demo-card">
+              <h3 className="demo-card-title">DestinationBox</h3>
+              <p className="demo-card-description">
+                Complete destination configuration editor with settings,
+                mapping, data, policy, consent, and options
+              </p>
+            </a>
+
             <a href="/mapping-box-demo.html" className="demo-card">
               <h3 className="demo-card-title">MappingBox</h3>
               <p className="demo-card-description">
