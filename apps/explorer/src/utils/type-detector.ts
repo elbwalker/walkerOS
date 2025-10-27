@@ -45,7 +45,7 @@ export function detectFromValue(value: unknown): NodeType {
     return 'valueType';
   }
 
-  // Primitives → valueType
+  // Primitives
   if (typeof value === 'string') {
     return 'valueType';
   }
@@ -53,7 +53,7 @@ export function detectFromValue(value: unknown): NodeType {
     return 'valueType';
   }
   if (typeof value === 'boolean') {
-    return 'valueType';
+    return 'boolean'; // Boolean primitives use toggle pane
   }
 
   // Arrays → distinguish loop from set

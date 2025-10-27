@@ -18,9 +18,9 @@ describe('detectFromValue', () => {
       expect(detectFromValue(0)).toBe('valueType');
     });
 
-    it('detects boolean as valueType', () => {
-      expect(detectFromValue(true)).toBe('valueType');
-      expect(detectFromValue(false)).toBe('valueType');
+    it('detects boolean as boolean', () => {
+      expect(detectFromValue(true)).toBe('boolean');
+      expect(detectFromValue(false)).toBe('boolean');
     });
 
     it('detects null/undefined as valueType', () => {

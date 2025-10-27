@@ -63,10 +63,9 @@ function getNodeTypeFromPath(
     const propertyName = path[2];
     if (propertyName === 'name') return 'name';
     if (propertyName === 'batch') return 'batch';
-    if (propertyName === 'ignore') return 'ignore';
     if (propertyName === 'consent') return 'consent';
 
-    // For data, settings, condition, etc. - use universal type detection
+    // For data, settings, condition, ignore, etc. - use universal type detection
     // Fall through to three-tier detection below
   }
 

@@ -10,7 +10,6 @@ import { MappingFnPaneView } from './mapping-fn-pane-view';
 import { MappingValidatePaneView } from './mapping-validate-pane-view';
 import { MappingNamePaneView } from './mapping-name-pane-view';
 import { MappingBatchPaneView } from './mapping-batch-pane-view';
-import { MappingIgnorePaneView } from './mapping-ignore-pane-view';
 import { MappingConsentPaneView } from './mapping-consent-pane-view';
 import { MappingSetPaneView } from './mapping-set-pane-view';
 import { MappingLoopPaneView } from './mapping-loop-pane-view';
@@ -34,7 +33,6 @@ import type { DestinationSchemas } from '../organisms/mapping-box';
  * - 'policy' → MappingPolicyOverviewPane - Shows list of policy rules with badges
  * - 'name' → MappingNamePaneView - Simple string input for event name override
  * - 'batch' → MappingBatchPaneView - Number input for batch size configuration
- * - 'ignore' → MappingIgnorePaneView - Boolean toggle to ignore rule
  * - 'consent' → MappingConsentPaneView - Consent state tiles with discovery
  * - 'valueConfig' → MappingValueConfigPaneView - Full ValueConfig editor
  * - 'valueType' → MappingValueTypePaneView - String or ValueConfig editor (replaces old property/type-grid)
@@ -121,17 +119,6 @@ export function MappingPane({
       // MappingBatchPaneView uses standard .elb-mapping-pane structure
       return (
         <MappingBatchPaneView
-          path={path}
-          mappingState={mappingState}
-          navigation={navigation}
-          className={className}
-        />
-      );
-
-    case 'ignore':
-      // MappingIgnorePaneView uses standard .elb-mapping-pane structure
-      return (
-        <MappingIgnorePaneView
           path={path}
           mappingState={mappingState}
           navigation={navigation}

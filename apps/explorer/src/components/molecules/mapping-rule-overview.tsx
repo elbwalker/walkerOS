@@ -181,8 +181,8 @@ export function MappingRuleOverview({
       // Batch is a number - use dedicated batch pane
       navigation.openTab([...path, key], 'batch');
     } else if (key === 'ignore') {
-      // Ignore is a boolean - use dedicated ignore pane
-      navigation.openTab([...path, key], 'ignore');
+      // Ignore is a boolean - use boolean pane (auto-detected)
+      navigation.openTab([...path, key], 'boolean');
     } else if (key === 'condition') {
       // Condition is a function - use dedicated condition pane
       navigation.openTab([...path, key], 'condition');
