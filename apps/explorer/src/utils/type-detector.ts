@@ -1,6 +1,10 @@
 import type { NodeType } from '../hooks/useMappingNavigation';
 import type { RJSFSchema } from '@rjsf/utils';
 import type { DestinationSchemas } from '../components/organisms/mapping-box';
+import type {
+  ConfigStructureDef,
+  PropertyDef,
+} from '../schemas/config-structures/types';
 import { destinationConfigStructureSchema } from '../schemas/destination-config-structure';
 
 /**
@@ -456,4 +460,167 @@ export function getValueAtPath(
   }
 
   return current;
+}
+
+/**
+ * Structure-aware type detection (for generic ConfigEditor)
+ *
+ * Enhanced detection that uses ConfigStructureDef to determine NodeTypes.
+ * This allows the same editor to work at any depth with any config type.
+ *
+ * Detection Strategy:
+ * 1. Check structure definition for explicit nodeType
+ * 2. Handle special patterns (entity-action)
+ * 3. Fall back to schema-driven detection
+ * 4. Fall back to value introspection
+ *
+ * @param value - The value to inspect
+ * @param path - Path to the value
+ * @param structure - Structure definition for the config
+ * @param schemas - Optional JSON schemas bundle
+ * @returns Appropriate NodeType for editing
+ *
+ * @example
+ * // With structure definition
+ * const nodeType = detectNodeTypeWithStructure(
+ *   value,
+ *   ['settings', 'pixelId'],
+ *   DESTINATION_CONFIG_STRUCTURE,
+ *   { settings: pixelIdSchema }
+ * );
+ */
+export function detectNodeTypeWithStructure(
+  value: unknown,
+  path: string[],
+  structure: ConfigStructureDef,
+  schemas?: Record<string, RJSFSchema>,
+): NodeType {
+  // Empty path → use structure root type
+  if (path.length === 0) {
+    return structure.rootNodeType || 'entity';
+  }
+
+  // Navigate structure definition to find property
+  let currentStructure = structure;
+  let propertyDef: PropertyDef | undefined;
+
+  for (let i = 0; i < path.length; i++) {
+    const segment = path[i];
+    propertyDef = currentStructure.properties?.[segment];
+
+    if (!propertyDef) break;
+
+    // If property has nested structure, continue navigating
+    if (propertyDef.structure) {
+      currentStructure = propertyDef.structure;
+    }
+  }
+
+  // Priority 1: Explicit nodeType in structure definition
+  if (propertyDef?.nodeType) {
+    return propertyDef.nodeType;
+  }
+
+  // Priority 2: Handle entity-action pattern
+  if (propertyDef?.children === 'entity-action') {
+    // Determine depth in entity-action hierarchy
+    const baseDepth = path.length - 1; // Depth of mapping property itself
+    const relativeDepth = path.length - baseDepth;
+
+    if (relativeDepth === 1) return 'entity'; // mapping.{entity}
+    if (relativeDepth === 2) return 'rule'; // mapping.{entity}.{action}
+
+    // Deeper: check for special rule properties
+    if (relativeDepth >= 3) {
+      const propertyName = path[path.length - 1];
+      if (propertyName === 'name') return 'name';
+      if (propertyName === 'batch') return 'batch';
+      if (propertyName === 'consent') return 'consent';
+      if (propertyName === 'condition') return 'condition';
+      if (propertyName === 'ignore') return 'boolean';
+    }
+  }
+
+  // Priority 3: Schema-driven detection
+  const schema = getSchemaForPathFromBundle(path, propertyDef, schemas);
+  if (schema) {
+    // Check schema type for primitives
+    if (
+      schema.type === 'boolean' &&
+      (typeof value === 'boolean' || value === undefined || value === null)
+    ) {
+      return 'boolean';
+    }
+
+    if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
+      if (
+        typeof value === 'string' ||
+        typeof value === 'number' ||
+        value === undefined ||
+        value === null
+      ) {
+        return 'enum';
+      }
+    }
+
+    if (
+      (schema.type === 'string' || schema.type === 'number') &&
+      (typeof value === 'string' ||
+        typeof value === 'number' ||
+        value === undefined ||
+        value === null)
+    ) {
+      return detectFromJsonSchema(schema);
+    }
+  }
+
+  // Priority 4: Value introspection
+  if (value !== undefined && value !== null) {
+    const detectedType = detectFromValue(value);
+    if (
+      schema &&
+      (detectedType === 'valueType' || detectedType === 'boolean')
+    ) {
+      return detectFromJsonSchema(schema);
+    }
+    return detectedType;
+  }
+
+  // Priority 5: JSON Schema fallback
+  if (schema) {
+    return detectFromJsonSchema(schema);
+  }
+
+  // Priority 6: Default
+  return 'valueType';
+}
+
+/**
+ * Get schema for a path from schemas bundle
+ *
+ * Helper for structure-aware detection.
+ *
+ * @param path - Path array
+ * @param propertyDef - Property definition with schemaPath
+ * @param schemas - Schemas bundle
+ * @returns JSON Schema or undefined
+ */
+function getSchemaForPathFromBundle(
+  path: string[],
+  propertyDef: PropertyDef | undefined,
+  schemas?: Record<string, RJSFSchema>,
+): RJSFSchema | undefined {
+  if (!schemas || !propertyDef) return undefined;
+
+  const schemaPath = propertyDef.schemaPath;
+  if (!schemaPath) return undefined;
+
+  // Get schema from bundle
+  const schema = schemas[schemaPath];
+  if (!schema) return undefined;
+
+  // If path has more segments, try to navigate schema
+  // For now, return top-level schema
+  // TODO: Could add schema navigation here if needed
+  return schema;
 }
