@@ -111,6 +111,14 @@ const App = () => {
                 generation
               </p>
             </a>
+
+            <a href="/visual_editor.html" className="demo-card">
+              <h3 className="demo-card-title">Visual Editor (Generic)</h3>
+              <p className="demo-card-description">
+                Generic ConfigEditor component working at any depth - full
+                DestinationConfig and deep nested rule editing
+              </p>
+            </a>
           </div>
         </section>
       </div>

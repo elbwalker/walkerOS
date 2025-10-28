@@ -530,14 +530,20 @@ export function detectNodeTypeWithStructure(
     if (relativeDepth === 1) return 'entity'; // mapping.{entity}
     if (relativeDepth === 2) return 'rule'; // mapping.{entity}.{action}
 
-    // Deeper: check for special rule properties
+    // Deeper than rule level: check for rule properties using MAPPING_RULE_STRUCTURE
     if (relativeDepth >= 3) {
-      const propertyName = path[path.length - 1];
-      if (propertyName === 'name') return 'name';
-      if (propertyName === 'batch') return 'batch';
-      if (propertyName === 'consent') return 'consent';
-      if (propertyName === 'condition') return 'condition';
-      if (propertyName === 'ignore') return 'boolean';
+      // Import MAPPING_RULE_STRUCTURE inline to avoid circular deps
+      // Path segment after the rule: e.g., 'settings', 'name', 'batch'
+      const rulePropertySegmentIndex = baseDepth + 2; // Index of first property after entity.action
+      const rulePropertyPath = path.slice(rulePropertySegmentIndex);
+
+      // Try to navigate MAPPING_RULE_STRUCTURE for rule properties
+      // This handles: name, batch, settings, data, consent, condition, ignore, policy
+      if (rulePropertyPath.length > 0) {
+        // Use the same MAPPING_RULE_STRUCTURE that tree building uses
+        // We can't import it here to avoid circular deps, so we'll fall through to schema detection
+        // The schema-driven detection below will handle it
+      }
     }
   }
 
@@ -610,7 +616,22 @@ function getSchemaForPathFromBundle(
   propertyDef: PropertyDef | undefined,
   schemas?: Record<string, RJSFSchema>,
 ): RJSFSchema | undefined {
-  if (!schemas || !propertyDef) return undefined;
+  if (!schemas) return undefined;
+
+  // If no propertyDef, try generic path-based schema navigation
+  if (!propertyDef) {
+    // Config-level settings: ['settings', 'pixelId']
+    if (path.length >= 2 && path[0] === 'settings' && schemas.settings) {
+      return navigateSettingsSchema(path, schemas.settings) || undefined;
+    }
+
+    // Rule-level mapping settings: ['mapping', 'product', 'view', 'settings', 'track']
+    if (path.includes('settings') && schemas.mapping) {
+      return navigateMappingSettingsSchema(path, schemas.mapping) || undefined;
+    }
+
+    return undefined;
+  }
 
   const schemaPath = propertyDef.schemaPath;
   if (!schemaPath) return undefined;
@@ -619,8 +640,19 @@ function getSchemaForPathFromBundle(
   const schema = schemas[schemaPath];
   if (!schema) return undefined;
 
-  // If path has more segments, try to navigate schema
-  // For now, return top-level schema
-  // TODO: Could add schema navigation here if needed
+  // Navigate nested schema if this is a schema-driven property with children
+  if (propertyDef.children === 'schema-driven' && path.length >= 2) {
+    // The propertyDef is for the parent (e.g., 'settings')
+    // We need to navigate to the child property (e.g., 'track')
+    // Use the existing navigation utilities
+    if (path.includes('settings') && schemaPath === 'mapping') {
+      // Rule-level settings path
+      return navigateMappingSettingsSchema(path, schema) || undefined;
+    } else if (path[0] === 'settings' && schemaPath === 'settings') {
+      // Config-level settings path
+      return navigateSettingsSchema(path, schema) || undefined;
+    }
+  }
+
   return schema;
 }
