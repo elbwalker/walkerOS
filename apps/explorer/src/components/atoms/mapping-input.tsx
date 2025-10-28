@@ -12,6 +12,7 @@ export interface MappingInputProps {
   title?: string;
   className?: string;
   autoFocus?: boolean;
+  error?: boolean;
 }
 
 /**
@@ -23,6 +24,7 @@ export interface MappingInputProps {
  * - Monospace font for property paths and values
  * - Hover and focus states
  * - Optional disabled state with visual feedback
+ * - Optional error state with visual feedback (red border/background)
  * - Type support for text and number inputs
  *
  * Used by:
@@ -30,12 +32,14 @@ export interface MappingInputProps {
  * - Entity pane (action name input)
  * - Batch pane (number input)
  * - ValueType pane (quick value string)
+ * - Primitive pane (schema-validated inputs)
  *
  * @example
  * <MappingInput
  *   value={name}
  *   onChange={setName}
  *   placeholder="e.g., page_view"
+ *   error={!isValid}
  * />
  */
 export function MappingInput({
@@ -50,6 +54,7 @@ export function MappingInput({
   title,
   className = '',
   autoFocus = false,
+  error = false,
 }: MappingInputProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
@@ -58,7 +63,7 @@ export function MappingInput({
   return (
     <input
       type={type}
-      className={`elb-mapping-input ${disabled ? 'is-disabled' : ''} ${className}`}
+      className={`elb-mapping-input ${disabled ? 'is-disabled' : ''} ${error ? 'is-error' : ''} ${className}`}
       value={value}
       onChange={handleChange}
       onBlur={onBlur}

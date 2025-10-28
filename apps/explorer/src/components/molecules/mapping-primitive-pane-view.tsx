@@ -3,6 +3,7 @@ import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { MappingInput } from '../atoms/mapping-input';
+import { validateValue } from '../../utils/schema-validation';
 
 /**
  * Primitive Pane View - Schema-driven editor for primitive values
@@ -11,15 +12,16 @@ import { MappingInput } from '../atoms/mapping-input';
  * - String fields (with pattern, minLength, maxLength validation)
  * - Number fields (with min, max validation)
  * - Schema-based hints and placeholders
+ * - Real-time validation with error highlighting
  *
  * Examples:
- * - settings.pixelId: string with pattern validation
+ * - settings.pixelId: string with pattern validation (must be all digits)
  * - settings.timeout: number with min/max
  * - settings.apiKey: string with minLength
  *
  * Benefits over generic valueType pane:
  * - No confusing ValueConfig conversion tiles
- * - Schema validation hints
+ * - Schema validation with visual feedback
  * - Clean, consistent styling
  */
 export interface MappingPrimitivePaneViewProps {
@@ -103,6 +105,10 @@ export function MappingPrimitivePaneView({
     if (parts.length > 0) hints.push(`Range: ${parts.join(' - ')}`);
   }
 
+  // Validate current value against schema
+  const validationResult = validateValue(value, schema);
+  const hasError = !validationResult.valid;
+
   // Current type indicator
   const currentType =
     value === null ? 'null' : value === undefined ? 'undefined' : typeof value;
@@ -121,6 +127,7 @@ export function MappingPrimitivePaneView({
           placeholder={placeholder}
           type={isNumber ? 'number' : 'text'}
           autoFocus
+          error={hasError}
         />
         <div className="elb-mapping-pane-hint">
           Current type: <strong>{currentType}</strong>
@@ -134,6 +141,14 @@ export function MappingPrimitivePaneView({
             <>
               <br />
               {uiSchema['ui:help']}
+            </>
+          )}
+          {hasError && validationResult.error && (
+            <>
+              <br />
+              <span style={{ color: 'var(--color-button-danger)' }}>
+                ⚠ {validationResult.error}
+              </span>
             </>
           )}
         </div>
