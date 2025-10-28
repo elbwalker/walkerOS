@@ -11,7 +11,7 @@ import { useTreeState } from '../../hooks/useTreeState';
 import { MappingNavigationHeader } from '../molecules/mapping-navigation-header';
 import { ConfigTreeSidebar } from '../molecules/config-tree-sidebar';
 import { MappingPane } from '../molecules/mapping-pane';
-import { MappingOverviewPane } from '../molecules/mapping-overview-pane';
+import { DestinationConfigOverviewPane } from '../molecules/destination-config-overview-pane';
 import { CodeBox } from '../organisms/code-box';
 import type { Destination, Mapping } from '@walkeros/core';
 import { getValueAtPath } from '../../utils/mapping-path';
@@ -377,9 +377,10 @@ export function DestinationEditorTabs<
               schemas={schemas}
             />
           ) : (
-            <MappingOverviewPane
+            <DestinationConfigOverviewPane
               mappingState={mappingState}
               navigation={navigation}
+              schemas={schemas}
             />
           )}
         </div>

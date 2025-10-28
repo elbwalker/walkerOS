@@ -136,7 +136,7 @@ export function SettingsOverviewPane({
       navigation={navigation}
       className={className}
     >
-      <div className="elb-rule-overview-grid">
+      <div className="elb-mapping-rule-section-grid">
         {/* Configured settings */}
         {configuredSettings.map((setting) => (
           <RuleTile
@@ -147,15 +147,16 @@ export function SettingsOverviewPane({
             onClick={() => handleSettingClick(setting.key, setting.nodeType)}
           />
         ))}
+      </div>
 
-        {/* Available settings (from schema) */}
-        {availableSettings.length > 0 && (
-          <>
-            {configuredSettings.length > 0 && (
-              <div className="elb-rule-overview-divider">
-                Available Settings
-              </div>
-            )}
+      {/* Available settings (from schema) */}
+      {availableSettings.length > 0 && (
+        <div className="elb-mapping-rule-section">
+          <h3 className="elb-mapping-rule-section-title">Available Settings</h3>
+          <p className="elb-mapping-rule-section-description">
+            Click to configure additional destination settings
+          </p>
+          <div className="elb-mapping-rule-section-grid">
             {availableSettings.map((setting) => (
               <RuleTile
                 key={setting.key}
@@ -167,9 +168,9 @@ export function SettingsOverviewPane({
                 }
               />
             ))}
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </BaseMappingPane>
   );
 }
