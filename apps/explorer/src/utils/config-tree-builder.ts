@@ -25,20 +25,20 @@ export interface ConfigTreeNode {
 }
 
 /**
- * Build tree structure for destination config - FULLY SCHEMA-DRIVEN
+ * Build tree structure for destination config - CONFIG-DRIVEN
  *
- * Uses destinationConfigStructureSchema to dynamically generate tree
- * based on actual config structure, not hardcoded sections.
+ * Builds tree from actual config values only (not schema possibilities).
+ * Tree reflects what's in the JSON, just like MappingBox behavior.
  *
  * Strategy:
- * 1. Iterate through destinationConfigStructureSchema.properties
- * 2. For each property, check if value exists in config
- * 3. Build node with label from schema.title
- * 4. Determine NodeType using getRootPropertyNodeType() or universal detection
- * 5. Build children for complex types (settings, mapping)
+ * 1. Iterate through actual config keys (not schema)
+ * 2. Build node with label from schema.title (if available) or capitalized key
+ * 3. Determine NodeType using getRootPropertyNodeType() or universal detection
+ * 4. Build children for complex types (settings, mapping) from actual values
+ * 5. When property is deleted, it disappears from tree
  *
  * @param config - Full destination config
- * @param schemas - Destination schemas for property discovery
+ * @param schemas - Destination schemas for labels/metadata
  * @param sections - Which sections to show (for filtering)
  * @returns Array of root-level tree nodes
  */
@@ -56,21 +56,22 @@ export function buildConfigTree<
     return nodes;
   }
 
-  // Iterate through schema properties to build tree dynamically
-  const propertyKeys = Object.keys(structureSchema.properties);
+  // Iterate through actual config keys to build tree from real data
+  const configKeys = Object.keys(config).filter(
+    (key) => config[key as keyof typeof config] !== undefined,
+  );
 
-  for (const key of propertyKeys) {
+  for (const key of configKeys) {
     // Check if this section is enabled (for known sections only)
     const sectionKey = key as keyof DestinationBoxSections;
     if (sections[sectionKey] === false) {
       continue;
     }
 
-    const propertySchema = structureSchema.properties[key] as RJSFSchema;
+    const propertySchema = structureSchema.properties[key] as
+      | RJSFSchema
+      | undefined;
     const configValue = (config as any)[key];
-
-    // Determine if property has a value
-    const hasValue = configValue !== undefined && configValue !== null;
 
     // Get NodeType for this property
     const nodeType =
@@ -79,27 +80,27 @@ export function buildConfigTree<
     // Build node based on property type
     const node: ConfigTreeNode = {
       key,
-      label: propertySchema.title || capitalize(key),
+      label: propertySchema?.title || capitalize(key),
       path: [key],
       type: nodeType,
-      hasValue,
+      hasValue: true,
     };
 
     // Build children for complex types
-    if (key === 'settings' && hasValue) {
-      // Settings: build children from actual config or schema
+    if (key === 'settings' && configValue) {
+      // Settings: build children from actual config values only
       node.children = buildSettingsChildren(
         configValue as Record<string, unknown>,
         schemas?.settings,
       );
       node.isExpandable = node.children.length > 0;
-    } else if (key === 'mapping' && hasValue) {
-      // Mapping: build entity → action hierarchy
+    } else if (key === 'mapping' && configValue) {
+      // Mapping: build entity → action hierarchy from actual values
       node.children = buildMappingChildren(
         configValue as Record<string, Record<string, unknown>>,
       );
       node.isExpandable = node.children.length > 0;
-    } else if (propertySchema.type === 'object' && hasValue) {
+    } else if (propertySchema?.type === 'object' && configValue) {
       // Other objects (policy, consent): don't build children, open as pane
       node.isExpandable = false;
     } else {
@@ -114,7 +115,7 @@ export function buildConfigTree<
 }
 
 /**
- * Build children nodes for settings
+ * Build children nodes for settings - only show actual values
  */
 function buildSettingsChildren(
   settings: Record<string, unknown>,
@@ -122,32 +123,20 @@ function buildSettingsChildren(
 ): ConfigTreeNode[] {
   const children: ConfigTreeNode[] = [];
 
-  if (settings) {
-    // Build from actual config values
-    Object.keys(settings).forEach((key) => {
+  // Only build from actual config values
+  Object.keys(settings)
+    .filter((key) => settings[key] !== undefined)
+    .forEach((key) => {
+      const propSchema = schema?.properties?.[key] as RJSFSchema | undefined;
       children.push({
         key,
-        label: capitalize(key),
+        label: propSchema?.title || capitalize(key),
         path: ['settings', key],
         type: 'valueConfig',
-        hasValue: settings[key] !== undefined,
+        hasValue: true,
         isExpandable: false,
       });
     });
-  } else if (schema?.properties) {
-    // Build from schema (show available properties even if not configured)
-    Object.keys(schema.properties).forEach((key) => {
-      const propSchema = schema.properties![key] as RJSFSchema;
-      children.push({
-        key,
-        label: propSchema.title || capitalize(key),
-        path: ['settings', key],
-        type: 'valueConfig',
-        hasValue: false,
-        isExpandable: false,
-      });
-    });
-  }
 
   return children;
 }
