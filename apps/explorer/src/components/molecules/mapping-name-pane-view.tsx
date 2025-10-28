@@ -1,27 +1,35 @@
 import React from 'react';
+import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 import type { UseMappingStateReturn } from '../../hooks/useMappingState';
 import type { UseMappingNavigationReturn } from '../../hooks/useMappingNavigation';
 import { BaseMappingPane } from '../atoms/base-mapping-pane';
 import { MappingInput } from '../atoms/mapping-input';
+import { validateValue } from '../../utils/schema-validation';
 
 export interface MappingNamePaneViewProps {
   path: string[];
   mappingState: UseMappingStateReturn;
   navigation: UseMappingNavigationReturn;
+  schema?: RJSFSchema;
+  uiSchema?: UiSchema;
   className?: string;
 }
 
 /**
- * Name Pane - Simple string input for rule name override
+ * Name Pane - Text input with schema validation for rule name override
  *
  * The name property is a simple string that overrides the destination event name.
  * From packages/core/src/types/mapping.ts:
  *   name?: string;  // Use a custom event name
+ *
+ * Uses type="text" with schema validation (minLength, maxLength, pattern)
  */
 export function MappingNamePaneView({
   path,
   mappingState,
   navigation,
+  schema,
+  uiSchema,
   className = '',
 }: MappingNamePaneViewProps) {
   const value = mappingState.actions.getValue(path);
@@ -36,10 +44,23 @@ export function MappingNamePaneView({
     }
   };
 
+  // Validate current value
+  const validationResult = validateValue(value, schema);
+  const hasError = !validationResult.valid;
+
+  // Get title and description from schema or use defaults
+  const title = schema?.title || 'Event Name Override';
+  const description =
+    schema?.description ||
+    'Override the destination event name with a custom string';
+  const placeholder =
+    uiSchema?.['ui:placeholder'] ||
+    'e.g., page_view, product_click, order_complete';
+
   return (
     <BaseMappingPane
-      title="Event Name Override"
-      description="Override the destination event name with a custom string"
+      title={title}
+      description={description}
       navigation={navigation}
       className={className}
     >
@@ -47,11 +68,21 @@ export function MappingNamePaneView({
         <MappingInput
           value={nameValue}
           onChange={handleChange}
-          placeholder="e.g., page_view, product_click, order_complete"
+          placeholder={placeholder}
+          type="text"
+          error={hasError}
         />
         <div className="elb-mapping-pane-hint">
-          This string will be sent to the destination instead of the default
-          entity-action name. Leave empty to use default.
+          {uiSchema?.['ui:help'] ||
+            'This string will be sent to the destination instead of the default entity-action name. Leave empty to use default.'}
+          {hasError && validationResult.error && (
+            <>
+              <br />
+              <span style={{ color: 'var(--color-button-danger)' }}>
+                ⚠ {validationResult.error}
+              </span>
+            </>
+          )}
         </div>
       </div>
 

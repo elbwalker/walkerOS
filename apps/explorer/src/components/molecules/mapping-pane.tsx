@@ -27,6 +27,10 @@ import {
   navigateSettingsSchema,
   navigateMappingSettingsSchema,
 } from '../../utils/type-detector';
+import {
+  getRulePropertySchema,
+  getRulePropertyUiSchema,
+} from '../../schemas/rule-properties-schema';
 
 /**
  * Get JSON Schema for a given path
@@ -35,16 +39,22 @@ function getSchemaForPath(
   path: string[],
   schemas?: DestinationSchemas,
 ): RJSFSchema | undefined {
-  if (!schemas) return undefined;
-
   // Config-level settings: ['settings', 'pixelId']
-  if (path.length >= 2 && path[0] === 'settings' && schemas.settings) {
+  if (path.length >= 2 && path[0] === 'settings' && schemas?.settings) {
     return navigateSettingsSchema(path, schemas.settings) || undefined;
   }
 
   // Rule-level mapping settings: ['mapping', 'product', 'view', 'settings', 'track']
-  if (path.includes('settings') && schemas.mapping) {
+  if (path.includes('settings') && schemas?.mapping) {
     return navigateMappingSettingsSchema(path, schemas.mapping) || undefined;
+  }
+
+  // Universal rule properties: ['mapping', 'product', 'view', 'name']
+  // or ['product', 'view', 'name'] (legacy paths)
+  const propertyKey = path[path.length - 1];
+  const rulePropertySchema = getRulePropertySchema(propertyKey);
+  if (rulePropertySchema) {
+    return rulePropertySchema;
   }
 
   return undefined;
@@ -57,20 +67,25 @@ function getUiSchemaForPath(
   path: string[],
   schemas?: DestinationSchemas,
 ): UiSchema | undefined {
-  if (!schemas) return undefined;
-
   // Config-level settings UI schema
-  if (path.length >= 2 && path[0] === 'settings' && schemas.settingsUi) {
+  if (path.length >= 2 && path[0] === 'settings' && schemas?.settingsUi) {
     // Navigate to the property in UI schema
     const propertyKey = path[path.length - 1];
     return schemas.settingsUi[propertyKey];
   }
 
   // Rule-level mapping settings UI schema
-  if (path.includes('settings') && schemas.mappingUi) {
+  if (path.includes('settings') && schemas?.mappingUi) {
     // Navigate to the property in UI schema
     const propertyKey = path[path.length - 1];
     return schemas.mappingUi[propertyKey];
+  }
+
+  // Universal rule properties UI schema
+  const propertyKey = path[path.length - 1];
+  const rulePropertyUiSchema = getRulePropertyUiSchema(propertyKey);
+  if (rulePropertyUiSchema) {
+    return rulePropertyUiSchema;
   }
 
   return undefined;
@@ -166,6 +181,8 @@ export function MappingPane({
           path={path}
           mappingState={mappingState}
           navigation={navigation}
+          schema={getSchemaForPath(path, schemas)}
+          uiSchema={getUiSchemaForPath(path, schemas)}
           className={className}
         />
       );
@@ -177,6 +194,8 @@ export function MappingPane({
           path={path}
           mappingState={mappingState}
           navigation={navigation}
+          schema={getSchemaForPath(path, schemas)}
+          uiSchema={getUiSchemaForPath(path, schemas)}
           className={className}
         />
       );

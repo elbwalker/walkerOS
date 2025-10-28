@@ -6,23 +6,21 @@ import { MappingInput } from '../atoms/mapping-input';
 import { validateValue } from '../../utils/schema-validation';
 
 /**
- * Primitive Pane View - Schema-driven editor for primitive values
+ * Primitive Pane View - Schema-validated text input for primitive values
  *
- * Styled like the value pane but with schema validation support:
+ * Uses type="text" with schema validation to allow typing ANY value:
  * - String fields (with pattern, minLength, maxLength validation)
  * - Number fields (with min, max validation)
  * - Schema-based hints and placeholders
  * - Real-time validation with error highlighting
+ * - Allows typing invalid values to show validation errors
  *
  * Examples:
- * - settings.pixelId: string with pattern validation (must be all digits)
- * - settings.timeout: number with min/max
+ * - settings.pixelId: string with pattern validation (can type "abc123", shows error)
+ * - settings.timeout: number with min/max (can type "abc", shows error)
  * - settings.apiKey: string with minLength
  *
- * Benefits over generic valueType pane:
- * - No confusing ValueConfig conversion tiles
- * - Schema validation with visual feedback
- * - Clean, consistent styling
+ * Key: Always uses type="text" input, never type="number" to allow typing anything
  */
 export interface MappingPrimitivePaneViewProps {
   path: string[];
@@ -43,7 +41,7 @@ export function MappingPrimitivePaneView({
 }: MappingPrimitivePaneViewProps) {
   const value = mappingState.actions.getValue(path);
 
-  // Convert to string for editing (like value pane)
+  // Convert to string for editing
   const stringValue =
     value === null ? 'null' : value === undefined ? '' : String(value);
 
@@ -67,7 +65,7 @@ export function MappingPrimitivePaneView({
       }
     }
 
-    // Default to string
+    // Default to string (validation will show error if wrong type)
     mappingState.actions.setValue(path, newValue);
   };
 
@@ -77,41 +75,12 @@ export function MappingPrimitivePaneView({
     schema?.description ||
     `${isNumber ? 'Number' : 'Text'} field${schema?.pattern ? ' with validation' : ''}`;
 
-  // Get placeholder from UI schema or schema
   const placeholder =
     uiSchema?.['ui:placeholder'] || schema?.examples?.[0] || undefined;
 
-  // Build validation hints
-  const hints: string[] = [];
-
-  if (schema?.pattern) {
-    hints.push(`Pattern: ${schema.pattern}`);
-  }
-
-  if (schema?.minLength !== undefined || schema?.maxLength !== undefined) {
-    const parts: string[] = [];
-    if (schema.minLength) parts.push(`min ${schema.minLength} chars`);
-    if (schema.maxLength) parts.push(`max ${schema.maxLength} chars`);
-    if (parts.length > 0) hints.push(parts.join(', '));
-  }
-
-  if (
-    isNumber &&
-    (schema?.minimum !== undefined || schema?.maximum !== undefined)
-  ) {
-    const parts: string[] = [];
-    if (schema.minimum !== undefined) parts.push(`min ${schema.minimum}`);
-    if (schema.maximum !== undefined) parts.push(`max ${schema.maximum}`);
-    if (parts.length > 0) hints.push(`Range: ${parts.join(' - ')}`);
-  }
-
-  // Validate current value against schema
+  // Validate current value
   const validationResult = validateValue(value, schema);
   const hasError = !validationResult.valid;
-
-  // Current type indicator
-  const currentType =
-    value === null ? 'null' : value === undefined ? 'undefined' : typeof value;
 
   return (
     <BaseMappingPane
@@ -125,18 +94,12 @@ export function MappingPrimitivePaneView({
           value={stringValue}
           onChange={handleChange}
           placeholder={placeholder}
-          type={isNumber ? 'number' : 'text'}
+          type="text"
           autoFocus
           error={hasError}
         />
         <div className="elb-mapping-pane-hint">
-          Current type: <strong>{currentType}</strong>
-          {hints.length > 0 && (
-            <>
-              <br />
-              {hints.join(' • ')}
-            </>
-          )}
+          Current type: <strong>{typeof value}</strong>
           {uiSchema?.['ui:help'] && (
             <>
               <br />
