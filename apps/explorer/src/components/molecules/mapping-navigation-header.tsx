@@ -17,11 +17,13 @@ export interface MappingNavigationHeaderProps {
   showActionButton?: boolean;
   actionButtonLabel?: string;
   showDeleteButton?: boolean;
+  validationErrors?: number;
   onNavigate: (path: string[]) => void;
   onToggleTree?: () => void;
   onToggleCode?: () => void;
   onActionClick?: () => void;
   onDeleteClick?: () => void;
+  onValidationClick?: () => void;
   className?: string;
 }
 
@@ -34,11 +36,13 @@ export function MappingNavigationHeader({
   showActionButton = false,
   actionButtonLabel = '+ Add',
   showDeleteButton = false,
+  validationErrors = 0,
   onNavigate,
   onToggleTree,
   onToggleCode,
   onActionClick,
   onDeleteClick,
+  onValidationClick,
   className = '',
 }: MappingNavigationHeaderProps) {
   return (
@@ -59,6 +63,21 @@ export function MappingNavigationHeader({
         <MappingBreadcrumb segments={breadcrumb} onNavigate={onNavigate} />
 
         {paneType && <span className="elb-mapping-pane-type">{paneType}</span>}
+
+        {validationErrors > 0 && onValidationClick && (
+          <button
+            type="button"
+            className="elb-validation-warning-badge"
+            onClick={onValidationClick}
+            aria-label={`${validationErrors} validation ${validationErrors === 1 ? 'error' : 'errors'}`}
+            title={`${validationErrors} validation ${validationErrors === 1 ? 'error' : 'errors'}. Click to view.`}
+          >
+            <span className="elb-validation-warning-icon">⚠</span>
+            <span className="elb-validation-warning-count">
+              {validationErrors}
+            </span>
+          </button>
+        )}
       </div>
 
       <div className="elb-mapping-navigation-right">

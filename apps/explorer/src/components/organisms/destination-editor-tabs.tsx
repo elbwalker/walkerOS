@@ -12,6 +12,7 @@ import { MappingNavigationHeader } from '../molecules/mapping-navigation-header'
 import { ConfigTreeSidebar } from '../molecules/config-tree-sidebar';
 import { MappingPane } from '../molecules/mapping-pane';
 import { DestinationConfigOverviewPane } from '../molecules/destination-config-overview-pane';
+import { ValidationOverviewPane } from '../molecules/validation-overview-pane';
 import { CodeBox } from '../organisms/code-box';
 import type { Destination, Mapping } from '@walkeros/core';
 import { getValueAtPath } from '../../utils/mapping-path';
@@ -26,6 +27,7 @@ import {
   getRootPropertyNodeType,
   isMappingPath,
 } from '../../schemas/destination-config-structure';
+import { validateConfig } from '../../utils/config-validator';
 
 /**
  * Determines the appropriate NodeType based on path, value, and schemas
@@ -201,6 +203,13 @@ export function DestinationEditorTabs<
     [mappingState.config, schemas, sections],
   );
 
+  // Validate entire config
+  const validationErrors = useMemo(
+    () =>
+      validateConfig(mappingState.config as Record<string, unknown>, schemas),
+    [mappingState.config, schemas],
+  );
+
   // Get active tab for rendering
   const activeTab = navigation.openTabs.find(
     (tab) => tab.id === navigation.activeTabId,
@@ -326,6 +335,7 @@ export function DestinationEditorTabs<
           showCodeButton={!!activeTab}
           codeViewActive={codeViewActive}
           showDeleteButton={activeTab && activeTab.path.length > 0}
+          validationErrors={validationErrors.length}
           onNavigate={(path) => {
             if (path.length === 0) {
               navigation.closeAllTabs();
@@ -335,6 +345,9 @@ export function DestinationEditorTabs<
           }}
           onToggleTree={navigation.toggleTree}
           onToggleCode={() => setCodeViewActive(!codeViewActive)}
+          onValidationClick={() => {
+            navigation.openTab([], 'validationOverview' as NodeType);
+          }}
           onDeleteClick={() => {
             if (activeTab) {
               const path = activeTab.path;
@@ -369,13 +382,20 @@ export function DestinationEditorTabs<
               showHeader={false}
             />
           ) : activeTab ? (
-            <MappingPane
-              nodeType={activeTab.nodeType}
-              path={activeTab.path}
-              mappingState={mappingState}
-              navigation={navigation}
-              schemas={schemas}
-            />
+            activeTab.nodeType === 'validationOverview' ? (
+              <ValidationOverviewPane
+                errors={validationErrors}
+                navigation={navigation}
+              />
+            ) : (
+              <MappingPane
+                nodeType={activeTab.nodeType}
+                path={activeTab.path}
+                mappingState={mappingState}
+                navigation={navigation}
+                schemas={schemas}
+              />
+            )
           ) : (
             <DestinationConfigOverviewPane
               mappingState={mappingState}

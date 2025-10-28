@@ -14,6 +14,7 @@ export type NodeType =
   | 'consent'
   | 'settings' // Config-level settings overview
   | 'options' // Config-level options (loadScript, queue, etc.)
+  | 'validationOverview' // Validation errors overview
   | 'valueConfig'
   | 'valueType'
   | 'primitive' // Schema-defined string/number primitives (no ValueConfig conversion)

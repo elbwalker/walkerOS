@@ -121,3 +121,36 @@
     border-color: var(--border-input);
   }
 }
+
+// Validation warning badge
+.elb-validation-warning-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid var(--color-status-warning);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: 8px;
+
+  &:hover {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: var(--color-button-danger);
+    transform: scale(1.05);
+  }
+}
+
+.elb-validation-warning-icon {
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-status-warning);
+}
+
+.elb-validation-warning-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-status-warning);
+  line-height: 1;
+}
