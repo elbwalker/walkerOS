@@ -1,4 +1,4 @@
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
 import { clone, createEvent } from '@walkeros/core';
 import { examples } from '../';
@@ -16,12 +16,8 @@ describe('Server Destination BigQuery', () => {
   const credentials = { type: 'service_account', private_key: 'secret' };
 
   const mockCollector = {} as Collector.Instance;
-  const testEnv = clone(env.push);
-
-  function getMockFn(config: Partial<Config>) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (config.settings?.client || ({} as any)).mockFn;
-  }
+  let testEnv: typeof env.push;
+  let mockInsert: jest.Mock;
 
   async function getConfig(settings: Partial<Settings> = {}) {
     return (await destination.init({
@@ -37,6 +33,35 @@ describe('Server Destination BigQuery', () => {
 
     destination = jest.requireActual('../').default;
     destination.config = {};
+
+    // Create test environment with mocked BigQuery client
+    testEnv = clone(env.push);
+    mockInsert = jest.fn().mockResolvedValue(undefined);
+
+    // Override BigQuery with a mock class that has jest.fn() tracking
+    testEnv.BigQuery = class MockBigQuery {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      options: any;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      constructor(options?: any) {
+        this.options = options;
+      }
+
+      dataset(_datasetId: string) {
+        return this;
+      }
+
+      table(_tableId: string) {
+        return this;
+      }
+
+      async insert(rows: unknown[]) {
+        mockInsert('insert', rows);
+        return Promise.resolve();
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any;
   });
 
   test('init', async () => {
@@ -65,7 +90,6 @@ describe('Server Destination BigQuery', () => {
 
   test('push', async () => {
     const config = await getConfig({ projectId, bigquery: { credentials } });
-    const mockFn = getMockFn(config);
 
     await destination.push(event, {
       config,
@@ -74,7 +98,7 @@ describe('Server Destination BigQuery', () => {
       collector: mockCollector,
       env: testEnv,
     });
-    expect(mockFn).toHaveBeenCalledWith('insert', [
+    expect(mockInsert).toHaveBeenCalledWith('insert', [
       {
         timestamp: expect.any(Date),
         name: 'entity action',
@@ -104,7 +128,6 @@ describe('Server Destination BigQuery', () => {
   test('data', async () => {
     const config = await getConfig({ projectId, bigquery: { credentials } });
     const data = { foo: 'bar' };
-    const mockFn = getMockFn(config);
 
     await destination.push(event, {
       config,
@@ -113,6 +136,6 @@ describe('Server Destination BigQuery', () => {
       collector: mockCollector,
       env: testEnv,
     });
-    expect(mockFn).toHaveBeenCalledWith('insert', [{ foo: 'bar' }]);
+    expect(mockInsert).toHaveBeenCalledWith('insert', [{ foo: 'bar' }]);
   });
 });
