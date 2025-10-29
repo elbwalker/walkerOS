@@ -11,7 +11,9 @@ import type { Env } from '../types';
 const noop = () => {};
 
 /**
- * Mock BigQuery client class that simulates dataset/table operations
+ * Creates a mock BigQuery client class that records dataset, table, and insert invocations for tests.
+ *
+ * @returns A MockBigQuery class whose instances expose `calls` (array of recorded calls), `options` (constructor options), methods `dataset`, `table`, and `insert`, and a `mockFn` getter for backwards compatibility.
  */
 function createMockBigQuery() {
   return class MockBigQuery {

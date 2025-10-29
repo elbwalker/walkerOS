@@ -8,6 +8,12 @@
 import { startFlow } from '@walkeros/collector';
 import type { WalkerOS } from '@walkeros/core';
 
+/**
+ * Runs end-to-end mapping tests for the Walker OS collector and logs the observed results.
+ *
+ * Configures a console destination with destination-level mappings (product view/add and order complete with a computed tax),
+ * sends several test events to verify mapping behavior, then creates a custom source with a source-level mapping and exercises it.
+ */
 async function testMapping() {
   console.log('\n🧪 Testing walkerOS Mapping System\n');
   console.log('='.repeat(60));
