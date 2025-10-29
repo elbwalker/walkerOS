@@ -7,35 +7,40 @@ import type { Env } from '../types';
  * and development without requiring actual BigQuery SDK dependencies.
  */
 
+// Simple no-op function for mocking
+const noop = () => {};
+
 /**
  * Mock BigQuery client class that simulates dataset/table operations
  */
 function createMockBigQuery() {
   return class MockBigQuery {
-    mockFn: jest.Mock;
+    calls: Array<{ method: string; args: unknown[] }>;
     options: unknown;
 
     constructor(options?: unknown) {
       this.options = options;
-      this.mockFn = jest.fn();
-      // Expose mockFn for test assertions - needed for test access pattern
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (this as any).mockFn = this.mockFn;
+      this.calls = [];
     }
 
     dataset(datasetId: string) {
-      this.mockFn('dataset', datasetId);
+      this.calls.push({ method: 'dataset', args: [datasetId] });
       return this;
     }
 
     table(tableId: string) {
-      this.mockFn('table', tableId);
+      this.calls.push({ method: 'table', args: [tableId] });
       return this;
     }
 
     async insert(rows: unknown[]) {
-      this.mockFn('insert', rows);
+      this.calls.push({ method: 'insert', args: [rows] });
       return Promise.resolve();
+    }
+
+    // For backwards compatibility with tests that might check mockFn
+    get mockFn() {
+      return noop;
     }
   };
 }

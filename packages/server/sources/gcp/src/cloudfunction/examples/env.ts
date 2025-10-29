@@ -1,4 +1,5 @@
 import type { Env } from '../types';
+import type { Elb } from '@walkeros/core';
 
 /**
  * Example environment configurations for GCP Cloud Function source
@@ -6,6 +7,18 @@ import type { Env } from '../types';
  * These environments provide standardized mock structures for testing
  * HTTP request handling without requiring actual cloud function deployment.
  */
+
+// Create a properly typed elb/push/command function that returns a promise with PushResult
+const createMockElbFn = (): Elb.Fn => {
+  const fn = (() =>
+    Promise.resolve({
+      ok: true,
+      successful: [],
+      queued: [],
+      failed: [],
+    })) as Elb.Fn;
+  return fn;
+};
 
 /**
  * Standard mock environment for testing cloud function source
@@ -15,12 +28,12 @@ import type { Env } from '../types';
  */
 export const push: Env = {
   get push() {
-    return jest.fn();
+    return createMockElbFn();
   },
   get command() {
-    return jest.fn();
+    return createMockElbFn();
   },
   get elb() {
-    return jest.fn();
+    return createMockElbFn();
   },
 };

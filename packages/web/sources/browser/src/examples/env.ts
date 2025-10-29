@@ -1,4 +1,5 @@
 import type { Env } from '../types';
+import type { Elb } from '@walkeros/core';
 
 /**
  * Example environment configurations for browser source
@@ -7,12 +8,27 @@ import type { Env } from '../types';
  * browser event capture without requiring an actual DOM environment.
  */
 
+// Simple no-op function for mocking
+const noop = () => {};
+
+// Create a properly typed elb/push/command function that returns a promise with PushResult
+const createMockElbFn = (): Elb.Fn => {
+  const fn = (() =>
+    Promise.resolve({
+      ok: true,
+      successful: [],
+      queued: [],
+      failed: [],
+    })) as Elb.Fn;
+  return fn;
+};
+
 /**
  * Mock window object with common browser APIs
  */
 const createMockWindow = () => ({
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
+  addEventListener: noop,
+  removeEventListener: noop,
   location: {
     href: 'https://example.com/page',
     pathname: '/page',
@@ -44,22 +60,22 @@ const createMockWindow = () => ({
  * Mock document object with DOM methods
  */
 const createMockDocument = () => ({
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-  querySelector: jest.fn(),
-  querySelectorAll: jest.fn(() => []),
-  getElementById: jest.fn(),
-  getElementsByClassName: jest.fn(() => []),
-  getElementsByTagName: jest.fn(() => []),
-  createElement: jest.fn(() => ({
-    setAttribute: jest.fn(),
-    getAttribute: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-  })),
+  addEventListener: noop,
+  removeEventListener: noop,
+  querySelector: noop,
+  querySelectorAll: () => [],
+  getElementById: noop,
+  getElementsByClassName: () => [],
+  getElementsByTagName: () => [],
+  createElement: () => ({
+    setAttribute: noop,
+    getAttribute: noop,
+    addEventListener: noop,
+    removeEventListener: noop,
+  }),
   body: {
-    appendChild: jest.fn(),
-    removeChild: jest.fn(),
+    appendChild: noop,
+    removeChild: noop,
   },
   documentElement: {
     scrollTop: 0,
@@ -79,13 +95,13 @@ const createMockDocument = () => ({
  */
 export const push: Env = {
   get push() {
-    return jest.fn();
+    return createMockElbFn();
   },
   get command() {
-    return jest.fn();
+    return createMockElbFn();
   },
   get elb() {
-    return jest.fn();
+    return createMockElbFn();
   },
   get window() {
     return createMockWindow() as unknown as typeof window;
