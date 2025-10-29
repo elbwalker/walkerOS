@@ -1,5 +1,13 @@
 # @walkeros/storybook-demo
 
+## 0.1.3
+
+### Patch Changes
+
+- Schema builder, event-level mapping policies, config package, fixed jest mocks
+- Updated dependencies
+  - @walkeros/web-source-browser@0.2.1
+
 ## 0.1.2
 
 ### Patch Changes
