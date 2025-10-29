@@ -72,7 +72,7 @@ function getGlobals() {
 
 const config = {
   transform: {
-    '^.+\\.(t|j)sx?$': [
+    '^.+\\.(t|j|mj)sx?$': [
       '@swc/jest',
       {
         jsc: {
@@ -88,7 +88,7 @@ const config = {
       },
     ],
   },
-  transformIgnorePatterns: ['/node_modules/(?!(@walkerOS)/)'],
+  transformIgnorePatterns: ['/node_modules/(?!(@walkeros)/)'],
   testMatch: ['<rootDir>/**/*.test.(ts|tsx|js|jsx)'],
   moduleFileExtensions: ['js', 'ts', 'tsx', 'mjs'],
   rootDir: '.',
