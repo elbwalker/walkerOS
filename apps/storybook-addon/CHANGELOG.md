@@ -1,5 +1,22 @@
 # @walkeros/storybook-addon
 
+## 0.2.2
+
+### Patch Changes
+
+- Schema builder, event-level mapping policies, config package, fixed jest mocks
+- Updated dependencies
+  - @walkeros/web-source-browser@0.2.1
+  - @walkeros/collector@0.2.1
+  - @walkeros/web-core@0.2.1
+  - @walkeros/core@0.2.1
+
+## 0.2.1
+
+### Patch Changes
+
+- README link
+
 ## 0.2.0
 
 ### Minor Changes

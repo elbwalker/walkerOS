@@ -9,6 +9,17 @@ export * as DestinationMeta from './types';
 // Examples
 export * as examples from './examples';
 
+// Schemas - hand-written (legacy)
+export * as schema from './schema';
+
+// Schemas - generated with schema builder (DRY approach)
+export {
+  settingsSchemaGenerated,
+  mappingSchemaGenerated,
+  settingsUiSchemaGenerated,
+  mappingUiSchemaGenerated,
+} from './schema-builder';
+
 export const destinationMeta: Destination = {
   type: 'meta-pixel',
 

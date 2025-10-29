@@ -105,7 +105,6 @@ packages/
 ### Applications
 
 - **apps/walkerjs**: Ready-to-use browser bundle
-- **apps/explorer**: Interactive HTML element explorer and live code editor
 - **apps/quickstart**: Code examples and getting started templates
 - **website**: Documentation site built with Docusaurus
 

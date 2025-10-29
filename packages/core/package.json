@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/core",
   "description": "Core types and platform-agnostic utilities for walkerOS",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -17,8 +17,10 @@
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
-  "dependencies": {},
-  "devDependencies": {},
+  "dependencies": {
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.24.6"
+  },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/core"

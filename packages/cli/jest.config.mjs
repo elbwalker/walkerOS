@@ -1,4 +1,4 @@
-import nodeConfig from '@walkeros/jest/node.config.mjs';
+import nodeConfig from '@walkeros/config/jest/node.config';
 
 export default {
   ...nodeConfig,

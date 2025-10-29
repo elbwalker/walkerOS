@@ -1,4 +1,4 @@
-import baseConfig from '@walkeros/jest/index.mjs';
+import baseConfig from '@walkeros/config/jest';
 
 const config = {};
 

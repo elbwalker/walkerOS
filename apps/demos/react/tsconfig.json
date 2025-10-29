@@ -1,5 +1,5 @@
 {
-  "extends": "@walkeros/tsconfig/web.json",
+  "extends": "@walkeros/config/tsconfig/web.json",
   "compilerOptions": {
     "jsx": "react-jsx",
     "noEmit": true,

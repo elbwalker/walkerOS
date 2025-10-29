@@ -17,6 +17,11 @@ import {
 import destinationGtag from '@walkeros/web-destination-gtag';
 import { examples } from '@walkeros/web-destination-gtag';
 
+export const documentationGtag = {
+  ...destinationGtag,
+  examples,
+};
+
 # Google Analytics 4 (GA4)
 
 <PackageLink
@@ -114,7 +119,7 @@ elb('walker destination', destinationGtag, {
 #### Example
 
 <DestinationInit
-  destination={destinationGtag}
+  destination={documentationGtag}
   custom={`{
     measurementId: 'G-XXXXXXXXXX', // Required
     debug: false,
@@ -166,7 +171,7 @@ an&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/g
 gtag.js event.
 
 <DestinationPush
-  destination={destinationGtag}
+  destination={documentationGtag}
   settings={{
     ga4: {
       measurementId: 'G-XXXXXXXXXX',
@@ -186,7 +191,7 @@ a&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/ga
 gtag.js event.
 
 <DestinationPush
-  destination={destinationGtag}
+  destination={documentationGtag}
   settings={{
     ga4: {
       measurementId: 'G-XXXXXXXXXX',

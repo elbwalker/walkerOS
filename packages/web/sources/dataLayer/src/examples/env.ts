@@ -1,4 +1,4 @@
-import type { Source } from '@walkeros/core';
+import type { Source, Elb } from '@walkeros/core';
 
 /**
  * Example environment configurations for dataLayer source
@@ -7,10 +7,25 @@ import type { Source } from '@walkeros/core';
  * dataLayer interception without requiring a real window object.
  */
 
+// Simple no-op function for mocking
+const noop = () => {};
+
+// Create a properly typed elb/push/command function that returns a promise with PushResult
+const createMockElbFn = (): Elb.Fn => {
+  const fn = (() =>
+    Promise.resolve({
+      ok: true,
+      successful: [],
+      queued: [],
+      failed: [],
+    })) as Elb.Fn;
+  return fn;
+};
+
 /**
  * Environment interface for dataLayer source
  */
-interface DataLayerEnv extends Source.Env {
+interface DataLayerEnv extends Source.BaseEnv {
   window?: typeof window;
 }
 
@@ -19,8 +34,8 @@ interface DataLayerEnv extends Source.Env {
  */
 const createMockWindow = () => ({
   dataLayer: [] as unknown[],
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
+  addEventListener: noop,
+  removeEventListener: noop,
 });
 
 /**
@@ -31,13 +46,13 @@ const createMockWindow = () => ({
  */
 export const push: DataLayerEnv = {
   get push() {
-    return jest.fn();
+    return createMockElbFn();
   },
   get command() {
-    return jest.fn();
+    return createMockElbFn();
   },
   get elb() {
-    return jest.fn();
+    return createMockElbFn();
   },
   get window() {
     return createMockWindow() as unknown as typeof window;

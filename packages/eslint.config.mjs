@@ -1,4 +1,4 @@
-import baseConfig from '@walkeros/eslint/index.mjs';
+import baseConfig from '@walkeros/config/eslint';
 
 export default [
   ...baseConfig,

@@ -1,4 +1,4 @@
-import webConfig from '@walkeros/jest/web.config.mjs';
+import webConfig from '@walkeros/config/jest/web.config';
 
 export default {
   ...webConfig,

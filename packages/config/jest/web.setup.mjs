@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 
-const mockDataLayer = jest.fn(); //.mockImplementation(console.log);
+const mockDataLayer = jest.fn();
 
 global.beforeEach(() => {
   jest.useFakeTimers();
@@ -11,13 +11,13 @@ global.beforeEach(() => {
 
   // reset DOM with event listeners etc.
   document.getElementsByTagName('html')[0].innerHTML = '';
-  document.body = document.body.cloneNode() as HTMLElement;
+  document.body = document.body.cloneNode();
 
   // elbLayer and dataLayer
-  const w = window as unknown as Record<string, unknown | unknown[]>;
+  const w = window;
   w.elbLayer = undefined;
   w.dataLayer = [];
-  (w.dataLayer as unknown[]).push = mockDataLayer;
+  w.dataLayer.push = mockDataLayer;
 
   // Performance
   global.performance.getEntriesByType = jest

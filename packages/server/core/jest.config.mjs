@@ -1,7 +1,3 @@
-import baseConfig from '@walkeros/jest/web.config.mjs';
+import baseConfig from '@walkeros/config/jest/node.config';
 
-const config = {
-  testEnvironment: 'jsdom',
-};
-
-export default { ...baseConfig, ...config };
+export default baseConfig;

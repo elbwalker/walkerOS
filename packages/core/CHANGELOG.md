@@ -1,5 +1,11 @@
 # @walkeros/core
 
+## 0.2.1
+
+### Patch Changes
+
+- Schema builder, event-level mapping policies, config package, fixed jest mocks
+
 ## 0.2.0
 
 ### Minor Changes

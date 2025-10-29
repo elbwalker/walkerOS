@@ -32,6 +32,7 @@ export interface Rule<Settings = unknown> {
   data?: Data; // Mapping of event data
   ignore?: boolean; // Choose to no process an event when set to true
   name?: string; // Use a custom event name
+  policy?: Policy; // Event-level policy applied after config-level policy
 }
 
 export interface Result {

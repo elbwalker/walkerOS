@@ -1,4 +1,4 @@
-const mockDataLayer = jest.fn(); //.mockImplementation(console.log);
+const mockDataLayer = jest.fn();
 
 global.beforeEach(() => {
   jest.useFakeTimers();

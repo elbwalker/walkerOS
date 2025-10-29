@@ -1,5 +1,20 @@
 # @walkeros/website
 
+## 0.2.1
+
+### Patch Changes
+
+- Schema builder, event-level mapping policies, config package, fixed jest mocks
+- Updated dependencies
+  - @walkeros/web-destination-plausible@0.2.1
+  - @walkeros/web-destination-piwikpro@0.2.1
+  - @walkeros/web-destination-gtag@0.2.1
+  - @walkeros/web-destination-meta@0.2.1
+  - @walkeros/web-destination-api@0.2.1
+  - @walkeros/web-source-browser@0.2.1
+  - @walkeros/collector@0.2.1
+  - @walkeros/core@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes

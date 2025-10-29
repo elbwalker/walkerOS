@@ -1,3 +1,3 @@
-import config from '@walkeros/eslint/node.mjs';
+import config from '@walkeros/config/eslint/node';
 
 export default config;

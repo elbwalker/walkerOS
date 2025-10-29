@@ -197,14 +197,16 @@ async function processMappingValue(
  *
  * This is the unified mapping logic used by both sources and destinations.
  * It applies transformations in this order:
- * 1. Policy - modifies the event itself
- * 2. Mapping rules - finds matching rule, checks ignore, overrides name
- * 3. Data transformation - creates context data
+ * 1. Config-level policy - modifies the event itself (global rules)
+ * 2. Mapping rules - finds matching rule based on entity-action
+ * 3. Event-level policy - modifies the event based on specific mapping rule
+ * 4. Data transformation - creates context data
+ * 5. Ignore check and name override
  *
  * Sources can pass partial events, destinations pass full events.
  * getMappingValue works with both partial and full events.
  *
- * @param event - The event to process (can be partial or full, will be mutated by policy)
+ * @param event - The event to process (can be partial or full, will be mutated by policies)
  * @param config - Mapping configuration (mapping, data, policy, consent)
  * @param collector - Collector instance for context
  * @returns Object with transformed event, data, mapping rule, and ignore flag
@@ -222,7 +224,7 @@ export async function processEventMapping<
   mappingKey?: string;
   ignore: boolean;
 }> {
-  // Step 1: Apply policy (modifies event)
+  // Step 1: Apply config-level policy (modifies event)
   if (config.policy) {
     await Promise.all(
       Object.entries(config.policy).map(async ([key, mapping]) => {
@@ -237,6 +239,16 @@ export async function processEventMapping<
     event,
     config.mapping,
   );
+
+  // Step 2.5: Apply event-level policy (modifies event)
+  if (eventMapping?.policy) {
+    await Promise.all(
+      Object.entries(eventMapping.policy).map(async ([key, mapping]) => {
+        const value = await getMappingValue(event, mapping, { collector });
+        event = setByPath(event, key, value);
+      }),
+    );
+  }
 
   // Step 3: Transform global data
   let data =

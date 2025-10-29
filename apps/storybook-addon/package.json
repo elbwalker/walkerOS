@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/storybook-addon",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Visualize, debug, and validate walkerOS event tracking in your Storybook stories. Real-time event capture with visual DOM highlighting for data-attribute based tagging.",
   "keywords": [
     "storybook-addons",
@@ -12,9 +12,13 @@
     "events",
     "walkeros"
   ],
+  "homepage": "https://github.com/elbwalker/walkerOS/tree/main/apps/storybook-addon",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/elbwalker/walkerOS",
+    "url": "https://github.com/elbwalker/walkerOS.git",
     "directory": "apps/storybook-addon"
   },
   "type": "module",
@@ -39,7 +43,8 @@
     "dist/**/*",
     "README.md",
     "*.js",
-    "*.d.ts"
+    "*.d.ts",
+    "!src/**/*"
   ],
   "scripts": {
     "build": "tsup",
@@ -61,16 +66,13 @@
     "@storybook/icons": "^1.4.0"
   },
   "devDependencies": {
-    "@walkeros/eslint": "*",
-    "@walkeros/jest": "*",
-    "@walkeros/tsconfig": "*",
-    "@walkeros/tsup": "*",
+    "@walkeros/config": "*",
     "@storybook/addon-docs": "^9.1.2",
     "@storybook/react-vite": "^9.1.2",
     "@types/node": "^22",
     "@types/react": "^18.2.65",
     "@types/react-dom": "^18.2.21",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "^5.1.0",
     "auto": "^11.1.1",
     "boxen": "^7.1.1",
     "npm-run-all2": "^6.2.3",
@@ -82,7 +84,7 @@
     "ts-dedent": "^2.2.0",
     "tsup": "^8.2.4",
     "typescript": "^5.8.2",
-    "vite": "^5.3.5",
+    "vite": "^7.1.12",
     "zx": "^8.4.1"
   },
   "peerDependencies": {
