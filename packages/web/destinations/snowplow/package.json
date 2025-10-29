@@ -1,0 +1,35 @@
+{
+  "name": "@walkeros/web-destination-snowplow",
+  "version": "2.0.0",
+  "author": "elbwalker",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup --silent",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "lint": "tsc && eslint \"**/*.ts*\"",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@walkeros/core": "latest",
+    "@walkeros/web-core": "latest"
+  },
+  "devDependencies": {
+    "@walkeros/collector": "latest",
+    "@walkeros/config": "latest"
+  },
+  "peerDependencies": {
+    "@walkeros/core": "latest"
+  }
+}

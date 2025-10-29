@@ -1,10 +1,10 @@
 import baseConfig from '@walkeros/config/jest/web.config';
 
-export default {
-  ...baseConfig,
+const config = {
   displayName: 'quickstart',
-  testEnvironment: 'jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
 };
+
+export default { ...baseConfig, ...config };
