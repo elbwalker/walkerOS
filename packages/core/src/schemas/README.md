@@ -385,10 +385,6 @@ const schema = createObjectSchema({
 
 ## Related Documentation
 
-- [Type Detection](../../../apps/explorer/TYPE_DETECTION.md) - How schemas are
-  used
-- [Meta Pixel Example](../../web/destinations/meta/src/schema-example.ts) - Real
-  usage
 - [RJSF Documentation](https://rjsf-team.github.io/react-jsonschema-form/) -
   JSON Schema reference
 
