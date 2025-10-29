@@ -5,6 +5,8 @@ import { defineConfig, type Options } from 'tsup';
 import { globalPackages as globalManagerPackages } from 'storybook/internal/manager/globals';
 import { globalPackages as globalPreviewPackages } from 'storybook/internal/preview/globals';
 
+// NOTE: This config currently targets Storybook 9 (dual ESM/CJS support)
+// See STORYBOOK_10_MIGRATION.md for migration plan to Storybook 10 (ESM-only)
 const NODE_TARGET: Options['target'] = 'node20';
 
 type BundlerConfig = {

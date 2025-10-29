@@ -17,6 +17,17 @@ stories.
 - ⚙️ **Custom Prefix Support**: Configure custom data attribute prefixes
 - 🚀 **Zero Configuration**: Works out of the box with walkerOS data attributes
 
+## Compatibility
+
+| Addon Version | Storybook Version | Status                      |
+| ------------- | ----------------- | --------------------------- |
+| ^0.2.x        | ^9.0.0            | ✅ Current (Active Support) |
+| ^1.0.0        | ^10.0.0           | 📋 Planned                  |
+
+> **Note:** Storybook 10 support is planned for v1.0.0. See
+> [STORYBOOK_10_MIGRATION.md](./STORYBOOK_10_MIGRATION.md) for migration
+> details.
+
 ## Installation
 
 ```bash
