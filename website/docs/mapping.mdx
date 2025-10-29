@@ -18,23 +18,29 @@ export const logValue = async (input, config, log) => {
 
 # Mapping
 
-Mapping transforms your events - either as they come from sources or before they go to destinations. Use the same mapping syntax in both places.
+Mapping transforms your events - either as they come from sources or before they
+go to destinations. Use the same mapping syntax in both places.
 
 ## Why Mapping?
 
-**For Sources:** Clean up messy input data, filter unwanted events, normalize formats
+**For Sources:** Clean up messy input data, filter unwanted events, normalize
+formats
 
-**For Destinations:** Transform events to match what each tool expects (GA4, Meta, etc.)
+**For Destinations:** Transform events to match what each tool expects (GA4,
+Meta, etc.)
 
 ## When to Use
 
 **Source Mapping:**
+
 - Filter test/debug events before they reach your collector
 - Rename inconsistent event names from different sources
 - Validate or normalize data before processing
 
 **Destination Mapping:**
-- Transform event names to match destination requirements (e.g., `product view` → `view_item` for GA4)
+
+- Transform event names to match destination requirements (e.g., `product view`
+  → `view_item` for GA4)
 - Reshape data to fit destination APIs
 - Add required fields like currency codes
 
@@ -81,7 +87,8 @@ destinations: {
 }
 ```
 
-Both mappings are independent - one event can be transformed differently at each stage.
+Both mappings are independent - one event can be transformed differently at each
+stage.
 
 ## What You Can Do
 
@@ -91,6 +98,7 @@ Both mappings are independent - one event can be transformed differently at each
 - **Add static values** like currency codes
 - **Validate data** before sending
 - **Require consent** to respect user privacy
+- **Apply policies** to modify events at config or event level
 
 ## Event Mapping with getMappingEvent
 
@@ -374,6 +382,49 @@ Only return values when required consent is granted:
   fn={logValue}
 />
 
+## Policy
+
+Policies modify events before processing. Apply them at **config-level** (all
+events) or **event-level** (specific entity-action combinations).
+
+**Processing order**: Config policy → Event matching → Event policy → Data
+transformation
+
+### Config-Level Policy
+
+Global transformations applied to all events:
+
+```typescript
+config: {
+  policy: {
+    'user.email': { fn: (e) => e.user?.email?.toLowerCase() },
+    'data.timestamp': { fn: () => Date.now() },
+  },
+}
+```
+
+### Event-Level Policy
+
+Transformations for specific events:
+
+```typescript
+config: {
+  mapping: {
+    product: {
+      view: {
+        name: 'view_item',
+        policy: {
+          'data.id': { fn: (e) => `PRODUCT_${e.data?.id}` },
+        },
+      },
+    },
+  },
+}
+```
+
+Policies work with wildcards and conditions, and both levels can be combined -
+config policy runs first, then event policy for the matched rule.
+
 ## Usage Examples
 
 ### Source Mapping
@@ -388,17 +439,25 @@ await startFlow({
       config: {
         mapping: {
           // Rename DOM clicks to views
-          product: { click: { name: 'product view' } },
+          product: {
+            click: {
+              name: 'product view',
+              policy: {
+                // Event-level: normalize product IDs
+                'data.id': { fn: (e) => e.data?.id?.toUpperCase() },
+              },
+            },
+          },
           // Ignore test events
           test: { '*': { ignore: true } },
         },
         policy: {
-          // Normalize user email
-          'user.email': { fn: (e) => e.user?.email?.toLowerCase() }
-        }
-      }
-    }
-  }
+          // Config-level: normalize user email for all events
+          'user.email': { fn: (e) => e.user?.email?.toLowerCase() },
+        },
+      },
+    },
+  },
 });
 ```
 
@@ -420,15 +479,15 @@ await startFlow({
                 map: {
                   item_id: 'data.id',
                   value: 'data.price',
-                  currency: { value: 'USD' }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+                  currency: { value: 'USD' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
 });
 ```
 
@@ -451,5 +510,3 @@ Event processed twice with different configs:
 4. **Validate critical data** before sending to destinations
 5. **Respect consent** by using consent-based mappings
 6. **Keep transformations simple** - complex logic in custom functions
-
-

@@ -14,7 +14,7 @@ import { formatValue, parseInput } from '../molecules/codeBox';
 
 interface DestinationPushProps<Settings = unknown, MappingType = unknown>
   extends Omit<LiveCodeProps, 'input' | 'config' | 'fn'> {
-  destination: Destination.Instance<Settings, MappingType>;
+  destination: Destination.Instance;
   event: WalkerOS.PartialEvent;
   mapping?: Mapping.Rule<MappingType> | string;
   settings?: Settings;
@@ -33,6 +33,7 @@ const createMockCollector = (): Collector.Instance => {
   return {
     push: () => Promise.resolve(mockPushResult),
     allowed: true,
+    command: () => Promise.resolve(mockPushResult),
     config: {
       tagging: 0,
       globalsStatic: {},
@@ -57,21 +58,41 @@ const createMockCollector = (): Collector.Instance => {
   } satisfies Collector.Instance;
 };
 
-const createGenericInterceptor = (baseEnv: Destination.Environment = {}) => {
+const createSelectiveInterceptor = (
+  baseEnv: Record<string, unknown> = {},
+  simulationPaths: string[] = ['call:*'],
+) => {
   const capturedCalls: string[] = [];
 
   const formatArgs = (args: unknown[]): string => {
     return args.map((arg) => formatValue(arg, { quotes: true })).join(', ');
   };
 
-  const interceptFunction = (name: string, originalFn?: Function) => {
+  const shouldIntercept = (path: string[]): boolean => {
+    const fullPath = path.join('.');
+
+    // Check if any simulation path matches
+    return simulationPaths.some((pattern) => {
+      if (pattern === 'call:*') return true; // Intercept all function calls
+      if (pattern.startsWith('call:')) {
+        const targetPath = pattern.slice(5); // Remove 'call:' prefix
+        return fullPath === targetPath || fullPath.endsWith('.' + targetPath);
+      }
+      return false;
+    });
+  };
+
+  const interceptFunction = (path: string[], originalFn?: Function) => {
     return (...args: unknown[]) => {
-      capturedCalls.push(`${name}(${formatArgs(args)});`);
+      if (shouldIntercept(path)) {
+        const functionName = path[path.length - 1];
+        capturedCalls.push(`${functionName}(${formatArgs(args)});`);
+      }
       return originalFn?.(...args);
     };
   };
 
-  const createProxy = (target: unknown): unknown => {
+  const createProxy = (target: unknown, path: string[] = []): unknown => {
     if (typeof target !== 'object' || target === null) {
       return target;
     }
@@ -79,13 +100,14 @@ const createGenericInterceptor = (baseEnv: Destination.Environment = {}) => {
     return new Proxy(target as Record<string, unknown>, {
       get(obj: Record<string, unknown>, prop: string) {
         const value = obj[prop];
+        const currentPath = [...path, prop];
 
         if (typeof value === 'function') {
-          return interceptFunction(prop, value);
+          return interceptFunction(currentPath, value);
         }
 
         if (typeof value === 'object' && value !== null) {
-          return createProxy(value);
+          return createProxy(value, currentPath);
         }
 
         return value;
@@ -93,7 +115,7 @@ const createGenericInterceptor = (baseEnv: Destination.Environment = {}) => {
     });
   };
 
-  const interceptedEnv = createProxy(baseEnv) as Destination.Environment;
+  const interceptedEnv = createProxy(baseEnv) as Record<string, unknown>;
 
   return {
     env: interceptedEnv,
@@ -103,9 +125,9 @@ const createGenericInterceptor = (baseEnv: Destination.Environment = {}) => {
 
 const createContext = <Settings, MappingType>(
   settings: Settings,
-  env: Destination.Environment,
+  env: Record<string, unknown>,
   mapping?: Mapping.Rule<MappingType>,
-): Destination.PushContext<Settings, MappingType> => ({
+) => ({
   collector: createMockCollector(),
   config: {
     settings,
@@ -116,7 +138,7 @@ const createContext = <Settings, MappingType>(
 });
 
 interface DestinationInitProps<Settings = unknown, MappingType = unknown> {
-  destination: Destination.Instance<Settings, MappingType>;
+  destination: Destination.Instance;
   custom?: unknown;
 }
 
@@ -140,9 +162,17 @@ export const DestinationInit = <Settings = unknown, MappingType = unknown>({
 
         const inputValue = await parseInput(input);
 
-        // Create interceptor based on destination's env
-        const { env, getCapturedCalls } = createGenericInterceptor(
-          destination.env,
+        // Get destination's exported environment and simulation paths
+        const destinationEnv =
+          (destination as any).examples?.env?.push || destination.env || {};
+        const simulationPaths = (destination as any).examples?.simulation || [
+          'call:*',
+        ];
+
+        // Create selective interceptor based on destination's env and simulation paths
+        const { env, getCapturedCalls } = createSelectiveInterceptor(
+          destinationEnv,
+          simulationPaths,
         );
 
         const context = createContext<Settings, MappingType>(
@@ -196,17 +226,26 @@ export const DestinationPush = <Settings = unknown, MappingType = unknown>({
               ? { '*': { '*': configValue } }
               : configValue;
 
-          // Create interceptor based on destination's env
-          const { env, getCapturedCalls } = createGenericInterceptor(
-            destination.env,
+          // Get destination's exported environment and simulation paths
+          const destinationEnv =
+            (destination as any).examples?.env?.push || destination.env || {};
+          const simulationPaths = (destination as any).examples?.simulation || [
+            'call:*',
+          ];
+
+          // Create selective interceptor based on destination's env and simulation paths
+          const { env, getCapturedCalls } = createSelectiveInterceptor(
+            destinationEnv,
+            simulationPaths,
           );
 
           // Configure destination with mapping and use collector's destinationPush
           const configuredDestination = {
             ...destination,
             config: {
+              ...destination.config,
               settings: settings || ({} as Settings),
-              mapping: wrappedMapping,
+              mapping: wrappedMapping as any,
             },
             env,
           };

@@ -21,7 +21,6 @@
     "@docusaurus/theme-mermaid": "^3.7.0",
     "@walkeros/core": "*",
     "@walkeros/collector": "*",
-    "@walkeros/explorer": "*",
     "@walkeros/web-source-browser": "*",
     "@walkeros/web-destination-api": "*",
     "@walkeros/web-destination-gtag": "*",

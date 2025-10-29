@@ -249,21 +249,6 @@ export { destinationMeta } from './destination';
 export { settingsSchema, mappingSchema } from './schema';
 ```
 
-### Step 3: Use in App/Website
-
-```typescript
-// website/docs/destinations/web/meta-pixel.mdx
-import { destinationMeta, mappingSchema } from '@walkeros/web-destination-meta';
-import { MappingBox } from '@walkeros/explorer';
-
-<MappingBox
-  mapping={config}
-  schemas={{
-    mapping: mappingSchema,  // ← Schema from destination
-  }}
-/>
-```
-
 **NO Zod dependency needed in destination!** ✅
 
 ## Property Definition Reference
