@@ -130,24 +130,24 @@ export const ValueConfigSchema = ValueConfigSchemaLazy;
 // JSON Schema generation for RJSF/Explorer
 export const valueConfigJsonSchema = zodToJsonSchema(ValueConfigSchema, {
   target: 'jsonSchema7',
-  $refStrategy: 'none',
+  $refStrategy: 'relative',
   name: 'ValueConfig',
 });
 
 export const loopJsonSchema = zodToJsonSchema(LoopSchema, {
   target: 'jsonSchema7',
-  $refStrategy: 'none',
+  $refStrategy: 'relative',
   name: 'Loop',
 });
 
 export const setJsonSchema = zodToJsonSchema(SetSchema, {
   target: 'jsonSchema7',
-  $refStrategy: 'none',
+  $refStrategy: 'relative',
   name: 'Set',
 });
 
 export const mapJsonSchema = zodToJsonSchema(MapSchema, {
   target: 'jsonSchema7',
-  $refStrategy: 'none',
+  $refStrategy: 'relative',
   name: 'Map',
 });
