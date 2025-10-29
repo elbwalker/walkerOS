@@ -1,4 +1,4 @@
-import { defineConfig, baseConfig } from '@walkeros/tsup';
+import { defineConfig, baseConfig } from '@walkeros/config/tsup';
 
 export default defineConfig({
   ...baseConfig,

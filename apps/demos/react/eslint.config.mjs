@@ -1,4 +1,4 @@
-import webConfig from '@walkeros/eslint/web.mjs';
+import webConfig from '@walkeros/config/eslint/web';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 

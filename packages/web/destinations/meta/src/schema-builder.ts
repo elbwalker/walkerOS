@@ -10,8 +10,9 @@
  * - Savings: 57% less code!
  */
 
-import { createObjectSchema } from '@walkeros/core';
-import type { RJSFSchema, UiSchema } from '@rjsf/utils';
+import { createObjectSchema, type JSONSchema } from '@walkeros/core';
+
+export type UiSchema = Record<string, unknown>;
 
 /**
  * Meta Pixel standard events
@@ -40,7 +41,7 @@ const META_STANDARD_EVENTS = [
 /**
  * Settings schema - Config-level settings
  */
-export const settingsSchemaGenerated: RJSFSchema = createObjectSchema(
+export const settingsSchemaGenerated: JSONSchema = createObjectSchema(
   {
     pixelId: {
       type: 'string',
@@ -56,7 +57,7 @@ export const settingsSchemaGenerated: RJSFSchema = createObjectSchema(
 /**
  * Mapping schema - Rule-level mapping settings
  */
-export const mappingSchemaGenerated: RJSFSchema = createObjectSchema(
+export const mappingSchemaGenerated: JSONSchema = createObjectSchema(
   {
     track: {
       type: 'string',

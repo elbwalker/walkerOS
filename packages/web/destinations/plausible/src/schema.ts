@@ -1,4 +1,9 @@
-import type { RJSFSchema, UiSchema } from '@rjsf/utils';
+import type { JSONSchema } from '@walkeros/core';
+
+/**
+ * UI Schema type (for Explorer compatibility)
+ */
+export type UiSchema = Record<string, unknown>;
 
 /**
  * RJSF schema for Plausible config-level settings
@@ -6,7 +11,7 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
  *
  * @see {@link Settings} in types/index.ts
  */
-export const settingsSchema: RJSFSchema = {
+export const settingsSchema: JSONSchema = {
   type: 'object',
   title: 'Plausible Settings',
   properties: {
@@ -37,7 +42,7 @@ export const settingsUiSchema: UiSchema = {
  *
  * @see {@link Mapping} in types/index.ts
  */
-export const mappingSchema: RJSFSchema = {
+export const mappingSchema: JSONSchema = {
   type: 'object',
   title: 'Plausible Mapping',
   properties: {},

@@ -1,4 +1,7 @@
-import type { RJSFSchema } from '@rjsf/utils';
+/**
+ * JSON Schema type
+ */
+export type JSONSchema = Record<string, unknown>;
 
 /**
  * Schema Builder - DRY utility for creating JSON Schemas
@@ -42,7 +45,7 @@ export interface PropertyDef {
   enum?: readonly string[] | readonly number[];
   properties?: Record<string, PropertyDef>;
   items?: PropertyDef;
-  default?: any;
+  default?: unknown;
 }
 
 /**
@@ -69,16 +72,16 @@ export interface PropertyDef {
 export function createObjectSchema(
   properties: Record<string, PropertyDef>,
   title?: string,
-): RJSFSchema {
+): JSONSchema {
   const required: string[] = [];
-  const schemaProperties: Record<string, any> = {};
+  const schemaProperties: Record<string, unknown> = {};
 
   for (const [key, def] of Object.entries(properties)) {
     if (def.required) {
       required.push(key);
     }
 
-    const property: any = {
+    const property: Record<string, unknown> = {
       type: def.type,
     };
 
@@ -93,10 +96,11 @@ export function createObjectSchema(
 
     // Nested object
     if (def.type === 'object' && def.properties) {
-      property.properties = {};
+      const props: Record<string, unknown> = {};
       for (const [nestedKey, nestedDef] of Object.entries(def.properties)) {
-        property.properties[nestedKey] = createPropertySchema(nestedDef);
+        props[nestedKey] = createPropertySchema(nestedDef);
       }
+      property.properties = props;
     }
 
     // Array
@@ -107,7 +111,7 @@ export function createObjectSchema(
     schemaProperties[key] = property;
   }
 
-  const schema: RJSFSchema = {
+  const schema: JSONSchema = {
     type: 'object',
     properties: schemaProperties,
   };
@@ -122,8 +126,8 @@ export function createObjectSchema(
  * Create property schema from definition
  * Helper for nested properties
  */
-function createPropertySchema(def: PropertyDef): any {
-  const property: any = {
+function createPropertySchema(def: PropertyDef): Record<string, unknown> {
+  const property: Record<string, unknown> = {
     type: def.type,
   };
 
@@ -138,10 +142,11 @@ function createPropertySchema(def: PropertyDef): any {
 
   // Nested object
   if (def.type === 'object' && def.properties) {
-    property.properties = {};
+    const props: Record<string, unknown> = {};
     for (const [key, nestedDef] of Object.entries(def.properties)) {
-      property.properties[key] = createPropertySchema(nestedDef);
+      props[key] = createPropertySchema(nestedDef);
     }
+    property.properties = props;
   }
 
   // Array
@@ -183,8 +188,8 @@ export function createArraySchema(
     description?: string;
     title?: string;
   },
-): RJSFSchema {
-  const schema: RJSFSchema = {
+): JSONSchema {
+  const schema: JSONSchema = {
     type: 'array',
     items: createPropertySchema(itemDef),
   };
@@ -219,8 +224,8 @@ export function createEnumSchema(
     description?: string;
     title?: string;
   },
-): RJSFSchema {
-  const schema: RJSFSchema = {
+): JSONSchema {
+  const schema: JSONSchema = {
     type,
     enum: [...values],
   };
@@ -253,7 +258,7 @@ export function createTupleSchema(
   firstItem: PropertyDef,
   secondItem: PropertyDef,
   description?: string,
-): RJSFSchema {
+): JSONSchema {
   return createArraySchema(
     { type: 'object' }, // Generic, items can be different
     {

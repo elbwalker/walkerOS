@@ -36,6 +36,7 @@ export const ConsentSchema = z
  * Recursive schemas - use z.any() to avoid circular type issues
  * These work for validation and JSON Schema generation
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ValueSchemaLazy: z.ZodType<any> = z.lazy(() =>
   z.union([
     z.string(),
@@ -56,6 +57,7 @@ const ValueSchemaLazy: z.ZodType<any> = z.lazy(() =>
  *
  * Explorer type detector reads minItems/maxItems to detect loops.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const LoopSchemaLazy: z.ZodType<any> = z
   .tuple([ValueSchemaLazy, ValueSchemaLazy])
   .describe('Loop: [source, transform] tuple for array transformations');
@@ -64,6 +66,7 @@ const LoopSchemaLazy: z.ZodType<any> = z
  * Set schema - ARRAY with any number of elements
  * [value1, value2, ...]
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SetSchemaLazy: z.ZodType<any> = z
   .array(ValueSchemaLazy)
   .describe('Set: Array of values');
@@ -72,6 +75,7 @@ const SetSchemaLazy: z.ZodType<any> = z
  * Map schema - Object with string keys and Value values
  * { key1: value1, key2: value2, ... }
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const MapSchemaLazy: z.ZodType<any> = z
   .record(z.string(), ValueSchemaLazy)
   .describe('Map: Object mapping keys to values');
@@ -92,6 +96,7 @@ const MapSchemaLazy: z.ZodType<any> = z
  *
  * At least one property must be present.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ValueConfigSchemaLazy: z.ZodType<any> = z
   .object({
     key: z.string().optional().describe('Property path (e.g., "data.id")'),

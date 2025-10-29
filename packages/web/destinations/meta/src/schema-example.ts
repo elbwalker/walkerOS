@@ -16,7 +16,11 @@
  * - New approach: ~30 lines of declarative definitions
  */
 
-import { createObjectSchema, createEnumSchema } from '@walkeros/core';
+import {
+  createObjectSchema,
+  createEnumSchema,
+  type JSONSchema,
+} from '@walkeros/core';
 
 /**
  * Settings schema using schema builder
@@ -106,7 +110,7 @@ export const mappingSchemaAlternative = createObjectSchema(
     track: {
       ...(createEnumSchema(metaStandardEvents, 'string', {
         description: 'Meta Pixel standard event name',
-      }) as any),
+      }) as Record<string, unknown>),
       type: 'string',
     },
     trackCustom: {

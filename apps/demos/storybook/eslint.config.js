@@ -1,4 +1,4 @@
-import baseConfig from '@walkeros/eslint/web.mjs';
+import baseConfig from '@walkeros/config/eslint/web';
 import storybook from 'eslint-plugin-storybook';
 
 export default [

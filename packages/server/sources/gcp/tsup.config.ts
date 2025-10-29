@@ -1,4 +1,4 @@
-import { defineConfig, buildModules } from '@walkeros/tsup';
+import { defineConfig, buildModules } from '@walkeros/config/tsup';
 
 export default defineConfig([
   buildModules({

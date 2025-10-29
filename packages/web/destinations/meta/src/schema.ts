@@ -1,4 +1,6 @@
-import type { RJSFSchema, UiSchema } from '@rjsf/utils';
+import type { JSONSchema } from '@walkeros/core';
+
+export type UiSchema = Record<string, unknown>;
 
 /**
  * RJSF schema for Meta Pixel config-level settings
@@ -6,7 +8,7 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
  *
  * @see {@link Settings} in types/index.ts
  */
-export const settingsSchema: RJSFSchema = {
+export const settingsSchema: JSONSchema = {
   type: 'object',
   title: 'Meta Pixel Settings',
   properties: {
@@ -38,7 +40,7 @@ export const settingsUiSchema: UiSchema = {
  *
  * @see {@link Mapping} in types/index.ts
  */
-export const mappingSchema: RJSFSchema = {
+export const mappingSchema: JSONSchema = {
   type: 'object',
   title: 'Meta Pixel Mapping',
   properties: {
@@ -96,7 +98,7 @@ export const mappingUiSchema: UiSchema = {
  *
  * @see https://developers.facebook.com/docs/meta-pixel/reference
  */
-export const dataSchema: RJSFSchema = {
+export const dataSchema: JSONSchema = {
   type: 'object',
   title: 'Meta Pixel Event Data',
   description: 'Properties that can be sent with Meta Pixel events',

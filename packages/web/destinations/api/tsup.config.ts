@@ -4,7 +4,7 @@ import {
   buildExamples,
   buildBrowser,
   buildES5,
-} from '@walkeros/tsup';
+} from '@walkeros/config/tsup';
 
 const globalName = 'Walkerjs';
 
