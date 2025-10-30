@@ -111,6 +111,13 @@ export interface Context<T extends TypesGeneric = Types> {
   env: Env<T>;
 }
 
+export interface InitContext<T extends TypesGeneric = Types> {
+  collector: Collector.Instance;
+  config: Config<Types<Partial<Settings<T>>, Mapping<T>, Env<T>>>;
+  data?: Data;
+  env: Env<T>;
+}
+
 export interface PushContext<T extends TypesGeneric = Types>
   extends Context<T> {
   mapping?: WalkerOSMapping.Rule<Mapping<T>>;
@@ -122,7 +129,7 @@ export interface PushBatchContext<T extends TypesGeneric = Types>
 }
 
 export type InitFn<T extends TypesGeneric = Types> = (
-  context: Context<T>,
+  context: InitContext<T>,
 ) => WalkerOS.PromiseOrValue<void | false | Config<T>>;
 
 export type PushFn<T extends TypesGeneric = Types> = (
