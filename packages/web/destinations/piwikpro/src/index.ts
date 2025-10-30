@@ -43,8 +43,6 @@ export const destinationPiwikPro: Destination = {
 
     // Enable download and outlink tracking if not disabled
     if (settings?.linkTracking !== false) paq(['enableLinkTracking']);
-
-    return config;
   },
 
   async push(event, { config, mapping = {}, data, env }) {
