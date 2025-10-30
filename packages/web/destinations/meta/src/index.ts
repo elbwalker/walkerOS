@@ -33,8 +33,6 @@ export const destinationMeta: Destination = {
     const { window } = getEnv(env);
     const fbq = window.fbq as facebook.Pixel.Event;
     fbq('init', pixelId);
-
-    return config;
   },
 
   push(event, { config, mapping = {}, data, env }) {
