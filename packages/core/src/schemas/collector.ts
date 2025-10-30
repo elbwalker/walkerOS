@@ -8,18 +8,12 @@ import {
 } from './walkeros';
 import { ConfigSchema as MappingConfigSchema } from './mapping';
 import {
-  OptionalBoolean,
   RequiredBoolean,
   RequiredNumber,
-  OptionalString,
-  OptionalIdentifier,
+  Identifier,
   Timestamp,
   Counter,
   TaggingVersion,
-  createOptionalIdSchema,
-  createTimestampSchema,
-  createCounterSchema,
-  createBooleanSchema,
 } from './primitives';
 import { ErrorHandlerSchema, LogHandlerSchema } from './utilities';
 
@@ -104,10 +98,10 @@ export const CommandTypeSchema = z
  */
 export const ConfigSchema = z
   .object({
-    run: createBooleanSchema(
-      'Whether to run collector automatically on initialization',
-      true,
-    ),
+    run: z
+      .boolean()
+      .describe('Whether to run collector automatically on initialization')
+      .optional(),
     tagging: TaggingVersion,
     globalsStatic: PropertiesSchema.describe(
       'Static global properties that persist across collector runs',
@@ -115,7 +109,7 @@ export const ConfigSchema = z
     sessionStatic: z
       .record(z.any())
       .describe('Static session data that persists across collector runs'),
-    verbose: createBooleanSchema('Enable verbose logging for debugging'),
+    verbose: z.boolean().describe('Enable verbose logging for debugging'),
     // Function handlers
     onError: ErrorHandlerSchema.optional(),
     onLog: LogHandlerSchema.optional(),
@@ -136,19 +130,19 @@ export const ConfigSchema = z
  */
 export const SessionDataSchema = PropertiesSchema.and(
   z.object({
-    isStart: RequiredBoolean.describe('Whether this is a new session start'),
-    storage: RequiredBoolean.describe('Whether storage is available'),
-    id: createOptionalIdSchema('Session identifier'),
-    start: createTimestampSchema('Session start timestamp', true),
+    isStart: z.boolean().describe('Whether this is a new session start'),
+    storage: z.boolean().describe('Whether storage is available'),
+    id: Identifier.describe('Session identifier').optional(),
+    start: Timestamp.describe('Session start timestamp').optional(),
     marketing: z
       .literal(true)
       .optional()
       .describe('Marketing attribution flag'),
-    updated: createTimestampSchema('Last update timestamp', true),
-    isNew: OptionalBoolean.describe('Whether this is a new session'),
-    device: createOptionalIdSchema('Device identifier'),
-    count: createCounterSchema('Event count in session', true),
-    runs: createCounterSchema('Number of runs', true),
+    updated: Timestamp.describe('Last update timestamp').optional(),
+    isNew: z.boolean().describe('Whether this is a new session').optional(),
+    device: Identifier.describe('Device identifier').optional(),
+    count: Counter.describe('Event count in session').optional(),
+    runs: Counter.describe('Number of runs').optional(),
   }),
 ).describe('Session state and tracking data');
 

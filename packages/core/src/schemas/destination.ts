@@ -8,14 +8,7 @@ import {
   RulesSchema,
   PolicySchema,
 } from './mapping';
-import {
-  OptionalBoolean,
-  OptionalIdentifier,
-  GenericSettings,
-  GenericEnv,
-  createBooleanSchema,
-  createOptionalIdSchema,
-} from './primitives';
+import { Identifier } from './primitives';
 import { ErrorHandlerSchema, LogHandlerSchema } from './utilities';
 
 /**
@@ -59,33 +52,42 @@ export const ConfigSchema = z
     consent: ConsentSchema.optional().describe(
       'Required consent states to send events to this destination',
     ),
-    settings: GenericSettings.describe('Implementation-specific configuration'),
+    settings: z
+      .any()
+      .describe('Implementation-specific configuration')
+      .optional(),
     data: z
       .union([ValueSchema, ValuesSchema])
       .optional()
       .describe(
         'Global data transformation applied to all events for this destination',
       ),
-    env: GenericEnv.describe('Environment dependencies (platform-specific)'),
-    id: createOptionalIdSchema(
+    env: z
+      .any()
+      .describe('Environment dependencies (platform-specific)')
+      .optional(),
+    id: Identifier.describe(
       'Destination instance identifier (defaults to destination key)',
-    ),
-    init: createBooleanSchema('Whether to initialize immediately', true),
-    loadScript: createBooleanSchema(
-      'Whether to load external script (for web destinations)',
-      true,
-    ),
+    ).optional(),
+    init: z.boolean().describe('Whether to initialize immediately').optional(),
+    loadScript: z
+      .boolean()
+      .describe('Whether to load external script (for web destinations)')
+      .optional(),
     mapping: RulesSchema.optional().describe(
       'Entity-action specific mapping rules for this destination',
     ),
     policy: PolicySchema.optional().describe(
       'Pre-processing policy rules applied before event mapping',
     ),
-    queue: createBooleanSchema(
-      'Whether to queue events when consent is not granted',
-      true,
-    ),
-    verbose: createBooleanSchema('Enable verbose logging for debugging', true),
+    queue: z
+      .boolean()
+      .describe('Whether to queue events when consent is not granted')
+      .optional(),
+    verbose: z
+      .boolean()
+      .describe('Enable verbose logging for debugging')
+      .optional(),
     // Handler functions
     onError: ErrorHandlerSchema.optional(),
     onLog: LogHandlerSchema.optional(),

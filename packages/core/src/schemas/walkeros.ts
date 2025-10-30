@@ -1,19 +1,12 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import {
-  OptionalString,
-  OptionalBoolean,
   RequiredString,
   RequiredNumber,
   Identifier,
-  OptionalIdentifier,
   Timestamp,
   Counter,
   TaggingVersion,
-  createIdSchema,
-  createOptionalIdSchema,
-  createTimestampSchema,
-  createCounterSchema,
 } from './primitives';
 
 /**
@@ -250,16 +243,14 @@ export const EventSchema = z
     consent: ConsentSchema.describe('Consent states at event time'),
 
     // System-generated fields
-    id: createIdSchema('Unique event identifier (timestamp-based)'),
+    id: Identifier.describe('Unique event identifier (timestamp-based)'),
     trigger: RequiredString.describe('Event trigger identifier'),
     entity: RequiredString.describe('Parsed entity from event name'),
     action: RequiredString.describe('Parsed action from event name'),
-    timestamp: createTimestampSchema(
-      'Unix timestamp in milliseconds since epoch',
-    ),
+    timestamp: Timestamp.describe('Unix timestamp in milliseconds since epoch'),
     timing: RequiredNumber.describe('Event processing timing information'),
     group: RequiredString.describe('Event grouping identifier'),
-    count: createCounterSchema('Event count in session'),
+    count: Counter.describe('Event count in session'),
 
     // Version & source tracking
     version: VersionSchema.describe('Walker version information'),

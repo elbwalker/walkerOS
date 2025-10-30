@@ -1,11 +1,5 @@
 import { z } from 'zod';
-import {
-  OptionalBoolean,
-  OptionalIdentifier,
-  AnyFunction,
-  createBooleanSchema,
-  createOptionalIdSchema,
-} from './primitives';
+import {} from './primitives';
 import { ErrorHandlerSchema, LogHandlerSchema } from './utilities';
 
 /**
@@ -50,7 +44,10 @@ export const HandlersConfig = z
  */
 export const VerboseConfig = z
   .object({
-    verbose: createBooleanSchema('Enable verbose logging for debugging', true),
+    verbose: z
+      .boolean()
+      .describe('Enable verbose logging for debugging')
+      .optional(),
   })
   .partial();
 
@@ -60,10 +57,10 @@ export const VerboseConfig = z
  */
 export const QueueConfig = z
   .object({
-    queue: createBooleanSchema(
-      'Whether to queue events when consent is not granted',
-      true,
-    ),
+    queue: z
+      .boolean()
+      .describe('Whether to queue events when consent is not granted')
+      .optional(),
   })
   .partial();
 
@@ -71,11 +68,7 @@ export const QueueConfig = z
  * IdConfig - ID configuration pattern
  * Used in: Destination.Config, Source.Config
  */
-export const IdConfig = z
-  .object({
-    id: OptionalIdentifier,
-  })
-  .partial();
+export const IdConfig = z.object({}).partial();
 
 /**
  * InitConfig - Initialization configuration pattern
@@ -83,11 +76,11 @@ export const IdConfig = z
  */
 export const InitConfig = z
   .object({
-    init: createBooleanSchema('Whether to initialize immediately', true),
-    loadScript: createBooleanSchema(
-      'Whether to load external script (for web destinations)',
-      true,
-    ),
+    init: z.boolean().describe('Whether to initialize immediately').optional(),
+    loadScript: z
+      .boolean()
+      .describe('Whether to load external script (for web destinations)')
+      .optional(),
   })
   .partial();
 
@@ -97,7 +90,7 @@ export const InitConfig = z
  */
 export const DisabledConfig = z
   .object({
-    disabled: createBooleanSchema('Set to true to disable', true),
+    disabled: z.boolean().describe('Set to true to disable').optional(),
   })
   .partial();
 
@@ -107,10 +100,10 @@ export const DisabledConfig = z
  */
 export const PrimaryConfig = z
   .object({
-    primary: createBooleanSchema(
-      'Mark as primary (only one can be primary)',
-      true,
-    ),
+    primary: z
+      .boolean()
+      .describe('Mark as primary (only one can be primary)')
+      .optional(),
   })
   .partial();
 
@@ -251,7 +244,7 @@ export const RuntimeInstanceConfig = z
  */
 export const BaseContextConfig = z
   .object({
-    collector: AnyFunction.describe('Collector instance (runtime object)'),
+    collector: z.any().describe('Collector instance (runtime object)'),
     config: z.any().describe('Configuration'),
     env: z.any().describe('Environment dependencies'),
   })
@@ -285,7 +278,7 @@ export const BatchConfig = z
  */
 export const ProcessingControlConfig = z
   .object({
-    ignore: createBooleanSchema('Set to true to skip processing', true),
+    ignore: z.boolean().describe('Set to true to skip processing').optional(),
     condition: z
       .string()
       .optional()

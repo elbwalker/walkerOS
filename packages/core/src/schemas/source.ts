@@ -1,13 +1,7 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ConfigSchema as MappingConfigSchema } from './mapping';
-import {
-  GenericSettings,
-  GenericEnv,
-  OptionalBoolean,
-  createOptionalIdSchema,
-  createBooleanSchema,
-} from './primitives';
+import { Identifier } from './primitives';
 import { ErrorHandlerSchema } from './utilities';
 
 /**
@@ -84,17 +78,22 @@ export const BaseEnvSchema = z
  * Generic note: settings, env, and mapping can have source-specific types
  */
 export const ConfigSchema = MappingConfigSchema.extend({
-  settings: GenericSettings.describe('Implementation-specific configuration'),
+  settings: z
+    .any()
+    .describe('Implementation-specific configuration')
+    .optional(),
   env: BaseEnvSchema.optional().describe(
     'Environment dependencies (platform-specific)',
   ),
-  id: createOptionalIdSchema('Source identifier (defaults to source key)'),
+  id: Identifier.describe(
+    'Source identifier (defaults to source key)',
+  ).optional(),
   onError: ErrorHandlerSchema.optional(),
-  disabled: createBooleanSchema('Set to true to disable', true),
-  primary: createBooleanSchema(
-    'Mark as primary (only one can be primary)',
-    true,
-  ),
+  disabled: z.boolean().describe('Set to true to disable').optional(),
+  primary: z
+    .boolean()
+    .describe('Mark as primary (only one can be primary)')
+    .optional(),
 }).describe('Source configuration with mapping and environment');
 
 /**
