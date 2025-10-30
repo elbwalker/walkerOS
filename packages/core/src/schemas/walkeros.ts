@@ -10,7 +10,6 @@ import {
   Timestamp,
   Counter,
   TaggingVersion,
-  DESCRIPTIONS,
   createIdSchema,
   createOptionalIdSchema,
   createTimestampSchema,
@@ -251,14 +250,16 @@ export const EventSchema = z
     consent: ConsentSchema.describe('Consent states at event time'),
 
     // System-generated fields
-    id: createIdSchema(DESCRIPTIONS.eventId),
-    trigger: RequiredString.describe(DESCRIPTIONS.trigger),
+    id: createIdSchema('Unique event identifier (timestamp-based)'),
+    trigger: RequiredString.describe('Event trigger identifier'),
     entity: RequiredString.describe('Parsed entity from event name'),
     action: RequiredString.describe('Parsed action from event name'),
-    timestamp: createTimestampSchema(DESCRIPTIONS.timestamp),
-    timing: RequiredNumber.describe(DESCRIPTIONS.timing),
-    group: RequiredString.describe(DESCRIPTIONS.group),
-    count: createCounterSchema(DESCRIPTIONS.eventCount),
+    timestamp: createTimestampSchema(
+      'Unix timestamp in milliseconds since epoch',
+    ),
+    timing: RequiredNumber.describe('Event processing timing information'),
+    group: RequiredString.describe('Event grouping identifier'),
+    count: createCounterSchema('Event count in session'),
 
     // Version & source tracking
     version: VersionSchema.describe('Walker version information'),

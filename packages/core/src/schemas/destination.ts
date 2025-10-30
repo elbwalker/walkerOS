@@ -13,7 +13,6 @@ import {
   OptionalIdentifier,
   GenericSettings,
   GenericEnv,
-  DESCRIPTIONS,
   createBooleanSchema,
   createOptionalIdSchema,
 } from './primitives';
@@ -60,25 +59,33 @@ export const ConfigSchema = z
     consent: ConsentSchema.optional().describe(
       'Required consent states to send events to this destination',
     ),
-    settings: GenericSettings.describe(DESCRIPTIONS.settings),
+    settings: GenericSettings.describe('Implementation-specific configuration'),
     data: z
       .union([ValueSchema, ValuesSchema])
       .optional()
       .describe(
         'Global data transformation applied to all events for this destination',
       ),
-    env: GenericEnv.describe(DESCRIPTIONS.env),
-    id: createOptionalIdSchema(DESCRIPTIONS.destinationId),
-    init: createBooleanSchema(DESCRIPTIONS.init, true),
-    loadScript: createBooleanSchema(DESCRIPTIONS.loadScript, true),
+    env: GenericEnv.describe('Environment dependencies (platform-specific)'),
+    id: createOptionalIdSchema(
+      'Destination instance identifier (defaults to destination key)',
+    ),
+    init: createBooleanSchema('Whether to initialize immediately', true),
+    loadScript: createBooleanSchema(
+      'Whether to load external script (for web destinations)',
+      true,
+    ),
     mapping: RulesSchema.optional().describe(
       'Entity-action specific mapping rules for this destination',
     ),
     policy: PolicySchema.optional().describe(
       'Pre-processing policy rules applied before event mapping',
     ),
-    queue: createBooleanSchema(DESCRIPTIONS.queue, true),
-    verbose: createBooleanSchema(DESCRIPTIONS.verbose, true),
+    queue: createBooleanSchema(
+      'Whether to queue events when consent is not granted',
+      true,
+    ),
+    verbose: createBooleanSchema('Enable verbose logging for debugging', true),
     // Handler functions
     onError: ErrorHandlerSchema.optional(),
     onLog: LogHandlerSchema.optional(),

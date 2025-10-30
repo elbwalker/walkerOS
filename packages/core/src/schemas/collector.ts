@@ -16,7 +16,6 @@ import {
   Timestamp,
   Counter,
   TaggingVersion,
-  DESCRIPTIONS,
   createOptionalIdSchema,
   createTimestampSchema,
   createCounterSchema,
@@ -116,7 +115,7 @@ export const ConfigSchema = z
     sessionStatic: z
       .record(z.any())
       .describe('Static session data that persists across collector runs'),
-    verbose: createBooleanSchema(DESCRIPTIONS.verbose),
+    verbose: createBooleanSchema('Enable verbose logging for debugging'),
     // Function handlers
     onError: ErrorHandlerSchema.optional(),
     onLog: LogHandlerSchema.optional(),
@@ -138,15 +137,18 @@ export const ConfigSchema = z
 export const SessionDataSchema = PropertiesSchema.and(
   z.object({
     isStart: RequiredBoolean.describe('Whether this is a new session start'),
-    storage: RequiredBoolean.describe(DESCRIPTIONS.storage),
-    id: createOptionalIdSchema(DESCRIPTIONS.sessionId),
-    start: createTimestampSchema(DESCRIPTIONS.sessionStart, true),
-    marketing: z.literal(true).optional().describe(DESCRIPTIONS.marketing),
-    updated: createTimestampSchema(DESCRIPTIONS.updated, true),
+    storage: RequiredBoolean.describe('Whether storage is available'),
+    id: createOptionalIdSchema('Session identifier'),
+    start: createTimestampSchema('Session start timestamp', true),
+    marketing: z
+      .literal(true)
+      .optional()
+      .describe('Marketing attribution flag'),
+    updated: createTimestampSchema('Last update timestamp', true),
     isNew: OptionalBoolean.describe('Whether this is a new session'),
-    device: createOptionalIdSchema(DESCRIPTIONS.deviceId),
-    count: createCounterSchema(DESCRIPTIONS.eventCount, true),
-    runs: createCounterSchema(DESCRIPTIONS.runs, true),
+    device: createOptionalIdSchema('Device identifier'),
+    count: createCounterSchema('Event count in session', true),
+    runs: createCounterSchema('Number of runs', true),
   }),
 ).describe('Session state and tracking data');
 

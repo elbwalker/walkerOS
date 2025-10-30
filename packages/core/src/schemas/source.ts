@@ -5,7 +5,6 @@ import {
   GenericSettings,
   GenericEnv,
   OptionalBoolean,
-  DESCRIPTIONS,
   createOptionalIdSchema,
   createBooleanSchema,
 } from './primitives';
@@ -85,12 +84,17 @@ export const BaseEnvSchema = z
  * Generic note: settings, env, and mapping can have source-specific types
  */
 export const ConfigSchema = MappingConfigSchema.extend({
-  settings: GenericSettings.describe(DESCRIPTIONS.settings),
-  env: BaseEnvSchema.optional().describe(DESCRIPTIONS.env),
-  id: createOptionalIdSchema(DESCRIPTIONS.sourceId),
+  settings: GenericSettings.describe('Implementation-specific configuration'),
+  env: BaseEnvSchema.optional().describe(
+    'Environment dependencies (platform-specific)',
+  ),
+  id: createOptionalIdSchema('Source identifier (defaults to source key)'),
   onError: ErrorHandlerSchema.optional(),
-  disabled: createBooleanSchema(DESCRIPTIONS.disabled, true),
-  primary: createBooleanSchema(DESCRIPTIONS.primary, true),
+  disabled: createBooleanSchema('Set to true to disable', true),
+  primary: createBooleanSchema(
+    'Mark as primary (only one can be primary)',
+    true,
+  ),
 }).describe('Source configuration with mapping and environment');
 
 /**

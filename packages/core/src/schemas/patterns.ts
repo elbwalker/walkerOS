@@ -3,7 +3,6 @@ import {
   OptionalBoolean,
   OptionalIdentifier,
   AnyFunction,
-  DESCRIPTIONS,
   createBooleanSchema,
   createOptionalIdSchema,
 } from './primitives';
@@ -32,8 +31,12 @@ import { ErrorHandlerSchema, LogHandlerSchema } from './utilities';
  */
 export const HandlersConfig = z
   .object({
-    onError: ErrorHandlerSchema.optional().describe(DESCRIPTIONS.onError),
-    onLog: LogHandlerSchema.optional().describe(DESCRIPTIONS.onLog),
+    onError: ErrorHandlerSchema.optional().describe(
+      'Error handler function: (error, state?) => void',
+    ),
+    onLog: LogHandlerSchema.optional().describe(
+      'Log handler function: (message, verbose?) => void',
+    ),
   })
   .partial();
 
@@ -47,7 +50,7 @@ export const HandlersConfig = z
  */
 export const VerboseConfig = z
   .object({
-    verbose: createBooleanSchema(DESCRIPTIONS.verbose, true),
+    verbose: createBooleanSchema('Enable verbose logging for debugging', true),
   })
   .partial();
 
@@ -57,7 +60,10 @@ export const VerboseConfig = z
  */
 export const QueueConfig = z
   .object({
-    queue: createBooleanSchema(DESCRIPTIONS.queue, true),
+    queue: createBooleanSchema(
+      'Whether to queue events when consent is not granted',
+      true,
+    ),
   })
   .partial();
 
@@ -77,8 +83,11 @@ export const IdConfig = z
  */
 export const InitConfig = z
   .object({
-    init: createBooleanSchema(DESCRIPTIONS.init, true),
-    loadScript: createBooleanSchema(DESCRIPTIONS.loadScript, true),
+    init: createBooleanSchema('Whether to initialize immediately', true),
+    loadScript: createBooleanSchema(
+      'Whether to load external script (for web destinations)',
+      true,
+    ),
   })
   .partial();
 
@@ -88,7 +97,7 @@ export const InitConfig = z
  */
 export const DisabledConfig = z
   .object({
-    disabled: createBooleanSchema(DESCRIPTIONS.disabled, true),
+    disabled: createBooleanSchema('Set to true to disable', true),
   })
   .partial();
 
@@ -98,7 +107,10 @@ export const DisabledConfig = z
  */
 export const PrimaryConfig = z
   .object({
-    primary: createBooleanSchema(DESCRIPTIONS.primary, true),
+    primary: createBooleanSchema(
+      'Mark as primary (only one can be primary)',
+      true,
+    ),
   })
   .partial();
 
@@ -113,7 +125,10 @@ export const PrimaryConfig = z
  */
 export const GenericSettingsConfig = z
   .object({
-    settings: z.any().optional().describe(DESCRIPTIONS.settings),
+    settings: z
+      .any()
+      .optional()
+      .describe('Implementation-specific configuration'),
   })
   .partial();
 
@@ -124,7 +139,10 @@ export const GenericSettingsConfig = z
  */
 export const GenericEnvConfig = z
   .object({
-    env: z.any().optional().describe(DESCRIPTIONS.env),
+    env: z
+      .any()
+      .optional()
+      .describe('Environment dependencies (platform-specific)'),
   })
   .partial();
 
@@ -148,7 +166,7 @@ export function createDataTransformationConfig(
       data: z
         .union([ValueSchema, ValuesSchema])
         .optional()
-        .describe(DESCRIPTIONS.data),
+        .describe('Data transformation rules'),
     })
     .partial();
 }
@@ -163,7 +181,7 @@ export function createDataTransformationConfig(
 export function createMappingRulesConfig(RulesSchema: z.ZodTypeAny) {
   return z
     .object({
-      mapping: RulesSchema.optional().describe(DESCRIPTIONS.mapping),
+      mapping: RulesSchema.optional().describe('Event mapping rules'),
     })
     .partial();
 }
@@ -178,7 +196,7 @@ export function createMappingRulesConfig(RulesSchema: z.ZodTypeAny) {
 export function createPolicyConfig(PolicySchema: z.ZodTypeAny) {
   return z
     .object({
-      policy: PolicySchema.optional().describe(DESCRIPTIONS.policy),
+      policy: PolicySchema.optional().describe('Pre-processing policy rules'),
     })
     .partial();
 }
@@ -193,7 +211,7 @@ export function createPolicyConfig(PolicySchema: z.ZodTypeAny) {
 export function createConsentConfig(ConsentSchema: z.ZodTypeAny) {
   return z
     .object({
-      consent: ConsentSchema.optional().describe(DESCRIPTIONS.consent),
+      consent: ConsentSchema.optional().describe('Required consent states'),
     })
     .partial();
 }
@@ -249,8 +267,11 @@ export const BaseContextConfig = z
  */
 export const BatchConfig = z
   .object({
-    batch: z.number().optional().describe(DESCRIPTIONS.batch),
-    batched: z.any().optional().describe(DESCRIPTIONS.batched),
+    batch: z
+      .number()
+      .optional()
+      .describe('Batch size: bundle N events for batch processing'),
+    batched: z.any().optional().describe('Batch of events to be processed'),
   })
   .partial();
 
@@ -264,8 +285,11 @@ export const BatchConfig = z
  */
 export const ProcessingControlConfig = z
   .object({
-    ignore: createBooleanSchema(DESCRIPTIONS.ignore, true),
-    condition: z.string().optional().describe(DESCRIPTIONS.condition),
+    ignore: createBooleanSchema('Set to true to skip processing', true),
+    condition: z
+      .string()
+      .optional()
+      .describe('Condition function: return true to process'),
   })
   .partial();
 
