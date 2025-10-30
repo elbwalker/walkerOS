@@ -7,6 +7,22 @@ import {
   EventSchema,
 } from './walkeros';
 import { ConfigSchema as MappingConfigSchema } from './mapping';
+import {
+  OptionalBoolean,
+  RequiredBoolean,
+  RequiredNumber,
+  OptionalString,
+  OptionalIdentifier,
+  Timestamp,
+  Counter,
+  TaggingVersion,
+  DESCRIPTIONS,
+  createOptionalIdSchema,
+  createTimestampSchema,
+  createCounterSchema,
+  createBooleanSchema,
+} from './primitives';
+import { ErrorHandlerSchema, LogHandlerSchema } from './utilities';
 
 /**
  * Collector Schemas
@@ -89,21 +105,21 @@ export const CommandTypeSchema = z
  */
 export const ConfigSchema = z
   .object({
-    run: z
-      .boolean()
-      .optional()
-      .describe('Whether to run collector automatically on initialization'),
-    tagging: z.number().describe('Version number for event tagging'),
+    run: createBooleanSchema(
+      'Whether to run collector automatically on initialization',
+      true,
+    ),
+    tagging: TaggingVersion,
     globalsStatic: PropertiesSchema.describe(
       'Static global properties that persist across collector runs',
     ),
     sessionStatic: z
       .record(z.any())
       .describe('Static session data that persists across collector runs'),
-    verbose: z.boolean().describe('Enable verbose logging for debugging'),
-    // Function handlers - not validated, use z.any()
-    onError: z.any().optional().describe('Error handler function'),
-    onLog: z.any().optional().describe('Log handler function'),
+    verbose: createBooleanSchema(DESCRIPTIONS.verbose),
+    // Function handlers
+    onError: ErrorHandlerSchema.optional(),
+    onLog: LogHandlerSchema.optional(),
   })
   .describe('Core collector configuration');
 
@@ -121,19 +137,16 @@ export const ConfigSchema = z
  */
 export const SessionDataSchema = PropertiesSchema.and(
   z.object({
-    isStart: z.boolean().describe('Whether this is a new session start'),
-    storage: z.boolean().describe('Whether session storage is available'),
-    id: z.string().optional().describe('Session identifier'),
-    start: z.number().optional().describe('Session start timestamp'),
-    marketing: z
-      .literal(true)
-      .optional()
-      .describe('Marketing attribution flag'),
-    updated: z.number().optional().describe('Last session update timestamp'),
-    isNew: z.boolean().optional().describe('Whether this is a new session'),
-    device: z.string().optional().describe('Device identifier'),
-    count: z.number().optional().describe('Event count in session'),
-    runs: z.number().optional().describe('Collector run count'),
+    isStart: RequiredBoolean.describe('Whether this is a new session start'),
+    storage: RequiredBoolean.describe(DESCRIPTIONS.storage),
+    id: createOptionalIdSchema(DESCRIPTIONS.sessionId),
+    start: createTimestampSchema(DESCRIPTIONS.sessionStart, true),
+    marketing: z.literal(true).optional().describe(DESCRIPTIONS.marketing),
+    updated: createTimestampSchema(DESCRIPTIONS.updated, true),
+    isNew: OptionalBoolean.describe('Whether this is a new session'),
+    device: createOptionalIdSchema(DESCRIPTIONS.deviceId),
+    count: createCounterSchema(DESCRIPTIONS.eventCount, true),
+    runs: createCounterSchema(DESCRIPTIONS.runs, true),
   }),
 ).describe('Session state and tracking data');
 

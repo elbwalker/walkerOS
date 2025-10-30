@@ -51,16 +51,53 @@ import { ValueConfigSchema } from '@walkeros/core/schemas/value-config';
 - **Utilities** (`utilities.ts`): StorageTypeSchema, ErrorHandlerSchema,
   LogHandlerSchema
 
+**DRY Improvements** (`primitives.ts` & `patterns.ts`):
+
+- **New files**: Reusable schema building blocks to eliminate duplication
+- **Primitives**: OptionalString, OptionalBoolean, Identifier, Timestamp,
+  Counter, TaggingVersion, GenericSettings, GenericEnv, etc.
+- **Standard descriptions**: DESCRIPTIONS map ensures consistent field
+  descriptions across all schemas
+- **Helper functions**: createIdSchema(), createBooleanSchema(),
+  createTimestampSchema(), etc.
+- **Patterns**: HandlersConfig, VerboseConfig, QueueConfig, and other common
+  configuration patterns
+- **Impact**: Eliminated 70+ schema duplications, ~100-150 lines of code
+  reduction
+
+**Critical fixes:**
+
+- **Tagging description standardized**: "Tagging version number" now consistent
+  in VersionSchema and Collector.ConfigSchema
+- **Handler functions**: ErrorHandlerSchema and LogHandlerSchema now imported
+  from utilities.ts (not redefined inline)
+- **ID fields**: Standardized with context-aware descriptions (userId,
+  sessionId, deviceId, sourceId, destinationId, eventId)
+- **Primitive fields**: Boolean/String/Number inline definitions replaced with
+  reusable primitives
+
+**Files updated with DRY patterns:**
+
+- `walkeros.ts`: User, Version, Source, Event schemas use primitives
+- `collector.ts`: Config, SessionData schemas use primitives and fix tagging
+- `destination.ts`: Config schema uses primitives and handler patterns
+- `source.ts`: Config schema uses primitives and handler patterns
+- `index.ts`: Exports primitives and patterns for external use
+
 **Benefits:**
 
 - Clear organization mirroring types folder structure
 - Comprehensive Zod schemas for runtime validation
 - JSON Schema generation for MCP tools and Explorer UI
 - Consistent naming convention: `{TypeName}Schema` and `{typeName}JsonSchema`
+- DRY principle: Single source of truth for common schema patterns
+- Standardized descriptions across all schemas
 
 **Documentation:**
 
 - See `packages/core/src/schemas/README.md` for complete schema documentation
+- See `packages/core/src/schemas/primitives.ts` for reusable primitives
+- See `packages/core/src/schemas/patterns.ts` for common patterns
 - All schemas include detailed descriptions via `.describe()`
 - JSON Schema exports available for all major types
 

@@ -27,6 +27,13 @@
  */
 
 // ========================================
+// Primitives & Patterns (DRY building blocks)
+// ========================================
+
+export * from './primitives';
+export * from './patterns';
+
+// ========================================
 // Namespace Exports (prevents name collisions)
 // ========================================
 

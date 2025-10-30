@@ -8,6 +8,16 @@ import {
   RulesSchema,
   PolicySchema,
 } from './mapping';
+import {
+  OptionalBoolean,
+  OptionalIdentifier,
+  GenericSettings,
+  GenericEnv,
+  DESCRIPTIONS,
+  createBooleanSchema,
+  createOptionalIdSchema,
+} from './primitives';
+import { ErrorHandlerSchema, LogHandlerSchema } from './utilities';
 
 /**
  * Destination Schemas
@@ -50,54 +60,28 @@ export const ConfigSchema = z
     consent: ConsentSchema.optional().describe(
       'Required consent states to send events to this destination',
     ),
-    settings: z
-      .any()
-      .optional()
-      .describe(
-        'Destination-specific configuration (e.g., API keys, measurement IDs)',
-      ),
+    settings: GenericSettings.describe(DESCRIPTIONS.settings),
     data: z
       .union([ValueSchema, ValuesSchema])
       .optional()
       .describe(
         'Global data transformation applied to all events for this destination',
       ),
-    env: z
-      .any()
-      .optional()
-      .describe('Environment dependencies (e.g., global objects, DOM APIs)'),
-    id: z
-      .string()
-      .optional()
-      .describe(
-        'Destination instance identifier (defaults to destination key)',
-      ),
-    init: z
-      .boolean()
-      .optional()
-      .describe('Whether to initialize destination immediately'),
-    loadScript: z
-      .boolean()
-      .optional()
-      .describe('Whether to load external script (for web destinations)'),
+    env: GenericEnv.describe(DESCRIPTIONS.env),
+    id: createOptionalIdSchema(DESCRIPTIONS.destinationId),
+    init: createBooleanSchema(DESCRIPTIONS.init, true),
+    loadScript: createBooleanSchema(DESCRIPTIONS.loadScript, true),
     mapping: RulesSchema.optional().describe(
       'Entity-action specific mapping rules for this destination',
     ),
     policy: PolicySchema.optional().describe(
       'Pre-processing policy rules applied before event mapping',
     ),
-    queue: z
-      .boolean()
-      .optional()
-      .describe('Whether to queue events when consent is not granted'),
-    verbose: z
-      .boolean()
-      .optional()
-      .describe('Enable verbose logging for debugging'),
-    // Note: onError and onLog are functions, not easily serializable
-    // We use z.any() to allow them but don't validate structure
-    onError: z.any().optional().describe('Error handler function'),
-    onLog: z.any().optional().describe('Log handler function'),
+    queue: createBooleanSchema(DESCRIPTIONS.queue, true),
+    verbose: createBooleanSchema(DESCRIPTIONS.verbose, true),
+    // Handler functions
+    onError: ErrorHandlerSchema.optional(),
+    onLog: LogHandlerSchema.optional(),
   })
   .describe('Destination configuration');
 

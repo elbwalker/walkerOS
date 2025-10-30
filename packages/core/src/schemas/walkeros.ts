@@ -1,5 +1,21 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import {
+  OptionalString,
+  OptionalBoolean,
+  RequiredString,
+  RequiredNumber,
+  Identifier,
+  OptionalIdentifier,
+  Timestamp,
+  Counter,
+  TaggingVersion,
+  DESCRIPTIONS,
+  createIdSchema,
+  createOptionalIdSchema,
+  createTimestampSchema,
+  createCounterSchema,
+} from './primitives';
 
 /**
  * Core walkerOS Event Model Schemas
@@ -135,10 +151,10 @@ export const UserSchema = PropertiesSchema.and(
  */
 export const VersionSchema = PropertiesSchema.and(
   z.object({
-    source: z
-      .string()
-      .describe('Walker implementation version (e.g., "2.0.0")'),
-    tagging: z.number().describe('Tagging version number'),
+    source: RequiredString.describe(
+      'Walker implementation version (e.g., "2.0.0")',
+    ),
+    tagging: TaggingVersion,
   }),
 ).describe('Walker version information');
 
@@ -149,12 +165,10 @@ export const VersionSchema = PropertiesSchema.and(
 export const SourceSchema = PropertiesSchema.and(
   z.object({
     type: SourceTypeSchema.describe('Source type identifier'),
-    id: z
-      .string()
-      .describe('Source implementation ID (e.g., "@elbwalker/walker.js")'),
-    previous_id: z
-      .string()
-      .describe('Previous source ID for migration tracking'),
+    id: RequiredString.describe('Source identifier (typically URL on web)'),
+    previous_id: RequiredString.describe(
+      'Previous source identifier (typically referrer on web)',
+    ),
   }),
 ).describe('Event source information');
 
@@ -237,16 +251,14 @@ export const EventSchema = z
     consent: ConsentSchema.describe('Consent states at event time'),
 
     // System-generated fields
-    id: z.string().describe('Unique event identifier (timestamp-based)'),
-    trigger: z.string().describe('Event trigger identifier'),
-    entity: z.string().describe('Parsed entity from event name'),
-    action: z.string().describe('Parsed action from event name'),
-    timestamp: z
-      .number()
-      .describe('Event creation time (milliseconds since epoch)'),
-    timing: z.number().describe('Event processing timing'),
-    group: z.string().describe('Event grouping identifier'),
-    count: z.number().describe('Event count in session'),
+    id: createIdSchema(DESCRIPTIONS.eventId),
+    trigger: RequiredString.describe(DESCRIPTIONS.trigger),
+    entity: RequiredString.describe('Parsed entity from event name'),
+    action: RequiredString.describe('Parsed action from event name'),
+    timestamp: createTimestampSchema(DESCRIPTIONS.timestamp),
+    timing: RequiredNumber.describe(DESCRIPTIONS.timing),
+    group: RequiredString.describe(DESCRIPTIONS.group),
+    count: createCounterSchema(DESCRIPTIONS.eventCount),
 
     // Version & source tracking
     version: VersionSchema.describe('Walker version information'),

@@ -1,6 +1,15 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ConfigSchema as MappingConfigSchema } from './mapping';
+import {
+  GenericSettings,
+  GenericEnv,
+  OptionalBoolean,
+  DESCRIPTIONS,
+  createOptionalIdSchema,
+  createBooleanSchema,
+} from './primitives';
+import { ErrorHandlerSchema } from './utilities';
 
 /**
  * Source Schemas
@@ -76,24 +85,12 @@ export const BaseEnvSchema = z
  * Generic note: settings, env, and mapping can have source-specific types
  */
 export const ConfigSchema = MappingConfigSchema.extend({
-  settings: z
-    .any()
-    .optional()
-    .describe('Source-specific configuration (e.g., selectors, endpoints)'),
-  env: BaseEnvSchema.optional().describe('Environment dependencies'),
-  id: z
-    .string()
-    .optional()
-    .describe('Source identifier (defaults to source key)'),
-  onError: z.any().optional().describe('Error handler function'),
-  disabled: z
-    .boolean()
-    .optional()
-    .describe('Set to true to disable this source'),
-  primary: z
-    .boolean()
-    .optional()
-    .describe('Mark as primary source (only one can be primary)'),
+  settings: GenericSettings.describe(DESCRIPTIONS.settings),
+  env: BaseEnvSchema.optional().describe(DESCRIPTIONS.env),
+  id: createOptionalIdSchema(DESCRIPTIONS.sourceId),
+  onError: ErrorHandlerSchema.optional(),
+  disabled: createBooleanSchema(DESCRIPTIONS.disabled, true),
+  primary: createBooleanSchema(DESCRIPTIONS.primary, true),
 }).describe('Source configuration with mapping and environment');
 
 /**
