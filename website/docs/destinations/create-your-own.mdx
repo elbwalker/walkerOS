@@ -83,6 +83,19 @@ export const destinationWebhook: Destination<WebhookSettings> = {
 };
 ```
 
+## Schema Validation (Optional)
+
+Destinations can export Zod schemas to provide runtime validation and TypeScript
+IDE support for configuration options. Export a `schemas` namespace containing
+`SettingsSchema` and `MappingSchema` to enable validation, autocomplete, and
+JSON Schema generation for tools like MCP and Explorer.
+
+See the
+[Destination Schemas Guide](https://github.com/elbwalker/walkerOS/blob/main/DESTINATION_SCHEMAS.md)
+for implementation details, or reference existing destinations like
+[Meta Pixel](https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/meta)
+for complete examples.
+
 ## The `on` method (Optional)
 
 The optional `on` method allows your destination to respond to collector
@@ -213,9 +226,12 @@ declare global {
 
 ## Environment Dependencies (Testing)
 
-The `env` parameter enables dependency injection for external APIs and SDKs. This allows you to test your destination logic without making actual API calls or requiring real browser globals.
+The `env` parameter enables dependency injection for external APIs and SDKs.
+This allows you to test your destination logic without making actual API calls
+or requiring real browser globals.
 
 **Use Cases:**
+
 - Mock external SDKs (Google Analytics, Facebook Pixel, AWS SDK)
 - Test without network requests
 - Simulate different API responses
@@ -246,14 +262,19 @@ export interface Env extends DestinationServer.Env {
 
 ### Using Environment in Your Destination
 
-Use the 3rd generic parameter for type safety, then access env in `init` or `push`:
+Use the 3rd generic parameter for type safety, then access env in `init` or
+`push`:
 
 ```typescript
 import type { DestinationWeb } from '@walkeros/web-core';
 import { getEnv } from '@walkeros/web-core';
 
-interface Settings { /* ... */ }
-interface Mapping { /* ... */ }
+interface Settings {
+  /* ... */
+}
+interface Mapping {
+  /* ... */
+}
 interface Env extends DestinationWeb.Env {
   window: { customAPI: (event: string) => void };
 }
@@ -318,6 +339,7 @@ describe('My Destination', () => {
 ```
 
 **Key Points:**
+
 - **Production**: No `env` needed, uses real APIs (window, fetch, SDKs)
 - **Testing**: Provide `env` with mocks for isolated testing
 - **Type Safety**: 3rd generic parameter gives full autocomplete

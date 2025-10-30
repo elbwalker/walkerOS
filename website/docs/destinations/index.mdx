@@ -21,6 +21,8 @@ Destinations handle the final step in the data pipeline by:
 - **Error Handling** - Manage failed requests and retry logic
 - **Data Validation** - Ensure events meet destination requirements
 
+All walkerOS destinations export Zod schemas for configuration validation, providing TypeScript type safety and IDE autocomplete for settings and mapping options. See the [Destination Schemas Guide](https://github.com/elbwalker/walkerOS/blob/main/DESTINATION_SCHEMAS.md) for technical details.
+
 ## Architecture
 
 Destinations receive events from the collector after processing:
