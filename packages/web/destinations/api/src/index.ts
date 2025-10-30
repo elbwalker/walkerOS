@@ -8,14 +8,23 @@ export * as DestinationAPI from './types';
 // Examples
 export * as examples from './examples';
 
+// Schemas
+export * as schemas from './schemas';
+
 export const destinationAPI: Destination = {
   type: 'api',
 
   config: {},
 
   push(event, { config, mapping, data, env }) {
-    const { settings = {} as Settings } = config;
-    const { url, headers, method, transform, transport = 'fetch' } = settings;
+    const { settings } = config;
+    const {
+      url,
+      headers,
+      method,
+      transform,
+      transport = 'fetch',
+    } = settings || {};
 
     if (!url) return;
 
