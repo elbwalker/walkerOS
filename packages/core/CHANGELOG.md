@@ -1,5 +1,74 @@
 # @walkeros/core
 
+## Unreleased
+
+### Breaking Changes
+
+#### Schema Organization Restructure
+
+**What changed:**
+
+- Complete reorganization of `packages/core/src/schemas/` to mirror
+  `packages/core/src/types/` structure
+- Schemas previously in `value-config.ts` have been moved to `mapping.ts`
+- New schema files added: `walkeros.ts`, `destination.ts`, `collector.ts`,
+  `source.ts`, `utilities.ts`
+- `value-config.ts` is now **deprecated** and will be removed in the next major
+  version
+
+**Impact on imports:**
+
+```typescript
+// ✅ Still works (re-exported from index.ts)
+import { ValueConfigSchema, LoopSchema } from '@walkeros/core';
+
+// ✅ Also works (explicit import from new location)
+import { ValueConfigSchema, LoopSchema } from '@walkeros/core/schemas/mapping';
+
+// ❌ Will stop working in next major version
+import { ValueConfigSchema } from '@walkeros/core/schemas/value-config';
+```
+
+**Action required:**
+
+- If importing from `@walkeros/core` → **No action needed** (backwards
+  compatible)
+- If importing directly from `schemas/value-config.ts` → Update to import from
+  `schemas/mapping.ts`
+
+**New schemas added:**
+
+- **Core Event Model** (`walkeros.ts`): EventSchema, UserSchema,
+  PropertiesSchema, EntitySchema, ConsentSchema, SourceTypeSchema
+- **Mapping System** (`mapping.ts`): ValueSchema, RuleSchema, RulesSchema,
+  PolicySchema, ConfigSchema (migrated from value-config.ts)
+- **Destination** (`destination.ts`): ConfigSchema, InstanceSchema, BatchSchema,
+  ResultSchema
+- **Collector** (`collector.ts`): ConfigSchema, SessionDataSchema,
+  CommandTypeSchema, InstanceSchema
+- **Source** (`source.ts`): BaseEnvSchema, ConfigSchema, InstanceSchema,
+  InitSourceSchema
+- **Utilities** (`utilities.ts`): StorageTypeSchema, ErrorHandlerSchema,
+  LogHandlerSchema
+
+**Benefits:**
+
+- Clear organization mirroring types folder structure
+- Comprehensive Zod schemas for runtime validation
+- JSON Schema generation for MCP tools and Explorer UI
+- Consistent naming convention: `{TypeName}Schema` and `{typeName}JsonSchema`
+
+**Documentation:**
+
+- See `packages/core/src/schemas/README.md` for complete schema documentation
+- All schemas include detailed descriptions via `.describe()`
+- JSON Schema exports available for all major types
+
+**Migration timeline:**
+
+- Current version: Backwards compatible, all old imports work
+- Next major version: `value-config.ts` will be removed
+
 ## 0.2.1
 
 ### Patch Changes
