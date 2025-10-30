@@ -33,7 +33,7 @@ import {
  * PropertyType - Base property value types
  * Can be primitive (boolean, string, number) or nested object with Property values
  */
-export const PropertyTypeSchema: z.ZodType<any> = z.lazy(() =>
+export const PropertyTypeSchema: z.ZodTypeAny = z.lazy(() =>
   z.union([
     z.boolean(),
     z.string(),
@@ -46,7 +46,7 @@ export const PropertyTypeSchema: z.ZodType<any> = z.lazy(() =>
  * Property - PropertyType or array of PropertyType
  * Recursive structure allows nested objects and arrays
  */
-export const PropertySchema: z.ZodType<any> = z.lazy(() =>
+export const PropertySchema: z.ZodTypeAny = z.lazy(() =>
   z.union([PropertyTypeSchema, z.array(PropertyTypeSchema)]),
 );
 
@@ -169,7 +169,7 @@ export const SourceSchema = PropertiesSchema.and(
  * Allows events to contain related entities with their own data and context
  * Recursive: entities can contain nested entities
  */
-export const EntitySchema: z.ZodType<any> = z
+export const EntitySchema: z.ZodTypeAny = z
   .lazy(() =>
     z.object({
       entity: z.string().describe('Entity name'),
@@ -270,7 +270,7 @@ export const PartialEventSchema = EventSchema.partial().describe(
  * DeepPartialEvent - Event with deeply nested optional fields
  * Used for event updates and patches
  */
-export const DeepPartialEventSchema: z.ZodType<any> = z
+export const DeepPartialEventSchema: z.ZodTypeAny = z
   .lazy(() => EventSchema.deepPartial())
   .describe('Deep partial event structure with all nested fields optional');
 

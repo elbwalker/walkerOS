@@ -96,7 +96,6 @@ export type Init<T extends TypesGeneric = Types> = {
 };
 
 export interface InitDestinations {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: Init<any>;
 }
 

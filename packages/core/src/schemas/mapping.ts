@@ -37,7 +37,7 @@ import { ConsentSchema } from './walkeros';
  *
  * Recursive structure allows nested transformations
  */
-export const ValueSchema: z.ZodType<any> = z.lazy(() =>
+export const ValueSchema: z.ZodTypeAny = z.lazy(() =>
   z.union([
     z.string().describe('String value or property path (e.g., "data.id")'),
     z.number().describe('Numeric value'),
@@ -65,7 +65,7 @@ export const ValuesSchema = z
  * Example: ['nested', { map: { id: 'data.id' } }]
  * Means: Iterate over event.nested array, transform each item
  */
-const LoopSchema: z.ZodType<any> = z
+const LoopSchema: z.ZodTypeAny = z
   .tuple([ValueSchema, ValueSchema])
   .describe(
     'Loop transformation: [source, transform] tuple for array processing',
@@ -81,7 +81,7 @@ const LoopSchema: z.ZodType<any> = z
  * Example: ['data.firstName', ' ', 'data.lastName']
  * Means: Combine multiple values
  */
-const SetSchema: z.ZodType<any> = z
+const SetSchema: z.ZodTypeAny = z
   .array(ValueSchema)
   .describe('Set: Array of values for selection or combination');
 
@@ -92,7 +92,7 @@ const SetSchema: z.ZodType<any> = z
  * Example: { item_id: 'data.id', item_name: 'data.name' }
  * Means: Transform event data to destination format
  */
-const MapSchema: z.ZodType<any> = z
+const MapSchema: z.ZodTypeAny = z
   .record(z.string(), ValueSchema)
   .describe('Map: Object mapping keys to transformation values');
 
@@ -112,7 +112,7 @@ const MapSchema: z.ZodType<any> = z
  *
  * At least one property must be present.
  */
-const ValueConfigSchema: z.ZodType<any> = z
+const ValueConfigSchema: z.ZodTypeAny = z
   .object({
     key: z
       .string()
