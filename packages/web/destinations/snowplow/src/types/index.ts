@@ -18,17 +18,17 @@ export interface SnowplowFunction {
   q?: unknown[];
 }
 
-// Snowplow structured event parameters
-export interface StructuredEventParams {
-  category: string;
-  action: string;
-  label?: string;
-  property?: string;
-  value?: number;
+// Snowplow self-describing event structure
+export interface SelfDescribingEvent {
+  event: {
+    schema: string;
+    data: WalkerOS.Properties;
+  };
+  context?: ContextEntity[];
 }
 
-// Snowplow self-describing event
-export interface SelfDescribingEvent {
+// Snowplow context entity (wrapped with schema)
+export interface ContextEntity {
   schema: string;
   data: WalkerOS.Properties;
 }
@@ -74,26 +74,6 @@ export interface Settings {
   platform?: string;
 
   /**
-   * Event method
-   *
-   * Which Snowplow method to use for tracking events:
-   * - "struct": Use trackStructEvent (category/action/label/property/value)
-   * - "self": Use trackSelfDescribingEvent (schema-based events)
-   *
-   * @default "struct"
-   */
-  eventMethod?: 'struct' | 'self';
-
-  /**
-   * Schema for self-describing events
-   *
-   * Iglu schema URI to use when eventMethod is "self".
-   *
-   * @example "iglu:com.example/event/jsonschema/1-0-0"
-   */
-  schema?: string;
-
-  /**
    * Enable automatic page view tracking
    *
    * If true, page view events will be tracked automatically.
@@ -101,41 +81,154 @@ export interface Settings {
    * @default false
    */
   pageViewTracking?: boolean;
+
+  /**
+   * Snowplow-specific ecommerce configuration
+   */
+  snowplow?: SnowplowSettings;
+}
+
+/**
+ * Snowplow-specific settings (similar to GA4Settings in gtag)
+ */
+export interface SnowplowSettings {
+  /**
+   * Ecommerce action schema URI
+   *
+   * Schema used for all ecommerce action events.
+   *
+   * @default "iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2"
+   */
+  actionSchema?: string;
+
+  /**
+   * Product entity schema URI
+   *
+   * @default "iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0"
+   */
+  productSchema?: string;
+
+  /**
+   * Cart entity schema URI
+   *
+   * @default "iglu:com.snowplowanalytics.snowplow.ecommerce/cart/jsonschema/1-0-0"
+   */
+  cartSchema?: string;
+
+  /**
+   * Transaction entity schema URI
+   *
+   * @default "iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0"
+   */
+  transactionSchema?: string;
+
+  /**
+   * Refund entity schema URI
+   *
+   * @default "iglu:com.snowplowanalytics.snowplow.ecommerce/refund/jsonschema/1-0-0"
+   */
+  refundSchema?: string;
+
+  /**
+   * Checkout step entity schema URI
+   *
+   * @default "iglu:com.snowplowanalytics.snowplow.ecommerce/checkout_step/jsonschema/1-0-0"
+   */
+  checkoutStepSchema?: string;
+
+  /**
+   * Promotion entity schema URI
+   *
+   * @default "iglu:com.snowplowanalytics.snowplow.ecommerce/promotion/jsonschema/1-0-0"
+   */
+  promotionSchema?: string;
+
+  /**
+   * User entity schema URI (optional)
+   *
+   * @example "iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-0"
+   */
+  userSchema?: string;
+
+  /**
+   * Custom entity schemas
+   *
+   * Define schemas for custom context entities.
+   *
+   * @example { custom_entity: "iglu:com.example/custom/jsonschema/1-0-0" }
+   */
+  customSchemas?: {
+    [entityType: string]: string;
+  };
+
+  /**
+   * Default currency code (ISO 4217)
+   *
+   * Used as fallback when currency is not specified in event data.
+   *
+   * @example "USD", "EUR", "GBP"
+   * @default "USD"
+   */
+  currency?: string;
+
+  /**
+   * Data mapping at destination level
+   *
+   * Global data transformation applied to all events.
+   */
+  data?: WalkerOSMapping.Value | WalkerOSMapping.Values;
 }
 
 /**
  * Custom mapping parameters for Snowplow events
+ *
+ * Similar to GA4/Meta pattern - keeps mapping flat and simple.
  */
 export interface Mapping {
   /**
-   * Event category for structured events
-   */
-  category?: string;
-
-  /**
-   * Event action for structured events
+   * Snowplow ecommerce action type
+   *
+   * Determines which Snowplow ecommerce action this event maps to.
+   *
+   * @example "product_view", "add_to_cart", "transaction", "refund"
    */
   action?: string;
 
   /**
-   * Event label for structured events
+   * Snowplow-specific settings override
+   *
+   * Allows per-event schema and configuration overrides.
    */
-  label?: string;
+  snowplow?: SnowplowMappingSettings;
+}
+
+/**
+ * Per-event Snowplow settings override
+ */
+export interface SnowplowMappingSettings {
+  /**
+   * Override action schema for this specific event
+   */
+  actionSchema?: string;
 
   /**
-   * Event property for structured events
+   * Override entity schemas for this specific event
    */
-  property?: string;
+  schemas?: {
+    product?: string;
+    cart?: string;
+    transaction?: string;
+    refund?: string;
+    checkout_step?: string;
+    promotion?: string;
+    user?: string;
+    [entityType: string]: string | undefined;
+  };
 
   /**
-   * Event value for structured events
+   * Data mapping at event level
    */
-  value?: number;
-
-  /**
-   * Schema for self-describing event
-   */
-  schema?: string;
+  data?: WalkerOSMapping.Value | WalkerOSMapping.Values;
 }
 
 /**
@@ -155,3 +248,110 @@ export type Config = DestinationWeb.Config<Types>;
 export type Rule = WalkerOSMapping.Rule<Mapping>;
 export type Rules = WalkerOSMapping.Rules<Rule>;
 export type Param = WalkerOSMapping.Value;
+
+/**
+ * Default Snowplow Ecommerce Schema URIs
+ * Based on Snowplow Analytics official ecommerce schema
+ */
+export const DEFAULT_SCHEMAS = {
+  ACTION:
+    'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
+  PRODUCT:
+    'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+  CART: 'iglu:com.snowplowanalytics.snowplow.ecommerce/cart/jsonschema/1-0-0',
+  TRANSACTION:
+    'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
+  REFUND:
+    'iglu:com.snowplowanalytics.snowplow.ecommerce/refund/jsonschema/1-0-0',
+  CHECKOUT_STEP:
+    'iglu:com.snowplowanalytics.snowplow.ecommerce/checkout_step/jsonschema/1-0-0',
+  PROMOTION:
+    'iglu:com.snowplowanalytics.snowplow.ecommerce/promotion/jsonschema/1-0-0',
+  USER: 'iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-0',
+} as const;
+
+/**
+ * Snowplow ecommerce action types
+ */
+export const ACTION_TYPES = {
+  PRODUCT_VIEW: 'product_view',
+  LIST_VIEW: 'list_view',
+  LIST_CLICK: 'list_click',
+  ADD_TO_CART: 'add_to_cart',
+  REMOVE_FROM_CART: 'remove_from_cart',
+  CHECKOUT_STEP: 'checkout_step',
+  TRANSACTION: 'transaction',
+  REFUND: 'refund',
+  PROMO_VIEW: 'promo_view',
+  PROMO_CLICK: 'promo_click',
+  TRANSACTION_ERROR: 'trns_error',
+} as const;
+
+/**
+ * Field name mappings for context entity detection
+ * Maps field names to their respective entity types
+ */
+export const ENTITY_FIELD_MAPPING = {
+  product: [
+    'id',
+    'name',
+    'category',
+    'price',
+    'currency',
+    'quantity',
+    'variant',
+    'brand',
+    'size',
+    'list_price',
+    'inventory_status',
+    'position',
+    'creative_id',
+  ],
+  transaction: [
+    'transaction_id',
+    'revenue',
+    'payment_method',
+    'total_quantity',
+    'tax',
+    'shipping',
+    'discount_code',
+    'discount_amount',
+    'credit_order',
+  ],
+  cart: ['cart_id', 'total_value'],
+  refund: ['transaction_id', 'refund_amount', 'refund_reason', 'refund_method'],
+  checkout_step: [
+    'step',
+    'shipping_postcode',
+    'billing_postcode',
+    'shipping_full_address',
+    'billing_full_address',
+    'delivery_provider',
+    'delivery_method',
+    'coupon_code',
+    'account_type',
+    'payment_method',
+    'proof_of_payment',
+    'marketing_opt_in',
+  ],
+  promotion: ['id', 'name', 'creative_id', 'type', 'position', 'slot'],
+} as const;
+
+/**
+ * Required fields per entity type
+ * Based on Snowplow ecommerce schema requirements
+ */
+export const REQUIRED_FIELDS = {
+  product: ['id', 'category', 'price', 'currency'],
+  transaction: [
+    'transaction_id',
+    'revenue',
+    'payment_method',
+    'currency',
+    'total_quantity',
+  ],
+  cart: ['total_value', 'currency'],
+  refund: ['transaction_id', 'refund_amount', 'currency'],
+  checkout_step: ['step'],
+  promotion: ['id'],
+} as const;

@@ -74,7 +74,9 @@ describe('destination snowplow', () => {
     consoleWarnSpy.mockRestore();
   });
 
-  test('event structured (default)', async () => {
+  test('event transaction (default)', async () => {
+    const event = getEvent('order complete');
+
     const destinationWithEnv = {
       ...destination,
       env: testEnv as DestinationSnowplow.Env,
@@ -86,11 +88,11 @@ describe('destination snowplow', () => {
       mapping: mapping.config,
     });
 
-    await elb(getEvent());
+    await elb(event);
 
     expect(calls).toContainEqual({
       path: ['window', 'snowplow'],
-      args: events.structuredEvent(),
+      args: events.transaction(),
     });
   });
 
@@ -120,11 +122,7 @@ describe('destination snowplow', () => {
   });
 
   test('event product view', async () => {
-    const event = getEvent('product view', {
-      id: 'P123',
-      name: 'Laptop',
-      price: 999,
-    });
+    const event = getEvent('product view');
 
     const destinationWithEnv = {
       ...destination,
@@ -146,11 +144,7 @@ describe('destination snowplow', () => {
   });
 
   test('event purchase', async () => {
-    const event = getEvent('order complete', {
-      id: 'ORDER123',
-      total: 1999,
-      currency: 'USD',
-    });
+    const event = getEvent('order complete');
 
     const destinationWithEnv = {
       ...destination,
@@ -171,11 +165,9 @@ describe('destination snowplow', () => {
     });
   });
 
-  test('event self-describing', async () => {
-    const event = getEvent('product view', {
-      id: 'P123',
-      price: 999,
-    });
+  test('event without mapping is skipped', async () => {
+    // Test that events without mapping configuration are silently skipped
+    const event = getEvent('custom unmapped');
 
     const destinationWithEnv = {
       ...destination,
@@ -184,25 +176,18 @@ describe('destination snowplow', () => {
     elb('walker destination', destinationWithEnv, {
       settings: {
         collectorUrl: 'https://collector.example.com',
-        eventMethod: 'self',
-        schema: 'iglu:com.example/product_view/jsonschema/1-0-0',
       },
-      mapping: {
-        product: {
-          view: examples.mapping.selfDescribingEvent,
-        },
-      },
+      mapping: mapping.config,
     });
 
     await elb(event);
 
-    expect(calls).toContainEqual({
-      path: ['window', 'snowplow'],
-      args: events.selfDescribingEvent(),
-    });
+    // Should only have newTracker call, no event tracking
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args[0]).toBe('newTracker');
   });
 
-  test('handles invalid data gracefully', async () => {
+  test('handles event without action mapping', async () => {
     const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
     const destinationWithEnv = {
@@ -213,14 +198,23 @@ describe('destination snowplow', () => {
       settings: {
         collectorUrl: 'https://collector.example.com',
       },
+      mapping: {
+        custom: {
+          event: {
+            // Mapping exists but no action specified
+            data: { map: { id: 'data.id' } },
+          },
+        },
+      },
     });
 
-    // Send event with invalid data (will be filtered out by mapping)
-    await elb('custom invalid', {});
+    // Send event that has mapping but no action
+    await elb('custom event', { id: '123' });
 
-    // Should warn about invalid data format
+    // Should warn about missing action type
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      '[Snowplow] Invalid data format',
+      '[Snowplow] No action type specified in mapping for event:',
+      'custom event',
     );
     consoleWarnSpy.mockRestore();
   });

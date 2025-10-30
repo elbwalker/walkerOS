@@ -1,7 +1,7 @@
-import type { Settings, Destination } from './types';
-import { isObject } from '@walkeros/core';
-import { getEnv } from '@walkeros/web-core';
+import type { WalkerOS } from '@walkeros/core';
+import type { Settings, Destination, Mapping } from './types';
 import { addScript, setup } from './setup';
+import { pushSnowplowEvent } from './push';
 
 // Types
 export * as DestinationSnowplow from './types';
@@ -84,57 +84,21 @@ export const destinationSnowplow: Destination = {
   /**
    * Process and send an event to Snowplow
    *
-   * Transforms the walkerOS event and sends it using either structured
-   * or self-describing event format.
+   * Transforms the walkerOS event using the mapping configuration and
+   * sends it as a Snowplow ecommerce self-describing event.
    *
    * @param event - The walkerOS event to process
    * @param context - Push context with config, data, mapping, and env
    */
-  push(event, { config, data, env }) {
-    const { window } = getEnv(env);
-    const w = window as Window;
-    const snowplow = w.snowplow;
-
-    if (!snowplow) {
-      // eslint-disable-next-line no-console
-      console.warn('[Snowplow] Tracker not initialized');
-      return;
-    }
-
-    if (!isObject(data)) {
-      // eslint-disable-next-line no-console
-      console.warn('[Snowplow] Invalid data format');
-      return;
-    }
-
-    try {
-      // Handle page view events
-      if (event.name === 'page view') {
-        snowplow('trackPageView');
-        return;
-      }
-
-      // Handle self-describing events
-      if (config.settings?.eventMethod === 'self') {
-        // Data should already have the { event: { schema, data } } structure from mapping
-        snowplow('trackSelfDescribingEvent', data);
-        return;
-      }
-
-      // Handle structured events (default)
-      const params = data as Record<string, unknown>;
-      snowplow(
-        'trackStructEvent',
-        (params.category as string) || 'walkerOS',
-        (params.action as string) || event.action || 'event',
-        params.label as string | undefined,
-        params.property as string | undefined,
-        params.value as number | undefined,
-      );
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('[Snowplow] Event tracking failed:', error);
-    }
+  push(event, { config, data = {}, mapping = {}, env }) {
+    const eventMapping = mapping.settings || {};
+    pushSnowplowEvent(
+      event,
+      eventMapping,
+      data as WalkerOS.AnyObject,
+      config.settings,
+      env,
+    );
   },
 };
 
