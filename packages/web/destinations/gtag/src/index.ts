@@ -13,6 +13,9 @@ export * as DestinationGtag from './types';
 // Examples
 export * as examples from './examples';
 
+// Schemas
+export * as schemas from './schemas';
+
 // Track whether default consent has been set
 let defaultConsentSet = false;
 
