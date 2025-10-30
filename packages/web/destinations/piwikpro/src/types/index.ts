@@ -11,9 +11,9 @@ declare global {
 }
 
 export interface Settings {
-  appId: string;
+  appId?: string;
   linkTracking?: boolean;
-  url: string;
+  url?: string;
 }
 
 export interface Mapping {

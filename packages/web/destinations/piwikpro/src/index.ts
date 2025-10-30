@@ -9,6 +9,9 @@ export * as DestinationPiwikPro from './types';
 // Examples
 export * as examples from './examples';
 
+// Schemas
+export * as schemas from './schemas';
+
 export const destinationPiwikPro: Destination = {
   type: 'piwikpro',
 
@@ -17,8 +20,8 @@ export const destinationPiwikPro: Destination = {
   init({ config, env }) {
     const { window } = getEnv(env);
     const w = window as Window;
-    const { settings = {} as Partial<Settings>, loadScript } = config;
-    const { appId, url } = settings;
+    const { settings, loadScript } = config;
+    const { appId, url } = settings || {};
 
     // Required parameters
     if (!appId || !url) return false;
@@ -39,7 +42,7 @@ export const destinationPiwikPro: Destination = {
     }
 
     // Enable download and outlink tracking if not disabled
-    if (settings.linkTracking !== false) paq(['enableLinkTracking']);
+    if (settings?.linkTracking !== false) paq(['enableLinkTracking']);
 
     return config;
   },
