@@ -140,3 +140,16 @@ export * from './schema-builder';
  * All schemas are now organized by domain (mapping, destination, collector, etc.)
  */
 // Note: Schemas are already exported above from mapping.ts
+
+/**
+ * Re-export Zod and zod-to-json-schema for destinations
+ *
+ * Destinations can import Zod from @walkeros/core instead of adding
+ * their own dependency. This ensures version consistency and reduces
+ * duplicate dependencies in the monorepo.
+ *
+ * Usage in destinations:
+ * import { z, zodToJsonSchema } from '@walkeros/core';
+ */
+export { z } from 'zod';
+export { zodToJsonSchema } from 'zod-to-json-schema';

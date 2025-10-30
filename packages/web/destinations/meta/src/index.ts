@@ -9,16 +9,8 @@ export * as DestinationMeta from './types';
 // Examples
 export * as examples from './examples';
 
-// Schemas - hand-written (legacy)
-export * as schema from './schema';
-
-// Schemas - generated with schema builder (DRY approach)
-export {
-  settingsSchemaGenerated,
-  mappingSchemaGenerated,
-  settingsUiSchemaGenerated,
-  mappingUiSchemaGenerated,
-} from './schema-builder';
+// Schemas
+export * as schemas from './schemas';
 
 export const destinationMeta: Destination = {
   type: 'meta-pixel',
@@ -26,8 +18,8 @@ export const destinationMeta: Destination = {
   config: {},
 
   init({ config, env }) {
-    const { settings = {} as Partial<Settings>, loadScript } = config;
-    const { pixelId } = settings;
+    const { settings, loadScript } = config;
+    const { pixelId } = settings || {};
 
     // Load Meta Pixel script if required (fbevents.js)
     if (loadScript) addScript(env);
