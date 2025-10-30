@@ -8,6 +8,9 @@ export * as DestinationBigQuery from './types';
 // Examples
 export * as examples from './examples';
 
+// Schemas
+export * as schemas from './schemas';
+
 export const destinationBigQuery: Destination = {
   type: 'gcp-bigquery',
 

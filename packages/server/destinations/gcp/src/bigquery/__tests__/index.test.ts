@@ -40,10 +40,8 @@ describe('Server Destination BigQuery', () => {
 
     // Override BigQuery with a mock class that has jest.fn() tracking
     testEnv.BigQuery = class MockBigQuery {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       options: any;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       constructor(options?: any) {
         this.options = options;
       }
@@ -60,7 +58,6 @@ describe('Server Destination BigQuery', () => {
         mockInsert('insert', rows);
         return Promise.resolve();
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
   });
 
