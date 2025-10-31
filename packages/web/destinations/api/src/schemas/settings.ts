@@ -1,27 +1,29 @@
 import { z } from '@walkeros/core';
 
-/**
- * API Settings Schema
- * Configuration for API destination (generic HTTP endpoint)
- */
 export const SettingsSchema = z.object({
-  url: z.string().url().describe('Target API endpoint URL for sending events'),
+  url: z
+    .string()
+    .url()
+    .describe(
+      'The HTTP endpoint URL to send events to (like https://api.example.com/events)',
+    ),
   headers: z
     .record(z.string())
-    .describe('HTTP headers to include in requests (key-value pairs)')
+    .describe(
+      "Additional HTTP headers to include with requests (like { 'Authorization': 'Bearer token', 'Content-Type': 'application/json' })",
+    )
     .optional(),
-  method: z.string().describe('HTTP method (default: POST)').optional(),
+  method: z.string().default('POST').describe('HTTP method for the request'),
   transform: z
     .any()
-    .describe('Custom function to transform event data before sending')
+    .describe(
+      'Function to transform event data before sending (like (data, config, mapping) => JSON.stringify(data))',
+    )
     .optional(),
   transport: z
-    .enum(['fetch', 'beacon', 'xhr'])
-    .describe('Transport method for sending requests (default: fetch)')
-    .optional(),
+    .enum(['fetch', 'xhr', 'beacon'])
+    .default('fetch')
+    .describe('Transport method for sending requests'),
 });
 
-/**
- * Type inference from SettingsSchema
- */
 export type Settings = z.infer<typeof SettingsSchema>;

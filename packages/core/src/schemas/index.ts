@@ -149,7 +149,28 @@ export * from './schema-builder';
  * duplicate dependencies in the monorepo.
  *
  * Usage in destinations:
- * import { z, zodToJsonSchema } from '@walkeros/core';
+ * import { z, zodToJsonSchema, zodToSchema } from '@walkeros/core';
  */
 export { z } from 'zod';
 export { zodToJsonSchema } from 'zod-to-json-schema';
+
+import type { z as zod } from 'zod';
+import { zodToJsonSchema as toJsonSchema } from 'zod-to-json-schema';
+
+/**
+ * Utility to convert Zod schema to JSON Schema with consistent defaults
+ *
+ * This wrapper ensures all destinations use the same JSON Schema configuration:
+ * - target: 'jsonSchema7' (JSON Schema Draft 7 format)
+ * - $refStrategy: 'none' (inline all references, no $ref pointers)
+ *
+ * Usage in destinations:
+ * import { zodToSchema } from '@walkeros/core';
+ * export const settings = zodToSchema(SettingsSchema);
+ */
+export function zodToSchema(schema: zod.ZodTypeAny) {
+  return toJsonSchema(schema, {
+    target: 'jsonSchema7',
+    $refStrategy: 'none',
+  });
+}
