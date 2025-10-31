@@ -1,27 +1,20 @@
 import { z } from '@walkeros/core';
 
-/**
- * PiwikPro Settings Schema
- * Configuration for PiwikPro analytics destination
- */
 export const SettingsSchema = z.object({
   appId: z
     .string()
     .min(1)
-    .describe('PiwikPRO App ID (UUID format: XXX-XXX-XXX-XXX-XXX)'),
+    .describe('ID of the Piwik PRO site (like XXX-XXX-XXX-XXX-XXX)'),
   url: z
     .string()
     .url()
     .describe(
-      'PiwikPRO instance URL (e.g., https://your_account_name.piwik.pro/)',
+      'URL of your Piwik PRO account (like https://your_account_name.piwik.pro/)',
     ),
   linkTracking: z
     .boolean()
-    .describe('Enable automatic download and outlink tracking')
-    .optional(),
+    .default(false)
+    .describe('Enables/Disables download and outlink tracking'),
 });
 
-/**
- * Type inference from SettingsSchema
- */
 export type Settings = z.infer<typeof SettingsSchema>;

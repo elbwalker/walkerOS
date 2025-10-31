@@ -1,17 +1,10 @@
 import { z } from '@walkeros/core';
 import { PixelId } from './primitives';
 
-/**
- * Meta Pixel Settings Schema
- * Configuration for Meta (Facebook) Pixel destination
- */
 export const SettingsSchema = z.object({
   pixelId: PixelId.describe(
-    'Your Meta (Facebook) Pixel ID - a numeric identifier',
+    'Your Meta Pixel ID from Facebook Business Manager (like 1234567890)',
   ),
 });
 
-/**
- * Type inference from SettingsSchema
- */
 export type Settings = z.infer<typeof SettingsSchema>;

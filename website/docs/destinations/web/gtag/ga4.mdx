@@ -8,14 +8,14 @@ package: '@walkeros/web-destination-gtag'
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
 import { getEvent } from '@walkeros/core';
 import {
   DestinationInit,
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 import destinationGtag from '@walkeros/web-destination-gtag';
-import { examples } from '@walkeros/web-destination-gtag';
+import { examples, schemas } from '@walkeros/web-destination-gtag';
 
 export const documentationGtag = {
   ...destinationGtag,
@@ -62,59 +62,7 @@ elb('walker destination', destinationGtag, {
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'measurementId',
-      type: 'string',
-      description: 'GA4 Measurement ID from Google Analytics',
-      required: true,
-      example: "'G-XXXXXXXXXX'",
-    },
-    {
-      name: 'debug',
-      type: 'boolean',
-      description: 'Enable debug mode for GA4',
-      required: false,
-      example: 'true',
-    },
-    {
-      name: 'include',
-      type: 'Include[]',
-      description: 'Array of properties to include in events',
-      required: false,
-      example: "['data', 'context', 'user']",
-    },
-    {
-      name: 'pageview',
-      type: 'boolean',
-      description: 'Enable automatic pageview tracking',
-      required: false,
-      example: 'true',
-    },
-    {
-      name: 'server_container_url',
-      type: 'string',
-      description: 'Server-side GTM container URL',
-      required: false,
-      example: "'https://server-container.com'",
-    },
-    {
-      name: 'snakeCase',
-      type: 'boolean',
-      description: 'Convert parameter names to snake_case',
-      required: false,
-      example: 'true',
-    },
-    {
-      name: 'transport_url',
-      type: 'string',
-      description: 'Custom transport URL for GA4',
-      required: false,
-      example: "'https://analytics.example.com/mp/collect'",
-    },
-  ]}
-/>
+<SchemaSettingsTable schema={schemas.ga4} />
 
 #### Example
 
@@ -135,17 +83,7 @@ elb('walker destination', destinationGtag, {
 
 For custom event mapping (`mapping.entity.action.settings.ga4`):
 
-<SettingsTable
-  properties={[
-    {
-      name: 'include',
-      type: 'Include[]',
-      description: 'Array of properties to include in this specific event',
-      required: false,
-      example: "['data', 'context']",
-    },
-  ]}
-/>
+<SchemaSettingsTable schema={schemas.ga4} />
 
 You are able to map your walkerOS events to match the respective requirements of
 each vendor. The `mapping` examples are using a

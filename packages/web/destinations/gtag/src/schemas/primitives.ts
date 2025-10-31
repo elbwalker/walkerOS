@@ -26,38 +26,41 @@ export const ConsentModeSchema = z.union([
   z.record(z.union([z.string(), z.array(z.string())])),
 ]);
 
-/**
- * GA4 Settings Schema
- * Configuration for Google Analytics 4
- */
 export const GA4SettingsSchema = z.object({
   measurementId: z
     .string()
     .regex(/^G-[A-Z0-9]+$/, 'Must be a valid GA4 Measurement ID (G-XXXXXXXXXX)')
-    .describe('GA4 Measurement ID (required)'),
-  debug: z.boolean().describe('Enable GA4 debug mode').optional(),
+    .describe('GA4 Measurement ID from Google Analytics (like G-XXXXXXXXXX)'),
+  debug: z
+    .boolean()
+    .describe('Enable debug mode for GA4 (like true)')
+    .optional(),
   include: IncludeSchema.describe(
-    'Which event properties to include in GA4 events',
+    "Array of properties to include in events (like ['data', 'context', 'user'])",
   ).optional(),
-  pageview: z.boolean().describe('Automatically send pageviews').optional(),
+  pageview: z
+    .boolean()
+    .describe('Enable automatic pageview tracking (like true)')
+    .optional(),
   server_container_url: z
     .string()
     .url()
-    .describe('Server-side GTM container URL')
+    .describe(
+      'Server-side GTM container URL (like https://server-container.com)',
+    )
     .optional(),
   snakeCase: z
     .boolean()
-    .describe('Convert parameter names to snake_case')
+    .describe('Convert parameter names to snake_case (like true)')
     .optional(),
   transport_url: z
     .string()
     .url()
-    .describe('Custom transport URL for sending data')
+    .describe(
+      'Custom transport URL for GA4 (like https://analytics.example.com/mp/collect)',
+    )
     .optional(),
-  data: z
-    .any()
-    .describe('Custom data mapping (WalkerOS.Mapping.Value | Values)')
-    .optional(),
+  data: z.any().describe('Custom data mapping configuration').optional(),
 });
 
 /**

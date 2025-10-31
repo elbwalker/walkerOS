@@ -1,38 +1,38 @@
 import { z } from '@walkeros/core';
 
-/**
- * GCP BigQuery Settings Schema
- * Configuration for Google Cloud BigQuery destination
- */
 export const SettingsSchema = z.object({
   client: z
     .any()
-    .describe('BigQuery client instance (from @google-cloud/bigquery)')
+    .describe(
+      'Google Cloud BigQuery client instance (like new BigQuery({ projectId, keyFilename }))',
+    )
     .optional(),
-  projectId: z.string().min(1).describe('GCP Project ID (required)'),
+  projectId: z
+    .string()
+    .min(1)
+    .describe('Google Cloud Project ID (like my-gcp-project)'),
   datasetId: z
     .string()
     .min(1)
-    .describe('BigQuery dataset ID (default: walkeros)')
-    .optional(),
+    .default('walkeros')
+    .describe(
+      'BigQuery dataset ID where events will be stored (like walker_events)',
+    ),
   tableId: z
     .string()
     .min(1)
-    .describe('BigQuery table ID (default: events)')
-    .optional(),
+    .default('events')
+    .describe('BigQuery table ID for event storage (like events)'),
   location: z
     .string()
-    .describe('BigQuery dataset location (default: EU)')
-    .optional(),
+    .default('EU')
+    .describe('Geographic location for the BigQuery dataset (like US)'),
   bigquery: z
     .any()
     .describe(
-      'BigQueryOptions for client configuration (from @google-cloud/bigquery)',
+      'Additional BigQuery client configuration options (like { keyFilename: "path/to/key.json" })',
     )
     .optional(),
 });
 
-/**
- * Type inference from SettingsSchema
- */
 export type Settings = z.infer<typeof SettingsSchema>;

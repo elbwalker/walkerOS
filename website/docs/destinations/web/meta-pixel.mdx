@@ -7,14 +7,14 @@ package: '@walkeros/web-destination-meta'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
 import { getEvent } from '@walkeros/core';
 import {
   DestinationInit,
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 import destinationMetaPixel from '@walkeros/web-destination-meta';
-import { examples } from '@walkeros/web-destination-meta';
+import { examples, schemas } from '@walkeros/web-destination-meta';
 
 export const documentationMetaPixel = {
   ...destinationMetaPixel,
@@ -69,25 +69,7 @@ const { collector, elb } = await startFlow({
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'pixelId',
-      type: 'string',
-      description: 'Your Meta Pixel ID from Facebook Business Manager',
-      required: true,
-      example: "'1234567890'",
-    },
-    {
-      name: 'loadScript',
-      type: 'boolean',
-      description:
-        'Whether to automatically load the Meta Pixel script (fbevents.js)',
-      required: false,
-      example: 'true',
-    },
-  ]}
-/>
+<SchemaSettingsTable schema={schemas.settings} />
 
 #### Example
 

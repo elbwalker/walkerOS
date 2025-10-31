@@ -6,14 +6,14 @@ package: '@walkeros/web-destination-gtag'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
 import { createEvent } from '@walkeros/core';
 import {
   DestinationInit,
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 import destinationGtag from '@walkeros/web-destination-gtag';
-import { examples } from '@walkeros/web-destination-gtag';
+import { examples, schemas } from '@walkeros/web-destination-gtag';
 
 export const documentationGtag = {
   ...destinationGtag,
@@ -80,40 +80,13 @@ elb('order complete', {
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'conversionId',
-      type: 'string',
-      description: 'Google Ads conversion ID from your Google Ads account',
-      required: true,
-      example: "'AW-XXXXXXXXX'",
-    },
-    {
-      name: 'currency',
-      type: 'string',
-      description: 'Default currency code for conversion values',
-      required: false,
-      example: "'EUR'",
-    },
-  ]}
-/>
+<SchemaSettingsTable schema={schemas.ads} />
 
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings.ads`):
 
-<SettingsTable
-  properties={[
-    {
-      name: 'label',
-      type: 'string',
-      description: 'Conversion label for this specific event',
-      required: false,
-      example: "'conversion_label'",
-    },
-  ]}
-/>
+<SchemaSettingsTable schema={schemas.ads} />
 
 ## Live Demo
 

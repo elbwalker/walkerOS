@@ -1,48 +1,47 @@
 import { z } from '@walkeros/core';
 import { ActionSourceSchema } from './primitives';
 
-/**
- * Meta Conversions API Settings Schema
- * Configuration for Meta (Facebook) Conversions API destination
- */
 export const SettingsSchema = z.object({
   accessToken: z
     .string()
     .min(1)
-    .describe('Meta Conversions API access token (required)'),
+    .describe(
+      'Meta access token for Conversions API authentication (like your_access_token)',
+    ),
   pixelId: z
     .string()
     .regex(/^[0-9]+$/, 'Pixel ID must contain only digits')
-    .describe('Meta Pixel ID - numeric identifier (required)'),
+    .describe(
+      'Meta Pixel ID from your Facebook Business account (like 1234567890)',
+    ),
   action_source: ActionSourceSchema.describe(
-    'Default action source for events (where conversion took place)',
+    'Source of the event (website, app, phone_call, etc.) (like website)',
   ).optional(),
   doNotHash: z
     .array(z.string())
     .describe(
-      'List of user_data field names that should NOT be hashed (e.g., ["client_ip_address", "client_user_agent"])',
+      "Array of user_data fields that should not be hashed (like ['client_ip_address', 'client_user_agent'])",
     )
     .optional(),
   test_event_code: z
     .string()
-    .describe('Test event code for Meta Events Manager testing')
+    .describe(
+      'Test event code for debugging Meta Conversions API events (like TEST12345)',
+    )
     .optional(),
   url: z
     .string()
     .url()
     .describe(
-      'Custom Meta CAPI endpoint URL (default: https://graph.facebook.com/v18.0/{pixelId}/events)',
+      'Custom URL for Meta Conversions API endpoint (like https://graph.facebook.com/v17.0)',
     )
     .optional(),
   user_data: z
     .record(z.any())
     .describe(
-      'Mapping configuration for user_data fields (WalkerOS.Mapping.Map)',
+      "Mapping configuration for user data fields (like { email: 'user.email', phone: 'user.phone' })",
     )
     .optional(),
 });
 
-/**
- * Type inference from SettingsSchema
- */
 export type Settings = z.infer<typeof SettingsSchema>;

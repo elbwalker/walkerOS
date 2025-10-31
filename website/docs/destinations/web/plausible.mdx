@@ -8,14 +8,14 @@ package: '@walkeros/web-destination-plausible'
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
 import { getEvent } from '@walkeros/core';
 import {
   DestinationInit,
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 import destinationPlausible from '@walkeros/web-destination-plausible';
-import { examples } from '@walkeros/web-destination-plausible';
+import { examples, schemas } from '@walkeros/web-destination-plausible';
 
 export const documentationPlausible = {
   ...destinationPlausible,
@@ -63,17 +63,7 @@ elb('walker destination', destinationPlausible, {
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'domain',
-      type: 'string',
-      description: 'The domain of your site as registered in Plausible',
-      required: false,
-      example: "'elbwalker.com'",
-    },
-  ]}
-/>
+<SchemaSettingsTable schema={schemas.settings} />
 
 <DestinationInit
   destination={documentationPlausible}

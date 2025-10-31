@@ -8,14 +8,17 @@ sidebar_position: 1
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
 import { getEvent } from '@walkeros/core';
 import {
   DestinationInit,
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 import destinationWebAPI from '@walkeros/web-destination-api';
-import { examples } from '@walkeros/web-destination-api';
+import { examples, schemas } from '@walkeros/web-destination-api';
+
+{/* import { CodeBox } from '@walkeros/explorer'; */}
+{/* import '@walkeros/explorer/styles.css'; */}
 
 export const documentationAPI = {
   ...destinationWebAPI,
@@ -63,46 +66,7 @@ const { collector, elb } = await startFlow({
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'url',
-      type: 'string',
-      description: 'The HTTP endpoint URL to send events to',
-      required: true,
-      example: "'https://api.example.com/events'",
-    },
-    {
-      name: 'headers',
-      type: 'Record<string, string>',
-      description: 'Additional HTTP headers to include with requests',
-      required: false,
-      example:
-        "{ 'Authorization': 'Bearer token', 'Content-Type': 'application/json' }",
-    },
-    {
-      name: 'method',
-      type: 'string',
-      description: 'HTTP method for the request',
-      required: false,
-      example: "'POST'",
-    },
-    {
-      name: 'transform',
-      type: 'function',
-      description: 'Function to transform event data before sending',
-      required: false,
-      example: '(data, config, mapping) => JSON.stringify(data)',
-    },
-    {
-      name: 'transport',
-      type: "'fetch' | 'xhr' | 'beacon'",
-      description: 'Transport method for sending requests',
-      required: false,
-      example: "'fetch'",
-    },
-  ]}
-/>
+<SchemaSettingsTable schema={schemas.settings} />
 
 ## Usage
 

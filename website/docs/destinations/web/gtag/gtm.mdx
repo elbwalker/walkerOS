@@ -7,14 +7,14 @@ package: '@walkeros/web-destination-gtag'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
 import { getEvent } from '@walkeros/core';
 import {
   DestinationInit,
   DestinationPush,
 } from '@site/src/components/organisms/liveDestination';
 import destinationGtag from '@walkeros/web-destination-gtag';
-import { examples } from '@walkeros/web-destination-gtag';
+import { examples, schemas } from '@walkeros/web-destination-gtag';
 
 export const documentationGtag = {
   ...destinationGtag,
@@ -58,31 +58,7 @@ elb('walker destination', destinationGtag, {
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'containerId',
-      type: 'string',
-      description: 'GTM Container ID from Google Tag Manager',
-      required: true,
-      example: "'GTM-XXXXXXX'",
-    },
-    {
-      name: 'dataLayer',
-      type: 'string',
-      description: 'Custom dataLayer variable name',
-      required: false,
-      example: "'customDataLayer'",
-    },
-    {
-      name: 'domain',
-      type: 'string',
-      description: 'Domain for GTM script loading',
-      required: false,
-      example: "'googletagmanager.com'",
-    },
-  ]}
-/>
+<SchemaSettingsTable schema={schemas.gtm} />
 
 ### Event Mapping
 

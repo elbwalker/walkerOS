@@ -1,21 +1,11 @@
 import { z } from '@walkeros/core';
 
-/**
- * PiwikPro Mapping Schema
- * Event-level mapping configuration for PiwikPro goals and custom tracking
- */
 export const MappingSchema = z.object({
-  goalId: z
-    .string()
-    .describe('PiwikPro Goal ID for conversion tracking')
-    .optional(),
+  goalId: z.string().describe('ID to count the event as a goal (like 1)'),
   goalValue: z
     .string()
-    .describe('Mapping key for goal value (e.g., "data.revenue")')
+    .describe('Property to be used as the goal value (like data.value)')
     .optional(),
 });
 
-/**
- * Type inference from MappingSchema
- */
 export type Mapping = z.infer<typeof MappingSchema>;
