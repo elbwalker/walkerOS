@@ -3,14 +3,16 @@
   "description": "Meta server destination for walkerOS",
   "version": "0.2.1",
   "license": "MIT",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/browser-schemas.d.ts",
+      "import": "./dist/browser-schemas.mjs",
+      "require": "./dist/browser-schemas.js"
     },
     "./examples": {
       "types": "./dist/examples/index.d.ts",

@@ -9,7 +9,7 @@ package: '@walkeros/server-destination-gcp'
 
 import PackageLink from '@site/src/components/docs/package-link';
 import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
-import gcpBigQuerySettings from '@site/src/schemas/gcp-bigquery-settings.json';
+import { schemas } from '@walkeros/server-destination-gcp/schemas';
 
 # GCP BigQuery
 
@@ -18,6 +18,10 @@ import gcpBigQuerySettings from '@site/src/schemas/gcp-bigquery-settings.json';
   github="packages/server/destinations/gcp"
   npm="@walkeros/server-destination-gcp"
 />
+
+The GCP destination package provides server-side integration for streaming
+events from walkerOS to Google BigQuery for data warehousing, analytics, and
+machine learning workloads.
 
 ## Installation
 
@@ -42,4 +46,4 @@ elb('walker destination', destinationBigQuery, {
 
 ## Configuration reference
 
-<SchemaSettingsTable schema={gcpBigQuerySettings} />
+<SchemaSettingsTable schema={schemas.settings} />

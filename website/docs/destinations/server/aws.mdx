@@ -9,7 +9,7 @@ package: '@walkeros/server-destination-aws'
 
 import PackageLink from '@site/src/components/docs/package-link';
 import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
-import awsFirehoseSettings from '@site/src/schemas/aws-firehose-settings.json';
+import { schemas } from '@walkeros/server-destination-aws/schemas';
 
 # AWS Firehose
 
@@ -18,6 +18,10 @@ import awsFirehoseSettings from '@site/src/schemas/aws-firehose-settings.json';
   github="packages/server/destinations/aws"
   npm="@walkeros/server-destination-aws"
 />
+
+The AWS destination package provides server-side integration for streaming
+events from walkerOS to Amazon Kinesis Data Firehose for real-time analytics,
+data lakes, and downstream processing.
 
 ## Installation
 
@@ -49,4 +53,6 @@ elb('walker destination', destinationFirehose, {
 
 ## Configuration reference
 
-<SchemaSettingsTable schema={awsFirehoseSettings} />
+Configuration options for the `settings.firehose` property:
+
+<SchemaSettingsTable schema={schemas.firehose} />

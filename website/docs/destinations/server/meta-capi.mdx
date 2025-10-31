@@ -9,7 +9,7 @@ package: '@walkeros/server-destination-meta'
 
 import PackageLink from '@site/src/components/docs/package-link';
 import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
-import metaCAPISettings from '@site/src/schemas/meta-capi-settings.json';
+import { schemas } from '@walkeros/server-destination-meta/schemas';
 
 # Meta Conversions API
 
@@ -41,4 +41,4 @@ elb('walker destination', destinationMeta, {
 
 ## Configuration reference
 
-<SchemaSettingsTable schema={metaCAPISettings} />
+<SchemaSettingsTable schema={schemas.settings} />
