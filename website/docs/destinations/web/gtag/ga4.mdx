@@ -8,10 +8,12 @@ package: '@walkeros/web-destination-gtag'
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemoDemo, DestinationDemo } from '@walkeros/explorer';
+import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import { examples, schemas } from '@walkeros/web-destination-gtag';
+
+export const destination = { ...destinationGtag, examples };
 
 # Google Analytics 4 (GA4)
 
@@ -58,16 +60,18 @@ elb('walker destination', destinationGtag, {
 #### Example
 
 <DestinationInitDemo
-  destination={destinationGtag}
-  custom={`{
-    measurementId: 'G-XXXXXXXXXX', // Required
-    debug: false,
-    include: ['globals'],
-    pageview: false,
-    server_container_url: 'https://server.example.com',
-    snakeCase: true,
-    transport_url: 'https://www.google-analytics.com/g/collect',
-  }`}
+  destination={destination}
+  settings={{
+    ga4: {
+      measurementId: 'G-XXXXXXXXXX',
+      debug: false,
+      include: ['globals'],
+      pageview: false,
+      server_container_url: 'https://server.example.com',
+      snakeCase: true,
+      transport_url: 'https://www.google-analytics.com/g/collect',
+    },
+  }}
 />
 
 ### Event Mapping
@@ -100,7 +104,7 @@ an&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/g
 gtag.js event.
 
 <DestinationDemo
-  destination={destinationGtag}
+  destination={destination}
   settings={{
     ga4: {
       measurementId: 'G-XXXXXXXXXX',
@@ -120,7 +124,7 @@ a&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/ga
 gtag.js event.
 
 <DestinationDemo
-  destination={destinationGtag}
+  destination={destination}
   settings={{
     ga4: {
       measurementId: 'G-XXXXXXXXXX',

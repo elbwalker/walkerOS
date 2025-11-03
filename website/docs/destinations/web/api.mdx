@@ -8,10 +8,12 @@ sidebar_position: 1
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemoDemo, DestinationDemo } from '@walkeros/explorer';
+import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
 import destinationWebAPI from '@walkeros/web-destination-api';
 import { examples, schemas } from '@walkeros/web-destination-api';
+
+export const destination = { ...destinationWebAPI, examples };
 
 # API Destination
 
@@ -208,7 +210,7 @@ By default the&nbsp;<Link to="/docs/core/web#sendweb">`sendWeb`</Link> function
 is used to send the events to an API.
 
 <DestinationDemo
-  destination={destinationWebAPI}
+  destination={destination}
   settings={{
     url: 'https://api.example.com/events',
   }}

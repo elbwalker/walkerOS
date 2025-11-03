@@ -13,6 +13,8 @@ import { getEvent } from '@walkeros/core';
 import destinationPlausible from '@walkeros/web-destination-plausible';
 import { examples, schemas } from '@walkeros/web-destination-plausible';
 
+export const destination = { ...destinationPlausible, examples };
+
 # Plausible Analytics
 
 <PackageLink
@@ -53,7 +55,7 @@ elb('walker destination', destinationPlausible, {
 <PropertyTable schema={schemas.settings} />
 
 <DestinationInitDemo
-  destination={destinationPlausible}
+  destination={destination}
   settings={{
     domain: 'elbwalker.com',
   }}
@@ -74,7 +76,7 @@ events</Link> manually using the JavaScript function
 ### CustomEvent
 
 <DestinationDemo
-  destination={destinationPlausible}
+  destination={destination}
   settings={{
     domain: 'elbwalker.com',
   }}
@@ -90,7 +92,7 @@ E-commerce revenue tracking</Link> guide to learn more about the setup within
 Plausible.
 
 <DestinationDemo
-  destination={destinationPlausible}
+  destination={destination}
   settings={{
     domain: 'elbwalker.com',
   }}

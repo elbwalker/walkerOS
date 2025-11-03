@@ -6,10 +6,12 @@ package: '@walkeros/web-destination-gtag'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemoDemo, DestinationDemo } from '@walkeros/explorer';
+import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
 import { createEvent } from '@walkeros/core';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import { examples, schemas } from '@walkeros/web-destination-gtag';
+
+export const destination = { ...destinationGtag, examples };
 
 # Google Ads
 
@@ -86,7 +88,7 @@ Try the Google Ads destination with real events:
 ### Initialize Google Ads
 
 <DestinationInitDemo
-  destination={destinationGtag}
+  destination={destination}
   custom={{
     ads: {
       conversionId: 'AW-123456789',
@@ -98,7 +100,7 @@ Try the Google Ads destination with real events:
 ### Track a Conversion Event
 
 <DestinationDemo
-  destination={destinationGtag}
+  destination={destination}
   settings={{
     ads: {
       conversionId: 'AW-123456789',

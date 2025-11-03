@@ -7,10 +7,12 @@ package: '@walkeros/web-destination-meta'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemoDemo, DestinationDemo } from '@walkeros/explorer';
+import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
 import destinationMetaPixel from '@walkeros/web-destination-meta';
 import { examples, schemas } from '@walkeros/web-destination-meta';
+
+export const destination = { ...destinationMetaPixel, examples };
 
 # Meta Pixel
 
@@ -61,8 +63,8 @@ const { collector, elb } = await startFlow({
 #### Example
 
 <DestinationInitDemo
-  destination={destinationMetaPixel}
-  custom={{
+  destination={destination}
+  settings={{
     pixelId: '1234567890',
   }}
 />
@@ -82,7 +84,7 @@ Learn more aboot
 ### ViewContent
 
 <DestinationDemo
-  destination={destinationMetaPixel}
+  destination={destination}
   settings={{
     pixelId: '1234567890',
   }}
@@ -96,7 +98,7 @@ Learn more aboot
 ### AddToCart
 
 <DestinationDemo
-  destination={destinationMetaPixel}
+  destination={destination}
   settings={{
     pixelId: '1234567890',
   }}
@@ -110,7 +112,7 @@ Learn more aboot
 ### InitiateCheckout
 
 <DestinationDemo
-  destination={destinationMetaPixel}
+  destination={destination}
   settings={{
     pixelId: '1234567890',
   }}
@@ -124,7 +126,7 @@ Learn more aboot
 ### Purchase
 
 <DestinationDemo
-  destination={destinationMetaPixel}
+  destination={destination}
   settings={{
     pixelId: '1234567890',
   }}
