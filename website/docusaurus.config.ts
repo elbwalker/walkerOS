@@ -40,13 +40,6 @@ const config: Config = {
 
   themes: ['@docusaurus/theme-live-codeblock', '@docusaurus/theme-mermaid'],
 
-  stylesheets: [
-    {
-      href: '/node_modules/@walkeros/explorer/dist/styles.css',
-      type: 'text/css',
-    },
-  ],
-
   presets: [
     [
       'classic',
