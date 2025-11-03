@@ -8,7 +8,7 @@ package: '@walkeros/server-destination-aws'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
+import { PropertyTable } from '@walkeros/explorer';
 import { schemas } from '@walkeros/server-destination-aws/schemas';
 
 # AWS Firehose
@@ -55,4 +55,4 @@ elb('walker destination', destinationFirehose, {
 
 Configuration options for the `settings.firehose` property:
 
-<SchemaSettingsTable schema={schemas.firehose} />
+<PropertyTable schema={schemas.firehose} />

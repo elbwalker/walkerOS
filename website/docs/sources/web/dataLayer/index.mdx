@@ -6,8 +6,11 @@ sidebar_position: 2
 package: '@walkeros/web-source-datalayer'
 ---
 
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { PropertyTable } from '@walkeros/explorer';
 import PackageLink from '@site/src/components/docs/package-link';
+import { schemas } from '@walkeros/web-source-datalayer';
+
+export const dataLayerSchema = schemas.settings;
 
 <PackageLink
   github="packages/web/sources/datalayer"
@@ -68,32 +71,7 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
 
 ## Configuration
 
-<SettingsTable
-  properties={[
-    {
-      name: 'name',
-      type: 'string',
-      description: 'DataLayer variable name (default: "dataLayer")',
-      required: false,
-      example: "'dataLayer'",
-    },
-    {
-      name: 'prefix',
-      type: 'string',
-      description:
-        'Event prefix for filtering (default: "dataLayer")',
-      required: false,
-      example: "'gtag'",
-    },
-    {
-      name: 'filter',
-      type: '(event: unknown) => boolean',
-      description: 'Custom function to filter which events to process',
-      required: false,
-      example: '(event) => event && typeof event === "object"',
-    },
-  ]}
-/>
+<PropertyTable schema={dataLayerSchema} />
 
 ## Custom Filtering
 

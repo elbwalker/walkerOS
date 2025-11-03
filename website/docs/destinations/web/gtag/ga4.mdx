@@ -8,19 +8,10 @@ package: '@walkeros/web-destination-gtag'
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
+import { PropertyTable, DestinationInitDemoDemo, DestinationDemo } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import { examples, schemas } from '@walkeros/web-destination-gtag';
-
-export const documentationGtag = {
-  ...destinationGtag,
-  examples,
-};
 
 # Google Analytics 4 (GA4)
 
@@ -62,12 +53,12 @@ elb('walker destination', destinationGtag, {
 
 ## Configuration reference
 
-<SchemaSettingsTable schema={schemas.ga4} />
+<PropertyTable schema={schemas.ga4} />
 
 #### Example
 
-<DestinationInit
-  destination={documentationGtag}
+<DestinationInitDemo
+  destination={destinationGtag}
   custom={`{
     measurementId: 'G-XXXXXXXXXX', // Required
     debug: false,
@@ -83,7 +74,7 @@ elb('walker destination', destinationGtag, {
 
 For custom event mapping (`mapping.entity.action.settings.ga4`):
 
-<SchemaSettingsTable schema={schemas.ga4} />
+<PropertyTable schema={schemas.ga4} />
 
 You are able to map your walkerOS events to match the respective requirements of
 each vendor. The `mapping` examples are using a
@@ -108,8 +99,8 @@ Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/ga4/reference/events?sjid=10736118709897970414-EU&client_type=gtag#add_to_cart">add_to_cart</Link>
 gtag.js event.
 
-<DestinationPush
-  destination={documentationGtag}
+<DestinationDemo
+  destination={destinationGtag}
   settings={{
     ga4: {
       measurementId: 'G-XXXXXXXXXX',
@@ -128,8 +119,8 @@ Map your walkerOS event to get
 a&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/ga4/reference/events?sjid=10736118709897970414-EU&client_type=gtag#purchase">purchase</Link>
 gtag.js event.
 
-<DestinationPush
-  destination={documentationGtag}
+<DestinationDemo
+  destination={destinationGtag}
   settings={{
     ga4: {
       measurementId: 'G-XXXXXXXXXX',

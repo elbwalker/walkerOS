@@ -1,6 +1,9 @@
 export * from './types';
 
 export * from './constants';
+
+// Export schemas
+export * as schemas from './schemas';
 export * from './consent';
 export * from './flow';
 export * from './push';

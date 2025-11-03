@@ -6,19 +6,10 @@ package: '@walkeros/web-destination-gtag'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
+import { PropertyTable, DestinationInitDemoDemo, DestinationDemo } from '@walkeros/explorer';
 import { createEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import { examples, schemas } from '@walkeros/web-destination-gtag';
-
-export const documentationGtag = {
-  ...destinationGtag,
-  examples,
-};
 
 # Google Ads
 
@@ -80,13 +71,13 @@ elb('order complete', {
 
 ## Configuration reference
 
-<SchemaSettingsTable schema={schemas.ads} />
+<PropertyTable schema={schemas.ads} />
 
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings.ads`):
 
-<SchemaSettingsTable schema={schemas.ads} />
+<PropertyTable schema={schemas.ads} />
 
 ## Live Demo
 
@@ -94,8 +85,8 @@ Try the Google Ads destination with real events:
 
 ### Initialize Google Ads
 
-<DestinationInit
-  destination={documentationGtag}
+<DestinationInitDemo
+  destination={destinationGtag}
   custom={{
     ads: {
       conversionId: 'AW-123456789',
@@ -106,8 +97,8 @@ Try the Google Ads destination with real events:
 
 ### Track a Conversion Event
 
-<DestinationPush
-  destination={documentationGtag}
+<DestinationDemo
+  destination={destinationGtag}
   settings={{
     ads: {
       conversionId: 'AW-123456789',

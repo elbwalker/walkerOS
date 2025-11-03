@@ -6,7 +6,10 @@ path: packages/web/sources/browser
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { PropertyTable } from '@walkeros/explorer';
+import { schemas } from '@walkeros/web-source-browser';
+
+export const taggerSchema = schemas.tagger;
 
 # Tagger
 
@@ -67,16 +70,7 @@ const customTagger = createTagger({
 
 ## Configuration
 
-<SettingsTable
-  properties={[
-    {
-      name: 'prefix',
-      type: 'string',
-      description: 'Custom prefix for generated data attributes',
-      default: "'data-elb'",
-    },
-  ]}
-/>
+<PropertyTable schema={taggerSchema} />
 
 ## Usage Examples
 

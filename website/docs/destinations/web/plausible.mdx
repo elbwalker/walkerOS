@@ -8,23 +8,10 @@ package: '@walkeros/web-destination-plausible'
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
+import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationPlausible from '@walkeros/web-destination-plausible';
 import { examples, schemas } from '@walkeros/web-destination-plausible';
-
-export const documentationPlausible = {
-  ...destinationPlausible,
-  env: {
-    window: {
-      plausible: () => {},
-    },
-  },
-};
 
 # Plausible Analytics
 
@@ -63,13 +50,13 @@ elb('walker destination', destinationPlausible, {
 
 ## Configuration reference
 
-<SchemaSettingsTable schema={schemas.settings} />
+<PropertyTable schema={schemas.settings} />
 
-<DestinationInit
-  destination={documentationPlausible}
-  custom={`{
-    domain: 'elbwalker.com', // Optional, domain of your site as registered
-  }`}
+<DestinationInitDemo
+  destination={destinationPlausible}
+  settings={{
+    domain: 'elbwalker.com',
+  }}
 />
 
 ## Mapping examples
@@ -86,16 +73,14 @@ events</Link> manually using the JavaScript function
 
 ### CustomEvent
 
-<DestinationPush
-  destination={documentationPlausible}
+<DestinationDemo
+  destination={destinationPlausible}
   settings={{
     domain: 'elbwalker.com',
   }}
   event={getEvent()}
   mapping={examples.mapping.customEvent}
   generic={true}
-  smallText={true}
-  height={'256px'}
 />
 
 ### Purchase
@@ -104,13 +89,11 @@ Checkout&nbsp;<Link to="https://plausible.io/docs/ecommerce-revenue-tracking">Pl
 E-commerce revenue tracking</Link> guide to learn more about the setup within
 Plausible.
 
-<DestinationPush
-  destination={documentationPlausible}
+<DestinationDemo
+  destination={destinationPlausible}
   settings={{
     domain: 'elbwalker.com',
   }}
-  smallText={true}
-  height={'512px'}
   event={getEvent('order complete')}
   mapping={examples.mapping.purchase}
   generic={true}

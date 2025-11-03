@@ -7,7 +7,10 @@ sidebar_position: 2
 ---
 
 import Link from '@docusaurus/Link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { PropertyTable } from '@walkeros/explorer';
+import { schemas } from '@walkeros/collector';
+
+export const collectorSchema = schemas.settings;
 
 # Collector
 
@@ -84,62 +87,7 @@ const { collector, elb } = await startFlow({
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'run',
-      type: 'boolean',
-      description:
-        'Automatically start the collector pipeline on initialization',
-      required: false,
-      example: 'true',
-    },
-    {
-      name: 'sources',
-      type: 'object',
-      description:
-        'Configurations for sources providing events to the collector',
-      required: false,
-      example: '{ browser: { code: sourceBrowser, config: {...} } }',
-    },
-    {
-      name: 'destinations',
-      type: 'object',
-      description: 'Configurations for destinations receiving processed events',
-      required: false,
-      example: '{ gtag: { code: destinationGtag, config: {...} } }',
-    },
-    {
-      name: 'consent',
-      type: 'object',
-      description: 'Initial consent state to control routing of events',
-      required: false,
-      example: '{ analytics: true, marketing: false }',
-    },
-    {
-      name: 'verbose',
-      type: 'boolean',
-      description: 'Enable verbose logging for debugging',
-      required: false,
-      example: 'false',
-    },
-    {
-      name: 'onError',
-      type: 'function',
-      description:
-        'Error handler triggered when the collector encounters failures',
-      required: false,
-      example: '(error) => console.error(error)',
-    },
-    {
-      name: 'onLog',
-      type: 'function',
-      description: 'Custom log handler for collector messages',
-      required: false,
-      example: '(message, level) => console.log(message)',
-    },
-  ]}
-/>
+<PropertyTable schema={collectorSchema} />
 
 ## Advanced setup
 

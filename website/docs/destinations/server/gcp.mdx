@@ -8,7 +8,7 @@ package: '@walkeros/server-destination-gcp'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
+import { PropertyTable } from '@walkeros/explorer';
 import { schemas } from '@walkeros/server-destination-gcp/schemas';
 
 # GCP BigQuery
@@ -46,4 +46,4 @@ elb('walker destination', destinationBigQuery, {
 
 ## Configuration reference
 
-<SchemaSettingsTable schema={schemas.settings} />
+<PropertyTable schema={schemas.settings} />

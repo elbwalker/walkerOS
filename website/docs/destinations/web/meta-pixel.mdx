@@ -7,23 +7,10 @@ package: '@walkeros/web-destination-meta'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
+import { PropertyTable, DestinationInitDemoDemo, DestinationDemo } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationMetaPixel from '@walkeros/web-destination-meta';
 import { examples, schemas } from '@walkeros/web-destination-meta';
-
-export const documentationMetaPixel = {
-  ...destinationMetaPixel,
-  env: {
-    window: {
-      fbq: () => {},
-    },
-  },
-};
 
 # Meta Pixel
 
@@ -69,11 +56,11 @@ const { collector, elb } = await startFlow({
 
 ## Configuration reference
 
-<SchemaSettingsTable schema={schemas.settings} />
+<PropertyTable schema={schemas.settings} />
 
 #### Example
 
-<DestinationInit
+<DestinationInitDemo
   destination={destinationMetaPixel}
   custom={{
     pixelId: '1234567890',
@@ -94,8 +81,8 @@ Learn more aboot
 
 ### ViewContent
 
-<DestinationPush
-  destination={documentationMetaPixel}
+<DestinationDemo
+  destination={destinationMetaPixel}
   settings={{
     pixelId: '1234567890',
   }}
@@ -108,8 +95,8 @@ Learn more aboot
 
 ### AddToCart
 
-<DestinationPush
-  destination={documentationMetaPixel}
+<DestinationDemo
+  destination={destinationMetaPixel}
   settings={{
     pixelId: '1234567890',
   }}
@@ -122,8 +109,8 @@ Learn more aboot
 
 ### InitiateCheckout
 
-<DestinationPush
-  destination={documentationMetaPixel}
+<DestinationDemo
+  destination={destinationMetaPixel}
   settings={{
     pixelId: '1234567890',
   }}
@@ -136,8 +123,8 @@ Learn more aboot
 
 ### Purchase
 
-<DestinationPush
-  destination={documentationMetaPixel}
+<DestinationDemo
+  destination={destinationMetaPixel}
   settings={{
     pixelId: '1234567890',
   }}

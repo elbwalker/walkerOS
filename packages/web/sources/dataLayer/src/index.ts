@@ -5,6 +5,9 @@ import { interceptDataLayer, processExistingEvents } from './interceptor';
 // Export types for external usage
 export * as SourceDataLayer from './types';
 
+// Export schemas
+export * as schemas from './schemas';
+
 // Export examples
 export * from './examples';
 

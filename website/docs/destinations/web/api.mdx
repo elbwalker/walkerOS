@@ -8,24 +8,10 @@ sidebar_position: 1
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
+import { PropertyTable, DestinationInitDemoDemo, DestinationDemo } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationWebAPI from '@walkeros/web-destination-api';
 import { examples, schemas } from '@walkeros/web-destination-api';
-
-{/* import { CodeBox } from '@walkeros/explorer'; */}
-{/* import '@walkeros/explorer/styles.css'; */}
-
-export const documentationAPI = {
-  ...destinationWebAPI,
-  env: {
-    sendWeb: () => ({ ok: true }),
-  },
-};
 
 # API Destination
 
@@ -66,7 +52,7 @@ const { collector, elb } = await startFlow({
 
 ## Configuration reference
 
-<SchemaSettingsTable schema={schemas.settings} />
+<PropertyTable schema={schemas.settings} />
 
 ## Usage
 
@@ -221,8 +207,8 @@ const { collector, elb } = await startFlow({
 By default the&nbsp;<Link to="/docs/core/web#sendweb">`sendWeb`</Link> function
 is used to send the events to an API.
 
-<DestinationPush
-  destination={documentationAPI}
+<DestinationDemo
+  destination={destinationWebAPI}
   settings={{
     url: 'https://api.example.com/events',
   }}

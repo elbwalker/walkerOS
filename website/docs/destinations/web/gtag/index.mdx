@@ -8,7 +8,7 @@ package: '@walkeros/web-destination-gtag'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
+import { PropertyTable } from '@walkeros/explorer';
 import { schemas } from '@walkeros/web-destination-gtag';
 
 # Google Gtag
@@ -59,10 +59,10 @@ const { collector, elb } = await startFlow({
 
 ## Configuration reference
 
-<SchemaSettingsTable schema={schemas.settings} />
+<PropertyTable schema={schemas.settings} />
 
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings`):
 
-<SchemaSettingsTable schema={schemas.mapping} />
+<PropertyTable schema={schemas.mapping} />

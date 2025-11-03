@@ -8,25 +8,10 @@ package: '@walkeros/web-destination-piwikpro'
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
+import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationPiwikPro from '@walkeros/web-destination-piwikpro';
 import { examples, schemas } from '@walkeros/web-destination-piwikpro';
-
-export const documentationPiwikPro = {
-  ...destinationPiwikPro,
-  env: {
-    window: {
-      _paq: {
-        push: () => {},
-      },
-    },
-  },
-};
 
 # Piwik PRO
 
@@ -67,22 +52,21 @@ elb('walker destination', destinationPiwikPro, {
 
 ## Configuration reference
 
-<SchemaSettingsTable schema={schemas.settings} />
+<PropertyTable schema={schemas.settings} />
 
-<DestinationInit
+<DestinationInitDemo
   destination={destinationPiwikPro}
-  custom={`{
-    appId: 'XXX-XXX-XXX-XXX-XXX', // Id of the site
-    // linkTracking: false, // Disable download and outlink tracking
-    url: 'https://your_account_name.piwik.pro/', // Same address as the login
-  }`}
+  settings={{
+    appId: 'XXX-XXX-XXX-XXX-XXX',
+    url: 'https://your_account_name.piwik.pro/',
+  }}
 />
 
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings`):
 
-<SchemaSettingsTable schema={schemas.mapping} />
+<PropertyTable schema={schemas.mapping} />
 
 ## Mapping examples
 
@@ -99,8 +83,8 @@ Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceproductdetailview#examples">ecommerceProductDetailView</Link>
 event.
 
-<DestinationPush
-  destination={documentationPiwikPro}
+<DestinationDemo
+  destination={destinationPiwikPro}
   settings={{
     appId: 'XXX-XXX-XXX-XXX-XXX',
     url: 'https://your_account_name.piwik.pro/',
@@ -118,8 +102,8 @@ Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceaddtocart#examples">ecommerceAddToCart</Link>
 event.
 
-<DestinationPush
-  destination={documentationPiwikPro}
+<DestinationDemo
+  destination={destinationPiwikPro}
   settings={{
     appId: 'XXX-XXX-XXX-XXX-XXX',
     url: 'https://your_account_name.piwik.pro/',
@@ -137,8 +121,8 @@ Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommercecartupdate#examples">ecommerceCartUpdate</Link>
 event.
 
-<DestinationPush
-  destination={documentationPiwikPro}
+<DestinationDemo
+  destination={destinationPiwikPro}
   settings={{
     appId: 'XXX-XXX-XXX-XXX-XXX',
     url: 'https://your_account_name.piwik.pro/',
@@ -156,8 +140,8 @@ Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceorder#examples">ecommerceOrder</Link>
 event.
 
-<DestinationPush
-  destination={documentationPiwikPro}
+<DestinationDemo
+  destination={destinationPiwikPro}
   settings={{
     appId: 'XXX-XXX-XXX-XXX-XXX',
     url: 'https://your_account_name.piwik.pro/',

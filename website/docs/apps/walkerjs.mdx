@@ -6,7 +6,13 @@ package: '@walkeros/walker.js'
 ---
 
 import Link from '@docusaurus/Link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { PropertyTable } from '@walkeros/explorer';
+import { schemas } from '@walkeros/walker.js';
+
+export const walkerjsSettingsSchema = schemas.settings;
+export const browserConfigSchema = schemas.browserConfig;
+export const dataLayerConfigSchema = schemas.dataLayerConfig;
+export const collectorConfigSchema = schemas.collectorConfig;
 
 # walker.js
 
@@ -89,145 +95,19 @@ Walker.js supports multiple configuration approaches with different priorities:
 
 ### Settings
 
-<SettingsTable
-  properties={[
-    {
-      name: 'elb',
-      type: 'string',
-      default: '"elb"',
-      description: 'Global function name for event tracking',
-    },
-    {
-      name: 'name',
-      type: 'string',
-      default: '"walkerjs"',
-      description: 'Global instance name',
-    },
-    {
-      name: 'run',
-      type: 'boolean',
-      default: 'true',
-      description: 'Auto-initialize walker.js on load',
-    },
-    {
-      name: 'browser',
-      type: 'object | boolean',
-      default:
-        '{ run: true, session: true, scope: document.body, pageview: true }',
-      description: (
-        <>
-          <Link to="/docs/sources/web/browser/">
-            Browser source configuration
-          </Link>
-        </>
-      ),
-    },
-    {
-      name: 'dataLayer',
-      type: 'object | boolean',
-      default: 'false',
-      description: (
-        <>
-          <Link to="/docs/sources/web/dataLayer">
-            DataLayer source configuration
-          </Link>
-        </>
-      ),
-    },
-    {
-      name: 'collector',
-      type: 'object',
-      default: '{}',
-      description: (
-        <>
-          <Link to="/docs/collector/">
-            Collector configuration
-          </Link>{' '}
-          including destinations and consent settings
-        </>
-      ),
-    },
-  ]}
-/>
+<PropertyTable schema={walkerjsSettingsSchema} />
 
 #### Browser Source Settings
 
-<SettingsTable
-  properties={[
-    {
-      name: 'browser.run',
-      type: 'boolean',
-      default: 'true',
-      description: 'Auto-start DOM tracking',
-    },
-    {
-      name: 'browser.session',
-      type: 'boolean',
-      default: 'true',
-      description: 'Enable session tracking',
-    },
-    {
-      name: 'browser.scope',
-      type: 'Element',
-      default: 'document.body',
-      description: 'DOM element scope for tracking',
-    },
-    {
-      name: 'browser.pageview',
-      type: 'boolean',
-      default: 'true',
-      description: 'Enable automatic page view events',
-    },
-  ]}
-/>
+<PropertyTable schema={browserConfigSchema} />
 
 #### DataLayer Settings
 
-<SettingsTable
-  properties={[
-    {
-      name: 'dataLayer',
-      type: 'boolean',
-      default: 'false',
-      description: 'Enable dataLayer integration with defaults',
-    },
-    {
-      name: 'dataLayer.name',
-      type: 'string',
-      default: '"dataLayer"',
-      description: 'DataLayer variable name',
-    },
-    {
-      name: 'dataLayer.prefix',
-      type: 'string',
-      default: '"dataLayer"',
-      description: 'Event prefix for dataLayer events',
-    },
-  ]}
-/>
+<PropertyTable schema={dataLayerConfigSchema} />
 
 #### Collector Settings
 
-<SettingsTable
-  properties={[
-    {
-      name: 'collector.consent',
-      type: 'object',
-      default: '{ functional: true }',
-      description: 'Default consent state',
-    },
-    {
-      name: 'collector.destinations',
-      type: 'object',
-      default: '{}',
-      description: (
-        <>
-          <Link to="/docs/destinations">Destination configurations</Link>
-        </>
-      ),
-    },
-  ]}
-/>
+<PropertyTable schema={collectorConfigSchema} />
 
 ### Full Configuration Object
 

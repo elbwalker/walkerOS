@@ -7,19 +7,10 @@ package: '@walkeros/web-destination-gtag'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import SchemaSettingsTable from '@site/src/components/molecules/SchemaSettingsTable';
+import { PropertyTable, DestinationInitDemoDemo, DestinationDemo } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import { examples, schemas } from '@walkeros/web-destination-gtag';
-
-export const documentationGtag = {
-  ...destinationGtag,
-  examples,
-};
 
 # Google Tag Manager (GTM)
 
@@ -58,7 +49,7 @@ elb('walker destination', destinationGtag, {
 
 ## Configuration reference
 
-<SchemaSettingsTable schema={schemas.gtm} />
+<PropertyTable schema={schemas.gtm} />
 
 ### Event Mapping
 
