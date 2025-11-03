@@ -8,7 +8,7 @@ package: '@walkeros/web-destination-gtag'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable } from '@walkeros/explorer';
+import { PropertyTable, CodeBox } from '@walkeros/explorer';
 import { schemas } from '@walkeros/web-destination-gtag';
 
 # Google Gtag
@@ -31,8 +31,8 @@ npm install @walkeros/web-destination-gtag
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeBox
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const { collector, elb } = await startFlow({
@@ -54,8 +54,11 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  disabled
+  language="typescript"
+  label="Code Example"
+/>
 
 ## Configuration reference
 

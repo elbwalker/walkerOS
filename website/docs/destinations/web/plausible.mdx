@@ -8,7 +8,7 @@ package: '@walkeros/web-destination-plausible'
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
+import { PropertyTable, DestinationInitDemo, DestinationDemo, CodeBox } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
 import destinationPlausible from '@walkeros/web-destination-plausible';
 import { examples, schemas } from '@walkeros/web-destination-plausible';
@@ -37,8 +37,8 @@ npm install @walkeros/web-destination-plausible
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeBox
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationPlausible } from '@walkeros/web-destination-plausible';
 
 const { elb } = await startFlow();
@@ -47,8 +47,11 @@ elb('walker destination', destinationPlausible, {
   settings: {
     domain: 'elbwalker.com', // Optional, domain of your site as registered
   },
-});
-```
+});`}
+  disabled
+  language="typescript"
+  label="Code Example"
+/>
 
 ## Configuration reference
 

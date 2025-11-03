@@ -8,7 +8,7 @@ package: '@walkeros/web-destination-gtag'
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
+import { PropertyTable, DestinationInitDemo, DestinationDemo, CodeBox } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import { examples, schemas } from '@walkeros/web-destination-gtag';
@@ -38,8 +38,8 @@ npm install @walkeros/web-destination-gtag
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeBox
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const { elb } = await startFlow();
@@ -50,8 +50,11 @@ elb('walker destination', destinationGtag, {
       measurementId: 'G-XXXXXXXXXX',
     },
   },
-});
-```
+});`}
+  disabled
+  language="typescript"
+  label="Code Example"
+/>
 
 ## Configuration reference
 

@@ -8,7 +8,7 @@ package: '@walkeros/web-destination-piwikpro'
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
+import { PropertyTable, DestinationInitDemo, DestinationDemo, CodeBox } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
 import destinationPiwikPro from '@walkeros/web-destination-piwikpro';
 import { examples, schemas } from '@walkeros/web-destination-piwikpro';
@@ -38,8 +38,8 @@ npm install @walkeros/web-destination-piwikpro
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeBox
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationPiwikPro } from '@walkeros/web-destination-piwikpro';
 
 const { elb } = await startFlow();
@@ -49,8 +49,11 @@ elb('walker destination', destinationPiwikPro, {
     appId: 'XXX-XXX-XXX-XXX-XXX', // Required
     url: 'https://your_account_name.piwik.pro/', // Required
   },
-});
-```
+});`}
+  disabled
+  language="typescript"
+  label="Code Example"
+/>
 
 ## Configuration reference
 

@@ -8,7 +8,7 @@ sidebar_position: 1
 
 import Link from '@docusaurus/Link';
 import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
+import { PropertyTable, DestinationInitDemo, DestinationDemo, CodeBox } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
 import destinationWebAPI from '@walkeros/web-destination-api';
 import { examples, schemas } from '@walkeros/web-destination-api';
@@ -34,8 +34,8 @@ npm install @walkeros/web-destination-api
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeBox
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await startFlow({
@@ -49,8 +49,11 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  disabled
+  language="typescript"
+  label="Code Example"
+/>
 
 ## Configuration reference
 
@@ -60,8 +63,8 @@ const { collector, elb } = await startFlow({
 
 ### Basic Usage
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeBox
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await startFlow({
@@ -80,13 +83,16 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  disabled
+  language="typescript"
+  label="Code Example"
+/>
 
 ### Advanced Usage with Transform
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeBox
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await startFlow({
@@ -101,7 +107,7 @@ const { collector, elb } = await startFlow({
             // Custom transformation logic
             return JSON.stringify({
               timestamp: Date.now(),
-              event_name: `${event.entity}_${event.action}`,
+              event_name: \`\${event.entity}_\${event.action}\`,
               properties: event.data,
               context: event.context,
             });
@@ -110,15 +116,18 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  disabled
+  language="typescript"
+  label="Code Example"
+/>
 
 ## Examples
 
 ### Sending to Analytics API
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeBox
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await startFlow({
@@ -135,7 +144,7 @@ const { collector, elb } = await startFlow({
           },
           transform: (event) => {
             return JSON.stringify({
-              event_type: `${event.entity}_${event.action}`,
+              event_type: \`\${event.entity}_\${event.action}\`,
               user_id: event.user?.id,
               session_id: event.user?.session,
               properties: event.data,
@@ -146,15 +155,18 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  disabled
+  language="typescript"
+  label="Code Example"
+/>
 
 ### Using Beacon Transport
 
 For critical events that need to be sent even when the page is unloading:
 
-```typescript
-// Add to existing startFlow config
+<CodeBox
+  code={`// Add to existing startFlow config
 const { collector, elb } = await startFlow({
   destinations: {
     criticalApi: {
@@ -167,15 +179,18 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  disabled
+  language="typescript"
+  label="Code Example"
+/>
 
 ### Custom Data Mapping
 
 Use mapping rules to control which events are sent:
 
-```typescript
-// Add to existing startFlow config
+<CodeBox
+  code={`// Add to existing startFlow config
 const { collector, elb } = await startFlow({
   destinations: {
     api: {
@@ -194,8 +209,11 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  disabled
+  language="typescript"
+  label="Code Example"
+/>
 
 ## Transport Methods
 

@@ -6,7 +6,7 @@ package: '@walkeros/web-destination-gtag'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
+import { PropertyTable, DestinationInitDemo, DestinationDemo, CodeBox } from '@walkeros/explorer';
 import { createEvent } from '@walkeros/core';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import { examples, schemas } from '@walkeros/web-destination-gtag';
@@ -36,8 +36,8 @@ npm install @walkeros/web-destination-gtag
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeBox
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const { elb } = await startFlow();
@@ -68,8 +68,11 @@ elb('order complete', {
   value: 49.99,
   currency: 'EUR',
   items: 2,
-});
-```
+});`}
+  disabled
+  language="typescript"
+  label="Code Example"
+/>
 
 ## Configuration reference
 

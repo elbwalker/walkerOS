@@ -7,7 +7,7 @@ package: '@walkeros/web-destination-meta'
 ---
 
 import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
+import { PropertyTable, DestinationInitDemo, DestinationDemo, CodeBox } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
 import destinationMetaPixel from '@walkeros/web-destination-meta';
 import { examples, schemas } from '@walkeros/web-destination-meta';
@@ -37,8 +37,8 @@ npm install @walkeros/web-destination-meta
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeBox
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/web-destination-meta';
 
 const { collector, elb } = await startFlow({
@@ -53,8 +53,11 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  disabled
+  language="typescript"
+  label="Code Example"
+/>
 
 ## Configuration reference
 
