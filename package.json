@@ -3,7 +3,6 @@
   "private": true,
   "workspaces": [
     "packages/core",
-    "explorer",
     "packages/collector",
     "packages/server/core",
     "packages/server/destinations/*",
@@ -39,7 +38,7 @@
     "typescript": "^5.8.2"
   },
   "lint-staged": {
-    "*.{js,ts,tsx,json,css,md}": [
+    "*.{js,ts,tsx,json,css,md,mdx}": [
       "prettier --write"
     ]
   },

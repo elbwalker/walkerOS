@@ -1,10 +1,9 @@
-***
-
+---
 title: walker.js
 description: Ready-to-use walkerOS bundle for instant web tracking
-sidebar\_position: 1
+sidebar_position: 1
 package: '@walkeros/walker.js'
-------------------------------
+---
 
 import Link from '@docusaurus/Link';
 import { PropertyTable, CodeBox } from '@walkeros/explorer';
@@ -109,37 +108,37 @@ Walker.js supports multiple configuration approaches with different priorities:
 
 <CodeBox
   code={`window.elbConfig = {
-// Global settings
-elb: 'elb', // Global function name (default: 'elb')
-name: 'walkerjs', // Global instance name
-run: true, // Auto-initialize (default: true)
+  // Global settings
+  elb: 'elb', // Global function name (default: 'elb')
+  name: 'walkerjs', // Global instance name
+  run: true, // Auto-initialize (default: true)
 
-// Browser source settings
-browser: {
-run: true, // Auto-start DOM tracking
-session: true, // Enable session tracking
-scope: document.body, // Tracking scope
-pageview: true, // Enable automatic page views
-},
+  // Browser source settings
+  browser: {
+    run: true, // Auto-start DOM tracking
+    session: true, // Enable session tracking
+    scope: document.body, // Tracking scope
+    pageview: true, // Enable automatic page views
+  },
 
-// DataLayer integration
-dataLayer: true, // Enable dataLayer
-// or detailed config:
-// dataLayer: {
-//   name: 'dataLayer', // DataLayer variable name
-//   prefix: 'dataLayer', // Event prefix
-// },
+  // DataLayer integration
+  dataLayer: true, // Enable dataLayer
+  // or detailed config:
+  // dataLayer: {
+  //   name: 'dataLayer', // DataLayer variable name
+  //   prefix: 'dataLayer', // Event prefix
+  // },
 
-// Collector configuration
-collector: {
-consent: { functional: true }, // Default consent state
-destinations: {
-// Your destinations here
-console: {
-  push: (event) => console.log('Event:', event),
-},
-},
-},
+  // Collector configuration
+  collector: {
+    consent: { functional: true }, // Default consent state
+    destinations: {
+      // Your destinations here
+      console: {
+        push: (event) => console.log('Event:', event),
+      },
+    },
+  },
 };`}
   disabled
   language="javascript"
