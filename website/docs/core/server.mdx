@@ -40,8 +40,8 @@ data: { url: '/home' },
 const response = await sendServer(url, data, {
 method: 'PUT',
 headers: {
-  Authorization: 'Bearer token',
-  'Content-Type': 'application/json',
+Authorization: 'Bearer token',
+'Content-Type': 'application/json',
 },
 timeout: 10000, // 10 seconds
 });
@@ -154,7 +154,7 @@ const result = await sendServer(
 processedEvent,
 {
 headers: {
-  'X-API-Key': process.env.ANALYTICS_API_KEY,
+'X-API-Key': process.env.ANALYTICS_API_KEY,
 },
 timeout: 8000,
 },

@@ -54,14 +54,14 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 const { collector, elb } = await startFlow({
 sources: {
 browser: {
-  code: sourceBrowser,
-  config: {
-    settings: {
-      pageview: true,
-      session: true,
-      prefix: 'data-elb',
-    },
+code: sourceBrowser,
+config: {
+  settings: {
+    pageview: true,
+    session: true,
+    prefix: 'data-elb',
   },
+},
 },
 },
 destinations: {
@@ -117,9 +117,9 @@ return {
 type: 'custom',
 config,
 on: async (event, context) => {
-  if (event === 'consent') {
-    // React to consent changes
-  }
+if (event === 'consent') {
+  // React to consent changes
+}
 },
 };
 };

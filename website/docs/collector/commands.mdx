@@ -55,10 +55,10 @@ Destinations are typically configured during collector initialization:
   code={`const { collector, elb } = await startFlow({
 destinations: {
 gtag: {
-  code: destinationGtag,
-  config: {
-    /* custom config */
-  },
+code: destinationGtag,
+config: {
+  /* custom config */
+},
 },
 },
 });
@@ -359,8 +359,8 @@ Add hooks during collector initialization or via the `hook` command:
 const { collector } = await startFlow({
 hooks: {
 prePush: (params, ...args) => {
-  window.elbTimer = Date.now();
-  return params.fn(...args);
+window.elbTimer = Date.now();
+return params.fn(...args);
 },
 },
 });

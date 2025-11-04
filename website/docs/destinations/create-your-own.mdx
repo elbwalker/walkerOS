@@ -53,7 +53,7 @@ the destination's configuration.
 event: WalkerOS.Event,
 context: {
 config: {
-  settings?: Settings;
+settings?: Settings;
 };
 },
 ) => void;
@@ -90,9 +90,9 @@ if (!settings?.url) return;
 
 // 4. Send the event
 fetch(settings.url, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(event),
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(event),
 }).catch(console.error);
 },
 };
@@ -140,8 +140,8 @@ config: {},
 
 on(event, context) {
 if (event === 'consent') {
-  console.log('Consent updated:', context);
-  // React to consent changes - maybe clear cookies if consent withdrawn
+console.log('Consent updated:', context);
+// React to consent changes - maybe clear cookies if consent withdrawn
 }
 },
 
@@ -169,12 +169,12 @@ import { destinationWebhook } from './destinationWebhook';
 const { elb } = await startFlow({
 destinations: {
 myWebhook: {
-  destination: destinationWebhook,
-  config: {
-    settings: {
-      url: 'https://api.example.com/events',
-    },
+destination: destinationWebhook,
+config: {
+  settings: {
+    url: 'https://api.example.com/events',
   },
+},
 },
 },
 });
@@ -197,30 +197,30 @@ config: {},
 
 on(event, context) {
 switch (event) {
-  case 'session':
-    // New session started
-    console.log('New session:', context);
-    // Could initialize session-specific tracking
-    break;
+case 'session':
+  // New session started
+  console.log('New session:', context);
+  // Could initialize session-specific tracking
+  break;
 
-  case 'consent':
-    // Handle consent changes
-    const consent = context as { marketing?: boolean; analytics?: boolean };
-    if (!consent?.marketing) {
-      // Clear marketing-related data if consent withdrawn
-      console.log('Marketing consent withdrawn, clearing data');
-    }
-    break;
+case 'consent':
+  // Handle consent changes
+  const consent = context as { marketing?: boolean; analytics?: boolean };
+  if (!consent?.marketing) {
+    // Clear marketing-related data if consent withdrawn
+    console.log('Marketing consent withdrawn, clearing data');
+  }
+  break;
 
-  case 'ready':
-    // Collector is ready
-    console.log('Starting destination services');
-    break;
+case 'ready':
+  // Collector is ready
+  console.log('Starting destination services');
+  break;
 
-  case 'run':
-    // Collector resumed processing
-    console.log('Collector resumed, processing queued events');
-    break;
+case 'run':
+  // Collector resumed processing
+  console.log('Collector resumed, processing queued events');
+  break;
 }
 },
 
@@ -230,9 +230,9 @@ const { settings } = config;
 if (!settings?.url) return;
 
 fetch(settings.url, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(event),
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(event),
 }).catch(console.error);
 },
 };
@@ -257,7 +257,7 @@ import type { WebhookSettings } from './destinationWebhook';
 declare global {
 namespace WalkerOS {
 interface Destinations {
-  webhook: Destination.Config<WebhookSettings>;
+webhook: Destination.Config<WebhookSettings>;
 }
 }
 }

@@ -2,7 +2,8 @@
 
 title: Migration
 description: How to migrate to the latest walkerOS packages
------------------------------------------------------------
+sidebar\_position: 1
+--------------------
 
 import { CodeBox } from '@walkeros/explorer';
 
@@ -101,20 +102,20 @@ destinations: [destinationGoogleGA4],
   code={`const { elb } = await startFlow({
 sources: {
 browser: {
-  code: sourceBrowser,
-  config: {
-    settings: { scope: document.body },
-  },
+code: sourceBrowser,
+config: {
+  settings: { scope: document.body },
+},
 },
 },
 destinations: {
 gtag: {
-  code: destinationGtag,
-  config: {
-    settings: {
-      ga4: { measurementId: 'G-XXXXXXXXXX' },
-    },
+code: destinationGtag,
+config: {
+  settings: {
+    ga4: { measurementId: 'G-XXXXXXXXXX' },
   },
+},
 },
 },
 });
@@ -158,20 +159,20 @@ Configure all sources and destinations in a single `startFlow` call:
   code={`const { elb } = await startFlow({
 sources: {
 browser: {
-  code: sourceBrowser,
-  config: {
-    settings: { scope: document.body, session: true },
-  },
+code: sourceBrowser,
+config: {
+  settings: { scope: document.body, session: true },
+},
 },
 },
 destinations: {
 gtag: {
-  code: destinationGtag,
-  config: {
-    settings: {
-      ga4: { measurementId: 'G-XXXXXXXXXX' },
-    },
+code: destinationGtag,
+config: {
+  settings: {
+    ga4: { measurementId: 'G-XXXXXXXXXX' },
   },
+},
 },
 },
 });

@@ -198,8 +198,8 @@ event: string,
 transform: (data: unknown) => { name: string; data: unknown },
 ) => {
 const handler = (data: unknown) => {
-  const transformed = transform(data);
-  elb(transformed.name, transformed.data);
+const transformed = transform(data);
+elb(transformed.name, transformed.data);
 };
 api.on(event, handler);
 handlers.set(event, handler);
@@ -208,15 +208,15 @@ handlers.set(event, handler);
 // Set up event listeners based on settings
 if (settings.captureInteractions) {
 register('userAction', (data) => ({
-  name: \`\${settings.prefix} interaction\`,
-  data,
+name: \`\${settings.prefix} interaction\`,
+data,
 }));
 }
 
 if (settings.captureErrors) {
 register('error', (data) => ({
-  name: \`\${settings.prefix} error\`,
-  data,
+name: \`\${settings.prefix} error\`,
+data,
 }));
 }
 
@@ -225,7 +225,7 @@ type: 'event-api',
 config: { ...config, settings },
 push: elb,
 destroy: async () => {
-  handlers.forEach((handler, event) => api.off(event, handler));
+handlers.forEach((handler, event) => api.off(event, handler));
 },
 };
 };
@@ -248,16 +248,16 @@ const externalAPI = getYourAPI();
 const { elb } = await startFlow({
 sources: {
 eventAPI: {
-  code: sourceEventAPI,
-  config: {
-    settings: {
-      captureInteractions: true,
-      prefix: 'myapp',
-    },
+code: sourceEventAPI,
+config: {
+  settings: {
+    captureInteractions: true,
+    prefix: 'myapp',
   },
-  env: {
-    api: externalAPI, // Collector provides elb automatically
-  },
+},
+env: {
+  api: externalAPI, // Collector provides elb automatically
+},
 },
 },
 });
@@ -313,7 +313,7 @@ it('validates required dependencies', async () => {
 const elb = createMockElb();
 
 await expect(
-  sourceEventAPI({ settings: {} }, { elb } as any)
+sourceEventAPI({ settings: {} }, { elb } as any)
 ).rejects.toThrow('requires api');
 });
 
@@ -322,8 +322,8 @@ const api = createMockAPI();
 const elb = createMockElb();
 
 await sourceEventAPI(
-  { settings: { captureInteractions: true } },
-  { elb, api }
+{ settings: { captureInteractions: true } },
+{ elb, api }
 );
 
 expect(api.on).toHaveBeenCalledWith('userAction', expect.any(Function));
@@ -370,9 +370,9 @@ When the external API isn't immediately available:
   code={`async function waitForAPI<T>(getter: () => T | null): Promise<T> {
 return new Promise((resolve) => {
 const check = () => {
-  const instance = getter();
-  if (instance) resolve(instance);
-  else setTimeout(check, 100);
+const instance = getter();
+if (instance) resolve(instance);
+else setTimeout(check, 100);
 };
 check();
 });

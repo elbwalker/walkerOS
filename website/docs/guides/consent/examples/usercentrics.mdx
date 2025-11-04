@@ -2,7 +2,8 @@
 
 title: Usercentrics
 description: How to use walkerOS consent mode with Usercentrics
----------------------------------------------------------------
+sidebar\_position: 1
+--------------------
 
 import Link from '@docusaurus/Link';
 import { CodeBox } from '@walkeros/explorer';
@@ -27,21 +28,21 @@ if (e.event != 'consent_status') return;
 
 var cat = 'ucCategory';
 if (Object.values(e[cat]).every((val) => typeof val === 'boolean'))
-  return e[cat]; // Choice by group
+return e[cat]; // Choice by group
 
 // Individual choice
 const obj = {};
 
 // Services
 for (const key in e) {
-  if (!['action', 'event', 'type', cat].includes(key)) {
-    obj[key.toLowerCase().replace(/ /g, '_')] = e[key];
-  }
+if (!['action', 'event', 'type', cat].includes(key)) {
+  obj[key.toLowerCase().replace(/ /g, '_')] = e[key];
+}
 }
 
 // Groups
 for (const key in e[cat]) {
-  if (typeof e[cat][key] === 'boolean') obj[key] = e[cat][key];
+if (typeof e[cat][key] === 'boolean') obj[key] = e[cat][key];
 }
 
 return obj;

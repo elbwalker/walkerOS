@@ -54,14 +54,14 @@ Map events by their entity-action structure:
 sources: {
 browser: {
 config: {
-  mapping: {
-    product: {
-      click: { name: 'product view' }  // Standardize clicks to views
-    },
-    test: {
-      '*': { ignore: true }  // Filter out test events
-    }
+mapping: {
+  product: {
+    click: { name: 'product view' }  // Standardize clicks to views
+  },
+  test: {
+    '*': { ignore: true }  // Filter out test events
   }
+}
 }
 }
 }
@@ -70,19 +70,19 @@ config: {
 destinations: {
 gtag: {
 config: {
-  mapping: {
-    product: {
-      view: {
-        name: 'view_item',  // GA4 expects this name
-        data: {
-          map: {
-            item_id: 'data.id',
-            value: 'data.price'
-          }
+mapping: {
+  product: {
+    view: {
+      name: 'view_item',  // GA4 expects this name
+      data: {
+        map: {
+          item_id: 'data.id',
+          value: 'data.price'
         }
       }
     }
   }
+}
 }
 }
 }
@@ -124,14 +124,14 @@ Map specific entity-action combinations to custom event names:
   input={`await getMappingEvent(
 { name: 'product view' },
 {
-  product: {
-    view: { name: 'product_viewed' },
-  },
+product: {
+  view: { name: 'product_viewed' },
+},
 }
 );`}
   output={`{
 eventMapping: {
-  name: "product_viewed"
+name: "product_viewed"
 },
 mappingKey: "product view"
 }`}
@@ -148,17 +148,17 @@ Use wildcards (`*`) to match multiple entities or actions:
   input={`await getMappingEvent(
 { name: 'product click' },
 {
-  product: {
-    '*': { name: 'product_interaction' },
-  },
-  '*': {
-    click: { name: 'generic_click' },
-  },
+product: {
+  '*': { name: 'product_interaction' },
+},
+'*': {
+  click: { name: 'generic_click' },
+},
 }
 );`}
   output={`{
 eventMapping: {
-  name: "product_interaction"
+name: "product_interaction"
 },
 mappingKey: "product *"
 }`}
@@ -174,24 +174,24 @@ Use conditions to apply different mappings based on event properties:
   labelInput="Configuration"
   input={`await getMappingEvent(
 {
-  name: 'order complete',
-  data: { value: 100 },
+name: 'order complete',
+data: { value: 100 },
 },
 {
-  order: {
-    complete: [
-      {
-        condition: (event) => event.data?.value > 50,
-        name: 'high_value_purchase',
-      },
-      { name: 'purchase' }, // Fallback
-    ],
-  },
+order: {
+  complete: [
+    {
+      condition: (event) => event.data?.value > 50,
+      name: 'high_value_purchase',
+    },
+    { name: 'purchase' }, // Fallback
+  ],
+},
 }
 );`}
   output={`{
 eventMapping: {
-  name: "high_value_purchase"
+name: "high_value_purchase"
 },
 mappingKey: "order complete"
 }`}
@@ -208,14 +208,14 @@ Skip processing certain events by setting `ignore: true`:
   input={`await getMappingEvent(
 { name: 'test event' },
 {
-  test: {
-    event: { ignore: true },
-  },
+test: {
+  event: { ignore: true },
+},
 }
 );`}
   output={`{
 eventMapping: {
-  ignore: true
+ignore: true
 },
 mappingKey: "test event"
 }`}
@@ -283,7 +283,7 @@ Transform values using custom functions:
   input={`await getMappingValue(
 { user: { email: 'john@example.com' } },
 {
-  fn: (event) => event.user.email.split('@')[1]
+fn: (event) => event.user.email.split('@')[1]
 }
 );`}
   output={`"example.com"`}
@@ -299,17 +299,17 @@ Create new objects by mapping properties:
   labelInput="Configuration"
   input={`await getMappingValue(
 {
-  product: { id: 'P123', name: 'Laptop', price: 999 },
-  user: { id: 'U456' }
+product: { id: 'P123', name: 'Laptop', price: 999 },
+user: { id: 'U456' }
 },
 {
-  map: {
-    item_id: 'product.id',
-    item_name: 'product.name',
-    value: 'product.price',
-    user_id: 'user.id',
-    currency: { value: 'USD' },
-  }
+map: {
+  item_id: 'product.id',
+  item_name: 'product.name',
+  value: 'product.price',
+  user_id: 'user.id',
+  currency: { value: 'USD' },
+}
 }
 );`}
   output={`{
@@ -331,16 +331,16 @@ Process arrays and transform each item:
   labelInput="Configuration"
   input={`await getMappingValue(
 {
-  products: [
-    { id: 'P1', name: 'Laptop' },
-    { id: 'P2', name: 'Mouse' }
-  ]
+products: [
+  { id: 'P1', name: 'Laptop' },
+  { id: 'P2', name: 'Mouse' }
+]
 },
 {
-  loop: [
-    'products',
-    { map: { item_id: 'id', item_name: 'name' } }
-  ]
+loop: [
+  'products',
+  { map: { item_id: 'id', item_name: 'name' } }
+]
 }
 );`}
   output={`[
@@ -360,8 +360,8 @@ Validate values and return undefined if validation fails:
   input={`await getMappingValue(
 { email: 'john@example.com' },
 {
-  key: 'email',
-  validate: (value) => typeof value === 'string' && value.includes('@')
+key: 'email',
+validate: (value) => typeof value === 'string' && value.includes('@')
 }
 );`}
   output={`"john@example.com"`}
@@ -377,12 +377,12 @@ Only return values when required consent is granted:
   labelInput="Configuration"
   input={`await getMappingValue(
 {
-  email: 'john@example.com',
-  consent: { marketing: false, functional: true }
+email: 'john@example.com',
+consent: { marketing: false, functional: true }
 },
 {
-  key: 'email',
-  consent: { marketing: true }
+key: 'email',
+consent: { marketing: true }
 }
 );`}
   output={`undefined`}
@@ -423,12 +423,12 @@ Transformations for specific events:
   code={`config: {
 mapping: {
 product: {
-  view: {
-    name: 'view_item',
-    policy: {
-      'data.id': { fn: (e) => \`PRODUCT_\${e.data?.id}\` },
-    },
+view: {
+  name: 'view_item',
+  policy: {
+    'data.id': { fn: (e) => \`PRODUCT_\${e.data?.id}\` },
   },
+},
 },
 },
 }`}
@@ -452,27 +452,27 @@ Normalize events before they reach the collector:
   code={`await startFlow({
 sources: {
 browser: {
-  code: sourceBrowser,
-  config: {
-    mapping: {
-      // Rename DOM clicks to views
-      product: {
-        click: {
-          name: 'product view',
-          policy: {
-            // Event-level: normalize product IDs
-            'data.id': { fn: (e) => e.data?.id?.toUpperCase() },
-          },
+code: sourceBrowser,
+config: {
+  mapping: {
+    // Rename DOM clicks to views
+    product: {
+      click: {
+        name: 'product view',
+        policy: {
+          // Event-level: normalize product IDs
+          'data.id': { fn: (e) => e.data?.id?.toUpperCase() },
         },
       },
-      // Ignore test events
-      test: { '*': { ignore: true } },
     },
-    policy: {
-      // Config-level: normalize user email for all events
-      'user.email': { fn: (e) => e.user?.email?.toLowerCase() },
-    },
+    // Ignore test events
+    test: { '*': { ignore: true } },
   },
+  policy: {
+    // Config-level: normalize user email for all events
+    'user.email': { fn: (e) => e.user?.email?.toLowerCase() },
+  },
+},
 },
 },
 });`}
@@ -491,23 +491,23 @@ Transform for specific destination APIs:
   code={`await startFlow({
 destinations: {
 gtag: {
-  code: destinationGtag,
-  config: {
-    mapping: {
-      product: {
-        view: {
-          name: 'view_item',
-          data: {
-            map: {
-              item_id: 'data.id',
-              value: 'data.price',
-              currency: { value: 'USD' },
-            },
+code: destinationGtag,
+config: {
+  mapping: {
+    product: {
+      view: {
+        name: 'view_item',
+        data: {
+          map: {
+            item_id: 'data.id',
+            value: 'data.price',
+            currency: { value: 'USD' },
           },
         },
       },
     },
   },
+},
 },
 },
 });`}

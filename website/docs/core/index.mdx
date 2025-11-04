@@ -169,16 +169,16 @@ await getMappingValue(event, 'data.productId');
 // Complex mapping with conditions and loops
 const mapping = {
 map: {
-  orderId: 'data.id',
-  products: {
-    loop: [
-      'nested',
-      {
-        condition: (entity) => entity.entity === 'product',
-        map: { id: 'data.id', name: 'data.name' },
-      },
-    ],
-  },
+orderId: 'data.id',
+products: {
+  loop: [
+    'nested',
+    {
+      condition: (entity) => entity.entity === 'product',
+      map: { id: 'data.id', name: 'data.name' },
+    },
+  ],
+},
 },
 };
 await getMappingValue(event, mapping);`}

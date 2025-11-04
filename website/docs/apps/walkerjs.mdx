@@ -134,10 +134,10 @@ dataLayer: true, // Enable dataLayer
 collector: {
 consent: { functional: true }, // Default consent state
 destinations: {
-  // Your destinations here
-  console: {
-    push: (event) => console.log('Event:', event),
-  },
+// Your destinations here
+console: {
+  push: (event) => console.log('Event:', event),
+},
 },
 },
 };`}
@@ -281,7 +281,7 @@ Use walker.js programmatically in applications:
 const { collector, elb } = await createWalkerjs({
 collector: {
 destinations: {
-  console: { push: console.log },
+console: { push: console.log },
 },
 },
 browser: {
@@ -304,21 +304,21 @@ Configure multiple destinations for your events:
   code={`window.elbConfig = {
 collector: {
 destinations: {
-  // Console logging for development
-  console: {
-    push: (event) => console.log('Walker.js Event:', event),
-  },
+// Console logging for development
+console: {
+  push: (event) => console.log('Walker.js Event:', event),
+},
 
-  // Custom API endpoint
-  api: {
-    push: async (event) => {
-      await fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(event),
-      });
-    },
+// Custom API endpoint
+api: {
+  push: async (event) => {
+    await fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    });
   },
+},
 },
 },
 };`}

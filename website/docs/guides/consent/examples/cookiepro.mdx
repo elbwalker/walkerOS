@@ -36,8 +36,8 @@ function handleConsent() {
 
 const consent = {};
 window.OptanonActiveGroups.split(',').forEach((category) => {
-  const name = mapping[category];
-  if (name) consent[name] = true;
+const name = mapping[category];
+if (name) consent[name] = true;
 });
 
 elb('walker consent', consent);
@@ -47,8 +47,8 @@ if (window.Optanon && window.OptanonActiveGroups) {
 handleConsent(); // CMP already loaded
 } else {
 window.OptanonWrapper = function (e) {
-  if (wrapper) wrapper(); // Call the original OptanonWrapper
-  handleConsent();
+if (wrapper) wrapper(); // Call the original OptanonWrapper
+handleConsent();
 };
 }
 
