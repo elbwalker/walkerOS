@@ -18,10 +18,12 @@
     "./es5": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.es5.js"
-    }
+    },
+    "./src/schemas": "./src/schemas.ts"
   },
   "files": [
     "dist/**",
+    "src/schemas.ts",
     "README.md",
     "CHANGELOG.md"
   ],

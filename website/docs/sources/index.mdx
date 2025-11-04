@@ -1,8 +1,11 @@
----
+***
+
 title: Sources
 description: Event data sources for walkerOS collector
-sidebar_position: 4
----
+sidebar\_position: 4
+--------------------
+
+import { CodeBox } from '@walkeros/explorer';
 
 # Sources
 
@@ -24,9 +27,9 @@ Sources capture events in their native format and send them to the collector:
 
 Captures events from web pages using DOM attributes:
 
-- DOM interactions (clicks, form submissions, visibility)
-- Automatic session and pageview tracking
-- Custom data attributes (`data-elb-*`)
+* DOM interactions (clicks, form submissions, visibility)
+* Automatic session and pageview tracking
+* Custom data attributes (`data-elb-*`)
 
 [Learn more →](./web/browser/)
 
@@ -34,9 +37,9 @@ Captures events from web pages using DOM attributes:
 
 Integrates with existing analytics implementations:
 
-- Works with GA4 and GTM dataLayer
-- Event transformation and filtering
-- Gradual migration support
+* Works with GA4 and GTM dataLayer
+* Event transformation and filtering
+* Gradual migration support
 
 [Learn more →](./web/dataLayer/)
 
@@ -44,78 +47,96 @@ Integrates with existing analytics implementations:
 
 Sources are configured in `startFlow`:
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeBox
+  code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector, elb } = await startFlow({
-  sources: {
-    browser: {
-      code: sourceBrowser,
-      config: {
-        settings: {
-          pageview: true,
-          session: true,
-          prefix: 'data-elb',
-        },
+sources: {
+  browser: {
+    code: sourceBrowser,
+    config: {
+      settings: {
+        pageview: true,
+        session: true,
+        prefix: 'data-elb',
       },
     },
   },
-  destinations: {
-    /* your destinations */
-  },
+},
+destinations: {
+  /* your destinations */
+},
 });
 
 // elb is now browser.push (enhanced with DOM commands)
 // Use elb for manual event tracking
 await elb('product view', { id: 'P123', name: 'Laptop' });
-```
+`}
+  disabled
+  language="typescript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ## Primary Source
 
 `startFlow` returns an `elb` function based on your sources:
 
-- **With sources**: Returns first source's `push` method (enhanced features)
-- **Multiple sources**: First source is primary by default
-- **No sources**: Returns `collector.push` (basic functionality)
+* **With sources**: Returns first source's `push` method (enhanced features)
+* **Multiple sources**: First source is primary by default
+* **No sources**: Returns `collector.push` (basic functionality)
 
 ### Override Primary Source
 
-```typescript
-const { elb } = await startFlow({
-  sources: {
-    browser: { code: sourceBrowser },
-    dataLayer: { code: sourceDataLayer, primary: true }, // Override
-  },
+<CodeBox
+  code={`const { elb } = await startFlow({
+sources: {
+  browser: { code: sourceBrowser },
+  dataLayer: { code: sourceDataLayer, primary: true }, // Override
+},
 });
 
 // elb is now dataLayer.push instead of browser.push
-```
+`}
+  disabled
+  language="typescript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ## Reactive Event Handling
 
 Sources can react to collector events via the optional `on` method:
 
-```typescript
-const mySource: Source.Init = async (config, env) => {
-  return {
-    type: 'custom',
-    config,
-    on: async (event, context) => {
-      if (event === 'consent') {
-        // React to consent changes
-      }
-    },
-  };
+<CodeBox
+  code={`const mySource: Source.Init = async (config, env) => {
+return {
+  type: 'custom',
+  config,
+  on: async (event, context) => {
+    if (event === 'consent') {
+      // React to consent changes
+    }
+  },
 };
-```
+};
+`}
+  disabled
+  language="typescript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 **Available Events:**
 
-- `consent` - Consent state changes
-- `session` - Session lifecycle events
-- `ready` - Collector ready state
-- `run` - Collector run events
+* `consent` - Consent state changes
+* `session` - Session lifecycle events
+* `ready` - Collector ready state
+* `run` - Collector run events
 
 ## Creating Custom Sources
 
@@ -123,6 +144,6 @@ See [Create Your Own Source](./create-your-own) for a complete guide to building
 
 ## Next Steps
 
-- **[Browser Source](./web/browser/)** - DOM-based tracking
-- **[DataLayer Source](./web/dataLayer/)** - Legacy integration
-- **[Create Your Own](./create-your-own)** - Custom source guide
+* **[Browser Source](./web/browser/)** - DOM-based tracking
+* **[DataLayer Source](./web/dataLayer/)** - Legacy integration
+* **[Create Your Own](./create-your-own)** - Custom source guide

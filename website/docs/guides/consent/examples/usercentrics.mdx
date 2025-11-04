@@ -1,9 +1,11 @@
----
+***
+
 title: Usercentrics
 description: How to use walkerOS consent mode with Usercentrics
----
+---------------------------------------------------------------
 
 import Link from '@docusaurus/Link';
+import { CodeBox } from '@walkeros/explorer';
 
 Usercentrics supports an
 [implementation via DataLayer & Events](https://docs.usercentrics.com/#/v2-events?id=usage-as-window-event).
@@ -17,38 +19,44 @@ choice:
 The following code will listen for the `ucEvent`, parse the consent state and
 eventually call the `walker consent` command:
 
-```js
-window.addEventListener('ucEvent', function (event) {
-  function ucStates(e) {
-    if (e.event != 'consent_status') return;
-    // if (e.type != 'explicit') return; // Process only explicit consent
+<CodeBox
+  code={`window.addEventListener('ucEvent', function (event) {
+function ucStates(e) {
+  if (e.event != 'consent_status') return;
+  // if (e.type != 'explicit') return; // Process only explicit consent
 
-    var cat = 'ucCategory';
-    if (Object.values(e[cat]).every((val) => typeof val === 'boolean'))
-      return e[cat]; // Choice by group
+  var cat = 'ucCategory';
+  if (Object.values(e[cat]).every((val) => typeof val === 'boolean'))
+    return e[cat]; // Choice by group
 
-    // Individual choice
-    const obj = {};
+  // Individual choice
+  const obj = {};
 
-    // Services
-    for (const key in e) {
-      if (!['action', 'event', 'type', cat].includes(key)) {
-        obj[key.toLowerCase().replace(/ /g, '_')] = e[key];
-      }
+  // Services
+  for (const key in e) {
+    if (!['action', 'event', 'type', cat].includes(key)) {
+      obj[key.toLowerCase().replace(/ /g, '_')] = e[key];
     }
-
-    // Groups
-    for (const key in e[cat]) {
-      if (typeof e[cat][key] === 'boolean') obj[key] = e[cat][key];
-    }
-
-    return obj;
   }
 
-  const state = ucStates(event.detail);
-  if (state) elb('walker consent', state); // Update walker.js consent state
+  // Groups
+  for (const key in e[cat]) {
+    if (typeof e[cat][key] === 'boolean') obj[key] = e[cat][key];
+  }
+
+  return obj;
+}
+
+const state = ucStates(event.detail);
+if (state) elb('walker consent', state); // Update walker.js consent state
 });
-```
+`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 Optionally uncomment the `e.type !== 'explicit'` check to process only
 explicitly given content. This will prevent walker.js from starting

@@ -1,18 +1,14 @@
----
+***
+
 title: walker.js
 description: Ready-to-use walkerOS bundle for instant web tracking
-sidebar_position: 1
+sidebar\_position: 1
 package: '@walkeros/walker.js'
----
+------------------------------
 
 import Link from '@docusaurus/Link';
-import { PropertyTable } from '@walkeros/explorer';
-import { schemas } from '@walkeros/walker.js';
-
-export const walkerjsSettingsSchema = schemas.settings;
-export const browserConfigSchema = schemas.browserConfig;
-export const dataLayerConfigSchema = schemas.dataLayerConfig;
-export const collectorConfigSchema = schemas.collectorConfig;
+import { PropertyTable, CodeBox } from '@walkeros/explorer';
+import * as schemas from '@walkeros/walker.js/src/schemas';
 
 # walker.js
 
@@ -95,57 +91,62 @@ Walker.js supports multiple configuration approaches with different priorities:
 
 ### Settings
 
-<PropertyTable schema={walkerjsSettingsSchema} />
+<PropertyTable schema={schemas.settings} />
 
 #### Browser Source Settings
 
-<PropertyTable schema={browserConfigSchema} />
+<PropertyTable schema={schemas.browserConfig} />
 
 #### DataLayer Settings
 
-<PropertyTable schema={dataLayerConfigSchema} />
+<PropertyTable schema={schemas.dataLayerConfig} />
 
 #### Collector Settings
 
-<PropertyTable schema={collectorConfigSchema} />
+<PropertyTable schema={schemas.collectorConfig} />
 
 ### Full Configuration Object
 
-```javascript
-window.elbConfig = {
-  // Global settings
-  elb: 'elb', // Global function name (default: 'elb')
-  name: 'walkerjs', // Global instance name
-  run: true, // Auto-initialize (default: true)
+<CodeBox
+  code={`window.elbConfig = {
+// Global settings
+elb: 'elb', // Global function name (default: 'elb')
+name: 'walkerjs', // Global instance name
+run: true, // Auto-initialize (default: true)
 
-  // Browser source settings
-  browser: {
-    run: true, // Auto-start DOM tracking
-    session: true, // Enable session tracking
-    scope: document.body, // Tracking scope
-    pageview: true, // Enable automatic page views
-  },
+// Browser source settings
+browser: {
+  run: true, // Auto-start DOM tracking
+  session: true, // Enable session tracking
+  scope: document.body, // Tracking scope
+  pageview: true, // Enable automatic page views
+},
 
-  // DataLayer integration
-  dataLayer: true, // Enable dataLayer
-  // or detailed config:
-  // dataLayer: {
-  //   name: 'dataLayer', // DataLayer variable name
-  //   prefix: 'dataLayer', // Event prefix
-  // },
+// DataLayer integration
+dataLayer: true, // Enable dataLayer
+// or detailed config:
+// dataLayer: {
+//   name: 'dataLayer', // DataLayer variable name
+//   prefix: 'dataLayer', // Event prefix
+// },
 
-  // Collector configuration
-  collector: {
-    consent: { functional: true }, // Default consent state
-    destinations: {
-      // Your destinations here
-      console: {
-        push: (event) => console.log('Event:', event),
-      },
+// Collector configuration
+collector: {
+  consent: { functional: true }, // Default consent state
+  destinations: {
+    // Your destinations here
+    console: {
+      push: (event) => console.log('Event:', event),
     },
   },
-};
-```
+},
+};`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ### Inline Configuration
 
@@ -203,32 +204,42 @@ For detailed information on data attributes, see the
 
 Use the global `elb` function for manual tracking:
 
-```javascript
-// Simple event
+<CodeBox
+  code={`// Simple event
 elb('button click', {
-  label: 'interesting',
-});
-```
+label: 'interesting',
+});`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ### DataLayer Integration
 
 Walker.js can integrate with existing dataLayer implementations:
 
-```javascript
-// Enable dataLayer integration
+<CodeBox
+  code={`// Enable dataLayer integration
 window.elbConfig = {
-  dataLayer: true, // Uses window.dataLayer by default
+dataLayer: true, // Uses window.dataLayer by default
 };
 
 // Existing dataLayer events will be processed
 dataLayer.push({
-  event: 'purchase',
-  ecommerce: {
-    transaction_id: '12345',
-    value: 25.42,
-  },
-});
-```
+event: 'purchase',
+ecommerce: {
+  transaction_id: '12345',
+  value: 25.42,
+},
+});`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ## Advanced Features
 
@@ -255,58 +266,68 @@ Walker.js handles async loading gracefully with automatic event queueing:
 
 Walker.js provides multiple build formats for different environments:
 
-- `walker.js` - Standard IIFE bundle for browsers
-- `index.es5.js` - GTM-compatible ES2015 build
-- `index.mjs` - ES modules for modern bundlers
-- `index.js` - CommonJS for Node.js environments
+* `walker.js` - Standard IIFE bundle for browsers
+* `index.es5.js` - GTM-compatible ES2015 build
+* `index.mjs` - ES modules for modern bundlers
+* `index.js` - CommonJS for Node.js environments
 
 ### Programmatic Usage
 
 Use walker.js programmatically in applications:
 
-```javascript
-import { createWalkerjs } from '@walkeros/walker.js';
+<CodeBox
+  code={`import { createWalkerjs } from '@walkeros/walker.js';
 
 const { collector, elb } = await createWalkerjs({
-  collector: {
-    destinations: {
-      console: { push: console.log },
-    },
+collector: {
+  destinations: {
+    console: { push: console.log },
   },
-  browser: {
-    session: true,
-    pageview: true,
-  },
-});
-```
+},
+browser: {
+  session: true,
+  pageview: true,
+},
+});`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ## Destination Configuration
 
 Configure multiple destinations for your events:
 
-```javascript
-window.elbConfig = {
-  collector: {
-    destinations: {
-      // Console logging for development
-      console: {
-        push: (event) => console.log('Walker.js Event:', event),
-      },
+<CodeBox
+  code={`window.elbConfig = {
+collector: {
+  destinations: {
+    // Console logging for development
+    console: {
+      push: (event) => console.log('Walker.js Event:', event),
+    },
 
-      // Custom API endpoint
-      api: {
-        push: async (event) => {
-          await fetch('/api/events', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(event),
-          });
-        },
+    // Custom API endpoint
+    api: {
+      push: async (event) => {
+        await fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(event),
+        });
       },
     },
   },
-};
-```
+},
+};`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 For comprehensive destination options, see the
 [Destinations documentation](/docs/destinations/).
@@ -326,21 +347,19 @@ object name.
 
 ### Factory Function
 
-```typescript
-createWalkerjs(config?: Config): Promise<Instance>
-```
+<CodeBox code={`createWalkerjs(config?: Config): Promise<Instance>`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight={{ min: 100, max: 600 }} />
 
 Creates a new walker.js instance with the provided configuration.
 
 ### Instance Properties
 
-- `collector` - The walkerOS collector instance
-- `elb` - Browser push function for event tracking
+* `collector` - The walkerOS collector instance
+* `elb` - Browser push function for event tracking
 
 ### Utility Functions
 
-```javascript
-import { getAllEvents, getEvents, getGlobals } from '@walkeros/walker.js';
+<CodeBox
+  code={`import { getAllEvents, getEvents, getGlobals } from '@walkeros/walker.js';
 
 // Get all trackable events on the page
 const events = getAllEvents();
@@ -350,16 +369,21 @@ const button = document.querySelector('button');
 const clickEvents = getEvents(button, 'click');
 
 // Get global properties from the page
-const globals = getGlobals();
-```
+const globals = getGlobals();`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ## Related Documentation
 
-- **[Browser Source](/docs/sources/web/browser/)** - Detailed DOM tracking
+* **[Browser Source](/docs/sources/web/browser/)** - Detailed DOM tracking
   capabilities
-- **[Collector](/docs/collector/)** - Event processing and routing
-- **[Destinations](/docs/destinations/)** - Available destination options
-- **[DataLayer Source](/docs/sources/web/dataLayer/)** - DataLayer integration
+* **[Collector](/docs/collector/)** - Event processing and routing
+* **[Destinations](/docs/destinations/)** - Available destination options
+* **[DataLayer Source](/docs/sources/web/dataLayer/)** - DataLayer integration
   details
 
 Walker.js combines all these components into a single, easy-to-use package

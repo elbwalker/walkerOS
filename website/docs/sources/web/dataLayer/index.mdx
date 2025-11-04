@@ -1,21 +1,17 @@
----
+***
+
 title: DataLayer
 description: Integration with existing dataLayer implementations
 path: /docs/sources/web/dataLayer
-sidebar_position: 2
+sidebar\_position: 2
 package: '@walkeros/web-source-datalayer'
----
+-----------------------------------------
 
 import { PropertyTable } from '@walkeros/explorer';
 import PackageLink from '@site/src/components/docs/package-link';
 import { schemas } from '@walkeros/web-source-datalayer';
 
-export const dataLayerSchema = schemas.settings;
-
-<PackageLink
-  github="packages/web/sources/datalayer"
-  npm="@walkeros/web-source-datalayer"
-/>
+<PackageLink github="packages/web/sources/datalayer" npm="@walkeros/web-source-datalayer" />
 
 # DataLayer Source
 
@@ -71,7 +67,7 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
 
 ## Configuration
 
-<PropertyTable schema={dataLayerSchema} />
+<PropertyTable schema={schemas.settings} />
 
 ## Custom Filtering
 
@@ -104,6 +100,7 @@ const { elb } = await startFlow({
 Use the dataLayer source for gradual migration from GA4/GTM:
 
 1. **Phase 1**: Add walkerOS alongside existing dataLayer
+
    ```typescript
    // Existing code continues to work
    dataLayer.push({ event: 'purchase', value: 99.99 });
@@ -111,6 +108,7 @@ Use the dataLayer source for gradual migration from GA4/GTM:
    ```
 
 2. **Phase 2**: Map dataLayer events to walkerOS destinations
+
    ```typescript
    destinations: {
      ga4: {
@@ -134,5 +132,5 @@ Use the dataLayer source for gradual migration from GA4/GTM:
 
 ## Next Steps
 
-- Review [event mapping](/docs/mapping) for transforming dataLayer events
-- Check [GA4 destination](/docs/destinations/web/gtag) for Google Analytics integration
+* Review [event mapping](/docs/mapping) for transforming dataLayer events
+* Check [GA4 destination](/docs/destinations/web/gtag) for Google Analytics integration

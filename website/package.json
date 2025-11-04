@@ -24,6 +24,7 @@
     "@walkeros/collector": "*",
     "@walkeros/core": "*",
     "@walkeros/explorer": "*",
+    "@walkeros/walker.js": "*",
     "@walkeros/web-destination-api": "*",
     "@walkeros/web-destination-gtag": "*",
     "@walkeros/web-destination-meta": "*",

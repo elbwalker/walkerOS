@@ -1,11 +1,13 @@
----
+***
+
 title: Tagging
-sidebar_position: 3
+sidebar\_position: 3
 description: How to tag a page using the walkerOS browser source
----
+----------------------------------------------------------------
 
 import Link from '@docusaurus/Link';
 import PromotionLive from '@site/src/components/templates/promotionLive';
+import { CodeBox } from '@walkeros/explorer';
 
 Tag your web components using `data-elb` attributes to enable structured event
 tracking — no custom JavaScript required.
@@ -20,11 +22,11 @@ everywhere — without extra code or tracking configuration.
 
 You'll learn how to:
 
-- Define entities, actions, and triggers directly in your HTML
-- Add contextual and global properties
-- Handle dynamic values, arrays, and type casting
-- Link elements across DOM boundaries
-- Structure nested data automatically
+* Define entities, actions, and triggers directly in your HTML
+* Add contextual and global properties
+* Handle dynamic values, arrays, and type casting
+* Link elements across DOM boundaries
+* Structure nested data automatically
 
 If you're looking for a **lightweight, declarative** way to implement analytics
 and event tracking, `data-elb` tagging is your foundation.
@@ -61,53 +63,59 @@ Tag a page...
 
 ... to get a structured event as a result:
 
-```js
-{
-  name: 'promotion view', // Name as a combination of entity and action
-  data: {
-    // Arbitrary properties related to the entity
-    name: 'Setting up tracking easily',
-    category: 'analytics',
-  },
-  context: {
-    // Provides additional information about the state during the event
-    test: ['engagement', 0] // Key, [value, order]
-  },
-  globals: {
-    // General properties that apply to every event
-    language: 'en'
-  },
-  custom: {}, // Additional space for individual setups
-  user: {
-    // Contains user identifiers for different identification levels
-    // Require consent and set manually for sessions building and cross-device
-    id: 'us3r1d',
-    device: 'c00k131d',
-    session: 's3ss10n1d',
-  },
-  nested: [], // List of nested entities
-  consent: { functional: true }, // Status of the granted consent state(s)
-  id: '1647261462000-01b5e2-5', // Timestamp, group & count of the event
-  trigger: 'visible', // Name of the trigger that fired
-  entity: 'promotion', // The entity name involved in the event
-  action: 'view', // The specific action performed on the entity
-  timestamp: 1647261462000, // Time when the event fired
-  timing: 3.14, // Duration how long it took to trigger this event
-  group: '01b5e2', // Random identifier for all events during a run
-  count: 5, // Incremental counter of the events in the same run
-  version: {
-    // Information about the used implementation setup
-    source: 'X.X.X', // Semantic version of the used source
-    tagging: 42, // A version number of the then-used tagging status
-  },
-  source: {
-    // Details about the origin of the event
-    type: 'web', // Source type of the event (also app, server, or custom one)
-    id: 'https://github.com/elbwalker/walkerOS', // Source of the event's origin
-    previous_id: 'https://www.elbwalker.com/' // Previous source (like referrer)
-  }
+<CodeBox
+  code={`{
+name: 'promotion view', // Name as a combination of entity and action
+data: {
+  // Arbitrary properties related to the entity
+  name: 'Setting up tracking easily',
+  category: 'analytics',
+},
+context: {
+  // Provides additional information about the state during the event
+  test: ['engagement', 0] // Key, [value, order]
+},
+globals: {
+  // General properties that apply to every event
+  language: 'en'
+},
+custom: {}, // Additional space for individual setups
+user: {
+  // Contains user identifiers for different identification levels
+  // Require consent and set manually for sessions building and cross-device
+  id: 'us3r1d',
+  device: 'c00k131d',
+  session: 's3ss10n1d',
+},
+nested: [], // List of nested entities
+consent: { functional: true }, // Status of the granted consent state(s)
+id: '1647261462000-01b5e2-5', // Timestamp, group & count of the event
+trigger: 'visible', // Name of the trigger that fired
+entity: 'promotion', // The entity name involved in the event
+action: 'view', // The specific action performed on the entity
+timestamp: 1647261462000, // Time when the event fired
+timing: 3.14, // Duration how long it took to trigger this event
+group: '01b5e2', // Random identifier for all events during a run
+count: 5, // Incremental counter of the events in the same run
+version: {
+  // Information about the used implementation setup
+  source: 'X.X.X', // Semantic version of the used source
+  tagging: 42, // A version number of the then-used tagging status
+},
+source: {
+  // Details about the origin of the event
+  type: 'web', // Source type of the event (also app, server, or custom one)
+  id: 'https://github.com/elbwalker/walkerOS', // Source of the event's origin
+  previous_id: 'https://www.elbwalker.com/' // Previous source (like referrer)
 }
-```
+}
+`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 :::note
 
@@ -124,8 +132,8 @@ is `page` when no `data-elb` is set.
 An **action** can be added by setting one of the following attributes on the
 **same level** or **child elements** in combination with a **matching trigger**:
 
-- **`data-elbaction`** - applies action to the **nearest entity only**
-- **`data-elbactions`** - applies action to **all entities** in the DOM
+* **`data-elbaction`** - applies action to the **nearest entity only**
+* **`data-elbactions`** - applies action to **all entities** in the DOM
   hierarchy
 
 Both attributes use the same syntax, e.g., `data-elbaction="visible:view"` or
@@ -259,7 +267,7 @@ can be set anywhere inside an elb scope.
 :::warning
 
 Spaces in entities, e.g., "shopping cart" or actions, e.g., "add to cart" will
-be replaced by underscores to "shopping_cart" and "add_to_cart".
+be replaced by underscores to "shopping\_cart" and "add\_to\_cart".
 
 :::
 
@@ -287,9 +295,15 @@ inside of the entity scope or a parent.
 </div>
 ```
 
-```js
-{ data: { source: "parent", key: "value", foo: "bar", } }
-```
+<CodeBox
+  code={`{ data: { source: "parent", key: "value", foo: "bar", } }
+`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ### Hierarchy
 
@@ -309,10 +323,10 @@ closest ones or parent values will be preferred over the others.
 
 Based on which element gets clicked, the event will contain the following data
 
-- family: `{ key: 'baz' }`, the last found data-property
-- parent: `{ key: 'foo' }`, a direct data-value
-- child: `{ key: 'bar' }`, direct value closer than the parent
-- sibling: `{ key: 'foo' }`, no value specified, so it takes the parent's value
+* family: `{ key: 'baz' }`, the last found data-property
+* parent: `{ key: 'foo' }`, a direct data-value
+* child: `{ key: 'bar' }`, direct value closer than the parent
+* sibling: `{ key: 'foo' }`, no value specified, so it takes the parent's value
 
 ### Type casting
 
@@ -391,14 +405,20 @@ To use array types, add the `[]` suffix to a property's name, such as
 </div>
 ```
 
-```js
-{
-  data: {
-    size: ["s", "l"],
-  },
-  // ...
+<CodeBox
+  code={`{
+data: {
+  size: ["s", "l"],
+},
+// ...
 }
-```
+`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ### Generic properties
 
@@ -422,17 +442,23 @@ Explicit properties are preferred over generic ones.
 
 :::
 
-```js
-{
-  data: {
-    p: 'v', // parent
-    k: 'v', // explicit
-    g: 'v', // generic
-    o: 'v' // overridden by explicit
-  },
-  // ...
+<CodeBox
+  code={`{
+data: {
+  p: 'v', // parent
+  k: 'v', // explicit
+  g: 'v', // generic
+  o: 'v' // overridden by explicit
+},
+// ...
 }
-```
+`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ## Globals
 
@@ -450,14 +476,20 @@ define them anywhere on a page using the `data-elbglobals` attribute.
 
 This example will lead to the following event:
 
-```js
-{
-  "event": "entity action",
-  "data": { "foo": "bar" },
-  "globals": { "outof": "scope" }
-  // other properties omitted
+<CodeBox
+  code={`{
+"event": "entity action",
+"data": { "foo": "bar" },
+"globals": { "outof": "scope" }
+// other properties omitted
 }
-```
+`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 :::info
 
@@ -488,18 +520,24 @@ position, a test, or specific components for example.
 The context properties are tuples with the value and an index, starting at the
 closest parent (`[value, index]`). Access them via `event.context.key[0]`.
 
-```js
-{
-  event: "promotion click",
-  data: { title: "click me" },
-  globals: { plan: "paid" },
-  context: {
-    test: ["engagement", 1],
-    recommendation: ["smart_ai", 0],
-  },
-  // other properties omitted
+<CodeBox
+  code={`{
+event: "promotion click",
+data: { title: "click me" },
+globals: { plan: "paid" },
+context: {
+  test: ["engagement", 1],
+  recommendation: ["smart_ai", 0],
+},
+// other properties omitted
 }
-```
+`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 :::tip
 
@@ -532,22 +570,28 @@ the nested array of each event. Each element is a regular entity.
 
 This example will lead to the following event on load:
 
-```js
-{
-  "event": "mother view",
-  "data": { "label": "caring" },
-  "nested": [
-    { "entity": "son", "data": { "age": 23 } },
-    {
-      "entity": "daughter",
-      "data": { "age": 32 },
-      "nested": [{ "entity": "baby", "data": { "status": "infant" } }],
-    },
-    { "entity": "baby", "data": { "status": "infant" } },
-  ],
-  // other properties omitted
+<CodeBox
+  code={`{
+"event": "mother view",
+"data": { "label": "caring" },
+"nested": [
+  { "entity": "son", "data": { "age": 23 } },
+  {
+    "entity": "daughter",
+    "data": { "age": 32 },
+    "nested": [{ "entity": "baby", "data": { "status": "infant" } }],
+  },
+  { "entity": "baby", "data": { "status": "infant" } },
+],
+// other properties omitted
 }
-```
+`}
+  disabled
+  language="javascript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 Nested entities that are nested inside another entity will be captured on both
 levels.
