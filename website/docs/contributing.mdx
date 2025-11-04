@@ -5,6 +5,7 @@ position: 7
 ---
 
 import Link from '@docusaurus/Link';
+import { CodeBox } from '@walkeros/explorer';
 
 walkerOS is an open-source project. There are multiple ways to contribute, and
 we appreciate them all. If you have any questions, feel free to reach out:
@@ -42,8 +43,8 @@ stable and released versions. The whole project can be tested and build using
 [TurboRepo](https://turbo.build/repo/). Run all commands from the root
 directory.
 
-```bash
-# Make sure to install all dependencies first
+<CodeBox
+  code={`# Make sure to install all dependencies first
 npm i
 
 # To start a local development server
@@ -58,7 +59,13 @@ turbo run build
 # To develop or build a specific package use --filter option
 turbo run dev --filter=*walker.js
 turbo run build --filter=*walker.js --filter=*utils
-```
+`}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 The `filter` option can be used to only run one or multiple packages. To filter
 use the `packages name` field in the `package.json` file.
@@ -67,9 +74,15 @@ use the `packages name` field in the `package.json` file.
 
 To update all npm packages to the latest version, run:
 
-```bash
-npx npm-check-updates -u && npm update && npm install
-```
+<CodeBox
+  code={`npx npm-check-updates -u && npm update && npm install
+`}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ## Documentation
 
@@ -78,9 +91,15 @@ folder. It is built using [Docusaurus](https://docusaurus.io/). To start a local
 server with live reload make sure to run `npm i` first, go to the `website/`
 directory and call:
 
-```bash
-npm run start
-```
+<CodeBox
+  code={`npm run start
+`}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ## How to release
 
@@ -92,9 +111,15 @@ How to update a package, create a changeset, and publish a (pre-)release.
 
 2. Create a Changeset: From the root of your monorepo, run:
 
-```bash
-$ npx changeset
-```
+<CodeBox
+  code={`$ npx changeset
+`}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 Select the packages that should be updated and describe the changes.
 
@@ -102,15 +127,27 @@ Select the packages that should be updated and describe the changes.
 
 1. (Optional) Enter pre-release process:
 
-```bash
-$ npx changeset pre enter next
-```
+<CodeBox
+  code={`$ npx changeset pre enter next
+`}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 2. Bump Version for (Pre-)Release: Now, run:
 
-```bash
-$ npx changeset version
-```
+<CodeBox
+  code={`$ npx changeset version
+`}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 #### Publishing the Pre-Release
 
@@ -120,9 +157,15 @@ $ npx changeset version
 2. To publish with the current tag (`latest` by default or `next` for a
    pre-release): From the root of the monorepo, run:
 
-```bash
-$ npm run publish-packages
-```
+<CodeBox
+  code={`$ npm run publish-packages
+`}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 #### (Optional) Exiting Pre-Release Mode
 
@@ -130,9 +173,15 @@ After a pre-release is done and it's ready to be released as a stable version:
 
 1. Exit Pre-Release Mode: Run:
 
-```bash
-$ npx changeset pre exit
-```
+<CodeBox
+  code={`$ npx changeset pre exit
+`}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 2. Follow the release process again: Create a new changeset for the stable
    release, version, and then publish normally.

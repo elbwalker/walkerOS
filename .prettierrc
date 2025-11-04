@@ -13,7 +13,8 @@
     {
       "files": "*.mdx",
       "options": {
-        "parser": "mdx"
+        "parser": "mdx",
+        "proseWrap": "preserve"
       }
     }
   ],

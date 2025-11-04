@@ -28,9 +28,15 @@ Captures user interactions directly from the DOM using data attributes.
 
 <Tabs>
   <TabItem value="npm" label="npm" default>
-    ```bash
-    npm install @walkeros/web-source-browser
-    ```
+    <CodeBox
+  code={`    npm install @walkeros/web-source-browser
+    `}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
     <CodeBox
       code={`import { startFlow } from '@walkeros/collector';
@@ -55,13 +61,13 @@ config: {
       language="javascript"
       label="Code Example"
       showHeader={false}
-      autoHeight={{ min: 100, max: 600 }}
+      autoHeight
     />
   </TabItem>
 
   <TabItem value="script" label="script">
-    ```html
-    <script>
+    <CodeBox
+  code={`    <script>
       const { startFlow } = await import(
         'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
       );
@@ -83,7 +89,13 @@ config: {
         },
       });
     </script>
-    ```
+    `}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
   </TabItem>
 </Tabs>
 
@@ -107,7 +119,7 @@ elb('product view', { id: 'P123' }); // Also tracks events
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 **Browser Source elb adds:**

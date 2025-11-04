@@ -20,15 +20,22 @@ automatic pageview tracking and component-level event tracking.
 
 First, install the required walkerOS packages:
 
-```bash
-npm install @walkeros/core @walkeros/collector @walkeros/web-source-browser
-```
+<CodeBox
+  code={`npm install @walkeros/core @walkeros/collector @walkeros/web-source-browser
+`}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ## Setup
 
 ### 1. walker initialization
 
-```tsx title="apps/demos/react/src/walker/index.ts"
+<CodeBox
+  code={`// apps/demos/react/src/walker/index.ts
 import type { Collector, WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 
@@ -82,13 +89,20 @@ const taggerInstance = createTagger();
 export function tagger(entity?: string) {
   return taggerInstance(entity);
 }
-```
+`}
+  disabled
+  language="tsx"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### 2. App integration
 
 Integrate directly in your main App component:
 
-```tsx title="apps/demos/react/src/App.tsx"
+<CodeBox
+  code={`// apps/demos/react/src/App.tsx
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { initializeWalker } from './walker';
@@ -128,15 +142,23 @@ function App() {
 }
 
 export default App;
-```
+`}
+  disabled
+  language="tsx"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ## Component tagging
 
 Use the tagger helper for clean component tracking:
 
-```tsx title="apps/demos/react/src/components/ProductDetail.tsx"
+<CodeBox
+  code={`// apps/demos/react/src/components/ProductDetail.tsx
 import { tagger } from '../walker';
 
+import { CodeBox } from '@walkeros/explorer';
 function ProductDetail({ productId }: { productId: string }) {
   const product = getProductById(parseInt(productId));
 
@@ -172,10 +194,16 @@ function ProductDetail({ productId }: { productId: string }) {
     </div>
   );
 }
-```
+`}
+  disabled
+  language="tsx"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
-```tsx
-// Without tagger helper (verbose)
+<CodeBox
+  code={`// Without tagger helper (verbose)
 <div
   data-elb="product"
   data-elb-action="view"
@@ -194,7 +222,13 @@ function ProductDetail({ productId }: { productId: string }) {
     .get()}
 >
 
-```
+`}
+  disabled
+  language="tsx"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 :::info
 
@@ -207,8 +241,8 @@ chain.
 
 Use the `elb` function for custom events:
 
-```tsx
-function CheckoutForm() {
+<CodeBox
+  code={`function CheckoutForm() {
   const handleSubmit = (formData: any) => {
     window.elb('checkout complete', {
       total: formData.total,
@@ -218,7 +252,13 @@ function CheckoutForm() {
 
   return <form onSubmit={handleSubmit}>{/* Form fields */}</form>;
 }
-```
+`}
+  disabled
+  language="tsx"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ## Testing
 

@@ -22,19 +22,31 @@ complex setup or configuration.
 
 ### Option 1: NPM Package
 
-```bash
-npm install @walkeros/walker.js
-```
+<CodeBox
+  code={`npm install @walkeros/walker.js
+`}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### Option 2: CDN
 
-```html
-<script
+<CodeBox
+  code={`<script
   async
   data-elbconfig="elbConfig"
   src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/walker.js"
 ></script>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ## Basic Setup
 
@@ -42,24 +54,36 @@ npm install @walkeros/walker.js
 
 Add this script before walker.js loads to queue events during initialization:
 
-```html
-<script>
+<CodeBox
+  code={`<script>
   function elb() {
     (window.elbLayer = window.elbLayer || []).push(arguments);
   }
 </script>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### 2. Include Walker.js
 
-```html
-<script async data-elbconfig="elbConfig" src="./walker.js"></script>
-```
+<CodeBox
+  code={`<script async data-elbconfig="elbConfig" src="./walker.js"></script>
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### 3. Configure Destinations
 
-```html
-<script>
+<CodeBox
+  code={`<script>
   window.elbConfig = {
     collector: {
       destinations: {
@@ -78,7 +102,13 @@ Add this script before walker.js loads to queue events during initialization:
     },
   };
 </script>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ## Configuration Options
 
@@ -144,27 +174,33 @@ Walker.js supports multiple configuration approaches with different priorities:
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Inline Configuration
 
 Configure directly in the script tag using simple key:value pairs:
 
-```html
-<script
+<CodeBox
+  code={`<script
   async
   data-elbconfig="elb:track;run:true;instance:myWalker"
   src="./walker.js"
 ></script>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### Named Configuration Object
 
 Use a custom configuration object name:
 
-```html
-<script>
+<CodeBox
+  code={`<script>
   window.trackingConfig = {
     elb: 'track',
     collector: {
@@ -175,7 +211,13 @@ Use a custom configuration object name:
   };
 </script>
 <script async data-elbconfig="trackingConfig" src="./walker.js"></script>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ## Usage
 
@@ -183,8 +225,8 @@ Use a custom configuration object name:
 
 Walker.js automatically tracks events based on HTML data attributes:
 
-```html
-<!-- Product tracking -->
+<CodeBox
+  code={`<!-- Product tracking -->
 <div data-elb="product" data-elb-product="id:123;name:Blue T-Shirt;price:29.99">
   <button data-elbaction="click:add">Add to Cart</button>
 </div>
@@ -194,7 +236,13 @@ Walker.js automatically tracks events based on HTML data attributes:
 
 <!-- Context information -->
 <div data-elbcontext="section:recommendations"></div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 For detailed information on data attributes, see the
 [Browser Source documentation](/docs/sources/web/browser/tagging).
@@ -212,7 +260,7 @@ label: 'interesting',
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### DataLayer Integration
@@ -237,7 +285,7 @@ value: 25.42,
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Advanced Features
@@ -246,8 +294,8 @@ value: 25.42,
 
 Walker.js handles async loading gracefully with automatic event queueing:
 
-```html
-<script>
+<CodeBox
+  code={`<script>
   // 1. Define elb function to queue events
   function elb() {
     (window.elbLayer = window.elbLayer || []).push(arguments);
@@ -259,7 +307,13 @@ Walker.js handles async loading gracefully with automatic event queueing:
 
 <!-- 3. Walker.js processes queued events when it loads -->
 <script async data-elbconfig="elbConfig" src="./walker.js"></script>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### Build Variants
 
@@ -292,7 +346,7 @@ pageview: true,
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Destination Configuration
@@ -325,7 +379,7 @@ api: {
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 For comprehensive destination options, see the
@@ -346,7 +400,7 @@ object name.
 
 ### Factory Function
 
-<CodeBox code={`createWalkerjs(config?: Config): Promise<Instance>`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight={{ min: 100, max: 600 }} />
+<CodeBox code={`createWalkerjs(config?: Config): Promise<Instance>`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight />
 
 Creates a new walker.js instance with the provided configuration.
 
@@ -373,7 +427,7 @@ const globals = getGlobals();`}
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Related Documentation

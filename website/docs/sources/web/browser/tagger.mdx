@@ -41,9 +41,15 @@ Use the tagger when you need to:
 
 ## Installation
 
-```bash
-npm install @walkeros/web-source-browser
-```
+<CodeBox
+  code={`npm install @walkeros/web-source-browser
+`}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ## Initialization
 
@@ -64,7 +70,7 @@ prefix: 'data-elb',
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Configuration
@@ -94,7 +100,7 @@ const attributes = tagger('product')
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Entity Tagging
@@ -117,7 +123,7 @@ const attributes = tagger()
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Action Mapping
@@ -137,7 +143,7 @@ const attributes = tagger()
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Context and Global Properties
@@ -161,7 +167,7 @@ const attributes = tagger()
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Multiple Entity Scopes
@@ -185,7 +191,7 @@ const attributes = tagger('product')
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Order Matters
@@ -210,7 +216,7 @@ const attributes = tagger('product')
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Value Escaping
@@ -229,7 +235,7 @@ const attributes = tagger('product')
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Available Methods (API Reference)
@@ -252,7 +258,7 @@ tagger('product').data('id', '123');
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ##### `entity(name: string)`
@@ -272,7 +278,7 @@ tagger('foo').entity('bar').data('a', 1);
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ##### `data(key: string, value: Property)` | `data(object: Properties)`
@@ -292,7 +298,7 @@ tagger('product').data({ id: 123, name: 'Widget', price: 99.99 });
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ##### `action(trigger: string, action?: string)` | `action(object: Record<string, string>)`
@@ -313,7 +319,7 @@ tagger().action({ load: 'view', click: 'select', impression: 'view' });
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ##### `actions(trigger: string, action?: string)` | `actions(object: Record<string, string>)`
@@ -337,7 +343,7 @@ tagger().action('click', 'select').actions('load', 'view');
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ##### `context(key: string, value: Property)` | `context(object: Properties)`
@@ -355,7 +361,7 @@ tagger().context({ test: 'engagement', position: 'header', type: 'promo' });
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ##### `globals(key: string, value: Property)` | `globals(object: Properties)`
@@ -373,7 +379,7 @@ tagger().globals({ lang: 'en', plan: 'paid', version: '1.0' });
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ##### `link(id: string, type: string)` | `link(object: Record<string, string>)`
@@ -391,7 +397,7 @@ tagger().link({ details: 'parent', modal: 'child', sidebar: 'child' });
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ##### `get()`
@@ -411,7 +417,7 @@ const attributes = tagger().entity('product').data('id', '123').get();
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 All methods return the tagger instance for method chaining, except `get()` which
@@ -466,7 +472,7 @@ return (
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Shopping Cart
@@ -495,7 +501,7 @@ return (
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Dynamic Component Tracking
@@ -518,5 +524,5 @@ Sign Up
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />

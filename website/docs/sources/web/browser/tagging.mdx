@@ -35,8 +35,8 @@ Tag a page...
 
 {/* <PromotionLive /> */}
 
-```html
-<!-- Generic usage -->
+<CodeBox
+  code={`<!-- Generic usage -->
 <div
   data-elb="ENTITY"
   data-elb-ENTITY="KEY:VALUE"
@@ -57,7 +57,13 @@ Tag a page...
     </div>
   </div>
 </div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ... to get a structured event as a result:
 
@@ -112,7 +118,7 @@ previous_id: 'https://www.elbwalker.com/' // Previous source (like referrer)
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 :::note
@@ -179,12 +185,18 @@ Trigger names are predefined and to be selected from the list, while the
 If the trigger and action values are equal, e.g. for click events, you can
 shorten the implementation:
 
-```html
-<b data-elbaction="click">
+<CodeBox
+  code={`<b data-elbaction="click">
   Use the short version, instead of
   <s data-elbaction="click:click">long</s>
 </b>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### Parameters
 
@@ -193,11 +205,17 @@ accept optional parameters. The scroll trigger needs to know the percentage a
 user scrolls down, a wait trigger the number of milliseconds until the action
 gets triggered. Use brackets behind the trigger to pass that information.
 
-```html
-<!-- specifying trigger parameters -->
+<CodeBox
+  code={`<!-- specifying trigger parameters -->
 <p data-elbaction="wait(10):interested"></p>
 <p data-elbaction="pulse(10):interested"></p>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### Action filter
 
@@ -207,14 +225,20 @@ entity by adding the name, e.g. `data-elbaction="load:view(product)` or
 `data-elbactions="load:view(product)"`. If the trigger event gets called, the
 result will only include the property values from the specific entities.
 
-```html
-<!-- setting a filter for an entity -->
+<CodeBox
+  code={`<!-- setting a filter for an entity -->
 <div data-elb="foo">
   <div data-elb="bar" data-elbaction="load:hello(bar)">
     only the bar hello event fires.
   </div>
 </div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### Up-bubbling click trigger
 
@@ -223,11 +247,17 @@ finds a `data-elbaction` with the click trigger, it will fire the action. Often,
 the image or a whole div-block gets clicked, not the parent a-element. Using the
 bubbling-up flow, the walker still triggers the actions for you.
 
-```html
-<button data-elb="product" data-elbaction="click">
+<CodeBox
+  code={`<button data-elb="product" data-elbaction="click">
   <img class="full" src="some.jpg" alt="" />
 </button>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 :::warning
 
@@ -242,12 +272,18 @@ Use the `data-elblink` tag to extend the scope of an entity by elements placed
 somewhere else (like modals). Specific IDs connect linked elements. They are
 hierarchically and can either be a parent or a child.
 
-```html
-<div data-elb="info" data-elblink="details:parent">...</div>
+<CodeBox
+  code={`<div data-elb="info" data-elblink="details:parent">...</div>
 ...
 <div data-elblink="details:child" data-elbaction="visible">...</div>
 <p data-elblink="another:child">...</p>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 The second element is the parent, triggering the visible action for the
 `info visible` event. There can be multiple children, but there is only one
@@ -284,14 +320,20 @@ symbols, especially `:` or `;`
 To specify `data`, use the name of the entity. The `data` attributes have to be
 inside of the entity scope or a parent.
 
-```html
-<div data-elb-entity="source:parent">
+<CodeBox
+  code={`<div data-elb-entity="source:parent">
   <div data-elb="entity">
     <p data-elb-entity="key:value">...</p>
     <p data-elb-entity="foo:bar">...</p>
   </div>
 </div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 <CodeBox
   code={`{ data: { source: "parent", key: "value", foo: "bar", } }
@@ -300,7 +342,7 @@ inside of the entity scope or a parent.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Hierarchy
@@ -309,15 +351,21 @@ There is a hierarchy for the `data` properties, where the order defines which
 values to use for similar keys. Based on the triggering action element, the
 closest ones or parent values will be preferred over the others.
 
-```html
-<div id="family" data-elb="e" data-elbaction="click">
+<CodeBox
+  code={`<div id="family" data-elb="e" data-elbaction="click">
   <div id="parent" data-elb-e="key:foo" data-elbaction="click">
     <p id="child" data-elb-e="key:bar" data-elbaction="click"></p>
     <b id="sibling" data-elbaction="click"></b>
   </div>
   <b data-elb-e="key:baz"></b>
 </div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 Based on which element gets clicked, the event will contain the following data
 
@@ -330,13 +378,19 @@ Based on which element gets clicked, the event will contain the following data
 
 Property values will be cast to their type, supporting string, number & boolean.
 
-```html
-<div data-elb="types">
+<CodeBox
+  code={`<div data-elb="types">
   <p data-elb-types="string:text">{ string: "text" }</p>
   <p data-elb-types="int:42;float:3.14">{ int: 42, float: 3.14 }</p>
   <p data-elb-types="bool:true">{ bool: true }</p>
 </div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### Multiple attributes
 
@@ -348,26 +402,44 @@ key-value pairs. Therefore, it’s necessary to escape values that contain a
 semicolon. Quotes are here to meet your needs. To prevent a mistaken
 value-split, use single quotes.
 
-```html
-<!-- value wrapping with quotes -->
+<CodeBox
+  code={`<!-- value wrapping with quotes -->
 <p data-elb="foo" data-elb-foo="b:a;r">{ "b": "a", "r": true }</p>
 <p data-elb="foo" data-elb-foo="b:'a;r'">{ "b": "a;r" }</p>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 If a single quote is part of the value, escape it with a backslash:
 
-```html
-<!-- escaping values with backslash -->
+<CodeBox
+  code={`<!-- escaping values with backslash -->
 <p data-elb="foo" data-elb-foo="bar:it\'s escaped">{ "bar": "it's escaped" }</p>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 The semicolon can be used as a separator to list multiple values inside of a
 `data-elb` or `data-elbaction` attribute.
 
-```html
-<!-- using multiple key-value pairs at once -->
+<CodeBox
+  code={`<!-- using multiple key-value pairs at once -->
 <p data-elb="foo" data-elb-foo="a:1;b:2">{ "a": 1, "b": 2 }</p>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### Dynamic field values
 
@@ -375,33 +447,51 @@ You might want to measure dynamic field values, e.g. the quantity of a product
 or the value of the selected element. Use a `#` at the beginning, followed by
 the attribute name to access the value of the element attribute.
 
-```html
-<!-- Basic usage: elb-ENTITY="KEY:#VALUE" -->
+<CodeBox
+  code={`<!-- Basic usage: elb-ENTITY="KEY:#VALUE" -->
 <input type="text" value="blue" data-elb-product="color:#value"></input>
 <div data-elb-product="name:#innerHTML">Everyday Ruck Snack</div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 To capture a selected option from a list, use `elb-ENTITY="KEY:#selected"` to
 get size:20L
 
-```html
-<select data-elb-product="size:#selected">
+<CodeBox
+  code={`<select data-elb-product="size:#selected">
   <option value="18L">18L</option>
   <option value="20L" selected="selected">20L</option>
 </select>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### Arrays
 
 To use array types, add the `[]` suffix to a property's name, such as
 `size[]:m`. It will generate de-duplicated data properties.
 
-```html
-<div data-elb="product">
+<CodeBox
+  code={`<div data-elb="product">
   <p data-elb-product="size[]:s;size[]:l"></p>
   <p data-elb-product="size[]:l"></p>
 </div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 <CodeBox
   code={`{
@@ -415,7 +505,7 @@ size: ["s", "l"],
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Generic properties
@@ -423,8 +513,8 @@ size: ["s", "l"],
 Leave the entity name empty (only `data-elb-`) to add the property to any
 related entity. Explicitly named properties are preferred over generic ones.
 
-```html
-<div data-elb-="p:v">
+<CodeBox
+  code={`<div data-elb-="p:v">
   <div data-elb="generic">
     <p data-elb-generic="k:v"></p>
     <p data-elb-="g:v"></p>
@@ -432,7 +522,13 @@ related entity. Explicitly named properties are preferred over generic ones.
     <p data-elb-="o:x"></p>
   </div>
 </div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 :::note
 
@@ -455,7 +551,7 @@ o: 'v' // overridden by explicit
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Globals
@@ -466,11 +562,17 @@ events on a page**. Those properties are called **globals** and will be
 arbitrary, like the data property. What is unique about them is that you can
 define them anywhere on a page using the `data-elbglobals` attribute.
 
-```html
-<div data-elbglobals="outof:scope"></div>
+<CodeBox
+  code={`<div data-elbglobals="outof:scope"></div>
 
 <div data-elb="entity" data-elb-entity="foo:bar" data-elbaction="load:action" />
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 This example will lead to the following event:
 
@@ -486,7 +588,7 @@ This example will lead to the following event:
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 :::info
@@ -501,8 +603,8 @@ Context doesn't work like globals for every event, but is helpful information
 for every framing context an event is embedded in. A context could be a
 position, a test, or specific components for example.
 
-```html
-<div data-elbcontext="test:engagement" data-elbglobals="plan:paid">
+<CodeBox
+  code={`<div data-elbcontext="test:engagement" data-elbglobals="plan:paid">
   <div data-elbcontext="recommendation:smart_ai">
     <div
       data-elb="promotion"
@@ -513,7 +615,13 @@ position, a test, or specific components for example.
     </div>
   </div>
 </div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 The context properties are tuples with the value and an index, starting at the
 closest parent (`[value, index]`). Access them via `event.context.key[0]`.
@@ -534,7 +642,7 @@ recommendation: ["smart_ai", 0],
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 :::tip
@@ -553,8 +661,8 @@ The walker algorithm runs through nested entities and treats them like regular
 entities by gathering all related information. Nested entities are accessible in
 the nested array of each event. Each element is a regular entity.
 
-```html
-<div
+<CodeBox
+  code={`<div
   data-elb="mother"
   data-elb-mother="label:caring"
   data-elbaction="load:view"
@@ -564,7 +672,13 @@ the nested array of each event. Each element is a regular entity.
     <div data-elb="baby" data-elb-baby="status:infant"></div>
   </div>
 </div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 This example will lead to the following event on load:
 
@@ -588,7 +702,7 @@ This example will lead to the following event on load:
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 Nested entities that are nested inside another entity will be captured on both

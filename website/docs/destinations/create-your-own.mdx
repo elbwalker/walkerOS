@@ -38,7 +38,7 @@ context?: unknown,
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## The `push` function
@@ -61,7 +61,7 @@ settings?: Settings;
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Example: A Simple Webhook Destination
@@ -100,7 +100,7 @@ body: JSON.stringify(event),
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Schema Validation (Optional)
@@ -153,7 +153,7 @@ console.log('Event:', event);
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Using your destination
@@ -182,7 +182,7 @@ config: {
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Advanced Example: Session Management
@@ -240,7 +240,7 @@ body: JSON.stringify(event),
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## TypeScript Integration
@@ -265,7 +265,7 @@ webhook: Destination.Config<WebhookSettings>;
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Environment Dependencies (Testing)
@@ -307,7 +307,7 @@ BigQuery?: typeof BigQuery;
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Using Environment in Your Destination
@@ -351,7 +351,7 @@ window.customAPI(event.name);
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Creating Test Environments
@@ -372,7 +372,7 @@ customAPI: jest.fn(),
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 Export from your examples index:
@@ -385,7 +385,7 @@ export * as env from './env';
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Using in Tests
@@ -409,7 +409,7 @@ expect(testEnv.window.customAPI).toHaveBeenCalledWith('page view');
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 **Key Points:**

@@ -25,7 +25,7 @@ env: Source.Env<Types>,
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 The returned instance must implement:
@@ -43,7 +43,7 @@ on?(event, context): void | Promise<void>; // Optional reactive hooks
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Types Bundle
@@ -71,7 +71,7 @@ interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 **The 4 type parameters**:
@@ -106,7 +106,7 @@ elb('my event', { data: 'value' });
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 The collector always provides `env.elb`. You provide other dependencies (like `window`, `document`, custom APIs) when configuring the source.
@@ -148,7 +148,7 @@ push: elb,
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Complete Example: Event API Source
@@ -232,7 +232,7 @@ handlers.forEach((handler, event) => api.off(event, handler));
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Using Your Source
@@ -264,7 +264,7 @@ env: {
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Testing Your Source
@@ -297,7 +297,7 @@ off: jest.fn(),
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Test Example
@@ -355,7 +355,7 @@ expect(api.off).toHaveBeenCalled();
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Common Patterns
@@ -383,7 +383,7 @@ const api = await waitForAPI(() => window.myAPI || null);
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Source as Adapter Pattern
@@ -421,7 +421,7 @@ export type Push = Elb.Fn;
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 The `Push` type parameter defines what your source exposes externally. Internally, all sources use `env.elb` to forward to the collector.

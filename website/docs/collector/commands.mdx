@@ -42,7 +42,7 @@ elb('walker destination', destinationGtag, {
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 :::tip
@@ -65,7 +65,7 @@ config: {
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 See destination-specific documentation for configuration options.
@@ -85,7 +85,7 @@ once a value is set to `true` it's treated as consent being granted.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 Setting a consent state to `false` will immediately stop a destination from
@@ -111,7 +111,7 @@ like `run` or `consent` changes.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 `Options` depend on `type` and can also be an array for multiple listeners at
@@ -130,7 +130,7 @@ console.log('run with', { instance });
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 Every time the `run` command is called, the function will be executed:
@@ -146,7 +146,7 @@ elb('walker run');
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### consent
@@ -167,7 +167,7 @@ elb('walker on', 'consent', { marketing: onConsent });
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 The `onConsent` function will only be called when the `marketing` consent
@@ -181,7 +181,7 @@ elb('walker consent', { marketing: true }); // Will trigger the onConsent functi
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## user
@@ -197,7 +197,7 @@ identification).
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 User IDs are added to each event.
@@ -217,7 +217,7 @@ User IDs are added to each event.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 :::warning
@@ -245,7 +245,7 @@ Set custom properties that are added to each event processed by the collector.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## globals
@@ -259,7 +259,7 @@ Set global properties that are added to each event processed by the collector.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## hook
@@ -277,7 +277,7 @@ Add hooks to the collector to customize or enhance default processing.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Moments
@@ -345,7 +345,7 @@ return;
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Adding a hook
@@ -377,5 +377,5 @@ elb('entity action');
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />

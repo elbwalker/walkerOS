@@ -19,7 +19,7 @@ information, storage, sessions, and web-based communication.
 
 Import web utilities from the `@walkeros/web-core` package:
 
-<CodeBox code={`import { getAttribute, sendWeb, sessionStart } from '@walkeros/web-core';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight={{ min: 100, max: 600 }} />
+<CodeBox code={`import { getAttribute, sendWeb, sessionStart } from '@walkeros/web-core';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight />
 
 ## DOM Utilities
 
@@ -36,7 +36,7 @@ const entityType = getAttribute(element, 'data-elb'); // Returns 'product'
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Attribute Parsing
@@ -53,7 +53,7 @@ strings using specified separators.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 #### splitKeyVal
@@ -62,13 +62,12 @@ strings using specified separators.
 attribute strings.
 
 <CodeBox
-  code={`splitKeyVal('id:123'); // Returns ['id', '123']
-`}
+  code={`splitKeyVal('id:123'); // Returns ['id', '123']`}
   disabled
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 #### parseInlineConfig
@@ -84,7 +83,7 @@ configuration strings from HTML attributes.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Browser Information
@@ -101,7 +100,7 @@ preferred language.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### getTimezone
@@ -115,7 +114,7 @@ preferred language.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### getScreenSize
@@ -130,7 +129,7 @@ dimensions.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Element Visibility
@@ -150,7 +149,7 @@ if (isVisible(promoElement)) {
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 This function considers:
@@ -180,7 +179,7 @@ const sessionData = storageRead('session_data', 'sessionStorage');
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 #### storageWrite
@@ -202,7 +201,7 @@ storageWrite('tracking_id', 'abc123', 1440, 'cookie', '.example.com');
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 #### storageDelete
@@ -217,7 +216,7 @@ storageDelete('session_temp', 'sessionStorage');
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Session Management
@@ -243,7 +242,7 @@ sampling: 1.0, // 100% sampling
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 Session data includes:
@@ -285,7 +284,7 @@ method: 'PUT',
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Transport-Specific Functions
@@ -306,7 +305,7 @@ headers: { 'Content-Type': 'application/json' },
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 #### sendWebAsBeacon
@@ -324,7 +323,7 @@ sendWebAsBeacon('/analytics/pageview', { duration: Date.now() - startTime });
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 #### sendWebAsXhr
@@ -340,7 +339,7 @@ const response = sendWebAsXhr(url, data, { method: 'POST' });
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Web Hashing
@@ -362,7 +361,7 @@ navigator.userAgent + navigator.language + screen.width,
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Configuration Types
@@ -384,7 +383,7 @@ noCors?: boolean;
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### SessionConfig
@@ -400,12 +399,12 @@ sampling?: number; // Sampling rate (0-1)
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### StorageType
 
-<CodeBox code={`type StorageType = 'localStorage' | 'sessionStorage' | 'cookie';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight={{ min: 100, max: 600 }} />
+<CodeBox code={`type StorageType = 'localStorage' | 'sessionStorage' | 'cookie';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight />
 
 ## Usage Notes
 

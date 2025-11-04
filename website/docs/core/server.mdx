@@ -18,7 +18,7 @@ cryptographic hashing, and other backend operations.
 
 Import server utilities from the `@walkeros/server-core` package:
 
-<CodeBox code={`import { sendServer, getHashServer } from '@walkeros/server-core';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight={{ min: 100, max: 600 }} />
+<CodeBox code={`import { sendServer, getHashServer } from '@walkeros/server-core';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight />
 
 ## Server Communication
 
@@ -54,7 +54,7 @@ console.error('Send failed:', response.error);
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### SendServerOptions
@@ -69,7 +69,7 @@ timeout?: number; // Request timeout in milliseconds (default: 5000)
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### SendResponse
@@ -84,7 +84,7 @@ error?: string; // Error message (if request failed)
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Cryptographic Operations
@@ -113,7 +113,7 @@ const anonymousId = await getHashServer(\`\${userEmail}\${deviceId}\${salt}\`, 1
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 This function is commonly used for:
@@ -165,7 +165,7 @@ return result;
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Privacy-Safe Session Tracking
@@ -185,7 +185,7 @@ return await getHashServer(fingerprint, 20);
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Error Handling
@@ -212,7 +212,7 @@ console.error('Network error:', error.message);
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Performance Considerations
@@ -232,7 +232,7 @@ await sendServer(url, data, { timeout: 15000 });
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Batch Processing
@@ -259,7 +259,7 @@ timeout: 10000,
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Connection Reuse
@@ -291,7 +291,7 @@ timeout: 5000,
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Integration with Core
@@ -322,7 +322,7 @@ ip: safeIP,
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 For platform-agnostic utilities, see <Link to="/docs/core">Core

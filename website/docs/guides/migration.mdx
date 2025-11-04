@@ -27,26 +27,38 @@ packages.
 
 **Before:**
 
-```json
-{
+<CodeBox
+  code={`{
   "dependencies": {
     "@elbwalker/walker.js": "^2.0.0",
     "@elbwalker/destination-web-google-ga4": "^2.0.0"
   }
 }
-```
+`}
+  disabled
+  language="json"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 **After:**
 
-```json
-{
+<CodeBox
+  code={`{
   "dependencies": {
     "@walkeros/collector": "^0.0.7",
     "@walkeros/web-source-browser": "^0.0.7",
     "@walkeros/web-destination-gtag": "^0.0.7"
   }
 }
-```
+`}
+  disabled
+  language="json"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### 2. Update Imports
 
@@ -61,7 +73,7 @@ import type { WalkerOS } from '@elbwalker/types';
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 **After:**
@@ -76,7 +88,7 @@ import type { WalkerOS } from '@walkeros/core';
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### 3. Update Function Calls
@@ -92,7 +104,7 @@ destinations: [destinationGoogleGA4],
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 **After:**
@@ -123,7 +135,7 @@ config: {
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Breaking Changes
@@ -180,7 +192,7 @@ config: {
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 **Benefits:**
@@ -234,8 +246,8 @@ more precise entity targeting:
 
 Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
 
-```html
-<!-- Before (@elbwalker) -->
+<CodeBox
+  code={`<!-- Before (@elbwalker) -->
 <div data-elb="parent">
   <div data-elb="child" data-elbaction="click:action">
     <!-- Triggered both parent and child entities -->
@@ -248,20 +260,32 @@ Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
     <!-- Triggers both parent and child entities -->
   </div>
 </div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 #### Option 2: Use New Behavior (Recommended for new projects)
 
 Use `data-elbaction` for more precise, performance-optimized tracking:
 
-```html
-<!-- @walkeros - New behavior -->
+<CodeBox
+  code={`<!-- @walkeros - New behavior -->
 <div data-elb="parent">
   <div data-elb="child" data-elbaction="click:action">
     <!-- Only triggers child entity -->
   </div>
 </div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### When to Use Each
 
@@ -292,7 +316,7 @@ tagger().actions('click', 'select').get();
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## visible vs impression Triggers
@@ -312,15 +336,21 @@ The visibility trigger names have been updated to better reflect their behavior:
 
 Update your HTML to use the new trigger names:
 
-```html
-<!-- Before (@elbwalker and early @walkeros) -->
+<CodeBox
+  code={`<!-- Before (@elbwalker and early @walkeros) -->
 <div data-elbaction="visible:view">Single fire</div>
 <div data-elbaction="visibles:track">Multiple fires</div>
 
 <!-- After (@walkeros current) -->
 <div data-elbaction="impression:view">Single fire</div>
 <div data-elbaction="visible:track">Multiple fires</div>
-```
+`}
+  disabled
+  language="html"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 #### Option 2: Understand the Behavior Change
 
@@ -358,5 +388,5 @@ tagger().action('visible', 'track').get();
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />

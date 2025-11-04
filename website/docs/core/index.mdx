@@ -18,7 +18,7 @@ data manipulation, validation, mapping, and more.
 
 Import the core utilities directly from the `@walkeros/core` package:
 
-<CodeBox code={`import { assign, anonymizeIP, getMappingValue } from '@walkeros/core';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight={{ min: 100, max: 600 }} />
+<CodeBox code={`import { assign, anonymizeIP, getMappingValue } from '@walkeros/core';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight />
 
 ## Data Manipulation
 
@@ -44,7 +44,7 @@ assign(obj1, obj2, { merge: false }); // Returns { a: 1, b: [2, 3], c: 3 }`}
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Path Operations
@@ -64,7 +64,7 @@ getByPath({ arr: ['foo', 'bar'] }, 'arr.1'); // Returns "bar"
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 #### setByPath
@@ -81,7 +81,7 @@ value.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### clone
@@ -98,7 +98,7 @@ original.foo = false; // cloned.foo remains true
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### castValue
@@ -115,7 +115,7 @@ castValue('hello'); // Returns 'hello' (unchanged)
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Privacy & Security
@@ -132,7 +132,7 @@ octet to zero.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### Hashing
@@ -148,7 +148,7 @@ getId(10); // Returns 10-character string
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Event Processing
@@ -184,7 +184,7 @@ await getMappingValue(event, mapping);`}
   language="typescript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### getMappingEvent
@@ -212,7 +212,7 @@ getMarketingParameters(url, { utm_custom: 'custom', partner: 'partnerId' });
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Type Validation
@@ -247,7 +247,7 @@ query strings to JavaScript objects with type casting.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### requestToParameter
@@ -263,7 +263,7 @@ URL-encoded query strings.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## User Agent Parsing
@@ -281,7 +281,7 @@ device information.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 Individual functions are also available:
@@ -308,7 +308,7 @@ safeParse('invalid'); // Returns {} instead of throwing
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### tryCatchAsync
@@ -326,7 +326,7 @@ async operations.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Performance Optimization
@@ -344,7 +344,7 @@ the wait time.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ### throttle
@@ -359,7 +359,7 @@ the wait time.
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Utilities
@@ -384,7 +384,7 @@ onLog('Silent message'); // No output
   language="javascript"
   label="Code Example"
   showHeader={false}
-  autoHeight={{ min: 100, max: 600 }}
+  autoHeight
 />
 
 ## Validation

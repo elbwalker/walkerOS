@@ -14,9 +14,15 @@ for more details.
 
 Install the required packages:
 
-```bash
-npm install @walkeros/collector @walkeros/web-source-browser
-```
+<CodeBox
+  code={`npm install @walkeros/collector @walkeros/web-source-browser
+`}
+  disabled
+  language="bash"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ## Setup
 
@@ -24,7 +30,8 @@ npm install @walkeros/collector @walkeros/web-source-browser
 
 Create the walker initialization file:
 
-```tsx title="walker/index.ts"
+<CodeBox
+  code={`// walker/index.ts
 import type { Collector, WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
@@ -81,13 +88,20 @@ const taggerInstance = createTagger();
 export function tagger(entity?: string) {
   return taggerInstance(entity);
 }
-```
+`}
+  disabled
+  language="tsx"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ### 2. App integration
 
 For Next.js applications, use the Next.js router events:
 
-```tsx title="pages/_app.tsx"
+<CodeBox
+  code={`// pages/_app.tsx
 import { useRouter } from 'next/router';
 import { useEffect, useRef } from 'react';
 import { initializeWalker } from '../walker';
@@ -127,11 +141,18 @@ export default function App({ Component, pageProps }) {
 
   return <Component {...pageProps} />;
 }
-```
+`}
+  disabled
+  language="tsx"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 For Next.js 13+ with App Router:
 
-```tsx title="app/layout.tsx"
+<CodeBox
+  code={`// app/layout.tsx
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -166,15 +187,22 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
-```
+`}
+  disabled
+  language="tsx"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 ## Component usage
 
 Component usage is identical to React. Use the tagger helper and manual events:
 
-```tsx
-import { tagger } from '../walker';
+<CodeBox
+  code={`import { tagger } from '../walker';
 
+import { CodeBox } from '@walkeros/explorer';
 function ProductPage({ product }) {
   // Manual event tracking
   useEffect(() => {
@@ -203,7 +231,13 @@ function ProductPage({ product }) {
     </div>
   );
 }
-```
+`}
+  disabled
+  language="tsx"
+  label="Code Example"
+  showHeader={false}
+  autoHeight
+/>
 
 :::info
 
