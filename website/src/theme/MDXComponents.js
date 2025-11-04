@@ -8,6 +8,7 @@ import {
   PropertyTable,
   DestinationInitDemo,
   DestinationDemo,
+  LiveCode,
 } from '@walkeros/explorer';
 // Import website-specific components
 import PackageLink from '@site/src/components/docs/package-link';
@@ -25,4 +26,5 @@ export default {
   PropertyTable,
   DestinationInitDemo,
   DestinationDemo,
+  LiveCode,
 };
