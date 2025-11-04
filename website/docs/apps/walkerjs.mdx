@@ -20,30 +20,22 @@ complex setup or configuration.
 
 ### Option 1: NPM Package
 
-<CodeBox
+<CodeSnippet
   code={`npm install @walkeros/walker.js
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Option 2: CDN
 
-<CodeBox
+<CodeSnippet
   code={`<script
   async
   data-elbconfig="elbConfig"
   src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/walker.js"
 ></script>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Basic Setup
@@ -52,35 +44,27 @@ complex setup or configuration.
 
 Add this script before walker.js loads to queue events during initialization:
 
-<CodeBox
+<CodeSnippet
   code={`<script>
   function elb() {
     (window.elbLayer = window.elbLayer || []).push(arguments);
   }
 </script>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### 2. Include Walker.js
 
-<CodeBox
+<CodeSnippet
   code={`<script async data-elbconfig="elbConfig" src="./walker.js"></script>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### 3. Configure Destinations
 
-<CodeBox
+<CodeSnippet
   code={`<script>
   window.elbConfig = {
     collector: {
@@ -101,11 +85,7 @@ Add this script before walker.js loads to queue events during initialization:
   };
 </script>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Configuration Options
@@ -134,7 +114,7 @@ Walker.js supports multiple configuration approaches with different priorities:
 
 ### Full Configuration Object
 
-<CodeBox
+<CodeSnippet
   code={`window.elbConfig = {
   // Global settings
   elb: 'elb', // Global function name (default: 'elb')
@@ -168,36 +148,28 @@ Walker.js supports multiple configuration approaches with different priorities:
     },
   },
 };`}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Inline Configuration
 
 Configure directly in the script tag using simple key:value pairs:
 
-<CodeBox
+<CodeSnippet
   code={`<script
   async
   data-elbconfig="elb:track;run:true;instance:myWalker"
   src="./walker.js"
 ></script>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Named Configuration Object
 
 Use a custom configuration object name:
 
-<CodeBox
+<CodeSnippet
   code={`<script>
   window.trackingConfig = {
     elb: 'track',
@@ -210,11 +182,7 @@ Use a custom configuration object name:
 </script>
 <script async data-elbconfig="trackingConfig" src="./walker.js"></script>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Usage
@@ -223,7 +191,7 @@ Use a custom configuration object name:
 
 Walker.js automatically tracks events based on HTML data attributes:
 
-<CodeBox
+<CodeSnippet
   code={`<!-- Product tracking -->
 <div data-elb="product" data-elb-product="id:123;name:Blue T-Shirt;price:29.99">
   <button data-elbaction="click:add">Add to Cart</button>
@@ -235,11 +203,7 @@ Walker.js automatically tracks events based on HTML data attributes:
 <!-- Context information -->
 <div data-elbcontext="section:recommendations"></div>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 For detailed information on data attributes, see the
@@ -249,23 +213,19 @@ For detailed information on data attributes, see the
 
 Use the global `elb` function for manual tracking:
 
-<CodeBox
+<CodeSnippet
   code={`// Simple event
 elb('button click', {
 label: 'interesting',
 });`}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### DataLayer Integration
 
 Walker.js can integrate with existing dataLayer implementations:
 
-<CodeBox
+<CodeSnippet
   code={`// Enable dataLayer integration
 window.elbConfig = {
 dataLayer: true, // Uses window.dataLayer by default
@@ -279,11 +239,7 @@ transaction_id: '12345',
 value: 25.42,
 },
 });`}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Advanced Features
@@ -292,7 +248,7 @@ value: 25.42,
 
 Walker.js handles async loading gracefully with automatic event queueing:
 
-<CodeBox
+<CodeSnippet
   code={`<script>
   // 1. Define elb function to queue events
   function elb() {
@@ -306,11 +262,7 @@ Walker.js handles async loading gracefully with automatic event queueing:
 <!-- 3. Walker.js processes queued events when it loads -->
 <script async data-elbconfig="elbConfig" src="./walker.js"></script>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Build Variants
@@ -326,7 +278,7 @@ Walker.js provides multiple build formats for different environments:
 
 Use walker.js programmatically in applications:
 
-<CodeBox
+<CodeSnippet
   code={`import { createWalkerjs } from '@walkeros/walker.js';
 
 const { collector, elb } = await createWalkerjs({
@@ -340,18 +292,14 @@ session: true,
 pageview: true,
 },
 });`}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Destination Configuration
 
 Configure multiple destinations for your events:
 
-<CodeBox
+<CodeSnippet
   code={`window.elbConfig = {
 collector: {
 destinations: {
@@ -373,11 +321,7 @@ api: {
 },
 },
 };`}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 For comprehensive destination options, see the
@@ -398,7 +342,7 @@ object name.
 
 ### Factory Function
 
-<CodeBox code={`createWalkerjs(config?: Config): Promise<Instance>`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight />
+<CodeSnippet code={`createWalkerjs(config?: Config): Promise<Instance>`} language="typescript" />
 
 Creates a new walker.js instance with the provided configuration.
 
@@ -409,7 +353,7 @@ Creates a new walker.js instance with the provided configuration.
 
 ### Utility Functions
 
-<CodeBox
+<CodeSnippet
   code={`import { getAllEvents, getEvents, getGlobals } from '@walkeros/walker.js';
 
 // Get all trackable events on the page
@@ -421,11 +365,7 @@ const clickEvents = getEvents(button, 'click');
 
 // Get global properties from the page
 const globals = getGlobals();`}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Related Documentation

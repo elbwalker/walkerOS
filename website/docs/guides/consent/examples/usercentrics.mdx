@@ -16,7 +16,7 @@ choice:
 The following code will listen for the `ucEvent`, parse the consent state and
 eventually call the `walker consent` command:
 
-<CodeBox
+<CodeSnippet
   code={`window.addEventListener('ucEvent', function (event) {
 function ucStates(e) {
 if (e.event != 'consent_status') return;
@@ -48,11 +48,7 @@ const state = ucStates(event.detail);
 if (state) elb('walker consent', state); // Update walker.js consent state
 });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 Optionally uncomment the `e.type !== 'explicit'` check to process only

@@ -46,7 +46,7 @@ Meta, etc.)
 
 Map events by their entity-action structure:
 
-<CodeBox
+<CodeSnippet
   code={`// Source: Clean up what comes in
 sources: {
 browser: {
@@ -84,11 +84,7 @@ mapping: {
 }
 }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 Both mappings are independent - one event can be transformed differently at each
@@ -398,25 +394,21 @@ transformation
 
 Global transformations applied to all events:
 
-<CodeBox
+<CodeSnippet
   code={`config: {
 policy: {
 'user.email': { fn: (e) => e.user?.email?.toLowerCase() },
 'data.timestamp': { fn: () => Date.now() },
 },
 }`}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Event-Level Policy
 
 Transformations for specific events:
 
-<CodeBox
+<CodeSnippet
   code={`config: {
 mapping: {
 product: {
@@ -429,11 +421,7 @@ view: {
 },
 },
 }`}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 Policies work with wildcards and conditions, and both levels can be combined -
@@ -445,7 +433,7 @@ config policy runs first, then event policy for the matched rule.
 
 Normalize events before they reach the collector:
 
-<CodeBox
+<CodeSnippet
   code={`await startFlow({
 sources: {
 browser: {
@@ -473,18 +461,14 @@ config: {
 },
 },
 });`}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Destination Mapping
 
 Transform for specific destination APIs:
 
-<CodeBox
+<CodeSnippet
   code={`await startFlow({
 destinations: {
 gtag: {
@@ -508,27 +492,19 @@ config: {
 },
 },
 });`}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Combined Flow
 
 Event processed twice with different configs:
 
-<CodeBox
+<CodeSnippet
   code={`// 1. Browser sends: "product click"
 // 2. Source mapping: "product click" → "product view"
 // 3. Destination mapping: "product view" → "view_item"
 // 4. GA4 receives: "view_item"`}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Best Practices

@@ -14,14 +14,10 @@ for more details.
 
 Install the required packages:
 
-<CodeBox
+<CodeSnippet
   code={`npm install @walkeros/collector @walkeros/web-source-browser
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Setup
@@ -30,7 +26,7 @@ Install the required packages:
 
 Create the walker initialization file:
 
-<CodeBox
+<CodeSnippet
   code={`// walker/index.ts
 import type { Collector, WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
@@ -89,18 +85,14 @@ export function tagger(entity?: string) {
   return taggerInstance(entity);
 }
 `}
-  disabled
   language="tsx"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### 2. App integration
 
 For Next.js applications, use the Next.js router events:
 
-<CodeBox
+<CodeSnippet
   code={`// pages/_app.tsx
 import { useRouter } from 'next/router';
 import { useEffect, useRef } from 'react';
@@ -142,16 +134,12 @@ export default function App({ Component, pageProps }) {
   return <Component {...pageProps} />;
 }
 `}
-  disabled
   language="tsx"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 For Next.js 13+ with App Router:
 
-<CodeBox
+<CodeSnippet
   code={`// app/layout.tsx
 'use client';
 
@@ -188,18 +176,14 @@ export default function RootLayout({ children }) {
   );
 }
 `}
-  disabled
   language="tsx"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Component usage
 
 Component usage is identical to React. Use the tagger helper and manual events:
 
-<CodeBox
+<CodeSnippet
   code={`import { tagger } from '../walker';
 
 function ProductPage({ product }) {
@@ -231,11 +215,7 @@ function ProductPage({ product }) {
   );
 }
 `}
-  disabled
   language="tsx"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 :::info

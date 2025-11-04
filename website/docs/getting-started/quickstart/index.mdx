@@ -18,19 +18,15 @@ and tested with every release.
 
 Install the collector package from npm:
 
-<CodeBox
+<CodeSnippet
   code={`npm install @walkeros/collector @walkeros/web-source-browser
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## 2. Create basic setup
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
@@ -64,18 +60,14 @@ console: {
 window.walker = collector;
 }
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## 3. Add destinations
 
 Install destination packages and add them to your setup:
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
@@ -121,18 +113,14 @@ ga4: {
 window.walker = collector;
 }
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## 4. Add consent management
 
 Add consent requirements to your destinations:
 
-<CodeBox
+<CodeSnippet
   code={`export async function initializeWalker(): Promise<void> {
 const { collector, elb } = await startFlow({
 sources: {
@@ -197,11 +185,7 @@ marketing: false,
 }
 }
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Next Steps

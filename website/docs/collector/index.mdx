@@ -48,19 +48,15 @@ data warehouses.
 
 ## Installation
 
-<CodeBox
+<CodeSnippet
   code={`npm install @walkeros/collector
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Basic setup
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
@@ -88,11 +84,7 @@ console: {
 },
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Configuration reference
@@ -101,7 +93,7 @@ console: {
 
 ## Advanced setup
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationAPI } from '@walkeros/web-destination-api';
@@ -139,9 +131,5 @@ console.log(\`[\${level}] \${message}\`);
 },
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />

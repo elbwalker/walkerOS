@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 // Import explorer components (made available in all MDX files)
 import {
   CodeBox,
+  CodeSnippet,
   PropertyTable,
   DestinationInitDemo,
   DestinationDemo,
@@ -23,6 +24,7 @@ export default {
   PackageLink,
   // Explorer components (no import needed in MDX files)
   CodeBox,
+  CodeSnippet,
   PropertyTable,
   DestinationInitDemo,
   DestinationDemo,

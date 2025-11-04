@@ -25,7 +25,7 @@ Commands</Link>.
 Add destinations to the collector for event processing. Destinations handle the
 actual delivery of events to third-party services.
 
-<CodeBox
+<CodeSnippet
   code={`// Add destination dynamically at runtime
 const destinationLog = { push: console.log };
 elb('walker destination', destinationLog);
@@ -36,18 +36,14 @@ elb('walker destination', destinationGtag, {
 /* custom config */
 });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 :::tip
 
 Destinations are typically configured during collector initialization:
 
-<CodeBox
+<CodeSnippet
   code={`const { collector, elb } = await startFlow({
 destinations: {
 gtag: {
@@ -59,11 +55,7 @@ config: {
 },
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 See destination-specific documentation for configuration options.
@@ -76,14 +68,10 @@ Manage consent states for the collector. Names can be defined arbitrarily, but
 common groups are functional, analytics, and marketing. Values are booleans, and
 once a value is set to `true` it's treated as consent being granted.
 
-<CodeBox
+<CodeSnippet
   code={`elb('walker consent', { marketing: true, analytics: true });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 Setting a consent state to `false` will immediately stop a destination from
@@ -102,14 +90,10 @@ in detail.
 Add event listeners to the collector. They get called when specific events occur
 like `run` or `consent` changes.
 
-<CodeBox
+<CodeSnippet
   code={`elb('walker on', type, options);
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 `Options` depend on `type` and can also be an array for multiple listeners at
@@ -119,32 +103,24 @@ once.
 
 With each `run`, the on-event will be called with `instance` as a parameter.
 
-<CodeBox
+<CodeSnippet
   code={`elb('walker on', 'run', function (instance) {
 console.log('run with', { instance });
 });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 Every time the `run` command is called, the function will be executed:
 
-<CodeBox
+<CodeSnippet
   code={`// Setup collector with browser source
 const { collector } = await startFlow({ run: true });
 // Output: run with { instance: { ... } }
 elb('walker run');
 // Output: run with { instance: { ... } }
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### consent
@@ -152,7 +128,7 @@ elb('walker run');
 Every time the `consent` changes, the rules-matching function(s) will be called
 with the parameters `instance` and `consent`.
 
-<CodeBox
+<CodeSnippet
   code={`function onConsent(instance, consent) {
 console.log('consent with', { instance, consent });
 if (consent.marketing) elb('walker user', readFromStorage());
@@ -161,25 +137,17 @@ if (consent.marketing) elb('walker user', readFromStorage());
 //   command      type        rule       function
 elb('walker on', 'consent', { marketing: onConsent });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 The `onConsent` function will only be called when the `marketing` consent
 changes:
 
-<CodeBox
+<CodeSnippet
   code={`elb('walker consent', { functional: true }); // Won't trigger the onConsent function
 elb('walker consent', { marketing: true }); // Will trigger the onConsent function
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## user
@@ -188,19 +156,15 @@ Set user identification data for the collector. There are three levels: user
 (company's internal ID), device (longer-term identifier), and session (temporary
 identification).
 
-<CodeBox
+<CodeSnippet
   code={`elb('walker user', { id: 'us3r', device: 'c00k13', session: 's3ss10n' });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 User IDs are added to each event.
 
-<CodeBox
+<CodeSnippet
   code={`{
 "event": "entity action",
 "user": {
@@ -211,11 +175,7 @@ User IDs are added to each event.
 // other properties omitted
 }
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 :::warning
@@ -236,28 +196,20 @@ and <Link to="/docs/guides/user-stitching">user stitching</Link>
 
 Set custom properties that are added to each event processed by the collector.
 
-<CodeBox
+<CodeSnippet
   code={`elb('walker custom', { key: 'value' });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## globals
 
 Set global properties that are added to each event processed by the collector.
 
-<CodeBox
+<CodeSnippet
   code={`elb('walker globals', { key: 'value' });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## hook
@@ -268,14 +220,10 @@ manipulation, or cancellation of default behavior.
 
 Add hooks to the collector to customize or enhance default processing.
 
-<CodeBox
+<CodeSnippet
   code={`elb('walker hook', '<moment>', hookFn);
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Moments
@@ -300,7 +248,7 @@ In general, `params` will be prefixed as a parameter, containing `fn` which is
 the original function and `result` for the post-hooks. Use the following
 function signatures:
 
-<CodeBox
+<CodeSnippet
   code={`// Push
 function prePush(params, event, data, options, context, nested) {
 return params.fn(event, data, options, context, nested);
@@ -339,18 +287,14 @@ function postDestinationPushBatch(params) {
 return;
 }
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Adding a hook
 
 Add hooks during collector initialization or via the `hook` command:
 
-<CodeBox
+<CodeSnippet
   code={`// Add hooks during initialization
 const { collector } = await startFlow({
 hooks: {
@@ -371,9 +315,5 @@ elb('entity action');
 // Output:
 // walker exec time 1
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />

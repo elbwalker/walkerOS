@@ -16,7 +16,7 @@ The code won't override an eventually existing `OptanonWrapper`. The `mapping`
 translated the CookiePro categories to the walker.js consent groups and is an
 example of how to map the CookiePro categories to the walker.js
 
-<CodeBox
+<CodeSnippet
   code={`(function (wrapper) {
 // Renaming of the categories
 const mapping = {
@@ -54,11 +54,7 @@ handleConsent();
 });
 })(window.OptanonWrapper);
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 Adjust the mapping according to the CookiePro categories and the associated

@@ -26,7 +26,7 @@ No npm installation required. Just add the CDN script:
 
 Use ES6 modules for loading walkerOS packages:
 
-<CodeBox
+<CodeSnippet
   code={`<script type="module">
   import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
   import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
@@ -58,18 +58,14 @@ Use ES6 modules for loading walkerOS packages:
   window.walker = collector;
 </script>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Usage Example
 
 Complete HTML page with walkerOS tracking:
 
-<CodeBox
+<CodeSnippet
   code={`<!DOCTYPE html>
 <html>
   <head>
@@ -109,18 +105,14 @@ Complete HTML page with walkerOS tracking:
   </body>
 </html>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Tagging
 
 Add tracking attributes to your HTML elements:
 
-<CodeBox
+<CodeSnippet
   code={`<!DOCTYPE html>
 <html>
   <head>
@@ -180,18 +172,14 @@ Add tracking attributes to your HTML elements:
   </body>
 </html>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## ES6 Modules
 
 Use modern ES6 modules:
 
-<CodeBox
+<CodeSnippet
   code={`<script type="module">
   // Dynamic imports
   const { startFlow } = await import(
@@ -242,18 +230,14 @@ Use modern ES6 modules:
   elb('page view', { title: document.title });
 </script>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Adding Destinations
 
 Add Google Analytics or other destinations:
 
-<CodeBox
+<CodeSnippet
   code={`<script type="module">
   import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
   import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
@@ -288,11 +272,7 @@ Add Google Analytics or other destinations:
   });
 </script>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Next Steps

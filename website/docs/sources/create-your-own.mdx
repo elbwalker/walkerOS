@@ -12,22 +12,18 @@ A source captures events from an environment (browser, server, third-party API) 
 
 Sources are async functions that receive configuration and environment, then return a source instance:
 
-<CodeBox
+<CodeSnippet
   code={`type Source.Init<Types> = (
 config: Partial<Source.Config<Types>>,
 env: Source.Env<Types>,
 ) => Promise<Source.Instance<Types>>;
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 The returned instance must implement:
 
-<CodeBox
+<CodeSnippet
   code={`interface Source.Instance {
 type: string; // Unique identifier
 config: Source.Config; // Merged configuration
@@ -36,18 +32,14 @@ destroy?(): void | Promise<void>; // Optional cleanup
 on?(event, context): void | Promise<void>; // Optional reactive hooks
 }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Types Bundle
 
 Sources use a `Types` interface to bundle all TypeScript types:
 
-<CodeBox
+<CodeSnippet
   code={`import type { Source, Elb } from '@walkeros/core';
 
 // 1. Define your settings
@@ -64,11 +56,7 @@ customAPI?: YourAPIType;
 // 3. Bundle them together
 interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 **The 4 type parameters**:
@@ -85,7 +73,7 @@ The `env` parameter is always provided by the collector and contains:
 * **`elb`**: Required - function to send events to collector (provided automatically)
 * **Custom dependencies**: Optional - any APIs your source needs (you provide via config)
 
-<CodeBox
+<CodeSnippet
   code={`export const mySource: Source.Init<Types> = async (config, env) => {
 const { elb, customAPI } = env;
 
@@ -99,18 +87,14 @@ throw new Error('Source requires customAPI in environment');
 elb('my event', { data: 'value' });
 };
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 The collector always provides `env.elb`. You provide other dependencies (like `window`, `document`, custom APIs) when configuring the source.
 
 ## Minimal Example
 
-<CodeBox
+<CodeSnippet
   code={`import type { Source, Elb } from '@walkeros/core';
 
 interface Settings {
@@ -141,18 +125,14 @@ push: elb,
 };
 };
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Complete Example: Event API Source
 
 Capturing events from a third-party API with event listeners:
 
-<CodeBox
+<CodeSnippet
   code={`import type { Source, Elb } from '@walkeros/core';
 
 // Your external API interface
@@ -225,16 +205,12 @@ handlers.forEach((handler, event) => api.off(event, handler));
 };
 };
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Using Your Source
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { sourceEventAPI } from './sourceEventAPI';
 
@@ -257,18 +233,14 @@ env: {
 },
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Testing Your Source
 
 ### Test Utilities
 
-<CodeBox
+<CodeSnippet
   code={`// __tests__/test-utils.ts
 import type { Elb } from '@walkeros/core';
 
@@ -290,16 +262,12 @@ off: jest.fn(),
 };
 }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Test Example
 
-<CodeBox
+<CodeSnippet
   code={`import { sourceEventAPI } from '../index';
 import { createMockElb, createMockAPI } from './test-utils';
 
@@ -348,11 +316,7 @@ expect(api.off).toHaveBeenCalled();
 });
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Common Patterns
@@ -361,7 +325,7 @@ expect(api.off).toHaveBeenCalled();
 
 When the external API isn't immediately available:
 
-<CodeBox
+<CodeSnippet
   code={`async function waitForAPI<T>(getter: () => T | null): Promise<T> {
 return new Promise((resolve) => {
 const check = () => {
@@ -376,11 +340,7 @@ check();
 // Usage
 const api = await waitForAPI(() => window.myAPI || null);
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Source as Adapter Pattern
@@ -404,7 +364,7 @@ External System  ←→  Source (Adapter)  ←→  Collector
 
 **Example signatures:**
 
-<CodeBox
+<CodeSnippet
   code={`// Browser source
 export type Push = (elem?: Element, data?: Properties) => Promise<PushResult>;
 
@@ -414,11 +374,7 @@ export type Push = (req: Request, res: Response) => Promise<void>;
 // Standard event source
 export type Push = Elb.Fn;
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 The `Push` type parameter defines what your source exposes externally. Internally, all sources use `env.elb` to forward to the collector.

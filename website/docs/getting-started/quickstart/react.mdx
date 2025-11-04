@@ -20,21 +20,17 @@ automatic pageview tracking and component-level event tracking.
 
 First, install the required walkerOS packages:
 
-<CodeBox
+<CodeSnippet
   code={`npm install @walkeros/core @walkeros/collector @walkeros/web-source-browser
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Setup
 
 ### 1. walker initialization
 
-<CodeBox
+<CodeSnippet
   code={`// apps/demos/react/src/walker/index.ts
 import type { Collector, WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
@@ -90,18 +86,14 @@ export function tagger(entity?: string) {
   return taggerInstance(entity);
 }
 `}
-  disabled
   language="tsx"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### 2. App integration
 
 Integrate directly in your main App component:
 
-<CodeBox
+<CodeSnippet
   code={`// apps/demos/react/src/App.tsx
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
@@ -143,18 +135,14 @@ function App() {
 
 export default App;
 `}
-  disabled
   language="tsx"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Component tagging
 
 Use the tagger helper for clean component tracking:
 
-<CodeBox
+<CodeSnippet
   code={`// apps/demos/react/src/components/ProductDetail.tsx
 import { tagger } from '../walker';
 
@@ -194,14 +182,10 @@ function ProductDetail({ productId }: { productId: string }) {
   );
 }
 `}
-  disabled
   language="tsx"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
-<CodeBox
+<CodeSnippet
   code={`// Without tagger helper (verbose)
 <div
   data-elb="product"
@@ -222,11 +206,7 @@ function ProductDetail({ productId }: { productId: string }) {
 >
 
 `}
-  disabled
   language="tsx"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 :::info
@@ -240,7 +220,7 @@ chain.
 
 Use the `elb` function for custom events:
 
-<CodeBox
+<CodeSnippet
   code={`function CheckoutForm() {
   const handleSubmit = (formData: any) => {
     window.elb('checkout complete', {
@@ -252,11 +232,7 @@ Use the `elb` function for custom events:
   return <form onSubmit={handleSubmit}>{/* Form fields */}</form>;
 }
 `}
-  disabled
   language="tsx"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Testing

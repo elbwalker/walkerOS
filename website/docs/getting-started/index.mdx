@@ -42,19 +42,15 @@ a complete **first-party tracking system** for modern teams and the modern web.
   <TabItem value="npm" label="npm" default>
     Install the package from npm:
 
-    <CodeBox
+    <CodeSnippet
   code={`    npm install @walkeros/collector @walkeros/web-source-browser
     `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
     Initialize walkerOS in your project. See the quickstart guides for more details.
 
-    <CodeBox
+    <CodeSnippet
       code={`import type { WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
@@ -96,7 +92,7 @@ console: {
   <TabItem value="script" label="script">
     For websites without build tools install from CDN or host the files yourself:
 
-    <CodeBox
+    <CodeSnippet
   code={`    <script>
       // Load the collector and source
       const { startFlow } = await import(
@@ -131,11 +127,7 @@ console: {
       });
     </script>
     `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
   </TabItem>
 </Tabs>

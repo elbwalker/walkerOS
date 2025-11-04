@@ -13,7 +13,7 @@ The following code works asynchronously with CookieFirst Banner API and listens
 for the `cf_init` and `cf_consent`, parses the consent state and eventually
 calls the `walker consent` command:
 
-<CodeBox
+<CodeSnippet
   code={`(function () {
 function handleConsent(consent) {
 if (!consent) return; // Process only explicit consent
@@ -50,11 +50,7 @@ handleConsent(e.detail);
 });
 })();
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 Ensure the [elb](/docs/sources/web/browser/commands#elb) function is available.

@@ -25,19 +25,15 @@ customizable data transformation and transport methods.
 
 ## Installation
 
-<CodeBox
+<CodeSnippet
   code={`npm install @walkeros/web-destination-api
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Setup
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
@@ -53,10 +49,7 @@ const { collector, elb } = await startFlow({
     },
   },
 });`}
-  disabled
   language="typescript"
-  label="Code Example"
-  autoHeight
 />
 
 ## Configuration reference
@@ -67,7 +60,7 @@ const { collector, elb } = await startFlow({
 
 ### Basic Usage
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
@@ -88,15 +81,12 @@ const { collector, elb } = await startFlow({
     },
   },
 });`}
-  disabled
   language="typescript"
-  label="Code Example"
-  autoHeight
 />
 
 ### Advanced Usage with Transform
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
@@ -122,17 +112,14 @@ const { collector, elb } = await startFlow({
     },
   },
 });`}
-  disabled
   language="typescript"
-  label="Code Example"
-  autoHeight
 />
 
 ## Examples
 
 ### Sending to Analytics API
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
@@ -162,17 +149,14 @@ const { collector, elb } = await startFlow({
     },
   },
 });`}
-  disabled
   language="typescript"
-  label="Code Example"
-  autoHeight
 />
 
 ### Using Beacon Transport
 
 For critical events that need to be sent even when the page is unloading:
 
-<CodeBox
+<CodeSnippet
   code={`// Add to existing startFlow config
 const { collector, elb } = await startFlow({
   destinations: {
@@ -187,17 +171,14 @@ const { collector, elb } = await startFlow({
     },
   },
 });`}
-  disabled
   language="typescript"
-  label="Code Example"
-  autoHeight
 />
 
 ### Custom Data Mapping
 
 Use mapping rules to control which events are sent:
 
-<CodeBox
+<CodeSnippet
   code={`// Add to existing startFlow config
 const { collector, elb } = await startFlow({
   destinations: {
@@ -218,10 +199,7 @@ const { collector, elb } = await startFlow({
     },
   },
 });`}
-  disabled
   language="typescript"
-  label="Code Example"
-  autoHeight
 />
 
 ## Transport Methods

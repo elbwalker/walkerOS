@@ -39,21 +39,17 @@ Use the tagger when you need to:
 
 ## Installation
 
-<CodeBox
+<CodeSnippet
   code={`npm install @walkeros/web-source-browser
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Initialization
 
 The tagger is initialized using the `createTagger` factory function:
 
-<CodeBox
+<CodeSnippet
   code={`import { createTagger } from '@walkeros/web-source-browser';
 
 // Create with default configuration
@@ -64,11 +60,7 @@ const customTagger = createTagger({
 prefix: 'data-elb',
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Configuration
@@ -79,7 +71,7 @@ prefix: 'data-elb',
 
 ### Basic Data Tagging (Without Entity)
 
-<CodeBox
+<CodeSnippet
   code={`const tagger = createTagger();
 
 // Using tagger with a scope parameter sets naming for data attributes only
@@ -94,16 +86,12 @@ const attributes = tagger('product')
 // }
 // Note: No 'data-elb' entity attribute is created
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Entity Tagging
 
-<CodeBox
+<CodeSnippet
   code={`// To create an entity attribute, use the .entity() method
 const attributes = tagger()
 .entity('product')
@@ -117,16 +105,12 @@ const attributes = tagger()
 //   'data-elb-product': 'id:123;name:Widget'
 // }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Action Mapping
 
-<CodeBox
+<CodeSnippet
   code={`const attributes = tagger()
 .action('load', 'view')
 .action('click', 'select')
@@ -137,16 +121,12 @@ const attributes = tagger()
 //   'data-elbaction': 'load:view;click:select'
 // }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Context and Global Properties
 
-<CodeBox
+<CodeSnippet
   code={`const attributes = tagger('product')
 .data('id', 123)
 .context('test', 'engagement')
@@ -161,16 +141,12 @@ const attributes = tagger()
 //   'data-elbglobals': 'lang:en'
 // }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Multiple Entity Scopes
 
-<CodeBox
+<CodeSnippet
   code={`// Starting with a naming scope
 const attributes = tagger('product')
 .data('id', 123)
@@ -185,16 +161,12 @@ const attributes = tagger('product')
 //   'data-elb-user': 'name:John'
 // }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Order Matters
 
-<CodeBox
+<CodeSnippet
   code={`// Data before entity uses original scope
 const attributes = tagger('product')
 .data('id', 123)
@@ -210,16 +182,12 @@ const attributes = tagger('product')
 //   'data-elb-cart': 'quantity:2'
 // }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Value Escaping
 
-<CodeBox
+<CodeSnippet
   code={`const attributes = tagger()
 .data('description', 'Product with: special; chars & "quotes"')
 .get();
@@ -229,11 +197,7 @@ const attributes = tagger('product')
 //   'data-elb-': 'description:Product with\\\\: special\\\\; chars & \\\\"quotes\\\\"'
 // }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Available Methods (API Reference)
@@ -243,7 +207,7 @@ const attributes = tagger('product')
 Creates a new tagger instance. The optional scope parameter sets the naming
 scope for data attributes without creating an entity attribute.
 
-<CodeBox
+<CodeSnippet
   code={`// Without scope - generic data attributes
 tagger().data('key', 'value');
 // Creates: data-elb-="key:value"
@@ -252,11 +216,7 @@ tagger().data('key', 'value');
 tagger('product').data('id', '123');
 // Creates: data-elb-product="id:123"
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ##### `entity(name: string)`
@@ -264,7 +224,7 @@ tagger('product').data('id', '123');
 Sets the entity attribute and updates the naming scope for subsequent data
 calls.
 
-<CodeBox
+<CodeSnippet
   code={`tagger().entity('product').data('id', '123');
 // Creates: data-elb="product" data-elb-product="id:123"
 
@@ -272,18 +232,14 @@ calls.
 tagger('foo').entity('bar').data('a', 1);
 // Creates: data-elb="bar" data-elb-bar="a:1"
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ##### `data(key: string, value: Property)` | `data(object: Properties)`
 
 Adds data properties using the current naming scope.
 
-<CodeBox
+<CodeSnippet
   code={`// Single property
 tagger('product').data('id', 123);
 // Creates: data-elb-product="id:123"
@@ -292,18 +248,14 @@ tagger('product').data('id', 123);
 tagger('product').data({ id: 123, name: 'Widget', price: 99.99 });
 // Creates: data-elb-product="id:123;name:Widget;price:99.99"
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ##### `action(trigger: string, action?: string)` | `action(object: Record<string, string>)`
 
 Adds action mappings for event triggers. Creates a `data-elbaction` attribute.
 
-<CodeBox
+<CodeSnippet
   code={`// Single action
 tagger().action('load', 'view');
 
@@ -313,18 +265,14 @@ tagger().action('load:view');
 // Multiple actions
 tagger().action({ load: 'view', click: 'select', impression: 'view' });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ##### `actions(trigger: string, action?: string)` | `actions(object: Record<string, string>)`
 
 Adds action mappings for event triggers. Creates a `data-elbactions` attribute.
 
-<CodeBox
+<CodeSnippet
   code={`// Single action
 tagger().actions('load', 'view');
 
@@ -337,72 +285,56 @@ tagger().actions({ load: 'view', click: 'select', visible: 'visible' });
 // Can be combined with action() method
 tagger().action('click', 'select').actions('load', 'view');
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ##### `context(key: string, value: Property)` | `context(object: Properties)`
 
 Adds context properties that apply to all events.
 
-<CodeBox
+<CodeSnippet
   code={`// Single context
 tagger().context('test', 'engagement');
 
 // Multiple contexts
 tagger().context({ test: 'engagement', position: 'header', type: 'promo' });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ##### `globals(key: string, value: Property)` | `globals(object: Properties)`
 
 Adds global properties that persist across page views.
 
-<CodeBox
+<CodeSnippet
   code={`// Single global
 tagger().globals('lang', 'en');
 
 // Multiple globals
 tagger().globals({ lang: 'en', plan: 'paid', version: '1.0' });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ##### `link(id: string, type: string)` | `link(object: Record<string, string>)`
 
 Adds link relationships between elements.
 
-<CodeBox
+<CodeSnippet
   code={`// Single link
 tagger().link('details', 'parent');
 
 // Multiple links
 tagger().link({ details: 'parent', modal: 'child', sidebar: 'child' });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ##### `get()`
 
 Generates the final HTML attributes object.
 
-<CodeBox
+<CodeSnippet
   code={`// With naming scope only
 const attributes = tagger('product').data('id', '123').get();
 // Returns: { 'data-elb-product': 'id:123' }
@@ -411,11 +343,7 @@ const attributes = tagger('product').data('id', '123').get();
 const attributes = tagger().entity('product').data('id', '123').get();
 // Returns: { 'data-elb': 'product', 'data-elb-product': 'id:123' }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 All methods return the tagger instance for method chaining, except `get()` which
@@ -425,7 +353,7 @@ returns the final attributes object.
 
 ### Product Listing Page
 
-<CodeBox
+<CodeSnippet
   code={`// For product cards with nearest entity tracking only
 function ProductCard({ product }) {
 return (
@@ -466,16 +394,12 @@ return (
 );
 }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Shopping Cart
 
-<CodeBox
+<CodeSnippet
   code={`// For cart items that need both entity and data attributes
 function CartItem({ item }) {
 return (
@@ -495,16 +419,12 @@ return (
 );
 }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Dynamic Component Tracking
 
-<CodeBox
+<CodeSnippet
   code={`// Reusable tracking function
 function trackComponent(type, data, actions = {}) {
 return tagger(type)
@@ -518,9 +438,5 @@ return tagger(type)
 Sign Up
 </button>
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />

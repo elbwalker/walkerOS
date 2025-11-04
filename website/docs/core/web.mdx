@@ -16,7 +16,7 @@ information, storage, sessions, and web-based communication.
 
 Import web utilities from the `@walkeros/web-core` package:
 
-<CodeBox code={`import { getAttribute, sendWeb, sessionStart } from '@walkeros/web-core';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight />
+<CodeSnippet code={`import { getAttribute, sendWeb, sessionStart } from '@walkeros/web-core';`} language="typescript" />
 
 ## DOM Utilities
 
@@ -25,15 +25,11 @@ Import web utilities from the `@walkeros/web-core` package:
 `getAttribute(element: Element, name: string): string` retrieves attribute
 values from DOM elements with enhanced handling.
 
-<CodeBox
+<CodeSnippet
   code={`const element = document.querySelector('[data-elb="product"]');
 const entityType = getAttribute(element, 'data-elb'); // Returns 'product'
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Attribute Parsing
@@ -43,14 +39,10 @@ const entityType = getAttribute(element, 'data-elb'); // Returns 'product'
 `splitAttribute(str: string, separator?: string): string[]` splits attribute
 strings using specified separators.
 
-<CodeBox
+<CodeSnippet
   code={`splitAttribute('id:123,name:shirt', ','); // Returns ['id:123', 'name:shirt']
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 #### splitKeyVal
@@ -58,13 +50,9 @@ strings using specified separators.
 `splitKeyVal(str: string): [string, string]` splits key-value pairs from
 attribute strings.
 
-<CodeBox
+<CodeSnippet
   code={`splitKeyVal('id:123'); // Returns ['id', '123']`}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 #### parseInlineConfig
@@ -72,15 +60,11 @@ attribute strings.
 `parseInlineConfig(str: string): Record<string, unknown>` parses inline
 configuration strings from HTML attributes.
 
-<CodeBox
+<CodeSnippet
   code={`parseInlineConfig('{"tracking": true, "debug": false}');
 // Returns { tracking: true, debug: false }
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Browser Information
@@ -90,28 +74,20 @@ configuration strings from HTML attributes.
 `getLanguage(navigatorRef: Navigator): string | undefined` extracts the user's
 preferred language.
 
-<CodeBox
+<CodeSnippet
   code={`getLanguage(navigator); // Returns 'en-US' or user's language
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### getTimezone
 
 `getTimezone(): string | undefined` gets the user's timezone from the Intl API.
 
-<CodeBox
+<CodeSnippet
   code={`getTimezone(); // Returns 'America/New_York' or user's timezone
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### getScreenSize
@@ -119,14 +95,10 @@ preferred language.
 `getScreenSize(windowRef: Window): string` returns the window's screen
 dimensions.
 
-<CodeBox
+<CodeSnippet
   code={`getScreenSize(window); // Returns '1920x1080' or current screen size
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Element Visibility
@@ -136,17 +108,13 @@ dimensions.
 `isVisible(element: HTMLElement): boolean` checks if an element is visible to
 the user.
 
-<CodeBox
+<CodeSnippet
   code={`const promoElement = document.getElementById('promotion');
 if (isVisible(promoElement)) {
 // Element is visible on screen
 }
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 This function considers:
@@ -165,18 +133,14 @@ This function considers:
 `storageRead(key: string, storage?: StorageType): WalkerOS.PropertyType` reads
 data from browser storage with automatic type conversion.
 
-<CodeBox
+<CodeSnippet
   code={`// Default uses localStorage
 const userId = storageRead('walker_user_id');
 
 // Use sessionStorage
 const sessionData = storageRead('session_data', 'sessionStorage');
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 #### storageWrite
@@ -184,7 +148,7 @@ const sessionData = storageRead('session_data', 'sessionStorage');
 `storageWrite(key: string, value: WalkerOS.PropertyType, maxAgeInMinutes?: number, storage?: StorageType, domain?: string): WalkerOS.PropertyType`
 writes data to storage with expiration and domain options.
 
-<CodeBox
+<CodeSnippet
   code={`// Store with 30-minute expiration
 storageWrite('user_preference', 'dark-mode', 30);
 
@@ -194,26 +158,18 @@ storageWrite('temp_data', { id: 123 }, undefined, 'sessionStorage');
 // Store with custom domain for cookies
 storageWrite('tracking_id', 'abc123', 1440, 'cookie', '.example.com');
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 #### storageDelete
 
 `storageDelete(key: string, storage?: StorageType)` removes data from storage.
 
-<CodeBox
+<CodeSnippet
   code={`storageDelete('expired_data');
 storageDelete('session_temp', 'sessionStorage');
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Session Management
@@ -223,7 +179,7 @@ storageDelete('session_temp', 'sessionStorage');
 `sessionStart(config?: SessionConfig): WalkerOS.SessionData | void` initializes
 and manages user sessions with automatic renewal and tracking.
 
-<CodeBox
+<CodeSnippet
   code={`// Start session with default config
 const session = sessionStart();
 
@@ -235,11 +191,7 @@ maxAge: 1440, // 24 hours
 sampling: 1.0, // 100% sampling
 });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 Session data includes:
@@ -263,7 +215,7 @@ Session data includes:
 `sendWeb<T>(url: string, data?: SendDataValue, options?: SendWebOptionsDynamic<T>): SendWebReturn<T>`
 sends data using various web transport methods.
 
-<CodeBox
+<CodeSnippet
   code={`// Default fetch transport
 await sendWeb('https://api.example.com/events', eventData);
 
@@ -277,11 +229,7 @@ headers: { Authorization: 'Bearer token' },
 method: 'PUT',
 });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Transport-Specific Functions
@@ -291,18 +239,14 @@ method: 'PUT',
 `sendWebAsFetch(url: string, data?: SendDataValue, options?: SendWebOptionsFetch): Promise<SendResponse>`
 uses the modern Fetch API with advanced options.
 
-<CodeBox
+<CodeSnippet
   code={`await sendWebAsFetch(url, data, {
 credentials: 'include',
 noCors: true,
 headers: { 'Content-Type': 'application/json' },
 });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 #### sendWebAsBeacon
@@ -310,17 +254,13 @@ headers: { 'Content-Type': 'application/json' },
 `sendWebAsBeacon(url: string, data?: SendDataValue): SendResponse` uses the
 Beacon API for reliable data transmission, especially during page unload.
 
-<CodeBox
+<CodeSnippet
   code={`// Reliable sending during page unload
 window.addEventListener('beforeunload', () => {
 sendWebAsBeacon('/analytics/pageview', { duration: Date.now() - startTime });
 });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 #### sendWebAsXhr
@@ -328,15 +268,11 @@ sendWebAsBeacon('/analytics/pageview', { duration: Date.now() - startTime });
 `sendWebAsXhr(url: string, data?: SendDataValue, options?: SendWebOptions): SendResponse`
 uses XMLHttpRequest for synchronous communication.
 
-<CodeBox
+<CodeSnippet
   code={`// Synchronous request (blocks execution)
 const response = sendWebAsXhr(url, data, { method: 'POST' });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Web Hashing
@@ -346,7 +282,7 @@ const response = sendWebAsXhr(url, data, { method: 'POST' });
 `getHashWeb(str: string, length?: number): Promise<string>` generates SHA-256
 hashes using the Web Crypto API.
 
-<CodeBox
+<CodeSnippet
   code={`// Generate hash for fingerprinting
 const userFingerprint = await getHashWeb(
 navigator.userAgent + navigator.language + screen.width,
@@ -354,18 +290,14 @@ navigator.userAgent + navigator.language + screen.width,
 );
 // Returns shortened hash like '47e0bdd10f04ef13'
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Configuration Types
 
 ### SendWebOptions
 
-<CodeBox
+<CodeSnippet
   code={`interface SendWebOptions {
 headers?: Record<string, string>;
 method?: string; // Default: 'POST'
@@ -376,32 +308,24 @@ interface SendWebOptionsFetch extends SendWebOptions {
 credentials?: 'omit' | 'same-origin' | 'include';
 noCors?: boolean;
 }`}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### SessionConfig
 
-<CodeBox
+<CodeSnippet
   code={`interface SessionConfig {
 storage?: boolean; // Enable storage persistence
 domain?: string; // Cookie domain
 maxAge?: number; // Session duration in minutes
 sampling?: number; // Sampling rate (0-1)
 }`}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### StorageType
 
-<CodeBox code={`type StorageType = 'localStorage' | 'sessionStorage' | 'cookie';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight />
+<CodeSnippet code={`type StorageType = 'localStorage' | 'sessionStorage' | 'cookie';`} language="typescript" />
 
 ## Usage Notes
 

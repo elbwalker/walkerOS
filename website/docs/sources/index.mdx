@@ -45,7 +45,7 @@ Integrates with existing analytics implementations:
 
 Sources are configured in `startFlow`:
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
@@ -71,11 +71,7 @@ destinations: {
 // Use elb for manual event tracking
 await elb('product view', { id: 'P123', name: 'Laptop' });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Primary Source
@@ -88,7 +84,7 @@ await elb('product view', { id: 'P123', name: 'Laptop' });
 
 ### Override Primary Source
 
-<CodeBox
+<CodeSnippet
   code={`const { elb } = await startFlow({
 sources: {
 browser: { code: sourceBrowser },
@@ -98,18 +94,14 @@ dataLayer: { code: sourceDataLayer, primary: true }, // Override
 
 // elb is now dataLayer.push instead of browser.push
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Reactive Event Handling
 
 Sources can react to collector events via the optional `on` method:
 
-<CodeBox
+<CodeSnippet
   code={`const mySource: Source.Init = async (config, env) => {
 return {
 type: 'custom',
@@ -122,11 +114,7 @@ if (event === 'consent') {
 };
 };
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 **Available Events:**

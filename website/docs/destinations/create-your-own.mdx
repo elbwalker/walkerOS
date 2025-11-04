@@ -18,7 +18,7 @@ an external service, such as an analytics platform, an API, or a database.
 A destination is an object that implements the `Destination` interface. The most
 important property is the `push` function, which is called for every event.
 
-<CodeBox
+<CodeSnippet
   code={`interface Destination<Settings = unknown> {
 config: {};
 push: PushFn<Settings>;
@@ -30,11 +30,7 @@ context?: unknown,
 ): void | Promise<void>;
 }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## The `push` function
@@ -43,7 +39,7 @@ The `push` function is where you'll implement the logic to send the event to
 your desired service. It receives the `event` and a `context` object containing
 the destination's configuration.
 
-<CodeBox
+<CodeSnippet
   code={`type PushFn<Settings> = (
 event: WalkerOS.Event,
 context: {
@@ -53,18 +49,14 @@ settings?: Settings;
 },
 ) => void;
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Example: A Simple Webhook Destination
 
 Here is an example of a simple destination that sends events to a webhook URL.
 
-<CodeBox
+<CodeSnippet
   code={`import type { Destination } from '@walkeros/core';
 
 // 1. Define your settings interface
@@ -92,11 +84,7 @@ body: JSON.stringify(event),
 },
 };
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Schema Validation (Optional)
@@ -128,7 +116,7 @@ management, or cleanup tasks.
 
 ### Example: Consent-Aware Destination
 
-<CodeBox
+<CodeSnippet
   code={`export const destinationWithConsent: Destination<WebhookSettings> = {
 type: 'webhook-consent',
 config: {},
@@ -145,11 +133,7 @@ console.log('Event:', event);
 },
 };
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Using your destination
@@ -157,7 +141,7 @@ console.log('Event:', event);
 To use your custom destination, add it to the `destinations` object in your
 collector configuration.
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationWebhook } from './destinationWebhook';
 
@@ -174,18 +158,14 @@ config: {
 },
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Advanced Example: Session Management
 
 Here's a more advanced example that demonstrates session handling and cleanup:
 
-<CodeBox
+<CodeSnippet
   code={`export const destinationWithSession: Destination<WebhookSettings> = {
 type: 'webhook-session',
 config: {},
@@ -232,11 +212,7 @@ body: JSON.stringify(event),
 },
 };
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## TypeScript Integration
@@ -244,7 +220,7 @@ body: JSON.stringify(event),
 To get full TypeScript support for your destination's configuration, you can
 extend the `WalkerOS.Destinations` interface.
 
-<CodeBox
+<CodeSnippet
   code={`// types.ts
 import type { Destination } from '@walkeros/core';
 import type { WebhookSettings } from './destinationWebhook';
@@ -257,11 +233,7 @@ webhook: Destination.Config<WebhookSettings>;
 }
 }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Environment Dependencies (Testing)
@@ -281,7 +253,7 @@ or requiring real browser globals.
 
 Define the external dependencies your destination needs:
 
-<CodeBox
+<CodeSnippet
   code={`// types.ts - Web destination
 import type { DestinationWeb } from '@walkeros/web-core';
 
@@ -299,11 +271,7 @@ export interface Env extends DestinationServer.Env {
 BigQuery?: typeof BigQuery;
 }
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Using Environment in Your Destination
@@ -311,7 +279,7 @@ BigQuery?: typeof BigQuery;
 Use the 3rd generic parameter for type safety, then access env in `init` or
 `push`:
 
-<CodeBox
+<CodeSnippet
   code={`import type { DestinationWeb } from '@walkeros/web-core';
 import { getEnv } from '@walkeros/web-core';
 
@@ -343,18 +311,14 @@ window.customAPI(event.name);
 },
 };
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Creating Test Environments
 
 Create reusable mock environments in an `examples/env.ts` file:
 
-<CodeBox
+<CodeSnippet
   code={`// examples/env.ts
 import type { Env } from '../types';
 
@@ -364,29 +328,21 @@ customAPI: jest.fn(),
 },
 };
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 Export from your examples index:
 
-<CodeBox
+<CodeSnippet
   code={`// examples/index.ts
 export * as env from './env';
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Using in Tests
 
-<CodeBox
+<CodeSnippet
   code={`import { clone } from '@walkeros/core';
 import { examples } from './index';
 
@@ -401,11 +357,7 @@ expect(testEnv.window.customAPI).toHaveBeenCalledWith('page view');
 });
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 **Key Points:**

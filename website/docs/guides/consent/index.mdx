@@ -30,14 +30,10 @@ To set/update the consent state, the CMP should actively push the
 (`true/false`). If only one condition applies, consent is granted. Updating only
 one value won't override existing states.
 
-<CodeBox
+<CodeSnippet
   code={`elb('walker consent', { functional: true, marketing: false });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 Consent keys can be defined arbitrarily (typically known as *functional*,
@@ -72,21 +68,17 @@ A destination only requires one granted consent state to process events.
 To revoke consent and stop sharing events with a destination, all matching rules
 have to be set to `false`:
 
-<CodeBox
+<CodeSnippet
   code={`elb('walker consent', { marketing: false });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## on Consent
 
 To start walker.js only after a consent choice, use the `on consent` command:
 
-<CodeBox
+<CodeSnippet
   code={`// Wait for functional consent to run
 elb('walker on', 'consent', {
 functional: () => {
@@ -97,17 +89,13 @@ elb('walker run');
 // Later, a CMP has to update the consent state
 elb('walker consent', { functional: true });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 Another example of how to use the `on consent` command might be to update
 [Googles consent mode v2](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic):
 
-<CodeBox
+<CodeSnippet
   code={`elb('walker on', 'consent', (instance, consent) => {
 // Check if marketing consent is granted
 if (consent.marketing) {
@@ -120,11 +108,7 @@ analytics_storage: 'granted',
 }
 });
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 The consent mode will be updated via `gtag` as soon as marketing consent is

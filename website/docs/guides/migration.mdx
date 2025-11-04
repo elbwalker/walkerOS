@@ -26,7 +26,7 @@ packages.
 
 **Before:**
 
-<CodeBox
+<CodeSnippet
   code={`{
   "dependencies": {
     "@elbwalker/walker.js": "^2.0.0",
@@ -34,16 +34,12 @@ packages.
   }
 }
 `}
-  disabled
   language="json"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 **After:**
 
-<CodeBox
+<CodeSnippet
   code={`{
   "dependencies": {
     "@walkeros/collector": "^0.0.7",
@@ -52,63 +48,47 @@ packages.
   }
 }
 `}
-  disabled
   language="json"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### 2. Update Imports
 
 **Before:**
 
-<CodeBox
+<CodeSnippet
   code={`import { Walkerjs } from '@elbwalker/walker.js';
 import { destinationGoogleGA4 } from '@elbwalker/destination-web-google-ga4';
 import type { WalkerOS } from '@elbwalker/types';
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 **After:**
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 import type { WalkerOS } from '@walkeros/core';
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### 3. Update Function Calls
 
 **Before:**
 
-<CodeBox
+<CodeSnippet
   code={`const walker = Walkerjs({
 destinations: [destinationGoogleGA4],
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 **After:**
 
-<CodeBox
+<CodeSnippet
   code={`const { elb } = await startFlow({
 sources: {
 browser: {
@@ -130,11 +110,7 @@ config: {
 },
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Breaking Changes
@@ -165,7 +141,7 @@ config: {
 
 Configure all sources and destinations in a single `startFlow` call:
 
-<CodeBox
+<CodeSnippet
   code={`const { elb } = await startFlow({
 sources: {
 browser: {
@@ -187,11 +163,7 @@ config: {
 },
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 **Benefits:**
@@ -245,7 +217,7 @@ more precise entity targeting:
 
 Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
 
-<CodeBox
+<CodeSnippet
   code={`<!-- Before (@elbwalker) -->
 <div data-elb="parent">
   <div data-elb="child" data-elbaction="click:action">
@@ -260,18 +232,14 @@ Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
   </div>
 </div>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 #### Option 2: Use New Behavior (Recommended for new projects)
 
 Use `data-elbaction` for more precise, performance-optimized tracking:
 
-<CodeBox
+<CodeSnippet
   code={`<!-- @walkeros - New behavior -->
 <div data-elb="parent">
   <div data-elb="child" data-elbaction="click:action">
@@ -279,11 +247,7 @@ Use `data-elbaction` for more precise, performance-optimized tracking:
   </div>
 </div>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### When to Use Each
@@ -304,18 +268,14 @@ Use `data-elbaction` for more precise, performance-optimized tracking:
 
 The tagger also provides both methods:
 
-<CodeBox
+<CodeSnippet
   code={`// Nearest entity only (data-elbaction)
 tagger().action('click', 'select').get();
 
 // All entities (data-elbactions)
 tagger().actions('click', 'select').get();
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## visible vs impression Triggers
@@ -335,7 +295,7 @@ The visibility trigger names have been updated to better reflect their behavior:
 
 Update your HTML to use the new trigger names:
 
-<CodeBox
+<CodeSnippet
   code={`<!-- Before (@elbwalker and early @walkeros) -->
 <div data-elbaction="visible:view">Single fire</div>
 <div data-elbaction="visibles:track">Multiple fires</div>
@@ -344,11 +304,7 @@ Update your HTML to use the new trigger names:
 <div data-elbaction="impression:view">Single fire</div>
 <div data-elbaction="visible:track">Multiple fires</div>
 `}
-  disabled
   language="html"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 #### Option 2: Understand the Behavior Change
@@ -376,16 +332,12 @@ If you keep using the old names, understand the behavior has changed:
 
 The tagger supports both trigger types:
 
-<CodeBox
+<CodeSnippet
   code={`// Single impression (fires once)
 tagger().action('impression', 'view').get();
 
 // Multiple visibility (fires each time visible)
 tagger().action('visible', 'track').get();
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />

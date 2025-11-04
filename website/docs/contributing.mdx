@@ -40,7 +40,7 @@ stable and released versions. The whole project can be tested and build using
 [TurboRepo](https://turbo.build/repo/). Run all commands from the root
 directory.
 
-<CodeBox
+<CodeSnippet
   code={`# Make sure to install all dependencies first
 npm i
 
@@ -57,11 +57,7 @@ turbo run build
 turbo run dev --filter=*walker.js
 turbo run build --filter=*walker.js --filter=*utils
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 The `filter` option can be used to only run one or multiple packages. To filter
@@ -71,14 +67,10 @@ use the `packages name` field in the `package.json` file.
 
 To update all npm packages to the latest version, run:
 
-<CodeBox
+<CodeSnippet
   code={`npx npm-check-updates -u && npm update && npm install
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Documentation
@@ -88,14 +80,10 @@ folder. It is built using [Docusaurus](https://docusaurus.io/). To start a local
 server with live reload make sure to run `npm i` first, go to the `website/`
 directory and call:
 
-<CodeBox
+<CodeSnippet
   code={`npm run start
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## How to release
@@ -108,14 +96,10 @@ How to update a package, create a changeset, and publish a (pre-)release.
 
 2. Create a Changeset: From the root of your monorepo, run:
 
-<CodeBox
+<CodeSnippet
   code={`$ npx changeset
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 Select the packages that should be updated and describe the changes.
@@ -124,26 +108,18 @@ Select the packages that should be updated and describe the changes.
 
 1. (Optional) Enter pre-release process:
 
-<CodeBox
+<CodeSnippet
   code={`$ npx changeset pre enter next
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 2. Bump Version for (Pre-)Release: Now, run:
 
-<CodeBox
+<CodeSnippet
   code={`$ npx changeset version
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 #### Publishing the Pre-Release
@@ -154,14 +130,10 @@ Select the packages that should be updated and describe the changes.
 2. To publish with the current tag (`latest` by default or `next` for a
    pre-release): From the root of the monorepo, run:
 
-<CodeBox
+<CodeSnippet
   code={`$ npm run publish-packages
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 #### (Optional) Exiting Pre-Release Mode
@@ -170,14 +142,10 @@ After a pre-release is done and it's ready to be released as a stable version:
 
 1. Exit Pre-Release Mode: Run:
 
-<CodeBox
+<CodeSnippet
   code={`$ npx changeset pre exit
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 2. Follow the release process again: Create a new changeset for the stable

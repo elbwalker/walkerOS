@@ -15,19 +15,15 @@ Integrates with existing Google Analytics 4 and GTM dataLayer implementations by
 
 ## Installation
 
-<CodeBox
+<CodeSnippet
   code={`npm install @walkeros/web-source-datalayer
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Basic Setup
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { sourceDataLayer } from '@walkeros/web-source-datalayer';
 
@@ -48,11 +44,7 @@ const { collector, elb } = await startFlow({
   },
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## How It Works
@@ -64,7 +56,7 @@ The dataLayer source intercepts `dataLayer.push()` calls and transforms them int
 3. **Transforms** dataLayer format to walkerOS event format
 4. **Forwards** to collector for processing
 
-<CodeBox
+<CodeSnippet
   code={`// Existing dataLayer code (unchanged)
 window.dataLayer = window.dataLayer || [];
 dataLayer.push({ event: 'purchase', value: 99.99 });
@@ -72,11 +64,7 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
 // Automatically captured and transformed by sourceDataLayer
 // → Sent to walkerOS collector as standard event
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Configuration
@@ -87,7 +75,7 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
 
 Filter which dataLayer events get processed:
 
-<CodeBox
+<CodeSnippet
   code={`const { elb } = await startFlow({
   sources: {
     dataLayer: {
@@ -108,11 +96,7 @@ Filter which dataLayer events get processed:
   },
 });
 `}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Migration Strategy
@@ -121,20 +105,16 @@ Use the dataLayer source for gradual migration from GA4/GTM:
 
 ### Phase 1: Add walkerOS alongside existing dataLayer
 
-<CodeBox
+<CodeSnippet
   code={`// Existing code continues to work
 dataLayer.push({ event: 'purchase', value: 99.99 });
 // Now also captured by walkerOS`}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Phase 2: Map dataLayer events to walkerOS destinations
 
-<CodeBox
+<CodeSnippet
   code={`destinations: {
   ga4: {
     code: destinationGtag,
@@ -145,25 +125,17 @@ dataLayer.push({ event: 'purchase', value: 99.99 });
     }
   }
 }`}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Phase 3: Gradually replace dataLayer.push with elb()
 
-<CodeBox
+<CodeSnippet
   code={`// Old
 dataLayer.push({ event: 'purchase', value: 99.99 });
 // New
 elb('order complete', { total: 99.99 });`}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Next Steps

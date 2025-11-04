@@ -28,19 +28,15 @@ care of loading the script and the function calls.
 
 ## Installation
 
-<CodeBox
+<CodeSnippet
   code={`npm install @walkeros/web-destination-plausible
 `}
-  disabled
   language="bash"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ## Setup
 
-<CodeBox
+<CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationPlausible } from '@walkeros/web-destination-plausible';
 
@@ -51,10 +47,7 @@ elb('walker destination', destinationPlausible, {
     domain: 'elbwalker.com', // Optional, domain of your site as registered
   },
 });`}
-  disabled
   language="typescript"
-  label="Code Example"
-  autoHeight
 />
 
 ## Configuration reference

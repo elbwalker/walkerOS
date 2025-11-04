@@ -42,7 +42,7 @@ A walkerOS event consists of three components:
 Here's an example of the structure and components of a walkerOS event. Keys are
 static, their content can be defined dynamically with different value types.
 
-<CodeBox
+<CodeSnippet
   code={`{
 name: 'promotion view', // Name as a combination of entity and action
 data: {
@@ -95,11 +95,7 @@ previous_id: 'https://www.elbwalker.com/', // Previous source (like referrer)
 };
 
 `}
-  disabled
   language="javascript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 **Event names** are a combination of the entities involved (*promotion*) and the
@@ -156,7 +152,7 @@ This enables cross-device tracking or linking sessions for a cohesive user
 journey. On a server-side setup, a temporarily `hash` value is added. Any other
 user-related information can also be added. A few values are recommended:
 
-<CodeBox
+<CodeSnippet
   code={`interface User extends Properties {
 // IDs
 id?: string; // User ID
@@ -179,11 +175,7 @@ screenSize?: string; // Screen size
 ip?: string; // IP address
 internal?: boolean; // Internal user flag
 }`}
-  disabled
   language="typescript"
-  label="Code Example"
-  showHeader={false}
-  autoHeight
 />
 
 ### Consent
