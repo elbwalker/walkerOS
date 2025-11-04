@@ -24,37 +24,37 @@ example of how to map the CookiePro categories to the walker.js
   code={`(function (wrapper) {
 // Renaming of the categories
 const mapping = {
-  C0001: 'functional', // necessary
-  C0002: 'analytics', // performance
-  C0003: 'analytics', // functional
-  C0004: 'marketing', // targeting
-  C0005: 'marketing', // social
+C0001: 'functional', // necessary
+C0002: 'analytics', // performance
+C0003: 'analytics', // functional
+C0004: 'marketing', // targeting
+C0005: 'marketing', // social
 };
 
 function handleConsent() {
-  // if (!OneTrust.IsAlertBoxClosed()) return; // Process only explicit consent
+// if (!OneTrust.IsAlertBoxClosed()) return; // Process only explicit consent
 
-  const consent = {};
-  window.OptanonActiveGroups.split(',').forEach((category) => {
-    const name = mapping[category];
-    if (name) consent[name] = true;
-  });
+const consent = {};
+window.OptanonActiveGroups.split(',').forEach((category) => {
+  const name = mapping[category];
+  if (name) consent[name] = true;
+});
 
-  elb('walker consent', consent);
+elb('walker consent', consent);
 }
 
 if (window.Optanon && window.OptanonActiveGroups) {
-  handleConsent(); // CMP already loaded
+handleConsent(); // CMP already loaded
 } else {
-  window.OptanonWrapper = function (e) {
-    if (wrapper) wrapper(); // Call the original OptanonWrapper
-    handleConsent();
-  };
+window.OptanonWrapper = function (e) {
+  if (wrapper) wrapper(); // Call the original OptanonWrapper
+  handleConsent();
+};
 }
 
 // Listen for consent updates
 window.addEventListener('OneTrustGroupsUpdated', function (event) {
-  handleConsent();
+handleConsent();
 });
 })(window.OptanonWrapper);
 `}

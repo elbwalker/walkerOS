@@ -97,7 +97,7 @@ const { elb, customAPI } = env;
 // elb is guaranteed to exist (provided by collector)
 // customAPI validation only needed if required by your source
 if (!customAPI) {
-  throw new Error('Source requires customAPI in environment');
+throw new Error('Source requires customAPI in environment');
 }
 
 // Use elb to send events to collector
@@ -130,19 +130,19 @@ export const sourceCustom: Source.Init<Types> = async (config, env) => {
 const { elb } = env;
 
 const settings: Source.Settings<Types> = {
-  prefix: 'custom',
-  ...config?.settings,
+prefix: 'custom',
+...config?.settings,
 };
 
 const fullConfig: Source.Config<Types> = {
-  ...config,
-  settings,
+...config,
+settings,
 };
 
 return {
-  type: 'custom',
-  config: fullConfig,
-  push: elb,
+type: 'custom',
+config: fullConfig,
+push: elb,
 };
 };
 `}
@@ -184,49 +184,49 @@ const { elb, api } = env;
 if (!api) throw new Error('Source requires api instance');
 
 const settings: Source.Settings<Types> = {
-  captureInteractions: true,
-  captureErrors: true,
-  prefix: 'app',
-  ...config?.settings,
+captureInteractions: true,
+captureErrors: true,
+prefix: 'app',
+...config?.settings,
 };
 
 const handlers = new Map<string, (data: unknown) => void>();
 
 // Register event handler
 const register = (
-  event: string,
-  transform: (data: unknown) => { name: string; data: unknown },
+event: string,
+transform: (data: unknown) => { name: string; data: unknown },
 ) => {
-  const handler = (data: unknown) => {
-    const transformed = transform(data);
-    elb(transformed.name, transformed.data);
-  };
-  api.on(event, handler);
-  handlers.set(event, handler);
+const handler = (data: unknown) => {
+  const transformed = transform(data);
+  elb(transformed.name, transformed.data);
+};
+api.on(event, handler);
+handlers.set(event, handler);
 };
 
 // Set up event listeners based on settings
 if (settings.captureInteractions) {
-  register('userAction', (data) => ({
-    name: \`\${settings.prefix} interaction\`,
-    data,
-  }));
+register('userAction', (data) => ({
+  name: \`\${settings.prefix} interaction\`,
+  data,
+}));
 }
 
 if (settings.captureErrors) {
-  register('error', (data) => ({
-    name: \`\${settings.prefix} error\`,
-    data,
-  }));
+register('error', (data) => ({
+  name: \`\${settings.prefix} error\`,
+  data,
+}));
 }
 
 return {
-  type: 'event-api',
-  config: { ...config, settings },
-  push: elb,
-  destroy: async () => {
-    handlers.forEach((handler, event) => api.off(event, handler));
-  },
+type: 'event-api',
+config: { ...config, settings },
+push: elb,
+destroy: async () => {
+  handlers.forEach((handler, event) => api.off(event, handler));
+},
 };
 };
 `}
@@ -247,18 +247,18 @@ const externalAPI = getYourAPI();
 
 const { elb } = await startFlow({
 sources: {
-  eventAPI: {
-    code: sourceEventAPI,
-    config: {
-      settings: {
-        captureInteractions: true,
-        prefix: 'myapp',
-      },
-    },
-    env: {
-      api: externalAPI, // Collector provides elb automatically
+eventAPI: {
+  code: sourceEventAPI,
+  config: {
+    settings: {
+      captureInteractions: true,
+      prefix: 'myapp',
     },
   },
+  env: {
+    api: externalAPI, // Collector provides elb automatically
+  },
+},
 },
 });
 `}
@@ -280,18 +280,18 @@ import type { Elb } from '@walkeros/core';
 export function createMockElb(): jest.MockedFunction<Elb.Fn> {
 const mock = jest.fn();
 mock.mockResolvedValue({
-  ok: true,
-  successful: [],
-  queued: [],
-  failed: [],
+ok: true,
+successful: [],
+queued: [],
+failed: [],
 });
 return mock as jest.MockedFunction<Elb.Fn>;
 }
 
 export function createMockAPI() {
 return {
-  on: jest.fn(),
-  off: jest.fn(),
+on: jest.fn(),
+off: jest.fn(),
 };
 }
 `}
@@ -310,46 +310,46 @@ import { createMockElb, createMockAPI } from './test-utils';
 
 describe('Event API Source', () => {
 it('validates required dependencies', async () => {
-  const elb = createMockElb();
+const elb = createMockElb();
 
-  await expect(
-    sourceEventAPI({ settings: {} }, { elb } as any)
-  ).rejects.toThrow('requires api');
+await expect(
+  sourceEventAPI({ settings: {} }, { elb } as any)
+).rejects.toThrow('requires api');
 });
 
 it('registers event listeners', async () => {
-  const api = createMockAPI();
-  const elb = createMockElb();
+const api = createMockAPI();
+const elb = createMockElb();
 
-  await sourceEventAPI(
-    { settings: { captureInteractions: true } },
-    { elb, api }
-  );
+await sourceEventAPI(
+  { settings: { captureInteractions: true } },
+  { elb, api }
+);
 
-  expect(api.on).toHaveBeenCalledWith('userAction', expect.any(Function));
+expect(api.on).toHaveBeenCalledWith('userAction', expect.any(Function));
 });
 
 it('transforms and forwards events', async () => {
-  const api = createMockAPI();
-  const elb = createMockElb();
+const api = createMockAPI();
+const elb = createMockElb();
 
-  await sourceEventAPI({ settings: {} }, { elb, api });
+await sourceEventAPI({ settings: {} }, { elb, api });
 
-  // Simulate event
-  const handler = api.on.mock.calls[0][1];
-  handler({ action: 'click' });
+// Simulate event
+const handler = api.on.mock.calls[0][1];
+handler({ action: 'click' });
 
-  expect(elb).toHaveBeenCalledWith('app interaction', { action: 'click' });
+expect(elb).toHaveBeenCalledWith('app interaction', { action: 'click' });
 });
 
 it('cleans up on destroy', async () => {
-  const api = createMockAPI();
-  const elb = createMockElb();
+const api = createMockAPI();
+const elb = createMockElb();
 
-  const source = await sourceEventAPI({ settings: {} }, { elb, api });
-  await source.destroy?.();
+const source = await sourceEventAPI({ settings: {} }, { elb, api });
+await source.destroy?.();
 
-  expect(api.off).toHaveBeenCalled();
+expect(api.off).toHaveBeenCalled();
 });
 });
 `}
@@ -369,12 +369,12 @@ When the external API isn't immediately available:
 <CodeBox
   code={`async function waitForAPI<T>(getter: () => T | null): Promise<T> {
 return new Promise((resolve) => {
-  const check = () => {
-    const instance = getter();
-    if (instance) resolve(instance);
-    else setTimeout(check, 100);
-  };
-  check();
+const check = () => {
+  const instance = getter();
+  if (instance) resolve(instance);
+  else setTimeout(check, 100);
+};
+check();
 });
 }
 

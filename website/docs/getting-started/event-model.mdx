@@ -51,31 +51,31 @@ static, their content can be defined dynamically with different value types.
   code={`{
 name: 'promotion view', // Name as a combination of entity and action
 data: {
-  // Arbitrary properties related to the entity
-  name: 'Setting up tracking easily',
-  interactive: false,
+// Arbitrary properties related to the entity
+name: 'Setting up tracking easily',
+interactive: false,
 },
 context: {
-  // Provides additional information about the state during the event
-  stage: ['learning', 1], // A logical funnel stage
-  test: ['engagement', 0], // Key, [value, order]
+// Provides additional information about the state during the event
+stage: ['learning', 1], // A logical funnel stage
+test: ['engagement', 0], // Key, [value, order]
 },
 globals: {
-  // General properties that apply to every event
-  language: 'en',
+// General properties that apply to every event
+language: 'en',
 },
 custom: {}, // Additional space for individual setups
 user: {
-  // Contains user identifiers for different identification levels
-  // Require consent and set manually for sessions building and cross-device
-  id: 'us3r1d',
-  device: 'c00k131d',
-  session: 's3ss10n1d',
-  // More user-related properties, see below
+// Contains user identifiers for different identification levels
+// Require consent and set manually for sessions building and cross-device
+id: 'us3r1d',
+device: 'c00k131d',
+session: 's3ss10n1d',
+// More user-related properties, see below
 },
 nested: [
-  // All nested entities within the main entity
-  { type: 'github', data: { repo: 'walkerOS' } },
+// All nested entities within the main entity
+{ type: 'github', data: { repo: 'walkerOS' } },
 ],
 consent: { functional: true, marketing: true }, // Status of the granted consent state(s)
 id: '1647261462000-01b5e2-2', // Timestamp, group & count of the event
@@ -87,15 +87,15 @@ timing: 3.14, // Duration how long it took to trigger this event
 group: '01b5e2', // Random identifier for all events during a run
 count: 2, // Incremental counter of the events in the same run
 version: {
-  // Information about the used implementation setup
-  source: 'X.X.X', // Semantic version of the used source
-  tagging: 42, // A version number of the then-used tagging status
+// Information about the used implementation setup
+source: 'X.X.X', // Semantic version of the used source
+tagging: 42, // A version number of the then-used tagging status
 },
 source: {
-  // Details about the origin of the event
-  type: 'web', // Source type of the event (also app, server, or custom one)
-  id: 'https://github.com/elbwalker/walkerOS', // Source of the event's origin
-  previous_id: 'https://www.elbwalker.com/', // Previous source (like referrer)
+// Details about the origin of the event
+type: 'web', // Source type of the event (also app, server, or custom one)
+id: 'https://github.com/elbwalker/walkerOS', // Source of the event's origin
+previous_id: 'https://www.elbwalker.com/', // Previous source (like referrer)
 },
 };
 
@@ -161,30 +161,35 @@ This enables cross-device tracking or linking sessions for a cohesive user
 journey. On a server-side setup, a temporarily `hash` value is added. Any other
 user-related information can also be added. A few values are recommended:
 
-```ts
-interface User extends Properties {
-  // IDs
-  id?: string; // User ID
-  device?: string; // Typically a cookie or local storage ID
-  session?: string; // Session ID
-  hash?: string; // Temporary hash for server-side setups
-  // User related
-  userAgent?: string; // Full user agent string
-  browser?: string; // Browser name
-  browserVersion?: string; // Browser version
-  deviceType?: string; // Type of device like, mobile, desktop, tablet
-  language?: string; // User's language settings
-  country?: string; // Country code
-  region?: string; // Region code
-  city?: string; // City name
-  timezone?: string; // Timezone
-  os?: string; // Operating system
-  osVersion?: string; // Operating system version
-  screenSize?: string; // Screen size
-  ip?: string; // IP address
-  internal?: boolean; // Internal user flag
-}
-```
+<CodeBox
+  code={`interface User extends Properties {
+// IDs
+id?: string; // User ID
+device?: string; // Typically a cookie or local storage ID
+session?: string; // Session ID
+hash?: string; // Temporary hash for server-side setups
+// User related
+userAgent?: string; // Full user agent string
+browser?: string; // Browser name
+browserVersion?: string; // Browser version
+deviceType?: string; // Type of device like, mobile, desktop, tablet
+language?: string; // User's language settings
+country?: string; // Country code
+region?: string; // Region code
+city?: string; // City name
+timezone?: string; // Timezone
+os?: string; // Operating system
+osVersion?: string; // Operating system version
+screenSize?: string; // Screen size
+ip?: string; // IP address
+internal?: boolean; // Internal user flag
+}`}
+  disabled
+  language="typescript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ### Consent
 

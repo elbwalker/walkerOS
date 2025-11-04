@@ -34,16 +34,16 @@ import { destinationFirehose } from '@walkeros/server-destination-aws';
 
 elb('walker destination', destinationFirehose, {
 settings: {
-  firehose: {
-    streamName: 'your-firehose-stream-name',
-    region: 'eu-central-1',
-    config: {
-      credentials: {
-        accessKeyId: 'your-access-key-id',
-        secretAccessKey: 'your-secret-access-key',
-      },
+firehose: {
+  streamName: 'your-firehose-stream-name',
+  region: 'eu-central-1',
+  config: {
+    credentials: {
+      accessKeyId: 'your-access-key-id',
+      secretAccessKey: 'your-secret-access-key',
     },
   },
+},
 },
 });
 `}

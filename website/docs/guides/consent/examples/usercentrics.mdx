@@ -22,29 +22,29 @@ eventually call the `walker consent` command:
 <CodeBox
   code={`window.addEventListener('ucEvent', function (event) {
 function ucStates(e) {
-  if (e.event != 'consent_status') return;
-  // if (e.type != 'explicit') return; // Process only explicit consent
+if (e.event != 'consent_status') return;
+// if (e.type != 'explicit') return; // Process only explicit consent
 
-  var cat = 'ucCategory';
-  if (Object.values(e[cat]).every((val) => typeof val === 'boolean'))
-    return e[cat]; // Choice by group
+var cat = 'ucCategory';
+if (Object.values(e[cat]).every((val) => typeof val === 'boolean'))
+  return e[cat]; // Choice by group
 
-  // Individual choice
-  const obj = {};
+// Individual choice
+const obj = {};
 
-  // Services
-  for (const key in e) {
-    if (!['action', 'event', 'type', cat].includes(key)) {
-      obj[key.toLowerCase().replace(/ /g, '_')] = e[key];
-    }
+// Services
+for (const key in e) {
+  if (!['action', 'event', 'type', cat].includes(key)) {
+    obj[key.toLowerCase().replace(/ /g, '_')] = e[key];
   }
+}
 
-  // Groups
-  for (const key in e[cat]) {
-    if (typeof e[cat][key] === 'boolean') obj[key] = e[cat][key];
-  }
+// Groups
+for (const key in e[cat]) {
+  if (typeof e[cat][key] === 'boolean') obj[key] = e[cat][key];
+}
 
-  return obj;
+return obj;
 }
 
 const state = ucStates(event.detail);

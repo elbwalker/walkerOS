@@ -4,8 +4,7 @@ title: Commands
 description: Browser source API methods and commands
 path: /docs/sources/web/browser/commands
 sidebar\_position: 3
-package: '@walkeros/web-source-browser'
----------------------------------------
+--------------------
 
 import Link from '@docusaurus/Link';
 
@@ -76,18 +75,18 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector } = await startFlow({
 sources: {
-  browser: {
-    code: sourceBrowser,
-    config: {
-      settings: {
-        elb: 'elb', // Name to assign the elb function to the window
-        elbLayer: true, // Enable elbLayer for async command queuing
-        pageview: true, // Trigger a page view event by default
-        prefix: 'data-elb', // Attributes prefix used by the walker for DOM scanning
-        session: true, // Enable session tracking
-      },
+browser: {
+  code: sourceBrowser,
+  config: {
+    settings: {
+      elb: 'elb', // Name to assign the elb function to the window
+      elbLayer: true, // Enable elbLayer for async command queuing
+      pageview: true, // Trigger a page view event by default
+      prefix: 'data-elb', // Attributes prefix used by the walker for DOM scanning
+      session: true, // Enable session tracking
     },
   },
+},
 },
 });
 `}

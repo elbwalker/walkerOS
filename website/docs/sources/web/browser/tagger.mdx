@@ -427,6 +427,26 @@ returns the final attributes object.
   code={`// For product cards with nearest entity tracking only
 function ProductCard({ product }) {
 return (
+<div
+  {...tagger('product')
+    .data({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      category: product.category
+    })
+    .action('click', 'select') // Only tracks the product entity
+    .get()}
+>
+  {product.name}
+</div>
+);
+}
+
+// For product cards that also need page context tracking
+function ProductCardWithContext({ product }) {
+return (
+<div className="page-section" data-elb="page" data-elb-page="section:products">
   <div
     {...tagger('product')
       .data({
@@ -435,32 +455,12 @@ return (
         price: product.price,
         category: product.category
       })
-      .action('click', 'select') // Only tracks the product entity
+      .actions('click', 'select') // Uses data-elbactions
       .get()}
   >
     {product.name}
   </div>
-);
-}
-
-// For product cards that also need page context tracking
-function ProductCardWithContext({ product }) {
-return (
-  <div className="page-section" data-elb="page" data-elb-page="section:products">
-    <div
-      {...tagger('product')
-        .data({
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          category: product.category
-        })
-        .actions('click', 'select') // Uses data-elbactions
-        .get()}
-    >
-      {product.name}
-    </div>
-  </div>
+</div>
 );
 }
 `}
@@ -477,19 +477,19 @@ return (
   code={`// For cart items that need both entity and data attributes
 function CartItem({ item }) {
 return (
-  <div
-    {...tagger()
-      .entity('cart')
-      .data({
-        productId: item.id,
-        quantity: item.quantity,
-        price: item.price
-      })
-      .action('click', 'remove')
-      .get()}
-  >
-    {item.name}
-  </div>
+<div
+  {...tagger()
+    .entity('cart')
+    .data({
+      productId: item.id,
+      quantity: item.quantity,
+      price: item.price
+    })
+    .action('click', 'remove')
+    .get()}
+>
+  {item.name}
+</div>
 );
 }
 `}
@@ -506,9 +506,9 @@ return (
   code={`// Reusable tracking function
 function trackComponent(type, data, actions = {}) {
 return tagger(type)
-  .data(data)
-  .action(actions)
-  .get();
+.data(data)
+.action(actions)
+.get();
 }
 
 // Usage

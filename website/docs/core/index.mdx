@@ -20,9 +20,7 @@ data manipulation, validation, mapping, and more.
 
 Import the core utilities directly from the `@walkeros/core` package:
 
-```ts
-import { assign, anonymizeIP, getMappingValue } from '@walkeros/core';
-```
+<CodeBox code={`import { assign, anonymizeIP, getMappingValue } from '@walkeros/core';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight={{ min: 100, max: 600 }} />
 
 ## Data Manipulation
 
@@ -32,19 +30,24 @@ import { assign, anonymizeIP, getMappingValue } from '@walkeros/core';
 advanced merging capabilities. It has special behavior for arrays: when merging,
 it concatenates arrays from both objects, removing duplicates.
 
-```ts
-interface AssignOptions {
-  merge?: boolean; // Merge array properties (default: true)
-  shallow?: boolean; // Create shallow copy (default: true)
-  extend?: boolean; // Extend with new properties (default: true)
+<CodeBox
+  code={`interface AssignOptions {
+merge?: boolean; // Merge array properties (default: true)
+shallow?: boolean; // Create shallow copy (default: true)
+extend?: boolean; // Extend with new properties (default: true)
 }
 
 const obj1 = { a: 1, b: [1, 2] };
 const obj2 = { b: [2, 3], c: 3 };
 
 assign(obj1, obj2); // Returns { a: 1, b: [1, 2, 3], c: 3 }
-assign(obj1, obj2, { merge: false }); // Returns { a: 1, b: [2, 3], c: 3 }
-```
+assign(obj1, obj2, { merge: false }); // Returns { a: 1, b: [2, 3], c: 3 }`}
+  disabled
+  language="typescript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ### Path Operations
 
@@ -159,27 +162,32 @@ extracts values from events using
 
 <Link to="/docs/mapping">mapping configurations</Link>.
 
-```ts
-// Simple path mapping
+<CodeBox
+  code={`// Simple path mapping
 await getMappingValue(event, 'data.productId');
 
 // Complex mapping with conditions and loops
 const mapping = {
-  map: {
-    orderId: 'data.id',
-    products: {
-      loop: [
-        'nested',
-        {
-          condition: (entity) => entity.entity === 'product',
-          map: { id: 'data.id', name: 'data.name' },
-        },
-      ],
-    },
+map: {
+  orderId: 'data.id',
+  products: {
+    loop: [
+      'nested',
+      {
+        condition: (entity) => entity.entity === 'product',
+        map: { id: 'data.id', name: 'data.name' },
+      },
+    ],
   },
+},
 };
-await getMappingValue(event, mapping);
-```
+await getMappingValue(event, mapping);`}
+  disabled
+  language="typescript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ### getMappingEvent
 

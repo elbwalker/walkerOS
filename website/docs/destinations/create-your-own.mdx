@@ -30,8 +30,8 @@ push: PushFn<Settings>;
 type?: string;
 init?: InitFn<Settings>;
 on?(
-  event: 'consent' | 'session' | 'ready' | 'run',
-  context?: unknown,
+event: 'consent' | 'session' | 'ready' | 'run',
+context?: unknown,
 ): void | Promise<void>;
 }
 `}
@@ -52,9 +52,9 @@ the destination's configuration.
   code={`type PushFn<Settings> = (
 event: WalkerOS.Event,
 context: {
-  config: {
-    settings?: Settings;
-  };
+config: {
+  settings?: Settings;
+};
 },
 ) => void;
 `}
@@ -83,17 +83,17 @@ type: 'webhook',
 config: {},
 
 push(event, { config }) {
-  const { settings } = config;
+const { settings } = config;
 
-  // 3. Access your settings
-  if (!settings?.url) return;
+// 3. Access your settings
+if (!settings?.url) return;
 
-  // 4. Send the event
-  fetch(settings.url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(event),
-  }).catch(console.error);
+// 4. Send the event
+fetch(settings.url, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(event),
+}).catch(console.error);
 },
 };
 `}
@@ -139,14 +139,14 @@ type: 'webhook-consent',
 config: {},
 
 on(event, context) {
-  if (event === 'consent') {
-    console.log('Consent updated:', context);
-    // React to consent changes - maybe clear cookies if consent withdrawn
-  }
+if (event === 'consent') {
+  console.log('Consent updated:', context);
+  // React to consent changes - maybe clear cookies if consent withdrawn
+}
 },
 
 push(event, { config }) {
-  console.log('Event:', event);
+console.log('Event:', event);
 },
 };
 `}
@@ -168,14 +168,14 @@ import { destinationWebhook } from './destinationWebhook';
 
 const { elb } = await startFlow({
 destinations: {
-  myWebhook: {
-    destination: destinationWebhook,
-    config: {
-      settings: {
-        url: 'https://api.example.com/events',
-      },
+myWebhook: {
+  destination: destinationWebhook,
+  config: {
+    settings: {
+      url: 'https://api.example.com/events',
     },
   },
+},
 },
 });
 `}
@@ -196,44 +196,44 @@ type: 'webhook-session',
 config: {},
 
 on(event, context) {
-  switch (event) {
-    case 'session':
-      // New session started
-      console.log('New session:', context);
-      // Could initialize session-specific tracking
-      break;
+switch (event) {
+  case 'session':
+    // New session started
+    console.log('New session:', context);
+    // Could initialize session-specific tracking
+    break;
 
-    case 'consent':
-      // Handle consent changes
-      const consent = context as { marketing?: boolean; analytics?: boolean };
-      if (!consent?.marketing) {
-        // Clear marketing-related data if consent withdrawn
-        console.log('Marketing consent withdrawn, clearing data');
-      }
-      break;
+  case 'consent':
+    // Handle consent changes
+    const consent = context as { marketing?: boolean; analytics?: boolean };
+    if (!consent?.marketing) {
+      // Clear marketing-related data if consent withdrawn
+      console.log('Marketing consent withdrawn, clearing data');
+    }
+    break;
 
-    case 'ready':
-      // Collector is ready
-      console.log('Starting destination services');
-      break;
+  case 'ready':
+    // Collector is ready
+    console.log('Starting destination services');
+    break;
 
-    case 'run':
-      // Collector resumed processing
-      console.log('Collector resumed, processing queued events');
-      break;
-  }
+  case 'run':
+    // Collector resumed processing
+    console.log('Collector resumed, processing queued events');
+    break;
+}
 },
 
 push(event, { config }) {
-  // Regular event processing
-  const { settings } = config;
-  if (!settings?.url) return;
+// Regular event processing
+const { settings } = config;
+if (!settings?.url) return;
 
-  fetch(settings.url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(event),
-  }).catch(console.error);
+fetch(settings.url, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(event),
+}).catch(console.error);
 },
 };
 `}
@@ -256,9 +256,9 @@ import type { WebhookSettings } from './destinationWebhook';
 
 declare global {
 namespace WalkerOS {
-  interface Destinations {
-    webhook: Destination.Config<WebhookSettings>;
-  }
+interface Destinations {
+  webhook: Destination.Config<WebhookSettings>;
+}
 }
 }
 `}
@@ -292,7 +292,7 @@ import type { DestinationWeb } from '@walkeros/web-core';
 
 export interface Env extends DestinationWeb.Env {
 window: {
-  gtag: (command: string, ...args: unknown[]) => void;
+gtag: (command: string, ...args: unknown[]) => void;
 };
 }
 
@@ -336,15 +336,15 @@ type: 'custom',
 config: {},
 
 async init({ config, env }) {
-  // Initialize SDK using env, falls back to real APIs
-  const { window } = getEnv(env);
-  window.customAPI('init');
-  return config;
+// Initialize SDK using env, falls back to real APIs
+const { window } = getEnv(env);
+window.customAPI('init');
+return config;
 },
 
 push(event, { config, env }) {
-  const { window } = getEnv(env);
-  window.customAPI(event.name);
+const { window } = getEnv(env);
+window.customAPI(event.name);
 },
 };
 `}
@@ -365,7 +365,7 @@ import type { Env } from '../types';
 
 export const push: Env = {
 window: {
-  customAPI: jest.fn(),
+customAPI: jest.fn(),
 },
 };
 `}
@@ -397,12 +397,12 @@ import { examples } from './index';
 
 describe('My Destination', () => {
 it('calls custom API', async () => {
-  // Clone the example env to avoid mutations
-  const testEnv = clone(examples.env.push);
+// Clone the example env to avoid mutations
+const testEnv = clone(examples.env.push);
 
-  await destination.push(event, { config, env: testEnv });
+await destination.push(event, { config, env: testEnv });
 
-  expect(testEnv.window.customAPI).toHaveBeenCalledWith('page view');
+expect(testEnv.window.customAPI).toHaveBeenCalledWith('page view');
 });
 });
 `}

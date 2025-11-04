@@ -20,9 +20,7 @@ cryptographic hashing, and other backend operations.
 
 Import server utilities from the `@walkeros/server-core` package:
 
-```ts
-import { sendServer, getHashServer } from '@walkeros/server-core';
-```
+<CodeBox code={`import { sendServer, getHashServer } from '@walkeros/server-core';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight={{ min: 100, max: 600 }} />
 
 ## Server Communication
 
@@ -34,24 +32,24 @@ sends HTTP requests using Node.js built-in modules (`http`/`https`).
 <CodeBox
   code={`// Simple POST request
 const response = await sendServer('https://api.example.com/events', {
-  name: 'page view',
-  data: { url: '/home' },
+name: 'page view',
+data: { url: '/home' },
 });
 
 // With custom options
 const response = await sendServer(url, data, {
-  method: 'PUT',
-  headers: {
-    Authorization: 'Bearer token',
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000, // 10 seconds
+method: 'PUT',
+headers: {
+  Authorization: 'Bearer token',
+  'Content-Type': 'application/json',
+},
+timeout: 10000, // 10 seconds
 });
 
 if (response.ok) {
-  console.log('Data sent successfully:', response.data);
+console.log('Data sent successfully:', response.data);
 } else {
-  console.error('Send failed:', response.error);
+console.error('Send failed:', response.error);
 }
 `}
   disabled
@@ -63,23 +61,33 @@ if (response.ok) {
 
 ### SendServerOptions
 
-```ts
-interface SendServerOptions {
-  headers?: Record<string, string>; // Custom HTTP headers
-  method?: string; // HTTP method (default: 'POST')
-  timeout?: number; // Request timeout in milliseconds (default: 5000)
-}
-```
+<CodeBox
+  code={`interface SendServerOptions {
+headers?: Record<string, string>; // Custom HTTP headers
+method?: string; // HTTP method (default: 'POST')
+timeout?: number; // Request timeout in milliseconds (default: 5000)
+}`}
+  disabled
+  language="typescript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ### SendResponse
 
-```ts
-interface SendResponse {
-  ok: boolean; // Indicates if the request was successful (2xx status)
-  data?: unknown; // Parsed response data (if available)
-  error?: string; // Error message (if request failed)
-}
-```
+<CodeBox
+  code={`interface SendResponse {
+ok: boolean; // Indicates if the request was successful (2xx status)
+data?: unknown; // Parsed response data (if available)
+error?: string; // Error message (if request failed)
+}`}
+  disabled
+  language="typescript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ## Cryptographic Operations
 
@@ -135,8 +143,8 @@ const anonymousUserId = await getHashServer(
 const processedEvent = {
 ...event,
 user: {
-  ...event.user,
-  id: anonymousUserId,
+...event.user,
+id: anonymousUserId,
 },
 };
 
@@ -145,10 +153,10 @@ const result = await sendServer(
 'https://analytics.example.com/collect',
 processedEvent,
 {
-  headers: {
-    'X-API-Key': process.env.ANALYTICS_API_KEY,
-  },
-  timeout: 8000,
+headers: {
+  'X-API-Key': process.env.ANALYTICS_API_KEY,
+},
+timeout: 8000,
 },
 );
 

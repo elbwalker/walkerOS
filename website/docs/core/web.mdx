@@ -21,9 +21,7 @@ information, storage, sessions, and web-based communication.
 
 Import web utilities from the `@walkeros/web-core` package:
 
-```ts
-import { getAttribute, sendWeb, sessionStart } from '@walkeros/web-core';
-```
+<CodeBox code={`import { getAttribute, sendWeb, sessionStart } from '@walkeros/web-core';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight={{ min: 100, max: 600 }} />
 
 ## DOM Utilities
 
@@ -373,35 +371,43 @@ navigator.userAgent + navigator.language + screen.width,
 
 ### SendWebOptions
 
-```ts
-interface SendWebOptions {
-  headers?: Record<string, string>;
-  method?: string; // Default: 'POST'
-  transport?: 'fetch' | 'beacon' | 'xhr'; // Default: 'fetch'
+<CodeBox
+  code={`interface SendWebOptions {
+headers?: Record<string, string>;
+method?: string; // Default: 'POST'
+transport?: 'fetch' | 'beacon' | 'xhr'; // Default: 'fetch'
 }
 
 interface SendWebOptionsFetch extends SendWebOptions {
-  credentials?: 'omit' | 'same-origin' | 'include';
-  noCors?: boolean;
-}
-```
+credentials?: 'omit' | 'same-origin' | 'include';
+noCors?: boolean;
+}`}
+  disabled
+  language="typescript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ### SessionConfig
 
-```ts
-interface SessionConfig {
-  storage?: boolean; // Enable storage persistence
-  domain?: string; // Cookie domain
-  maxAge?: number; // Session duration in minutes
-  sampling?: number; // Sampling rate (0-1)
-}
-```
+<CodeBox
+  code={`interface SessionConfig {
+storage?: boolean; // Enable storage persistence
+domain?: string; // Cookie domain
+maxAge?: number; // Session duration in minutes
+sampling?: number; // Sampling rate (0-1)
+}`}
+  disabled
+  language="typescript"
+  label="Code Example"
+  showHeader={false}
+  autoHeight={{ min: 100, max: 600 }}
+/>
 
 ### StorageType
 
-```ts
-type StorageType = 'localStorage' | 'sessionStorage' | 'cookie';
-```
+<CodeBox code={`type StorageType = 'localStorage' | 'sessionStorage' | 'cookie';`} disabled language="typescript" label="Code Example" showHeader={false} autoHeight={{ min: 100, max: 600 }} />
 
 ## Usage Notes
 

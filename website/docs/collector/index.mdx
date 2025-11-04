@@ -65,23 +65,23 @@ const { collector, elb } = await startFlow({
 run: true,
 consent: { functional: true },
 sources: {
-  browser: {
-    code: sourceBrowser,
-    config: {
-      settings: {
-        pageview: true,
-        session: true,
-      },
+browser: {
+  code: sourceBrowser,
+  config: {
+    settings: {
+      pageview: true,
+      session: true,
     },
   },
 },
+},
 destinations: {
-  console: {
-    code: {
-      type: 'console',
-      push: (event) => console.log('Event:', event),
-    },
+console: {
+  code: {
+    type: 'console',
+    push: (event) => console.log('Event:', event),
   },
+},
 },
 });
 `}
@@ -107,32 +107,32 @@ const { collector, elb } = await startFlow({
 run: true,
 consent: { functional: true },
 sources: {
-  browser: {
-    code: sourceBrowser,
-    config: {
-      settings: {
-        pageview: true,
-        session: true,
-      },
+browser: {
+  code: sourceBrowser,
+  config: {
+    settings: {
+      pageview: true,
+      session: true,
     },
   },
 },
+},
 destinations: {
-  api: {
-    code: destinationAPI,
-    config: {
-      settings: {
-        url: 'https://analytics.example.com/events',
-      },
+api: {
+  code: destinationAPI,
+  config: {
+    settings: {
+      url: 'https://analytics.example.com/events',
     },
   },
+},
 },
 verbose: true,
 onError: (error: unknown) => {
-  console.error('Collector error:', error);
+console.error('Collector error:', error);
 },
 onLog: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => {
-  console.log(\`[\${level}] \${message}\`);
+console.log(\`[\${level}] \${message}\`);
 },
 });
 `}

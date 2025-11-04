@@ -100,22 +100,22 @@ destinations: [destinationGoogleGA4],
 <CodeBox
   code={`const { elb } = await startFlow({
 sources: {
-  browser: {
-    code: sourceBrowser,
-    config: {
-      settings: { scope: document.body },
+browser: {
+  code: sourceBrowser,
+  config: {
+    settings: { scope: document.body },
+  },
+},
+},
+destinations: {
+gtag: {
+  code: destinationGtag,
+  config: {
+    settings: {
+      ga4: { measurementId: 'G-XXXXXXXXXX' },
     },
   },
 },
-destinations: {
-  gtag: {
-    code: destinationGtag,
-    config: {
-      settings: {
-        ga4: { measurementId: 'G-XXXXXXXXXX' },
-      },
-    },
-  },
 },
 });
 `}
@@ -157,22 +157,22 @@ Configure all sources and destinations in a single `startFlow` call:
 <CodeBox
   code={`const { elb } = await startFlow({
 sources: {
-  browser: {
-    code: sourceBrowser,
-    config: {
-      settings: { scope: document.body, session: true },
+browser: {
+  code: sourceBrowser,
+  config: {
+    settings: { scope: document.body, session: true },
+  },
+},
+},
+destinations: {
+gtag: {
+  code: destinationGtag,
+  config: {
+    settings: {
+      ga4: { measurementId: 'G-XXXXXXXXXX' },
     },
   },
 },
-destinations: {
-  gtag: {
-    code: destinationGtag,
-    config: {
-      settings: {
-        ga4: { measurementId: 'G-XXXXXXXXXX' },
-      },
-    },
-  },
 },
 });
 `}

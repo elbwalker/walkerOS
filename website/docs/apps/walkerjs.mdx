@@ -116,10 +116,10 @@ run: true, // Auto-initialize (default: true)
 
 // Browser source settings
 browser: {
-  run: true, // Auto-start DOM tracking
-  session: true, // Enable session tracking
-  scope: document.body, // Tracking scope
-  pageview: true, // Enable automatic page views
+run: true, // Auto-start DOM tracking
+session: true, // Enable session tracking
+scope: document.body, // Tracking scope
+pageview: true, // Enable automatic page views
 },
 
 // DataLayer integration
@@ -132,13 +132,13 @@ dataLayer: true, // Enable dataLayer
 
 // Collector configuration
 collector: {
-  consent: { functional: true }, // Default consent state
-  destinations: {
-    // Your destinations here
-    console: {
-      push: (event) => console.log('Event:', event),
-    },
+consent: { functional: true }, // Default consent state
+destinations: {
+  // Your destinations here
+  console: {
+    push: (event) => console.log('Event:', event),
   },
+},
 },
 };`}
   disabled
@@ -230,8 +230,8 @@ dataLayer: true, // Uses window.dataLayer by default
 dataLayer.push({
 event: 'purchase',
 ecommerce: {
-  transaction_id: '12345',
-  value: 25.42,
+transaction_id: '12345',
+value: 25.42,
 },
 });`}
   disabled
@@ -280,13 +280,13 @@ Use walker.js programmatically in applications:
 
 const { collector, elb } = await createWalkerjs({
 collector: {
-  destinations: {
-    console: { push: console.log },
-  },
+destinations: {
+  console: { push: console.log },
+},
 },
 browser: {
-  session: true,
-  pageview: true,
+session: true,
+pageview: true,
 },
 });`}
   disabled
@@ -303,23 +303,23 @@ Configure multiple destinations for your events:
 <CodeBox
   code={`window.elbConfig = {
 collector: {
-  destinations: {
-    // Console logging for development
-    console: {
-      push: (event) => console.log('Walker.js Event:', event),
-    },
+destinations: {
+  // Console logging for development
+  console: {
+    push: (event) => console.log('Walker.js Event:', event),
+  },
 
-    // Custom API endpoint
-    api: {
-      push: async (event) => {
-        await fetch('/api/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(event),
-        });
-      },
+  // Custom API endpoint
+  api: {
+    push: async (event) => {
+      await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event),
+      });
     },
   },
+},
 },
 };`}
   disabled

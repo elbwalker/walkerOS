@@ -40,16 +40,16 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector, elb } = await startFlow({
 sources: {
-  browser: {
-    code: sourceBrowser,
-    config: {
-      settings: {
-        pageview: true,
-        session: true,
-        prefix: 'data-elb',
-      },
+browser: {
+  code: sourceBrowser,
+  config: {
+    settings: {
+      pageview: true,
+      session: true,
+      prefix: 'data-elb',
     },
   },
+},
 },
 });
 `}

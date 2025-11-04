@@ -54,12 +54,12 @@ Destinations are typically configured during collector initialization:
 <CodeBox
   code={`const { collector, elb } = await startFlow({
 destinations: {
-  gtag: {
-    code: destinationGtag,
-    config: {
-      /* custom config */
-    },
+gtag: {
+  code: destinationGtag,
+  config: {
+    /* custom config */
   },
+},
 },
 });
 `}
@@ -208,9 +208,9 @@ User IDs are added to each event.
   code={`{
 "event": "entity action",
 "user": {
-  "id": "us3r",
-  "device": "c00k13",
-  "session": "s3ss10n"
+"id": "us3r",
+"device": "c00k13",
+"session": "s3ss10n"
 }
 // other properties omitted
 }
@@ -358,10 +358,10 @@ Add hooks during collector initialization or via the `hook` command:
   code={`// Add hooks during initialization
 const { collector } = await startFlow({
 hooks: {
-  prePush: (params, ...args) => {
-    window.elbTimer = Date.now();
-    return params.fn(...args);
-  },
+prePush: (params, ...args) => {
+  window.elbTimer = Date.now();
+  return params.fn(...args);
+},
 },
 });
 

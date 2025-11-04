@@ -58,26 +58,26 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 // Initialize walkerOS
 export async function initializeWalker(): Promise<void> {
 const { collector, elb } = await startFlow({
-  sources: {
-    browser: {
-      code: sourceBrowser,
-      config: {
-        settings: {
-          pageview: true,
-          session: true,
-          elb: 'elb',
-        },
+sources: {
+  browser: {
+    code: sourceBrowser,
+    config: {
+      settings: {
+        pageview: true,
+        session: true,
+        elb: 'elb',
       },
     },
   },
-  destinations: {
-    console: {
-      code: {
-        type: 'console',
-        push: (event) => console.log('Event:', event),
-      },
+},
+destinations: {
+  console: {
+    code: {
+      type: 'console',
+      push: (event) => console.log('Event:', event),
     },
   },
+},
 });
 }
 `}

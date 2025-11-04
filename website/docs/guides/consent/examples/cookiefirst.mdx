@@ -21,37 +21,37 @@ calls the `walker consent` command:
 <CodeBox
   code={`(function () {
 function handleConsent(consent) {
-  if (!consent) return; // Process only explicit consent
+if (!consent) return; // Process only explicit consent
 
-  // Renaming of the categories
-  const mapping = {
-    necessary: 'functional',
-    functional: 'functional',
-    performance: 'analytics',
-    advertising: 'marketing',
-  };
+// Renaming of the categories
+const mapping = {
+  necessary: 'functional',
+  functional: 'functional',
+  performance: 'analytics',
+  advertising: 'marketing',
+};
 
-  const state = {};
-  Object.keys(consent).forEach(function (category) {
-    state[mapping[category] || category] = consent[category];
-  });
+const state = {};
+Object.keys(consent).forEach(function (category) {
+  state[mapping[category] || category] = consent[category];
+});
 
-  elb('walker consent', state);
+elb('walker consent', state);
 }
 
 if (window.CookieFirst) {
-  // Already loaded
-  handleConsent(CookieFirst.consent);
+// Already loaded
+handleConsent(CookieFirst.consent);
 } else {
-  // On load
-  window.addEventListener('cf_init', function () {
-    handleConsent(CookieFirst.consent);
-  });
+// On load
+window.addEventListener('cf_init', function () {
+  handleConsent(CookieFirst.consent);
+});
 }
 
 // On change
 window.addEventListener('cf_consent', function (e) {
-  handleConsent(e.detail);
+handleConsent(e.detail);
 });
 })();
 `}
