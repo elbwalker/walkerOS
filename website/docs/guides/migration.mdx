@@ -32,8 +32,7 @@ packages.
     "@elbwalker/walker.js": "^2.0.0",
     "@elbwalker/destination-web-google-ga4": "^2.0.0"
   }
-}
-`}
+}`}
   language="json"
 />
 
@@ -46,8 +45,7 @@ packages.
     "@walkeros/web-source-browser": "^0.0.7",
     "@walkeros/web-destination-gtag": "^0.0.7"
   }
-}
-`}
+}`}
   language="json"
 />
 
@@ -58,8 +56,7 @@ packages.
 <CodeSnippet
   code={`import { Walkerjs } from '@elbwalker/walker.js';
 import { destinationGoogleGA4 } from '@elbwalker/destination-web-google-ga4';
-import type { WalkerOS } from '@elbwalker/types';
-`}
+import type { WalkerOS } from '@elbwalker/types';`}
   language="typescript"
 />
 
@@ -69,8 +66,7 @@ import type { WalkerOS } from '@elbwalker/types';
   code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
-import type { WalkerOS } from '@walkeros/core';
-`}
+import type { WalkerOS } from '@walkeros/core';`}
   language="typescript"
 />
 
@@ -81,8 +77,7 @@ import type { WalkerOS } from '@walkeros/core';
 <CodeSnippet
   code={`const walker = Walkerjs({
 destinations: [destinationGoogleGA4],
-});
-`}
+});`}
   language="typescript"
 />
 
@@ -108,8 +103,7 @@ config: {
 },
 },
 },
-});
-`}
+});`}
   language="typescript"
 />
 
@@ -161,8 +155,7 @@ config: {
 },
 },
 },
-});
-`}
+});`}
   language="typescript"
 />
 
@@ -230,8 +223,7 @@ Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
   <div data-elb="child" data-elbactions="click:action">
     <!-- Triggers both parent and child entities -->
   </div>
-</div>
-`}
+</div>`}
   language="html"
 />
 
@@ -245,8 +237,7 @@ Use `data-elbaction` for more precise, performance-optimized tracking:
   <div data-elb="child" data-elbaction="click:action">
     <!-- Only triggers child entity -->
   </div>
-</div>
-`}
+</div>`}
   language="html"
 />
 
@@ -273,8 +264,7 @@ The tagger also provides both methods:
 tagger().action('click', 'select').get();
 
 // All entities (data-elbactions)
-tagger().actions('click', 'select').get();
-`}
+tagger().actions('click', 'select').get();`}
   language="typescript"
 />
 
@@ -302,8 +292,7 @@ Update your HTML to use the new trigger names:
 
 <!-- After (@walkeros current) -->
 <div data-elbaction="impression:view">Single fire</div>
-<div data-elbaction="visible:track">Multiple fires</div>
-`}
+<div data-elbaction="visible:track">Multiple fires</div>`}
   language="html"
 />
 
@@ -337,7 +326,6 @@ The tagger supports both trigger types:
 tagger().action('impression', 'view').get();
 
 // Multiple visibility (fires each time visible)
-tagger().action('visible', 'track').get();
-`}
+tagger().action('visible', 'track').get();`}
   language="typescript"
 />

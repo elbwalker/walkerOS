@@ -54,8 +54,7 @@ Tag a page...
       <p data-elb-promotion="category:analytics">Analytics</p>
     </div>
   </div>
-</div>
-`}
+</div>`}
   language="html"
 />
 
@@ -106,8 +105,7 @@ type: 'web', // Source type of the event (also app, server, or custom one)
 id: 'https://github.com/elbwalker/walkerOS', // Source of the event's origin
 previous_id: 'https://www.elbwalker.com/' // Previous source (like referrer)
 }
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -179,8 +177,7 @@ shorten the implementation:
   code={`<b data-elbaction="click">
   Use the short version, instead of
   <s data-elbaction="click:click">long</s>
-</b>
-`}
+</b>`}
   language="html"
 />
 
@@ -194,8 +191,7 @@ gets triggered. Use brackets behind the trigger to pass that information.
 <CodeSnippet
   code={`<!-- specifying trigger parameters -->
 <p data-elbaction="wait(10):interested"></p>
-<p data-elbaction="pulse(10):interested"></p>
-`}
+<p data-elbaction="pulse(10):interested"></p>`}
   language="html"
 />
 
@@ -213,8 +209,7 @@ result will only include the property values from the specific entities.
   <div data-elb="bar" data-elbaction="load:hello(bar)">
     only the bar hello event fires.
   </div>
-</div>
-`}
+</div>`}
   language="html"
 />
 
@@ -228,8 +223,7 @@ bubbling-up flow, the walker still triggers the actions for you.
 <CodeSnippet
   code={`<button data-elb="product" data-elbaction="click">
   <img class="full" src="some.jpg" alt="" />
-</button>
-`}
+</button>`}
   language="html"
 />
 
@@ -250,8 +244,7 @@ hierarchically and can either be a parent or a child.
   code={`<div data-elb="info" data-elblink="details:parent">...</div>
 ...
 <div data-elblink="details:child" data-elbaction="visible">...</div>
-<p data-elblink="another:child">...</p>
-`}
+<p data-elblink="another:child">...</p>`}
   language="html"
 />
 
@@ -296,14 +289,12 @@ inside of the entity scope or a parent.
     <p data-elb-entity="key:value">...</p>
     <p data-elb-entity="foo:bar">...</p>
   </div>
-</div>
-`}
+</div>`}
   language="html"
 />
 
 <CodeSnippet
-  code={`{ data: { source: "parent", key: "value", foo: "bar", } }
-`}
+  code={`{ data: { source: "parent", key: "value", foo: "bar", } }`}
   language="javascript"
 />
 
@@ -320,8 +311,7 @@ closest ones or parent values will be preferred over the others.
     <b id="sibling" data-elbaction="click"></b>
   </div>
   <b data-elb-e="key:baz"></b>
-</div>
-`}
+</div>`}
   language="html"
 />
 
@@ -341,8 +331,7 @@ Property values will be cast to their type, supporting string, number & boolean.
   <p data-elb-types="string:text">{ string: "text" }</p>
   <p data-elb-types="int:42;float:3.14">{ int: 42, float: 3.14 }</p>
   <p data-elb-types="bool:true">{ bool: true }</p>
-</div>
-`}
+</div>`}
   language="html"
 />
 
@@ -359,8 +348,7 @@ value-split, use single quotes.
 <CodeSnippet
   code={`<!-- value wrapping with quotes -->
 <p data-elb="foo" data-elb-foo="b:a;r">{ "b": "a", "r": true }</p>
-<p data-elb="foo" data-elb-foo="b:'a;r'">{ "b": "a;r" }</p>
-`}
+<p data-elb="foo" data-elb-foo="b:'a;r'">{ "b": "a;r" }</p>`}
   language="html"
 />
 
@@ -368,8 +356,7 @@ If a single quote is part of the value, escape it with a backslash:
 
 <CodeSnippet
   code={`<!-- escaping values with backslash -->
-<p data-elb="foo" data-elb-foo="bar:it\'s escaped">{ "bar": "it's escaped" }</p>
-`}
+<p data-elb="foo" data-elb-foo="bar:it\'s escaped">{ "bar": "it's escaped" }</p>`}
   language="html"
 />
 
@@ -378,8 +365,7 @@ The semicolon can be used as a separator to list multiple values inside of a
 
 <CodeSnippet
   code={`<!-- using multiple key-value pairs at once -->
-<p data-elb="foo" data-elb-foo="a:1;b:2">{ "a": 1, "b": 2 }</p>
-`}
+<p data-elb="foo" data-elb-foo="a:1;b:2">{ "a": 1, "b": 2 }</p>`}
   language="html"
 />
 
@@ -392,8 +378,7 @@ the attribute name to access the value of the element attribute.
 <CodeSnippet
   code={`<!-- Basic usage: elb-ENTITY="KEY:#VALUE" -->
 <input type="text" value="blue" data-elb-product="color:#value"></input>
-<div data-elb-product="name:#innerHTML">Everyday Ruck Snack</div>
-`}
+<div data-elb-product="name:#innerHTML">Everyday Ruck Snack</div>`}
   language="html"
 />
 
@@ -404,8 +389,7 @@ get size:20L
   code={`<select data-elb-product="size:#selected">
   <option value="18L">18L</option>
   <option value="20L" selected="selected">20L</option>
-</select>
-`}
+</select>`}
   language="html"
 />
 
@@ -418,8 +402,7 @@ To use array types, add the `[]` suffix to a property's name, such as
   code={`<div data-elb="product">
   <p data-elb-product="size[]:s;size[]:l"></p>
   <p data-elb-product="size[]:l"></p>
-</div>
-`}
+</div>`}
   language="html"
 />
 
@@ -429,8 +412,7 @@ data: {
 size: ["s", "l"],
 },
 // ...
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -447,8 +429,7 @@ related entity. Explicitly named properties are preferred over generic ones.
     <p data-elb-generic="o:v"></p>
     <p data-elb-="o:x"></p>
   </div>
-</div>
-`}
+</div>`}
   language="html"
 />
 
@@ -467,8 +448,7 @@ g: 'v', // generic
 o: 'v' // overridden by explicit
 },
 // ...
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -483,8 +463,7 @@ define them anywhere on a page using the `data-elbglobals` attribute.
 <CodeSnippet
   code={`<div data-elbglobals="outof:scope"></div>
 
-<div data-elb="entity" data-elb-entity="foo:bar" data-elbaction="load:action" />
-`}
+<div data-elb="entity" data-elb-entity="foo:bar" data-elbaction="load:action" />`}
   language="html"
 />
 
@@ -496,8 +475,7 @@ This example will lead to the following event:
 "data": { "foo": "bar" },
 "globals": { "outof": "scope" }
 // other properties omitted
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -524,8 +502,7 @@ position, a test, or specific components for example.
       click me
     </div>
   </div>
-</div>
-`}
+</div>`}
   language="html"
 />
 
@@ -542,8 +519,7 @@ test: ["engagement", 1],
 recommendation: ["smart_ai", 0],
 },
 // other properties omitted
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -573,8 +549,7 @@ the nested array of each event. Each element is a regular entity.
   <div data-elb="daughter" data-elb-daughter="age:32">
     <div data-elb="baby" data-elb-baby="status:infant"></div>
   </div>
-</div>
-`}
+</div>`}
   language="html"
 />
 
@@ -594,8 +569,7 @@ This example will lead to the following event on load:
 { "entity": "baby", "data": { "status": "infant" } },
 ],
 // other properties omitted
-}
-`}
+}`}
   language="javascript"
 />
 

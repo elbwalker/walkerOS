@@ -27,8 +27,7 @@ values from DOM elements with enhanced handling.
 
 <CodeSnippet
   code={`const element = document.querySelector('[data-elb="product"]');
-const entityType = getAttribute(element, 'data-elb'); // Returns 'product'
-`}
+const entityType = getAttribute(element, 'data-elb'); // Returns 'product'`}
   language="javascript"
 />
 
@@ -40,8 +39,7 @@ const entityType = getAttribute(element, 'data-elb'); // Returns 'product'
 strings using specified separators.
 
 <CodeSnippet
-  code={`splitAttribute('id:123,name:shirt', ','); // Returns ['id:123', 'name:shirt']
-`}
+  code={`splitAttribute('id:123,name:shirt', ','); // Returns ['id:123', 'name:shirt']`}
   language="javascript"
 />
 
@@ -62,8 +60,7 @@ configuration strings from HTML attributes.
 
 <CodeSnippet
   code={`parseInlineConfig('{"tracking": true, "debug": false}');
-// Returns { tracking: true, debug: false }
-`}
+// Returns { tracking: true, debug: false }`}
   language="javascript"
 />
 
@@ -75,8 +72,7 @@ configuration strings from HTML attributes.
 preferred language.
 
 <CodeSnippet
-  code={`getLanguage(navigator); // Returns 'en-US' or user's language
-`}
+  code={`getLanguage(navigator); // Returns 'en-US' or user's language`}
   language="javascript"
 />
 
@@ -85,8 +81,7 @@ preferred language.
 `getTimezone(): string | undefined` gets the user's timezone from the Intl API.
 
 <CodeSnippet
-  code={`getTimezone(); // Returns 'America/New_York' or user's timezone
-`}
+  code={`getTimezone(); // Returns 'America/New_York' or user's timezone`}
   language="javascript"
 />
 
@@ -96,8 +91,7 @@ preferred language.
 dimensions.
 
 <CodeSnippet
-  code={`getScreenSize(window); // Returns '1920x1080' or current screen size
-`}
+  code={`getScreenSize(window); // Returns '1920x1080' or current screen size`}
   language="javascript"
 />
 
@@ -112,8 +106,7 @@ the user.
   code={`const promoElement = document.getElementById('promotion');
 if (isVisible(promoElement)) {
 // Element is visible on screen
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -138,8 +131,7 @@ data from browser storage with automatic type conversion.
 const userId = storageRead('walker_user_id');
 
 // Use sessionStorage
-const sessionData = storageRead('session_data', 'sessionStorage');
-`}
+const sessionData = storageRead('session_data', 'sessionStorage');`}
   language="javascript"
 />
 
@@ -156,8 +148,7 @@ storageWrite('user_preference', 'dark-mode', 30);
 storageWrite('temp_data', { id: 123 }, undefined, 'sessionStorage');
 
 // Store with custom domain for cookies
-storageWrite('tracking_id', 'abc123', 1440, 'cookie', '.example.com');
-`}
+storageWrite('tracking_id', 'abc123', 1440, 'cookie', '.example.com');`}
   language="javascript"
 />
 
@@ -167,8 +158,7 @@ storageWrite('tracking_id', 'abc123', 1440, 'cookie', '.example.com');
 
 <CodeSnippet
   code={`storageDelete('expired_data');
-storageDelete('session_temp', 'sessionStorage');
-`}
+storageDelete('session_temp', 'sessionStorage');`}
   language="javascript"
 />
 
@@ -189,8 +179,7 @@ storage: true,
 domain: '.example.com',
 maxAge: 1440, // 24 hours
 sampling: 1.0, // 100% sampling
-});
-`}
+});`}
   language="javascript"
 />
 
@@ -227,8 +216,7 @@ await sendWeb(url, data, { transport: 'xhr' });
 await sendWeb(url, data, {
 headers: { Authorization: 'Bearer token' },
 method: 'PUT',
-});
-`}
+});`}
   language="javascript"
 />
 
@@ -244,8 +232,7 @@ uses the modern Fetch API with advanced options.
 credentials: 'include',
 noCors: true,
 headers: { 'Content-Type': 'application/json' },
-});
-`}
+});`}
   language="javascript"
 />
 
@@ -258,8 +245,7 @@ Beacon API for reliable data transmission, especially during page unload.
   code={`// Reliable sending during page unload
 window.addEventListener('beforeunload', () => {
 sendWebAsBeacon('/analytics/pageview', { duration: Date.now() - startTime });
-});
-`}
+});`}
   language="javascript"
 />
 
@@ -270,8 +256,7 @@ uses XMLHttpRequest for synchronous communication.
 
 <CodeSnippet
   code={`// Synchronous request (blocks execution)
-const response = sendWebAsXhr(url, data, { method: 'POST' });
-`}
+const response = sendWebAsXhr(url, data, { method: 'POST' });`}
   language="javascript"
 />
 
@@ -288,8 +273,7 @@ const userFingerprint = await getHashWeb(
 navigator.userAgent + navigator.language + screen.width,
 16,
 );
-// Returns shortened hash like '47e0bdd10f04ef13'
-`}
+// Returns shortened hash like '47e0bdd10f04ef13'`}
   language="javascript"
 />
 

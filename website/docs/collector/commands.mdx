@@ -34,8 +34,7 @@ elb('walker destination', destinationLog);
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 elb('walker destination', destinationGtag, {
 /* custom config */
-});
-`}
+});`}
   language="javascript"
 />
 
@@ -53,8 +52,7 @@ config: {
 },
 },
 },
-});
-`}
+});`}
   language="typescript"
 />
 
@@ -69,8 +67,7 @@ common groups are functional, analytics, and marketing. Values are booleans, and
 once a value is set to `true` it's treated as consent being granted.
 
 <CodeSnippet
-  code={`elb('walker consent', { marketing: true, analytics: true });
-`}
+  code={`elb('walker consent', { marketing: true, analytics: true });`}
   language="javascript"
 />
 
@@ -91,8 +88,7 @@ Add event listeners to the collector. They get called when specific events occur
 like `run` or `consent` changes.
 
 <CodeSnippet
-  code={`elb('walker on', type, options);
-`}
+  code={`elb('walker on', type, options);`}
   language="javascript"
 />
 
@@ -106,8 +102,7 @@ With each `run`, the on-event will be called with `instance` as a parameter.
 <CodeSnippet
   code={`elb('walker on', 'run', function (instance) {
 console.log('run with', { instance });
-});
-`}
+});`}
   language="javascript"
 />
 
@@ -118,8 +113,7 @@ Every time the `run` command is called, the function will be executed:
 const { collector } = await startFlow({ run: true });
 // Output: run with { instance: { ... } }
 elb('walker run');
-// Output: run with { instance: { ... } }
-`}
+// Output: run with { instance: { ... } }`}
   language="javascript"
 />
 
@@ -135,8 +129,7 @@ if (consent.marketing) elb('walker user', readFromStorage());
 }
 
 //   command      type        rule       function
-elb('walker on', 'consent', { marketing: onConsent });
-`}
+elb('walker on', 'consent', { marketing: onConsent });`}
   language="javascript"
 />
 
@@ -145,8 +138,7 @@ changes:
 
 <CodeSnippet
   code={`elb('walker consent', { functional: true }); // Won't trigger the onConsent function
-elb('walker consent', { marketing: true }); // Will trigger the onConsent function
-`}
+elb('walker consent', { marketing: true }); // Will trigger the onConsent function`}
   language="javascript"
 />
 
@@ -157,8 +149,7 @@ Set user identification data for the collector. There are three levels: user
 identification).
 
 <CodeSnippet
-  code={`elb('walker user', { id: 'us3r', device: 'c00k13', session: 's3ss10n' });
-`}
+  code={`elb('walker user', { id: 'us3r', device: 'c00k13', session: 's3ss10n' });`}
   language="javascript"
 />
 
@@ -173,8 +164,7 @@ User IDs are added to each event.
 "session": "s3ss10n"
 }
 // other properties omitted
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -197,8 +187,7 @@ and <Link to="/docs/guides/user-stitching">user stitching</Link>
 Set custom properties that are added to each event processed by the collector.
 
 <CodeSnippet
-  code={`elb('walker custom', { key: 'value' });
-`}
+  code={`elb('walker custom', { key: 'value' });`}
   language="javascript"
 />
 
@@ -207,8 +196,7 @@ Set custom properties that are added to each event processed by the collector.
 Set global properties that are added to each event processed by the collector.
 
 <CodeSnippet
-  code={`elb('walker globals', { key: 'value' });
-`}
+  code={`elb('walker globals', { key: 'value' });`}
   language="javascript"
 />
 
@@ -221,8 +209,7 @@ manipulation, or cancellation of default behavior.
 Add hooks to the collector to customize or enhance default processing.
 
 <CodeSnippet
-  code={`elb('walker hook', '<moment>', hookFn);
-`}
+  code={`elb('walker hook', '<moment>', hookFn);`}
   language="javascript"
 />
 
@@ -285,8 +272,7 @@ return params.fn(event, config, mapping, runState);
 function postDestinationPushBatch(params) {
 // Custom code with a void return
 return;
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -313,7 +299,6 @@ console.log('walker exec time', Date.now() - window.elbTimer);
 elb('entity action');
 
 // Output:
-// walker exec time 1
-`}
+// walker exec time 1`}
   language="javascript"
 />

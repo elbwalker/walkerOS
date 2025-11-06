@@ -21,8 +21,7 @@ complex setup or configuration.
 ### Option 1: NPM Package
 
 <CodeSnippet
-  code={`npm install @walkeros/walker.js
-`}
+  code={`npm install @walkeros/walker.js`}
   language="bash"
 />
 
@@ -33,8 +32,7 @@ complex setup or configuration.
   async
   data-elbconfig="elbConfig"
   src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/walker.js"
-></script>
-`}
+></script>`}
   language="html"
 />
 
@@ -49,16 +47,14 @@ Add this script before walker.js loads to queue events during initialization:
   function elb() {
     (window.elbLayer = window.elbLayer || []).push(arguments);
   }
-</script>
-`}
+</script>`}
   language="html"
 />
 
 ### 2. Include Walker.js
 
 <CodeSnippet
-  code={`<script async data-elbconfig="elbConfig" src="./walker.js"></script>
-`}
+  code={`<script async data-elbconfig="elbConfig" src="./walker.js"></script>`}
   language="html"
 />
 
@@ -83,8 +79,7 @@ Add this script before walker.js loads to queue events during initialization:
       },
     },
   };
-</script>
-`}
+</script>`}
   language="html"
 />
 
@@ -160,8 +155,7 @@ Configure directly in the script tag using simple key:value pairs:
   async
   data-elbconfig="elb:track;run:true;instance:myWalker"
   src="./walker.js"
-></script>
-`}
+></script>`}
   language="html"
 />
 
@@ -180,8 +174,7 @@ Use a custom configuration object name:
     },
   };
 </script>
-<script async data-elbconfig="trackingConfig" src="./walker.js"></script>
-`}
+<script async data-elbconfig="trackingConfig" src="./walker.js"></script>`}
   language="html"
 />
 
@@ -201,8 +194,7 @@ Walker.js automatically tracks events based on HTML data attributes:
 <div data-elbglobals="pagetype:product_detail"></div>
 
 <!-- Context information -->
-<div data-elbcontext="section:recommendations"></div>
-`}
+<div data-elbcontext="section:recommendations"></div>`}
   language="html"
 />
 
@@ -260,8 +252,7 @@ Walker.js handles async loading gracefully with automatic event queueing:
 </script>
 
 <!-- 3. Walker.js processes queued events when it loads -->
-<script async data-elbconfig="elbConfig" src="./walker.js"></script>
-`}
+<script async data-elbconfig="elbConfig" src="./walker.js"></script>`}
   language="html"
 />
 

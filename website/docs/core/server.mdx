@@ -46,8 +46,7 @@ if (response.ok) {
 console.log('Data sent successfully:', response.data);
 } else {
 console.error('Send failed:', response.error);
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -93,8 +92,7 @@ userAgent + language + ipAddress + date.getDate(),
 // Returns 16-character hash like '47e0bdd10f04ef13'
 
 // User identification while preserving privacy
-const anonymousId = await getHashServer(\`\${userEmail}\${deviceId}\${salt}\`, 12);
-`}
+const anonymousId = await getHashServer(\`\${userEmail}\${deviceId}\${salt}\`, 12);`}
   language="javascript"
 />
 
@@ -141,8 +139,7 @@ timeout: 8000,
 );
 
 return result;
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -157,8 +154,7 @@ new Date().toDateString(), // Daily rotation
 ].join('|');
 
 return await getHashServer(fingerprint, 20);
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -180,8 +176,7 @@ console.warn('Request failed:', response.error);
 } catch (error) {
 // Network error, timeout, or other exception
 console.error('Network error:', error.message);
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -196,8 +191,7 @@ Configure appropriate timeouts based on your use case:
 await sendServer(url, data, { timeout: 2000 });
 
 // Critical business data
-await sendServer(url, data, { timeout: 15000 });
-`}
+await sendServer(url, data, { timeout: 15000 });`}
   language="javascript"
 />
 
@@ -219,8 +213,7 @@ timestamp: Date.now(),
 {
 timeout: 10000,
 },
-);
-`}
+);`}
   language="javascript"
 />
 
@@ -247,8 +240,7 @@ Authorization: \`Bearer \${apiKey}\`,
 'Content-Type': 'application/json',
 },
 timeout: 5000,
-});
-`}
+});`}
   language="javascript"
 />
 
@@ -274,8 +266,7 @@ return await sendServer(endpoint, {
 sessionId,
 ip: safeIP,
 });
-}
-`}
+}`}
   language="javascript"
 />
 

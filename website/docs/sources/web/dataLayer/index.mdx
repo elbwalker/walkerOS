@@ -16,8 +16,7 @@ Integrates with existing Google Analytics 4 and GTM dataLayer implementations by
 ## Installation
 
 <CodeSnippet
-  code={`npm install @walkeros/web-source-datalayer
-`}
+  code={`npm install @walkeros/web-source-datalayer`}
   language="bash"
 />
 
@@ -42,8 +41,7 @@ const { collector, elb } = await startFlow({
   destinations: {
     // Your destinations
   },
-});
-`}
+});`}
   language="typescript"
 />
 
@@ -62,8 +60,7 @@ window.dataLayer = window.dataLayer || [];
 dataLayer.push({ event: 'purchase', value: 99.99 });
 
 // Automatically captured and transformed by sourceDataLayer
-// → Sent to walkerOS collector as standard event
-`}
+// → Sent to walkerOS collector as standard event`}
   language="javascript"
 />
 
@@ -94,8 +91,7 @@ Filter which dataLayer events get processed:
       },
     },
   },
-});
-`}
+});`}
   language="typescript"
 />
 

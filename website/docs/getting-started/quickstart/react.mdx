@@ -21,8 +21,7 @@ automatic pageview tracking and component-level event tracking.
 First, install the required walkerOS packages:
 
 <CodeSnippet
-  code={`npm install @walkeros/core @walkeros/collector @walkeros/web-source-browser
-`}
+  code={`npm install @walkeros/core @walkeros/collector @walkeros/web-source-browser`}
   language="bash"
 />
 
@@ -84,8 +83,7 @@ const taggerInstance = createTagger();
 
 export function tagger(entity?: string) {
   return taggerInstance(entity);
-}
-`}
+}`}
   language="tsx"
 />
 
@@ -133,8 +131,7 @@ function App() {
   );
 }
 
-export default App;
-`}
+export default App;`}
   language="tsx"
 />
 
@@ -180,8 +177,7 @@ function ProductDetail({ productId }: { productId: string }) {
       </button>
     </div>
   );
-}
-`}
+}`}
   language="tsx"
 />
 
@@ -230,8 +226,7 @@ Use the `elb` function for custom events:
   };
 
   return <form onSubmit={handleSubmit}>{/* Form fields */}</form>;
-}
-`}
+}`}
   language="tsx"
 />
 

@@ -52,8 +52,7 @@ iteration.
 <CodeSnippet
   code={`getByPath({ data: { id: 'wow' } }, 'data.id'); // Returns "wow"
 getByPath({ nested: [1, 2, { id: 'cool' }] }, 'nested.*.id'); // Returns ['', '', 'cool']
-getByPath({ arr: ['foo', 'bar'] }, 'arr.1'); // Returns "bar"
-`}
+getByPath({ arr: ['foo', 'bar'] }, 'arr.1'); // Returns "bar"`}
   language="javascript"
 />
 
@@ -65,8 +64,7 @@ value.
 
 <CodeSnippet
   code={`const updatedEvent = setByPath(event, 'data.id', 'new-value');
-// Returns a new event with data.id set to 'new-value'
-`}
+// Returns a new event with data.id set to 'new-value'`}
   language="javascript"
 />
 
@@ -78,8 +76,7 @@ reference handling.
 <CodeSnippet
   code={`const original = { foo: true, arr: ['a', 'b'] };
 const cloned = clone(original);
-original.foo = false; // cloned.foo remains true
-`}
+original.foo = false; // cloned.foo remains true`}
   language="javascript"
 />
 
@@ -91,8 +88,7 @@ appropriate types (number, boolean).
 <CodeSnippet
   code={`castValue('123'); // Returns 123 (number)
 castValue('true'); // Returns true (boolean)
-castValue('hello'); // Returns 'hello' (unchanged)
-`}
+castValue('hello'); // Returns 'hello' (unchanged)`}
   language="javascript"
 />
 
@@ -104,8 +100,7 @@ castValue('hello'); // Returns 'hello' (unchanged)
 octet to zero.
 
 <CodeSnippet
-  code={`anonymizeIP('192.168.1.100'); // Returns '192.168.1.0'
-`}
+  code={`anonymizeIP('192.168.1.100'); // Returns '192.168.1.0'`}
   language="javascript"
 />
 
@@ -116,8 +111,7 @@ unique identifiers.
 
 <CodeSnippet
   code={`getId(); // Returns random 6-char string like 'a1b2c3'
-getId(10); // Returns 10-character string
-`}
+getId(10); // Returns 10-character string`}
   language="javascript"
 />
 
@@ -172,8 +166,7 @@ new URL('https://example.com/?utm_source=docs&gclid=123'),
 // Returns { source: "docs", gclid: "123", clickId: "gclid" }
 
 // With custom parameters
-getMarketingParameters(url, { utm_custom: 'custom', partner: 'partnerId' });
-`}
+getMarketingParameters(url, { utm_custom: 'custom', partner: 'partnerId' });`}
   language="javascript"
 />
 
@@ -203,8 +196,7 @@ query strings to JavaScript objects with type casting.
 
 <CodeSnippet
   code={`requestToData('a=1&b=true&c=hello&arr[0]=x&arr[1]=y');
-// Returns { a: 1, b: true, c: 'hello', arr: ['x', 'y'] }
-`}
+// Returns { a: 1, b: true, c: 'hello', arr: ['x', 'y'] }`}
   language="javascript"
 />
 
@@ -215,8 +207,7 @@ URL-encoded query strings.
 
 <CodeSnippet
   code={`requestToParameter({ a: 1, b: true, arr: ['x', 'y'] });
-// Returns 'a=1&b=true&arr[0]=x&arr[1]=y'
-`}
+// Returns 'a=1&b=true&arr[0]=x&arr[1]=y'`}
   language="javascript"
 />
 
@@ -229,8 +220,7 @@ device information.
 
 <CodeSnippet
   code={`parseUserAgent(navigator.userAgent);
-// Returns { browser: 'Chrome', browserVersion: '91.0', os: 'Windows', ... }
-`}
+// Returns { browser: 'Chrome', browserVersion: '91.0', os: 'Windows', ... }`}
   language="javascript"
 />
 
@@ -252,8 +242,7 @@ functions with error handling.
 <CodeSnippet
   code={`const safeParse = tryCatch(JSON.parse, () => ({}));
 safeParse('{"valid": "json"}'); // Parses successfully
-safeParse('invalid'); // Returns {} instead of throwing
-`}
+safeParse('invalid'); // Returns {} instead of throwing`}
   language="javascript"
 />
 
@@ -266,8 +255,7 @@ async operations.
   code={`const safeAsyncCall = tryCatchAsync(
 () => fetchUserData(),
 (error) => ({ error: 'Failed to load user' }),
-);
-`}
+);`}
   language="javascript"
 />
 
@@ -280,8 +268,7 @@ the wait time.
 
 <CodeSnippet
   code={`const debouncedSearch = debounce(searchFunction, 300);
-// Only executes after 300ms of inactivity
-`}
+// Only executes after 300ms of inactivity`}
   language="javascript"
 />
 
@@ -291,8 +278,7 @@ the wait time.
 
 <CodeSnippet
   code={`const throttledScroll = throttle(scrollHandler, 100);
-// Executes at most every 100ms
-`}
+// Executes at most every 100ms`}
   language="javascript"
 />
 
@@ -312,8 +298,7 @@ the wait time.
 
 <CodeSnippet
   code={`onLog('Debug info', true); // Logs message
-onLog('Silent message'); // No output
-`}
+onLog('Silent message'); // No output`}
   language="javascript"
 />
 

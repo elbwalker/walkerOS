@@ -28,8 +28,7 @@ on?(
 event: 'consent' | 'session' | 'ready' | 'run',
 context?: unknown,
 ): void | Promise<void>;
-}
-`}
+}`}
   language="typescript"
 />
 
@@ -47,8 +46,7 @@ config: {
 settings?: Settings;
 };
 },
-) => void;
-`}
+) => void;`}
   language="typescript"
 />
 
@@ -82,8 +80,7 @@ headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify(event),
 }).catch(console.error);
 },
-};
-`}
+};`}
   language="typescript"
 />
 
@@ -131,8 +128,7 @@ console.log('Consent updated:', context);
 push(event, { config }) {
 console.log('Event:', event);
 },
-};
-`}
+};`}
   language="typescript"
 />
 
@@ -156,8 +152,7 @@ config: {
 },
 },
 },
-});
-`}
+});`}
   language="typescript"
 />
 
@@ -210,8 +205,7 @@ headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify(event),
 }).catch(console.error);
 },
-};
-`}
+};`}
   language="typescript"
 />
 
@@ -231,8 +225,7 @@ interface Destinations {
 webhook: Destination.Config<WebhookSettings>;
 }
 }
-}
-`}
+}`}
   language="typescript"
 />
 
@@ -269,8 +262,7 @@ import type { BigQuery } from '@google-cloud/bigquery';
 
 export interface Env extends DestinationServer.Env {
 BigQuery?: typeof BigQuery;
-}
-`}
+}`}
   language="typescript"
 />
 
@@ -309,8 +301,7 @@ push(event, { config, env }) {
 const { window } = getEnv(env);
 window.customAPI(event.name);
 },
-};
-`}
+};`}
   language="typescript"
 />
 
@@ -326,8 +317,7 @@ export const push: Env = {
 window: {
 customAPI: jest.fn(),
 },
-};
-`}
+};`}
   language="typescript"
 />
 
@@ -335,8 +325,7 @@ Export from your examples index:
 
 <CodeSnippet
   code={`// examples/index.ts
-export * as env from './env';
-`}
+export * as env from './env';`}
   language="typescript"
 />
 
@@ -355,8 +344,7 @@ await destination.push(event, { config, env: testEnv });
 
 expect(testEnv.window.customAPI).toHaveBeenCalledWith('page view');
 });
-});
-`}
+});`}
   language="typescript"
 />
 

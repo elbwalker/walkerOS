@@ -37,8 +37,7 @@ window.elb = elb;
 // Or define the elb function manually in the browser
 function elb() {
 (window.elbLayer = window.elbLayer || []).push(arguments);
-}
-`}
+}`}
   language="javascript"
 />
 
@@ -46,8 +45,7 @@ Usage options:
 
 <CodeSnippet
   code={`elb("entity action", data, ...);
-elb({event: "entity action", data: { foo: "bar"}});
-`}
+elb({event: "entity action", data: { foo: "bar"}});`}
   language="javascript"
 />
 
@@ -75,8 +73,7 @@ config: {
 },
 },
 },
-});
-`}
+});`}
   language="javascript"
 />
 
@@ -99,16 +96,14 @@ event setup. It will:
 * Process the `elbLayer` stack
 
 <CodeSnippet
-  code={`elb('walker run');
-`}
+  code={`elb('walker run');`}
   language="javascript"
 />
 
 A run accepts a partial state parameter:
 
 <CodeSnippet
-  code={`elb('walker run', { group: 'group1d' });
-`}
+  code={`elb('walker run', { group: 'group1d' });`}
   language="javascript"
 />
 
@@ -119,8 +114,7 @@ dynamically loaded content like newly added products or wizard steps.
 
 <CodeSnippet
   code={`elb('walker init', element); // Single element
-elb('walker init', [element1, element2]); // Multiple elements
-`}
+elb('walker init', [element1, element2]); // Multiple elements`}
   language="javascript"
 />
 

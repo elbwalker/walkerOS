@@ -31,8 +31,7 @@ To set/update the consent state, the CMP should actively push the
 one value won't override existing states.
 
 <CodeSnippet
-  code={`elb('walker consent', { functional: true, marketing: false });
-`}
+  code={`elb('walker consent', { functional: true, marketing: false });`}
   language="javascript"
 />
 
@@ -69,8 +68,7 @@ To revoke consent and stop sharing events with a destination, all matching rules
 have to be set to `false`:
 
 <CodeSnippet
-  code={`elb('walker consent', { marketing: false });
-`}
+  code={`elb('walker consent', { marketing: false });`}
   language="javascript"
 />
 
@@ -87,8 +85,7 @@ elb('walker run');
 });
 
 // Later, a CMP has to update the consent state
-elb('walker consent', { functional: true });
-`}
+elb('walker consent', { functional: true });`}
   language="javascript"
 />
 
@@ -106,8 +103,7 @@ ad_storage: 'granted',
 analytics_storage: 'granted',
 });
 }
-});
-`}
+});`}
   language="javascript"
 />
 

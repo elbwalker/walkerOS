@@ -16,8 +16,7 @@ Sources are async functions that receive configuration and environment, then ret
   code={`type Source.Init<Types> = (
 config: Partial<Source.Config<Types>>,
 env: Source.Env<Types>,
-) => Promise<Source.Instance<Types>>;
-`}
+) => Promise<Source.Instance<Types>>;`}
   language="typescript"
 />
 
@@ -30,8 +29,7 @@ config: Source.Config; // Merged configuration
 push: Elb.Fn; // Function to send events (forwards to env.elb)
 destroy?(): void | Promise<void>; // Optional cleanup
 on?(event, context): void | Promise<void>; // Optional reactive hooks
-}
-`}
+}`}
   language="typescript"
 />
 
@@ -54,8 +52,7 @@ customAPI?: YourAPIType;
 }
 
 // 3. Bundle them together
-interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}
-`}
+interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}`}
   language="typescript"
 />
 
@@ -85,8 +82,7 @@ throw new Error('Source requires customAPI in environment');
 
 // Use elb to send events to collector
 elb('my event', { data: 'value' });
-};
-`}
+};`}
   language="typescript"
 />
 
@@ -123,8 +119,7 @@ type: 'custom',
 config: fullConfig,
 push: elb,
 };
-};
-`}
+};`}
   language="typescript"
 />
 
@@ -203,8 +198,7 @@ destroy: async () => {
 handlers.forEach((handler, event) => api.off(event, handler));
 },
 };
-};
-`}
+};`}
   language="typescript"
 />
 
@@ -231,8 +225,7 @@ env: {
 },
 },
 },
-});
-`}
+});`}
   language="typescript"
 />
 
@@ -260,8 +253,7 @@ return {
 on: jest.fn(),
 off: jest.fn(),
 };
-}
-`}
+}`}
   language="typescript"
 />
 
@@ -314,8 +306,7 @@ await source.destroy?.();
 
 expect(api.off).toHaveBeenCalled();
 });
-});
-`}
+});`}
   language="typescript"
 />
 
@@ -338,8 +329,7 @@ check();
 }
 
 // Usage
-const api = await waitForAPI(() => window.myAPI || null);
-`}
+const api = await waitForAPI(() => window.myAPI || null);`}
   language="typescript"
 />
 
@@ -372,8 +362,7 @@ export type Push = (elem?: Element, data?: Properties) => Promise<PushResult>;
 export type Push = (req: Request, res: Response) => Promise<void>;
 
 // Standard event source
-export type Push = Elb.Fn;
-`}
+export type Push = Elb.Fn;`}
   language="typescript"
 />
 

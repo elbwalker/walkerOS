@@ -40,8 +40,7 @@ Use the tagger when you need to:
 ## Installation
 
 <CodeSnippet
-  code={`npm install @walkeros/web-source-browser
-`}
+  code={`npm install @walkeros/web-source-browser`}
   language="bash"
 />
 
@@ -58,8 +57,7 @@ const tagger = createTagger();
 // Create with custom configuration
 const customTagger = createTagger({
 prefix: 'data-elb',
-});
-`}
+});`}
   language="typescript"
 />
 
@@ -84,8 +82,7 @@ const attributes = tagger('product')
 // {
 //   'data-elb-product': 'id:123;name:Widget'
 // }
-// Note: No 'data-elb' entity attribute is created
-`}
+// Note: No 'data-elb' entity attribute is created`}
   language="typescript"
 />
 
@@ -103,8 +100,7 @@ const attributes = tagger()
 // {
 //   'data-elb': 'product',
 //   'data-elb-product': 'id:123;name:Widget'
-// }
-`}
+// }`}
   language="typescript"
 />
 
@@ -119,8 +115,7 @@ const attributes = tagger()
 // Result:
 // {
 //   'data-elbaction': 'load:view;click:select'
-// }
-`}
+// }`}
   language="typescript"
 />
 
@@ -139,8 +134,7 @@ const attributes = tagger()
 //   'data-elb-product': 'id:123',
 //   'data-elbcontext': 'test:engagement',
 //   'data-elbglobals': 'lang:en'
-// }
-`}
+// }`}
   language="typescript"
 />
 
@@ -159,8 +153,7 @@ const attributes = tagger('product')
 //   'data-elb': 'user',
 //   'data-elb-product': 'id:123',
 //   'data-elb-user': 'name:John'
-// }
-`}
+// }`}
   language="typescript"
 />
 
@@ -180,8 +173,7 @@ const attributes = tagger('product')
 //   'data-elb': 'cart',
 //   'data-elb-product': 'id:123;price:99.99',
 //   'data-elb-cart': 'quantity:2'
-// }
-`}
+// }`}
   language="typescript"
 />
 
@@ -195,8 +187,7 @@ const attributes = tagger('product')
 // Result:
 // {
 //   'data-elb-': 'description:Product with\\\\: special\\\\; chars & \\\\"quotes\\\\"'
-// }
-`}
+// }`}
   language="typescript"
 />
 
@@ -214,8 +205,7 @@ tagger().data('key', 'value');
 
 // With scope - scoped data attributes (no entity attribute)
 tagger('product').data('id', '123');
-// Creates: data-elb-product="id:123"
-`}
+// Creates: data-elb-product="id:123"`}
   language="typescript"
 />
 
@@ -230,8 +220,7 @@ calls.
 
 // Entity changes the naming scope
 tagger('foo').entity('bar').data('a', 1);
-// Creates: data-elb="bar" data-elb-bar="a:1"
-`}
+// Creates: data-elb="bar" data-elb-bar="a:1"`}
   language="typescript"
 />
 
@@ -246,8 +235,7 @@ tagger('product').data('id', 123);
 
 // Multiple properties
 tagger('product').data({ id: 123, name: 'Widget', price: 99.99 });
-// Creates: data-elb-product="id:123;name:Widget;price:99.99"
-`}
+// Creates: data-elb-product="id:123;name:Widget;price:99.99"`}
   language="typescript"
 />
 
@@ -263,8 +251,7 @@ tagger().action('load', 'view');
 tagger().action('load:view');
 
 // Multiple actions
-tagger().action({ load: 'view', click: 'select', impression: 'view' });
-`}
+tagger().action({ load: 'view', click: 'select', impression: 'view' });`}
   language="typescript"
 />
 
@@ -283,8 +270,7 @@ tagger().actions('load:view');
 tagger().actions({ load: 'view', click: 'select', visible: 'visible' });
 
 // Can be combined with action() method
-tagger().action('click', 'select').actions('load', 'view');
-`}
+tagger().action('click', 'select').actions('load', 'view');`}
   language="typescript"
 />
 
@@ -297,8 +283,7 @@ Adds context properties that apply to all events.
 tagger().context('test', 'engagement');
 
 // Multiple contexts
-tagger().context({ test: 'engagement', position: 'header', type: 'promo' });
-`}
+tagger().context({ test: 'engagement', position: 'header', type: 'promo' });`}
   language="typescript"
 />
 
@@ -311,8 +296,7 @@ Adds global properties that persist across page views.
 tagger().globals('lang', 'en');
 
 // Multiple globals
-tagger().globals({ lang: 'en', plan: 'paid', version: '1.0' });
-`}
+tagger().globals({ lang: 'en', plan: 'paid', version: '1.0' });`}
   language="typescript"
 />
 
@@ -325,8 +309,7 @@ Adds link relationships between elements.
 tagger().link('details', 'parent');
 
 // Multiple links
-tagger().link({ details: 'parent', modal: 'child', sidebar: 'child' });
-`}
+tagger().link({ details: 'parent', modal: 'child', sidebar: 'child' });`}
   language="typescript"
 />
 
@@ -341,8 +324,7 @@ const attributes = tagger('product').data('id', '123').get();
 
 // With entity attribute
 const attributes = tagger().entity('product').data('id', '123').get();
-// Returns: { 'data-elb': 'product', 'data-elb-product': 'id:123' }
-`}
+// Returns: { 'data-elb': 'product', 'data-elb-product': 'id:123' }`}
   language="typescript"
 />
 
@@ -392,8 +374,7 @@ return (
 </div>
 </div>
 );
-}
-`}
+}`}
   language="typescript"
 />
 
@@ -417,8 +398,7 @@ return (
 {item.name}
 </div>
 );
-}
-`}
+}`}
   language="typescript"
 />
 
@@ -436,7 +416,6 @@ return tagger(type)
 // Usage
 <button {...trackComponent('cta', { label: 'Sign Up', position: 'header' }, { click: 'signup' })}>
 Sign Up
-</button>
-`}
+</button>`}
   language="typescript"
 />

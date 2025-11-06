@@ -55,8 +55,7 @@ turbo run build
 
 # To develop or build a specific package use --filter option
 turbo run dev --filter=*walker.js
-turbo run build --filter=*walker.js --filter=*utils
-`}
+turbo run build --filter=*walker.js --filter=*utils`}
   language="bash"
 />
 
@@ -68,8 +67,7 @@ use the `packages name` field in the `package.json` file.
 To update all npm packages to the latest version, run:
 
 <CodeSnippet
-  code={`npx npm-check-updates -u && npm update && npm install
-`}
+  code={`npx npm-check-updates -u && npm update && npm install`}
   language="bash"
 />
 
@@ -81,8 +79,7 @@ server with live reload make sure to run `npm i` first, go to the `website/`
 directory and call:
 
 <CodeSnippet
-  code={`npm run start
-`}
+  code={`npm run start`}
   language="bash"
 />
 
@@ -97,8 +94,7 @@ How to update a package, create a changeset, and publish a (pre-)release.
 2. Create a Changeset: From the root of your monorepo, run:
 
 <CodeSnippet
-  code={`$ npx changeset
-`}
+  code={`$ npx changeset`}
   language="bash"
 />
 
@@ -109,16 +105,14 @@ Select the packages that should be updated and describe the changes.
 1. (Optional) Enter pre-release process:
 
 <CodeSnippet
-  code={`$ npx changeset pre enter next
-`}
+  code={`$ npx changeset pre enter next`}
   language="bash"
 />
 
 2. Bump Version for (Pre-)Release: Now, run:
 
 <CodeSnippet
-  code={`$ npx changeset version
-`}
+  code={`$ npx changeset version`}
   language="bash"
 />
 
@@ -131,8 +125,7 @@ Select the packages that should be updated and describe the changes.
    pre-release): From the root of the monorepo, run:
 
 <CodeSnippet
-  code={`$ npm run publish-packages
-`}
+  code={`$ npm run publish-packages`}
   language="bash"
 />
 
@@ -143,8 +136,7 @@ After a pre-release is done and it's ready to be released as a stable version:
 1. Exit Pre-Release Mode: Run:
 
 <CodeSnippet
-  code={`$ npx changeset pre exit
-`}
+  code={`$ npx changeset pre exit`}
   language="bash"
 />
 
