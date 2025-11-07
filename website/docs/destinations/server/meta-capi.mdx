@@ -1,43 +1,39 @@
 ---
 title: Meta Conversions API
-description:
-  Server-side Meta advertising events for enhanced privacy and tracking accuracy
+description: "Server-side Meta advertising events for enhanced privacy and tracking accuracy"
 path: /docs/destinations/server/meta-capi
 sidebar_position: 3
 package: '@walkeros/server-destination-meta'
 ---
-
-import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable } from '@walkeros/explorer';
 import { schemas } from '@walkeros/server-destination-meta/schemas';
 
 # Meta Conversions API
 
-<PackageLink
-  env="server"
-  github="packages/server/destinations/meta"
-  npm="@walkeros/server-destination-meta"
-/>
+<PackageLink env="server" github="packages/server/destinations/meta" npm="@walkeros/server-destination-meta" />
 
 ## Installation
 
-```bash
-npm install @walkeros/server-destination-meta
-```
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-meta
+`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { elb } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { elb } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/server-destination-meta';
 
 elb('walker destination', destinationMeta, {
-  settings: {
-    accessToken: 'YOUR_ACCESS_TOKEN',
-    pixelId: 'YOUR_PIXEL_ID',
-  },
+settings: {
+accessToken: 'YOUR_ACCESS_TOKEN',
+pixelId: 'YOUR_PIXEL_ID',
+},
 });
-```
+`}
+  language="typescript"
+/>
 
 ## Configuration reference
 

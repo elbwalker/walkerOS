@@ -1,23 +1,15 @@
 ---
 title: AWS Firehose
-description:
-  Stream events to Amazon Kinesis Data Firehose for real-time analytics
+description: "Stream events to Amazon Kinesis Data Firehose for real-time analytics"
 path: /docs/destinations/server/aws
 sidebar_position: 1
 package: '@walkeros/server-destination-aws'
 ---
-
-import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable } from '@walkeros/explorer';
 import { schemas } from '@walkeros/server-destination-aws/schemas';
 
 # AWS Firehose
 
-<PackageLink
-  env="server"
-  github="packages/server/destinations/aws"
-  npm="@walkeros/server-destination-aws"
-/>
+<PackageLink env="server" github="packages/server/destinations/aws" npm="@walkeros/server-destination-aws" />
 
 The AWS destination package provides server-side integration for streaming
 events from walkerOS to Amazon Kinesis Data Firehose for real-time analytics,
@@ -25,31 +17,35 @@ data lakes, and downstream processing.
 
 ## Installation
 
-```bash
-npm install @walkeros/server-destination-aws
-```
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-aws
+`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { elb } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { elb } from '@walkeros/collector';
 import { destinationFirehose } from '@walkeros/server-destination-aws';
 
 elb('walker destination', destinationFirehose, {
-  settings: {
-    firehose: {
-      streamName: 'your-firehose-stream-name',
-      region: 'eu-central-1',
-      config: {
-        credentials: {
-          accessKeyId: 'your-access-key-id',
-          secretAccessKey: 'your-secret-access-key',
-        },
-      },
-    },
+settings: {
+firehose: {
+streamName: 'your-firehose-stream-name',
+region: 'eu-central-1',
+config: {
+  credentials: {
+    accessKeyId: 'your-access-key-id',
+    secretAccessKey: 'your-secret-access-key',
   },
+},
+},
+},
 });
-```
+`}
+  language="typescript"
+/>
 
 ## Configuration reference
 

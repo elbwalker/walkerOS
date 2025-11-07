@@ -20,15 +20,18 @@ automatic pageview tracking and component-level event tracking.
 
 First, install the required walkerOS packages:
 
-```bash
-npm install @walkeros/core @walkeros/collector @walkeros/web-source-browser
-```
+<CodeSnippet
+  code={`npm install @walkeros/core @walkeros/collector @walkeros/web-source-browser
+`}
+  language="bash"
+/>
 
 ## Setup
 
 ### 1. walker initialization
 
-```tsx title="apps/demos/react/src/walker/index.ts"
+<CodeSnippet
+  code={`// apps/demos/react/src/walker/index.ts
 import type { Collector, WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 
@@ -82,13 +85,16 @@ const taggerInstance = createTagger();
 export function tagger(entity?: string) {
   return taggerInstance(entity);
 }
-```
+`}
+  language="tsx"
+/>
 
 ### 2. App integration
 
 Integrate directly in your main App component:
 
-```tsx title="apps/demos/react/src/App.tsx"
+<CodeSnippet
+  code={`// apps/demos/react/src/App.tsx
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { initializeWalker } from './walker';
@@ -128,13 +134,16 @@ function App() {
 }
 
 export default App;
-```
+`}
+  language="tsx"
+/>
 
 ## Component tagging
 
 Use the tagger helper for clean component tracking:
 
-```tsx title="apps/demos/react/src/components/ProductDetail.tsx"
+<CodeSnippet
+  code={`// apps/demos/react/src/components/ProductDetail.tsx
 import { tagger } from '../walker';
 
 function ProductDetail({ productId }: { productId: string }) {
@@ -172,10 +181,12 @@ function ProductDetail({ productId }: { productId: string }) {
     </div>
   );
 }
-```
+`}
+  language="tsx"
+/>
 
-```tsx
-// Without tagger helper (verbose)
+<CodeSnippet
+  code={`// Without tagger helper (verbose)
 <div
   data-elb="product"
   data-elb-action="view"
@@ -194,7 +205,9 @@ function ProductDetail({ productId }: { productId: string }) {
     .get()}
 >
 
-```
+`}
+  language="tsx"
+/>
 
 :::info
 
@@ -207,8 +220,8 @@ chain.
 
 Use the `elb` function for custom events:
 
-```tsx
-function CheckoutForm() {
+<CodeSnippet
+  code={`function CheckoutForm() {
   const handleSubmit = (formData: any) => {
     window.elb('checkout complete', {
       total: formData.total,
@@ -218,7 +231,9 @@ function CheckoutForm() {
 
   return <form onSubmit={handleSubmit}>{/* Form fields */}</form>;
 }
-```
+`}
+  language="tsx"
+/>
 
 ## Testing
 

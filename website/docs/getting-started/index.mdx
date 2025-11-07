@@ -8,6 +8,7 @@ sidebar_position: 1
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
+
 # Welcome to walkerOS
 
 walkerOS is an **event data collection as code** solution. It captures,
@@ -20,14 +21,14 @@ a complete **first-party tracking system** for modern teams and the modern web.
 
 ## Why walkerOS?
 
-- **Independence**: Make your your data collection independent from single
+* **Independence**: Make your your data collection independent from single
   vendor specifications to reduce complexity and extra code whenever you add or
   remove a new service. Keep maintenance effort to a minimum.
-- **Scalability**: DOM-based, component-level frontend tagging makes tracking
+* **Scalability**: DOM-based, component-level frontend tagging makes tracking
   user behavior declarative, reusable, and easy to maintain.
-- **Privacy-first approach**: Built-in consent handling and privacy controls
+* **Privacy-first approach**: Built-in consent handling and privacy controls
   help you meet compliance from day one.
-- **Type-safe tracking**: Built with TypeScript to catch tracking errors at
+* **Type-safe tracking**: Built with TypeScript to catch tracking errors at
   compile time, not in production. Get IDE autocomplete for APIs and destination
   configs, prevent data structure mistakes.
 
@@ -39,88 +40,95 @@ a complete **first-party tracking system** for modern teams and the modern web.
 
 <Tabs>
   <TabItem value="npm" label="npm" default>
+    Install the package from npm:
 
-Install the package from npm:
+    <CodeSnippet
+  code={`    npm install @walkeros/collector @walkeros/web-source-browser
+    `}
+  language="bash"
+/>
 
-```bash
-npm install @walkeros/collector @walkeros/web-source-browser
-```
+    Initialize walkerOS in your project. See the quickstart guides for more details.
 
-Initialize walkerOS in your project. See the quickstart guides for more details.
-
-```javascript
-import type { WalkerOS } from '@walkeros/core';
+    <CodeSnippet
+      code={`import type { WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 // Initialize walkerOS
 export async function initializeWalker(): Promise<void> {
-  const { collector, elb } = await startFlow({
-    sources: {
-      browser: {
-        code: sourceBrowser,
-        config: {
-          settings: {
-            pageview: true,
-            session: true,
-            elb: 'elb',
-          },
-        },
-      },
+const { collector, elb } = await startFlow({
+sources: {
+browser: {
+  code: sourceBrowser,
+  config: {
+    settings: {
+      pageview: true,
+      session: true,
+      elb: 'elb',
     },
-    destinations: {
-      console: {
-        code: {
-          type: 'console',
-          push: (event) => console.log('Event:', event),
-        },
-      },
-    },
-  });
+  },
+},
+},
+destinations: {
+console: {
+  code: {
+    type: 'console',
+    push: (event) => console.log('Event:', event),
+  },
+},
+},
+});
 }
-```
-
+`}
+      disabled
+      language="javascript"
+      label="Code Example"
+      showHeader={false}
+      autoHeight
+    />
   </TabItem>
+
   <TabItem value="script" label="script">
+    For websites without build tools install from CDN or host the files yourself:
 
-For websites without build tools install from CDN or host the files yourself:
+    <CodeSnippet
+  code={`    <script>
+      // Load the collector and source
+      const { startFlow } = await import(
+        'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
+      );
+      const { sourceBrowser } = await import(
+        'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
+      );
 
-```html
-<script>
-  // Load the collector and source
-  const { startFlow } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
-  );
-  const { sourceBrowser } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
-  );
-
-  // Initialize walkerOS
-  const { collector, elb } = await startFlow({
-    sources: {
-      browser: {
-        code: sourceBrowser,
-        config: {
-          settings: {
-            prefix: 'data-elb',
-            pageview: true,
-            session: true,
+      // Initialize walkerOS
+      const { collector, elb } = await startFlow({
+        sources: {
+          browser: {
+            code: sourceBrowser,
+            config: {
+              settings: {
+                prefix: 'data-elb',
+                pageview: true,
+                session: true,
+              },
+            },
           },
         },
-      },
-    },
-    destinations: {
-      console: {
-        code: {
-          type: 'console',
-          push: (event) => console.log('Event:', event),
+        destinations: {
+          console: {
+            code: {
+              type: 'console',
+              push: (event) => console.log('Event:', event),
+            },
+          },
         },
-      },
-    },
-  });
-</script>
-```
-
+      });
+    </script>
+    `}
+  language="html"
+/>
   </TabItem>
 </Tabs>
 

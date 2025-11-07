@@ -4,6 +4,7 @@ description: CDN setup for non-npm users
 sidebar_position: 3
 ---
 
+
 # Browser/CDN Quickstart
 
 No Build Required
@@ -25,8 +26,8 @@ No npm installation required. Just add the CDN script:
 
 Use ES6 modules for loading walkerOS packages:
 
-```html
-<script type="module">
+<CodeSnippet
+  code={`<script type="module">
   import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
   import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
 
@@ -56,14 +57,16 @@ Use ES6 modules for loading walkerOS packages:
 
   window.walker = collector;
 </script>
-```
+`}
+  language="html"
+/>
 
 ## Usage Example
 
 Complete HTML page with walkerOS tracking:
 
-```html
-<!DOCTYPE html>
+<CodeSnippet
+  code={`<!DOCTYPE html>
 <html>
   <head>
     <script type="module">
@@ -101,14 +104,16 @@ Complete HTML page with walkerOS tracking:
     <!-- Your content with data-elb attributes -->
   </body>
 </html>
-```
+`}
+  language="html"
+/>
 
 ## Tagging
 
 Add tracking attributes to your HTML elements:
 
-```html
-<!DOCTYPE html>
+<CodeSnippet
+  code={`<!DOCTYPE html>
 <html>
   <head>
     <script type="module">
@@ -166,14 +171,16 @@ Add tracking attributes to your HTML elements:
     </form>
   </body>
 </html>
-```
+`}
+  language="html"
+/>
 
 ## ES6 Modules
 
 Use modern ES6 modules:
 
-```html
-<script type="module">
+<CodeSnippet
+  code={`<script type="module">
   // Dynamic imports
   const { startFlow } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
@@ -222,14 +229,16 @@ Use modern ES6 modules:
   // Track custom events
   elb('page view', { title: document.title });
 </script>
-```
+`}
+  language="html"
+/>
 
 ## Adding Destinations
 
 Add Google Analytics or other destinations:
 
-```html
-<script type="module">
+<CodeSnippet
+  code={`<script type="module">
   import { startFlow } from 'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs';
   import { sourceBrowser } from 'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs';
   import destinationGtag from 'https://cdn.jsdelivr.net/npm/@walkeros/web-destination-gtag/dist/index.mjs';
@@ -262,7 +271,9 @@ Add Google Analytics or other destinations:
     },
   });
 </script>
-```
+`}
+  language="html"
+/>
 
 ## Next Steps
 

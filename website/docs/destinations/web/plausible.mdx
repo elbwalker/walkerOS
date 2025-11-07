@@ -6,12 +6,11 @@ sidebar_position: 4
 package: '@walkeros/web-destination-plausible'
 ---
 
-import Link from '@docusaurus/Link';
-import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemo, DestinationDemo } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
 import destinationPlausible from '@walkeros/web-destination-plausible';
 import { examples, schemas } from '@walkeros/web-destination-plausible';
+
+export const destination = { ...destinationPlausible, examples };
 
 # Plausible Analytics
 
@@ -29,14 +28,16 @@ care of loading the script and the function calls.
 
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-plausible
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-plausible
+`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationPlausible } from '@walkeros/web-destination-plausible';
 
 const { elb } = await startFlow();
@@ -45,15 +46,16 @@ elb('walker destination', destinationPlausible, {
   settings: {
     domain: 'elbwalker.com', // Optional, domain of your site as registered
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ## Configuration reference
 
 <PropertyTable schema={schemas.settings} />
 
 <DestinationInitDemo
-  destination={destinationPlausible}
+  destination={destination}
   settings={{
     domain: 'elbwalker.com',
   }}
@@ -74,7 +76,7 @@ events</Link> manually using the JavaScript function
 ### CustomEvent
 
 <DestinationDemo
-  destination={destinationPlausible}
+  destination={destination}
   settings={{
     domain: 'elbwalker.com',
   }}
@@ -90,7 +92,7 @@ E-commerce revenue tracking</Link> guide to learn more about the setup within
 Plausible.
 
 <DestinationDemo
-  destination={destinationPlausible}
+  destination={destination}
   settings={{
     domain: 'elbwalker.com',
   }}

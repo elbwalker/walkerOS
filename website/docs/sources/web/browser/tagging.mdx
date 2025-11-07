@@ -3,8 +3,6 @@ title: Tagging
 sidebar_position: 3
 description: How to tag a page using the walkerOS browser source
 ---
-
-import Link from '@docusaurus/Link';
 import PromotionLive from '@site/src/components/templates/promotionLive';
 
 Tag your web components using `data-elb` attributes to enable structured event
@@ -20,11 +18,11 @@ everywhere — without extra code or tracking configuration.
 
 You'll learn how to:
 
-- Define entities, actions, and triggers directly in your HTML
-- Add contextual and global properties
-- Handle dynamic values, arrays, and type casting
-- Link elements across DOM boundaries
-- Structure nested data automatically
+* Define entities, actions, and triggers directly in your HTML
+* Add contextual and global properties
+* Handle dynamic values, arrays, and type casting
+* Link elements across DOM boundaries
+* Structure nested data automatically
 
 If you're looking for a **lightweight, declarative** way to implement analytics
 and event tracking, `data-elb` tagging is your foundation.
@@ -35,8 +33,8 @@ Tag a page...
 
 {/* <PromotionLive /> */}
 
-```html
-<!-- Generic usage -->
+<CodeSnippet
+  code={`<!-- Generic usage -->
 <div
   data-elb="ENTITY"
   data-elb-ENTITY="KEY:VALUE"
@@ -57,57 +55,61 @@ Tag a page...
     </div>
   </div>
 </div>
-```
+`}
+  language="html"
+/>
 
 ... to get a structured event as a result:
 
-```js
-{
-  name: 'promotion view', // Name as a combination of entity and action
-  data: {
-    // Arbitrary properties related to the entity
-    name: 'Setting up tracking easily',
-    category: 'analytics',
-  },
-  context: {
-    // Provides additional information about the state during the event
-    test: ['engagement', 0] // Key, [value, order]
-  },
-  globals: {
-    // General properties that apply to every event
-    language: 'en'
-  },
-  custom: {}, // Additional space for individual setups
-  user: {
-    // Contains user identifiers for different identification levels
-    // Require consent and set manually for sessions building and cross-device
-    id: 'us3r1d',
-    device: 'c00k131d',
-    session: 's3ss10n1d',
-  },
-  nested: [], // List of nested entities
-  consent: { functional: true }, // Status of the granted consent state(s)
-  id: '1647261462000-01b5e2-5', // Timestamp, group & count of the event
-  trigger: 'visible', // Name of the trigger that fired
-  entity: 'promotion', // The entity name involved in the event
-  action: 'view', // The specific action performed on the entity
-  timestamp: 1647261462000, // Time when the event fired
-  timing: 3.14, // Duration how long it took to trigger this event
-  group: '01b5e2', // Random identifier for all events during a run
-  count: 5, // Incremental counter of the events in the same run
-  version: {
-    // Information about the used implementation setup
-    source: 'X.X.X', // Semantic version of the used source
-    tagging: 42, // A version number of the then-used tagging status
-  },
-  source: {
-    // Details about the origin of the event
-    type: 'web', // Source type of the event (also app, server, or custom one)
-    id: 'https://github.com/elbwalker/walkerOS', // Source of the event's origin
-    previous_id: 'https://www.elbwalker.com/' // Previous source (like referrer)
-  }
+<CodeSnippet
+  code={`{
+name: 'promotion view', // Name as a combination of entity and action
+data: {
+// Arbitrary properties related to the entity
+name: 'Setting up tracking easily',
+category: 'analytics',
+},
+context: {
+// Provides additional information about the state during the event
+test: ['engagement', 0] // Key, [value, order]
+},
+globals: {
+// General properties that apply to every event
+language: 'en'
+},
+custom: {}, // Additional space for individual setups
+user: {
+// Contains user identifiers for different identification levels
+// Require consent and set manually for sessions building and cross-device
+id: 'us3r1d',
+device: 'c00k131d',
+session: 's3ss10n1d',
+},
+nested: [], // List of nested entities
+consent: { functional: true }, // Status of the granted consent state(s)
+id: '1647261462000-01b5e2-5', // Timestamp, group & count of the event
+trigger: 'visible', // Name of the trigger that fired
+entity: 'promotion', // The entity name involved in the event
+action: 'view', // The specific action performed on the entity
+timestamp: 1647261462000, // Time when the event fired
+timing: 3.14, // Duration how long it took to trigger this event
+group: '01b5e2', // Random identifier for all events during a run
+count: 5, // Incremental counter of the events in the same run
+version: {
+// Information about the used implementation setup
+source: 'X.X.X', // Semantic version of the used source
+tagging: 42, // A version number of the then-used tagging status
+},
+source: {
+// Details about the origin of the event
+type: 'web', // Source type of the event (also app, server, or custom one)
+id: 'https://github.com/elbwalker/walkerOS', // Source of the event's origin
+previous_id: 'https://www.elbwalker.com/' // Previous source (like referrer)
 }
-```
+}
+`}
+  language="javascript"
+/>
 
 :::note
 
@@ -124,8 +126,8 @@ is `page` when no `data-elb` is set.
 An **action** can be added by setting one of the following attributes on the
 **same level** or **child elements** in combination with a **matching trigger**:
 
-- **`data-elbaction`** - applies action to the **nearest entity only**
-- **`data-elbactions`** - applies action to **all entities** in the DOM
+* **`data-elbaction`** - applies action to the **nearest entity only**
+* **`data-elbactions`** - applies action to **all entities** in the DOM
   hierarchy
 
 Both attributes use the same syntax, e.g., `data-elbaction="visible:view"` or
@@ -173,12 +175,14 @@ Trigger names are predefined and to be selected from the list, while the
 If the trigger and action values are equal, e.g. for click events, you can
 shorten the implementation:
 
-```html
-<b data-elbaction="click">
+<CodeSnippet
+  code={`<b data-elbaction="click">
   Use the short version, instead of
   <s data-elbaction="click:click">long</s>
 </b>
-```
+`}
+  language="html"
+/>
 
 ### Parameters
 
@@ -187,11 +191,13 @@ accept optional parameters. The scroll trigger needs to know the percentage a
 user scrolls down, a wait trigger the number of milliseconds until the action
 gets triggered. Use brackets behind the trigger to pass that information.
 
-```html
-<!-- specifying trigger parameters -->
+<CodeSnippet
+  code={`<!-- specifying trigger parameters -->
 <p data-elbaction="wait(10):interested"></p>
 <p data-elbaction="pulse(10):interested"></p>
-```
+`}
+  language="html"
+/>
 
 ### Action filter
 
@@ -201,14 +207,16 @@ entity by adding the name, e.g. `data-elbaction="load:view(product)` or
 `data-elbactions="load:view(product)"`. If the trigger event gets called, the
 result will only include the property values from the specific entities.
 
-```html
-<!-- setting a filter for an entity -->
+<CodeSnippet
+  code={`<!-- setting a filter for an entity -->
 <div data-elb="foo">
   <div data-elb="bar" data-elbaction="load:hello(bar)">
     only the bar hello event fires.
   </div>
 </div>
-```
+`}
+  language="html"
+/>
 
 ### Up-bubbling click trigger
 
@@ -217,11 +225,13 @@ finds a `data-elbaction` with the click trigger, it will fire the action. Often,
 the image or a whole div-block gets clicked, not the parent a-element. Using the
 bubbling-up flow, the walker still triggers the actions for you.
 
-```html
-<button data-elb="product" data-elbaction="click">
+<CodeSnippet
+  code={`<button data-elb="product" data-elbaction="click">
   <img class="full" src="some.jpg" alt="" />
 </button>
-```
+`}
+  language="html"
+/>
 
 :::warning
 
@@ -236,12 +246,14 @@ Use the `data-elblink` tag to extend the scope of an entity by elements placed
 somewhere else (like modals). Specific IDs connect linked elements. They are
 hierarchically and can either be a parent or a child.
 
-```html
-<div data-elb="info" data-elblink="details:parent">...</div>
+<CodeSnippet
+  code={`<div data-elb="info" data-elblink="details:parent">...</div>
 ...
 <div data-elblink="details:child" data-elbaction="visible">...</div>
 <p data-elblink="another:child">...</p>
-```
+`}
+  language="html"
+/>
 
 The second element is the parent, triggering the visible action for the
 `info visible` event. There can be multiple children, but there is only one
@@ -259,7 +271,7 @@ can be set anywhere inside an elb scope.
 :::warning
 
 Spaces in entities, e.g., "shopping cart" or actions, e.g., "add to cart" will
-be replaced by underscores to "shopping_cart" and "add_to_cart".
+be replaced by underscores to "shopping\_cart" and "add\_to\_cart".
 
 :::
 
@@ -278,18 +290,22 @@ symbols, especially `:` or `;`
 To specify `data`, use the name of the entity. The `data` attributes have to be
 inside of the entity scope or a parent.
 
-```html
-<div data-elb-entity="source:parent">
+<CodeSnippet
+  code={`<div data-elb-entity="source:parent">
   <div data-elb="entity">
     <p data-elb-entity="key:value">...</p>
     <p data-elb-entity="foo:bar">...</p>
   </div>
 </div>
-```
+`}
+  language="html"
+/>
 
-```js
-{ data: { source: "parent", key: "value", foo: "bar", } }
-```
+<CodeSnippet
+  code={`{ data: { source: "parent", key: "value", foo: "bar", } }
+`}
+  language="javascript"
+/>
 
 ### Hierarchy
 
@@ -297,34 +313,38 @@ There is a hierarchy for the `data` properties, where the order defines which
 values to use for similar keys. Based on the triggering action element, the
 closest ones or parent values will be preferred over the others.
 
-```html
-<div id="family" data-elb="e" data-elbaction="click">
+<CodeSnippet
+  code={`<div id="family" data-elb="e" data-elbaction="click">
   <div id="parent" data-elb-e="key:foo" data-elbaction="click">
     <p id="child" data-elb-e="key:bar" data-elbaction="click"></p>
     <b id="sibling" data-elbaction="click"></b>
   </div>
   <b data-elb-e="key:baz"></b>
 </div>
-```
+`}
+  language="html"
+/>
 
 Based on which element gets clicked, the event will contain the following data
 
-- family: `{ key: 'baz' }`, the last found data-property
-- parent: `{ key: 'foo' }`, a direct data-value
-- child: `{ key: 'bar' }`, direct value closer than the parent
-- sibling: `{ key: 'foo' }`, no value specified, so it takes the parent's value
+* family: `{ key: 'baz' }`, the last found data-property
+* parent: `{ key: 'foo' }`, a direct data-value
+* child: `{ key: 'bar' }`, direct value closer than the parent
+* sibling: `{ key: 'foo' }`, no value specified, so it takes the parent's value
 
 ### Type casting
 
 Property values will be cast to their type, supporting string, number & boolean.
 
-```html
-<div data-elb="types">
+<CodeSnippet
+  code={`<div data-elb="types">
   <p data-elb-types="string:text">{ string: "text" }</p>
   <p data-elb-types="int:42;float:3.14">{ int: 42, float: 3.14 }</p>
   <p data-elb-types="bool:true">{ bool: true }</p>
 </div>
-```
+`}
+  language="html"
+/>
 
 ### Multiple attributes
 
@@ -336,26 +356,32 @@ key-value pairs. Therefore, it’s necessary to escape values that contain a
 semicolon. Quotes are here to meet your needs. To prevent a mistaken
 value-split, use single quotes.
 
-```html
-<!-- value wrapping with quotes -->
+<CodeSnippet
+  code={`<!-- value wrapping with quotes -->
 <p data-elb="foo" data-elb-foo="b:a;r">{ "b": "a", "r": true }</p>
 <p data-elb="foo" data-elb-foo="b:'a;r'">{ "b": "a;r" }</p>
-```
+`}
+  language="html"
+/>
 
 If a single quote is part of the value, escape it with a backslash:
 
-```html
-<!-- escaping values with backslash -->
+<CodeSnippet
+  code={`<!-- escaping values with backslash -->
 <p data-elb="foo" data-elb-foo="bar:it\'s escaped">{ "bar": "it's escaped" }</p>
-```
+`}
+  language="html"
+/>
 
 The semicolon can be used as a separator to list multiple values inside of a
 `data-elb` or `data-elbaction` attribute.
 
-```html
-<!-- using multiple key-value pairs at once -->
+<CodeSnippet
+  code={`<!-- using multiple key-value pairs at once -->
 <p data-elb="foo" data-elb-foo="a:1;b:2">{ "a": 1, "b": 2 }</p>
-```
+`}
+  language="html"
+/>
 
 ### Dynamic field values
 
@@ -363,50 +389,58 @@ You might want to measure dynamic field values, e.g. the quantity of a product
 or the value of the selected element. Use a `#` at the beginning, followed by
 the attribute name to access the value of the element attribute.
 
-```html
-<!-- Basic usage: elb-ENTITY="KEY:#VALUE" -->
+<CodeSnippet
+  code={`<!-- Basic usage: elb-ENTITY="KEY:#VALUE" -->
 <input type="text" value="blue" data-elb-product="color:#value"></input>
 <div data-elb-product="name:#innerHTML">Everyday Ruck Snack</div>
-```
+`}
+  language="html"
+/>
 
 To capture a selected option from a list, use `elb-ENTITY="KEY:#selected"` to
 get size:20L
 
-```html
-<select data-elb-product="size:#selected">
+<CodeSnippet
+  code={`<select data-elb-product="size:#selected">
   <option value="18L">18L</option>
   <option value="20L" selected="selected">20L</option>
 </select>
-```
+`}
+  language="html"
+/>
 
 ### Arrays
 
 To use array types, add the `[]` suffix to a property's name, such as
 `size[]:m`. It will generate de-duplicated data properties.
 
-```html
-<div data-elb="product">
+<CodeSnippet
+  code={`<div data-elb="product">
   <p data-elb-product="size[]:s;size[]:l"></p>
   <p data-elb-product="size[]:l"></p>
 </div>
-```
+`}
+  language="html"
+/>
 
-```js
-{
-  data: {
-    size: ["s", "l"],
-  },
-  // ...
+<CodeSnippet
+  code={`{
+data: {
+size: ["s", "l"],
+},
+// ...
 }
-```
+`}
+  language="javascript"
+/>
 
 ### Generic properties
 
 Leave the entity name empty (only `data-elb-`) to add the property to any
 related entity. Explicitly named properties are preferred over generic ones.
 
-```html
-<div data-elb-="p:v">
+<CodeSnippet
+  code={`<div data-elb-="p:v">
   <div data-elb="generic">
     <p data-elb-generic="k:v"></p>
     <p data-elb-="g:v"></p>
@@ -414,7 +448,9 @@ related entity. Explicitly named properties are preferred over generic ones.
     <p data-elb-="o:x"></p>
   </div>
 </div>
-```
+`}
+  language="html"
+/>
 
 :::note
 
@@ -422,17 +458,19 @@ Explicit properties are preferred over generic ones.
 
 :::
 
-```js
-{
-  data: {
-    p: 'v', // parent
-    k: 'v', // explicit
-    g: 'v', // generic
-    o: 'v' // overridden by explicit
-  },
-  // ...
+<CodeSnippet
+  code={`{
+data: {
+p: 'v', // parent
+k: 'v', // explicit
+g: 'v', // generic
+o: 'v' // overridden by explicit
+},
+// ...
 }
-```
+`}
+  language="javascript"
+/>
 
 ## Globals
 
@@ -442,22 +480,26 @@ events on a page**. Those properties are called **globals** and will be
 arbitrary, like the data property. What is unique about them is that you can
 define them anywhere on a page using the `data-elbglobals` attribute.
 
-```html
-<div data-elbglobals="outof:scope"></div>
+<CodeSnippet
+  code={`<div data-elbglobals="outof:scope"></div>
 
 <div data-elb="entity" data-elb-entity="foo:bar" data-elbaction="load:action" />
-```
+`}
+  language="html"
+/>
 
 This example will lead to the following event:
 
-```js
-{
-  "event": "entity action",
-  "data": { "foo": "bar" },
-  "globals": { "outof": "scope" }
-  // other properties omitted
+<CodeSnippet
+  code={`{
+"event": "entity action",
+"data": { "foo": "bar" },
+"globals": { "outof": "scope" }
+// other properties omitted
 }
-```
+`}
+  language="javascript"
+/>
 
 :::info
 
@@ -471,8 +513,8 @@ Context doesn't work like globals for every event, but is helpful information
 for every framing context an event is embedded in. A context could be a
 position, a test, or specific components for example.
 
-```html
-<div data-elbcontext="test:engagement" data-elbglobals="plan:paid">
+<CodeSnippet
+  code={`<div data-elbcontext="test:engagement" data-elbglobals="plan:paid">
   <div data-elbcontext="recommendation:smart_ai">
     <div
       data-elb="promotion"
@@ -483,23 +525,27 @@ position, a test, or specific components for example.
     </div>
   </div>
 </div>
-```
+`}
+  language="html"
+/>
 
 The context properties are tuples with the value and an index, starting at the
 closest parent (`[value, index]`). Access them via `event.context.key[0]`.
 
-```js
-{
-  event: "promotion click",
-  data: { title: "click me" },
-  globals: { plan: "paid" },
-  context: {
-    test: ["engagement", 1],
-    recommendation: ["smart_ai", 0],
-  },
-  // other properties omitted
+<CodeSnippet
+  code={`{
+event: "promotion click",
+data: { title: "click me" },
+globals: { plan: "paid" },
+context: {
+test: ["engagement", 1],
+recommendation: ["smart_ai", 0],
+},
+// other properties omitted
 }
-```
+`}
+  language="javascript"
+/>
 
 :::tip
 
@@ -517,8 +563,8 @@ The walker algorithm runs through nested entities and treats them like regular
 entities by gathering all related information. Nested entities are accessible in
 the nested array of each event. Each element is a regular entity.
 
-```html
-<div
+<CodeSnippet
+  code={`<div
   data-elb="mother"
   data-elb-mother="label:caring"
   data-elbaction="load:view"
@@ -528,26 +574,30 @@ the nested array of each event. Each element is a regular entity.
     <div data-elb="baby" data-elb-baby="status:infant"></div>
   </div>
 </div>
-```
+`}
+  language="html"
+/>
 
 This example will lead to the following event on load:
 
-```js
+<CodeSnippet
+  code={`{
+"event": "mother view",
+"data": { "label": "caring" },
+"nested": [
+{ "entity": "son", "data": { "age": 23 } },
 {
-  "event": "mother view",
-  "data": { "label": "caring" },
-  "nested": [
-    { "entity": "son", "data": { "age": 23 } },
-    {
-      "entity": "daughter",
-      "data": { "age": 32 },
-      "nested": [{ "entity": "baby", "data": { "status": "infant" } }],
-    },
-    { "entity": "baby", "data": { "status": "infant" } },
-  ],
-  // other properties omitted
+"entity": "daughter",
+"data": { "age": 32 },
+"nested": [{ "entity": "baby", "data": { "status": "infant" } }],
+},
+{ "entity": "baby", "data": { "status": "infant" } },
+],
+// other properties omitted
 }
-```
+`}
+  language="javascript"
+/>
 
 Nested entities that are nested inside another entity will be captured on both
 levels.

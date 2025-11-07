@@ -1,23 +1,15 @@
 ---
 title: GCP BigQuery
-description:
-  Stream events to Google BigQuery for data analytics and machine learning
+description: "Stream events to Google BigQuery for data analytics and machine learning"
 path: /docs/destinations/server/gcp
 sidebar_position: 2
 package: '@walkeros/server-destination-gcp'
 ---
-
-import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable } from '@walkeros/explorer';
 import { schemas } from '@walkeros/server-destination-gcp/schemas';
 
 # GCP BigQuery
 
-<PackageLink
-  env="server"
-  github="packages/server/destinations/gcp"
-  npm="@walkeros/server-destination-gcp"
-/>
+<PackageLink env="server" github="packages/server/destinations/gcp" npm="@walkeros/server-destination-gcp" />
 
 The GCP destination package provides server-side integration for streaming
 events from walkerOS to Google BigQuery for data warehousing, analytics, and
@@ -25,24 +17,28 @@ machine learning workloads.
 
 ## Installation
 
-```bash
-npm install @walkeros/server-destination-gcp
-```
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-gcp
+`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { elb } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { elb } from '@walkeros/collector';
 import { destinationBigQuery } from '@walkeros/server-destination-gcp';
 
 elb('walker destination', destinationBigQuery, {
-  settings: {
-    projectId: 'YOUR_PROJECT_ID',
-    datasetId: 'YOUR_DATASET_ID',
-    tableId: 'YOUR_TABLE_ID',
-  },
+settings: {
+projectId: 'YOUR_PROJECT_ID',
+datasetId: 'YOUR_DATASET_ID',
+tableId: 'YOUR_TABLE_ID',
+},
 });
-```
+`}
+  language="typescript"
+/>
 
 ## Configuration reference
 

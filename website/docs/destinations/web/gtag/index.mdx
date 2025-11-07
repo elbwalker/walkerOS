@@ -1,14 +1,10 @@
 ---
 title: Google Gtag
-description:
-  Unified Google destination supporting GA4, Google Ads, and GTM through a
-  single gtag implementation
+description: "Unified Google destination supporting GA4, Google Ads, and GTM through a single gtag implementation"
 sidebar_position: 1
 package: '@walkeros/web-destination-gtag'
 ---
 
-import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable } from '@walkeros/explorer';
 import { schemas } from '@walkeros/web-destination-gtag';
 
 # Google Gtag
@@ -25,14 +21,16 @@ single destination configuration.
 
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-gtag
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-gtag
+`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const { collector, elb } = await startFlow({
@@ -54,8 +52,9 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ## Configuration reference
 

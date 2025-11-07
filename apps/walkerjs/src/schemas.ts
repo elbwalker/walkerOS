@@ -1,6 +1,6 @@
 import type { RJSFSchema } from '@rjsf/utils';
 
-export const walkerjsSettingsSchema: RJSFSchema = {
+export const settings: RJSFSchema = {
   type: 'object',
   properties: {
     elb: {
@@ -44,7 +44,7 @@ export const walkerjsSettingsSchema: RJSFSchema = {
   },
 };
 
-export const browserConfigSchema: RJSFSchema = {
+export const browserConfig: RJSFSchema = {
   type: 'object',
   properties: {
     'browser.run': {
@@ -70,7 +70,7 @@ export const browserConfigSchema: RJSFSchema = {
   },
 };
 
-export const dataLayerConfigSchema: RJSFSchema = {
+export const dataLayerConfig: RJSFSchema = {
   type: 'object',
   properties: {
     dataLayer: {
@@ -91,7 +91,7 @@ export const dataLayerConfigSchema: RJSFSchema = {
   },
 };
 
-export const collectorConfigSchema: RJSFSchema = {
+export const collectorConfig: RJSFSchema = {
   type: 'object',
   properties: {
     'collector.consent': {
@@ -106,11 +106,4 @@ export const collectorConfigSchema: RJSFSchema = {
         'Destination configurations. See destinations documentation for available options.',
     },
   },
-};
-
-export const schemas = {
-  settings: walkerjsSettingsSchema,
-  browserConfig: browserConfigSchema,
-  dataLayerConfig: dataLayerConfigSchema,
-  collectorConfig: collectorConfigSchema,
 };

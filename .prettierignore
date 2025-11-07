@@ -29,3 +29,6 @@ logs/
 
 # Handlebars templates (JavaScript generation)
 **/*.hbs
+
+# MDX files (formatted by remark-mdx instead)
+website/docs/**/*.mdx

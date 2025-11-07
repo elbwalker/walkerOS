@@ -6,11 +6,11 @@ sidebar_position: 2
 package: '@walkeros/web-destination-meta'
 ---
 
-import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemoDemo, DestinationDemo } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
 import destinationMetaPixel from '@walkeros/web-destination-meta';
 import { examples, schemas } from '@walkeros/web-destination-meta';
+
+export const destination = { ...destinationMetaPixel, examples };
 
 # Meta Pixel
 
@@ -29,14 +29,16 @@ function calls.
 
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-meta
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-meta
+`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/web-destination-meta';
 
 const { collector, elb } = await startFlow({
@@ -51,8 +53,9 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ## Configuration reference
 
@@ -61,8 +64,8 @@ const { collector, elb } = await startFlow({
 #### Example
 
 <DestinationInitDemo
-  destination={destinationMetaPixel}
-  custom={{
+  destination={destination}
+  settings={{
     pixelId: '1234567890',
   }}
 />
@@ -82,7 +85,7 @@ Learn more aboot
 ### ViewContent
 
 <DestinationDemo
-  destination={destinationMetaPixel}
+  destination={destination}
   settings={{
     pixelId: '1234567890',
   }}
@@ -96,7 +99,7 @@ Learn more aboot
 ### AddToCart
 
 <DestinationDemo
-  destination={destinationMetaPixel}
+  destination={destination}
   settings={{
     pixelId: '1234567890',
   }}
@@ -110,7 +113,7 @@ Learn more aboot
 ### InitiateCheckout
 
 <DestinationDemo
-  destination={destinationMetaPixel}
+  destination={destination}
   settings={{
     pixelId: '1234567890',
   }}
@@ -124,7 +127,7 @@ Learn more aboot
 ### Purchase
 
 <DestinationDemo
-  destination={destinationMetaPixel}
+  destination={destination}
   settings={{
     pixelId: '1234567890',
   }}

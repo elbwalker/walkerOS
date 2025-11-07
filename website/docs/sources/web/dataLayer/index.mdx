@@ -5,17 +5,9 @@ path: /docs/sources/web/dataLayer
 sidebar_position: 2
 package: '@walkeros/web-source-datalayer'
 ---
-
-import { PropertyTable } from '@walkeros/explorer';
-import PackageLink from '@site/src/components/docs/package-link';
 import { schemas } from '@walkeros/web-source-datalayer';
 
-export const dataLayerSchema = schemas.settings;
-
-<PackageLink
-  github="packages/web/sources/datalayer"
-  npm="@walkeros/web-source-datalayer"
-/>
+<PackageLink github="packages/web/sources/datalayer" npm="@walkeros/web-source-datalayer" />
 
 # DataLayer Source
 
@@ -23,14 +15,16 @@ Integrates with existing Google Analytics 4 and GTM dataLayer implementations by
 
 ## Installation
 
-```bash
-npm install @walkeros/web-source-datalayer
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-source-datalayer
+`}
+  language="bash"
+/>
 
 ## Basic Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { sourceDataLayer } from '@walkeros/web-source-datalayer';
 
 const { collector, elb } = await startFlow({
@@ -49,7 +43,9 @@ const { collector, elb } = await startFlow({
     // Your destinations
   },
 });
-```
+`}
+  language="typescript"
+/>
 
 ## How It Works
 
@@ -60,25 +56,27 @@ The dataLayer source intercepts `dataLayer.push()` calls and transforms them int
 3. **Transforms** dataLayer format to walkerOS event format
 4. **Forwards** to collector for processing
 
-```javascript
-// Existing dataLayer code (unchanged)
+<CodeSnippet
+  code={`// Existing dataLayer code (unchanged)
 window.dataLayer = window.dataLayer || [];
 dataLayer.push({ event: 'purchase', value: 99.99 });
 
 // Automatically captured and transformed by sourceDataLayer
 // → Sent to walkerOS collector as standard event
-```
+`}
+  language="javascript"
+/>
 
 ## Configuration
 
-<PropertyTable schema={dataLayerSchema} />
+<PropertyTable schema={schemas.settings} />
 
 ## Custom Filtering
 
 Filter which dataLayer events get processed:
 
-```typescript
-const { elb } = await startFlow({
+<CodeSnippet
+  code={`const { elb } = await startFlow({
   sources: {
     dataLayer: {
       code: sourceDataLayer,
@@ -97,42 +95,50 @@ const { elb } = await startFlow({
     },
   },
 });
-```
+`}
+  language="typescript"
+/>
 
 ## Migration Strategy
 
 Use the dataLayer source for gradual migration from GA4/GTM:
 
-1. **Phase 1**: Add walkerOS alongside existing dataLayer
-   ```typescript
-   // Existing code continues to work
-   dataLayer.push({ event: 'purchase', value: 99.99 });
-   // Now also captured by walkerOS
-   ```
+### Phase 1: Add walkerOS alongside existing dataLayer
 
-2. **Phase 2**: Map dataLayer events to walkerOS destinations
-   ```typescript
-   destinations: {
-     ga4: {
-       code: destinationGtag,
-       config: {
-         mapping: {
-           // Map dataLayer purchase to GA4 format
-         }
-       }
-     }
-   }
-   ```
+<CodeSnippet
+  code={`// Existing code continues to work
+dataLayer.push({ event: 'purchase', value: 99.99 });
+// Now also captured by walkerOS`}
+  language="typescript"
+/>
 
-3. **Phase 3**: Gradually replace dataLayer.push with elb()
-   ```typescript
-   // Old
-   dataLayer.push({ event: 'purchase', value: 99.99 });
-   // New
-   elb('order complete', { total: 99.99 });
-   ```
+### Phase 2: Map dataLayer events to walkerOS destinations
+
+<CodeSnippet
+  code={`destinations: {
+  ga4: {
+    code: destinationGtag,
+    config: {
+      mapping: {
+        // Map dataLayer purchase to GA4 format
+      }
+    }
+  }
+}`}
+  language="typescript"
+/>
+
+### Phase 3: Gradually replace dataLayer.push with elb()
+
+<CodeSnippet
+  code={`// Old
+dataLayer.push({ event: 'purchase', value: 99.99 });
+// New
+elb('order complete', { total: 99.99 });`}
+  language="typescript"
+/>
 
 ## Next Steps
 
-- Review [event mapping](/docs/mapping) for transforming dataLayer events
-- Check [GA4 destination](/docs/destinations/web/gtag) for Google Analytics integration
+* Review [event mapping](/docs/mapping) for transforming dataLayer events
+* Check [GA4 destination](/docs/destinations/web/gtag) for Google Analytics integration

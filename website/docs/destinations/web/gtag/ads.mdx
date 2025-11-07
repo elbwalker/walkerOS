@@ -5,11 +5,11 @@ sidebar_position: 3
 package: '@walkeros/web-destination-gtag'
 ---
 
-import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemoDemo, DestinationDemo } from '@walkeros/explorer';
 import { createEvent } from '@walkeros/core';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import { examples, schemas } from '@walkeros/web-destination-gtag';
+
+export const destination = { ...destinationGtag, examples };
 
 # Google Ads
 
@@ -28,14 +28,16 @@ function calls.
 
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-gtag
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-gtag
+`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const { elb } = await startFlow();
@@ -66,8 +68,9 @@ elb('order complete', {
   value: 49.99,
   currency: 'EUR',
   items: 2,
-});
-```
+});`}
+  language="typescript"
+/>
 
 ## Configuration reference
 
@@ -86,7 +89,7 @@ Try the Google Ads destination with real events:
 ### Initialize Google Ads
 
 <DestinationInitDemo
-  destination={destinationGtag}
+  destination={destination}
   custom={{
     ads: {
       conversionId: 'AW-123456789',
@@ -98,7 +101,7 @@ Try the Google Ads destination with real events:
 ### Track a Conversion Event
 
 <DestinationDemo
-  destination={destinationGtag}
+  destination={destination}
   settings={{
     ads: {
       conversionId: 'AW-123456789',

@@ -1,6 +1,6 @@
 import type { RJSFSchema } from '@rjsf/utils';
 
-export const settingsSchema: RJSFSchema = {
+export const settings: RJSFSchema = {
   type: 'object',
   properties: {
     prefix: {
@@ -39,7 +39,7 @@ export const settingsSchema: RJSFSchema = {
   },
 };
 
-export const taggerSchema: RJSFSchema = {
+export const tagger: RJSFSchema = {
   type: 'object',
   properties: {
     prefix: {
@@ -48,9 +48,4 @@ export const taggerSchema: RJSFSchema = {
       description: 'Custom prefix for generated data attributes',
     },
   },
-};
-
-export const schemas = {
-  settings: settingsSchema,
-  tagger: taggerSchema,
 };

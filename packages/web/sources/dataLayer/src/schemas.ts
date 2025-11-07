@@ -1,6 +1,6 @@
 import type { RJSFSchema } from '@rjsf/utils';
 
-export const settingsSchema: RJSFSchema = {
+export const settings: RJSFSchema = {
   type: 'object',
   properties: {
     name: {
@@ -18,8 +18,4 @@ export const settingsSchema: RJSFSchema = {
       description: 'Custom function to filter which events to process',
     },
   },
-};
-
-export const schemas = {
-  settings: settingsSchema,
 };

@@ -1,16 +1,15 @@
 ---
 title: Google Tag Manager (GTM)
-description:
-  Google Tag Manager configuration within the unified gtag destination
+description: "Google Tag Manager configuration within the unified gtag destination"
 sidebar_position: 4
 package: '@walkeros/web-destination-gtag'
 ---
 
-import PackageLink from '@site/src/components/docs/package-link';
-import { PropertyTable, DestinationInitDemoDemo, DestinationDemo } from '@walkeros/explorer';
 import { getEvent } from '@walkeros/core';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import { examples, schemas } from '@walkeros/web-destination-gtag';
+
+export const destination = { ...destinationGtag, examples };
 
 # Google Tag Manager (GTM)
 
@@ -25,14 +24,16 @@ and add third-party integrations to your website.
 
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-gtag
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-gtag
+`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const { elb } = await startFlow();
@@ -44,8 +45,9 @@ elb('walker destination', destinationGtag, {
       dataLayer: 'dataLayer', // Optional custom dataLayer name
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ## Configuration reference
 
