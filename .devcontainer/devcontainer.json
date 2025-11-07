@@ -1,7 +1,7 @@
 {
   "name": "walkerOS dev container",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:latest",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
   // Features to add to the dev container. More info: https://containers.dev/features.
   "features": {},
   "customizations": {
