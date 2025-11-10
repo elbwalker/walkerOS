@@ -39,20 +39,13 @@ describe('Collect Mode Integration', () => {
   afterEach(async () => {
     // Clean up specific process (NOT killall!)
     if (serverProcess && !serverProcess.killed) {
+      // Send graceful shutdown signal
       serverProcess.kill('SIGTERM');
 
-      // Wait for graceful shutdown
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(resolve, 5000);
-        serverProcess.on('exit', () => {
-          clearTimeout(timeout);
-          resolve();
-        });
-      });
+      // Small delay for graceful shutdown attempt
+      // Jest's forceExit will clean up if process doesn't exit
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
-
-    // Small delay to ensure port is released
-    await new Promise((resolve) => setTimeout(resolve, 500));
   });
 
   it('should start server and respond to health checks', async () => {

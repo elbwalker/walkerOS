@@ -17,4 +17,8 @@ export default {
   // Integration tests need more time for server startup
   testTimeout: 30000,
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  // Integration tests spawn real Node processes - open handles are expected
+  // Base config has forceExit: true, but also detectOpenHandles: true (warns)
+  // Override to silence warnings for spawned child processes
+  detectOpenHandles: false,
 };
