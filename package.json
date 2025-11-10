@@ -2,8 +2,10 @@
   "name": "@walkeros/monorepo",
   "private": true,
   "workspaces": [
+    "packages/cli",
     "packages/core",
     "packages/collector",
+    "packages/docker",
     "packages/server/core",
     "packages/server/destinations/*",
     "packages/server/sources/*",

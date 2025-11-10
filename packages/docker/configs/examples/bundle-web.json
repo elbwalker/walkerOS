@@ -1,0 +1,94 @@
+{
+  "platform": "web",
+  "build": {
+    "platform": "browser",
+    "format": "iife",
+    "minify": true,
+    "sourcemap": true,
+    "globalName": "walkerOS"
+  },
+  "packages": {
+    "@walkeros/collector": {
+      "version": "latest",
+      "imports": ["startFlow"]
+    },
+    "@walkeros/web-source-browser": {
+      "version": "latest",
+      "imports": ["sourceBrowser"]
+    },
+    "@walkeros/web-destination-gtag": {
+      "version": "latest",
+      "imports": ["destinationGtag"]
+    }
+  },
+  "code": "",
+  "sources": {
+    "browser": {
+      "code": "sourceBrowser",
+      "config": {
+        "settings": {
+          "elb": "elb"
+        }
+      }
+    }
+  },
+  "destinations": {
+    "gtag": {
+      "code": "destinationGtag",
+      "config": {
+        "settings": {
+          "ga4": {
+            "measurementId": "${GA4_MEASUREMENT_ID}"
+          }
+        },
+        "mapping": {
+          "page": {
+            "view": {
+              "name": "page_view",
+              "data": {
+                "map": {
+                  "page_title": "data.title",
+                  "page_path": "data.path"
+                }
+              }
+            }
+          },
+          "product": {
+            "view": {
+              "name": "view_item",
+              "data": {
+                "map": {
+                  "currency": {
+                    "value": "USD"
+                  },
+                  "value": "data.price",
+                  "items": {
+                    "loop": [
+                      "nested",
+                      {
+                        "map": {
+                          "item_id": "data.id",
+                          "item_name": "data.name",
+                          "price": "data.price"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "collector": {
+    "run": true
+  },
+  "output": "/app/dist/walker.js",
+  "docker": {
+    "bundle": {
+      "output": "/app/dist/walker.js"
+    }
+  }
+}

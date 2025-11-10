@@ -1,0 +1,67 @@
+import fs from 'fs/promises';
+import path from 'path';
+import { parseDockerConfig, type DockerConfig } from './schema';
+
+/**
+ * Load and parse Docker configuration from file
+ */
+export async function loadDockerConfig(
+  configPath?: string,
+): Promise<DockerConfig> {
+  const filePath = configPath || process.env.CONFIG_FILE || '/app/config.json';
+  const resolvedPath = path.resolve(filePath);
+
+  try {
+    const content = await fs.readFile(resolvedPath, 'utf-8');
+    const rawConfig = JSON.parse(content);
+
+    // Substitute environment variables
+    const substituted = substituteEnvVars(rawConfig);
+
+    // Parse and validate
+    return parseDockerConfig(substituted);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error(`Config file not found: ${resolvedPath}`);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Recursively substitute environment variables in configuration
+ * Replaces ${VAR_NAME} or ${VAR_NAME:default} with process.env.VAR_NAME
+ * Supports type coercion: numbers are parsed as numbers
+ */
+function substituteEnvVars(obj: any): any {
+  if (typeof obj === 'string') {
+    return obj.replace(
+      /\$\{([^}:]+)(?::([^}]+))?\}/g,
+      (match, varName, defaultValue) => {
+        const value = process.env[varName] || defaultValue;
+        if (value === undefined) {
+          throw new Error(
+            `Environment variable ${varName} not found and no default provided (referenced in config)`,
+          );
+        }
+        // Try to parse as number if it looks like one
+        const numValue = Number(value);
+        return !isNaN(numValue) && value.trim() !== '' ? numValue : value;
+      },
+    );
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => substituteEnvVars(item));
+  }
+
+  if (obj !== null && typeof obj === 'object') {
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = substituteEnvVars(value);
+    }
+    return result;
+  }
+
+  return obj;
+}
