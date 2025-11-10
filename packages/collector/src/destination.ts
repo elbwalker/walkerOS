@@ -212,11 +212,11 @@ export async function destinationInit<Destination extends Destination.Instance>(
 ): Promise<boolean> {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
-    const context: Destination.Context = {
+    const context = {
       collector,
       config: destination.config,
       env: mergeEnvironments(destination.env, destination.config.env),
-    };
+    } as Destination.InitContext;
 
     const configResult = await useHooks(
       destination.init,

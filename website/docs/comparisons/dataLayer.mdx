@@ -3,9 +3,7 @@ title: dataLayer vs. walker.js
 sidebar_position: 2
 description: A comparison of data capturing with walker.js and dataLayer.
 ---
-
-import Link from '@docusaurus/Link';
-import { PromotionReady } from '@site/src/components/templates/flow-complete';
+import { PromotionPlayground } from '@walkeros/explorer';
 
 In the world of web analytics and tag management, Google's `dataLayer` has been
 the go-to solution for pushing data to tools like
@@ -27,11 +25,11 @@ With `dataLayer`, you are responsible for collecting, formatting, and pushing
 every piece of data manually — often right before a user action occurs. This
 means you must:
 
-- Detect the DOM state or user interaction
-- Extract all relevant values (e.g. product ID, name, price)
-- Wait for consent or tool readiness
-- Build the correct structure
-- Call `dataLayer.push` manually
+* Detect the DOM state or user interaction
+* Extract all relevant values (e.g. product ID, name, price)
+* Wait for consent or tool readiness
+* Build the correct structure
+* Call `dataLayer.push` manually
 
 walker.js automates all of this. It:
 
@@ -95,32 +93,33 @@ to scale.**
 
 ### `dataLayer` (manual setup)
 
-```js
-dataLayer.push({
-  event: 'add_to_cart',
-  ecommerce: {
-    items: [
-      { item_id: 'sku123', item_name: 'Cool Hat', price: 29.99, quantity: 1 },
-    ],
-  },
-});
-```
+<CodeSnippet
+  code={`dataLayer.push({
+event: 'add_to_cart',
+ecommerce: {
+items: [
+{ item_id: 'sku123', item_name: 'Cool Hat', price: 29.99, quantity: 1 },
+],
+},
+});`}
+  language="javascript"
+/>
 
-- You must gather all item values yourself.
-- You must ensure this push happens after the DOM is ready, and after consent is
+* You must gather all item values yourself.
+* You must ensure this push happens after the DOM is ready, and after consent is
   granted (typically configured in an external tag manager like GTM)
 
 ### walker.js (declarative + automated)
 
-<PromotionReady width="w-1/2" />
+<PromotionPlayground />
 
 walker.js takes care of:
 
-- Listening for clicks
-- Collecting product info from data-elb-\*
-- Checking consent state
-- Formatting the event (e.g., for GA4 or GTM)
-- Pushing to dataLayer via the GTM destination
+* Listening for clicks
+* Collecting product info from data-elb-\*
+* Checking consent state
+* Formatting the event (e.g., for GA4 or GTM)
+* Pushing to dataLayer via the GTM destination
 
 All you had to do was tag the button.
 
@@ -152,11 +151,11 @@ tomorrow.
 
 We offer serveral ways to integrate with GTM and/or keep using the `dataLayer`:
 
-- **Install walker.js with the tag template:** If you'd like to install
+* **Install walker.js with the tag template:** If you'd like to install
   walker.js using GTM you can use the
   [Google Tag Manager tag template](/docs/sources/web/browser/)
 
-- **Use GTM destination:** If you'd like to use
+* **Use GTM destination:** If you'd like to use
   [walker.js](/docs/sources/web/browser/) as an event source while keeping GTM
   for other tasks, you can use the
   [Google Tag Manager destination](/docs/destinations/web/gtag/gtm) that

@@ -1,4 +1,6 @@
 import type { WalkerOS, Source as CoreSource } from '@walkeros/core';
+import type { SettingsSchema, CorsOptionsSchema } from './schemas';
+import { z } from '@walkeros/core';
 
 // Minimal request/response interfaces
 export interface Request {
@@ -15,18 +17,9 @@ export interface Response {
   set(key: string, value: string): Response;
 }
 
-export interface Settings {
-  cors?: boolean | CorsOptions;
-  timeout?: number;
-}
-
-export interface CorsOptions {
-  origin?: string | string[];
-  methods?: string[];
-  headers?: string[];
-  credentials?: boolean;
-  maxAge?: number;
-}
+// Types inferred from Zod schemas
+export type Settings = z.infer<typeof SettingsSchema>;
+export type CorsOptions = z.infer<typeof CorsOptionsSchema>;
 
 export interface Mapping {
   // Custom source event mapping properties

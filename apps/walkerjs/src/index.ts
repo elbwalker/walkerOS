@@ -15,6 +15,9 @@ import { dataLayerDestination } from './destination';
 // Re-export types
 export * as Walkerjs from './types';
 
+// Export schemas
+export * as schemas from './schemas';
+
 export { getAllEvents, getEvents, getGlobals };
 
 // Factory function to create walker.js instance
@@ -27,11 +30,11 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
       },
     },
     browser: {
-      run: true,
       session: true,
     },
     dataLayer: false,
     elb: 'elb',
+    run: true,
   };
 
   const fullConfig = assign(defaultConfig, config);

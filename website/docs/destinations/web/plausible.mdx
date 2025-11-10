@@ -6,25 +6,11 @@ sidebar_position: 4
 package: '@walkeros/web-destination-plausible'
 ---
 
-import Link from '@docusaurus/Link';
-import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationPlausible from '@walkeros/web-destination-plausible';
-import { examples } from '@walkeros/web-destination-plausible';
+import { examples, schemas } from '@walkeros/web-destination-plausible';
 
-export const documentationPlausible = {
-  ...destinationPlausible,
-  env: {
-    window: {
-      plausible: () => {},
-    },
-  },
-};
+export const destination = { ...destinationPlausible, examples };
 
 # Plausible Analytics
 
@@ -42,14 +28,15 @@ care of loading the script and the function calls.
 
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-plausible
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-plausible`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationPlausible } from '@walkeros/web-destination-plausible';
 
 const { elb } = await startFlow();
@@ -58,28 +45,19 @@ elb('walker destination', destinationPlausible, {
   settings: {
     domain: 'elbwalker.com', // Optional, domain of your site as registered
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'domain',
-      type: 'string',
-      description: 'The domain of your site as registered in Plausible',
-      required: false,
-      example: "'elbwalker.com'",
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.settings} />
 
-<DestinationInit
-  destination={documentationPlausible}
-  custom={`{
-    domain: 'elbwalker.com', // Optional, domain of your site as registered
-  }`}
+<DestinationInitDemo
+  destination={destination}
+  settings={{
+    domain: 'elbwalker.com',
+  }}
 />
 
 ## Mapping examples
@@ -96,16 +74,14 @@ events</Link> manually using the JavaScript function
 
 ### CustomEvent
 
-<DestinationPush
-  destination={documentationPlausible}
+<DestinationDemo
+  destination={destination}
   settings={{
     domain: 'elbwalker.com',
   }}
   event={getEvent()}
   mapping={examples.mapping.customEvent}
   generic={true}
-  smallText={true}
-  height={'256px'}
 />
 
 ### Purchase
@@ -114,13 +90,11 @@ Checkout&nbsp;<Link to="https://plausible.io/docs/ecommerce-revenue-tracking">Pl
 E-commerce revenue tracking</Link> guide to learn more about the setup within
 Plausible.
 
-<DestinationPush
-  destination={documentationPlausible}
+<DestinationDemo
+  destination={destination}
   settings={{
     domain: 'elbwalker.com',
   }}
-  smallText={true}
-  height={'512px'}
   event={getEvent('order complete')}
   mapping={examples.mapping.purchase}
   generic={true}

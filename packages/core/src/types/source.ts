@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type {
-  WalkerOS,
   Elb,
   On,
   Handler,
@@ -100,6 +99,5 @@ export type InitSource<T extends TypesGeneric = Types> = {
  * Maps source IDs to their initialization configurations.
  */
 export interface InitSources {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [sourceId: string]: InitSource<any>;
 }

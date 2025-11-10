@@ -5,8 +5,7 @@ sidebar_position: 1
 package: '@walkeros/walker.js'
 ---
 
-import Link from '@docusaurus/Link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import * as schemas from '@walkeros/walker.js/src/schemas';
 
 # walker.js
 
@@ -21,19 +20,21 @@ complex setup or configuration.
 
 ### Option 1: NPM Package
 
-```bash
-npm install @walkeros/walker.js
-```
+<CodeSnippet
+  code={`npm install @walkeros/walker.js`}
+  language="bash"
+/>
 
 ### Option 2: CDN
 
-```html
-<script
+<CodeSnippet
+  code={`<script
   async
   data-elbconfig="elbConfig"
   src="https://cdn.jsdelivr.net/npm/@walkeros/walker.js@latest/dist/walker.js"
-></script>
-```
+></script>`}
+  language="html"
+/>
 
 ## Basic Setup
 
@@ -41,24 +42,26 @@ npm install @walkeros/walker.js
 
 Add this script before walker.js loads to queue events during initialization:
 
-```html
-<script>
+<CodeSnippet
+  code={`<script>
   function elb() {
     (window.elbLayer = window.elbLayer || []).push(arguments);
   }
-</script>
-```
+</script>`}
+  language="html"
+/>
 
 ### 2. Include Walker.js
 
-```html
-<script async data-elbconfig="elbConfig" src="./walker.js"></script>
-```
+<CodeSnippet
+  code={`<script async data-elbconfig="elbConfig" src="./walker.js"></script>`}
+  language="html"
+/>
 
 ### 3. Configure Destinations
 
-```html
-<script>
+<CodeSnippet
+  code={`<script>
   window.elbConfig = {
     collector: {
       destinations: {
@@ -76,8 +79,9 @@ Add this script before walker.js loads to queue events during initialization:
       },
     },
   };
-</script>
-```
+</script>`}
+  language="html"
+/>
 
 ## Configuration Options
 
@@ -89,150 +93,24 @@ Walker.js supports multiple configuration approaches with different priorities:
 
 ### Settings
 
-<SettingsTable
-  properties={[
-    {
-      name: 'elb',
-      type: 'string',
-      default: '"elb"',
-      description: 'Global function name for event tracking',
-    },
-    {
-      name: 'name',
-      type: 'string',
-      default: '"walkerjs"',
-      description: 'Global instance name',
-    },
-    {
-      name: 'run',
-      type: 'boolean',
-      default: 'true',
-      description: 'Auto-initialize walker.js on load',
-    },
-    {
-      name: 'browser',
-      type: 'object | boolean',
-      default:
-        '{ run: true, session: true, scope: document.body, pageview: true }',
-      description: (
-        <>
-          <Link to="/docs/sources/web/browser/">
-            Browser source configuration
-          </Link>
-        </>
-      ),
-    },
-    {
-      name: 'dataLayer',
-      type: 'object | boolean',
-      default: 'false',
-      description: (
-        <>
-          <Link to="/docs/sources/web/dataLayer">
-            DataLayer source configuration
-          </Link>
-        </>
-      ),
-    },
-    {
-      name: 'collector',
-      type: 'object',
-      default: '{}',
-      description: (
-        <>
-          <Link to="/docs/collector/">
-            Collector configuration
-          </Link>{' '}
-          including destinations and consent settings
-        </>
-      ),
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.settings} />
 
 #### Browser Source Settings
 
-<SettingsTable
-  properties={[
-    {
-      name: 'browser.run',
-      type: 'boolean',
-      default: 'true',
-      description: 'Auto-start DOM tracking',
-    },
-    {
-      name: 'browser.session',
-      type: 'boolean',
-      default: 'true',
-      description: 'Enable session tracking',
-    },
-    {
-      name: 'browser.scope',
-      type: 'Element',
-      default: 'document.body',
-      description: 'DOM element scope for tracking',
-    },
-    {
-      name: 'browser.pageview',
-      type: 'boolean',
-      default: 'true',
-      description: 'Enable automatic page view events',
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.browserConfig} />
 
 #### DataLayer Settings
 
-<SettingsTable
-  properties={[
-    {
-      name: 'dataLayer',
-      type: 'boolean',
-      default: 'false',
-      description: 'Enable dataLayer integration with defaults',
-    },
-    {
-      name: 'dataLayer.name',
-      type: 'string',
-      default: '"dataLayer"',
-      description: 'DataLayer variable name',
-    },
-    {
-      name: 'dataLayer.prefix',
-      type: 'string',
-      default: '"dataLayer"',
-      description: 'Event prefix for dataLayer events',
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.dataLayerConfig} />
 
 #### Collector Settings
 
-<SettingsTable
-  properties={[
-    {
-      name: 'collector.consent',
-      type: 'object',
-      default: '{ functional: true }',
-      description: 'Default consent state',
-    },
-    {
-      name: 'collector.destinations',
-      type: 'object',
-      default: '{}',
-      description: (
-        <>
-          <Link to="/docs/destinations">Destination configurations</Link>
-        </>
-      ),
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.collectorConfig} />
 
 ### Full Configuration Object
 
-```javascript
-window.elbConfig = {
+<CodeSnippet
+  code={`window.elbConfig = {
   // Global settings
   elb: 'elb', // Global function name (default: 'elb')
   name: 'walkerjs', // Global instance name
@@ -264,27 +142,29 @@ window.elbConfig = {
       },
     },
   },
-};
-```
+};`}
+  language="javascript"
+/>
 
 ### Inline Configuration
 
 Configure directly in the script tag using simple key:value pairs:
 
-```html
-<script
+<CodeSnippet
+  code={`<script
   async
   data-elbconfig="elb:track;run:true;instance:myWalker"
   src="./walker.js"
-></script>
-```
+></script>`}
+  language="html"
+/>
 
 ### Named Configuration Object
 
 Use a custom configuration object name:
 
-```html
-<script>
+<CodeSnippet
+  code={`<script>
   window.trackingConfig = {
     elb: 'track',
     collector: {
@@ -294,8 +174,9 @@ Use a custom configuration object name:
     },
   };
 </script>
-<script async data-elbconfig="trackingConfig" src="./walker.js"></script>
-```
+<script async data-elbconfig="trackingConfig" src="./walker.js"></script>`}
+  language="html"
+/>
 
 ## Usage
 
@@ -303,8 +184,8 @@ Use a custom configuration object name:
 
 Walker.js automatically tracks events based on HTML data attributes:
 
-```html
-<!-- Product tracking -->
+<CodeSnippet
+  code={`<!-- Product tracking -->
 <div data-elb="product" data-elb-product="id:123;name:Blue T-Shirt;price:29.99">
   <button data-elbaction="click:add">Add to Cart</button>
 </div>
@@ -313,8 +194,9 @@ Walker.js automatically tracks events based on HTML data attributes:
 <div data-elbglobals="pagetype:product_detail"></div>
 
 <!-- Context information -->
-<div data-elbcontext="section:recommendations"></div>
-```
+<div data-elbcontext="section:recommendations"></div>`}
+  language="html"
+/>
 
 For detailed information on data attributes, see the
 [Browser Source documentation](/docs/sources/web/browser/tagging).
@@ -323,32 +205,34 @@ For detailed information on data attributes, see the
 
 Use the global `elb` function for manual tracking:
 
-```javascript
-// Simple event
+<CodeSnippet
+  code={`// Simple event
 elb('button click', {
-  label: 'interesting',
-});
-```
+label: 'interesting',
+});`}
+  language="javascript"
+/>
 
 ### DataLayer Integration
 
 Walker.js can integrate with existing dataLayer implementations:
 
-```javascript
-// Enable dataLayer integration
+<CodeSnippet
+  code={`// Enable dataLayer integration
 window.elbConfig = {
-  dataLayer: true, // Uses window.dataLayer by default
+dataLayer: true, // Uses window.dataLayer by default
 };
 
 // Existing dataLayer events will be processed
 dataLayer.push({
-  event: 'purchase',
-  ecommerce: {
-    transaction_id: '12345',
-    value: 25.42,
-  },
-});
-```
+event: 'purchase',
+ecommerce: {
+transaction_id: '12345',
+value: 25.42,
+},
+});`}
+  language="javascript"
+/>
 
 ## Advanced Features
 
@@ -356,8 +240,8 @@ dataLayer.push({
 
 Walker.js handles async loading gracefully with automatic event queueing:
 
-```html
-<script>
+<CodeSnippet
+  code={`<script>
   // 1. Define elb function to queue events
   function elb() {
     (window.elbLayer = window.elbLayer || []).push(arguments);
@@ -368,65 +252,68 @@ Walker.js handles async loading gracefully with automatic event queueing:
 </script>
 
 <!-- 3. Walker.js processes queued events when it loads -->
-<script async data-elbconfig="elbConfig" src="./walker.js"></script>
-```
+<script async data-elbconfig="elbConfig" src="./walker.js"></script>`}
+  language="html"
+/>
 
 ### Build Variants
 
 Walker.js provides multiple build formats for different environments:
 
-- `walker.js` - Standard IIFE bundle for browsers
-- `index.es5.js` - GTM-compatible ES2015 build
-- `index.mjs` - ES modules for modern bundlers
-- `index.js` - CommonJS for Node.js environments
+* `walker.js` - Standard IIFE bundle for browsers
+* `index.es5.js` - GTM-compatible ES2015 build
+* `index.mjs` - ES modules for modern bundlers
+* `index.js` - CommonJS for Node.js environments
 
 ### Programmatic Usage
 
 Use walker.js programmatically in applications:
 
-```javascript
-import { createWalkerjs } from '@walkeros/walker.js';
+<CodeSnippet
+  code={`import { createWalkerjs } from '@walkeros/walker.js';
 
 const { collector, elb } = await createWalkerjs({
-  collector: {
-    destinations: {
-      console: { push: console.log },
-    },
-  },
-  browser: {
-    session: true,
-    pageview: true,
-  },
-});
-```
+collector: {
+destinations: {
+console: { push: console.log },
+},
+},
+browser: {
+session: true,
+pageview: true,
+},
+});`}
+  language="javascript"
+/>
 
 ## Destination Configuration
 
 Configure multiple destinations for your events:
 
-```javascript
-window.elbConfig = {
-  collector: {
-    destinations: {
-      // Console logging for development
-      console: {
-        push: (event) => console.log('Walker.js Event:', event),
-      },
+<CodeSnippet
+  code={`window.elbConfig = {
+collector: {
+destinations: {
+// Console logging for development
+console: {
+  push: (event) => console.log('Walker.js Event:', event),
+},
 
-      // Custom API endpoint
-      api: {
-        push: async (event) => {
-          await fetch('/api/events', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(event),
-          });
-        },
-      },
-    },
+// Custom API endpoint
+api: {
+  push: async (event) => {
+    await fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    });
   },
-};
-```
+},
+},
+},
+};`}
+  language="javascript"
+/>
 
 For comprehensive destination options, see the
 [Destinations documentation](/docs/destinations/).
@@ -446,21 +333,19 @@ object name.
 
 ### Factory Function
 
-```typescript
-createWalkerjs(config?: Config): Promise<Instance>
-```
+<CodeSnippet code={`createWalkerjs(config?: Config): Promise<Instance>`} language="typescript" />
 
 Creates a new walker.js instance with the provided configuration.
 
 ### Instance Properties
 
-- `collector` - The walkerOS collector instance
-- `elb` - Browser push function for event tracking
+* `collector` - The walkerOS collector instance
+* `elb` - Browser push function for event tracking
 
 ### Utility Functions
 
-```javascript
-import { getAllEvents, getEvents, getGlobals } from '@walkeros/walker.js';
+<CodeSnippet
+  code={`import { getAllEvents, getEvents, getGlobals } from '@walkeros/walker.js';
 
 // Get all trackable events on the page
 const events = getAllEvents();
@@ -470,16 +355,17 @@ const button = document.querySelector('button');
 const clickEvents = getEvents(button, 'click');
 
 // Get global properties from the page
-const globals = getGlobals();
-```
+const globals = getGlobals();`}
+  language="javascript"
+/>
 
 ## Related Documentation
 
-- **[Browser Source](/docs/sources/web/browser/)** - Detailed DOM tracking
+* **[Browser Source](/docs/sources/web/browser/)** - Detailed DOM tracking
   capabilities
-- **[Collector](/docs/collector/)** - Event processing and routing
-- **[Destinations](/docs/destinations/)** - Available destination options
-- **[DataLayer Source](/docs/sources/web/dataLayer/)** - DataLayer integration
+* **[Collector](/docs/collector/)** - Event processing and routing
+* **[Destinations](/docs/destinations/)** - Available destination options
+* **[DataLayer Source](/docs/sources/web/dataLayer/)** - DataLayer integration
   details
 
 Walker.js combines all these components into a single, easy-to-use package

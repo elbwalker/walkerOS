@@ -12,7 +12,7 @@ declare global {
 }
 
 export interface Settings {
-  pixelId?: string;
+  pixelId: string;
 }
 
 export interface Mapping {

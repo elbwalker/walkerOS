@@ -5,6 +5,7 @@
  */
 
 @import 'tailwindcss';
+@import '@walkeros/explorer/styles.css';
 
 /* DaisyUI plugin configuration */
 @plugin "daisyui" {

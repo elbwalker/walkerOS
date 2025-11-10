@@ -1,5 +1,21 @@
 # walkeros-demo-react
 
+## 1.2.0
+
+### Minor Changes
+
+- [schema #555](https://github.com/elbwalker/walkerOS/issues/555)
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/web-destination-gtag@0.3.0
+  - @walkeros/web-destination-api@0.3.0
+  - @walkeros/web-source-browser@0.3.0
+  - @walkeros/collector@0.3.0
+  - @walkeros/web-core@0.3.0
+  - @walkeros/core@0.3.0
+
 ## 1.1.1
 
 ### Patch Changes

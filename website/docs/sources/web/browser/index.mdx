@@ -4,17 +4,11 @@ description: DOM-based event tracking for web applications
 sidebar_position: 1
 package: '@walkeros/web-source-browser'
 ---
-
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
-import Link from '@docusaurus/Link';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import PackageLink from '@site/src/components/docs/package-link';
+import { schemas } from '@walkeros/web-source-browser';
 
-<PackageLink
-  github="packages/web/sources/browser"
-  npm="@walkeros/web-source-browser"
-/>
+<PackageLink github="packages/web/sources/browser" npm="@walkeros/web-source-browser" />
 
 # Browser Source
 
@@ -22,151 +16,106 @@ Captures user interactions directly from the DOM using data attributes.
 
 ## Features
 
-- **Data attribute reading**: Extracts tracking data from `data-elb-*` attributes
-- **Session management**: Automatic session detection and handling
-- **Pageview tracking**: Automatic or manual page view events
-- **DOM commands**: Enhanced `elb` function with `walker init` support
+* **Data attribute reading**: Extracts tracking data from `data-elb-*` attributes
+* **Session management**: Automatic session detection and handling
+* **Pageview tracking**: Automatic or manual page view events
+* **DOM commands**: Enhanced `elb` function with `walker init` support
 
 ## Installation
 
 <Tabs>
   <TabItem value="npm" label="npm" default>
+    <CodeSnippet
+  code={`    npm install @walkeros/web-source-browser
+    `}
+  language="bash"
+/>
 
-```bash
-npm install @walkeros/web-source-browser
-```
-
-```js
-import { startFlow } from '@walkeros/collector';
+    <CodeSnippet
+      code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector, elb } = await startFlow({
-  sources: {
-    browser: {
-      code: sourceBrowser,
-      config: {
-        settings: {
-          pageview: true,
-          session: true,
-          prefix: 'data-elb',
-        },
-      },
-    },
+sources: {
+browser: {
+code: sourceBrowser,
+config: {
+  settings: {
+    pageview: true,
+    session: true,
+    prefix: 'data-elb',
   },
-});
-```
+},
+},
+},
+});`}
+      disabled
+      language="javascript"
+      label="Code Example"
+      showHeader={false}
+      autoHeight
+    />
+  </TabItem>
 
-</TabItem>
-<TabItem value="script" label="script">
+  <TabItem value="script" label="script">
+    <CodeSnippet
+  code={`    <script>
+      const { startFlow } = await import(
+        'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
+      );
+      const { sourceBrowser } = await import(
+        'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
+      );
 
-```html
-<script>
-  const { startFlow } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
-  );
-  const { sourceBrowser } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
-  );
-
-  const { collector, elb } = await startFlow({
-    sources: {
-      browser: {
-        code: sourceBrowser,
-        config: {
-          settings: {
-            pageview: true,
-            session: true,
+      const { collector, elb } = await startFlow({
+        sources: {
+          browser: {
+            code: sourceBrowser,
+            config: {
+              settings: {
+                pageview: true,
+                session: true,
+              },
+            },
           },
         },
-      },
-    },
-  });
-</script>
-```
-
-</TabItem>
+      });
+    </script>
+    `}
+  language="html"
+/>
+  </TabItem>
 </Tabs>
 
 ## Configuration
 
-<SettingsTable
-  properties={[
-    {
-      name: 'prefix',
-      type: 'string',
-      description: 'Prefix for data attributes (default: "data-elb")',
-      required: false,
-      example: "'data-elb'",
-    },
-    {
-      name: 'scope',
-      type: 'Element | Document',
-      description: 'DOM scope for event tracking (default: document)',
-      required: false,
-      example: 'document.querySelector("#app")',
-    },
-    {
-      name: 'pageview',
-      type: 'boolean',
-      description: 'Enable automatic pageview tracking',
-      required: false,
-      example: 'true',
-    },
-    {
-      name: 'session',
-      type: 'boolean',
-      description: 'Enable session tracking',
-      required: false,
-      example: 'true',
-    },
-    {
-      name: 'elb',
-      type: 'string',
-      description: 'Name for global elb function (e.g., window.elb)',
-      required: false,
-      example: "'elb'",
-    },
-    {
-      name: 'name',
-      type: 'string',
-      description: 'Custom name for source instance',
-      required: false,
-      example: "'mySource'",
-    },
-    {
-      name: 'elbLayer',
-      type: 'boolean | string | Elb.Layer',
-      description: 'Enable elbLayer for async command queuing',
-      required: false,
-      example: 'true',
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.settings} />
 
 ## Enhanced elb Function
 
 The browser source returns an enhanced `elb` function with additional features:
 
-```typescript
-// Collector elb: Basic event tracking
+<CodeSnippet
+  code={`// Collector elb: Basic event tracking
 collector.push('product view', { id: 'P123' });
 
 // Browser source elb: Enhanced with DOM commands
 elb('walker init', { scope: document.querySelector('#app') });
-elb('product view', { id: 'P123' }); // Also tracks events
-```
+elb('product view', { id: 'P123' }); // Also tracks events`}
+  language="typescript"
+/>
 
 **Browser Source elb adds:**
 
-- **DOM Commands**: `walker init` for asynchronous DOM element loading
-- **Flexible Arguments**: Support for multiple argument patterns
-- **elbLayer Integration**: Automatic processing of queued commands
-- **Element Parameters**: Support for element parameters in commands
+* **DOM Commands**: `walker init` for asynchronous DOM element loading
+* **Flexible Arguments**: Support for multiple argument patterns
+* **elbLayer Integration**: Automatic processing of queued commands
+* **Element Parameters**: Support for element parameters in commands
 
 See [Commands](/docs/sources/web/browser/commands) for complete API documentation.
 
 ## Next Steps
 
-- [Tagging Guide](/docs/sources/web/browser/tagging) - Learn about data attributes
-- [Commands Reference](/docs/sources/web/browser/commands) - Full API documentation
-- [Tagger Tool](/docs/sources/web/browser/tagger) - Visual tagging tool
+* [Tagging Guide](/docs/sources/web/browser/tagging) - Learn about data attributes
+* [Commands Reference](/docs/sources/web/browser/commands) - Full API documentation
+* [Tagger Tool](/docs/sources/web/browser/tagger) - Visual tagging tool

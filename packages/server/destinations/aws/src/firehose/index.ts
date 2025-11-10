@@ -9,6 +9,9 @@ export * as DestinationFirehose from './types';
 // Examples
 export * as examples from './examples';
 
+// Schemas
+export * as schemas from './schemas';
+
 export const destinationFirehose: Destination = {
   type: 'aws-firehose',
 

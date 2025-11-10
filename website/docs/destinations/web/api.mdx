@@ -6,23 +6,11 @@ path: packages/web/destinations/api
 sidebar_position: 1
 ---
 
-import Link from '@docusaurus/Link';
-import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationWebAPI from '@walkeros/web-destination-api';
-import { examples } from '@walkeros/web-destination-api';
+import { examples, schemas } from '@walkeros/web-destination-api';
 
-export const documentationAPI = {
-  ...destinationWebAPI,
-  env: {
-    sendWeb: () => ({ ok: true }),
-  },
-};
+export const destination = { ...destinationWebAPI, examples };
 
 # API Destination
 
@@ -37,14 +25,15 @@ customizable data transformation and transport methods.
 
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-api
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-api`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await startFlow({
@@ -58,58 +47,20 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'url',
-      type: 'string',
-      description: 'The HTTP endpoint URL to send events to',
-      required: true,
-      example: "'https://api.example.com/events'",
-    },
-    {
-      name: 'headers',
-      type: 'Record<string, string>',
-      description: 'Additional HTTP headers to include with requests',
-      required: false,
-      example:
-        "{ 'Authorization': 'Bearer token', 'Content-Type': 'application/json' }",
-    },
-    {
-      name: 'method',
-      type: 'string',
-      description: 'HTTP method for the request',
-      required: false,
-      example: "'POST'",
-    },
-    {
-      name: 'transform',
-      type: 'function',
-      description: 'Function to transform event data before sending',
-      required: false,
-      example: '(data, config, mapping) => JSON.stringify(data)',
-    },
-    {
-      name: 'transport',
-      type: "'fetch' | 'xhr' | 'beacon'",
-      description: 'Transport method for sending requests',
-      required: false,
-      example: "'fetch'",
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.settings} />
 
 ## Usage
 
 ### Basic Usage
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await startFlow({
@@ -128,13 +79,14 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ### Advanced Usage with Transform
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await startFlow({
@@ -149,7 +101,7 @@ const { collector, elb } = await startFlow({
             // Custom transformation logic
             return JSON.stringify({
               timestamp: Date.now(),
-              event_name: `${event.entity}_${event.action}`,
+              event_name: \`\${event.entity}_\${event.action}\`,
               properties: event.data,
               context: event.context,
             });
@@ -158,15 +110,16 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ## Examples
 
 ### Sending to Analytics API
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await startFlow({
@@ -183,7 +136,7 @@ const { collector, elb } = await startFlow({
           },
           transform: (event) => {
             return JSON.stringify({
-              event_type: `${event.entity}_${event.action}`,
+              event_type: \`\${event.entity}_\${event.action}\`,
               user_id: event.user?.id,
               session_id: event.user?.session,
               properties: event.data,
@@ -194,15 +147,16 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ### Using Beacon Transport
 
 For critical events that need to be sent even when the page is unloading:
 
-```typescript
-// Add to existing startFlow config
+<CodeSnippet
+  code={`// Add to existing startFlow config
 const { collector, elb } = await startFlow({
   destinations: {
     criticalApi: {
@@ -215,15 +169,16 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ### Custom Data Mapping
 
 Use mapping rules to control which events are sent:
 
-```typescript
-// Add to existing startFlow config
+<CodeSnippet
+  code={`// Add to existing startFlow config
 const { collector, elb } = await startFlow({
   destinations: {
     api: {
@@ -242,8 +197,9 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ## Transport Methods
 
@@ -257,8 +213,8 @@ const { collector, elb } = await startFlow({
 By default the&nbsp;<Link to="/docs/core/web#sendweb">`sendWeb`</Link> function
 is used to send the events to an API.
 
-<DestinationPush
-  destination={documentationAPI}
+<DestinationDemo
+  destination={destination}
   settings={{
     url: 'https://api.example.com/events',
   }}

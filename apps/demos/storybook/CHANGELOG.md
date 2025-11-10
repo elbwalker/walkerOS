@@ -1,5 +1,16 @@
 # @walkeros/storybook-demo
 
+## 0.2.0
+
+### Minor Changes
+
+- [schema #555](https://github.com/elbwalker/walkerOS/issues/555)
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/web-source-browser@0.3.0
+
 ## 0.1.3
 
 ### Patch Changes

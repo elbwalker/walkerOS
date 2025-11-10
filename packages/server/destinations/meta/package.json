@@ -1,16 +1,18 @@
 {
   "name": "@walkeros/server-destination-meta",
   "description": "Meta server destination for walkerOS",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "license": "MIT",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/browser-schemas.d.ts",
+      "import": "./dist/browser-schemas.mjs",
+      "require": "./dist/browser-schemas.js"
     },
     "./examples": {
       "types": "./dist/examples/index.d.ts",
@@ -30,8 +32,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "0.2.1",
-    "@walkeros/server-core": "0.2.1"
+    "@walkeros/core": "0.3.0",
+    "@walkeros/server-core": "0.3.0"
   },
   "devDependencies": {},
   "repository": {

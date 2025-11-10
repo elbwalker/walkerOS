@@ -1,27 +1,30 @@
 import type { Source, Elb, Collector } from '@walkeros/core';
 import type { SessionConfig, SessionCallback } from '@walkeros/web-core';
+import type { SettingsSchema } from '../schemas';
+import { z } from '@walkeros/core';
 
 // Export browser-specific elb types
 export * from './elb';
 import type { BrowserPush } from './elb';
 
+// Base settings from Zod schema
+type BaseSettings = z.infer<typeof SettingsSchema>;
+
 // InitSettings: what users provide (all optional)
-export interface InitSettings extends Record<string, unknown> {
-  prefix?: string;
+// Override specific fields with non-serializable types
+export interface InitSettings
+  extends Partial<Omit<BaseSettings, 'scope' | 'session' | 'elbLayer'>> {
   scope?: Element | Document;
-  pageview?: boolean;
   session?: boolean | SessionConfig;
-  elb?: string;
   elbLayer?: boolean | string | Elb.Layer;
 }
 
-// Settings: resolved configuration (required fields are actually required)
-export interface Settings extends Record<string, unknown> {
-  prefix: string;
+// Settings: resolved configuration
+// Override specific fields with non-serializable types
+export interface Settings
+  extends Omit<BaseSettings, 'scope' | 'session' | 'elbLayer'> {
   scope?: Element | Document;
-  pageview: boolean;
   session: boolean | SessionConfig;
-  elb: string;
   elbLayer: boolean | string | Elb.Layer;
 }
 
