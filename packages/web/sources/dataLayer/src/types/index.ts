@@ -1,4 +1,6 @@
 import type { WalkerOS, Source, Elb } from '@walkeros/core';
+import type { SettingsSchema } from '../schemas';
+import { z } from '@walkeros/core';
 
 declare global {
   interface Window {
@@ -9,7 +11,11 @@ declare global {
 
 export type DataLayer = Array<unknown>;
 
-export interface Settings extends Record<string, unknown> {
+// Base settings from Zod schema
+type BaseSettings = z.infer<typeof SettingsSchema>;
+
+// Override filter to be actual function type (not serializable in schema)
+export interface Settings extends Omit<BaseSettings, 'filter'> {
   name?: string;
   prefix?: string;
   filter?: (event: unknown) => WalkerOS.PromiseOrValue<boolean>;

@@ -14,6 +14,7 @@ import { isEventRequest, setCorsHeaders } from './utils';
 import { processEvent } from './push';
 
 export * as SourceCloudFunction from './types';
+export * as schemas from './schemas';
 
 // Export examples
 export * as examples from './examples';
