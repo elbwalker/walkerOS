@@ -1,5 +1,11 @@
 # @walkeros/core
 
+## 0.3.0
+
+### Minor Changes
+
+- [schema #555](https://github.com/elbwalker/walkerOS/issues/555)
+
 ## Unreleased
 
 ### Breaking Changes
