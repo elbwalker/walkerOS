@@ -1,11 +1,13 @@
 import { JSX } from 'react';
 import Layout from '@theme/Layout';
-import { PromotionReady } from '@site/src/components/templates/flow-complete';
+import { PromotionPlayground } from '@walkeros/explorer';
 
-export default function EventFlowPage(): JSX.Element {
+export default function PlaygroundPage(): JSX.Element {
   return (
-    <Layout title="Event Flow" description="Test the event flow component">
-      <PromotionReady />
+    <Layout title="Playground" description="Interactive walkerOS playground">
+      <div style={{ padding: '2rem' }}>
+        <PromotionPlayground />
+      </div>
     </Layout>
   );
 }
