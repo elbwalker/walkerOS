@@ -40,5 +40,8 @@ export async function loadJsonConfig<T>(configPath: string): Promise<T> {
 
 export function getTempDir(tempDir = '.tmp'): string {
   const randomId = Math.random().toString(36).substring(2, 11);
-  return path.join(process.cwd(), tempDir, `cli-${Date.now()}-${randomId}`);
+  const basePath = path.isAbsolute(tempDir)
+    ? tempDir
+    : path.join(process.cwd(), tempDir);
+  return path.join(basePath, `cli-${Date.now()}-${randomId}`);
 }

@@ -74,6 +74,47 @@ function validateNoDuplicatePackages(packages: Package[]): void {
   }
 }
 
+/**
+ * Recursively resolve and download package dependencies
+ */
+async function resolveDependencies(
+  pkg: Package,
+  packageDir: string,
+  logger: Logger,
+  visited: Set<string> = new Set(),
+): Promise<Package[]> {
+  const dependencies: Package[] = [];
+  const pkgKey = `${pkg.name}@${pkg.version}`;
+
+  if (visited.has(pkgKey)) {
+    return dependencies;
+  }
+  visited.add(pkgKey);
+
+  try {
+    const packageJsonPath = path.join(packageDir, 'package.json');
+    if (await fs.pathExists(packageJsonPath)) {
+      const packageJson = await fs.readJson(packageJsonPath);
+      const deps = {
+        ...packageJson.dependencies,
+        ...packageJson.peerDependencies,
+      };
+
+      for (const [name, versionSpec] of Object.entries(deps)) {
+        if (typeof versionSpec === 'string') {
+          // Convert version spec to 'latest' for simplicity
+          // In the future, we could use semver to resolve exact versions
+          dependencies.push({ name, version: 'latest' });
+        }
+      }
+    }
+  } catch (error) {
+    logger.debug(`Failed to read dependencies for ${pkgKey}: ${error}`);
+  }
+
+  return dependencies;
+}
+
 export async function downloadPackages(
   packages: Package[],
   targetDir: string,
@@ -81,14 +122,23 @@ export async function downloadPackages(
   useCache = true,
 ): Promise<Map<string, string>> {
   const packagePaths = new Map<string, string>();
+  const downloadQueue: Package[] = [...packages];
+  const processed = new Set<string>();
 
-  // Validate no duplicate packages with different versions
+  // Validate no duplicate packages with different versions in initial list
   validateNoDuplicatePackages(packages);
 
   // Ensure target directory exists
   await fs.ensureDir(targetDir);
 
-  for (const pkg of packages) {
+  while (downloadQueue.length > 0) {
+    const pkg = downloadQueue.shift()!;
+    const pkgKey = `${pkg.name}@${pkg.version}`;
+
+    if (processed.has(pkgKey)) {
+      continue;
+    }
+    processed.add(pkgKey);
     const packageSpec = `${pkg.name}@${pkg.version}`;
     // Use proper node_modules structure: node_modules/@scope/package
     const packageDir = getPackageDirectory(targetDir, pkg.name, pkg.version);
@@ -101,6 +151,15 @@ export async function downloadPackages(
         await fs.ensureDir(path.dirname(packageDir));
         await fs.copy(cachedPath, packageDir);
         packagePaths.set(pkg.name, packageDir);
+
+        // Resolve and queue dependencies for cached package too
+        const deps = await resolveDependencies(pkg, packageDir, logger);
+        for (const dep of deps) {
+          const depKey = `${dep.name}@${dep.version}`;
+          if (!processed.has(depKey)) {
+            downloadQueue.push(dep);
+          }
+        }
         continue;
       } catch (error) {
         logger.debug(
@@ -116,8 +175,11 @@ export async function downloadPackages(
       await fs.ensureDir(path.dirname(packageDir));
 
       // Extract package to proper node_modules structure
+      // Use environment variable for cache location (Docker-friendly)
+      const cacheDir =
+        process.env.NPM_CACHE_DIR || path.join(process.cwd(), '.npm-cache');
       await pacote.extract(packageSpec, packageDir, {
-        cache: path.join(process.cwd(), '.npm-cache'),
+        cache: cacheDir,
       });
 
       // Cache the downloaded package for future use
@@ -132,6 +194,15 @@ export async function downloadPackages(
       }
 
       packagePaths.set(pkg.name, packageDir);
+
+      // Resolve and queue dependencies
+      const deps = await resolveDependencies(pkg, packageDir, logger);
+      for (const dep of deps) {
+        const depKey = `${dep.name}@${dep.version}`;
+        if (!processed.has(depKey)) {
+          downloadQueue.push(dep);
+        }
+      }
     } catch (error) {
       throw new Error(`Failed to download ${packageSpec}: ${error}`);
     }
