@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { loadDockerConfig } from './config';
+import { loadDockerConfig, parseDockerConfig } from './config';
 import { registerSource, registerDestination } from './config/registry';
 import { sourceExpress } from './sources/express';
 import { destinationConsole } from './destinations/console';
@@ -62,7 +62,7 @@ async function main() {
         // Serve mode works without config (uses defaults + env vars)
         const config = process.env.CONFIG_FILE
           ? await loadDockerConfig()
-          : ({} as any);
+          : parseDockerConfig({});
         await runServeMode(config);
         break;
       }
