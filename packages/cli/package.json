@@ -3,7 +3,6 @@
   "version": "0.2.0",
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
-  "type": "module",
   "bin": {
     "walkeros": "./dist/index.mjs"
   },
