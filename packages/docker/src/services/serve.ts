@@ -6,10 +6,17 @@ import type { DockerConfig } from '../config/schema';
  * Run serve mode - serve static files (typically generated bundles)
  */
 export async function runServeMode(config: DockerConfig): Promise<void> {
-  const port = config.docker?.port || 8080;
-  const host = config.docker?.host || '0.0.0.0';
+  // Port priority: ENV variable > config > default
+  const port = process.env.PORT
+    ? parseInt(process.env.PORT, 10)
+    : config.docker?.port || 8080;
+  // Host priority: ENV variable > config > default
+  const host = process.env.HOST || config.docker?.host || '0.0.0.0';
+  // Static dir priority: ENV variable > config > default
   const staticDir =
-    config.docker?.serve?.staticDir || path.resolve('/app/dist');
+    process.env.STATIC_DIR ||
+    config.docker?.serve?.staticDir ||
+    path.resolve('/app/dist');
 
   console.log('📁 Serve mode: Starting static file server...');
   console.log(`   Directory: ${staticDir}`);

@@ -19,15 +19,20 @@ describe('Collect Mode Integration', () => {
   // Use process.cwd() which points to package root when running tests
   const projectRoot = process.cwd();
 
-  // Build once before all tests
+  // Build once before all tests (only if dist doesn't exist)
   beforeAll(() => {
-    console.log('Building docker package...');
-    try {
-      execSync('npm run build', { cwd: projectRoot, stdio: 'inherit' });
-      console.log('Build complete');
-    } catch (error) {
-      console.error('Build failed:', error);
-      throw error;
+    const distPath = join(projectRoot, 'dist/index.js');
+    const distExists = require('fs').existsSync(distPath);
+
+    if (!distExists) {
+      console.log('Building docker package...');
+      try {
+        execSync('npm run build', { cwd: projectRoot, stdio: 'inherit' });
+        console.log('Build complete');
+      } catch (error) {
+        console.error('Build failed:', error);
+        throw error;
+      }
     }
   });
 

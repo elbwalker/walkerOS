@@ -16,6 +16,7 @@ export default defineConfig({
     'express',
     'cors',
     'zod',
+    'esbuild', // Cannot bundle esbuild - has native binaries
   ],
   // CLI src imports need to be bundled or resolved
   noExternal: [/@walkeros\/cli\/src/],

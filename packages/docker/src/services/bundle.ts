@@ -11,10 +11,18 @@ export async function runBundleMode(config: DockerConfig): Promise<void> {
   console.log(`   Platform: ${config.platform}`);
   console.log(`   Output: ${config.output}`);
 
+  // Get config file path from environment (set by main entry point)
+  const configFile = process.env.CONFIG_FILE;
+  if (!configFile) {
+    throw new Error(
+      'CONFIG_FILE environment variable required for bundle mode',
+    );
+  }
+
   try {
     // Delegate to CLI - it handles everything
     await bundleCommand({
-      config: config as any, // Docker config extends CLI config
+      config: configFile, // Pass config file path, not object
       cache: config.cache !== false,
       stats: process.env.DEBUG === 'true',
       verbose: process.env.DEBUG === 'true',
