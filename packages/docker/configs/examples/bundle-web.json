@@ -86,6 +86,8 @@
     "run": true
   },
   "output": "/app/dist/walker.js",
+  "tempDir": "/tmp",
+  "template": "/app/packages/cli/templates/base.hbs",
   "docker": {
     "bundle": {
       "output": "/app/dist/walker.js"

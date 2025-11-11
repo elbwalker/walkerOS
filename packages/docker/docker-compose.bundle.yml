@@ -1,0 +1,40 @@
+# docker-compose for walkerOS Bundle Mode
+# Generates a static JavaScript bundle and exits
+
+version: '3.8'
+
+services:
+  walkeros-bundle:
+    image: walkeros/docker:latest
+    container_name: walkeros-bundle
+
+    environment:
+      # Required: Set operational mode
+      MODE: bundle
+
+      # Config file path
+      CONFIG_FILE: /app/config/bundle-web.json
+
+      # Optional: Override output path
+      # OUTPUT_PATH: /app/dist/walker.js
+
+      # Optional: Enable debug logging
+      # DEBUG: "true"
+
+    volumes:
+      # Mount config file
+      - ./configs/examples/bundle-web.json:/app/config/bundle-web.json:ro
+
+      # Mount output directory (bundle will be written here)
+      - ./dist:/app/dist
+
+      # Optional: Mount custom config
+      # - ./my-bundle-config.json:/app/config.json:ro
+
+    # Bundle mode exits after completion, so no restart
+    restart: "no"
+
+# Usage:
+# 1. Ensure dist/ directory exists: mkdir -p dist
+# 2. Run: docker-compose -f docker-compose.bundle.yml up
+# 3. Check output: ls -l dist/walker.js

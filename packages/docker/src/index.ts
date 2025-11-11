@@ -44,22 +44,28 @@ async function main() {
     registerSource('sourceExpress', sourceExpress);
     registerDestination('destinationConsole', destinationConsole);
 
-    // Load configuration
-    const config = await loadDockerConfig();
-
     // Run the appropriate mode
     switch (mode) {
-      case 'bundle':
+      case 'bundle': {
+        const config = await loadDockerConfig();
         await runBundleMode(config);
         break;
+      }
 
-      case 'collect':
+      case 'collect': {
+        const config = await loadDockerConfig();
         await runCollectMode(config);
         break;
+      }
 
-      case 'serve':
+      case 'serve': {
+        // Serve mode works without config (uses defaults + env vars)
+        const config = process.env.CONFIG_FILE
+          ? await loadDockerConfig()
+          : ({} as any);
         await runServeMode(config);
         break;
+      }
 
       default:
         throw new Error(`Unhandled mode: ${mode}`);

@@ -4,7 +4,7 @@
 # ============================================================================
 # Stage 1: Build
 # ============================================================================
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -30,9 +30,12 @@ RUN npm run build --workspace=@walkeros/docker
 # ============================================================================
 # Stage 2: Production Runtime
 # ============================================================================
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /app
+
+# Install tini for proper signal handling
+RUN apk add --no-cache tini
 
 # Install production dependencies only
 COPY package.json package-lock.json ./
@@ -47,6 +50,7 @@ COPY --from=builder /app/packages/cli/dist ./packages/cli/dist
 COPY --from=builder /app/packages/cli/package.json ./packages/cli/
 COPY --from=builder /app/packages/cli/templates ./packages/cli/templates
 COPY --from=builder /app/packages/docker/dist ./packages/docker/dist
+COPY --from=builder /app/packages/docker/configs ./packages/docker/configs
 
 # Install production dependencies
 RUN npm ci --production --workspace=@walkeros/docker
@@ -55,16 +59,16 @@ RUN npm ci --production --workspace=@walkeros/docker
 RUN addgroup -g 1001 walker && \
     adduser -D -u 1001 -G walker walker
 
-# Create necessary directories
+# Create necessary directories and set ownership
 RUN mkdir -p /app/dist /app/config && \
-    chown -R walker:walker /app
+    chown -R walker:walker /app && \
+    chmod 1777 /tmp
 
 # Switch to non-root user
 USER walker
 
 # Default environment variables
 ENV MODE=collect \
-    CONFIG_FILE=/app/config.json \
     NODE_ENV=production
 
 # Health check (for collect mode)
@@ -74,5 +78,6 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Expose default port
 EXPOSE 8080
 
-# Entry point
+# Entry point (use tini for proper signal handling)
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "packages/docker/dist/index.js"]
