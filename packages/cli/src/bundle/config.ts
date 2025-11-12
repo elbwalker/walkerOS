@@ -4,8 +4,19 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
 // ESM-compatible __dirname resolution
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Use a function to get the directory path that works in both ESM and CommonJS
+function getDirname(): string {
+  // Check if we're in an ESM context by checking if __dirname is undefined
+  // In ESM, __dirname doesn't exist; in CommonJS, it's defined globally
+  // @ts-ignore - __dirname may not exist in ESM
+  if (typeof __dirname === 'undefined') {
+    // ESM context - use import.meta.url
+    // @ts-ignore - import.meta only exists in ESM
+    return dirname(fileURLToPath(import.meta.url));
+  }
+  // CommonJS context
+  return __dirname;
+}
 
 // Package configuration schema
 const PackageConfigSchema = z.object({
@@ -108,7 +119,7 @@ const CollectorConfigSchema = z
 
 // Configuration schema
 export const BundleConfigSchema = z.object({
-  platform: z.enum(['web', 'node']).default('web'),
+  platform: z.enum(['web', 'server']).default('web'),
   packages: z.record(z.string(), PackageConfigSchema.default({})),
   code: z.string(),
   template: z.string().optional(),
@@ -143,13 +154,13 @@ export function parseBundleConfig(data: unknown): BundleConfig {
 
   // Auto-select template based on platform if not specified
   let template = parsed.template;
-  if (!template && parsed.platform === 'node') {
-    // Use node.hbs template for Node.js platform
+  if (!template && parsed.platform === 'server') {
+    // Use server.hbs template for server platform
     // Use path resolution that works both in bundled and unbundled contexts
-    template = path.join(__dirname, '../templates/node.hbs');
+    template = path.join(getDirname(), '../templates/server.hbs');
   } else if (!template && parsed.platform === 'web') {
     // Use base.hbs template for web platform
-    template = path.join(__dirname, '../templates/base.hbs');
+    template = path.join(getDirname(), '../templates/base.hbs');
   }
 
   return {

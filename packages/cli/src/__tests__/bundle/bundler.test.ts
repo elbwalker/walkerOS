@@ -75,10 +75,10 @@ describe('Bundler', () => {
     await expect(bundle(config, logger)).resolves.not.toThrow();
   });
 
-  it('should bundle node config with CJS format', async () => {
-    // Inline node configuration
+  it('should bundle server config with CJS format', async () => {
+    // Inline server configuration
     const rawConfig = {
-      platform: 'node',
+      platform: 'server',
       packages: {
         '@walkeros/core': {
           imports: ['trim', 'isString'],
@@ -89,7 +89,7 @@ describe('Bundler', () => {
         platform: 'node',
         format: 'cjs',
       },
-      output: path.join(testOutputDir, 'node-bundle.js'),
+      output: path.join(testOutputDir, 'server-bundle.js'),
     };
 
     const config = parseBundleConfig(rawConfig);

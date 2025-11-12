@@ -74,7 +74,7 @@ describe('Bundler Integration', () => {
 
   it('should validate custom build configuration', async () => {
     const rawConfig = {
-      platform: 'node',
+      platform: 'server',
       packages: {},
       code: 'export const test = "hello";',
       build: {

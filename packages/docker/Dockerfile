@@ -16,6 +16,7 @@ COPY packages/docker/package.json ./packages/docker/
 COPY packages/core ./packages/core
 COPY packages/collector ./packages/collector
 COPY packages/cli ./packages/cli
+COPY packages/cli/templates ./packages/cli/templates
 COPY packages/config ./packages/config
 
 # Install dependencies (including devDependencies for build)
