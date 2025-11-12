@@ -1,4 +1,4 @@
-import { BundleConfigSchema } from '@walkeros/cli/src/bundle/config';
+import { BundleConfigSchema } from '@walkeros/cli';
 import { z } from 'zod';
 
 /**

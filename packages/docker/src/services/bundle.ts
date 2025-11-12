@@ -1,4 +1,4 @@
-import { bundleCommand } from '@walkeros/cli/src/bundle';
+import { bundleCommand } from '@walkeros/cli';
 import type { DockerConfig } from '../config/schema';
 
 /**

@@ -1,0 +1,34 @@
+(async function() {
+  const config = {
+    sources: {
+    {{#each sources}}
+      {{@key}}: {
+        code: {{{code}}},
+        config: {{{config}}}{{#if env}},
+        env: {{{env}}}{{/if}}
+      },
+    {{/each}}
+    },
+    destinations: {
+    {{#each destinations}}
+      {{@key}}: {
+        code: {{{code}}},
+        config: {{{config}}}{{#if env}},
+        env: {{{env}}}{{/if}}
+      },
+    {{/each}}
+    }{{#if collector}},
+    ...{{{collector}}}{{/if}}
+  };
+
+  {{{CODE}}}
+
+  const result = await startFlow(config);
+
+  // Export for Node.js module system
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = result;
+  }
+
+  return result;
+})();

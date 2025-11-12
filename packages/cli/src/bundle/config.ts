@@ -1,4 +1,11 @@
 import { z } from 'zod';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// ESM-compatible __dirname resolution
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Package configuration schema
 const PackageConfigSchema = z.object({
@@ -14,7 +21,7 @@ const SourceDestinationItemSchema = z.object({
 });
 
 // Build configuration schema with platform-specific defaults
-function createBuildConfigSchema(platform: 'web' | 'node') {
+function createBuildConfigSchema(platform: 'web' | 'server') {
   if (platform === 'web') {
     return z.object({
       platform: z.enum(['browser', 'node', 'neutral']).default('browser'),
@@ -134,8 +141,20 @@ export function parseBundleConfig(data: unknown): BundleConfig {
     {},
   );
 
+  // Auto-select template based on platform if not specified
+  let template = parsed.template;
+  if (!template && parsed.platform === 'node') {
+    // Use node.hbs template for Node.js platform
+    // Use path resolution that works both in bundled and unbundled contexts
+    template = path.join(__dirname, '../templates/node.hbs');
+  } else if (!template && parsed.platform === 'web') {
+    // Use base.hbs template for web platform
+    template = path.join(__dirname, '../templates/base.hbs');
+  }
+
   return {
     ...parsed,
+    template,
     build: {
       ...platformBuildDefaults,
       ...parsed.build,

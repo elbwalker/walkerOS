@@ -2,6 +2,12 @@ import { Command } from 'commander';
 import { bundleCommand } from './bundle';
 import { simulateCommand } from './simulate';
 
+// Export commands for programmatic use
+export { bundleCommand, simulateCommand };
+
+// Export types and schemas for extending
+export { BundleConfigSchema, type BundleConfig } from './bundle/config';
+
 const program = new Command();
 
 program
@@ -53,4 +59,11 @@ program
     });
   });
 
-program.parse();
+// Only run CLI if this file is executed directly (not imported as a module)
+// Check if the resolved file path matches the first CLI argument
+import { fileURLToPath } from 'url';
+const isMainModule =
+  process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isMainModule) {
+  program.parse();
+}

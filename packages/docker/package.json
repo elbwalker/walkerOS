@@ -19,9 +19,9 @@
     "test": "jest"
   },
   "dependencies": {
-    "@walkeros/cli": "^0.2.0",
-    "@walkeros/collector": "^0.3.0",
-    "@walkeros/core": "^0.3.0",
+    "@walkeros/cli": "*",
+    "@walkeros/collector": "*",
+    "@walkeros/core": "*",
     "cors": "^2.8.5",
     "esbuild": "^0.19.0",
     "express": "^4.18.2",

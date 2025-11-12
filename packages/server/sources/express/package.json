@@ -18,7 +18,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "0.3.0",
+    "@walkeros/core": "*",
     "express": "^4.18.2",
     "cors": "^2.8.5"
   },
