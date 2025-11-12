@@ -17,6 +17,7 @@
  * - types/destination.ts → schemas/destination.ts
  * - types/collector.ts → schemas/collector.ts
  * - types/source.ts → schemas/source.ts
+ * - types/flow.ts → schemas/flow.ts
  * - types/storage.ts + types/handler.ts → schemas/utilities.ts
  *
  * Import strategy:
@@ -42,6 +43,7 @@ import * as MappingSchemas from './mapping';
 import * as DestinationSchemas from './destination';
 import * as CollectorSchemas from './collector';
 import * as SourceSchemas from './source';
+import * as FlowSchemas from './flow';
 import * as UtilitySchemas from './utilities';
 
 export {
@@ -50,6 +52,7 @@ export {
   DestinationSchemas,
   CollectorSchemas,
   SourceSchemas,
+  FlowSchemas,
   UtilitySchemas,
 };
 
@@ -106,6 +109,24 @@ export {
   ruleJsonSchema,
   rulesJsonSchema,
 } from './mapping';
+
+// Export commonly used schemas from Flow namespace directly
+export {
+  SetupSchema,
+  ConfigSchema as FlowConfigSchema, // Alias to avoid conflict with other ConfigSchema exports
+  SourceReferenceSchema,
+  DestinationReferenceSchema,
+  PrimitiveSchema,
+  parseSetup,
+  safeParseSetup,
+  parseConfig,
+  safeParseConfig,
+  // JSON Schemas
+  setupJsonSchema,
+  configJsonSchema,
+  sourceReferenceJsonSchema,
+  destinationReferenceJsonSchema,
+} from './flow';
 
 // ========================================
 // Schema Builder - DRY utility for destinations
