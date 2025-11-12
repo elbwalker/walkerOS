@@ -1,5 +1,5 @@
 import type { WalkerOS } from '@walkeros/core';
-import { isString, isDefined, isArray } from '@walkeros/core';
+import { isString, isDefined } from '@walkeros/core';
 import type {
   Event,
   UserData,
@@ -9,15 +9,6 @@ import type {
   ConsentStatus,
 } from './types';
 import { hashEmail, hashPhone, hashName } from './hash';
-
-/**
- * Helper to extract value from context/globals property (which can be [value, scope] tuple or direct value)
- */
-function extractValue(prop: unknown): string | undefined {
-  if (isString(prop)) return prop;
-  if (isArray(prop) && prop.length >= 1 && isString(prop[0])) return prop[0];
-  return undefined;
-}
 
 /**
  * Format walkerOS event timestamp to RFC 3339 format
@@ -111,51 +102,29 @@ export async function formatUserData(
 }
 
 /**
- * Extract attribution identifiers from walkerOS event
+ * Extract and format attribution identifiers from mapped data
  * https://developers.google.com/data-manager/api/reference/rest/v1/AdIdentifiers
  *
- * Priority: context > data > globals
+ * Attribution identifiers should be mapped explicitly in the mapping configuration.
+ * Example: { gclid: 'context.gclid', gbraid: 'context.gbraid' }
  */
 export function formatAdIdentifiers(
-  event: WalkerOS.Event,
+  data: Record<string, unknown>,
 ): AdIdentifiers | undefined {
   const identifiers: AdIdentifiers = {};
 
-  // Check context first (context properties can be [value, scope] tuples)
-  const context = event.context as Record<string, unknown> | undefined;
-  if (context) {
-    const gclid = extractValue(context.gclid);
-    if (gclid) identifiers.gclid = gclid;
-
-    const gbraid = extractValue(context.gbraid);
-    if (gbraid) identifiers.gbraid = gbraid;
-
-    const wbraid = extractValue(context.wbraid);
-    if (wbraid) identifiers.wbraid = wbraid;
-
-    const sessionAttributes = extractValue(context.sessionAttributes);
-    if (sessionAttributes) identifiers.sessionAttributes = sessionAttributes;
+  // Extract from mapped data (already processed by mapping system)
+  if (isString(data.gclid) && data.gclid) {
+    identifiers.gclid = data.gclid;
   }
-
-  // Check data properties
-  const data = event.data as Record<string, unknown> | undefined;
-  if (data) {
-    if (!identifiers.gclid && isString(data.gclid) && data.gclid) {
-      identifiers.gclid = data.gclid;
-    }
-    if (!identifiers.gbraid && isString(data.gbraid) && data.gbraid) {
-      identifiers.gbraid = data.gbraid;
-    }
-    if (!identifiers.wbraid && isString(data.wbraid) && data.wbraid) {
-      identifiers.wbraid = data.wbraid;
-    }
+  if (isString(data.gbraid) && data.gbraid) {
+    identifiers.gbraid = data.gbraid;
   }
-
-  // Check globals (globals properties can also be [value, scope] tuples)
-  const globals = event.globals as Record<string, unknown> | undefined;
-  if (globals && !identifiers.gclid) {
-    const gclid = extractValue(globals.gclid);
-    if (gclid) identifiers.gclid = gclid;
+  if (isString(data.wbraid) && data.wbraid) {
+    identifiers.wbraid = data.wbraid;
+  }
+  if (isString(data.sessionAttributes) && data.sessionAttributes) {
+    identifiers.sessionAttributes = data.sessionAttributes;
   }
 
   return Object.keys(identifiers).length > 0 ? identifiers : undefined;
@@ -232,7 +201,7 @@ export async function formatEvent(
   }
 
   // Attribution identifiers
-  const adIdentifiers = formatAdIdentifiers(event);
+  const adIdentifiers = formatAdIdentifiers(data);
   if (adIdentifiers) {
     dataManagerEvent.adIdentifiers = adIdentifiers;
   }

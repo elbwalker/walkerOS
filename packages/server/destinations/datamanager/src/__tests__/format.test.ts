@@ -54,11 +54,10 @@ describe('format utilities', () => {
   });
 
   describe('formatAdIdentifiers', () => {
-    test('extracts gclid from context', () => {
-      const event = getEvent('page view');
-      event.context = { gclid: ['TeSter', 0] };
+    test('extracts gclid from mapped data', () => {
+      const data = { gclid: 'TeSter' };
 
-      const result = formatAdIdentifiers(event);
+      const result = formatAdIdentifiers(data);
 
       expect(result).toEqual({
         gclid: 'TeSter',
@@ -66,13 +65,12 @@ describe('format utilities', () => {
     });
 
     test('extracts gbraid and wbraid', () => {
-      const event = getEvent('page view');
-      event.context = {
-        gbraid: ['ios-attribution-id', 0],
-        wbraid: ['web-to-app-id', 0],
+      const data = {
+        gbraid: 'ios-attribution-id',
+        wbraid: 'web-to-app-id',
       };
 
-      const result = formatAdIdentifiers(event);
+      const result = formatAdIdentifiers(data);
 
       expect(result).toEqual({
         gbraid: 'ios-attribution-id',
@@ -81,50 +79,51 @@ describe('format utilities', () => {
     });
 
     test('extracts sessionAttributes', () => {
-      const event = getEvent('page view');
-      event.context = {
-        sessionAttributes: ['gad_source=1&gad_campaignid=123', 0],
+      const data = {
+        sessionAttributes: 'gad_source=1&gad_campaignid=123',
       };
 
-      const result = formatAdIdentifiers(event);
+      const result = formatAdIdentifiers(data);
 
       expect(result).toEqual({
         sessionAttributes: 'gad_source=1&gad_campaignid=123',
       });
     });
 
-    test('prioritizes context over data', () => {
-      const event = getEvent('page view');
-      event.context = { gclid: ['context-gclid', 0] };
-      event.data = { gclid: 'data-gclid' };
+    test('extracts all identifiers', () => {
+      const data = {
+        gclid: 'test-gclid',
+        gbraid: 'test-gbraid',
+        wbraid: 'test-wbraid',
+        sessionAttributes: 'gad_source=1',
+      };
 
-      const result = formatAdIdentifiers(event);
+      const result = formatAdIdentifiers(data);
 
-      expect(result?.gclid).toBe('context-gclid');
+      expect(result).toEqual({
+        gclid: 'test-gclid',
+        gbraid: 'test-gbraid',
+        wbraid: 'test-wbraid',
+        sessionAttributes: 'gad_source=1',
+      });
     });
 
-    test('falls back to data properties', () => {
-      const event = getEvent('page view');
-      event.data = { gclid: 'data-gclid' };
+    test('ignores non-string values', () => {
+      const data = {
+        gclid: 123, // Not a string
+        gbraid: null,
+        wbraid: undefined,
+      };
 
-      const result = formatAdIdentifiers(event);
+      const result = formatAdIdentifiers(data);
 
-      expect(result?.gclid).toBe('data-gclid');
-    });
-
-    test('falls back to globals', () => {
-      const event = getEvent('page view');
-      event.globals = { gclid: ['global-gclid', 0] };
-
-      const result = formatAdIdentifiers(event);
-
-      expect(result?.gclid).toBe('global-gclid');
+      expect(result).toBeUndefined();
     });
 
     test('returns undefined when no identifiers found', () => {
-      const event = getEvent('page view');
+      const data = {};
 
-      const result = formatAdIdentifiers(event);
+      const result = formatAdIdentifiers(data);
 
       expect(result).toBeUndefined();
     });

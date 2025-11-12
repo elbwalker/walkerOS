@@ -57,6 +57,10 @@ export const SettingsSchema = z.object({
     .string()
     .describe('Test event code for debugging (like TEST12345)')
     .optional(),
+  logLevel: z
+    .enum(['debug', 'info', 'warn', 'error', 'none'])
+    .describe('Log level for debugging (debug shows all API calls)')
+    .optional(),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

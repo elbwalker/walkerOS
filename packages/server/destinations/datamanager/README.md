@@ -163,9 +163,11 @@ https://www.googleapis.com/auth/datamanager
 The destination automatically extracts and formats:
 
 - **User Identifiers**: Email, phone, address (with SHA-256 hashing)
-- **Attribution**: GCLID, gbraid, wbraid from context/data/globals
 - **Transaction Data**: ID, value, currency
 - **Consent**: Maps walkerOS consent to DMA format
+
+**Attribution identifiers** (gclid, gbraid, wbraid) must be configured via
+mapping for explicit control.
 
 ### User Data Mapping
 
@@ -442,6 +444,76 @@ Add test event code for debugging in production:
   },
 }
 ```
+
+## Debug Mode
+
+Enable debug logging to see API requests and responses:
+
+```typescript
+{
+  settings: {
+    logLevel: 'debug', // Shows all API calls and responses
+  },
+}
+```
+
+**Log levels**: `debug` (all), `info`, `warn`, `error`, `none` (default).
+
+Debug mode logs:
+
+- Event processing details
+- API request payload and destination count
+- API response status and request ID
+- Validation errors with full context
+
+## Deduplication with gtag
+
+Prevent double-counting between client-side gtag and server-side Data Manager:
+
+### Transaction ID Matching
+
+Use the same transaction ID across both platforms:
+
+```javascript
+// Client-side gtag
+gtag('event', 'conversion', {
+  transaction_id: 'ORDER-123',
+  send_to: 'AW-CONVERSION/xxx',
+});
+```
+
+```typescript
+// Server-side walkerOS
+await elb('order complete', {
+  id: 'ORDER-123', // Auto-mapped to transactionId
+});
+```
+
+Google deduplicates using `transactionId` within 14 days.
+
+### GCLID Attribution
+
+Map GCLID from your event structure:
+
+```typescript
+{
+  mapping: {
+    order: {
+      complete: {
+        data: {
+          map: {
+            gclid: 'context.gclid',  // From URL parameter
+            transactionId: 'data.id',
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+GCLID is automatically captured by walkerOS browser source from URL parameters
+(`?gclid=xxx`).
 
 ## Rate Limits
 

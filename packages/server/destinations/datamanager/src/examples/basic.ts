@@ -74,3 +74,22 @@ export const ga4: DestinationDataManager.Config = {
     eventSource: 'WEB',
   },
 };
+
+/**
+ * Debug configuration with logging enabled
+ */
+export const debug: DestinationDataManager.Config = {
+  settings: {
+    accessToken: 'ya29.c.xxx',
+    destinations: [
+      {
+        operatingAccount: {
+          accountId: '123-456-7890',
+          accountType: 'GOOGLE_ADS',
+        },
+        productDestinationId: 'AW-CONVERSION-123',
+      },
+    ],
+    logLevel: 'debug', // Shows all API calls and responses
+  },
+};

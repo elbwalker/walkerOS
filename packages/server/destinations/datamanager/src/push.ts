@@ -2,6 +2,7 @@ import type { PushFn } from './types';
 import type { IngestEventsRequest, IngestEventsResponse } from './types';
 import { getMappingValue, isObject } from '@walkeros/core';
 import { formatEvent, formatConsent } from './format';
+import { createLogger } from './utils';
 
 export const push: PushFn = async function (
   event,
@@ -15,7 +16,10 @@ export const push: PushFn = async function (
     url = 'https://datamanager.googleapis.com/v1',
     consent: requestConsent,
     testEventCode,
+    logLevel = 'none',
   } = config.settings!;
+
+  const logger = createLogger(logLevel);
 
   // Get mapped data from destination config and event mapping
   const configData = config.data
@@ -32,6 +36,12 @@ export const push: PushFn = async function (
 
   // Format event for Data Manager API
   const dataManagerEvent = await formatEvent(event, finalData);
+
+  logger.debug('Processing event', {
+    name: event.name,
+    id: event.id,
+    timestamp: event.timestamp,
+  });
 
   // Apply event source from settings if not set
   if (!dataManagerEvent.eventSource && eventSource) {
@@ -66,6 +76,13 @@ export const push: PushFn = async function (
   const fetchFn = env?.fetch || fetch;
   const endpoint = `${url}/events:ingest`;
 
+  logger.debug('Sending to Data Manager API', {
+    endpoint,
+    eventCount: requestBody.events.length,
+    destinations: destinations.length,
+    validateOnly,
+  });
+
   const response = await fetchFn(endpoint, {
     method: 'POST',
     headers: {
@@ -77,6 +94,10 @@ export const push: PushFn = async function (
 
   if (!response.ok) {
     const errorText = await response.text();
+    logger.error('API request failed', {
+      status: response.status,
+      error: errorText,
+    });
     throw new Error(
       `Data Manager API error (${response.status}): ${errorText}`,
     );
@@ -84,10 +105,22 @@ export const push: PushFn = async function (
 
   const result: IngestEventsResponse = await response.json();
 
+  logger.debug('API response', {
+    status: response.status,
+    requestId: result.requestId,
+  });
+
   // If validation errors exist, throw them
   if (result.validationErrors && result.validationErrors.length > 0) {
+    logger.error('Validation errors', {
+      errors: result.validationErrors,
+    });
     throw new Error(
       `Validation errors: ${JSON.stringify(result.validationErrors)}`,
     );
   }
+
+  logger.info('Event processed successfully', {
+    requestId: result.requestId,
+  });
 };

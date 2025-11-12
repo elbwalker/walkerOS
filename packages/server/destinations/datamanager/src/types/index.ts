@@ -3,6 +3,7 @@ import type {
   Destination as CoreDestination,
 } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
+import type { LogLevel } from '../utils';
 
 export interface Settings {
   /** OAuth 2.0 access token with datamanager scope */
@@ -31,9 +32,18 @@ export interface Settings {
 
   /** Test event code for debugging (optional) */
   testEventCode?: string;
+
+  /** Log level for debugging (optional) */
+  logLevel?: LogLevel;
 }
 
-export interface Mapping {}
+export interface Mapping {
+  // Attribution identifiers (optional, for explicit mapping)
+  gclid?: WalkerOSMapping.Value;
+  gbraid?: WalkerOSMapping.Value;
+  wbraid?: WalkerOSMapping.Value;
+  sessionAttributes?: WalkerOSMapping.Value;
+}
 
 export interface Env extends DestinationServer.Env {
   fetch?: typeof fetch;

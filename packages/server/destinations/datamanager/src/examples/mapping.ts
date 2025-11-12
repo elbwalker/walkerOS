@@ -12,6 +12,12 @@ export const Purchase: DestinationDataManager.Rule = {
       conversionValue: 'data.total',
       currency: { key: 'data.currency', value: 'USD' },
       eventName: { value: 'purchase' },
+
+      // Attribution identifiers (captured by browser source from URL)
+      gclid: 'context.gclid', // Google Click ID
+      gbraid: 'context.gbraid', // iOS attribution
+      wbraid: 'context.wbraid', // Web-to-app
+
       cartData: {
         map: {
           items: {
