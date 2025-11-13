@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { loadJsonConfig, createLogger, getTempDir, isObject } from '../core';
 import { parseBundleConfig, type BundleConfig } from '../bundle/config';
-import { bundle } from '../bundle/bundler';
+import { bundleCore } from '../bundle/bundler';
 import { downloadPackages } from '../bundle/package-manager';
 import { CallTracker } from './tracker';
 import type { SimulateCommandOptions, SimulationResult } from './types';
@@ -17,7 +17,7 @@ function generateId(): string {
 /**
  * Main simulation orchestrator
  */
-export async function simulate(
+export async function simulateCore(
   configPath: string,
   event: unknown,
   options: Pick<SimulateCommandOptions, 'json' | 'verbose'> = {},
@@ -188,7 +188,7 @@ ${config.code || ''}
     };
 
     // 8. Bundle with downloaded packages (they're already in tempDir/node_modules)
-    await bundle(config, createLogger({ silent: true }), false);
+    await bundleCore(config, createLogger({ silent: true }), false);
     bundlePath = tempOutput;
 
     // 9. Inject minimal globals for Node simulation environment

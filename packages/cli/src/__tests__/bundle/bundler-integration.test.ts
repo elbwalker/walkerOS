@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { bundle } from '../../bundle/bundler';
+import { bundleCore as bundle } from '../../bundle/bundler';
 import { parseBundleConfig } from '../../bundle/config';
 import { createLogger, type Logger } from '../../core';
 import { getId } from '@walkeros/core';

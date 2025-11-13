@@ -1,5 +1,5 @@
 import path from 'path';
-import { simulate } from '../../simulate/simulator';
+import { simulateCore as simulate } from '../../simulate/simulator';
 import { Collector } from '@walkeros/core';
 
 // Mock package-manager to avoid network calls and return empty results

@@ -1,7 +1,7 @@
 import esbuild from 'esbuild';
 import path from 'path';
 import fs from 'fs-extra';
-import { BundleConfig, BuildConfig } from './config';
+import { BundleConfig, BuildOptions } from './config';
 import { downloadPackages } from './package-manager';
 import { TemplateEngine } from './template-engine';
 import { Logger, getTempDir } from '../core';
@@ -13,7 +13,7 @@ export interface BundleStats {
   treeshakingEffective: boolean;
 }
 
-export async function bundle(
+export async function bundleCore(
   config: BundleConfig,
   logger: Logger,
   showStats = false,
@@ -180,7 +180,7 @@ async function collectBundleStats(
 }
 
 function createEsbuildOptions(
-  buildConfig: BuildConfig,
+  buildConfig: BuildOptions,
   entryPath: string,
   outputPath: string,
   tempDir: string,

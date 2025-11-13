@@ -2,11 +2,20 @@ import { Command } from 'commander';
 import { bundleCommand } from './bundle';
 import { simulateCommand } from './simulate';
 
-// Export commands for programmatic use
+// === CLI Commands ===
+// Export CLI command handlers
 export { bundleCommand, simulateCommand };
 
-// Export types for extending
+// === Programmatic API ===
+// High-level functions for library usage
+export { bundle } from './bundle';
+export { simulate } from './simulate';
+
+// === Types ===
+// Export types for programmatic usage
 export type { Config as BundleConfig } from './types/bundle';
+export type { BundleStats } from './bundle/bundler';
+export type { SimulationResult } from './simulate/types';
 
 const program = new Command();
 

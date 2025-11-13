@@ -17,7 +17,8 @@ import {
   loadAllEnvironments,
   type LoadConfigResult,
 } from './config-loader';
-import { bundle } from './bundler';
+import { parseBundleConfig } from './config';
+import { bundleCore } from './bundler';
 import { displayStats, createStatsSummary } from './stats';
 
 export interface BundleCommandOptions {
@@ -88,7 +89,7 @@ export async function bundleCommand(
 
         // Run bundler
         const shouldCollectStats = options.stats || options.json;
-        const stats = await bundle(config, logger, shouldCollectStats);
+        const stats = await bundleCore(config, logger, shouldCollectStats);
 
         results.push({
           environment,
@@ -172,4 +173,68 @@ export async function bundleCommand(
     }
     process.exit(1);
   }
+}
+
+/**
+ * High-level bundle function for programmatic usage.
+ *
+ * Handles configuration loading, parsing, and logger creation internally.
+ *
+ * @param configOrPath - Bundle configuration object or path to config file
+ * @param options - Bundle options
+ * @param options.silent - Suppress all output (default: false)
+ * @param options.verbose - Enable verbose logging (default: false)
+ * @param options.stats - Collect and return bundle statistics (default: false)
+ * @param options.cache - Enable package caching (default: true)
+ * @returns Bundle statistics if stats option is true, otherwise void
+ *
+ * @example
+ * ```typescript
+ * // With config object
+ * await bundle({
+ *   platform: 'web',
+ *   packages: { '@walkeros/collector': { imports: ['startFlow'] } },
+ *   sources: { browser: { code: 'sourceBrowser' } },
+ *   destinations: { api: { code: 'destinationApi' } },
+ *   code: 'export default startFlow({ sources, destinations })',
+ *   output: './dist/walker.js'
+ * });
+ *
+ * // With config file
+ * await bundle('./walker.config.json', { stats: true });
+ * ```
+ */
+export async function bundle(
+  configOrPath: unknown,
+  options: {
+    silent?: boolean;
+    verbose?: boolean;
+    stats?: boolean;
+    cache?: boolean;
+  } = {},
+): Promise<import('./bundler').BundleStats | void> {
+  // 1. Load config if path provided
+  let rawConfig: unknown;
+  if (typeof configOrPath === 'string') {
+    rawConfig = await loadJsonConfig(configOrPath);
+  } else {
+    rawConfig = configOrPath;
+  }
+
+  // 2. Parse and normalize config
+  const config = parseBundleConfig(rawConfig);
+
+  // 3. Handle cache option
+  if (options.cache !== undefined) {
+    config.cache = options.cache;
+  }
+
+  // 4. Create logger internally
+  const logger = createLogger({
+    silent: options.silent ?? false,
+    verbose: options.verbose ?? false,
+  });
+
+  // 5. Call core bundler
+  return await bundleCore(config, logger, options.stats ?? false);
 }

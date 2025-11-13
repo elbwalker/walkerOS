@@ -12,6 +12,7 @@ export interface Logger {
   info: (...args: unknown[]) => void;
   success: (...args: unknown[]) => void;
   warning: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void; // Alias for warning
   error: (...args: unknown[]) => void;
   debug: (...args: unknown[]) => void;
   gray: (...args: unknown[]) => void;
@@ -61,6 +62,14 @@ export function createLogger(options: LoggerOptions = {}): Logger {
     },
 
     warning: (...args: unknown[]) => {
+      if (shouldLog) {
+        const message = args.map((arg) => String(arg)).join(' ');
+        console.log(chalk.yellow(message));
+      }
+    },
+
+    warn: (...args: unknown[]) => {
+      // Alias for warning
       if (shouldLog) {
         const message = args.map((arg) => String(arg)).join(' ');
         console.log(chalk.yellow(message));

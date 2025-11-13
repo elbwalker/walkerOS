@@ -1,9 +1,15 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { isObject } from '@walkeros/core';
 
-// Re-export for internal CLI usage
-export { isObject };
+// Simple check for plain objects
+export function isObject(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.prototype.toString.call(value) === '[object Object]'
+  );
+}
 
 export function substituteEnvVariables(value: string): string {
   return value.replace(/\${([^}]+)}/g, (_, envVar) => {

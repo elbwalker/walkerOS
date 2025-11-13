@@ -183,21 +183,149 @@ logger.error('Something went wrong');
 
 ### Programmatic Usage
 
+The CLI provides high-level functions for programmatic usage in Node.js
+applications like Docker containers, build scripts, and testing frameworks.
+
+#### Basic Example
+
+```typescript
+import { bundle, simulate } from '@walkeros/cli';
+import type {
+  BundleConfig,
+  BundleStats,
+  SimulationResult,
+} from '@walkeros/cli';
+
+// Bundle with config object
+const config: BundleConfig = {
+  platform: 'web',
+  packages: {
+    '@walkeros/core': {
+      version: '^0.1.2',
+      imports: ['startFlow', 'createEvent'],
+    },
+    '@walkeros/web-destination-gtag': {
+      imports: ['destinationGtag'],
+    },
+  },
+  code: 'export const tracker = startFlow({ /* ... */ });',
+  output: './dist/walker.js',
+  build: {
+    platform: 'browser',
+    format: 'esm',
+    minify: true,
+  },
+};
+
+// Bundle and get stats
+const stats: BundleStats = await bundle(config, {
+  stats: true,
+  verbose: false,
+  silent: false,
+});
+
+console.log(`Bundle size: ${stats.totalSize} bytes`);
+
+// Simulate event processing
+const result: SimulationResult = await simulate(
+  './bundle.config.json',
+  { name: 'product view', data: { id: 'P123', price: 99.99 } },
+  { json: true },
+);
+
+console.log(result.captures); // View captured API calls
+```
+
+#### Bundle Function
+
+```typescript
+function bundle(
+  configOrPath: BundleConfig | string,
+  options?: {
+    silent?: boolean; // Suppress output (default: false)
+    verbose?: boolean; // Detailed logging (default: false)
+    stats?: boolean; // Return bundle statistics (default: false)
+    cache?: boolean; // Enable package caching (default: true)
+  },
+): Promise<BundleStats | void>;
+```
+
+**Examples:**
+
+```typescript
+// With config file path
+await bundle('./config.json', { stats: true });
+
+// With config object
+await bundle({
+  platform: 'server',
+  packages: { '@walkeros/core': { imports: ['createEvent'] } },
+  code: 'export default createEvent;',
+  output: './dist/bundle.js',
+  build: { platform: 'node', format: 'esm' },
+});
+
+// Silent mode for CI/CD
+const stats = await bundle(config, { silent: true, stats: true });
+if (stats.totalSize > 1000000) {
+  throw new Error('Bundle too large!');
+}
+```
+
+#### Simulate Function
+
+```typescript
+function simulate(
+  configPath: string,
+  event: unknown,
+  options?: {
+    silent?: boolean; // Suppress output (default: false)
+    verbose?: boolean; // Detailed logging (default: false)
+    json?: boolean; // Return JSON result (default: false)
+  },
+): Promise<SimulationResult>;
+```
+
+**Note:** Currently only supports config file paths. Config object support will
+be added in a future version.
+
+**Examples:**
+
+```typescript
+// Test product view tracking
+const result = await simulate(
+  './ecommerce.config.json',
+  {
+    name: 'product view',
+    data: { id: 'P123', name: 'Laptop', price: 999.99 },
+  },
+  { json: true },
+);
+
+// Check if gtag was called correctly
+const gtagCalls = result.captures.filter((c) => c.destination === 'gtag');
+expect(gtagCalls[0].payload).toEqual({
+  event: 'view_item',
+  item_id: 'P123',
+  value: 999.99,
+});
+
+// Verbose debugging
+await simulate('./config.json', event, { verbose: true });
+```
+
+#### CLI Commands (Advanced)
+
+For advanced use cases requiring direct access to CLI commands:
+
 ```typescript
 import { bundleCommand, simulateCommand } from '@walkeros/cli';
 
-// Bundle programmatically
+// Access CLI command directly (handles process.exit, argument parsing, etc.)
 await bundleCommand({
   config: 'config.json',
   stats: true,
   verbose: true,
-});
-
-// Simulate programmatically
-await simulateCommand({
-  config: 'config.json',
-  event: '{"name":"product view","data":{"id":"P123"}}',
-  json: true,
 });
 ```
 

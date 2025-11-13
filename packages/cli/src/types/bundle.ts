@@ -12,9 +12,59 @@ import type { BuildOptions as ESBuildOptions } from 'esbuild';
 
 /**
  * CLI-specific environment configuration.
- * Extends Flow.Config with build options.
+ * Based on Flow.Config with build-specific extensions.
  */
-export interface Config extends Flow.Config {
+export interface Config {
+  /**
+   * Target platform.
+   */
+  platform: 'web' | 'server';
+
+  /**
+   * NPM packages to bundle.
+   */
+  packages: Record<string, { version?: string; imports?: string[] }>;
+
+  /**
+   * User code to include in bundle.
+   */
+  code: string;
+
+  /**
+   * Output file path.
+   */
+  output: string;
+
+  /**
+   * Source configurations (optional).
+   */
+  sources?: Record<string, unknown>;
+
+  /**
+   * Destination configurations (optional).
+   */
+  destinations?: Record<string, unknown>;
+
+  /**
+   * Collector configuration (optional).
+   */
+  collector?: unknown;
+
+  /**
+   * Environment-specific variables (optional).
+   */
+  env?: Record<string, string>;
+
+  /**
+   * Temporary directory for build artifacts.
+   */
+  tempDir?: string;
+
+  /**
+   * Custom template file path.
+   */
+  template?: string;
+
   /**
    * Build configuration for esbuild.
    *
@@ -32,6 +82,21 @@ export interface Config extends Flow.Config {
    * @see {@link BuildOptions}
    */
   build?: BuildOptions;
+
+  /**
+   * Enable package caching.
+   *
+   * @remarks
+   * When enabled, downloaded packages are cached for faster subsequent builds.
+   *
+   * @default true
+   */
+  cache?: boolean;
+
+  /**
+   * Allow additional properties for extensibility.
+   */
+  [key: string]: unknown;
 }
 
 /**
@@ -164,6 +229,13 @@ export interface MinifyOptions {
    * @default false
    */
   keepNames?: boolean;
+
+  /**
+   * How to handle legal comments.
+   *
+   * @default "none"
+   */
+  legalComments?: 'none' | 'inline' | 'eof' | 'linked' | 'external';
 }
 
 /**
@@ -173,7 +245,27 @@ export interface MinifyOptions {
  * Extends Flow.Setup with Bundle.Config for environments.
  * Used when loading configs with CLI.
  */
-export interface Setup extends Omit<Flow.Setup, 'environments'> {
+export interface Setup {
+  /**
+   * Configuration schema version.
+   */
+  version: 1;
+
+  /**
+   * JSON Schema reference for IDE validation.
+   */
+  $schema?: string;
+
+  /**
+   * Shared variables for interpolation across all environments.
+   */
+  variables?: Record<string, string | number | boolean>;
+
+  /**
+   * Reusable configuration definitions.
+   */
+  definitions?: Record<string, unknown>;
+
   /**
    * Environments with build configurations.
    */
