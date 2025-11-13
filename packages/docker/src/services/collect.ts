@@ -5,6 +5,9 @@ import { resolveSources, resolveDestinations } from '../config/registry';
 /**
  * Run collect mode - start event collection server
  *
+ * Phase 1: Uses built-in sources (sourceExpress) and destinations (destinationConsole)
+ * Phase 2: Will support dynamic loading from npm packages via pre-bundling
+ *
  * Sources own their infrastructure (HTTP server, PubSub clients, etc.)
  * Docker just calls startFlow() and lets sources handle everything
  */
@@ -57,7 +60,7 @@ export async function runCollectMode(config: DockerConfig): Promise<void> {
     process.on('SIGTERM', () => shutdownHandler('SIGTERM'));
     process.on('SIGINT', () => shutdownHandler('SIGINT'));
 
-    // Keep process alive
+    // Keep process alive - sources handle everything
     await new Promise(() => {});
   } catch (error) {
     console.error('❌ Collector failed:', error);

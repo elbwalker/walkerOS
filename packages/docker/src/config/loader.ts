@@ -8,7 +8,17 @@ import { parseDockerConfig, type DockerConfig } from './schema';
 export async function loadDockerConfig(
   configPath?: string,
 ): Promise<DockerConfig> {
-  const filePath = configPath || process.env.CONFIG_FILE || '/app/config.json';
+  const filePath = configPath || process.env.FLOW;
+
+  if (!filePath) {
+    console.error('❌ FLOW environment variable required');
+    console.error('   Built-in flows: -e FLOW=/app/flows/demo.json');
+    console.error(
+      '   Custom flow: -e FLOW=/app/custom.json -v $(pwd)/flow.json:/app/custom.json',
+    );
+    process.exit(1);
+  }
+
   const resolvedPath = path.resolve(filePath);
 
   try {
@@ -22,7 +32,17 @@ export async function loadDockerConfig(
     return parseDockerConfig(substituted);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      throw new Error(`Config file not found: ${resolvedPath}`);
+      console.error(`❌ Flow config not found: ${resolvedPath}`);
+      console.error('   Built-in flows:');
+      // List available flows
+      const flowsDir = '/app/flows';
+      try {
+        const files = await fs.readdir(flowsDir);
+        files.forEach((f) => console.error(`     /app/flows/${f}`));
+      } catch {
+        console.error('     (flows directory not found)');
+      }
+      process.exit(1);
     }
     throw error;
   }

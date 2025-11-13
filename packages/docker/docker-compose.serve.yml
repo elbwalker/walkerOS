@@ -12,8 +12,8 @@ services:
       # Required: Set operational mode
       MODE: serve
 
-      # Config file path
-      CONFIG_FILE: /app/config/serve-static.json
+      # Required: Flow configuration file path (built-in flows at /app/flows/)
+      FLOW: /app/flows/serve.json
 
       # Optional: Override port from config
       PORT: 8080
@@ -28,14 +28,15 @@ services:
       - "8080:8080"
 
     volumes:
-      # Mount config file
-      - ./configs/examples/serve-static.json:/app/config/serve-static.json:ro
-
       # Mount static files directory
       - ./dist:/app/dist:ro
 
       # Optional: Mount different static directory
       # - ./static:/app/static:ro
+
+      # Optional: Mount custom flow config
+      # - ./my-flow.json:/app/custom.json:ro
+      # Then set FLOW: /app/custom.json
 
     # Health check
     healthcheck:

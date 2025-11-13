@@ -51,7 +51,7 @@ COPY --from=builder /app/packages/cli/dist ./packages/cli/dist
 COPY --from=builder /app/packages/cli/package.json ./packages/cli/
 COPY --from=builder /app/packages/cli/templates ./packages/cli/templates
 COPY --from=builder /app/packages/docker/dist ./packages/docker/dist
-COPY --from=builder /app/packages/docker/configs ./packages/docker/configs
+COPY --from=builder /app/packages/docker/flows ./flows
 
 # Install production dependencies
 RUN npm ci --production --workspace=@walkeros/docker

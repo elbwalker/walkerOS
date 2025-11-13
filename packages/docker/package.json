@@ -8,7 +8,7 @@
   "license": "MIT",
   "files": [
     "dist/**",
-    "configs/**"
+    "flows/**"
   ],
   "scripts": {
     "build": "tsup --silent",

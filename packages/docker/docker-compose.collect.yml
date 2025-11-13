@@ -12,8 +12,8 @@ services:
       # Required: Set operational mode
       MODE: collect
 
-      # Config file path (mounted volume or inline)
-      CONFIG_FILE: /app/config/collect-basic.json
+      # Required: Flow configuration file path (built-in flows at /app/flows/)
+      FLOW: /app/flows/collect-console.json
 
       # Optional: Override port from config
       PORT: 8080
@@ -27,12 +27,10 @@ services:
     ports:
       - "8080:8080"
 
-    volumes:
-      # Mount config file
-      - ./configs/examples/collect-basic.json:/app/config/collect-basic.json:ro
-
-      # Optional: Mount custom config
-      # - ./my-config.json:/app/config.json:ro
+    # volumes:
+      # Optional: Mount custom flow config
+      # - ./my-flow.json:/app/custom.json:ro
+      # Then set FLOW: /app/custom.json
 
     # Health check
     healthcheck:

@@ -102,11 +102,10 @@ sleep 1
 # Step 4: Test Collect Mode
 echo -e "${BLUE}[4/4] Testing Collect Mode...${NC}"
 
-# Start collect mode container
+# Start collect mode container (using built-in flow)
 if ! COLLECT_CONTAINER=$(docker run -d \
   -e MODE=collect \
-  -e CONFIG_FILE=/app/config.json \
-  -v "${PROJECT_ROOT}/packages/docker/configs/examples/collect-basic.json:/app/config.json:ro" \
+  -e FLOW=/app/flows/collect-console.json \
   -p 8080:8080 \
   "${FULL_IMAGE}" 2>&1); then
   echo -e "${RED}✗ Failed to start collect mode container${NC}"

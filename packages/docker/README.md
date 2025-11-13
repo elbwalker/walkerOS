@@ -1,64 +1,120 @@
 # @walkeros/docker
 
-Docker container for walkerOS with three operational modes: bundle, collect, and
-serve.
+Production-ready Docker container for walkerOS with built-in flow
+configurations.
 
-## Features
-
-- **Zero-duplication architecture** - Uses @walkeros/cli for bundling, no custom
-  code
-- **Sources own infrastructure** - Express servers, PubSub clients managed by
-  sources
-- **Single entry point** - Same code works for all modes
-- **JSON configuration** - Compatible with @walkeros/cli config format
-
-## Operational Modes
-
-### Bundle Mode
-
-Generate optimized JavaScript bundles for client-side usage.
+## Quick Start
 
 ```bash
-docker run -e MODE=bundle \
-  -v $(pwd)/config.json:/app/config.json \
+# Run demo (flows are already in the image)
+docker run -e MODE=collect -e FLOW=/app/flows/demo.json walkeros/docker:latest
+```
+
+That's it! The demo will:
+
+- Download source-demo and destination-demo packages from npm
+- Emit test events with delays
+- Log filtered event output
+- Run completely self-contained
+
+## Built-in Flows
+
+All flows are included in the Docker image at `/app/flows/`:
+
+- **demo.json** - Demo packages (source-demo → destination-demo)
+- **collect-console.json** - HTTP collection → console logging
+- **bundle-web.json** - Web bundle generation
+- **serve.json** - Static file serving
+
+## Usage
+
+### Demo Mode
+
+```bash
+docker run -e MODE=collect -e FLOW=/app/flows/demo.json walkeros/docker
+```
+
+### HTTP Collection Server
+
+```bash
+docker run -p 8080:8080 \
+  -e MODE=collect \
+  -e FLOW=/app/flows/collect-console.json \
+  walkeros/docker
+
+# Send event
+curl -X POST http://localhost:8080/collect \
+  -H "Content-Type: application/json" \
+  -d '{"event":"page view","data":{"title":"Test"}}'
+```
+
+### Generate Web Bundle
+
+```bash
+docker run \
+  -e MODE=bundle \
+  -e FLOW=/app/flows/bundle-web.json \
   -v $(pwd)/dist:/app/dist \
   walkeros/docker
 ```
 
-### Collect Mode
+_Note: Volume mount needed to extract generated bundle_
 
-Run an HTTP server that collects events and sends them to configured
-destinations.
-
-```bash
-docker run -e MODE=collect \
-  -v $(pwd)/config.json:/app/config.json \
-  -p 8080:8080 \
-  walkeros/docker
-```
-
-### Serve Mode
-
-Serve static files (typically generated bundles) via HTTP.
+### Serve Static Files
 
 ```bash
-docker run -e MODE=serve \
+docker run -p 8080:8080 \
+  -e MODE=serve \
+  -e FLOW=/app/flows/serve.json \
   -v $(pwd)/dist:/app/dist \
-  -p 8080:8080 \
   walkeros/docker
 ```
 
-## Configuration
+_Note: Volume mount needed to serve your files_
 
-Configuration uses JSON format compatible with @walkeros/cli.
+## Custom Flow Configuration
 
-### Collect Mode Example
+### Option 1: Build Custom Image (Recommended)
+
+```dockerfile
+FROM walkeros/docker:latest
+COPY my-flow.json /app/flows/custom.json
+```
+
+```bash
+docker build -t my-walker .
+docker run -e MODE=collect -e FLOW=/app/flows/custom.json my-walker
+```
+
+### Option 2: Mount Custom Flow
+
+```bash
+docker run \
+  -e MODE=collect \
+  -e FLOW=/app/custom.json \
+  -v $(pwd)/my-flow.json:/app/custom.json \
+  walkeros/docker
+```
+
+## Modes
+
+Three operational modes:
+
+**Collect** - Run event collection server **Bundle** - Generate static
+JavaScript bundle **Serve** - Serve static files
+
+## Flow Configuration
+
+Flow files use Bundle.Config format:
 
 ```json
 {
-  "platform": "node",
+  "platform": "server",
   "packages": {
-    "@walkeros/collector": {}
+    "@walkeros/collector": {
+      "version": "latest",
+      "imports": ["startFlow"]
+    }
   },
   "code": "",
   "sources": {
@@ -77,62 +133,65 @@ Configuration uses JSON format compatible with @walkeros/cli.
     "console": {
       "code": "destinationConsole",
       "config": {
-        "settings": {
-          "pretty": true,
-          "prefix": "[walkerOS]"
-        }
+        "settings": { "pretty": true }
       }
     }
   },
-  "collector": {
-    "run": true,
-    "globals": {
-      "environment": "production"
-    }
-  },
-  "docker": {
-    "port": 8080,
-    "collect": {
-      "gracefulShutdown": 25000
+  "collector": { "run": true }
+}
+```
+
+### Configuration Structure
+
+- **platform**: "web" or "server"
+- **packages**: npm packages to download dynamically with version and imports
+- **code**: Custom initialization code (can be empty string)
+- **sources**: Event sources with `code` field referencing imports
+- **destinations**: Event destinations with `code` field referencing imports
+- **collector**: Processing settings
+
+### Port Configuration
+
+Ports are defined in source settings:
+
+```json
+{
+  "sources": {
+    "http": {
+      "config": {
+        "settings": {
+          "port": 8080
+        }
+      }
     }
   }
 }
 ```
 
-### Bundle Mode Example
+Then map with `-p 8080:8080` in docker run.
+
+## Environment Variables
+
+### Required
+
+- `MODE` - Operational mode: `bundle`, `collect`, or `serve`
+- `FLOW` - Path to flow configuration file
+
+### Optional
+
+- `DEBUG` - Enable debug logging (default: `false`)
+- `PORT` - Override port from config
+- `HOST` - Override host from config
+
+### Variable Substitution
+
+Use environment variables in flow files with `${VAR_NAME}` or
+`${VAR_NAME:default}` syntax:
 
 ```json
 {
-  "platform": "web",
-  "build": {
-    "platform": "browser",
-    "format": "iife",
-    "minify": true,
-    "globalName": "walkerOS"
-  },
-  "packages": {
-    "@walkeros/collector": {
-      "version": "latest",
-      "imports": ["startFlow"]
-    },
-    "@walkeros/web-source-browser": {
-      "version": "latest",
-      "imports": ["sourceBrowser"]
-    },
-    "@walkeros/web-destination-gtag": {
-      "version": "latest",
-      "imports": ["destinationGtag"]
-    }
-  },
-  "code": "",
-  "sources": {
-    "browser": {
-      "code": "sourceBrowser"
-    }
-  },
   "destinations": {
     "gtag": {
-      "code": "destinationGtag",
       "config": {
         "settings": {
           "ga4": {
@@ -141,39 +200,46 @@ Configuration uses JSON format compatible with @walkeros/cli.
         }
       }
     }
-  },
-  "output": "/app/dist/walker.js"
+  }
 }
 ```
 
-## Environment Variables
+## Docker Compose
 
-### Required
+```yaml
+version: '3.8'
 
-- `MODE` - Operational mode: `bundle`, `collect`, or `serve`
+services:
+  walkeros:
+    image: walkeros/docker:latest
+    environment:
+      MODE: collect
+      FLOW: /app/flows/demo.json
+    restart: unless-stopped
+```
 
-### Optional
+### Collect Mode with Port Mapping
 
-- `CONFIG_FILE` - Path to configuration file (default: `/app/config.json`)
-- `DEBUG` - Enable debug logging (default: `false`)
-
-### Secrets
-
-Use environment variables in config with `${VAR_NAME}` syntax:
-
-```json
-{
-  "destinations": {
-    "bigquery": {
-      "config": {
-        "settings": {
-          "projectId": "${GCP_PROJECT_ID}",
-          "credentials": "${GCP_CREDENTIALS}"
-        }
-      }
-    }
-  }
-}
+```yaml
+services:
+  walkeros-collect:
+    image: walkeros/docker:latest
+    environment:
+      MODE: collect
+      FLOW: /app/flows/collect-console.json
+    ports:
+      - '8080:8080'
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:8080/health', (r) =>
+          process.exit(r.statusCode === 200 ? 0 : 1))",
+        ]
+      interval: 30s
 ```
 
 ## Phase 1: Built-in Sources and Destinations
@@ -191,39 +257,6 @@ Use environment variables in config with `${VAR_NAME}` syntax:
   - Pretty-printed or compact JSON output
   - Configurable prefix and context inclusion
 
-## Docker Compose Example
-
-```yaml
-version: '3.8'
-
-services:
-  walker-collect:
-    image: walkeros/docker:latest
-    environment:
-      - MODE=collect
-      - CONFIG_FILE=/app/config.json
-    ports:
-      - '8080:8080'
-    volumes:
-      - ./config.json:/app/config.json
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:8080/health']
-      interval: 30s
-      timeout: 3s
-      retries: 3
-
-  walker-serve:
-    image: walkeros/docker:latest
-    environment:
-      - MODE=serve
-    ports:
-      - '8081:8080'
-    volumes:
-      - ./dist:/app/dist
-    restart: unless-stopped
-```
-
 ## Development
 
 ### Build
@@ -235,20 +268,37 @@ npm run build
 ### Run Locally
 
 ```bash
+# Demo mode
+MODE=collect FLOW=./flows/demo.json npm run dev
+
 # Collect mode
-MODE=collect CONFIG_FILE=./configs/examples/collect-basic.json npm run dev
+MODE=collect FLOW=./flows/collect-console.json npm run dev
 
 # Bundle mode
-MODE=bundle CONFIG_FILE=./configs/examples/bundle-web.json npm run dev
+MODE=bundle FLOW=./flows/bundle-web.json npm run dev
 
 # Serve mode
-MODE=serve CONFIG_FILE=./configs/examples/serve-static.json npm run dev
+MODE=serve FLOW=./flows/serve.json npm run dev
 ```
 
-### Build Docker Image
+### Docker Testing
+
+See comprehensive guides in [docs/](./docs/):
+
+- **[LOCAL-TESTING.md](./docs/LOCAL-TESTING.md)** - Testing Docker images
+  locally
+- **[DOCKER-HUB.md](./docs/DOCKER-HUB.md)** - Publishing to Docker Hub
+- **[DEPLOYMENT-CHECKLIST.md](./docs/DEPLOYMENT-CHECKLIST.md)** - Deployment
+  verification
+
+Quick start:
 
 ```bash
+# Build image
 docker build -t walkeros/docker:latest -f packages/docker/Dockerfile .
+
+# Test demo flow
+docker run -e MODE=collect -e FLOW=/app/flows/demo.json walkeros/docker:latest
 ```
 
 ## Architecture
@@ -259,6 +309,7 @@ docker build -t walkeros/docker:latest -f packages/docker/Dockerfile .
 2. **Source Infrastructure** - Sources manage their own servers/subscriptions
 3. **Unified Config** - Same JSON schema works for CLI and Docker
 4. **Single Entry** - One `index.ts` handles all modes
+5. **Built-in Flows** - Example configurations baked into image
 
 ### Data Flow
 
@@ -280,25 +331,58 @@ JSON Config → CLI Bundler → Optimized JS Bundle
 HTTP Request → Express Static → Files
 ```
 
+## Troubleshooting
+
+### FLOW not found
+
+- Check FLOW path points to file in container
+- Built-in flows: `/app/flows/*.json`
+- Custom flows: mount with `-v` or bake into image
+
+### Port already in use
+
+- Check port in flow.json source settings
+- Update docker port mapping: `-p XXXX:XXXX`
+
+### Package download fails
+
+- Check internet connectivity
+- Verify npm registry access
+
+## Docker Hub
+
+Official image: `walkeros/docker`
+
+```bash
+# Pull latest
+docker pull walkeros/docker:latest
+
+# Pull specific version
+docker pull walkeros/docker:0.1.0
+```
+
 ## Roadmap
 
-### Phase 1 (Current)
+### Phase 1 ✅ Complete
 
 - ✅ Bundle mode with CLI integration
 - ✅ Collect mode with Express source
 - ✅ Serve mode for static files
 - ✅ Console destination for testing
 - ✅ Environment variable substitution
-- ✅ Dockerfile with multi-stage build
+- ✅ Dockerfile with multi-stage build (Node 22)
+- ✅ Tini for proper signal handling
+- ✅ Non-root user (walker:1001)
+- ✅ Built-in flow examples
+- ✅ docker-compose examples
 
-### Phase 2 (Future)
+### Phase 2 (Next)
 
-- ⏳ Dev mode with hot reload (`DEV=true`)
-- ⏳ Production bundled execution for collect mode
+- ⏳ Dynamic package loading for collect mode
+- ⏳ Production logging
+- ⏳ Performance testing and optimization
+- ⏳ Multi-platform builds (amd64, arm64)
 - ⏳ Additional sources (PubSub, EventBridge, SQS)
-- ⏳ Import destinations from @walkeros packages
-- ⏳ Kubernetes deployment examples
-- ⏳ Metrics and monitoring endpoints
 
 ## License
 

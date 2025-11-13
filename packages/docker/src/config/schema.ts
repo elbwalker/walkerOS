@@ -1,15 +1,25 @@
-import { BundleConfigSchema } from '@walkeros/cli';
 import { z } from 'zod';
 
 /**
- * Docker-specific configuration extending CLI's BundleConfigSchema
+ * Docker-specific configuration
  *
  * Note: Bundle/collect modes require full config from file.
  * Serve mode can run with minimal config (just docker.* fields).
- * Therefore, we make bundle-specific fields optional in the Docker schema.
+ * We use passthrough() to allow any additional fields from Flow.Config/Bundle.Config.
  */
-export const DockerConfigSchema = BundleConfigSchema.partial()
-  .extend({
+export const DockerConfigSchema = z
+  .object({
+    // Allow all Flow.Config / Bundle.Config fields
+    platform: z.enum(['web', 'server']).optional(),
+    packages: z.record(z.any()).optional(),
+    code: z.string().optional(),
+    sources: z.record(z.any()).optional(),
+    destinations: z.record(z.any()).optional(),
+    collector: z.any().optional(),
+    build: z.any().optional(),
+    output: z.string().optional(),
+
+    // Docker-specific configuration
     docker: z
       .object({
         port: z.number().int().min(1).max(65535).default(8080),
@@ -51,6 +61,7 @@ export const DockerConfigSchema = BundleConfigSchema.partial()
       .optional()
       .default({}),
   })
+  .passthrough() // Allow any additional fields
   .default({});
 
 export type DockerConfig = z.infer<typeof DockerConfigSchema>;
