@@ -22,5 +22,13 @@ export const push: Env = {
   }) as unknown as Env['sendWeb'],
 };
 
+/**
+ * Simulation tracking paths
+ * Specifies which function calls to track during simulation
+ */
+export const simulation = [
+  'call:sendWeb', // Track sendWeb function calls
+];
+
 // Future: error scenarios (v2)
 // export const error: Env = { ... };
