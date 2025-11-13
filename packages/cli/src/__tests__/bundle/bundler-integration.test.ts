@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { bundleCore as bundle } from '../../bundle/bundler';
 import { parseBundleConfig } from '../../bundle/config';
+import { ensureBuildConfig } from '../../types/bundle';
 import { createLogger, type Logger } from '../../core';
 import { getId } from '@walkeros/core';
 
@@ -44,7 +45,8 @@ describe('Bundler Integration', () => {
       output: path.join(testOutputDir, 'test-config.js'),
     };
 
-    const config = parseBundleConfig(rawConfig);
+    const parsedConfig = parseBundleConfig(rawConfig);
+    const config = ensureBuildConfig(parsedConfig);
 
     expect(Object.keys(config.packages)).toHaveLength(1);
     expect('@walkeros/core' in config.packages).toBe(true);
@@ -87,7 +89,8 @@ describe('Bundler Integration', () => {
       output: path.join(testOutputDir, 'build-test.mjs'),
     };
 
-    const config = parseBundleConfig(rawConfig);
+    const parsedConfig = parseBundleConfig(rawConfig);
+    const config = ensureBuildConfig(parsedConfig);
 
     expect(config.build.platform).toBe('node');
     expect(config.build.format).toBe('esm');

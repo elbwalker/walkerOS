@@ -16,6 +16,13 @@ export { simulate } from './simulate';
 export type { Config as BundleConfig } from './types/bundle';
 export type { BundleStats } from './bundle/bundler';
 export type { SimulationResult } from './simulate/types';
+export type {
+  SourceDestinationItem,
+  TemplateVariables,
+  ProcessedTemplateVariables,
+  TemplateSource,
+  TemplateDestination,
+} from './types/template';
 
 const program = new Command();
 

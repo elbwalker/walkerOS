@@ -387,7 +387,7 @@ describe('Config Loader', () => {
       });
 
       expect(result.config.platform).toBe('web');
-      expect(result.config.sources?.browser.package).toBe(
+      expect((result.config.sources as any)?.browser?.package).toBe(
         '@walkeros/web-source-browser@2.0.0',
       );
       expect(result.config.build?.minify).toBe(true);

@@ -2,6 +2,8 @@ import esbuild from 'esbuild';
 import path from 'path';
 import fs from 'fs-extra';
 import { BundleConfig, BuildOptions } from './config';
+import { ensureBuildConfig } from '../types/bundle';
+import type { SourceDestinationItem } from '../types/template';
 import { downloadPackages } from './package-manager';
 import { TemplateEngine } from './template-engine';
 import { Logger, getTempDir } from '../core';
@@ -19,6 +21,8 @@ export async function bundleCore(
   showStats = false,
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
+  // Ensure build config has all required properties
+  const validatedConfig = ensureBuildConfig(config);
   // Only generate a new temp dir if one isn't explicitly provided
   // This allows simulator to share its temp dir with the bundler
   const TEMP_DIR = config.tempDir || getTempDir();
@@ -78,7 +82,7 @@ export async function bundleCore(
 
     // Step 4: Create entry point
     logger.info('📝 Creating entry point...');
-    const entryContent = await createEntryPoint(config, packagePaths);
+    const entryContent = await createEntryPoint(validatedConfig, packagePaths);
     const entryPath = path.join(TEMP_DIR, 'entry.js');
     await fs.writeFile(entryPath, entryContent);
 
@@ -90,7 +94,7 @@ export async function bundleCore(
     await fs.ensureDir(path.dirname(outputPath));
 
     const buildOptions = createEsbuildOptions(
-      config.build,
+      validatedConfig.build,
       entryPath,
       outputPath,
       TEMP_DIR,
@@ -296,7 +300,7 @@ function packageNameToVariable(packageName: string): string {
 }
 
 async function createEntryPoint(
-  config: BundleConfig,
+  config: BundleConfig & { build: BuildOptions },
   packagePaths: Map<string, string>,
 ): Promise<string> {
   // Generate import statements from packages
@@ -310,9 +314,13 @@ async function createEntryPoint(
   if (config.destinations) {
     for (const [destKey, destConfig] of Object.entries(config.destinations)) {
       // Require explicit package field - no inference for any packages
-      const packageName = (destConfig as any).package;
-      if (packageName) {
-        destinationPackages.add(packageName);
+      if (
+        typeof destConfig === 'object' &&
+        destConfig !== null &&
+        'package' in destConfig &&
+        typeof destConfig.package === 'string'
+      ) {
+        destinationPackages.add(destConfig.package);
       }
       // If no package field, skip auto-importing examples for this destination
     }
@@ -420,10 +428,10 @@ async function createEntryPoint(
     templatedCode = await templateEngine.process(
       config.template,
       config.code, // Pass user code as parameter
-      config.sources || {},
-      config.destinations || {},
-      config.collector || {},
-      config.build, // Pass build config to template
+      (config.sources || {}) as Record<string, SourceDestinationItem>,
+      (config.destinations || {}) as Record<string, SourceDestinationItem>,
+      (config.collector || {}) as Record<string, unknown>,
+      config.build as Record<string, unknown>, // Pass build config to template
     );
   } else {
     // No template - just use the code directly

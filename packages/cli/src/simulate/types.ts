@@ -1,5 +1,5 @@
 import type { Elb } from '@walkeros/core';
-import type { ApiCall } from './api-tracker';
+import type { ApiCall } from './tracker';
 
 export interface SimulateCommandOptions {
   config: string;

@@ -124,7 +124,13 @@ export async function executeSimulation(
     const packagesArray = Object.entries(config.packages).map(
       ([name, packageConfig]) => ({
         name,
-        version: (packageConfig as any).version || 'latest',
+        version:
+          (typeof packageConfig === 'object' &&
+          packageConfig !== null &&
+          'version' in packageConfig &&
+          typeof packageConfig.version === 'string'
+            ? packageConfig.version
+            : undefined) || 'latest',
       }),
     );
     const packagePaths = await downloadPackages(
@@ -193,11 +199,12 @@ ${config.code || ''}
 
     // 9. Inject minimal globals for Node simulation environment
     // This allows destinations to reference window/document without errors
-    if (!globalThis.window) {
-      (globalThis as any).window = {};
+    const globalWithSim = globalThis as Record<string, unknown>;
+    if (!globalWithSim.window) {
+      globalWithSim.window = {};
     }
-    if (!globalThis.document) {
-      (globalThis as any).document = {};
+    if (!globalWithSim.document) {
+      globalWithSim.document = {};
     }
 
     // 10. Dynamic import the bundle
@@ -212,11 +219,19 @@ ${config.code || ''}
       for (const [key, dest] of Object.entries(config.destinations)) {
         const destEnv = importedExamples[key]?.env?.push;
         if (destEnv) {
-          if (destEnv.window) {
-            Object.assign((globalThis as any).window, destEnv.window);
+          if (
+            destEnv.window &&
+            typeof globalWithSim.window === 'object' &&
+            globalWithSim.window !== null
+          ) {
+            Object.assign(globalWithSim.window, destEnv.window);
           }
-          if (destEnv.document) {
-            Object.assign((globalThis as any).document, destEnv.document);
+          if (
+            destEnv.document &&
+            typeof globalWithSim.document === 'object' &&
+            globalWithSim.document !== null
+          ) {
+            Object.assign(globalWithSim.document, destEnv.document);
           }
         }
       }
@@ -261,7 +276,8 @@ ${config.code || ''}
     // }
 
     // Cleanup injected globals
-    delete (globalThis as any).window;
-    delete (globalThis as any).document;
+    const globalWithSim = globalThis as Record<string, unknown>;
+    delete globalWithSim.window;
+    delete globalWithSim.document;
   }
 }

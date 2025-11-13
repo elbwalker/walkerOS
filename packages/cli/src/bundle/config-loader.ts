@@ -13,7 +13,6 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { isObject } from '../utils/type-guards';
 import type { Bundle } from '../types';
-import type { Flow } from '@walkeros/core';
 
 // ESM-compatible __dirname resolution
 function getDirname(): string {
@@ -35,7 +34,7 @@ function validatePlatform(platform: unknown): platform is 'web' | 'server' {
 /**
  * Type guard: Check if config is multi-environment format.
  */
-function isMultiEnvConfig(data: unknown): data is Flow.Setup {
+function isMultiEnvConfig(data: unknown): data is Bundle.Setup {
   return (
     isObject(data) &&
     'version' in data &&

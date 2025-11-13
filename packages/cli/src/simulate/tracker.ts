@@ -65,8 +65,8 @@ export class CallTracker {
       const cleanPath = path.replace(/^call:/, '');
       const parts = cleanPath.split('.');
 
-      let current: any = wrapped;
-      let source: any = env;
+      let current: Record<string, unknown> = wrapped;
+      let source: Record<string, unknown> | undefined = env;
 
       // Navigate to parent object
       for (let i = 0; i < parts.length - 1; i++) {
@@ -76,8 +76,11 @@ export class CallTracker {
           current[part] = {};
         }
 
-        current = current[part];
-        source = source?.[part];
+        current = current[part] as Record<string, unknown>;
+        source =
+          source && typeof source[part] === 'object' && source[part] !== null
+            ? (source[part] as Record<string, unknown>)
+            : undefined;
       }
 
       // Wrap the final property
@@ -87,7 +90,9 @@ export class CallTracker {
       // Wrap with full path for tracking
       current[finalKey] = this.wrapFunction(
         `${destKey}:${cleanPath}`,
-        typeof originalFn === 'function' ? originalFn : undefined,
+        typeof originalFn === 'function'
+          ? (originalFn as (...args: unknown[]) => unknown)
+          : undefined,
       );
     }
 

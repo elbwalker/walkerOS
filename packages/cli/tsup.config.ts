@@ -7,7 +7,7 @@ export default defineConfig({
   outExtension() {
     return { js: '.mjs' };
   },
-  dts: false, // TODO: Enable after fixing type generation issues with Bundle.Config
+  dts: true,
   sourcemap: true,
   minify: false, // Disable minification for CLI to avoid runtime issues
   banner: {

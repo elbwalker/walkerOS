@@ -271,3 +271,63 @@ export interface Setup {
    */
   environments: Record<string, Config>;
 }
+
+/**
+ * Get default build configuration for platform.
+ *
+ * @param platform - Target platform ('web' or 'server')
+ * @returns Platform-specific default build options
+ *
+ * @remarks
+ * Provides sensible defaults for each platform:
+ * - web: IIFE format for browser, ES2020 target
+ * - server: ESM format for Node.js, Node18 target
+ */
+export function getDefaultBuildOptions(
+  platform: 'web' | 'server',
+): BuildOptions {
+  if (platform === 'web') {
+    return {
+      platform: 'browser',
+      format: 'iife',
+      target: 'es2020',
+      minify: false,
+      sourcemap: false,
+      output: './dist/walker.js',
+      globalName: 'walkerOS',
+    };
+  }
+  return {
+    platform: 'node',
+    format: 'esm',
+    target: 'node18',
+    minify: false,
+    sourcemap: false,
+    output: './dist/bundle.js',
+  };
+}
+
+/**
+ * Ensure build config exists with defaults.
+ *
+ * @param config - Bundle configuration
+ * @returns Configuration with guaranteed build property
+ *
+ * @remarks
+ * If config.build is undefined, this function adds platform-specific defaults.
+ * This ensures that code can safely access config.build properties.
+ *
+ * @example
+ * ```typescript
+ * const validatedConfig = ensureBuildConfig(config);
+ * // Now safe to access: validatedConfig.build.format
+ * ```
+ */
+export function ensureBuildConfig(
+  config: Config,
+): Config & { build: BuildOptions } {
+  return {
+    ...config,
+    build: config.build ?? getDefaultBuildOptions(config.platform),
+  };
+}

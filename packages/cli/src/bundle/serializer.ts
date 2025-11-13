@@ -4,31 +4,15 @@
  */
 
 import { isObject } from '../core/config';
+import type {
+  TemplateSource,
+  TemplateDestination,
+  ProcessedTemplateVariables,
+} from '../types/template';
 
 export interface SerializerOptions {
   indent?: number;
   singleQuotes?: boolean;
-}
-
-interface TemplateSource {
-  code: string;
-  config?: unknown;
-  env?: unknown;
-  [key: string]: unknown;
-}
-
-interface TemplateDestination {
-  code: string;
-  config?: unknown;
-  env?: unknown;
-  [key: string]: unknown;
-}
-
-interface ProcessedTemplateVariables {
-  sources?: Record<string, TemplateSource>;
-  destinations?: Record<string, TemplateDestination>;
-  collector?: Record<string, unknown>;
-  [key: string]: unknown;
 }
 
 /**
