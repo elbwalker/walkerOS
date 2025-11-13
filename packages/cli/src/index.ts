@@ -5,8 +5,8 @@ import { simulateCommand } from './simulate';
 // Export commands for programmatic use
 export { bundleCommand, simulateCommand };
 
-// Export types and schemas for extending
-export { BundleConfigSchema, type BundleConfig } from './bundle/config';
+// Export types for extending
+export type { Config as BundleConfig } from './types/bundle';
 
 const program = new Command();
 
@@ -24,6 +24,11 @@ program
     'configuration file path',
     'bundle.config.json',
   )
+  .option(
+    '-e, --env <name>',
+    'environment to build (for multi-environment configs)',
+  )
+  .option('--all', 'build all environments (for multi-environment configs)')
   .option('-s, --stats', 'show bundle statistics')
   .option('--json', 'output statistics in JSON format (implies --stats)')
   .option('--no-cache', 'disable package caching and download fresh packages')
@@ -31,6 +36,8 @@ program
   .action(async (options) => {
     await bundleCommand({
       config: options.config,
+      env: options.env,
+      all: options.all,
       stats: options.stats,
       json: options.json,
       cache: options.cache,

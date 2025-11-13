@@ -66,4 +66,3 @@ export async function simulateCommand(
 // Re-export types and utilities for testing
 export * from './types';
 export * from './simulator';
-export * from './loader';

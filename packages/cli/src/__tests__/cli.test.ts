@@ -72,18 +72,31 @@ describe('CLI Bundle Command', () => {
     expect(output).toMatchObject({
       success: true,
       data: {
-        stats: {
-          totalSize: expect.any(Number),
-          packages: expect.any(Array),
-          buildTime: expect.any(Number),
-          treeshakingEffective: expect.any(Boolean),
+        environments: expect.arrayContaining([
+          {
+            environment: 'default',
+            success: true,
+            stats: {
+              totalSize: expect.any(Number),
+              packages: expect.any(Array),
+              buildTime: expect.any(Number),
+              treeshakingEffective: expect.any(Boolean),
+            },
+          },
+        ]),
+        summary: {
+          total: 1,
+          success: 1,
+          failed: 0,
         },
       },
       duration: expect.any(Number),
     });
 
-    expect(output.data.stats.packages).toHaveLength(1);
-    expect(output.data.stats.packages[0].name).toBe('@walkeros/core@latest');
+    expect(output.data.environments[0].stats.packages).toHaveLength(1);
+    expect(output.data.environments[0].stats.packages[0].name).toBe(
+      '@walkeros/core@latest',
+    );
   });
 
   it('should output JSON format for failed bundle', async () => {
@@ -156,7 +169,7 @@ describe('CLI Bundle Command', () => {
 
     const output = JSON.parse(result.stdout);
     expect(output.success).toBe(true);
-    expect(output.data.stats.treeshakingEffective).toBe(true); // Should be effective with named imports
+    expect(output.data.environments[0].stats.treeshakingEffective).toBe(true); // Should be effective with named imports
   });
 
   it('should suppress decorative output in JSON mode', async () => {

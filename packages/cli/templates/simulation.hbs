@@ -1,0 +1,188 @@
+// Simulation-specific template for ESM execution with API tracking
+// This template is used only for simulation mode to inject tracking
+
+// API Tracking implementation (bundled inline)
+function createApiTracker(entry, logger, paths) {
+  const log = (type, path, ...rest) => {
+    if (type === 'get') return;
+
+    if (paths && paths.length > 0) {
+      const matches = paths.some((pattern) => {
+        if (pattern.includes(':')) {
+          const [opType, opPath] = pattern.split(':');
+          if (opPath === '*') {
+            return type === opType;
+          }
+          return type === opType && path.startsWith(opPath);
+        }
+        return path.startsWith(pattern);
+      });
+      if (!matches) return;
+    }
+
+    const call = { type, path, timestamp: Date.now() };
+
+    if (type === 'call' && rest.length > 0) {
+      call.args = rest[0];
+    } else if (type === 'set' && rest.length > 0) {
+      call.value = rest[0];
+    }
+
+    logger(call);
+  };
+
+  const createNestedProxy = (currentPath, baseTarget = {}) => {
+    return new Proxy(baseTarget, {
+      get(target, prop) {
+        if (typeof prop === 'symbol') return undefined;
+
+        const fullPath = currentPath ? `${currentPath}.${prop}` : prop;
+        log('get', fullPath);
+
+        if (target[prop] !== undefined) {
+          const value = target[prop];
+
+          if (Array.isArray(value)) {
+            return new Proxy(value, {
+              get(arrayTarget, arrayProp) {
+                if (typeof arrayProp === 'symbol')
+                  return arrayTarget[arrayProp];
+
+                const nestedPath = `${fullPath}.${arrayProp}`;
+
+                if (arrayProp === 'push') {
+                  log('get', nestedPath);
+
+                  return new Proxy(arrayTarget.push.bind(arrayTarget), {
+                    apply(_target, thisArg, args) {
+                      log('call', nestedPath, args);
+                      return arrayTarget.push.apply(thisArg, args);
+                    },
+                  });
+                }
+
+                return arrayTarget[arrayProp];
+              },
+            });
+          }
+
+          if (typeof value === 'object' && value !== null) {
+            return createNestedProxy(fullPath, value);
+          }
+
+          if (typeof value === 'function') {
+            return new Proxy(value, {
+              apply(target, thisArg, args) {
+                log('call', fullPath, args);
+                return target.apply(thisArg, args);
+              },
+            });
+          }
+
+          return value;
+        }
+
+        const functionProxy = new Proxy(() => {}, {
+          apply(_target, _thisArg, args) {
+            log('call', fullPath, args);
+            return undefined;
+          },
+
+          get(_target, nestedProp) {
+            if (typeof nestedProp === 'symbol') return undefined;
+
+            const nestedPath = `${fullPath}.${nestedProp}`;
+            log('get', nestedPath);
+
+            if (nestedProp === 'push') {
+              return new Proxy(() => {}, {
+                apply(_target, _thisArg, args) {
+                  log('call', nestedPath, args);
+                  return undefined;
+                },
+              });
+            }
+
+            return createNestedProxy(nestedPath);
+          },
+        });
+
+        return functionProxy;
+      },
+
+      set(target, prop, value) {
+        if (typeof prop === 'symbol') return false;
+
+        const fullPath = currentPath ? `${currentPath}.${prop}` : prop;
+        log('set', fullPath, value);
+
+        target[prop] = value;
+        return true;
+      },
+    });
+  };
+
+  return createNestedProxy('', entry);
+}
+
+function logApiUsage(vmUsage, name, call) {
+  if (!vmUsage[name]) vmUsage[name] = [];
+  vmUsage[name].push(call);
+}
+
+// Simulation function export
+export default (async function() {
+  const vmUsage = {};
+
+  const config = {
+    sources: {
+    {{#each sources}}
+      {{@key}}: {
+        code: {{{code}}},
+        config: {{{config}}}{{#if env}},
+        env: createApiTracker(
+          {
+            window,
+            document,
+            ...{{{env}}}
+          },
+          (call) => logApiUsage(vmUsage, '{{@key}}', call),
+          ['call:*']
+        ){{/if}}
+      },
+    {{/each}}
+    },
+    destinations: {
+    {{#each destinations}}
+      {{@key}}: {
+        code: {{{code}}},
+        config: {{{config}}}{{#if env}},
+        env: createApiTracker(
+          {
+            window,
+            document,
+            ...{{{env}}}
+          },
+          (call) => logApiUsage(vmUsage, '{{@key}}', call),
+          ['call:*']
+        ){{else}},
+        env: createApiTracker(
+          {
+            window,
+            document
+          },
+          (call) => logApiUsage(vmUsage, '{{@key}}', call),
+          ['call:*']
+        ){{/if}}
+      },
+    {{/each}}
+    }{{#if collector}},
+    ...{{{collector}}}{{/if}}
+  };
+
+  {{{CODE}}}
+
+  const result = await startFlow(config);
+
+  return { flow: result, vmUsage };
+})();

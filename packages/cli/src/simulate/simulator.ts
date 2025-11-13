@@ -1,12 +1,18 @@
 import path from 'path';
+import os from 'os';
 import fs from 'fs-extra';
 import { loadJsonConfig, createLogger, getTempDir, isObject } from '../core';
 import { parseBundleConfig, type BundleConfig } from '../bundle/config';
 import { bundle } from '../bundle/bundler';
-import { executeInVM } from './loader';
-import { createApiTracker, logApiUsage } from './api-tracker';
 import type { SimulateCommandOptions, SimulationResult } from './types';
 import type { WalkerOS } from '@walkeros/core';
+
+/**
+ * Generate a unique ID for temp files (lightweight alternative to getId)
+ */
+function generateId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
 
 /**
  * Main simulation orchestrator
@@ -96,30 +102,37 @@ export function formatSimulationResult(
 }
 
 /**
- * Generate bundle code from config (similar to bundle command)
+ * Generate simulation bundle using simulation template
+ * This creates an ESM bundle with API tracking built-in
  */
-async function generateBundleCode(
+async function generateSimulationBundle(
   config: BundleConfig,
   silent = false,
 ): Promise<string> {
   // Create a logger for bundle generation - silent in JSON mode
   const logger = createLogger({ silent });
 
-  // Create temporary bundle and return the generated code
+  // Create temporary bundle
   const tempDir = getTempDir();
-  const tempOutput = path.join(tempDir, 'simulation-bundle.js');
+  const tempOutput = path.join(
+    tempDir,
+    `simulation-bundle-${generateId()}.mjs`,
+  );
 
-  // For simulation, we need a template to create proper module structure
-  const packageRoot = process.cwd();
-  const simulationTemplate = path.join(packageRoot, 'templates/base.hbs');
+  // Use simulation template (has tracking built-in)
+  // In ESM, __dirname is not available, so we use import.meta.url
+  const __filename = new URL(import.meta.url).pathname;
+  const __dirname = path.dirname(__filename);
+  // From dist/index.mjs, go up one level to get to package root
+  const packageRoot = path.resolve(__dirname, '..');
+  const simulationTemplate = path.join(packageRoot, 'templates/simulation.hbs');
 
   const tempConfig = {
     ...config,
-    template: config.template || simulationTemplate, // Force template for simulation
+    template: simulationTemplate,
     build: {
       ...config.build,
-      platform: 'node' as const, // Override platform for Node.js simulation
-      format: 'cjs' as const, // Override with CommonJS for simulation
+      format: 'esm' as const, // ESM for dynamic import()
     },
     output: tempOutput,
   };
@@ -128,17 +141,8 @@ async function generateBundleCode(
     // Generate bundle
     await bundle(tempConfig, logger, false);
 
-    // Read the generated file
-    const bundleCode = await fs.readFile(tempOutput, 'utf-8');
-
-    // The base template with platform=node and format=cjs should already generate
-    // module.exports = (async function() { ... })();
-    // So we can use it directly
-
-    // Cleanup temp files
-    await fs.remove(tempDir);
-
-    return bundleCode;
+    // Return the path to the bundle (not the code itself)
+    return tempOutput;
   } catch (error) {
     // Cleanup on error
     await fs.remove(tempDir).catch(() => {});
@@ -147,103 +151,62 @@ async function generateBundleCode(
 }
 
 /**
- * Execute simulation with real walkerOS implementation
+ * Execute simulation using ESM import with tracking
  */
 export async function executeSimulation(
   event: unknown,
   configPath: string,
 ): Promise<SimulationResult> {
+  const startTime = Date.now();
+  let bundlePath: string | undefined;
+
   try {
     // Generate real bundle from config
     const rawConfig = await loadJsonConfig(configPath);
     const config = parseBundleConfig(rawConfig);
 
-    // Create bundle using the bundle system
-    const bundleCode = await generateBundleCode(config, true); // Always silent for simulation
+    // Create simulation bundle (ESM with tracking built-in)
+    bundlePath = await generateSimulationBundle(config, true);
 
-    // The CJS bundle now assigns to module.exports, so we can access it
-    const wrappedBundleCode = `
-      // Set up module context
-      const module = { exports: {} };
-      const exports = module.exports;
-      const vmLogs = [];
-      const vmUsage = {};
-      
-      // Override console.log to capture logs
-      console.log = (...args) => {
-        vmLogs.push(args);
-      };
-      
-      // Test console.log capture
-      console.log("simulation start");
+    // Dynamic import with cache busting
+    const timestamp = Date.now();
+    const moduleUrl = `file://${bundlePath}?t=${timestamp}`;
 
-      // Execute the CJS bundle (sets module.exports)
-      ${bundleCode}
-      
-      // Get the collector from module.exports
-      const flow = await module.exports;
+    // Import the ESM bundle
+    const module = await import(moduleUrl);
 
-      // Enable error logging for simulation debugging
-      flow.collector.config.onError = function(error) {
-        vmLogs.push(['ERROR:', error]);
-      };
-      
-      // Set up dynamic API tracking for each destination
-      if (flow && flow.collector && flow.collector.destinations) {
-        Object.entries(flow.collector.destinations).forEach(([name, destination]) => {
-          // Try to get examples from multiple sources
-          let examples = destination.examples || destination.code?.examples;
-          
-          // Try to get examples from the dynamically generated examples object
-          if (!examples && typeof globalThis.examples !== 'undefined') {
-            examples = globalThis.examples[name];
-          }
-          
-          // Start with minimal window/document objects
-          let baseEnv = {
-            window,
-            document
-          };
-          
-          let trackingPaths = ['call:*']; // Default fallback
-          
-          // Apply tracking to the entire env
-          const trackedEnv = createApiTracker(
-            baseEnv,
-            (call) => logApiUsage(vmUsage, name, call),
-            trackingPaths
-          );
-          
-          destination.env = trackedEnv;
-        });
-      }
+    // The simulation template exports { flow, vmUsage } wrapped in a Promise
+    const { flow, vmUsage } = await module.default;
 
-      // Test event execution with generated collector
-      const testEvent = ${JSON.stringify(event)};
-      
-      // The bundle should return { collector, elb } from startFlow
-      if (flow && typeof flow.elb === 'function') {
-        const elbResult = await flow.elb(testEvent);
-        
-        // Store results for VM extraction
-        globalThis.vmResult = {
-          collector: flow.collector,
-          elbResult,
-          logs: vmLogs,
-          usage: vmUsage
-        };
-      } else {
-        throw new Error('Bundle did not return valid collector with elb function');
-      }
-    `;
+    if (!flow || typeof flow.elb !== 'function') {
+      throw new Error(
+        'Bundle did not export valid flow object with elb function',
+      );
+    }
 
-    const vmResult = await executeInVM(wrappedBundleCode);
+    // Execute the event
+    const elbResult = await flow.elb(event);
 
-    return vmResult;
+    const duration = Date.now() - startTime;
+
+    return {
+      success: true,
+      elbResult,
+      usage: vmUsage || {},
+      duration,
+      logs: [],
+    };
   } catch (error) {
+    const duration = Date.now() - startTime;
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
+      duration,
     };
+  } finally {
+    // Cleanup temp bundle file
+    if (bundlePath) {
+      await fs.remove(path.dirname(bundlePath)).catch(() => {});
+    }
   }
 }

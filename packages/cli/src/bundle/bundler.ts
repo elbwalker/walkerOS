@@ -188,6 +188,7 @@ function createEsbuildOptions(
     baseOptions.external = [];
   } else if (buildConfig.platform === 'node') {
     // For Node.js bundles, mark Node built-ins as external
+    // Note: zod packages must also be provided in simulate/loader.ts VM context
     baseOptions.external = [
       'crypto',
       'fs',
@@ -202,6 +203,8 @@ function createEsbuildOptions(
       'url',
       'querystring',
       'zlib',
+      'zod', // External: provided by VM context for simulation
+      'zod-to-json-schema', // External: provided by VM context for simulation
     ];
   }
 
@@ -332,12 +335,23 @@ async function createEntryPoint(
 
   // Apply module format wrapping if needed
   let wrappedCode = templatedCode;
-  if (config.build.format === 'cjs') {
-    // Wrap in module.exports for CommonJS
-    wrappedCode = `module.exports = ${templatedCode}`;
-  } else if (config.build.platform === 'browser' && config.build.globalName) {
-    // Assign to window for browser builds with globalName
-    wrappedCode = `window['${config.build.globalName}'] = ${templatedCode}`;
+
+  // Check if template already has exports (e.g., simulation template)
+  const hasExport =
+    templatedCode.includes('export default') ||
+    templatedCode.includes('module.exports');
+
+  if (!hasExport) {
+    if (config.build.format === 'cjs') {
+      // Wrap in module.exports for CommonJS
+      wrappedCode = `module.exports = ${templatedCode}`;
+    } else if (config.build.format === 'esm') {
+      // Export as default for ESM
+      wrappedCode = `export default ${templatedCode}`;
+    } else if (config.build.platform === 'browser' && config.build.globalName) {
+      // Assign to window for browser builds with globalName
+      wrappedCode = `window['${config.build.globalName}'] = ${templatedCode}`;
+    }
   }
 
   // Combine imports with wrapped code

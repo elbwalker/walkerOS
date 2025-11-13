@@ -9,6 +9,7 @@ export default defineConfig({
   },
   dts: false, // No types needed for CLI-only package
   sourcemap: true,
+  minify: false, // Disable minification for CLI to avoid runtime issues
   banner: {
     js: '#!/usr/bin/env node',
   },
