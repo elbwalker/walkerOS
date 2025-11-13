@@ -22,7 +22,7 @@ export const destinationDemo: Destination = {
   init({ config, env }) {
     // eslint-disable-next-line no-console
     const log = env?.log || console.log;
-    const settings = config?.settings || { name: 'demo' };
+    const settings = { name: 'demo', ...config?.settings };
 
     // Log initialization
     log(`[${settings.name}] initialized`);
@@ -31,7 +31,7 @@ export const destinationDemo: Destination = {
   push(event, { config, env }) {
     // eslint-disable-next-line no-console
     const log = env?.log || console.log;
-    const settings = config?.settings || { name: 'demo' };
+    const settings = { name: 'demo', ...config?.settings };
 
     const output = settings.values
       ? extractValues(
