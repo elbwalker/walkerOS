@@ -255,6 +255,11 @@ describe('CLI Simulate Command', () => {
       '--json',
     ]);
 
+    if (result.exitCode !== 0) {
+      console.log('STDERR:', result.stderr);
+      console.log('STDOUT:', result.stdout);
+    }
+
     expect(result.exitCode).toBe(0);
 
     const output = JSON.parse(result.stdout);

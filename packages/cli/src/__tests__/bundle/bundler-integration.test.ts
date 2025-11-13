@@ -79,18 +79,18 @@ describe('Bundler Integration', () => {
       code: 'export const test = "hello";',
       build: {
         platform: 'node',
-        format: 'cjs',
+        format: 'esm',
         minify: true,
         sourcemap: true,
         target: 'node18',
       },
-      output: path.join(testOutputDir, 'build-test.js'),
+      output: path.join(testOutputDir, 'build-test.mjs'),
     };
 
     const config = parseBundleConfig(rawConfig);
 
     expect(config.build.platform).toBe('node');
-    expect(config.build.format).toBe('cjs');
+    expect(config.build.format).toBe('esm');
     expect(config.build.minify).toBe(true);
     expect(config.build.sourcemap).toBe(true);
     expect(config.build.target).toBe('node18');

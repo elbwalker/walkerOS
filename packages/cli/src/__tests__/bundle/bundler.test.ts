@@ -75,7 +75,7 @@ describe('Bundler', () => {
     await expect(bundle(config, logger)).resolves.not.toThrow();
   });
 
-  it('should bundle server config with CJS format', async () => {
+  it('should bundle server config with ESM format', async () => {
     // Inline server configuration
     const rawConfig = {
       platform: 'server',
@@ -84,12 +84,12 @@ describe('Bundler', () => {
           imports: ['trim', 'isString'],
         },
       },
-      code: 'module.exports = { processText: (text) => trim(text) };',
+      code: 'export default { processText: (text) => trim(text) };',
       build: {
         platform: 'node',
-        format: 'cjs',
+        format: 'esm',
       },
-      output: path.join(testOutputDir, 'server-bundle.js'),
+      output: path.join(testOutputDir, 'server-bundle.mjs'),
     };
 
     const config = parseBundleConfig(rawConfig);

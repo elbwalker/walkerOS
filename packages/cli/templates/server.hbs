@@ -25,10 +25,5 @@
 
   const result = await startFlow(config);
 
-  // Export for Node.js module system
-  if (typeof module !== 'undefined' && module.exports) {
-    module.exports = result;
-  }
-
   return result;
 })();

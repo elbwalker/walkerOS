@@ -27,7 +27,7 @@ export interface Config extends Flow.Config {
    *
    * Platform-specific defaults apply:
    * - web: format=iife, platform=browser, target=es2020
-   * - server: format=cjs, platform=node, target=node18
+   * - server: format=esm, platform=node, target=node20
    *
    * @see {@link BuildOptions}
    */
@@ -44,8 +44,8 @@ export interface Config extends Flow.Config {
 export interface BuildOptions
   extends Pick<
     ESBuildOptions,
-    | 'format' // esm | cjs | iife | umd
-    | 'target' // es2020, node18, etc.
+    | 'format' // esm | iife
+    | 'target' // es2020, node20, etc.
     | 'minify' // Enable minification
     | 'sourcemap' // Generate source maps
     | 'platform' // browser | node | neutral
