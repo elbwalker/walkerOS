@@ -90,7 +90,7 @@ const config = {
   },
   transformIgnorePatterns: ['/node_modules/(?!(@walkeros)/)'],
   testMatch: ['<rootDir>/**/*.test.(ts|tsx|js|jsx)'],
-  moduleFileExtensions: ['js', 'ts', 'tsx', 'mjs'],
+  moduleFileExtensions: ['js', 'ts', 'tsx', 'mjs', 'json'],
   rootDir: '.',
   moduleDirectories: ['node_modules', 'src'],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
@@ -110,7 +110,8 @@ const config = {
     '/node_modules/',
     '/dist/',
     '/build/',
-    '/coverage/'
+    '/coverage/',
+    '.tmp'
   ],
 };
 
