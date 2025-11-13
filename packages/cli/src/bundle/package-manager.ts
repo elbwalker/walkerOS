@@ -102,9 +102,9 @@ async function resolveDependencies(
 
       for (const [name, versionSpec] of Object.entries(deps)) {
         if (typeof versionSpec === 'string') {
-          // Convert version spec to 'latest' for simplicity
-          // In the future, we could use semver to resolve exact versions
-          dependencies.push({ name, version: 'latest' });
+          // Use the version spec as-is (pacote will resolve it)
+          // This respects the package.json dependency requirements
+          dependencies.push({ name, version: versionSpec });
         }
       }
     }
@@ -179,7 +179,17 @@ export async function downloadPackages(
       const cacheDir =
         process.env.NPM_CACHE_DIR || path.join(process.cwd(), '.npm-cache');
       await pacote.extract(packageSpec, packageDir, {
+        // Force npm registry download, prevent workspace resolution
+        registry: 'https://registry.npmjs.org',
+
+        // Force online fetching from registry (don't use cached workspace packages)
+        preferOnline: true,
+
+        // Cache for performance
         cache: cacheDir,
+
+        // Don't resolve relative to workspace context
+        where: undefined,
       });
 
       // Cache the downloaded package for future use

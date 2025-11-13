@@ -19,11 +19,16 @@ export async function bundle(
   showStats = false,
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
-  const TEMP_DIR = getTempDir(config.tempDir);
+  // Only generate a new temp dir if one isn't explicitly provided
+  // This allows simulator to share its temp dir with the bundler
+  const TEMP_DIR = config.tempDir || getTempDir();
 
   try {
     // Step 1: Prepare temporary directory
-    await fs.emptyDir(TEMP_DIR);
+    // Only clean if we created a new temp dir (don't clean shared simulator temp)
+    if (!config.tempDir) {
+      await fs.emptyDir(TEMP_DIR);
+    }
     logger.debug('Cleaned temporary directory');
 
     // Step 2: Download packages
@@ -35,14 +40,43 @@ export async function bundle(
         version: packageConfig.version || 'latest',
       }),
     );
+    // downloadPackages adds 'node_modules' subdirectory automatically
     const packagePaths = await downloadPackages(
       packagesArray,
-      path.join(TEMP_DIR, 'node_modules'),
+      TEMP_DIR,
       logger,
       config.cache,
     );
 
-    // Step 3: Create entry point
+    // Fix @walkeros packages to have proper ESM exports
+    // This ensures Node resolves to .mjs files instead of .js (CJS)
+    for (const [pkgName, pkgPath] of packagePaths.entries()) {
+      if (pkgName.startsWith('@walkeros/')) {
+        const pkgJsonPath = path.join(pkgPath, 'package.json');
+        const pkgJson = await fs.readJSON(pkgJsonPath);
+
+        // Add exports field to force ESM resolution
+        if (!pkgJson.exports && pkgJson.module) {
+          pkgJson.exports = {
+            '.': {
+              import: pkgJson.module,
+              require: pkgJson.main,
+            },
+          };
+          await fs.writeJSON(pkgJsonPath, pkgJson, { spaces: 2 });
+        }
+      }
+    }
+
+    // Step 3: Create package.json to enable ESM in temp directory
+    // This ensures Node treats all .js files as ESM and resolves @walkeros packages correctly
+    const packageJsonPath = path.join(TEMP_DIR, 'package.json');
+    await fs.writeFile(
+      packageJsonPath,
+      JSON.stringify({ type: 'module' }, null, 2),
+    );
+
+    // Step 4: Create entry point
     logger.info('📝 Creating entry point...');
     const entryContent = await createEntryPoint(config, packagePaths);
     const entryPath = path.join(TEMP_DIR, 'entry.js');
@@ -85,13 +119,18 @@ export async function bundle(
     }
 
     // Step 6: Cleanup
-    await fs.remove(TEMP_DIR);
-    logger.debug('Cleaned up temporary files');
+    // Only cleanup if we created our own temp dir (not shared with simulator)
+    if (!config.tempDir) {
+      await fs.remove(TEMP_DIR);
+      logger.debug('Cleaned up temporary files');
+    }
 
     return stats;
   } catch (error) {
-    // Cleanup on error
-    await fs.remove(TEMP_DIR).catch(() => {});
+    // Cleanup on error (only if we created our own temp dir)
+    if (!config.tempDir) {
+      await fs.remove(TEMP_DIR).catch(() => {});
+    }
     throw error;
   }
 }
@@ -148,11 +187,9 @@ function createEsbuildOptions(
   packagePaths: Map<string, string>,
   logger: Logger,
 ): esbuild.BuildOptions {
-  // Create aliases to force esbuild to use downloaded packages
+  // Don't use aliases - they cause esbuild to bundle even external packages
+  // Instead, use absWorkingDir to point to temp directory where node_modules is
   const alias: Record<string, string> = {};
-  for (const [packageName, packagePath] of packagePaths.entries()) {
-    alias[packageName] = packagePath;
-  }
 
   const baseOptions: esbuild.BuildOptions = {
     entryPoints: [entryPath],
@@ -160,12 +197,14 @@ function createEsbuildOptions(
     format: buildConfig.format as esbuild.Format,
     platform: buildConfig.platform as esbuild.Platform,
     outfile: outputPath,
-    alias,
+    absWorkingDir: tempDir, // Resolve modules from temp directory
+    // alias removed - not needed with absWorkingDir
+    mainFields: ['module', 'main'], // Prefer ESM over CJS
     treeShaking: true,
     logLevel: 'error',
     minify: buildConfig.minify,
     sourcemap: buildConfig.sourcemap,
-    resolveExtensions: ['.js', '.ts', '.mjs', '.json'],
+    resolveExtensions: ['.mjs', '.js', '.ts', '.json'], // Prefer .mjs
 
     // Enhanced minification options when minify is enabled
     ...(buildConfig.minify && {
@@ -185,10 +224,10 @@ function createEsbuildOptions(
       global: 'globalThis',
     };
     // For browser bundles, let users handle Node.js built-ins as needed
-    baseOptions.external = [];
+    baseOptions.external = buildConfig.external || [];
   } else if (buildConfig.platform === 'node') {
     // For Node.js bundles, mark Node built-ins as external
-    baseOptions.external = [
+    const nodeBuiltins = [
       'crypto',
       'fs',
       'path',
@@ -203,6 +242,28 @@ function createEsbuildOptions(
       'querystring',
       'zlib',
     ];
+    // Mark zod as external to prevent double-loading when CLI imports examples
+    // and bundle imports destinations (both use @walkeros/core which imports zod)
+    // Use wildcard patterns to match both ESM and CJS imports
+    const npmPackages = [
+      'zod',
+      'zod-to-json-schema',
+      'zod/*',
+      'zod-to-json-schema/*',
+    ];
+    // ALSO mark all downloaded @walkeros packages as external
+    // Even though we alias them, they should not be bundled
+    const walkerosPackages = Array.from(packagePaths.keys()).filter((name) =>
+      name.startsWith('@walkeros/'),
+    );
+    baseOptions.external = buildConfig.external
+      ? [
+          ...nodeBuiltins,
+          ...npmPackages,
+          ...walkerosPackages,
+          ...buildConfig.external,
+        ]
+      : [...nodeBuiltins, ...npmPackages, ...walkerosPackages];
   }
 
   // Set target if specified
@@ -241,6 +302,21 @@ async function createEntryPoint(
   // Generate import statements from packages
   const importStatements: string[] = [];
   const examplesMappings: string[] = [];
+
+  // For simulation mode, automatically import examples from destination packages
+  // This ensures examples are loaded in the SAME execution context as the bundle
+  // preventing zod double-loading issues
+  const destinationPackages = new Set<string>();
+  if (config.destinations) {
+    for (const [destKey, destConfig] of Object.entries(config.destinations)) {
+      // Require explicit package field - no inference for any packages
+      const packageName = (destConfig as any).package;
+      if (packageName) {
+        destinationPackages.add(packageName);
+      }
+      // If no package field, skip auto-importing examples for this destination
+    }
+  }
 
   for (const [packageName, packageConfig] of Object.entries(config.packages)) {
     if (packageConfig.imports && packageConfig.imports.length > 0) {
@@ -302,6 +378,21 @@ async function createEntryPoint(
         `import * as ${varName} from '${packageName}'; // Consider specifying explicit imports`,
       );
     }
+
+    // Auto-import examples for destination packages
+    if (destinationPackages.has(packageName)) {
+      const destinationMatch = packageName.match(
+        /@walkeros\/(?:web|server)-destination-(.+)$/,
+      );
+      if (destinationMatch) {
+        const destinationName = destinationMatch[1];
+        const examplesVarName = `${destinationName.replace(/-/g, '_')}_examples`;
+        importStatements.push(
+          `import * as ${examplesVarName} from '${packageName}/examples';`,
+        );
+        examplesMappings.push(`  ${destinationName}: ${examplesVarName}`);
+      }
+    }
   }
 
   // Create examples object if we have any mappings
@@ -346,10 +437,15 @@ async function createEntryPoint(
     }
   }
 
-  // Combine imports with wrapped code
-  const finalCode = importsCode
-    ? `${importsCode}\n\n${wrappedCode}`
-    : wrappedCode;
+  // Combine imports, examples object, and wrapped code
+  let finalCode = importsCode
+    ? `${importsCode}\n\n${examplesObject}${wrappedCode}`
+    : `${examplesObject}${wrappedCode}`;
+
+  // If we have examples, export them as a named export
+  if (examplesObject && config.build.format === 'esm') {
+    finalCode += `\n\nexport { examples };`;
+  }
 
   return finalCode;
 }

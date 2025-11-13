@@ -5,22 +5,7 @@ import { parseBundleConfig } from '../../bundle/config';
 import { createLogger, type Logger } from '../../core';
 import { getId } from '@walkeros/core';
 
-// Mock package-manager to avoid pacote dependency issues in tests
-jest.mock('../../bundle/package-manager', () => ({
-  downloadPackages: jest
-    .fn()
-    .mockResolvedValue(
-      new Map([['@walkeros/core', '/tmp/mock-walkeros-core']]),
-    ),
-}));
-
-// Mock esbuild to avoid actual bundling in tests
-jest.mock('esbuild', () => ({
-  __esModule: true,
-  default: {
-    build: jest.fn().mockResolvedValue({}),
-  },
-}));
+// No mocks - test with real package downloads and bundling
 
 describe('Bundler', () => {
   const testOutputDir = path.join('.tmp', `bundler-${Date.now()}-${getId()}`);

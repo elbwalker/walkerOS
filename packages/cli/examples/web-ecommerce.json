@@ -99,6 +99,7 @@
   },
   "destinations": {
     "gtag": {
+      "package": "@walkeros/web-destination-gtag",
       "code": "destinationGtag",
       "config": {
         "settings": {
@@ -203,6 +204,7 @@
       }
     },
     "api": {
+      "package": "@walkeros/web-destination-api",
       "code": "destinationAPI",
       "config": {
         "settings": {

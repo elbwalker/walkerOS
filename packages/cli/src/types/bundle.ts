@@ -49,6 +49,7 @@ export interface BuildOptions
     | 'minify' // Enable minification
     | 'sourcemap' // Generate source maps
     | 'platform' // browser | node | neutral
+    | 'external' // External packages to not bundle
   > {
   /**
    * Output file path.
