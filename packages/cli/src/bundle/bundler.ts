@@ -382,14 +382,23 @@ async function createEntryPoint(
     // Auto-import examples for destination packages
     if (destinationPackages.has(packageName)) {
       const destinationMatch = packageName.match(
-        /@walkeros\/(?:web|server)-destination-(.+)$/,
+        /@walkeros\/(?:(?:web|server)-)?destination-(.+)$/,
       );
       if (destinationMatch) {
         const destinationName = destinationMatch[1];
         const examplesVarName = `${destinationName.replace(/-/g, '_')}_examples`;
-        importStatements.push(
-          `import * as ${examplesVarName} from '${packageName}/examples';`,
-        );
+        // Try importing from /examples subpath first (standard packages)
+        // Fall back to importing { examples } from main module (demo packages)
+        const isDemoPackage = packageName.includes('-demo');
+        if (isDemoPackage) {
+          importStatements.push(
+            `import { examples as ${examplesVarName} } from '${packageName}';`,
+          );
+        } else {
+          importStatements.push(
+            `import * as ${examplesVarName} from '${packageName}/examples';`,
+          );
+        }
         examplesMappings.push(`  ${destinationName}: ${examplesVarName}`);
       }
     }
@@ -424,8 +433,8 @@ async function createEntryPoint(
   // Apply module format wrapping if needed
   let wrappedCode = templatedCode;
 
-  // Check if template already has exports
-  const hasExport = templatedCode.includes('export default');
+  // Check if code already has any export statements (default, named, etc.)
+  const hasExport = /^\s*export\s/m.test(templatedCode);
 
   if (!hasExport) {
     if (config.build.format === 'esm') {

@@ -267,8 +267,7 @@ describe('CLI Simulate Command', () => {
       result: {
         ok: true,
         successful: expect.arrayContaining([
-          expect.objectContaining({ id: 'gtag' }),
-          expect.objectContaining({ id: 'api' }),
+          expect.objectContaining({ id: 'demo' }),
         ]),
         queued: [],
         failed: [],
@@ -278,26 +277,16 @@ describe('CLI Simulate Command', () => {
         }),
       },
       usage: {
-        gtag: expect.any(Array),
-        api: expect.any(Array),
+        demo: expect.any(Array),
       },
       duration: expect.any(Number),
     });
 
-    // Verify gtag API calls
-    expect(output.usage.gtag.length).toBeGreaterThan(0);
-    expect(output.usage.gtag[0]).toMatchObject({
+    // Verify demo destination log calls
+    expect(output.usage.demo.length).toBeGreaterThan(0);
+    expect(output.usage.demo[0]).toMatchObject({
       type: 'call',
-      path: 'window.gtag',
-      timestamp: expect.any(Number),
-      args: expect.any(Array),
-    });
-
-    // Verify api API calls
-    expect(output.usage.api.length).toBeGreaterThan(0);
-    expect(output.usage.api[0]).toMatchObject({
-      type: 'call',
-      path: 'sendWeb',
+      path: 'log',
       timestamp: expect.any(Number),
       args: expect.any(Array),
     });

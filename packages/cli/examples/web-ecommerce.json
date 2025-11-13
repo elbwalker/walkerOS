@@ -4,20 +4,14 @@
     "@walkeros/collector": {
       "imports": ["startFlow"]
     },
-    "@walkeros/web-source-browser": {
-      "imports": ["sourceBrowser"]
+    "@walkeros/source-demo": {
+      "imports": ["sourceDemo"]
     },
-    "@walkeros/web-source-datalayer": {
-      "imports": ["sourceDataLayer"]
-    },
-    "@walkeros/web-destination-gtag": {
-      "imports": ["destinationGtag"]
-    },
-    "@walkeros/web-destination-api": {
-      "imports": ["destinationAPI"]
+    "@walkeros/destination-demo": {
+      "imports": ["destinationDemo"]
     }
   },
-  "code": "console.log('web-ecommerce.json example');",
+  "code": "",
   "build": {
     "minify": false,
     "globalName": "walkerOS"
@@ -25,191 +19,33 @@
   "output": "./dist/web-ecommerce.js",
   "template": "templates/base.hbs",
   "sources": {
-    "browser": {
-      "code": "sourceBrowser",
+    "demo": {
+      "code": "sourceDemo",
       "config": {
         "settings": {
-          "prefix": "data-elb",
-          "pageview": true,
-          "session": true,
-          "elb": "elb",
-          "elbLayer": "elbLayer"
-        }
-      }
-    },
-    "dataLayer": {
-      "code": "sourceDataLayer",
-      "config": {
-        "settings": {
-          "prefix": "gtag"
-        },
-        "mapping": {
-          "consent": {
-            "update": {
-              "name": "walker consent",
-              "settings": {
-                "command": {
-                  "map": {
-                    "functional": { "value": true },
-                    "analytics": {
-                      "key": "analytics_storage",
-                      "fn": "(value) => value === 'granted'"
-                    },
-                    "marketing": {
-                      "key": "ad_storage",
-                      "fn": "(value) => value === 'granted'"
-                    }
-                  }
-                }
-              }
+          "events": [
+            {
+              "name": "page view",
+              "data": { "title": "Home", "path": "/" },
+              "delay": 0
+            },
+            {
+              "name": "product view",
+              "data": { "id": "P123", "name": "Test Product", "price": 99.99 },
+              "delay": 100
             }
-          },
-          "purchase": {
-            "name": "order complete",
-            "data": {
-              "map": {
-                "id": "transaction_id",
-                "total": "value",
-                "currency": "currency",
-                "nested": {
-                  "loop": [
-                    "items",
-                    {
-                      "map": {
-                        "type": { "value": "product" },
-                        "data": {
-                          "map": {
-                            "id": "item_id",
-                            "name": "item_name",
-                            "category": "item_category",
-                            "quantity": "quantity",
-                            "price": "price"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
+          ]
         }
       }
     }
   },
   "destinations": {
-    "gtag": {
-      "package": "@walkeros/web-destination-gtag",
-      "code": "destinationGtag",
+    "demo": {
+      "package": "@walkeros/destination-demo",
+      "code": "destinationDemo",
       "config": {
         "settings": {
-          "ga4": {
-            "measurementId": "G-XXXXXXXXXX"
-          }
-        },
-        "mapping": {
-          "order": {
-            "complete": {
-              "name": "purchase",
-              "settings": {
-                "ga4": {
-                  "include": ["data"]
-                }
-              },
-              "data": {
-                "map": {
-                  "transaction_id": "data.id",
-                  "value": "data.total",
-                  "tax": "data.tax",
-                  "shipping": "data.shipping",
-                  "currency": { "key": "data.currency", "value": "USD" },
-                  "items": {
-                    "loop": [
-                      "nested",
-                      {
-                        "condition": "(entity) => entity.entity === 'product'",
-                        "map": {
-                          "item_id": "data.id",
-                          "item_name": "data.name",
-                          "item_category": "data.category",
-                          "quantity": {
-                            "key": "data.quantity",
-                            "value": 1
-                          },
-                          "price": "data.price"
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            },
-            "add": {
-              "name": "add_to_cart",
-              "settings": {
-                "ga4": {
-                  "include": ["data"]
-                }
-              },
-              "data": {
-                "map": {
-                  "currency": { "key": "data.currency", "value": "USD" },
-                  "value": "data.total",
-                  "items": {
-                    "loop": [
-                      "nested",
-                      {
-                        "condition": "(entity) => entity.entity === 'product'",
-                        "map": {
-                          "item_id": "data.id",
-                          "item_name": "data.name",
-                          "quantity": {
-                            "key": "data.quantity",
-                            "value": 1
-                          },
-                          "price": "data.price"
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          },
-          "product": {
-            "view": {
-              "name": "view_item",
-              "settings": {
-                "ga4": {
-                  "include": ["data"]
-                }
-              },
-              "data": {
-                "map": {
-                  "currency": { "key": "data.currency", "value": "USD" },
-                  "value": "data.price",
-                  "items": [
-                    {
-                      "item_id": "data.id",
-                      "item_name": "data.name",
-                      "item_category": "data.category",
-                      "price": "data.price"
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "api": {
-      "package": "@walkeros/web-destination-api",
-      "code": "destinationAPI",
-      "config": {
-        "settings": {
-          "url": "https://api.example.com/events",
-          "transport": "beacon"
+          "name": "demo"
         }
       }
     }

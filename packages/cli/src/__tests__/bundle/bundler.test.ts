@@ -171,7 +171,7 @@ describe('Bundler', () => {
     it('should handle template configuration', async () => {
       // Create a test template file
       const templatePath = path.join(testOutputDir, 'test.hbs');
-      await fs.writeFile(templatePath, '{{{CODE}}}\\n// Template footer');
+      await fs.writeFile(templatePath, '{{{CODE}}}\n// Template footer');
 
       const config = parseBundleConfig({
         platform: 'web',

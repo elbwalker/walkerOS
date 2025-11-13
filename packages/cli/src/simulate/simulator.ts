@@ -134,12 +134,6 @@ export async function executeSimulation(
       config.cache,
     );
 
-    console.log(
-      '[DEBUG] Downloaded packages:',
-      Array.from(packagePaths.keys()),
-    );
-    console.log('[DEBUG] Temp dir:', tempDir);
-
     // 3. Create tracker
     const tracker = new CallTracker();
 
@@ -197,12 +191,38 @@ ${config.code || ''}
     await bundle(config, createLogger({ silent: true }), false);
     bundlePath = tempOutput;
 
-    // 9. Dynamic import the bundle
+    // 9. Inject minimal globals for Node simulation environment
+    // This allows destinations to reference window/document without errors
+    if (!globalThis.window) {
+      (globalThis as any).window = {};
+    }
+    if (!globalThis.document) {
+      (globalThis as any).document = {};
+    }
+
+    // 10. Dynamic import the bundle
     const timestamp = Date.now();
     const moduleUrl = `file://${bundlePath}?t=${timestamp}`;
     const module = await import(moduleUrl);
 
-    // 10. Call bundle factory function with tracker
+    // 11. Populate globals with destination-specific mocks from examples
+    // This happens AFTER import so we can access the exported examples
+    const importedExamples = module.examples;
+    if (importedExamples && config.destinations) {
+      for (const [key, dest] of Object.entries(config.destinations)) {
+        const destEnv = importedExamples[key]?.env?.push;
+        if (destEnv) {
+          if (destEnv.window) {
+            Object.assign((globalThis as any).window, destEnv.window);
+          }
+          if (destEnv.document) {
+            Object.assign((globalThis as any).document, destEnv.document);
+          }
+        }
+      }
+    }
+
+    // 12. Call bundle factory function with tracker
     const flowResult = await module.default({ tracker });
     if (!flowResult || typeof flowResult.elb !== 'function') {
       throw new Error(
@@ -212,10 +232,10 @@ ${config.code || ''}
 
     const { elb } = flowResult;
 
-    // 11. Execute the event
+    // 13. Execute the event
     const elbResult = await elb(event);
 
-    // 12. Retrieve tracked calls from tracker instance
+    // 14. Retrieve tracked calls from tracker instance
     const usage = tracker.getCalls();
 
     const duration = Date.now() - startTime;
@@ -235,13 +255,13 @@ ${config.code || ''}
       duration,
     };
   } finally {
-    // Cleanup temp bundle file
-    if (bundlePath) {
-      console.log(
-        '[DEBUG] Keeping temp dir for inspection:',
-        path.dirname(bundlePath),
-      );
-      // await fs.remove(path.dirname(bundlePath)).catch(() => {});
-    }
+    // Cleanup temp bundle file (currently keeping for debugging)
+    // if (bundlePath) {
+    //   await fs.remove(path.dirname(bundlePath)).catch(() => {});
+    // }
+
+    // Cleanup injected globals
+    delete (globalThis as any).window;
+    delete (globalThis as any).document;
   }
 }

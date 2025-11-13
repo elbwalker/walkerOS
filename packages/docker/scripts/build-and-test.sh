@@ -39,20 +39,14 @@ echo -e "${GREEN}✓ Docker image built: ${FULL_IMAGE}${NC}\n"
 # Step 2: Test Bundle Mode
 echo -e "${BLUE}[2/4] Testing Bundle Mode...${NC}"
 
-# Create temporary directories for bundle output, temp files, and npm cache
+# Create temporary directory for bundle output
 TEST_DIR=$(mktemp -d)
-TEMP_DIR=$(mktemp -d)
-CACHE_DIR=$(mktemp -d)
-trap "rm -rf ${TEST_DIR} ${TEMP_DIR} ${CACHE_DIR}" EXIT
+trap "rm -rf ${TEST_DIR}" EXIT
 
 docker run --rm \
   -e MODE=bundle \
-  -e CONFIG_FILE=/app/config.json \
-  -e NPM_CACHE_DIR=/cache \
-  -v "${PROJECT_ROOT}/packages/docker/configs/examples/bundle-web.json:/app/config.json:ro" \
+  -e FLOW=/app/flows/bundle-web.json \
   -v "${TEST_DIR}:/app/dist" \
-  -v "${TEMP_DIR}:/tmp" \
-  -v "${CACHE_DIR}:/cache" \
   -e GA4_MEASUREMENT_ID="G-TEST123" \
   "${FULL_IMAGE}"
 
@@ -68,10 +62,9 @@ fi
 # Step 3: Test Serve Mode
 echo -e "${BLUE}[3/4] Testing Serve Mode...${NC}"
 
-# Start serve mode container
+# Start serve mode container (no FLOW needed)
 SERVE_CONTAINER=$(docker run -d \
   -e MODE=serve \
-  -e CONFIG_FILE= \
   -v "${TEST_DIR}:/app/dist:ro" \
   -p 8081:8080 \
   "${FULL_IMAGE}")
