@@ -48,6 +48,17 @@ export const complete: DestinationDataManager.Config = {
       adUserData: 'CONSENT_GRANTED',
       adPersonalization: 'CONSENT_GRANTED',
     },
+
+    // Guided helpers (apply to all events)
+    userData: {
+      email: 'user.id',
+      phone: 'data.phone',
+      firstName: 'data.firstName',
+      lastName: 'data.lastName',
+    },
+    userId: 'user.id',
+    clientId: 'user.device',
+    sessionAttributes: 'context.sessionAttributes',
   },
   data: {
     map: {

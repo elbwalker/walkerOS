@@ -103,6 +103,15 @@ const config = {
         adUserData: 'CONSENT_GRANTED',
         adPersonalization: 'CONSENT_GRANTED',
       },
+
+      // Guided helpers (apply to all events)
+      userData: {
+        email: 'user.id',
+        phone: 'data.phone',
+      },
+      userId: 'user.id',
+      clientId: 'user.device',
+      sessionAttributes: 'context.sessionAttributes',
     },
 
     // Event mapping
@@ -153,6 +162,54 @@ const config = {
 
 ```
 https://www.googleapis.com/auth/datamanager
+```
+
+## Guided Mapping Helpers
+
+Define common fields once in Settings instead of repeating them in every event
+mapping:
+
+```typescript
+{
+  settings: {
+    accessToken: 'ya29.c.xxx',
+    destinations: [...],
+
+    // Guided helpers (apply to all events)
+    userData: {
+      email: 'user.id',
+      phone: 'data.phone',
+      firstName: 'data.firstName',
+      lastName: 'data.lastName',
+    },
+    userId: 'user.id',
+    clientId: 'user.device',
+    sessionAttributes: 'context.sessionAttributes',
+  },
+}
+```
+
+**Precedence**: Settings helpers < config.data < event mapping
+
+Event mappings always override Settings:
+
+```typescript
+{
+  settings: {
+    userId: 'user.id',  // Default for all events
+  },
+  mapping: {
+    order: {
+      complete: {
+        data: {
+          map: {
+            userId: 'data.customerId',  // Override for this event
+          },
+        },
+      },
+    },
+  },
+}
 ```
 
 ## Data Mapping
@@ -529,17 +586,21 @@ be rejected.
 
 ### Settings
 
-| Property        | Type          | Required | Description                            |
-| --------------- | ------------- | -------- | -------------------------------------- |
-| `accessToken`   | string        | ✓        | OAuth 2.0 access token                 |
-| `destinations`  | Destination[] | ✓        | Array of destination accounts (max 10) |
-| `eventSource`   | EventSource   |          | Default event source (WEB, APP, etc.)  |
-| `batchSize`     | number        |          | Max events per batch (max 2000)        |
-| `batchInterval` | number        |          | Batch flush interval in ms             |
-| `validateOnly`  | boolean       |          | Validate without ingestion             |
-| `url`           | string        |          | Override API endpoint                  |
-| `consent`       | Consent       |          | Request-level consent                  |
-| `testEventCode` | string        |          | Test event code for debugging          |
+| Property            | Type          | Required | Description                             |
+| ------------------- | ------------- | -------- | --------------------------------------- |
+| `accessToken`       | string        | ✓        | OAuth 2.0 access token                  |
+| `destinations`      | Destination[] | ✓        | Array of destination accounts (max 10)  |
+| `eventSource`       | EventSource   |          | Default event source (WEB, APP, etc.)   |
+| `batchSize`         | number        |          | Max events per batch (max 2000)         |
+| `batchInterval`     | number        |          | Batch flush interval in ms              |
+| `validateOnly`      | boolean       |          | Validate without ingestion              |
+| `url`               | string        |          | Override API endpoint                   |
+| `consent`           | Consent       |          | Request-level consent                   |
+| `testEventCode`     | string        |          | Test event code for debugging           |
+| `userData`          | object        |          | Guided helper: User data mapping        |
+| `userId`            | string        |          | Guided helper: First-party user ID      |
+| `clientId`          | string        |          | Guided helper: GA4 client ID            |
+| `sessionAttributes` | string        |          | Guided helper: Privacy-safe attribution |
 
 ### Event Fields
 

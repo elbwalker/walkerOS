@@ -17,9 +17,37 @@ export const push: PushFn = async function (
     consent: requestConsent,
     testEventCode,
     logLevel = 'none',
+    userData,
+    userId,
+    clientId,
+    sessionAttributes,
   } = config.settings!;
 
   const logger = createLogger(logLevel);
+
+  // Extract Settings guided helpers
+  const userDataMapped = userData
+    ? await getMappingValue(event, { map: userData })
+    : {};
+  const userIdMapped = userId
+    ? await getMappingValue(event, userId)
+    : undefined;
+  const clientIdMapped = clientId
+    ? await getMappingValue(event, clientId)
+    : undefined;
+  const sessionAttributesMapped = sessionAttributes
+    ? await getMappingValue(event, sessionAttributes)
+    : undefined;
+
+  // Build Settings helpers object
+  const settingsHelpers: Record<string, unknown> = {};
+  if (isObject(userDataMapped)) {
+    Object.assign(settingsHelpers, userDataMapped);
+  }
+  if (userIdMapped !== undefined) settingsHelpers.userId = userIdMapped;
+  if (clientIdMapped !== undefined) settingsHelpers.clientId = clientIdMapped;
+  if (sessionAttributesMapped !== undefined)
+    settingsHelpers.sessionAttributes = sessionAttributesMapped;
 
   // Get mapped data from destination config and event mapping
   const configData = config.data
@@ -27,9 +55,9 @@ export const push: PushFn = async function (
     : {};
   const eventData = isObject(data) ? data : {};
 
-  // Merge: config.data < event mapping data < event.data
+  // Merge: Settings helpers < config.data < event mapping data
   const finalData = {
-    ...(event.data as Record<string, unknown>),
+    ...settingsHelpers,
     ...(isObject(configData) ? configData : {}),
     ...eventData,
   };

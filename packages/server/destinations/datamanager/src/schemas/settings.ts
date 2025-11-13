@@ -61,6 +61,30 @@ export const SettingsSchema = z.object({
     .enum(['debug', 'info', 'warn', 'error', 'none'])
     .describe('Log level for debugging (debug shows all API calls)')
     .optional(),
+  userData: z
+    .record(z.any())
+    .describe(
+      "Guided helper: User data mapping for all events (like { email: 'user.id', phone: 'data.phone' })",
+    )
+    .optional(),
+  userId: z
+    .any()
+    .describe(
+      "Guided helper: First-party user ID for all events (like 'user.id')",
+    )
+    .optional(),
+  clientId: z
+    .any()
+    .describe(
+      "Guided helper: GA4 client ID for all events (like 'user.device')",
+    )
+    .optional(),
+  sessionAttributes: z
+    .any()
+    .describe(
+      "Guided helper: Privacy-safe attribution for all events (like 'context.sessionAttributes')",
+    )
+    .optional(),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

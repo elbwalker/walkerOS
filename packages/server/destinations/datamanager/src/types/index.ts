@@ -35,6 +35,18 @@ export interface Settings {
 
   /** Log level for debugging (optional) */
   logLevel?: LogLevel;
+
+  /** Guided helpers: User data mapping (applies to all events) */
+  userData?: WalkerOSMapping.Map;
+
+  /** Guided helper: First-party user ID */
+  userId?: WalkerOSMapping.Value;
+
+  /** Guided helper: GA4 client ID */
+  clientId?: WalkerOSMapping.Value;
+
+  /** Guided helper: Privacy-safe attribution (Google's sessionAttributes) */
+  sessionAttributes?: WalkerOSMapping.Value;
 }
 
 export interface Mapping {

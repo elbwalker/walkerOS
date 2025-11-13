@@ -168,10 +168,19 @@ describe('Server Destination Data Manager', () => {
     test('includes transactionId for deduplication', async () => {
       const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
-      (event.data as Record<string, unknown>).transactionId = 'TXN-12345';
+      (event.data as Record<string, unknown>).id = 'TXN-12345';
+
+      const config: Config = {
+        settings: defaultSettings,
+        data: {
+          map: {
+            transactionId: 'data.id',
+          },
+        },
+      };
 
       await destination.push(event, {
-        config: { settings: defaultSettings },
+        config,
         collector: mockCollector,
         env: { fetch: mockFetch },
       });
@@ -183,11 +192,21 @@ describe('Server Destination Data Manager', () => {
     test('includes conversionValue and currency', async () => {
       const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
-      (event.data as Record<string, unknown>).conversionValue = 199.99;
+      (event.data as Record<string, unknown>).total = 199.99;
       (event.data as Record<string, unknown>).currency = 'EUR';
 
+      const config: Config = {
+        settings: defaultSettings,
+        data: {
+          map: {
+            conversionValue: 'data.total',
+            currency: 'data.currency',
+          },
+        },
+      };
+
       await destination.push(event, {
-        config: { settings: defaultSettings },
+        config,
         collector: mockCollector,
         env: { fetch: mockFetch },
       });
@@ -443,6 +462,147 @@ describe('Server Destination Data Manager', () => {
 
       expect(customFetch).toHaveBeenCalled();
       expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    test('applies Settings guided helpers (userData)', async () => {
+      const mockCollector = {} as Collector.Instance;
+      const event = getEvent('order complete');
+      event.user = { id: 'user@example.com' };
+      (event.data as Record<string, unknown>).phone = '+1234567890';
+
+      const config: Config = {
+        settings: {
+          accessToken,
+          destinations: [
+            {
+              operatingAccount: {
+                accountId: '123-456-7890',
+                accountType: 'GOOGLE_ADS',
+              },
+              productDestinationId: 'AW-CONVERSION-123',
+            },
+          ],
+          userData: {
+            email: 'user.id',
+            phone: 'data.phone',
+          },
+        },
+      };
+
+      await destination.push(event, {
+        config,
+        collector: mockCollector,
+        env: { fetch: mockFetch },
+      });
+
+      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(requestBody.events[0].userData).toBeDefined();
+      expect(requestBody.events[0].userData.userIdentifiers.length).toBe(2);
+    });
+
+    test('applies Settings guided helpers (userId, clientId)', async () => {
+      const mockCollector = {} as Collector.Instance;
+      const event = getEvent('page view');
+      event.user = { id: 'user-123', device: 'device-456' };
+
+      const config: Config = {
+        settings: {
+          accessToken,
+          destinations: [
+            {
+              operatingAccount: {
+                accountId: '123-456-7890',
+                accountType: 'GOOGLE_ADS',
+              },
+              productDestinationId: 'AW-CONVERSION-123',
+            },
+          ],
+          userId: 'user.id',
+          clientId: 'user.device',
+        },
+      };
+
+      await destination.push(event, {
+        config,
+        collector: mockCollector,
+        env: { fetch: mockFetch },
+      });
+
+      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(requestBody.events[0].userId).toBe('user-123');
+      expect(requestBody.events[0].clientId).toBe('device-456');
+    });
+
+    test('applies Settings guided helpers (sessionAttributes)', async () => {
+      const mockCollector = {} as Collector.Instance;
+      const event = getEvent('order complete');
+      event.context = {
+        sessionAttributes: ['gad_source=1&gad_campaignid=123', 0],
+      };
+
+      const config: Config = {
+        settings: {
+          accessToken,
+          destinations: [
+            {
+              operatingAccount: {
+                accountId: '123-456-7890',
+                accountType: 'GOOGLE_ADS',
+              },
+              productDestinationId: 'AW-CONVERSION-123',
+            },
+          ],
+          sessionAttributes: 'context.sessionAttributes.0',
+        },
+      };
+
+      await destination.push(event, {
+        config,
+        collector: mockCollector,
+        env: { fetch: mockFetch },
+      });
+
+      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(requestBody.events[0].adIdentifiers).toBeDefined();
+      expect(requestBody.events[0].adIdentifiers.sessionAttributes).toBe(
+        'gad_source=1&gad_campaignid=123',
+      );
+    });
+
+    test('event mapping overrides Settings helpers', async () => {
+      const mockCollector = {} as Collector.Instance;
+      const event = getEvent('order complete');
+      event.user = { id: 'default-user' };
+
+      const config: Config = {
+        settings: {
+          accessToken,
+          destinations: [
+            {
+              operatingAccount: {
+                accountId: '123-456-7890',
+                accountType: 'GOOGLE_ADS',
+              },
+              productDestinationId: 'AW-CONVERSION-123',
+            },
+          ],
+          userId: 'user.id', // Settings helper
+        },
+        data: {
+          map: {
+            userId: { value: 'override-user' }, // Event mapping override
+          },
+        },
+      };
+
+      await destination.push(event, {
+        config,
+        collector: mockCollector,
+        env: { fetch: mockFetch },
+      });
+
+      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(requestBody.events[0].userId).toBe('override-user');
     });
   });
 });
