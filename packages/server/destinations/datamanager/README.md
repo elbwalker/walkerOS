@@ -185,6 +185,12 @@ mapping:
     userId: 'user.id',
     clientId: 'user.device',
     sessionAttributes: 'context.sessionAttributes',
+
+    // Consent mapping (string = field name, boolean = static value)
+    consentAdUserData: 'marketing',              // Read event.consent.marketing
+    consentAdPersonalization: 'personalization', // Read event.consent.personalization
+    // OR use static values:
+    // consentAdUserData: true,                  // Always CONSENT_GRANTED
   },
 }
 ```
@@ -273,16 +279,26 @@ Attribution identifiers must be explicitly mapped:
 
 ### Consent Mapping
 
+Map your consent field names to Data Manager's required fields:
+
 ```typescript
-// walkerOS consent
 {
-  consent: {
-    marketing: true,
-    personalization: false
-  }
+  settings: {
+    // Map from your consent field names
+    consentAdUserData: 'marketing',              // Read event.consent.marketing
+    consentAdPersonalization: 'personalization', // Read event.consent.personalization
+  },
 }
 
-// Maps to Data Manager format
+// Your event with standard consent field names
+await elb('order complete', { total: 99.99 }, {
+  consent: {
+    marketing: true,
+    personalization: false,
+  },
+});
+
+// Becomes Data Manager format
 {
   consent: {
     adUserData: 'CONSENT_GRANTED',
@@ -290,6 +306,20 @@ Attribution identifiers must be explicitly mapped:
   }
 }
 ```
+
+**Static values** for always-on consent:
+
+```typescript
+{
+  settings: {
+    consentAdUserData: true,  // Always CONSENT_GRANTED
+    consentAdPersonalization: false,  // Always CONSENT_DENIED
+  },
+}
+```
+
+**Fallback**: Without consent mapping, uses `event.consent.marketing` →
+`adUserData` and `event.consent.personalization` → `adPersonalization`.
 
 ## Event Mapping Examples
 
@@ -586,21 +616,23 @@ be rejected.
 
 ### Settings
 
-| Property            | Type          | Required | Description                             |
-| ------------------- | ------------- | -------- | --------------------------------------- |
-| `accessToken`       | string        | ✓        | OAuth 2.0 access token                  |
-| `destinations`      | Destination[] | ✓        | Array of destination accounts (max 10)  |
-| `eventSource`       | EventSource   |          | Default event source (WEB, APP, etc.)   |
-| `batchSize`         | number        |          | Max events per batch (max 2000)         |
-| `batchInterval`     | number        |          | Batch flush interval in ms              |
-| `validateOnly`      | boolean       |          | Validate without ingestion              |
-| `url`               | string        |          | Override API endpoint                   |
-| `consent`           | Consent       |          | Request-level consent                   |
-| `testEventCode`     | string        |          | Test event code for debugging           |
-| `userData`          | object        |          | Guided helper: User data mapping        |
-| `userId`            | string        |          | Guided helper: First-party user ID      |
-| `clientId`          | string        |          | Guided helper: GA4 client ID            |
-| `sessionAttributes` | string        |          | Guided helper: Privacy-safe attribution |
+| Property                   | Type           | Required | Description                                 |
+| -------------------------- | -------------- | -------- | ------------------------------------------- |
+| `accessToken`              | string         | ✓        | OAuth 2.0 access token                      |
+| `destinations`             | Destination[]  | ✓        | Array of destination accounts (max 10)      |
+| `eventSource`              | EventSource    |          | Default event source (WEB, APP, etc.)       |
+| `batchSize`                | number         |          | Max events per batch (max 2000)             |
+| `batchInterval`            | number         |          | Batch flush interval in ms                  |
+| `validateOnly`             | boolean        |          | Validate without ingestion                  |
+| `url`                      | string         |          | Override API endpoint                       |
+| `consent`                  | Consent        |          | Request-level consent                       |
+| `testEventCode`            | string         |          | Test event code for debugging               |
+| `userData`                 | object         |          | Guided helper: User data mapping            |
+| `userId`                   | string         |          | Guided helper: First-party user ID          |
+| `clientId`                 | string         |          | Guided helper: GA4 client ID                |
+| `sessionAttributes`        | string         |          | Guided helper: Privacy-safe attribution     |
+| `consentAdUserData`        | string/boolean |          | Consent mapping: Field name or static value |
+| `consentAdPersonalization` | string/boolean |          | Consent mapping: Field name or static value |
 
 ### Event Fields
 

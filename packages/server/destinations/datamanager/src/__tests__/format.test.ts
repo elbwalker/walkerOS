@@ -342,5 +342,48 @@ describe('format utilities', () => {
       expect(result.userData).toBeDefined();
       expect(result.adIdentifiers).toEqual({ gclid: 'test-gclid' });
     });
+
+    test('uses mapped consent from data (boolean values)', async () => {
+      const event = getEvent('order complete');
+      const mappedData = {
+        adUserData: true,
+        adPersonalization: false,
+      };
+
+      const result = await formatEvent(event, mappedData);
+
+      expect(result.consent).toEqual({
+        adUserData: 'CONSENT_GRANTED',
+        adPersonalization: 'CONSENT_DENIED',
+      });
+    });
+
+    test('mapped consent overrides event.consent', async () => {
+      const event = getEvent('order complete');
+      event.consent = { marketing: true, personalization: true };
+      const mappedData = {
+        adUserData: false, // Override event.consent
+      };
+
+      const result = await formatEvent(event, mappedData);
+
+      expect(result.consent).toEqual({
+        adUserData: 'CONSENT_DENIED',
+      });
+    });
+
+    test('falls back to event.consent when no mapped consent', async () => {
+      const event = getEvent('order complete');
+      event.consent = { marketing: true };
+      const mappedData = {
+        transactionId: 'TXN-123',
+      };
+
+      const result = await formatEvent(event, mappedData);
+
+      expect(result.consent).toEqual({
+        adUserData: 'CONSENT_GRANTED',
+      });
+    });
   });
 });

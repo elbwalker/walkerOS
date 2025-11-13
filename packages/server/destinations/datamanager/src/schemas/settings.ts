@@ -85,6 +85,18 @@ export const SettingsSchema = z.object({
       "Guided helper: Privacy-safe attribution for all events (like 'context.sessionAttributes')",
     )
     .optional(),
+  consentAdUserData: z
+    .union([z.string(), z.boolean()])
+    .describe(
+      "Consent mapping: Field name from event.consent (like 'marketing') or static boolean value",
+    )
+    .optional(),
+  consentAdPersonalization: z
+    .union([z.string(), z.boolean()])
+    .describe(
+      "Consent mapping: Field name from event.consent (like 'targeting') or static boolean value",
+    )
+    .optional(),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

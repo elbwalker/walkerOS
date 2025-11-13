@@ -21,6 +21,8 @@ export const push: PushFn = async function (
     userId,
     clientId,
     sessionAttributes,
+    consentAdUserData,
+    consentAdPersonalization,
   } = config.settings!;
 
   const logger = createLogger(logLevel);
@@ -39,6 +41,21 @@ export const push: PushFn = async function (
     ? await getMappingValue(event, sessionAttributes)
     : undefined;
 
+  // Extract consent from Settings
+  const consentAdUserDataValue =
+    typeof consentAdUserData === 'boolean'
+      ? consentAdUserData
+      : typeof consentAdUserData === 'string' && event.consent
+        ? event.consent[consentAdUserData]
+        : undefined;
+
+  const consentAdPersonalizationValue =
+    typeof consentAdPersonalization === 'boolean'
+      ? consentAdPersonalization
+      : typeof consentAdPersonalization === 'string' && event.consent
+        ? event.consent[consentAdPersonalization]
+        : undefined;
+
   // Build Settings helpers object
   const settingsHelpers: Record<string, unknown> = {};
   if (isObject(userDataMapped)) {
@@ -48,6 +65,10 @@ export const push: PushFn = async function (
   if (clientIdMapped !== undefined) settingsHelpers.clientId = clientIdMapped;
   if (sessionAttributesMapped !== undefined)
     settingsHelpers.sessionAttributes = sessionAttributesMapped;
+  if (consentAdUserDataValue !== undefined)
+    settingsHelpers.adUserData = consentAdUserDataValue;
+  if (consentAdPersonalizationValue !== undefined)
+    settingsHelpers.adPersonalization = consentAdPersonalizationValue;
 
   // Get mapped data from destination config and event mapping
   const configData = config.data

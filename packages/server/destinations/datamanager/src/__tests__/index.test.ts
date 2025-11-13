@@ -605,4 +605,150 @@ describe('Server Destination Data Manager', () => {
       expect(requestBody.events[0].userId).toBe('override-user');
     });
   });
+
+  describe('consent mapping', () => {
+    test('maps consent from Settings using string field names', async () => {
+      const mockCollector = {} as Collector.Instance;
+      const event = getEvent('order complete');
+      event.consent = {
+        ads: true,
+        targeting: false,
+      };
+
+      const config: Config = {
+        settings: {
+          accessToken,
+          destinations: [
+            {
+              operatingAccount: {
+                accountId: '123-456-7890',
+                accountType: 'GOOGLE_ADS',
+              },
+              productDestinationId: 'AW-CONVERSION-123',
+            },
+          ],
+          consentAdUserData: 'ads',
+          consentAdPersonalization: 'targeting',
+        },
+      };
+
+      await destination.push(event, {
+        config,
+        collector: mockCollector,
+        env: { fetch: mockFetch },
+      });
+
+      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(requestBody.events[0].consent).toEqual({
+        adUserData: 'CONSENT_GRANTED',
+        adPersonalization: 'CONSENT_DENIED',
+      });
+    });
+
+    test('maps consent from Settings using boolean static values', async () => {
+      const mockCollector = {} as Collector.Instance;
+      const event = getEvent('order complete');
+
+      const config: Config = {
+        settings: {
+          accessToken,
+          destinations: [
+            {
+              operatingAccount: {
+                accountId: '123-456-7890',
+                accountType: 'GOOGLE_ADS',
+              },
+              productDestinationId: 'AW-CONVERSION-123',
+            },
+          ],
+          consentAdUserData: true,
+          consentAdPersonalization: false,
+        },
+      };
+
+      await destination.push(event, {
+        config,
+        collector: mockCollector,
+        env: { fetch: mockFetch },
+      });
+
+      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(requestBody.events[0].consent).toEqual({
+        adUserData: 'CONSENT_GRANTED',
+        adPersonalization: 'CONSENT_DENIED',
+      });
+    });
+
+    test('falls back to event.consent with hardcoded field names', async () => {
+      const mockCollector = {} as Collector.Instance;
+      const event = getEvent('order complete');
+      event.consent = {
+        marketing: true,
+        personalization: false,
+      };
+
+      const config: Config = {
+        settings: {
+          accessToken,
+          destinations: [
+            {
+              operatingAccount: {
+                accountId: '123-456-7890',
+                accountType: 'GOOGLE_ADS',
+              },
+              productDestinationId: 'AW-CONVERSION-123',
+            },
+          ],
+        },
+      };
+
+      await destination.push(event, {
+        config,
+        collector: mockCollector,
+        env: { fetch: mockFetch },
+      });
+
+      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(requestBody.events[0].consent).toEqual({
+        adUserData: 'CONSENT_GRANTED',
+        adPersonalization: 'CONSENT_DENIED',
+      });
+    });
+
+    test('mapped consent overrides event.consent', async () => {
+      const mockCollector = {} as Collector.Instance;
+      const event = getEvent('order complete');
+      event.consent = {
+        marketing: false, // This should be ignored
+        ads: true, // This should be used via Settings mapping
+      };
+
+      const config: Config = {
+        settings: {
+          accessToken,
+          destinations: [
+            {
+              operatingAccount: {
+                accountId: '123-456-7890',
+                accountType: 'GOOGLE_ADS',
+              },
+              productDestinationId: 'AW-CONVERSION-123',
+            },
+          ],
+          consentAdUserData: 'ads',
+        },
+      };
+
+      await destination.push(event, {
+        config,
+        collector: mockCollector,
+        env: { fetch: mockFetch },
+      });
+
+      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(requestBody.events[0].consent).toEqual({
+        adUserData: 'CONSENT_GRANTED',
+      });
+    });
+  });
 });

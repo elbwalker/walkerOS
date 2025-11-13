@@ -47,6 +47,12 @@ export interface Settings {
 
   /** Guided helper: Privacy-safe attribution (Google's sessionAttributes) */
   sessionAttributes?: WalkerOSMapping.Value;
+
+  /** Consent mapping: Map consent field to adUserData (string = field name, boolean = static value) */
+  consentAdUserData?: string | boolean;
+
+  /** Consent mapping: Map consent field to adPersonalization (string = field name, boolean = static value) */
+  consentAdPersonalization?: string | boolean;
 }
 
 export interface Mapping {

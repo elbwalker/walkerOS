@@ -214,10 +214,29 @@ export async function formatEvent(
     dataManagerEvent.eventSource = data.eventSource as Event['eventSource'];
   }
 
-  // Consent
-  const consent = formatConsent(event.consent);
-  if (consent) {
-    dataManagerEvent.consent = consent;
+  // Consent - check mapped data first, then fallback to event.consent
+  const mappedConsent: Consent = {};
+
+  // Check for mapped consent values (from Settings or event mapping)
+  if (typeof data.adUserData === 'boolean') {
+    mappedConsent.adUserData = data.adUserData
+      ? 'CONSENT_GRANTED'
+      : 'CONSENT_DENIED';
+  }
+  if (typeof data.adPersonalization === 'boolean') {
+    mappedConsent.adPersonalization = data.adPersonalization
+      ? 'CONSENT_GRANTED'
+      : 'CONSENT_DENIED';
+  }
+
+  // If no mapped consent, fall back to event.consent
+  if (Object.keys(mappedConsent).length === 0) {
+    const eventConsent = formatConsent(event.consent);
+    if (eventConsent) {
+      dataManagerEvent.consent = eventConsent;
+    }
+  } else {
+    dataManagerEvent.consent = mappedConsent;
   }
 
   return dataManagerEvent;
