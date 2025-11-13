@@ -54,7 +54,7 @@ describe('Collect Mode Integration', () => {
   });
 
   it('should start server and respond to health checks', async () => {
-    const configPath = join(projectRoot, 'configs/examples/collect-basic.json');
+    const configPath = join(projectRoot, 'flows/collect-console.json');
 
     // Start collect mode using built code (avoids Jest PIPEWRAP issue)
     serverProcess = spawn('node', ['dist/index.js'], {
@@ -62,7 +62,7 @@ describe('Collect Mode Integration', () => {
       env: {
         ...process.env,
         MODE: 'collect',
-        CONFIG_FILE: configPath,
+        FLOW: configPath,
         PORT: port.toString(),
       },
     });
@@ -92,14 +92,14 @@ describe('Collect Mode Integration', () => {
   }, 20000);
 
   it('should respond to readiness checks', async () => {
-    const configPath = join(projectRoot, 'configs/examples/collect-basic.json');
+    const configPath = join(projectRoot, 'flows/collect-console.json');
 
     serverProcess = spawn('node', ['dist/index.js'], {
       cwd: projectRoot,
       env: {
         ...process.env,
         MODE: 'collect',
-        CONFIG_FILE: configPath,
+        FLOW: configPath,
         PORT: port.toString(),
       },
     });
@@ -115,14 +115,14 @@ describe('Collect Mode Integration', () => {
   }, 20000);
 
   it('should collect and process events successfully', async () => {
-    const configPath = join(projectRoot, 'configs/examples/collect-basic.json');
+    const configPath = join(projectRoot, 'flows/collect-console.json');
 
     serverProcess = spawn('node', ['dist/index.js'], {
       cwd: projectRoot,
       env: {
         ...process.env,
         MODE: 'collect',
-        CONFIG_FILE: configPath,
+        FLOW: configPath,
         PORT: port.toString(),
       },
     });
@@ -156,14 +156,14 @@ describe('Collect Mode Integration', () => {
   }, 20000);
 
   it('should handle multiple concurrent events', async () => {
-    const configPath = join(projectRoot, 'configs/examples/collect-basic.json');
+    const configPath = join(projectRoot, 'flows/collect-console.json');
 
     serverProcess = spawn('node', ['dist/index.js'], {
       cwd: projectRoot,
       env: {
         ...process.env,
         MODE: 'collect',
-        CONFIG_FILE: configPath,
+        FLOW: configPath,
         PORT: port.toString(),
       },
     });
@@ -202,14 +202,14 @@ describe('Collect Mode Integration', () => {
   }, 20000);
 
   it('should handle CORS preflight requests', async () => {
-    const configPath = join(projectRoot, 'configs/examples/collect-basic.json');
+    const configPath = join(projectRoot, 'flows/collect-console.json');
 
     serverProcess = spawn('node', ['dist/index.js'], {
       cwd: projectRoot,
       env: {
         ...process.env,
         MODE: 'collect',
-        CONFIG_FILE: configPath,
+        FLOW: configPath,
         PORT: port.toString(),
       },
     });

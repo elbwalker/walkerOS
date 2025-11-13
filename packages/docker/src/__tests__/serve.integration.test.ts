@@ -61,7 +61,7 @@ describe('Serve Mode Integration', () => {
   });
 
   it('should start server and respond to health checks', async () => {
-    const configPath = join(projectRoot, 'configs/examples/serve-static.json');
+    const configPath = join(projectRoot, 'flows/serve.json');
 
     // Start serve mode
     serverProcess = spawn('node', ['dist/index.js'], {
@@ -69,7 +69,7 @@ describe('Serve Mode Integration', () => {
       env: {
         ...process.env,
         MODE: 'serve',
-        CONFIG_FILE: configPath,
+        FLOW: configPath,
         PORT: port.toString(),
         STATIC_DIR: staticDir,
       },
@@ -106,14 +106,14 @@ describe('Serve Mode Integration', () => {
       '// Test walker bundle\nwindow.walkerOS = { test: true };';
     writeFileSync(join(staticDir, 'walker.js'), testContent);
 
-    const configPath = join(projectRoot, 'configs/examples/serve-static.json');
+    const configPath = join(projectRoot, 'flows/serve.json');
 
     serverProcess = spawn('node', ['dist/index.js'], {
       cwd: projectRoot,
       env: {
         ...process.env,
         MODE: 'serve',
-        CONFIG_FILE: configPath,
+        FLOW: configPath,
         PORT: port.toString(),
         STATIC_DIR: staticDir,
       },
@@ -143,14 +143,14 @@ describe('Serve Mode Integration', () => {
       '<html><body>Test</body></html>',
     );
 
-    const configPath = join(projectRoot, 'configs/examples/serve-static.json');
+    const configPath = join(projectRoot, 'flows/serve.json');
 
     serverProcess = spawn('node', ['dist/index.js'], {
       cwd: projectRoot,
       env: {
         ...process.env,
         MODE: 'serve',
-        CONFIG_FILE: configPath,
+        FLOW: configPath,
         PORT: port.toString(),
         STATIC_DIR: staticDir,
       },
@@ -177,14 +177,14 @@ describe('Serve Mode Integration', () => {
   }, 20000);
 
   it('should return 404 for non-existent files', async () => {
-    const configPath = join(projectRoot, 'configs/examples/serve-static.json');
+    const configPath = join(projectRoot, 'flows/serve.json');
 
     serverProcess = spawn('node', ['dist/index.js'], {
       cwd: projectRoot,
       env: {
         ...process.env,
         MODE: 'serve',
-        CONFIG_FILE: configPath,
+        FLOW: configPath,
         PORT: port.toString(),
         STATIC_DIR: staticDir,
       },

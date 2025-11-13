@@ -111,7 +111,7 @@ describe('Bundle Mode Integration', () => {
       env: {
         ...process.env,
         MODE: 'bundle',
-        CONFIG_FILE: testConfigPath,
+        FLOW: testConfigPath,
       },
     });
 
@@ -209,7 +209,7 @@ describe('Bundle Mode Integration', () => {
       env: {
         ...process.env,
         MODE: 'bundle',
-        CONFIG_FILE: testConfigPath,
+        FLOW: testConfigPath,
       },
     });
 
@@ -241,7 +241,7 @@ describe('Bundle Mode Integration', () => {
       env: {
         ...process.env,
         MODE: 'bundle',
-        CONFIG_FILE: invalidConfigPath,
+        FLOW: invalidConfigPath,
         OUTPUT_PATH: testOutputFile,
       },
     });

@@ -12,11 +12,9 @@ export async function runBundleMode(config: DockerConfig): Promise<void> {
   console.log(`   Output: ${config.output}`);
 
   // Get config file path from environment (set by main entry point)
-  const configFile = process.env.CONFIG_FILE;
+  const configFile = process.env.FLOW;
   if (!configFile) {
-    throw new Error(
-      'CONFIG_FILE environment variable required for bundle mode',
-    );
+    throw new Error('FLOW environment variable required for bundle mode');
   }
 
   try {
