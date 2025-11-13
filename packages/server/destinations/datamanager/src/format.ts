@@ -21,75 +21,61 @@ export function formatTimestamp(timestamp: number): string {
 }
 
 /**
- * Extract and format user identifiers from walkerOS event
+ * Format user identifiers from mapped data
  * https://developers.google.com/data-manager/api/reference/rest/v1/UserData
  *
+ * User data must be explicitly mapped in the mapping configuration.
  * Max 10 identifiers per event
  */
 export async function formatUserData(
-  event: WalkerOS.Event,
+  data: Record<string, unknown>,
 ): Promise<UserData | undefined> {
   const identifiers: UserIdentifier[] = [];
 
-  // Extract email
-  if (
-    event.user?.id &&
-    isString(event.user.id) &&
-    event.user.id.includes('@')
-  ) {
-    const hashedEmail = await hashEmail(event.user.id);
+  // Extract from mapped data only
+  // Email
+  if (isString(data.email) && data.email) {
+    const hashedEmail = await hashEmail(data.email);
     if (hashedEmail) {
       identifiers.push({ emailAddress: hashedEmail });
     }
   }
 
-  // Extract from data properties
-  const data = event.data as Record<string, unknown> | undefined;
-  if (data) {
-    // Email from data.email
-    if (isString(data.email) && data.email) {
-      const hashedEmail = await hashEmail(data.email);
-      if (hashedEmail) {
-        identifiers.push({ emailAddress: hashedEmail });
-      }
+  // Phone
+  if (isString(data.phone) && data.phone) {
+    const hashedPhone = await hashPhone(data.phone);
+    if (hashedPhone) {
+      identifiers.push({ phoneNumber: hashedPhone });
+    }
+  }
+
+  // Address from mapped properties
+  const hasAddress =
+    data.firstName || data.lastName || data.regionCode || data.postalCode;
+
+  if (hasAddress) {
+    const address: Record<string, string> = {};
+
+    if (isString(data.firstName) && data.firstName) {
+      address.givenName = await hashName(data.firstName, 'given');
     }
 
-    // Phone from data.phone
-    if (isString(data.phone) && data.phone) {
-      const hashedPhone = await hashPhone(data.phone);
-      if (hashedPhone) {
-        identifiers.push({ phoneNumber: hashedPhone });
-      }
+    if (isString(data.lastName) && data.lastName) {
+      address.familyName = await hashName(data.lastName, 'family');
     }
 
-    // Address from data properties
-    const hasAddress =
-      data.firstName || data.lastName || data.regionCode || data.postalCode;
+    // Region code is NOT hashed
+    if (isString(data.regionCode) && data.regionCode) {
+      address.regionCode = data.regionCode.toUpperCase();
+    }
 
-    if (hasAddress) {
-      const address: Record<string, string> = {};
+    // Postal code is NOT hashed
+    if (isString(data.postalCode) && data.postalCode) {
+      address.postalCode = data.postalCode;
+    }
 
-      if (isString(data.firstName) && data.firstName) {
-        address.givenName = await hashName(data.firstName, 'given');
-      }
-
-      if (isString(data.lastName) && data.lastName) {
-        address.familyName = await hashName(data.lastName, 'family');
-      }
-
-      // Region code is NOT hashed
-      if (isString(data.regionCode) && data.regionCode) {
-        address.regionCode = data.regionCode.toUpperCase();
-      }
-
-      // Postal code is NOT hashed
-      if (isString(data.postalCode) && data.postalCode) {
-        address.postalCode = data.postalCode;
-      }
-
-      if (Object.keys(address).length > 0) {
-        identifiers.push({ address });
-      }
+    if (Object.keys(address).length > 0) {
+      identifiers.push({ address });
     }
   }
 
@@ -173,29 +159,26 @@ export async function formatEvent(
     eventTimestamp: formatTimestamp(event.timestamp),
   };
 
-  // Use mapped data if provided, otherwise use event data
-  const data = mappedData || (event.data as Record<string, unknown>);
+  // Use only mapped data (no fallback to event.data)
+  const data = mappedData || {};
 
   // Transaction ID for deduplication
-  if (isString(data?.transactionId) && data.transactionId) {
+  if (isString(data.transactionId) && data.transactionId) {
     dataManagerEvent.transactionId = data.transactionId.substring(0, 512);
-  } else if (event.id) {
-    // Fallback to event ID
-    dataManagerEvent.transactionId = event.id.substring(0, 512);
   }
 
   // Client ID (GA)
-  if (isString(data?.clientId) && data.clientId) {
+  if (isString(data.clientId) && data.clientId) {
     dataManagerEvent.clientId = data.clientId.substring(0, 255);
   }
 
   // User ID
-  if (isString(event.user?.id) && event.user.id) {
-    dataManagerEvent.userId = event.user.id.substring(0, 256);
+  if (isString(data.userId) && data.userId) {
+    dataManagerEvent.userId = data.userId.substring(0, 256);
   }
 
   // User data
-  const userData = await formatUserData(event);
+  const userData = await formatUserData(data);
   if (userData) {
     dataManagerEvent.userData = userData;
   }
@@ -207,33 +190,27 @@ export async function formatEvent(
   }
 
   // Conversion value
-  if (typeof data?.conversionValue === 'number') {
+  if (typeof data.conversionValue === 'number') {
     dataManagerEvent.conversionValue = data.conversionValue;
-  } else if (typeof data?.value === 'number') {
-    // Fallback to 'value' property
-    dataManagerEvent.conversionValue = data.value;
-  } else if (typeof data?.total === 'number') {
-    // Fallback to 'total' property
-    dataManagerEvent.conversionValue = data.total;
   }
 
   // Currency
-  if (isString(data?.currency) && data.currency) {
+  if (isString(data.currency) && data.currency) {
     dataManagerEvent.currency = data.currency.substring(0, 3).toUpperCase();
   }
 
   // Cart data
-  if (data?.cartData && typeof data.cartData === 'object') {
+  if (data.cartData && typeof data.cartData === 'object') {
     dataManagerEvent.cartData = data.cartData as Event['cartData'];
   }
 
   // Event name (for GA4)
-  if (isString(data?.eventName) && data.eventName) {
+  if (isString(data.eventName) && data.eventName) {
     dataManagerEvent.eventName = data.eventName.substring(0, 40);
   }
 
   // Event source
-  if (isString(data?.eventSource) && data.eventSource) {
+  if (isString(data.eventSource) && data.eventSource) {
     dataManagerEvent.eventSource = data.eventSource as Event['eventSource'];
   }
 

@@ -8,12 +8,11 @@ a single unified API.
 
 - **Multi-platform reach**: Single API call sends data to Google Ads, DV360, and
   GA4
-- **Privacy-first**: Automatic SHA-256 hashing of PII with Gmail-specific email
+- **Privacy-first**: SHA-256 hashing of PII with Gmail-specific email
   normalization
 - **DMA compliance**: Built-in consent management for EEA/UK/Switzerland
-- **GCLID attribution**: Automatic extraction and inclusion of Google Click IDs
-- **Flexible mapping**: Transform walkerOS events to Data Manager format using
-  mapping rules
+- **Explicit mapping**: Transform walkerOS events to Data Manager format using
+  declarative mapping rules
 - **Type-safe**: Full TypeScript support with comprehensive type definitions
 
 ## Installation
@@ -94,8 +93,8 @@ const config = {
 
       // Optional settings
       eventSource: 'WEB', // Default event source
-      batchSize: 100, // Events before auto-send (max 2000)
-      batchInterval: 5000, // Timeout in ms before auto-send
+      batchSize: 100, // Events per batch (max 2000)
+      batchInterval: 5000, // Batch flush interval in ms
       validateOnly: false, // Test mode (validate without ingestion)
       testEventCode: 'TEST12345', // For debugging
 
@@ -158,61 +157,60 @@ https://www.googleapis.com/auth/datamanager
 
 ## Data Mapping
 
-### Automatic Data Extraction
+### Event Data Mapping
 
-The destination automatically extracts and formats:
-
-- **User Identifiers**: Email, phone, address (with SHA-256 hashing)
-- **Transaction Data**: ID, value, currency
-- **Consent**: Maps walkerOS consent to DMA format
-
-**Attribution identifiers** (gclid, gbraid, wbraid) must be configured via
-mapping for explicit control.
-
-### User Data Mapping
+All event data must be explicitly mapped. The destination does not auto-extract
+fields from events.
 
 ```typescript
-// walkerOS event
 {
-  user: { id: 'user@example.com' },
-  data: {
-    phone: '+1234567890',
-    firstName: 'John',
-    lastName: 'Doe',
-    country: 'US',
-    zip: '12345',
-  }
-}
+  mapping: {
+    order: {
+      complete: {
+        name: 'purchase',
+        data: {
+          map: {
+            // Transaction data
+            transactionId: 'data.id',
+            conversionValue: 'data.total',
+            currency: { key: 'data.currency', value: 'USD' },
+            eventName: { value: 'purchase' },
 
-// Automatically becomes (with hashing):
-{
-  userData: {
-    userIdentifiers: [
-      { emailAddress: '<SHA-256 hash>' },
-      { phoneNumber: '<SHA-256 hash>' },
-      { address: {
-          givenName: '<SHA-256 hash>',
-          familyName: '<SHA-256 hash>',
-          regionCode: 'US', // NOT hashed
-          postalCode: '12345' // NOT hashed
-        }
-      }
-    ]
-  }
+            // User identification
+            userId: 'user.id',
+            email: 'user.id', // Will be SHA-256 hashed
+            phone: 'data.phone', // Will be SHA-256 hashed
+
+            // Attribution identifiers
+            gclid: 'context.gclid',
+            gbraid: 'context.gbraid',
+          },
+        },
+      },
+    },
+  },
 }
 ```
 
 ### Attribution Identifiers
 
-```typescript
-// Extract GCLID from URL parameters
-{
-  context: { gclid: 'TeSter' }, // From URL: ?gclid=TeSter
+Attribution identifiers must be explicitly mapped:
 
-  // Automatically included in event
-  adIdentifiers: {
-    gclid: 'TeSter'
-  }
+```typescript
+{
+  mapping: {
+    order: {
+      complete: {
+        data: {
+          map: {
+            gclid: 'context.gclid', // From URL: ?gclid=TeSter
+            gbraid: 'context.gbraid', // iOS attribution
+            wbraid: 'context.wbraid', // Web-to-app
+          },
+        },
+      },
+    },
+  },
 }
 ```
 
@@ -485,11 +483,12 @@ gtag('event', 'conversion', {
 ```typescript
 // Server-side walkerOS
 await elb('order complete', {
-  id: 'ORDER-123', // Auto-mapped to transactionId
+  id: 'ORDER-123', // Must map to transactionId via mapping config
 });
 ```
 
-Google deduplicates using `transactionId` within 14 days.
+Google deduplicates using `transactionId` within 14 days. You must explicitly
+map the transaction ID in your configuration.
 
 ### GCLID Attribution
 
@@ -512,8 +511,8 @@ Map GCLID from your event structure:
 }
 ```
 
-GCLID is automatically captured by walkerOS browser source from URL parameters
-(`?gclid=xxx`).
+GCLID is captured by walkerOS browser source from URL parameters (`?gclid=xxx`)
+and stored in `context.gclid`.
 
 ## Rate Limits
 
@@ -535,8 +534,8 @@ be rejected.
 | `accessToken`   | string        | ✓        | OAuth 2.0 access token                 |
 | `destinations`  | Destination[] | ✓        | Array of destination accounts (max 10) |
 | `eventSource`   | EventSource   |          | Default event source (WEB, APP, etc.)  |
-| `batchSize`     | number        |          | Max events before auto-send (max 2000) |
-| `batchInterval` | number        |          | Timeout in ms before auto-send         |
+| `batchSize`     | number        |          | Max events per batch (max 2000)        |
+| `batchInterval` | number        |          | Batch flush interval in ms             |
 | `validateOnly`  | boolean       |          | Validate without ingestion             |
 | `url`           | string        |          | Override API endpoint                  |
 | `consent`       | Consent       |          | Request-level consent                  |

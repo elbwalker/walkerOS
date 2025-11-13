@@ -130,33 +130,20 @@ describe('format utilities', () => {
   });
 
   describe('formatUserData', () => {
-    test('extracts and hashes email from user.id', async () => {
-      const event = getEvent('page view');
-      event.user = { id: 'user@example.com' };
+    test('extracts and hashes email from mapped data', async () => {
+      const data = { email: 'user@example.com' };
 
-      const result = await formatUserData(event);
-
-      expect(result).toBeDefined();
-      expect(result?.userIdentifiers).toHaveLength(1);
-      expect(result?.userIdentifiers[0]).toHaveProperty('emailAddress');
-    });
-
-    test('extracts and hashes email from data.email', async () => {
-      const event = getEvent('page view');
-      event.data = { email: 'test@example.com' };
-
-      const result = await formatUserData(event);
+      const result = await formatUserData(data);
 
       expect(result).toBeDefined();
       expect(result?.userIdentifiers).toHaveLength(1);
       expect(result?.userIdentifiers[0]).toHaveProperty('emailAddress');
     });
 
-    test('extracts and hashes phone from data.phone', async () => {
-      const event = getEvent('page view');
-      event.data = { phone: '+1234567890' };
+    test('extracts and hashes phone from mapped data', async () => {
+      const data = { phone: '+1234567890' };
 
-      const result = await formatUserData(event);
+      const result = await formatUserData(data);
 
       expect(result).toBeDefined();
       expect(result?.userIdentifiers).toHaveLength(1);
@@ -164,15 +151,14 @@ describe('format utilities', () => {
     });
 
     test('extracts address with hashed names', async () => {
-      const event = getEvent('page view');
-      event.data = {
+      const data = {
         firstName: 'John',
         lastName: 'Doe',
         regionCode: 'us',
         postalCode: '12345',
       };
 
-      const result = await formatUserData(event);
+      const result = await formatUserData(data);
 
       expect(result).toBeDefined();
       expect(result?.userIdentifiers).toHaveLength(1);
@@ -186,11 +172,9 @@ describe('format utilities', () => {
       expect(addressIdentifier.address.postalCode).toBe('12345'); // Not hashed
     });
 
-    test('limits to 10 identifiers', async () => {
-      const event = getEvent('page view');
-      event.user = { id: 'user@example.com' };
-      event.data = {
-        email: 'test1@example.com',
+    test('combines multiple user identifiers', async () => {
+      const data = {
+        email: 'test@example.com',
         phone: '+1234567890',
         firstName: 'John',
         lastName: 'Doe',
@@ -198,29 +182,32 @@ describe('format utilities', () => {
         postalCode: '12345',
       };
 
-      const result = await formatUserData(event);
+      const result = await formatUserData(data);
 
       expect(result).toBeDefined();
+      expect(result?.userIdentifiers.length).toBe(3); // email, phone, address
       expect(result?.userIdentifiers.length).toBeLessThanOrEqual(10);
     });
 
     test('returns undefined when no identifiers found', async () => {
-      const event = getEvent('page view');
+      const data = {};
 
-      const result = await formatUserData(event);
+      const result = await formatUserData(data);
 
       expect(result).toBeUndefined();
     });
   });
 
   describe('formatEvent', () => {
-    test('formats complete event', async () => {
+    test('formats complete event with mapped data', async () => {
       const event = getEvent('order complete');
-      (event.data as Record<string, unknown>).transactionId = 'TXN-123';
-      (event.data as Record<string, unknown>).conversionValue = 99.99;
-      (event.data as Record<string, unknown>).currency = 'usd';
+      const mappedData = {
+        transactionId: 'TXN-123',
+        conversionValue: 99.99,
+        currency: 'usd',
+      };
 
-      const result = await formatEvent(event);
+      const result = await formatEvent(event, mappedData);
 
       expect(result).toMatchObject({
         eventTimestamp: expect.any(String),
@@ -230,51 +217,55 @@ describe('format utilities', () => {
       });
     });
 
-    test('uses event.id as fallback transactionId', async () => {
+    test('returns only timestamp when no mapped data', async () => {
       const event = getEvent('page view');
 
       const result = await formatEvent(event);
 
-      expect(result.transactionId).toBe(event.id);
+      expect(result).toEqual({
+        eventTimestamp: expect.any(String),
+      });
+      expect(result.transactionId).toBeUndefined();
+      expect(result.userId).toBeUndefined();
     });
 
-    test('extracts userId from event.user.id', async () => {
+    test('includes userId when mapped', async () => {
       const event = getEvent('page view');
-      event.user = { id: 'user-123' };
+      const mappedData = { userId: 'user-123' };
 
-      const result = await formatEvent(event);
+      const result = await formatEvent(event, mappedData);
 
       expect(result.userId).toBe('user-123');
     });
 
-    test('includes clientId when provided', async () => {
+    test('includes clientId when mapped', async () => {
       const event = getEvent('page view');
-      (event.data as Record<string, unknown>).clientId = 'GA-CLIENT-123';
+      const mappedData = { clientId: 'GA-CLIENT-123' };
 
-      const result = await formatEvent(event);
+      const result = await formatEvent(event, mappedData);
 
       expect(result.clientId).toBe('GA-CLIENT-123');
     });
 
-    test('includes eventName when provided', async () => {
+    test('includes eventName when mapped', async () => {
       const event = getEvent('page view');
-      (event.data as Record<string, unknown>).eventName = 'page_view';
+      const mappedData = { eventName: 'page_view' };
 
-      const result = await formatEvent(event);
+      const result = await formatEvent(event, mappedData);
 
       expect(result.eventName).toBe('page_view');
     });
 
-    test('includes eventSource when provided', async () => {
+    test('includes eventSource when mapped', async () => {
       const event = getEvent('page view');
-      (event.data as Record<string, unknown>).eventSource = 'WEB';
+      const mappedData = { eventSource: 'WEB' };
 
-      const result = await formatEvent(event);
+      const result = await formatEvent(event, mappedData);
 
       expect(result.eventSource).toBe('WEB');
     });
 
-    test('includes consent when present', async () => {
+    test('includes consent when present in event', async () => {
       const event = getEvent('page view');
       event.consent = { marketing: true, personalization: false };
 
@@ -286,58 +277,70 @@ describe('format utilities', () => {
       });
     });
 
-    test('handles mapped data override', async () => {
+    test('includes user data when mapped', async () => {
       const event = getEvent('page view');
       const mappedData = {
-        transactionId: 'MAPPED-123',
-        conversionValue: 199.99,
-        currency: 'EUR',
+        email: 'test@example.com',
+        phone: '+1234567890',
       };
 
       const result = await formatEvent(event, mappedData);
 
-      expect(result).toMatchObject({
-        transactionId: 'MAPPED-123',
-        conversionValue: 199.99,
-        currency: 'EUR',
-      });
-    });
-
-    test('uses value as fallback for conversionValue', async () => {
-      const event = getEvent('order complete');
-      (event.data as Record<string, unknown>).value = 149.99;
-
-      const result = await formatEvent(event);
-
-      expect(result.conversionValue).toBe(149.99);
-    });
-
-    test('uses total as fallback for conversionValue', async () => {
-      const event = getEvent('order complete');
-      (event.data as Record<string, unknown>).total = 249.99;
-
-      const result = await formatEvent(event);
-
-      expect(result.conversionValue).toBe(249.99);
+      expect(result.userData).toBeDefined();
+      expect(result.userData?.userIdentifiers).toHaveLength(2);
     });
 
     test('truncates long transactionId to 512 chars', async () => {
       const longId = 'A'.repeat(1000);
       const event = getEvent('page view');
-      (event.data as Record<string, unknown>).transactionId = longId;
+      const mappedData = { transactionId: longId };
 
-      const result = await formatEvent(event);
+      const result = await formatEvent(event, mappedData);
 
       expect(result.transactionId?.length).toBe(512);
     });
 
     test('truncates long currency to 3 chars', async () => {
       const event = getEvent('page view');
-      (event.data as Record<string, unknown>).currency = 'TOOLONG';
+      const mappedData = { currency: 'TOOLONG' };
 
-      const result = await formatEvent(event);
+      const result = await formatEvent(event, mappedData);
 
       expect(result.currency?.length).toBe(3);
+    });
+
+    test('includes all fields when fully mapped', async () => {
+      const event = getEvent('order complete');
+      event.consent = { marketing: true };
+      const mappedData = {
+        transactionId: 'ORDER-123',
+        userId: 'user-456',
+        clientId: 'GA-789',
+        email: 'customer@example.com',
+        conversionValue: 299.99,
+        currency: 'USD',
+        eventName: 'purchase',
+        eventSource: 'WEB',
+        gclid: 'test-gclid',
+      };
+
+      const result = await formatEvent(event, mappedData);
+
+      expect(result).toMatchObject({
+        eventTimestamp: expect.any(String),
+        transactionId: 'ORDER-123',
+        userId: 'user-456',
+        clientId: 'GA-789',
+        conversionValue: 299.99,
+        currency: 'USD',
+        eventName: 'purchase',
+        eventSource: 'WEB',
+        consent: {
+          adUserData: 'CONSENT_GRANTED',
+        },
+      });
+      expect(result.userData).toBeDefined();
+      expect(result.adIdentifiers).toEqual({ gclid: 'test-gclid' });
     });
   });
 });

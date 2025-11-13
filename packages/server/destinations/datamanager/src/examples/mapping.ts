@@ -8,16 +8,22 @@ export const Purchase: DestinationDataManager.Rule = {
   name: 'purchase',
   data: {
     map: {
+      // Required fields
       transactionId: 'data.id',
       conversionValue: 'data.total',
       currency: { key: 'data.currency', value: 'USD' },
       eventName: { value: 'purchase' },
+
+      // User identification
+      userId: 'user.id',
+      email: 'user.id', // Will be hashed automatically
 
       // Attribution identifiers (captured by browser source from URL)
       gclid: 'context.gclid', // Google Click ID
       gbraid: 'context.gbraid', // iOS attribution
       wbraid: 'context.wbraid', // Web-to-app
 
+      // Shopping cart data
       cartData: {
         map: {
           items: {
