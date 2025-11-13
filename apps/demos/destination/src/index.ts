@@ -2,6 +2,7 @@ import type { WalkerOS } from '@walkeros/core';
 import type { Destination } from './types';
 
 export * as DestinationDemo from './types';
+export * as examples from './examples';
 
 /**
  * Demo destination for walkerOS
