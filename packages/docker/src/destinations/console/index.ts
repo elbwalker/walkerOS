@@ -15,9 +15,7 @@ export interface ConsoleDestinationSettings {
  *
  * Logs events to console with optional formatting
  */
-export const destinationConsole: Destination.Instance<{
-  settings: ConsoleDestinationSettings;
-}> = {
+export const destinationConsole: Destination.Instance = {
   type: 'console',
 
   config: {
@@ -25,18 +23,18 @@ export const destinationConsole: Destination.Instance<{
       pretty: true,
       prefix: '[walkerOS]',
       includeContext: false,
-    },
+    } as ConsoleDestinationSettings,
   },
 
   /**
    * Process and log event to console
    */
   push: async (event: WalkerOS.Event, context?: Destination.PushContext) => {
-    const settings = context?.destination?.config?.settings || {
+    const settings = (context?.config?.settings || {
       pretty: true,
       prefix: '[walkerOS]',
       includeContext: false,
-    };
+    }) as ConsoleDestinationSettings;
 
     const prefix = settings.prefix || '[walkerOS]';
 
@@ -70,7 +68,7 @@ export const destinationConsole: Destination.Instance<{
       console.log(`  ID: ${event.id}`);
     } else {
       // Compact JSON output
-      const output: any = {
+      const output: Record<string, unknown> = {
         event: event.name,
         entity: event.entity,
         action: event.action,
@@ -98,9 +96,9 @@ export function createConsoleDestination(
     ...destinationConsole,
     config: {
       settings: {
-        ...destinationConsole.config.settings,
+        ...(destinationConsole.config.settings as ConsoleDestinationSettings),
         ...settings,
-      },
+      } as ConsoleDestinationSettings,
     },
   };
 }

@@ -1,18 +1,17 @@
 #!/usr/bin/env node
 
 import { loadDockerConfig, parseDockerConfig } from './config';
+import type { Config } from './config/schema';
 import { registerSource, registerDestination } from './config/registry';
 import { sourceExpress } from './sources/express';
 import { destinationConsole } from './destinations/console';
-import { runBundleMode } from './services/bundle';
 import { runCollectMode } from './services/collect';
 import { runServeMode } from './services/serve';
 
 /**
  * walkerOS Docker Container
  *
- * Supports three operational modes:
- * - bundle: Generate static JavaScript bundles
+ * Supports two operational modes:
  * - collect: Run event collection server
  * - serve: Serve static files
  */
@@ -23,14 +22,15 @@ async function main() {
 
   if (!mode) {
     console.error('❌ Error: MODE environment variable required');
-    console.error('   Valid modes: bundle | collect | serve');
-    console.error('   Example: MODE=collect node dist/index.js');
+    console.error('   Valid modes: collect | serve');
+    console.error('   Example: MODE=collect FLOW=/app/config/flow.json');
     process.exit(1);
   }
 
-  if (!['bundle', 'collect', 'serve'].includes(mode)) {
+  if (!['collect', 'serve'].includes(mode)) {
     console.error(`❌ Error: Invalid MODE="${mode}"`);
-    console.error('   Valid modes: bundle | collect | serve');
+    console.error('   Valid modes: collect | serve');
+    console.error('   Note: Use @walkeros/cli for bundle generation');
     process.exit(1);
   }
 
@@ -46,12 +46,6 @@ async function main() {
 
     // Run the appropriate mode
     switch (mode) {
-      case 'bundle': {
-        const config = await loadDockerConfig();
-        await runBundleMode(config);
-        break;
-      }
-
       case 'collect': {
         const config = await loadDockerConfig();
         await runCollectMode(config);
@@ -62,11 +56,15 @@ async function main() {
         // Serve mode works without config (uses defaults + env vars)
         const config = process.env.FLOW
           ? await loadDockerConfig()
-          : {
+          : ({
               flow: { platform: 'web' as const },
-              build: {},
+              build: {
+                packages: {},
+                code: '',
+                output: '',
+              },
               docker: parseDockerConfig({}),
-            };
+            } as unknown as Config);
         await runServeMode(config);
         break;
       }

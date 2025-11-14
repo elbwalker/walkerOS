@@ -1,15 +1,17 @@
 import { Command } from 'commander';
 import { bundleCommand } from './bundle';
 import { simulateCommand } from './simulate';
+import { runCommand } from './run';
 
 // === CLI Commands ===
 // Export CLI command handlers
-export { bundleCommand, simulateCommand };
+export { bundleCommand, simulateCommand, runCommand };
 
 // === Programmatic API ===
 // High-level functions for library usage
 export { bundle } from './bundle';
 export { simulate } from './simulate';
+export { run } from './run';
 
 // === Types ===
 // Export types for programmatic usage
@@ -23,6 +25,7 @@ export type {
   TemplateSource,
   TemplateDestination,
 } from './types/template';
+export type { RunMode, RunCommandOptions, RunOptions, RunResult } from './run';
 
 const program = new Command();
 
@@ -77,6 +80,35 @@ program
     await simulateCommand({
       config: options.config,
       event: options.event,
+      json: options.json,
+      verbose: options.verbose,
+    });
+  });
+
+// Run command
+program
+  .command('run <mode> <config>')
+  .description('Run walkerOS in Docker (modes: collect, serve)')
+  .option('-p, --port <number>', 'Server port', parseInt)
+  .option('-h, --host <host>', 'Server host (default: 0.0.0.0)')
+  .option('-d, --detach', 'Run container in background')
+  .option('--name <name>', 'Container name')
+  .option('--no-pull', 'Skip Docker image pull')
+  .option(
+    '--image <image>',
+    'Docker image to use (default: walkeros/docker:latest)',
+  )
+  .option('--json', 'Output results as JSON')
+  .option('-v, --verbose', 'Verbose output')
+  .action(async (mode, config, options) => {
+    await runCommand(mode, {
+      config,
+      port: options.port,
+      host: options.host,
+      detach: options.detach,
+      name: options.name,
+      noPull: !options.pull,
+      image: options.image,
       json: options.json,
       verbose: options.verbose,
     });

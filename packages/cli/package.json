@@ -5,8 +5,12 @@
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.mjs"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.mjs"
+    }
   },
   "bin": {
     "walkeros": "./dist/index.mjs"

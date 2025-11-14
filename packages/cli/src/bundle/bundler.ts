@@ -24,7 +24,12 @@ export async function bundleCore(
   const bundleStartTime = Date.now();
   // Only generate a new temp dir if one isn't explicitly provided
   // This allows simulator to share its temp dir with the bundler
-  const TEMP_DIR = buildOptions.tempDir || getTempDir();
+  // Ensure TEMP_DIR is always absolute (esbuild requirement)
+  const TEMP_DIR = buildOptions.tempDir
+    ? path.isAbsolute(buildOptions.tempDir)
+      ? buildOptions.tempDir
+      : path.resolve(buildOptions.tempDir)
+    : getTempDir();
 
   try {
     // Step 1: Prepare temporary directory

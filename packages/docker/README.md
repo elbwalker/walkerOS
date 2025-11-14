@@ -22,8 +22,7 @@ That's it! The demo will:
 All flows are included in the Docker image at `/app/flows/`:
 
 - **demo.json** - Demo packages (source-demo → destination-demo)
-- **collect-console.json** - HTTP collection → console logging
-- **bundle-web.json** - Web bundle generation
+- **express-console.json** - HTTP collection → console logging
 - **serve.json** - Static file serving
 
 ## Usage
@@ -39,7 +38,7 @@ docker run -e MODE=collect -e FLOW=/app/flows/demo.json walkeros/docker
 ```bash
 docker run -p 8080:8080 \
   -e MODE=collect \
-  -e FLOW=/app/flows/collect-console.json \
+  -e FLOW=/app/flows/express-console.json \
   walkeros/docker
 
 # Send event
@@ -47,18 +46,6 @@ curl -X POST http://localhost:8080/collect \
   -H "Content-Type: application/json" \
   -d '{"event":"page view","data":{"title":"Test"}}'
 ```
-
-### Generate Web Bundle
-
-```bash
-docker run \
-  -e MODE=bundle \
-  -e FLOW=/app/flows/bundle-web.json \
-  -v $(pwd)/dist:/app/dist \
-  walkeros/docker
-```
-
-_Note: Volume mount needed to extract generated bundle_
 
 ### Serve Static Files
 
@@ -98,10 +85,13 @@ docker run \
 
 ## Modes
 
-Three operational modes:
+Two operational modes:
 
-**Collect** - Run event collection server **Bundle** - Generate static
-JavaScript bundle **Serve** - Serve static files
+- **collect** - Run event collection server
+- **serve** - Serve static files
+
+**Note**: Bundle generation is handled by `@walkeros/cli`. See
+[CLI documentation](../cli/README.md) for details.
 
 ## Flow Configuration
 
@@ -200,7 +190,7 @@ Then map with `-p 8080:8080` in docker run.
 
 ### Required
 
-- `MODE` - Operational mode: `bundle`, `collect`, or `serve`
+- `MODE` - Operational mode: `collect` or `serve`
 - `FLOW` - Path to flow configuration file
 
 ### Optional
@@ -300,10 +290,7 @@ npm run build
 MODE=collect FLOW=./flows/demo.json npm run dev
 
 # Collect mode
-MODE=collect FLOW=./flows/collect-console.json npm run dev
-
-# Bundle mode
-MODE=bundle FLOW=./flows/bundle-web.json npm run dev
+MODE=collect FLOW=./flows/express-console.json npm run dev
 
 # Serve mode
 MODE=serve FLOW=./flows/serve.json npm run dev
@@ -347,17 +334,13 @@ docker run -e MODE=collect -e FLOW=/app/flows/demo.json walkeros/docker:latest
 HTTP Request → Express Source → Collector → Destinations → External APIs
 ```
 
-**Bundle Mode:**
-
-```
-JSON Config → CLI Bundler → Optimized JS Bundle
-```
-
 **Serve Mode:**
 
 ```
 HTTP Request → Express Static → Files
 ```
+
+**Note**: Bundle generation uses `@walkeros/cli` - see CLI documentation.
 
 ## Troubleshooting
 
@@ -391,9 +374,8 @@ docker pull walkeros/docker:0.1.0
 
 ## Roadmap
 
-### Phase 1 ✅ Complete
+### Phase A ✅ Complete
 
-- ✅ Bundle mode with CLI integration
 - ✅ Collect mode with Express source
 - ✅ Serve mode for static files
 - ✅ Console destination for testing
@@ -404,13 +386,20 @@ docker pull walkeros/docker:0.1.0
 - ✅ Built-in flow examples
 - ✅ docker-compose examples
 
-### Phase 2 (Next)
+### Phase B ✅ Complete (CLI Integration)
 
-- ⏳ Dynamic package loading for collect mode
-- ⏳ Production logging
+- ✅ Removed bundle mode from Docker (use `@walkeros/cli` instead)
+- ✅ CLI `run` command for Docker orchestration
+- ✅ Simplified Docker to 2 modes: collect & serve
+- ✅ Zero code duplication architecture
+
+### Phase C (Next)
+
+- ⏳ Production logging and metrics
 - ⏳ Performance testing and optimization
 - ⏳ Multi-platform builds (amd64, arm64)
 - ⏳ Additional sources (PubSub, EventBridge, SQS)
+- ⏳ Docker image publishing automation
 
 ## License
 

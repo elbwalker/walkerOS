@@ -4,18 +4,18 @@ import type { Source, Destination } from '@walkeros/core';
  * Registry of available sources (Phase 1: built-in only)
  * Phase 2 will support dynamic imports from @walkeros packages
  */
-const SOURCE_REGISTRY: Record<string, Source.Init<any>> = {};
+const SOURCE_REGISTRY: Record<string, Source.Init> = {};
 
 /**
  * Registry of available destinations (Phase 1: built-in only)
  * Phase 2 will support dynamic imports from @walkeros packages
  */
-const DESTINATION_REGISTRY: Record<string, Destination.Instance<any>> = {};
+const DESTINATION_REGISTRY: Record<string, Destination.Instance> = {};
 
 /**
  * Register a source in the registry
  */
-export function registerSource(name: string, source: Source.Init<any>): void {
+export function registerSource(name: string, source: Source.Init): void {
   SOURCE_REGISTRY[name] = source;
 }
 
@@ -24,7 +24,7 @@ export function registerSource(name: string, source: Source.Init<any>): void {
  */
 export function registerDestination(
   name: string,
-  destination: Destination.Instance<any>,
+  destination: Destination.Instance,
 ): void {
   DESTINATION_REGISTRY[name] = destination;
 }
@@ -34,8 +34,8 @@ export function registerDestination(
  * Converts string references like "sourceExpress" to actual function instances
  */
 export function resolveSources(
-  sources: Record<string, any>,
-): Record<string, any> {
+  sources: Record<string, unknown>,
+): Record<string, unknown> {
   return resolveCode(sources, SOURCE_REGISTRY, 'source');
 }
 
@@ -44,8 +44,8 @@ export function resolveSources(
  * Converts string references like "destinationConsole" to actual instances
  */
 export function resolveDestinations(
-  destinations: Record<string, any>,
-): Record<string, any> {
+  destinations: Record<string, unknown>,
+): Record<string, unknown> {
   return resolveCode(destinations, DESTINATION_REGISTRY, 'destination');
 }
 
@@ -53,29 +53,37 @@ export function resolveDestinations(
  * Generic code resolution helper
  */
 function resolveCode(
-  items: Record<string, any>,
-  registry: Record<string, any>,
+  items: Record<string, unknown>,
+  registry: Record<string, unknown>,
   type: 'source' | 'destination',
-): Record<string, any> {
-  const resolved: Record<string, any> = {};
+): Record<string, unknown> {
+  const resolved: Record<string, unknown> = {};
 
   for (const [key, item] of Object.entries(items)) {
+    // Type guard for items with code property
+    if (typeof item !== 'object' || item === null || !('code' in item)) {
+      resolved[key] = item;
+      continue;
+    }
+
+    const itemObj = item as { code: unknown; [key: string]: unknown };
+
     // If code is already a function/object, use it directly
-    if (typeof item.code !== 'string') {
+    if (typeof itemObj.code !== 'string') {
       resolved[key] = item;
       continue;
     }
 
     // Resolve string reference from registry
-    const code = registry[item.code];
+    const code = registry[itemObj.code];
     if (!code) {
       throw new Error(
-        `Unknown ${type} code reference: "${item.code}". Available ${type}s: ${Object.keys(registry).join(', ') || 'none'}`,
+        `Unknown ${type} code reference: "${itemObj.code}". Available ${type}s: ${Object.keys(registry).join(', ') || 'none'}`,
       );
     }
 
     resolved[key] = {
-      ...item,
+      ...itemObj,
       code,
     };
   }

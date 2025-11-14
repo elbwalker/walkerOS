@@ -32,18 +32,20 @@ describe('Programmatic Bundle API', () => {
 
   it('should bundle with config object', async () => {
     const config = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': {
-          imports: ['getId', 'trim'],
-        },
+      flow: {
+        platform: 'web' as const,
       },
-      code: 'export const test = getId(8); export const clean = (s) => trim(s);',
       build: {
+        packages: {
+          '@walkeros/core': {
+            imports: ['getId', 'trim'],
+          },
+        },
+        code: 'export const test = getId(8); export const clean = (s) => trim(s);',
         platform: 'browser',
         format: 'esm',
+        output: path.join(testOutputDir, 'config-object.js'),
       },
-      output: path.join(testOutputDir, 'config-object.js'),
     };
 
     await expect(bundle(config, { silent: true })).resolves.not.toThrow();
@@ -60,12 +62,16 @@ describe('Programmatic Bundle API', () => {
 
   it('should return stats when requested', async () => {
     const config = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': { imports: ['getId'] },
+      flow: {
+        platform: 'web' as const,
       },
-      code: 'export const test = getId(8);',
-      output: path.join(testOutputDir, 'with-stats.js'),
+      build: {
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
+        },
+        code: 'export const test = getId(8);',
+        output: path.join(testOutputDir, 'with-stats.js'),
+      },
     };
 
     const stats = await bundle(config, { silent: true, stats: true });
@@ -78,12 +84,16 @@ describe('Programmatic Bundle API', () => {
 
   it('should return undefined when stats not requested', async () => {
     const config = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': { imports: ['getId'] },
+      flow: {
+        platform: 'web' as const,
       },
-      code: 'export const test = getId(8);',
-      output: path.join(testOutputDir, 'no-stats.js'),
+      build: {
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
+        },
+        code: 'export const test = getId(8);',
+        output: path.join(testOutputDir, 'no-stats.js'),
+      },
     };
 
     const result = await bundle(config, { silent: true, stats: false });
@@ -93,12 +103,16 @@ describe('Programmatic Bundle API', () => {
 
   it('should handle cache option', async () => {
     const config = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': { imports: ['getId'] },
+      flow: {
+        platform: 'web' as const,
       },
-      code: 'export const test = getId(8);',
-      output: path.join(testOutputDir, 'with-cache.js'),
+      build: {
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
+        },
+        code: 'export const test = getId(8);',
+        output: path.join(testOutputDir, 'with-cache.js'),
+      },
     };
 
     await expect(
@@ -108,12 +122,16 @@ describe('Programmatic Bundle API', () => {
 
   it('should handle verbose option', async () => {
     const config = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': { imports: ['getId'] },
+      flow: {
+        platform: 'web' as const,
       },
-      code: 'export const test = getId(8);',
-      output: path.join(testOutputDir, 'verbose.js'),
+      build: {
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
+        },
+        code: 'export const test = getId(8);',
+        output: path.join(testOutputDir, 'verbose.js'),
+      },
     };
 
     await expect(

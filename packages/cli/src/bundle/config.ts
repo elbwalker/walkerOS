@@ -79,6 +79,14 @@ export function parseBundleConfig(data: unknown): ParsedConfig {
     );
   }
 
+  // Validate build.packages field
+  const buildData = data.build as Record<string, unknown>;
+  if ('packages' in buildData && !isObject(buildData.packages)) {
+    throw new Error(
+      `Invalid config: build.packages must be an object, got ${typeof buildData.packages}`,
+    );
+  }
+
   const config = data as unknown as EnvironmentConfig;
   return normalizeConfigs(config, '/unknown/path');
 }

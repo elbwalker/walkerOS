@@ -1,59 +1,65 @@
 {
-  "platform": "web",
-  "packages": {
-    "@walkeros/collector": {
-      "imports": ["startFlow"]
+  "flow": {
+    "platform": "web",
+    "sources": {
+      "demo": {
+        "code": "sourceDemo",
+        "config": {
+          "settings": {
+            "events": [
+              {
+                "name": "page view",
+                "data": { "title": "Home", "path": "/" },
+                "delay": 0
+              },
+              {
+                "name": "product view",
+                "data": {
+                  "id": "P123",
+                  "name": "Test Product",
+                  "price": 99.99
+                },
+                "delay": 100
+              }
+            ]
+          }
+        }
+      }
     },
-    "@walkeros/source-demo": {
-      "imports": ["sourceDemo"]
+    "destinations": {
+      "demo": {
+        "package": "@walkeros/destination-demo",
+        "code": "destinationDemo",
+        "config": {
+          "settings": {
+            "name": "demo"
+          }
+        }
+      }
     },
-    "@walkeros/destination-demo": {
-      "imports": ["destinationDemo"]
+    "collector": {
+      "run": true,
+      "globals": {
+        "language": "en"
+      }
     }
   },
-  "code": "",
   "build": {
+    "packages": {
+      "@walkeros/collector": {
+        "imports": ["startFlow"]
+      },
+      "@walkeros/source-demo": {
+        "imports": ["sourceDemo"]
+      },
+      "@walkeros/destination-demo": {
+        "imports": ["destinationDemo"]
+      }
+    },
+    "code": "// walkerOS configuration",
     "minify": false,
-    "globalName": "walkerOS"
-  },
-  "output": "./dist/web-ecommerce.js",
-  "template": "templates/base.hbs",
-  "sources": {
-    "demo": {
-      "code": "sourceDemo",
-      "config": {
-        "settings": {
-          "events": [
-            {
-              "name": "page view",
-              "data": { "title": "Home", "path": "/" },
-              "delay": 0
-            },
-            {
-              "name": "product view",
-              "data": { "id": "P123", "name": "Test Product", "price": 99.99 },
-              "delay": 100
-            }
-          ]
-        }
-      }
-    }
-  },
-  "destinations": {
-    "demo": {
-      "package": "@walkeros/destination-demo",
-      "code": "destinationDemo",
-      "config": {
-        "settings": {
-          "name": "demo"
-        }
-      }
-    }
-  },
-  "collector": {
-    "run": true,
-    "globals": {
-      "language": "en"
-    }
+    "globalName": "walkerOS",
+    "output": "./dist/web-ecommerce.js",
+    "template": "templates/base.hbs"
   }
 }

@@ -15,7 +15,7 @@ export interface ExpressSourceSettings {
 /**
  * Express source instance with HTTP server
  */
-export interface ExpressSourceInstance extends Source.Instance {
+export interface ExpressSourceInstance extends Omit<Source.Instance, 'push'> {
   type: 'express';
   app: express.Application;
   push: (req: Request, res: Response) => Promise<void>;
@@ -31,15 +31,13 @@ export interface ExpressSourceInstance extends Source.Instance {
  * - Starts HTTP server
  * - Handles graceful shutdown
  */
-export const sourceExpress: Source.Init<{
-  settings: ExpressSourceSettings;
-}> = async (config, env) => {
-  const settings = config.settings || {
+export const sourceExpress: Source.Init = async (config, env) => {
+  const settings = (config.settings || {
     endpoint: '/collect',
     port: 8080,
     cors: true,
     jsonLimit: '10mb',
-  };
+  }) as ExpressSourceSettings;
 
   const app = express();
 
@@ -67,7 +65,9 @@ export const sourceExpress: Source.Init<{
       }
 
       // Send event to collector
-      await env.push(event);
+      if (env && 'push' in env && typeof env.push === 'function') {
+        await env.push(event);
+      }
 
       res.json({
         success: true,
@@ -134,5 +134,5 @@ export const sourceExpress: Source.Init<{
     app, // Expose for advanced usage
   };
 
-  return instance;
+  return instance as unknown as Source.Instance;
 };

@@ -18,11 +18,11 @@ export async function loadDockerConfig(configPath?: string): Promise<Config> {
     const rawConfig = JSON.parse(content);
 
     // Substitute environment variables
-    const substituted = substituteEnvVars(rawConfig);
+    const substituted = substituteEnvVars(rawConfig) as Record<string, unknown>;
 
     // Extract sections (CLI will validate flow/build when used)
-    const flowConfig = substituted.flow || {};
-    const buildConfig = substituted.build || {};
+    const flowConfig = (substituted.flow || {}) as Config['flow'];
+    const buildConfig = (substituted.build || {}) as Config['build'];
     const dockerConfig = parseDockerConfig(substituted);
 
     return {
@@ -53,7 +53,7 @@ export async function loadDockerConfig(configPath?: string): Promise<Config> {
  * Replaces ${VAR_NAME} or ${VAR_NAME:default} with process.env.VAR_NAME
  * Supports type coercion: numbers are parsed as numbers
  */
-function substituteEnvVars(obj: any): any {
+function substituteEnvVars(obj: unknown): unknown {
   if (typeof obj === 'string') {
     return obj.replace(
       /\$\{([^}:]+)(?::([^}]+))?\}/g,
@@ -76,7 +76,7 @@ function substituteEnvVars(obj: any): any {
   }
 
   if (obj !== null && typeof obj === 'object') {
-    const result: any = {};
+    const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       result[key] = substituteEnvVars(value);
     }

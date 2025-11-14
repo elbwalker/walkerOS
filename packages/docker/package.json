@@ -16,7 +16,7 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
-    "lint": "tsc && eslint \"**/*.ts*\"",
+    "lint": "tsc && eslint \"src/**/*.ts\"",
     "test": "jest"
   },
   "dependencies": {

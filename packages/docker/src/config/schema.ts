@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import type { EnvironmentConfig } from '@walkeros/cli';
+import type { BuildOptions } from '@walkeros/cli';
+import type { Flow } from '@walkeros/core';
 
 /**
  * Docker-specific runtime configuration
@@ -16,9 +17,25 @@ export const DockerConfigSchema = z
 export type DockerConfig = z.infer<typeof DockerConfigSchema>;
 
 /**
- * Complete configuration: CLI's EnvironmentConfig + Docker runtime config
+ * Complete configuration: flow + build + docker
+ *
+ * Combines runtime configuration (flow), build-time configuration (build),
+ * and Docker-specific settings (docker).
  */
-export interface Config extends EnvironmentConfig {
+export interface Config {
+  /**
+   * Runtime event processing configuration
+   */
+  flow: Flow.Config;
+
+  /**
+   * Build-time configuration for bundling
+   */
+  build: BuildOptions;
+
+  /**
+   * Docker-specific runtime settings
+   */
   docker?: DockerConfig;
 }
 
@@ -26,6 +43,9 @@ export interface Config extends EnvironmentConfig {
  * Parse Docker-specific configuration only
  */
 export function parseDockerConfig(data: unknown): DockerConfig {
-  const dockerData = (data as any)?.docker || {};
+  const dockerData =
+    typeof data === 'object' && data !== null && 'docker' in data
+      ? (data as { docker?: unknown }).docker || {}
+      : {};
   return DockerConfigSchema.parse(dockerData);
 }

@@ -36,7 +36,7 @@ describe('Config Loader', () => {
         },
         build: {
           packages: {},
-          code: '',
+          code: 'export {};',
           output: './dist/test.js',
         },
       };
@@ -62,7 +62,7 @@ describe('Config Loader', () => {
         },
         build: {
           packages: {},
-          code: '',
+          code: 'export {};',
           output: '',
         },
       };
@@ -84,7 +84,7 @@ describe('Config Loader', () => {
         },
         build: {
           packages: {},
-          code: '',
+          code: 'export {};',
           output: '',
         },
       };
@@ -106,7 +106,7 @@ describe('Config Loader', () => {
         },
         build: {
           packages: {},
-          code: '',
+          code: 'export {};',
           output: '',
           minify: true,
           format: 'esm' as const,
@@ -129,7 +129,7 @@ describe('Config Loader', () => {
         },
         build: {
           packages: {},
-          code: '',
+          code: 'export {};',
           output: '',
         },
       };
@@ -167,7 +167,7 @@ describe('Config Loader', () => {
           },
           build: {
             packages: {},
-            code: '',
+            code: 'export {};',
             output: './dist/prod.js',
           },
         },
@@ -188,7 +188,7 @@ describe('Config Loader', () => {
           },
           build: {
             packages: {},
-            code: '',
+            code: 'export {};',
             output: './dist/stage.js',
           },
         },
@@ -203,7 +203,7 @@ describe('Config Loader', () => {
           },
           build: {
             packages: {},
-            code: '',
+            code: 'export {};',
             output: './dist/server.js',
           },
         },
@@ -267,7 +267,7 @@ describe('Config Loader', () => {
     test('throws error if --all used with single-environment config', () => {
       const singleConfig = {
         flow: { platform: 'web' as const },
-        build: { packages: {}, code: '', output: '' },
+        build: { packages: {}, code: 'export {};', output: '' },
       };
 
       expect(() =>
@@ -286,7 +286,7 @@ describe('Config Loader', () => {
     test('returns empty array for single-env config', () => {
       const singleConfig = {
         flow: { platform: 'web' as const },
-        build: { packages: {}, code: '', output: '' },
+        build: { packages: {}, code: 'export {};', output: '' },
       };
       const environments = getAvailableEnvironments(singleConfig);
 
@@ -304,7 +304,7 @@ describe('Config Loader', () => {
         flow: {
           platform: 'invalid',
         },
-        build: { packages: {}, code: '', output: '' },
+        build: { packages: {}, code: 'export {};', output: '' },
       };
 
       expect(() =>
@@ -330,7 +330,7 @@ describe('Config Loader', () => {
         environments: {
           prod: {
             flow: { platform: 'web' as const },
-            build: { packages: {}, code: '', output: '' },
+            build: { packages: {}, code: 'export {};', output: '' },
           },
         },
       };
@@ -360,7 +360,7 @@ describe('Config Loader', () => {
         environments: {
           prod: {
             flow: { platform: 'web' as const },
-            build: { packages: {}, code: '', output: '' },
+            build: { packages: {}, code: 'export {};', output: '' },
           },
         },
       };
@@ -388,7 +388,7 @@ describe('Config Loader', () => {
         },
         build: {
           packages: {},
-          code: '',
+          code: 'export {};',
           output: '',
         },
       };
@@ -450,7 +450,7 @@ describe('Config Loader', () => {
             },
             build: {
               packages: {},
-              code: '',
+              code: 'export {};',
               minify: true,
               sourcemap: false,
               output: './dist/walker.min.js',
