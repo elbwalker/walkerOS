@@ -2,7 +2,7 @@
   "name": "@walkeros/docker",
   "description": "Docker container for walkerOS with bundle, collect, and serve modes",
   "version": "0.1.0",
-  "main": "./dist/index.js",
+  "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "license": "MIT",
@@ -15,7 +15,7 @@
     "build": "tsup --silent && cp -r templates dist/",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "tsx src/index.ts",
-    "start": "node dist/index.js",
+    "start": "node dist/index.mjs",
     "lint": "tsc && eslint \"src/**/*.ts\"",
     "test": "jest"
   },

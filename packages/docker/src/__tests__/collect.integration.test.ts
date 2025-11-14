@@ -21,7 +21,7 @@ describe('Collect Mode Integration', () => {
 
   // Build once before all tests (only if dist doesn't exist)
   beforeAll(() => {
-    const distPath = join(projectRoot, 'dist/index.js');
+    const distPath = join(projectRoot, 'dist/index.mjs');
     const distExists = require('fs').existsSync(distPath);
 
     if (!distExists) {
@@ -57,7 +57,7 @@ describe('Collect Mode Integration', () => {
     const configPath = join(projectRoot, 'flows/express-console.json');
 
     // Start collect mode using built code (avoids Jest PIPEWRAP issue)
-    serverProcess = spawn('node', ['dist/index.js'], {
+    serverProcess = spawn('node', ['dist/index.mjs'], {
       cwd: projectRoot,
       env: {
         ...process.env,
@@ -94,7 +94,7 @@ describe('Collect Mode Integration', () => {
   it('should respond to readiness checks', async () => {
     const configPath = join(projectRoot, 'flows/express-console.json');
 
-    serverProcess = spawn('node', ['dist/index.js'], {
+    serverProcess = spawn('node', ['dist/index.mjs'], {
       cwd: projectRoot,
       env: {
         ...process.env,
@@ -117,7 +117,7 @@ describe('Collect Mode Integration', () => {
   it('should collect and process events successfully', async () => {
     const configPath = join(projectRoot, 'flows/express-console.json');
 
-    serverProcess = spawn('node', ['dist/index.js'], {
+    serverProcess = spawn('node', ['dist/index.mjs'], {
       cwd: projectRoot,
       env: {
         ...process.env,
@@ -158,7 +158,7 @@ describe('Collect Mode Integration', () => {
   it('should handle multiple concurrent events', async () => {
     const configPath = join(projectRoot, 'flows/express-console.json');
 
-    serverProcess = spawn('node', ['dist/index.js'], {
+    serverProcess = spawn('node', ['dist/index.mjs'], {
       cwd: projectRoot,
       env: {
         ...process.env,
@@ -204,7 +204,7 @@ describe('Collect Mode Integration', () => {
   it('should handle CORS preflight requests', async () => {
     const configPath = join(projectRoot, 'flows/express-console.json');
 
-    serverProcess = spawn('node', ['dist/index.js'], {
+    serverProcess = spawn('node', ['dist/index.mjs'], {
       cwd: projectRoot,
       env: {
         ...process.env,

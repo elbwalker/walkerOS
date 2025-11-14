@@ -1,7 +1,12 @@
 import { bundle } from '@walkeros/cli';
 import path from 'path';
 import fs from 'fs-extra';
+import { fileURLToPath } from 'url';
 import type { Config } from '../config/schema';
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Run collect mode - start event collection server

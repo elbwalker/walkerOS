@@ -81,4 +81,4 @@ EXPOSE 8080
 
 # Entry point (use tini for proper signal handling)
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "packages/docker/dist/index.js"]
+CMD ["node", "packages/docker/dist/index.mjs"]

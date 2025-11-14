@@ -23,7 +23,7 @@ describe('Serve Mode Integration', () => {
 
   // Build once before all tests (only if dist doesn't exist)
   beforeAll(() => {
-    const distPath = join(projectRoot, 'dist/index.js');
+    const distPath = join(projectRoot, 'dist/index.mjs');
     const distExists = existsSync(distPath);
 
     if (!distExists) {
@@ -64,7 +64,7 @@ describe('Serve Mode Integration', () => {
     const configPath = join(projectRoot, 'flows/serve.json');
 
     // Start serve mode
-    serverProcess = spawn('node', ['dist/index.js'], {
+    serverProcess = spawn('node', ['dist/index.mjs'], {
       cwd: projectRoot,
       env: {
         ...process.env,
@@ -108,7 +108,7 @@ describe('Serve Mode Integration', () => {
 
     const configPath = join(projectRoot, 'flows/serve.json');
 
-    serverProcess = spawn('node', ['dist/index.js'], {
+    serverProcess = spawn('node', ['dist/index.mjs'], {
       cwd: projectRoot,
       env: {
         ...process.env,
@@ -145,7 +145,7 @@ describe('Serve Mode Integration', () => {
 
     const configPath = join(projectRoot, 'flows/serve.json');
 
-    serverProcess = spawn('node', ['dist/index.js'], {
+    serverProcess = spawn('node', ['dist/index.mjs'], {
       cwd: projectRoot,
       env: {
         ...process.env,
@@ -179,7 +179,7 @@ describe('Serve Mode Integration', () => {
   it('should return 404 for non-existent files', async () => {
     const configPath = join(projectRoot, 'flows/serve.json');
 
-    serverProcess = spawn('node', ['dist/index.js'], {
+    serverProcess = spawn('node', ['dist/index.mjs'], {
       cwd: projectRoot,
       env: {
         ...process.env,
