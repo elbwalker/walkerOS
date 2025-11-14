@@ -8,16 +8,8 @@ import { parseDockerConfig, type Config } from './schema';
  * CLI functions will validate flow/build when they're used
  */
 export async function loadDockerConfig(configPath?: string): Promise<Config> {
-  const filePath = configPath || process.env.FLOW;
-
-  if (!filePath) {
-    console.error('❌ FLOW environment variable required');
-    console.error('   Built-in flows: -e FLOW=/app/flows/demo.json');
-    console.error(
-      '   Custom flow: -e FLOW=/app/custom.json -v $(pwd)/flow.json:/app/custom.json',
-    );
-    process.exit(1);
-  }
+  // Simple default: Use demo.json if no FLOW specified
+  const filePath = configPath || process.env.FLOW || '/app/flows/demo.json';
 
   const resolvedPath = path.resolve(filePath);
 

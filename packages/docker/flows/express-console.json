@@ -48,7 +48,6 @@
       }
     },
     "code": "// Collect mode\n",
-    "template": "/workspaces/walkerOS/packages/cli/templates/base.hbs",
     "tempDir": "/tmp"
   },
   "docker": {

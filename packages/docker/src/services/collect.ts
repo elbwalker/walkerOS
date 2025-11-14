@@ -62,6 +62,13 @@ export async function runCollectMode(config: Config): Promise<void> {
     if (!flowConfig.build) flowConfig.build = {};
     flowConfig.build.output = bundlePath;
 
+    // Set template path relative to Docker package (templates bundled with package)
+    if (!flowConfig.build.template) {
+      // Resolve from Docker package root
+      const dockerRoot = path.resolve(__dirname, '..');
+      flowConfig.build.template = path.join(dockerRoot, 'templates/base.hbs');
+    }
+
     // For Docker collect mode, we need standalone bundles with all dependencies bundled
     // Use 'node' platform but with empty external to bundle everything
     flowConfig.build.platform = 'node';

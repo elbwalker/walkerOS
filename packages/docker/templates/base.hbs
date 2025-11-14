@@ -1,0 +1,44 @@
+export default async function(context = {}) {
+  const { tracker } = context;
+  const __simulationTracker = tracker;
+
+  // Check if we're in a browser environment
+  const window = typeof globalThis.window !== 'undefined' ? globalThis.window : undefined;
+  const document = typeof globalThis.document !== 'undefined' ? globalThis.document : undefined;
+
+  const config = {
+    sources: {
+    {{#each sources}}
+      {{@key}}: {
+        code: {{{code}}},
+        config: {{{config}}}{{#if env}},
+        env: {
+          window,
+          document,
+          ...{{{env}}}
+        }{{/if}}
+      },
+    {{/each}}
+    },
+    destinations: {
+    {{#each destinations}}
+      {{@key}}: {
+        code: {{{code}}},
+        config: {{{config}}}{{#if env}},
+        env: {
+          window,
+          document,
+          ...{{{env}}}
+        }{{/if}}
+      },
+    {{/each}}
+    }{{#if collector}},
+    ...{{{collector}}}{{/if}}
+  };
+
+  {{{CODE}}}
+
+  const result = await startFlow(config);
+
+  return result;
+}
