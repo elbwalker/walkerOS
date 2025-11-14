@@ -1,8 +1,8 @@
 import esbuild from 'esbuild';
 import path from 'path';
 import fs from 'fs-extra';
-import { BundleConfig, BuildOptions } from './config';
-import { ensureBuildConfig } from '../types/bundle';
+import type { Flow } from '@walkeros/core';
+import type { BuildOptions } from './config';
 import type { SourceDestinationItem } from '../types/template';
 import { downloadPackages } from './package-manager';
 import { TemplateEngine } from './template-engine';
@@ -16,21 +16,20 @@ export interface BundleStats {
 }
 
 export async function bundleCore(
-  config: BundleConfig,
+  flowConfig: Flow.Config,
+  buildOptions: BuildOptions,
   logger: Logger,
   showStats = false,
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
-  // Ensure build config has all required properties
-  const validatedConfig = ensureBuildConfig(config);
   // Only generate a new temp dir if one isn't explicitly provided
   // This allows simulator to share its temp dir with the bundler
-  const TEMP_DIR = config.tempDir || getTempDir();
+  const TEMP_DIR = buildOptions.tempDir || getTempDir();
 
   try {
     // Step 1: Prepare temporary directory
     // Only clean if we created a new temp dir (don't clean shared simulator temp)
-    if (!config.tempDir) {
+    if (!buildOptions.tempDir) {
       await fs.emptyDir(TEMP_DIR);
     }
     logger.debug('Cleaned temporary directory');
@@ -38,7 +37,7 @@ export async function bundleCore(
     // Step 2: Download packages
     logger.info('📥 Downloading packages...');
     // Convert packages object to array format expected by downloadPackages
-    const packagesArray = Object.entries(config.packages).map(
+    const packagesArray = Object.entries(buildOptions.packages).map(
       ([name, packageConfig]) => ({
         name,
         version: packageConfig.version || 'latest',
@@ -49,7 +48,7 @@ export async function bundleCore(
       packagesArray,
       TEMP_DIR,
       logger,
-      config.cache,
+      buildOptions.cache,
     );
 
     // Fix @walkeros packages to have proper ESM exports
@@ -82,19 +81,23 @@ export async function bundleCore(
 
     // Step 4: Create entry point
     logger.info('📝 Creating entry point...');
-    const entryContent = await createEntryPoint(validatedConfig, packagePaths);
+    const entryContent = await createEntryPoint(
+      flowConfig,
+      buildOptions,
+      packagePaths,
+    );
     const entryPath = path.join(TEMP_DIR, 'entry.js');
     await fs.writeFile(entryPath, entryContent);
 
     // Step 4: Bundle with esbuild
     logger.info('⚡ Bundling with esbuild...');
-    const outputPath = path.resolve(config.output);
+    const outputPath = path.resolve(buildOptions.output);
 
     // Ensure output directory exists
     await fs.ensureDir(path.dirname(outputPath));
 
-    const buildOptions = createEsbuildOptions(
-      validatedConfig.build,
+    const esbuildOptions = createEsbuildOptions(
+      buildOptions,
       entryPath,
       outputPath,
       TEMP_DIR,
@@ -103,10 +106,10 @@ export async function bundleCore(
     );
 
     try {
-      await esbuild.build(buildOptions);
+      await esbuild.build(esbuildOptions);
     } catch (buildError) {
       // Enhanced error handling for build failures
-      throw createBuildError(buildError as EsbuildError, config.code);
+      throw createBuildError(buildError as EsbuildError, buildOptions.code);
     }
 
     logger.gray(`Output: ${outputPath}`);
@@ -116,7 +119,7 @@ export async function bundleCore(
     if (showStats) {
       stats = await collectBundleStats(
         outputPath,
-        config.packages,
+        buildOptions.packages,
         bundleStartTime,
         entryContent,
       );
@@ -124,7 +127,7 @@ export async function bundleCore(
 
     // Step 6: Cleanup
     // Only cleanup if we created our own temp dir (not shared with simulator)
-    if (!config.tempDir) {
+    if (!buildOptions.tempDir) {
       await fs.remove(TEMP_DIR);
       logger.debug('Cleaned up temporary files');
     }
@@ -132,7 +135,7 @@ export async function bundleCore(
     return stats;
   } catch (error) {
     // Cleanup on error (only if we created our own temp dir)
-    if (!config.tempDir) {
+    if (!buildOptions.tempDir) {
       await fs.remove(TEMP_DIR).catch(() => {});
     }
     throw error;
@@ -141,7 +144,7 @@ export async function bundleCore(
 
 async function collectBundleStats(
   outputPath: string,
-  packages: BundleConfig['packages'],
+  packages: BuildOptions['packages'],
   startTime: number,
   entryContent: string,
 ): Promise<BundleStats> {
@@ -184,7 +187,7 @@ async function collectBundleStats(
 }
 
 function createEsbuildOptions(
-  buildConfig: BuildOptions,
+  buildOptions: BuildOptions,
   entryPath: string,
   outputPath: string,
   tempDir: string,
@@ -198,38 +201,38 @@ function createEsbuildOptions(
   const baseOptions: esbuild.BuildOptions = {
     entryPoints: [entryPath],
     bundle: true,
-    format: buildConfig.format as esbuild.Format,
-    platform: buildConfig.platform as esbuild.Platform,
+    format: buildOptions.format as esbuild.Format,
+    platform: buildOptions.platform as esbuild.Platform,
     outfile: outputPath,
     absWorkingDir: tempDir, // Resolve modules from temp directory
     // alias removed - not needed with absWorkingDir
     mainFields: ['module', 'main'], // Prefer ESM over CJS
     treeShaking: true,
     logLevel: 'error',
-    minify: buildConfig.minify,
-    sourcemap: buildConfig.sourcemap,
+    minify: buildOptions.minify,
+    sourcemap: buildOptions.sourcemap,
     resolveExtensions: ['.mjs', '.js', '.ts', '.json'], // Prefer .mjs
 
     // Enhanced minification options when minify is enabled
-    ...(buildConfig.minify && {
-      minifyWhitespace: buildConfig.minifyOptions?.whitespace ?? true,
-      minifyIdentifiers: buildConfig.minifyOptions?.identifiers ?? true,
-      minifySyntax: buildConfig.minifyOptions?.syntax ?? true,
-      legalComments: buildConfig.minifyOptions?.legalComments ?? 'none',
-      keepNames: buildConfig.minifyOptions?.keepNames ?? false,
+    ...(buildOptions.minify && {
+      minifyWhitespace: buildOptions.minifyOptions?.whitespace ?? true,
+      minifyIdentifiers: buildOptions.minifyOptions?.identifiers ?? true,
+      minifySyntax: buildOptions.minifyOptions?.syntax ?? true,
+      legalComments: buildOptions.minifyOptions?.legalComments ?? 'none',
+      keepNames: buildOptions.minifyOptions?.keepNames ?? false,
       charset: 'utf8',
     }),
   };
 
   // Platform-specific configurations
-  if (buildConfig.platform === 'browser') {
+  if (buildOptions.platform === 'browser') {
     baseOptions.define = {
       'process.env.NODE_ENV': '"production"',
       global: 'globalThis',
     };
     // For browser bundles, let users handle Node.js built-ins as needed
-    baseOptions.external = buildConfig.external || [];
-  } else if (buildConfig.platform === 'node') {
+    baseOptions.external = buildOptions.external || [];
+  } else if (buildOptions.platform === 'node') {
     // For Node.js bundles, mark Node built-ins as external
     const nodeBuiltins = [
       'crypto',
@@ -260,28 +263,28 @@ function createEsbuildOptions(
     const walkerosPackages = Array.from(packagePaths.keys()).filter((name) =>
       name.startsWith('@walkeros/'),
     );
-    baseOptions.external = buildConfig.external
+    baseOptions.external = buildOptions.external
       ? [
           ...nodeBuiltins,
           ...npmPackages,
           ...walkerosPackages,
-          ...buildConfig.external,
+          ...buildOptions.external,
         ]
       : [...nodeBuiltins, ...npmPackages, ...walkerosPackages];
   }
 
   // Set target if specified
-  if (buildConfig.target) {
-    baseOptions.target = buildConfig.target;
-  } else if (buildConfig.platform === 'node') {
+  if (buildOptions.target) {
+    baseOptions.target = buildOptions.target;
+  } else if (buildOptions.platform === 'node') {
     baseOptions.target = 'node18';
   } else {
     baseOptions.target = 'es2018';
   }
 
   // Set global name for IIFE format
-  if (buildConfig.globalName && buildConfig.format === 'iife') {
-    baseOptions.globalName = buildConfig.globalName;
+  if (buildOptions.globalName && buildOptions.format === 'iife') {
+    baseOptions.globalName = buildOptions.globalName;
   }
 
   return baseOptions;
@@ -300,7 +303,8 @@ function packageNameToVariable(packageName: string): string {
 }
 
 async function createEntryPoint(
-  config: BundleConfig & { build: BuildOptions },
+  flowConfig: Flow.Config,
+  buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
 ): Promise<string> {
   // Generate import statements from packages
@@ -311,8 +315,11 @@ async function createEntryPoint(
   // This ensures examples are loaded in the SAME execution context as the bundle
   // preventing zod double-loading issues
   const destinationPackages = new Set<string>();
-  if (config.destinations) {
-    for (const [destKey, destConfig] of Object.entries(config.destinations)) {
+  const destinations = (
+    flowConfig as unknown as { destinations?: Record<string, unknown> }
+  ).destinations;
+  if (destinations) {
+    for (const [destKey, destConfig] of Object.entries(destinations)) {
       // Require explicit package field - no inference for any packages
       if (
         typeof destConfig === 'object' &&
@@ -326,7 +333,9 @@ async function createEntryPoint(
     }
   }
 
-  for (const [packageName, packageConfig] of Object.entries(config.packages)) {
+  for (const [packageName, packageConfig] of Object.entries(
+    buildOptions.packages,
+  )) {
     if (packageConfig.imports && packageConfig.imports.length > 0) {
       // Remove duplicates within the same package
       const uniqueImports = [...new Set(packageConfig.imports)];
@@ -423,19 +432,30 @@ async function createEntryPoint(
 
   // Apply template if configured, otherwise just use code directly
   let templatedCode: string;
-  if (config.template) {
+  if (buildOptions.template) {
     const templateEngine = new TemplateEngine();
+    const flowWithProps = flowConfig as unknown as {
+      sources?: Record<string, unknown>;
+      destinations?: Record<string, unknown>;
+      collector?: Record<string, unknown>;
+    };
     templatedCode = await templateEngine.process(
-      config.template,
-      config.code, // Pass user code as parameter
-      (config.sources || {}) as Record<string, SourceDestinationItem>,
-      (config.destinations || {}) as Record<string, SourceDestinationItem>,
-      (config.collector || {}) as Record<string, unknown>,
-      config.build as Record<string, unknown>, // Pass build config to template
+      buildOptions.template,
+      buildOptions.code, // Pass user code as parameter
+      (flowWithProps.sources || {}) as unknown as Record<
+        string,
+        SourceDestinationItem
+      >,
+      (flowWithProps.destinations || {}) as unknown as Record<
+        string,
+        SourceDestinationItem
+      >,
+      (flowWithProps.collector || {}) as unknown as Record<string, unknown>,
+      buildOptions as unknown as Record<string, unknown>, // Pass build config to template
     );
   } else {
     // No template - just use the code directly
-    templatedCode = config.code;
+    templatedCode = buildOptions.code;
   }
 
   // Apply module format wrapping if needed
@@ -445,12 +465,12 @@ async function createEntryPoint(
   const hasExport = /^\s*export\s/m.test(templatedCode);
 
   if (!hasExport) {
-    if (config.build.format === 'esm') {
+    if (buildOptions.format === 'esm') {
       // Export as default for ESM
       wrappedCode = `export default ${templatedCode}`;
-    } else if (config.build.platform === 'browser' && config.build.globalName) {
+    } else if (buildOptions.platform === 'browser' && buildOptions.globalName) {
       // Assign to window for browser builds with globalName
-      wrappedCode = `window['${config.build.globalName}'] = ${templatedCode}`;
+      wrappedCode = `window['${buildOptions.globalName}'] = ${templatedCode}`;
     }
   }
 
@@ -460,7 +480,7 @@ async function createEntryPoint(
     : `${examplesObject}${wrappedCode}`;
 
   // If we have examples, export them as a named export
-  if (examplesObject && config.build.format === 'esm') {
+  if (examplesObject && buildOptions.format === 'esm') {
     finalCode += `\n\nexport { examples };`;
   }
 

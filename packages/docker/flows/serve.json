@@ -1,12 +1,14 @@
 {
-  "platform": "web",
-  "packages": {},
-  "code": "",
+  "flow": {
+    "platform": "web"
+  },
+  "build": {
+    "packages": {},
+    "code": "// Serve mode\n"
+  },
   "docker": {
     "port": 8080,
     "host": "0.0.0.0",
-    "serve": {
-      "staticDir": "/app/dist"
-    }
+    "staticDir": "/app/dist"
   }
 }

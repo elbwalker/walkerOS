@@ -1,63 +1,97 @@
 /**
  * Configuration Helpers
  *
- * Re-exports types for convenience and backward compatibility.
+ * Re-exports types for convenience.
  * Provides helper functions for config parsing.
  */
 
-import { normalizeConfig } from './config-loader';
+import { normalizeConfigs } from './config-loader';
 import { isObject } from '../utils/type-guards';
-import type { Bundle } from '../types';
+import type { Flow } from '@walkeros/core';
+import type { BuildOptions, EnvironmentConfig } from '../types/bundle';
 
 // Re-export types
-export type { Config as BundleConfig } from '../types/bundle';
-export type { BuildOptions, MinifyOptions } from '../types/bundle';
+export type {
+  BuildOptions,
+  MinifyOptions,
+  EnvironmentConfig,
+} from '../types/bundle';
+
+/**
+ * Result of parsing bundle configuration.
+ */
+export interface ParsedConfig {
+  flowConfig: Flow.Config;
+  buildOptions: BuildOptions;
+}
 
 /**
  * Parse and normalize bundle configuration.
  *
- * @param data - Raw configuration data
- * @returns Normalized Bundle.Config with platform-specific defaults
+ * @param data - Raw configuration data (EnvironmentConfig format: { flow, build })
+ * @returns Normalized flowConfig and buildOptions with platform-specific defaults
  * @throws Error if validation fails
  *
  * @example
  * ```typescript
- * const config = parseBundleConfig({
- *   platform: 'web',
- *   sources: {
- *     browser: { package: '@walkeros/web-source-browser' }
+ * const { flowConfig, buildOptions } = parseBundleConfig({
+ *   flow: {
+ *     platform: 'web',
+ *     sources: { browser: {...} },
+ *     destinations: { gtag: {...} }
+ *   },
+ *   build: {
+ *     packages: { '@walkeros/core': {...} },
+ *     code: '...',
+ *     output: './dist/bundle.js'
  *   }
  * });
  * ```
  */
-export function parseBundleConfig(data: unknown): Bundle.Config {
+export function parseBundleConfig(data: unknown): ParsedConfig {
   // Basic type checking
   if (!isObject(data)) {
     throw new Error(`Invalid config: expected object, got ${typeof data}`);
   }
 
-  if (
-    !('platform' in data) ||
-    (data.platform !== 'web' && data.platform !== 'server')
-  ) {
+  // Check for new format { flow, build }
+  if (!('flow' in data) || !isObject(data.flow)) {
     throw new Error(
-      `Invalid config: platform must be "web" or "server", got "${(data as { platform?: unknown }).platform}"`,
+      `Invalid config: missing "flow" field. ` +
+        `Expected format: { flow: { platform: "web" | "server", ... }, build: { ... } }`,
     );
   }
 
-  const config = data as Bundle.Config;
-  return normalizeConfig(config, '/unknown/path');
+  if (!('build' in data) || !isObject(data.build)) {
+    throw new Error(
+      `Invalid config: missing "build" field. ` +
+        `Expected format: { flow: { platform: "web" | "server", ... }, build: { ... } }`,
+    );
+  }
+
+  const flowData = data.flow as Record<string, unknown>;
+  if (
+    !('platform' in flowData) ||
+    (flowData.platform !== 'web' && flowData.platform !== 'server')
+  ) {
+    throw new Error(
+      `Invalid config: flow.platform must be "web" or "server", got "${flowData.platform}"`,
+    );
+  }
+
+  const config = data as unknown as EnvironmentConfig;
+  return normalizeConfigs(config, '/unknown/path');
 }
 
 /**
  * Safely parse bundle configuration without throwing.
  *
  * @param data - Raw configuration data
- * @returns Success result with normalized config or error result
+ * @returns Success result with normalized configs or error result
  */
 export function safeParseBundleConfig(data: unknown): {
   success: boolean;
-  data?: Bundle.Config;
+  data?: ParsedConfig;
   error?: Error;
 } {
   try {

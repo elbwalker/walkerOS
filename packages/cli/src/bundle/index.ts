@@ -73,11 +73,16 @@ export async function bundleCommand(
       error?: string;
     }> = [];
 
-    for (const { config, environment, isMultiEnvironment } of configsToBundle) {
+    for (const {
+      flowConfig,
+      buildOptions,
+      environment,
+      isMultiEnvironment,
+    } of configsToBundle) {
       try {
         // Override cache setting from CLI if provided
         if (options.cache !== undefined) {
-          config.cache = options.cache;
+          buildOptions.cache = options.cache;
         }
 
         // Log environment being built (for multi-environment setups)
@@ -89,7 +94,12 @@ export async function bundleCommand(
 
         // Run bundler
         const shouldCollectStats = options.stats || options.json;
-        const stats = await bundleCore(config, logger, shouldCollectStats);
+        const stats = await bundleCore(
+          flowConfig,
+          buildOptions,
+          logger,
+          shouldCollectStats,
+        );
 
         results.push({
           environment,
@@ -222,11 +232,11 @@ export async function bundle(
   }
 
   // 2. Parse and normalize config
-  const config = parseBundleConfig(rawConfig);
+  const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
 
   // 3. Handle cache option
   if (options.cache !== undefined) {
-    config.cache = options.cache;
+    buildOptions.cache = options.cache;
   }
 
   // 4. Create logger internally
@@ -236,5 +246,10 @@ export async function bundle(
   });
 
   // 5. Call core bundler
-  return await bundleCore(config, logger, options.stats ?? false);
+  return await bundleCore(
+    flowConfig,
+    buildOptions,
+    logger,
+    options.stats ?? false,
+  );
 }

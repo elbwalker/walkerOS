@@ -18,19 +18,26 @@ describe('Config Loader', () => {
   describe('Single Environment Config', () => {
     test('loads single-environment config successfully', () => {
       const config = {
-        platform: 'web',
-        sources: {
-          browser: {
-            package: '@walkeros/web-source-browser',
-          },
-        },
-        destinations: {
-          gtag: {
-            package: '@walkeros/web-destination-gtag',
-            config: {
-              settings: { ga4: { measurementId: 'G-123' } },
+        flow: {
+          platform: 'web' as const,
+          sources: {
+            browser: {
+              package: '@walkeros/web-source-browser',
             },
           },
+          destinations: {
+            gtag: {
+              package: '@walkeros/web-destination-gtag',
+              config: {
+                settings: { ga4: { measurementId: 'G-123' } },
+              },
+            },
+          },
+        },
+        build: {
+          packages: {},
+          code: '',
+          output: './dist/test.js',
         },
       };
 
@@ -40,44 +47,67 @@ describe('Config Loader', () => {
 
       expect(result.environment).toBe('default');
       expect(result.isMultiEnvironment).toBe(false);
-      expect(result.config.platform).toBe('web');
-      expect(result.config.sources).toBeDefined();
+      expect(
+        (result.flowConfig as unknown as { platform: string }).platform,
+      ).toBe('web');
+      expect(
+        (result.flowConfig as unknown as { sources: unknown }).sources,
+      ).toBeDefined();
     });
 
     test('applies platform-specific defaults for web', () => {
       const config = {
-        platform: 'web' as const,
+        flow: {
+          platform: 'web' as const,
+        },
+        build: {
+          packages: {},
+          code: '',
+          output: '',
+        },
       };
 
       const result = loadBundleConfig(config, {
         configPath: '/test/config.json',
       });
 
-      expect(result.config.build?.platform).toBe('browser');
-      expect(result.config.build?.format).toBe('iife');
-      expect(result.config.build?.target).toBe('es2020');
-      expect(result.config.build?.output).toBe('./dist/walker.js');
+      expect(result.buildOptions.platform).toBe('browser');
+      expect(result.buildOptions.format).toBe('iife');
+      expect(result.buildOptions.target).toBe('es2020');
+      expect(result.buildOptions.output).toBe('./dist/walker.js');
     });
 
     test('applies platform-specific defaults for server', () => {
       const config = {
-        platform: 'server' as const,
+        flow: {
+          platform: 'server' as const,
+        },
+        build: {
+          packages: {},
+          code: '',
+          output: '',
+        },
       };
 
       const result = loadBundleConfig(config, {
         configPath: '/test/config.json',
       });
 
-      expect(result.config.build?.platform).toBe('node');
-      expect(result.config.build?.format).toBe('esm');
-      expect(result.config.build?.target).toBe('node20');
-      expect(result.config.build?.output).toBe('./dist/bundle.js');
+      expect(result.buildOptions.platform).toBe('node');
+      expect(result.buildOptions.format).toBe('esm');
+      expect(result.buildOptions.target).toBe('node20');
+      expect(result.buildOptions.output).toBe('./dist/bundle.js');
     });
 
     test('merges custom build options with defaults', () => {
       const config = {
-        platform: 'web' as const,
+        flow: {
+          platform: 'web' as const,
+        },
         build: {
+          packages: {},
+          code: '',
+          output: '',
           minify: true,
           format: 'esm' as const,
         },
@@ -87,33 +117,28 @@ describe('Config Loader', () => {
         configPath: '/test/config.json',
       });
 
-      expect(result.config.build?.minify).toBe(true);
-      expect(result.config.build?.format).toBe('esm'); // Custom overrides default
-      expect(result.config.build?.target).toBe('es2020'); // Default preserved
+      expect(result.buildOptions.minify).toBe(true);
+      expect(result.buildOptions.format).toBe('esm'); // Custom overrides default
+      expect(result.buildOptions.target).toBe('es2020'); // Default preserved
     });
 
-    test('auto-selects web template', () => {
+    test('does not auto-select templates', () => {
       const config = {
-        platform: 'web' as const,
+        flow: {
+          platform: 'web' as const,
+        },
+        build: {
+          packages: {},
+          code: '',
+          output: '',
+        },
       };
 
       const result = loadBundleConfig(config, {
         configPath: '/test/config.json',
       });
 
-      expect(result.config.build?.template).toContain('base.hbs');
-    });
-
-    test('auto-selects server template', () => {
-      const config = {
-        platform: 'server' as const,
-      };
-
-      const result = loadBundleConfig(config, {
-        configPath: '/test/config.json',
-      });
-
-      expect(result.config.build?.template).toContain('server.hbs');
+      expect(result.buildOptions.template).toBeUndefined();
     });
   });
 
@@ -126,39 +151,60 @@ describe('Config Loader', () => {
       version: 1,
       environments: {
         web_prod: {
-          platform: 'web' as const,
-          sources: {
-            browser: {
-              package: '@walkeros/web-source-browser',
+          flow: {
+            platform: 'web' as const,
+            sources: {
+              browser: {
+                package: '@walkeros/web-source-browser',
+              },
+            },
+            destinations: {
+              gtag: {
+                package: '@walkeros/web-destination-gtag',
+                config: { settings: { ga4: { measurementId: 'G-PROD' } } },
+              },
             },
           },
-          destinations: {
-            gtag: {
-              package: '@walkeros/web-destination-gtag',
-              config: { settings: { ga4: { measurementId: 'G-PROD' } } },
-            },
+          build: {
+            packages: {},
+            code: '',
+            output: './dist/prod.js',
           },
         },
         web_stage: {
-          platform: 'web' as const,
-          sources: {
-            browser: {
-              package: '@walkeros/web-source-browser',
+          flow: {
+            platform: 'web' as const,
+            sources: {
+              browser: {
+                package: '@walkeros/web-source-browser',
+              },
+            },
+            destinations: {
+              gtag: {
+                package: '@walkeros/web-destination-gtag',
+                config: { settings: { ga4: { measurementId: 'G-STAGE' } } },
+              },
             },
           },
-          destinations: {
-            gtag: {
-              package: '@walkeros/web-destination-gtag',
-              config: { settings: { ga4: { measurementId: 'G-STAGE' } } },
-            },
+          build: {
+            packages: {},
+            code: '',
+            output: './dist/stage.js',
           },
         },
         server_prod: {
-          platform: 'server' as const,
-          destinations: {
-            api: {
-              package: '@walkeros/server-destination-api',
+          flow: {
+            platform: 'server' as const,
+            destinations: {
+              api: {
+                package: '@walkeros/server-destination-api',
+              },
             },
+          },
+          build: {
+            packages: {},
+            code: '',
+            output: './dist/server.js',
           },
         },
       },
@@ -177,7 +223,9 @@ describe('Config Loader', () => {
         'web_stage',
         'server_prod',
       ]);
-      expect(result.config.platform).toBe('web');
+      expect(
+        (result.flowConfig as unknown as { platform: string }).platform,
+      ).toBe('web');
     });
 
     test('throws error if environment not specified for multi-env config', () => {
@@ -208,12 +256,19 @@ describe('Config Loader', () => {
         'web_stage',
         'server_prod',
       ]);
-      expect(results[0].config.platform).toBe('web');
-      expect(results[2].config.platform).toBe('server');
+      expect(
+        (results[0].flowConfig as unknown as { platform: string }).platform,
+      ).toBe('web');
+      expect(
+        (results[2].flowConfig as unknown as { platform: string }).platform,
+      ).toBe('server');
     });
 
     test('throws error if --all used with single-environment config', () => {
-      const singleConfig = { platform: 'web' as const };
+      const singleConfig = {
+        flow: { platform: 'web' as const },
+        build: { packages: {}, code: '', output: '' },
+      };
 
       expect(() =>
         loadAllEnvironments(singleConfig, {
@@ -229,7 +284,10 @@ describe('Config Loader', () => {
     });
 
     test('returns empty array for single-env config', () => {
-      const singleConfig = { platform: 'web' as const };
+      const singleConfig = {
+        flow: { platform: 'web' as const },
+        build: { packages: {}, code: '', output: '' },
+      };
       const environments = getAvailableEnvironments(singleConfig);
 
       expect(environments).toEqual([]);
@@ -243,7 +301,10 @@ describe('Config Loader', () => {
   describe('Error Handling', () => {
     test('throws detailed error for invalid config format', () => {
       const invalidConfig = {
-        platform: 'invalid',
+        flow: {
+          platform: 'invalid',
+        },
+        build: { packages: {}, code: '', output: '' },
       };
 
       expect(() =>
@@ -267,7 +328,10 @@ describe('Config Loader', () => {
       const invalidConfig = {
         version: 2,
         environments: {
-          prod: { platform: 'web' },
+          prod: {
+            flow: { platform: 'web' as const },
+            build: { packages: {}, code: '', output: '' },
+          },
         },
       };
 
@@ -294,7 +358,10 @@ describe('Config Loader', () => {
       const config = {
         version: 1,
         environments: {
-          prod: { platform: 'web' as const },
+          prod: {
+            flow: { platform: 'web' as const },
+            build: { packages: {}, code: '', output: '' },
+          },
         },
       };
 
@@ -316,7 +383,14 @@ describe('Config Loader', () => {
       };
 
       const config = {
-        platform: 'web' as const,
+        flow: {
+          platform: 'web' as const,
+        },
+        build: {
+          packages: {},
+          code: '',
+          output: '',
+        },
       };
 
       loadBundleConfig(config, {
@@ -350,29 +424,33 @@ describe('Config Loader', () => {
         },
         environments: {
           web_production: {
-            platform: 'web' as const,
-            sources: {
-              browser: {
-                package: '@walkeros/web-source-browser@2.0.0',
-                config: {
-                  settings: { pageview: true },
-                },
-                primary: true,
-              },
-            },
-            destinations: {
-              gtag: {
-                package: '@walkeros/web-destination-gtag@2.0.0',
-                config: {
-                  settings: { ga4: { measurementId: 'G-PROD' } },
+            flow: {
+              platform: 'web' as const,
+              sources: {
+                browser: {
+                  package: '@walkeros/web-source-browser@2.0.0',
+                  config: {
+                    settings: { pageview: true },
+                  },
+                  primary: true,
                 },
               },
-            },
-            collector: {
-              run: true,
-              tagging: 1,
+              destinations: {
+                gtag: {
+                  package: '@walkeros/web-destination-gtag@2.0.0',
+                  config: {
+                    settings: { ga4: { measurementId: 'G-PROD' } },
+                  },
+                },
+              },
+              collector: {
+                run: true,
+                tagging: 1,
+              },
             },
             build: {
+              packages: {},
+              code: '',
               minify: true,
               sourcemap: false,
               output: './dist/walker.min.js',
@@ -386,12 +464,18 @@ describe('Config Loader', () => {
         environment: 'web_production',
       });
 
-      expect(result.config.platform).toBe('web');
-      expect((result.config.sources as any)?.browser?.package).toBe(
-        '@walkeros/web-source-browser@2.0.0',
-      );
-      expect(result.config.build?.minify).toBe(true);
-      expect(result.config.build?.output).toBe('./dist/walker.min.js');
+      expect(
+        (result.flowConfig as unknown as { platform: string }).platform,
+      ).toBe('web');
+      expect(
+        (
+          result.flowConfig as unknown as {
+            sources?: Record<string, { package?: string }>;
+          }
+        ).sources?.browser?.package,
+      ).toBe('@walkeros/web-source-browser@2.0.0');
+      expect(result.buildOptions.minify).toBe(true);
+      expect(result.buildOptions.output).toBe('./dist/walker.min.js');
     });
   });
 });

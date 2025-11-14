@@ -2,12 +2,11 @@ import fs from 'fs-extra';
 import path from 'path';
 import { bundleCore as bundle } from '../../bundle/bundler';
 import { parseBundleConfig } from '../../bundle/config';
-import { ensureBuildConfig } from '../../types/bundle';
 import { createLogger, type Logger } from '../../core';
 import { getId } from '@walkeros/core';
 
 describe('Bundler Integration', () => {
-  const testOutputDir = path.join(
+  const testOutputDir = path.resolve(
     '.tmp',
     `bundler-integration-${Date.now()}-${getId()}`,
   );
@@ -31,84 +30,96 @@ describe('Bundler Integration', () => {
 
   it('should handle configuration parsing correctly', async () => {
     const rawConfig = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': {
-          imports: ['getId'],
-        },
+      flow: {
+        platform: 'web' as const,
       },
-      code: 'export const test = getId(8);',
       build: {
-        platform: 'browser',
-        format: 'esm',
+        packages: {
+          '@walkeros/core': {
+            imports: ['getId'],
+          },
+        },
+        code: 'export const test = getId(8);',
+        platform: 'browser' as const,
+        format: 'esm' as const,
+        output: path.join(testOutputDir, 'test-config.js'),
       },
-      output: path.join(testOutputDir, 'test-config.js'),
     };
 
-    const parsedConfig = parseBundleConfig(rawConfig);
-    const config = ensureBuildConfig(parsedConfig);
+    const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
 
-    expect(Object.keys(config.packages)).toHaveLength(1);
-    expect('@walkeros/core' in config.packages).toBe(true);
-    expect(config.code).toContain('getId');
-    expect(config.build.platform).toBe('browser');
-    expect(config.output).toBe(path.join(testOutputDir, 'test-config.js'));
+    expect(Object.keys(buildOptions.packages)).toHaveLength(1);
+    expect('@walkeros/core' in buildOptions.packages).toBe(true);
+    expect(buildOptions.code).toContain('getId');
+    expect(buildOptions.platform).toBe('browser');
+    expect(buildOptions.output).toBe(
+      path.join(testOutputDir, 'test-config.js'),
+    );
   });
 
   it('should handle template configuration', async () => {
     const rawConfig = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': {
-          imports: ['getId'],
-        },
+      flow: {
+        platform: 'web' as const,
       },
-      code: 'export const test = getId(8);',
-      template: 'templates/web.hbs',
-      output: path.join(testOutputDir, 'template-test.js'),
+      build: {
+        packages: {
+          '@walkeros/core': {
+            imports: ['getId'],
+          },
+        },
+        code: 'export const test = getId(8);',
+        template: 'templates/web.hbs',
+        output: path.join(testOutputDir, 'template-test.js'),
+      },
     };
 
-    const config = parseBundleConfig(rawConfig);
+    const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
 
-    expect(config.template).toBeDefined();
-    expect(config.template).toBe('templates/web.hbs');
+    expect(buildOptions.template).toBeDefined();
+    expect(buildOptions.template).toBe('templates/web.hbs');
   });
 
   it('should validate custom build configuration', async () => {
     const rawConfig = {
-      platform: 'server',
-      packages: {},
-      code: 'export const test = "hello";',
+      flow: {
+        platform: 'server' as const,
+      },
       build: {
-        platform: 'node',
-        format: 'esm',
+        packages: {},
+        code: 'export const test = "hello";',
+        platform: 'node' as const,
+        format: 'esm' as const,
         minify: true,
         sourcemap: true,
         target: 'node18',
+        output: path.join(testOutputDir, 'build-test.mjs'),
       },
-      output: path.join(testOutputDir, 'build-test.mjs'),
     };
 
-    const parsedConfig = parseBundleConfig(rawConfig);
-    const config = ensureBuildConfig(parsedConfig);
+    const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
 
-    expect(config.build.platform).toBe('node');
-    expect(config.build.format).toBe('esm');
-    expect(config.build.minify).toBe(true);
-    expect(config.build.sourcemap).toBe(true);
-    expect(config.build.target).toBe('node18');
+    expect(buildOptions.platform).toBe('node');
+    expect(buildOptions.format).toBe('esm');
+    expect(buildOptions.minify).toBe(true);
+    expect(buildOptions.sourcemap).toBe(true);
+    expect(buildOptions.target).toBe('node18');
   });
 
   it('should handle error conditions gracefully', async () => {
     // Test with invalid syntax in content
-    const config = parseBundleConfig({
-      platform: 'web',
-      packages: {},
-      code: 'export const badCode = () => { return [1,2,3] x => x * 2; };',
-      output: path.join(testOutputDir, 'error-test.js'),
+    const { flowConfig, buildOptions } = parseBundleConfig({
+      flow: {
+        platform: 'web' as const,
+      },
+      build: {
+        packages: {},
+        code: 'export const badCode = () => { return [1,2,3] x => x * 2; };',
+        output: path.join(testOutputDir, 'error-test.js'),
+      },
     });
 
     // Should not throw during configuration parsing
-    expect(config.code).toContain('badCode');
+    expect(buildOptions.code).toContain('badCode');
   });
 });

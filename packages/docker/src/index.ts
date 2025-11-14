@@ -62,7 +62,11 @@ async function main() {
         // Serve mode works without config (uses defaults + env vars)
         const config = process.env.FLOW
           ? await loadDockerConfig()
-          : parseDockerConfig({});
+          : {
+              flow: { platform: 'web' as const },
+              build: {},
+              docker: parseDockerConfig({}),
+            };
         await runServeMode(config);
         break;
       }

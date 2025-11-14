@@ -1,9 +1,10 @@
 /**
  * Configuration Loader
  *
- * Loads and parses bundle configurations with support for:
+ * Loads and parses configurations with support for:
+ * - Separate Flow.Config and BuildOptions
  * - Legacy single-environment configs
- * - Flow.Setup multi-environment configs
+ * - Multi-environment setups
  * - Environment selection
  * - Platform-specific defaults
  */
@@ -11,8 +12,10 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import type { Flow } from '@walkeros/core';
 import { isObject } from '../utils/type-guards';
-import type { Bundle } from '../types';
+import type { BuildOptions, EnvironmentConfig, Setup } from '../types/bundle';
+import { ensureBuildOptions } from '../types/bundle';
 
 // ESM-compatible __dirname resolution
 function getDirname(): string {
@@ -34,7 +37,7 @@ function validatePlatform(platform: unknown): platform is 'web' | 'server' {
 /**
  * Type guard: Check if config is multi-environment format.
  */
-function isMultiEnvConfig(data: unknown): data is Bundle.Setup {
+function isMultiEnvConfig(data: unknown): data is Setup {
   return (
     isObject(data) &&
     'version' in data &&
@@ -45,11 +48,31 @@ function isMultiEnvConfig(data: unknown): data is Bundle.Setup {
 }
 
 /**
- * Type guard: Check if config is single-environment format.
+ * Type guard: Check if config is single-environment format (new structure).
  */
-function isSingleEnvConfig(data: unknown): data is Bundle.Config {
+function isSingleEnvConfig(data: unknown): data is EnvironmentConfig {
   return (
-    isObject(data) && 'platform' in data && validatePlatform(data.platform)
+    isObject(data) &&
+    'flow' in data &&
+    'build' in data &&
+    isObject(data.flow) &&
+    isObject(data.build) &&
+    'platform' in data.flow &&
+    validatePlatform((data.flow as { platform: unknown }).platform)
+  );
+}
+
+/**
+ * Type guard: Check if config is legacy format (old Bundle.Config structure).
+ * @deprecated Legacy format - will be removed in future versions
+ */
+function isLegacyConfig(data: unknown): boolean {
+  return (
+    isObject(data) &&
+    'platform' in data &&
+    validatePlatform(data.platform) &&
+    !('flow' in data) && // Not new format
+    !('version' in data) // Not multi-env
   );
 }
 
@@ -57,9 +80,11 @@ function isSingleEnvConfig(data: unknown): data is Bundle.Config {
  * Result of configuration loading.
  */
 export interface LoadConfigResult {
-  /** Parsed bundle configuration for the selected environment */
-  config: Bundle.Config;
-  /** Name of the selected environment (or 'default' for legacy configs) */
+  /** Runtime event processing configuration */
+  flowConfig: Flow.Config;
+  /** Build-time configuration */
+  buildOptions: BuildOptions;
+  /** Name of the selected environment (or 'default' for single configs) */
   environment: string;
   /** Whether this is a multi-environment setup */
   isMultiEnvironment: boolean;
@@ -87,14 +112,15 @@ export interface LoadConfigOptions {
  *
  * @remarks
  * Automatically detects whether the config is:
- * - Legacy single-environment format
- * - New Flow.Setup multi-environment format
+ * - New format: { flow: {...}, build: {...} }
+ * - Multi-environment format: { version: 1, environments: {...} }
+ * - Legacy format: { platform, sources, destinations, packages, ... } (with deprecation warning)
  *
  * For multi-environment configs, requires `environment` option.
  *
  * @param rawConfig - Raw configuration object from JSON file
  * @param options - Loading options
- * @returns Parsed configuration with metadata
+ * @returns Parsed configuration with flow and build separated
  */
 export function loadBundleConfig(
   rawConfig: unknown,
@@ -105,24 +131,35 @@ export function loadBundleConfig(
     return loadMultiEnvironmentConfig(rawConfig, options);
   }
 
-  // Check if single-environment format
+  // Check if new single-environment format
   if (isSingleEnvConfig(rawConfig)) {
     return loadSingleEnvironmentConfig(rawConfig, options);
+  }
+
+  // Check if legacy format (deprecated)
+  if (isLegacyConfig(rawConfig)) {
+    if (options.logger) {
+      options.logger.warn(
+        `⚠️  DEPRECATED: Legacy config format detected at ${options.configPath}\n` +
+          `   Please migrate to new format: { flow: {...}, build: {...} }`,
+      );
+    }
+    return loadLegacyConfig(rawConfig as Record<string, unknown>, options);
   }
 
   // Invalid format - provide helpful error
   const configType = isObject(rawConfig)
     ? 'platform' in rawConfig
       ? `invalid platform value: "${(rawConfig as { platform: unknown }).platform}"`
-      : 'missing "platform" field'
+      : 'missing "flow" and "build" fields'
     : `not an object (got ${typeof rawConfig})`;
 
   throw new Error(
     `Invalid configuration format at ${options.configPath}.\n` +
       `Configuration ${configType}.\n\n` +
       `Expected either:\n` +
-      `  1. Flow.Setup (multi-environment): { version: 1, environments: {...} }\n` +
-      `  2. Bundle.Config (single): { platform: "web" | "server", ... }`,
+      `  1. Multi-environment: { version: 1, environments: { prod: { flow: {...}, build: {...} } } }\n` +
+      `  2. Single-environment: { flow: { platform: "web" | "server", ... }, build: { packages: {...}, ... } }`,
   );
 }
 
@@ -130,7 +167,7 @@ export function loadBundleConfig(
  * Load multi-environment configuration.
  */
 function loadMultiEnvironmentConfig(
-  setup: Bundle.Setup,
+  setup: Setup,
   options: LoadConfigOptions,
 ): LoadConfigResult {
   const availableEnvironments = Object.keys(setup.environments);
@@ -155,8 +192,11 @@ function loadMultiEnvironmentConfig(
   // Get the environment config
   const envConfig = setup.environments[selectedEnv];
 
-  // Apply platform-specific defaults and normalization
-  const normalizedConfig = normalizeConfig(envConfig);
+  // Normalize flow and build configs separately
+  const { flowConfig, buildOptions } = normalizeConfigs(
+    envConfig,
+    options.configPath,
+  );
 
   if (options.logger) {
     options.logger.info(
@@ -165,7 +205,8 @@ function loadMultiEnvironmentConfig(
   }
 
   return {
-    config: normalizedConfig,
+    flowConfig,
+    buildOptions,
     environment: selectedEnv,
     isMultiEnvironment: true,
     availableEnvironments,
@@ -176,11 +217,14 @@ function loadMultiEnvironmentConfig(
  * Load single-environment configuration.
  */
 function loadSingleEnvironmentConfig(
-  config: Bundle.Config,
+  config: EnvironmentConfig,
   options: LoadConfigOptions,
 ): LoadConfigResult {
-  // Normalize the config
-  const normalizedConfig = normalizeConfig(config);
+  // Normalize the configs
+  const { flowConfig, buildOptions } = normalizeConfigs(
+    config,
+    options.configPath,
+  );
 
   if (options.logger && options.environment) {
     options.logger.warn(
@@ -189,24 +233,77 @@ function loadSingleEnvironmentConfig(
   }
 
   return {
-    config: normalizedConfig,
+    flowConfig,
+    buildOptions,
     environment: 'default',
     isMultiEnvironment: false,
   };
 }
 
 /**
- * Normalize configuration with platform-specific defaults.
+ * Load legacy configuration format (deprecated).
+ * @deprecated Will be removed in future versions
+ */
+function loadLegacyConfig(
+  config: Record<string, unknown>,
+  options: LoadConfigOptions,
+): LoadConfigResult {
+  const platform = config.platform as 'web' | 'server';
+
+  // Split legacy config into flow and build
+  const flowConfig: Flow.Config = {
+    platform,
+    sources: config.sources,
+    destinations: config.destinations,
+    collector: config.collector,
+    env: config.env,
+  } as unknown as Flow.Config;
+
+  const buildOptions: Partial<BuildOptions> = {
+    packages: (config.packages as BuildOptions['packages']) || {},
+    code: (config.code as string) || '',
+    output: (config.output as string) || '',
+    tempDir: config.tempDir as string,
+    template: config.template as string,
+    cache: config.cache as boolean,
+    ...(config.build as Partial<BuildOptions>),
+  };
+
+  // Normalize
+  const normalized = normalizeConfigs(
+    { flow: flowConfig, build: buildOptions },
+    options.configPath,
+  );
+
+  return {
+    ...normalized,
+    environment: 'default',
+    isMultiEnvironment: false,
+  };
+}
+
+/**
+ * Normalize flow and build configurations with platform-specific defaults.
  * Exported for use in helper functions and tests.
  */
-export function normalizeConfig(
-  config: Bundle.Config,
+export function normalizeConfigs(
+  config:
+    | EnvironmentConfig
+    | { flow: Flow.Config; build: Partial<BuildOptions> },
   configPath?: string,
-): Bundle.Config {
-  const platform = config.platform;
+): { flowConfig: Flow.Config; buildOptions: BuildOptions } {
+  const flowConfig = config.flow;
+  const platform = (flowConfig as unknown as { platform: 'web' | 'server' })
+    .platform;
+
+  if (!validatePlatform(platform)) {
+    throw new Error(
+      `Invalid platform "${platform}". Must be "web" or "server".`,
+    );
+  }
 
   // Apply platform-specific build defaults
-  const buildDefaults: Partial<Bundle.BuildOptions> =
+  const buildDefaults: Partial<BuildOptions> =
     platform === 'web'
       ? {
           platform: 'browser',
@@ -214,8 +311,8 @@ export function normalizeConfig(
           target: 'es2020',
           minify: false,
           sourcemap: true,
-          output: './dist/walker.js',
           tempDir: '.tmp',
+          cache: true,
         }
       : {
           platform: 'node',
@@ -223,30 +320,27 @@ export function normalizeConfig(
           target: 'node20',
           minify: false,
           sourcemap: false,
-          output: './dist/bundle.js',
           tempDir: '.tmp',
+          cache: true,
         };
 
   // Merge build config
-  const build: Bundle.BuildOptions = {
+  const buildConfig: Partial<BuildOptions> = {
     ...buildDefaults,
     ...config.build,
   };
 
-  // Auto-select template if not specified
-  let template = config.build?.template;
-  if (!template) {
-    const templateName = platform === 'server' ? 'server.hbs' : 'base.hbs';
-    template = path.join(getDirname(), '../templates', templateName);
-  }
+  // Only use template if explicitly specified
+  const buildOptionsToNormalize = {
+    ...buildConfig,
+  };
 
-  // Return normalized config
+  // Ensure all required build fields are present
+  const buildOptions = ensureBuildOptions(buildOptionsToNormalize, platform);
+
   return {
-    ...config,
-    build: {
-      ...build,
-      template,
-    },
+    flowConfig,
+    buildOptions,
   };
 }
 
@@ -264,10 +358,10 @@ export function loadAllEnvironments(
   rawConfig: unknown,
   options: Omit<LoadConfigOptions, 'environment'>,
 ): LoadConfigResult[] {
-  // Must be a Flow.Setup (multi-environment) config
+  // Must be a multi-environment config
   if (!isMultiEnvConfig(rawConfig)) {
     throw new Error(
-      `--all flag requires a multi-environment configuration (Flow.Setup format).\n` +
+      `--all flag requires a multi-environment configuration (Setup format).\n` +
         `Your configuration appears to be single-environment.`,
     );
   }

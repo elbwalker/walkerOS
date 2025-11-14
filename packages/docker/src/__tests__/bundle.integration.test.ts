@@ -51,57 +51,61 @@ describe('Bundle Mode Integration', () => {
   });
 
   it('should generate valid JavaScript bundle', async () => {
-    // Create test config with output pointing to our test directory
+    // Create test config with output pointing to our test directory (NEW format)
     const testConfigPath = join(testOutputDir, 'test-bundle-config.json');
     const testConfig = {
-      platform: 'web',
-      build: {
-        platform: 'browser',
-        format: 'iife',
-        minify: true,
-        globalName: 'walkerOS',
-      },
-      packages: {
-        '@walkeros/collector': {
-          version: 'latest',
-          imports: ['startFlow'],
-        },
-        '@walkeros/web-source-browser': {
-          version: 'latest',
-          imports: ['sourceBrowser'],
-        },
-        '@walkeros/web-destination-gtag': {
-          version: 'latest',
-          imports: ['destinationGtag'],
-        },
-      },
-      code: 'startFlow',
-      sources: {
-        browser: {
-          code: 'sourceBrowser',
-          config: {
-            settings: {
-              elb: 'elb',
-            },
-          },
-        },
-      },
-      destinations: {
-        gtag: {
-          code: 'destinationGtag',
-          config: {
-            settings: {
-              ga4: {
-                measurementId: 'G-TEST123456',
+      flow: {
+        platform: 'web',
+        sources: {
+          browser: {
+            code: 'sourceBrowser',
+            config: {
+              settings: {
+                elb: 'elb',
               },
             },
           },
         },
+        destinations: {
+          gtag: {
+            code: 'destinationGtag',
+            config: {
+              settings: {
+                ga4: {
+                  measurementId: 'G-TEST123456',
+                },
+              },
+            },
+          },
+        },
+        collector: {
+          run: true,
+        },
       },
-      collector: {
-        run: true,
+      build: {
+        packages: {
+          '@walkeros/collector': {
+            version: 'latest',
+            imports: ['startFlow'],
+          },
+          '@walkeros/web-source-browser': {
+            version: 'latest',
+            imports: ['sourceBrowser'],
+          },
+          '@walkeros/web-destination-gtag': {
+            version: 'latest',
+            imports: ['destinationGtag'],
+          },
+        },
+        code: '// Test bundle\n',
+        output: testOutputFile,
+        platform: 'browser',
+        format: 'iife',
+        minify: true,
+        globalName: 'walkerOS',
+        template: join(projectRoot, '../cli/templates/base.hbs'),
+        tempDir: join(tmpdir(), 'walker-test-temp'),
       },
-      output: testOutputFile,
     };
     writeFileSync(testConfigPath, JSON.stringify(testConfig, null, 2));
 
@@ -150,57 +154,61 @@ describe('Bundle Mode Integration', () => {
   }, 30000); // Bundle generation may take longer than collect mode
 
   it('should use configuration from bundle-web.json', async () => {
-    // Create test config with output pointing to our test directory
+    // Create test config with output pointing to our test directory (NEW format)
     const testConfigPath = join(testOutputDir, 'test-bundle-config-2.json');
     const testConfig = {
-      platform: 'web',
-      build: {
-        platform: 'browser',
-        format: 'iife',
-        minify: true,
-        globalName: 'walkerOS',
-      },
-      packages: {
-        '@walkeros/collector': {
-          version: 'latest',
-          imports: ['startFlow'],
-        },
-        '@walkeros/web-source-browser': {
-          version: 'latest',
-          imports: ['sourceBrowser'],
-        },
-        '@walkeros/web-destination-gtag': {
-          version: 'latest',
-          imports: ['destinationGtag'],
-        },
-      },
-      code: 'startFlow',
-      sources: {
-        browser: {
-          code: 'sourceBrowser',
-          config: {
-            settings: {
-              elb: 'elb',
-            },
-          },
-        },
-      },
-      destinations: {
-        gtag: {
-          code: 'destinationGtag',
-          config: {
-            settings: {
-              ga4: {
-                measurementId: 'G-TEST123456',
+      flow: {
+        platform: 'web',
+        sources: {
+          browser: {
+            code: 'sourceBrowser',
+            config: {
+              settings: {
+                elb: 'elb',
               },
             },
           },
         },
+        destinations: {
+          gtag: {
+            code: 'destinationGtag',
+            config: {
+              settings: {
+                ga4: {
+                  measurementId: 'G-TEST123456',
+                },
+              },
+            },
+          },
+        },
+        collector: {
+          run: true,
+        },
       },
-      collector: {
-        run: true,
+      build: {
+        packages: {
+          '@walkeros/collector': {
+            version: 'latest',
+            imports: ['startFlow'],
+          },
+          '@walkeros/web-source-browser': {
+            version: 'latest',
+            imports: ['sourceBrowser'],
+          },
+          '@walkeros/web-destination-gtag': {
+            version: 'latest',
+            imports: ['destinationGtag'],
+          },
+        },
+        code: '// Test bundle\n',
+        output: testOutputFile,
+        platform: 'browser',
+        format: 'iife',
+        minify: true,
+        globalName: 'walkerOS',
+        template: join(projectRoot, '../cli/templates/base.hbs'),
+        tempDir: join(tmpdir(), 'walker-test-temp'),
       },
-      output: testOutputFile,
     };
     writeFileSync(testConfigPath, JSON.stringify(testConfig, null, 2));
 

@@ -13,7 +13,7 @@ export { simulate } from './simulate';
 
 // === Types ===
 // Export types for programmatic usage
-export type { Config as BundleConfig } from './types/bundle';
+export type { BuildOptions, EnvironmentConfig, Setup } from './types/bundle';
 export type { BundleStats } from './bundle/bundler';
 export type { SimulationResult } from './simulate/types';
 export type {

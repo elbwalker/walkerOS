@@ -1,13 +1,13 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { parseDockerConfig, type DockerConfig } from './schema';
+import { parseDockerConfig, type Config } from './schema';
 
 /**
  * Load and parse Docker configuration from file
+ * Extracts flow, build, and docker sections
+ * CLI functions will validate flow/build when they're used
  */
-export async function loadDockerConfig(
-  configPath?: string,
-): Promise<DockerConfig> {
+export async function loadDockerConfig(configPath?: string): Promise<Config> {
   const filePath = configPath || process.env.FLOW;
 
   if (!filePath) {
@@ -28,8 +28,16 @@ export async function loadDockerConfig(
     // Substitute environment variables
     const substituted = substituteEnvVars(rawConfig);
 
-    // Parse and validate
-    return parseDockerConfig(substituted);
+    // Extract sections (CLI will validate flow/build when used)
+    const flowConfig = substituted.flow || {};
+    const buildConfig = substituted.build || {};
+    const dockerConfig = parseDockerConfig(substituted);
+
+    return {
+      flow: flowConfig,
+      build: buildConfig,
+      docker: dockerConfig,
+    };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       console.error(`❌ Flow config not found: ${resolvedPath}`);

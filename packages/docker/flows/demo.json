@@ -1,74 +1,80 @@
 {
-  "platform": "server",
-  "packages": {
-    "@walkeros/collector": {
-      "version": "latest",
-      "imports": ["startFlow"]
-    },
-    "@walkeros/source-demo": {
-      "version": "latest",
-      "imports": ["sourceDemo"]
-    },
-    "@walkeros/destination-demo": {
-      "version": "latest",
-      "imports": ["destinationDemo"]
-    }
-  },
-  "code": "",
-  "sources": {
-    "demo": {
-      "code": "sourceDemo",
-      "config": {
-        "settings": {
-          "events": [
-            {
-              "name": "page view",
-              "data": {
-                "title": "Home Page",
-                "path": "/"
+  "flow": {
+    "platform": "server",
+    "sources": {
+      "demo": {
+        "code": "sourceDemo",
+        "config": {
+          "settings": {
+            "events": [
+              {
+                "name": "page view",
+                "data": {
+                  "title": "Home Page",
+                  "path": "/"
+                }
+              },
+              {
+                "name": "page view",
+                "data": {
+                  "title": "About Page",
+                  "path": "/about"
+                },
+                "delay": 2000
+              },
+              {
+                "name": "product view",
+                "data": {
+                  "id": "P123",
+                  "name": "Demo Product",
+                  "price": 29.99
+                },
+                "delay": 4000
               }
-            },
-            {
-              "name": "page view",
-              "data": {
-                "title": "About Page",
-                "path": "/about"
-              },
-              "delay": 2000
-            },
-            {
-              "name": "product view",
-              "data": {
-                "id": "P123",
-                "name": "Demo Product",
-                "price": 29.99
-              },
-              "delay": 4000
-            }
-          ]
+            ]
+          }
         }
       }
-    }
-  },
-  "destinations": {
-    "demo": {
-      "code": "destinationDemo",
-      "config": {
-        "settings": {
-          "name": "Demo Output",
-          "values": [
-            "name",
-            "data.title",
-            "data.path",
-            "data.id",
-            "data.name",
-            "timestamp"
-          ]
+    },
+    "destinations": {
+      "demo": {
+        "code": "destinationDemo",
+        "config": {
+          "settings": {
+            "name": "Demo Output",
+            "values": [
+              "name",
+              "data.title",
+              "data.path",
+              "data.id",
+              "data.name",
+              "timestamp"
+            ]
+          }
         }
       }
+    },
+    "collector": {
+      "run": true
     }
   },
-  "collector": {
-    "run": true
+  "build": {
+    "packages": {
+      "@walkeros/collector": {
+        "version": "latest",
+        "imports": ["startFlow"]
+      },
+      "@walkeros/source-demo": {
+        "version": "latest",
+        "imports": ["sourceDemo"]
+      },
+      "@walkeros/destination-demo": {
+        "version": "latest",
+        "imports": ["destinationDemo"]
+      }
+    },
+    "code": "// Demo mode\n",
+    "template": "/workspaces/walkerOS/packages/cli/templates/base.hbs",
+    "tempDir": "/tmp"
   }
 }

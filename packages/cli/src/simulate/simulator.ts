@@ -1,7 +1,9 @@
 import path from 'path';
 import fs from 'fs-extra';
+import type { Flow } from '@walkeros/core';
 import { loadJsonConfig, createLogger, getTempDir, isObject } from '../core';
-import { parseBundleConfig, type BundleConfig } from '../bundle/config';
+import { parseBundleConfig } from '../bundle/config';
+import type { BuildOptions } from '../bundle/config';
 import { bundleCore } from '../bundle/bundler';
 import { downloadPackages } from '../bundle/package-manager';
 import { CallTracker } from './tracker';
@@ -115,13 +117,11 @@ export async function executeSimulation(
   try {
     // 1. Load config
     const rawConfig = await loadJsonConfig(configPath);
-    const config = parseBundleConfig(rawConfig) as BundleConfig & {
-      platform: 'web' | 'server';
-    };
+    const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
 
     // 2. Download packages to temp directory
     // This ensures we use clean npm packages, not workspace packages
-    const packagesArray = Object.entries(config.packages).map(
+    const packagesArray = Object.entries(buildOptions.packages).map(
       ([name, packageConfig]) => ({
         name,
         version:
@@ -137,7 +137,7 @@ export async function executeSimulation(
       packagesArray,
       tempDir, // downloadPackages will add 'node_modules' subdirectory itself
       createLogger({ silent: true }),
-      config.cache,
+      buildOptions.cache,
     );
 
     // 3. Create tracker
@@ -147,8 +147,11 @@ export async function executeSimulation(
     // The bundle will import examples, so we can reference them directly in the injected code
     const envSetupCode: string[] = [];
 
-    if (config.destinations) {
-      for (const [key, dest] of Object.entries(config.destinations)) {
+    const destinations = (
+      flowConfig as unknown as { destinations?: Record<string, unknown> }
+    ).destinations;
+    if (destinations) {
+      for (const [key, dest] of Object.entries(destinations)) {
         // Generate code to wrap env using examples imported IN THE BUNDLE
         const destName = key.replace(/-/g, '_');
         envSetupCode.push(`
@@ -170,11 +173,11 @@ export async function executeSimulation(
 
     // 5. Inject env setup code BEFORE startFlow
     // Note: __simulationTracker will be provided via factory function parameter
-    config.code = `
+    const modifiedCode = `
 // Inject tracked envs into destination configs
 ${envSetupCode.join('\n')}
 
-${config.code || ''}
+${buildOptions.code || ''}
 `;
 
     // 7. Create temporary bundle with downloaded packages
@@ -183,18 +186,24 @@ ${config.code || ''}
       `simulation-bundle-${generateId()}.mjs`,
     );
 
-    config.output = tempOutput;
-    config.tempDir = tempDir; // Use same temp dir for bundle
-
-    config.build = {
-      ...config.build,
+    // Create modified build options for simulation
+    const simulationBuildOptions: BuildOptions = {
+      ...buildOptions,
+      code: modifiedCode,
+      output: tempOutput,
+      tempDir, // Use same temp dir for bundle
       format: 'esm' as const,
       // Force node platform for simulation since we're running in Node.js
       platform: 'node' as const,
     };
 
     // 8. Bundle with downloaded packages (they're already in tempDir/node_modules)
-    await bundleCore(config, createLogger({ silent: true }), false);
+    await bundleCore(
+      flowConfig,
+      simulationBuildOptions,
+      createLogger({ silent: true }),
+      false,
+    );
     bundlePath = tempOutput;
 
     // 9. Inject minimal globals for Node simulation environment
@@ -215,8 +224,11 @@ ${config.code || ''}
     // 11. Populate globals with destination-specific mocks from examples
     // This happens AFTER import so we can access the exported examples
     const importedExamples = module.examples;
-    if (importedExamples && config.destinations) {
-      for (const [key, dest] of Object.entries(config.destinations)) {
+    const destinations2 = (
+      flowConfig as unknown as { destinations?: Record<string, unknown> }
+    ).destinations;
+    if (importedExamples && destinations2) {
+      for (const [key, dest] of Object.entries(destinations2)) {
         const destEnv = importedExamples[key]?.env?.push;
         if (destEnv) {
           if (

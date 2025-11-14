@@ -1,46 +1,58 @@
 {
-  "platform": "server",
-  "packages": {
-    "@walkeros/collector": {}
-  },
-  "code": "",
-  "sources": {
-    "http": {
-      "code": "sourceExpress",
-      "config": {
-        "settings": {
-          "endpoint": "/collect",
-          "port": "${PORT:8080}",
-          "cors": true,
-          "jsonLimit": "10mb"
+  "flow": {
+    "platform": "server",
+    "sources": {
+      "http": {
+        "code": "sourceExpress",
+        "config": {
+          "settings": {
+            "path": "/collect",
+            "port": 8080,
+            "cors": true
+          }
         }
+      }
+    },
+    "destinations": {
+      "demo": {
+        "code": "destinationDemo",
+        "config": {
+          "settings": {
+            "name": "Collect Console Output",
+            "values": ["name", "data", "timestamp"]
+          }
+        }
+      }
+    },
+    "collector": {
+      "run": true,
+      "globals": {
+        "environment": "production",
+        "version": "1.0.0"
       }
     }
   },
-  "destinations": {
-    "console": {
-      "code": "destinationConsole",
-      "config": {
-        "settings": {
-          "pretty": true,
-          "prefix": "[walkerOS]",
-          "includeContext": false
-        }
+  "build": {
+    "packages": {
+      "@walkeros/collector": {
+        "version": "latest",
+        "imports": ["startFlow"]
+      },
+      "@walkeros/server-source-express": {
+        "version": "latest",
+        "imports": ["sourceExpress"]
+      },
+      "@walkeros/destination-demo": {
+        "version": "latest",
+        "imports": ["destinationDemo"]
       }
-    }
-  },
-  "collector": {
-    "run": true,
-    "globals": {
-      "environment": "production",
-      "version": "1.0.0"
-    }
+    },
+    "code": "// Collect mode\n",
+    "template": "/workspaces/walkerOS/packages/cli/templates/base.hbs",
+    "tempDir": "/tmp"
   },
   "docker": {
     "port": 8080,
-    "host": "0.0.0.0",
-    "collect": {
-      "gracefulShutdown": 25000
-    }
+    "host": "0.0.0.0"
   }
 }

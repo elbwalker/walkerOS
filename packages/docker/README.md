@@ -105,62 +105,88 @@ JavaScript bundle **Serve** - Serve static files
 
 ## Flow Configuration
 
-Flow files use Bundle.Config format:
+Flow files use the NEW format with separate `flow` and `build` sections:
 
 ```json
 {
-  "platform": "server",
-  "packages": {
-    "@walkeros/collector": {
-      "version": "latest",
-      "imports": ["startFlow"]
-    }
-  },
-  "code": "",
-  "sources": {
-    "http": {
-      "code": "sourceExpress",
-      "config": {
-        "settings": {
-          "endpoint": "/collect",
-          "port": 8080,
-          "cors": true
+  "flow": {
+    "platform": "server",
+    "sources": {
+      "http": {
+        "code": "sourceExpress",
+        "config": {
+          "settings": {
+            "path": "/collect",
+            "port": 8080,
+            "cors": true
+          }
         }
       }
-    }
-  },
-  "destinations": {
-    "console": {
-      "code": "destinationConsole",
-      "config": {
-        "settings": { "pretty": true }
+    },
+    "destinations": {
+      "demo": {
+        "code": "destinationDemo",
+        "config": {
+          "settings": {
+            "name": "Console Output",
+            "values": ["name", "data", "timestamp"]
+          }
+        }
       }
-    }
+    },
+    "collector": { "run": true }
   },
-  "collector": { "run": true }
+  "build": {
+    "packages": {
+      "@walkeros/collector": {
+        "version": "latest",
+        "imports": ["startFlow"]
+      },
+      "@walkeros/server-source-express": {
+        "version": "latest",
+        "imports": ["sourceExpress"]
+      },
+      "@walkeros/destination-demo": {
+        "version": "latest",
+        "imports": ["destinationDemo"]
+      }
+    },
+    "code": "// Custom initialization\n",
+    "template": "/app/packages/cli/templates/base.hbs",
+    "tempDir": "/tmp"
+  }
 }
 ```
 
 ### Configuration Structure
 
+**Flow section** (runtime configuration):
+
 - **platform**: "web" or "server"
-- **packages**: npm packages to download dynamically with version and imports
-- **code**: Custom initialization code (can be empty string)
 - **sources**: Event sources with `code` field referencing imports
 - **destinations**: Event destinations with `code` field referencing imports
 - **collector**: Processing settings
 
+**Build section** (build-time configuration):
+
+- **packages**: npm packages to download dynamically with version and imports
+- **code**: Custom initialization code (required, can be a comment)
+- **template**: Path to Handlebars template for bundle generation
+- **tempDir**: Temporary directory for build artifacts
+
 ### Port Configuration
 
-Ports are defined in source settings:
+Ports are defined in source settings within the `flow` section:
 
 ```json
 {
-  "sources": {
-    "http": {
-      "config": {
-        "settings": {
-          "port": 8080
+  "flow": {
+    "sources": {
+      "http": {
+        "config": {
+          "settings": {
+            "port": 8080
+          }
         }
       }
     }
@@ -190,12 +216,14 @@ Use environment variables in flow files with `${VAR_NAME}` or
 
 ```json
 {
-  "destinations": {
-    "gtag": {
-      "config": {
-        "settings": {
-          "ga4": {
-            "measurementId": "${GA4_MEASUREMENT_ID}"
+  "flow": {
+    "destinations": {
+      "gtag": {
+        "config": {
+          "settings": {
+            "ga4": {
+              "measurementId": "${GA4_MEASUREMENT_ID}"
+            }
           }
         }
       }

@@ -1,15 +1,15 @@
 import { bundleCommand } from '@walkeros/cli';
-import type { DockerConfig } from '../config/schema';
+import type { Config } from '../config/schema';
 
 /**
  * Run bundle mode - generate static JavaScript bundle
  *
  * Delegates to @walkeros/cli bundleCommand with zero duplication
  */
-export async function runBundleMode(config: DockerConfig): Promise<void> {
+export async function runBundleMode(config: Config): Promise<void> {
   console.log('📦 Bundle mode: Generating static file...');
-  console.log(`   Platform: ${config.platform}`);
-  console.log(`   Output: ${config.output}`);
+  console.log(`   Platform: ${config.flow.platform}`);
+  console.log(`   Output: ${config.build.output}`);
 
   // Get config file path from environment (set by main entry point)
   const configFile = process.env.FLOW;
@@ -21,12 +21,12 @@ export async function runBundleMode(config: DockerConfig): Promise<void> {
     // Delegate to CLI - it handles everything
     await bundleCommand({
       config: configFile, // Pass config file path, not object
-      cache: config.cache !== false,
+      cache: config.build.cache ?? true,
       stats: process.env.DEBUG === 'true',
       verbose: process.env.DEBUG === 'true',
     });
 
-    console.log(`✅ Bundle created successfully: ${config.output}`);
+    console.log(`✅ Bundle created successfully: ${config.build.output}`);
     process.exit(0);
   } catch (error) {
     console.error('❌ Bundle failed:', error);
