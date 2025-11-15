@@ -95,7 +95,7 @@ Two operational modes:
 
 ## Flow Configuration
 
-Flow files use the NEW format with separate `flow` and `build` sections:
+Flow files use the format with separate `flow` and `build` sections:
 
 ```json
 {
@@ -142,11 +142,15 @@ Flow files use the NEW format with separate `flow` and `build` sections:
       }
     },
     "code": "// Custom initialization\n",
-    "template": "/app/packages/cli/templates/base.hbs",
+    "template": "../templates/base.hbs",
+    "output": "bundle.mjs",
     "tempDir": "/tmp"
   }
 }
 ```
+
+**Note**: Template paths starting with `./` or `../` are resolved relative to
+the flow file's directory.
 
 ### Configuration Structure
 
@@ -161,7 +165,8 @@ Flow files use the NEW format with separate `flow` and `build` sections:
 
 - **packages**: npm packages to download dynamically with version and imports
 - **code**: Custom initialization code (required, can be a comment)
-- **template**: Path to Handlebars template for bundle generation
+- **template**: Path to Handlebars template (relative paths supported)
+- **output**: Bundle output path
 - **tempDir**: Temporary directory for build artifacts
 
 ### Port Configuration
@@ -260,7 +265,7 @@ services:
       interval: 30s
 ```
 
-## Phase 1: Built-in Sources and Destinations
+## Built-in Components
 
 ### Sources
 
@@ -372,34 +377,26 @@ docker pull walkeros/docker:latest
 docker pull walkeros/docker:0.1.0
 ```
 
-## Roadmap
+## Status
 
-### Phase A ✅ Complete
+### Production Ready ✅
+
+Core infrastructure complete and tested:
 
 - ✅ Collect mode with Express source
 - ✅ Serve mode for static files
-- ✅ Console destination for testing
+- ✅ CLI integration with `run` command
+- ✅ Flow configuration with template support
 - ✅ Environment variable substitution
-- ✅ Dockerfile with multi-stage build (Node 22)
-- ✅ Tini for proper signal handling
-- ✅ Non-root user (walker:1001)
-- ✅ Built-in flow examples
-- ✅ docker-compose examples
+- ✅ Docker image with security hardening
+- ✅ Comprehensive testing and documentation
 
-### Phase B ✅ Complete (CLI Integration)
+### Next Steps
 
-- ✅ Removed bundle mode from Docker (use `@walkeros/cli` instead)
-- ✅ CLI `run` command for Docker orchestration
-- ✅ Simplified Docker to 2 modes: collect & serve
-- ✅ Zero code duplication architecture
-
-### Phase C (Next)
-
-- ⏳ Production logging and metrics
-- ⏳ Performance testing and optimization
-- ⏳ Multi-platform builds (amd64, arm64)
-- ⏳ Additional sources (PubSub, EventBridge, SQS)
-- ⏳ Docker image publishing automation
+- Production logging and metrics
+- Multi-platform builds (amd64, arm64)
+- Additional sources (PubSub, EventBridge, SQS)
+- Automated Docker Hub publishing
 
 ## License
 

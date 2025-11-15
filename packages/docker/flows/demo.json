@@ -46,6 +46,8 @@
       }
     },
     "code": "// Demo mode\n",
+    "template": "../templates/base.hbs",
+    "output": "demo-bundle.mjs",
     "tempDir": "/tmp"
   },
   "docker": {

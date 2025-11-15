@@ -330,6 +330,22 @@ export function normalizeConfigs(
     ...config.build,
   };
 
+  // Resolve template path relative to config file directory if it starts with ./ or ../
+  // This allows flow files to reference templates next to them, while keeping backward compatibility
+  if (
+    configPath &&
+    buildConfig.template &&
+    !path.isAbsolute(buildConfig.template)
+  ) {
+    if (
+      buildConfig.template.startsWith('./') ||
+      buildConfig.template.startsWith('../')
+    ) {
+      const configDir = path.dirname(configPath);
+      buildConfig.template = path.resolve(configDir, buildConfig.template);
+    }
+  }
+
   // Only use template if explicitly specified
   const buildOptionsToNormalize = {
     ...buildConfig,

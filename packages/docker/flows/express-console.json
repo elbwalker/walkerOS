@@ -48,6 +48,8 @@
       }
     },
     "code": "// Collect mode\n",
+    "template": "../templates/base.hbs",
+    "output": "express-console-bundle.mjs",
     "tempDir": "/tmp"
   },
   "docker": {
