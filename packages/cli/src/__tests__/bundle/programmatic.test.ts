@@ -54,7 +54,7 @@ describe('Programmatic Bundle API', () => {
   it('should bundle with config file path', async () => {
     const configPath = path.resolve(
       __dirname,
-      '../../../examples/web-ecommerce.json',
+      '../../../examples/web-serve.json',
     );
 
     await expect(bundle(configPath, { silent: true })).resolves.not.toThrow();

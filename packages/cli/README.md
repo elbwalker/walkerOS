@@ -48,7 +48,7 @@ walkeros bundle --config flow.json [options]
 
 ```bash
 # Bundle with stats
-walkeros bundle --config examples/server-simple.json --stats
+walkeros bundle --config examples/server-collect.json --stats
 ```
 
 The output path is specified in the config's `build.output` field.
@@ -73,7 +73,7 @@ walkeros simulate --config flow.json --event '{"name":"page view"}' [options]
 ```bash
 # Simulate page view
 walkeros simulate \
-  --config examples/web-ecommerce.json \
+  --config examples/web-serve.json \
   --event '{"name":"page view","data":{"title":"Home"}}' \
   --json
 ```
@@ -105,10 +105,10 @@ walkeros run <mode> --config <path> [options]
 
 ```bash
 # Run collection server (auto-bundles JSON)
-walkeros run collect --config examples/server-simple.json --port 3000
+walkeros run collect --config examples/server-collect.json --port 3000
 
 # Run with pre-built bundle
-walkeros run collect --config examples/server-simple.mjs --port 3000
+walkeros run collect --config examples/server-collect.mjs --port 3000
 
 # Serve static files
 walkeros run serve --config flow.json --port 8080 --static-dir ./dist
@@ -210,24 +210,24 @@ await runCommand('collect', {
 
 Working example configs in [examples/](./examples/):
 
-- **server-simple.json** - Basic server-side collection
+- **server-collect.json** - Basic server-side collection
 - **server-collection.json** - Advanced server setup
-- **web-ecommerce.json** - E-commerce tracking
+- **web-serve.json** - Web demo with API destination
 - **web-tracking.json** - General web tracking
 
 Try them:
 
 ```bash
 # Bundle example
-walkeros bundle --config examples/server-simple.json --stats
+walkeros bundle --config examples/server-collect.json --stats
 
 # Simulate
 walkeros simulate \
-  --config examples/web-ecommerce.json \
+  --config examples/web-serve.json \
   --event '{"name":"product view","data":{"id":"P123"}}'
 
 # Run server
-walkeros run collect --config examples/server-simple.json --port 3000
+walkeros run collect --config examples/server-collect.json --port 3000
 ```
 
 ## Development Workflow

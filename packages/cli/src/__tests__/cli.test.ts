@@ -203,10 +203,7 @@ describe('CLI Bundle Command', () => {
 });
 
 describe('CLI Simulate Command', () => {
-  const testConfigPath = path.join(
-    __dirname,
-    '../../examples/web-ecommerce.json',
-  );
+  const testConfigPath = path.join(__dirname, '../../examples/web-serve.json');
 
   beforeEach(() => {
     // Mock console.log and console.error to suppress output during tests

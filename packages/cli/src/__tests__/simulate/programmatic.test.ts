@@ -10,7 +10,7 @@ describe('Programmatic Simulate API', () => {
   it('should simulate with config file path', async () => {
     const configPath = path.resolve(
       __dirname,
-      '../../../examples/web-ecommerce.json',
+      '../../../examples/web-serve.json',
     );
     const event = { name: 'page view', data: { title: 'Home', path: '/' } };
 
@@ -31,7 +31,7 @@ describe('Programmatic Simulate API', () => {
   it('should handle verbose option', async () => {
     const configPath = path.resolve(
       __dirname,
-      '../../../examples/web-ecommerce.json',
+      '../../../examples/web-serve.json',
     );
     const event = { name: 'product view', data: { id: 'P123' } };
 
@@ -61,7 +61,7 @@ describe('Programmatic Simulate API', () => {
   it('should handle JSON option', async () => {
     const configPath = path.resolve(
       __dirname,
-      '../../../examples/web-ecommerce.json',
+      '../../../examples/web-serve.json',
     );
     const event = { name: 'page view', data: {} };
 

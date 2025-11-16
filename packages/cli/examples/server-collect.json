@@ -50,7 +50,7 @@
     },
     "code": "// Simple server-side event collection with demo destination\n",
     "template": "../templates/base.hbs",
-    "output": "server-simple.mjs",
+    "output": "server-collect.mjs",
     "tempDir": "/tmp"
   }
 }

@@ -5,23 +5,26 @@ walkerOS use cases.
 
 ## Web Examples
 
-### web-ecommerce.json
+### web-serve.json
 
-**Purpose**: Simple web demo with test events
+**Purpose**: Browser bundle that sends events to collector
 
 **Features**:
 
 - sourceDemo (generates test events automatically)
-- destinationDemo (console output)
+- destinationDemo (console output for debugging)
+- destinationAPI (sends events to http://localhost:8080/collect)
 - Simulates page views and product views
 
-**Use case**: Quick testing and understanding basic flow structure
+**Use case**: Demo web tracking that connects to server-collect.json for full
+event flow testing
 
 **Try it**:
 
 ```bash
-walkeros bundle -c examples/web-ecommerce.json --stats
-walkeros simulate -c examples/web-ecommerce.json -e '{"name":"page view","data":{"title":"Home"}}'
+walkeros bundle examples/web-serve.json
+walkeros run serve examples/web-serve.mjs -p 3000
+# Open http://localhost:3000 in browser
 ```
 
 ### web-tracking.json
@@ -68,6 +71,32 @@ walkeros simulate -c examples/web-tracking.json \
 ```
 
 ## Server Examples
+
+### server-collect.json
+
+**Purpose**: Minimal server-side event collection endpoint
+
+**Features**:
+
+- sourceExpress (HTTP endpoint at /collect)
+- destinationDemo (console logging)
+- CORS enabled for browser requests
+- Health check endpoint
+
+**Use case**: Simple event collector for demo and testing, receives events from
+web-serve.json
+
+**Try it**:
+
+```bash
+walkeros bundle examples/server-collect.json
+walkeros run collect examples/server-collect.mjs -p 8080
+
+# In another terminal, send test event:
+curl -X POST http://localhost:8080/collect \
+  -H "Content-Type: application/json" \
+  -d '{"name":"page view","data":{"title":"Test"}}'
+```
 
 ### server-collection.json
 
@@ -122,8 +151,35 @@ curl -X POST http://localhost:8080/collect \
 
 ## Workflow: Web → Server
 
-A common pattern is to collect events in the browser and send them to a server
-for processing:
+### Quick Demo Loop (web-serve → server-collect)
+
+The simplest way to see the complete event flow:
+
+**Terminal 1 - Start collector**:
+
+```bash
+walkeros bundle examples/server-collect.json
+walkeros run collect examples/server-collect.mjs -p 8080
+```
+
+**Terminal 2 - Start web server**:
+
+```bash
+walkeros bundle examples/web-serve.json
+walkeros run serve examples/web-serve.mjs -p 3000
+```
+
+**Browser**: Open http://localhost:3000
+
+**Events flow**:
+
+```
+Browser (demo source) → destinationAPI → POST /collect → sourceExpress → destinationDemo (console)
+```
+
+### Production Pattern (web-tracking → server-collection)
+
+For production with real analytics platforms:
 
 **1. Start collection server**:
 
@@ -134,10 +190,10 @@ walkeros run collect examples/server-collection.json -p 8080
 **2. Bundle web tracking** (configured to send to localhost:8080):
 
 ```bash
-walkeros bundle -c examples/web-tracking.json
+walkeros bundle examples/web-tracking.json
 ```
 
-**3. Deploy** `dist/web-tracking.js` to your website
+**3. Deploy** bundle to your website
 
 **4. Events flow**:
 

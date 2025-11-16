@@ -19,8 +19,8 @@ describe('Run Command Integration', () => {
     });
 
     it('should accept pre-built bundle files', () => {
-      // Use the pre-built server-simple.mjs bundle
-      const bundlePath = join(projectRoot, 'examples/server-simple.mjs');
+      // Use the pre-built server-collect.mjs bundle
+      const bundlePath = join(projectRoot, 'examples/server-collect.mjs');
 
       // Verify the bundle exists
       expect(existsSync(bundlePath)).toBe(true);
@@ -33,8 +33,8 @@ describe('Run Command Integration', () => {
     });
 
     it('should validate JSON config structure', async () => {
-      // Use the server-simple.json config
-      const configPath = join(projectRoot, 'examples/server-simple.json');
+      // Use the server-collect.json config
+      const configPath = join(projectRoot, 'examples/server-collect.json');
 
       // Verify the config exists and is valid JSON
       expect(existsSync(configPath)).toBe(true);

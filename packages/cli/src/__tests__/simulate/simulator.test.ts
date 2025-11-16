@@ -11,7 +11,7 @@ describe('Simulate', () => {
   it('should handle package manager errors gracefully', async () => {
     const configPath = path.resolve(
       __dirname,
-      '../../../examples/web-ecommerce.json',
+      '../../../examples/web-serve.json',
     );
     const event = { name: 'product view', data: { id: 'P123' } };
 

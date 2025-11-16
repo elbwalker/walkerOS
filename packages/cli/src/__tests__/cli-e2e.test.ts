@@ -33,14 +33,14 @@ describe('CLI E2E Tests', () => {
 
   describe('bundle command', () => {
     it('should bundle a simple server config', async () => {
-      const configPath = join(projectRoot, 'examples/server-simple.json');
+      const configPath = join(projectRoot, 'examples/server-collect.json');
 
       const result = await runCLI(['bundle', '--config', configPath]);
 
       expect(result.code).toBe(0);
 
       // Verify the output file was created (as specified in the config)
-      const outputPath = join(projectRoot, 'examples/server-simple.mjs');
+      const outputPath = join(projectRoot, 'examples/server-collect.mjs');
       expect(existsSync(outputPath)).toBe(true);
     }, 30000);
 
@@ -56,7 +56,7 @@ describe('CLI E2E Tests', () => {
     }, 10000);
 
     it('should handle --stats flag', async () => {
-      const configPath = join(projectRoot, 'examples/server-simple.json');
+      const configPath = join(projectRoot, 'examples/server-collect.json');
 
       const result = await runCLI([
         'bundle',
@@ -72,7 +72,7 @@ describe('CLI E2E Tests', () => {
 
   describe('simulate command', () => {
     it('should simulate with --json output', async () => {
-      const configPath = join(projectRoot, 'examples/web-ecommerce.json');
+      const configPath = join(projectRoot, 'examples/web-serve.json');
 
       const result = await runCLI([
         'simulate',

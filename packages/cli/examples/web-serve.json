@@ -35,6 +35,14 @@
             "name": "demo"
           }
         }
+      },
+      "api": {
+        "code": "destinationAPI",
+        "config": {
+          "settings": {
+            "url": "http://localhost:8080/collect"
+          }
+        }
       }
     },
     "collector": {
@@ -54,12 +62,15 @@
       },
       "@walkeros/destination-demo": {
         "imports": ["destinationDemo"]
+      },
+      "@walkeros/web-destination-api": {
+        "imports": ["destinationAPI"]
       }
     },
     "code": "// walkerOS configuration",
     "minify": false,
     "globalName": "walkerOS",
-    "output": "./dist/web-ecommerce.js",
+    "output": "web-serve.mjs",
     "template": "templates/base.hbs"
   }
 }
