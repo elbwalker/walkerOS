@@ -171,7 +171,7 @@ Minimal example:
     },
     "code": "// Custom code here\n",
     "output": "bundle.mjs",
-    "template": "../../docker/templates/base.hbs"
+    "template": "./templates/base.hbs"
   }
 }
 ```

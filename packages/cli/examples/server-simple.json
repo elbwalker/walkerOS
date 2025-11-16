@@ -49,7 +49,7 @@
       }
     },
     "code": "// Simple server-side event collection with demo destination\n",
-    "template": "../../docker/templates/base.hbs",
+    "template": "../templates/base.hbs",
     "output": "server-simple.mjs",
     "tempDir": "/tmp"
   }
