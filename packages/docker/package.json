@@ -7,7 +7,8 @@
   "types": "./dist/index.d.mts",
   "license": "MIT",
   "files": [
-    "dist/**"
+    "dist/**",
+    "demos/**"
   ],
   "scripts": {
     "build": "tsup --silent",
