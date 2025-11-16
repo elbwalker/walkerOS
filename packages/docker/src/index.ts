@@ -1,18 +1,14 @@
 #!/usr/bin/env node
 
-import { loadDockerConfig, parseDockerConfig } from './config';
-import type { Config } from './config/schema';
-import { registerSource, registerDestination } from './config/registry';
-import { sourceExpress } from './sources/express';
-import { destinationConsole } from './destinations/console';
-import { runCollectMode } from './services/collect';
+import { runFlow } from './services/runner';
 import { runServeMode } from './services/serve';
 
 /**
  * walkerOS Docker Container
  *
+ * Pure runtime container for executing pre-built flows.
  * Supports two operational modes:
- * - collect: Run event collection server
+ * - collect: Run event collection server from pre-built flow
  * - serve: Serve static files
  */
 
@@ -23,14 +19,14 @@ async function main() {
   if (!mode) {
     console.error('❌ Error: MODE environment variable required');
     console.error('   Valid modes: collect | serve');
-    console.error('   Example: MODE=collect FLOW=/app/config/flow.json');
+    console.error('   Example: MODE=collect FLOW=/app/flow.mjs');
     process.exit(1);
   }
 
   if (!['collect', 'serve'].includes(mode)) {
     console.error(`❌ Error: Invalid MODE="${mode}"`);
     console.error('   Valid modes: collect | serve');
-    console.error('   Note: Use @walkeros/cli for bundle generation');
+    console.error('   Note: Build flows with @walkeros/cli first');
     process.exit(1);
   }
 
@@ -40,31 +36,36 @@ async function main() {
   console.log(`Mode: ${mode.toUpperCase()}\n`);
 
   try {
-    // Register Phase 1 built-in sources and destinations
-    registerSource('sourceExpress', sourceExpress);
-    registerDestination('destinationConsole', destinationConsole);
-
     // Run the appropriate mode
     switch (mode) {
       case 'collect': {
-        const config = await loadDockerConfig();
-        await runCollectMode(config);
+        const flowPath = process.env.FLOW;
+
+        if (!flowPath) {
+          throw new Error(
+            'FLOW environment variable required. ' +
+              'Example: FLOW=/app/flow.mjs',
+          );
+        }
+
+        // Extract port from environment if set
+        const port = process.env.PORT
+          ? parseInt(process.env.PORT, 10)
+          : undefined;
+        const host = process.env.HOST;
+
+        await runFlow(flowPath, { port, host });
         break;
       }
 
       case 'serve': {
-        // Serve mode works without config (uses defaults + env vars)
-        const config = process.env.FLOW
-          ? await loadDockerConfig()
-          : ({
-              flow: { platform: 'web' as const },
-              build: {
-                packages: {},
-                code: '',
-                output: '',
-              },
-              docker: parseDockerConfig({}),
-            } as unknown as Config);
+        // Serve mode uses minimal config from environment variables
+        const config = {
+          port: process.env.PORT ? parseInt(process.env.PORT, 10) : 8080,
+          host: process.env.HOST || '0.0.0.0',
+          staticDir: process.env.STATIC_DIR || '/app/dist',
+        };
+
         await runServeMode(config);
         break;
       }
@@ -94,5 +95,11 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-// Run main
-main();
+// Export functions for CLI usage
+export { runFlow, type RuntimeConfig } from './services/runner';
+export { runServeMode, type ServeConfig } from './services/serve';
+
+// Run main only when executed directly (not when imported)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

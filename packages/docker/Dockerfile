@@ -1,4 +1,5 @@
 # walkerOS Docker Container
+# Pure runtime container for executing pre-built flows
 # Multi-stage build for optimized production images
 
 # ============================================================================
@@ -12,11 +13,7 @@ WORKDIR /app
 COPY package.json package-lock.json turbo.json ./
 COPY packages/docker/package.json ./packages/docker/
 
-# Copy all required packages for monorepo
-COPY packages/core ./packages/core
-COPY packages/collector ./packages/collector
-COPY packages/cli ./packages/cli
-COPY packages/cli/templates ./packages/cli/templates
+# Copy only config package (for build tools)
 COPY packages/config ./packages/config
 
 # Install dependencies (including devDependencies for build)
@@ -25,7 +22,7 @@ RUN npm ci
 # Copy docker source code
 COPY packages/docker ./packages/docker
 
-# Build the docker package
+# Build the docker package (pure runtime only)
 RUN npm run build --workspace=@walkeros/docker
 
 # ============================================================================
@@ -42,18 +39,10 @@ RUN apk add --no-cache tini
 COPY package.json package-lock.json ./
 COPY packages/docker/package.json ./packages/docker/
 
-# Copy built packages from builder
-COPY --from=builder /app/packages/core/dist ./packages/core/dist
-COPY --from=builder /app/packages/core/package.json ./packages/core/
-COPY --from=builder /app/packages/collector/dist ./packages/collector/dist
-COPY --from=builder /app/packages/collector/package.json ./packages/collector/
-COPY --from=builder /app/packages/cli/dist ./packages/cli/dist
-COPY --from=builder /app/packages/cli/package.json ./packages/cli/
-COPY --from=builder /app/packages/cli/templates ./packages/cli/templates
+# Copy only the Docker runtime (no build tools, no other packages)
 COPY --from=builder /app/packages/docker/dist ./packages/docker/dist
-COPY --from=builder /app/packages/docker/flows ./flows
 
-# Install production dependencies
+# Install minimal production dependencies (express, cors, zod)
 RUN npm ci --production --workspace=@walkeros/docker
 
 # Create non-root user
@@ -61,7 +50,7 @@ RUN addgroup -g 1001 walker && \
     adduser -D -u 1001 -G walker walker
 
 # Create necessary directories and set ownership
-RUN mkdir -p /app/dist /app/config && \
+RUN mkdir -p /app/dist && \
     chown -R walker:walker /app && \
     chmod 1777 /tmp
 
