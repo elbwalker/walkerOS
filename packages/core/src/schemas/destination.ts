@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, toJsonSchema } from './validation';
 import { ConsentSchema, EventSchema } from './walkeros';
 import {
   ValueSchema,
@@ -326,44 +325,28 @@ export const DLQSchema = z
 // JSON Schema Exports (for Explorer/RJSF/MCP)
 // ========================================
 
-export const configJsonSchema = zodToJsonSchema(ConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'DestinationConfig',
-});
+export const configJsonSchema = toJsonSchema(ConfigSchema, 'DestinationConfig');
 
-export const partialConfigJsonSchema = zodToJsonSchema(PartialConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'PartialDestinationConfig',
-});
+export const partialConfigJsonSchema = toJsonSchema(
+  PartialConfigSchema,
+  'PartialDestinationConfig',
+);
 
-export const contextJsonSchema = zodToJsonSchema(ContextSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'DestinationContext',
-});
+export const contextJsonSchema = toJsonSchema(
+  ContextSchema,
+  'DestinationContext',
+);
 
-export const pushContextJsonSchema = zodToJsonSchema(PushContextSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'PushContext',
-});
+export const pushContextJsonSchema = toJsonSchema(
+  PushContextSchema,
+  'PushContext',
+);
 
-export const batchJsonSchema = zodToJsonSchema(BatchSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Batch',
-});
+export const batchJsonSchema = toJsonSchema(BatchSchema, 'Batch');
 
-export const instanceJsonSchema = zodToJsonSchema(InstanceSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'DestinationInstance',
-});
+export const instanceJsonSchema = toJsonSchema(
+  InstanceSchema,
+  'DestinationInstance',
+);
 
-export const resultJsonSchema = zodToJsonSchema(ResultSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'DestinationResult',
-});
+export const resultJsonSchema = toJsonSchema(ResultSchema, 'DestinationResult');

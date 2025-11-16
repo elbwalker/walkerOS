@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, toJsonSchema } from './validation';
 import { ConfigSchema as MappingConfigSchema } from './mapping';
 import { Identifier } from './primitives';
 import { ErrorHandlerSchema } from './utilities';
@@ -212,38 +211,26 @@ export const InitSourcesSchema = z
 // JSON Schema Exports (for Explorer/RJSF/MCP)
 // ========================================
 
-export const baseEnvJsonSchema = zodToJsonSchema(BaseEnvSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'SourceBaseEnv',
-});
+export const baseEnvJsonSchema = toJsonSchema(BaseEnvSchema, 'SourceBaseEnv');
 
-export const configJsonSchema = zodToJsonSchema(ConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'SourceConfig',
-});
+export const configJsonSchema = toJsonSchema(ConfigSchema, 'SourceConfig');
 
-export const partialConfigJsonSchema = zodToJsonSchema(PartialConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'PartialSourceConfig',
-});
+export const partialConfigJsonSchema = toJsonSchema(
+  PartialConfigSchema,
+  'PartialSourceConfig',
+);
 
-export const instanceJsonSchema = zodToJsonSchema(InstanceSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'SourceInstance',
-});
+export const instanceJsonSchema = toJsonSchema(
+  InstanceSchema,
+  'SourceInstance',
+);
 
-export const initSourceJsonSchema = zodToJsonSchema(InitSourceSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'InitSource',
-});
+export const initSourceJsonSchema = toJsonSchema(
+  InitSourceSchema,
+  'InitSource',
+);
 
-export const initSourcesJsonSchema = zodToJsonSchema(InitSourcesSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'InitSources',
-});
+export const initSourcesJsonSchema = toJsonSchema(
+  InitSourcesSchema,
+  'InitSources',
+);

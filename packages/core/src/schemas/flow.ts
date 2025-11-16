@@ -14,8 +14,7 @@
  * @packageDocumentation
  */
 
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, toJsonSchema, zodToJsonSchema } from './validation';
 
 // ========================================
 // Primitive Type Schemas
@@ -60,7 +59,7 @@ export const SourceReferenceSchema = z
       .boolean()
       .optional()
       .describe(
-        'Mark as primary source (provides main ELB). Only one source should be primary.',
+        'Mark as primary source (provides main elb). Only one source should be primary.',
       ),
   })
   .describe('Source package reference with configuration');
@@ -317,11 +316,11 @@ export const setupJsonSchema = zodToJsonSchema(SetupSchema, {
  *
  * @returns JSON Schema (Draft 7) representation of ConfigSchema
  */
-export const configJsonSchema = zodToJsonSchema(ConfigSchema, {
-  name: 'FlowConfig',
-  $refStrategy: 'root',
-  target: 'jsonSchema7',
-});
+export const configJsonSchema = toJsonSchema(
+  ConfigSchema,
+  'FlowConfig',
+  'root',
+);
 
 /**
  * Generate JSON Schema for SourceReference.
@@ -331,13 +330,10 @@ export const configJsonSchema = zodToJsonSchema(ConfigSchema, {
  *
  * @returns JSON Schema (Draft 7) representation of SourceReferenceSchema
  */
-export const sourceReferenceJsonSchema = zodToJsonSchema(
+export const sourceReferenceJsonSchema = toJsonSchema(
   SourceReferenceSchema,
-  {
-    name: 'SourceReference',
-    $refStrategy: 'root',
-    target: 'jsonSchema7',
-  },
+  'SourceReference',
+  'root',
 );
 
 /**
@@ -348,11 +344,8 @@ export const sourceReferenceJsonSchema = zodToJsonSchema(
  *
  * @returns JSON Schema (Draft 7) representation of DestinationReferenceSchema
  */
-export const destinationReferenceJsonSchema = zodToJsonSchema(
+export const destinationReferenceJsonSchema = toJsonSchema(
   DestinationReferenceSchema,
-  {
-    name: 'DestinationReference',
-    $refStrategy: 'root',
-    target: 'jsonSchema7',
-  },
+  'DestinationReference',
+  'root',
 );

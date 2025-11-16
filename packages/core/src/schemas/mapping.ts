@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, toJsonSchema } from './validation';
 import { ConsentSchema } from './walkeros';
 
 /**
@@ -305,56 +304,23 @@ export const ResultSchema = z
 // JSON Schema Exports (for Explorer/RJSF/MCP)
 // ========================================
 
-export const valueJsonSchema = zodToJsonSchema(ValueSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Value',
-});
+export const valueJsonSchema = toJsonSchema(ValueSchema, 'Value');
 
-export const valueConfigJsonSchema = zodToJsonSchema(ValueConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'ValueConfig',
-});
+export const valueConfigJsonSchema = toJsonSchema(
+  ValueConfigSchema,
+  'ValueConfig',
+);
 
-export const loopJsonSchema = zodToJsonSchema(LoopSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Loop',
-});
+export const loopJsonSchema = toJsonSchema(LoopSchema, 'Loop');
 
-export const setJsonSchema = zodToJsonSchema(SetSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Set',
-});
+export const setJsonSchema = toJsonSchema(SetSchema, 'Set');
 
-export const mapJsonSchema = zodToJsonSchema(MapSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Map',
-});
+export const mapJsonSchema = toJsonSchema(MapSchema, 'Map');
 
-export const policyJsonSchema = zodToJsonSchema(PolicySchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Policy',
-});
+export const policyJsonSchema = toJsonSchema(PolicySchema, 'Policy');
 
-export const ruleJsonSchema = zodToJsonSchema(RuleSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Rule',
-});
+export const ruleJsonSchema = toJsonSchema(RuleSchema, 'Rule');
 
-export const rulesJsonSchema = zodToJsonSchema(RulesSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Rules',
-});
+export const rulesJsonSchema = toJsonSchema(RulesSchema, 'Rules');
 
-export const configJsonSchema = zodToJsonSchema(ConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'MappingConfig',
-});
+export const configJsonSchema = toJsonSchema(ConfigSchema, 'MappingConfig');

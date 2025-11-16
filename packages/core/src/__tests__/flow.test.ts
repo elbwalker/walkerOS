@@ -526,38 +526,39 @@ describe('Flow Schemas', () => {
     test('setupJsonSchema is valid JSON Schema', () => {
       expect(setupJsonSchema).toHaveProperty('$schema');
       expect(setupJsonSchema).toHaveProperty('definitions');
-      expect(setupJsonSchema.definitions).toHaveProperty('FlowConfig');
-      expect(setupJsonSchema.definitions.FlowConfig).toHaveProperty(
+      expect(setupJsonSchema.definitions!).toHaveProperty('FlowConfig');
+      expect(setupJsonSchema.definitions!.FlowConfig).toHaveProperty(
         'properties',
       );
-      expect(setupJsonSchema.definitions.FlowConfig.properties).toHaveProperty(
-        'platform',
-      );
+      expect(
+        (setupJsonSchema.definitions!.FlowConfig as any).properties,
+      ).toHaveProperty('platform');
     });
 
     test('configJsonSchema is valid JSON Schema', () => {
       expect(configJsonSchema).toHaveProperty('$schema');
       expect(configJsonSchema).toHaveProperty('definitions');
-      expect(configJsonSchema.definitions.FlowConfig).toHaveProperty(
+      expect(configJsonSchema.definitions!.FlowConfig).toHaveProperty(
         'type',
         'object',
       );
-      expect(configJsonSchema.definitions.FlowConfig).toHaveProperty(
+      expect(configJsonSchema.definitions!.FlowConfig).toHaveProperty(
         'properties',
       );
-      expect(configJsonSchema.definitions.FlowConfig.properties).toHaveProperty(
-        'platform',
-      );
+      expect(
+        (configJsonSchema.definitions!.FlowConfig as any).properties,
+      ).toHaveProperty('platform');
     });
 
     test('sourceReferenceJsonSchema is valid JSON Schema', () => {
       expect(sourceReferenceJsonSchema).toHaveProperty('$schema');
       expect(sourceReferenceJsonSchema).toHaveProperty('definitions');
       expect(
-        sourceReferenceJsonSchema.definitions.SourceReference,
+        sourceReferenceJsonSchema.definitions!.SourceReference,
       ).toHaveProperty('properties');
       expect(
-        sourceReferenceJsonSchema.definitions.SourceReference.properties,
+        (sourceReferenceJsonSchema.definitions!.SourceReference as any)
+          .properties,
       ).toHaveProperty('package');
     });
 
@@ -565,11 +566,13 @@ describe('Flow Schemas', () => {
       expect(destinationReferenceJsonSchema).toHaveProperty('$schema');
       expect(destinationReferenceJsonSchema).toHaveProperty('definitions');
       expect(
-        destinationReferenceJsonSchema.definitions.DestinationReference,
+        destinationReferenceJsonSchema.definitions!.DestinationReference,
       ).toHaveProperty('properties');
       expect(
-        destinationReferenceJsonSchema.definitions.DestinationReference
-          .properties,
+        (
+          destinationReferenceJsonSchema.definitions!
+            .DestinationReference as any
+        ).properties,
       ).toHaveProperty('package');
     });
   });

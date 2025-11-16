@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, toJsonSchema } from './validation';
 import {
   RequiredString,
   RequiredNumber,
@@ -278,53 +277,30 @@ export const DeepPartialEventSchema: z.ZodTypeAny = z
 // JSON Schema Exports (for Explorer/RJSF/MCP)
 // ========================================
 
-export const eventJsonSchema = zodToJsonSchema(EventSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Event',
-});
+export const eventJsonSchema = toJsonSchema(EventSchema, 'Event');
 
-export const partialEventJsonSchema = zodToJsonSchema(PartialEventSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'PartialEvent',
-});
-
-export const userJsonSchema = zodToJsonSchema(UserSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'User',
-});
-
-export const propertiesJsonSchema = zodToJsonSchema(PropertiesSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Properties',
-});
-
-export const orderedPropertiesJsonSchema = zodToJsonSchema(
-  OrderedPropertiesSchema,
-  {
-    target: 'jsonSchema7',
-    $refStrategy: 'relative',
-    name: 'OrderedProperties',
-  },
+export const partialEventJsonSchema = toJsonSchema(
+  PartialEventSchema,
+  'PartialEvent',
 );
 
-export const entityJsonSchema = zodToJsonSchema(EntitySchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Entity',
-});
+export const userJsonSchema = toJsonSchema(UserSchema, 'User');
 
-export const sourceTypeJsonSchema = zodToJsonSchema(SourceTypeSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'SourceType',
-});
+export const propertiesJsonSchema = toJsonSchema(
+  PropertiesSchema,
+  'Properties',
+);
 
-export const consentJsonSchema = zodToJsonSchema(ConsentSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Consent',
-});
+export const orderedPropertiesJsonSchema = toJsonSchema(
+  OrderedPropertiesSchema,
+  'OrderedProperties',
+);
+
+export const entityJsonSchema = toJsonSchema(EntitySchema, 'Entity');
+
+export const sourceTypeJsonSchema = toJsonSchema(
+  SourceTypeSchema,
+  'SourceType',
+);
+
+export const consentJsonSchema = toJsonSchema(ConsentSchema, 'Consent');

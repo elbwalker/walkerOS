@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, toJsonSchema } from './validation';
 
 /**
  * Utility Schemas
@@ -103,32 +102,21 @@ export const HandlerSchema = z
 // JSON Schema Exports (for Explorer/RJSF/MCP)
 // ========================================
 
-export const storageTypeJsonSchema = zodToJsonSchema(StorageTypeSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'StorageType',
-});
+export const storageTypeJsonSchema = toJsonSchema(
+  StorageTypeSchema,
+  'StorageType',
+);
 
-export const storageJsonSchema = zodToJsonSchema(StorageSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Storage',
-});
+export const storageJsonSchema = toJsonSchema(StorageSchema, 'Storage');
 
-export const errorHandlerJsonSchema = zodToJsonSchema(ErrorHandlerSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'ErrorHandler',
-});
+export const errorHandlerJsonSchema = toJsonSchema(
+  ErrorHandlerSchema,
+  'ErrorHandler',
+);
 
-export const logHandlerJsonSchema = zodToJsonSchema(LogHandlerSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'LogHandler',
-});
+export const logHandlerJsonSchema = toJsonSchema(
+  LogHandlerSchema,
+  'LogHandler',
+);
 
-export const handlerJsonSchema = zodToJsonSchema(HandlerSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Handler',
-});
+export const handlerJsonSchema = toJsonSchema(HandlerSchema, 'Handler');

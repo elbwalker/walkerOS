@@ -172,11 +172,10 @@ export * from './schema-builder';
  * Usage in destinations:
  * import { z, zodToJsonSchema, zodToSchema } from '@walkeros/core';
  */
-export { z } from 'zod';
-export { zodToJsonSchema } from 'zod-to-json-schema';
+export { z, zodToJsonSchema } from './validation';
 
-import type { z as zod } from 'zod';
-import { zodToJsonSchema as toJsonSchema } from 'zod-to-json-schema';
+import type { zod } from './validation';
+import { zodToJsonSchema } from './validation';
 
 /**
  * Utility to convert Zod schema to JSON Schema with consistent defaults
@@ -190,7 +189,7 @@ import { zodToJsonSchema as toJsonSchema } from 'zod-to-json-schema';
  * export const settings = zodToSchema(SettingsSchema);
  */
 export function zodToSchema(schema: zod.ZodTypeAny) {
-  return toJsonSchema(schema, {
+  return zodToJsonSchema(schema, {
     target: 'jsonSchema7',
     $refStrategy: 'none',
   });

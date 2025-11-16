@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, toJsonSchema } from './validation';
 import {
   ConsentSchema,
   UserSchema,
@@ -278,38 +277,29 @@ export const InstanceSchema = z
 // JSON Schema Exports (for Explorer/RJSF/MCP)
 // ========================================
 
-export const commandTypeJsonSchema = zodToJsonSchema(CommandTypeSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'CommandType',
-});
+export const commandTypeJsonSchema = toJsonSchema(
+  CommandTypeSchema,
+  'CommandType',
+);
 
-export const configJsonSchema = zodToJsonSchema(ConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'CollectorConfig',
-});
+export const configJsonSchema = toJsonSchema(ConfigSchema, 'CollectorConfig');
 
-export const sessionDataJsonSchema = zodToJsonSchema(SessionDataSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'SessionData',
-});
+export const sessionDataJsonSchema = toJsonSchema(
+  SessionDataSchema,
+  'SessionData',
+);
 
-export const initConfigJsonSchema = zodToJsonSchema(InitConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'InitConfig',
-});
+export const initConfigJsonSchema = toJsonSchema(
+  InitConfigSchema,
+  'InitConfig',
+);
 
-export const pushContextJsonSchema = zodToJsonSchema(PushContextSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'CollectorPushContext',
-});
+export const pushContextJsonSchema = toJsonSchema(
+  PushContextSchema,
+  'CollectorPushContext',
+);
 
-export const instanceJsonSchema = zodToJsonSchema(InstanceSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'CollectorInstance',
-});
+export const instanceJsonSchema = toJsonSchema(
+  InstanceSchema,
+  'CollectorInstance',
+);

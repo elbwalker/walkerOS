@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from './validation';
 import {} from './primitives';
 import { ErrorHandlerSchema, LogHandlerSchema } from './utilities';
 

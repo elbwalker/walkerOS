@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, toJsonSchema } from './validation';
 
 /**
  * Zod Schemas for walkerOS Mapping ValueConfig
@@ -21,7 +20,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
  * const result = ValueConfigSchema.safeParse(userInput);
  *
  * // Generate JSON Schema for Explorer
- * const jsonSchema = zodToJsonSchema(ValueConfigSchema);
+ * const jsonSchema = toJsonSchema(ValueConfigSchema, 'ValueConfig');
  */
 
 /**
@@ -128,26 +127,13 @@ export const MapSchema = MapSchemaLazy;
 export const ValueConfigSchema = ValueConfigSchemaLazy;
 
 // JSON Schema generation for RJSF/Explorer
-export const valueConfigJsonSchema = zodToJsonSchema(ValueConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'ValueConfig',
-});
+export const valueConfigJsonSchema = toJsonSchema(
+  ValueConfigSchema,
+  'ValueConfig',
+);
 
-export const loopJsonSchema = zodToJsonSchema(LoopSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Loop',
-});
+export const loopJsonSchema = toJsonSchema(LoopSchema, 'Loop');
 
-export const setJsonSchema = zodToJsonSchema(SetSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Set',
-});
+export const setJsonSchema = toJsonSchema(SetSchema, 'Set');
 
-export const mapJsonSchema = zodToJsonSchema(MapSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Map',
-});
+export const mapJsonSchema = toJsonSchema(MapSchema, 'Map');
