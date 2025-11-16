@@ -65,26 +65,3 @@ export function validatePort(port: number): void {
     );
   }
 }
-
-/**
- * Validates container name
- *
- * @param name - Container name to validate
- * @throws Error if name is invalid
- */
-export function validateContainerName(name: string): void {
-  // Docker container name rules:
-  // - Only [a-zA-Z0-9][a-zA-Z0-9_.-]
-  // - Must start with alphanumeric
-  const validNamePattern = /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/;
-
-  if (!validNamePattern.test(name)) {
-    throw new Error(
-      `Invalid container name: "${name}"\n` +
-        `   Container names must:\n` +
-        `   - Start with a letter or number\n` +
-        `   - Contain only letters, numbers, underscores, periods, and hyphens\n` +
-        `   Example: --name walkeros-collector`,
-    );
-  }
-}

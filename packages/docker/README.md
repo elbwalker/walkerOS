@@ -1,230 +1,169 @@
 # @walkeros/docker
 
-Production-ready Docker container for walkerOS with built-in flow
-configurations.
+Pure runtime Docker container for walkerOS - executes pre-built flow bundles
+with instant startup and minimal footprint.
+
+## Overview
+
+This is a **runtime-only** container designed for production deployment. It does
+NOT bundle or build flows - it only executes pre-built `.mjs` bundles.
+
+**Key Characteristics:**
+
+- ⚡ **<1s startup** - No npm downloads or build steps at runtime
+- 📦 **~50MB image** - Only runtime dependencies (express, cors, zod)
+- 🔒 **Secure** - No build tools or package managers in production
+- ☁️ **Cloud-optimized** - Perfect for GCP Cloud Run, Kubernetes, ECS
+- 🎯 **Single responsibility** - Execute flows, nothing else
+
+## Architecture
+
+```
+Build Phase (CLI)          Runtime Phase (Docker)
+─────────────────         ────────────────────────
+flow.json                 flow.mjs (pre-built)
+    ↓                            ↓
+CLI bundles              Docker imports & runs
+    ↓                            ↓
+flow.mjs  ──────────────→  Running collector
+```
+
+**What's included:** Express server, flow executor, graceful shutdown **What's
+NOT included:** CLI, bundler, npm, build tools
+
+See [docs/CAPABILITIES.md](./docs/CAPABILITIES.md) for detailed architecture
+documentation.
 
 ## Quick Start
 
-```bash
-# Run demo (flows are already in the image)
-docker run -e MODE=collect -e FLOW=/app/flows/demo.json walkeros/docker:latest
-```
+### Step 1: Build Your Flow
 
-That's it! The demo will:
-
-- Download source-demo and destination-demo packages from npm
-- Emit test events with delays
-- Log filtered event output
-- Run completely self-contained
-
-## Built-in Flows
-
-All flows are included in the Docker image at `/app/flows/`:
-
-- **demo.json** - Demo packages (source-demo → destination-demo)
-- **express-console.json** - HTTP collection → console logging
-- **serve.json** - Static file serving
-
-## Usage
-
-### Demo Mode
+Use [@walkeros/cli](../cli/README.md) to bundle your flow configuration:
 
 ```bash
-docker run -e MODE=collect -e FLOW=/app/flows/demo.json walkeros/docker
+# Install CLI
+npm install -g @walkeros/cli
+
+# Create and bundle your flow
+walkeros bundle flow.json --output flow.mjs
 ```
 
-### HTTP Collection Server
+### Step 2: Run in Docker
+
+```bash
+docker run -p 8080:8080 \
+  -v $(pwd)/flow.mjs:/app/flow.mjs \
+  -e MODE=collect \
+  -e FLOW=/app/flow.mjs \
+  walkeros/docker:latest
+```
+
+## Usage Patterns
+
+### Local Development with Volume Mount
+
+```bash
+# Bundle your flow
+walkeros bundle flow.json --output flow.mjs
+
+# Run with volume mount
+docker run -p 8080:8080 \
+  -v $(pwd)/flow.mjs:/app/flow.mjs \
+  -e MODE=collect \
+  -e FLOW=/app/flow.mjs \
+  walkeros/docker:latest
+```
+
+### Production Deployment (Recommended)
+
+Build a custom image with your bundled flow:
+
+```dockerfile
+FROM walkeros/docker:latest
+COPY flow.mjs /app/flow.mjs
+ENV MODE=collect
+ENV FLOW=/app/flow.mjs
+```
+
+```bash
+docker build -t my-collector .
+docker run -p 8080:8080 my-collector
+```
+
+### GCP Cloud Run Deployment
+
+```bash
+# Build production bundle
+walkeros bundle production.json --output flow.mjs
+
+# Create Dockerfile
+cat > Dockerfile <<EOF
+FROM walkeros/docker:latest
+COPY flow.mjs /app/flow.mjs
+ENV MODE=collect
+ENV FLOW=/app/flow.mjs
+EOF
+
+# Deploy
+gcloud run deploy my-collector \
+  --source . \
+  --port 8080 \
+  --allow-unauthenticated
+```
+
+## Operational Modes
+
+Two operational modes via `MODE` environment variable:
+
+### collect
+
+Runs event collection server - executes the flow bundle which typically starts
+an HTTP server.
 
 ```bash
 docker run -p 8080:8080 \
   -e MODE=collect \
-  -e FLOW=/app/flows/express-console.json \
-  walkeros/docker
-
-# Send event
-curl -X POST http://localhost:8080/collect \
-  -H "Content-Type: application/json" \
-  -d '{"event":"page view","data":{"title":"Test"}}'
+  -e FLOW=/app/flow.mjs \
+  -v $(pwd)/flow.mjs:/app/flow.mjs \
+  walkeros/docker:latest
 ```
 
-### Serve Static Files
+### serve
+
+Serves static files (useful for web bundles):
 
 ```bash
 docker run -p 8080:8080 \
   -e MODE=serve \
-  -e FLOW=/app/flows/serve.json \
+  -e STATIC_DIR=/app/dist \
   -v $(pwd)/dist:/app/dist \
-  walkeros/docker
+  walkeros/docker:latest
 ```
-
-_Note: Volume mount needed to serve your files_
-
-## Custom Flow Configuration
-
-### Option 1: Build Custom Image (Recommended)
-
-```dockerfile
-FROM walkeros/docker:latest
-COPY my-flow.json /app/flows/custom.json
-```
-
-```bash
-docker build -t my-walker .
-docker run -e MODE=collect -e FLOW=/app/flows/custom.json my-walker
-```
-
-### Option 2: Mount Custom Flow
-
-```bash
-docker run \
-  -e MODE=collect \
-  -e FLOW=/app/custom.json \
-  -v $(pwd)/my-flow.json:/app/custom.json \
-  walkeros/docker
-```
-
-## Modes
-
-Two operational modes:
-
-- **collect** - Run event collection server
-- **serve** - Serve static files
-
-**Note**: Bundle generation is handled by `@walkeros/cli`. See
-[CLI documentation](../cli/README.md) for details.
-
-## Flow Configuration
-
-Flow files use the format with separate `flow` and `build` sections:
-
-```json
-{
-  "flow": {
-    "platform": "server",
-    "sources": {
-      "http": {
-        "code": "sourceExpress",
-        "config": {
-          "settings": {
-            "path": "/collect",
-            "port": 8080,
-            "cors": true
-          }
-        }
-      }
-    },
-    "destinations": {
-      "demo": {
-        "code": "destinationDemo",
-        "config": {
-          "settings": {
-            "name": "Console Output",
-            "values": ["name", "data", "timestamp"]
-          }
-        }
-      }
-    },
-    "collector": { "run": true }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": {
-        "version": "latest",
-        "imports": ["startFlow"]
-      },
-      "@walkeros/server-source-express": {
-        "version": "latest",
-        "imports": ["sourceExpress"]
-      },
-      "@walkeros/destination-demo": {
-        "version": "latest",
-        "imports": ["destinationDemo"]
-      }
-    },
-    "code": "// Custom initialization\n",
-    "template": "../templates/base.hbs",
-    "output": "bundle.mjs",
-    "tempDir": "/tmp"
-  }
-}
-```
-
-**Note**: Template paths starting with `./` or `../` are resolved relative to
-the flow file's directory.
-
-### Configuration Structure
-
-**Flow section** (runtime configuration):
-
-- **platform**: "web" or "server"
-- **sources**: Event sources with `code` field referencing imports
-- **destinations**: Event destinations with `code` field referencing imports
-- **collector**: Processing settings
-
-**Build section** (build-time configuration):
-
-- **packages**: npm packages to download dynamically with version and imports
-- **code**: Custom initialization code (required, can be a comment)
-- **template**: Path to Handlebars template (relative paths supported)
-- **output**: Bundle output path
-- **tempDir**: Temporary directory for build artifacts
-
-### Port Configuration
-
-Ports are defined in source settings within the `flow` section:
-
-```json
-{
-  "flow": {
-    "sources": {
-      "http": {
-        "config": {
-          "settings": {
-            "port": 8080
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-Then map with `-p 8080:8080` in docker run.
 
 ## Environment Variables
 
 ### Required
 
-- `MODE` - Operational mode: `collect` or `serve`
-- `FLOW` - Path to flow configuration file
+- **`MODE`** - Operational mode: `collect` or `serve`
+- **`FLOW`** - Path to pre-built flow bundle (`.mjs` file) - **required for
+  collect mode**
 
 ### Optional
 
-- `DEBUG` - Enable debug logging (default: `false`)
-- `PORT` - Override port from config
-- `HOST` - Override host from config
+- **`PORT`** - Server port (default: from flow or 8080)
+- **`HOST`** - Server host (default: 0.0.0.0)
+- **`STATIC_DIR`** - Static files directory for serve mode (default: /app/dist)
 
-### Variable Substitution
+**Example:**
 
-Use environment variables in flow files with `${VAR_NAME}` or
-`${VAR_NAME:default}` syntax:
-
-```json
-{
-  "flow": {
-    "destinations": {
-      "gtag": {
-        "config": {
-          "settings": {
-            "ga4": {
-              "measurementId": "${GA4_MEASUREMENT_ID}"
-            }
-          }
-        }
-      }
-    }
-  }
-}
+```bash
+docker run -p 3000:3000 \
+  -e MODE=collect \
+  -e FLOW=/app/flow.mjs \
+  -e PORT=3000 \
+  -e HOST=0.0.0.0 \
+  -v $(pwd)/flow.mjs:/app/flow.mjs \
+  walkeros/docker:latest
 ```
 
 ## Docker Compose
@@ -233,23 +172,14 @@ Use environment variables in flow files with `${VAR_NAME}` or
 version: '3.8'
 
 services:
-  walkeros:
-    image: walkeros/docker:latest
+  collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
     environment:
       MODE: collect
-      FLOW: /app/flows/demo.json
-    restart: unless-stopped
-```
-
-### Collect Mode with Port Mapping
-
-```yaml
-services:
-  walkeros-collect:
-    image: walkeros/docker:latest
-    environment:
-      MODE: collect
-      FLOW: /app/flows/collect-console.json
+      FLOW: /app/flow.mjs
+      PORT: 8080
     ports:
       - '8080:8080'
     restart: unless-stopped
@@ -263,107 +193,133 @@ services:
           process.exit(r.statusCode === 200 ? 0 : 1))",
         ]
       interval: 30s
+      timeout: 10s
+      retries: 3
 ```
 
-## Built-in Components
+**Dockerfile:**
 
-### Sources
-
-- **sourceExpress** - HTTP server for event collection
-  - Owns Express server lifecycle
-  - Handles CORS, JSON parsing, health checks
-  - Graceful shutdown support
-
-### Destinations
-
-- **destinationConsole** - Console logging for testing
-  - Pretty-printed or compact JSON output
-  - Configurable prefix and context inclusion
+```dockerfile
+FROM walkeros/docker:latest
+COPY flow.mjs /app/flow.mjs
+ENV MODE=collect
+ENV FLOW=/app/flow.mjs
+```
 
 ## Development
 
-### Build
+### Build Package
 
 ```bash
 npm run build
 ```
 
-### Run Locally
+### Run Locally (without Docker)
 
-```bash
-# Demo mode
-MODE=collect FLOW=./flows/demo.json npm run dev
+The Docker package exports functions that can be used directly in Node.js:
 
-# Collect mode
-MODE=collect FLOW=./flows/express-console.json npm run dev
+```typescript
+import { runFlow, runServeMode } from '@walkeros/docker';
 
-# Serve mode
-MODE=serve FLOW=./flows/serve.json npm run dev
+// Run a pre-built flow
+await runFlow('/path/to/flow.mjs', {
+  port: 8080,
+  host: '0.0.0.0',
+});
+
+// Or run serve mode
+await runServeMode({
+  port: 8080,
+  staticDir: '/path/to/dist',
+});
 ```
 
-### Docker Testing
+### Build Docker Image
+
+```bash
+# From monorepo root
+docker build -t walkeros/docker:latest -f packages/docker/Dockerfile .
+
+# Test with a bundled flow
+walkeros bundle flow.json --output flow.mjs
+docker run -p 8080:8080 \
+  -v $(pwd)/flow.mjs:/app/flow.mjs \
+  -e MODE=collect \
+  -e FLOW=/app/flow.mjs \
+  walkeros/docker:latest
+```
+
+### Testing
+
+```bash
+npm test
+```
 
 See comprehensive guides in [docs/](./docs/):
 
+- **[CAPABILITIES.md](./docs/CAPABILITIES.md)** - Architecture and capabilities
 - **[LOCAL-TESTING.md](./docs/LOCAL-TESTING.md)** - Testing Docker images
   locally
 - **[DOCKER-HUB.md](./docs/DOCKER-HUB.md)** - Publishing to Docker Hub
-- **[DEPLOYMENT-CHECKLIST.md](./docs/DEPLOYMENT-CHECKLIST.md)** - Deployment
-  verification
 
-Quick start:
+## Library Usage
 
-```bash
-# Build image
-docker build -t walkeros/docker:latest -f packages/docker/Dockerfile .
+The Docker package can be imported as a library (used by @walkeros/cli):
 
-# Test demo flow
-docker run -e MODE=collect -e FLOW=/app/flows/demo.json walkeros/docker:latest
+```typescript
+import {
+  runFlow,
+  runServeMode,
+  type RuntimeConfig,
+  type ServeConfig,
+} from '@walkeros/docker';
+
+// Execute a pre-built flow
+await runFlow('/path/to/flow.mjs', {
+  port: 8080,
+  host: '0.0.0.0',
+});
+
+// Or run in serve mode
+await runServeMode({
+  port: 3000,
+  staticDir: './dist',
+});
 ```
 
-## Architecture
-
-### Zero-Duplication Design
-
-1. **CLI Integration** - Uses @walkeros/cli for all bundling operations
-2. **Source Infrastructure** - Sources manage their own servers/subscriptions
-3. **Unified Config** - Same JSON schema works for CLI and Docker
-4. **Single Entry** - One `index.ts` handles all modes
-5. **Built-in Flows** - Example configurations baked into image
-
-### Data Flow
-
-**Collect Mode:**
-
-```
-HTTP Request → Express Source → Collector → Destinations → External APIs
-```
-
-**Serve Mode:**
-
-```
-HTTP Request → Express Static → Files
-```
-
-**Note**: Bundle generation uses `@walkeros/cli` - see CLI documentation.
+This is how `@walkeros/cli` uses the Docker package - no Docker daemon required!
 
 ## Troubleshooting
 
-### FLOW not found
+### "FLOW environment variable required"
 
-- Check FLOW path points to file in container
-- Built-in flows: `/app/flows/*.json`
-- Custom flows: mount with `-v` or bake into image
+Ensure you're providing the FLOW env var pointing to a pre-built `.mjs` file:
+
+```bash
+docker run \
+  -e MODE=collect \
+  -e FLOW=/app/flow.mjs \
+  -v $(pwd)/flow.mjs:/app/flow.mjs \
+  walkeros/docker:latest
+```
+
+### "Cannot find module"
+
+The FLOW path must point to a pre-built `.mjs` bundle, not a `.json` config:
+
+```bash
+# ❌ Wrong - JSON config
+-e FLOW=/app/flow.json
+
+# ✅ Correct - Pre-built bundle
+-e FLOW=/app/flow.mjs
+```
 
 ### Port already in use
 
-- Check port in flow.json source settings
-- Update docker port mapping: `-p XXXX:XXXX`
-
-### Package download fails
-
-- Check internet connectivity
-- Verify npm registry access
+- Check what's using the port: `lsof -i :8080`
+- Use a different port: `-p 3000:8080`
+- Port in flow configuration vs Docker mapping must match
 
 ## Docker Hub
 
@@ -377,26 +333,39 @@ docker pull walkeros/docker:latest
 docker pull walkeros/docker:0.1.0
 ```
 
-## Status
+## What's Different from CLI?
+
+| Feature             | @walkeros/docker      | @walkeros/cli               |
+| ------------------- | --------------------- | --------------------------- |
+| **Purpose**         | Runtime execution     | Build + orchestration       |
+| **Bundling**        | ❌ No                 | ✅ Yes                      |
+| **Dependencies**    | 3 (runtime only)      | 10 (includes Docker)        |
+| **Image Size**      | ~50MB                 | N/A                         |
+| **Startup**         | <1s                   | N/A                         |
+| **Docker Required** | For containerization  | No (uses Docker as library) |
+| **Use Case**        | Production deployment | Development + build         |
+
+## Version & Status
+
+**Current Version:** 0.1.0 **Recommended Next Version:** 0.2.0 (breaking
+changes)
 
 ### Production Ready ✅
 
-Core infrastructure complete and tested:
+- ✅ Pure runtime architecture - zero build dependencies
+- ✅ Library exports for CLI integration
+- ✅ Collect and serve modes
+- ✅ <1s startup time
+- ✅ ~50MB Docker image
+- ✅ Graceful shutdown handling
+- ✅ GCP Cloud Run optimized
 
-- ✅ Collect mode with Express source
-- ✅ Serve mode for static files
-- ✅ CLI integration with `run` command
-- ✅ Flow configuration with template support
-- ✅ Environment variable substitution
-- ✅ Docker image with security hardening
-- ✅ Comprehensive testing and documentation
+### Breaking Changes from Previous Versions
 
-### Next Steps
-
-- Production logging and metrics
-- Multi-platform builds (amd64, arm64)
-- Additional sources (PubSub, EventBridge, SQS)
-- Automated Docker Hub publishing
+- ❌ No longer accepts JSON configs at runtime
+- ❌ Must receive pre-built .mjs bundles via FLOW env var
+- ❌ Removed all bundling, build, and package download capabilities
+- ✅ Use @walkeros/cli to bundle flows first
 
 ## License
 

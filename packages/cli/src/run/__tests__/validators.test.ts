@@ -1,12 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
-import {
-  validateMode,
-  validateFlowFile,
-  validatePort,
-  validateContainerName,
-} from '../validators';
+import { validateMode, validateFlowFile, validatePort } from '../validators';
 
 describe('validators', () => {
   describe('validateMode', () => {
@@ -102,49 +97,6 @@ describe('validators', () => {
     it('should provide helpful error message', () => {
       expect(() => validatePort(99999)).toThrow(/between 1 and 65535/);
       expect(() => validatePort(99999)).toThrow(/Example: --port 8080/);
-    });
-  });
-
-  describe('validateContainerName', () => {
-    it('should accept valid names', () => {
-      expect(() => validateContainerName('my-container')).not.toThrow();
-      expect(() => validateContainerName('container_1')).not.toThrow();
-      expect(() => validateContainerName('test.container')).not.toThrow();
-      expect(() => validateContainerName('a1b2c3')).not.toThrow();
-      expect(() => validateContainerName('MyContainer')).not.toThrow();
-    });
-
-    it('should reject names starting with special characters', () => {
-      expect(() => validateContainerName('-invalid')).toThrow(
-        /Invalid container name/,
-      );
-      expect(() => validateContainerName('_invalid')).toThrow(
-        /Invalid container name/,
-      );
-      expect(() => validateContainerName('.invalid')).toThrow(
-        /Invalid container name/,
-      );
-    });
-
-    it('should reject names with invalid characters', () => {
-      expect(() => validateContainerName('invalid@name')).toThrow(
-        /Invalid container name/,
-      );
-      expect(() => validateContainerName('invalid name')).toThrow(
-        /Invalid container name/,
-      );
-      expect(() => validateContainerName('invalid/name')).toThrow(
-        /Invalid container name/,
-      );
-    });
-
-    it('should provide helpful error message', () => {
-      expect(() => validateContainerName('-invalid')).toThrow(
-        /Start with a letter or number/,
-      );
-      expect(() => validateContainerName('-invalid')).toThrow(
-        /Example: --name walkeros-collector/,
-      );
     });
   });
 });

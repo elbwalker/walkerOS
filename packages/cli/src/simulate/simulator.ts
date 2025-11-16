@@ -115,6 +115,9 @@ export async function executeSimulation(
   const tempDir = getTempDir();
 
   try {
+    // Ensure temp directory exists
+    await fs.ensureDir(tempDir);
+
     // 1. Load config
     const rawConfig = await loadJsonConfig(configPath);
     const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
@@ -282,10 +285,12 @@ ${buildOptions.code || ''}
       duration,
     };
   } finally {
-    // Cleanup temp bundle file (currently keeping for debugging)
-    // if (bundlePath) {
-    //   await fs.remove(path.dirname(bundlePath)).catch(() => {});
-    // }
+    // Cleanup temp directory and all its contents
+    if (tempDir) {
+      await fs.remove(tempDir).catch(() => {
+        // Ignore cleanup errors - temp dirs will be cleaned eventually
+      });
+    }
 
     // Cleanup injected globals
     const globalWithSim = globalThis as Record<string, unknown>;

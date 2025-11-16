@@ -88,16 +88,10 @@ program
 // Run command
 program
   .command('run <mode> <config>')
-  .description('Run walkerOS in Docker (modes: collect, serve)')
+  .description('Run walkerOS flows (modes: collect, serve)')
   .option('-p, --port <number>', 'Server port', parseInt)
   .option('-h, --host <host>', 'Server host (default: 0.0.0.0)')
-  .option('-d, --detach', 'Run container in background')
-  .option('--name <name>', 'Container name')
-  .option('--no-pull', 'Skip Docker image pull')
-  .option(
-    '--image <image>',
-    'Docker image to use (default: walkeros/docker:latest)',
-  )
+  .option('--static-dir <dir>', 'Static directory for serve mode')
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
   .action(async (mode, config, options) => {
@@ -105,10 +99,7 @@ program
       config,
       port: options.port,
       host: options.host,
-      detach: options.detach,
-      name: options.name,
-      noPull: !options.pull,
-      image: options.image,
+      staticDir: options.staticDir,
       json: options.json,
       verbose: options.verbose,
     });
