@@ -1,12 +1,11 @@
-import { defineConfig, baseConfig } from '@walkeros/config/tsup';
+import { defineConfig, buildModules } from '@walkeros/config/tsup';
 
-export default defineConfig({
-  ...baseConfig,
-  entry: ['src/index.ts'],
-  format: ['esm'],
-  target: 'node18',
-  dts: true,
-  sourcemap: true,
-  minify: false,
-  external: ['express', 'cors', 'zod', 'path'],
-});
+export default defineConfig(
+  buildModules({
+    entry: ['src/index.ts'],
+    format: ['esm'],
+    target: 'node18',
+    minify: false,
+    external: ['express', 'cors', 'zod', 'path'],
+  }),
+);

@@ -72,7 +72,7 @@ TEST_CONTAINER="walkeros-test-$$"
 docker run -d \
     --name "$TEST_CONTAINER" \
     -e MODE=collect \
-    -e FLOW=/app/flows/demo.json \
+    -e FLOW=/app/demos/demo-collect.mjs \
     -p 13000:8080 \
     "$FULL_IMAGE"
 
@@ -110,7 +110,7 @@ echo -e "${GREEN}Build and test successful!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 echo "Next steps:"
-echo "  1. Test manually: docker run -e MODE=collect -e FLOW=/app/flows/demo.json -p 3000:8080 $FULL_IMAGE"
-echo "  2. Tag for version: docker tag $FULL_IMAGE $IMAGE_NAME:0.1.0"
-echo "  3. Push to registry: docker push $IMAGE_NAME:0.1.0"
+echo "  1. Test manually: docker run -e MODE=collect -e FLOW=/app/demos/demo-collect.mjs -p 3000:8080 $FULL_IMAGE"
+echo "  2. Tag for version: docker tag $FULL_IMAGE $IMAGE_NAME:0.1.1"
+echo "  3. Push to registry: docker push $IMAGE_NAME:0.1.1"
 echo ""

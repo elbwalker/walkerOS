@@ -21,7 +21,7 @@ describe('Collect Mode Integration', () => {
 
   // Build Docker package before all tests
   beforeAll(() => {
-    const distPath = join(projectRoot, 'dist/index.js');
+    const distPath = join(projectRoot, 'dist/index.mjs');
     const distExists = existsSync(distPath);
 
     if (!distExists) {
@@ -50,7 +50,7 @@ describe('Collect Mode Integration', () => {
     // Verify bundle exists
     expect(existsSync(bundlePath)).toBe(true);
 
-    serverProcess = spawn('node', ['dist/index.js'], {
+    serverProcess = spawn('node', ['dist/index.mjs'], {
       cwd: projectRoot,
       env: {
         ...process.env,
@@ -81,9 +81,9 @@ describe('Collect Mode Integration', () => {
     expect(typeof dockerModule.runServeMode).toBe('function');
   });
 
-  it('should have correct TypeScript types exported', () => {
+  it('should have correct TypeScript types exported', async () => {
     // This ensures the types are properly exported
-    const dockerModule = require('../index');
+    const dockerModule = await import('../index');
 
     expect(dockerModule).toHaveProperty('runFlow');
     expect(dockerModule).toHaveProperty('runServeMode');

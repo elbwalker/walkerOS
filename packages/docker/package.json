@@ -3,12 +3,12 @@
   "description": "Pure runtime Docker container for walkerOS - executes pre-built flows",
   "version": "0.1.1",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "default": "./dist/index.mjs"
     }
   },
   "license": "MIT",
