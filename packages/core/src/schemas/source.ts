@@ -45,10 +45,13 @@ import { ErrorHandlerSchema } from './utilities';
  */
 export const BaseEnvSchema = z
   .object({
-    push: z.any().describe('Collector push function'),
-    command: z.any().describe('Collector command function'),
-    sources: z.any().optional().describe('Map of registered source instances'),
-    elb: z.any().describe('Public API function (alias for collector.push)'),
+    push: z.unknown().describe('Collector push function'),
+    command: z.unknown().describe('Collector command function'),
+    sources: z
+      .unknown()
+      .optional()
+      .describe('Map of registered source instances'),
+    elb: z.unknown().describe('Public API function (alias for collector.push)'),
   })
   .catchall(z.unknown())
   .describe(
@@ -98,9 +101,12 @@ export const ConfigSchema = MappingConfigSchema.extend({
 /**
  * PartialConfig - Config with all fields optional
  * Used for config updates and overrides
+ *
+ * Note: ConfigSchema extends MappingConfigSchema with mostly optional fields.
+ * Using .partial() ensures all fields are optional for config updates.
  */
-export const PartialConfigSchema = ConfigSchema.deepPartial().describe(
-  'Partial source configuration with all fields deeply optional',
+export const PartialConfigSchema = ConfigSchema.partial().describe(
+  'Partial source configuration with all fields optional',
 );
 
 // ========================================
@@ -145,7 +151,10 @@ export const InstanceSchema = z
       .any()
       .optional()
       .describe('Cleanup function called when source is removed'),
-    on: z.any().optional().describe('Lifecycle hook function for event types'),
+    on: z
+      .unknown()
+      .optional()
+      .describe('Lifecycle hook function for event types'),
   })
   .describe('Source instance with push handler and lifecycle methods');
 

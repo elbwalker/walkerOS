@@ -525,55 +525,37 @@ describe('Flow Schemas', () => {
   describe('JSON Schema Generation', () => {
     test('setupJsonSchema is valid JSON Schema', () => {
       expect(setupJsonSchema).toHaveProperty('$schema');
-      expect(setupJsonSchema).toHaveProperty('definitions');
-      expect(setupJsonSchema.definitions!).toHaveProperty('FlowConfig');
-      expect(setupJsonSchema.definitions!.FlowConfig).toHaveProperty(
-        'properties',
+      expect(setupJsonSchema).toHaveProperty('type', 'object');
+      expect(setupJsonSchema).toHaveProperty('properties');
+      expect((setupJsonSchema as any).properties).toHaveProperty('version');
+      expect((setupJsonSchema as any).properties).toHaveProperty(
+        'environments',
       );
-      expect(
-        (setupJsonSchema.definitions!.FlowConfig as any).properties,
-      ).toHaveProperty('platform');
     });
 
     test('configJsonSchema is valid JSON Schema', () => {
       expect(configJsonSchema).toHaveProperty('$schema');
-      expect(configJsonSchema).toHaveProperty('definitions');
-      expect(configJsonSchema.definitions!.FlowConfig).toHaveProperty(
-        'type',
-        'object',
-      );
-      expect(configJsonSchema.definitions!.FlowConfig).toHaveProperty(
-        'properties',
-      );
-      expect(
-        (configJsonSchema.definitions!.FlowConfig as any).properties,
-      ).toHaveProperty('platform');
+      expect(configJsonSchema).toHaveProperty('type', 'object');
+      expect(configJsonSchema).toHaveProperty('properties');
+      expect((configJsonSchema as any).properties).toHaveProperty('platform');
     });
 
     test('sourceReferenceJsonSchema is valid JSON Schema', () => {
       expect(sourceReferenceJsonSchema).toHaveProperty('$schema');
-      expect(sourceReferenceJsonSchema).toHaveProperty('definitions');
-      expect(
-        sourceReferenceJsonSchema.definitions!.SourceReference,
-      ).toHaveProperty('properties');
-      expect(
-        (sourceReferenceJsonSchema.definitions!.SourceReference as any)
-          .properties,
-      ).toHaveProperty('package');
+      expect(sourceReferenceJsonSchema).toHaveProperty('type', 'object');
+      expect(sourceReferenceJsonSchema).toHaveProperty('properties');
+      expect((sourceReferenceJsonSchema as any).properties).toHaveProperty(
+        'package',
+      );
     });
 
     test('destinationReferenceJsonSchema is valid JSON Schema', () => {
       expect(destinationReferenceJsonSchema).toHaveProperty('$schema');
-      expect(destinationReferenceJsonSchema).toHaveProperty('definitions');
-      expect(
-        destinationReferenceJsonSchema.definitions!.DestinationReference,
-      ).toHaveProperty('properties');
-      expect(
-        (
-          destinationReferenceJsonSchema.definitions!
-            .DestinationReference as any
-        ).properties,
-      ).toHaveProperty('package');
+      expect(destinationReferenceJsonSchema).toHaveProperty('type', 'object');
+      expect(destinationReferenceJsonSchema).toHaveProperty('properties');
+      expect((destinationReferenceJsonSchema as any).properties).toHaveProperty(
+        'package',
+      );
     });
   });
 

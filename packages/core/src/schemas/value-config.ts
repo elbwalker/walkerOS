@@ -12,7 +12,7 @@ import { z, toJsonSchema } from './validation';
  * These Zod schemas are for VALIDATION and JSON SCHEMA GENERATION only.
  *
  * The circular/recursive nature of Value → ValueConfig → Value makes
- * full type inference complex, so we use z.any() with lazy evaluation
+ * full type inference complex, so we use z.unknown() with lazy evaluation
  * and keep existing TypeScript types separate.
  *
  * @example
@@ -32,7 +32,7 @@ export const ConsentSchema = z
   .describe('Consent requirement mapping');
 
 /**
- * Recursive schemas - use z.any() to avoid circular type issues
+ * Recursive schemas - use z.unknown() to avoid circular type issues
  * These work for validation and JSON Schema generation
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -26,6 +26,9 @@ import { ConsentSchema } from './walkeros';
 // Recursive Value Schemas
 // ========================================
 
+// Forward declaration for circular dependency
+let ValueConfigSchemaLazy: z.ZodTypeAny;
+
 /**
  * Value - Core value type for mapping transformations
  *
@@ -41,7 +44,7 @@ export const ValueSchema: z.ZodTypeAny = z.lazy(() =>
     z.string().describe('String value or property path (e.g., "data.id")'),
     z.number().describe('Numeric value'),
     z.boolean().describe('Boolean value'),
-    ValueConfigSchema,
+    z.lazy(() => ValueConfigSchemaLazy),
     z.array(ValueSchema).describe('Array of values'),
   ]),
 );
@@ -64,11 +67,13 @@ export const ValuesSchema = z
  * Example: ['nested', { map: { id: 'data.id' } }]
  * Means: Iterate over event.nested array, transform each item
  */
-const LoopSchema: z.ZodTypeAny = z
-  .tuple([ValueSchema, ValueSchema])
-  .describe(
-    'Loop transformation: [source, transform] tuple for array processing',
-  );
+const LoopSchema: z.ZodTypeAny = z.lazy(() =>
+  z
+    .tuple([ValueSchema, ValueSchema])
+    .describe(
+      'Loop transformation: [source, transform] tuple for array processing',
+    ),
+);
 
 /**
  * Set - Array of values for selection/combination
@@ -80,9 +85,11 @@ const LoopSchema: z.ZodTypeAny = z
  * Example: ['data.firstName', ' ', 'data.lastName']
  * Means: Combine multiple values
  */
-const SetSchema: z.ZodTypeAny = z
-  .array(ValueSchema)
-  .describe('Set: Array of values for selection or combination');
+const SetSchema: z.ZodTypeAny = z.lazy(() =>
+  z
+    .array(ValueSchema)
+    .describe('Set: Array of values for selection or combination'),
+);
 
 /**
  * Map - Object mapping for data transformation
@@ -91,9 +98,11 @@ const SetSchema: z.ZodTypeAny = z
  * Example: { item_id: 'data.id', item_name: 'data.name' }
  * Means: Transform event data to destination format
  */
-const MapSchema: z.ZodTypeAny = z
-  .record(z.string(), ValueSchema)
-  .describe('Map: Object mapping keys to transformation values');
+const MapSchema: z.ZodTypeAny = z.lazy(() =>
+  z
+    .record(z.string(), ValueSchema)
+    .describe('Map: Object mapping keys to transformation values'),
+);
 
 /**
  * ValueConfig - Configuration object for value transformations
@@ -111,7 +120,7 @@ const MapSchema: z.ZodTypeAny = z
  *
  * At least one property must be present.
  */
-const ValueConfigSchema: z.ZodTypeAny = z
+ValueConfigSchemaLazy = z
   .object({
     key: z
       .string()
@@ -153,8 +162,11 @@ const ValueConfigSchema: z.ZodTypeAny = z
   })
   .describe('Value transformation configuration with multiple strategies');
 
+// Export with original name for backward compatibility
+export const ValueConfigSchema = ValueConfigSchemaLazy;
+
 // Re-export for use in other schemas
-export { ValueConfigSchema, LoopSchema, SetSchema, MapSchema };
+export { LoopSchema, SetSchema, MapSchema };
 
 // ========================================
 // Policy Schema

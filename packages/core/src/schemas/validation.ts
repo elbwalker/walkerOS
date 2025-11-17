@@ -7,32 +7,50 @@
  */
 
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 
 // Re-export validation tools for schema files
 export { z };
 export type { z as zod } from 'zod';
-export { zodToJsonSchema };
 
 /**
  * Standard JSON Schema conversion with consistent project defaults
  *
- * Eliminates duplicate configuration blocks across all schema files.
- * All walkerOS schemas use jsonSchema7 format with named definitions.
+ * Uses Zod 4 native toJSONSchema() method for JSON Schema generation.
+ * All walkerOS schemas use JSON Schema Draft 7 format.
  *
  * @param schema - Zod schema to convert
- * @param name - Schema name for the JSON Schema definition
- * @param refStrategy - Reference strategy: 'relative' (default), 'root', or 'none'
+ * @param _name - Schema name (ignored in Zod 4, kept for API compatibility)
+ * @param target - JSON Schema target version (default: 'draft-7')
  * @returns JSON Schema object
  */
 export function toJsonSchema(
   schema: z.ZodTypeAny,
-  name: string,
-  refStrategy: 'relative' | 'root' | 'none' = 'relative',
+  _name?: string,
+  target: 'draft-7' | 'draft-2020-12' | 'openapi-3.0' = 'draft-7',
 ) {
-  return zodToJsonSchema(schema, {
-    target: 'jsonSchema7',
-    $refStrategy: refStrategy,
-    name,
+  return z.toJSONSchema(schema, {
+    target,
+  });
+}
+
+/**
+ * Legacy alias for backward compatibility
+ * @deprecated Use toJsonSchema() instead
+ */
+export function zodToJsonSchema(
+  schema: z.ZodTypeAny,
+  options?: {
+    target?: string;
+    name?: string;
+    $refStrategy?: string;
+    definitions?: Record<string, z.ZodTypeAny>;
+  },
+) {
+  const target =
+    options?.target === 'jsonSchema7'
+      ? 'draft-7'
+      : (options?.target as 'draft-7' | 'draft-2020-12' | 'openapi-3.0');
+  return z.toJSONSchema(schema, {
+    target: target || 'draft-7',
   });
 }

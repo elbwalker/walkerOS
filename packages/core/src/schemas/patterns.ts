@@ -225,7 +225,7 @@ export function createConsentConfig(ConsentSchema: z.ZodTypeAny) {
 export const RuntimeInstanceConfig = z
   .object({
     type: z.string().optional().describe('Instance type identifier'),
-    config: z.any().describe('Instance configuration'),
+    config: z.unknown().describe('Instance configuration'),
   })
   .partial();
 
@@ -244,9 +244,9 @@ export const RuntimeInstanceConfig = z
  */
 export const BaseContextConfig = z
   .object({
-    collector: z.any().describe('Collector instance (runtime object)'),
-    config: z.any().describe('Configuration'),
-    env: z.any().describe('Environment dependencies'),
+    collector: z.unknown().describe('Collector instance (runtime object)'),
+    config: z.unknown().describe('Configuration'),
+    env: z.unknown().describe('Environment dependencies'),
   })
   .partial();
 
@@ -264,7 +264,7 @@ export const BatchConfig = z
       .number()
       .optional()
       .describe('Batch size: bundle N events for batch processing'),
-    batched: z.any().optional().describe('Batch of events to be processed'),
+    batched: z.unknown().optional().describe('Batch of events to be processed'),
   })
   .partial();
 
@@ -296,7 +296,9 @@ export const ProcessingControlConfig = z
  */
 export const SourcesMapConfig = z
   .object({
-    sources: z.record(z.string(), z.any()).describe('Map of source instances'),
+    sources: z
+      .record(z.string(), z.unknown())
+      .describe('Map of source instances'),
   })
   .partial();
 
@@ -307,7 +309,7 @@ export const SourcesMapConfig = z
 export const DestinationsMapConfig = z
   .object({
     destinations: z
-      .record(z.string(), z.any())
+      .record(z.string(), z.unknown())
       .describe('Map of destination instances'),
   })
   .partial();

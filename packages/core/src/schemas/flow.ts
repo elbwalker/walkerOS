@@ -109,7 +109,7 @@ export const ConfigSchema = z
   .object({
     platform: z
       .enum(['web', 'server'], {
-        errorMap: () => ({ message: 'Platform must be "web" or "server"' }),
+        error: 'Platform must be "web" or "server"',
       })
       .describe(
         'Target platform: "web" for browser-based tracking, "server" for Node.js server-side collection',
@@ -157,7 +157,7 @@ export const SetupSchema = z
   .object({
     version: z
       .literal(1, {
-        errorMap: () => ({ message: 'Only version 1 is currently supported' }),
+        error: 'Only version 1 is currently supported',
       })
       .describe('Configuration schema version (currently only 1 is supported)'),
     $schema: z
@@ -235,9 +235,7 @@ export function parseSetup(data: unknown): z.infer<typeof SetupSchema> {
  * }
  * ```
  */
-export function safeParseSetup(
-  data: unknown,
-): z.SafeParseReturnType<unknown, z.infer<typeof SetupSchema>> {
+export function safeParseSetup(data: unknown) {
   return SetupSchema.safeParse(data);
 }
 
@@ -266,9 +264,7 @@ export function parseConfig(data: unknown): z.infer<typeof ConfigSchema> {
  * @param data - Raw JSON data for single environment
  * @returns Success result with data or error result with issues
  */
-export function safeParseConfig(
-  data: unknown,
-): z.SafeParseReturnType<unknown, z.infer<typeof ConfigSchema>> {
+export function safeParseConfig(data: unknown) {
   return ConfigSchema.safeParse(data);
 }
 
@@ -296,16 +292,8 @@ export function safeParseConfig(
  * );
  * ```
  */
-export const setupJsonSchema = zodToJsonSchema(SetupSchema, {
-  name: 'FlowSetup',
-  $refStrategy: 'root',
-  target: 'jsonSchema7',
-  definitions: {
-    FlowConfig: ConfigSchema,
-    SourceReference: SourceReferenceSchema,
-    DestinationReference: DestinationReferenceSchema,
-    Primitive: PrimitiveSchema,
-  },
+export const setupJsonSchema = z.toJSONSchema(SetupSchema, {
+  target: 'draft-7',
 });
 
 /**
@@ -316,11 +304,7 @@ export const setupJsonSchema = zodToJsonSchema(SetupSchema, {
  *
  * @returns JSON Schema (Draft 7) representation of ConfigSchema
  */
-export const configJsonSchema = toJsonSchema(
-  ConfigSchema,
-  'FlowConfig',
-  'root',
-);
+export const configJsonSchema = toJsonSchema(ConfigSchema, 'FlowConfig');
 
 /**
  * Generate JSON Schema for SourceReference.
@@ -333,7 +317,6 @@ export const configJsonSchema = toJsonSchema(
 export const sourceReferenceJsonSchema = toJsonSchema(
   SourceReferenceSchema,
   'SourceReference',
-  'root',
 );
 
 /**
@@ -347,5 +330,4 @@ export const sourceReferenceJsonSchema = toJsonSchema(
 export const destinationReferenceJsonSchema = toJsonSchema(
   DestinationReferenceSchema,
   'DestinationReference',
-  'root',
 );

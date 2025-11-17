@@ -175,22 +175,31 @@ export * from './schema-builder';
 export { z, zodToJsonSchema } from './validation';
 
 import type { zod } from './validation';
-import { zodToJsonSchema } from './validation';
+import { z, zodToJsonSchema } from './validation';
+
+/**
+ * JSONSchema type for JSON Schema Draft 7 objects
+ *
+ * Represents a JSON Schema object as returned by Zod's toJSONSchema().
+ * Uses Record<string, unknown> as JSON Schema structure is dynamic.
+ */
+export type JSONSchema = Record<string, unknown>;
 
 /**
  * Utility to convert Zod schema to JSON Schema with consistent defaults
  *
  * This wrapper ensures all destinations use the same JSON Schema configuration:
- * - target: 'jsonSchema7' (JSON Schema Draft 7 format)
- * - $refStrategy: 'none' (inline all references, no $ref pointers)
+ * - target: 'draft-7' (JSON Schema Draft 7 format)
  *
  * Usage in destinations:
  * import { zodToSchema } from '@walkeros/core';
  * export const settings = zodToSchema(SettingsSchema);
+ *
+ * @param schema - Zod schema to convert
+ * @returns JSON Schema Draft 7 object
  */
-export function zodToSchema(schema: zod.ZodTypeAny) {
-  return zodToJsonSchema(schema, {
-    target: 'jsonSchema7',
-    $refStrategy: 'none',
-  });
+export function zodToSchema(schema: zod.ZodTypeAny): JSONSchema {
+  return z.toJSONSchema(schema, {
+    target: 'draft-7',
+  }) as JSONSchema;
 }

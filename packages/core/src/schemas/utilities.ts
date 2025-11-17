@@ -61,7 +61,7 @@ export const StorageSchema = z
  * - error: The error that occurred
  * - state: Optional state information for debugging
  *
- * Note: Function schemas use z.any() as functions aren't serializable
+ * Note: Function schemas use z.unknown() as functions aren't serializable
  */
 export const ErrorHandlerSchema = z
   .any()
@@ -81,7 +81,7 @@ export const ErrorHandlerSchema = z
  * - message: Log message
  * - verbose: Whether this is a verbose-only log
  *
- * Note: Function schemas use z.any() as functions aren't serializable
+ * Note: Function schemas use z.unknown() as functions aren't serializable
  */
 export const LogHandlerSchema = z
   .any()

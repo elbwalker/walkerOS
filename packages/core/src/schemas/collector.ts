@@ -106,7 +106,7 @@ export const ConfigSchema = z
       'Static global properties that persist across collector runs',
     ),
     sessionStatic: z
-      .record(z.any())
+      .record(z.string(), z.unknown())
       .describe('Static session data that persists across collector runs'),
     verbose: z.boolean().describe('Enable verbose logging for debugging'),
     // Function handlers
@@ -162,8 +162,8 @@ export const InitConfigSchema = ConfigSchema.partial()
     user: UserSchema.optional().describe('Initial user data'),
     globals: PropertiesSchema.optional().describe('Initial global properties'),
     // Sources and destinations are complex runtime objects
-    sources: z.any().optional().describe('Source configurations'),
-    destinations: z.any().optional().describe('Destination configurations'),
+    sources: z.unknown().optional().describe('Source configurations'),
+    destinations: z.unknown().optional().describe('Destination configurations'),
     custom: PropertiesSchema.optional().describe(
       'Initial custom implementation-specific properties',
     ),
@@ -196,14 +196,14 @@ export const PushContextSchema = z
  * Sources - Map of source IDs to instances
  */
 export const SourcesSchema = z
-  .record(z.string(), z.any())
+  .record(z.string(), z.unknown())
   .describe('Map of source IDs to source instances');
 
 /**
  * Destinations - Map of destination IDs to instances
  */
 export const DestinationsSchema = z
-  .record(z.string(), z.any())
+  .record(z.string(), z.unknown())
   .describe('Map of destination IDs to destination instances');
 
 // ========================================
@@ -242,8 +242,8 @@ export const DestinationsSchema = z
 export const InstanceSchema = z
   .object({
     // Methods (functions - not validated)
-    push: z.any().describe('Push function for processing events'),
-    command: z.any().describe('Command function for walker commands'),
+    push: z.unknown().describe('Push function for processing events'),
+    command: z.unknown().describe('Command function for walker commands'),
     // State
     allowed: z.boolean().describe('Whether event processing is allowed'),
     config: ConfigSchema.describe('Current collector configuration'),
@@ -258,15 +258,13 @@ export const InstanceSchema = z
     ),
     globals: PropertiesSchema.describe('Current global properties'),
     group: z.string().describe('Event grouping identifier'),
-    hooks: z.any().describe('Lifecycle hook functions'),
-    on: z.any().describe('Event lifecycle configuration'),
+    hooks: z.unknown().describe('Lifecycle hook functions'),
+    on: z.unknown().describe('Event lifecycle configuration'),
     queue: z.array(EventSchema).describe('Queued events awaiting processing'),
     round: z
       .number()
       .describe('Collector run count (increments with each run)'),
-    session: z
-      .union([z.undefined(), SessionDataSchema])
-      .describe('Current session state'),
+    session: z.union([SessionDataSchema]).describe('Current session state'),
     timing: z.number().describe('Event processing timing information'),
     user: UserSchema.describe('Current user data'),
     version: z.string().describe('Walker implementation version'),

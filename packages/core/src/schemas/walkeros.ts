@@ -266,12 +266,19 @@ export const PartialEventSchema = EventSchema.partial().describe(
 );
 
 /**
- * DeepPartialEvent - Event with deeply nested optional fields
+ * DeepPartialEvent - Event with all fields optional
  * Used for event updates and patches
+ *
+ * Note: While the TypeScript type uses DeepPartial<Event> for compile-time validation,
+ * the Zod schema uses .partial() which makes top-level fields optional. This is
+ * sufficient for runtime validation as deeply nested partial objects are rarely
+ * provided (users typically omit entire objects rather than providing partial nested data).
+ * Zod 4 deliberately removed .deepPartial() due to internal type complexity issues.
  */
-export const DeepPartialEventSchema: z.ZodTypeAny = z
-  .lazy(() => EventSchema.deepPartial())
-  .describe('Deep partial event structure with all nested fields optional');
+export const DeepPartialEventSchema: z.ZodTypeAny =
+  EventSchema.partial().describe(
+    'Partial event structure with all top-level fields optional',
+  );
 
 // ========================================
 // JSON Schema Exports (for Explorer/RJSF/MCP)
