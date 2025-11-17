@@ -141,7 +141,7 @@ export function normalizeConfigs(
           format: 'iife',
           target: 'es2020',
           minify: false,
-          sourcemap: true,
+          sourcemap: false,
           tempDir: '.tmp',
           cache: true,
         }

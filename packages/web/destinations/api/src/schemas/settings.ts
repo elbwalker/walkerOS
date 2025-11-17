@@ -8,7 +8,7 @@ export const SettingsSchema = z.object({
       'The HTTP endpoint URL to send events to (like https://api.example.com/events)',
     ),
   headers: z
-    .record(z.string())
+    .record(z.string(), z.string())
     .describe(
       "Additional HTTP headers to include with requests (like { 'Authorization': 'Bearer token', 'Content-Type': 'application/json' })",
     )

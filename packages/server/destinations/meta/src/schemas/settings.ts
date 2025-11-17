@@ -37,7 +37,7 @@ export const SettingsSchema = z.object({
     )
     .optional(),
   user_data: z
-    .record(z.any())
+    .record(z.string(), z.string())
     .describe(
       "Mapping configuration for user data fields (like { email: 'user.email', phone: 'user.phone' })",
     )

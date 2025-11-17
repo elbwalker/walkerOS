@@ -62,7 +62,7 @@ export const SettingsSchema = z.object({
     .describe('Log level for debugging (debug shows all API calls)')
     .optional(),
   userData: z
-    .record(z.any())
+    .record(z.string(), z.unknown())
     .describe(
       "Guided helper: User data mapping for all events (like { email: 'user.id', phone: 'data.phone' })",
     )

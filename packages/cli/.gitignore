@@ -4,8 +4,9 @@ dist/
 
 # Generated bundles (from examples)
 examples/*.mjs
-server-collect.mjs
-web-serve.mjs
+examples/*.mjs.map
+server-collect.mjs*
+web-serve.mjs*
 
 # Temp directories
 .tmp/
