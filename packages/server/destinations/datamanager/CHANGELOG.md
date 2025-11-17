@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1
+
+### Patch Changes
+
+- hello
+- Updated dependencies
+  - @walkeros/core@0.3.1
+  - @walkeros/server-core@0.3.1
+
 All notable changes to the @walkeros/server-destination-datamanager package will
 be documented in this file.
 

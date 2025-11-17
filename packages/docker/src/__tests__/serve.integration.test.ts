@@ -58,8 +58,16 @@ describe('Serve Mode Integration', () => {
       },
     });
 
-    // Wait for server to be ready
-    await waitForServer(`http://localhost:${port}/health`, 10000);
+    // Capture output for debugging
+    serverProcess.stdout?.on('data', (data) => {
+      console.log(`[Server stdout]: ${data}`);
+    });
+    serverProcess.stderr?.on('data', (data) => {
+      console.error(`[Server stderr]: ${data}`);
+    });
+
+    // Wait for server to be ready (longer timeout for CI)
+    await waitForServer(`http://localhost:${port}/health`, 30000);
 
     const healthRes = await fetch(`http://localhost:${port}/health`);
     expect(healthRes.status).toBe(200);
@@ -67,7 +75,7 @@ describe('Serve Mode Integration', () => {
     const health = (await healthRes.json()) as any;
     expect(health.status).toBe('ok');
     expect(health.mode).toBe('serve');
-  }, 15000);
+  }, 35000);
 
   it('should serve static files', async () => {
     const staticDir = join(projectRoot, '.tmp/test-static');
@@ -82,7 +90,15 @@ describe('Serve Mode Integration', () => {
       },
     });
 
-    await waitForServer(`http://localhost:${port}/health`, 10000);
+    // Capture output for debugging
+    serverProcess.stdout?.on('data', (data) => {
+      console.log(`[Server stdout]: ${data}`);
+    });
+    serverProcess.stderr?.on('data', (data) => {
+      console.error(`[Server stderr]: ${data}`);
+    });
+
+    await waitForServer(`http://localhost:${port}/health`, 30000);
 
     // Test serving HTML file
     const htmlRes = await fetch(`http://localhost:${port}/index.html`);
@@ -95,7 +111,7 @@ describe('Serve Mode Integration', () => {
     expect(txtRes.status).toBe(200);
     const txt = await txtRes.text();
     expect(txt).toBe('Hello World');
-  }, 15000);
+  }, 35000);
 
   it('should export runServeMode function', async () => {
     const dockerModule = await import('../index');

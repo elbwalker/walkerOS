@@ -1,6 +1,6 @@
-# @walkeros/cli
+# @walkeros/docker
 
-## 0.3.1
+## 0.1.1
 
 ### Patch Changes
 
@@ -27,19 +27,3 @@
   ```
 
 - hello
-- Updated dependencies [25f7e10]
-- Updated dependencies
-- Updated dependencies
-  - @walkeros/docker@0.1.1
-  - @walkeros/core@0.3.1
-
-## 0.2.0
-
-### Minor Changes
-
-- env
-
-### Patch Changes
-
-- Updated dependencies
-  - @walkeros/core@0.2.0

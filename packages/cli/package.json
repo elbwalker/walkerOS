@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/cli",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
@@ -32,7 +32,7 @@
     "docker:test": "docker run --rm walkeros/cli:latest --version"
   },
   "dependencies": {
-    "@walkeros/core": "^0.2.0",
+    "@walkeros/core": "^0.3.1",
     "@walkeros/docker": "*",
     "chalk": "^5.3.0",
     "commander": "^11.0.0",
