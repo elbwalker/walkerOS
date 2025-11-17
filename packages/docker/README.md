@@ -58,6 +58,76 @@ docker run -p 8080:8080 \
   walkeros/docker:latest
 ```
 
+## Instant Demo
+
+Want to try walkerOS Docker immediately? Use the included demo bundles - no CLI
+or bundling required:
+
+### Event Collector Demo
+
+```bash
+docker run -p 8080:8080 \
+  -e MODE=collect \
+  -e FLOW=/app/demos/demo-collect.mjs \
+  walkeros/docker:latest
+```
+
+Test it:
+
+```bash
+curl -X POST http://localhost:8080/collect \
+  -H "Content-Type: application/json" \
+  -d '{"name":"page view","data":{"title":"Test"}}'
+```
+
+### Web Bundle Demo
+
+```bash
+docker run -p 3000:8080 \
+  -e MODE=serve \
+  -e FLOW=/app/demos/demo-serve.mjs \
+  walkeros/docker:latest
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser to see
+automatic event tracking.
+
+### Full Demo Loop
+
+Run both demos together to see the complete event flow from browser to
+collector:
+
+**Terminal 1 - Start Collector:**
+
+```bash
+docker run -p 8080:8080 \
+  -e MODE=collect \
+  -e FLOW=/app/demos/demo-collect.mjs \
+  --name walker-collector \
+  walkeros/docker:latest
+```
+
+**Terminal 2 - Start Web Bundle:**
+
+```bash
+docker run -p 3000:8080 \
+  -e MODE=serve \
+  -e FLOW=/app/demos/demo-serve.mjs \
+  --name walker-web \
+  walkeros/docker:latest
+```
+
+Open [http://localhost:3000](http://localhost:3000) and watch events flow from
+browser → Terminal 1 collector logs.
+
+**Cleanup:**
+
+```bash
+docker stop walker-collector walker-web && docker rm walker-collector walker-web
+```
+
+See [demos/README.md](./demos/README.md) for detailed demo documentation.
+
 ## Usage Patterns
 
 ### Local Development with Volume Mount

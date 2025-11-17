@@ -6,8 +6,8 @@
  * - No bundling at runtime
  * - Tests Express server, collector, and event processing
  *
- * Note: These tests require pre-built bundles from @walkeros/cli
- * In real usage, bundles are generated separately before deployment
+ * Note: Uses Docker's own static demo bundles (demos/demo-collect.mjs)
+ * These are committed to the package for quick-start testing
  */
 
 import { spawn, ChildProcess, execSync } from 'child_process';
@@ -48,8 +48,8 @@ describe('Collect Mode Integration', () => {
   });
 
   it('should start server with pre-built bundle', async () => {
-    // Use pre-built bundle from CLI package
-    const bundlePath = join(projectRoot, '../cli/examples/server-simple.mjs');
+    // Use Docker's own static demo bundle
+    const bundlePath = join(projectRoot, 'demos/demo-collect.mjs');
 
     // Verify bundle exists
     expect(existsSync(bundlePath)).toBe(true);
@@ -59,7 +59,7 @@ describe('Collect Mode Integration', () => {
       env: {
         ...process.env,
         MODE: 'collect',
-        FLOW: bundlePath, // Pre-built bundle from CLI
+        FLOW: bundlePath, // Static demo bundle from Docker package
         PORT: port.toString(),
       },
     });
@@ -88,7 +88,7 @@ describe('Collect Mode Integration', () => {
   });
 
   it('should have correct TypeScript types exported', () => {
-    // This ensures the types are properly exported for CLI usage
+    // This ensures the types are properly exported
     const dockerModule = require('../index');
 
     expect(dockerModule).toHaveProperty('runFlow');
