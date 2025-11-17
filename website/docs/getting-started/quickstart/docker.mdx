@@ -1,0 +1,172 @@
+---
+title: Docker Quick Start
+description: Get walkerOS running with Docker in 5 minutes
+---
+
+# Docker Quick Start
+
+## Try the Demo
+
+```bash
+docker run -e MODE=collect -e FLOW=/app/flows/demo.json walkeros/docker:latest
+```
+
+Output:
+```
+📦 Downloading packages...
+🚀 Collect mode: Starting event collector...
+✅ Collector running
+
+[Demo Output] {
+  "name": "page view",
+  "data.title": "Home Page",
+  "data.path": "/",
+  "timestamp": 1234567890000
+}
+```
+
+The demo is self-contained:
+- Downloads demo packages from npm
+- Emits test events
+- Logs output
+- No external APIs needed
+
+## HTTP Event Collection
+
+```bash
+docker run -d -p 8080:8080 \
+  -e MODE=collect \
+  -e FLOW=/app/flows/collect-console.json \
+  walkeros/docker
+
+# Send event
+curl -X POST http://localhost:8080/collect \
+  -H "Content-Type: application/json" \
+  -d '{"event":"page view","data":{"title":"Home"}}'
+```
+
+## Built-in Flows
+
+The Docker image includes flows at `/app/flows/`:
+
+- `demo.json` - Demo packages
+- `collect-console.json` - HTTP → console
+- `bundle-web.json` - Web bundle
+- `serve.json` - Static server
+
+## Custom Flow
+
+### Build Custom Image
+
+```dockerfile
+FROM walkeros/docker:latest
+COPY my-flow.json /app/flows/custom.json
+```
+
+```bash
+docker build -t my-walker .
+docker run -e MODE=collect -e FLOW=/app/flows/custom.json my-walker
+```
+
+## Docker Compose
+
+```yaml
+version: '3.8'
+
+services:
+  walkeros:
+    image: walkeros/docker:latest
+    environment:
+      MODE: collect
+      FLOW: /app/flows/demo.json
+    restart: unless-stopped
+```
+
+### With Port Mapping
+
+```yaml
+services:
+  walkeros-collect:
+    image: walkeros/docker:latest
+    environment:
+      MODE: collect
+      FLOW: /app/flows/collect-console.json
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+```
+
+## Flow Configuration
+
+Flow files use the NEW format with separate `flow` and `build` sections:
+
+```json
+{
+  "flow": {
+    "platform": "server",
+    "sources": {
+      "http": {
+        "code": "sourceExpress",
+        "config": {
+          "settings": {
+            "path": "/collect",
+            "port": 8080,
+            "cors": true
+          }
+        }
+      }
+    },
+    "destinations": {
+      "demo": {
+        "code": "destinationDemo",
+        "config": {
+          "settings": {
+            "name": "Console Output",
+            "values": ["name", "data", "timestamp"]
+          }
+        }
+      }
+    },
+    "collector": { "run": true }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": {
+        "version": "latest",
+        "imports": ["startFlow"]
+      },
+      "@walkeros/server-source-express": {
+        "version": "latest",
+        "imports": ["sourceExpress"]
+      },
+      "@walkeros/destination-demo": {
+        "version": "latest",
+        "imports": ["destinationDemo"]
+      }
+    },
+    "code": "// Custom initialization\n",
+    "template": "/app/packages/cli/templates/base.hbs",
+    "tempDir": "/tmp"
+  }
+}
+```
+
+### Configuration Structure
+
+**Flow section** (runtime configuration):
+- **platform**: "web" or "server"
+- **sources**: Event sources with `code` field referencing imports
+- **destinations**: Event destinations with `code` field referencing imports
+- **collector**: Processing settings
+
+**Build section** (build-time configuration):
+- **packages**: npm packages to download dynamically with version and imports
+- **code**: Custom initialization code (required, can be a comment)
+- **template**: Path to Handlebars template for bundle generation
+- **tempDir**: Temporary directory for build artifacts
+
+## Next Steps
+
+- [Available Sources](../../sources/)
+- [Available Destinations](../../destinations/)
+- [Docker Package README](https://github.com/elbwalker/walkerOS/tree/main/packages/docker)

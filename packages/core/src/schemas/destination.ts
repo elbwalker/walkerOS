@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, toJsonSchema } from './validation';
 import { ConsentSchema, EventSchema } from './walkeros';
 import {
   ValueSchema,
@@ -45,7 +44,7 @@ import { ErrorHandlerSchema, LogHandlerSchema } from './utilities';
  * - Error/log handlers
  *
  * Generic note: settings, env, and mapping can have destination-specific types
- * but for schema validation we use z.any() to allow flexibility
+ * but for schema validation we use z.unknown() to allow flexibility
  */
 export const ConfigSchema = z
   .object({
@@ -95,11 +94,14 @@ export const ConfigSchema = z
   .describe('Destination configuration');
 
 /**
- * PartialConfig - Config with all fields optional and partial settings
+ * PartialConfig - Config with all fields optional
  * Used for config updates and overrides
+ *
+ * Note: All fields in ConfigSchema are already optional (.optional() on each field).
+ * Using .partial() ensures the schema itself makes all fields optional at the type level.
  */
-export const PartialConfigSchema = ConfigSchema.deepPartial().describe(
-  'Partial destination configuration with all fields deeply optional',
+export const PartialConfigSchema = ConfigSchema.partial().describe(
+  'Partial destination configuration with all fields optional',
 );
 
 /**
@@ -124,17 +126,16 @@ export const DestinationPolicySchema = PolicySchema.describe(
  */
 export const ContextSchema = z
   .object({
-    collector: z.any().describe('Collector instance (runtime object)'),
+    collector: z.unknown().describe('Collector instance (runtime object)'),
     config: ConfigSchema.describe('Destination configuration'),
     data: z
       .union([
-        z.any(), // WalkerOS.Property
-        z.undefined(),
-        z.array(z.union([z.any(), z.undefined()])),
+        z.unknown(), // WalkerOS.Property
+        z.array(z.unknown()),
       ])
       .optional()
       .describe('Transformed event data'),
-    env: z.any().describe('Environment dependencies'),
+    env: z.unknown().describe('Environment dependencies'),
   })
   .describe('Destination context for init and push functions');
 
@@ -189,11 +190,12 @@ export const BatchSchema = z
     events: z.array(EventSchema).describe('Array of events in batch'),
     data: z
       .array(
-        z.union([
-          z.any(), // WalkerOS.Property
-          z.undefined(),
-          z.array(z.union([z.any(), z.undefined()])),
-        ]),
+        z
+          .union([
+            z.unknown(), // WalkerOS.Property
+            z.array(z.unknown()),
+          ])
+          .optional(),
       )
       .describe('Transformed data for each event'),
     mapping: RuleSchema.optional().describe('Shared mapping rule for batch'),
@@ -206,10 +208,10 @@ export const BatchSchema = z
  */
 export const DataSchema = z
   .union([
-    z.any(), // WalkerOS.Property
-    z.undefined(),
-    z.array(z.union([z.any(), z.undefined()])),
+    z.unknown(), // WalkerOS.Property
+    z.array(z.unknown()),
   ])
+  .optional()
   .describe('Transformed event data (Property, undefined, or array)');
 
 // ========================================
@@ -221,7 +223,7 @@ export const DataSchema = z
  *
  * Note: This schema is primarily for documentation
  * Runtime functions (init, push, pushBatch) cannot be validated
- * Use z.any() for function fields
+ * Use z.unknown() for function fields
  */
 export const InstanceSchema = z
   .object({
@@ -231,16 +233,16 @@ export const InstanceSchema = z
       .optional()
       .describe('Queued events awaiting consent'),
     dlq: z
-      .array(z.tuple([EventSchema, z.any()]))
+      .array(z.tuple([EventSchema, z.unknown()]))
       .optional()
       .describe('Dead letter queue (failed events with errors)'),
     type: z.string().optional().describe('Destination type identifier'),
-    env: z.any().optional().describe('Environment dependencies'),
-    // Functions - not validated, use z.any()
-    init: z.any().optional().describe('Initialization function'),
-    push: z.any().describe('Push function for single events'),
-    pushBatch: z.any().optional().describe('Batch push function'),
-    on: z.any().optional().describe('Event lifecycle hook function'),
+    env: z.unknown().optional().describe('Environment dependencies'),
+    // Functions - not validated, use z.unknown()
+    init: z.unknown().optional().describe('Initialization function'),
+    push: z.unknown().describe('Push function for single events'),
+    pushBatch: z.unknown().optional().describe('Batch push function'),
+    on: z.unknown().optional().describe('Event lifecycle hook function'),
   })
   .describe('Destination instance (runtime object with functions)');
 
@@ -254,7 +256,7 @@ export const InitSchema = z
     config: PartialConfigSchema.optional().describe(
       'Partial configuration overrides',
     ),
-    env: z.any().optional().describe('Partial environment overrides'),
+    env: z.unknown().optional().describe('Partial environment overrides'),
   })
   .describe('Destination initialization configuration');
 
@@ -296,7 +298,7 @@ export const PushResultSchema = z
       .array(EventSchema)
       .optional()
       .describe('Events queued (awaiting consent)'),
-    error: z.any().optional().describe('Error if push failed'),
+    error: z.unknown().optional().describe('Error if push failed'),
   })
   .describe('Push operation result');
 
@@ -319,51 +321,35 @@ export const ResultSchema = z
  * Array of failed events with their errors
  */
 export const DLQSchema = z
-  .array(z.tuple([EventSchema, z.any()]))
+  .array(z.tuple([EventSchema, z.unknown()]))
   .describe('Dead letter queue: [(event, error), ...]');
 
 // ========================================
 // JSON Schema Exports (for Explorer/RJSF/MCP)
 // ========================================
 
-export const configJsonSchema = zodToJsonSchema(ConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'DestinationConfig',
-});
+export const configJsonSchema = toJsonSchema(ConfigSchema, 'DestinationConfig');
 
-export const partialConfigJsonSchema = zodToJsonSchema(PartialConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'PartialDestinationConfig',
-});
+export const partialConfigJsonSchema = toJsonSchema(
+  PartialConfigSchema,
+  'PartialDestinationConfig',
+);
 
-export const contextJsonSchema = zodToJsonSchema(ContextSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'DestinationContext',
-});
+export const contextJsonSchema = toJsonSchema(
+  ContextSchema,
+  'DestinationContext',
+);
 
-export const pushContextJsonSchema = zodToJsonSchema(PushContextSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'PushContext',
-});
+export const pushContextJsonSchema = toJsonSchema(
+  PushContextSchema,
+  'PushContext',
+);
 
-export const batchJsonSchema = zodToJsonSchema(BatchSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Batch',
-});
+export const batchJsonSchema = toJsonSchema(BatchSchema, 'Batch');
 
-export const instanceJsonSchema = zodToJsonSchema(InstanceSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'DestinationInstance',
-});
+export const instanceJsonSchema = toJsonSchema(
+  InstanceSchema,
+  'DestinationInstance',
+);
 
-export const resultJsonSchema = zodToJsonSchema(ResultSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'DestinationResult',
-});
+export const resultJsonSchema = toJsonSchema(ResultSchema, 'DestinationResult');

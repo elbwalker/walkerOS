@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, toJsonSchema } from './validation';
 import { ConfigSchema as MappingConfigSchema } from './mapping';
 import { Identifier } from './primitives';
 import { ErrorHandlerSchema } from './utilities';
@@ -46,10 +45,13 @@ import { ErrorHandlerSchema } from './utilities';
  */
 export const BaseEnvSchema = z
   .object({
-    push: z.any().describe('Collector push function'),
-    command: z.any().describe('Collector command function'),
-    sources: z.any().optional().describe('Map of registered source instances'),
-    elb: z.any().describe('Public API function (alias for collector.push)'),
+    push: z.unknown().describe('Collector push function'),
+    command: z.unknown().describe('Collector command function'),
+    sources: z
+      .unknown()
+      .optional()
+      .describe('Map of registered source instances'),
+    elb: z.unknown().describe('Public API function (alias for collector.push)'),
   })
   .catchall(z.unknown())
   .describe(
@@ -99,9 +101,12 @@ export const ConfigSchema = MappingConfigSchema.extend({
 /**
  * PartialConfig - Config with all fields optional
  * Used for config updates and overrides
+ *
+ * Note: ConfigSchema extends MappingConfigSchema with mostly optional fields.
+ * Using .partial() ensures all fields are optional for config updates.
  */
-export const PartialConfigSchema = ConfigSchema.deepPartial().describe(
-  'Partial source configuration with all fields deeply optional',
+export const PartialConfigSchema = ConfigSchema.partial().describe(
+  'Partial source configuration with all fields optional',
 );
 
 // ========================================
@@ -146,7 +151,10 @@ export const InstanceSchema = z
       .any()
       .optional()
       .describe('Cleanup function called when source is removed'),
-    on: z.any().optional().describe('Lifecycle hook function for event types'),
+    on: z
+      .unknown()
+      .optional()
+      .describe('Lifecycle hook function for event types'),
   })
   .describe('Source instance with push handler and lifecycle methods');
 
@@ -212,38 +220,26 @@ export const InitSourcesSchema = z
 // JSON Schema Exports (for Explorer/RJSF/MCP)
 // ========================================
 
-export const baseEnvJsonSchema = zodToJsonSchema(BaseEnvSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'SourceBaseEnv',
-});
+export const baseEnvJsonSchema = toJsonSchema(BaseEnvSchema, 'SourceBaseEnv');
 
-export const configJsonSchema = zodToJsonSchema(ConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'SourceConfig',
-});
+export const configJsonSchema = toJsonSchema(ConfigSchema, 'SourceConfig');
 
-export const partialConfigJsonSchema = zodToJsonSchema(PartialConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'PartialSourceConfig',
-});
+export const partialConfigJsonSchema = toJsonSchema(
+  PartialConfigSchema,
+  'PartialSourceConfig',
+);
 
-export const instanceJsonSchema = zodToJsonSchema(InstanceSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'SourceInstance',
-});
+export const instanceJsonSchema = toJsonSchema(
+  InstanceSchema,
+  'SourceInstance',
+);
 
-export const initSourceJsonSchema = zodToJsonSchema(InitSourceSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'InitSource',
-});
+export const initSourceJsonSchema = toJsonSchema(
+  InitSourceSchema,
+  'InitSource',
+);
 
-export const initSourcesJsonSchema = zodToJsonSchema(InitSourcesSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'InitSources',
-});
+export const initSourcesJsonSchema = toJsonSchema(
+  InitSourcesSchema,
+  'InitSources',
+);

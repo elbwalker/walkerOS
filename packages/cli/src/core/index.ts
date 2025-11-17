@@ -1,4 +1,5 @@
 export * from './logger';
-export * from './config';
 export * from './timer';
 export * from './output';
+export * from './execution';
+export * from './docker';

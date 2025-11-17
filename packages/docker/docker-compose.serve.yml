@@ -1,0 +1,67 @@
+# docker-compose for walkerOS Serve Mode
+# Serves static files (typically generated bundles) via HTTP
+
+version: '3.8'
+
+services:
+  walkeros-serve:
+    image: walkeros/docker:latest
+    container_name: walkeros-serve
+
+    environment:
+      # Required: Set operational mode
+      MODE: serve
+
+      # Required: Flow configuration file path (built-in flows at /app/flows/)
+      FLOW: /app/flows/serve.json
+
+      # Optional: Override port from config
+      PORT: 8080
+
+      # Optional: Override host
+      HOST: 0.0.0.0
+
+      # Optional: Override static directory
+      # STATIC_DIR: /app/static
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      # Mount static files directory
+      - ./dist:/app/dist:ro
+
+      # Optional: Mount different static directory
+      # - ./static:/app/static:ro
+
+      # Optional: Mount custom flow config
+      # - ./my-flow.json:/app/custom.json:ro
+      # Then set FLOW: /app/custom.json
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+# Usage:
+# 1. Generate bundle first:
+#    docker-compose -f docker-compose.bundle.yml up
+# 2. Serve the bundle:
+#    docker-compose -f docker-compose.serve.yml up
+# 3. Access bundle: curl http://localhost:8080/walker.js

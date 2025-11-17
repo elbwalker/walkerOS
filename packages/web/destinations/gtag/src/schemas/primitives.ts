@@ -23,7 +23,7 @@ export const IncludeSchema = z.array(
  */
 export const ConsentModeSchema = z.union([
   z.boolean(),
-  z.record(z.union([z.string(), z.array(z.string())])),
+  z.record(z.string(), z.union([z.string(), z.array(z.string())])),
 ]);
 
 export const GA4SettingsSchema = z.object({

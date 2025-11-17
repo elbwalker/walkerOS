@@ -1,0 +1,56 @@
+{
+  "flow": {
+    "platform": "server",
+    "sources": {
+      "http": {
+        "code": "sourceExpress",
+        "config": {
+          "settings": {
+            "path": "/collect",
+            "port": 8080,
+            "cors": true,
+            "healthCheck": true
+          }
+        }
+      }
+    },
+    "destinations": {
+      "demo": {
+        "code": "destinationDemo",
+        "config": {
+          "settings": {
+            "name": "Server Collection Demo",
+            "values": ["name", "data", "context", "user", "nested", "timestamp"]
+          }
+        }
+      }
+    },
+    "collector": {
+      "run": true,
+      "globals": {
+        "environment": "test",
+        "version": "1.0.0"
+      }
+    }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": {
+        "version": "latest",
+        "imports": ["startFlow"]
+      },
+      "@walkeros/server-source-express": {
+        "version": "latest",
+        "imports": ["sourceExpress"]
+      },
+      "@walkeros/destination-demo": {
+        "version": "latest",
+        "imports": ["destinationDemo"]
+      }
+    },
+    "code": "// Simple server-side event collection with demo destination\n",
+    "template": "../templates/base.hbs",
+    "output": "server-collect.mjs",
+    "tempDir": "/tmp"
+  }
+}

@@ -1,5 +1,22 @@
 # @walkeros/website
 
+## 0.2.2
+
+### Patch Changes
+
+- zod4
+- Updated dependencies
+- Updated dependencies [25f7e10]
+  - @walkeros/web-destination-gtag@0.3.1
+  - @walkeros/web-destination-api@0.3.1
+  - @walkeros/core@0.3.1
+  - @walkeros/walker.js@0.3.1
+  - @walkeros/collector@0.3.1
+  - @walkeros/web-destination-piwikpro@0.3.1
+  - @walkeros/web-source-browser@0.3.1
+  - @walkeros/web-destination-meta@0.3.1
+  - @walkeros/web-destination-plausible@0.3.1
+
 ## 0.2.1
 
 ### Patch Changes

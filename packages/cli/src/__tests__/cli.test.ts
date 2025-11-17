@@ -24,7 +24,8 @@ describe('CLI Bundle Command', () => {
     args: string[],
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
     return new Promise((resolve) => {
-      const child = spawn('node', ['dist/index.mjs', ...args], {
+      // Add --local flag to run tests without Docker
+      const child = spawn('node', ['dist/index.js', ...args, '--local'], {
         stdio: 'pipe',
         shell: false,
       });
@@ -47,14 +48,17 @@ describe('CLI Bundle Command', () => {
   };
 
   it('should output JSON format for successful bundle', async () => {
-    // Create a test config
     const testConfig = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': { imports: ['getId'] },
+      flow: {
+        platform: 'web',
       },
-      code: 'export const test = getId();',
-      output: path.join(testOutputDir, 'test.js'),
+      build: {
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
+        },
+        code: 'export const test = getId();',
+        output: path.join(testOutputDir, 'test.js'),
+      },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
@@ -72,29 +76,45 @@ describe('CLI Bundle Command', () => {
     expect(output).toMatchObject({
       success: true,
       data: {
-        stats: {
-          totalSize: expect.any(Number),
-          packages: expect.any(Array),
-          buildTime: expect.any(Number),
-          treeshakingEffective: expect.any(Boolean),
+        environments: expect.arrayContaining([
+          {
+            environment: 'default',
+            success: true,
+            stats: {
+              totalSize: expect.any(Number),
+              packages: expect.any(Array),
+              buildTime: expect.any(Number),
+              treeshakingEffective: expect.any(Boolean),
+            },
+          },
+        ]),
+        summary: {
+          total: 1,
+          success: 1,
+          failed: 0,
         },
       },
       duration: expect.any(Number),
     });
 
-    expect(output.data.stats.packages).toHaveLength(1);
-    expect(output.data.stats.packages[0].name).toBe('@walkeros/core@latest');
+    expect(output.data.environments[0].stats.packages).toHaveLength(1);
+    expect(output.data.environments[0].stats.packages[0].name).toBe(
+      '@walkeros/core@latest',
+    );
   });
 
   it('should output JSON format for failed bundle', async () => {
-    // Create a test config with syntax error
     const testConfig = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': { imports: ['getId'] },
+      flow: {
+        platform: 'web',
       },
-      code: 'export const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
-      output: path.join(testOutputDir, 'error-test.js'),
+      build: {
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
+        },
+        code: 'export const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
+        output: path.join(testOutputDir, 'error-test.js'),
+      },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
@@ -137,10 +157,14 @@ describe('CLI Bundle Command', () => {
 
   it('should collect stats when --json flag is used (implies --stats)', async () => {
     const testConfig = {
-      platform: 'web',
-      packages: { '@walkeros/core': { imports: ['getId'] } },
-      code: 'export const test = getId;',
-      output: path.join(testOutputDir, 'wildcard-test.js'),
+      flow: {
+        platform: 'web',
+      },
+      build: {
+        packages: { '@walkeros/core': { imports: ['getId'] } },
+        code: 'export const test = getId;',
+        output: path.join(testOutputDir, 'wildcard-test.js'),
+      },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
@@ -156,15 +180,19 @@ describe('CLI Bundle Command', () => {
 
     const output = JSON.parse(result.stdout);
     expect(output.success).toBe(true);
-    expect(output.data.stats.treeshakingEffective).toBe(true); // Should be effective with named imports
+    expect(output.data.environments[0].stats.treeshakingEffective).toBe(true); // Should be effective with named imports
   });
 
   it('should suppress decorative output in JSON mode', async () => {
     const testConfig = {
-      platform: 'web',
-      packages: { '@walkeros/core': { imports: ['getId'] } },
-      code: 'export const test = getId();',
-      output: path.join(testOutputDir, 'minimal-test.js'),
+      flow: {
+        platform: 'web',
+      },
+      build: {
+        packages: { '@walkeros/core': { imports: ['getId'] } },
+        code: 'export const test = getId();',
+        output: path.join(testOutputDir, 'minimal-test.js'),
+      },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
@@ -190,10 +218,7 @@ describe('CLI Bundle Command', () => {
 });
 
 describe('CLI Simulate Command', () => {
-  const testConfigPath = path.join(
-    __dirname,
-    '../../examples/web-ecommerce.json',
-  );
+  const testConfigPath = path.join(__dirname, '../../examples/web-serve.json');
 
   beforeEach(() => {
     // Mock console.log and console.error to suppress output during tests
@@ -210,7 +235,8 @@ describe('CLI Simulate Command', () => {
     args: string[],
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
     return new Promise((resolve) => {
-      const child = spawn('node', ['dist/index.mjs', ...args], {
+      // Add --local flag to run tests without Docker
+      const child = spawn('node', ['dist/index.js', ...args, '--local'], {
         stdio: 'pipe',
         shell: false,
       });
@@ -242,6 +268,11 @@ describe('CLI Simulate Command', () => {
       '--json',
     ]);
 
+    if (result.exitCode !== 0) {
+      console.log('STDERR:', result.stderr);
+      console.log('STDOUT:', result.stdout);
+    }
+
     expect(result.exitCode).toBe(0);
 
     const output = JSON.parse(result.stdout);
@@ -249,8 +280,7 @@ describe('CLI Simulate Command', () => {
       result: {
         ok: true,
         successful: expect.arrayContaining([
-          expect.objectContaining({ id: 'gtag' }),
-          expect.objectContaining({ id: 'api' }),
+          expect.objectContaining({ id: 'demo' }),
         ]),
         queued: [],
         failed: [],
@@ -260,26 +290,16 @@ describe('CLI Simulate Command', () => {
         }),
       },
       usage: {
-        gtag: expect.any(Array),
-        api: expect.any(Array),
+        demo: expect.any(Array),
       },
       duration: expect.any(Number),
     });
 
-    // Verify gtag API calls
-    expect(output.usage.gtag.length).toBeGreaterThan(0);
-    expect(output.usage.gtag[0]).toMatchObject({
+    // Verify demo destination log calls
+    expect(output.usage.demo.length).toBeGreaterThan(0);
+    expect(output.usage.demo[0]).toMatchObject({
       type: 'call',
-      path: 'window.gtag',
-      timestamp: expect.any(Number),
-      args: expect.any(Array),
-    });
-
-    // Verify api API calls
-    expect(output.usage.api.length).toBeGreaterThan(0);
-    expect(output.usage.api[0]).toMatchObject({
-      type: 'call',
-      path: 'sendWeb',
+      path: 'log',
       timestamp: expect.any(Number),
       args: expect.any(Array),
     });

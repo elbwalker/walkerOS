@@ -4,7 +4,7 @@ import {
   loadJsonConfig,
   substituteEnvVariables,
   getTempDir,
-} from '../../core/config';
+} from '../../config';
 import { getId } from '@walkeros/core';
 
 describe('Config utilities', () => {

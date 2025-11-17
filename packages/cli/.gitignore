@@ -1,0 +1,21 @@
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# Generated bundles (from examples)
+examples/*.mjs
+examples/*.mjs.map
+server-collect.mjs*
+web-serve.mjs*
+
+# Temp directories
+.tmp/
+*.tmp
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,65 @@
+{
+  "name": "@walkeros/server-destination-datamanager",
+  "description": "Google Data Manager server destination for walkerOS",
+  "version": "0.3.1",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas.d.ts",
+      "import": "./dist/schemas.mjs",
+      "require": "./dist/schemas.js"
+    },
+    "./examples": {
+      "types": "./dist/examples/index.d.ts",
+      "import": "./dist/examples/index.mjs",
+      "require": "./dist/examples/index.js"
+    }
+  },
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "lint": "tsc && eslint \"**/*.ts*\"",
+    "test": "jest",
+    "update": "npx npm-check-updates -u && npm update"
+  },
+  "dependencies": {
+    "@walkeros/core": "0.3.1",
+    "@walkeros/server-core": "0.3.1"
+  },
+  "devDependencies": {},
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/server/destinations/datamanager"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "keywords": [
+    "walker",
+    "walkerOS",
+    "destination",
+    "server",
+    "google",
+    "data-manager",
+    "google-ads",
+    "dv360",
+    "ga4"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

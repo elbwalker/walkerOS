@@ -1,0 +1,80 @@
+---
+title: Google Data Manager
+description: "Server-side event ingestion to Google Ads, Display & Video 360, and Google Analytics 4"
+path: /docs/destinations/server/datamanager
+sidebar_position: 4
+package: '@walkeros/server-destination-datamanager'
+---
+import { schemas } from '@walkeros/server-destination-datamanager/schemas';
+
+# Google Data Manager
+
+<PackageLink env="server" github="packages/server/destinations/datamanager" npm="@walkeros/server-destination-datamanager" />
+
+The Google Data Manager destination package provides server-side integration for
+sending conversion events and audience data to Google's advertising ecosystem
+through a single unified API endpoint.
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-datamanager`}
+  language="bash"
+/>
+
+## Setup
+
+<CodeSnippet
+  code={`import { elb } from '@walkeros/collector';
+import { destinationDataManager } from '@walkeros/server-destination-datamanager';
+
+elb('walker destination', destinationDataManager, {
+  settings: {
+    accessToken: 'ya29.c.xxx',
+    destinations: [
+      {
+        operatingAccount: {
+          accountId: '123-456-7890',
+          accountType: 'GOOGLE_ADS',
+        },
+        productDestinationId: 'AW-CONVERSION-123',
+      },
+    ],
+  },
+});`}
+  language="typescript"
+/>
+
+## Guided Mapping Helpers
+
+Define common fields once in Settings instead of repeating them in every event
+mapping:
+
+<CodeSnippet
+  code={`elb('walker destination', destinationDataManager, {
+  settings: {
+    accessToken: 'ya29.c.xxx',
+    destinations: [...],
+
+    // Guided helpers (apply to all events)
+    userData: {
+      email: 'user.mail',
+      phone: 'data.phone',
+    },
+    userId: 'user.id',
+    clientId: 'user.device',
+    sessionAttributes: 'context.sessionAttributes',
+
+    // Consent mapping
+    consentAdUserData: 'marketing',
+    consentAdPersonalization: 'personalization',
+  },
+});`}
+  language="typescript"
+/>
+
+**Consent mapping**: Map your consent field names (string) or use static values (boolean). Event mappings always override Settings helpers.
+
+## Configuration reference
+
+<PropertyTable schema={schemas.settings} />

@@ -1,0 +1,126 @@
+{
+  "$ref": "#/definitions/FlowSetup",
+  "definitions": {
+    "FlowConfig": {
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": ["web", "server"],
+          "description": "Target platform: \"web\" for browser-based tracking, \"server\" for Node.js server-side collection"
+        },
+        "sources": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/SourceReference"
+          },
+          "description": "Source configurations (data capture) keyed by unique identifier"
+        },
+        "destinations": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/DestinationReference"
+          },
+          "description": "Destination configurations (data output) keyed by unique identifier"
+        },
+        "collector": {
+          "description": "Collector configuration for event processing (uses Collector.InitConfig)"
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Environment-specific variables (override root-level variables)"
+        }
+      },
+      "required": ["platform"],
+      "additionalProperties": true,
+      "description": "Single environment configuration for one deployment target"
+    },
+    "SourceReference": {
+      "type": "object",
+      "properties": {
+        "package": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Package specifier with optional version (e.g., \"@walkeros/web-source-browser@2.0.0\")"
+        },
+        "config": {
+          "description": "Source-specific configuration object"
+        },
+        "env": {
+          "description": "Source environment configuration"
+        },
+        "primary": {
+          "type": "boolean",
+          "description": "Mark as primary source (provides main elb). Only one source should be primary."
+        }
+      },
+      "required": ["package"],
+      "additionalProperties": false,
+      "description": "Source package reference with configuration"
+    },
+    "DestinationReference": {
+      "type": "object",
+      "properties": {
+        "package": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Package specifier with optional version (e.g., \"@walkeros/web-destination-gtag@2.0.0\")"
+        },
+        "config": {
+          "description": "Destination-specific configuration object"
+        },
+        "env": {
+          "description": "Destination environment configuration"
+        }
+      },
+      "required": ["package"],
+      "additionalProperties": false,
+      "description": "Destination package reference with configuration"
+    },
+    "Primitive": {
+      "type": ["string", "number", "boolean"],
+      "description": "Primitive value: string, number, or boolean"
+    },
+    "FlowSetup": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 1,
+          "description": "Configuration schema version (currently only 1 is supported)"
+        },
+        "$schema": {
+          "type": "string",
+          "format": "uri",
+          "description": "JSON Schema reference for IDE validation (e.g., \"https://walkeros.io/schema/flow/v1.json\")"
+        },
+        "variables": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Primitive"
+          },
+          "description": "Shared variables for interpolation across all environments (use ${VAR_NAME:default} syntax)"
+        },
+        "definitions": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Reusable configuration definitions (reference with JSON Schema $ref syntax)"
+        },
+        "environments": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/FlowConfig"
+          },
+          "description": "Named environment configurations (e.g., web_prod, server_stage)"
+        }
+      },
+      "required": ["version", "environments"],
+      "additionalProperties": false,
+      "description": "Complete multi-environment walkerOS configuration (walkeros.config.json)"
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

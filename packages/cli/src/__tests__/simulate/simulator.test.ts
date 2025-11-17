@@ -1,9 +1,9 @@
 import path from 'path';
-import { simulate } from '../../simulate/simulator';
+import { simulateCore as simulate } from '../../commands/simulate/simulator';
 import { Collector } from '@walkeros/core';
 
 // Mock package-manager to avoid network calls and return empty results
-jest.mock('../../bundle/package-manager', () => ({
+jest.mock('../../commands/bundle/package-manager', () => ({
   downloadPackages: jest.fn().mockResolvedValue(new Map()),
 }));
 
@@ -11,7 +11,7 @@ describe('Simulate', () => {
   it('should handle package manager errors gracefully', async () => {
     const configPath = path.resolve(
       __dirname,
-      '../../../examples/web-ecommerce.json',
+      '../../../examples/web-serve.json',
     );
     const event = { name: 'product view', data: { id: 'P123' } };
 

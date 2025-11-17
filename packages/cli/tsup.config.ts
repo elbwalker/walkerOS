@@ -4,11 +4,9 @@ export default defineConfig({
   ...baseConfig,
   entry: ['src/index.ts'],
   format: ['esm'],
-  outExtension() {
-    return { js: '.mjs' };
-  },
-  dts: false, // No types needed for CLI-only package
+  dts: true,
   sourcemap: true,
+  minify: false,
   banner: {
     js: '#!/usr/bin/env node',
   },

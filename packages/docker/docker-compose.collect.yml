@@ -1,0 +1,54 @@
+# docker-compose for walkerOS Collect Mode
+# Runs an HTTP event collection server
+
+version: '3.8'
+
+services:
+  walkeros-collect:
+    image: walkeros/docker:latest
+    container_name: walkeros-collect
+
+    environment:
+      # Required: Set operational mode
+      MODE: collect
+
+      # Required: Flow configuration file path (built-in flows at /app/flows/)
+      FLOW: /app/flows/collect-console.json
+
+      # Optional: Override port from config
+      PORT: 8080
+
+      # Optional: Override host
+      HOST: 0.0.0.0
+
+      # Optional: Enable debug logging
+      # DEBUG: "true"
+
+    ports:
+      - "8080:8080"
+
+    # volumes:
+      # Optional: Mount custom flow config
+      # - ./my-flow.json:/app/custom.json:ro
+      # Then set FLOW: /app/custom.json
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M

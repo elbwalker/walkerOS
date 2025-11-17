@@ -1,5 +1,14 @@
 # @walkeros/server-destination-meta
 
+## 0.3.1
+
+### Patch Changes
+
+- zod4
+- Updated dependencies
+  - @walkeros/core@0.3.1
+  - @walkeros/server-core@0.3.1
+
 ## 0.3.0
 
 ### Minor Changes

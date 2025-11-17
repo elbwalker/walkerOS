@@ -17,6 +17,7 @@
  * - types/destination.ts → schemas/destination.ts
  * - types/collector.ts → schemas/collector.ts
  * - types/source.ts → schemas/source.ts
+ * - types/flow.ts → schemas/flow.ts
  * - types/storage.ts + types/handler.ts → schemas/utilities.ts
  *
  * Import strategy:
@@ -42,6 +43,7 @@ import * as MappingSchemas from './mapping';
 import * as DestinationSchemas from './destination';
 import * as CollectorSchemas from './collector';
 import * as SourceSchemas from './source';
+import * as FlowSchemas from './flow';
 import * as UtilitySchemas from './utilities';
 
 export {
@@ -50,6 +52,7 @@ export {
   DestinationSchemas,
   CollectorSchemas,
   SourceSchemas,
+  FlowSchemas,
   UtilitySchemas,
 };
 
@@ -107,6 +110,24 @@ export {
   rulesJsonSchema,
 } from './mapping';
 
+// Export commonly used schemas from Flow namespace directly
+export {
+  SetupSchema,
+  ConfigSchema as FlowConfigSchema, // Alias to avoid conflict with other ConfigSchema exports
+  SourceReferenceSchema,
+  DestinationReferenceSchema,
+  PrimitiveSchema,
+  parseSetup,
+  safeParseSetup,
+  parseConfig,
+  safeParseConfig,
+  // JSON Schemas
+  setupJsonSchema,
+  configJsonSchema,
+  sourceReferenceJsonSchema,
+  destinationReferenceJsonSchema,
+} from './flow';
+
 // ========================================
 // Schema Builder - DRY utility for destinations
 // ========================================
@@ -151,26 +172,34 @@ export * from './schema-builder';
  * Usage in destinations:
  * import { z, zodToJsonSchema, zodToSchema } from '@walkeros/core';
  */
-export { z } from 'zod';
-export { zodToJsonSchema } from 'zod-to-json-schema';
+export { z, zodToJsonSchema } from './validation';
 
-import type { z as zod } from 'zod';
-import { zodToJsonSchema as toJsonSchema } from 'zod-to-json-schema';
+import type { zod } from './validation';
+import { z, zodToJsonSchema } from './validation';
+
+/**
+ * JSONSchema type for JSON Schema Draft 7 objects
+ *
+ * Represents a JSON Schema object as returned by Zod's toJSONSchema().
+ * Uses Record<string, unknown> as JSON Schema structure is dynamic.
+ */
+export type JSONSchema = Record<string, unknown>;
 
 /**
  * Utility to convert Zod schema to JSON Schema with consistent defaults
  *
  * This wrapper ensures all destinations use the same JSON Schema configuration:
- * - target: 'jsonSchema7' (JSON Schema Draft 7 format)
- * - $refStrategy: 'none' (inline all references, no $ref pointers)
+ * - target: 'draft-7' (JSON Schema Draft 7 format)
  *
  * Usage in destinations:
  * import { zodToSchema } from '@walkeros/core';
  * export const settings = zodToSchema(SettingsSchema);
+ *
+ * @param schema - Zod schema to convert
+ * @returns JSON Schema Draft 7 object
  */
-export function zodToSchema(schema: zod.ZodTypeAny) {
-  return toJsonSchema(schema, {
-    target: 'jsonSchema7',
-    $refStrategy: 'none',
-  });
+export function zodToSchema(schema: zod.ZodTypeAny): JSONSchema {
+  return z.toJSONSchema(schema, {
+    target: 'draft-7',
+  }) as JSONSchema;
 }

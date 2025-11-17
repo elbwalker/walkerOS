@@ -1,206 +1,285 @@
 # @walkeros/cli
 
-walkerOS CLI - Bundle and simulate walkerOS components
+Command-line tools for building, testing, and running walkerOS event collection
+flows.
 
-## Overview
+## What is this?
 
-The walkerOS CLI provides tools for bundling NPM packages with custom code and
-simulating event processing for development and testing.
+The walkerOS CLI is a developer tool that:
+
+- **Bundles** flow configurations into optimized JavaScript
+- **Simulates** event processing for testing
+- **Runs** flows locally without Docker daemon
+
+Think of it as your development toolchain for walkerOS - from config to running
+production bundles.
 
 ## Installation
 
 ```bash
+# Global (recommended for CLI usage)
+npm install -g @walkeros/cli
+
+# Local (for programmatic usage)
 npm install @walkeros/cli
 ```
 
 ## Commands
 
-### Bundle Command
+### bundle
 
-Bundle NPM packages with custom code into optimized JavaScript files:
+Generate optimized JavaScript bundles from flow configurations.
 
 ```bash
-walkeros bundle [options]
+walkeros bundle --config flow.json [options]
 ```
 
 **Options:**
 
-- `-c, --config <path>` - Configuration file path (default:
-  `bundle.config.json`)
+- `-c, --config <path>` - Flow configuration file (required)
+- `-e, --env <name>` - Build specific environment (multi-env configs)
+- `--all` - Build all environments
 - `-s, --stats` - Show bundle statistics
-- `--json` - Output statistics in JSON format (implies --stats)
-- `--no-cache` - Disable package caching and download fresh packages
+- `--json` - Output stats as JSON
+- `--no-cache` - Disable package caching
 - `-v, --verbose` - Verbose output
 
-**Examples:**
+**Example:**
 
 ```bash
-# Basic bundle
-walkeros bundle
-
-# With custom config and stats
-walkeros bundle -c my-config.json --stats --verbose
-
-# JSON output for CI/CD
-walkeros bundle --json
+# Bundle with stats
+walkeros bundle --config examples/server-collect.json --stats
 ```
 
-### Simulate Command
+The output path is specified in the config's `build.output` field.
 
-Simulate event processing and capture API calls for development and debugging:
+### simulate
+
+Test event processing with simulated events.
 
 ```bash
-walkeros simulate [options]
+walkeros simulate --config flow.json --event '{"name":"page view"}' [options]
 ```
 
 **Options:**
 
-- `-c, --config <path>` - Bundle configuration file (default:
-  `bundle.config.json`)
-- `-e, --event <json>` - Event to simulate (JSON string)
+- `-c, --config <path>` - Bundle configuration file (required)
+- `-e, --event <json>` - Event JSON string (required)
 - `--json` - Output results as JSON
 - `-v, --verbose` - Verbose output
 
+**Example:**
+
+```bash
+# Simulate page view
+walkeros simulate \
+  --config examples/web-serve.json \
+  --event '{"name":"page view","data":{"title":"Home"}}' \
+  --json
+```
+
+### run
+
+Run flows locally using @walkeros/docker as a library (no Docker daemon
+required).
+
+```bash
+walkeros run <mode> --config <path> [options]
+```
+
+**Modes:**
+
+- `collect` - HTTP event collection server
+- `serve` - Static file server
+
+**Options:**
+
+- `-c, --config <path>` - Flow config (.json) or bundle (.mjs)
+- `-p, --port <number>` - Server port
+- `-h, --host <host>` - Server host
+- `--static-dir <dir>` - Static directory (serve mode)
+- `--json` - JSON output
+- `-v, --verbose` - Verbose output
+
 **Examples:**
 
 ```bash
-# Simulate a product view event
-walkeros simulate -e '{"name":"product view","data":{"id":"P123","price":99.99}}'
+# Run collection server (auto-bundles JSON)
+walkeros run collect --config examples/server-collect.json --port 3000
 
-# With custom config and JSON output
-walkeros simulate -c ecommerce-config.json --json --verbose
+# Run with pre-built bundle
+walkeros run collect --config examples/server-collect.mjs --port 3000
+
+# Serve static files
+walkeros run serve --config flow.json --port 8080 --static-dir ./dist
 ```
 
-## Configuration
+**How it works:**
 
-### Bundle Configuration
+1. JSON configs are bundled to temp `.mjs` automatically
+2. `.mjs` bundles are used directly
+3. Runs in current Node.js process (no containers)
+4. Press Ctrl+C for graceful shutdown
 
-Create a `bundle.config.json` file:
+## Flow Configuration
+
+Minimal example:
 
 ```json
 {
-  "packages": [
-    {
-      "name": "@walkeros/core",
-      "version": "^0.1.2",
-      "imports": ["startFlow", "createEvent"]
-    },
-    {
-      "name": "@walkeros/web-destinations-gtag",
-      "version": "^0.1.0",
-      "imports": ["destinationGtag"]
-    }
-  ],
-  "sources": [
-    {
-      "name": "browser",
-      "config": {
-        "globalsOnly": true
-      }
-    }
-  ],
-  "destinations": [
-    {
-      "name": "gtag",
-      "config": {
-        "settings": {
-          "ga4": {
-            "measurementId": "G-XXXXXXXXXX"
+  "flow": {
+    "platform": "server",
+    "sources": {
+      "http": {
+        "code": "sourceExpress",
+        "config": {
+          "settings": {
+            "path": "/collect",
+            "port": 8080
           }
         }
       }
+    },
+    "destinations": {
+      "demo": {
+        "code": "destinationDemo",
+        "config": {
+          "settings": {
+            "name": "Demo"
+          }
+        }
+      }
+    },
+    "collector": {
+      "run": true
     }
-  ],
-  "content": "// Custom initialization code",
-  "output": {
-    "filename": "walkeros-bundle.js",
-    "dir": "./dist"
   },
   "build": {
-    "platform": "browser",
-    "format": "esm",
-    "minify": true
+    "packages": {
+      "@walkeros/collector": {
+        "version": "latest",
+        "imports": ["startFlow"]
+      },
+      "@walkeros/server-source-express": {
+        "version": "latest",
+        "imports": ["sourceExpress"]
+      },
+      "@walkeros/destination-demo": {
+        "version": "latest",
+        "imports": ["destinationDemo"]
+      }
+    },
+    "code": "// Custom code here\n",
+    "output": "bundle.mjs",
+    "template": "./templates/base.hbs"
   }
 }
 ```
 
-### Key Configuration Sections
+See [examples/](./examples/) for complete working configurations.
 
-- **`packages`** - NPM packages to include with specific imports
-- **`sources`** - Data collection sources (browser, dataLayer, etc.)
-- **`destinations`** - Analytics/marketing destinations (gtag, Meta, etc.)
-- **`content`** - Custom JavaScript code to include
-- **`output`** - Bundle output configuration
-- **`build`** - Build options (platform, format, minification)
+## Programmatic API
+
+Use commands programmatically:
+
+```typescript
+import { bundle, simulate, runCommand } from '@walkeros/cli';
+
+// Bundle
+await bundle({
+  config: './flow.json',
+  stats: true,
+});
+
+// Simulate
+const result = await simulate(
+  './flow.json',
+  { name: 'page view', data: { title: 'Test' } },
+  { json: true },
+);
+
+// Run
+await runCommand('collect', {
+  config: './flow.json',
+  port: 3000,
+  verbose: true,
+});
+```
+
+## Examples
+
+Working example configs in [examples/](./examples/):
+
+- **server-collect.json** - Basic server-side collection
+- **server-collection.json** - Advanced server setup
+- **web-serve.json** - Web demo with API destination
+- **web-tracking.json** - General web tracking
+
+Try them:
+
+```bash
+# Bundle example
+walkeros bundle --config examples/server-collect.json --stats
+
+# Simulate
+walkeros simulate \
+  --config examples/web-serve.json \
+  --event '{"name":"product view","data":{"id":"P123"}}'
+
+# Run server
+walkeros run collect --config examples/server-collect.json --port 3000
+```
 
 ## Development Workflow
 
-### 1. Bundle Your Configuration
+Typical development cycle:
 
 ```bash
-walkeros bundle -c config.json --stats
-```
+# 1. Create/edit config
+vim my-flow.json
 
-### 2. Test with Simulation
+# 2. Bundle and check stats
+walkeros bundle --config my-flow.json --stats
 
-```bash
-walkeros simulate -e '{"name":"page view","data":{"title":"Home"}}'
-```
+# 3. Test with simulation
+walkeros simulate \
+  --config my-flow.json \
+  --event '{"name":"test event"}' \
+  --verbose
 
-### 3. Production Build
+# 4. Run locally
+walkeros run collect --config my-flow.json --port 3000
 
-```bash
-walkeros bundle -c config.json --json > build-info.json
+# 5. In another terminal, test it
+curl -X POST http://localhost:3000/collect \
+  -H "Content-Type: application/json" \
+  -d '{"name":"page view","data":{"title":"Home"}}'
 ```
 
 ## Architecture
 
-The CLI is organized into focused modules:
-
-- **`core/`** - Shared utilities (logger, timer, output formatting)
-- **`bundle/`** - Package bundling and code generation
-- **`simulate/`** - Event simulation and API call tracking
-
-### Logger System
-
-All output uses a consistent logging system:
-
-```typescript
-import { createLogger } from '@walkeros/cli/core';
-
-const logger = createLogger({
-  verbose: true,
-  silent: false,
-  json: false,
-});
-
-logger.info('Starting process...');
-logger.success('Process completed!');
-logger.error('Something went wrong');
+```
+CLI (downloads packages + bundles with esbuild)
+ ├─ Bundle → optimized .mjs file
+ ├─ Simulate → test bundle with events
+ └─ Run → import @walkeros/docker + execute bundle
 ```
 
-## API
+**Key principle**: CLI handles build-time, Docker handles runtime.
 
-### Programmatic Usage
+## Requirements
 
-```typescript
-import { bundleCommand, simulateCommand } from '@walkeros/cli';
+- **Node.js**: 18+ or 22+
+- **Docker**: Not required for CLI (only for production deployment)
 
-// Bundle programmatically
-await bundleCommand({
-  config: 'config.json',
-  stats: true,
-  verbose: true,
-});
+## Documentation
 
-// Simulate programmatically
-await simulateCommand({
-  config: 'config.json',
-  event: '{"name":"product view","data":{"id":"P123"}}',
-  json: true,
-});
-```
+Detailed guides in [docs/](./docs/):
+
+- [RUN_COMMAND.md](./docs/RUN_COMMAND.md) - Run command details
+- [PUBLISHING.md](./docs/PUBLISHING.md) - Publishing guide
+- [MANUAL_TESTING_GUIDE.md](./docs/MANUAL_TESTING_GUIDE.md) - Testing guide
 
 ## License
 
-MIT
+MIT © elbwalker

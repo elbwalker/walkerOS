@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, toJsonSchema } from './validation';
 import {
   RequiredString,
   RequiredNumber,
@@ -267,64 +266,48 @@ export const PartialEventSchema = EventSchema.partial().describe(
 );
 
 /**
- * DeepPartialEvent - Event with deeply nested optional fields
+ * DeepPartialEvent - Event with all fields optional
  * Used for event updates and patches
+ *
+ * Note: While the TypeScript type uses DeepPartial<Event> for compile-time validation,
+ * the Zod schema uses .partial() which makes top-level fields optional. This is
+ * sufficient for runtime validation as deeply nested partial objects are rarely
+ * provided (users typically omit entire objects rather than providing partial nested data).
+ * Zod 4 deliberately removed .deepPartial() due to internal type complexity issues.
  */
-export const DeepPartialEventSchema: z.ZodTypeAny = z
-  .lazy(() => EventSchema.deepPartial())
-  .describe('Deep partial event structure with all nested fields optional');
+export const DeepPartialEventSchema: z.ZodTypeAny =
+  EventSchema.partial().describe(
+    'Partial event structure with all top-level fields optional',
+  );
 
 // ========================================
 // JSON Schema Exports (for Explorer/RJSF/MCP)
 // ========================================
 
-export const eventJsonSchema = zodToJsonSchema(EventSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Event',
-});
+export const eventJsonSchema = toJsonSchema(EventSchema, 'Event');
 
-export const partialEventJsonSchema = zodToJsonSchema(PartialEventSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'PartialEvent',
-});
-
-export const userJsonSchema = zodToJsonSchema(UserSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'User',
-});
-
-export const propertiesJsonSchema = zodToJsonSchema(PropertiesSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Properties',
-});
-
-export const orderedPropertiesJsonSchema = zodToJsonSchema(
-  OrderedPropertiesSchema,
-  {
-    target: 'jsonSchema7',
-    $refStrategy: 'relative',
-    name: 'OrderedProperties',
-  },
+export const partialEventJsonSchema = toJsonSchema(
+  PartialEventSchema,
+  'PartialEvent',
 );
 
-export const entityJsonSchema = zodToJsonSchema(EntitySchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Entity',
-});
+export const userJsonSchema = toJsonSchema(UserSchema, 'User');
 
-export const sourceTypeJsonSchema = zodToJsonSchema(SourceTypeSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'SourceType',
-});
+export const propertiesJsonSchema = toJsonSchema(
+  PropertiesSchema,
+  'Properties',
+);
 
-export const consentJsonSchema = zodToJsonSchema(ConsentSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Consent',
-});
+export const orderedPropertiesJsonSchema = toJsonSchema(
+  OrderedPropertiesSchema,
+  'OrderedProperties',
+);
+
+export const entityJsonSchema = toJsonSchema(EntitySchema, 'Entity');
+
+export const sourceTypeJsonSchema = toJsonSchema(
+  SourceTypeSchema,
+  'SourceType',
+);
+
+export const consentJsonSchema = toJsonSchema(ConsentSchema, 'Consent');

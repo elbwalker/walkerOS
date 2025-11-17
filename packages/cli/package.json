@@ -1,11 +1,19 @@
 {
   "name": "@walkeros/cli",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "bin": {
-    "walkeros": "./dist/index.mjs"
+    "walkeros": "./dist/index.js"
   },
   "files": [
     "dist/**",
@@ -18,11 +26,14 @@
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "jest --colors",
-    "lint": "tsc && eslint \"**/*.ts*\"",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage && rm -rf .temp"
+    "lint": "tsc && eslint \"src/**/*.ts*\"",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage && rm -rf .temp",
+    "docker:build": "bash scripts/build-docker.sh",
+    "docker:test": "docker run --rm walkeros/cli:latest --version"
   },
   "dependencies": {
-    "@walkeros/core": "^0.2.0",
+    "@walkeros/core": "^0.3.1",
+    "@walkeros/docker": "*",
     "chalk": "^5.3.0",
     "commander": "^11.0.0",
     "esbuild": "^0.19.0",
