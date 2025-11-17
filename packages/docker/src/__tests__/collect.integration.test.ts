@@ -16,12 +16,12 @@ import { existsSync } from 'fs';
 
 describe('Collect Mode Integration', () => {
   let serverProcess: ChildProcess;
-  let port: number;
+  const port = 8080;
   const projectRoot = process.cwd();
 
   // Build Docker package before all tests
   beforeAll(() => {
-    const distPath = join(projectRoot, 'dist/index.mjs');
+    const distPath = join(projectRoot, 'dist/index.js');
     const distExists = existsSync(distPath);
 
     if (!distExists) {
@@ -34,10 +34,6 @@ describe('Collect Mode Integration', () => {
         throw error;
       }
     }
-  });
-
-  beforeEach(() => {
-    port = 8000 + Math.floor(Math.random() * 1000);
   });
 
   afterEach(async () => {
@@ -54,21 +50,19 @@ describe('Collect Mode Integration', () => {
     // Verify bundle exists
     expect(existsSync(bundlePath)).toBe(true);
 
-    serverProcess = spawn('node', ['dist/index.mjs'], {
+    serverProcess = spawn('node', ['dist/index.js'], {
       cwd: projectRoot,
       env: {
         ...process.env,
         MODE: 'collect',
-        FLOW: bundlePath, // Static demo bundle from Docker package
+        FLOW: bundlePath,
         PORT: port.toString(),
       },
     });
 
-    // The bundle has sourceExpress configured with port 8080
-    // Health endpoint is provided by the source, not Docker runtime
-    await waitForServer(`http://localhost:8080/health`, 15000);
+    await waitForServer(`http://localhost:${port}/health`, 15000);
 
-    const healthRes = await fetch(`http://localhost:8080/health`);
+    const healthRes = await fetch(`http://localhost:${port}/health`);
     expect(healthRes.status).toBe(200);
 
     const health = (await healthRes.json()) as any;

@@ -2,20 +2,1305 @@
 import { z as f } from "zod";
 import { z as k } from "zod";
 import { z } from "zod";
-import { zodToJsonSchema as D } from "zod-to-json-schema";
+
+// node_modules/zod-to-json-schema/dist/esm/Options.js
+var ignoreOverride = Symbol("Let zodToJsonSchema decide on which parser to use");
+var defaultOptions = {
+  name: void 0,
+  $refStrategy: "root",
+  basePath: ["#"],
+  effectStrategy: "input",
+  pipeStrategy: "all",
+  dateStrategy: "format:date-time",
+  mapStrategy: "entries",
+  removeAdditionalStrategy: "passthrough",
+  allowedAdditionalProperties: true,
+  rejectedAdditionalProperties: false,
+  definitionPath: "definitions",
+  target: "jsonSchema7",
+  strictUnions: false,
+  definitions: {},
+  errorMessages: false,
+  markdownDescription: false,
+  patternStrategy: "escape",
+  applyRegexFlags: false,
+  emailStrategy: "format:email",
+  base64Strategy: "contentEncoding:base64",
+  nameStrategy: "ref",
+  openAiAnyTypeName: "OpenAiAnyType"
+};
+var getDefaultOptions = (options) => typeof options === "string" ? {
+  ...defaultOptions,
+  name: options
+} : {
+  ...defaultOptions,
+  ...options
+};
+
+// node_modules/zod-to-json-schema/dist/esm/Refs.js
+var getRefs = (options) => {
+  const _options = getDefaultOptions(options);
+  const currentPath = _options.name !== void 0 ? [..._options.basePath, _options.definitionPath, _options.name] : _options.basePath;
+  return {
+    ..._options,
+    flags: { hasReferencedOpenAiAnyType: false },
+    currentPath,
+    propertyPath: void 0,
+    seen: new Map(Object.entries(_options.definitions).map(([name, def]) => [
+      def._def,
+      {
+        def: def._def,
+        path: [..._options.basePath, _options.definitionPath, name],
+        // Resolution of references will be forced even though seen, so it's ok that the schema is undefined here for now.
+        jsonSchema: void 0
+      }
+    ]))
+  };
+};
+
+// node_modules/zod-to-json-schema/dist/esm/errorMessages.js
+function addErrorMessage(res, key, errorMessage, refs) {
+  if (!refs?.errorMessages)
+    return;
+  if (errorMessage) {
+    res.errorMessage = {
+      ...res.errorMessage,
+      [key]: errorMessage
+    };
+  }
+}
+function setResponseValueAndErrors(res, key, value, errorMessage, refs) {
+  res[key] = value;
+  addErrorMessage(res, key, errorMessage, refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
+var getRelativePath = (pathA, pathB) => {
+  let i2 = 0;
+  for (; i2 < pathA.length && i2 < pathB.length; i2++) {
+    if (pathA[i2] !== pathB[i2])
+      break;
+  }
+  return [(pathA.length - i2).toString(), ...pathB.slice(i2)].join("/");
+};
+
+// node_modules/zod-to-json-schema/dist/esm/selectParser.js
+import { ZodFirstPartyTypeKind as ZodFirstPartyTypeKind3 } from "zod";
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/any.js
+function parseAnyDef(refs) {
+  if (refs.target !== "openAi") {
+    return {};
+  }
+  const anyDefinitionPath = [
+    ...refs.basePath,
+    refs.definitionPath,
+    refs.openAiAnyTypeName
+  ];
+  refs.flags.hasReferencedOpenAiAnyType = true;
+  return {
+    $ref: refs.$refStrategy === "relative" ? getRelativePath(anyDefinitionPath, refs.currentPath) : anyDefinitionPath.join("/")
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/array.js
+import { ZodFirstPartyTypeKind } from "zod";
+function parseArrayDef(def, refs) {
+  const res = {
+    type: "array"
+  };
+  if (def.type?._def && def.type?._def?.typeName !== ZodFirstPartyTypeKind.ZodAny) {
+    res.items = parseDef(def.type._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "items"]
+    });
+  }
+  if (def.minLength) {
+    setResponseValueAndErrors(res, "minItems", def.minLength.value, def.minLength.message, refs);
+  }
+  if (def.maxLength) {
+    setResponseValueAndErrors(res, "maxItems", def.maxLength.value, def.maxLength.message, refs);
+  }
+  if (def.exactLength) {
+    setResponseValueAndErrors(res, "minItems", def.exactLength.value, def.exactLength.message, refs);
+    setResponseValueAndErrors(res, "maxItems", def.exactLength.value, def.exactLength.message, refs);
+  }
+  return res;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
+function parseBigintDef(def, refs) {
+  const res = {
+    type: "integer",
+    format: "int64"
+  };
+  if (!def.checks)
+    return res;
+  for (const check of def.checks) {
+    switch (check.kind) {
+      case "min":
+        if (refs.target === "jsonSchema7") {
+          if (check.inclusive) {
+            setResponseValueAndErrors(res, "minimum", check.value, check.message, refs);
+          } else {
+            setResponseValueAndErrors(res, "exclusiveMinimum", check.value, check.message, refs);
+          }
+        } else {
+          if (!check.inclusive) {
+            res.exclusiveMinimum = true;
+          }
+          setResponseValueAndErrors(res, "minimum", check.value, check.message, refs);
+        }
+        break;
+      case "max":
+        if (refs.target === "jsonSchema7") {
+          if (check.inclusive) {
+            setResponseValueAndErrors(res, "maximum", check.value, check.message, refs);
+          } else {
+            setResponseValueAndErrors(res, "exclusiveMaximum", check.value, check.message, refs);
+          }
+        } else {
+          if (!check.inclusive) {
+            res.exclusiveMaximum = true;
+          }
+          setResponseValueAndErrors(res, "maximum", check.value, check.message, refs);
+        }
+        break;
+      case "multipleOf":
+        setResponseValueAndErrors(res, "multipleOf", check.value, check.message, refs);
+        break;
+    }
+  }
+  return res;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
+function parseBooleanDef() {
+  return {
+    type: "boolean"
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
+function parseBrandedDef(_def, refs) {
+  return parseDef(_def.type._def, refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
+var parseCatchDef = (def, refs) => {
+  return parseDef(def.innerType._def, refs);
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/date.js
+function parseDateDef(def, refs, overrideDateStrategy) {
+  const strategy = overrideDateStrategy ?? refs.dateStrategy;
+  if (Array.isArray(strategy)) {
+    return {
+      anyOf: strategy.map((item, i2) => parseDateDef(def, refs, item))
+    };
+  }
+  switch (strategy) {
+    case "string":
+    case "format:date-time":
+      return {
+        type: "string",
+        format: "date-time"
+      };
+    case "format:date":
+      return {
+        type: "string",
+        format: "date"
+      };
+    case "integer":
+      return integerDateParser(def, refs);
+  }
+}
+var integerDateParser = (def, refs) => {
+  const res = {
+    type: "integer",
+    format: "unix-time"
+  };
+  if (refs.target === "openApi3") {
+    return res;
+  }
+  for (const check of def.checks) {
+    switch (check.kind) {
+      case "min":
+        setResponseValueAndErrors(
+          res,
+          "minimum",
+          check.value,
+          // This is in milliseconds
+          check.message,
+          refs
+        );
+        break;
+      case "max":
+        setResponseValueAndErrors(
+          res,
+          "maximum",
+          check.value,
+          // This is in milliseconds
+          check.message,
+          refs
+        );
+        break;
+    }
+  }
+  return res;
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/default.js
+function parseDefaultDef(_def, refs) {
+  return {
+    ...parseDef(_def.innerType._def, refs),
+    default: _def.defaultValue()
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
+function parseEffectsDef(_def, refs) {
+  return refs.effectStrategy === "input" ? parseDef(_def.schema._def, refs) : parseAnyDef(refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
+function parseEnumDef(def) {
+  return {
+    type: "string",
+    enum: Array.from(def.values)
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
+var isJsonSchema7AllOfType = (type) => {
+  if ("type" in type && type.type === "string")
+    return false;
+  return "allOf" in type;
+};
+function parseIntersectionDef(def, refs) {
+  const allOf = [
+    parseDef(def.left._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "allOf", "0"]
+    }),
+    parseDef(def.right._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "allOf", "1"]
+    })
+  ].filter((x2) => !!x2);
+  let unevaluatedProperties = refs.target === "jsonSchema2019-09" ? { unevaluatedProperties: false } : void 0;
+  const mergedAllOf = [];
+  allOf.forEach((schema) => {
+    if (isJsonSchema7AllOfType(schema)) {
+      mergedAllOf.push(...schema.allOf);
+      if (schema.unevaluatedProperties === void 0) {
+        unevaluatedProperties = void 0;
+      }
+    } else {
+      let nestedSchema = schema;
+      if ("additionalProperties" in schema && schema.additionalProperties === false) {
+        const { additionalProperties, ...rest } = schema;
+        nestedSchema = rest;
+      } else {
+        unevaluatedProperties = void 0;
+      }
+      mergedAllOf.push(nestedSchema);
+    }
+  });
+  return mergedAllOf.length ? {
+    allOf: mergedAllOf,
+    ...unevaluatedProperties
+  } : void 0;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
+function parseLiteralDef(def, refs) {
+  const parsedType = typeof def.value;
+  if (parsedType !== "bigint" && parsedType !== "number" && parsedType !== "boolean" && parsedType !== "string") {
+    return {
+      type: Array.isArray(def.value) ? "array" : "object"
+    };
+  }
+  if (refs.target === "openApi3") {
+    return {
+      type: parsedType === "bigint" ? "integer" : parsedType,
+      enum: [def.value]
+    };
+  }
+  return {
+    type: parsedType === "bigint" ? "integer" : parsedType,
+    const: def.value
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/record.js
+import { ZodFirstPartyTypeKind as ZodFirstPartyTypeKind2 } from "zod";
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/string.js
+var emojiRegex = void 0;
+var zodPatterns = {
+  /**
+   * `c` was changed to `[cC]` to replicate /i flag
+   */
+  cuid: /^[cC][^\s-]{8,}$/,
+  cuid2: /^[0-9a-z]+$/,
+  ulid: /^[0-9A-HJKMNP-TV-Z]{26}$/,
+  /**
+   * `a-z` was added to replicate /i flag
+   */
+  email: /^(?!\.)(?!.*\.\.)([a-zA-Z0-9_'+\-\.]*)[a-zA-Z0-9_+-]@([a-zA-Z0-9][a-zA-Z0-9\-]*\.)+[a-zA-Z]{2,}$/,
+  /**
+   * Constructed a valid Unicode RegExp
+   *
+   * Lazily instantiate since this type of regex isn't supported
+   * in all envs (e.g. React Native).
+   *
+   * See:
+   * https://github.com/colinhacks/zod/issues/2433
+   * Fix in Zod:
+   * https://github.com/colinhacks/zod/commit/9340fd51e48576a75adc919bff65dbc4a5d4c99b
+   */
+  emoji: () => {
+    if (emojiRegex === void 0) {
+      emojiRegex = RegExp("^(\\p{Extended_Pictographic}|\\p{Emoji_Component})+$", "u");
+    }
+    return emojiRegex;
+  },
+  /**
+   * Unused
+   */
+  uuid: /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/,
+  /**
+   * Unused
+   */
+  ipv4: /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/,
+  ipv4Cidr: /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\/(3[0-2]|[12]?[0-9])$/,
+  /**
+   * Unused
+   */
+  ipv6: /^(([a-f0-9]{1,4}:){7}|::([a-f0-9]{1,4}:){0,6}|([a-f0-9]{1,4}:){1}:([a-f0-9]{1,4}:){0,5}|([a-f0-9]{1,4}:){2}:([a-f0-9]{1,4}:){0,4}|([a-f0-9]{1,4}:){3}:([a-f0-9]{1,4}:){0,3}|([a-f0-9]{1,4}:){4}:([a-f0-9]{1,4}:){0,2}|([a-f0-9]{1,4}:){5}:([a-f0-9]{1,4}:){0,1})([a-f0-9]{1,4}|(((25[0-5])|(2[0-4][0-9])|(1[0-9]{2})|([0-9]{1,2}))\.){3}((25[0-5])|(2[0-4][0-9])|(1[0-9]{2})|([0-9]{1,2})))$/,
+  ipv6Cidr: /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/(12[0-8]|1[01][0-9]|[1-9]?[0-9])$/,
+  base64: /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/,
+  base64url: /^([0-9a-zA-Z-_]{4})*(([0-9a-zA-Z-_]{2}(==)?)|([0-9a-zA-Z-_]{3}(=)?))?$/,
+  nanoid: /^[a-zA-Z0-9_-]{21}$/,
+  jwt: /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/
+};
+function parseStringDef(def, refs) {
+  const res = {
+    type: "string"
+  };
+  if (def.checks) {
+    for (const check of def.checks) {
+      switch (check.kind) {
+        case "min":
+          setResponseValueAndErrors(res, "minLength", typeof res.minLength === "number" ? Math.max(res.minLength, check.value) : check.value, check.message, refs);
+          break;
+        case "max":
+          setResponseValueAndErrors(res, "maxLength", typeof res.maxLength === "number" ? Math.min(res.maxLength, check.value) : check.value, check.message, refs);
+          break;
+        case "email":
+          switch (refs.emailStrategy) {
+            case "format:email":
+              addFormat(res, "email", check.message, refs);
+              break;
+            case "format:idn-email":
+              addFormat(res, "idn-email", check.message, refs);
+              break;
+            case "pattern:zod":
+              addPattern(res, zodPatterns.email, check.message, refs);
+              break;
+          }
+          break;
+        case "url":
+          addFormat(res, "uri", check.message, refs);
+          break;
+        case "uuid":
+          addFormat(res, "uuid", check.message, refs);
+          break;
+        case "regex":
+          addPattern(res, check.regex, check.message, refs);
+          break;
+        case "cuid":
+          addPattern(res, zodPatterns.cuid, check.message, refs);
+          break;
+        case "cuid2":
+          addPattern(res, zodPatterns.cuid2, check.message, refs);
+          break;
+        case "startsWith":
+          addPattern(res, RegExp(`^${escapeLiteralCheckValue(check.value, refs)}`), check.message, refs);
+          break;
+        case "endsWith":
+          addPattern(res, RegExp(`${escapeLiteralCheckValue(check.value, refs)}$`), check.message, refs);
+          break;
+        case "datetime":
+          addFormat(res, "date-time", check.message, refs);
+          break;
+        case "date":
+          addFormat(res, "date", check.message, refs);
+          break;
+        case "time":
+          addFormat(res, "time", check.message, refs);
+          break;
+        case "duration":
+          addFormat(res, "duration", check.message, refs);
+          break;
+        case "length":
+          setResponseValueAndErrors(res, "minLength", typeof res.minLength === "number" ? Math.max(res.minLength, check.value) : check.value, check.message, refs);
+          setResponseValueAndErrors(res, "maxLength", typeof res.maxLength === "number" ? Math.min(res.maxLength, check.value) : check.value, check.message, refs);
+          break;
+        case "includes": {
+          addPattern(res, RegExp(escapeLiteralCheckValue(check.value, refs)), check.message, refs);
+          break;
+        }
+        case "ip": {
+          if (check.version !== "v6") {
+            addFormat(res, "ipv4", check.message, refs);
+          }
+          if (check.version !== "v4") {
+            addFormat(res, "ipv6", check.message, refs);
+          }
+          break;
+        }
+        case "base64url":
+          addPattern(res, zodPatterns.base64url, check.message, refs);
+          break;
+        case "jwt":
+          addPattern(res, zodPatterns.jwt, check.message, refs);
+          break;
+        case "cidr": {
+          if (check.version !== "v6") {
+            addPattern(res, zodPatterns.ipv4Cidr, check.message, refs);
+          }
+          if (check.version !== "v4") {
+            addPattern(res, zodPatterns.ipv6Cidr, check.message, refs);
+          }
+          break;
+        }
+        case "emoji":
+          addPattern(res, zodPatterns.emoji(), check.message, refs);
+          break;
+        case "ulid": {
+          addPattern(res, zodPatterns.ulid, check.message, refs);
+          break;
+        }
+        case "base64": {
+          switch (refs.base64Strategy) {
+            case "format:binary": {
+              addFormat(res, "binary", check.message, refs);
+              break;
+            }
+            case "contentEncoding:base64": {
+              setResponseValueAndErrors(res, "contentEncoding", "base64", check.message, refs);
+              break;
+            }
+            case "pattern:zod": {
+              addPattern(res, zodPatterns.base64, check.message, refs);
+              break;
+            }
+          }
+          break;
+        }
+        case "nanoid": {
+          addPattern(res, zodPatterns.nanoid, check.message, refs);
+        }
+        case "toLowerCase":
+        case "toUpperCase":
+        case "trim":
+          break;
+        default:
+          /* @__PURE__ */ ((_3) => {
+          })(check);
+      }
+    }
+  }
+  return res;
+}
+function escapeLiteralCheckValue(literal, refs) {
+  return refs.patternStrategy === "escape" ? escapeNonAlphaNumeric(literal) : literal;
+}
+var ALPHA_NUMERIC = new Set("ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz0123456789");
+function escapeNonAlphaNumeric(source) {
+  let result = "";
+  for (let i2 = 0; i2 < source.length; i2++) {
+    if (!ALPHA_NUMERIC.has(source[i2])) {
+      result += "\\";
+    }
+    result += source[i2];
+  }
+  return result;
+}
+function addFormat(schema, value, message, refs) {
+  if (schema.format || schema.anyOf?.some((x2) => x2.format)) {
+    if (!schema.anyOf) {
+      schema.anyOf = [];
+    }
+    if (schema.format) {
+      schema.anyOf.push({
+        format: schema.format,
+        ...schema.errorMessage && refs.errorMessages && {
+          errorMessage: { format: schema.errorMessage.format }
+        }
+      });
+      delete schema.format;
+      if (schema.errorMessage) {
+        delete schema.errorMessage.format;
+        if (Object.keys(schema.errorMessage).length === 0) {
+          delete schema.errorMessage;
+        }
+      }
+    }
+    schema.anyOf.push({
+      format: value,
+      ...message && refs.errorMessages && { errorMessage: { format: message } }
+    });
+  } else {
+    setResponseValueAndErrors(schema, "format", value, message, refs);
+  }
+}
+function addPattern(schema, regex, message, refs) {
+  if (schema.pattern || schema.allOf?.some((x2) => x2.pattern)) {
+    if (!schema.allOf) {
+      schema.allOf = [];
+    }
+    if (schema.pattern) {
+      schema.allOf.push({
+        pattern: schema.pattern,
+        ...schema.errorMessage && refs.errorMessages && {
+          errorMessage: { pattern: schema.errorMessage.pattern }
+        }
+      });
+      delete schema.pattern;
+      if (schema.errorMessage) {
+        delete schema.errorMessage.pattern;
+        if (Object.keys(schema.errorMessage).length === 0) {
+          delete schema.errorMessage;
+        }
+      }
+    }
+    schema.allOf.push({
+      pattern: stringifyRegExpWithFlags(regex, refs),
+      ...message && refs.errorMessages && { errorMessage: { pattern: message } }
+    });
+  } else {
+    setResponseValueAndErrors(schema, "pattern", stringifyRegExpWithFlags(regex, refs), message, refs);
+  }
+}
+function stringifyRegExpWithFlags(regex, refs) {
+  if (!refs.applyRegexFlags || !regex.flags) {
+    return regex.source;
+  }
+  const flags = {
+    i: regex.flags.includes("i"),
+    m: regex.flags.includes("m"),
+    s: regex.flags.includes("s")
+    // `.` matches newlines
+  };
+  const source = flags.i ? regex.source.toLowerCase() : regex.source;
+  let pattern = "";
+  let isEscaped = false;
+  let inCharGroup = false;
+  let inCharRange = false;
+  for (let i2 = 0; i2 < source.length; i2++) {
+    if (isEscaped) {
+      pattern += source[i2];
+      isEscaped = false;
+      continue;
+    }
+    if (flags.i) {
+      if (inCharGroup) {
+        if (source[i2].match(/[a-z]/)) {
+          if (inCharRange) {
+            pattern += source[i2];
+            pattern += `${source[i2 - 2]}-${source[i2]}`.toUpperCase();
+            inCharRange = false;
+          } else if (source[i2 + 1] === "-" && source[i2 + 2]?.match(/[a-z]/)) {
+            pattern += source[i2];
+            inCharRange = true;
+          } else {
+            pattern += `${source[i2]}${source[i2].toUpperCase()}`;
+          }
+          continue;
+        }
+      } else if (source[i2].match(/[a-z]/)) {
+        pattern += `[${source[i2]}${source[i2].toUpperCase()}]`;
+        continue;
+      }
+    }
+    if (flags.m) {
+      if (source[i2] === "^") {
+        pattern += `(^|(?<=[\r
+]))`;
+        continue;
+      } else if (source[i2] === "$") {
+        pattern += `($|(?=[\r
+]))`;
+        continue;
+      }
+    }
+    if (flags.s && source[i2] === ".") {
+      pattern += inCharGroup ? `${source[i2]}\r
+` : `[${source[i2]}\r
+]`;
+      continue;
+    }
+    pattern += source[i2];
+    if (source[i2] === "\\") {
+      isEscaped = true;
+    } else if (inCharGroup && source[i2] === "]") {
+      inCharGroup = false;
+    } else if (!inCharGroup && source[i2] === "[") {
+      inCharGroup = true;
+    }
+  }
+  try {
+    new RegExp(pattern);
+  } catch {
+    console.warn(`Could not convert regex pattern at ${refs.currentPath.join("/")} to a flag-independent form! Falling back to the flag-ignorant source`);
+    return regex.source;
+  }
+  return pattern;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/record.js
+function parseRecordDef(def, refs) {
+  if (refs.target === "openAi") {
+    console.warn("Warning: OpenAI may not support records in schemas! Try an array of key-value pairs instead.");
+  }
+  if (refs.target === "openApi3" && def.keyType?._def.typeName === ZodFirstPartyTypeKind2.ZodEnum) {
+    return {
+      type: "object",
+      required: def.keyType._def.values,
+      properties: def.keyType._def.values.reduce((acc, key) => ({
+        ...acc,
+        [key]: parseDef(def.valueType._def, {
+          ...refs,
+          currentPath: [...refs.currentPath, "properties", key]
+        }) ?? parseAnyDef(refs)
+      }), {}),
+      additionalProperties: refs.rejectedAdditionalProperties
+    };
+  }
+  const schema = {
+    type: "object",
+    additionalProperties: parseDef(def.valueType._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "additionalProperties"]
+    }) ?? refs.allowedAdditionalProperties
+  };
+  if (refs.target === "openApi3") {
+    return schema;
+  }
+  if (def.keyType?._def.typeName === ZodFirstPartyTypeKind2.ZodString && def.keyType._def.checks?.length) {
+    const { type, ...keyType } = parseStringDef(def.keyType._def, refs);
+    return {
+      ...schema,
+      propertyNames: keyType
+    };
+  } else if (def.keyType?._def.typeName === ZodFirstPartyTypeKind2.ZodEnum) {
+    return {
+      ...schema,
+      propertyNames: {
+        enum: def.keyType._def.values
+      }
+    };
+  } else if (def.keyType?._def.typeName === ZodFirstPartyTypeKind2.ZodBranded && def.keyType._def.type._def.typeName === ZodFirstPartyTypeKind2.ZodString && def.keyType._def.type._def.checks?.length) {
+    const { type, ...keyType } = parseBrandedDef(def.keyType._def, refs);
+    return {
+      ...schema,
+      propertyNames: keyType
+    };
+  }
+  return schema;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/map.js
+function parseMapDef(def, refs) {
+  if (refs.mapStrategy === "record") {
+    return parseRecordDef(def, refs);
+  }
+  const keys = parseDef(def.keyType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "items", "items", "0"]
+  }) || parseAnyDef(refs);
+  const values = parseDef(def.valueType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "items", "items", "1"]
+  }) || parseAnyDef(refs);
+  return {
+    type: "array",
+    maxItems: 125,
+    items: {
+      type: "array",
+      items: [keys, values],
+      minItems: 2,
+      maxItems: 2
+    }
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
+function parseNativeEnumDef(def) {
+  const object = def.values;
+  const actualKeys = Object.keys(def.values).filter((key) => {
+    return typeof object[object[key]] !== "number";
+  });
+  const actualValues = actualKeys.map((key) => object[key]);
+  const parsedTypes = Array.from(new Set(actualValues.map((values) => typeof values)));
+  return {
+    type: parsedTypes.length === 1 ? parsedTypes[0] === "string" ? "string" : "number" : ["string", "number"],
+    enum: actualValues
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/never.js
+function parseNeverDef(refs) {
+  return refs.target === "openAi" ? void 0 : {
+    not: parseAnyDef({
+      ...refs,
+      currentPath: [...refs.currentPath, "not"]
+    })
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/null.js
+function parseNullDef(refs) {
+  return refs.target === "openApi3" ? {
+    enum: ["null"],
+    nullable: true
+  } : {
+    type: "null"
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/union.js
+var primitiveMappings = {
+  ZodString: "string",
+  ZodNumber: "number",
+  ZodBigInt: "integer",
+  ZodBoolean: "boolean",
+  ZodNull: "null"
+};
+function parseUnionDef(def, refs) {
+  if (refs.target === "openApi3")
+    return asAnyOf(def, refs);
+  const options = def.options instanceof Map ? Array.from(def.options.values()) : def.options;
+  if (options.every((x2) => x2._def.typeName in primitiveMappings && (!x2._def.checks || !x2._def.checks.length))) {
+    const types = options.reduce((types2, x2) => {
+      const type = primitiveMappings[x2._def.typeName];
+      return type && !types2.includes(type) ? [...types2, type] : types2;
+    }, []);
+    return {
+      type: types.length > 1 ? types : types[0]
+    };
+  } else if (options.every((x2) => x2._def.typeName === "ZodLiteral" && !x2.description)) {
+    const types = options.reduce((acc, x2) => {
+      const type = typeof x2._def.value;
+      switch (type) {
+        case "string":
+        case "number":
+        case "boolean":
+          return [...acc, type];
+        case "bigint":
+          return [...acc, "integer"];
+        case "object":
+          if (x2._def.value === null)
+            return [...acc, "null"];
+        case "symbol":
+        case "undefined":
+        case "function":
+        default:
+          return acc;
+      }
+    }, []);
+    if (types.length === options.length) {
+      const uniqueTypes = types.filter((x2, i2, a4) => a4.indexOf(x2) === i2);
+      return {
+        type: uniqueTypes.length > 1 ? uniqueTypes : uniqueTypes[0],
+        enum: options.reduce((acc, x2) => {
+          return acc.includes(x2._def.value) ? acc : [...acc, x2._def.value];
+        }, [])
+      };
+    }
+  } else if (options.every((x2) => x2._def.typeName === "ZodEnum")) {
+    return {
+      type: "string",
+      enum: options.reduce((acc, x2) => [
+        ...acc,
+        ...x2._def.values.filter((x3) => !acc.includes(x3))
+      ], [])
+    };
+  }
+  return asAnyOf(def, refs);
+}
+var asAnyOf = (def, refs) => {
+  const anyOf = (def.options instanceof Map ? Array.from(def.options.values()) : def.options).map((x2, i2) => parseDef(x2._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "anyOf", `${i2}`]
+  })).filter((x2) => !!x2 && (!refs.strictUnions || typeof x2 === "object" && Object.keys(x2).length > 0));
+  return anyOf.length ? { anyOf } : void 0;
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
+function parseNullableDef(def, refs) {
+  if (["ZodString", "ZodNumber", "ZodBigInt", "ZodBoolean", "ZodNull"].includes(def.innerType._def.typeName) && (!def.innerType._def.checks || !def.innerType._def.checks.length)) {
+    if (refs.target === "openApi3") {
+      return {
+        type: primitiveMappings[def.innerType._def.typeName],
+        nullable: true
+      };
+    }
+    return {
+      type: [
+        primitiveMappings[def.innerType._def.typeName],
+        "null"
+      ]
+    };
+  }
+  if (refs.target === "openApi3") {
+    const base2 = parseDef(def.innerType._def, {
+      ...refs,
+      currentPath: [...refs.currentPath]
+    });
+    if (base2 && "$ref" in base2)
+      return { allOf: [base2], nullable: true };
+    return base2 && { ...base2, nullable: true };
+  }
+  const base = parseDef(def.innerType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "anyOf", "0"]
+  });
+  return base && { anyOf: [base, { type: "null" }] };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/number.js
+function parseNumberDef(def, refs) {
+  const res = {
+    type: "number"
+  };
+  if (!def.checks)
+    return res;
+  for (const check of def.checks) {
+    switch (check.kind) {
+      case "int":
+        res.type = "integer";
+        addErrorMessage(res, "type", check.message, refs);
+        break;
+      case "min":
+        if (refs.target === "jsonSchema7") {
+          if (check.inclusive) {
+            setResponseValueAndErrors(res, "minimum", check.value, check.message, refs);
+          } else {
+            setResponseValueAndErrors(res, "exclusiveMinimum", check.value, check.message, refs);
+          }
+        } else {
+          if (!check.inclusive) {
+            res.exclusiveMinimum = true;
+          }
+          setResponseValueAndErrors(res, "minimum", check.value, check.message, refs);
+        }
+        break;
+      case "max":
+        if (refs.target === "jsonSchema7") {
+          if (check.inclusive) {
+            setResponseValueAndErrors(res, "maximum", check.value, check.message, refs);
+          } else {
+            setResponseValueAndErrors(res, "exclusiveMaximum", check.value, check.message, refs);
+          }
+        } else {
+          if (!check.inclusive) {
+            res.exclusiveMaximum = true;
+          }
+          setResponseValueAndErrors(res, "maximum", check.value, check.message, refs);
+        }
+        break;
+      case "multipleOf":
+        setResponseValueAndErrors(res, "multipleOf", check.value, check.message, refs);
+        break;
+    }
+  }
+  return res;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/object.js
+function parseObjectDef(def, refs) {
+  const forceOptionalIntoNullable = refs.target === "openAi";
+  const result = {
+    type: "object",
+    properties: {}
+  };
+  const required = [];
+  const shape = def.shape();
+  for (const propName in shape) {
+    let propDef = shape[propName];
+    if (propDef === void 0 || propDef._def === void 0) {
+      continue;
+    }
+    let propOptional = safeIsOptional(propDef);
+    if (propOptional && forceOptionalIntoNullable) {
+      if (propDef._def.typeName === "ZodOptional") {
+        propDef = propDef._def.innerType;
+      }
+      if (!propDef.isNullable()) {
+        propDef = propDef.nullable();
+      }
+      propOptional = false;
+    }
+    const parsedDef = parseDef(propDef._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "properties", propName],
+      propertyPath: [...refs.currentPath, "properties", propName]
+    });
+    if (parsedDef === void 0) {
+      continue;
+    }
+    result.properties[propName] = parsedDef;
+    if (!propOptional) {
+      required.push(propName);
+    }
+  }
+  if (required.length) {
+    result.required = required;
+  }
+  const additionalProperties = decideAdditionalProperties(def, refs);
+  if (additionalProperties !== void 0) {
+    result.additionalProperties = additionalProperties;
+  }
+  return result;
+}
+function decideAdditionalProperties(def, refs) {
+  if (def.catchall._def.typeName !== "ZodNever") {
+    return parseDef(def.catchall._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "additionalProperties"]
+    });
+  }
+  switch (def.unknownKeys) {
+    case "passthrough":
+      return refs.allowedAdditionalProperties;
+    case "strict":
+      return refs.rejectedAdditionalProperties;
+    case "strip":
+      return refs.removeAdditionalStrategy === "strict" ? refs.allowedAdditionalProperties : refs.rejectedAdditionalProperties;
+  }
+}
+function safeIsOptional(schema) {
+  try {
+    return schema.isOptional();
+  } catch {
+    return true;
+  }
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
+var parseOptionalDef = (def, refs) => {
+  if (refs.currentPath.toString() === refs.propertyPath?.toString()) {
+    return parseDef(def.innerType._def, refs);
+  }
+  const innerSchema = parseDef(def.innerType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "anyOf", "1"]
+  });
+  return innerSchema ? {
+    anyOf: [
+      {
+        not: parseAnyDef(refs)
+      },
+      innerSchema
+    ]
+  } : parseAnyDef(refs);
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
+var parsePipelineDef = (def, refs) => {
+  if (refs.pipeStrategy === "input") {
+    return parseDef(def.in._def, refs);
+  } else if (refs.pipeStrategy === "output") {
+    return parseDef(def.out._def, refs);
+  }
+  const a4 = parseDef(def.in._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "allOf", "0"]
+  });
+  const b = parseDef(def.out._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "allOf", a4 ? "1" : "0"]
+  });
+  return {
+    allOf: [a4, b].filter((x2) => x2 !== void 0)
+  };
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
+function parsePromiseDef(def, refs) {
+  return parseDef(def.type._def, refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/set.js
+function parseSetDef(def, refs) {
+  const items = parseDef(def.valueType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "items"]
+  });
+  const schema = {
+    type: "array",
+    uniqueItems: true,
+    items
+  };
+  if (def.minSize) {
+    setResponseValueAndErrors(schema, "minItems", def.minSize.value, def.minSize.message, refs);
+  }
+  if (def.maxSize) {
+    setResponseValueAndErrors(schema, "maxItems", def.maxSize.value, def.maxSize.message, refs);
+  }
+  return schema;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
+function parseTupleDef(def, refs) {
+  if (def.rest) {
+    return {
+      type: "array",
+      minItems: def.items.length,
+      items: def.items.map((x2, i2) => parseDef(x2._def, {
+        ...refs,
+        currentPath: [...refs.currentPath, "items", `${i2}`]
+      })).reduce((acc, x2) => x2 === void 0 ? acc : [...acc, x2], []),
+      additionalItems: parseDef(def.rest._def, {
+        ...refs,
+        currentPath: [...refs.currentPath, "additionalItems"]
+      })
+    };
+  } else {
+    return {
+      type: "array",
+      minItems: def.items.length,
+      maxItems: def.items.length,
+      items: def.items.map((x2, i2) => parseDef(x2._def, {
+        ...refs,
+        currentPath: [...refs.currentPath, "items", `${i2}`]
+      })).reduce((acc, x2) => x2 === void 0 ? acc : [...acc, x2], [])
+    };
+  }
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
+function parseUndefinedDef(refs) {
+  return {
+    not: parseAnyDef(refs)
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
+function parseUnknownDef(refs) {
+  return parseAnyDef(refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
+var parseReadonlyDef = (def, refs) => {
+  return parseDef(def.innerType._def, refs);
+};
+
+// node_modules/zod-to-json-schema/dist/esm/selectParser.js
+var selectParser = (def, typeName, refs) => {
+  switch (typeName) {
+    case ZodFirstPartyTypeKind3.ZodString:
+      return parseStringDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodNumber:
+      return parseNumberDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodObject:
+      return parseObjectDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodBigInt:
+      return parseBigintDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodBoolean:
+      return parseBooleanDef();
+    case ZodFirstPartyTypeKind3.ZodDate:
+      return parseDateDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodUndefined:
+      return parseUndefinedDef(refs);
+    case ZodFirstPartyTypeKind3.ZodNull:
+      return parseNullDef(refs);
+    case ZodFirstPartyTypeKind3.ZodArray:
+      return parseArrayDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodUnion:
+    case ZodFirstPartyTypeKind3.ZodDiscriminatedUnion:
+      return parseUnionDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodIntersection:
+      return parseIntersectionDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodTuple:
+      return parseTupleDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodRecord:
+      return parseRecordDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodLiteral:
+      return parseLiteralDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodEnum:
+      return parseEnumDef(def);
+    case ZodFirstPartyTypeKind3.ZodNativeEnum:
+      return parseNativeEnumDef(def);
+    case ZodFirstPartyTypeKind3.ZodNullable:
+      return parseNullableDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodOptional:
+      return parseOptionalDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodMap:
+      return parseMapDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodSet:
+      return parseSetDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodLazy:
+      return () => def.getter()._def;
+    case ZodFirstPartyTypeKind3.ZodPromise:
+      return parsePromiseDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodNaN:
+    case ZodFirstPartyTypeKind3.ZodNever:
+      return parseNeverDef(refs);
+    case ZodFirstPartyTypeKind3.ZodEffects:
+      return parseEffectsDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodAny:
+      return parseAnyDef(refs);
+    case ZodFirstPartyTypeKind3.ZodUnknown:
+      return parseUnknownDef(refs);
+    case ZodFirstPartyTypeKind3.ZodDefault:
+      return parseDefaultDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodBranded:
+      return parseBrandedDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodReadonly:
+      return parseReadonlyDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodCatch:
+      return parseCatchDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodPipeline:
+      return parsePipelineDef(def, refs);
+    case ZodFirstPartyTypeKind3.ZodFunction:
+    case ZodFirstPartyTypeKind3.ZodVoid:
+    case ZodFirstPartyTypeKind3.ZodSymbol:
+      return void 0;
+    default:
+      return /* @__PURE__ */ ((_3) => void 0)(typeName);
+  }
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parseDef.js
+function parseDef(def, refs, forceResolution = false) {
+  const seenItem = refs.seen.get(def);
+  if (refs.override) {
+    const overrideResult = refs.override?.(def, refs, seenItem, forceResolution);
+    if (overrideResult !== ignoreOverride) {
+      return overrideResult;
+    }
+  }
+  if (seenItem && !forceResolution) {
+    const seenSchema = get$ref(seenItem, refs);
+    if (seenSchema !== void 0) {
+      return seenSchema;
+    }
+  }
+  const newItem = { def, path: refs.currentPath, jsonSchema: void 0 };
+  refs.seen.set(def, newItem);
+  const jsonSchemaOrGetter = selectParser(def, def.typeName, refs);
+  const jsonSchema = typeof jsonSchemaOrGetter === "function" ? parseDef(jsonSchemaOrGetter(), refs) : jsonSchemaOrGetter;
+  if (jsonSchema) {
+    addMeta(def, refs, jsonSchema);
+  }
+  if (refs.postProcess) {
+    const postProcessResult = refs.postProcess(jsonSchema, def, refs);
+    newItem.jsonSchema = jsonSchema;
+    return postProcessResult;
+  }
+  newItem.jsonSchema = jsonSchema;
+  return jsonSchema;
+}
+var get$ref = (item, refs) => {
+  switch (refs.$refStrategy) {
+    case "root":
+      return { $ref: item.path.join("/") };
+    case "relative":
+      return { $ref: getRelativePath(refs.currentPath, item.path) };
+    case "none":
+    case "seen": {
+      if (item.path.length < refs.currentPath.length && item.path.every((value, index) => refs.currentPath[index] === value)) {
+        console.warn(`Recursive reference detected at ${refs.currentPath.join("/")}! Defaulting to any`);
+        return parseAnyDef(refs);
+      }
+      return refs.$refStrategy === "seen" ? parseAnyDef(refs) : void 0;
+    }
+  }
+};
+var addMeta = (def, refs, jsonSchema) => {
+  if (def.description) {
+    jsonSchema.description = def.description;
+    if (refs.markdownDescription) {
+      jsonSchema.markdownDescription = def.description;
+    }
+  }
+  return jsonSchema;
+};
+
+// node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
+var zodToJsonSchema = (schema, options) => {
+  const refs = getRefs(options);
+  let definitions = typeof options === "object" && options.definitions ? Object.entries(options.definitions).reduce((acc, [name2, schema2]) => ({
+    ...acc,
+    [name2]: parseDef(schema2._def, {
+      ...refs,
+      currentPath: [...refs.basePath, refs.definitionPath, name2]
+    }, true) ?? parseAnyDef(refs)
+  }), {}) : void 0;
+  const name = typeof options === "string" ? options : options?.nameStrategy === "title" ? void 0 : options?.name;
+  const main = parseDef(schema._def, name === void 0 ? refs : {
+    ...refs,
+    currentPath: [...refs.basePath, refs.definitionPath, name]
+  }, false) ?? parseAnyDef(refs);
+  const title = typeof options === "object" && options.name !== void 0 && options.nameStrategy === "title" ? options.name : void 0;
+  if (title !== void 0) {
+    main.title = title;
+  }
+  if (refs.flags.hasReferencedOpenAiAnyType) {
+    if (!definitions) {
+      definitions = {};
+    }
+    if (!definitions[refs.openAiAnyTypeName]) {
+      definitions[refs.openAiAnyTypeName] = {
+        // Skipping "object" as no properties can be defined and additionalProperties must be "false"
+        type: ["string", "number", "integer", "boolean", "array", "null"],
+        items: {
+          $ref: refs.$refStrategy === "relative" ? "1" : [
+            ...refs.basePath,
+            refs.definitionPath,
+            refs.openAiAnyTypeName
+          ].join("/")
+        }
+      };
+    }
+  }
+  const combined = name === void 0 ? definitions ? {
+    ...main,
+    [refs.definitionPath]: definitions
+  } : main : {
+    $ref: [
+      ...refs.$refStrategy === "relative" ? [] : refs.basePath,
+      refs.definitionPath,
+      name
+    ].join("/"),
+    [refs.definitionPath]: {
+      ...definitions,
+      [name]: main
+    }
+  };
+  if (refs.target === "jsonSchema7") {
+    combined.$schema = "http://json-schema.org/draft-07/schema#";
+  } else if (refs.target === "jsonSchema2019-09" || refs.target === "openAi") {
+    combined.$schema = "https://json-schema.org/draft/2019-09/schema#";
+  }
+  if (refs.target === "openAi" && ("anyOf" in combined || "oneOf" in combined || "allOf" in combined || "type" in combined && Array.isArray(combined.type))) {
+    console.warn("Warning: OpenAI may not support schemas with unions as roots! Try wrapping it in an object property.");
+  }
+  return combined;
+};
+
+// node_modules/@walkeros/core/dist/index.mjs
 import { z as ae } from "zod";
-import { zodToJsonSchema as se } from "zod-to-json-schema";
 import { z as Ie } from "zod";
-import { zodToJsonSchema as Oe } from "zod-to-json-schema";
 import { z as et } from "zod";
-import { zodToJsonSchema as tt } from "zod-to-json-schema";
 import { z as zt } from "zod";
-import { zodToJsonSchema as Dt } from "zod-to-json-schema";
 import { z as Ht } from "zod";
-import { zodToJsonSchema as _t } from "zod-to-json-schema";
 import { z as un } from "zod";
-import { zodToJsonSchema as mn } from "zod-to-json-schema";
-import { zodToJsonSchema as gn } from "zod-to-json-schema";
 var e = Object.defineProperty;
 var t = (t4, n4) => {
   for (var i2 in n4)
@@ -37,11 +1322,11 @@ var I = z.object({ Local: z.literal("local"), Session: z.literal("session"), Coo
 var O = z.any().describe("Error handler function: (error, state?) => void");
 var J = z.any().describe("Log handler function: (message, verbose?) => void");
 var L = z.object({ Error: O.describe("Error handler function"), Log: J.describe("Log handler function") }).describe("Handler interface with error and log functions");
-var T = D($, { target: "jsonSchema7", $refStrategy: "relative", name: "StorageType" });
-var M = D(I, { target: "jsonSchema7", $refStrategy: "relative", name: "Storage" });
-var R = D(O, { target: "jsonSchema7", $refStrategy: "relative", name: "ErrorHandler" });
-var A = D(J, { target: "jsonSchema7", $refStrategy: "relative", name: "LogHandler" });
-var q = D(L, { target: "jsonSchema7", $refStrategy: "relative", name: "Handler" });
+var T = zodToJsonSchema($, { target: "jsonSchema7", $refStrategy: "relative", name: "StorageType" });
+var M = zodToJsonSchema(I, { target: "jsonSchema7", $refStrategy: "relative", name: "Storage" });
+var R = zodToJsonSchema(O, { target: "jsonSchema7", $refStrategy: "relative", name: "ErrorHandler" });
+var A = zodToJsonSchema(J, { target: "jsonSchema7", $refStrategy: "relative", name: "LogHandler" });
+var q = zodToJsonSchema(L, { target: "jsonSchema7", $refStrategy: "relative", name: "Handler" });
 var U = k.object({ onError: O.optional().describe("Error handler function: (error, state?) => void"), onLog: J.optional().describe("Log handler function: (message, verbose?) => void") }).partial();
 var N = k.object({ verbose: k.boolean().describe("Enable verbose logging for debugging").optional() }).partial();
 var B = k.object({ queue: k.boolean().describe("Whether to queue events when consent is not granted").optional() }).partial();
@@ -73,14 +1358,14 @@ var ye = ae.array(he).describe("Array of nested entities");
 var Se = ae.object({ name: ae.string().describe('Event name in "entity action" format (e.g., "page view", "product add")'), data: de.describe("Event-specific properties"), context: pe.describe("Ordered context properties with priorities"), globals: de.describe("Global properties shared across events"), custom: de.describe("Custom implementation-specific properties"), user: ge.describe("User identification and attributes"), nested: ye.describe("Related nested entities"), consent: me.describe("Consent states at event time"), id: v.describe("Unique event identifier (timestamp-based)"), trigger: h.describe("Event trigger identifier"), entity: h.describe("Parsed entity from event name"), action: h.describe("Parsed action from event name"), timestamp: j.describe("Unix timestamp in milliseconds since epoch"), timing: y.describe("Event processing timing information"), group: h.describe("Event grouping identifier"), count: w.describe("Event count in session"), version: be.describe("Walker version information"), source: fe.describe("Event source information") }).describe("Complete walkerOS event structure");
 var ve = Se.partial().describe("Partial event structure with all fields optional");
 var je = ae.lazy(() => Se.deepPartial()).describe("Deep partial event structure with all nested fields optional");
-var we = se(Se, { target: "jsonSchema7", $refStrategy: "relative", name: "Event" });
-var xe = se(ve, { target: "jsonSchema7", $refStrategy: "relative", name: "PartialEvent" });
-var Ee = se(ge, { target: "jsonSchema7", $refStrategy: "relative", name: "User" });
-var Ce = se(de, { target: "jsonSchema7", $refStrategy: "relative", name: "Properties" });
-var ke = se(pe, { target: "jsonSchema7", $refStrategy: "relative", name: "OrderedProperties" });
-var Pe = se(he, { target: "jsonSchema7", $refStrategy: "relative", name: "Entity" });
-var ze = se(ue, { target: "jsonSchema7", $refStrategy: "relative", name: "SourceType" });
-var De = se(me, { target: "jsonSchema7", $refStrategy: "relative", name: "Consent" });
+var we = zodToJsonSchema(Se, { target: "jsonSchema7", $refStrategy: "relative", name: "Event" });
+var xe = zodToJsonSchema(ve, { target: "jsonSchema7", $refStrategy: "relative", name: "PartialEvent" });
+var Ee = zodToJsonSchema(ge, { target: "jsonSchema7", $refStrategy: "relative", name: "User" });
+var Ce = zodToJsonSchema(de, { target: "jsonSchema7", $refStrategy: "relative", name: "Properties" });
+var ke = zodToJsonSchema(pe, { target: "jsonSchema7", $refStrategy: "relative", name: "OrderedProperties" });
+var Pe = zodToJsonSchema(he, { target: "jsonSchema7", $refStrategy: "relative", name: "Entity" });
+var ze = zodToJsonSchema(ue, { target: "jsonSchema7", $refStrategy: "relative", name: "SourceType" });
+var De = zodToJsonSchema(me, { target: "jsonSchema7", $refStrategy: "relative", name: "Consent" });
 var $e = {};
 t($e, { ConfigSchema: () => Be, LoopSchema: () => Te, MapSchema: () => Re, PolicySchema: () => qe, ResultSchema: () => We, RuleSchema: () => Ue, RulesSchema: () => Ne, SetSchema: () => Me, ValueConfigSchema: () => Ae, ValueSchema: () => Je, ValuesSchema: () => Le, configJsonSchema: () => Ye, loopJsonSchema: () => _e, mapJsonSchema: () => Fe, policyJsonSchema: () => Ge, ruleJsonSchema: () => Qe, rulesJsonSchema: () => Xe, setJsonSchema: () => Ke, valueConfigJsonSchema: () => He, valueJsonSchema: () => Ve });
 var Je = Ie.lazy(() => Ie.union([Ie.string().describe('String value or property path (e.g., "data.id")'), Ie.number().describe("Numeric value"), Ie.boolean().describe("Boolean value"), Ae, Ie.array(Je).describe("Array of values")]));
@@ -94,15 +1379,15 @@ var Ue = Ie.object({ batch: Ie.number().optional().describe("Batch size: bundle 
 var Ne = Ie.record(Ie.string(), Ie.record(Ie.string(), Ie.union([Ue, Ie.array(Ue)])).optional()).describe("Nested mapping rules: { entity: { action: Rule | Rule[] } } with wildcard support");
 var Be = Ie.object({ consent: me.optional().describe("Required consent states to process any events"), data: Ie.union([Je, Le]).optional().describe("Global data transformation applied to all events"), mapping: Ne.optional().describe("Entity-action specific mapping rules"), policy: qe.optional().describe("Pre-processing policy rules applied before mapping") }).describe("Shared mapping configuration for sources and destinations");
 var We = Ie.object({ eventMapping: Ue.optional().describe("Resolved mapping rule for event"), mappingKey: Ie.string().optional().describe('Mapping key used (e.g., "product.view")') }).describe("Mapping resolution result");
-var Ve = Oe(Je, { target: "jsonSchema7", $refStrategy: "relative", name: "Value" });
-var He = Oe(Ae, { target: "jsonSchema7", $refStrategy: "relative", name: "ValueConfig" });
-var _e = Oe(Te, { target: "jsonSchema7", $refStrategy: "relative", name: "Loop" });
-var Ke = Oe(Me, { target: "jsonSchema7", $refStrategy: "relative", name: "Set" });
-var Fe = Oe(Re, { target: "jsonSchema7", $refStrategy: "relative", name: "Map" });
-var Ge = Oe(qe, { target: "jsonSchema7", $refStrategy: "relative", name: "Policy" });
-var Qe = Oe(Ue, { target: "jsonSchema7", $refStrategy: "relative", name: "Rule" });
-var Xe = Oe(Ne, { target: "jsonSchema7", $refStrategy: "relative", name: "Rules" });
-var Ye = Oe(Be, { target: "jsonSchema7", $refStrategy: "relative", name: "MappingConfig" });
+var Ve = zodToJsonSchema(Je, { target: "jsonSchema7", $refStrategy: "relative", name: "Value" });
+var He = zodToJsonSchema(Ae, { target: "jsonSchema7", $refStrategy: "relative", name: "ValueConfig" });
+var _e = zodToJsonSchema(Te, { target: "jsonSchema7", $refStrategy: "relative", name: "Loop" });
+var Ke = zodToJsonSchema(Me, { target: "jsonSchema7", $refStrategy: "relative", name: "Set" });
+var Fe = zodToJsonSchema(Re, { target: "jsonSchema7", $refStrategy: "relative", name: "Map" });
+var Ge = zodToJsonSchema(qe, { target: "jsonSchema7", $refStrategy: "relative", name: "Policy" });
+var Qe = zodToJsonSchema(Ue, { target: "jsonSchema7", $refStrategy: "relative", name: "Rule" });
+var Xe = zodToJsonSchema(Ne, { target: "jsonSchema7", $refStrategy: "relative", name: "Rules" });
+var Ye = zodToJsonSchema(Be, { target: "jsonSchema7", $refStrategy: "relative", name: "MappingConfig" });
 var Ze = {};
 t(Ze, { BatchSchema: () => dt, ConfigSchema: () => nt, ContextSchema: () => rt, DLQSchema: () => St, DataSchema: () => pt, DestinationPolicySchema: () => ot, DestinationsSchema: () => bt, InitDestinationsSchema: () => gt, InitSchema: () => mt, InstanceSchema: () => ut, PartialConfigSchema: () => it, PushBatchContextSchema: () => st, PushContextSchema: () => at, PushEventSchema: () => ct, PushEventsSchema: () => lt, PushResultSchema: () => ht, RefSchema: () => ft, ResultSchema: () => yt, batchJsonSchema: () => Et, configJsonSchema: () => vt, contextJsonSchema: () => wt, instanceJsonSchema: () => Ct, partialConfigJsonSchema: () => jt, pushContextJsonSchema: () => xt, resultJsonSchema: () => kt });
 var nt = et.object({ consent: me.optional().describe("Required consent states to send events to this destination"), settings: et.any().describe("Implementation-specific configuration").optional(), data: et.union([Je, Le]).optional().describe("Global data transformation applied to all events for this destination"), env: et.any().describe("Environment dependencies (platform-specific)").optional(), id: v.describe("Destination instance identifier (defaults to destination key)").optional(), init: et.boolean().describe("Whether to initialize immediately").optional(), loadScript: et.boolean().describe("Whether to load external script (for web destinations)").optional(), mapping: Ne.optional().describe("Entity-action specific mapping rules for this destination"), policy: qe.optional().describe("Pre-processing policy rules applied before event mapping"), queue: et.boolean().describe("Whether to queue events when consent is not granted").optional(), verbose: et.boolean().describe("Enable verbose logging for debugging").optional(), onError: O.optional(), onLog: J.optional() }).describe("Destination configuration");
@@ -123,13 +1408,13 @@ var ft = et.object({ id: et.string().describe("Destination ID"), destination: ut
 var ht = et.object({ queue: et.array(Se).optional().describe("Events queued (awaiting consent)"), error: et.any().optional().describe("Error if push failed") }).describe("Push operation result");
 var yt = et.object({ successful: et.array(ft).describe("Destinations that processed successfully"), queued: et.array(ft).describe("Destinations that queued events"), failed: et.array(ft).describe("Destinations that failed to process") }).describe("Overall destination processing result");
 var St = et.array(et.tuple([Se, et.any()])).describe("Dead letter queue: [(event, error), ...]");
-var vt = tt(nt, { target: "jsonSchema7", $refStrategy: "relative", name: "DestinationConfig" });
-var jt = tt(it, { target: "jsonSchema7", $refStrategy: "relative", name: "PartialDestinationConfig" });
-var wt = tt(rt, { target: "jsonSchema7", $refStrategy: "relative", name: "DestinationContext" });
-var xt = tt(at, { target: "jsonSchema7", $refStrategy: "relative", name: "PushContext" });
-var Et = tt(dt, { target: "jsonSchema7", $refStrategy: "relative", name: "Batch" });
-var Ct = tt(ut, { target: "jsonSchema7", $refStrategy: "relative", name: "DestinationInstance" });
-var kt = tt(yt, { target: "jsonSchema7", $refStrategy: "relative", name: "DestinationResult" });
+var vt = zodToJsonSchema(nt, { target: "jsonSchema7", $refStrategy: "relative", name: "DestinationConfig" });
+var jt = zodToJsonSchema(it, { target: "jsonSchema7", $refStrategy: "relative", name: "PartialDestinationConfig" });
+var wt = zodToJsonSchema(rt, { target: "jsonSchema7", $refStrategy: "relative", name: "DestinationContext" });
+var xt = zodToJsonSchema(at, { target: "jsonSchema7", $refStrategy: "relative", name: "PushContext" });
+var Et = zodToJsonSchema(dt, { target: "jsonSchema7", $refStrategy: "relative", name: "Batch" });
+var Ct = zodToJsonSchema(ut, { target: "jsonSchema7", $refStrategy: "relative", name: "DestinationInstance" });
+var kt = zodToJsonSchema(yt, { target: "jsonSchema7", $refStrategy: "relative", name: "DestinationResult" });
 var Pt = {};
 t(Pt, { CommandTypeSchema: () => $t, ConfigSchema: () => It, DestinationsSchema: () => Mt, InitConfigSchema: () => Jt, InstanceSchema: () => Rt, PushContextSchema: () => Lt, SessionDataSchema: () => Ot, SourcesSchema: () => Tt, commandTypeJsonSchema: () => At, configJsonSchema: () => qt, initConfigJsonSchema: () => Nt, instanceJsonSchema: () => Wt, pushContextJsonSchema: () => Bt, sessionDataJsonSchema: () => Ut });
 var $t = zt.union([zt.enum(["action", "config", "consent", "context", "destination", "elb", "globals", "hook", "init", "link", "run", "user", "walker"]), zt.string()]).describe("Collector command type: standard commands or custom string for extensions");
@@ -140,12 +1425,12 @@ var Lt = zt.object({ mapping: Be.optional().describe("Source-level mapping confi
 var Tt = zt.record(zt.string(), zt.any()).describe("Map of source IDs to source instances");
 var Mt = zt.record(zt.string(), zt.any()).describe("Map of destination IDs to destination instances");
 var Rt = zt.object({ push: zt.any().describe("Push function for processing events"), command: zt.any().describe("Command function for walker commands"), allowed: zt.boolean().describe("Whether event processing is allowed"), config: It.describe("Current collector configuration"), consent: me.describe("Current consent state"), count: zt.number().describe("Event count (increments with each event)"), custom: de.describe("Custom implementation-specific properties"), sources: Tt.describe("Registered source instances"), destinations: Mt.describe("Registered destination instances"), globals: de.describe("Current global properties"), group: zt.string().describe("Event grouping identifier"), hooks: zt.any().describe("Lifecycle hook functions"), on: zt.any().describe("Event lifecycle configuration"), queue: zt.array(Se).describe("Queued events awaiting processing"), round: zt.number().describe("Collector run count (increments with each run)"), session: zt.union([zt.undefined(), Ot]).describe("Current session state"), timing: zt.number().describe("Event processing timing information"), user: ge.describe("Current user data"), version: zt.string().describe("Walker implementation version") }).describe("Collector instance with state and methods");
-var At = Dt($t, { target: "jsonSchema7", $refStrategy: "relative", name: "CommandType" });
-var qt = Dt(It, { target: "jsonSchema7", $refStrategy: "relative", name: "CollectorConfig" });
-var Ut = Dt(Ot, { target: "jsonSchema7", $refStrategy: "relative", name: "SessionData" });
-var Nt = Dt(Jt, { target: "jsonSchema7", $refStrategy: "relative", name: "InitConfig" });
-var Bt = Dt(Lt, { target: "jsonSchema7", $refStrategy: "relative", name: "CollectorPushContext" });
-var Wt = Dt(Rt, { target: "jsonSchema7", $refStrategy: "relative", name: "CollectorInstance" });
+var At = zodToJsonSchema($t, { target: "jsonSchema7", $refStrategy: "relative", name: "CommandType" });
+var qt = zodToJsonSchema(It, { target: "jsonSchema7", $refStrategy: "relative", name: "CollectorConfig" });
+var Ut = zodToJsonSchema(Ot, { target: "jsonSchema7", $refStrategy: "relative", name: "SessionData" });
+var Nt = zodToJsonSchema(Jt, { target: "jsonSchema7", $refStrategy: "relative", name: "InitConfig" });
+var Bt = zodToJsonSchema(Lt, { target: "jsonSchema7", $refStrategy: "relative", name: "CollectorPushContext" });
+var Wt = zodToJsonSchema(Rt, { target: "jsonSchema7", $refStrategy: "relative", name: "CollectorInstance" });
 var Vt = {};
 t(Vt, { BaseEnvSchema: () => Kt, ConfigSchema: () => Ft, InitSchema: () => Xt, InitSourceSchema: () => Yt, InitSourcesSchema: () => Zt, InstanceSchema: () => Qt, PartialConfigSchema: () => Gt, baseEnvJsonSchema: () => en, configJsonSchema: () => tn, initSourceJsonSchema: () => rn, initSourcesJsonSchema: () => an, instanceJsonSchema: () => on, partialConfigJsonSchema: () => nn });
 var Kt = Ht.object({ push: Ht.any().describe("Collector push function"), command: Ht.any().describe("Collector command function"), sources: Ht.any().optional().describe("Map of registered source instances"), elb: Ht.any().describe("Public API function (alias for collector.push)") }).catchall(Ht.unknown()).describe("Base environment for dependency injection - platform-specific sources extend this");
@@ -155,12 +1440,12 @@ var Qt = Ht.object({ type: Ht.string().describe('Source type identifier (e.g., "
 var Xt = Ht.any().describe("Source initialization function: (config, env) => Instance | Promise<Instance>");
 var Yt = Ht.object({ code: Xt.describe("Source initialization function"), config: Gt.optional().describe("Partial configuration overrides"), env: Kt.partial().optional().describe("Partial environment overrides"), primary: Ht.boolean().optional().describe("Mark as primary source (only one can be primary)") }).describe("Source initialization configuration");
 var Zt = Ht.record(Ht.string(), Yt).describe("Map of source IDs to initialization configurations");
-var en = _t(Kt, { target: "jsonSchema7", $refStrategy: "relative", name: "SourceBaseEnv" });
-var tn = _t(Ft, { target: "jsonSchema7", $refStrategy: "relative", name: "SourceConfig" });
-var nn = _t(Gt, { target: "jsonSchema7", $refStrategy: "relative", name: "PartialSourceConfig" });
-var on = _t(Qt, { target: "jsonSchema7", $refStrategy: "relative", name: "SourceInstance" });
-var rn = _t(Yt, { target: "jsonSchema7", $refStrategy: "relative", name: "InitSource" });
-var an = _t(Zt, { target: "jsonSchema7", $refStrategy: "relative", name: "InitSources" });
+var en = zodToJsonSchema(Kt, { target: "jsonSchema7", $refStrategy: "relative", name: "SourceBaseEnv" });
+var tn = zodToJsonSchema(Ft, { target: "jsonSchema7", $refStrategy: "relative", name: "SourceConfig" });
+var nn = zodToJsonSchema(Gt, { target: "jsonSchema7", $refStrategy: "relative", name: "PartialSourceConfig" });
+var on = zodToJsonSchema(Qt, { target: "jsonSchema7", $refStrategy: "relative", name: "SourceInstance" });
+var rn = zodToJsonSchema(Yt, { target: "jsonSchema7", $refStrategy: "relative", name: "InitSource" });
+var an = zodToJsonSchema(Zt, { target: "jsonSchema7", $refStrategy: "relative", name: "InitSources" });
 var hn = { merge: true, shallow: true, extend: true };
 function yn(e5, t4 = {}, n4 = {}) {
   n4 = { ...hn, ...n4 };

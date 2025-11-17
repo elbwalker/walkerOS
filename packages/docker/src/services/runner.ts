@@ -5,6 +5,9 @@
  * All bundling, package downloading, and code generation happens BEFORE this runs.
  */
 
+import { pathToFileURL } from 'url';
+import { resolve } from 'path';
+
 export interface RuntimeConfig {
   port?: number;
   host?: string;
@@ -23,9 +26,9 @@ export async function runFlow(
   console.log(`🚀 Loading flow from ${flowPath}`);
 
   try {
-    // Dynamically import the pre-built bundle
-    // The bundle exports a default function that returns { collector }
-    const module = await import(`file://${flowPath}`);
+    const absolutePath = resolve(flowPath);
+    const fileUrl = pathToFileURL(absolutePath).href;
+    const module = await import(fileUrl);
 
     if (!module.default || typeof module.default !== 'function') {
       throw new Error(
