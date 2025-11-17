@@ -3,12 +3,12 @@
  * Converts JSON objects to valid JavaScript code for use in templates
  */
 
-import { isObject } from '../core/config';
+import { isObject } from '../../config';
 import type {
   TemplateSource,
   TemplateDestination,
   ProcessedTemplateVariables,
-} from '../types/template';
+} from '../../types/template';
 
 export interface SerializerOptions {
   indent?: number;

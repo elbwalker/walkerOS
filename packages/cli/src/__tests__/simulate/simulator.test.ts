@@ -1,9 +1,9 @@
 import path from 'path';
-import { simulateCore as simulate } from '../../simulate/simulator';
+import { simulateCore as simulate } from '../../commands/simulate/simulator';
 import { Collector } from '@walkeros/core';
 
 // Mock package-manager to avoid network calls and return empty results
-jest.mock('../../bundle/package-manager', () => ({
+jest.mock('../../commands/bundle/package-manager', () => ({
   downloadPackages: jest.fn().mockResolvedValue(new Map()),
 }));
 

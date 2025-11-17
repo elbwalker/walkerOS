@@ -1,8 +1,8 @@
 import path from 'path';
-import { simulate } from '../../simulate';
+import { simulate } from '../../commands/simulate';
 
 // Mock package-manager to avoid network calls
-jest.mock('../../bundle/package-manager', () => ({
+jest.mock('../../commands/bundle/package-manager', () => ({
   downloadPackages: jest.fn().mockResolvedValue(new Map()),
 }));
 

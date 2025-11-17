@@ -8,7 +8,7 @@ import {
   loadBundleConfig,
   loadAllEnvironments,
   getAvailableEnvironments,
-} from '../bundle/config-loader';
+} from '../config';
 
 describe('Config Loader', () => {
   // ========================================

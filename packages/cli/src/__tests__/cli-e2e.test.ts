@@ -13,7 +13,7 @@ import fs from 'fs-extra';
 const projectRoot = process.cwd();
 
 describe('CLI E2E Tests', () => {
-  const cliPath = join(projectRoot, 'dist/index.mjs');
+  const cliPath = join(projectRoot, 'dist/index.js');
   const tmpDir = join(projectRoot, '.tmp/e2e-tests');
 
   beforeAll(async () => {
@@ -149,9 +149,10 @@ function runCLI(
   args: string[],
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
+    // Add --local flag to run tests without Docker
     const child = spawn(
       'node',
-      [join(projectRoot, 'dist/index.mjs'), ...args],
+      [join(projectRoot, 'dist/index.js'), ...args, '--local'],
       {
         cwd: projectRoot,
         env: { ...process.env, FORCE_COLOR: '0' },

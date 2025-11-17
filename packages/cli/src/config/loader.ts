@@ -2,79 +2,20 @@
  * Configuration Loader
  *
  * Loads and parses configurations with support for:
- * - Separate Flow.Config and BuildOptions
- * - Legacy single-environment configs
+ * - Single-environment configs
  * - Multi-environment setups
  * - Environment selection
- * - Platform-specific defaults
  */
 
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import type { Flow } from '@walkeros/core';
-import { isObject } from '../utils/type-guards';
 import type { BuildOptions, EnvironmentConfig, Setup } from '../types/bundle';
-import { ensureBuildOptions } from '../types/bundle';
-
-// ESM-compatible __dirname resolution
-function getDirname(): string {
-  // @ts-ignore
-  if (typeof __dirname === 'undefined') {
-    // @ts-ignore
-    return dirname(fileURLToPath(import.meta.url));
-  }
-  return __dirname;
-}
-
-/**
- * Type guard: Validate platform value.
- */
-function validatePlatform(platform: unknown): platform is 'web' | 'server' {
-  return platform === 'web' || platform === 'server';
-}
-
-/**
- * Type guard: Check if config is multi-environment format.
- */
-function isMultiEnvConfig(data: unknown): data is Setup {
-  return (
-    isObject(data) &&
-    'version' in data &&
-    data.version === 1 &&
-    'environments' in data &&
-    isObject(data.environments)
-  );
-}
-
-/**
- * Type guard: Check if config is single-environment format (new structure).
- */
-function isSingleEnvConfig(data: unknown): data is EnvironmentConfig {
-  return (
-    isObject(data) &&
-    'flow' in data &&
-    'build' in data &&
-    isObject(data.flow) &&
-    isObject(data.build) &&
-    'platform' in data.flow &&
-    validatePlatform((data.flow as { platform: unknown }).platform)
-  );
-}
-
-/**
- * Type guard: Check if config is legacy format (old Bundle.Config structure).
- * @deprecated Legacy format - will be removed in future versions
- */
-function isLegacyConfig(data: unknown): boolean {
-  return (
-    isObject(data) &&
-    'platform' in data &&
-    validatePlatform(data.platform) &&
-    !('flow' in data) && // Not new format
-    !('version' in data) // Not multi-env
-  );
-}
+import {
+  isMultiEnvConfig,
+  isSingleEnvConfig,
+  validatePlatform,
+  isObject,
+} from './validators';
+import { normalizeConfigs } from './parser';
 
 /**
  * Result of configuration loading.
@@ -134,17 +75,6 @@ export function loadBundleConfig(
   // Check if new single-environment format
   if (isSingleEnvConfig(rawConfig)) {
     return loadSingleEnvironmentConfig(rawConfig, options);
-  }
-
-  // Check if legacy format (deprecated)
-  if (isLegacyConfig(rawConfig)) {
-    if (options.logger) {
-      options.logger.warn(
-        `⚠️  DEPRECATED: Legacy config format detected at ${options.configPath}\n` +
-          `   Please migrate to new format: { flow: {...}, build: {...} }`,
-      );
-    }
-    return loadLegacyConfig(rawConfig as Record<string, unknown>, options);
   }
 
   // Invalid format - provide helpful error
@@ -240,125 +170,10 @@ function loadSingleEnvironmentConfig(
   };
 }
 
-/**
- * Load legacy configuration format (deprecated).
- * @deprecated Will be removed in future versions
- */
-function loadLegacyConfig(
-  config: Record<string, unknown>,
-  options: LoadConfigOptions,
-): LoadConfigResult {
-  const platform = config.platform as 'web' | 'server';
-
-  // Split legacy config into flow and build
-  const flowConfig: Flow.Config = {
-    platform,
-    sources: config.sources,
-    destinations: config.destinations,
-    collector: config.collector,
-    env: config.env,
-  } as unknown as Flow.Config;
-
-  const buildOptions: Partial<BuildOptions> = {
-    packages: (config.packages as BuildOptions['packages']) || {},
-    code: (config.code as string) || '',
-    output: (config.output as string) || '',
-    tempDir: config.tempDir as string,
-    template: config.template as string,
-    cache: config.cache as boolean,
-    ...(config.build as Partial<BuildOptions>),
-  };
-
-  // Normalize
-  const normalized = normalizeConfigs(
-    { flow: flowConfig, build: buildOptions },
-    options.configPath,
-  );
-
-  return {
-    ...normalized,
-    environment: 'default',
-    isMultiEnvironment: false,
-  };
-}
-
-/**
- * Normalize flow and build configurations with platform-specific defaults.
- * Exported for use in helper functions and tests.
- */
-export function normalizeConfigs(
-  config:
-    | EnvironmentConfig
-    | { flow: Flow.Config; build: Partial<BuildOptions> },
-  configPath?: string,
-): { flowConfig: Flow.Config; buildOptions: BuildOptions } {
-  const flowConfig = config.flow;
-  const platform = (flowConfig as unknown as { platform: 'web' | 'server' })
-    .platform;
-
-  if (!validatePlatform(platform)) {
-    throw new Error(
-      `Invalid platform "${platform}". Must be "web" or "server".`,
-    );
-  }
-
-  // Apply platform-specific build defaults
-  const buildDefaults: Partial<BuildOptions> =
-    platform === 'web'
-      ? {
-          platform: 'browser',
-          format: 'iife',
-          target: 'es2020',
-          minify: false,
-          sourcemap: true,
-          tempDir: '.tmp',
-          cache: true,
-        }
-      : {
-          platform: 'node',
-          format: 'esm',
-          target: 'node20',
-          minify: false,
-          sourcemap: false,
-          tempDir: '.tmp',
-          cache: true,
-        };
-
-  // Merge build config
-  const buildConfig: Partial<BuildOptions> = {
-    ...buildDefaults,
-    ...config.build,
-  };
-
-  // Resolve template path relative to config file directory if it starts with ./ or ../
-  // This allows flow files to reference templates next to them, while keeping backward compatibility
-  if (
-    configPath &&
-    buildConfig.template &&
-    !path.isAbsolute(buildConfig.template)
-  ) {
-    if (
-      buildConfig.template.startsWith('./') ||
-      buildConfig.template.startsWith('../')
-    ) {
-      const configDir = path.dirname(configPath);
-      buildConfig.template = path.resolve(configDir, buildConfig.template);
-    }
-  }
-
-  // Only use template if explicitly specified
-  const buildOptionsToNormalize = {
-    ...buildConfig,
-  };
-
-  // Ensure all required build fields are present
-  const buildOptions = ensureBuildOptions(buildOptionsToNormalize, platform);
-
-  return {
-    flowConfig,
-    buildOptions,
-  };
-}
+// Legacy format support removed in v0.3.0
+// Migration: Convert old format { platform, sources, destinations, packages, code, output }
+// To new format: { flow: { platform, sources, destinations }, build: { packages, code, output } }
+// See docs/MIGRATION.md for details
 
 /**
  * Load all environments from a multi-environment configuration.

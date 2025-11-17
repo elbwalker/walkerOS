@@ -1,16 +1,22 @@
+/**
+ * Configuration Utility Functions
+ */
+
 import fs from 'fs-extra';
 import path from 'path';
 
-// Simple check for plain objects
-export function isObject(value: unknown): value is Record<string, unknown> {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    !Array.isArray(value) &&
-    Object.prototype.toString.call(value) === '[object Object]'
-  );
-}
-
+/**
+ * Substitute environment variables in a string.
+ *
+ * @param value - String with ${VAR} placeholders
+ * @returns String with environment variables substituted
+ * @throws Error if environment variable is not found
+ *
+ * @example
+ * ```typescript
+ * substituteEnvVariables('${HOME}/config') // "/Users/name/config"
+ * ```
+ */
 export function substituteEnvVariables(value: string): string {
   return value.replace(/\${([^}]+)}/g, (_, envVar) => {
     const envValue = process.env[envVar];
@@ -21,6 +27,13 @@ export function substituteEnvVariables(value: string): string {
   });
 }
 
+/**
+ * Load and parse JSON configuration file.
+ *
+ * @param configPath - Path to JSON file
+ * @returns Parsed configuration object
+ * @throws Error if file not found or invalid JSON
+ */
 export async function loadJsonConfig<T>(configPath: string): Promise<T> {
   const absolutePath = path.resolve(configPath);
 
@@ -38,6 +51,18 @@ export async function loadJsonConfig<T>(configPath: string): Promise<T> {
   }
 }
 
+/**
+ * Generate a unique temporary directory path.
+ *
+ * @param tempDir - Base temporary directory (default: ".tmp")
+ * @returns Absolute path to unique temp directory
+ *
+ * @example
+ * ```typescript
+ * getTempDir() // "/workspaces/project/.tmp/cli-1647261462000-abc123"
+ * getTempDir('/tmp') // "/tmp/cli-1647261462000-abc123"
+ * ```
+ */
 export function getTempDir(tempDir = '.tmp'): string {
   const randomId = Math.random().toString(36).substring(2, 11);
   const basePath = path.isAbsolute(tempDir)

@@ -5,3 +5,4 @@
  */
 
 export * as Bundle from './bundle';
+export * from './global';

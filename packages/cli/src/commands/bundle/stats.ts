@@ -1,9 +1,9 @@
 /**
  * Bundle statistics display utilities
  */
-import { formatBytes } from '../core';
+import { formatBytes } from '../../core';
 import type { BundleStats } from './bundler';
-import type { Logger } from '../core';
+import type { Logger } from '../../core';
 
 /**
  * Display detailed bundle statistics to console

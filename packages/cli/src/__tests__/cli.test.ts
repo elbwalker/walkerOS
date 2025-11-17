@@ -24,7 +24,8 @@ describe('CLI Bundle Command', () => {
     args: string[],
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
     return new Promise((resolve) => {
-      const child = spawn('node', ['dist/index.mjs', ...args], {
+      // Add --local flag to run tests without Docker
+      const child = spawn('node', ['dist/index.js', ...args, '--local'], {
         stdio: 'pipe',
         shell: false,
       });
@@ -47,14 +48,17 @@ describe('CLI Bundle Command', () => {
   };
 
   it('should output JSON format for successful bundle', async () => {
-    // Create a test config
     const testConfig = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': { imports: ['getId'] },
+      flow: {
+        platform: 'web',
       },
-      code: 'export const test = getId();',
-      output: path.join(testOutputDir, 'test.js'),
+      build: {
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
+        },
+        code: 'export const test = getId();',
+        output: path.join(testOutputDir, 'test.js'),
+      },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
@@ -100,14 +104,17 @@ describe('CLI Bundle Command', () => {
   });
 
   it('should output JSON format for failed bundle', async () => {
-    // Create a test config with syntax error
     const testConfig = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': { imports: ['getId'] },
+      flow: {
+        platform: 'web',
       },
-      code: 'export const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
-      output: path.join(testOutputDir, 'error-test.js'),
+      build: {
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
+        },
+        code: 'export const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
+        output: path.join(testOutputDir, 'error-test.js'),
+      },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
@@ -150,10 +157,14 @@ describe('CLI Bundle Command', () => {
 
   it('should collect stats when --json flag is used (implies --stats)', async () => {
     const testConfig = {
-      platform: 'web',
-      packages: { '@walkeros/core': { imports: ['getId'] } },
-      code: 'export const test = getId;',
-      output: path.join(testOutputDir, 'wildcard-test.js'),
+      flow: {
+        platform: 'web',
+      },
+      build: {
+        packages: { '@walkeros/core': { imports: ['getId'] } },
+        code: 'export const test = getId;',
+        output: path.join(testOutputDir, 'wildcard-test.js'),
+      },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
@@ -174,10 +185,14 @@ describe('CLI Bundle Command', () => {
 
   it('should suppress decorative output in JSON mode', async () => {
     const testConfig = {
-      platform: 'web',
-      packages: { '@walkeros/core': { imports: ['getId'] } },
-      code: 'export const test = getId();',
-      output: path.join(testOutputDir, 'minimal-test.js'),
+      flow: {
+        platform: 'web',
+      },
+      build: {
+        packages: { '@walkeros/core': { imports: ['getId'] } },
+        code: 'export const test = getId();',
+        output: path.join(testOutputDir, 'minimal-test.js'),
+      },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
@@ -220,7 +235,8 @@ describe('CLI Simulate Command', () => {
     args: string[],
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
     return new Promise((resolve) => {
-      const child = spawn('node', ['dist/index.mjs', ...args], {
+      // Add --local flag to run tests without Docker
+      const child = spawn('node', ['dist/index.js', ...args, '--local'], {
         stdio: 'pipe',
         shell: false,
       });

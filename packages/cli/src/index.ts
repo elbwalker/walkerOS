@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { bundleCommand } from './bundle';
-import { simulateCommand } from './simulate';
-import { runCommand } from './run';
+import { bundleCommand } from './commands/bundle';
+import { simulateCommand } from './commands/simulate';
+import { runCommand } from './commands/run';
 
 // === CLI Commands ===
 // Export CLI command handlers
@@ -9,15 +9,15 @@ export { bundleCommand, simulateCommand, runCommand };
 
 // === Programmatic API ===
 // High-level functions for library usage
-export { bundle } from './bundle';
-export { simulate } from './simulate';
-export { run } from './run';
+export { bundle } from './commands/bundle';
+export { simulate } from './commands/simulate';
+export { run } from './commands/run';
 
 // === Types ===
 // Export types for programmatic usage
 export type { BuildOptions, EnvironmentConfig, Setup } from './types/bundle';
-export type { BundleStats } from './bundle/bundler';
-export type { SimulationResult } from './simulate/types';
+export type { BundleStats } from './commands/bundle/bundler';
+export type { SimulationResult } from './commands/simulate/types';
 export type {
   SourceDestinationItem,
   TemplateVariables,
@@ -25,7 +25,13 @@ export type {
   TemplateSource,
   TemplateDestination,
 } from './types/template';
-export type { RunMode, RunCommandOptions, RunOptions, RunResult } from './run';
+export type {
+  RunMode,
+  RunCommandOptions,
+  RunOptions,
+  RunResult,
+} from './commands/run';
+export type { GlobalOptions } from './types/global';
 
 const program = new Command();
 
@@ -52,6 +58,9 @@ program
   .option('--json', 'output statistics in JSON format (implies --stats)')
   .option('--no-cache', 'disable package caching and download fresh packages')
   .option('-v, --verbose', 'verbose output')
+  .option('--local', 'execute in local Node.js instead of Docker')
+  .option('--dry-run', 'preview command without executing')
+  .option('--silent', 'suppress output')
   .action(async (options) => {
     await bundleCommand({
       config: options.config,
@@ -61,6 +70,9 @@ program
       json: options.json,
       cache: options.cache,
       verbose: options.verbose,
+      local: options.local,
+      dryRun: options.dryRun,
+      silent: options.silent,
     });
   });
 
@@ -76,32 +88,73 @@ program
   .option('-e, --event <json>', 'Event to simulate (JSON string)')
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
+  .option('--local', 'execute in local Node.js instead of Docker')
+  .option('--dry-run', 'preview command without executing')
+  .option('--silent', 'suppress output')
   .action(async (options) => {
     await simulateCommand({
       config: options.config,
       event: options.event,
       json: options.json,
       verbose: options.verbose,
+      local: options.local,
+      dryRun: options.dryRun,
+      silent: options.silent,
     });
   });
 
-// Run command
-program
-  .command('run <mode> <config>')
-  .description('Run walkerOS flows (modes: collect, serve)')
-  .option('-p, --port <number>', 'Server port', parseInt)
-  .option('-h, --host <host>', 'Server host (default: 0.0.0.0)')
+// Run command with subcommands
+const runCmd = program
+  .command('run')
+  .description('Run walkerOS flows in collect or serve mode');
+
+// Run collect subcommand
+runCmd
+  .command('collect <file>')
+  .description('Run collector mode (event collection endpoint)')
+  .option('-p, --port <number>', 'Port to listen on (default: 8080)', parseInt)
+  .option('-h, --host <address>', 'Host address (default: 0.0.0.0)')
+  .option('--json', 'Output results as JSON')
+  .option('-v, --verbose', 'Verbose output')
+  .option('--local', 'execute in local Node.js instead of Docker')
+  .option('--dry-run', 'preview command without executing')
+  .option('--silent', 'suppress output')
+  .action(async (file, options) => {
+    await runCommand('collect', {
+      config: file,
+      port: options.port,
+      host: options.host,
+      json: options.json,
+      verbose: options.verbose,
+      local: options.local,
+      dryRun: options.dryRun,
+      silent: options.silent,
+    });
+  });
+
+// Run serve subcommand
+runCmd
+  .command('serve <file>')
+  .description('Run serve mode (static file server for browser bundles)')
+  .option('-p, --port <number>', 'Port to listen on (default: 8080)', parseInt)
+  .option('-h, --host <address>', 'Host address (default: 0.0.0.0)')
   .option('--static-dir <dir>', 'Static directory for serve mode')
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
-  .action(async (mode, config, options) => {
-    await runCommand(mode, {
-      config,
+  .option('--local', 'execute in local Node.js instead of Docker')
+  .option('--dry-run', 'preview command without executing')
+  .option('--silent', 'suppress output')
+  .action(async (file, options) => {
+    await runCommand('serve', {
+      config: file,
       port: options.port,
       host: options.host,
       staticDir: options.staticDir,
       json: options.json,
       verbose: options.verbose,
+      local: options.local,
+      dryRun: options.dryRun,
+      silent: options.silent,
     });
   });
 

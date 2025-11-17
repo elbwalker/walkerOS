@@ -4,6 +4,8 @@
  * Types for running walkerOS flows via CLI using @walkeros/docker as a library
  */
 
+import type { GlobalOptions } from '../../types';
+
 /**
  * Run mode - determines which execution mode to use
  */
@@ -12,7 +14,7 @@ export type RunMode = 'collect' | 'serve';
 /**
  * CLI command options for `walkeros run`
  */
-export interface RunCommandOptions {
+export interface RunCommandOptions extends GlobalOptions {
   /** Flow configuration file path (.json or pre-built .mjs) */
   config: string;
 
@@ -24,9 +26,6 @@ export interface RunCommandOptions {
 
   /** Static directory for serve mode */
   staticDir?: string;
-
-  /** Enable verbose output */
-  verbose?: boolean;
 
   /** Enable JSON output */
   json?: boolean;

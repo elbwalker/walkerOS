@@ -1,9 +1,14 @@
 import path from 'path';
 import fs from 'fs-extra';
 import type { Flow } from '@walkeros/core';
-import { loadJsonConfig, createLogger, getTempDir, isObject } from '../core';
-import { parseBundleConfig } from '../bundle/config';
-import type { BuildOptions } from '../bundle/config';
+import { createLogger } from '../../core';
+import {
+  loadJsonConfig,
+  getTempDir,
+  isObject,
+  parseBundleConfig,
+  type BuildOptions,
+} from '../../config';
 import { bundleCore } from '../bundle/bundler';
 import { downloadPackages } from '../bundle/package-manager';
 import { CallTracker } from './tracker';
@@ -22,11 +27,11 @@ function generateId(): string {
 export async function simulateCore(
   configPath: string,
   event: unknown,
-  options: Pick<SimulateCommandOptions, 'json' | 'verbose'> = {},
+  options: Pick<SimulateCommandOptions, 'json' | 'verbose' | 'silent'> = {},
 ): Promise<SimulationResult> {
   const logger = createLogger({
     verbose: options.verbose || false,
-    silent: false,
+    silent: options.silent || false,
     json: options.json || false,
   });
 

@@ -2,7 +2,7 @@ import {
   serializeToJS,
   serializeConfig,
   processTemplateVariables,
-} from '../../bundle/serializer';
+} from '../../commands/bundle/serializer';
 
 describe('Serializer', () => {
   describe('serializeToJS', () => {

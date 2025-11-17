@@ -2,11 +2,12 @@ import esbuild from 'esbuild';
 import path from 'path';
 import fs from 'fs-extra';
 import type { Flow } from '@walkeros/core';
-import type { BuildOptions } from './config';
-import type { SourceDestinationItem } from '../types/template';
+import type { BuildOptions } from '../../types/bundle';
+import type { SourceDestinationItem } from '../../types/template';
 import { downloadPackages } from './package-manager';
 import { TemplateEngine } from './template-engine';
-import { Logger, getTempDir } from '../core';
+import type { Logger } from '../../core';
+import { getTempDir } from '../../config';
 
 export interface BundleStats {
   totalSize: number;
@@ -261,9 +262,7 @@ function createEsbuildOptions(
     // Use wildcard patterns to match both ESM and CJS imports
     const npmPackages = [
       'zod',
-      'zod-to-json-schema',
       'zod/*',
-      'zod-to-json-schema/*',
       'express',
       'express/*',
       'cors',

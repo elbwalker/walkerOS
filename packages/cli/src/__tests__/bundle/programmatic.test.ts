@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { bundle } from '../../bundle';
+import { bundle } from '../../commands/bundle';
 import { getId } from '@walkeros/core';
 
 describe('Programmatic Bundle API', () => {

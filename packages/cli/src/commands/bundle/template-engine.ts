@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import Handlebars from 'handlebars';
-import type { SourceDestinationItem } from '../types/template';
+import type { SourceDestinationItem } from '../../types/template';
 import { processTemplateVariables } from './serializer';
 
 export class TemplateEngine {

@@ -1,21 +1,15 @@
 /**
- * Configuration Helpers
+ * Configuration Parser
  *
- * Re-exports types for convenience.
- * Provides helper functions for config parsing.
+ * Parsing and normalization logic for configurations.
  */
 
-import { normalizeConfigs } from './config-loader';
-import { isObject } from '../utils/type-guards';
+import path from 'path';
 import type { Flow } from '@walkeros/core';
 import type { BuildOptions, EnvironmentConfig } from '../types/bundle';
-
-// Re-export types
-export type {
-  BuildOptions,
-  MinifyOptions,
-  EnvironmentConfig,
-} from '../types/bundle';
+import { isObject, isSingleEnvConfig } from './validators';
+import { ensureBuildOptions } from './defaults';
+import { validatePlatform } from './validators';
 
 /**
  * Result of parsing bundle configuration.
@@ -114,4 +108,79 @@ export function safeParseBundleConfig(data: unknown): {
       error: error instanceof Error ? error : new Error(String(error)),
     };
   }
+}
+
+/**
+ * Normalize flow and build configurations with platform-specific defaults.
+ *
+ * @param config - Environment configuration or flow+build object
+ * @param configPath - Path to config file (for relative template resolution)
+ * @returns Normalized flow and build configurations
+ */
+export function normalizeConfigs(
+  config:
+    | EnvironmentConfig
+    | { flow: Flow.Config; build: Partial<BuildOptions> },
+  configPath?: string,
+): { flowConfig: Flow.Config; buildOptions: BuildOptions } {
+  const flowConfig = config.flow;
+  const platform = (flowConfig as unknown as { platform: 'web' | 'server' })
+    .platform;
+
+  if (!validatePlatform(platform)) {
+    throw new Error(
+      `Invalid platform "${platform}". Must be "web" or "server".`,
+    );
+  }
+
+  // Apply platform-specific build defaults
+  const buildDefaults: Partial<BuildOptions> =
+    platform === 'web'
+      ? {
+          platform: 'browser',
+          format: 'iife',
+          target: 'es2020',
+          minify: false,
+          sourcemap: true,
+          tempDir: '.tmp',
+          cache: true,
+        }
+      : {
+          platform: 'node',
+          format: 'esm',
+          target: 'node20',
+          minify: false,
+          sourcemap: false,
+          tempDir: '.tmp',
+          cache: true,
+        };
+
+  // Merge build config
+  const buildConfig: Partial<BuildOptions> = {
+    ...buildDefaults,
+    ...config.build,
+  };
+
+  // Resolve template path relative to config file directory if it starts with ./ or ../
+  if (
+    configPath &&
+    buildConfig.template &&
+    !path.isAbsolute(buildConfig.template)
+  ) {
+    if (
+      buildConfig.template.startsWith('./') ||
+      buildConfig.template.startsWith('../')
+    ) {
+      const configDir = path.dirname(configPath);
+      buildConfig.template = path.resolve(configDir, buildConfig.template);
+    }
+  }
+
+  // Ensure all required build fields are present
+  const buildOptions = ensureBuildOptions(buildConfig, platform);
+
+  return {
+    flowConfig,
+    buildOptions,
+  };
 }
