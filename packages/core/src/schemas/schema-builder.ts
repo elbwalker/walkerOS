@@ -49,25 +49,11 @@ export interface PropertyDef {
 }
 
 /**
- * Create object schema from property definitions
+ * Builds a top-level JSON Schema object from a map of property definitions.
  *
- * @param properties - Property definitions
- * @param title - Optional schema title
- * @returns JSON Schema
- *
- * @example
- * const schema = createObjectSchema({
- *   pixelId: {
- *     type: 'string',
- *     required: true,
- *     pattern: '^[0-9]+$',
- *     description: 'Your Meta Pixel ID',
- *   },
- *   eventName: {
- *     type: 'string',
- *     enum: ['PageView', 'Purchase'],
- *   },
- * }, 'Meta Pixel Settings');
+ * @param properties - Map of property names to their schema definitions (`PropertyDef`)
+ * @param title - Optional title to set on the resulting schema
+ * @returns The assembled JSON Schema object with `type: "object"`, `properties` populated from `properties`, and `required` set for any properties marked required
  */
 export function createObjectSchema(
   properties: Record<string, PropertyDef>,
@@ -123,8 +109,13 @@ export function createObjectSchema(
 }
 
 /**
- * Create property schema from definition
- * Helper for nested properties
+ * Builds a JSON Schema fragment for a single property definition.
+ *
+ * Recursively includes nested object properties and array item schemas when the definition
+ * describes an object or an array.
+ *
+ * @param def - The PropertyDef describing the property's type, constraints, defaults and any nested properties/items.
+ * @returns A JSON Schema object representing the property, suitable for inclusion in a parent schema's `properties` or `items`.
  */
 function createPropertySchema(def: PropertyDef): Record<string, unknown> {
   const property: Record<string, unknown> = {
@@ -158,27 +149,13 @@ function createPropertySchema(def: PropertyDef): Record<string, unknown> {
 }
 
 /**
- * Create array schema
+ * Builds a JSON Schema for an array whose items follow the provided property definition.
  *
- * @param itemDef - Definition for array items
- * @param options - Optional array constraints
- * @returns JSON Schema
+ * Supports optional constraints: `minItems`, `maxItems`, `description`, and `title`.
  *
- * @example
- * // Simple string array
- * const tagsSchema = createArraySchema({ type: 'string' });
- *
- * // Tuple (loop pattern) - exactly 2 items
- * const loopSchema = createArraySchema(
- *   { type: 'object' },
- *   { minItems: 2, maxItems: 2 }
- * );
- *
- * // Array with enum
- * const includeSchema = createArraySchema({
- *   type: 'string',
- *   enum: ['data', 'context', 'globals'],
- * });
+ * @param itemDef - Definition for each array item
+ * @param options - Optional array constraints (minItems, maxItems, description, title)
+ * @returns A JSONSchema describing the array with `items` set to the schema for `itemDef` and any provided constraints
  */
 export function createArraySchema(
   itemDef: PropertyDef,
@@ -203,19 +180,12 @@ export function createArraySchema(
 }
 
 /**
- * Create enum schema
+ * Builds a JSON Schema that restricts values to the provided enum members.
  *
- * @param values - Allowed values
- * @param type - Value type ('string' or 'number')
- * @param options - Optional constraints
- * @returns JSON Schema
- *
- * @example
- * const eventTypeSchema = createEnumSchema(
- *   ['PageView', 'Purchase', 'AddToCart'],
- *   'string',
- *   { description: 'Meta Pixel standard event' }
- * );
+ * @param values - Allowed enum values
+ * @param type - The JSON Schema primitive type for the enum values ('string' or 'number')
+ * @param options - Optional metadata such as `description` and `title`
+ * @returns A JSON Schema object with `type` and `enum` set to the provided values
  */
 export function createEnumSchema(
   values: readonly string[] | readonly number[],
@@ -237,22 +207,12 @@ export function createEnumSchema(
 }
 
 /**
- * Create tuple schema (Loop pattern)
+ * Builds a JSON Schema for a two-element tuple representing a loop pattern.
  *
- * Creates an array schema with exactly 2 items, which the Explorer
- * type detector recognizes as a "loop" pattern.
- *
- * @param firstItem - Definition for first element (source)
- * @param secondItem - Definition for second element (transform)
- * @param description - Optional description
- * @returns JSON Schema with minItems=2, maxItems=2
- *
- * @example
- * const loopSchema = createTupleSchema(
- *   { type: 'string' },
- *   { type: 'object' },
- *   'Loop: [source, transform]'
- * );
+ * @param firstItem - Definition for the first element (source). Note: the current implementation does not apply this definition to the produced schema.
+ * @param secondItem - Definition for the second element (transform). Note: the current implementation does not apply this definition to the produced schema.
+ * @param description - Optional description for the tuple schema.
+ * @returns A JSON Schema describing an array with exactly two items (`minItems=2`, `maxItems=2`).
  */
 export function createTupleSchema(
   firstItem: PropertyDef,
