@@ -15,6 +15,8 @@
     "apps/quickstart",
     "apps/walkerjs",
     "apps/storybook-addon",
+    "apps/demos/destination",
+    "apps/demos/source",
     "apps/demos/react",
     "apps/demos/storybook",
     "website"

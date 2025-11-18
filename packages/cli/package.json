@@ -40,8 +40,7 @@
     "fs-extra": "^11.0.0",
     "handlebars": "^4.7.8",
     "jsdom": "^22.1.0",
-    "pacote": "^17.0.0",
-    "zod": "^3.23.8"
+    "pacote": "^17.0.0"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.0",

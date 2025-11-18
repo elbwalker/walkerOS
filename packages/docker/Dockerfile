@@ -1,6 +1,5 @@
 # walkerOS Docker Container
-# Pure runtime container for executing pre-built flows
-# Includes minimal demo bundles for quick-start testing
+# Runtime container with demo bundles for quick-start testing
 # Multi-stage build for optimized production images
 
 # ============================================================================
@@ -43,11 +42,15 @@ COPY packages/docker/package.json ./packages/docker/
 # Copy only the Docker runtime (no build tools, no other packages)
 COPY --from=builder /app/packages/docker/dist ./packages/docker/dist
 
-# Copy demo bundles for quick-start examples
+# Copy demo bundles for quick-start testing
+# Note: Demos use external dependencies (zod, express, cors)
 COPY packages/docker/demos /app/demos
 
-# Install minimal production dependencies (express, cors, zod)
-RUN npm ci --production --workspace=@walkeros/docker
+# Install production dependencies
+# - Workspace install: For runtime code (packages/docker/dist)
+# - Root install: For demo bundles to resolve dependencies
+RUN npm ci --production --workspace=@walkeros/docker && \
+    npm install --production --package-lock-only=false express cors @walkeros/core@^0.3.1
 
 # Create non-root user
 RUN addgroup -g 1001 walker && \
