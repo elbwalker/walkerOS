@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-browser",
   "description": "Browser DOM source for walkerOS",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

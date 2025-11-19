@@ -1,5 +1,12 @@
 # @walkeros/quickstart
 
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/web-source-browser@0.3.2
+
 ## 0.3.1
 
 ### Patch Changes
