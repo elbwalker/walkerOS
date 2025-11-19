@@ -12,15 +12,15 @@ import { VERSION as DOCKER_VERSION } from '@walkeros/docker';
 import { isUrl } from '../config/utils';
 import type { GlobalOptions } from '../types/global';
 
-// Get the directory of this module (ESM-compatible)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 // Read CLI version from own package.json
 // Handle both development (src/) and production (dist/) paths
 function readPackageVersion(): string {
+  // Get the directory of this module (ESM-compatible)
+  const moduleFilename = fileURLToPath(import.meta.url);
+  const moduleDir = path.dirname(moduleFilename);
+
   // Try production path first (dist/index.js -> ../package.json)
-  const prodPath = path.join(__dirname, '../package.json');
+  const prodPath = path.join(moduleDir, '../package.json');
   try {
     const pkg = JSON.parse(readFileSync(prodPath, 'utf-8')) as {
       version: string;
@@ -28,7 +28,7 @@ function readPackageVersion(): string {
     return pkg.version;
   } catch {
     // Fall back to development path (src/core/docker.ts -> ../../package.json)
-    const devPath = path.join(__dirname, '../../package.json');
+    const devPath = path.join(moduleDir, '../../package.json');
     const pkg = JSON.parse(readFileSync(devPath, 'utf-8')) as {
       version: string;
     };

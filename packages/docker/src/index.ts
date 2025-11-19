@@ -7,10 +7,10 @@ import { runFlow } from './services/runner';
 import { runServeMode } from './services/serve';
 
 // Read version from package.json (ESM-compatible)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const moduleFilename = fileURLToPath(import.meta.url);
+const moduleDir = path.dirname(moduleFilename);
 const packageJson = JSON.parse(
-  readFileSync(path.join(__dirname, '../package.json'), 'utf-8'),
+  readFileSync(path.join(moduleDir, '../package.json'), 'utf-8'),
 ) as { version: string };
 
 /**
