@@ -104,7 +104,17 @@ export async function executeInDocker(
   options: GlobalOptions = {},
   configFile?: string,
 ): Promise<void> {
-  const dockerCmd = buildDockerCommand(command, args, options, configFile);
+  // Force --local execution inside container to prevent nested Docker attempts
+  // Architecture: Host CLI decides environment (Docker vs local),
+  // Container CLI always executes locally (no Docker-in-Docker)
+  const containerArgs = [...args, '--local'];
+
+  const dockerCmd = buildDockerCommand(
+    command,
+    containerArgs,
+    options,
+    configFile,
+  );
 
   return new Promise((resolve, reject) => {
     const proc = spawn(dockerCmd[0], dockerCmd.slice(1), {

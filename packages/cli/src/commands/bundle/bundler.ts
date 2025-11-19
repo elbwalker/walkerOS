@@ -257,19 +257,12 @@ function createEsbuildOptions(
     ];
     // Mark runtime dependencies as external
     // These packages are installed in the Docker container and should not be bundled
-    // - zod: Prevents double-loading issues (used by @walkeros/core)
     // - express/cors: Runtime dependencies for server sources
+    // Note: zod is bundled inline via @walkeros/core (not marked external)
     // Use wildcard patterns to match both ESM and CJS imports
-    const npmPackages = [
-      'zod',
-      'zod/*',
-      'express',
-      'express/*',
-      'cors',
-      'cors/*',
-    ];
+    const npmPackages = ['express', 'express/*', 'cors', 'cors/*'];
     // All downloaded @walkeros packages will be bundled into the output
-    // Only Node.js built-ins and problematic packages (zod) are marked external
+    // Only Node.js built-ins and runtime server packages (express/cors) are marked external
     baseOptions.external = buildOptions.external
       ? [...nodeBuiltins, ...npmPackages, ...buildOptions.external]
       : [...nodeBuiltins, ...npmPackages];

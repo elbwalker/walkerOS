@@ -43,14 +43,13 @@ COPY packages/docker/package.json ./packages/docker/
 COPY --from=builder /app/packages/docker/dist ./packages/docker/dist
 
 # Copy demo bundles for quick-start testing
-# Note: Demos use external dependencies (zod, express, cors)
+# Note: Demo bundles are self-contained (only use express/cors at runtime)
 COPY packages/docker/demos /app/demos
 
 # Install production dependencies
 # - Workspace install: For runtime code (packages/docker/dist)
-# - Root install: For demo bundles to resolve dependencies
-RUN npm ci --production --workspace=@walkeros/docker && \
-    npm install --production --package-lock-only=false express cors @walkeros/core@^0.3.1
+# After Phase 1, demo bundles are self-contained (no @walkeros/core needed)
+RUN npm ci --production --workspace=@walkeros/docker
 
 # Create non-root user
 RUN addgroup -g 1001 walker && \

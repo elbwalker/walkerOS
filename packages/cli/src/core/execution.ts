@@ -5,7 +5,11 @@
  */
 
 import type { GlobalOptions } from '../types/global';
-import { executeInDocker, isDockerAvailable } from './docker';
+import {
+  executeInDocker,
+  executeRunInDocker,
+  isDockerAvailable,
+} from './docker';
 import type { Logger } from './logger';
 
 /**
@@ -36,6 +40,7 @@ export type ExecuteHandler = () => Promise<void>;
  * @param dockerArgs - Docker command arguments
  * @param options - Global options
  * @param logger - Logger instance
+ * @param configFile - Optional config file path to mount in Docker
  */
 export async function executeCommand(
   localHandler: ExecuteHandler,
@@ -43,6 +48,7 @@ export async function executeCommand(
   dockerArgs: string[],
   options: GlobalOptions,
   logger?: Logger,
+  configFile?: string,
 ): Promise<void> {
   const mode = getExecutionMode(options);
 
@@ -77,6 +83,6 @@ export async function executeCommand(
     if (logger && !options.silent) {
       logger.info('🐳 Executing in Docker container...');
     }
-    await executeInDocker(dockerCommand, dockerArgs, options);
+    await executeInDocker(dockerCommand, dockerArgs, options, configFile);
   }
 }
