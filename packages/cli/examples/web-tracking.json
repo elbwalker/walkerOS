@@ -228,10 +228,8 @@
         "imports": ["destinationDemo"]
       }
     },
-    "code": "// Web tracking with browser source and multiple destinations\n",
     "minify": false,
     "globalName": "walkerOS",
-    "output": "./dist/web-tracking.js",
-    "template": "templates/base.hbs"
+    "output": "./dist/web-tracking.js"
   }
 }

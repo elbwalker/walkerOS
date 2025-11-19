@@ -74,9 +74,6 @@ export function ensureBuildOptions(
   );
 
   // Validate required fields
-  if (!buildOptions.code && !defaults.code) {
-    throw new Error('BuildOptions.code is required');
-  }
   if (!buildOptions.output && !defaults.output) {
     throw new Error('BuildOptions.output is required');
   }
@@ -84,7 +81,7 @@ export function ensureBuildOptions(
   return {
     ...defaults,
     ...buildOptions,
-    code: buildOptions.code || defaults.code!,
+    code: buildOptions.code || defaults.code || '',
     output: buildOptions.output || defaults.output!,
     packages: buildOptions.packages || defaults.packages!,
   } as BuildOptions;

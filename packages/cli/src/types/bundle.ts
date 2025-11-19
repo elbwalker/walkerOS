@@ -55,15 +55,18 @@ export interface BuildOptions
    * User code to include in bundle.
    *
    * @remarks
-   * Custom JavaScript/TypeScript code that will be included in the bundle.
+   * Optional custom JavaScript/TypeScript code that will be included in the bundle.
    * Can reference imported packages and will be executed when bundle loads.
+   * If omitted, the template's default behavior will be used.
+   *
+   * @default ""
    *
    * @example
    * ```typescript
    * "export default () => startFlow({ sources: {...}, destinations: {...} })"
    * ```
    */
-  code: string;
+  code?: string;
 
   /**
    * Output file path.

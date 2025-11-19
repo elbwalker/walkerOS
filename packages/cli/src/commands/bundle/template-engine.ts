@@ -1,8 +1,8 @@
 import fs from 'fs-extra';
-import path from 'path';
 import Handlebars from 'handlebars';
 import type { SourceDestinationItem } from '../../types/template';
 import { processTemplateVariables } from './serializer';
+import { resolveAsset } from '../../core/asset-resolver';
 
 export class TemplateEngine {
   private handlebars: typeof Handlebars;
@@ -14,9 +14,12 @@ export class TemplateEngine {
 
   /**
    * Load template content from file path
+   *
+   * @param templatePath - Template path (bare name, relative, or absolute)
    */
   async loadTemplate(templatePath: string): Promise<string> {
-    const resolvedPath = path.resolve(templatePath);
+    // Use unified asset resolver (works in both local and Docker)
+    const resolvedPath = resolveAsset(templatePath, 'template');
 
     if (!(await fs.pathExists(resolvedPath))) {
       throw new Error(`Template file not found: ${resolvedPath}`);

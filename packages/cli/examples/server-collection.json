@@ -148,9 +148,6 @@
         "imports": ["destinationDemo"]
       }
     },
-    "code": "// Server-side event collection and forwarding\n// To add custom API forwarding, create a destination using sendServer from @walkeros/server-core:\n// import { sendServer } from '@walkeros/server-core';\n// const customAPI = {\n//   push: async (event) => {\n//     await sendServer('https://example.com/api/events', event, {\n//       headers: { 'Authorization': 'Bearer TOKEN' },\n//       method: 'POST'\n//     });\n//   }\n// };\n",
-    "template": "../templates/base.hbs",
-    "output": "server-collection-bundle.mjs",
-    "tempDir": "/tmp"
+    "output": "server-collection-bundle.mjs"
   }
 }

@@ -57,6 +57,7 @@ describe('CLI Bundle Command', () => {
           '@walkeros/core': { imports: ['getId'] },
         },
         code: 'export const test = getId();',
+        template: '', // Disable template for raw code bundling
         output: path.join(testOutputDir, 'test.js'),
       },
     };
@@ -108,6 +109,7 @@ describe('CLI Bundle Command', () => {
           '@walkeros/core': { imports: ['getId'] },
         },
         code: 'export const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
+        template: '', // Disable template for raw code bundling
         output: path.join(testOutputDir, 'error-test.js'),
       },
     };
@@ -148,6 +150,7 @@ describe('CLI Bundle Command', () => {
       build: {
         packages: { '@walkeros/core': { imports: ['getId'] } },
         code: 'export const test = getId;',
+        template: '', // Disable template for raw code bundling
         output: path.join(testOutputDir, 'wildcard-test.js'),
       },
     };
@@ -171,6 +174,7 @@ describe('CLI Bundle Command', () => {
       build: {
         packages: { '@walkeros/core': { imports: ['getId'] } },
         code: 'export const test = getId();',
+        template: '', // Disable template for raw code bundling
         output: path.join(testOutputDir, 'minimal-test.js'),
       },
     };

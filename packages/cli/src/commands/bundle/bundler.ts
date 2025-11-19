@@ -115,7 +115,10 @@ export async function bundleCore(
       await esbuild.build(esbuildOptions);
     } catch (buildError) {
       // Enhanced error handling for build failures
-      throw createBuildError(buildError as EsbuildError, buildOptions.code);
+      throw createBuildError(
+        buildError as EsbuildError,
+        buildOptions.code || '',
+      );
     }
 
     logger.gray(`Output: ${outputPath}`);
@@ -436,7 +439,7 @@ async function createEntryPoint(
     };
     templatedCode = await templateEngine.process(
       buildOptions.template,
-      buildOptions.code, // Pass user code as parameter
+      buildOptions.code || '', // Pass user code as parameter (empty if undefined)
       (flowWithProps.sources || {}) as unknown as Record<
         string,
         SourceDestinationItem
@@ -450,7 +453,7 @@ async function createEntryPoint(
     );
   } else {
     // No template - just use the code directly
-    templatedCode = buildOptions.code;
+    templatedCode = buildOptions.code || '';
   }
 
   // Apply module format wrapping if needed

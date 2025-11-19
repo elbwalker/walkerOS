@@ -3,3 +3,4 @@ export * from './timer';
 export * from './output';
 export * from './execution';
 export * from './docker';
+export * from './asset-resolver';

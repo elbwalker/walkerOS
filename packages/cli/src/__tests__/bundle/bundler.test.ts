@@ -53,6 +53,7 @@ describe('Bundler', () => {
           },
         },
         code: 'export const test = getId(8);',
+        template: '', // Explicitly disable template for raw code bundling
         platform: 'browser' as const,
         format: 'esm' as const,
         output: path.join(testOutputDir, 'minimal.js'),
@@ -80,6 +81,7 @@ describe('Bundler', () => {
           },
         },
         code: 'export default { processText: (text) => trim(text) };',
+        template: '', // Explicitly disable template for raw code bundling
         platform: 'node' as const,
         format: 'esm' as const,
         output: path.join(testOutputDir, 'server-bundle.mjs'),
@@ -107,6 +109,7 @@ describe('Bundler', () => {
           },
         },
         code: "export function processData(data) {\n  return data.map(item => ({\n    ...item,\n    id: getId(8),\n    timestamp: new Date().toISOString().split('T')[0],\n    processed: true\n  }));\n}\n\nexport function extractNestedValues(data, path) {\n  return data.map(item => getByPath(item, path, null)).filter(val => val !== null);\n}\n\nexport function deepCloneData(data) {\n  return clone(data);\n}\n\nexport function cleanStringData(data) {\n  return data.map(item => ({\n    ...item,\n    name: typeof item.name === 'string' ? trim(item.name) : item.name\n  }));\n}\n\n// Re-export walkerOS utilities\nexport { getId, getByPath, clone, trim, isObject };",
+        template: '', // Explicitly disable template for raw code bundling
         platform: 'browser' as const,
         format: 'esm' as const,
         target: 'es2020',
@@ -137,6 +140,7 @@ describe('Bundler', () => {
             },
           },
           code: 'export const test = getId(8);',
+          template: '', // Explicitly disable template for raw code bundling
           output: path.join(testOutputDir, 'stats-test.js'),
         },
       };
@@ -161,6 +165,7 @@ describe('Bundler', () => {
         build: {
           packages: { '@walkeros/core': {} },
           code: 'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
+          template: '', // Explicitly disable template for raw code bundling
           output: path.join(testOutputDir, 'test.js'),
         },
       });
@@ -182,6 +187,7 @@ describe('Bundler', () => {
             },
           },
           code: 'export const test = getId(8);',
+          template: '', // Explicitly disable template for raw code bundling
           output: path.join(testOutputDir, 'no-stats.js'),
         },
       };
@@ -229,6 +235,7 @@ describe('Bundler', () => {
             '@walkeros/core': { imports: ['trim'] },
           },
           code: 'export const test = trim("hello");',
+          template: '', // Explicitly disable template for raw code bundling
           output: path.join(testOutputDir, 'missing-vars.js'),
         },
       });
@@ -248,6 +255,7 @@ describe('Bundler', () => {
             '@walkeros/core': { imports: ['getId'] },
           },
           code: 'export const test = getId(6);',
+          template: '', // Explicitly disable template for raw code bundling
           output: path.join(testOutputDir, 'append-test.js'),
         },
       });
@@ -269,6 +277,7 @@ describe('Bundler', () => {
             '@walkeros/core': { imports: ['getId'] },
           },
           code: 'export const test = getId();',
+          template: '', // Explicitly disable template for raw code bundling
           tempDir: '/tmp/my-custom-bundler-temp',
           output: path.join(testOutputDir, 'custom-temp-example.js'),
         },
@@ -289,6 +298,7 @@ describe('Bundler', () => {
             '@walkeros/core': { version: '0.0.7', imports: ['getId'] },
           },
           code: '// Test version pinning\nexport const test = getId();',
+          template: '', // Explicitly disable template for raw code bundling
           platform: 'browser' as const,
           format: 'esm' as const,
           target: 'es2020',
@@ -313,21 +323,6 @@ describe('Bundler', () => {
           build: {
             packages: 'invalid', // should be object
             code: 'test',
-            output: path.join(testOutputDir, 'test.js'),
-          },
-        });
-      }).toThrow();
-    });
-
-    it('should require content field', async () => {
-      expect(() => {
-        parseBundleConfig({
-          flow: {
-            platform: 'web' as const,
-          },
-          build: {
-            packages: {},
-            // missing code field
             output: path.join(testOutputDir, 'test.js'),
           },
         });

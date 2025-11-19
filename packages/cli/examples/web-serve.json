@@ -67,10 +67,8 @@
         "imports": ["destinationAPI"]
       }
     },
-    "code": "// walkerOS configuration",
     "minify": false,
     "globalName": "walkerOS",
-    "output": "web-serve.mjs",
-    "template": "templates/base.hbs"
+    "output": "web-serve.mjs"
   }
 }

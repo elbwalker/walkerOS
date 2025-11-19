@@ -122,7 +122,7 @@ describe('Config Loader', () => {
       expect(result.buildOptions.target).toBe('es2020'); // Default preserved
     });
 
-    test('does not auto-select templates', () => {
+    test('auto-selects templates based on platform', () => {
       const config = {
         flow: {
           platform: 'web' as const,
@@ -138,7 +138,8 @@ describe('Config Loader', () => {
         configPath: '/test/config.json',
       });
 
-      expect(result.buildOptions.template).toBeUndefined();
+      // Should auto-select web.hbs for web platform
+      expect(result.buildOptions.template).toBe('web.hbs');
     });
   });
 

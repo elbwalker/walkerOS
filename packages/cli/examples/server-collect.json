@@ -48,9 +48,6 @@
         "imports": ["destinationDemo"]
       }
     },
-    "code": "// Simple server-side event collection with demo destination\n",
-    "template": "../templates/base.hbs",
-    "output": "server-collect.mjs",
-    "tempDir": "/tmp"
+    "output": "server-collect.mjs"
   }
 }

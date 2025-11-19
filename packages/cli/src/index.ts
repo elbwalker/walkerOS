@@ -100,8 +100,10 @@ const runCmd = program
 
 // Run collect subcommand
 runCmd
-  .command('collect <file>')
-  .description('Run collector mode (event collection endpoint)')
+  .command('collect [file]')
+  .description(
+    'Run collector mode (event collection endpoint). Defaults to server-collect.mjs if no file specified.',
+  )
   .option('-p, --port <number>', 'Port to listen on (default: 8080)', parseInt)
   .option('-h, --host <address>', 'Host address (default: 0.0.0.0)')
   .option('--json', 'Output results as JSON')
@@ -111,7 +113,7 @@ runCmd
   .option('--silent', 'suppress output')
   .action(async (file, options) => {
     await runCommand('collect', {
-      config: file,
+      config: file || 'server-collect.mjs',
       port: options.port,
       host: options.host,
       json: options.json,
@@ -124,8 +126,10 @@ runCmd
 
 // Run serve subcommand
 runCmd
-  .command('serve <file>')
-  .description('Run serve mode (static file server for browser bundles)')
+  .command('serve [file]')
+  .description(
+    'Run serve mode (static file server for browser bundles). Defaults to web-serve.mjs if no file specified.',
+  )
   .option('-p, --port <number>', 'Port to listen on (default: 8080)', parseInt)
   .option('-h, --host <address>', 'Host address (default: 0.0.0.0)')
   .option('--static-dir <dir>', 'Static directory for serve mode')
@@ -136,7 +140,7 @@ runCmd
   .option('--silent', 'suppress output')
   .action(async (file, options) => {
     await runCommand('serve', {
-      config: file,
+      config: file || 'web-serve.mjs',
       port: options.port,
       host: options.host,
       staticDir: options.staticDir,

@@ -17,6 +17,10 @@ RUN npm install --omit=dev --no-audit
 # Copy built CLI distribution
 COPY dist ./dist
 
+# Copy templates and examples for zero-config usage
+COPY templates ./templates
+COPY examples ./examples
+
 # Set working directory for user projects
 # All commands will run relative to this directory
 WORKDIR /workspace

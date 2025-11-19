@@ -161,6 +161,12 @@ export function normalizeConfigs(
     ...config.build,
   };
 
+  // Auto-select default template based on platform if not specified
+  // Only auto-select if template is undefined (not explicitly set to empty string or false)
+  if (buildConfig.template === undefined) {
+    buildConfig.template = platform === 'server' ? 'server.hbs' : 'web.hbs';
+  }
+
   // Resolve template path relative to config file directory if it starts with ./ or ../
   if (
     configPath &&
