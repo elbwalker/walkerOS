@@ -1,5 +1,11 @@
 # @walkeros/cli
 
+## 0.3.4
+
+### Patch Changes
+
+- main module exec
+
 ## 0.3.3
 
 ### Patch Changes

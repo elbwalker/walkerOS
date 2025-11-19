@@ -38,7 +38,7 @@ const program = new Command();
 program
   .name('walkeros')
   .description('walkerOS CLI - Bundle and deploy walkerOS components')
-  .version('0.1.0');
+  .version('0.3.4');
 
 // Bundle command
 program
@@ -148,11 +148,7 @@ runCmd
     });
   });
 
-// Only run CLI if this file is executed directly (not imported as a module)
-// Check if the resolved file path matches the first CLI argument
-import { fileURLToPath } from 'url';
-const isMainModule =
-  process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
-if (isMainModule) {
-  program.parse();
-}
+// Run the CLI
+// Note: This file is marked as a bin script in package.json,
+// so it's always executed directly (never imported as a library)
+program.parse();
