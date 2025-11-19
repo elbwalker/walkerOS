@@ -4,6 +4,71 @@
 
 import fs from 'fs-extra';
 import path from 'path';
+import os from 'os';
+
+/**
+ * Check if a string is a valid URL
+ *
+ * @param str - String to check
+ * @returns True if string is a valid HTTP/HTTPS URL
+ */
+export function isUrl(str: string): boolean {
+  try {
+    const url = new URL(str);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Download a file from a URL to a temporary location
+ *
+ * @param url - HTTP/HTTPS URL to download
+ * @returns Path to downloaded temporary file
+ * @throws Error if download fails or response is not OK
+ *
+ * @example
+ * ```typescript
+ * const tempPath = await downloadFromUrl('https://example.com/config.json')
+ * // Returns: "/tmp/walkeros-download-1647261462000-abc123.json"
+ * ```
+ */
+export async function downloadFromUrl(url: string): Promise<string> {
+  if (!isUrl(url)) {
+    throw new Error(`Invalid URL: ${url}`);
+  }
+
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to download ${url}: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const content = await response.text();
+
+    // Extract filename from URL or generate one
+    const urlObj = new URL(url);
+    const urlFilename = path.basename(urlObj.pathname);
+    const extension = path.extname(urlFilename) || '.json';
+    const randomId = Math.random().toString(36).substring(2, 11);
+    const filename = `walkeros-download-${Date.now()}-${randomId}${extension}`;
+
+    // Write to system temp directory
+    const tempPath = path.join(os.tmpdir(), filename);
+    await fs.writeFile(tempPath, content, 'utf-8');
+
+    return tempPath;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to download from URL: ${error.message}`);
+    }
+    throw error;
+  }
+}
 
 /**
  * Substitute environment variables in a string.
@@ -28,17 +93,37 @@ export function substituteEnvVariables(value: string): string {
 }
 
 /**
- * Load and parse JSON configuration file.
+ * Load and parse JSON configuration file from local path or URL.
  *
- * @param configPath - Path to JSON file
- * @returns Parsed configuration object
- * @throws Error if file not found or invalid JSON
+ * @param configPath - Path to JSON file or HTTP/HTTPS URL
+ * @returns Parsed configuration object and cleanup function
+ * @throws Error if file not found, download fails, or invalid JSON
+ *
+ * @example
+ * ```typescript
+ * // Local file
+ * const config = await loadJsonConfig('./config.json')
+ *
+ * // Remote URL
+ * const config = await loadJsonConfig('https://example.com/config.json')
+ * ```
  */
 export async function loadJsonConfig<T>(configPath: string): Promise<T> {
-  const absolutePath = path.resolve(configPath);
+  let absolutePath: string;
+  let isTemporary = false;
 
-  if (!(await fs.pathExists(absolutePath))) {
-    throw new Error(`Configuration file not found: ${absolutePath}`);
+  // Check if input is a URL
+  if (isUrl(configPath)) {
+    // Download from URL to temp location
+    absolutePath = await downloadFromUrl(configPath);
+    isTemporary = true;
+  } else {
+    // Local file path
+    absolutePath = path.resolve(configPath);
+
+    if (!(await fs.pathExists(absolutePath))) {
+      throw new Error(`Configuration file not found: ${absolutePath}`);
+    }
   }
 
   try {
@@ -48,6 +133,15 @@ export async function loadJsonConfig<T>(configPath: string): Promise<T> {
     throw new Error(
       `Invalid JSON in config file: ${configPath}. ${error instanceof Error ? error.message : error}`,
     );
+  } finally {
+    // Clean up temporary downloaded file
+    if (isTemporary) {
+      try {
+        await fs.remove(absolutePath);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
   }
 }
 

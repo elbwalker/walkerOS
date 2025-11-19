@@ -1,7 +1,22 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { runFlow } from './services/runner';
 import { runServeMode } from './services/serve';
+
+// Read version from package.json (ESM-compatible)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const packageJson = JSON.parse(
+  readFileSync(path.join(__dirname, '../package.json'), 'utf-8'),
+) as { version: string };
+
+/**
+ * Package version - exported for use by @walkeros/cli
+ */
+export const VERSION = packageJson.version;
 
 /**
  * walkerOS Docker Container

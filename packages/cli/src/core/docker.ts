@@ -6,19 +6,52 @@
 
 import { spawn } from 'child_process';
 import path from 'path';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { VERSION as DOCKER_VERSION } from '@walkeros/docker';
+import { isUrl } from '../config/utils';
 import type { GlobalOptions } from '../types/global';
+
+// Get the directory of this module (ESM-compatible)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Read CLI version from own package.json
+// Handle both development (src/) and production (dist/) paths
+function readPackageVersion(): string {
+  // Try production path first (dist/index.js -> ../package.json)
+  const prodPath = path.join(__dirname, '../package.json');
+  try {
+    const pkg = JSON.parse(readFileSync(prodPath, 'utf-8')) as {
+      version: string;
+    };
+    return pkg.version;
+  } catch {
+    // Fall back to development path (src/core/docker.ts -> ../../package.json)
+    const devPath = path.join(__dirname, '../../package.json');
+    const pkg = JSON.parse(readFileSync(devPath, 'utf-8')) as {
+      version: string;
+    };
+    return pkg.version;
+  }
+}
+
+const CLI_VERSION = readPackageVersion();
 
 /**
  * Docker image for CLI/build tools (bundle, simulate)
+ * Uses explicit version by default, can be overridden with env var
  */
 export const CLI_DOCKER_IMAGE =
-  process.env.WALKEROS_CLI_DOCKER_IMAGE || 'walkeros/cli:latest';
+  process.env.WALKEROS_CLI_DOCKER_IMAGE || `walkeros/cli:${CLI_VERSION}`;
 
 /**
  * Docker image for production runtime (run command)
+ * Uses explicit version by default, can be overridden with env var
  */
 export const RUNTIME_DOCKER_IMAGE =
-  process.env.WALKEROS_RUNTIME_DOCKER_IMAGE || 'walkeros/docker:latest';
+  process.env.WALKEROS_RUNTIME_DOCKER_IMAGE ||
+  `walkeros/docker:${DOCKER_VERSION}`;
 
 /**
  * @deprecated Use CLI_DOCKER_IMAGE or RUNTIME_DOCKER_IMAGE instead
@@ -44,8 +77,8 @@ export function buildDockerCommand(
 
   const cmd = ['docker', 'run', '--rm'];
 
-  // Mount config file if provided
-  if (configFile) {
+  // Mount config file if provided (only for local files, not URLs)
+  if (configFile && !isUrl(configFile)) {
     const configPath = path.resolve(cwd, configFile);
 
     // Mount config file at /config/flow.json (read-only, separate from workspace)
@@ -54,6 +87,7 @@ export function buildDockerCommand(
     // Update args to use container path - replace first occurrence of config file path
     args = args.map((arg) => (arg === configFile ? '/config/flow.json' : arg));
   }
+  // For URLs, pass them through as-is - container will download them
 
   // Mount current directory for output files
   cmd.push('-v', `${cwd}:/workspace`);

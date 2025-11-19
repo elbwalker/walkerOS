@@ -64,7 +64,8 @@ export async function bundleCommand(
 
         // Step 1: Read configuration file
         logger.info('📦 Reading configuration...');
-        const configPath = path.resolve(options.config);
+        // Don't resolve URLs - pass them through as-is for download
+        const configPath = options.config;
         const rawConfig = await loadJsonConfig(configPath);
 
         // Step 2: Load configuration(s) based on flags
