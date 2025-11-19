@@ -24,7 +24,13 @@ export type ExecutionMode = 'local' | 'docker';
  * @returns Execution mode
  */
 export function getExecutionMode(options: GlobalOptions): ExecutionMode {
-  return options.local ? 'local' : 'docker';
+  // Force local mode if:
+  // 1. --local flag is provided, OR
+  // 2. Running inside a Docker container (WALKEROS_CONTAINER env var)
+  if (options.local || process.env.WALKEROS_CONTAINER === 'true') {
+    return 'local';
+  }
+  return 'docker';
 }
 
 /**
