@@ -14,7 +14,13 @@ import {
   type ServeConfig,
 } from '@walkeros/docker';
 import { bundle } from '../bundle';
-import { createLogger, createTimer, executeCommand } from '../../core';
+import {
+  createLogger,
+  createTimer,
+  getExecutionMode,
+  executeRunInDocker,
+  isDockerAvailable,
+} from '../../core';
 import { loadJsonConfig } from '../../config';
 import { validateMode, validateFlowFile, validatePort } from './validators';
 import type {
@@ -43,145 +49,154 @@ export async function runCommand(
     json: options.json,
   });
 
-  // Build Docker args
-  const dockerArgs = [mode, options.config];
-  if (options.port !== undefined)
-    dockerArgs.push('--port', String(options.port));
-  if (options.host) dockerArgs.push('--host', options.host);
-  if (options.staticDir) dockerArgs.push('--static-dir', options.staticDir);
-  if (options.json) dockerArgs.push('--json');
-  if (options.verbose) dockerArgs.push('--verbose');
-  if (options.silent) dockerArgs.push('--silent');
+  try {
+    // Step 1: Validate inputs
+    validateMode(mode);
+    const configPath = validateFlowFile(options.config);
 
-  await executeCommand(
-    async () => {
-      try {
-        // Step 1: Validate inputs
-        validateMode(mode);
-        const configPath = validateFlowFile(options.config);
+    if (options.port !== undefined) {
+      validatePort(options.port);
+    }
 
-        if (options.port !== undefined) {
-          validatePort(options.port);
+    // Step 2: Determine if config is pre-built or needs bundling
+    const isPreBuilt =
+      configPath.endsWith('.mjs') ||
+      configPath.endsWith('.js') ||
+      configPath.endsWith('.cjs');
+
+    let flowPath: string | null = null;
+
+    if (mode === 'collect') {
+      if (isPreBuilt) {
+        // Use pre-built bundle directly
+        flowPath = path.resolve(configPath);
+        if (!options.json && !options.silent) {
+          logger.info(`📦 Using pre-built flow: ${path.basename(flowPath)}`);
+        }
+      } else {
+        // Bundle JSON config first
+        if (!options.json && !options.silent) {
+          logger.info('🔨 Building flow bundle...');
         }
 
-        // Step 2: Determine if config is pre-built or needs bundling
-        const isPreBuilt =
-          configPath.endsWith('.mjs') ||
-          configPath.endsWith('.js') ||
-          configPath.endsWith('.cjs');
+        // Read config and modify output path
+        const rawConfig = await loadJsonConfig(configPath);
+        const tempPath = path.join(
+          os.tmpdir(),
+          `walkeros-${Date.now()}-${Math.random().toString(36).slice(2, 9)}.mjs`,
+        );
 
-        let flowPath: string;
+        // Ensure config has build.output set to temp path
+        const existingBuild =
+          typeof rawConfig === 'object' &&
+          rawConfig !== null &&
+          'build' in rawConfig &&
+          typeof (rawConfig as Record<string, unknown>).build === 'object'
+            ? ((rawConfig as Record<string, unknown>).build as Record<
+                string,
+                unknown
+              >)
+            : {};
 
-        if (isPreBuilt) {
-          // Use pre-built bundle directly
-          flowPath = path.resolve(configPath);
-          if (!options.json) {
-            logger.info(`📦 Using pre-built flow: ${path.basename(flowPath)}`);
-          }
-        } else {
-          // Bundle JSON config first
-          if (!options.json) {
-            logger.info('🔨 Building flow bundle...');
-          }
+        const configWithOutput = {
+          ...(rawConfig as Record<string, unknown>),
+          build: {
+            ...existingBuild,
+            output: tempPath,
+          },
+        };
 
-          // Read config and modify output path
-          const rawConfig = await loadJsonConfig(configPath);
-          const tempPath = path.join(
-            os.tmpdir(),
-            `walkeros-${Date.now()}-${Math.random().toString(36).slice(2, 9)}.mjs`,
-          );
+        await bundle(configWithOutput, {
+          cache: true,
+          verbose: options.verbose,
+          silent: options.json || options.silent,
+        });
 
-          // Ensure config has build.output set to temp path
-          const existingBuild =
-            typeof rawConfig === 'object' &&
-            rawConfig !== null &&
-            'build' in rawConfig &&
-            typeof (rawConfig as Record<string, unknown>).build === 'object'
-              ? ((rawConfig as Record<string, unknown>).build as Record<
-                  string,
-                  unknown
-                >)
-              : {};
+        flowPath = tempPath;
 
-          const configWithOutput = {
-            ...(rawConfig as Record<string, unknown>),
-            build: {
-              ...existingBuild,
-              output: tempPath,
-            },
-          };
-
-          await bundle(configWithOutput, {
-            cache: true,
-            verbose: options.verbose,
-            silent: options.json,
-          });
-
-          flowPath = tempPath;
-
-          if (!options.json) {
-            logger.success('✅ Bundle ready');
-          }
+        if (!options.json && !options.silent) {
+          logger.success('✅ Bundle ready');
         }
-
-        // Step 3: Run the flow using Docker package
-        if (!options.json) {
-          const modeLabel = mode === 'collect' ? 'Collector' : 'Server';
-          logger.info(`🚀 Starting ${modeLabel}...`);
-        }
-
-        switch (mode) {
-          case 'collect': {
-            const config: RuntimeConfig = {
-              port: options.port,
-              host: options.host,
-            };
-            await runFlow(flowPath, config);
-            break;
-          }
-
-          case 'serve': {
-            const config: ServeConfig = {
-              port: options.port,
-              host: options.host,
-              staticDir: options.staticDir,
-            };
-            await runServeMode(config);
-            break;
-          }
-
-          default:
-            throw new Error(`Unknown mode: ${mode}`);
-        }
-
-        // Note: runFlow runs forever, so we won't reach here unless it fails
-      } catch (error) {
-        const duration = timer.getElapsed() / 1000;
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-
-        if (options.json) {
-          const output = {
-            success: false,
-            mode,
-            error: errorMessage,
-            duration,
-          };
-          // eslint-disable-next-line no-console
-          console.log(JSON.stringify(output, null, 2));
-        } else {
-          logger.error('❌ Run failed:');
-          logger.error(errorMessage);
-        }
-        process.exit(1);
       }
-    },
-    'run',
-    dockerArgs,
-    options,
-    logger,
-    options.config,
-  );
+    }
+
+    // Step 3: Execute based on mode
+    const executionMode = getExecutionMode(options);
+
+    if (executionMode === 'docker') {
+      // Docker mode: Use production runtime image
+      const dockerAvailable = await isDockerAvailable();
+      if (!dockerAvailable) {
+        throw new Error(
+          'Docker is not available. Please install Docker or use --local flag to execute locally.',
+        );
+      }
+
+      if (!options.json && !options.silent) {
+        logger.info('🐳 Executing in production runtime container...');
+      }
+
+      await executeRunInDocker(mode as 'collect' | 'serve', flowPath, {
+        port: options.port,
+        host: options.host,
+        staticDir: options.staticDir,
+        silent: options.silent,
+      });
+    } else {
+      // Local mode: Use library functions
+      if (!options.json && !options.silent) {
+        const modeLabel = mode === 'collect' ? 'Collector' : 'Server';
+        logger.info(`🖥️  Starting ${modeLabel} locally...`);
+      }
+
+      switch (mode) {
+        case 'collect': {
+          if (!flowPath) {
+            throw new Error('Flow path is required for collect mode');
+          }
+          const config: RuntimeConfig = {
+            port: options.port,
+            host: options.host,
+          };
+          await runFlow(flowPath, config);
+          break;
+        }
+
+        case 'serve': {
+          const config: ServeConfig = {
+            port: options.port,
+            host: options.host,
+            staticDir: options.staticDir,
+          };
+          await runServeMode(config);
+          break;
+        }
+
+        default:
+          throw new Error(`Unknown mode: ${mode}`);
+      }
+    }
+
+    // Note: Both Docker and local modes run forever, so we won't reach here unless they fail
+  } catch (error) {
+    const duration = timer.getElapsed() / 1000;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    if (options.json) {
+      const output = {
+        success: false,
+        mode,
+        error: errorMessage,
+        duration,
+      };
+      // eslint-disable-next-line no-console
+      console.log(JSON.stringify(output, null, 2));
+    } else {
+      logger.error('❌ Run failed:');
+      logger.error(errorMessage);
+    }
+    process.exit(1);
+  }
 }
 
 /**

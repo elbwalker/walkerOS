@@ -63,12 +63,7 @@ describe('CLI Bundle Command', () => {
 
     await fs.writeJson(testConfigPath, testConfig);
 
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      testConfigPath,
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
 
     expect(result.exitCode).toBe(0);
 
@@ -119,12 +114,7 @@ describe('CLI Bundle Command', () => {
 
     await fs.writeJson(testConfigPath, testConfig);
 
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      testConfigPath,
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
 
     expect(result.exitCode).toBe(1);
 
@@ -139,12 +129,7 @@ describe('CLI Bundle Command', () => {
   });
 
   it('should output JSON format when config file not found', async () => {
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      'nonexistent.json',
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', 'nonexistent.json', '--json']);
 
     expect(result.exitCode).toBe(1);
 
@@ -169,12 +154,7 @@ describe('CLI Bundle Command', () => {
 
     await fs.writeJson(testConfigPath, testConfig);
 
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      testConfigPath,
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
 
     expect(result.exitCode).toBe(0);
 
@@ -197,12 +177,7 @@ describe('CLI Bundle Command', () => {
 
     await fs.writeJson(testConfigPath, testConfig);
 
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      testConfigPath,
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
 
     expect(result.exitCode).toBe(0);
 
@@ -261,7 +236,6 @@ describe('CLI Simulate Command', () => {
   it('should output JSON format for simulation', async () => {
     const result = await runCLI([
       'simulate',
-      '--config',
       testConfigPath,
       '--event',
       '{"name":"product view","data":{"id":"P123"}}',

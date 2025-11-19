@@ -35,7 +35,7 @@ describe('CLI E2E Tests', () => {
     it('should bundle a simple server config', async () => {
       const configPath = join(projectRoot, 'examples/server-collect.json');
 
-      const result = await runCLI(['bundle', '--config', configPath]);
+      const result = await runCLI(['bundle', configPath]);
 
       expect(result.code).toBe(0);
 
@@ -45,11 +45,7 @@ describe('CLI E2E Tests', () => {
     }, 30000);
 
     it('should show error for invalid config', async () => {
-      const result = await runCLI([
-        'bundle',
-        '--config',
-        '/nonexistent/config.json',
-      ]);
+      const result = await runCLI(['bundle', '/nonexistent/config.json']);
 
       expect(result.code).not.toBe(0);
       expect(result.stderr || result.stdout).toContain('not found');
@@ -58,12 +54,7 @@ describe('CLI E2E Tests', () => {
     it('should handle --stats flag', async () => {
       const configPath = join(projectRoot, 'examples/server-collect.json');
 
-      const result = await runCLI([
-        'bundle',
-        '--config',
-        configPath,
-        '--stats',
-      ]);
+      const result = await runCLI(['bundle', configPath, '--stats']);
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('Bundle Statistics');
@@ -76,7 +67,6 @@ describe('CLI E2E Tests', () => {
 
       const result = await runCLI([
         'simulate',
-        '--config',
         configPath,
         '--event',
         '{"name":"page view","data":{"title":"Test"}}',
@@ -96,11 +86,7 @@ describe('CLI E2E Tests', () => {
     }, 30000);
 
     it('should handle invalid config gracefully', async () => {
-      const result = await runCLI([
-        'simulate',
-        '--config',
-        '/invalid/path.json',
-      ]);
+      const result = await runCLI(['simulate', '/invalid/path.json']);
 
       expect(result.code).not.toBe(0);
       expect(result.stderr || result.stdout).toContain('not found');
