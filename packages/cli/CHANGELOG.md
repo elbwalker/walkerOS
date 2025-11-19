@@ -1,5 +1,13 @@
 # @walkeros/cli
 
+## 0.3.5
+
+### Patch Changes
+
+- cli usage
+- Updated dependencies
+  - @walkeros/docker@0.1.4
+
 ## 0.3.4
 
 ### Patch Changes

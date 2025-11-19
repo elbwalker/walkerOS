@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/destination-demo",
   "description": "Demo destination for walkerOS - logs events to console",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

@@ -1,5 +1,18 @@
 # @walkeros/docker
 
+## 0.1.4
+
+### Patch Changes
+
+- cli usage
+
+## 0.1.3
+
+### Patch Changes
+
+- Fix serve mode health endpoint by moving route before static middleware to
+  prevent permission errors
+
 ## 0.1.2
 
 ### Patch Changes

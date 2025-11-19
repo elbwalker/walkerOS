@@ -1,7 +1,18 @@
 import { Command } from 'commander';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { bundleCommand } from './commands/bundle';
 import { simulateCommand } from './commands/simulate';
 import { runCommand } from './commands/run';
+
+// Get package version dynamically
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(
+  readFileSync(join(__dirname, '../package.json'), 'utf-8'),
+);
+const VERSION = packageJson.version;
 
 // === CLI Commands ===
 // Export CLI command handlers
@@ -38,7 +49,7 @@ const program = new Command();
 program
   .name('walkeros')
   .description('walkerOS CLI - Bundle and deploy walkerOS components')
-  .version('0.3.4');
+  .version(VERSION);
 
 // Bundle command
 program

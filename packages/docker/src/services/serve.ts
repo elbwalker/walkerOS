@@ -30,10 +30,7 @@ export async function runServeMode(config?: ServeConfig): Promise<void> {
   try {
     const app = express();
 
-    // Serve static files
-    app.use(express.static(staticDir));
-
-    // Health check
+    // Health check (must be before static middleware to avoid file lookup)
     app.get('/health', (req, res) => {
       res.json({
         status: 'ok',
@@ -42,6 +39,9 @@ export async function runServeMode(config?: ServeConfig): Promise<void> {
         staticDir,
       });
     });
+
+    // Serve static files
+    app.use(express.static(staticDir));
 
     // Start server
     const server = app.listen(port, host, () => {

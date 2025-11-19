@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/cli",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
@@ -18,6 +18,7 @@
   "files": [
     "dist/**",
     "templates/**",
+    "examples/**",
     "README.md",
     "CHANGELOG.md"
   ],
@@ -27,9 +28,10 @@
     "start": "node dist/index.js",
     "test": "jest --colors",
     "lint": "tsc && eslint \"src/**/*.ts*\"",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage && rm -rf .temp",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage && rm -rf .temp && rm -rf .tmp",
     "docker:build": "bash scripts/build-docker.sh",
-    "docker:test": "docker run --rm walkeros/cli:latest --version"
+    "docker:test": "bash scripts/test-docker.sh",
+    "docker:publish": "bash scripts/publish-docker.sh"
   },
   "dependencies": {
     "@walkeros/core": "^0.3.1",

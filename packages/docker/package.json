@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/docker",
   "description": "Pure runtime Docker container for walkerOS - executes pre-built flows",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "type": "module",
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -22,7 +22,10 @@
     "dev": "tsx src/index.ts",
     "start": "node dist/index.mjs",
     "lint": "tsc && eslint \"src/**/*.ts\"",
-    "test": "jest"
+    "test": "jest",
+    "docker:build": "bash scripts/build.sh",
+    "docker:test": "bash scripts/build-and-test.sh",
+    "docker:publish": "bash scripts/publish.sh"
   },
   "dependencies": {
     "cors": "^2.8.5",

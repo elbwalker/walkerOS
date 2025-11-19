@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/source-demo",
   "description": "Demo source for walkerOS - generates events from config",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
