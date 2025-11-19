@@ -42,13 +42,8 @@ program
 
 // Bundle command
 program
-  .command('bundle')
+  .command('bundle [file]')
   .description('Bundle NPM packages with custom code')
-  .option(
-    '-c, --config <path>',
-    'configuration file path',
-    'bundle.config.json',
-  )
   .option(
     '-e, --env <name>',
     'environment to build (for multi-environment configs)',
@@ -61,9 +56,9 @@ program
   .option('--local', 'execute in local Node.js instead of Docker')
   .option('--dry-run', 'preview command without executing')
   .option('--silent', 'suppress output')
-  .action(async (options) => {
+  .action(async (file, options) => {
     await bundleCommand({
-      config: options.config,
+      config: file || 'bundle.config.json',
       env: options.env,
       all: options.all,
       stats: options.stats,
@@ -78,22 +73,17 @@ program
 
 // Simulate command
 program
-  .command('simulate')
+  .command('simulate [file]')
   .description('Simulate event processing and capture API calls')
-  .option(
-    '-c, --config <path>',
-    'Bundle configuration file',
-    'bundle.config.json',
-  )
   .option('-e, --event <json>', 'Event to simulate (JSON string)')
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
   .option('--local', 'execute in local Node.js instead of Docker')
   .option('--dry-run', 'preview command without executing')
   .option('--silent', 'suppress output')
-  .action(async (options) => {
+  .action(async (file, options) => {
     await simulateCommand({
-      config: options.config,
+      config: file || 'bundle.config.json',
       event: options.event,
       json: options.json,
       verbose: options.verbose,

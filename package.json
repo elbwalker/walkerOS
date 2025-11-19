@@ -14,6 +14,7 @@
     "packages/web/sources/*",
     "apps/quickstart",
     "apps/walkerjs",
+    "apps/cli",
     "apps/storybook-addon",
     "apps/demos/destination",
     "apps/demos/source",

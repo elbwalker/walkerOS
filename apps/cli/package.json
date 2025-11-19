@@ -1,11 +1,11 @@
 {
-  "name": "runneros",
+  "name": "walkeros",
   "version": "0.3.1",
-  "description": "Shorthand command for walkerOS CLI - run npx runneros instead of npx walkeros",
+  "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "runneros": "dist/index.js"
+    "walkeros": "dist/index.js"
   },
   "files": [
     "dist/**",
@@ -18,7 +18,7 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
   },
   "dependencies": {
-    "@walkeros/cli": "^0.3.1"
+    "@walkeros/cli": "0.3.1"
   },
   "devDependencies": {
     "tsup": "^8.4.0",

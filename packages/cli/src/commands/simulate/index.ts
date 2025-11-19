@@ -18,7 +18,7 @@ export async function simulateCommand(
     json: options.json,
   });
 
-  // Build Docker args
+  // Build Docker args - file path as first positional arg
   const dockerArgs = [options.config];
   if (options.event) dockerArgs.push('--event', options.event);
   if (options.json) dockerArgs.push('--json');
@@ -87,6 +87,7 @@ export async function simulateCommand(
     dockerArgs,
     options,
     logger,
+    options.config,
   );
 }
 

@@ -21,6 +21,9 @@ COPY dist ./dist
 # All commands will run relative to this directory
 WORKDIR /workspace
 
+# Set environment variable to indicate container environment
+ENV WALKEROS_CONTAINER=true
+
 # Entry point is the CLI
 # Users can run: docker run walkeros/cli:latest bundle config.json
 ENTRYPOINT ["node", "/cli/dist/index.js"]

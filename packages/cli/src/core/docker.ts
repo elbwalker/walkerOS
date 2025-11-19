@@ -20,25 +20,33 @@ export const DOCKER_IMAGE =
  * @param command - CLI command (bundle, simulate, run)
  * @param args - Command arguments
  * @param options - Global options
+ * @param configFile - Optional config file path to mount in Docker
  * @returns Docker command array
  */
 export function buildDockerCommand(
   command: string,
   args: string[],
   options: GlobalOptions = {},
+  configFile?: string,
 ): string[] {
   const cwd = process.cwd();
 
-  const cmd = [
-    'docker',
-    'run',
-    '--rm',
-    // Mount current directory
-    '-v',
-    `${cwd}:/workspace`,
-    '-w',
-    '/workspace',
-  ];
+  const cmd = ['docker', 'run', '--rm'];
+
+  // Mount config file if provided
+  if (configFile) {
+    const configPath = path.resolve(cwd, configFile);
+
+    // Mount config file at /config/flow.json (read-only, separate from workspace)
+    cmd.push('-v', `${configPath}:/config/flow.json:ro`);
+
+    // Update args to use container path - replace first occurrence of config file path
+    args = args.map((arg) => (arg === configFile ? '/config/flow.json' : arg));
+  }
+
+  // Mount current directory for output files
+  cmd.push('-v', `${cwd}:/workspace`);
+  cmd.push('-w', '/workspace');
 
   // Add user mapping on Linux/Mac to prevent permission issues
   if (process.platform !== 'win32') {
@@ -65,7 +73,8 @@ export function buildDockerCommand(
   cmd.push(DOCKER_IMAGE);
 
   // Add the command and arguments
-  cmd.push(command, ...args);
+  // Always add --local flag so container executes locally (no nested Docker)
+  cmd.push(command, ...args, '--local');
 
   return cmd;
 }
@@ -76,14 +85,16 @@ export function buildDockerCommand(
  * @param command - CLI command
  * @param args - Command arguments
  * @param options - Global options
+ * @param configFile - Optional config file path to mount in Docker
  * @returns Promise that resolves when command completes
  */
 export async function executeInDocker(
   command: string,
   args: string[],
   options: GlobalOptions = {},
+  configFile?: string,
 ): Promise<void> {
-  const dockerCmd = buildDockerCommand(command, args, options);
+  const dockerCmd = buildDockerCommand(command, args, options, configFile);
 
   return new Promise((resolve, reject) => {
     const proc = spawn(dockerCmd[0], dockerCmd.slice(1), {

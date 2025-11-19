@@ -180,6 +180,7 @@ export async function runCommand(
     dockerArgs,
     options,
     logger,
+    options.config,
   );
 }
 

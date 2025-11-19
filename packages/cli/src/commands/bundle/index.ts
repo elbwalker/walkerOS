@@ -44,7 +44,7 @@ export async function bundleCommand(
     json: options.json,
   });
 
-  // Build Docker args
+  // Build Docker args - file path as first positional arg
   const dockerArgs = [options.config];
   if (options.env) dockerArgs.push('--env', options.env);
   if (options.all) dockerArgs.push('--all');
@@ -204,6 +204,7 @@ export async function bundleCommand(
     dockerArgs,
     options,
     logger,
+    options.config,
   );
 }
 
