@@ -4,11 +4,13 @@ import path from 'path';
 export interface ServeConfig {
   port?: number;
   host?: string;
-  staticDir?: string;
+  servePath?: string;
+  serveName?: string;
+  filePath?: string;
 }
 
 /**
- * Run serve mode - serve static files (typically generated bundles)
+ * Run serve mode - serve single file (typically generated bundle)
  */
 export async function runServeMode(config?: ServeConfig): Promise<void> {
   // Port priority: ENV variable > config > default
@@ -19,33 +21,46 @@ export async function runServeMode(config?: ServeConfig): Promise<void> {
   // Host priority: ENV variable > config > default
   const host = process.env.HOST || config?.host || '0.0.0.0';
 
-  // Static dir priority: ENV variable > config > default
-  const staticDir =
-    process.env.STATIC_DIR || config?.staticDir || path.resolve('/app/dist');
+  // File path: ENV variable > config > baked-in default
+  const filePath =
+    process.env.FILE_PATH || config?.filePath || '/app/web-serve.mjs';
 
-  console.log('📁 Serve mode: Starting static file server...');
-  console.log(`   Directory: ${staticDir}`);
-  console.log(`   Address: http://${host}:${port}`);
+  // Serve name (filename in URL): ENV variable > config > default
+  const serveName = process.env.SERVE_NAME || config?.serveName || 'walker.js';
+
+  // Serve path (URL directory): ENV variable > config > default (empty = root)
+  const servePath = process.env.SERVE_PATH || config?.servePath || '';
+
+  // Build full URL path
+  const urlPath = servePath ? `/${servePath}/${serveName}` : `/${serveName}`;
+
+  console.log('📁 Serve mode: Starting single-file server...');
+  console.log(`   File: ${filePath}`);
+  console.log(`   URL: http://${host}:${port}${urlPath}`);
 
   try {
     const app = express();
 
-    // Health check (must be before static middleware to avoid file lookup)
+    // Health check
     app.get('/health', (req, res) => {
       res.json({
         status: 'ok',
         timestamp: Date.now(),
         mode: 'serve',
-        staticDir,
+        file: filePath,
+        url: urlPath,
       });
     });
 
-    // Serve static files
-    app.use(express.static(staticDir));
+    // Serve single file at custom URL path
+    app.get(urlPath, (req, res) => {
+      res.sendFile(filePath);
+    });
 
     // Start server
     const server = app.listen(port, host, () => {
       console.log(`✅ Server listening on http://${host}:${port}`);
+      console.log(`   GET ${urlPath} - Bundle file`);
       console.log(`   GET /health - Health check`);
     });
 

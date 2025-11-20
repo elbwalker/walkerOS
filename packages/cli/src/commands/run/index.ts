@@ -139,7 +139,8 @@ export async function runCommand(
       await executeRunInDocker(mode as 'collect' | 'serve', flowPath, {
         port: options.port,
         host: options.host,
-        staticDir: options.staticDir,
+        serveName: options.serveName,
+        servePath: options.servePath,
         silent: options.silent,
       });
     } else {
@@ -166,7 +167,9 @@ export async function runCommand(
           const config: ServeConfig = {
             port: options.port,
             host: options.host,
-            staticDir: options.staticDir,
+            serveName: options.serveName,
+            servePath: options.servePath,
+            filePath: flowPath || undefined,
           };
           await runServeMode(config);
           break;
@@ -304,7 +307,9 @@ export async function run(
         const config: ServeConfig = {
           port: options.port,
           host: options.host,
-          staticDir: options.staticDir,
+          serveName: options.serveName,
+          servePath: options.servePath,
+          filePath: flowPath,
         };
         await runServeMode(config);
         break;

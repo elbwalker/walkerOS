@@ -209,7 +209,7 @@ export async function imageExists(
  * Build Docker command for run command (production runtime)
  *
  * @param mode - Run mode (collect | serve)
- * @param flowPath - Path to pre-built .mjs bundle (for collect mode)
+ * @param flowPath - Path to pre-built .mjs bundle (for collect mode) or custom file (for serve mode)
  * @param options - Runtime options
  * @returns Docker command array
  */
@@ -219,7 +219,8 @@ export function buildDockerRunCommand(
   options: {
     port?: number;
     host?: string;
-    staticDir?: string;
+    serveName?: string;
+    servePath?: string;
   } = {},
 ): string[] {
   const cwd = process.cwd();
@@ -235,22 +236,31 @@ export function buildDockerRunCommand(
     cmd.push('-e', 'FLOW=/app/flow.mjs');
   }
 
-  // Port mapping
-  if (options.port !== undefined) {
-    cmd.push('-p', `${options.port}:${options.port}`);
-    cmd.push('-e', `PORT=${options.port}`);
+  // Mount custom file for serve mode
+  if (mode === 'serve' && flowPath) {
+    const absoluteFilePath = path.resolve(cwd, flowPath);
+    cmd.push('-v', `${absoluteFilePath}:/app/bundle.mjs:ro`);
+    cmd.push('-e', 'FILE_PATH=/app/bundle.mjs');
   }
+
+  // Port mapping - always map port for serve mode, use default if not specified
+  const port = options.port !== undefined ? options.port : 8080;
+  cmd.push('-p', `${port}:${port}`);
+  cmd.push('-e', `PORT=${port}`);
 
   // Host
   if (options.host) {
     cmd.push('-e', `HOST=${options.host}`);
   }
 
-  // Static directory for serve mode
-  if (mode === 'serve' && options.staticDir) {
-    const absoluteStaticDir = path.resolve(cwd, options.staticDir);
-    cmd.push('-v', `${absoluteStaticDir}:/app/dist:ro`);
-    cmd.push('-e', 'STATIC_DIR=/app/dist');
+  // Serve name (filename in URL)
+  if (options.serveName) {
+    cmd.push('-e', `SERVE_NAME=${options.serveName}`);
+  }
+
+  // Serve path (URL directory path)
+  if (options.servePath) {
+    cmd.push('-e', `SERVE_PATH=${options.servePath}`);
   }
 
   // Add user mapping on Linux/Mac to prevent permission issues
@@ -276,7 +286,7 @@ export function buildDockerRunCommand(
  * Execute run command in Docker container (production runtime)
  *
  * @param mode - Run mode (collect | serve)
- * @param flowPath - Path to pre-built .mjs bundle (for collect mode)
+ * @param flowPath - Path to pre-built .mjs bundle (for collect mode) or custom file (for serve mode)
  * @param options - Runtime and global options
  * @returns Promise that resolves when command completes
  */
@@ -286,7 +296,8 @@ export async function executeRunInDocker(
   options: {
     port?: number;
     host?: string;
-    staticDir?: string;
+    serveName?: string;
+    servePath?: string;
     silent?: boolean;
   } = {},
 ): Promise<void> {

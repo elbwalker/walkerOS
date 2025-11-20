@@ -1,9 +1,55 @@
 # walkerOS Docker Container
-# Runtime container with demo bundles for quick-start testing
+# Runtime container with baked-in web bundle and demo bundles
 # Multi-stage build for optimized production images
 
 # ============================================================================
-# Stage 1: Build
+# Stage 1: Build CLI and Bundle web-serve.mjs
+# ============================================================================
+FROM node:22-alpine AS bundler
+
+WORKDIR /build
+
+# Copy workspace configuration
+COPY package.json package-lock.json turbo.json ./
+
+# Copy all package.json files for dependency resolution
+COPY packages/cli/package.json ./packages/cli/
+COPY packages/config/package.json ./packages/config/
+COPY packages/core/package.json ./packages/core/
+COPY packages/collector/package.json ./packages/collector/
+COPY packages/web/core/package.json ./packages/web/core/
+COPY packages/web/sources/demo/package.json ./packages/web/sources/demo/
+COPY packages/web/destinations/demo/package.json ./packages/web/destinations/demo/
+COPY packages/web/destinations/api/package.json ./packages/web/destinations/api/
+
+# Install dependencies for CLI build
+RUN npm ci
+
+# Copy all required packages
+COPY packages/config ./packages/config
+COPY packages/core ./packages/core
+COPY packages/collector ./packages/collector
+COPY packages/web/core ./packages/web/core
+COPY packages/web/sources/demo ./packages/web/sources/demo
+COPY packages/web/destinations/demo ./packages/web/destinations/demo
+COPY packages/web/destinations/api ./packages/web/destinations/api
+COPY packages/cli ./packages/cli
+
+# Build all packages needed for bundling
+RUN npm run build --workspace=@walkeros/core && \
+    npm run build --workspace=@walkeros/collector && \
+    npm run build --workspace=@walkeros/web-core && \
+    npm run build --workspace=@walkeros/source-demo && \
+    npm run build --workspace=@walkeros/destination-demo && \
+    npm run build --workspace=@walkeros/web-destination-api && \
+    npm run build --workspace=@walkeros/cli
+
+# Bundle web-serve.json to create baked-in default bundle
+RUN cd packages/cli && \
+    node dist/index.js bundle examples/web-serve.json --local
+
+# ============================================================================
+# Stage 2: Build Docker Runtime
 # ============================================================================
 FROM node:22-alpine AS builder
 
@@ -26,7 +72,7 @@ COPY packages/docker ./packages/docker
 RUN npm run build --workspace=@walkeros/docker
 
 # ============================================================================
-# Stage 2: Production Runtime
+# Stage 3: Production Runtime
 # ============================================================================
 FROM node:22-alpine
 
@@ -41,6 +87,9 @@ COPY packages/docker/package.json ./packages/docker/
 
 # Copy only the Docker runtime (no build tools, no other packages)
 COPY --from=builder /app/packages/docker/dist ./packages/docker/dist
+
+# Copy baked-in web bundle from bundler stage
+COPY --from=bundler /build/packages/cli/web-serve.mjs /app/web-serve.mjs
 
 # Copy demo bundles for quick-start testing
 # Note: Demo bundles are self-contained (only use express/cors at runtime)

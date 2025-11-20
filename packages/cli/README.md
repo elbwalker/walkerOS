@@ -34,6 +34,13 @@ Generate optimized JavaScript bundles from flow configurations.
 walkeros bundle <config-file> [options]
 ```
 
+Config files can be local paths or HTTP(S) URLs:
+
+```bash
+walkeros bundle ./config.json                                    # Local file
+walkeros bundle https://example.com/config.json                  # Remote URL
+```
+
 **Options:**
 
 - `-e, --env <name>` - Build specific environment (multi-env configs)
@@ -266,6 +273,21 @@ CLI (downloads packages + bundles with esbuild)
 ```
 
 **Key principle**: CLI handles build-time, Docker handles runtime.
+
+## Docker Images
+
+By default, CLI uses **explicit version tags** (not `:latest`):
+
+- `walkeros/cli:0.3.5` - Build tools (bundle, simulate)
+- `walkeros/docker:0.1.4` - Production runtime
+
+Override with environment variables:
+
+```bash
+export WALKEROS_CLI_DOCKER_IMAGE=walkeros/cli:0.3.4
+export WALKEROS_RUNTIME_DOCKER_IMAGE=walkeros/docker:latest
+walkeros bundle config.json
+```
 
 ## Requirements
 
