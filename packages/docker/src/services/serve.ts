@@ -23,7 +23,7 @@ export async function runServeMode(config?: ServeConfig): Promise<void> {
 
   // File path: ENV variable > config > baked-in default
   const filePath =
-    process.env.FILE_PATH || config?.filePath || '/app/web-serve.mjs';
+    process.env.FILE_PATH || config?.filePath || '/app/web-serve.js';
 
   // Serve name (filename in URL): ENV variable > config > default
   const serveName = process.env.SERVE_NAME || config?.serveName || 'walker.js';

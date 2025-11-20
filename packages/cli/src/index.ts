@@ -139,7 +139,7 @@ runCmd
 runCmd
   .command('serve [file]')
   .description(
-    'Run serve mode (single-file server for browser bundles). Defaults to baked-in web-serve.mjs if no file specified.',
+    'Run serve mode (single-file server for browser bundles). Defaults to baked-in web-serve.js if no file specified.',
   )
   .option('-p, --port <number>', 'Port to listen on (default: 8080)', parseInt)
   .option('-h, --host <address>', 'Host address (default: 0.0.0.0)')
@@ -152,7 +152,7 @@ runCmd
   .option('--silent', 'suppress output')
   .action(async (file, options) => {
     await runCommand('serve', {
-      config: file || 'web-serve.mjs',
+      config: file || 'web-serve.js',
       port: options.port,
       host: options.host,
       serveName: options.name,

@@ -120,7 +120,7 @@ cp server-collect.mjs ../docker/demos/demo-collect.mjs
 
 # Rebuild serve demo
 node dist/index.mjs bundle --config examples/web-serve.json --local
-cp web-serve.mjs ../docker/demos/demo-serve.mjs
+cp web-serve.js ../docker/demos/demo-serve.js
 ```
 
 ## Documentation

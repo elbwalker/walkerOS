@@ -43,7 +43,7 @@ COPY packages/docker/package.json ./packages/docker/
 COPY --from=builder /app/packages/docker/dist ./packages/docker/dist
 
 # Copy pre-built web bundle (checked into repo)
-COPY packages/cli/examples/web-serve.mjs /app/web-serve.mjs
+COPY packages/cli/examples/web-serve.js /app/web-serve.js
 
 # Copy demo bundles for quick-start testing
 # Note: Demo bundles are self-contained (only use express/cors at runtime)
