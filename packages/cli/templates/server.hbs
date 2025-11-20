@@ -1,4 +1,4 @@
-(async function() {
+export default async function(context = {}) {
   const config = {
     sources: {
     {{#each sources}}
@@ -26,4 +26,4 @@
   const result = await startFlow(config);
 
   return result;
-})();
+}

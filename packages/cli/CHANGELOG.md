@@ -1,5 +1,15 @@
 # @walkeros/cli
 
+## 0.3.6
+
+### Patch Changes
+
+- port path and name
+- df4b2a1: Read CLI version dynamically from package.json instead of hardcoded
+  value
+- Updated dependencies
+  - @walkeros/docker@0.1.5
+
 ## 0.3.5
 
 ### Patch Changes
