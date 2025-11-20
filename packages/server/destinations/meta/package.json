@@ -10,9 +10,9 @@
       "require": "./dist/index.js"
     },
     "./schemas": {
-      "types": "./dist/browser-schemas.d.ts",
-      "import": "./dist/browser-schemas.mjs",
-      "require": "./dist/browser-schemas.js"
+      "types": "./dist/schemas-entry.d.ts",
+      "import": "./dist/schemas-entry.mjs",
+      "require": "./dist/schemas-entry.js"
     },
     "./examples": {
       "types": "./dist/examples/index.d.ts",

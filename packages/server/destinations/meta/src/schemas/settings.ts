@@ -1,4 +1,4 @@
-import { z } from '@walkeros/core';
+import { z } from '@walkeros/core/schemas';
 import { ActionSourceSchema } from './primitives';
 
 export const SettingsSchema = z.object({

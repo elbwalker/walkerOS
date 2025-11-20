@@ -1,4 +1,4 @@
-import { zodToSchema } from '@walkeros/core';
+import { zodToSchema } from '@walkeros/core/schemas';
 import { SettingsSchema, FirehoseConfigSchema } from './settings';
 import { MappingSchema } from './mapping';
 

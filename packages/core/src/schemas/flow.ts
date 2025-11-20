@@ -14,7 +14,7 @@
  * @packageDocumentation
  */
 
-import { z, toJsonSchema, zodToJsonSchema } from './validation';
+import { z, toJsonSchema } from './validation';
 
 // ========================================
 // Primitive Type Schemas

@@ -9,6 +9,18 @@
   "files": [
     "dist/**"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas-entry.d.ts",
+      "import": "./dist/schemas-entry.mjs",
+      "require": "./dist/schemas-entry.js"
+    }
+  },
   "scripts": {
     "build": "tsup --silent",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",

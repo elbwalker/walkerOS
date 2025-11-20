@@ -20,9 +20,6 @@ export * as SourceBrowser from './types';
 // Export examples
 export * as examples from './examples';
 
-// Export schemas
-export * as schemas from './schemas';
-
 // Export walker utility functions
 export {
   getAllEvents,

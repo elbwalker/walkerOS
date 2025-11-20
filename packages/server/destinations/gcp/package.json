@@ -10,9 +10,9 @@
       "require": "./dist/index.js"
     },
     "./schemas": {
-      "types": "./dist/schemas.d.ts",
-      "import": "./dist/schemas.mjs",
-      "require": "./dist/schemas.js"
+      "types": "./dist/schemas-entry.d.ts",
+      "import": "./dist/schemas-entry.mjs",
+      "require": "./dist/schemas-entry.js"
     }
   },
   "files": [

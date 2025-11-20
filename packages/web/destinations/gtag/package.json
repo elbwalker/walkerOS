@@ -16,6 +16,11 @@
       "types": "./dist/examples/index.d.ts",
       "import": "./dist/examples/index.mjs",
       "require": "./dist/examples/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas-entry.d.ts",
+      "import": "./dist/schemas-entry.mjs",
+      "require": "./dist/schemas-entry.js"
     }
   },
   "files": [

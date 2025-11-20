@@ -1,4 +1,4 @@
-import { z } from '@walkeros/core';
+import { z } from '@walkeros/core/schemas';
 import { JavaScriptVarName, EventPrefix } from './primitives';
 
 /**

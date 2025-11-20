@@ -1,4 +1,4 @@
-import { z } from '@walkeros/core';
+import { z } from '@walkeros/core/schemas';
 import { PixelId } from './primitives';
 
 export const SettingsSchema = z.object({

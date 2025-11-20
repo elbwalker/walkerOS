@@ -11,6 +11,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas-entry.d.ts",
+      "import": "./dist/schemas-entry.mjs",
+      "require": "./dist/schemas-entry.js"
     }
   },
   "files": [

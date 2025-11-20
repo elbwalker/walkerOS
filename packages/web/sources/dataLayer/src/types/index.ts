@@ -1,6 +1,6 @@
 import type { WalkerOS, Source, Elb } from '@walkeros/core';
 import type { SettingsSchema } from '../schemas';
-import { z } from '@walkeros/core';
+import { z } from '@walkeros/core/schemas';
 
 declare global {
   interface Window {

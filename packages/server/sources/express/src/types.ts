@@ -1,7 +1,7 @@
 import type { WalkerOS, Source as CoreSource } from '@walkeros/core';
 import type { Request, Response, Application } from 'express';
 import type { SettingsSchema, CorsOptionsSchema } from './schemas';
-import { z } from '@walkeros/core';
+import { z } from '@walkeros/core/schemas';
 
 // Types inferred from Zod schemas
 export type Settings = z.infer<typeof SettingsSchema>;

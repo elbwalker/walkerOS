@@ -1,4 +1,4 @@
-import { zodToSchema } from '@walkeros/core';
+import { zodToSchema } from '@walkeros/core/schemas';
 import { SettingsSchema } from './settings';
 import { TaggerSchema } from './tagger';
 
