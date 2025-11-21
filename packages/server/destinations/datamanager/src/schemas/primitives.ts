@@ -1,4 +1,4 @@
-import { z } from '@walkeros/core/schemas';
+import { z } from '@walkeros/core/dev';
 
 export const AccountTypeSchema = z.enum([
   'GOOGLE_ADS',

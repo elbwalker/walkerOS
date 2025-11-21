@@ -402,7 +402,7 @@ async function createEntryPoint(
       if (destinationMatch) {
         const destinationName = destinationMatch[1];
         const examplesVarName = `${destinationName.replace(/-/g, '_')}_examples`;
-        // Try importing from /examples subpath first (standard packages)
+        // Try importing from /dev subpath first (standard packages)
         // Fall back to importing { examples } from main module (demo packages)
         const isDemoPackage = packageName.includes('-demo');
         if (isDemoPackage) {
@@ -411,7 +411,7 @@ async function createEntryPoint(
           );
         } else {
           importStatements.push(
-            `import * as ${examplesVarName} from '${packageName}/examples';`,
+            `import { examples as ${examplesVarName} } from '${packageName}/dev';`,
           );
         }
         examplesMappings.push(`  ${destinationName}: ${examplesVarName}`);

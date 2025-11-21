@@ -5,9 +5,6 @@ import { push } from './push';
 // Types
 export * as DestinationDataManager from './types';
 
-// Examples
-export * as examples from './examples';
-
 export const destinationDataManager: DestinationInterface = {
   type: 'datamanager',
 

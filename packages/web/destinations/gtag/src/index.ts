@@ -10,9 +10,6 @@ import { getEnv } from '@walkeros/web-core';
 // Types
 export * as DestinationGtag from './types';
 
-// Examples
-export * as examples from './examples';
-
 // Track whether default consent has been set
 let defaultConsentSet = false;
 

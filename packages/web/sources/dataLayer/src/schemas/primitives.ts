@@ -1,4 +1,4 @@
-import { z } from '@walkeros/core/schemas';
+import { z } from '@walkeros/core/dev';
 
 /**
  * JavaScript variable name

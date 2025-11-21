@@ -1,5 +1,5 @@
 import { initGTM, pushGTMEvent } from '../gtm';
-import { examples } from '../index';
+import { examples } from '../dev';
 import { clone } from '@walkeros/core';
 import type { GTMSettings } from '../types';
 import { DestinationWeb } from '@walkeros/web-core';

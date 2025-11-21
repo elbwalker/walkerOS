@@ -23,7 +23,7 @@
  * Import strategy:
  * Due to overlapping schema names across domains (ConfigSchema, InstanceSchema, etc.),
  * schemas are organized into namespaces. Import either:
- * 1. From namespaces: import { WalkerOSSchemas, MappingSchemas } from '@walkeros/core/schemas'
+ * 1. From namespaces: import { WalkerOSSchemas, MappingSchemas } from '@walkeros/core/dev'
  * 2. Direct from files: import { EventSchema } from '@walkeros/core/schemas/walkeros'
  */
 
@@ -170,7 +170,7 @@ export * from './schema-builder';
  * duplicate dependencies in the monorepo.
  *
  * Usage in destinations:
- * import { z, zodToSchema } from '@walkeros/core/schemas';
+ * import { z, zodToSchema } from '@walkeros/core/dev';
  */
 export { z } from './validation';
 
@@ -192,7 +192,7 @@ export type JSONSchema = Record<string, unknown>;
  * - target: 'draft-7' (JSON Schema Draft 7 format)
  *
  * Usage in destinations:
- * import { zodToSchema } from '@walkeros/core/schemas';
+ * import { zodToSchema } from '@walkeros/core/dev';
  * export const settings = zodToSchema(SettingsSchema);
  *
  * @param schema - Zod schema to convert

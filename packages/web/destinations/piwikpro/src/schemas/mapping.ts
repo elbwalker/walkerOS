@@ -1,4 +1,4 @@
-import { z } from '@walkeros/core/schemas';
+import { z } from '@walkeros/core/dev';
 
 export const MappingSchema = z.object({
   goalId: z.string().describe('ID to count the event as a goal (like 1)'),

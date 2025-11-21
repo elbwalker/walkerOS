@@ -1,4 +1,4 @@
-import { zodToSchema } from '@walkeros/core/schemas';
+import { zodToSchema } from '@walkeros/core/dev';
 import { SettingsSchema } from './settings';
 import { MappingSchema } from './mapping';
 

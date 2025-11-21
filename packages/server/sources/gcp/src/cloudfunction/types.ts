@@ -1,6 +1,6 @@
 import type { WalkerOS, Source as CoreSource } from '@walkeros/core';
 import type { SettingsSchema, CorsOptionsSchema } from './schemas';
-import { z } from '@walkeros/core/schemas';
+import { z } from '@walkeros/core/dev';
 
 // Minimal request/response interfaces
 export interface Request {

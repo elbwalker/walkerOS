@@ -1,4 +1,4 @@
-import { z } from '@walkeros/core/schemas';
+import { z } from '@walkeros/core/dev';
 import { StandardEventName, CustomEventName } from './primitives';
 
 export const MappingSchema = z.object({

@@ -2,7 +2,7 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
 import { clone, getEvent } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { examples } from '../';
+import { examples } from '../dev';
 import { hashEvent } from '../hash';
 
 const { env, events, mapping } = examples;

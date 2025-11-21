@@ -1,7 +1,7 @@
 import type { Source, Elb, Collector } from '@walkeros/core';
 import type { SessionConfig, SessionCallback } from '@walkeros/web-core';
 import type { SettingsSchema } from '../schemas';
-import { z } from '@walkeros/core/schemas';
+import { z } from '@walkeros/core/dev';
 
 // Export browser-specific elb types
 export * from './elb';

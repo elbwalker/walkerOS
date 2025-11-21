@@ -9,10 +9,10 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
-    "./schemas": {
-      "types": "./dist/schemas-entry.d.ts",
-      "import": "./dist/schemas-entry.mjs",
-      "require": "./dist/schemas-entry.js"
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
     },
     "./examples": {
       "types": "./dist/examples/index.d.ts",

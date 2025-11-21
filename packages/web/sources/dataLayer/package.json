@@ -17,7 +17,7 @@
       "import": "./dist/examples/index.mjs",
       "require": "./dist/examples/index.js"
     },
-    "./schemas": {
+    "./dev": {
       "types": "./dist/schemas-entry.d.ts",
       "import": "./dist/schemas-entry.mjs",
       "require": "./dist/schemas-entry.js"

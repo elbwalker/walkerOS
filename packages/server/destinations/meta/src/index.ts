@@ -5,9 +5,6 @@ import { push } from './push';
 // Types
 export * as DestinationMeta from './types';
 
-// Examples
-export * as examples from './examples';
-
 export const destinationMeta: Destination = {
   type: 'meta',
 

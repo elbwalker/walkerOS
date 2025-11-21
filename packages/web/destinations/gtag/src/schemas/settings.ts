@@ -1,4 +1,4 @@
-import { z } from '@walkeros/core/schemas';
+import { z } from '@walkeros/core/dev';
 import {
   ConsentModeSchema,
   GA4SettingsSchema,
