@@ -280,11 +280,6 @@ function createEsbuildOptions(
     baseOptions.target = 'es2018';
   }
 
-  // Set global name for IIFE format
-  if (buildOptions.globalName && buildOptions.format === 'iife') {
-    baseOptions.globalName = buildOptions.globalName;
-  }
-
   return baseOptions;
 }
 
@@ -459,16 +454,32 @@ async function createEntryPoint(
   // Apply module format wrapping if needed
   let wrappedCode = templatedCode;
 
-  // Check if code already has any export statements (default, named, etc.)
-  const hasExport = /^\s*export\s/m.test(templatedCode);
+  if (buildOptions.format === 'iife' && buildOptions.platform === 'browser') {
+    // Browser IIFE: Auto-execute and assign to window
+    const collectorName = buildOptions.windowCollector || 'collector';
+    const elbName = buildOptions.windowElb || 'elb';
 
-  if (!hasExport) {
-    if (buildOptions.format === 'esm') {
-      // Export as default for ESM
+    // Strip export if present (template might have export default)
+    const codeWithoutExport = templatedCode.replace(
+      /^export\s+default\s+/m,
+      '',
+    );
+
+    wrappedCode = `(async () => {
+  const setupFn = ${codeWithoutExport};
+  const { collector, elb} = await setupFn();
+  if (typeof window !== 'undefined') {
+    window['${collectorName}'] = collector;
+    window['${elbName}'] = elb;
+  }
+})();`;
+  } else {
+    // Check if code already has any export statements (default, named, etc.)
+    const hasExport = /^\s*export\s/m.test(templatedCode);
+
+    if (!hasExport && buildOptions.format === 'esm') {
+      // Server ESM: Export function for manual calling
       wrappedCode = `export default ${templatedCode}`;
-    } else if (buildOptions.platform === 'browser' && buildOptions.globalName) {
-      // Assign to window for browser builds with globalName
-      wrappedCode = `window['${buildOptions.globalName}'] = ${templatedCode}`;
     }
   }
 

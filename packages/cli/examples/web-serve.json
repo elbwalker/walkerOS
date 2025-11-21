@@ -68,7 +68,8 @@
       }
     },
     "minify": true,
-    "globalName": "walkerOS",
-    "output": "web-serve.js"
+    "output": "web-serve.js",
+    "windowCollector": "collector",
+    "windowElb": "elb"
   }
 }
