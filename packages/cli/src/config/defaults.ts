@@ -4,7 +4,7 @@
  * Platform-specific default build options.
  */
 
-import type { BuildOptions } from '../types/bundle';
+import type { BuildOptions } from '../types/bundle.js';
 
 /**
  * Get default build configuration for platform.

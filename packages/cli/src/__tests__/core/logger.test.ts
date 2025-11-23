@@ -1,4 +1,4 @@
-import { createLogger } from '../../core/logger';
+import { createLogger } from '../../core/logger.js';
 
 describe('Logger', () => {
   let consoleLogSpy: jest.SpyInstance;

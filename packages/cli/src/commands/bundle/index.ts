@@ -19,9 +19,9 @@ import {
   parseBundleConfig,
   type LoadConfigResult,
 } from '../../config/index.js';
-import type { GlobalOptions } from '../../types';
-import { bundleCore } from './bundler';
-import { displayStats, createStatsSummary } from './stats';
+import type { GlobalOptions } from '../../types/index.js';
+import { bundleCore } from './bundler.js';
+import { displayStats, createStatsSummary } from './stats.js';
 
 export interface BundleCommandOptions extends GlobalOptions {
   config: string;

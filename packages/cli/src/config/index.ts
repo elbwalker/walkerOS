@@ -10,7 +10,7 @@ export {
   validatePlatform,
   isMultiEnvConfig,
   isSingleEnvConfig,
-} from './validators';
+} from './validators.js';
 
 // Utility functions
 export {
@@ -18,26 +18,26 @@ export {
   loadJsonConfig,
   loadJsonFromSource,
   getTempDir,
-} from './utils';
+} from './utils.js';
 
 // Platform defaults
-export { getDefaultBuildOptions, ensureBuildOptions } from './defaults';
+export { getDefaultBuildOptions, ensureBuildOptions } from './defaults.js';
 
 // Parser
 export {
   parseBundleConfig,
   safeParseBundleConfig,
   normalizeConfigs,
-} from './parser';
-export type { ParsedConfig } from './parser';
+} from './parser.js';
+export type { ParsedConfig } from './parser.js';
 
 // Loader
 export {
   loadBundleConfig,
   loadAllEnvironments,
   getAvailableEnvironments,
-} from './loader';
-export type { LoadConfigResult, LoadConfigOptions } from './loader';
+} from './loader.js';
+export type { LoadConfigResult, LoadConfigOptions } from './loader.js';
 
 // Type re-exports from bundle types
 export type {
@@ -45,4 +45,4 @@ export type {
   MinifyOptions,
   EnvironmentConfig,
   Setup,
-} from '../types/bundle';
+} from '../types/bundle.js';

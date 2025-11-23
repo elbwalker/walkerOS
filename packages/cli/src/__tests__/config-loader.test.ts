@@ -8,7 +8,7 @@ import {
   loadBundleConfig,
   loadAllEnvironments,
   getAvailableEnvironments,
-} from '../config';
+} from '../config/index.js';
 
 describe('Config Loader', () => {
   // ========================================

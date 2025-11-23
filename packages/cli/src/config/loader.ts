@@ -8,14 +8,18 @@
  */
 
 import type { Flow } from '@walkeros/core';
-import type { BuildOptions, EnvironmentConfig, Setup } from '../types/bundle';
+import type {
+  BuildOptions,
+  EnvironmentConfig,
+  Setup,
+} from '../types/bundle.js';
 import {
   isMultiEnvConfig,
   isSingleEnvConfig,
   validatePlatform,
   isObject,
-} from './validators';
-import { normalizeConfigs } from './parser';
+} from './validators.js';
+import { normalizeConfigs } from './parser.js';
 
 /**
  * Result of configuration loading.

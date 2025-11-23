@@ -9,11 +9,11 @@ import {
   parseBundleConfig,
   type BuildOptions,
 } from '../../config/index.js';
-import { bundleCore } from '../bundle/bundler';
-import { downloadPackages } from '../bundle/package-manager';
-import { CallTracker } from './tracker';
-import { executeInJSDOM } from './jsdom-executor';
-import type { SimulateCommandOptions, SimulationResult } from './types';
+import { bundleCore } from '../bundle/bundler.js';
+import { downloadPackages } from '../bundle/package-manager.js';
+import { CallTracker } from './tracker.js';
+import { executeInJSDOM } from './jsdom-executor.js';
+import type { SimulateCommandOptions, SimulationResult } from './types.js';
 
 /**
  * Generate a unique ID for temp files

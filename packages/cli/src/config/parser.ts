@@ -6,10 +6,10 @@
 
 import path from 'path';
 import type { Flow } from '@walkeros/core';
-import type { BuildOptions, EnvironmentConfig } from '../types/bundle';
-import { isObject, isSingleEnvConfig } from './validators';
-import { ensureBuildOptions } from './defaults';
-import { validatePlatform } from './validators';
+import type { BuildOptions, EnvironmentConfig } from '../types/bundle.js';
+import { isObject, isSingleEnvConfig } from './validators.js';
+import { ensureBuildOptions } from './defaults.js';
+import { validatePlatform } from './validators.js';
 
 /**
  * Result of parsing bundle configuration.

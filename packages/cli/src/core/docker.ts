@@ -9,8 +9,8 @@ import path from 'path';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { VERSION as DOCKER_VERSION } from '@walkeros/docker';
-import { isUrl } from '../config/utils';
-import type { GlobalOptions } from '../types/global';
+import { isUrl } from '../config/utils.js';
+import type { GlobalOptions } from '../types/global.js';
 
 // Read CLI version from own package.json
 // Handle both development (src/) and production (dist/) paths

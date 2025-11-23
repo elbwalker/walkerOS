@@ -26,23 +26,23 @@ export { run } from './commands/run/index.js';
 
 // === Types ===
 // Export types for programmatic usage
-export type { BuildOptions, EnvironmentConfig, Setup } from './types/bundle';
-export type { BundleStats } from './commands/bundle/bundler';
-export type { SimulationResult } from './commands/simulate/types';
+export type { BuildOptions, EnvironmentConfig, Setup } from './types/bundle.js';
+export type { BundleStats } from './commands/bundle/bundler.js';
+export type { SimulationResult } from './commands/simulate/types.js';
 export type {
   SourceDestinationItem,
   TemplateVariables,
   ProcessedTemplateVariables,
   TemplateSource,
   TemplateDestination,
-} from './types/template';
+} from './types/template.js';
 export type {
   RunMode,
   RunCommandOptions,
   RunOptions,
   RunResult,
-} from './commands/run';
-export type { GlobalOptions } from './types/global';
+} from './commands/run/index.js';
+export type { GlobalOptions } from './types/global.js';
 
 const program = new Command();
 

@@ -2,7 +2,7 @@
  * Bundle statistics display utilities
  */
 import { formatBytes } from '../../core/index.js';
-import type { BundleStats } from './bundler';
+import type { BundleStats } from './bundler.js';
 import type { Logger } from '../../core/index.js';
 
 /**

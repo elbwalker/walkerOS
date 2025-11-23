@@ -4,7 +4,7 @@
  * Types for running walkerOS flows via CLI using @walkeros/docker as a library
  */
 
-import type { GlobalOptions } from '../../types';
+import type { GlobalOptions } from '../../types/index.js';
 
 /**
  * Run mode - determines which execution mode to use

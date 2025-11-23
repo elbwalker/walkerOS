@@ -1,8 +1,8 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { bundleCore as bundle } from '../../commands/bundle/bundler';
-import { parseBundleConfig } from '../../config';
-import { createLogger, type Logger } from '../../core';
+import { bundleCore as bundle } from '../../commands/bundle/bundler.js';
+import { parseBundleConfig } from '../../config/index.js';
+import { createLogger, type Logger } from '../../core/index.js';
 import { getId } from '@walkeros/core';
 
 // No mocks - test with real package downloads and bundling

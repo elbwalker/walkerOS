@@ -1,8 +1,8 @@
 import fs from 'fs-extra';
 import Handlebars from 'handlebars';
-import type { SourceDestinationItem } from '../../types/template';
-import { processTemplateVariables } from './serializer';
-import { resolveAsset } from '../../core/asset-resolver';
+import type { SourceDestinationItem } from '../../types/template.js';
+import { processTemplateVariables } from './serializer.js';
+import { resolveAsset } from '../../core/asset-resolver.js';
 
 export class TemplateEngine {
   private handlebars: typeof Handlebars;

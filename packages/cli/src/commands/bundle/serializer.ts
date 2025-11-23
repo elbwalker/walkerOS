@@ -8,7 +8,7 @@ import type {
   TemplateSource,
   TemplateDestination,
   ProcessedTemplateVariables,
-} from '../../types/template';
+} from '../../types/template.js';
 
 export interface SerializerOptions {
   indent?: number;

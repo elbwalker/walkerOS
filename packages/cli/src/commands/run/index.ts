@@ -13,7 +13,7 @@ import {
   type RuntimeConfig,
   type ServeConfig,
 } from '@walkeros/docker';
-import { bundle } from '../bundle';
+import { bundle } from '../bundle/index.js';
 import {
   createLogger,
   createTimer,
@@ -22,13 +22,13 @@ import {
   isDockerAvailable,
 } from '../../core/index.js';
 import { loadJsonConfig } from '../../config/index.js';
-import { validateMode, validateFlowFile, validatePort } from './validators';
+import { validateMode, validateFlowFile, validatePort } from './validators.js';
 import type {
   RunMode,
   RunCommandOptions,
   RunOptions,
   RunResult,
-} from './types';
+} from './types.js';
 
 /**
  * CLI command function for `walkeros run`

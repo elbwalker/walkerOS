@@ -5,8 +5,8 @@
  */
 
 import { existsSync } from 'fs';
-import { resolveAsset } from '../../core/asset-resolver';
-import type { RunMode } from './types';
+import { resolveAsset } from '../../core/asset-resolver.js';
+import type { RunMode } from './types.js';
 
 /**
  * Valid run modes

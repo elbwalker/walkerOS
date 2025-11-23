@@ -4,7 +4,7 @@
  * Type checking utilities for configuration validation.
  */
 
-import type { Setup, EnvironmentConfig } from '../types/bundle';
+import type { Setup, EnvironmentConfig } from '../types/bundle.js';
 
 /**
  * Type guard: Check if value is a plain object.

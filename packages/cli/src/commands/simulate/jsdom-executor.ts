@@ -8,7 +8,7 @@
 import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
 import type { Elb } from '@walkeros/core';
-import type { CallTracker, ApiCall } from './tracker';
+import type { CallTracker, ApiCall } from './tracker.js';
 
 export interface ExecutionResult {
   collector: unknown;

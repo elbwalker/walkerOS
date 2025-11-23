@@ -1,7 +1,7 @@
-import { simulateCore, formatSimulationResult } from './simulator';
+import { simulateCore, formatSimulationResult } from './simulator.js';
 import { createLogger, executeCommand } from '../../core/index.js';
 import { loadJsonFromSource } from '../../config/index.js';
-import type { SimulateCommandOptions } from './types';
+import type { SimulateCommandOptions } from './types.js';
 
 /**
  * CLI command handler for simulate command
@@ -151,5 +151,5 @@ export async function simulate(
 }
 
 // Re-export types and utilities for testing
-export * from './types';
-export * from './simulator';
+export * from './types.js';
+export * from './simulator.js';

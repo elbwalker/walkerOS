@@ -4,13 +4,13 @@
  * Determines whether to execute commands locally or in Docker.
  */
 
-import type { GlobalOptions } from '../types/global';
+import type { GlobalOptions } from '../types/global.js';
 import {
   executeInDocker,
   executeRunInDocker,
   isDockerAvailable,
-} from './docker';
-import type { Logger } from './logger';
+} from './docker.js';
+import type { Logger } from './logger.js';
 
 /**
  * Execution mode

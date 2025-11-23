@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { TemplateEngine } from '../../commands/bundle/template-engine';
-import { SourceDestinationItem } from '../../types/template';
+import { TemplateEngine } from '../../commands/bundle/template-engine.js';
+import { SourceDestinationItem } from '../../types/template.js';
 import { getId } from '@walkeros/core';
 
 describe('TemplateEngine', () => {
