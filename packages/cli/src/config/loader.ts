@@ -13,13 +13,12 @@ import type {
   EnvironmentConfig,
   Setup,
 } from '../types/bundle.js';
+import { isMultiEnvConfig, isObject } from './validators.js';
 import {
-  isMultiEnvConfig,
-  isSingleEnvConfig,
-  validatePlatform,
-  isObject,
-} from './validators.js';
-import { normalizeConfigs } from './parser.js';
+  parseConfigStructure,
+  normalizeAndValidate,
+  normalizeConfigs,
+} from './parser.js';
 
 /**
  * Result of configuration loading.
@@ -71,34 +70,46 @@ export function loadBundleConfig(
   rawConfig: unknown,
   options: LoadConfigOptions,
 ): LoadConfigResult {
-  // Check if multi-environment format
-  if (isMultiEnvConfig(rawConfig)) {
-    return loadMultiEnvironmentConfig(rawConfig, options);
-  }
-
-  // Check if new single-environment format
-  if (isSingleEnvConfig(rawConfig)) {
-    return loadSingleEnvironmentConfig(rawConfig, options);
-  }
-
-  // Invalid format - provide helpful error
-  const configType = isObject(rawConfig)
-    ? 'platform' in rawConfig
-      ? `invalid platform value: "${(rawConfig as { platform: unknown }).platform}"`
-      : 'missing "flow" and "build" fields'
-    : `not an object (got ${typeof rawConfig})`;
-
-  throw new Error(
-    `Invalid configuration format at ${options.configPath}.\n` +
-      `Configuration ${configType}.\n\n` +
-      `Expected either:\n` +
-      `  1. Multi-environment: { version: 1, environments: { prod: { flow: {...}, build: {...} } } }\n` +
-      `  2. Single-environment: { flow: { platform: "web" | "server", ... }, build: { packages: {...}, ... } }`,
+  // Level 1: Parse structure and extract config
+  const { flowConfig, buildOptions, metadata } = parseConfigStructure(
+    rawConfig,
+    {
+      configPath: options.configPath,
+      environment: options.environment,
+    },
   );
+
+  // Level 2: Normalize and validate
+  const normalized = normalizeAndValidate(
+    flowConfig,
+    buildOptions,
+    options.configPath,
+  );
+
+  // Log environment selection if multi-environment
+  if (metadata.isMultiEnvironment && options.logger) {
+    options.logger.info(
+      `📦 Using environment: ${metadata.environment} (${metadata.availableEnvironments?.length || 0} total)`,
+    );
+  }
+
+  // Warn if --env flag specified for single-environment config
+  if (!metadata.isMultiEnvironment && options.environment && options.logger) {
+    options.logger.warn(
+      `--env flag specified but configuration is single-environment. Ignoring flag.`,
+    );
+  }
+
+  return {
+    ...normalized,
+    ...metadata,
+  };
 }
 
 /**
  * Load multi-environment configuration.
+ *
+ * @deprecated Kept for backward compatibility. Use loadBundleConfig() instead.
  */
 function loadMultiEnvironmentConfig(
   setup: Setup,
@@ -149,6 +160,8 @@ function loadMultiEnvironmentConfig(
 
 /**
  * Load single-environment configuration.
+ *
+ * @deprecated Kept for backward compatibility. Use loadBundleConfig() instead.
  */
 function loadSingleEnvironmentConfig(
   config: EnvironmentConfig,

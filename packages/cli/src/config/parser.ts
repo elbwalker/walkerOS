@@ -6,10 +6,17 @@
 
 import path from 'path';
 import type { Flow } from '@walkeros/core';
-import type { BuildOptions, EnvironmentConfig } from '../types/bundle.js';
-import { isObject, isSingleEnvConfig } from './validators.js';
-import { ensureBuildOptions } from './defaults.js';
-import { validatePlatform } from './validators.js';
+import type {
+  BuildOptions,
+  EnvironmentConfig,
+  Setup,
+} from '../types/bundle.js';
+import {
+  isObject,
+  isSingleEnvConfig,
+  isMultiEnvConfig,
+  validatePlatform,
+} from './validators.js';
 
 /**
  * Result of parsing bundle configuration.
@@ -17,6 +24,237 @@ import { validatePlatform } from './validators.js';
 export interface ParsedConfig {
   flowConfig: Flow.Config;
   buildOptions: BuildOptions;
+}
+
+/**
+ * Result of config structure parsing (before validation).
+ */
+export interface ParsedStructure {
+  /** Raw flow config (not yet validated) */
+  flowConfig: unknown;
+  /** Raw build options (not yet validated) */
+  buildOptions: unknown;
+  /** Metadata about the config */
+  metadata: {
+    /** Selected environment name */
+    environment: string;
+    /** Whether this is a multi-environment setup */
+    isMultiEnvironment: boolean;
+    /** All available environment names (for multi-env setups) */
+    availableEnvironments?: string[];
+  };
+}
+
+/**
+ * Options for parsing config structure.
+ */
+export interface ParseStructureOptions {
+  /** Config file path (for error messages) */
+  configPath?: string;
+  /** Environment to select (for multi-env configs) */
+  environment?: string;
+}
+
+/**
+ * Parse config structure and extract environment-specific configuration.
+ *
+ * @param rawConfig - Raw configuration object
+ * @param options - Parsing options
+ * @returns Extracted flow config, build options, and metadata
+ * @throws Error if config format is invalid or environment is missing
+ *
+ * @remarks
+ * **Level 1 of 3-level config loading**:
+ * - Detects multi-env vs single-env format
+ * - Extracts the appropriate environment config
+ * - No validation performed (happens in normalizeAndValidate)
+ */
+export function parseConfigStructure(
+  rawConfig: unknown,
+  options: ParseStructureOptions = {},
+): ParsedStructure {
+  // Multi-environment format
+  if (isMultiEnvConfig(rawConfig)) {
+    const setup = rawConfig as Setup;
+    const availableEnvironments = Object.keys(setup.environments);
+
+    // Validate environment selection
+    if (!options.environment) {
+      throw new Error(
+        `Multi-environment configuration detected. Please specify an environment using --env flag.\n` +
+          `Available environments: ${availableEnvironments.join(', ')}`,
+      );
+    }
+
+    const selectedEnv = options.environment;
+
+    if (!setup.environments[selectedEnv]) {
+      throw new Error(
+        `Environment "${selectedEnv}" not found in configuration.\n` +
+          `Available environments: ${availableEnvironments.join(', ')}`,
+      );
+    }
+
+    const envConfig = setup.environments[selectedEnv];
+
+    return {
+      flowConfig: envConfig.flow,
+      buildOptions: envConfig.build,
+      metadata: {
+        environment: selectedEnv,
+        isMultiEnvironment: true,
+        availableEnvironments,
+      },
+    };
+  }
+
+  // Single-environment format
+  if (isSingleEnvConfig(rawConfig)) {
+    const config = rawConfig as EnvironmentConfig;
+
+    return {
+      flowConfig: config.flow,
+      buildOptions: config.build,
+      metadata: {
+        environment: 'default',
+        isMultiEnvironment: false,
+      },
+    };
+  }
+
+  // Invalid format - provide helpful error
+  const configPath = options.configPath || 'configuration';
+  const configType = isObject(rawConfig)
+    ? 'platform' in rawConfig
+      ? `invalid platform value: "${(rawConfig as { platform: unknown }).platform}"`
+      : 'missing "flow" and "build" fields'
+    : `not an object (got ${typeof rawConfig})`;
+
+  throw new Error(
+    `Invalid configuration format at ${configPath}.\n` +
+      `Configuration ${configType}.\n\n` +
+      `Expected either:\n` +
+      `  1. Multi-environment: { version: 1, environments: { prod: { flow: {...}, build: {...} } } }\n` +
+      `  2. Single-environment: { flow: { platform: "web" | "server", ... }, build: { packages: {...}, ... } }`,
+  );
+}
+
+/**
+ * Normalize and validate flow and build configurations.
+ *
+ * @param flowConfig - Raw flow configuration
+ * @param buildOptions - Raw build options
+ * @param configPath - Path to config file (for relative template resolution)
+ * @returns Validated and normalized configuration
+ * @throws Error if validation fails
+ *
+ * @remarks
+ * **Level 2 of 3-level config loading**:
+ * - Validates platform (once!)
+ * - Applies platform-specific defaults (single pass)
+ * - Resolves relative template paths
+ * - Ensures all required fields are present
+ */
+export function normalizeAndValidate(
+  flowConfig: unknown,
+  buildOptions: unknown,
+  configPath?: string,
+): ParsedConfig {
+  // Extract and validate platform (ONCE - not in type guards)
+  if (!isObject(flowConfig) || !('platform' in flowConfig)) {
+    throw new Error(
+      `Invalid flow config: missing "platform" field. Expected "web" or "server".`,
+    );
+  }
+
+  const platform = (flowConfig as { platform: unknown }).platform;
+
+  if (!validatePlatform(platform)) {
+    throw new Error(
+      `Invalid platform "${platform}". Must be "web" or "server".`,
+    );
+  }
+
+  // Validate build options structure
+  if (!isObject(buildOptions)) {
+    throw new Error(
+      `Invalid build options: expected object, got ${typeof buildOptions}`,
+    );
+  }
+
+  // Apply platform-specific defaults (single pass merge)
+  const platformDefaults: Partial<BuildOptions> =
+    platform === 'web'
+      ? {
+          platform: 'browser',
+          format: 'iife',
+          target: 'es2020',
+          minify: false,
+          sourcemap: false,
+          tempDir: '.tmp',
+          cache: true,
+        }
+      : {
+          platform: 'node',
+          format: 'esm',
+          target: 'node20',
+          minify: false,
+          sourcemap: false,
+          tempDir: '.tmp',
+          cache: true,
+        };
+
+  // Single merge: defaults + user config + conditional defaults
+  const merged: Partial<BuildOptions> = {
+    ...platformDefaults,
+    ...(buildOptions as Partial<BuildOptions>),
+  };
+
+  // Auto-select default template based on platform if not specified
+  if (merged.template === undefined) {
+    merged.template = platform === 'server' ? 'server.hbs' : 'web.hbs';
+  }
+
+  // Apply window assignment defaults for browser IIFE
+  if (merged.format === 'iife' && merged.platform === 'browser') {
+    if (merged.windowCollector === undefined) {
+      merged.windowCollector = 'collector';
+    }
+    if (merged.windowElb === undefined) {
+      merged.windowElb = 'elb';
+    }
+  }
+
+  // Resolve template path relative to config file directory if it starts with ./ or ../
+  if (
+    configPath &&
+    merged.template &&
+    !path.isAbsolute(merged.template) &&
+    (merged.template.startsWith('./') || merged.template.startsWith('../'))
+  ) {
+    const configDir = path.dirname(configPath);
+    merged.template = path.resolve(configDir, merged.template);
+  }
+
+  // Apply platform-specific defaults for required fields
+  if (!merged.output || merged.output === '') {
+    merged.output =
+      platform === 'web' ? './dist/walker.js' : './dist/bundle.js';
+  }
+
+  if (!merged.packages) {
+    merged.packages = {};
+  }
+
+  if (merged.code === undefined || merged.code === '') {
+    merged.code = '';
+  }
+
+  // Return fully validated config
+  return {
+    flowConfig: flowConfig as Flow.Config,
+    buildOptions: merged as BuildOptions,
+  };
 }
 
 /**
@@ -63,16 +301,6 @@ export function parseBundleConfig(data: unknown): ParsedConfig {
     );
   }
 
-  const flowData = data.flow as Record<string, unknown>;
-  if (
-    !('platform' in flowData) ||
-    (flowData.platform !== 'web' && flowData.platform !== 'server')
-  ) {
-    throw new Error(
-      `Invalid config: flow.platform must be "web" or "server", got "${flowData.platform}"`,
-    );
-  }
-
   // Validate build.packages field
   const buildData = data.build as Record<string, unknown>;
   if ('packages' in buildData && !isObject(buildData.packages)) {
@@ -81,8 +309,8 @@ export function parseBundleConfig(data: unknown): ParsedConfig {
     );
   }
 
-  const config = data as unknown as EnvironmentConfig;
-  return normalizeConfigs(config, '/unknown/path');
+  // Use new simplified validation
+  return normalizeAndValidate(data.flow, data.build, '/unknown/path');
 }
 
 /**
@@ -116,6 +344,11 @@ export function safeParseBundleConfig(data: unknown): {
  * @param config - Environment configuration or flow+build object
  * @param configPath - Path to config file (for relative template resolution)
  * @returns Normalized flow and build configurations
+ *
+ * @deprecated Use normalizeAndValidate() instead (simpler, single-pass validation)
+ *
+ * @remarks
+ * Kept for backward compatibility. Internally delegates to normalizeAndValidate().
  */
 export function normalizeConfigs(
   config:
@@ -123,80 +356,6 @@ export function normalizeConfigs(
     | { flow: Flow.Config; build: Partial<BuildOptions> },
   configPath?: string,
 ): { flowConfig: Flow.Config; buildOptions: BuildOptions } {
-  const flowConfig = config.flow;
-  const platform = (flowConfig as unknown as { platform: 'web' | 'server' })
-    .platform;
-
-  if (!validatePlatform(platform)) {
-    throw new Error(
-      `Invalid platform "${platform}". Must be "web" or "server".`,
-    );
-  }
-
-  // Apply platform-specific build defaults
-  const buildDefaults: Partial<BuildOptions> =
-    platform === 'web'
-      ? {
-          platform: 'browser',
-          format: 'iife',
-          target: 'es2020',
-          minify: false,
-          sourcemap: false,
-          tempDir: '.tmp',
-          cache: true,
-        }
-      : {
-          platform: 'node',
-          format: 'esm',
-          target: 'node20',
-          minify: false,
-          sourcemap: false,
-          tempDir: '.tmp',
-          cache: true,
-        };
-
-  // Merge build config
-  const buildConfig: Partial<BuildOptions> = {
-    ...buildDefaults,
-    ...config.build,
-  };
-
-  // Auto-select default template based on platform if not specified
-  // Only auto-select if template is undefined (not explicitly set to empty string or false)
-  if (buildConfig.template === undefined) {
-    buildConfig.template = platform === 'server' ? 'server.hbs' : 'web.hbs';
-  }
-
-  // Apply window assignment defaults for browser IIFE
-  if (buildConfig.format === 'iife' && buildConfig.platform === 'browser') {
-    if (buildConfig.windowCollector === undefined) {
-      buildConfig.windowCollector = 'collector';
-    }
-    if (buildConfig.windowElb === undefined) {
-      buildConfig.windowElb = 'elb';
-    }
-  }
-
-  // Resolve template path relative to config file directory if it starts with ./ or ../
-  if (
-    configPath &&
-    buildConfig.template &&
-    !path.isAbsolute(buildConfig.template)
-  ) {
-    if (
-      buildConfig.template.startsWith('./') ||
-      buildConfig.template.startsWith('../')
-    ) {
-      const configDir = path.dirname(configPath);
-      buildConfig.template = path.resolve(configDir, buildConfig.template);
-    }
-  }
-
-  // Ensure all required build fields are present
-  const buildOptions = ensureBuildOptions(buildConfig, platform);
-
-  return {
-    flowConfig,
-    buildOptions,
-  };
+  // Delegate to new simplified function
+  return normalizeAndValidate(config.flow, config.build, configPath);
 }

@@ -42,6 +42,9 @@ export function isMultiEnvConfig(data: unknown): data is Setup {
 
 /**
  * Type guard: Check if config is single-environment format.
+ *
+ * @remarks
+ * Only checks structural shape. Platform validation happens later in normalization.
  */
 export function isSingleEnvConfig(data: unknown): data is EnvironmentConfig {
   return (
@@ -50,8 +53,7 @@ export function isSingleEnvConfig(data: unknown): data is EnvironmentConfig {
     'build' in data &&
     isObject(data.flow) &&
     isObject(data.build) &&
-    'platform' in data.flow &&
-    validatePlatform((data.flow as { platform: unknown }).platform)
+    'platform' in data.flow
   );
 }
 

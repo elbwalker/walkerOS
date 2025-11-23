@@ -312,7 +312,7 @@ describe('Config Loader', () => {
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow('Invalid configuration format');
+      ).toThrow('Invalid platform "invalid". Must be "web" or "server".');
     });
 
     test('throws error for missing required fields', () => {
