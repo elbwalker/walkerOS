@@ -295,22 +295,16 @@ function packageNameToVariable(packageName: string): string {
     .join('');
 }
 
-async function createEntryPoint(
-  flowConfig: Flow.Config,
-  buildOptions: BuildOptions,
-  packagePaths: Map<string, string>,
-): Promise<string> {
-  // Generate import statements from packages
-  const importStatements: string[] = [];
-  const examplesMappings: string[] = [];
-
-  // For simulation mode, automatically import examples from destination packages
-  // This ensures examples are loaded in the SAME execution context as the bundle
-  // preventing zod double-loading issues
+/**
+ * Detects destination packages from flow configuration.
+ * Extracts package names from destinations that have explicit 'package' field.
+ */
+function detectDestinationPackages(flowConfig: Flow.Config): Set<string> {
   const destinationPackages = new Set<string>();
   const destinations = (
     flowConfig as unknown as { destinations?: Record<string, unknown> }
   ).destinations;
+
   if (destinations) {
     for (const [destKey, destConfig] of Object.entries(destinations)) {
       // Require explicit package field - no inference for any packages
@@ -326,9 +320,26 @@ async function createEntryPoint(
     }
   }
 
-  for (const [packageName, packageConfig] of Object.entries(
-    buildOptions.packages,
-  )) {
+  return destinationPackages;
+}
+
+interface ImportGenerationResult {
+  importStatements: string[];
+  examplesMappings: string[];
+}
+
+/**
+ * Generates import statements and examples mappings from build packages.
+ * Handles explicit imports, namespace imports, and auto-imports for destination packages.
+ */
+function generateImportStatements(
+  packages: BuildOptions['packages'],
+  destinationPackages: Set<string>,
+): ImportGenerationResult {
+  const importStatements: string[] = [];
+  const examplesMappings: string[] = [];
+
+  for (const [packageName, packageConfig] of Object.entries(packages)) {
     if (packageConfig.imports && packageConfig.imports.length > 0) {
       // Remove duplicates within the same package
       const uniqueImports = [...new Set(packageConfig.imports)];
@@ -414,24 +425,41 @@ async function createEntryPoint(
     }
   }
 
-  // Create examples object if we have any mappings
-  let examplesObject = '';
-  if (examplesMappings.length > 0) {
-    examplesObject = `const examples = {\n${examplesMappings.join(',\n')}\n};\n`;
+  return { importStatements, examplesMappings };
+}
 
-    // For IIFE bundles, make examples available on window for simulator
-    if (buildOptions.format === 'iife' && buildOptions.platform === 'browser') {
-      examplesObject += `if (typeof window !== 'undefined') { window.__walkerOS_examples = examples; }\n`;
-    }
-
-    examplesObject += `\n`;
+/**
+ * Creates the examples object code from mappings.
+ * Handles special case for IIFE/browser bundles (window.__walkerOS_examples).
+ */
+function createExamplesObject(
+  examplesMappings: string[],
+  format: BuildOptions['format'],
+  platform: BuildOptions['platform'],
+): string {
+  if (examplesMappings.length === 0) {
+    return '';
   }
 
-  // Separate imports from template processing
-  const importsCode = importStatements.join('\n');
+  let examplesObject = `const examples = {\n${examplesMappings.join(',\n')}\n};\n`;
 
-  // Apply template if configured, otherwise just use code directly
-  let templatedCode: string;
+  // For IIFE bundles, make examples available on window for simulator
+  if (format === 'iife' && platform === 'browser') {
+    examplesObject += `if (typeof window !== 'undefined') { window.__walkerOS_examples = examples; }\n`;
+  }
+
+  examplesObject += `\n`;
+  return examplesObject;
+}
+
+/**
+ * Processes template if configured, otherwise returns code directly.
+ * Applies TemplateEngine to transform code with flow configuration.
+ */
+async function processTemplate(
+  flowConfig: Flow.Config,
+  buildOptions: BuildOptions,
+): Promise<string> {
   if (buildOptions.template) {
     const templateEngine = new TemplateEngine();
     const flowWithProps = flowConfig as unknown as {
@@ -439,7 +467,7 @@ async function createEntryPoint(
       destinations?: Record<string, unknown>;
       collector?: Record<string, unknown>;
     };
-    templatedCode = await templateEngine.process(
+    return await templateEngine.process(
       buildOptions.template,
       buildOptions.code || '', // Pass user code as parameter (empty if undefined)
       (flowWithProps.sources || {}) as unknown as Record<
@@ -455,35 +483,101 @@ async function createEntryPoint(
     );
   } else {
     // No template - just use the code directly
-    templatedCode = buildOptions.code || '';
+    return buildOptions.code || '';
+  }
+}
+
+/**
+ * Wraps code for specific output formats.
+ * Adds export wrapper for ESM without template when no export exists.
+ */
+function wrapCodeForFormat(
+  code: string,
+  format: BuildOptions['format'],
+  hasTemplate: boolean,
+): string {
+  // Template outputs ready-to-use code - no wrapping needed
+  if (hasTemplate) {
+    return code;
   }
 
-  // Template outputs ready-to-use code - no wrapping needed
-  let wrappedCode = templatedCode;
-
   // Only add export wrapper for server ESM without template
-  if (!buildOptions.template && buildOptions.format === 'esm') {
+  if (format === 'esm') {
     // Check if code already has export statements
-    const hasExport = /^\s*export\s/m.test(templatedCode);
+    const hasExport = /^\s*export\s/m.test(code);
 
     if (!hasExport) {
       // Raw code without export - wrap as default export
-      wrappedCode = `export default ${templatedCode}`;
+      return `export default ${code}`;
     }
   }
 
-  // Combine imports, examples object, and wrapped code
+  return code;
+}
+
+/**
+ * Assembles the final entry point code from all components.
+ * Combines imports, examples object, and wrapped code with format-specific exports.
+ */
+function assembleFinalCode(
+  importStatements: string[],
+  examplesObject: string,
+  wrappedCode: string,
+  format: BuildOptions['format'],
+): string {
+  const importsCode = importStatements.join('\n');
+
   let finalCode = importsCode
     ? `${importsCode}\n\n${examplesObject}${wrappedCode}`
     : `${examplesObject}${wrappedCode}`;
 
   // Make examples available for ESM
-  if (examplesObject && buildOptions.format === 'esm') {
+  if (examplesObject && format === 'esm') {
     // ESM: export as named export
     finalCode += `\n\nexport { examples };`;
   }
 
   return finalCode;
+}
+
+async function createEntryPoint(
+  flowConfig: Flow.Config,
+  buildOptions: BuildOptions,
+  packagePaths: Map<string, string>,
+): Promise<string> {
+  // Detect destination packages for auto-importing examples
+  const destinationPackages = detectDestinationPackages(flowConfig);
+
+  // Generate import statements and examples mappings
+  const { importStatements, examplesMappings } = generateImportStatements(
+    buildOptions.packages,
+    destinationPackages,
+  );
+
+  // Create examples object code
+  const examplesObject = createExamplesObject(
+    examplesMappings,
+    buildOptions.format,
+    buildOptions.platform,
+  );
+
+  // Process template or use code directly
+  const templatedCode = await processTemplate(flowConfig, buildOptions);
+
+  // Wrap code for specific output format
+  const wrappedCode = wrapCodeForFormat(
+    templatedCode,
+    buildOptions.format,
+    !!buildOptions.template,
+  );
+
+  // Assemble final entry point code
+  return assembleFinalCode(
+    importStatements,
+    examplesObject,
+    wrappedCode,
+    buildOptions.format,
+  );
 }
 
 interface EsbuildError {
