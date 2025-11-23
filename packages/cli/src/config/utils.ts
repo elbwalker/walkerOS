@@ -164,3 +164,120 @@ export function getTempDir(tempDir = '.tmp'): string {
     : path.join(process.cwd(), tempDir);
   return path.join(basePath, `cli-${Date.now()}-${randomId}`);
 }
+
+/**
+ * Load JSON from inline string, file path, or URL.
+ *
+ * Supports three input formats:
+ * 1. Inline JSON string - parsed directly
+ * 2. Local file path - read and parsed
+ * 3. HTTP/HTTPS URL - downloaded and parsed
+ *
+ * Detection priority:
+ * 1. URL (http://, https://) → download and parse
+ * 2. Existing file path → read and parse
+ * 3. Valid JSON string → parse directly
+ * 4. Simple string → treat as {name: string} for backward compatibility
+ *
+ * @param source - JSON string, file path, or URL
+ * @param options - Optional configuration
+ * @param options.name - Parameter name for error messages (e.g., "event", "config")
+ * @param options.required - Throw error if source is empty (default: false)
+ * @param options.fallback - Default value if source is empty
+ * @returns Parsed JSON object
+ * @throws Error if source is required but empty, or if loading/parsing fails
+ *
+ * @example
+ * ```typescript
+ * // Inline JSON
+ * await loadJsonFromSource('{"name":"order complete","data":{}}')
+ *
+ * // File path
+ * await loadJsonFromSource('./examples/event.json')
+ *
+ * // URL
+ * await loadJsonFromSource('https://example.com/event.json')
+ *
+ * // With options
+ * await loadJsonFromSource(input, {
+ *   name: 'event',
+ *   required: true,
+ *   fallback: { name: 'default' }
+ * })
+ * ```
+ */
+export async function loadJsonFromSource<T = unknown>(
+  source: string | undefined,
+  options?: {
+    name?: string;
+    required?: boolean;
+    fallback?: T;
+  },
+): Promise<T> {
+  const paramName = options?.name || 'input';
+
+  // Handle empty/undefined input
+  if (!source || source.trim() === '') {
+    if (options?.required) {
+      throw new Error(`${paramName} is required`);
+    }
+    if (options?.fallback !== undefined) {
+      return options.fallback;
+    }
+    return {} as T;
+  }
+
+  const trimmedSource = source.trim();
+
+  // 1. Check if URL
+  if (isUrl(trimmedSource)) {
+    try {
+      const tempPath = await downloadFromUrl(trimmedSource);
+      try {
+        const data = await fs.readJson(tempPath);
+        return data as T;
+      } finally {
+        // Clean up temp file
+        try {
+          await fs.remove(tempPath);
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+    } catch (error) {
+      throw new Error(
+        `Failed to load ${paramName} from URL ${trimmedSource}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  // 2. Check if file path exists
+  const resolvedPath = path.resolve(trimmedSource);
+  if (await fs.pathExists(resolvedPath)) {
+    try {
+      const data = await fs.readJson(resolvedPath);
+      return data as T;
+    } catch (error) {
+      throw new Error(
+        `Failed to parse ${paramName} from file ${trimmedSource}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  // 3. Try to parse as inline JSON
+  try {
+    const parsed = JSON.parse(trimmedSource);
+    return parsed as T;
+  } catch (jsonError) {
+    // 4. Fallback: treat as event name string for backward compatibility
+    // This allows simple strings like "page view" to work
+    if (!trimmedSource.startsWith('{') && !trimmedSource.startsWith('[')) {
+      return { name: trimmedSource } as T;
+    }
+
+    // If it looks like JSON but failed to parse, throw helpful error
+    throw new Error(
+      `Failed to parse ${paramName}. Input appears to be JSON but contains errors: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`,
+    );
+  }
+}

@@ -141,6 +141,7 @@ describe('Bundler', () => {
           },
           code: 'export const test = getId(8);',
           template: '', // Explicitly disable template for raw code bundling
+          format: 'esm' as const,
           output: path.join(testOutputDir, 'stats-test.js'),
         },
       };
@@ -166,6 +167,7 @@ describe('Bundler', () => {
           packages: { '@walkeros/core': {} },
           code: 'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
           template: '', // Explicitly disable template for raw code bundling
+          format: 'esm' as const,
           output: path.join(testOutputDir, 'test.js'),
         },
       });
@@ -188,6 +190,7 @@ describe('Bundler', () => {
           },
           code: 'export const test = getId(8);',
           template: '', // Explicitly disable template for raw code bundling
+          format: 'esm' as const,
           output: path.join(testOutputDir, 'no-stats.js'),
         },
       };
@@ -236,6 +239,7 @@ describe('Bundler', () => {
           },
           code: 'export const test = trim("hello");',
           template: '', // Explicitly disable template for raw code bundling
+          format: 'esm' as const,
           output: path.join(testOutputDir, 'missing-vars.js'),
         },
       });
@@ -256,6 +260,7 @@ describe('Bundler', () => {
           },
           code: 'export const test = getId(6);',
           template: '', // Explicitly disable template for raw code bundling
+          format: 'esm' as const,
           output: path.join(testOutputDir, 'append-test.js'),
         },
       });
@@ -278,6 +283,7 @@ describe('Bundler', () => {
           },
           code: 'export const test = getId();',
           template: '', // Explicitly disable template for raw code bundling
+          format: 'esm' as const,
           tempDir: '/tmp/my-custom-bundler-temp',
           output: path.join(testOutputDir, 'custom-temp-example.js'),
         },

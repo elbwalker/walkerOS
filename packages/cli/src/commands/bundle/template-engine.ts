@@ -10,6 +10,9 @@ export class TemplateEngine {
   constructor() {
     // Create a new Handlebars instance
     this.handlebars = Handlebars.create();
+
+    // Register equality helper for conditional window assignment
+    this.handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
   }
 
   /**

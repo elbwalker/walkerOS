@@ -20,8 +20,8 @@ import {
   getExecutionMode,
   executeRunInDocker,
   isDockerAvailable,
-} from '../../core';
-import { loadJsonConfig } from '../../config';
+} from '../../core/index.js';
+import { loadJsonConfig } from '../../config/index.js';
 import { validateMode, validateFlowFile, validatePort } from './validators';
 import type {
   RunMode,

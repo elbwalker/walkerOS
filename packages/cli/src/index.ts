@@ -2,9 +2,9 @@ import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { bundleCommand } from './commands/bundle';
-import { simulateCommand } from './commands/simulate';
-import { runCommand } from './commands/run';
+import { bundleCommand } from './commands/bundle/index.js';
+import { simulateCommand } from './commands/simulate/index.js';
+import { runCommand } from './commands/run/index.js';
 
 // Get package version dynamically
 const __filename = fileURLToPath(import.meta.url);
@@ -20,9 +20,9 @@ export { bundleCommand, simulateCommand, runCommand };
 
 // === Programmatic API ===
 // High-level functions for library usage
-export { bundle } from './commands/bundle';
-export { simulate } from './commands/simulate';
-export { run } from './commands/run';
+export { bundle } from './commands/bundle/index.js';
+export { simulate } from './commands/simulate/index.js';
+export { run } from './commands/run/index.js';
 
 // === Types ===
 // Export types for programmatic usage
@@ -86,7 +86,10 @@ program
 program
   .command('simulate [file]')
   .description('Simulate event processing and capture API calls')
-  .option('-e, --event <json>', 'Event to simulate (JSON string)')
+  .option(
+    '-e, --event <source>',
+    'Event to simulate (JSON string, file path, or URL)',
+  )
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
   .option('--local', 'execute in local Node.js instead of Docker')

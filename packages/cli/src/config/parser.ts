@@ -167,6 +167,16 @@ export function normalizeConfigs(
     buildConfig.template = platform === 'server' ? 'server.hbs' : 'web.hbs';
   }
 
+  // Apply window assignment defaults for browser IIFE
+  if (buildConfig.format === 'iife' && buildConfig.platform === 'browser') {
+    if (buildConfig.windowCollector === undefined) {
+      buildConfig.windowCollector = 'collector';
+    }
+    if (buildConfig.windowElb === undefined) {
+      buildConfig.windowElb = 'elb';
+    }
+  }
+
   // Resolve template path relative to config file directory if it starts with ./ or ../
   if (
     configPath &&

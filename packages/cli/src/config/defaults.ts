@@ -39,7 +39,6 @@ export function getDefaultBuildOptions(
       format: 'iife',
       target: 'es2020',
       output: output || './dist/walker.js',
-      globalName: 'walkerOS',
     };
   }
 

@@ -3,7 +3,7 @@
  * Converts JSON objects to valid JavaScript code for use in templates
  */
 
-import { isObject } from '../../config';
+import { isObject } from '../../config/index.js';
 import type {
   TemplateSource,
   TemplateDestination,

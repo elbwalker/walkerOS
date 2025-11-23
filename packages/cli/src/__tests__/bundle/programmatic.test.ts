@@ -72,6 +72,7 @@ describe('Programmatic Bundle API', () => {
         },
         code: 'export const test = getId(8);',
         template: '', // Disable template for raw code bundling
+        format: 'esm' as const,
         output: path.join(testOutputDir, 'with-stats.js'),
       },
     };
@@ -95,6 +96,7 @@ describe('Programmatic Bundle API', () => {
         },
         code: 'export const test = getId(8);',
         template: '', // Disable template for raw code bundling
+        format: 'esm' as const,
         output: path.join(testOutputDir, 'no-stats.js'),
       },
     };
@@ -115,6 +117,7 @@ describe('Programmatic Bundle API', () => {
         },
         code: 'export const test = getId(8);',
         template: '', // Disable template for raw code bundling
+        format: 'esm' as const,
         output: path.join(testOutputDir, 'with-cache.js'),
       },
     };
@@ -135,6 +138,7 @@ describe('Programmatic Bundle API', () => {
         },
         code: 'export const test = getId(8);',
         template: '', // Disable template for raw code bundling
+        format: 'esm' as const,
         output: path.join(testOutputDir, 'verbose.js'),
       },
     };

@@ -6,8 +6,8 @@ import type { BuildOptions } from '../../types/bundle';
 import type { SourceDestinationItem } from '../../types/template';
 import { downloadPackages } from './package-manager';
 import { TemplateEngine } from './template-engine';
-import type { Logger } from '../../core';
-import { getTempDir } from '../../config';
+import type { Logger } from '../../core/index.js';
+import { getTempDir } from '../../config/index.js';
 
 export interface BundleStats {
   totalSize: number;
@@ -415,10 +415,17 @@ async function createEntryPoint(
   }
 
   // Create examples object if we have any mappings
-  const examplesObject =
-    examplesMappings.length > 0
-      ? `const examples = {\n${examplesMappings.join(',\n')}\n};\n\n`
-      : '';
+  let examplesObject = '';
+  if (examplesMappings.length > 0) {
+    examplesObject = `const examples = {\n${examplesMappings.join(',\n')}\n};\n`;
+
+    // For IIFE bundles, make examples available on window for simulator
+    if (buildOptions.format === 'iife' && buildOptions.platform === 'browser') {
+      examplesObject += `if (typeof window !== 'undefined') { window.__walkerOS_examples = examples; }\n`;
+    }
+
+    examplesObject += `\n`;
+  }
 
   // Separate imports from template processing
   const importsCode = importStatements.join('\n');
@@ -451,34 +458,16 @@ async function createEntryPoint(
     templatedCode = buildOptions.code || '';
   }
 
-  // Apply module format wrapping if needed
+  // Template outputs ready-to-use code - no wrapping needed
   let wrappedCode = templatedCode;
 
-  if (buildOptions.format === 'iife' && buildOptions.platform === 'browser') {
-    // Browser IIFE: Auto-execute and assign to window
-    const collectorName = buildOptions.windowCollector || 'collector';
-    const elbName = buildOptions.windowElb || 'elb';
-
-    // Strip export if present (template might have export default)
-    const codeWithoutExport = templatedCode.replace(
-      /^export\s+default\s+/m,
-      '',
-    );
-
-    wrappedCode = `(async () => {
-  const setupFn = ${codeWithoutExport};
-  const { collector, elb} = await setupFn();
-  if (typeof window !== 'undefined') {
-    window['${collectorName}'] = collector;
-    window['${elbName}'] = elb;
-  }
-})();`;
-  } else {
-    // Check if code already has any export statements (default, named, etc.)
+  // Only add export wrapper for server ESM without template
+  if (!buildOptions.template && buildOptions.format === 'esm') {
+    // Check if code already has export statements
     const hasExport = /^\s*export\s/m.test(templatedCode);
 
-    if (!hasExport && buildOptions.format === 'esm') {
-      // Server ESM: Export function for manual calling
+    if (!hasExport) {
+      // Raw code without export - wrap as default export
       wrappedCode = `export default ${templatedCode}`;
     }
   }
@@ -488,8 +477,9 @@ async function createEntryPoint(
     ? `${importsCode}\n\n${examplesObject}${wrappedCode}`
     : `${examplesObject}${wrappedCode}`;
 
-  // If we have examples, export them as a named export
+  // Make examples available for ESM
   if (examplesObject && buildOptions.format === 'esm') {
+    // ESM: export as named export
     finalCode += `\n\nexport { examples };`;
   }
 

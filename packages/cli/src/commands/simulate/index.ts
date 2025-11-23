@@ -1,9 +1,6 @@
-import {
-  simulateCore,
-  parseEventInput,
-  formatSimulationResult,
-} from './simulator';
-import { createLogger, executeCommand } from '../../core';
+import { simulateCore, formatSimulationResult } from './simulator';
+import { createLogger, executeCommand } from '../../core/index.js';
+import { loadJsonFromSource } from '../../config/index.js';
 import type { SimulateCommandOptions } from './types';
 
 /**
@@ -30,8 +27,10 @@ export async function simulateCommand(
       const startTime = Date.now();
 
       try {
-        // Parse event input
-        const event = parseEventInput(options.event);
+        // Load event from inline JSON, file path, or URL
+        const event = await loadJsonFromSource(options.event, {
+          name: 'event',
+        });
 
         // Execute simulation
         const result = await simulateCore(options.config, event, {

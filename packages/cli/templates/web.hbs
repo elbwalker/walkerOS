@@ -1,7 +1,4 @@
-export default async function(context = {}) {
-  const { tracker } = context;
-  const __simulationTracker = tracker;
-
+(async () => {
   // Check if we're in a browser environment
   const window = typeof globalThis.window !== 'undefined' ? globalThis.window : undefined;
   const document = typeof globalThis.document !== 'undefined' ? globalThis.document : undefined;
@@ -11,26 +8,26 @@ export default async function(context = {}) {
     {{#each sources}}
       {{@key}}: {
         code: {{{code}}},
-        config: {{{config}}}{{#if env}},
+        config: {{{config}}}{{#unless config}}{}{{/unless}}{{#if env}},
         env: {
           window,
           document,
           ...{{{env}}}
         }{{/if}}
-      },
+      }{{#unless @last}},{{/unless}}
     {{/each}}
     },
     destinations: {
     {{#each destinations}}
       {{@key}}: {
         code: {{{code}}},
-        config: {{{config}}}{{#if env}},
+        config: {{{config}}}{{#unless config}}{}{{/unless}}{{#if env}},
         env: {
           window,
           document,
           ...{{{env}}}
         }{{/if}}
-      },
+      }{{#unless @last}},{{/unless}}
     {{/each}}
     }{{#if collector}},
     ...{{{collector}}}{{/if}}
@@ -38,7 +35,11 @@ export default async function(context = {}) {
 
   {{{CODE}}}
 
-  const result = await startFlow(config);
+  const { collector, elb } = await startFlow(config);
 
-  return result;
-}
+  if (typeof window !== 'undefined') {
+    {{#if build.windowCollector}}window['{{build.windowCollector}}'] = collector;
+    {{/if}}{{#if build.windowElb}}window['{{build.windowElb}}'] = elb;
+    {{/if}}
+  }
+})();

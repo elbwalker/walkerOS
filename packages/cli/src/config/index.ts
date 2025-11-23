@@ -13,7 +13,12 @@ export {
 } from './validators';
 
 // Utility functions
-export { substituteEnvVariables, loadJsonConfig, getTempDir } from './utils';
+export {
+  substituteEnvVariables,
+  loadJsonConfig,
+  loadJsonFromSource,
+  getTempDir,
+} from './utils';
 
 // Platform defaults
 export { getDefaultBuildOptions, ensureBuildOptions } from './defaults';

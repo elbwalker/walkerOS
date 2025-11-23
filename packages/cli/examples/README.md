@@ -3,6 +3,30 @@
 This directory contains example flow configurations demonstrating various
 walkerOS use cases.
 
+## Rebuilding Example Bundles
+
+The `.mjs` bundle files in this directory are pre-built from their corresponding
+`.json` config files. If you update the configs or core packages, rebuild them:
+
+```bash
+cd /workspaces/walkerOS/packages/cli
+
+# Rebuild server-collect
+walkeros bundle examples/server-collect.json --local
+mv server-collect.mjs examples/
+
+# Rebuild web-serve
+walkeros bundle examples/web-serve.json --local
+mv web-serve.js examples/
+
+# Update Docker demos
+cp examples/server-collect.mjs ../docker/demos/demo-collect.mjs
+cp examples/web-serve.js ../docker/demos/demo-serve.mjs
+```
+
+**Important**: Always use `--local` flag when rebuilding examples in the
+devcontainer.
+
 ## Web Examples
 
 ### web-serve.json
@@ -23,7 +47,7 @@ event flow testing
 
 ```bash
 walkeros bundle examples/web-serve.json
-walkeros run serve examples/web-serve.mjs -p 3000
+walkeros run serve examples/web-serve.js -p 3000
 # Open http://localhost:3000 in browser
 ```
 
@@ -63,11 +87,11 @@ export GA4_MEASUREMENT_ID="G-YOUR-ID"
 export META_PIXEL_ID="123456789"
 
 # Bundle for browser
-walkeros bundle -c examples/web-tracking.json --stats
+walkeros bundle examples/web-tracking.json --stats
 
 # Simulate events
-walkeros simulate -c examples/web-tracking.json \
-  -e '{"name":"product view","data":{"id":"P123","name":"Laptop","price":999}}'
+walkeros simulate examples/web-tracking.json \
+  --event '{"name":"product view","data":{"id":"P123","name":"Laptop","price":999}}'
 ```
 
 ## Server Examples
@@ -166,7 +190,7 @@ walkeros run collect examples/server-collect.mjs -p 8080
 
 ```bash
 walkeros bundle examples/web-serve.json
-walkeros run serve examples/web-serve.mjs -p 3000
+walkeros run serve examples/web-serve.js -p 3000
 ```
 
 **Browser**: Open http://localhost:3000

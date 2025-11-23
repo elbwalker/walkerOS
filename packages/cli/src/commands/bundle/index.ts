@@ -11,14 +11,14 @@ import {
   createSuccessOutput,
   createErrorOutput,
   executeCommand,
-} from '../../core';
+} from '../../core/index.js';
 import {
   loadJsonConfig,
   loadBundleConfig,
   loadAllEnvironments,
   parseBundleConfig,
   type LoadConfigResult,
-} from '../../config';
+} from '../../config/index.js';
 import type { GlobalOptions } from '../../types';
 import { bundleCore } from './bundler';
 import { displayStats, createStatsSummary } from './stats';
