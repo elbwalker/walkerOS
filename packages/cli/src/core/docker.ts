@@ -59,6 +59,32 @@ export const RUNTIME_DOCKER_IMAGE =
 export const DOCKER_IMAGE = CLI_DOCKER_IMAGE;
 
 /**
+ * Build common Docker arguments from CLI options
+ *
+ * Extracts common flags (config, json, verbose, silent) that are shared
+ * across bundle and simulate commands. Command-specific flags should be
+ * added after calling this function.
+ *
+ * @param options - CLI options containing common flags
+ * @returns Array of command-line arguments starting with config path
+ */
+export function buildCommonDockerArgs(options: {
+  config: string;
+  json?: boolean;
+  verbose?: boolean;
+  silent?: boolean;
+}): string[] {
+  const args = [options.config];
+
+  // Common flags
+  if (options.json) args.push('--json');
+  if (options.verbose) args.push('--verbose');
+  if (options.silent) args.push('--silent');
+
+  return args;
+}
+
+/**
  * Build Docker command for executing CLI commands
  *
  * @param command - CLI command (bundle, simulate, run)

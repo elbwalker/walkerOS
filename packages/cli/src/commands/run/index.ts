@@ -15,9 +15,10 @@ import {
 } from '@walkeros/docker';
 import { bundle } from '../bundle/index.js';
 import {
-  createLogger,
+  createCommandLogger,
   createTimer,
   getExecutionMode,
+  getErrorMessage,
   executeRunInDocker,
   isDockerAvailable,
 } from '../../core/index.js';
@@ -43,11 +44,7 @@ export async function runCommand(
   const timer = createTimer();
   timer.start();
 
-  const logger = createLogger({
-    verbose: options.verbose,
-    silent: options.silent ?? false,
-    json: options.json,
-  });
+  const logger = createCommandLogger(options);
 
   try {
     // Step 1: Validate inputs
@@ -183,7 +180,7 @@ export async function runCommand(
     // Note: Both Docker and local modes run forever, so we won't reach here unless they fail
   } catch (error) {
     const duration = timer.getElapsed() / 1000;
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
 
     if (options.json) {
       const output = {
@@ -330,7 +327,7 @@ export async function run(
       success: false,
       exitCode: 1,
       duration: Date.now() - startTime,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 }

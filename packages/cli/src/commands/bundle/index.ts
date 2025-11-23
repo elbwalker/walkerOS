@@ -6,11 +6,14 @@
 
 import path from 'path';
 import {
+  createCommandLogger,
   createLogger,
   createTimer,
   createSuccessOutput,
   createErrorOutput,
   executeCommand,
+  getErrorMessage,
+  buildCommonDockerArgs,
 } from '../../core/index.js';
 import {
   loadJsonConfig,
@@ -38,21 +41,15 @@ export async function bundleCommand(
   const timer = createTimer();
   timer.start();
 
-  const logger = createLogger({
-    verbose: options.verbose,
-    silent: options.silent ?? false,
-    json: options.json,
-  });
+  const logger = createCommandLogger(options);
 
-  // Build Docker args - file path as first positional arg
-  const dockerArgs = [options.config];
+  // Build Docker args - start with common flags
+  const dockerArgs = buildCommonDockerArgs(options);
+  // Add bundle-specific flags
   if (options.env) dockerArgs.push('--env', options.env);
   if (options.all) dockerArgs.push('--all');
   if (options.stats) dockerArgs.push('--stats');
-  if (options.json) dockerArgs.push('--json');
   if (options.cache === false) dockerArgs.push('--no-cache');
-  if (options.verbose) dockerArgs.push('--verbose');
-  if (options.silent) dockerArgs.push('--silent');
 
   await executeCommand(
     async () => {
@@ -126,8 +123,7 @@ export async function bundleCommand(
               displayStats(stats, logger);
             }
           } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
+            const errorMessage = getErrorMessage(error);
             results.push({
               environment,
               success: false,
@@ -186,8 +182,7 @@ export async function bundleCommand(
         }
       } catch (error) {
         const duration = timer.getElapsed() / 1000;
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = getErrorMessage(error);
 
         if (options.json) {
           // JSON error output for CI/CD
@@ -264,10 +259,7 @@ export async function bundle(
   }
 
   // 4. Create logger internally
-  const logger = createLogger({
-    silent: options.silent ?? false,
-    verbose: options.verbose ?? false,
-  });
+  const logger = createCommandLogger(options);
 
   // 5. Call core bundler
   return await bundleCore(

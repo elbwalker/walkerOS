@@ -5,6 +5,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import { getErrorMessage } from '../core/index.js';
 
 /**
  * Check if a string is a valid URL
@@ -246,7 +247,7 @@ export async function loadJsonFromSource<T = unknown>(
       }
     } catch (error) {
       throw new Error(
-        `Failed to load ${paramName} from URL ${trimmedSource}: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to load ${paramName} from URL ${trimmedSource}: ${getErrorMessage(error)}`,
       );
     }
   }
@@ -259,7 +260,7 @@ export async function loadJsonFromSource<T = unknown>(
       return data as T;
     } catch (error) {
       throw new Error(
-        `Failed to parse ${paramName} from file ${trimmedSource}: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to parse ${paramName} from file ${trimmedSource}: ${getErrorMessage(error)}`,
       );
     }
   }

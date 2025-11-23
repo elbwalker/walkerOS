@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 import chalk from 'chalk';
+import type { GlobalOptions } from '../types/global.js';
 
 export interface LoggerOptions {
   verbose?: boolean;
@@ -97,4 +98,21 @@ export function createLogger(options: LoggerOptions = {}): Logger {
       }
     },
   };
+}
+
+/**
+ * Create logger from command options
+ * Factory function that standardizes logger creation across commands
+ *
+ * @param options - Command options containing verbose, silent, and json flags
+ * @returns Configured logger instance
+ */
+export function createCommandLogger(
+  options: GlobalOptions & { json?: boolean },
+): Logger {
+  return createLogger({
+    verbose: options.verbose,
+    silent: options.silent ?? false,
+    json: options.json,
+  });
 }

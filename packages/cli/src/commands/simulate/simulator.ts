@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import type { Flow } from '@walkeros/core';
-import { createLogger } from '../../core/index.js';
+import { createLogger, getErrorMessage } from '../../core/index.js';
 import {
   loadJsonConfig,
   getTempDir,
@@ -58,7 +58,7 @@ export async function simulateCore(
 
     return result;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = getErrorMessage(error);
     logger.error(`💥 Simulation error: ${errorMessage}`);
 
     return {
@@ -203,7 +203,7 @@ export async function executeSimulation(
     const duration = Date.now() - startTime;
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
       duration,
     };
   } finally {

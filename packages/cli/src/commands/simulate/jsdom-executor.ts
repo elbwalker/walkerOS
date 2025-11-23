@@ -8,6 +8,7 @@
 import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
 import type { Elb } from '@walkeros/core';
+import { getErrorMessage } from '../../core/index.js';
 import type { CallTracker, ApiCall } from './tracker.js';
 
 export interface ExecutionResult {
@@ -168,7 +169,7 @@ export async function executeInJSDOM(
     window.document.body.appendChild(setupScript);
   } catch (error) {
     throw new Error(
-      `Failed to execute bundle setup: ${error instanceof Error ? error.message : String(error)}`,
+      `Failed to execute bundle setup: ${getErrorMessage(error)}`,
     );
   }
 
@@ -195,9 +196,7 @@ export async function executeInJSDOM(
   try {
     window.document.body.appendChild(iifeScript);
   } catch (error) {
-    throw new Error(
-      `Failed to execute IIFE: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw new Error(`Failed to execute IIFE: ${getErrorMessage(error)}`);
   }
 
   // 8. Wait for window.collector and window.elb assignments
@@ -214,7 +213,7 @@ export async function executeInJSDOM(
     );
   } catch (error) {
     throw new Error(
-      `Window property assignment failed: ${error instanceof Error ? error.message : String(error)}`,
+      `Window property assignment failed: ${getErrorMessage(error)}`,
     );
   }
 
@@ -230,9 +229,7 @@ export async function executeInJSDOM(
       | Elb.PushResult
       | undefined;
   } catch (error) {
-    throw new Error(
-      `Event execution failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    throw new Error(`Event execution failed: ${getErrorMessage(error)}`);
   }
 
   // 10. Return results with tracked calls

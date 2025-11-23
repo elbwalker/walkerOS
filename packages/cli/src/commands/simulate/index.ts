@@ -1,5 +1,11 @@
 import { simulateCore, formatSimulationResult } from './simulator.js';
-import { createLogger, executeCommand } from '../../core/index.js';
+import {
+  createCommandLogger,
+  createLogger,
+  executeCommand,
+  getErrorMessage,
+  buildCommonDockerArgs,
+} from '../../core/index.js';
 import { loadJsonFromSource } from '../../config/index.js';
 import type { SimulateCommandOptions } from './types.js';
 
@@ -9,18 +15,12 @@ import type { SimulateCommandOptions } from './types.js';
 export async function simulateCommand(
   options: SimulateCommandOptions,
 ): Promise<void> {
-  const logger = createLogger({
-    verbose: options.verbose,
-    silent: options.silent ?? false,
-    json: options.json,
-  });
+  const logger = createCommandLogger(options);
 
-  // Build Docker args - file path as first positional arg
-  const dockerArgs = [options.config];
+  // Build Docker args - start with common flags
+  const dockerArgs = buildCommonDockerArgs(options);
+  // Add simulate-specific flag
   if (options.event) dockerArgs.push('--event', options.event);
-  if (options.json) dockerArgs.push('--json');
-  if (options.verbose) dockerArgs.push('--verbose');
-  if (options.silent) dockerArgs.push('--silent');
 
   await executeCommand(
     async () => {
@@ -57,8 +57,7 @@ export async function simulateCommand(
           process.exit(1);
         }
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = getErrorMessage(error);
 
         if (options.json) {
           // JSON error output - create output logger that always logs
