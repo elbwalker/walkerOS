@@ -1,5 +1,17 @@
 # @walkeros/web-destination-piwikpro
 
+## 0.4.0
+
+### Minor Changes
+
+- Consolidate schemas and examples under `/dev` export
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/web-core@0.4.0
+  - @walkeros/core@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

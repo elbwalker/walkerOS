@@ -1,5 +1,16 @@
 # walkeros
 
+## 0.4.0
+
+### Minor Changes
+
+- Consolidate schemas and examples under `/dev` export
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/cli@0.4.0
+
 ## 0.3.6
 
 ### Patch Changes

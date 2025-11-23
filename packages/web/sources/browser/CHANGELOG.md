@@ -1,5 +1,17 @@
 # @walkeros/web-source-browser
 
+## 0.4.0
+
+### Minor Changes
+
+- Consolidate schemas and examples under `/dev` export
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/collector@0.4.0
+  - @walkeros/web-core@0.4.0
+
 ## 0.3.2
 
 ### Patch Changes

@@ -1,5 +1,24 @@
 # @walkeros/website
 
+## 0.3.0
+
+### Minor Changes
+
+- Consolidate schemas and examples under `/dev` export
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/web-destination-plausible@0.4.0
+  - @walkeros/web-destination-piwikpro@0.4.0
+  - @walkeros/web-destination-gtag@0.4.0
+  - @walkeros/web-destination-meta@0.4.0
+  - @walkeros/web-destination-api@0.4.0
+  - @walkeros/web-source-browser@0.4.0
+  - @walkeros/collector@0.4.0
+  - @walkeros/walker.js@0.4.0
+  - @walkeros/core@0.4.0
+
 ## 0.2.2
 
 ### Patch Changes
