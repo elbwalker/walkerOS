@@ -7,12 +7,6 @@
 
 import path from 'path';
 import {
-  runFlow,
-  runServeMode,
-  type RuntimeConfig,
-  type ServeConfig,
-} from '@walkeros/docker';
-import {
   createCommandLogger,
   createTimer,
   getExecutionMode,
@@ -22,6 +16,7 @@ import {
 } from '../../core/index.js';
 import { validateMode, validateFlowFile, validatePort } from './validators.js';
 import { prepareBundleForRun, isPreBuiltConfig } from './utils.js';
+import { executeRunLocal } from './execution.js';
 import type {
   RunMode,
   RunCommandOptions,
@@ -85,6 +80,18 @@ export async function runCommand(
     // Step 3: Execute based on mode
     const executionMode = getExecutionMode(options);
 
+    // Handle dry-run
+    if (options.dryRun) {
+      if (executionMode === 'docker') {
+        logger.info(
+          `[DRY-RUN] Would execute in Docker: run ${mode} with runtime image`,
+        );
+      } else {
+        logger.info(`[DRY-RUN] Would execute locally: run ${mode}`);
+      }
+      return;
+    }
+
     if (executionMode === 'docker') {
       // Docker mode: Use production runtime image
       const dockerAvailable = await isDockerAvailable();
@@ -112,34 +119,12 @@ export async function runCommand(
         logger.info(`🖥️  Starting ${modeLabel} locally...`);
       }
 
-      switch (mode) {
-        case 'collect': {
-          if (!flowPath) {
-            throw new Error('Flow path is required for collect mode');
-          }
-          const config: RuntimeConfig = {
-            port: options.port,
-            host: options.host,
-          };
-          await runFlow(flowPath, config);
-          break;
-        }
-
-        case 'serve': {
-          const config: ServeConfig = {
-            port: options.port,
-            host: options.host,
-            serveName: options.serveName,
-            servePath: options.servePath,
-            filePath: flowPath || undefined,
-          };
-          await runServeMode(config);
-          break;
-        }
-
-        default:
-          throw new Error(`Unknown mode: ${mode}`);
-      }
+      await executeRunLocal(mode as 'collect' | 'serve', flowPath, {
+        port: options.port,
+        host: options.host,
+        serveName: options.serveName,
+        servePath: options.servePath,
+      });
     }
 
     // Note: Both Docker and local modes run forever, so we won't reach here unless they fail
@@ -223,31 +208,12 @@ export async function run(
     }
 
     // Run the flow using Docker package
-    switch (mode) {
-      case 'collect': {
-        const config: RuntimeConfig = {
-          port: options.port,
-          host: options.host,
-        };
-        await runFlow(flowPath, config);
-        break;
-      }
-
-      case 'serve': {
-        const config: ServeConfig = {
-          port: options.port,
-          host: options.host,
-          serveName: options.serveName,
-          servePath: options.servePath,
-          filePath: flowPath,
-        };
-        await runServeMode(config);
-        break;
-      }
-
-      default:
-        throw new Error(`Unknown mode: ${mode}`);
-    }
+    await executeRunLocal(mode, flowPath, {
+      port: options.port,
+      host: options.host,
+      serveName: options.serveName,
+      servePath: options.servePath,
+    });
 
     // Success (though runFlow runs forever, so we typically don't reach here)
     return {
