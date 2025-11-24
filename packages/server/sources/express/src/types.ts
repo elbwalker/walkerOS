@@ -7,6 +7,9 @@ import { z } from '@walkeros/core/dev';
 export type Settings = z.infer<typeof SettingsSchema>;
 export type CorsOptions = z.infer<typeof CorsOptionsSchema>;
 
+// InitSettings: user input (all optional)
+export type InitSettings = Partial<Settings>;
+
 export interface Mapping {
   // Custom source event mapping properties
 }
@@ -20,7 +23,17 @@ export interface Env extends CoreSource.Env {
 }
 
 // Type bundle (must be after Settings, Mapping, Push, Env are defined)
-export type Types = CoreSource.Types<Settings, Mapping, Push, Env>;
+export type Types = CoreSource.Types<
+  Settings,
+  Mapping,
+  Push,
+  Env,
+  InitSettings
+>;
+
+// Convenience type exports
+export type Config = CoreSource.Config<Types>;
+export type PartialConfig = CoreSource.PartialConfig<Types>;
 
 export interface ExpressSource
   extends Omit<CoreSource.Instance<Types>, 'push'> {
@@ -28,8 +41,6 @@ export interface ExpressSource
   app: Application; // Expose Express app for advanced usage
   server?: ReturnType<Application['listen']>; // HTTP server (if port configured)
 }
-
-export type PartialConfig = CoreSource.PartialConfig<Types>;
 
 // Event request/response types
 export interface EventRequest {

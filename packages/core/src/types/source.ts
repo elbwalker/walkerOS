@@ -23,15 +23,23 @@ export interface BaseEnv {
 
 /**
  * Type bundle for source generics.
- * Groups Settings, Mapping, Push, and Env into a single type parameter.
+ * Groups Settings, Mapping, Push, Env, and InitSettings into a single type parameter.
  *
  * @template S - Settings configuration type
  * @template M - Mapping configuration type
  * @template P - Push function signature (flexible to support HTTP handlers, etc.)
  * @template E - Environment dependencies type
+ * @template I - InitSettings configuration type (user input)
  */
-export interface Types<S = unknown, M = unknown, P = Elb.Fn, E = BaseEnv> {
+export interface Types<
+  S = unknown,
+  M = unknown,
+  P = Elb.Fn,
+  E = BaseEnv,
+  I = S,
+> {
   settings: S;
+  initSettings: I;
   mapping: M;
   push: P;
   env: E;
@@ -40,12 +48,19 @@ export interface Types<S = unknown, M = unknown, P = Elb.Fn, E = BaseEnv> {
 /**
  * Generic constraint for Types - ensures T has required properties for indexed access
  */
-export type TypesGeneric = { settings: any; mapping: any; push: any; env: any };
+export type TypesGeneric = {
+  settings: any;
+  initSettings: any;
+  mapping: any;
+  push: any;
+  env: any;
+};
 
 /**
  * Type extractors for consistent usage with Types bundle
  */
 export type Settings<T extends TypesGeneric = Types> = T['settings'];
+export type InitSettings<T extends TypesGeneric = Types> = T['initSettings'];
 export type Mapping<T extends TypesGeneric = Types> = T['mapping'];
 export type Push<T extends TypesGeneric = Types> = T['push'];
 export type Env<T extends TypesGeneric = Types> = T['env'];
@@ -57,7 +72,7 @@ export type TypesOf<I> = I extends Instance<infer T> ? T : never;
 
 export interface Config<T extends TypesGeneric = Types>
   extends WalkerOSMapping.Config<Mapping<T>> {
-  settings?: Settings<T>;
+  settings?: InitSettings<T>;
   env?: Env<T>;
   id?: string;
   onError?: Handler.Error;

@@ -174,6 +174,7 @@ export const sourceExpress = async (
 // Export types (avoid re-exporting duplicates from schemas)
 export type {
   ExpressSource,
+  Config,
   PartialConfig,
   Types,
   EventRequest,
@@ -183,6 +184,8 @@ export type {
   Push,
   Env,
   Mapping,
+  InitSettings,
+  Settings,
 } from './types';
 
 // Export utils

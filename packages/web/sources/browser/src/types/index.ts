@@ -38,7 +38,9 @@ export interface Env extends Source.BaseEnv {
   document?: Document;
 }
 
-export type Types = Source.Types<Settings, Mapping, Push, Env>;
+export type Types = Source.Types<Settings, Mapping, Push, Env, InitSettings>;
+
+export type Config = Source.Config<Types>;
 
 export interface Context {
   elb: Elb.Fn;

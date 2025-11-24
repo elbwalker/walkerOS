@@ -24,10 +24,11 @@ export interface BaseEnv {
 
 /**
  * Type bundle for destination generics.
- * Groups Settings, Mapping, and Env into a single type parameter.
+ * Groups Settings, InitSettings, Mapping, and Env into a single type parameter.
  */
-export interface Types<S = unknown, M = unknown, E = BaseEnv> {
+export interface Types<S = unknown, M = unknown, E = BaseEnv, I = S> {
   settings: S;
+  initSettings: I;
   mapping: M;
   env: E;
 }
@@ -35,12 +36,18 @@ export interface Types<S = unknown, M = unknown, E = BaseEnv> {
 /**
  * Generic constraint for Types - ensures T has required properties for indexed access
  */
-export type TypesGeneric = { settings: any; mapping: any; env: any };
+export type TypesGeneric = {
+  settings: any;
+  initSettings: any;
+  mapping: any;
+  env: any;
+};
 
 /**
  * Type extractors for consistent usage with Types bundle
  */
 export type Settings<T extends TypesGeneric = Types> = T['settings'];
+export type InitSettings<T extends TypesGeneric = Types> = T['initSettings'];
 export type Mapping<T extends TypesGeneric = Types> = T['mapping'];
 export type Env<T extends TypesGeneric = Types> = T['env'];
 
@@ -63,7 +70,7 @@ export interface Instance<T extends TypesGeneric = Types> {
 
 export interface Config<T extends TypesGeneric = Types> {
   consent?: WalkerOS.Consent;
-  settings?: Settings<T>;
+  settings?: InitSettings<T>;
   data?: WalkerOSMapping.Value | WalkerOSMapping.Values;
   env?: Env<T>;
   id?: string;

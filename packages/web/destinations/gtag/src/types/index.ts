@@ -48,7 +48,7 @@ export interface ConsentMapping {
 }
 
 // Type bundle
-export type Types = CoreDestination.Types<Settings, Mapping, Env>;
+export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
 
 export type Destination = DestinationWeb.Destination<Types>;
 export type Config = DestinationWeb.Config<Types>;
@@ -69,6 +69,9 @@ export interface Settings {
   // GTM settings
   gtm?: GTMSettings;
 }
+
+// InitSettings: user input (all optional)
+export type InitSettings = Partial<Settings>;
 
 // GA4-specific settings
 export interface GA4Settings extends BaseSettings {

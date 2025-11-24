@@ -67,7 +67,9 @@ export interface Env extends DestinationServer.Env {
   fetch?: typeof fetch;
 }
 
-export type Types = CoreDestination.Types<Settings, Mapping, Env>;
+export type InitSettings = Partial<Settings>;
+
+export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
 
 export interface DestinationInterface
   extends DestinationServer.Destination<Types> {
