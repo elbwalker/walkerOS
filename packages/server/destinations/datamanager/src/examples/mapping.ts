@@ -93,7 +93,7 @@ export const mapping = {
  */
 export const userDataMapping: DestinationDataManager.Config = {
   settings: {
-    accessToken: 'ya29.c.xxx',
+    keyFilename: './service-account.json',
     destinations: [
       {
         operatingAccount: {

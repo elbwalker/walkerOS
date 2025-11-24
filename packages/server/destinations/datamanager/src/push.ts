@@ -3,13 +3,13 @@ import type { IngestEventsRequest, IngestEventsResponse } from './types';
 import { getMappingValue, isObject } from '@walkeros/core';
 import { formatEvent, formatConsent } from './format';
 import { createLogger } from './utils';
+import { getAccessToken } from './auth';
 
 export const push: PushFn = async function (
   event,
   { config, mapping, data, collector, env },
 ) {
   const {
-    accessToken,
     destinations,
     eventSource,
     validateOnly = false,
@@ -102,6 +102,10 @@ export const push: PushFn = async function (
     dataManagerEvent.consent = requestConsent;
   }
 
+  if (!destinations || destinations.length === 0) {
+    throw new Error('Destinations are required');
+  }
+
   // Build API request
   const requestBody: IngestEventsRequest = {
     events: [dataManagerEvent],
@@ -121,7 +125,21 @@ export const push: PushFn = async function (
     requestBody.testEventCode = testEventCode;
   }
 
-  // Send to Data Manager API
+  const authClient = env?.authClient;
+  if (!authClient) {
+    throw new Error(
+      'Auth client not initialized. Ensure init() was called successfully.',
+    );
+  }
+
+  let accessToken: string;
+  try {
+    accessToken = await getAccessToken(authClient);
+  } catch (error) {
+    logger.error('Authentication failed', { error });
+    throw error;
+  }
+
   const fetchFn = env?.fetch || fetch;
   const endpoint = `${url}/events:ingest`;
 

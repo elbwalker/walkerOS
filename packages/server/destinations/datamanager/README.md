@@ -23,7 +23,7 @@ npm install @walkeros/server-destination-datamanager
 
 ## Quick Start
 
-### Minimal Configuration
+### Minimal Configuration (AWS Lambda / Serverless)
 
 ```typescript
 import { destinationDataManager } from '@walkeros/server-destination-datamanager';
@@ -35,8 +35,11 @@ const { collector, elb } = await startFlow({
       ...destinationDataManager,
       config: {
         settings: {
-          // OAuth 2.0 access token with datamanager scope
-          accessToken: 'ya29.c.xxx',
+          // Service account credentials from environment variables
+          credentials: {
+            client_email: process.env.GOOGLE_CLIENT_EMAIL!,
+            private_key: process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+          },
 
           // Destination accounts
           destinations: [
@@ -62,7 +65,36 @@ await elb('order complete', {
 });
 ```
 
-### Complete Configuration
+### GCP Cloud Functions (Application Default Credentials)
+
+```typescript
+import { destinationDataManager } from '@walkeros/server-destination-datamanager';
+import { startFlow } from '@walkeros/collector';
+
+// No auth config needed - ADC works automatically on GCP!
+const { collector, elb } = await startFlow({
+  destinations: {
+    datamanager: {
+      ...destinationDataManager,
+      config: {
+        settings: {
+          destinations: [
+            {
+              operatingAccount: {
+                accountId: '123-456-7890',
+                accountType: 'GOOGLE_ADS',
+              },
+              productDestinationId: 'AW-CONVERSION-123',
+            },
+          ],
+        },
+      },
+    },
+  },
+});
+```
+
+### Local Development
 
 ```typescript
 import { destinationDataManager } from '@walkeros/server-destination-datamanager';
@@ -71,7 +103,8 @@ const config = {
   ...destinationDataManager,
   config: {
     settings: {
-      accessToken: 'ya29.c.xxx',
+      // Service account JSON file
+      keyFilename: './service-account.json',
 
       // Multiple destinations (max 10)
       destinations: [
@@ -136,33 +169,140 @@ const config = {
 
 ## Authentication
 
-### OAuth 2.0 Setup
+The Data Manager destination uses Google Cloud service accounts with automatic
+token refresh. The library handles token management automatically - you just
+provide credentials and tokens are cached and refreshed as needed.
 
-1. **Create a Google Cloud Project**
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select existing
+### Authentication Methods
 
-2. **Enable Data Manager API**
-   - Navigate to APIs & Services > Library
-   - Search for "Google Data Manager API"
-   - Click Enable
+The destination supports three authentication methods (in priority order):
 
-3. **Create Service Account**
-   - Go to APIs & Services > Credentials
-   - Click "Create Credentials" > "Service Account"
-   - Grant necessary permissions
-   - Download JSON key file
+1. **Inline Credentials** - Best for serverless (AWS Lambda, Docker, K8s)
+2. **Service Account File** - Best for local development
+3. **Application Default Credentials (ADC)** - Automatic on GCP
 
-4. **Get Access Token**
-   ```bash
-   gcloud auth application-default print-access-token --scopes=https://www.googleapis.com/auth/datamanager
-   ```
+### 1. Inline Credentials (Recommended for Serverless)
 
-### Required Scope
+Best for AWS Lambda, Docker, Kubernetes, and other containerized environments
+where you manage secrets via environment variables.
+
+```typescript
+import { destinationDataManager } from '@walkeros/server-destination-datamanager';
+
+const config = {
+  ...destinationDataManager,
+  config: {
+    settings: {
+      credentials: {
+        client_email: process.env.GOOGLE_CLIENT_EMAIL!,
+        private_key: process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+      },
+      destinations: [
+        /* ... */
+      ],
+    },
+  },
+};
+```
+
+**Environment Variables:**
+
+```bash
+GOOGLE_CLIENT_EMAIL=service-account@project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n"
+```
+
+**Note:** Use `.replace(/\\n/g, '\n')` to convert escaped newlines from
+environment variables.
+
+### 2. Service Account File (Local Development)
+
+Best for local development with filesystem access.
+
+```typescript
+const config = {
+  ...destinationDataManager,
+  config: {
+    settings: {
+      keyFilename: './service-account.json',
+      destinations: [
+        /* ... */
+      ],
+    },
+  },
+};
+```
+
+### 3. Application Default Credentials (GCP)
+
+Automatic on Google Cloud Platform - no configuration needed!
+
+```typescript
+const config = {
+  ...destinationDataManager,
+  config: {
+    settings: {
+      // No auth config needed - ADC used automatically!
+      destinations: [
+        /* ... */
+      ],
+    },
+  },
+};
+```
+
+**Works automatically on:**
+
+- Google Cloud Functions
+- Google Cloud Run
+- Google Compute Engine
+- Google Kubernetes Engine
+- Any GCP environment with default service account
+
+**Also works with:**
+
+- `GOOGLE_APPLICATION_CREDENTIALS` environment variable
+- gcloud CLI: `gcloud auth application-default login`
+
+### Creating a Service Account
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Navigate to **IAM & Admin > Service Accounts**
+3. Click **Create Service Account**
+4. Name: `walkeros-datamanager` (or your choice)
+5. Grant role: **Data Manager Admin** or custom role with datamanager
+   permissions
+6. Click **Keys > Add Key > Create New Key**
+7. Select **JSON** format and download
+
+**For inline credentials:**
+
+- Extract `client_email` and `private_key` from the JSON
+- Store in environment variables or secrets manager
+
+**For keyFilename:**
+
+- Set `keyFilename: '/path/to/downloaded-key.json'`
+
+**For ADC:**
+
+- Set `GOOGLE_APPLICATION_CREDENTIALS=/path/to/downloaded-key.json`
+- Or deploy to GCP where ADC works automatically
+
+### Required OAuth Scope
 
 ```
 https://www.googleapis.com/auth/datamanager
 ```
+
+This scope is automatically applied - no configuration needed.
+
+### Token Management
+
+- **Lifetime:** 1 hour (3600 seconds)
+- **Refresh:** Automatic - library handles expiration
+- **Caching:** Tokens are cached and reused until expiration
+- **Performance:** ~10-50ms overhead per request for token validation
 
 ## Guided Mapping Helpers
 
@@ -172,7 +312,7 @@ mapping:
 ```typescript
 {
   settings: {
-    accessToken: 'ya29.c.xxx',
+    credentials: { /* ... */ },
     destinations: [...],
 
     // Guided helpers (apply to all events)
@@ -616,23 +756,28 @@ be rejected.
 
 ### Settings
 
-| Property                   | Type           | Required | Description                                 |
-| -------------------------- | -------------- | -------- | ------------------------------------------- |
-| `accessToken`              | string         | ✓        | OAuth 2.0 access token                      |
-| `destinations`             | Destination[]  | ✓        | Array of destination accounts (max 10)      |
-| `eventSource`              | EventSource    |          | Default event source (WEB, APP, etc.)       |
-| `batchSize`                | number         |          | Max events per batch (max 2000)             |
-| `batchInterval`            | number         |          | Batch flush interval in ms                  |
-| `validateOnly`             | boolean        |          | Validate without ingestion                  |
-| `url`                      | string         |          | Override API endpoint                       |
-| `consent`                  | Consent        |          | Request-level consent                       |
-| `testEventCode`            | string         |          | Test event code for debugging               |
-| `userData`                 | object         |          | Guided helper: User data mapping            |
-| `userId`                   | string         |          | Guided helper: First-party user ID          |
-| `clientId`                 | string         |          | Guided helper: GA4 client ID                |
-| `sessionAttributes`        | string         |          | Guided helper: Privacy-safe attribution     |
-| `consentAdUserData`        | string/boolean |          | Consent mapping: Field name or static value |
-| `consentAdPersonalization` | string/boolean |          | Consent mapping: Field name or static value |
+| Property                   | Type           | Required | Description                                  |
+| -------------------------- | -------------- | -------- | -------------------------------------------- |
+| `credentials`              | object         | \*       | Service account (client_email + private_key) |
+| `keyFilename`              | string         | \*       | Path to service account JSON file            |
+| `scopes`                   | string[]       |          | OAuth scopes (default: datamanager scope)    |
+| `destinations`             | Destination[]  | ✓        | Array of destination accounts (max 10)       |
+| `eventSource`              | EventSource    |          | Default event source (WEB, APP, etc.)        |
+| `batchSize`                | number         |          | Max events per batch (max 2000)              |
+| `batchInterval`            | number         |          | Batch flush interval in ms                   |
+| `validateOnly`             | boolean        |          | Validate without ingestion                   |
+| `url`                      | string         |          | Override API endpoint                        |
+| `consent`                  | Consent        |          | Request-level consent                        |
+| `testEventCode`            | string         |          | Test event code for debugging                |
+| `userData`                 | object         |          | Guided helper: User data mapping             |
+| `userId`                   | string         |          | Guided helper: First-party user ID           |
+| `clientId`                 | string         |          | Guided helper: GA4 client ID                 |
+| `sessionAttributes`        | string         |          | Guided helper: Privacy-safe attribution      |
+| `consentAdUserData`        | string/boolean |          | Consent mapping: Field name or static value  |
+| `consentAdPersonalization` | string/boolean |          | Consent mapping: Field name or static value  |
+
+**\* One of `credentials`, `keyFilename`, or ADC (automatic) required for
+authentication**
 
 ### Event Fields
 

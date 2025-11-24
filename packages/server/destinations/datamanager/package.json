@@ -33,7 +33,8 @@
   },
   "dependencies": {
     "@walkeros/core": "0.4.0",
-    "@walkeros/server-core": "0.4.0"
+    "@walkeros/server-core": "0.4.0",
+    "google-auth-library": "^10.5.0"
   },
   "devDependencies": {},
   "repository": {

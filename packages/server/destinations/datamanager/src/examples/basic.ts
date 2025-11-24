@@ -1,11 +1,15 @@
 import type { DestinationDataManager } from '..';
 
 /**
- * Minimal configuration for Google Data Manager
+ * Minimal configuration for Google Data Manager with inline credentials
  */
 export const minimal: DestinationDataManager.Config = {
   settings: {
-    accessToken: 'ya29.c.xxx',
+    credentials: {
+      client_email: 'service-account@project.iam.gserviceaccount.com',
+      private_key:
+        '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n',
+    },
     destinations: [
       {
         operatingAccount: {
@@ -23,7 +27,11 @@ export const minimal: DestinationDataManager.Config = {
  */
 export const complete: DestinationDataManager.Config = {
   settings: {
-    accessToken: 'ya29.c.xxx',
+    credentials: {
+      client_email: 'service-account@project.iam.gserviceaccount.com',
+      private_key:
+        '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n',
+    },
     destinations: [
       {
         operatingAccount: {
@@ -68,11 +76,10 @@ export const complete: DestinationDataManager.Config = {
 };
 
 /**
- * GA4-specific configuration
+ * GA4-specific configuration using Application Default Credentials
  */
 export const ga4: DestinationDataManager.Config = {
   settings: {
-    accessToken: 'ya29.c.xxx',
     destinations: [
       {
         operatingAccount: {
@@ -87,11 +94,11 @@ export const ga4: DestinationDataManager.Config = {
 };
 
 /**
- * Debug configuration with logging enabled
+ * Debug configuration with logging enabled using keyFilename
  */
 export const debug: DestinationDataManager.Config = {
   settings: {
-    accessToken: 'ya29.c.xxx',
+    keyFilename: './service-account.json',
     destinations: [
       {
         operatingAccount: {
