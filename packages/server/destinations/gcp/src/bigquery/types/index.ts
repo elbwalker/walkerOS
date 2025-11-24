@@ -14,7 +14,14 @@ export interface Settings {
   bigquery?: BigQueryOptions;
 }
 
-export type InitSettings = Partial<Settings>;
+export interface InitSettings {
+  projectId: string;
+  client?: BigQuery;
+  datasetId?: string;
+  tableId?: string;
+  location?: string;
+  bigquery?: BigQueryOptions;
+}
 
 export interface Mapping {}
 
