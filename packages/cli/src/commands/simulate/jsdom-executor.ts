@@ -19,17 +19,20 @@ export interface ExecutionResult {
   duration: number;
 }
 
+interface DestinationEnv {
+  init?: Record<string, unknown>;
+  push: Record<string, unknown>;
+  simulation?: string[];
+}
+
 /**
- * Build sandbox from destination-provided examples
+ * Build sandbox from destination-provided envs
  *
- * Merges env mocks from each destination's examples, wrapping
+ * Merges env mocks from each destination's envs, wrapping
  * specified paths with CallTracker for API call tracking.
  */
-function buildSandboxFromExamples(
-  examples: Record<
-    string,
-    { env?: { push?: Record<string, unknown>; simulation?: string[] } }
-  >,
+function buildSandboxFromEnvs(
+  envs: Record<string, DestinationEnv>,
   destinations: Record<string, unknown>,
   tracker: CallTracker,
 ): { window: Record<string, unknown>; document: Record<string, unknown> } {
@@ -52,11 +55,11 @@ function buildSandboxFromExamples(
 
   // Add destination-specific env mocks
   for (const [destKey, destConfig] of Object.entries(destinations)) {
-    const destExamples = examples[destKey];
-    if (!destExamples?.env?.push) continue;
+    const destEnv = envs[destKey];
+    if (!destEnv?.push) continue;
 
-    const mockEnv = destExamples.env.push;
-    const trackPaths = destExamples.env.simulation || [];
+    const mockEnv = destEnv.push;
+    const trackPaths = destEnv.simulation || [];
 
     // Use existing CallTracker to wrap env
     const trackedEnv = tracker.wrapEnv(
@@ -116,18 +119,18 @@ function waitForWindowProperty(
  *
  * Main orchestration function that:
  * 1. Creates JSDOM virtual DOM
- * 2. Loads bundle and extracts examples
- * 3. Builds sandbox from destination examples
- * 4. Executes IIFE in JSDOM
- * 5. Waits for window.collector/elb assignment
- * 6. Runs event through elb
- * 7. Returns tracked API calls
+ * 2. Builds sandbox from dynamically loaded envs
+ * 3. Executes IIFE in JSDOM
+ * 4. Waits for window.collector/elb assignment
+ * 5. Runs event through elb
+ * 6. Returns tracked API calls
  */
 export async function executeInJSDOM(
   bundlePath: string,
   destinations: Record<string, unknown>,
   event: { name: string; data?: unknown },
   tracker: CallTracker,
+  envs: Record<string, DestinationEnv>,
   timeout: number = 10000,
 ): Promise<ExecutionResult> {
   const start = Date.now();
@@ -144,62 +147,21 @@ export async function executeInJSDOM(
 
   const { window } = dom;
 
-  // 2. Load bundle code
-  const bundleCode = await fs.readFile(bundlePath, 'utf8');
-
-  // 3. Split bundle into setup (examples) and IIFE parts
-  // Look for the IIFE pattern: (async () => {
-  const iifeMatch = bundleCode.match(
-    /(\(async\s*\(\)\s*=>\s*\{[\s\S]*\}\)\(\);?)/,
-  );
-
-  if (!iifeMatch) {
-    throw new Error('Could not find IIFE pattern in bundle');
-  }
-
-  const iifeStart = iifeMatch.index!;
-  const setupPart = bundleCode.substring(0, iifeStart);
-  const iifePart = bundleCode.substring(iifeStart);
-
-  // 4. Execute setup part to get examples
-  const setupScript = window.document.createElement('script');
-  setupScript.textContent = setupPart;
-
-  try {
-    window.document.body.appendChild(setupScript);
-  } catch (error) {
-    throw new Error(
-      `Failed to execute bundle setup: ${getErrorMessage(error)}`,
-    );
-  }
-
-  // 5. Extract examples from window (should be set by setup part)
-  const examples =
-    (
-      window as unknown as {
-        __walkerOS_examples?: Record<
-          string,
-          { env?: { push?: Record<string, unknown>; simulation?: string[] } }
-        >;
-      }
-    ).__walkerOS_examples || {};
-
-  // 6. Build sandbox from examples and inject into window
-  const sandbox = buildSandboxFromExamples(examples, destinations, tracker);
+  // 2. Build sandbox from dynamically loaded envs and inject into window
+  const sandbox = buildSandboxFromEnvs(envs, destinations, tracker);
   Object.assign(window, sandbox.window);
   Object.assign(window.document, sandbox.document);
 
-  // 7. Execute IIFE part with sandbox in place
-  const iifeScript = window.document.createElement('script');
-  iifeScript.textContent = iifePart;
+  // 3. Load and execute bundle code
+  const bundleCode = await fs.readFile(bundlePath, 'utf8');
 
   try {
-    window.document.body.appendChild(iifeScript);
+    window.eval(bundleCode);
   } catch (error) {
-    throw new Error(`Failed to execute IIFE: ${getErrorMessage(error)}`);
+    throw new Error(`Bundle execution failed: ${getErrorMessage(error)}`);
   }
 
-  // 8. Wait for window.collector and window.elb assignments
+  // 4. Wait for window.collector and window.elb assignments
   try {
     await waitForWindowProperty(
       window as unknown as Record<string, unknown>,
@@ -222,7 +184,7 @@ export async function executeInJSDOM(
     elb: (name: string, data?: unknown) => Promise<unknown>;
   };
 
-  // 9. Run event through elb
+  // 5. Run event through elb
   let elbResult: Elb.PushResult | undefined;
   try {
     elbResult = (await elb(event.name, event.data)) as
@@ -232,7 +194,7 @@ export async function executeInJSDOM(
     throw new Error(`Event execution failed: ${getErrorMessage(error)}`);
   }
 
-  // 10. Return results with tracked calls
+  // 6. Return results with tracked calls
   return {
     collector,
     elb,

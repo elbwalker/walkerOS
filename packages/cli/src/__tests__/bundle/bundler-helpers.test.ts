@@ -135,57 +135,6 @@ describe('Bundler Helper Functions', () => {
     });
   });
 
-  describe('createExamplesObject', () => {
-    it('should return empty string when no examples mappings', () => {
-      const examplesMappings: string[] = [];
-
-      // Expected: ''
-      expect(examplesMappings).toHaveLength(0);
-    });
-
-    it('should create examples object for ESM', () => {
-      const examplesMappings = ['  gtag: gtag_examples'];
-      const format = 'esm';
-      const platform = 'browser';
-
-      // Expected output:
-      // const examples = {
-      //   gtag: gtag_examples
-      // };
-      expect(examplesMappings).toHaveLength(1);
-      expect(format).toBe('esm');
-    });
-
-    it('should add window assignment for IIFE browser bundles', () => {
-      const examplesMappings = ['  gtag: gtag_examples'];
-      const format = 'iife';
-      const platform = 'browser';
-
-      // Expected to include:
-      // if (typeof window !== 'undefined') { window.__walkerOS_examples = examples; }
-      expect(format).toBe('iife');
-      expect(platform).toBe('browser');
-    });
-
-    it('should not add window assignment for non-IIFE formats', () => {
-      const examplesMappings = ['  gtag: gtag_examples'];
-      const format = 'esm';
-      const platform = 'browser';
-
-      // Should not include window assignment
-      expect(format).not.toBe('iife');
-    });
-
-    it('should not add window assignment for non-browser platforms', () => {
-      const examplesMappings = ['  gtag: gtag_examples'];
-      const format = 'iife';
-      const platform = 'node';
-
-      // Should not include window assignment
-      expect(platform).not.toBe('browser');
-    });
-  });
-
   describe('processTemplate', () => {
     it('should return code directly when no template', async () => {
       const flowConfig: Flow.Config = {} as Flow.Config;

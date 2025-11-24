@@ -13,6 +13,7 @@ import { bundleCore } from '../bundle/bundler.js';
 import { downloadPackages } from '../bundle/package-manager.js';
 import { CallTracker } from './tracker.js';
 import { executeInJSDOM } from './jsdom-executor.js';
+import { loadDestinationEnvs } from './env-loader.js';
 import type { SimulateCommandOptions, SimulationResult } from './types.js';
 
 /**
@@ -178,12 +179,16 @@ export async function executeSimulation(
     );
     bundlePath = tempOutput;
 
-    // 6. Execute IIFE in JSDOM with env-based mocking
+    // 6. Load env examples dynamically from destination packages
+    const envs = await loadDestinationEnvs(destinations || {});
+
+    // 7. Execute IIFE in JSDOM with env-based mocking
     const result = await executeInJSDOM(
       tempOutput,
       destinations || {},
       typedEvent,
       tracker,
+      envs, // Pass dynamically loaded envs
       10000, // 10s timeout
     );
 

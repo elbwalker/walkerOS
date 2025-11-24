@@ -400,56 +400,10 @@ function generateImportStatements(
       );
     }
 
-    // Auto-import examples for destination packages
-    if (destinationPackages.has(packageName)) {
-      const destinationMatch = packageName.match(
-        /@walkeros\/(?:(?:web|server)-)?destination-(.+)$/,
-      );
-      if (destinationMatch) {
-        const destinationName = destinationMatch[1];
-        const examplesVarName = `${destinationName.replace(/-/g, '_')}_examples`;
-        // Try importing from /dev subpath first (standard packages)
-        // Fall back to importing { examples } from main module (demo packages)
-        const isDemoPackage = packageName.includes('-demo');
-        if (isDemoPackage) {
-          importStatements.push(
-            `import { examples as ${examplesVarName} } from '${packageName}';`,
-          );
-        } else {
-          importStatements.push(
-            `import { examples as ${examplesVarName} } from '${packageName}/dev';`,
-          );
-        }
-        examplesMappings.push(`  ${destinationName}: ${examplesVarName}`);
-      }
-    }
+    // Examples are no longer auto-imported - simulator loads them dynamically
   }
 
   return { importStatements, examplesMappings };
-}
-
-/**
- * Creates the examples object code from mappings.
- * Handles special case for IIFE/browser bundles (window.__walkerOS_examples).
- */
-function createExamplesObject(
-  examplesMappings: string[],
-  format: BuildOptions['format'],
-  platform: BuildOptions['platform'],
-): string {
-  if (examplesMappings.length === 0) {
-    return '';
-  }
-
-  let examplesObject = `const examples = {\n${examplesMappings.join(',\n')}\n};\n`;
-
-  // For IIFE bundles, make examples available on window for simulator
-  if (format === 'iife' && platform === 'browser') {
-    examplesObject += `if (typeof window !== 'undefined') { window.__walkerOS_examples = examples; }\n`;
-  }
-
-  examplesObject += `\n`;
-  return examplesObject;
 }
 
 /**
@@ -548,18 +502,14 @@ async function createEntryPoint(
   // Detect destination packages for auto-importing examples
   const destinationPackages = detectDestinationPackages(flowConfig);
 
-  // Generate import statements and examples mappings
-  const { importStatements, examplesMappings } = generateImportStatements(
+  // Generate import statements (examples generation removed)
+  const { importStatements } = generateImportStatements(
     buildOptions.packages,
     destinationPackages,
   );
 
-  // Create examples object code
-  const examplesObject = createExamplesObject(
-    examplesMappings,
-    buildOptions.format,
-    buildOptions.platform,
-  );
+  // No longer generate examples in bundles - simulator loads them dynamically
+  const examplesObject = '';
 
   // Process template or use code directly
   const templatedCode = await processTemplate(flowConfig, buildOptions);
