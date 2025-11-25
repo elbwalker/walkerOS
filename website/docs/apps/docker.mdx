@@ -7,7 +7,7 @@ package: '@walkeros/docker'
 
 # walkerOS Docker
 
-The walkerOS Docker package (`@walkeros/docker`) is a **pure runtime container** for executing pre-built flow bundles in production. It's designed for fast startup (<1 second), minimal footprint (~150-200MB), and cloud-native deployment.
+The walkerOS Docker package (`@walkeros/docker`) is a **pure runtime container** for executing pre-built flow bundles in production. It's designed for fast startup (< 1 second), minimal footprint (~150-200MB), and cloud-native deployment.
 
 **Key Philosophy**: Docker handles runtime, [CLI](/docs/apps/cli) handles build-time. You bundle with the CLI, deploy with Docker.
 
@@ -768,8 +768,8 @@ Reference secrets in your flow configuration using environment variable substitu
 
 ### Startup Time
 
-- **Cold start**: <1 second (flow already bundled)
-- **Warm start**: <100ms (container reuse)
+- **Cold start**: < 1 second (flow already bundled)
+- **Warm start**: < 100ms (container reuse)
 
 ### Resource Usage
 
@@ -778,8 +778,8 @@ Typical resource consumption:
 | Metric | Idle | Active (1000 req/min) |
 |--------|------|----------------------|
 | Memory | ~50MB | ~100-150MB |
-| CPU | <1% | 5-15% |
-| Startup | <1s | <1s |
+| CPU | < 1% | 5-15% |
+| Startup | < 1s | < 1s |
 
 ### Scaling
 

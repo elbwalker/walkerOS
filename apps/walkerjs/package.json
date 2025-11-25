@@ -19,11 +19,13 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.es5.js"
     },
-    "./src/schemas": "./src/schemas.ts"
+    "./src/schemas": "./src/schemas.ts",
+    "./src/dev": "./src/dev.ts"
   },
   "files": [
     "dist/**",
     "src/schemas.ts",
+    "src/dev.ts",
     "README.md",
     "CHANGELOG.md"
   ],
