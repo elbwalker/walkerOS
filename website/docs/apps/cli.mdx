@@ -42,7 +42,8 @@ npx walkeros --version`}
 | Command | Purpose | Use Case |
 |---------|---------|----------|
 | `bundle` | Build production-ready bundle from flow config | Create deployable JavaScript from configuration |
-| `simulate` | Test flow with sample events | Validate configuration before deployment |
+| `simulate` | Test flow with sample events (mocked) | Validate configuration before deployment |
+| `push` | Execute event with real API calls | Integration testing, production validation |
 | `run collect` | Start HTTP event collection server | Accept incoming events via HTTP POST |
 | `run serve` | Serve web bundles as static files | Host browser tracking scripts |
 
@@ -384,6 +385,199 @@ echo '[
 
 # Simulate all events
 walkeros simulate flow.json --event-file events.json`}
+  language="bash"
+/>
+
+## Push Command
+
+The `push` command executes your flow with a real event, making actual API calls to your configured destinations. Unlike `simulate` which mocks API calls for safe testing, `push` performs real HTTP requests—ideal for integration testing and production validation.
+
+### Use Case
+
+You've validated your configuration with `simulate` and now need to:
+- Test with real third-party APIs (GA4, Meta, BigQuery, etc.)
+- Verify production credentials and endpoints work
+- Debug actual API responses and errors
+- Perform integration testing before deployment
+
+Push is your bridge between local testing and production deployment.
+
+### Basic Usage
+
+<CodeSnippet
+  code={`walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}' --local`}
+  language="bash"
+/>
+
+### Step-by-Step Guide
+
+**1. Create a flow configuration**
+
+Create `api-flow.json` with a destination that makes real HTTP calls:
+
+<CodeSnippet
+  code={`{
+  "flow": {
+    "platform": "server",
+    "destinations": {
+      "api": {
+        "code": "destinationAPI",
+        "config": {
+          "settings": {
+            "url": "https://your-endpoint.com/events",
+            "method": "POST"
+          }
+        }
+      }
+    },
+    "collector": { "run": true }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
+      "@walkeros/web-destination-api": { "version": "latest", "imports": ["destinationAPI"] }
+    }
+  }
+}`}
+  language="json"
+/>
+
+**2. Create an event file**
+
+Create `event.json`:
+
+<CodeSnippet
+  code={`{
+  "name": "order complete",
+  "data": {
+    "id": "ORD-12345",
+    "total": 299.99,
+    "currency": "USD"
+  },
+  "user": {
+    "id": "user_abc123"
+  }
+}`}
+  language="json"
+/>
+
+**3. Push the event**
+
+<CodeSnippet
+  code={`walkeros push api-flow.json --event event.json --local --verbose`}
+  language="bash"
+/>
+
+**4. Review the output**
+
+```
+📥 Loading event...
+📦 Loading flow configuration...
+🔨 Bundling flow configuration...
+🖥️  Executing in server environment (Node.js)...
+Pushing event: order complete
+✅ Event pushed successfully
+   Event ID: 1701234567890-abc12-1
+   Entity: order
+   Action: complete
+   Duration: 1234ms
+```
+
+The event was sent to your real API endpoint!
+
+### Options
+
+<CodeSnippet
+  code={`walkeros push <config-file> [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `-e, --event <source>` | **Required.** Event to push (JSON string, file path, or URL) |
+| `--env <name>` | Environment name (for multi-environment configs) |
+| `--json` | Output results as JSON |
+| `-v, --verbose` | Verbose output with debug information |
+| `-s, --silent` | Suppress output (for CI/CD) |
+| `--local` | Execute in local Node.js instead of Docker |
+
+### Event Input Formats
+
+The `--event` parameter accepts three formats:
+
+**Inline JSON string:**
+<CodeSnippet
+  code={`walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}'`}
+  language="bash"
+/>
+
+**File path:**
+<CodeSnippet
+  code={`walkeros push flow.json --event ./events/order.json`}
+  language="bash"
+/>
+
+**URL:**
+<CodeSnippet
+  code={`walkeros push flow.json --event https://example.com/sample-event.json`}
+  language="bash"
+/>
+
+### Push vs Simulate
+
+| Feature | `push` | `simulate` |
+|---------|--------|------------|
+| API Calls | Real HTTP requests | Mocked (captured) |
+| Use Case | Integration testing | Safe local testing |
+| Side Effects | Full (writes to DBs, sends to APIs) | None |
+| Output | Success/error from real APIs | Captured call data |
+
+**When to use each:**
+- Use `simulate` first to validate configuration without side effects
+- Use `push` to verify real integrations work before deployment
+
+### JSON Output
+
+For CI/CD pipelines, use `--json` for machine-readable output:
+
+<CodeSnippet
+  code={`walkeros push flow.json --event '{"name":"page view"}' --json --silent --local`}
+  language="bash"
+/>
+
+Output:
+```json
+{
+  "success": true,
+  "event": {
+    "id": "1701234567890-abc12-1",
+    "name": "page view",
+    "entity": "page",
+    "action": "view"
+  },
+  "duration": 1234
+}
+```
+
+On error:
+```json
+{
+  "success": false,
+  "error": "Connection refused: https://your-endpoint.com/events",
+  "duration": 5023
+}
+```
+
+### Multi-Environment
+
+Push to specific environments:
+
+<CodeSnippet
+  code={`# Push to staging
+walkeros push flow.json --event event.json --env staging --local
+
+# Push to production
+walkeros push flow.json --event event.json --env production --local`}
   language="bash"
 />
 
