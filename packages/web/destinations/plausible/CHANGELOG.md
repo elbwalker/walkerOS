@@ -1,5 +1,13 @@
 # @walkeros/web-destination-plausible
 
+## 0.4.1
+
+### Patch Changes
+
+- dev entry
+- Updated dependencies
+  - @walkeros/web-core@0.4.1
+
 ## 0.4.0
 
 ### Minor Changes

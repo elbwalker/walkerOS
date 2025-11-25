@@ -242,6 +242,18 @@ export function normalizeAndValidate(
       platform === 'web' ? './dist/walker.js' : './dist/bundle.js';
   }
 
+  // Resolve output path relative to config file directory if it's relative
+  // Skip resolution for placeholder paths used in tests/programmatic API
+  if (
+    configPath &&
+    configPath !== '/unknown/path' &&
+    merged.output &&
+    !path.isAbsolute(merged.output)
+  ) {
+    const configDir = path.dirname(configPath);
+    merged.output = path.resolve(configDir, merged.output);
+  }
+
   if (!merged.packages) {
     merged.packages = {};
   }

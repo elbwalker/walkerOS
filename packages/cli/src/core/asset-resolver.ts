@@ -22,7 +22,6 @@ export function getPackageRoot(): string {
   const currentFile = fileURLToPath(import.meta.url);
 
   // In test/dev mode: files are in src/ directory (e.g., src/core/asset-resolver.ts)
-  // In production: all code is bundled into dist/index.js
   if (currentFile.includes('/src/')) {
     // Running from source (tests): go up to package root
     // e.g., /path/to/packages/cli/src/core/asset-resolver.ts -> /path/to/packages/cli
@@ -30,8 +29,17 @@ export function getPackageRoot(): string {
     return currentFile.substring(0, srcIndex);
   }
 
-  // Running from dist (production/bundled)
-  // e.g., /path/to/packages/cli/dist/index.js -> /path/to/packages/cli
+  // Running from dist (production)
+  // Files can be at any depth: dist/index.js or dist/core/asset-resolver.js
+  // Find the dist/ directory and go one level up
+  // e.g., /path/to/packages/cli/dist/core/asset-resolver.js -> /path/to/packages/cli
+  // e.g., /cli/dist/core/asset-resolver.js -> /cli (Docker)
+  if (currentFile.includes('/dist/')) {
+    const distIndex = currentFile.indexOf('/dist/');
+    return currentFile.substring(0, distIndex);
+  }
+
+  // Fallback for other environments
   return path.resolve(currentFile, '../..');
 }
 

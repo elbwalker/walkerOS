@@ -1,5 +1,11 @@
 # @walkeros/docker
 
+## 0.2.1
+
+### Patch Changes
+
+- dev entry
+
 ## 0.2.0
 
 ### Minor Changes

@@ -74,7 +74,8 @@ describe('Config Loader', () => {
       expect(result.buildOptions.platform).toBe('browser');
       expect(result.buildOptions.format).toBe('iife');
       expect(result.buildOptions.target).toBe('es2020');
-      expect(result.buildOptions.output).toBe('./dist/walker.js');
+      // Output path is resolved relative to config file directory
+      expect(result.buildOptions.output).toBe('/test/dist/walker.js');
     });
 
     test('applies platform-specific defaults for server', () => {
@@ -96,7 +97,8 @@ describe('Config Loader', () => {
       expect(result.buildOptions.platform).toBe('node');
       expect(result.buildOptions.format).toBe('esm');
       expect(result.buildOptions.target).toBe('node20');
-      expect(result.buildOptions.output).toBe('./dist/bundle.js');
+      // Output path is resolved relative to config file directory
+      expect(result.buildOptions.output).toBe('/test/dist/bundle.js');
     });
 
     test('merges custom build options with defaults', () => {
@@ -476,7 +478,8 @@ describe('Config Loader', () => {
         ).sources?.browser?.package,
       ).toBe('@walkeros/web-source-browser@2.0.0');
       expect(result.buildOptions.minify).toBe(true);
-      expect(result.buildOptions.output).toBe('./dist/walker.min.js');
+      // Output path is resolved relative to config file directory
+      expect(result.buildOptions.output).toBe('/test/dist/walker.min.js');
     });
   });
 });

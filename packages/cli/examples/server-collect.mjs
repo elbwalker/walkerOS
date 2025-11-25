@@ -4,6 +4,524 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
+// node_modules/@walkeros/core/dist/index.mjs
+var m = { merge: true, shallow: true, extend: true };
+function y(e5, t3 = {}, n5 = {}) {
+  n5 = { ...m, ...n5 };
+  const o2 = Object.entries(t3).reduce((t4, [o3, r3]) => {
+    const i3 = e5[o3];
+    return n5.merge && Array.isArray(i3) && Array.isArray(r3) ? t4[o3] = r3.reduce((e6, t5) => e6.includes(t5) ? e6 : [...e6, t5], [...i3]) : (n5.extend || o3 in e5) && (t4[o3] = r3), t4;
+  }, {});
+  return n5.shallow ? { ...e5, ...o2 } : (Object.assign(e5, o2), e5);
+}
+function b(e5) {
+  return Array.isArray(e5);
+}
+function w(e5) {
+  return "boolean" == typeof e5;
+}
+function x(e5) {
+  return void 0 !== e5;
+}
+function O(e5) {
+  return "function" == typeof e5;
+}
+function k(e5) {
+  return "number" == typeof e5 && !Number.isNaN(e5);
+}
+function S(e5) {
+  return "object" == typeof e5 && null !== e5 && !b(e5) && "[object Object]" === Object.prototype.toString.call(e5);
+}
+function A(e5) {
+  return "string" == typeof e5;
+}
+function P(e5, t3 = /* @__PURE__ */ new WeakMap()) {
+  if ("object" != typeof e5 || null === e5)
+    return e5;
+  if (t3.has(e5))
+    return t3.get(e5);
+  const n5 = Object.prototype.toString.call(e5);
+  if ("[object Object]" === n5) {
+    const n6 = {};
+    t3.set(e5, n6);
+    for (const o2 in e5)
+      Object.prototype.hasOwnProperty.call(e5, o2) && (n6[o2] = P(e5[o2], t3));
+    return n6;
+  }
+  if ("[object Array]" === n5) {
+    const n6 = [];
+    return t3.set(e5, n6), e5.forEach((e6) => {
+      n6.push(P(e6, t3));
+    }), n6;
+  }
+  if ("[object Date]" === n5)
+    return new Date(e5.getTime());
+  if ("[object RegExp]" === n5) {
+    const t4 = e5;
+    return new RegExp(t4.source, t4.flags);
+  }
+  return e5;
+}
+function $(e5, t3 = "", n5) {
+  const o2 = t3.split(".");
+  let r3 = e5;
+  for (let e6 = 0; e6 < o2.length; e6++) {
+    const t4 = o2[e6];
+    if ("*" === t4 && b(r3)) {
+      const t5 = o2.slice(e6 + 1).join("."), i3 = [];
+      for (const e7 of r3) {
+        const o3 = $(e7, t5, n5);
+        i3.push(o3);
+      }
+      return i3;
+    }
+    if (r3 = r3 instanceof Object ? r3[t4] : void 0, !r3)
+      break;
+  }
+  return x(r3) ? r3 : n5;
+}
+function M(e5, t3, n5) {
+  if (!S(e5))
+    return e5;
+  const o2 = P(e5), r3 = t3.split(".");
+  let i3 = o2;
+  for (let e6 = 0; e6 < r3.length; e6++) {
+    const t4 = r3[e6];
+    e6 === r3.length - 1 ? i3[t4] = n5 : (t4 in i3 && "object" == typeof i3[t4] && null !== i3[t4] || (i3[t4] = {}), i3 = i3[t4]);
+  }
+  return o2;
+}
+function N(e5) {
+  if ("true" === e5)
+    return true;
+  if ("false" === e5)
+    return false;
+  const t3 = Number(e5);
+  return e5 == t3 && "" !== e5 ? t3 : String(e5);
+}
+function T(e5, t3 = {}, n5 = {}) {
+  const o2 = { ...t3, ...n5 }, r3 = {};
+  let i3 = void 0 === e5;
+  return Object.keys(o2).forEach((t4) => {
+    o2[t4] && (r3[t4] = true, e5 && e5[t4] && (i3 = true));
+  }), !!i3 && r3;
+}
+function D(e5 = 6) {
+  let t3 = "";
+  for (let n5 = 36; t3.length < e5; )
+    t3 += (Math.random() * n5 | 0).toString(n5);
+  return t3;
+}
+function L(e5, t3 = 1e3, n5 = false) {
+  let o2, r3 = null, i3 = false;
+  return (...s3) => new Promise((c3) => {
+    const a4 = n5 && !i3;
+    r3 && clearTimeout(r3), r3 = setTimeout(() => {
+      r3 = null, n5 && !i3 || (o2 = e5(...s3), c3(o2));
+    }, t3), a4 && (i3 = true, o2 = e5(...s3), c3(o2));
+  });
+}
+function V(e5) {
+  return w(e5) || A(e5) || k(e5) || !x(e5) || b(e5) && e5.every(V) || S(e5) && Object.values(e5).every(V);
+}
+function H(e5) {
+  return V(e5) ? e5 : void 0;
+}
+function U(e5, t3, n5) {
+  return function(...o2) {
+    try {
+      return e5(...o2);
+    } catch (e6) {
+      if (!t3)
+        return;
+      return t3(e6);
+    } finally {
+      n5?.();
+    }
+  };
+}
+function W(e5, t3, n5) {
+  return async function(...o2) {
+    try {
+      return await e5(...o2);
+    } catch (e6) {
+      if (!t3)
+        return;
+      return await t3(e6);
+    } finally {
+      await n5?.();
+    }
+  };
+}
+async function q(e5, t3) {
+  const [n5, o2] = (e5.name || "").split(" ");
+  if (!t3 || !n5 || !o2)
+    return {};
+  let r3, i3 = "", s3 = n5, c3 = o2;
+  const a4 = (t4) => {
+    if (t4)
+      return (t4 = b(t4) ? t4 : [t4]).find((t5) => !t5.condition || t5.condition(e5));
+  };
+  t3[s3] || (s3 = "*");
+  const u2 = t3[s3];
+  return u2 && (u2[c3] || (c3 = "*"), r3 = a4(u2[c3])), r3 || (s3 = "*", c3 = "*", r3 = a4(t3[s3]?.[c3])), r3 && (i3 = `${s3} ${c3}`), { eventMapping: r3, mappingKey: i3 };
+}
+async function B(e5, t3 = {}, n5 = {}) {
+  if (!x(e5))
+    return;
+  const o2 = S(e5) && e5.consent || n5.consent || n5.collector?.consent, r3 = b(t3) ? t3 : [t3];
+  for (const t4 of r3) {
+    const r4 = await W(F)(e5, t4, { ...n5, consent: o2 });
+    if (x(r4))
+      return r4;
+  }
+}
+async function F(e5, t3, n5 = {}) {
+  const { collector: o2, consent: r3 } = n5;
+  return (b(t3) ? t3 : [t3]).reduce(async (t4, i3) => {
+    const s3 = await t4;
+    if (s3)
+      return s3;
+    const c3 = A(i3) ? { key: i3 } : i3;
+    if (!Object.keys(c3).length)
+      return;
+    const { condition: a4, consent: u2, fn: l4, key: p4, loop: d4, map: f2, set: g4, validate: m3, value: y4 } = c3;
+    if (a4 && !await W(a4)(e5, i3, o2))
+      return;
+    if (u2 && !T(u2, r3))
+      return y4;
+    let h3 = x(y4) ? y4 : e5;
+    if (l4 && (h3 = await W(l4)(e5, i3, n5)), p4 && (h3 = $(e5, p4, y4)), d4) {
+      const [t5, o3] = d4, r4 = "this" === t5 ? [e5] : await B(e5, t5, n5);
+      b(r4) && (h3 = (await Promise.all(r4.map((e6) => B(e6, o3, n5)))).filter(x));
+    } else
+      f2 ? h3 = await Object.entries(f2).reduce(async (t5, [o3, r4]) => {
+        const i4 = await t5, s4 = await B(e5, r4, n5);
+        return x(s4) && (i4[o3] = s4), i4;
+      }, Promise.resolve({})) : g4 && (h3 = await Promise.all(g4.map((t5) => F(e5, t5, n5))));
+    m3 && !await W(m3)(h3) && (h3 = void 0);
+    const w3 = H(h3);
+    return x(w3) ? w3 : H(y4);
+  }, Promise.resolve(void 0));
+}
+async function X(e5, t3, n5) {
+  t3.policy && await Promise.all(Object.entries(t3.policy).map(async ([t4, o3]) => {
+    const r4 = await B(e5, o3, { collector: n5 });
+    e5 = M(e5, t4, r4);
+  }));
+  const { eventMapping: o2, mappingKey: r3 } = await q(e5, t3.mapping);
+  o2?.policy && await Promise.all(Object.entries(o2.policy).map(async ([t4, o3]) => {
+    const r4 = await B(e5, o3, { collector: n5 });
+    e5 = M(e5, t4, r4);
+  }));
+  let i3 = t3.data && await B(e5, t3.data, { collector: n5 });
+  if (o2) {
+    if (o2.ignore)
+      return { event: e5, data: i3, mapping: o2, mappingKey: r3, ignore: true };
+    if (o2.name && (e5.name = o2.name), o2.data) {
+      const t4 = o2.data && await B(e5, o2.data, { collector: n5 });
+      i3 = S(i3) && S(t4) ? y(i3, t4) : t4;
+    }
+  }
+  return { event: e5, data: i3, mapping: o2, mappingKey: r3, ignore: false };
+}
+function Q(e5, t3 = false) {
+  t3 && console.dir(e5, { depth: 4 });
+}
+function Y(e5) {
+  const t3 = String(e5), n5 = t3.split("?")[1] || t3;
+  return U(() => {
+    const e6 = new URLSearchParams(n5), t4 = {};
+    return e6.forEach((e7, n6) => {
+      const o2 = n6.split(/[[\]]+/).filter(Boolean);
+      let r3 = t4;
+      o2.forEach((t5, n7) => {
+        const i3 = n7 === o2.length - 1;
+        if (b(r3)) {
+          const s3 = parseInt(t5, 10);
+          i3 ? r3[s3] = N(e7) : (r3[s3] = r3[s3] || (isNaN(parseInt(o2[n7 + 1], 10)) ? {} : []), r3 = r3[s3]);
+        } else
+          S(r3) && (i3 ? r3[t5] = N(e7) : (r3[t5] = r3[t5] || (isNaN(parseInt(o2[n7 + 1], 10)) ? {} : []), r3 = r3[t5]));
+      });
+    }), t4;
+  })();
+}
+function re(e5, t3, n5) {
+  return function(...o2) {
+    let r3;
+    const i3 = "post" + t3, s3 = n5["pre" + t3], c3 = n5[i3];
+    return r3 = s3 ? s3({ fn: e5 }, ...o2) : e5(...o2), c3 && (r3 = c3({ fn: e5, result: r3 }, ...o2)), r3;
+  };
+}
+
+// node_modules/@walkeros/collector/dist/index.mjs
+var n = { Action: "action", Actions: "actions", Config: "config", Consent: "consent", Context: "context", Custom: "custom", Destination: "destination", Elb: "elb", Globals: "globals", Hook: "hook", Init: "init", Link: "link", On: "on", Prefix: "data-elb", Ready: "ready", Run: "run", Session: "session", User: "user", Walker: "walker" };
+var e = { Commands: n, Utils: { Storage: { Cookie: "cookie", Local: "local", Session: "session" } } };
+async function d(n5, e5, o2) {
+  const { code: s3, config: t3 = {}, env: a4 = {} } = e5, c3 = o2 || t3 || { init: false }, r3 = { ...s3, config: c3, env: y2(s3.env, a4) };
+  let u2 = r3.config.id;
+  if (!u2)
+    do {
+      u2 = D(4);
+    } while (n5.destinations[u2]);
+  return n5.destinations[u2] = r3, false !== r3.config.queue && (r3.queue = [...n5.queue]), g(n5, void 0, { [u2]: r3 });
+}
+async function g(n5, e5, o2) {
+  const { allowed: a4, consent: i3, globals: r3, user: u2 } = n5;
+  if (!a4)
+    return b2({ ok: false });
+  e5 && n5.queue.push(e5), o2 || (o2 = n5.destinations);
+  const l4 = await Promise.all(Object.entries(o2 || {}).map(async ([o3, a5]) => {
+    let l5 = (a5.queue || []).map((n6) => ({ ...n6, consent: i3 }));
+    if (a5.queue = [], e5) {
+      const n6 = P(e5);
+      l5.push(n6);
+    }
+    if (!l5.length)
+      return { id: o3, destination: a5, skipped: true };
+    const f3 = [], d5 = l5.filter((n6) => {
+      const e6 = T(a5.config.consent, i3, n6.consent);
+      return !e6 || (n6.consent = e6, f3.push(n6), false);
+    });
+    if (a5.queue.concat(d5), !f3.length)
+      return { id: o3, destination: a5, queue: l5 };
+    if (!await W(p)(n5, a5))
+      return { id: o3, destination: a5, queue: l5 };
+    let g5 = false;
+    return a5.dlq || (a5.dlq = []), await Promise.all(f3.map(async (e6) => (e6.globals = y(r3, e6.globals), e6.user = y(u2, e6.user), await W(h, (o4) => (n5.config.onError && n5.config.onError(o4, n5), g5 = true, a5.dlq.push([e6, o4]), false))(n5, a5, e6), e6))), { id: o3, destination: a5, error: g5 };
+  })), f2 = [], d4 = [], g4 = [];
+  for (const n6 of l4) {
+    if (n6.skipped)
+      continue;
+    const e6 = n6.destination, o3 = { id: n6.id, destination: e6 };
+    n6.error ? g4.push(o3) : n6.queue && n6.queue.length ? (e6.queue = (e6.queue || []).concat(n6.queue), d4.push(o3)) : f2.push(o3);
+  }
+  return b2({ ok: !g4.length, event: e5, successful: f2, queued: d4, failed: g4 });
+}
+async function p(n5, e5) {
+  if (e5.init && !e5.config.init) {
+    const o2 = { collector: n5, config: e5.config, env: y2(e5.env, e5.config.env) }, s3 = await re(e5.init, "DestinationInit", n5.hooks)(o2);
+    if (false === s3)
+      return s3;
+    e5.config = { ...s3 || e5.config, init: true };
+  }
+  return true;
+}
+async function h(n5, e5, o2) {
+  const { config: s3 } = e5, t3 = await X(o2, s3, n5);
+  if (t3.ignore)
+    return false;
+  const i3 = { collector: n5, config: s3, data: t3.data, mapping: t3.mapping, env: y2(e5.env, s3.env) }, c3 = t3.mapping;
+  if (c3?.batch && e5.pushBatch) {
+    const o3 = c3.batched || { key: t3.mappingKey || "", events: [], data: [] };
+    o3.events.push(t3.event), x(t3.data) && o3.data.push(t3.data), c3.batchFn = c3.batchFn || L((n6, e6) => {
+      const a4 = { collector: e6, config: s3, data: t3.data, mapping: c3, env: y2(n6.env, s3.env) };
+      re(n6.pushBatch, "DestinationPushBatch", e6.hooks)(o3, a4), o3.events = [], o3.data = [];
+    }, c3.batch), c3.batched = o3, c3.batchFn?.(e5, n5);
+  } else
+    await re(e5.push, "DestinationPush", n5.hooks)(t3.event, i3);
+  return true;
+}
+function b2(n5) {
+  return y({ ok: !n5?.failed?.length, successful: [], queued: [], failed: [] }, n5);
+}
+async function k2(n5, e5 = {}) {
+  const o2 = {};
+  for (const [n6, s3] of Object.entries(e5)) {
+    const { code: e6, config: t3 = {}, env: a4 = {} } = s3, i3 = { ...e6.config, ...t3 }, c3 = y2(e6.env, a4);
+    o2[n6] = { ...e6, config: i3, env: c3 };
+  }
+  return o2;
+}
+function y2(n5, e5) {
+  return n5 || e5 ? e5 ? n5 && S(n5) && S(e5) ? { ...n5, ...e5 } : e5 : n5 : {};
+}
+function C(n5, e5, o2) {
+  const s3 = n5.on, t3 = s3[e5] || [], a4 = b(o2) ? o2 : [o2];
+  a4.forEach((n6) => {
+    t3.push(n6);
+  }), s3[e5] = t3, q2(n5, e5, a4);
+}
+function q2(n5, o2, s3, t3) {
+  let a4, i3 = s3 || [];
+  switch (s3 || (i3 = n5.on[o2] || []), o2) {
+    case e.Commands.Consent:
+      a4 = t3 || n5.consent;
+      break;
+    case e.Commands.Session:
+      a4 = n5.session;
+      break;
+    case e.Commands.Ready:
+    case e.Commands.Run:
+    default:
+      a4 = void 0;
+  }
+  if (Object.values(n5.sources).forEach((n6) => {
+    n6.on && U(n6.on)(o2, a4);
+  }), Object.values(n5.destinations).forEach((n6) => {
+    if (n6.on) {
+      const e5 = n6.on;
+      U(e5)(o2, a4);
+    }
+  }), i3.length)
+    switch (o2) {
+      case e.Commands.Consent:
+        !function(n6, e5, o3) {
+          const s4 = o3 || n6.consent;
+          e5.forEach((e6) => {
+            Object.keys(s4).filter((n7) => n7 in e6).forEach((o4) => {
+              U(e6[o4])(n6, s4);
+            });
+          });
+        }(n5, i3, t3);
+        break;
+      case e.Commands.Ready:
+      case e.Commands.Run:
+        !function(n6, e5) {
+          n6.allowed && e5.forEach((e6) => {
+            U(e6)(n6);
+          });
+        }(n5, i3);
+        break;
+      case e.Commands.Session:
+        !function(n6, e5) {
+          if (!n6.session)
+            return;
+          e5.forEach((e6) => {
+            U(e6)(n6, n6.session);
+          });
+        }(n5, i3);
+    }
+}
+async function j(n5, e5) {
+  const { consent: s3 } = n5;
+  let t3 = false;
+  const a4 = {};
+  return Object.entries(e5).forEach(([n6, e6]) => {
+    const o2 = !!e6;
+    a4[n6] = o2, t3 = t3 || o2;
+  }), n5.consent = y(s3, a4), q2(n5, "consent", void 0, a4), t3 ? g(n5) : b2({ ok: true });
+}
+async function P2(n5, o2, s3, t3) {
+  let a4;
+  switch (o2) {
+    case e.Commands.Config:
+      S(s3) && y(n5.config, s3, { shallow: false });
+      break;
+    case e.Commands.Consent:
+      S(s3) && (a4 = await j(n5, s3));
+      break;
+    case e.Commands.Custom:
+      S(s3) && (n5.custom = y(n5.custom, s3));
+      break;
+    case e.Commands.Destination:
+      S(s3) && O(s3.push) && (a4 = await d(n5, { code: s3 }, t3));
+      break;
+    case e.Commands.Globals:
+      S(s3) && (n5.globals = y(n5.globals, s3));
+      break;
+    case e.Commands.On:
+      A(s3) && C(n5, s3, t3);
+      break;
+    case e.Commands.Ready:
+      q2(n5, "ready");
+      break;
+    case e.Commands.Run:
+      a4 = await L2(n5, s3);
+      break;
+    case e.Commands.Session:
+      q2(n5, "session");
+      break;
+    case e.Commands.User:
+      S(s3) && y(n5.user, s3, { shallow: false });
+  }
+  return a4 || { ok: true, successful: [], queued: [], failed: [] };
+}
+function $2(n5, e5) {
+  if (!e5.name)
+    throw new Error("Event name is required");
+  const [o2, s3] = e5.name.split(" ");
+  if (!o2 || !s3)
+    throw new Error("Event name is invalid");
+  ++n5.count;
+  const { timestamp: t3 = Date.now(), group: a4 = n5.group, count: i3 = n5.count } = e5, { name: c3 = `${o2} ${s3}`, data: r3 = {}, context: u2 = {}, globals: l4 = n5.globals, custom: m3 = {}, user: f2 = n5.user, nested: d4 = [], consent: g4 = n5.consent, id: p4 = `${t3}-${a4}-${i3}`, trigger: h3 = "", entity: b4 = o2, action: k4 = s3, timing: y4 = 0, version: w3 = { source: n5.version, tagging: n5.config.tagging || 0 }, source: v2 = { type: "collector", id: "", previous_id: "" } } = e5;
+  return { name: c3, data: r3, context: u2, globals: l4, custom: m3, user: f2, nested: d4, consent: g4, id: p4, trigger: h3, entity: b4, action: k4, timestamp: t3, timing: y4, group: a4, count: i3, version: w3, source: v2 };
+}
+async function L2(n5, e5) {
+  n5.allowed = true, n5.count = 0, n5.group = D(), n5.timing = Date.now(), e5 && (e5.consent && (n5.consent = y(n5.consent, e5.consent)), e5.user && (n5.user = y(n5.user, e5.user)), e5.globals && (n5.globals = y(n5.config.globalsStatic || {}, e5.globals)), e5.custom && (n5.custom = y(n5.custom, e5.custom))), Object.values(n5.destinations).forEach((n6) => {
+    n6.queue = [];
+  }), n5.queue = [], n5.round++;
+  const o2 = await g(n5);
+  return q2(n5, "run"), o2;
+}
+function I(n5, e5) {
+  return re(async (o2, s3 = {}) => await W(async () => {
+    let t3 = o2;
+    if (s3.mapping) {
+      const e6 = await X(t3, s3.mapping, n5);
+      if (e6.ignore)
+        return b2({ ok: true });
+      if (s3.mapping.consent) {
+        if (!T(s3.mapping.consent, n5.consent, e6.event.consent))
+          return b2({ ok: true });
+      }
+      t3 = e6.event;
+    }
+    const a4 = e5(t3), i3 = $2(n5, a4);
+    return await g(n5, i3);
+  }, () => b2({ ok: false }))(), "Push", n5.hooks);
+}
+async function W2(n5) {
+  const e5 = y({ globalsStatic: {}, sessionStatic: {}, tagging: 0, verbose: false, onLog: o2, run: true }, n5, { merge: false, extend: false });
+  function o2(n6, o3) {
+    Q({ message: n6 }, o3 || e5.verbose);
+  }
+  e5.onLog = o2;
+  const s3 = { ...e5.globalsStatic, ...n5.globals }, t3 = { allowed: false, config: e5, consent: n5.consent || {}, count: 0, custom: n5.custom || {}, destinations: {}, globals: s3, group: "", hooks: {}, on: {}, queue: [], round: 0, session: void 0, timing: Date.now(), user: n5.user || {}, version: "0.3.1", sources: {}, push: void 0, command: void 0 };
+  return t3.push = I(t3, (n6) => ({ timing: Math.round((Date.now() - t3.timing) / 10) / 100, source: { type: "collector", id: "", previous_id: "" }, ...n6 })), t3.command = function(n6, e6) {
+    return re(async (o3, s4, t4) => await W(async () => await e6(n6, o3, s4, t4), () => b2({ ok: false }))(), "Command", n6.hooks);
+  }(t3, P2), t3.destinations = await k2(0, n5.destinations || {}), t3;
+}
+async function K(n5, e5 = {}) {
+  const o2 = {};
+  for (const [s3, t3] of Object.entries(e5)) {
+    const { code: e6, config: a4 = {}, env: i3 = {}, primary: c3 } = t3, r3 = { push: (e7, o3 = {}) => n5.push(e7, { ...o3, mapping: a4 }), command: n5.command, sources: n5.sources, elb: n5.sources.elb.push, ...i3 }, u2 = await W(e6)(a4, r3);
+    u2 && (c3 && (u2.config = { ...u2.config, primary: c3 }), o2[s3] = u2);
+  }
+  return o2;
+}
+async function z(n5) {
+  n5 = n5 || {};
+  const e5 = await W2(n5), o2 = (s3 = e5, { type: "elb", config: {}, push: async (n6, e6, o3, t4, a5, i4) => {
+    if ("string" == typeof n6 && n6.startsWith("walker ")) {
+      const t5 = n6.replace("walker ", "");
+      return s3.command(t5, e6, o3);
+    }
+    let c4;
+    if ("string" == typeof n6)
+      c4 = { name: n6 }, e6 && "object" == typeof e6 && !Array.isArray(e6) && (c4.data = e6);
+    else {
+      if (!n6 || "object" != typeof n6)
+        return { ok: false, successful: [], queued: [], failed: [] };
+      c4 = n6, e6 && "object" == typeof e6 && !Array.isArray(e6) && (c4.data = { ...c4.data || {}, ...e6 });
+    }
+    return t4 && "object" == typeof t4 && (c4.context = t4), a5 && Array.isArray(a5) && (c4.nested = a5), i4 && "object" == typeof i4 && (c4.custom = i4), s3.push(c4);
+  } });
+  var s3;
+  e5.sources.elb = o2;
+  const t3 = await K(e5, n5.sources || {});
+  Object.assign(e5.sources, t3);
+  const { consent: a4, user: i3, globals: c3, custom: r3 } = n5;
+  a4 && await e5.command("consent", a4), i3 && await e5.command("user", i3), c3 && Object.assign(e5.globals, c3), r3 && Object.assign(e5.custom, r3), e5.config.run && await e5.command("run");
+  let u2 = o2.push;
+  const l4 = Object.values(e5.sources).filter((n6) => "elb" !== n6.type), m3 = l4.find((n6) => n6.config.primary);
+  return m3 ? u2 = m3.push : l4.length > 0 && (u2 = l4[0].push), { collector: e5, elb: u2 };
+}
+
+// node_modules/@walkeros/server-source-express/dist/index.mjs
+import e3 from "express";
+import o from "cors";
+
 // node_modules/zod/v4/classic/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -51,6 +569,7 @@ __export(external_exports, {
   ZodKSUID: () => ZodKSUID,
   ZodLazy: () => ZodLazy,
   ZodLiteral: () => ZodLiteral,
+  ZodMAC: () => ZodMAC,
   ZodMap: () => ZodMap,
   ZodNaN: () => ZodNaN,
   ZodNanoID: () => ZodNanoID,
@@ -109,6 +628,7 @@ __export(external_exports, {
   date: () => date3,
   decode: () => decode2,
   decodeAsync: () => decodeAsync2,
+  describe: () => describe2,
   discriminatedUnion: () => discriminatedUnion,
   e164: () => e1642,
   email: () => email2,
@@ -153,9 +673,11 @@ __export(external_exports, {
   lowercase: () => _lowercase,
   lt: () => _lt,
   lte: () => _lte,
+  mac: () => mac2,
   map: () => map,
   maxLength: () => _maxLength,
   maxSize: () => _maxSize,
+  meta: () => meta2,
   mime: () => _mime,
   minLength: () => _minLength,
   minSize: () => _minSize,
@@ -201,6 +723,7 @@ __export(external_exports, {
   set: () => set,
   setErrorMap: () => setErrorMap,
   size: () => _size,
+  slugify: () => _slugify,
   startsWith: () => _startsWith,
   strictObject: () => strictObject,
   string: () => string2,
@@ -298,6 +821,7 @@ __export(core_exports2, {
   $ZodKSUID: () => $ZodKSUID,
   $ZodLazy: () => $ZodLazy,
   $ZodLiteral: () => $ZodLiteral,
+  $ZodMAC: () => $ZodMAC,
   $ZodMap: () => $ZodMap,
   $ZodNaN: () => $ZodNaN,
   $ZodNanoID: () => $ZodNanoID,
@@ -398,6 +922,7 @@ __export(core_exports2, {
   _lowercase: () => _lowercase,
   _lt: () => _lt,
   _lte: () => _lte,
+  _mac: () => _mac,
   _map: () => _map,
   _max: () => _lte,
   _maxLength: () => _maxLength,
@@ -439,6 +964,7 @@ __export(core_exports2, {
   _safeParseAsync: () => _safeParseAsync,
   _set: () => _set,
   _size: () => _size,
+  _slugify: () => _slugify,
   _startsWith: () => _startsWith,
   _string: () => _string,
   _stringFormat: () => _stringFormat,
@@ -470,6 +996,7 @@ __export(core_exports2, {
   config: () => config,
   decode: () => decode,
   decodeAsync: () => decodeAsync,
+  describe: () => describe,
   encode: () => encode,
   encodeAsync: () => encodeAsync,
   flattenError: () => flattenError,
@@ -480,6 +1007,7 @@ __export(core_exports2, {
   isValidBase64URL: () => isValidBase64URL,
   isValidJWT: () => isValidJWT,
   locales: () => locales_exports,
+  meta: () => meta,
   parse: () => parse,
   parseAsync: () => parseAsync,
   prettifyError: () => prettifyError,
@@ -505,45 +1033,54 @@ var NEVER = Object.freeze({
 // @__NO_SIDE_EFFECTS__
 function $constructor(name, initializer3, params) {
   function init(inst, def) {
-    var _a;
-    Object.defineProperty(inst, "_zod", {
-      value: inst._zod ?? {},
-      enumerable: false
-    });
-    (_a = inst._zod).traits ?? (_a.traits = /* @__PURE__ */ new Set());
+    if (!inst._zod) {
+      Object.defineProperty(inst, "_zod", {
+        value: {
+          def,
+          constr: _2,
+          traits: /* @__PURE__ */ new Set()
+        },
+        enumerable: false
+      });
+    }
+    if (inst._zod.traits.has(name)) {
+      return;
+    }
     inst._zod.traits.add(name);
     initializer3(inst, def);
-    for (const k3 in _3.prototype) {
-      if (!(k3 in inst))
-        Object.defineProperty(inst, k3, { value: _3.prototype[k3].bind(inst) });
+    const proto = _2.prototype;
+    const keys = Object.keys(proto);
+    for (let i3 = 0; i3 < keys.length; i3++) {
+      const k4 = keys[i3];
+      if (!(k4 in inst)) {
+        inst[k4] = proto[k4].bind(inst);
+      }
     }
-    inst._zod.constr = _3;
-    inst._zod.def = def;
   }
   const Parent = params?.Parent ?? Object;
   class Definition extends Parent {
   }
   Object.defineProperty(Definition, "name", { value: name });
-  function _3(def) {
-    var _a;
+  function _2(def) {
+    var _a2;
     const inst = params?.Parent ? new Definition() : this;
     init(inst, def);
-    (_a = inst._zod).deferred ?? (_a.deferred = []);
+    (_a2 = inst._zod).deferred ?? (_a2.deferred = []);
     for (const fn2 of inst._zod.deferred) {
       fn2();
     }
     return inst;
   }
-  Object.defineProperty(_3, "init", { value: init });
-  Object.defineProperty(_3, Symbol.hasInstance, {
+  Object.defineProperty(_2, "init", { value: init });
+  Object.defineProperty(_2, Symbol.hasInstance, {
     value: (inst) => {
       if (params?.Parent && inst instanceof params.Parent)
         return true;
       return inst?._zod?.traits?.has(name);
     }
   });
-  Object.defineProperty(_3, "name", { value: name });
-  return _3;
+  Object.defineProperty(_2, "name", { value: name });
+  return _2;
 }
 var $brand = Symbol("zod_brand");
 var $ZodAsyncError = class extends Error {
@@ -622,6 +1159,7 @@ __export(util_exports, {
   required: () => required,
   safeExtend: () => safeExtend,
   shallowClone: () => shallowClone,
+  slugify: () => slugify,
   stringifyPrimitive: () => stringifyPrimitive,
   uint8ArrayToBase64: () => uint8ArrayToBase64,
   uint8ArrayToBase64url: () => uint8ArrayToBase64url,
@@ -639,17 +1177,17 @@ function assertIs(_arg) {
 function assertNever(_x) {
   throw new Error();
 }
-function assert(_3) {
+function assert(_2) {
 }
 function getEnumValues(entries) {
-  const numericValues = Object.values(entries).filter((v3) => typeof v3 === "number");
-  const values = Object.entries(entries).filter(([k3, _3]) => numericValues.indexOf(+k3) === -1).map(([_3, v3]) => v3);
+  const numericValues = Object.values(entries).filter((v2) => typeof v2 === "number");
+  const values = Object.entries(entries).filter(([k4, _2]) => numericValues.indexOf(+k4) === -1).map(([_2, v2]) => v2);
   return values;
 }
 function joinValues(array2, separator = "|") {
   return array2.map((val) => stringifyPrimitive(val)).join(separator);
 }
-function jsonStringifyReplacer(_3, value) {
+function jsonStringifyReplacer(_2, value) {
   if (typeof value === "bigint")
     return value.toString();
   return value;
@@ -704,9 +1242,9 @@ function defineLazy(object2, key, getter) {
       }
       return value;
     },
-    set(v3) {
+    set(v2) {
       Object.defineProperty(object2, key, {
-        value: v3
+        value: v2
         // configurable: true,
       });
     },
@@ -745,8 +1283,8 @@ function promiseAllObject(promisesObj) {
   const promises = keys.map((key) => promisesObj[key]);
   return Promise.all(promises).then((results) => {
     const resolvedObj = {};
-    for (let i2 = 0; i2 < keys.length; i2++) {
-      resolvedObj[keys[i2]] = results[i2];
+    for (let i3 = 0; i3 < keys.length; i3++) {
+      resolvedObj[keys[i3]] = results[i3];
     }
     return resolvedObj;
   });
@@ -754,13 +1292,16 @@ function promiseAllObject(promisesObj) {
 function randomString(length = 10) {
   const chars = "abcdefghijklmnopqrstuvwxyz";
   let str = "";
-  for (let i2 = 0; i2 < length; i2++) {
+  for (let i3 = 0; i3 < length; i3++) {
     str += chars[Math.floor(Math.random() * chars.length)];
   }
   return str;
 }
 function esc(str) {
   return JSON.stringify(str);
+}
+function slugify(input) {
+  return input.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
 }
 var captureStackTrace = "captureStackTrace" in Error ? Error.captureStackTrace : (..._args) => {
 };
@@ -772,18 +1313,20 @@ var allowsEval = cached(() => {
     return false;
   }
   try {
-    const F2 = Function;
-    new F2("");
+    const F3 = Function;
+    new F3("");
     return true;
-  } catch (_3) {
+  } catch (_2) {
     return false;
   }
 });
-function isPlainObject(o3) {
-  if (isObject(o3) === false)
+function isPlainObject(o2) {
+  if (isObject(o2) === false)
     return false;
-  const ctor = o3.constructor;
+  const ctor = o2.constructor;
   if (ctor === void 0)
+    return true;
+  if (typeof ctor !== "function")
     return true;
   const prot = ctor.prototype;
   if (isObject(prot) === false)
@@ -793,12 +1336,12 @@ function isPlainObject(o3) {
   }
   return true;
 }
-function shallowClone(o3) {
-  if (isPlainObject(o3))
-    return { ...o3 };
-  if (Array.isArray(o3))
-    return [...o3];
-  return o3;
+function shallowClone(o2) {
+  if (isPlainObject(o2))
+    return { ...o2 };
+  if (Array.isArray(o2))
+    return [...o2];
+  return o2;
 }
 function numKeys(data) {
   let keyCount = 0;
@@ -883,31 +1426,31 @@ function normalizeParams(_params) {
 function createTransparentProxy(getter) {
   let target;
   return new Proxy({}, {
-    get(_3, prop, receiver) {
+    get(_2, prop, receiver) {
       target ?? (target = getter());
       return Reflect.get(target, prop, receiver);
     },
-    set(_3, prop, value, receiver) {
+    set(_2, prop, value, receiver) {
       target ?? (target = getter());
       return Reflect.set(target, prop, value, receiver);
     },
-    has(_3, prop) {
+    has(_2, prop) {
       target ?? (target = getter());
       return Reflect.has(target, prop);
     },
-    deleteProperty(_3, prop) {
+    deleteProperty(_2, prop) {
       target ?? (target = getter());
       return Reflect.deleteProperty(target, prop);
     },
-    ownKeys(_3) {
+    ownKeys(_2) {
       target ?? (target = getter());
       return Reflect.ownKeys(target);
     },
-    getOwnPropertyDescriptor(_3, prop) {
+    getOwnPropertyDescriptor(_2, prop) {
       target ?? (target = getter());
       return Reflect.getOwnPropertyDescriptor(target, prop);
     },
-    defineProperty(_3, prop, descriptor) {
+    defineProperty(_2, prop, descriptor) {
       target ?? (target = getter());
       return Reflect.defineProperty(target, prop, descriptor);
     }
@@ -921,8 +1464,8 @@ function stringifyPrimitive(value) {
   return `${value}`;
 }
 function optionalKeys(shape) {
-  return Object.keys(shape).filter((k3) => {
-    return shape[k3]._zod.optin === "optional" && shape[k3]._zod.optout === "optional";
+  return Object.keys(shape).filter((k4) => {
+    return shape[k4]._zod.optin === "optional" && shape[k4]._zod.optout === "optional";
   });
 }
 var NUMBER_FORMAT_RANGES = {
@@ -1010,15 +1553,15 @@ function safeExtend(schema, shape) {
   };
   return clone(schema, def);
 }
-function merge(a4, b) {
+function merge(a4, b4) {
   const def = mergeDefs(a4._zod.def, {
     get shape() {
-      const _shape = { ...a4._zod.def.shape, ...b._zod.def.shape };
+      const _shape = { ...a4._zod.def.shape, ...b4._zod.def.shape };
       assignProp(this, "shape", _shape);
       return _shape;
     },
     get catchall() {
-      return b._zod.def.catchall;
+      return b4._zod.def.catchall;
     },
     checks: []
     // delete existing checks
@@ -1089,11 +1632,11 @@ function required(Class2, schema, mask) {
   });
   return clone(schema, def);
 }
-function aborted(x2, startIndex = 0) {
-  if (x2.aborted === true)
+function aborted(x3, startIndex = 0) {
+  if (x3.aborted === true)
     return true;
-  for (let i2 = startIndex; i2 < x2.issues.length; i2++) {
-    if (x2.issues[i2]?.continue !== true) {
+  for (let i3 = startIndex; i3 < x3.issues.length; i3++) {
+    if (x3.issues[i3]?.continue !== true) {
       return true;
     }
   }
@@ -1101,8 +1644,8 @@ function aborted(x2, startIndex = 0) {
 }
 function prefixIssues(path, issues) {
   return issues.map((iss) => {
-    var _a;
-    (_a = iss).path ?? (_a.path = []);
+    var _a2;
+    (_a2 = iss).path ?? (_a2.path = []);
     iss.path.unshift(path);
     return iss;
   });
@@ -1152,22 +1695,22 @@ function issue(...args) {
   return { ...iss };
 }
 function cleanEnum(obj) {
-  return Object.entries(obj).filter(([k3, _3]) => {
-    return Number.isNaN(Number.parseInt(k3, 10));
+  return Object.entries(obj).filter(([k4, _2]) => {
+    return Number.isNaN(Number.parseInt(k4, 10));
   }).map((el) => el[1]);
 }
 function base64ToUint8Array(base643) {
   const binaryString = atob(base643);
   const bytes = new Uint8Array(binaryString.length);
-  for (let i2 = 0; i2 < binaryString.length; i2++) {
-    bytes[i2] = binaryString.charCodeAt(i2);
+  for (let i3 = 0; i3 < binaryString.length; i3++) {
+    bytes[i3] = binaryString.charCodeAt(i3);
   }
   return bytes;
 }
 function uint8ArrayToBase64(bytes) {
   let binaryString = "";
-  for (let i2 = 0; i2 < bytes.length; i2++) {
-    binaryString += String.fromCharCode(bytes[i2]);
+  for (let i3 = 0; i3 < bytes.length; i3++) {
+    binaryString += String.fromCharCode(bytes[i3]);
   }
   return btoa(binaryString);
 }
@@ -1185,13 +1728,13 @@ function hexToUint8Array(hex3) {
     throw new Error("Invalid hex string length");
   }
   const bytes = new Uint8Array(cleanHex.length / 2);
-  for (let i2 = 0; i2 < cleanHex.length; i2 += 2) {
-    bytes[i2 / 2] = Number.parseInt(cleanHex.slice(i2, i2 + 2), 16);
+  for (let i3 = 0; i3 < cleanHex.length; i3 += 2) {
+    bytes[i3 / 2] = Number.parseInt(cleanHex.slice(i3, i3 + 2), 16);
   }
   return bytes;
 }
 function uint8ArrayToHex(bytes) {
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(bytes).map((b4) => b4.toString(16).padStart(2, "0")).join("");
 }
 var Class = class {
   constructor(..._args) {
@@ -1244,10 +1787,10 @@ function formatError(error46, mapper = (issue2) => issue2.message) {
         fieldErrors._errors.push(mapper(issue2));
       } else {
         let curr = fieldErrors;
-        let i2 = 0;
-        while (i2 < issue2.path.length) {
-          const el = issue2.path[i2];
-          const terminal = i2 === issue2.path.length - 1;
+        let i3 = 0;
+        while (i3 < issue2.path.length) {
+          const el = issue2.path[i3];
+          const terminal = i3 === issue2.path.length - 1;
           if (!terminal) {
             curr[el] = curr[el] || { _errors: [] };
           } else {
@@ -1255,7 +1798,7 @@ function formatError(error46, mapper = (issue2) => issue2.message) {
             curr[el]._errors.push(mapper(issue2));
           }
           curr = curr[el];
-          i2++;
+          i3++;
         }
       }
     }
@@ -1266,7 +1809,7 @@ function formatError(error46, mapper = (issue2) => issue2.message) {
 function treeifyError(error46, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
   const processError = (error47, path = []) => {
-    var _a, _b;
+    var _a2, _b;
     for (const issue2 of error47.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
         issue2.errors.map((issues) => processError({ issues }, issue2.path));
@@ -1281,13 +1824,13 @@ function treeifyError(error46, mapper = (issue2) => issue2.message) {
           continue;
         }
         let curr = result;
-        let i2 = 0;
-        while (i2 < fullpath.length) {
-          const el = fullpath[i2];
-          const terminal = i2 === fullpath.length - 1;
+        let i3 = 0;
+        while (i3 < fullpath.length) {
+          const el = fullpath[i3];
+          const terminal = i3 === fullpath.length - 1;
           if (typeof el === "string") {
             curr.properties ?? (curr.properties = {});
-            (_a = curr.properties)[el] ?? (_a[el] = { errors: [] });
+            (_a2 = curr.properties)[el] ?? (_a2[el] = { errors: [] });
             curr = curr.properties[el];
           } else {
             curr.items ?? (curr.items = []);
@@ -1297,7 +1840,7 @@ function treeifyError(error46, mapper = (issue2) => issue2.message) {
           if (terminal) {
             curr.errors.push(mapper(issue2));
           }
-          i2++;
+          i3++;
         }
       }
     }
@@ -1325,7 +1868,7 @@ function toDotPath(_path) {
 }
 function prettifyError(error46) {
   const lines = [];
-  const issues = [...error46.issues].sort((a4, b) => (a4.path ?? []).length - (b.path ?? []).length);
+  const issues = [...error46.issues].sort((a4, b4) => (a4.path ?? []).length - (b4.path ?? []).length);
   for (const issue2 of issues) {
     lines.push(`\u2716 ${issue2.message}`);
     if (issue2.path?.length)
@@ -1452,6 +1995,7 @@ __export(regexes_exports, {
   ipv6: () => ipv6,
   ksuid: () => ksuid,
   lowercase: () => lowercase,
+  mac: () => mac,
   md5_base64: () => md5_base64,
   md5_base64url: () => md5_base64url,
   md5_hex: () => md5_hex,
@@ -1512,6 +2056,10 @@ function emoji() {
 }
 var ipv4 = /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/;
 var ipv6 = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))$/;
+var mac = (delimiter) => {
+  const escapedDelim = escapeRegex(delimiter ?? ":");
+  return new RegExp(`^(?:[0-9A-F]{2}${escapedDelim}){5}[0-9A-F]{2}$|^(?:[0-9a-f]{2}${escapedDelim}){5}[0-9a-f]{2}$`);
+};
 var cidrv4 = /^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\/([0-9]|[1-2][0-9]|3[0-2])$/;
 var cidrv6 = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|::|([0-9a-fA-F]{1,4})?::([0-9a-fA-F]{1,4}:?){0,6})\/(12[0-8]|1[01][0-9]|[1-9]?[0-9])$/;
 var base64 = /^$|^(?:[0-9a-zA-Z+/]{4})*(?:(?:[0-9a-zA-Z+/]{2}==)|(?:[0-9a-zA-Z+/]{3}=))?$/;
@@ -1576,10 +2124,10 @@ var sha512_base64url = /* @__PURE__ */ fixedBase64url(86);
 
 // node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
-  var _a;
+  var _a2;
   inst._zod ?? (inst._zod = {});
   inst._zod.def = def;
-  (_a = inst._zod).onattach ?? (_a.onattach = []);
+  (_a2 = inst._zod).onattach ?? (_a2.onattach = []);
 });
 var numericOriginMap = {
   number: "number",
@@ -1645,8 +2193,8 @@ var $ZodCheckGreaterThan = /* @__PURE__ */ $constructor("$ZodCheckGreaterThan", 
 var $ZodCheckMultipleOf = /* @__PURE__ */ $constructor("$ZodCheckMultipleOf", (inst, def) => {
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
-    var _a;
-    (_a = inst2._zod.bag).multipleOf ?? (_a.multipleOf = def.value);
+    var _a2;
+    (_a2 = inst2._zod.bag).multipleOf ?? (_a2.multipleOf = def.value);
   });
   inst._zod.check = (payload) => {
     if (typeof payload.value !== typeof def.value)
@@ -1773,9 +2321,9 @@ var $ZodCheckBigIntFormat = /* @__PURE__ */ $constructor("$ZodCheckBigIntFormat"
   };
 });
 var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -1801,9 +2349,9 @@ var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, d
   };
 });
 var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -1829,9 +2377,9 @@ var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, d
   };
 });
 var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -1859,9 +2407,9 @@ var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (i
   };
 });
 var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -1888,9 +2436,9 @@ var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (ins
   };
 });
 var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -1917,9 +2465,9 @@ var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (ins
   };
 });
 var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -1948,7 +2496,7 @@ var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals"
   };
 });
 var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat", (inst, def) => {
-  var _a, _b;
+  var _a2, _b;
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
     const bag = inst2._zod.bag;
@@ -1959,7 +2507,7 @@ var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat"
     }
   });
   if (def.pattern)
-    (_a = inst._zod).check ?? (_a.check = (payload) => {
+    (_a2 = inst._zod).check ?? (_a2.check = (payload) => {
       def.pattern.lastIndex = 0;
       if (def.pattern.test(payload.value))
         return;
@@ -2136,19 +2684,19 @@ var Doc = class {
       return;
     }
     const content = arg;
-    const lines = content.split("\n").filter((x2) => x2);
-    const minIndent = Math.min(...lines.map((x2) => x2.length - x2.trimStart().length));
-    const dedented = lines.map((x2) => x2.slice(minIndent)).map((x2) => " ".repeat(this.indent * 2) + x2);
+    const lines = content.split("\n").filter((x3) => x3);
+    const minIndent = Math.min(...lines.map((x3) => x3.length - x3.trimStart().length));
+    const dedented = lines.map((x3) => x3.slice(minIndent)).map((x3) => " ".repeat(this.indent * 2) + x3);
     for (const line of dedented) {
       this.content.push(line);
     }
   }
   compile() {
-    const F2 = Function;
+    const F3 = Function;
     const args = this?.args;
     const content = this?.content ?? [``];
-    const lines = [...content.map((x2) => `  ${x2}`)];
-    return new F2(...args, lines.join("\n"));
+    const lines = [...content.map((x3) => `  ${x3}`)];
+    return new F3(...args, lines.join("\n"));
   }
 };
 
@@ -2156,12 +2704,12 @@ var Doc = class {
 var version = {
   major: 4,
   minor: 1,
-  patch: 12
+  patch: 13
 };
 
 // node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
-  var _a;
+  var _a2;
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
@@ -2176,7 +2724,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
     }
   }
   if (checks.length === 0) {
-    (_a = inst._zod).deferred ?? (_a.deferred = []);
+    (_a2 = inst._zod).deferred ?? (_a2.deferred = []);
     inst._zod.deferred?.push(() => {
       inst._zod.run = inst._zod.parse;
     });
@@ -2193,13 +2741,13 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
           continue;
         }
         const currLen = payload.issues.length;
-        const _3 = ch._zod.check(payload);
-        if (_3 instanceof Promise && ctx?.async === false) {
+        const _2 = ch._zod.check(payload);
+        if (_2 instanceof Promise && ctx?.async === false) {
           throw new $ZodAsyncError();
         }
-        if (asyncResult || _3 instanceof Promise) {
+        if (asyncResult || _2 instanceof Promise) {
           asyncResult = (asyncResult ?? Promise.resolve()).then(async () => {
-            await _3;
+            await _2;
             const nextLen = payload.issues.length;
             if (nextLen === currLen)
               return;
@@ -2259,10 +2807,10 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   inst["~standard"] = {
     validate: (value) => {
       try {
-        const r2 = safeParse(inst, value);
-        return r2.success ? { value: r2.data } : { issues: r2.error?.issues };
-      } catch (_3) {
-        return safeParseAsync(inst, value).then((r2) => r2.success ? { value: r2.data } : { issues: r2.error?.issues });
+        const r3 = safeParse(inst, value);
+        return r3.success ? { value: r3.data } : { issues: r3.error?.issues };
+      } catch (_2) {
+        return safeParseAsync(inst, value).then((r3) => r3.success ? { value: r3.data } : { issues: r3.error?.issues });
       }
     },
     vendor: "zod",
@@ -2272,11 +2820,11 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
 var $ZodString = /* @__PURE__ */ $constructor("$ZodString", (inst, def) => {
   $ZodType.init(inst, def);
   inst._zod.pattern = [...inst?._zod.bag?.patterns ?? []].pop() ?? string(inst._zod.bag);
-  inst._zod.parse = (payload, _3) => {
+  inst._zod.parse = (payload, _2) => {
     if (def.coerce)
       try {
         payload.value = String(payload.value);
-      } catch (_4) {
+      } catch (_3) {
       }
     if (typeof payload.value === "string")
       return payload;
@@ -2309,10 +2857,10 @@ var $ZodUUID = /* @__PURE__ */ $constructor("$ZodUUID", (inst, def) => {
       v7: 7,
       v8: 8
     };
-    const v3 = versionMap[def.version];
-    if (v3 === void 0)
+    const v2 = versionMap[def.version];
+    if (v2 === void 0)
       throw new Error(`Invalid UUID version: "${def.version}"`);
-    def.pattern ?? (def.pattern = uuid(v3));
+    def.pattern ?? (def.pattern = uuid(v2));
   } else
     def.pattern ?? (def.pattern = uuid());
   $ZodStringFormat.init(inst, def);
@@ -2334,7 +2882,7 @@ var $ZodURL = /* @__PURE__ */ $constructor("$ZodURL", (inst, def) => {
             code: "invalid_format",
             format: "url",
             note: "Invalid hostname",
-            pattern: hostname.source,
+            pattern: def.hostname.source,
             input: payload.value,
             inst,
             continue: !def.abort
@@ -2361,7 +2909,7 @@ var $ZodURL = /* @__PURE__ */ $constructor("$ZodURL", (inst, def) => {
         payload.value = trimmed;
       }
       return;
-    } catch (_3) {
+    } catch (_2) {
       payload.issues.push({
         code: "invalid_format",
         format: "url",
@@ -2419,18 +2967,12 @@ var $ZodISODuration = /* @__PURE__ */ $constructor("$ZodISODuration", (inst, def
 var $ZodIPv4 = /* @__PURE__ */ $constructor("$ZodIPv4", (inst, def) => {
   def.pattern ?? (def.pattern = ipv4);
   $ZodStringFormat.init(inst, def);
-  inst._zod.onattach.push((inst2) => {
-    const bag = inst2._zod.bag;
-    bag.format = `ipv4`;
-  });
+  inst._zod.bag.format = `ipv4`;
 });
 var $ZodIPv6 = /* @__PURE__ */ $constructor("$ZodIPv6", (inst, def) => {
   def.pattern ?? (def.pattern = ipv6);
   $ZodStringFormat.init(inst, def);
-  inst._zod.onattach.push((inst2) => {
-    const bag = inst2._zod.bag;
-    bag.format = `ipv6`;
-  });
+  inst._zod.bag.format = `ipv6`;
   inst._zod.check = (payload) => {
     try {
       new URL(`http://[${payload.value}]`);
@@ -2444,6 +2986,11 @@ var $ZodIPv6 = /* @__PURE__ */ $constructor("$ZodIPv6", (inst, def) => {
       });
     }
   };
+});
+var $ZodMAC = /* @__PURE__ */ $constructor("$ZodMAC", (inst, def) => {
+  def.pattern ?? (def.pattern = mac(def.delimiter));
+  $ZodStringFormat.init(inst, def);
+  inst._zod.bag.format = `mac`;
 });
 var $ZodCIDRv4 = /* @__PURE__ */ $constructor("$ZodCIDRv4", (inst, def) => {
   def.pattern ?? (def.pattern = cidrv4);
@@ -2492,9 +3039,7 @@ function isValidBase64(data) {
 var $ZodBase64 = /* @__PURE__ */ $constructor("$ZodBase64", (inst, def) => {
   def.pattern ?? (def.pattern = base64);
   $ZodStringFormat.init(inst, def);
-  inst._zod.onattach.push((inst2) => {
-    inst2._zod.bag.contentEncoding = "base64";
-  });
+  inst._zod.bag.contentEncoding = "base64";
   inst._zod.check = (payload) => {
     if (isValidBase64(payload.value))
       return;
@@ -2510,16 +3055,14 @@ var $ZodBase64 = /* @__PURE__ */ $constructor("$ZodBase64", (inst, def) => {
 function isValidBase64URL(data) {
   if (!base64url.test(data))
     return false;
-  const base643 = data.replace(/[-_]/g, (c2) => c2 === "-" ? "+" : "/");
+  const base643 = data.replace(/[-_]/g, (c3) => c3 === "-" ? "+" : "/");
   const padded = base643.padEnd(Math.ceil(base643.length / 4) * 4, "=");
   return isValidBase64(padded);
 }
 var $ZodBase64URL = /* @__PURE__ */ $constructor("$ZodBase64URL", (inst, def) => {
   def.pattern ?? (def.pattern = base64url);
   $ZodStringFormat.init(inst, def);
-  inst._zod.onattach.push((inst2) => {
-    inst2._zod.bag.contentEncoding = "base64url";
-  });
+  inst._zod.bag.contentEncoding = "base64url";
   inst._zod.check = (payload) => {
     if (isValidBase64URL(payload.value))
       return;
@@ -2591,7 +3134,7 @@ var $ZodNumber = /* @__PURE__ */ $constructor("$ZodNumber", (inst, def) => {
     if (def.coerce)
       try {
         payload.value = Number(payload.value);
-      } catch (_3) {
+      } catch (_2) {
       }
     const input = payload.value;
     if (typeof input === "number" && !Number.isNaN(input) && Number.isFinite(input)) {
@@ -2608,7 +3151,7 @@ var $ZodNumber = /* @__PURE__ */ $constructor("$ZodNumber", (inst, def) => {
     return payload;
   };
 });
-var $ZodNumberFormat = /* @__PURE__ */ $constructor("$ZodNumber", (inst, def) => {
+var $ZodNumberFormat = /* @__PURE__ */ $constructor("$ZodNumberFormat", (inst, def) => {
   $ZodCheckNumberFormat.init(inst, def);
   $ZodNumber.init(inst, def);
 });
@@ -2619,7 +3162,7 @@ var $ZodBoolean = /* @__PURE__ */ $constructor("$ZodBoolean", (inst, def) => {
     if (def.coerce)
       try {
         payload.value = Boolean(payload.value);
-      } catch (_3) {
+      } catch (_2) {
       }
     const input = payload.value;
     if (typeof input === "boolean")
@@ -2640,7 +3183,7 @@ var $ZodBigInt = /* @__PURE__ */ $constructor("$ZodBigInt", (inst, def) => {
     if (def.coerce)
       try {
         payload.value = BigInt(payload.value);
-      } catch (_3) {
+      } catch (_2) {
       }
     if (typeof payload.value === "bigint")
       return payload;
@@ -2653,7 +3196,7 @@ var $ZodBigInt = /* @__PURE__ */ $constructor("$ZodBigInt", (inst, def) => {
     return payload;
   };
 });
-var $ZodBigIntFormat = /* @__PURE__ */ $constructor("$ZodBigInt", (inst, def) => {
+var $ZodBigIntFormat = /* @__PURE__ */ $constructor("$ZodBigIntFormat", (inst, def) => {
   $ZodCheckBigIntFormat.init(inst, def);
   $ZodBigInt.init(inst, def);
 });
@@ -2788,16 +3331,16 @@ var $ZodArray = /* @__PURE__ */ $constructor("$ZodArray", (inst, def) => {
     }
     payload.value = Array(input.length);
     const proms = [];
-    for (let i2 = 0; i2 < input.length; i2++) {
-      const item = input[i2];
+    for (let i3 = 0; i3 < input.length; i3++) {
+      const item = input[i3];
       const result = def.element._zod.run({
         value: item,
         issues: []
       }, ctx);
       if (result instanceof Promise) {
-        proms.push(result.then((result2) => handleArrayResult(result2, payload, i2)));
+        proms.push(result.then((result2) => handleArrayResult(result2, payload, i3)));
       } else {
-        handleArrayResult(result, payload, i2);
+        handleArrayResult(result, payload, i3);
       }
     }
     if (proms.length) {
@@ -2820,9 +3363,9 @@ function handlePropertyResult(result, final, key, input) {
 }
 function normalizeDef(def) {
   const keys = Object.keys(def.shape);
-  for (const k3 of keys) {
-    if (!def.shape?.[k3]?._zod?.traits?.has("$ZodType")) {
-      throw new Error(`Invalid element at key "${k3}": expected a Zod schema`);
+  for (const k4 of keys) {
+    if (!def.shape?.[k4]?._zod?.traits?.has("$ZodType")) {
+      throw new Error(`Invalid element at key "${k4}": expected a Zod schema`);
     }
   }
   const okeys = optionalKeys(def.shape);
@@ -2839,18 +3382,18 @@ function handleCatchall(proms, input, payload, ctx, def, inst) {
   const keySet = def.keySet;
   const _catchall = def.catchall._zod;
   const t3 = _catchall.def.type;
-  for (const key of Object.keys(input)) {
+  for (const key in input) {
     if (keySet.has(key))
       continue;
     if (t3 === "never") {
       unrecognized.push(key);
       continue;
     }
-    const r2 = _catchall.run({ value: input[key], issues: [] }, ctx);
-    if (r2 instanceof Promise) {
-      proms.push(r2.then((r3) => handlePropertyResult(r3, payload, key, input)));
+    const r3 = _catchall.run({ value: input[key], issues: [] }, ctx);
+    if (r3 instanceof Promise) {
+      proms.push(r3.then((r4) => handlePropertyResult(r4, payload, key, input)));
     } else {
-      handlePropertyResult(r2, payload, key, input);
+      handlePropertyResult(r3, payload, key, input);
     }
   }
   if (unrecognized.length) {
@@ -2890,8 +3433,8 @@ var $ZodObject = /* @__PURE__ */ $constructor("$ZodObject", (inst, def) => {
       const field = shape[key]._zod;
       if (field.values) {
         propValues[key] ?? (propValues[key] = /* @__PURE__ */ new Set());
-        for (const v3 of field.values)
-          propValues[key].add(v3);
+        for (const v2 of field.values)
+          propValues[key].add(v2);
       }
     }
     return propValues;
@@ -2916,11 +3459,11 @@ var $ZodObject = /* @__PURE__ */ $constructor("$ZodObject", (inst, def) => {
     const shape = value.shape;
     for (const key of value.keys) {
       const el = shape[key];
-      const r2 = el._zod.run({ value: input[key], issues: [] }, ctx);
-      if (r2 instanceof Promise) {
-        proms.push(r2.then((r3) => handlePropertyResult(r3, payload, key, input)));
+      const r3 = el._zod.run({ value: input[key], issues: [] }, ctx);
+      if (r3 instanceof Promise) {
+        proms.push(r3.then((r4) => handlePropertyResult(r4, payload, key, input)));
       } else {
-        handlePropertyResult(r2, payload, key, input);
+        handlePropertyResult(r3, payload, key, input);
       }
     }
     if (!catchall) {
@@ -2937,8 +3480,8 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
     const doc = new Doc(["shape", "payload", "ctx"]);
     const normalized = _normalized.value;
     const parseStr = (key) => {
-      const k3 = esc(key);
-      return `shape[${k3}]._zod.run({ value: input[${k3}], issues: [] }, ctx)`;
+      const k4 = esc(key);
+      return `shape[${k4}]._zod.run({ value: input[${k4}], issues: [] }, ctx)`;
     };
     doc.write(`const input = payload.value;`);
     const ids = /* @__PURE__ */ Object.create(null);
@@ -2949,23 +3492,23 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
     doc.write(`const newResult = {};`);
     for (const key of normalized.keys) {
       const id = ids[key];
-      const k3 = esc(key);
+      const k4 = esc(key);
       doc.write(`const ${id} = ${parseStr(key)};`);
       doc.write(`
         if (${id}.issues.length) {
           payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
             ...iss,
-            path: iss.path ? [${k3}, ...iss.path] : [${k3}]
+            path: iss.path ? [${k4}, ...iss.path] : [${k4}]
           })));
         }
         
         
         if (${id}.value === undefined) {
-          if (${k3} in input) {
-            newResult[${k3}] = undefined;
+          if (${k4} in input) {
+            newResult[${k4}] = undefined;
           }
         } else {
-          newResult[${k3}] = ${id}.value;
+          newResult[${k4}] = ${id}.value;
         }
         
       `);
@@ -3012,7 +3555,7 @@ function handleUnionResults(results, final, inst, ctx) {
       return final;
     }
   }
-  const nonaborted = results.filter((r2) => !aborted(r2));
+  const nonaborted = results.filter((r3) => !aborted(r3));
   if (nonaborted.length === 1) {
     final.value = nonaborted[0].value;
     return nonaborted[0];
@@ -3027,18 +3570,18 @@ function handleUnionResults(results, final, inst, ctx) {
 }
 var $ZodUnion = /* @__PURE__ */ $constructor("$ZodUnion", (inst, def) => {
   $ZodType.init(inst, def);
-  defineLazy(inst._zod, "optin", () => def.options.some((o3) => o3._zod.optin === "optional") ? "optional" : void 0);
-  defineLazy(inst._zod, "optout", () => def.options.some((o3) => o3._zod.optout === "optional") ? "optional" : void 0);
+  defineLazy(inst._zod, "optin", () => def.options.some((o2) => o2._zod.optin === "optional") ? "optional" : void 0);
+  defineLazy(inst._zod, "optout", () => def.options.some((o2) => o2._zod.optout === "optional") ? "optional" : void 0);
   defineLazy(inst._zod, "values", () => {
-    if (def.options.every((o3) => o3._zod.values)) {
+    if (def.options.every((o2) => o2._zod.values)) {
       return new Set(def.options.flatMap((option) => Array.from(option._zod.values)));
     }
     return void 0;
   });
   defineLazy(inst._zod, "pattern", () => {
-    if (def.options.every((o3) => o3._zod.pattern)) {
-      const patterns = def.options.map((o3) => o3._zod.pattern);
-      return new RegExp(`^(${patterns.map((p2) => cleanRegex(p2.source)).join("|")})$`);
+    if (def.options.every((o2) => o2._zod.pattern)) {
+      const patterns = def.options.map((o2) => o2._zod.pattern);
+      return new RegExp(`^(${patterns.map((p4) => cleanRegex(p4.source)).join("|")})$`);
     }
     return void 0;
   });
@@ -3080,11 +3623,11 @@ var $ZodDiscriminatedUnion = /* @__PURE__ */ $constructor("$ZodDiscriminatedUnio
       const pv = option._zod.propValues;
       if (!pv || Object.keys(pv).length === 0)
         throw new Error(`Invalid discriminated union option at index "${def.options.indexOf(option)}"`);
-      for (const [k3, v3] of Object.entries(pv)) {
-        if (!propValues[k3])
-          propValues[k3] = /* @__PURE__ */ new Set();
-        for (const val of v3) {
-          propValues[k3].add(val);
+      for (const [k4, v2] of Object.entries(pv)) {
+        if (!propValues[k4])
+          propValues[k4] = /* @__PURE__ */ new Set();
+        for (const val of v2) {
+          propValues[k4].add(val);
         }
       }
     }
@@ -3093,15 +3636,15 @@ var $ZodDiscriminatedUnion = /* @__PURE__ */ $constructor("$ZodDiscriminatedUnio
   const disc = cached(() => {
     const opts = def.options;
     const map2 = /* @__PURE__ */ new Map();
-    for (const o3 of opts) {
-      const values = o3._zod.propValues?.[def.discriminator];
+    for (const o2 of opts) {
+      const values = o2._zod.propValues?.[def.discriminator];
       if (!values || values.size === 0)
-        throw new Error(`Invalid discriminated union option at index "${def.options.indexOf(o3)}"`);
-      for (const v3 of values) {
-        if (map2.has(v3)) {
-          throw new Error(`Duplicate discriminator value "${String(v3)}"`);
+        throw new Error(`Invalid discriminated union option at index "${def.options.indexOf(o2)}"`);
+      for (const v2 of values) {
+        if (map2.has(v2)) {
+          throw new Error(`Duplicate discriminator value "${String(v2)}"`);
         }
-        map2.set(v3, o3);
+        map2.set(v2, o2);
       }
     }
     return map2;
@@ -3151,19 +3694,19 @@ var $ZodIntersection = /* @__PURE__ */ $constructor("$ZodIntersection", (inst, d
     return handleIntersectionResults(payload, left, right);
   };
 });
-function mergeValues(a4, b) {
-  if (a4 === b) {
+function mergeValues(a4, b4) {
+  if (a4 === b4) {
     return { valid: true, data: a4 };
   }
-  if (a4 instanceof Date && b instanceof Date && +a4 === +b) {
+  if (a4 instanceof Date && b4 instanceof Date && +a4 === +b4) {
     return { valid: true, data: a4 };
   }
-  if (isPlainObject(a4) && isPlainObject(b)) {
-    const bKeys = Object.keys(b);
+  if (isPlainObject(a4) && isPlainObject(b4)) {
+    const bKeys = Object.keys(b4);
     const sharedKeys = Object.keys(a4).filter((key) => bKeys.indexOf(key) !== -1);
-    const newObj = { ...a4, ...b };
+    const newObj = { ...a4, ...b4 };
     for (const key of sharedKeys) {
-      const sharedValue = mergeValues(a4[key], b[key]);
+      const sharedValue = mergeValues(a4[key], b4[key]);
       if (!sharedValue.valid) {
         return {
           valid: false,
@@ -3174,14 +3717,14 @@ function mergeValues(a4, b) {
     }
     return { valid: true, data: newObj };
   }
-  if (Array.isArray(a4) && Array.isArray(b)) {
-    if (a4.length !== b.length) {
+  if (Array.isArray(a4) && Array.isArray(b4)) {
+    if (a4.length !== b4.length) {
       return { valid: false, mergeErrorPath: [] };
     }
     const newArray = [];
     for (let index = 0; index < a4.length; index++) {
       const itemA = a4[index];
-      const itemB = b[index];
+      const itemB = b4[index];
       const sharedValue = mergeValues(itemA, itemB);
       if (!sharedValue.valid) {
         return {
@@ -3214,7 +3757,6 @@ function handleIntersectionResults(result, left, right) {
 var $ZodTuple = /* @__PURE__ */ $constructor("$ZodTuple", (inst, def) => {
   $ZodType.init(inst, def);
   const items = def.items;
-  const optStart = items.length - [...items].reverse().findIndex((item) => item._zod.optin !== "optional");
   inst._zod.parse = (payload, ctx) => {
     const input = payload.value;
     if (!Array.isArray(input)) {
@@ -3228,6 +3770,8 @@ var $ZodTuple = /* @__PURE__ */ $constructor("$ZodTuple", (inst, def) => {
     }
     payload.value = [];
     const proms = [];
+    const reversedIndex = [...items].reverse().findIndex((item) => item._zod.optin !== "optional");
+    const optStart = reversedIndex === -1 ? 0 : items.length - reversedIndex;
     if (!def.rest) {
       const tooBig = input.length > items.length;
       const tooSmall = input.length < optStart - 1;
@@ -3241,35 +3785,35 @@ var $ZodTuple = /* @__PURE__ */ $constructor("$ZodTuple", (inst, def) => {
         return payload;
       }
     }
-    let i2 = -1;
+    let i3 = -1;
     for (const item of items) {
-      i2++;
-      if (i2 >= input.length) {
-        if (i2 >= optStart)
+      i3++;
+      if (i3 >= input.length) {
+        if (i3 >= optStart)
           continue;
       }
       const result = item._zod.run({
-        value: input[i2],
+        value: input[i3],
         issues: []
       }, ctx);
       if (result instanceof Promise) {
-        proms.push(result.then((result2) => handleTupleResult(result2, payload, i2)));
+        proms.push(result.then((result2) => handleTupleResult(result2, payload, i3)));
       } else {
-        handleTupleResult(result, payload, i2);
+        handleTupleResult(result, payload, i3);
       }
     }
     if (def.rest) {
       const rest = input.slice(items.length);
       for (const el of rest) {
-        i2++;
+        i3++;
         const result = def.rest._zod.run({
           value: el,
           issues: []
         }, ctx);
         if (result instanceof Promise) {
-          proms.push(result.then((result2) => handleTupleResult(result2, payload, i2)));
+          proms.push(result.then((result2) => handleTupleResult(result2, payload, i3)));
         } else {
-          handleTupleResult(result, payload, i2);
+          handleTupleResult(result, payload, i3);
         }
       }
     }
@@ -3298,11 +3842,13 @@ var $ZodRecord = /* @__PURE__ */ $constructor("$ZodRecord", (inst, def) => {
       return payload;
     }
     const proms = [];
-    if (def.keyType._zod.values) {
-      const values = def.keyType._zod.values;
+    const values = def.keyType._zod.values;
+    if (values) {
       payload.value = {};
+      const recordKeys = /* @__PURE__ */ new Set();
       for (const key of values) {
         if (typeof key === "string" || typeof key === "number" || typeof key === "symbol") {
+          recordKeys.add(typeof key === "number" ? key.toString() : key);
           const result = def.valueType._zod.run({ value: input[key], issues: [] }, ctx);
           if (result instanceof Promise) {
             proms.push(result.then((result2) => {
@@ -3321,7 +3867,7 @@ var $ZodRecord = /* @__PURE__ */ $constructor("$ZodRecord", (inst, def) => {
       }
       let unrecognized;
       for (const key in input) {
-        if (!values.has(key)) {
+        if (!recordKeys.has(key)) {
           unrecognized = unrecognized ?? [];
           unrecognized.push(key);
         }
@@ -3476,7 +4022,7 @@ var $ZodEnum = /* @__PURE__ */ $constructor("$ZodEnum", (inst, def) => {
   const values = getEnumValues(def.entries);
   const valuesSet = new Set(values);
   inst._zod.values = valuesSet;
-  inst._zod.pattern = new RegExp(`^(${values.filter((k3) => propertyKeyTypes.has(typeof k3)).map((o3) => typeof o3 === "string" ? escapeRegex(o3) : o3.toString()).join("|")})$`);
+  inst._zod.pattern = new RegExp(`^(${values.filter((k4) => propertyKeyTypes.has(typeof k4)).map((o2) => typeof o2 === "string" ? escapeRegex(o2) : o2.toString()).join("|")})$`);
   inst._zod.parse = (payload, _ctx) => {
     const input = payload.value;
     if (valuesSet.has(input)) {
@@ -3496,11 +4042,12 @@ var $ZodLiteral = /* @__PURE__ */ $constructor("$ZodLiteral", (inst, def) => {
   if (def.values.length === 0) {
     throw new Error("Cannot create literal schema with no valid values");
   }
-  inst._zod.values = new Set(def.values);
-  inst._zod.pattern = new RegExp(`^(${def.values.map((o3) => typeof o3 === "string" ? escapeRegex(o3) : o3 ? escapeRegex(o3.toString()) : String(o3)).join("|")})$`);
+  const values = new Set(def.values);
+  inst._zod.values = values;
+  inst._zod.pattern = new RegExp(`^(${def.values.map((o2) => typeof o2 === "string" ? escapeRegex(o2) : o2 ? escapeRegex(o2.toString()) : String(o2)).join("|")})$`);
   inst._zod.parse = (payload, _ctx) => {
     const input = payload.value;
-    if (inst._zod.values.has(input)) {
+    if (values.has(input)) {
       return payload;
     }
     payload.issues.push({
@@ -3569,7 +4116,7 @@ var $ZodOptional = /* @__PURE__ */ $constructor("$ZodOptional", (inst, def) => {
     if (def.innerType._zod.optin === "optional") {
       const result = def.innerType._zod.run(payload, ctx);
       if (result instanceof Promise)
-        return result.then((r2) => handleOptionalResult(r2, payload.value));
+        return result.then((r3) => handleOptionalResult(r3, payload.value));
       return handleOptionalResult(result, payload.value);
     }
     if (payload.value === void 0) {
@@ -3637,8 +4184,8 @@ var $ZodPrefault = /* @__PURE__ */ $constructor("$ZodPrefault", (inst, def) => {
 var $ZodNonOptional = /* @__PURE__ */ $constructor("$ZodNonOptional", (inst, def) => {
   $ZodType.init(inst, def);
   defineLazy(inst._zod, "values", () => {
-    const v3 = def.innerType._zod.values;
-    return v3 ? new Set([...v3].filter((x2) => x2 !== void 0)) : void 0;
+    const v2 = def.innerType._zod.values;
+    return v2 ? new Set([...v2].filter((x3) => x3 !== void 0)) : void 0;
   });
   inst._zod.parse = (payload, ctx) => {
     const result = def.innerType._zod.run(payload, ctx);
@@ -3813,8 +4360,8 @@ var $ZodReadonly = /* @__PURE__ */ $constructor("$ZodReadonly", (inst, def) => {
   $ZodType.init(inst, def);
   defineLazy(inst._zod, "propValues", () => def.innerType._zod.propValues);
   defineLazy(inst._zod, "values", () => def.innerType._zod.values);
-  defineLazy(inst._zod, "optin", () => def.innerType._zod.optin);
-  defineLazy(inst._zod, "optout", () => def.innerType._zod.optout);
+  defineLazy(inst._zod, "optin", () => def.innerType?._zod?.optin);
+  defineLazy(inst._zod, "optout", () => def.innerType?._zod?.optout);
   inst._zod.parse = (payload, ctx) => {
     if (ctx.direction === "backward") {
       return def.innerType._zod.run(payload, ctx);
@@ -3924,9 +4471,9 @@ var $ZodFunction = /* @__PURE__ */ $constructor("$ZodFunction", (inst, def) => {
     return payload;
   };
   inst.input = (...args) => {
-    const F2 = inst.constructor;
+    const F3 = inst.constructor;
     if (Array.isArray(args[0])) {
-      return new F2({
+      return new F3({
         type: "function",
         input: new $ZodTuple({
           type: "tuple",
@@ -3936,15 +4483,15 @@ var $ZodFunction = /* @__PURE__ */ $constructor("$ZodFunction", (inst, def) => {
         output: inst._def.output
       });
     }
-    return new F2({
+    return new F3({
       type: "function",
       input: args[0],
       output: inst._def.output
     });
   };
   inst.output = (output) => {
-    const F2 = inst.constructor;
-    return new F2({
+    const F3 = inst.constructor;
+    return new F3({
       type: "function",
       input: inst._def.input,
       output
@@ -3961,10 +4508,10 @@ var $ZodPromise = /* @__PURE__ */ $constructor("$ZodPromise", (inst, def) => {
 var $ZodLazy = /* @__PURE__ */ $constructor("$ZodLazy", (inst, def) => {
   $ZodType.init(inst, def);
   defineLazy(inst._zod, "innerType", () => def.getter());
-  defineLazy(inst._zod, "pattern", () => inst._zod.innerType._zod.pattern);
-  defineLazy(inst._zod, "propValues", () => inst._zod.innerType._zod.propValues);
-  defineLazy(inst._zod, "optin", () => inst._zod.innerType._zod.optin ?? void 0);
-  defineLazy(inst._zod, "optout", () => inst._zod.innerType._zod.optout ?? void 0);
+  defineLazy(inst._zod, "pattern", () => inst._zod.innerType?._zod?.pattern);
+  defineLazy(inst._zod, "propValues", () => inst._zod.innerType?._zod?.propValues);
+  defineLazy(inst._zod, "optin", () => inst._zod.innerType?._zod?.optin ?? void 0);
+  defineLazy(inst._zod, "optout", () => inst._zod.innerType?._zod?.optout ?? void 0);
   inst._zod.parse = (payload, ctx) => {
     const inner = inst._zod.innerType;
     return inner._zod.run(payload, ctx);
@@ -3973,16 +4520,16 @@ var $ZodLazy = /* @__PURE__ */ $constructor("$ZodLazy", (inst, def) => {
 var $ZodCustom = /* @__PURE__ */ $constructor("$ZodCustom", (inst, def) => {
   $ZodCheck.init(inst, def);
   $ZodType.init(inst, def);
-  inst._zod.parse = (payload, _3) => {
+  inst._zod.parse = (payload, _2) => {
     return payload;
   };
   inst._zod.check = (payload) => {
     const input = payload.value;
-    const r2 = def.fn(input);
-    if (r2 instanceof Promise) {
-      return r2.then((r3) => handleRefineResult(r3, payload, input, inst));
+    const r3 = def.fn(input);
+    if (r3 instanceof Promise) {
+      return r3.then((r4) => handleRefineResult(r4, payload, input, inst));
     }
-    handleRefineResult(r2, payload, input, inst);
+    handleRefineResult(r3, payload, input, inst);
     return;
   };
 });
@@ -5138,6 +5685,7 @@ var error9 = () => {
     duration: "ISO duration",
     ipv4: "IPv4 address",
     ipv6: "IPv6 address",
+    mac: "MAC address",
     cidrv4: "IPv4 range",
     cidrv6: "IPv6 range",
     base64: "base64-encoded string",
@@ -5953,110 +6501,201 @@ function fr_CA_default() {
 
 // node_modules/zod/v4/locales/he.js
 var error16 = () => {
-  const Sizable = {
-    string: { unit: "\u05D0\u05D5\u05EA\u05D9\u05D5\u05EA", verb: "\u05DC\u05DB\u05DC\u05D5\u05DC" },
-    file: { unit: "\u05D1\u05D9\u05D9\u05D8\u05D9\u05DD", verb: "\u05DC\u05DB\u05DC\u05D5\u05DC" },
-    array: { unit: "\u05E4\u05E8\u05D9\u05D8\u05D9\u05DD", verb: "\u05DC\u05DB\u05DC\u05D5\u05DC" },
-    set: { unit: "\u05E4\u05E8\u05D9\u05D8\u05D9\u05DD", verb: "\u05DC\u05DB\u05DC\u05D5\u05DC" }
+  const TypeNames = {
+    string: { label: "\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA", gender: "f" },
+    number: { label: "\u05DE\u05E1\u05E4\u05E8", gender: "m" },
+    boolean: { label: "\u05E2\u05E8\u05DA \u05D1\u05D5\u05DC\u05D9\u05D0\u05E0\u05D9", gender: "m" },
+    bigint: { label: "BigInt", gender: "m" },
+    date: { label: "\u05EA\u05D0\u05E8\u05D9\u05DA", gender: "m" },
+    array: { label: "\u05DE\u05E2\u05E8\u05DA", gender: "m" },
+    object: { label: "\u05D0\u05D5\u05D1\u05D9\u05D9\u05E7\u05D8", gender: "m" },
+    null: { label: "\u05E2\u05E8\u05DA \u05E8\u05D9\u05E7 (null)", gender: "m" },
+    undefined: { label: "\u05E2\u05E8\u05DA \u05DC\u05D0 \u05DE\u05D5\u05D2\u05D3\u05E8 (undefined)", gender: "m" },
+    symbol: { label: "\u05E1\u05D9\u05DE\u05D1\u05D5\u05DC (Symbol)", gender: "m" },
+    function: { label: "\u05E4\u05D5\u05E0\u05E7\u05E6\u05D9\u05D4", gender: "f" },
+    map: { label: "\u05DE\u05E4\u05D4 (Map)", gender: "f" },
+    set: { label: "\u05E7\u05D1\u05D5\u05E6\u05D4 (Set)", gender: "f" },
+    file: { label: "\u05E7\u05D5\u05D1\u05E5", gender: "m" },
+    promise: { label: "Promise", gender: "m" },
+    NaN: { label: "NaN", gender: "m" },
+    unknown: { label: "\u05E2\u05E8\u05DA \u05DC\u05D0 \u05D9\u05D3\u05D5\u05E2", gender: "m" },
+    value: { label: "\u05E2\u05E8\u05DA", gender: "m" }
   };
-  function getSizing(origin) {
+  const Sizable = {
+    string: { unit: "\u05EA\u05D5\u05D5\u05D9\u05DD", shortLabel: "\u05E7\u05E6\u05E8", longLabel: "\u05D0\u05E8\u05D5\u05DA" },
+    file: { unit: "\u05D1\u05D9\u05D9\u05D8\u05D9\u05DD", shortLabel: "\u05E7\u05D8\u05DF", longLabel: "\u05D2\u05D3\u05D5\u05DC" },
+    array: { unit: "\u05E4\u05E8\u05D9\u05D8\u05D9\u05DD", shortLabel: "\u05E7\u05D8\u05DF", longLabel: "\u05D2\u05D3\u05D5\u05DC" },
+    set: { unit: "\u05E4\u05E8\u05D9\u05D8\u05D9\u05DD", shortLabel: "\u05E7\u05D8\u05DF", longLabel: "\u05D2\u05D3\u05D5\u05DC" },
+    number: { unit: "", shortLabel: "\u05E7\u05D8\u05DF", longLabel: "\u05D2\u05D3\u05D5\u05DC" }
+    // no unit
+  };
+  const typeEntry = (t3) => t3 ? TypeNames[t3] : void 0;
+  const typeLabel = (t3) => {
+    const e5 = typeEntry(t3);
+    if (e5)
+      return e5.label;
+    return t3 ?? TypeNames.unknown.label;
+  };
+  const withDefinite = (t3) => `\u05D4${typeLabel(t3)}`;
+  const verbFor = (t3) => {
+    const e5 = typeEntry(t3);
+    const gender = e5?.gender ?? "m";
+    return gender === "f" ? "\u05E6\u05E8\u05D9\u05DB\u05D4 \u05DC\u05D4\u05D9\u05D5\u05EA" : "\u05E6\u05E8\u05D9\u05DA \u05DC\u05D4\u05D9\u05D5\u05EA";
+  };
+  const getSizing = (origin) => {
+    if (!origin)
+      return null;
     return Sizable[origin] ?? null;
-  }
+  };
   const parsedType8 = (data) => {
     const t3 = typeof data;
     switch (t3) {
-      case "number": {
+      case "number":
         return Number.isNaN(data) ? "NaN" : "number";
-      }
       case "object": {
-        if (Array.isArray(data)) {
+        if (Array.isArray(data))
           return "array";
-        }
-        if (data === null) {
+        if (data === null)
           return "null";
-        }
         if (Object.getPrototypeOf(data) !== Object.prototype && data.constructor) {
           return data.constructor.name;
         }
+        return "object";
       }
+      default:
+        return t3;
     }
-    return t3;
   };
   const Nouns = {
-    regex: "\u05E7\u05DC\u05D8",
-    email: "\u05DB\u05EA\u05D5\u05D1\u05EA \u05D0\u05D9\u05DE\u05D9\u05D9\u05DC",
-    url: "\u05DB\u05EA\u05D5\u05D1\u05EA \u05E8\u05E9\u05EA",
-    emoji: "\u05D0\u05D9\u05DE\u05D5\u05D2'\u05D9",
-    uuid: "UUID",
-    uuidv4: "UUIDv4",
-    uuidv6: "UUIDv6",
-    nanoid: "nanoid",
-    guid: "GUID",
-    cuid: "cuid",
-    cuid2: "cuid2",
-    ulid: "ULID",
-    xid: "XID",
-    ksuid: "KSUID",
-    datetime: "\u05EA\u05D0\u05E8\u05D9\u05DA \u05D5\u05D6\u05DE\u05DF ISO",
-    date: "\u05EA\u05D0\u05E8\u05D9\u05DA ISO",
-    time: "\u05D6\u05DE\u05DF ISO",
-    duration: "\u05DE\u05E9\u05DA \u05D6\u05DE\u05DF ISO",
-    ipv4: "\u05DB\u05EA\u05D5\u05D1\u05EA IPv4",
-    ipv6: "\u05DB\u05EA\u05D5\u05D1\u05EA IPv6",
-    cidrv4: "\u05D8\u05D5\u05D5\u05D7 IPv4",
-    cidrv6: "\u05D8\u05D5\u05D5\u05D7 IPv6",
-    base64: "\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA \u05D1\u05D1\u05E1\u05D9\u05E1 64",
-    base64url: "\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA \u05D1\u05D1\u05E1\u05D9\u05E1 64 \u05DC\u05DB\u05EA\u05D5\u05D1\u05D5\u05EA \u05E8\u05E9\u05EA",
-    json_string: "\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA JSON",
-    e164: "\u05DE\u05E1\u05E4\u05E8 E.164",
-    jwt: "JWT",
-    template_literal: "\u05E7\u05DC\u05D8"
+    regex: { label: "\u05E7\u05DC\u05D8", gender: "m" },
+    email: { label: "\u05DB\u05EA\u05D5\u05D1\u05EA \u05D0\u05D9\u05DE\u05D9\u05D9\u05DC", gender: "f" },
+    url: { label: "\u05DB\u05EA\u05D5\u05D1\u05EA \u05E8\u05E9\u05EA", gender: "f" },
+    emoji: { label: "\u05D0\u05D9\u05DE\u05D5\u05D2'\u05D9", gender: "m" },
+    uuid: { label: "UUID", gender: "m" },
+    nanoid: { label: "nanoid", gender: "m" },
+    guid: { label: "GUID", gender: "m" },
+    cuid: { label: "cuid", gender: "m" },
+    cuid2: { label: "cuid2", gender: "m" },
+    ulid: { label: "ULID", gender: "m" },
+    xid: { label: "XID", gender: "m" },
+    ksuid: { label: "KSUID", gender: "m" },
+    datetime: { label: "\u05EA\u05D0\u05E8\u05D9\u05DA \u05D5\u05D6\u05DE\u05DF ISO", gender: "m" },
+    date: { label: "\u05EA\u05D0\u05E8\u05D9\u05DA ISO", gender: "m" },
+    time: { label: "\u05D6\u05DE\u05DF ISO", gender: "m" },
+    duration: { label: "\u05DE\u05E9\u05DA \u05D6\u05DE\u05DF ISO", gender: "m" },
+    ipv4: { label: "\u05DB\u05EA\u05D5\u05D1\u05EA IPv4", gender: "f" },
+    ipv6: { label: "\u05DB\u05EA\u05D5\u05D1\u05EA IPv6", gender: "f" },
+    cidrv4: { label: "\u05D8\u05D5\u05D5\u05D7 IPv4", gender: "m" },
+    cidrv6: { label: "\u05D8\u05D5\u05D5\u05D7 IPv6", gender: "m" },
+    base64: { label: "\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA \u05D1\u05D1\u05E1\u05D9\u05E1 64", gender: "f" },
+    base64url: { label: "\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA \u05D1\u05D1\u05E1\u05D9\u05E1 64 \u05DC\u05DB\u05EA\u05D5\u05D1\u05D5\u05EA \u05E8\u05E9\u05EA", gender: "f" },
+    json_string: { label: "\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA JSON", gender: "f" },
+    e164: { label: "\u05DE\u05E1\u05E4\u05E8 E.164", gender: "m" },
+    jwt: { label: "JWT", gender: "m" },
+    ends_with: { label: "\u05E7\u05DC\u05D8", gender: "m" },
+    includes: { label: "\u05E7\u05DC\u05D8", gender: "m" },
+    lowercase: { label: "\u05E7\u05DC\u05D8", gender: "m" },
+    starts_with: { label: "\u05E7\u05DC\u05D8", gender: "m" },
+    uppercase: { label: "\u05E7\u05DC\u05D8", gender: "m" }
   };
   return (issue2) => {
     switch (issue2.code) {
-      case "invalid_type":
-        return `\u05E7\u05DC\u05D8 \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF: \u05E6\u05E8\u05D9\u05DA ${issue2.expected}, \u05D4\u05EA\u05E7\u05D1\u05DC ${parsedType8(issue2.input)}`;
-      case "invalid_value":
-        if (issue2.values.length === 1)
-          return `\u05E7\u05DC\u05D8 \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF: \u05E6\u05E8\u05D9\u05DA ${stringifyPrimitive(issue2.values[0])}`;
-        return `\u05E7\u05DC\u05D8 \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF: \u05E6\u05E8\u05D9\u05DA \u05D0\u05D7\u05EA \u05DE\u05D4\u05D0\u05E4\u05E9\u05E8\u05D5\u05D9\u05D5\u05EA  ${joinValues(issue2.values, "|")}`;
+      case "invalid_type": {
+        const expectedKey = issue2.expected;
+        const expected = typeLabel(expectedKey);
+        const receivedKey = parsedType8(issue2.input);
+        const received = TypeNames[receivedKey]?.label ?? receivedKey;
+        return `\u05E7\u05DC\u05D8 \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF: \u05E6\u05E8\u05D9\u05DA \u05DC\u05D4\u05D9\u05D5\u05EA ${expected}, \u05D4\u05EA\u05E7\u05D1\u05DC ${received}`;
+      }
+      case "invalid_value": {
+        if (issue2.values.length === 1) {
+          return `\u05E2\u05E8\u05DA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF: \u05D4\u05E2\u05E8\u05DA \u05D7\u05D9\u05D9\u05D1 \u05DC\u05D4\u05D9\u05D5\u05EA ${stringifyPrimitive(issue2.values[0])}`;
+        }
+        const stringified = issue2.values.map((v2) => stringifyPrimitive(v2));
+        if (issue2.values.length === 2) {
+          return `\u05E2\u05E8\u05DA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF: \u05D4\u05D0\u05E4\u05E9\u05E8\u05D5\u05D9\u05D5\u05EA \u05D4\u05DE\u05EA\u05D0\u05D9\u05DE\u05D5\u05EA \u05D4\u05DF ${stringified[0]} \u05D0\u05D5 ${stringified[1]}`;
+        }
+        const lastValue = stringified[stringified.length - 1];
+        const restValues = stringified.slice(0, -1).join(", ");
+        return `\u05E2\u05E8\u05DA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF: \u05D4\u05D0\u05E4\u05E9\u05E8\u05D5\u05D9\u05D5\u05EA \u05D4\u05DE\u05EA\u05D0\u05D9\u05DE\u05D5\u05EA \u05D4\u05DF ${restValues} \u05D0\u05D5 ${lastValue}`;
+      }
       case "too_big": {
-        const adj = issue2.inclusive ? "<=" : "<";
         const sizing = getSizing(issue2.origin);
-        if (sizing)
-          return `\u05D2\u05D3\u05D5\u05DC \u05DE\u05D3\u05D9: ${issue2.origin ?? "value"} \u05E6\u05E8\u05D9\u05DA \u05DC\u05D4\u05D9\u05D5\u05EA ${adj}${issue2.maximum.toString()} ${sizing.unit ?? "elements"}`;
-        return `\u05D2\u05D3\u05D5\u05DC \u05DE\u05D3\u05D9: ${issue2.origin ?? "value"} \u05E6\u05E8\u05D9\u05DA \u05DC\u05D4\u05D9\u05D5\u05EA ${adj}${issue2.maximum.toString()}`;
+        const subject = withDefinite(issue2.origin ?? "value");
+        if (issue2.origin === "string") {
+          return `${sizing?.longLabel ?? "\u05D0\u05E8\u05D5\u05DA"} \u05DE\u05D3\u05D9: ${subject} \u05E6\u05E8\u05D9\u05DB\u05D4 \u05DC\u05D4\u05DB\u05D9\u05DC ${issue2.maximum.toString()} ${sizing?.unit ?? ""} ${issue2.inclusive ? "\u05D0\u05D5 \u05E4\u05D7\u05D5\u05EA" : "\u05DC\u05DB\u05DC \u05D4\u05D9\u05D5\u05EA\u05E8"}`.trim();
+        }
+        if (issue2.origin === "number") {
+          const comparison = issue2.inclusive ? `\u05E7\u05D8\u05DF \u05D0\u05D5 \u05E9\u05D5\u05D5\u05D4 \u05DC-${issue2.maximum}` : `\u05E7\u05D8\u05DF \u05DE-${issue2.maximum}`;
+          return `\u05D2\u05D3\u05D5\u05DC \u05DE\u05D3\u05D9: ${subject} \u05E6\u05E8\u05D9\u05DA \u05DC\u05D4\u05D9\u05D5\u05EA ${comparison}`;
+        }
+        if (issue2.origin === "array" || issue2.origin === "set") {
+          const verb = issue2.origin === "set" ? "\u05E6\u05E8\u05D9\u05DB\u05D4" : "\u05E6\u05E8\u05D9\u05DA";
+          const comparison = issue2.inclusive ? `${issue2.maximum} ${sizing?.unit ?? ""} \u05D0\u05D5 \u05E4\u05D7\u05D5\u05EA` : `\u05E4\u05D7\u05D5\u05EA \u05DE-${issue2.maximum} ${sizing?.unit ?? ""}`;
+          return `\u05D2\u05D3\u05D5\u05DC \u05DE\u05D3\u05D9: ${subject} ${verb} \u05DC\u05D4\u05DB\u05D9\u05DC ${comparison}`.trim();
+        }
+        const adj = issue2.inclusive ? "<=" : "<";
+        const be2 = verbFor(issue2.origin ?? "value");
+        if (sizing?.unit) {
+          return `${sizing.longLabel} \u05DE\u05D3\u05D9: ${subject} ${be2} ${adj}${issue2.maximum.toString()} ${sizing.unit}`;
+        }
+        return `${sizing?.longLabel ?? "\u05D2\u05D3\u05D5\u05DC"} \u05DE\u05D3\u05D9: ${subject} ${be2} ${adj}${issue2.maximum.toString()}`;
       }
       case "too_small": {
-        const adj = issue2.inclusive ? ">=" : ">";
         const sizing = getSizing(issue2.origin);
-        if (sizing) {
-          return `\u05E7\u05D8\u05DF \u05DE\u05D3\u05D9: ${issue2.origin} \u05E6\u05E8\u05D9\u05DA \u05DC\u05D4\u05D9\u05D5\u05EA ${adj}${issue2.minimum.toString()} ${sizing.unit}`;
+        const subject = withDefinite(issue2.origin ?? "value");
+        if (issue2.origin === "string") {
+          return `${sizing?.shortLabel ?? "\u05E7\u05E6\u05E8"} \u05DE\u05D3\u05D9: ${subject} \u05E6\u05E8\u05D9\u05DB\u05D4 \u05DC\u05D4\u05DB\u05D9\u05DC ${issue2.minimum.toString()} ${sizing?.unit ?? ""} ${issue2.inclusive ? "\u05D0\u05D5 \u05D9\u05D5\u05EA\u05E8" : "\u05DC\u05E4\u05D7\u05D5\u05EA"}`.trim();
         }
-        return `\u05E7\u05D8\u05DF \u05DE\u05D3\u05D9: ${issue2.origin} \u05E6\u05E8\u05D9\u05DA \u05DC\u05D4\u05D9\u05D5\u05EA ${adj}${issue2.minimum.toString()}`;
+        if (issue2.origin === "number") {
+          const comparison = issue2.inclusive ? `\u05D2\u05D3\u05D5\u05DC \u05D0\u05D5 \u05E9\u05D5\u05D5\u05D4 \u05DC-${issue2.minimum}` : `\u05D2\u05D3\u05D5\u05DC \u05DE-${issue2.minimum}`;
+          return `\u05E7\u05D8\u05DF \u05DE\u05D3\u05D9: ${subject} \u05E6\u05E8\u05D9\u05DA \u05DC\u05D4\u05D9\u05D5\u05EA ${comparison}`;
+        }
+        if (issue2.origin === "array" || issue2.origin === "set") {
+          const verb = issue2.origin === "set" ? "\u05E6\u05E8\u05D9\u05DB\u05D4" : "\u05E6\u05E8\u05D9\u05DA";
+          if (issue2.minimum === 1 && issue2.inclusive) {
+            const singularPhrase = issue2.origin === "set" ? "\u05DC\u05E4\u05D7\u05D5\u05EA \u05E4\u05E8\u05D9\u05D8 \u05D0\u05D7\u05D3" : "\u05DC\u05E4\u05D7\u05D5\u05EA \u05E4\u05E8\u05D9\u05D8 \u05D0\u05D7\u05D3";
+            return `\u05E7\u05D8\u05DF \u05DE\u05D3\u05D9: ${subject} ${verb} \u05DC\u05D4\u05DB\u05D9\u05DC ${singularPhrase}`;
+          }
+          const comparison = issue2.inclusive ? `${issue2.minimum} ${sizing?.unit ?? ""} \u05D0\u05D5 \u05D9\u05D5\u05EA\u05E8` : `\u05D9\u05D5\u05EA\u05E8 \u05DE-${issue2.minimum} ${sizing?.unit ?? ""}`;
+          return `\u05E7\u05D8\u05DF \u05DE\u05D3\u05D9: ${subject} ${verb} \u05DC\u05D4\u05DB\u05D9\u05DC ${comparison}`.trim();
+        }
+        const adj = issue2.inclusive ? ">=" : ">";
+        const be2 = verbFor(issue2.origin ?? "value");
+        if (sizing?.unit) {
+          return `${sizing.shortLabel} \u05DE\u05D3\u05D9: ${subject} ${be2} ${adj}${issue2.minimum.toString()} ${sizing.unit}`;
+        }
+        return `${sizing?.shortLabel ?? "\u05E7\u05D8\u05DF"} \u05DE\u05D3\u05D9: ${subject} ${be2} ${adj}${issue2.minimum.toString()}`;
       }
       case "invalid_format": {
         const _issue = issue2;
         if (_issue.format === "starts_with")
-          return `\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05E0\u05D4: \u05D7\u05D9\u05D9\u05D1\u05EA \u05DC\u05D4\u05EA\u05D7\u05D9\u05DC \u05D1"${_issue.prefix}"`;
+          return `\u05D4\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA \u05D7\u05D9\u05D9\u05D1\u05EA \u05DC\u05D4\u05EA\u05D7\u05D9\u05DC \u05D1 "${_issue.prefix}"`;
         if (_issue.format === "ends_with")
-          return `\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05E0\u05D4: \u05D7\u05D9\u05D9\u05D1\u05EA \u05DC\u05D4\u05E1\u05EA\u05D9\u05D9\u05DD \u05D1 "${_issue.suffix}"`;
+          return `\u05D4\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA \u05D7\u05D9\u05D9\u05D1\u05EA \u05DC\u05D4\u05E1\u05EA\u05D9\u05D9\u05DD \u05D1 "${_issue.suffix}"`;
         if (_issue.format === "includes")
-          return `\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05E0\u05D4: \u05D7\u05D9\u05D9\u05D1\u05EA \u05DC\u05DB\u05DC\u05D5\u05DC "${_issue.includes}"`;
+          return `\u05D4\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA \u05D7\u05D9\u05D9\u05D1\u05EA \u05DC\u05DB\u05DC\u05D5\u05DC "${_issue.includes}"`;
         if (_issue.format === "regex")
-          return `\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05E0\u05D4: \u05D7\u05D9\u05D9\u05D1\u05EA \u05DC\u05D4\u05EA\u05D0\u05D9\u05DD \u05DC\u05EA\u05D1\u05E0\u05D9\u05EA ${_issue.pattern}`;
-        return `${Nouns[_issue.format] ?? issue2.format} \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF`;
+          return `\u05D4\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA \u05D7\u05D9\u05D9\u05D1\u05EA \u05DC\u05D4\u05EA\u05D0\u05D9\u05DD \u05DC\u05EA\u05D1\u05E0\u05D9\u05EA ${_issue.pattern}`;
+        const nounEntry = Nouns[_issue.format];
+        const noun = nounEntry?.label ?? _issue.format;
+        const gender = nounEntry?.gender ?? "m";
+        const adjective = gender === "f" ? "\u05EA\u05E7\u05D9\u05E0\u05D4" : "\u05EA\u05E7\u05D9\u05DF";
+        return `${noun} \u05DC\u05D0 ${adjective}`;
       }
       case "not_multiple_of":
         return `\u05DE\u05E1\u05E4\u05E8 \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF: \u05D7\u05D9\u05D9\u05D1 \u05DC\u05D4\u05D9\u05D5\u05EA \u05DE\u05DB\u05E4\u05DC\u05D4 \u05E9\u05DC ${issue2.divisor}`;
       case "unrecognized_keys":
         return `\u05DE\u05E4\u05EA\u05D7${issue2.keys.length > 1 ? "\u05D5\u05EA" : ""} \u05DC\u05D0 \u05DE\u05D6\u05D5\u05D4${issue2.keys.length > 1 ? "\u05D9\u05DD" : "\u05D4"}: ${joinValues(issue2.keys, ", ")}`;
-      case "invalid_key":
-        return `\u05DE\u05E4\u05EA\u05D7 \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF \u05D1${issue2.origin}`;
+      case "invalid_key": {
+        return `\u05E9\u05D3\u05D4 \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF \u05D1\u05D0\u05D5\u05D1\u05D9\u05D9\u05E7\u05D8`;
+      }
       case "invalid_union":
         return "\u05E7\u05DC\u05D8 \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF";
-      case "invalid_element":
-        return `\u05E2\u05E8\u05DA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF \u05D1${issue2.origin}`;
+      case "invalid_element": {
+        const place = withDefinite(issue2.origin ?? "array");
+        return `\u05E2\u05E8\u05DA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF \u05D1${place}`;
+      }
       default:
         return `\u05E7\u05DC\u05D8 \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF`;
     }
@@ -7492,10 +8131,10 @@ function ms_default() {
 // node_modules/zod/v4/locales/nl.js
 var error28 = () => {
   const Sizable = {
-    string: { unit: "tekens" },
-    file: { unit: "bytes" },
-    array: { unit: "elementen" },
-    set: { unit: "elementen" }
+    string: { unit: "tekens", verb: "te hebben" },
+    file: { unit: "bytes", verb: "te hebben" },
+    array: { unit: "elementen", verb: "te hebben" },
+    set: { unit: "elementen", verb: "te hebben" }
   };
   function getSizing(origin) {
     return Sizable[origin] ?? null;
@@ -7562,16 +8201,16 @@ var error28 = () => {
         const adj = issue2.inclusive ? "<=" : "<";
         const sizing = getSizing(issue2.origin);
         if (sizing)
-          return `Te lang: verwacht dat ${issue2.origin ?? "waarde"} ${adj}${issue2.maximum.toString()} ${sizing.unit ?? "elementen"} bevat`;
-        return `Te lang: verwacht dat ${issue2.origin ?? "waarde"} ${adj}${issue2.maximum.toString()} is`;
+          return `Te groot: verwacht dat ${issue2.origin ?? "waarde"} ${sizing.verb} ${adj}${issue2.maximum.toString()} ${sizing.unit ?? "elementen"}`;
+        return `Te groot: verwacht dat ${issue2.origin ?? "waarde"} ${adj}${issue2.maximum.toString()} is`;
       }
       case "too_small": {
         const adj = issue2.inclusive ? ">=" : ">";
         const sizing = getSizing(issue2.origin);
         if (sizing) {
-          return `Te kort: verwacht dat ${issue2.origin} ${adj}${issue2.minimum.toString()} ${sizing.unit} bevat`;
+          return `Te klein: verwacht dat ${issue2.origin} ${sizing.verb} ${adj}${issue2.minimum.toString()} ${sizing.unit}`;
         }
-        return `Te kort: verwacht dat ${issue2.origin} ${adj}${issue2.minimum.toString()} is`;
+        return `Te klein: verwacht dat ${issue2.origin} ${adj}${issue2.minimum.toString()} is`;
       }
       case "invalid_format": {
         const _issue = issue2;
@@ -9662,6 +10301,7 @@ function yo_default() {
 }
 
 // node_modules/zod/v4/core/registries.js
+var _a;
 var $output = Symbol("ZodOutput");
 var $input = Symbol("ZodInput");
 var $ZodRegistry = class {
@@ -9670,13 +10310,13 @@ var $ZodRegistry = class {
     this._idmap = /* @__PURE__ */ new Map();
   }
   add(schema, ..._meta) {
-    const meta = _meta[0];
-    this._map.set(schema, meta);
-    if (meta && typeof meta === "object" && "id" in meta) {
-      if (this._idmap.has(meta.id)) {
-        throw new Error(`ID ${meta.id} already exists in the registry`);
+    const meta3 = _meta[0];
+    this._map.set(schema, meta3);
+    if (meta3 && typeof meta3 === "object" && "id" in meta3) {
+      if (this._idmap.has(meta3.id)) {
+        throw new Error(`ID ${meta3.id} already exists in the registry`);
       }
-      this._idmap.set(meta.id, schema);
+      this._idmap.set(meta3.id, schema);
     }
     return this;
   }
@@ -9686,20 +10326,20 @@ var $ZodRegistry = class {
     return this;
   }
   remove(schema) {
-    const meta = this._map.get(schema);
-    if (meta && typeof meta === "object" && "id" in meta) {
-      this._idmap.delete(meta.id);
+    const meta3 = this._map.get(schema);
+    if (meta3 && typeof meta3 === "object" && "id" in meta3) {
+      this._idmap.delete(meta3.id);
     }
     this._map.delete(schema);
     return this;
   }
   get(schema) {
-    const p2 = schema._zod.parent;
-    if (p2) {
-      const pm = { ...this.get(p2) ?? {} };
+    const p4 = schema._zod.parent;
+    if (p4) {
+      const pm = { ...this.get(p4) ?? {} };
       delete pm.id;
-      const f = { ...pm, ...this._map.get(schema) };
-      return Object.keys(f).length ? f : void 0;
+      const f2 = { ...pm, ...this._map.get(schema) };
+      return Object.keys(f2).length ? f2 : void 0;
     }
     return this._map.get(schema);
   }
@@ -9710,7 +10350,8 @@ var $ZodRegistry = class {
 function registry() {
   return new $ZodRegistry();
 }
-var globalRegistry = /* @__PURE__ */ registry();
+(_a = globalThis).__zod_globalRegistry ?? (_a.__zod_globalRegistry = registry());
+var globalRegistry = globalThis.__zod_globalRegistry;
 
 // node_modules/zod/v4/core/api.js
 function _string(Class2, params) {
@@ -9868,6 +10509,15 @@ function _ipv6(Class2, params) {
   return new Class2({
     type: "string",
     format: "ipv6",
+    check: "string_format",
+    abort: false,
+    ...normalizeParams(params)
+  });
+}
+function _mac(Class2, params) {
+  return new Class2({
+    type: "string",
+    format: "mac",
     check: "string_format",
     abort: false,
     ...normalizeParams(params)
@@ -10306,6 +10956,9 @@ function _toLowerCase() {
 function _toUpperCase() {
   return _overwrite((input) => input.toUpperCase());
 }
+function _slugify() {
+  return _overwrite((input) => slugify(input));
+}
 function _array(Class2, element, params) {
   return new Class2({
     type: "array",
@@ -10373,7 +11026,7 @@ function _set(Class2, valueType, params) {
   });
 }
 function _enum(Class2, values, params) {
-  const entries = Array.isArray(values) ? Object.fromEntries(values.map((v3) => [v3, v3])) : values;
+  const entries = Array.isArray(values) ? Object.fromEntries(values.map((v2) => [v2, v2])) : values;
   return new Class2({
     type: "enum",
     entries,
@@ -10527,13 +11180,37 @@ function _check(fn2, params) {
   ch._zod.check = fn2;
   return ch;
 }
+function describe(description) {
+  const ch = new $ZodCheck({ check: "describe" });
+  ch._zod.onattach = [
+    (inst) => {
+      const existing = globalRegistry.get(inst) ?? {};
+      globalRegistry.add(inst, { ...existing, description });
+    }
+  ];
+  ch._zod.check = () => {
+  };
+  return ch;
+}
+function meta(metadata) {
+  const ch = new $ZodCheck({ check: "meta" });
+  ch._zod.onattach = [
+    (inst) => {
+      const existing = globalRegistry.get(inst) ?? {};
+      globalRegistry.add(inst, { ...existing, ...metadata });
+    }
+  ];
+  ch._zod.check = () => {
+  };
+  return ch;
+}
 function _stringbool(Classes, _params) {
   const params = normalizeParams(_params);
   let truthyArray = params.truthy ?? ["true", "1", "yes", "on", "y", "enabled"];
   let falsyArray = params.falsy ?? ["false", "0", "no", "off", "n", "disabled"];
   if (params.case !== "sensitive") {
-    truthyArray = truthyArray.map((v3) => typeof v3 === "string" ? v3.toLowerCase() : v3);
-    falsyArray = falsyArray.map((v3) => typeof v3 === "string" ? v3.toLowerCase() : v3);
+    truthyArray = truthyArray.map((v2) => typeof v2 === "string" ? v2.toLowerCase() : v2);
+    falsyArray = falsyArray.map((v2) => typeof v2 === "string" ? v2.toLowerCase() : v2);
   }
   const truthySet = new Set(truthyArray);
   const falsySet = new Set(falsyArray);
@@ -10607,7 +11284,7 @@ var JSONSchemaGenerator = class {
     this.seen = /* @__PURE__ */ new Map();
   }
   process(schema, _params = { path: [], schemaPath: [] }) {
-    var _a;
+    var _a2;
     const def = schema._zod.def;
     const formatMap = {
       guid: "uuid",
@@ -10798,11 +11475,11 @@ var JSONSchemaGenerator = class {
             }
             const allKeys = new Set(Object.keys(shape));
             const requiredKeys = new Set([...allKeys].filter((key) => {
-              const v3 = def.shape[key]._zod;
+              const v2 = def.shape[key]._zod;
               if (this.io === "input") {
-                return v3.optin === void 0;
+                return v2.optin === void 0;
               } else {
-                return v3.optout === void 0;
+                return v2.optout === void 0;
               }
             }));
             if (requiredKeys.size > 0) {
@@ -10823,11 +11500,16 @@ var JSONSchemaGenerator = class {
           }
           case "union": {
             const json2 = _json;
-            const options = def.options.map((x2, i2) => this.process(x2, {
+            const isDiscriminated = def.discriminator !== void 0;
+            const options = def.options.map((x3, i3) => this.process(x3, {
               ...params,
-              path: [...params.path, "anyOf", i2]
+              path: [...params.path, isDiscriminated ? "oneOf" : "anyOf", i3]
             }));
-            json2.anyOf = options;
+            if (isDiscriminated) {
+              json2.oneOf = options;
+            } else {
+              json2.anyOf = options;
+            }
             break;
           }
           case "intersection": {
@@ -10836,14 +11518,14 @@ var JSONSchemaGenerator = class {
               ...params,
               path: [...params.path, "allOf", 0]
             });
-            const b = this.process(def.right, {
+            const b4 = this.process(def.right, {
               ...params,
               path: [...params.path, "allOf", 1]
             });
             const isSimpleIntersection = (val) => "allOf" in val && Object.keys(val).length === 1;
             const allOf = [
               ...isSimpleIntersection(a4) ? a4.allOf : [a4],
-              ...isSimpleIntersection(b) ? b.allOf : [b]
+              ...isSimpleIntersection(b4) ? b4.allOf : [b4]
             ];
             json2.allOf = allOf;
             break;
@@ -10853,9 +11535,9 @@ var JSONSchemaGenerator = class {
             json2.type = "array";
             const prefixPath = this.target === "draft-2020-12" ? "prefixItems" : "items";
             const restPath = this.target === "draft-2020-12" ? "items" : this.target === "openapi-3.0" ? "items" : "additionalItems";
-            const prefixItems = def.items.map((x2, i2) => this.process(x2, {
+            const prefixItems = def.items.map((x3, i3) => this.process(x3, {
               ...params,
-              path: [...params.path, prefixPath, i2]
+              path: [...params.path, prefixPath, i3]
             }));
             const rest = def.rest ? this.process(def.rest, {
               ...params,
@@ -10920,9 +11602,9 @@ var JSONSchemaGenerator = class {
           case "enum": {
             const json2 = _json;
             const values = getEnumValues(def.entries);
-            if (values.every((v3) => typeof v3 === "number"))
+            if (values.every((v2) => typeof v2 === "number"))
               json2.type = "number";
-            if (values.every((v3) => typeof v3 === "string"))
+            if (values.every((v2) => typeof v2 === "string"))
               json2.type = "string";
             json2.enum = values;
             break;
@@ -10956,13 +11638,13 @@ var JSONSchemaGenerator = class {
                 json2.const = val;
               }
             } else {
-              if (vals.every((v3) => typeof v3 === "number"))
+              if (vals.every((v2) => typeof v2 === "number"))
                 json2.type = "number";
-              if (vals.every((v3) => typeof v3 === "string"))
+              if (vals.every((v2) => typeof v2 === "string"))
                 json2.type = "string";
-              if (vals.every((v3) => typeof v3 === "boolean"))
+              if (vals.every((v2) => typeof v2 === "boolean"))
                 json2.type = "string";
-              if (vals.every((v3) => v3 === null))
+              if (vals.every((v2) => v2 === null))
                 json2.type = "null";
               json2.enum = vals;
             }
@@ -10985,8 +11667,8 @@ var JSONSchemaGenerator = class {
                 file2.contentMediaType = mime[0];
                 Object.assign(json2, file2);
               } else {
-                json2.anyOf = mime.map((m) => {
-                  const mFile = { ...file2, contentMediaType: m };
+                json2.anyOf = mime.map((m3) => {
+                  const mFile = { ...file2, contentMediaType: m3 };
                   return mFile;
                 });
               }
@@ -11107,15 +11789,15 @@ var JSONSchemaGenerator = class {
         }
       }
     }
-    const meta = this.metadataRegistry.get(schema);
-    if (meta)
-      Object.assign(result.schema, meta);
+    const meta3 = this.metadataRegistry.get(schema);
+    if (meta3)
+      Object.assign(result.schema, meta3);
     if (this.io === "input" && isTransforming(schema)) {
       delete result.schema.examples;
       delete result.schema.default;
     }
     if (this.io === "input" && result.schema._prefault)
-      (_a = result.schema).default ?? (_a.default = result.schema._prefault);
+      (_a2 = result.schema).default ?? (_a2.default = result.schema._prefault);
     delete result.schema._prefault;
     const _result = this.seen.get(schema);
     return _result.schema;
@@ -11282,7 +11964,7 @@ function toJSONSchema(input, _params) {
     const gen2 = new JSONSchemaGenerator(_params);
     const defs = {};
     for (const entry of input._idmap.entries()) {
-      const [_3, schema] = entry;
+      const [_2, schema] = entry;
       gen2.process(schema);
     }
     const schemas = {};
@@ -11315,101 +11997,51 @@ function isTransforming(_schema, _ctx) {
   if (ctx.seen.has(_schema))
     return false;
   ctx.seen.add(_schema);
-  const schema = _schema;
-  const def = schema._zod.def;
-  switch (def.type) {
-    case "string":
-    case "number":
-    case "bigint":
-    case "boolean":
-    case "date":
-    case "symbol":
-    case "undefined":
-    case "null":
-    case "any":
-    case "unknown":
-    case "never":
-    case "void":
-    case "literal":
-    case "enum":
-    case "nan":
-    case "file":
-    case "template_literal":
-      return false;
-    case "array": {
-      return isTransforming(def.element, ctx);
-    }
-    case "object": {
-      for (const key in def.shape) {
-        if (isTransforming(def.shape[key], ctx))
-          return true;
-      }
-      return false;
-    }
-    case "union": {
-      for (const option of def.options) {
-        if (isTransforming(option, ctx))
-          return true;
-      }
-      return false;
-    }
-    case "intersection": {
-      return isTransforming(def.left, ctx) || isTransforming(def.right, ctx);
-    }
-    case "tuple": {
-      for (const item of def.items) {
-        if (isTransforming(item, ctx))
-          return true;
-      }
-      if (def.rest && isTransforming(def.rest, ctx))
-        return true;
-      return false;
-    }
-    case "record": {
-      return isTransforming(def.keyType, ctx) || isTransforming(def.valueType, ctx);
-    }
-    case "map": {
-      return isTransforming(def.keyType, ctx) || isTransforming(def.valueType, ctx);
-    }
-    case "set": {
-      return isTransforming(def.valueType, ctx);
-    }
-    case "promise":
-    case "optional":
-    case "nonoptional":
-    case "nullable":
-    case "readonly":
-      return isTransforming(def.innerType, ctx);
-    case "lazy":
-      return isTransforming(def.getter(), ctx);
-    case "default": {
-      return isTransforming(def.innerType, ctx);
-    }
-    case "prefault": {
-      return isTransforming(def.innerType, ctx);
-    }
-    case "custom": {
-      return false;
-    }
-    case "transform": {
-      return true;
-    }
-    case "pipe": {
-      return isTransforming(def.in, ctx) || isTransforming(def.out, ctx);
-    }
-    case "success": {
-      return false;
-    }
-    case "catch": {
-      return false;
-    }
-    case "function": {
-      return false;
-    }
-    default:
-      def;
+  const def = _schema._zod.def;
+  if (def.type === "transform")
+    return true;
+  if (def.type === "array")
+    return isTransforming(def.element, ctx);
+  if (def.type === "set")
+    return isTransforming(def.valueType, ctx);
+  if (def.type === "lazy")
+    return isTransforming(def.getter(), ctx);
+  if (def.type === "promise" || def.type === "optional" || def.type === "nonoptional" || def.type === "nullable" || def.type === "readonly" || def.type === "default" || def.type === "prefault") {
+    return isTransforming(def.innerType, ctx);
   }
-  throw new Error(`Unknown schema type: ${def.type}`);
+  if (def.type === "intersection") {
+    return isTransforming(def.left, ctx) || isTransforming(def.right, ctx);
+  }
+  if (def.type === "record" || def.type === "map") {
+    return isTransforming(def.keyType, ctx) || isTransforming(def.valueType, ctx);
+  }
+  if (def.type === "pipe") {
+    return isTransforming(def.in, ctx) || isTransforming(def.out, ctx);
+  }
+  if (def.type === "object") {
+    for (const key in def.shape) {
+      if (isTransforming(def.shape[key], ctx))
+        return true;
+    }
+    return false;
+  }
+  if (def.type === "union") {
+    for (const option of def.options) {
+      if (isTransforming(option, ctx))
+        return true;
+    }
+    return false;
+  }
+  if (def.type === "tuple") {
+    for (const item of def.items) {
+      if (isTransforming(item, ctx))
+        return true;
+    }
+    if (def.rest && isTransforming(def.rest, ctx))
+      return true;
+    return false;
+  }
+  return false;
 }
 
 // node_modules/zod/v4/core/json-schema.js
@@ -11526,8 +12158,8 @@ var ZodType = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   };
   inst.clone = (def2, params) => clone(inst, def2, params);
   inst.brand = () => inst;
-  inst.register = (reg, meta) => {
-    reg.add(inst, meta);
+  inst.register = (reg, meta3) => {
+    reg.add(inst, meta3);
     return inst;
   };
   inst.parse = (data, params) => parse2(inst, data, params, { callee: inst.parse });
@@ -11603,6 +12235,7 @@ var _ZodString = /* @__PURE__ */ $constructor("_ZodString", (inst, def) => {
   inst.normalize = (...args) => inst.check(_normalize(...args));
   inst.toLowerCase = () => inst.check(_toLowerCase());
   inst.toUpperCase = () => inst.check(_toUpperCase());
+  inst.slugify = () => inst.check(_slugify());
 });
 var ZodString = /* @__PURE__ */ $constructor("ZodString", (inst, def) => {
   $ZodString.init(inst, def);
@@ -11741,6 +12374,13 @@ var ZodIPv4 = /* @__PURE__ */ $constructor("ZodIPv4", (inst, def) => {
 });
 function ipv42(params) {
   return _ipv4(ZodIPv4, params);
+}
+var ZodMAC = /* @__PURE__ */ $constructor("ZodMAC", (inst, def) => {
+  $ZodMAC.init(inst, def);
+  ZodStringFormat.init(inst, def);
+});
+function mac2(params) {
+  return _mac(ZodMAC, params);
 }
 var ZodIPv6 = /* @__PURE__ */ $constructor("ZodIPv6", (inst, def) => {
   $ZodIPv6.init(inst, def);
@@ -11954,9 +12594,9 @@ var ZodDate = /* @__PURE__ */ $constructor("ZodDate", (inst, def) => {
   ZodType.init(inst, def);
   inst.min = (value, params) => inst.check(_gte(value, params));
   inst.max = (value, params) => inst.check(_lte(value, params));
-  const c2 = inst._zod.bag;
-  inst.minDate = c2.minimum ? new Date(c2.minimum) : null;
-  inst.maxDate = c2.maximum ? new Date(c2.maximum) : null;
+  const c3 = inst._zod.bag;
+  inst.minDate = c3.minimum ? new Date(c3.minimum) : null;
+  inst.maxDate = c3.maximum ? new Date(c3.maximum) : null;
 });
 function date3(params) {
   return _date(ZodDate, params);
@@ -12095,11 +12735,11 @@ function record(keyType, valueType, params) {
   });
 }
 function partialRecord(keyType, valueType, params) {
-  const k3 = clone(keyType);
-  k3._zod.values = void 0;
+  const k4 = clone(keyType);
+  k4._zod.values = void 0;
   return new ZodRecord({
     type: "record",
-    keyType: k3,
+    keyType: k4,
     valueType,
     ...util_exports.normalizeParams(params)
   });
@@ -12171,7 +12811,7 @@ var ZodEnum = /* @__PURE__ */ $constructor("ZodEnum", (inst, def) => {
   };
 });
 function _enum2(values, params) {
-  const entries = Array.isArray(values) ? Object.fromEntries(values.map((v3) => [v3, v3])) : values;
+  const entries = Array.isArray(values) ? Object.fromEntries(values.map((v2) => [v2, v2])) : values;
   return new ZodEnum({
     type: "enum",
     entries,
@@ -12452,6 +13092,8 @@ function refine(fn2, _params = {}) {
 function superRefine(fn2) {
   return _superRefine(fn2);
 }
+var describe2 = describe;
+var meta2 = meta;
 function _instanceof(cls, params = {
   error: `Input not instance of ${cls.name}`
 }) {
@@ -12534,798 +13176,326 @@ function date4(params) {
 // node_modules/zod/v4/classic/external.js
 config(en_default());
 
-// node_modules/@walkeros/core/dist/index.mjs
-var e = Object.defineProperty;
-var n = (n5, t3) => {
-  for (var i2 in t3)
-    e(n5, i2, { get: t3[i2], enumerable: true });
-};
-function h(e5, n5, t3 = "draft-7") {
-  return external_exports.toJSONSchema(e5, { target: t3 });
-}
-var v = external_exports.string();
-var S = external_exports.number();
-var w = external_exports.boolean();
-var k = external_exports.string().min(1);
-var j = external_exports.number().int().positive();
-var x = external_exports.number().int().nonnegative();
-var E = external_exports.number().describe("Tagging version number");
-var P = external_exports.union([external_exports.string(), external_exports.number(), external_exports.boolean()]);
-var C = P.optional();
-var O = {};
-n(O, { ErrorHandlerSchema: () => J, HandlerSchema: () => M, LogHandlerSchema: () => L, StorageSchema: () => I, StorageTypeSchema: () => D, errorHandlerJsonSchema: () => A, handlerJsonSchema: () => q, logHandlerJsonSchema: () => N, storageJsonSchema: () => z, storageTypeJsonSchema: () => R });
-var D = external_exports.enum(["local", "session", "cookie"]).describe("Storage mechanism: local, session, or cookie");
-var I = external_exports.object({ Local: external_exports.literal("local"), Session: external_exports.literal("session"), Cookie: external_exports.literal("cookie") }).describe("Storage type constants for type-safe references");
-var J = external_exports.any().describe("Error handler function: (error, state?) => void");
-var L = external_exports.any().describe("Log handler function: (message, verbose?) => void");
-var M = external_exports.object({ Error: J.describe("Error handler function"), Log: L.describe("Log handler function") }).describe("Handler interface with error and log functions");
-var R = h(D);
-var z = h(I);
-var A = h(J);
-var N = h(L);
-var q = h(M);
-var T = external_exports.object({ onError: J.optional().describe("Error handler function: (error, state?) => void"), onLog: L.optional().describe("Log handler function: (message, verbose?) => void") }).partial();
-var U = external_exports.object({ verbose: external_exports.boolean().describe("Enable verbose logging for debugging").optional() }).partial();
-var W = external_exports.object({ queue: external_exports.boolean().describe("Whether to queue events when consent is not granted").optional() }).partial();
-var B = external_exports.object({}).partial();
-var $ = external_exports.object({ init: external_exports.boolean().describe("Whether to initialize immediately").optional(), loadScript: external_exports.boolean().describe("Whether to load external script (for web destinations)").optional() }).partial();
-var V = external_exports.object({ disabled: external_exports.boolean().describe("Set to true to disable").optional() }).partial();
-var H = external_exports.object({ primary: external_exports.boolean().describe("Mark as primary (only one can be primary)").optional() }).partial();
-var _ = external_exports.object({ settings: external_exports.any().optional().describe("Implementation-specific configuration") }).partial();
-var K = external_exports.object({ env: external_exports.any().optional().describe("Environment dependencies (platform-specific)") }).partial();
-var Y = external_exports.object({ type: external_exports.string().optional().describe("Instance type identifier"), config: external_exports.unknown().describe("Instance configuration") }).partial();
-var Z = external_exports.object({ collector: external_exports.unknown().describe("Collector instance (runtime object)"), config: external_exports.unknown().describe("Configuration"), env: external_exports.unknown().describe("Environment dependencies") }).partial();
-var ee = external_exports.object({ batch: external_exports.number().optional().describe("Batch size: bundle N events for batch processing"), batched: external_exports.unknown().optional().describe("Batch of events to be processed") }).partial();
-var ne = external_exports.object({ ignore: external_exports.boolean().describe("Set to true to skip processing").optional(), condition: external_exports.string().optional().describe("Condition function: return true to process") }).partial();
-var te = external_exports.object({ sources: external_exports.record(external_exports.string(), external_exports.unknown()).describe("Map of source instances") }).partial();
-var ie = external_exports.object({ destinations: external_exports.record(external_exports.string(), external_exports.unknown()).describe("Map of destination instances") }).partial();
-var oe = {};
-n(oe, { ConsentSchema: () => ue, DeepPartialEventSchema: () => ve, EntitiesSchema: () => fe, EntitySchema: () => ge, EventSchema: () => he, OrderedPropertiesSchema: () => le, PartialEventSchema: () => ye, PropertiesSchema: () => ce, PropertySchema: () => ae, PropertyTypeSchema: () => se, SourceSchema: () => be, SourceTypeSchema: () => de, UserSchema: () => pe, VersionSchema: () => me, consentJsonSchema: () => Ce, entityJsonSchema: () => Ee, eventJsonSchema: () => Se, orderedPropertiesJsonSchema: () => xe, partialEventJsonSchema: () => we, propertiesJsonSchema: () => je, sourceTypeJsonSchema: () => Pe, userJsonSchema: () => ke });
-var re;
-var se = external_exports.lazy(() => external_exports.union([external_exports.boolean(), external_exports.string(), external_exports.number(), external_exports.record(external_exports.string(), ae)]));
-var ae = external_exports.lazy(() => external_exports.union([se, external_exports.array(se)]));
-var ce = external_exports.record(external_exports.string(), ae.optional()).describe("Flexible property collection with optional values");
-var le = external_exports.record(external_exports.string(), external_exports.tuple([ae, external_exports.number()]).optional()).describe("Ordered properties with [value, order] tuples for priority control");
-var de = external_exports.union([external_exports.enum(["web", "server", "app", "other"]), external_exports.string()]).describe("Source type: web, server, app, other, or custom");
-var ue = external_exports.record(external_exports.string(), external_exports.boolean()).describe("Consent requirement mapping (group name \u2192 state)");
-var pe = ce.and(external_exports.object({ id: external_exports.string().optional().describe("User identifier"), device: external_exports.string().optional().describe("Device identifier"), session: external_exports.string().optional().describe("Session identifier"), hash: external_exports.string().optional().describe("Hashed identifier"), address: external_exports.string().optional().describe("User address"), email: external_exports.string().email().optional().describe("User email address"), phone: external_exports.string().optional().describe("User phone number"), userAgent: external_exports.string().optional().describe("Browser user agent string"), browser: external_exports.string().optional().describe("Browser name"), browserVersion: external_exports.string().optional().describe("Browser version"), deviceType: external_exports.string().optional().describe("Device type (mobile, desktop, tablet)"), os: external_exports.string().optional().describe("Operating system"), osVersion: external_exports.string().optional().describe("Operating system version"), screenSize: external_exports.string().optional().describe("Screen dimensions"), language: external_exports.string().optional().describe("User language"), country: external_exports.string().optional().describe("User country"), region: external_exports.string().optional().describe("User region/state"), city: external_exports.string().optional().describe("User city"), zip: external_exports.string().optional().describe("User postal code"), timezone: external_exports.string().optional().describe("User timezone"), ip: external_exports.string().optional().describe("User IP address"), internal: external_exports.boolean().optional().describe("Internal user flag (employee, test user)") })).describe("User identification and properties");
-var me = ce.and(external_exports.object({ source: v.describe('Walker implementation version (e.g., "2.0.0")'), tagging: E })).describe("Walker version information");
-var be = ce.and(external_exports.object({ type: de.describe("Source type identifier"), id: v.describe("Source identifier (typically URL on web)"), previous_id: v.describe("Previous source identifier (typically referrer on web)") })).describe("Event source information");
-var ge = external_exports.lazy(() => external_exports.object({ entity: external_exports.string().describe("Entity name"), data: ce.describe("Entity-specific properties"), nested: external_exports.array(ge).describe("Nested child entities"), context: le.describe("Entity context data") })).describe("Nested entity structure with recursive nesting support");
-var fe = external_exports.array(ge).describe("Array of nested entities");
-var he = external_exports.object({ name: external_exports.string().describe('Event name in "entity action" format (e.g., "page view", "product add")'), data: ce.describe("Event-specific properties"), context: le.describe("Ordered context properties with priorities"), globals: ce.describe("Global properties shared across events"), custom: ce.describe("Custom implementation-specific properties"), user: pe.describe("User identification and attributes"), nested: fe.describe("Related nested entities"), consent: ue.describe("Consent states at event time"), id: k.describe("Unique event identifier (timestamp-based)"), trigger: v.describe("Event trigger identifier"), entity: v.describe("Parsed entity from event name"), action: v.describe("Parsed action from event name"), timestamp: j.describe("Unix timestamp in milliseconds since epoch"), timing: S.describe("Event processing timing information"), group: v.describe("Event grouping identifier"), count: x.describe("Event count in session"), version: me.describe("Walker version information"), source: be.describe("Event source information") }).describe("Complete walkerOS event structure");
-var ye = he.partial().describe("Partial event structure with all fields optional");
-var ve = he.partial().describe("Partial event structure with all top-level fields optional");
-var Se = h(he);
-var we = h(ye);
-var ke = h(pe);
-var je = h(ce);
-var xe = h(le);
-var Ee = h(ge);
-var Pe = h(de);
-var Ce = h(ue);
-var Oe = {};
-n(Oe, { ConfigSchema: () => qe, LoopSchema: () => Je, MapSchema: () => Me, PolicySchema: () => ze, ResultSchema: () => Te, RuleSchema: () => Ae, RulesSchema: () => Ne, SetSchema: () => Le, ValueConfigSchema: () => Re, ValueSchema: () => De, ValuesSchema: () => Ie, configJsonSchema: () => Fe, loopJsonSchema: () => Be, mapJsonSchema: () => Ve, policyJsonSchema: () => He, ruleJsonSchema: () => _e, rulesJsonSchema: () => Ke, setJsonSchema: () => $e, valueConfigJsonSchema: () => We, valueJsonSchema: () => Ue });
-var De = external_exports.lazy(() => external_exports.union([external_exports.string().describe('String value or property path (e.g., "data.id")'), external_exports.number().describe("Numeric value"), external_exports.boolean().describe("Boolean value"), external_exports.lazy(() => re), external_exports.array(De).describe("Array of values")]));
-var Ie = external_exports.array(De).describe("Array of transformation values");
-var Je = external_exports.lazy(() => external_exports.tuple([De, De]).describe("Loop transformation: [source, transform] tuple for array processing"));
-var Le = external_exports.lazy(() => external_exports.array(De).describe("Set: Array of values for selection or combination"));
-var Me = external_exports.lazy(() => external_exports.record(external_exports.string(), De).describe("Map: Object mapping keys to transformation values"));
-var Re = re = external_exports.object({ key: external_exports.string().optional().describe('Property path to extract from event (e.g., "data.id", "user.email")'), value: external_exports.union([external_exports.string(), external_exports.number(), external_exports.boolean()]).optional().describe("Static primitive value"), fn: external_exports.string().optional().describe("Custom transformation function as string (serialized)"), map: Me.optional().describe("Object mapping: transform event data to structured output"), loop: Je.optional().describe("Loop transformation: [source, transform] for array processing"), set: Le.optional().describe("Set of values: combine or select from multiple values"), consent: ue.optional().describe("Required consent states to include this value"), condition: external_exports.string().optional().describe("Condition function as string: return true to include value"), validate: external_exports.string().optional().describe("Validation function as string: return true if value is valid") }).refine((e5) => Object.keys(e5).length > 0, { message: "ValueConfig must have at least one property" }).describe("Value transformation configuration with multiple strategies");
-var ze = external_exports.record(external_exports.string(), De).describe("Policy rules for event pre-processing (key \u2192 value mapping)");
-var Ae = external_exports.object({ batch: external_exports.number().optional().describe("Batch size: bundle N events for batch processing"), condition: external_exports.string().optional().describe("Condition function as string: return true to process event"), consent: ue.optional().describe("Required consent states to process this event"), settings: external_exports.any().optional().describe("Destination-specific settings for this event mapping"), data: external_exports.union([De, Ie]).optional().describe("Data transformation rules for event"), ignore: external_exports.boolean().optional().describe("Set to true to skip processing this event"), name: external_exports.string().optional().describe('Custom event name override (e.g., "view_item" for "product view")'), policy: ze.optional().describe("Event-level policy overrides (applied after config-level policy)") }).describe("Mapping rule for specific entity-action combination");
-var Ne = external_exports.record(external_exports.string(), external_exports.record(external_exports.string(), external_exports.union([Ae, external_exports.array(Ae)])).optional()).describe("Nested mapping rules: { entity: { action: Rule | Rule[] } } with wildcard support");
-var qe = external_exports.object({ consent: ue.optional().describe("Required consent states to process any events"), data: external_exports.union([De, Ie]).optional().describe("Global data transformation applied to all events"), mapping: Ne.optional().describe("Entity-action specific mapping rules"), policy: ze.optional().describe("Pre-processing policy rules applied before mapping") }).describe("Shared mapping configuration for sources and destinations");
-var Te = external_exports.object({ eventMapping: Ae.optional().describe("Resolved mapping rule for event"), mappingKey: external_exports.string().optional().describe('Mapping key used (e.g., "product.view")') }).describe("Mapping resolution result");
-var Ue = h(De);
-var We = h(Re);
-var Be = h(Je);
-var $e = h(Le);
-var Ve = h(Me);
-var He = h(ze);
-var _e = h(Ae);
-var Ke = h(Ne);
-var Fe = h(qe);
-var Ge = {};
-n(Ge, { BatchSchema: () => rn, ConfigSchema: () => Qe, ContextSchema: () => Ze, DLQSchema: () => bn, DataSchema: () => sn, DestinationPolicySchema: () => Ye, DestinationsSchema: () => dn, InitDestinationsSchema: () => ln, InitSchema: () => cn, InstanceSchema: () => an, PartialConfigSchema: () => Xe, PushBatchContextSchema: () => nn, PushContextSchema: () => en, PushEventSchema: () => tn, PushEventsSchema: () => on, PushResultSchema: () => pn, RefSchema: () => un, ResultSchema: () => mn, batchJsonSchema: () => vn, configJsonSchema: () => gn, contextJsonSchema: () => hn, instanceJsonSchema: () => Sn, partialConfigJsonSchema: () => fn, pushContextJsonSchema: () => yn, resultJsonSchema: () => wn });
-var Qe = external_exports.object({ consent: ue.optional().describe("Required consent states to send events to this destination"), settings: external_exports.any().describe("Implementation-specific configuration").optional(), data: external_exports.union([De, Ie]).optional().describe("Global data transformation applied to all events for this destination"), env: external_exports.any().describe("Environment dependencies (platform-specific)").optional(), id: k.describe("Destination instance identifier (defaults to destination key)").optional(), init: external_exports.boolean().describe("Whether to initialize immediately").optional(), loadScript: external_exports.boolean().describe("Whether to load external script (for web destinations)").optional(), mapping: Ne.optional().describe("Entity-action specific mapping rules for this destination"), policy: ze.optional().describe("Pre-processing policy rules applied before event mapping"), queue: external_exports.boolean().describe("Whether to queue events when consent is not granted").optional(), verbose: external_exports.boolean().describe("Enable verbose logging for debugging").optional(), onError: J.optional(), onLog: L.optional() }).describe("Destination configuration");
-var Xe = Qe.partial().describe("Partial destination configuration with all fields optional");
-var Ye = ze.describe("Destination policy rules for event pre-processing");
-var Ze = external_exports.object({ collector: external_exports.unknown().describe("Collector instance (runtime object)"), config: Qe.describe("Destination configuration"), data: external_exports.union([external_exports.unknown(), external_exports.array(external_exports.unknown())]).optional().describe("Transformed event data"), env: external_exports.unknown().describe("Environment dependencies") }).describe("Destination context for init and push functions");
-var en = Ze.extend({ mapping: Ae.optional().describe("Resolved mapping rule for this specific event") }).describe("Push context with event-specific mapping");
-var nn = en.describe("Batch push context with event-specific mapping");
-var tn = external_exports.object({ event: he.describe("The event to process"), mapping: Ae.optional().describe("Mapping rule for this event") }).describe("Event with optional mapping for batch processing");
-var on = external_exports.array(tn).describe("Array of events with mappings");
-var rn = external_exports.object({ key: external_exports.string().describe('Batch key (usually mapping key like "product.view")'), events: external_exports.array(he).describe("Array of events in batch"), data: external_exports.array(external_exports.union([external_exports.unknown(), external_exports.array(external_exports.unknown())]).optional()).describe("Transformed data for each event"), mapping: Ae.optional().describe("Shared mapping rule for batch") }).describe("Batch of events grouped by mapping key");
-var sn = external_exports.union([external_exports.unknown(), external_exports.array(external_exports.unknown())]).optional().describe("Transformed event data (Property, undefined, or array)");
-var an = external_exports.object({ config: Qe.describe("Destination configuration"), queue: external_exports.array(he).optional().describe("Queued events awaiting consent"), dlq: external_exports.array(external_exports.tuple([he, external_exports.unknown()])).optional().describe("Dead letter queue (failed events with errors)"), type: external_exports.string().optional().describe("Destination type identifier"), env: external_exports.unknown().optional().describe("Environment dependencies"), init: external_exports.unknown().optional().describe("Initialization function"), push: external_exports.unknown().describe("Push function for single events"), pushBatch: external_exports.unknown().optional().describe("Batch push function"), on: external_exports.unknown().optional().describe("Event lifecycle hook function") }).describe("Destination instance (runtime object with functions)");
-var cn = external_exports.object({ code: an.describe("Destination instance with implementation"), config: Xe.optional().describe("Partial configuration overrides"), env: external_exports.unknown().optional().describe("Partial environment overrides") }).describe("Destination initialization configuration");
-var ln = external_exports.record(external_exports.string(), cn).describe("Map of destination IDs to initialization configurations");
-var dn = external_exports.record(external_exports.string(), an).describe("Map of destination IDs to runtime instances");
-var un = external_exports.object({ id: external_exports.string().describe("Destination ID"), destination: an.describe("Destination instance") }).describe("Destination reference (ID + instance)");
-var pn = external_exports.object({ queue: external_exports.array(he).optional().describe("Events queued (awaiting consent)"), error: external_exports.unknown().optional().describe("Error if push failed") }).describe("Push operation result");
-var mn = external_exports.object({ successful: external_exports.array(un).describe("Destinations that processed successfully"), queued: external_exports.array(un).describe("Destinations that queued events"), failed: external_exports.array(un).describe("Destinations that failed to process") }).describe("Overall destination processing result");
-var bn = external_exports.array(external_exports.tuple([he, external_exports.unknown()])).describe("Dead letter queue: [(event, error), ...]");
-var gn = h(Qe);
-var fn = h(Xe);
-var hn = h(Ze);
-var yn = h(en);
-var vn = h(rn);
-var Sn = h(an);
-var wn = h(mn);
-var kn = {};
-n(kn, { CommandTypeSchema: () => jn, ConfigSchema: () => xn, DestinationsSchema: () => Dn, InitConfigSchema: () => Pn, InstanceSchema: () => In, PushContextSchema: () => Cn, SessionDataSchema: () => En, SourcesSchema: () => On, commandTypeJsonSchema: () => Jn, configJsonSchema: () => Ln, initConfigJsonSchema: () => Rn, instanceJsonSchema: () => An, pushContextJsonSchema: () => zn, sessionDataJsonSchema: () => Mn });
-var jn = external_exports.union([external_exports.enum(["action", "config", "consent", "context", "destination", "elb", "globals", "hook", "init", "link", "run", "user", "walker"]), external_exports.string()]).describe("Collector command type: standard commands or custom string for extensions");
-var xn = external_exports.object({ run: external_exports.boolean().describe("Whether to run collector automatically on initialization").optional(), tagging: E, globalsStatic: ce.describe("Static global properties that persist across collector runs"), sessionStatic: external_exports.record(external_exports.string(), external_exports.unknown()).describe("Static session data that persists across collector runs"), verbose: external_exports.boolean().describe("Enable verbose logging for debugging"), onError: J.optional(), onLog: L.optional() }).describe("Core collector configuration");
-var En = ce.and(external_exports.object({ isStart: external_exports.boolean().describe("Whether this is a new session start"), storage: external_exports.boolean().describe("Whether storage is available"), id: k.describe("Session identifier").optional(), start: j.describe("Session start timestamp").optional(), marketing: external_exports.literal(true).optional().describe("Marketing attribution flag"), updated: j.describe("Last update timestamp").optional(), isNew: external_exports.boolean().describe("Whether this is a new session").optional(), device: k.describe("Device identifier").optional(), count: x.describe("Event count in session").optional(), runs: x.describe("Number of runs").optional() })).describe("Session state and tracking data");
-var Pn = xn.partial().extend({ consent: ue.optional().describe("Initial consent state"), user: pe.optional().describe("Initial user data"), globals: ce.optional().describe("Initial global properties"), sources: external_exports.unknown().optional().describe("Source configurations"), destinations: external_exports.unknown().optional().describe("Destination configurations"), custom: ce.optional().describe("Initial custom implementation-specific properties") }).describe("Collector initialization configuration with initial state");
-var Cn = external_exports.object({ mapping: qe.optional().describe("Source-level mapping configuration") }).describe("Push context with optional source mapping");
-var On = external_exports.record(external_exports.string(), external_exports.unknown()).describe("Map of source IDs to source instances");
-var Dn = external_exports.record(external_exports.string(), external_exports.unknown()).describe("Map of destination IDs to destination instances");
-var In = external_exports.object({ push: external_exports.unknown().describe("Push function for processing events"), command: external_exports.unknown().describe("Command function for walker commands"), allowed: external_exports.boolean().describe("Whether event processing is allowed"), config: xn.describe("Current collector configuration"), consent: ue.describe("Current consent state"), count: external_exports.number().describe("Event count (increments with each event)"), custom: ce.describe("Custom implementation-specific properties"), sources: On.describe("Registered source instances"), destinations: Dn.describe("Registered destination instances"), globals: ce.describe("Current global properties"), group: external_exports.string().describe("Event grouping identifier"), hooks: external_exports.unknown().describe("Lifecycle hook functions"), on: external_exports.unknown().describe("Event lifecycle configuration"), queue: external_exports.array(he).describe("Queued events awaiting processing"), round: external_exports.number().describe("Collector run count (increments with each run)"), session: external_exports.union([En]).describe("Current session state"), timing: external_exports.number().describe("Event processing timing information"), user: pe.describe("Current user data"), version: external_exports.string().describe("Walker implementation version") }).describe("Collector instance with state and methods");
-var Jn = h(jn);
-var Ln = h(xn);
-var Mn = h(En);
-var Rn = h(Pn);
-var zn = h(Cn);
-var An = h(In);
-var Nn = {};
-n(Nn, { BaseEnvSchema: () => qn, ConfigSchema: () => Tn, InitSchema: () => Bn, InitSourceSchema: () => $n, InitSourcesSchema: () => Vn, InstanceSchema: () => Wn, PartialConfigSchema: () => Un, baseEnvJsonSchema: () => Hn, configJsonSchema: () => _n, initSourceJsonSchema: () => Gn, initSourcesJsonSchema: () => Qn, instanceJsonSchema: () => Fn, partialConfigJsonSchema: () => Kn });
-var qn = external_exports.object({ push: external_exports.unknown().describe("Collector push function"), command: external_exports.unknown().describe("Collector command function"), sources: external_exports.unknown().optional().describe("Map of registered source instances"), elb: external_exports.unknown().describe("Public API function (alias for collector.push)") }).catchall(external_exports.unknown()).describe("Base environment for dependency injection - platform-specific sources extend this");
-var Tn = qe.extend({ settings: external_exports.any().describe("Implementation-specific configuration").optional(), env: qn.optional().describe("Environment dependencies (platform-specific)"), id: k.describe("Source identifier (defaults to source key)").optional(), onError: J.optional(), disabled: external_exports.boolean().describe("Set to true to disable").optional(), primary: external_exports.boolean().describe("Mark as primary (only one can be primary)").optional() }).describe("Source configuration with mapping and environment");
-var Un = Tn.partial().describe("Partial source configuration with all fields optional");
-var Wn = external_exports.object({ type: external_exports.string().describe('Source type identifier (e.g., "browser", "dataLayer")'), config: Tn.describe("Current source configuration"), push: external_exports.any().describe("Push function - THE HANDLER (flexible signature for platform compatibility)"), destroy: external_exports.any().optional().describe("Cleanup function called when source is removed"), on: external_exports.unknown().optional().describe("Lifecycle hook function for event types") }).describe("Source instance with push handler and lifecycle methods");
-var Bn = external_exports.any().describe("Source initialization function: (config, env) => Instance | Promise<Instance>");
-var $n = external_exports.object({ code: Bn.describe("Source initialization function"), config: Un.optional().describe("Partial configuration overrides"), env: qn.partial().optional().describe("Partial environment overrides"), primary: external_exports.boolean().optional().describe("Mark as primary source (only one can be primary)") }).describe("Source initialization configuration");
-var Vn = external_exports.record(external_exports.string(), $n).describe("Map of source IDs to initialization configurations");
-var Hn = h(qn);
-var _n = h(Tn);
-var Kn = h(Un);
-var Fn = h(Wn);
-var Gn = h($n);
-var Qn = h(Vn);
-var Xn = {};
-n(Xn, { ConfigSchema: () => nt, DestinationReferenceSchema: () => et, PrimitiveSchema: () => Yn, SetupSchema: () => tt, SourceReferenceSchema: () => Zn, configJsonSchema: () => ct, destinationReferenceJsonSchema: () => dt, parseConfig: () => rt, parseSetup: () => it, safeParseConfig: () => st, safeParseSetup: () => ot, setupJsonSchema: () => at, sourceReferenceJsonSchema: () => lt });
-var Yn = external_exports.union([external_exports.string(), external_exports.number(), external_exports.boolean()]).describe("Primitive value: string, number, or boolean");
-var Zn = external_exports.object({ package: external_exports.string().min(1, "Package name cannot be empty").describe('Package specifier with optional version (e.g., "@walkeros/web-source-browser@2.0.0")'), config: external_exports.unknown().optional().describe("Source-specific configuration object"), env: external_exports.unknown().optional().describe("Source environment configuration"), primary: external_exports.boolean().optional().describe("Mark as primary source (provides main elb). Only one source should be primary.") }).describe("Source package reference with configuration");
-var et = external_exports.object({ package: external_exports.string().min(1, "Package name cannot be empty").describe('Package specifier with optional version (e.g., "@walkeros/web-destination-gtag@2.0.0")'), config: external_exports.unknown().optional().describe("Destination-specific configuration object"), env: external_exports.unknown().optional().describe("Destination environment configuration") }).describe("Destination package reference with configuration");
-var nt = external_exports.object({ platform: external_exports.enum(["web", "server"], { error: 'Platform must be "web" or "server"' }).describe('Target platform: "web" for browser-based tracking, "server" for Node.js server-side collection'), sources: external_exports.record(external_exports.string(), Zn).optional().describe("Source configurations (data capture) keyed by unique identifier"), destinations: external_exports.record(external_exports.string(), et).optional().describe("Destination configurations (data output) keyed by unique identifier"), collector: external_exports.unknown().optional().describe("Collector configuration for event processing (uses Collector.InitConfig)"), env: external_exports.record(external_exports.string(), external_exports.string()).optional().describe("Environment-specific variables (override root-level variables)") }).passthrough().describe("Single environment configuration for one deployment target");
-var tt = external_exports.object({ version: external_exports.literal(1, { error: "Only version 1 is currently supported" }).describe("Configuration schema version (currently only 1 is supported)"), $schema: external_exports.string().url("Schema URL must be a valid URL").optional().describe('JSON Schema reference for IDE validation (e.g., "https://walkeros.io/schema/flow/v1.json")'), variables: external_exports.record(external_exports.string(), Yn).optional().describe("Shared variables for interpolation across all environments (use ${VAR_NAME:default} syntax)"), definitions: external_exports.record(external_exports.string(), external_exports.unknown()).optional().describe("Reusable configuration definitions (reference with JSON Schema $ref syntax)"), environments: external_exports.record(external_exports.string(), nt).refine((e5) => Object.keys(e5).length > 0, { message: "At least one environment is required" }).describe("Named environment configurations (e.g., web_prod, server_stage)") }).describe("Complete multi-environment walkerOS configuration (walkeros.config.json)");
-function it(e5) {
-  return tt.parse(e5);
-}
-function ot(e5) {
-  return tt.safeParse(e5);
-}
-function rt(e5) {
-  return nt.parse(e5);
-}
-function st(e5) {
-  return nt.safeParse(e5);
-}
-var at = external_exports.toJSONSchema(tt, { target: "draft-7" });
-var ct = h(nt);
-var lt = h(Zn);
-var dt = h(et);
-var yt = { merge: true, shallow: true, extend: true };
-function vt(e5, n5 = {}, t3 = {}) {
-  t3 = { ...yt, ...t3 };
-  const i2 = Object.entries(n5).reduce((n6, [i3, o3]) => {
-    const r2 = e5[i3];
-    return t3.merge && Array.isArray(r2) && Array.isArray(o3) ? n6[i3] = o3.reduce((e6, n7) => e6.includes(n7) ? e6 : [...e6, n7], [...r2]) : (t3.extend || i3 in e5) && (n6[i3] = o3), n6;
-  }, {});
-  return t3.shallow ? { ...e5, ...i2 } : (Object.assign(e5, i2), e5);
-}
-function wt(e5) {
-  return Array.isArray(e5);
-}
-function kt(e5) {
-  return "boolean" == typeof e5;
-}
-function xt(e5) {
-  return void 0 !== e5;
-}
-function Pt(e5) {
-  return "function" == typeof e5;
-}
-function Ct(e5) {
-  return "number" == typeof e5 && !Number.isNaN(e5);
-}
-function Ot(e5) {
-  return "object" == typeof e5 && null !== e5 && !wt(e5) && "[object Object]" === Object.prototype.toString.call(e5);
-}
-function It(e5) {
-  return "string" == typeof e5;
-}
-function Jt(e5, n5 = /* @__PURE__ */ new WeakMap()) {
-  if ("object" != typeof e5 || null === e5)
-    return e5;
-  if (n5.has(e5))
-    return n5.get(e5);
-  const t3 = Object.prototype.toString.call(e5);
-  if ("[object Object]" === t3) {
-    const t4 = {};
-    n5.set(e5, t4);
-    for (const i2 in e5)
-      Object.prototype.hasOwnProperty.call(e5, i2) && (t4[i2] = Jt(e5[i2], n5));
-    return t4;
-  }
-  if ("[object Array]" === t3) {
-    const t4 = [];
-    return n5.set(e5, t4), e5.forEach((e6) => {
-      t4.push(Jt(e6, n5));
-    }), t4;
-  }
-  if ("[object Date]" === t3)
-    return new Date(e5.getTime());
-  if ("[object RegExp]" === t3) {
-    const n6 = e5;
-    return new RegExp(n6.source, n6.flags);
-  }
-  return e5;
-}
-function Lt(e5, n5 = "", t3) {
-  const i2 = n5.split(".");
-  let o3 = e5;
-  for (let e6 = 0; e6 < i2.length; e6++) {
-    const n6 = i2[e6];
-    if ("*" === n6 && wt(o3)) {
-      const n7 = i2.slice(e6 + 1).join("."), r2 = [];
-      for (const e7 of o3) {
-        const i3 = Lt(e7, n7, t3);
-        r2.push(i3);
-      }
-      return r2;
-    }
-    if (o3 = o3 instanceof Object ? o3[n6] : void 0, !o3)
-      break;
-  }
-  return xt(o3) ? o3 : t3;
-}
-function Mt(e5, n5, t3) {
-  if (!Ot(e5))
-    return e5;
-  const i2 = Jt(e5), o3 = n5.split(".");
-  let r2 = i2;
-  for (let e6 = 0; e6 < o3.length; e6++) {
-    const n6 = o3[e6];
-    e6 === o3.length - 1 ? r2[n6] = t3 : (n6 in r2 && "object" == typeof r2[n6] && null !== r2[n6] || (r2[n6] = {}), r2 = r2[n6]);
-  }
-  return i2;
-}
-function Rt(e5) {
-  if ("true" === e5)
-    return true;
-  if ("false" === e5)
-    return false;
-  const n5 = Number(e5);
-  return e5 == n5 && "" !== e5 ? n5 : String(e5);
-}
-function zt(e5, n5 = {}, t3 = {}) {
-  const i2 = { ...n5, ...t3 }, o3 = {};
-  let r2 = void 0 === e5;
-  return Object.keys(i2).forEach((n6) => {
-    i2[n6] && (o3[n6] = true, e5 && e5[n6] && (r2 = true));
-  }), !!r2 && o3;
-}
-function Tt(e5 = 6) {
-  let n5 = "";
-  for (let t3 = 36; n5.length < e5; )
-    n5 += (Math.random() * t3 | 0).toString(t3);
-  return n5;
-}
-function Wt(e5, n5 = 1e3, t3 = false) {
-  let i2, o3 = null, r2 = false;
-  return (...s3) => new Promise((a4) => {
-    const c2 = t3 && !r2;
-    o3 && clearTimeout(o3), o3 = setTimeout(() => {
-      o3 = null, t3 && !r2 || (i2 = e5(...s3), a4(i2));
-    }, n5), c2 && (r2 = true, i2 = e5(...s3), a4(i2));
-  });
-}
-function $t(e5) {
-  return kt(e5) || It(e5) || Ct(e5) || !xt(e5) || wt(e5) && e5.every($t) || Ot(e5) && Object.values(e5).every($t);
-}
-function Ht(e5) {
-  return $t(e5) ? e5 : void 0;
-}
-function _t(e5, n5, t3) {
-  return function(...i2) {
-    try {
-      return e5(...i2);
-    } catch (e6) {
-      if (!n5)
-        return;
-      return n5(e6);
-    } finally {
-      t3?.();
-    }
-  };
-}
-function Kt(e5, n5, t3) {
-  return async function(...i2) {
-    try {
-      return await e5(...i2);
-    } catch (e6) {
-      if (!n5)
-        return;
-      return await n5(e6);
-    } finally {
-      await t3?.();
-    }
-  };
-}
-async function Ft(e5, n5) {
-  const [t3, i2] = (e5.name || "").split(" ");
-  if (!n5 || !t3 || !i2)
-    return {};
-  let o3, r2 = "", s3 = t3, a4 = i2;
-  const c2 = (n6) => {
-    if (n6)
-      return (n6 = wt(n6) ? n6 : [n6]).find((n7) => !n7.condition || n7.condition(e5));
-  };
-  n5[s3] || (s3 = "*");
-  const l3 = n5[s3];
-  return l3 && (l3[a4] || (a4 = "*"), o3 = c2(l3[a4])), o3 || (s3 = "*", a4 = "*", o3 = c2(n5[s3]?.[a4])), o3 && (r2 = `${s3} ${a4}`), { eventMapping: o3, mappingKey: r2 };
-}
-async function Gt(e5, n5 = {}, t3 = {}) {
-  if (!xt(e5))
-    return;
-  const i2 = Ot(e5) && e5.consent || t3.consent || t3.collector?.consent, o3 = wt(n5) ? n5 : [n5];
-  for (const n6 of o3) {
-    const o4 = await Kt(Qt)(e5, n6, { ...t3, consent: i2 });
-    if (xt(o4))
-      return o4;
-  }
-}
-async function Qt(e5, n5, t3 = {}) {
-  const { collector: i2, consent: o3 } = t3;
-  return (wt(n5) ? n5 : [n5]).reduce(async (n6, r2) => {
-    const s3 = await n6;
-    if (s3)
-      return s3;
-    const a4 = It(r2) ? { key: r2 } : r2;
-    if (!Object.keys(a4).length)
-      return;
-    const { condition: c2, consent: l3, fn: d2, key: u, loop: p2, map: m, set: b, validate: g2, value: f } = a4;
-    if (c2 && !await Kt(c2)(e5, r2, i2))
-      return;
-    if (l3 && !zt(l3, o3))
-      return f;
-    let h3 = xt(f) ? f : e5;
-    if (d2 && (h3 = await Kt(d2)(e5, r2, t3)), u && (h3 = Lt(e5, u, f)), p2) {
-      const [n7, i3] = p2, o4 = "this" === n7 ? [e5] : await Gt(e5, n7, t3);
-      wt(o4) && (h3 = (await Promise.all(o4.map((e6) => Gt(e6, i3, t3)))).filter(xt));
-    } else
-      m ? h3 = await Object.entries(m).reduce(async (n7, [i3, o4]) => {
-        const r3 = await n7, s4 = await Gt(e5, o4, t3);
-        return xt(s4) && (r3[i3] = s4), r3;
-      }, Promise.resolve({})) : b && (h3 = await Promise.all(b.map((n7) => Qt(e5, n7, t3))));
-    g2 && !await Kt(g2)(h3) && (h3 = void 0);
-    const y2 = Ht(h3);
-    return xt(y2) ? y2 : Ht(f);
-  }, Promise.resolve(void 0));
-}
-async function Xt(e5, n5, t3) {
-  n5.policy && await Promise.all(Object.entries(n5.policy).map(async ([n6, i3]) => {
-    const o4 = await Gt(e5, i3, { collector: t3 });
-    e5 = Mt(e5, n6, o4);
-  }));
-  const { eventMapping: i2, mappingKey: o3 } = await Ft(e5, n5.mapping);
-  i2?.policy && await Promise.all(Object.entries(i2.policy).map(async ([n6, i3]) => {
-    const o4 = await Gt(e5, i3, { collector: t3 });
-    e5 = Mt(e5, n6, o4);
-  }));
-  let r2 = n5.data && await Gt(e5, n5.data, { collector: t3 });
-  if (i2) {
-    if (i2.ignore)
-      return { event: e5, data: r2, mapping: i2, mappingKey: o3, ignore: true };
-    if (i2.name && (e5.name = i2.name), i2.data) {
-      const n6 = i2.data && await Gt(e5, i2.data, { collector: t3 });
-      r2 = Ot(r2) && Ot(n6) ? vt(r2, n6) : n6;
-    }
-  }
-  return { event: e5, data: r2, mapping: i2, mappingKey: o3, ignore: false };
-}
-function ei(e5, n5 = false) {
-  n5 && console.dir(e5, { depth: 4 });
-}
-function ni(e5) {
-  const n5 = String(e5), t3 = n5.split("?")[1] || n5;
-  return _t(() => {
-    const e6 = new URLSearchParams(t3), n6 = {};
-    return e6.forEach((e7, t4) => {
-      const i2 = t4.split(/[[\]]+/).filter(Boolean);
-      let o3 = n6;
-      i2.forEach((n7, t5) => {
-        const r2 = t5 === i2.length - 1;
-        if (wt(o3)) {
-          const s3 = parseInt(n7, 10);
-          r2 ? o3[s3] = Rt(e7) : (o3[s3] = o3[s3] || (isNaN(parseInt(i2[t5 + 1], 10)) ? {} : []), o3 = o3[s3]);
-        } else
-          Ot(o3) && (r2 ? o3[n7] = Rt(e7) : (o3[n7] = o3[n7] || (isNaN(parseInt(i2[t5 + 1], 10)) ? {} : []), o3 = o3[n7]));
-      });
-    }), n6;
-  })();
-}
-function ai(e5, n5, t3) {
-  return function(...i2) {
-    let o3;
-    const r2 = "post" + n5, s3 = t3["pre" + n5], a4 = t3[r2];
-    return o3 = s3 ? s3({ fn: e5 }, ...i2) : e5(...i2), a4 && (o3 = a4({ fn: e5, result: o3 }, ...i2)), o3;
-  };
-}
-
-// node_modules/@walkeros/collector/dist/index.mjs
+// node_modules/@walkeros/core/dist/dev.mjs
 var e2 = Object.defineProperty;
-var n2 = { Action: "action", Actions: "actions", Config: "config", Consent: "consent", Context: "context", Custom: "custom", Destination: "destination", Elb: "elb", Globals: "globals", Hook: "hook", Init: "init", Link: "link", On: "on", Prefix: "data-elb", Ready: "ready", Run: "run", Session: "session", User: "user", Walker: "walker" };
-var o = { Commands: n2, Utils: { Storage: { Cookie: "cookie", Local: "local", Session: "session" } } };
-var t = {};
-((n5, o3) => {
-  for (var t3 in o3)
-    e2(n5, t3, { get: o3[t3], enumerable: true });
-})(t, { schemas: () => a, settingsSchema: () => s });
-var s = { type: "object", properties: { run: { type: "boolean", description: "Automatically start the collector pipeline on initialization" }, sources: { type: "object", description: "Configurations for sources providing events to the collector" }, destinations: { type: "object", description: "Configurations for destinations receiving processed events" }, consent: { type: "object", description: "Initial consent state to control routing of events" }, verbose: { type: "boolean", description: "Enable verbose logging for debugging" }, onError: { type: "string", description: "Error handler triggered when the collector encounters failures" }, onLog: { type: "string", description: "Custom log handler for collector messages" } } };
-var a = { settings: s };
-async function h2(e5, n5, o3) {
-  const { code: t3, config: s3 = {}, env: a4 = {} } = n5, i2 = o3 || s3 || { init: false }, c2 = { ...t3, config: i2, env: q2(t3.env, a4) };
-  let r2 = c2.config.id;
-  if (!r2)
-    do {
-      r2 = Tt(4);
-    } while (e5.destinations[r2]);
-  return e5.destinations[r2] = c2, false !== c2.config.queue && (c2.queue = [...e5.queue]), y(e5, void 0, { [r2]: c2 });
+var n2 = (n5, i3) => {
+  for (var o2 in i3)
+    e2(n5, o2, { get: i3[o2], enumerable: true });
+};
+var i = {};
+n2(i, { BaseContextConfig: () => B2, BatchConfig: () => N2, CollectorSchemas: () => cn, ConsentSchema: () => X2, Counter: () => d2, DeepPartialEventSchema: () => re2, DestinationReferenceSchema: () => Nn, DestinationSchemas: () => Me, DestinationsMapConfig: () => A2, DisabledConfig: () => I2, EntitiesSchema: () => ie, EntitySchema: () => ne, EventSchema: () => oe, FlowConfigSchema: () => Vn, FlowSchemas: () => Tn, GenericEnvConfig: () => z2, GenericSettingsConfig: () => L3, HandlersConfig: () => P3, IdConfig: () => D2, Identifier: () => c, InitConfig: () => x2, LoopSchema: () => he, MapSchema: () => ve, MappingResultSchema: () => Pe, MappingSchemas: () => be, OptionalPrimitiveValue: () => m2, OrderedPropertiesSchema: () => $3, PartialEventSchema: () => te, PolicySchema: () => we, PrimaryConfig: () => R, PrimitiveSchema: () => Un, PrimitiveValue: () => u, ProcessingControlConfig: () => V2, PropertiesSchema: () => F2, PropertySchema: () => Q2, PropertyTypeSchema: () => _, QueueConfig: () => E, RequiredBoolean: () => s, RequiredNumber: () => a, RequiredString: () => r, RuleSchema: () => ke, RulesSchema: () => Ce, RuntimeInstanceConfig: () => U2, SetSchema: () => Se, SetupSchema: () => Wn, SourceReferenceSchema: () => Bn, SourceSchema: () => ee, SourceSchemas: () => Cn, SourceTypeSchema: () => K2, SourcesMapConfig: () => W3, TaggingVersion: () => p2, Timestamp: () => l, UserSchema: () => Y2, UtilitySchemas: () => b3, ValueConfigSchema: () => ye, ValueSchema: () => ge, ValuesSchema: () => fe, VerboseConfig: () => J, VersionSchema: () => Z, WalkerOSSchemas: () => H2, configJsonSchema: () => Fn, consentJsonSchema: () => me, createArraySchema: () => Zn, createConsentConfig: () => T2, createDataTransformationConfig: () => q3, createEnumSchema: () => ei, createMappingRulesConfig: () => M2, createObjectSchema: () => Xn, createPolicyConfig: () => O2, createTupleSchema: () => ni, destinationReferenceJsonSchema: () => Kn, entityJsonSchema: () => pe, eventJsonSchema: () => ae, loopJsonSchema: () => De, mapJsonSchema: () => Ie, orderedPropertiesJsonSchema: () => de, parseConfig: () => Gn, parseSetup: () => An, partialEventJsonSchema: () => se, policyJsonSchema: () => Re, propertiesJsonSchema: () => le, ruleJsonSchema: () => Le, rulesJsonSchema: () => ze, safeParseConfig: () => _n, safeParseSetup: () => Hn, setJsonSchema: () => xe, setupJsonSchema: () => Qn, sourceReferenceJsonSchema: () => $n, sourceTypeJsonSchema: () => ue, userJsonSchema: () => ce, valueConfigJsonSchema: () => Ee, valueJsonSchema: () => Je, z: () => external_exports, zodToSchema: () => ii });
+function t(e5, n5, i3 = "draft-7") {
+  return external_exports.toJSONSchema(e5, { target: i3 });
 }
-async function y(e5, n5, o3) {
-  const { allowed: t3, consent: s3, globals: a4, user: i2 } = e5;
-  if (!t3)
-    return w2({ ok: false });
-  n5 && e5.queue.push(n5), o3 || (o3 = e5.destinations);
-  const u = await Promise.all(Object.entries(o3 || {}).map(async ([o4, t4]) => {
-    let u2 = (t4.queue || []).map((e6) => ({ ...e6, consent: s3 }));
-    if (t4.queue = [], n5) {
-      const e6 = Jt(n5);
-      u2.push(e6);
+var r = external_exports.string();
+var a = external_exports.number();
+var s = external_exports.boolean();
+var c = external_exports.string().min(1);
+var l = external_exports.number().int().positive();
+var d2 = external_exports.number().int().nonnegative();
+var p2 = external_exports.number().describe("Tagging version number");
+var u = external_exports.union([external_exports.string(), external_exports.number(), external_exports.boolean()]);
+var m2 = u.optional();
+var b3 = {};
+n2(b3, { ErrorHandlerSchema: () => h2, HandlerSchema: () => v, LogHandlerSchema: () => S2, StorageSchema: () => f, StorageTypeSchema: () => g2, errorHandlerJsonSchema: () => k3, handlerJsonSchema: () => j2, logHandlerJsonSchema: () => C2, storageJsonSchema: () => w2, storageTypeJsonSchema: () => y3 });
+var g2 = external_exports.enum(["local", "session", "cookie"]).describe("Storage mechanism: local, session, or cookie");
+var f = external_exports.object({ Local: external_exports.literal("local"), Session: external_exports.literal("session"), Cookie: external_exports.literal("cookie") }).describe("Storage type constants for type-safe references");
+var h2 = external_exports.any().describe("Error handler function: (error, state?) => void");
+var S2 = external_exports.any().describe("Log handler function: (message, verbose?) => void");
+var v = external_exports.object({ Error: h2.describe("Error handler function"), Log: S2.describe("Log handler function") }).describe("Handler interface with error and log functions");
+var y3 = t(g2);
+var w2 = t(f);
+var k3 = t(h2);
+var C2 = t(S2);
+var j2 = t(v);
+var P3 = external_exports.object({ onError: h2.optional().describe("Error handler function: (error, state?) => void"), onLog: S2.optional().describe("Log handler function: (message, verbose?) => void") }).partial();
+var J = external_exports.object({ verbose: external_exports.boolean().describe("Enable verbose logging for debugging").optional() }).partial();
+var E = external_exports.object({ queue: external_exports.boolean().describe("Whether to queue events when consent is not granted").optional() }).partial();
+var D2 = external_exports.object({}).partial();
+var x2 = external_exports.object({ init: external_exports.boolean().describe("Whether to initialize immediately").optional(), loadScript: external_exports.boolean().describe("Whether to load external script (for web destinations)").optional() }).partial();
+var I2 = external_exports.object({ disabled: external_exports.boolean().describe("Set to true to disable").optional() }).partial();
+var R = external_exports.object({ primary: external_exports.boolean().describe("Mark as primary (only one can be primary)").optional() }).partial();
+var L3 = external_exports.object({ settings: external_exports.any().optional().describe("Implementation-specific configuration") }).partial();
+var z2 = external_exports.object({ env: external_exports.any().optional().describe("Environment dependencies (platform-specific)") }).partial();
+function q3(e5, n5) {
+  return external_exports.object({ data: external_exports.union([e5, n5]).optional().describe("Data transformation rules") }).partial();
+}
+function M2(e5) {
+  return external_exports.object({ mapping: e5.optional().describe("Event mapping rules") }).partial();
+}
+function O2(e5) {
+  return external_exports.object({ policy: e5.optional().describe("Pre-processing policy rules") }).partial();
+}
+function T2(e5) {
+  return external_exports.object({ consent: e5.optional().describe("Required consent states") }).partial();
+}
+var U2 = external_exports.object({ type: external_exports.string().optional().describe("Instance type identifier"), config: external_exports.unknown().describe("Instance configuration") }).partial();
+var B2 = external_exports.object({ collector: external_exports.unknown().describe("Collector instance (runtime object)"), config: external_exports.unknown().describe("Configuration"), env: external_exports.unknown().describe("Environment dependencies") }).partial();
+var N2 = external_exports.object({ batch: external_exports.number().optional().describe("Batch size: bundle N events for batch processing"), batched: external_exports.unknown().optional().describe("Batch of events to be processed") }).partial();
+var V2 = external_exports.object({ ignore: external_exports.boolean().describe("Set to true to skip processing").optional(), condition: external_exports.string().optional().describe("Condition function: return true to process") }).partial();
+var W3 = external_exports.object({ sources: external_exports.record(external_exports.string(), external_exports.unknown()).describe("Map of source instances") }).partial();
+var A2 = external_exports.object({ destinations: external_exports.record(external_exports.string(), external_exports.unknown()).describe("Map of destination instances") }).partial();
+var H2 = {};
+n2(H2, { ConsentSchema: () => X2, DeepPartialEventSchema: () => re2, EntitiesSchema: () => ie, EntitySchema: () => ne, EventSchema: () => oe, OrderedPropertiesSchema: () => $3, PartialEventSchema: () => te, PropertiesSchema: () => F2, PropertySchema: () => Q2, PropertyTypeSchema: () => _, SourceSchema: () => ee, SourceTypeSchema: () => K2, UserSchema: () => Y2, VersionSchema: () => Z, consentJsonSchema: () => me, entityJsonSchema: () => pe, eventJsonSchema: () => ae, orderedPropertiesJsonSchema: () => de, partialEventJsonSchema: () => se, propertiesJsonSchema: () => le, sourceTypeJsonSchema: () => ue, userJsonSchema: () => ce });
+var G;
+var _ = external_exports.lazy(() => external_exports.union([external_exports.boolean(), external_exports.string(), external_exports.number(), external_exports.record(external_exports.string(), Q2)]));
+var Q2 = external_exports.lazy(() => external_exports.union([_, external_exports.array(_)]));
+var F2 = external_exports.record(external_exports.string(), Q2.optional()).describe("Flexible property collection with optional values");
+var $3 = external_exports.record(external_exports.string(), external_exports.tuple([Q2, external_exports.number()]).optional()).describe("Ordered properties with [value, order] tuples for priority control");
+var K2 = external_exports.union([external_exports.enum(["web", "server", "app", "other"]), external_exports.string()]).describe("Source type: web, server, app, other, or custom");
+var X2 = external_exports.record(external_exports.string(), external_exports.boolean()).describe("Consent requirement mapping (group name \u2192 state)");
+var Y2 = F2.and(external_exports.object({ id: external_exports.string().optional().describe("User identifier"), device: external_exports.string().optional().describe("Device identifier"), session: external_exports.string().optional().describe("Session identifier"), hash: external_exports.string().optional().describe("Hashed identifier"), address: external_exports.string().optional().describe("User address"), email: external_exports.string().email().optional().describe("User email address"), phone: external_exports.string().optional().describe("User phone number"), userAgent: external_exports.string().optional().describe("Browser user agent string"), browser: external_exports.string().optional().describe("Browser name"), browserVersion: external_exports.string().optional().describe("Browser version"), deviceType: external_exports.string().optional().describe("Device type (mobile, desktop, tablet)"), os: external_exports.string().optional().describe("Operating system"), osVersion: external_exports.string().optional().describe("Operating system version"), screenSize: external_exports.string().optional().describe("Screen dimensions"), language: external_exports.string().optional().describe("User language"), country: external_exports.string().optional().describe("User country"), region: external_exports.string().optional().describe("User region/state"), city: external_exports.string().optional().describe("User city"), zip: external_exports.string().optional().describe("User postal code"), timezone: external_exports.string().optional().describe("User timezone"), ip: external_exports.string().optional().describe("User IP address"), internal: external_exports.boolean().optional().describe("Internal user flag (employee, test user)") })).describe("User identification and properties");
+var Z = F2.and(external_exports.object({ source: r.describe('Walker implementation version (e.g., "2.0.0")'), tagging: p2 })).describe("Walker version information");
+var ee = F2.and(external_exports.object({ type: K2.describe("Source type identifier"), id: r.describe("Source identifier (typically URL on web)"), previous_id: r.describe("Previous source identifier (typically referrer on web)") })).describe("Event source information");
+var ne = external_exports.lazy(() => external_exports.object({ entity: external_exports.string().describe("Entity name"), data: F2.describe("Entity-specific properties"), nested: external_exports.array(ne).describe("Nested child entities"), context: $3.describe("Entity context data") })).describe("Nested entity structure with recursive nesting support");
+var ie = external_exports.array(ne).describe("Array of nested entities");
+var oe = external_exports.object({ name: external_exports.string().describe('Event name in "entity action" format (e.g., "page view", "product add")'), data: F2.describe("Event-specific properties"), context: $3.describe("Ordered context properties with priorities"), globals: F2.describe("Global properties shared across events"), custom: F2.describe("Custom implementation-specific properties"), user: Y2.describe("User identification and attributes"), nested: ie.describe("Related nested entities"), consent: X2.describe("Consent states at event time"), id: c.describe("Unique event identifier (timestamp-based)"), trigger: r.describe("Event trigger identifier"), entity: r.describe("Parsed entity from event name"), action: r.describe("Parsed action from event name"), timestamp: l.describe("Unix timestamp in milliseconds since epoch"), timing: a.describe("Event processing timing information"), group: r.describe("Event grouping identifier"), count: d2.describe("Event count in session"), version: Z.describe("Walker version information"), source: ee.describe("Event source information") }).describe("Complete walkerOS event structure");
+var te = oe.partial().describe("Partial event structure with all fields optional");
+var re2 = oe.partial().describe("Partial event structure with all top-level fields optional");
+var ae = t(oe);
+var se = t(te);
+var ce = t(Y2);
+var le = t(F2);
+var de = t($3);
+var pe = t(ne);
+var ue = t(K2);
+var me = t(X2);
+var be = {};
+n2(be, { ConfigSchema: () => je, LoopSchema: () => he, MapSchema: () => ve, PolicySchema: () => we, ResultSchema: () => Pe, RuleSchema: () => ke, RulesSchema: () => Ce, SetSchema: () => Se, ValueConfigSchema: () => ye, ValueSchema: () => ge, ValuesSchema: () => fe, configJsonSchema: () => qe, loopJsonSchema: () => De, mapJsonSchema: () => Ie, policyJsonSchema: () => Re, ruleJsonSchema: () => Le, rulesJsonSchema: () => ze, setJsonSchema: () => xe, valueConfigJsonSchema: () => Ee, valueJsonSchema: () => Je });
+var ge = external_exports.lazy(() => external_exports.union([external_exports.string().describe('String value or property path (e.g., "data.id")'), external_exports.number().describe("Numeric value"), external_exports.boolean().describe("Boolean value"), external_exports.lazy(() => G), external_exports.array(ge).describe("Array of values")]));
+var fe = external_exports.array(ge).describe("Array of transformation values");
+var he = external_exports.lazy(() => external_exports.tuple([ge, ge]).describe("Loop transformation: [source, transform] tuple for array processing"));
+var Se = external_exports.lazy(() => external_exports.array(ge).describe("Set: Array of values for selection or combination"));
+var ve = external_exports.lazy(() => external_exports.record(external_exports.string(), ge).describe("Map: Object mapping keys to transformation values"));
+var ye = G = external_exports.object({ key: external_exports.string().optional().describe('Property path to extract from event (e.g., "data.id", "user.email")'), value: external_exports.union([external_exports.string(), external_exports.number(), external_exports.boolean()]).optional().describe("Static primitive value"), fn: external_exports.string().optional().describe("Custom transformation function as string (serialized)"), map: ve.optional().describe("Object mapping: transform event data to structured output"), loop: he.optional().describe("Loop transformation: [source, transform] for array processing"), set: Se.optional().describe("Set of values: combine or select from multiple values"), consent: X2.optional().describe("Required consent states to include this value"), condition: external_exports.string().optional().describe("Condition function as string: return true to include value"), validate: external_exports.string().optional().describe("Validation function as string: return true if value is valid") }).refine((e5) => Object.keys(e5).length > 0, { message: "ValueConfig must have at least one property" }).describe("Value transformation configuration with multiple strategies");
+var we = external_exports.record(external_exports.string(), ge).describe("Policy rules for event pre-processing (key \u2192 value mapping)");
+var ke = external_exports.object({ batch: external_exports.number().optional().describe("Batch size: bundle N events for batch processing"), condition: external_exports.string().optional().describe("Condition function as string: return true to process event"), consent: X2.optional().describe("Required consent states to process this event"), settings: external_exports.any().optional().describe("Destination-specific settings for this event mapping"), data: external_exports.union([ge, fe]).optional().describe("Data transformation rules for event"), ignore: external_exports.boolean().optional().describe("Set to true to skip processing this event"), name: external_exports.string().optional().describe('Custom event name override (e.g., "view_item" for "product view")'), policy: we.optional().describe("Event-level policy overrides (applied after config-level policy)") }).describe("Mapping rule for specific entity-action combination");
+var Ce = external_exports.record(external_exports.string(), external_exports.record(external_exports.string(), external_exports.union([ke, external_exports.array(ke)])).optional()).describe("Nested mapping rules: { entity: { action: Rule | Rule[] } } with wildcard support");
+var je = external_exports.object({ consent: X2.optional().describe("Required consent states to process any events"), data: external_exports.union([ge, fe]).optional().describe("Global data transformation applied to all events"), mapping: Ce.optional().describe("Entity-action specific mapping rules"), policy: we.optional().describe("Pre-processing policy rules applied before mapping") }).describe("Shared mapping configuration for sources and destinations");
+var Pe = external_exports.object({ eventMapping: ke.optional().describe("Resolved mapping rule for event"), mappingKey: external_exports.string().optional().describe('Mapping key used (e.g., "product.view")') }).describe("Mapping resolution result");
+var Je = t(ge);
+var Ee = t(ye);
+var De = t(he);
+var xe = t(Se);
+var Ie = t(ve);
+var Re = t(we);
+var Le = t(ke);
+var ze = t(Ce);
+var qe = t(je);
+var Me = {};
+n2(Me, { BatchSchema: () => He, ConfigSchema: () => Oe, ContextSchema: () => Be, DLQSchema: () => Ze, DataSchema: () => Ge, DestinationPolicySchema: () => Ue, DestinationsSchema: () => $e, InitDestinationsSchema: () => Fe, InitSchema: () => Qe, InstanceSchema: () => _e, PartialConfigSchema: () => Te, PushBatchContextSchema: () => Ve, PushContextSchema: () => Ne, PushEventSchema: () => We, PushEventsSchema: () => Ae, PushResultSchema: () => Xe, RefSchema: () => Ke, ResultSchema: () => Ye, batchJsonSchema: () => rn, configJsonSchema: () => en, contextJsonSchema: () => on, instanceJsonSchema: () => an, partialConfigJsonSchema: () => nn, pushContextJsonSchema: () => tn, resultJsonSchema: () => sn });
+var Oe = external_exports.object({ consent: X2.optional().describe("Required consent states to send events to this destination"), settings: external_exports.any().describe("Implementation-specific configuration").optional(), data: external_exports.union([ge, fe]).optional().describe("Global data transformation applied to all events for this destination"), env: external_exports.any().describe("Environment dependencies (platform-specific)").optional(), id: c.describe("Destination instance identifier (defaults to destination key)").optional(), init: external_exports.boolean().describe("Whether to initialize immediately").optional(), loadScript: external_exports.boolean().describe("Whether to load external script (for web destinations)").optional(), mapping: Ce.optional().describe("Entity-action specific mapping rules for this destination"), policy: we.optional().describe("Pre-processing policy rules applied before event mapping"), queue: external_exports.boolean().describe("Whether to queue events when consent is not granted").optional(), verbose: external_exports.boolean().describe("Enable verbose logging for debugging").optional(), onError: h2.optional(), onLog: S2.optional() }).describe("Destination configuration");
+var Te = Oe.partial().describe("Partial destination configuration with all fields optional");
+var Ue = we.describe("Destination policy rules for event pre-processing");
+var Be = external_exports.object({ collector: external_exports.unknown().describe("Collector instance (runtime object)"), config: Oe.describe("Destination configuration"), data: external_exports.union([external_exports.unknown(), external_exports.array(external_exports.unknown())]).optional().describe("Transformed event data"), env: external_exports.unknown().describe("Environment dependencies") }).describe("Destination context for init and push functions");
+var Ne = Be.extend({ mapping: ke.optional().describe("Resolved mapping rule for this specific event") }).describe("Push context with event-specific mapping");
+var Ve = Ne.describe("Batch push context with event-specific mapping");
+var We = external_exports.object({ event: oe.describe("The event to process"), mapping: ke.optional().describe("Mapping rule for this event") }).describe("Event with optional mapping for batch processing");
+var Ae = external_exports.array(We).describe("Array of events with mappings");
+var He = external_exports.object({ key: external_exports.string().describe('Batch key (usually mapping key like "product.view")'), events: external_exports.array(oe).describe("Array of events in batch"), data: external_exports.array(external_exports.union([external_exports.unknown(), external_exports.array(external_exports.unknown())]).optional()).describe("Transformed data for each event"), mapping: ke.optional().describe("Shared mapping rule for batch") }).describe("Batch of events grouped by mapping key");
+var Ge = external_exports.union([external_exports.unknown(), external_exports.array(external_exports.unknown())]).optional().describe("Transformed event data (Property, undefined, or array)");
+var _e = external_exports.object({ config: Oe.describe("Destination configuration"), queue: external_exports.array(oe).optional().describe("Queued events awaiting consent"), dlq: external_exports.array(external_exports.tuple([oe, external_exports.unknown()])).optional().describe("Dead letter queue (failed events with errors)"), type: external_exports.string().optional().describe("Destination type identifier"), env: external_exports.unknown().optional().describe("Environment dependencies"), init: external_exports.unknown().optional().describe("Initialization function"), push: external_exports.unknown().describe("Push function for single events"), pushBatch: external_exports.unknown().optional().describe("Batch push function"), on: external_exports.unknown().optional().describe("Event lifecycle hook function") }).describe("Destination instance (runtime object with functions)");
+var Qe = external_exports.object({ code: _e.describe("Destination instance with implementation"), config: Te.optional().describe("Partial configuration overrides"), env: external_exports.unknown().optional().describe("Partial environment overrides") }).describe("Destination initialization configuration");
+var Fe = external_exports.record(external_exports.string(), Qe).describe("Map of destination IDs to initialization configurations");
+var $e = external_exports.record(external_exports.string(), _e).describe("Map of destination IDs to runtime instances");
+var Ke = external_exports.object({ id: external_exports.string().describe("Destination ID"), destination: _e.describe("Destination instance") }).describe("Destination reference (ID + instance)");
+var Xe = external_exports.object({ queue: external_exports.array(oe).optional().describe("Events queued (awaiting consent)"), error: external_exports.unknown().optional().describe("Error if push failed") }).describe("Push operation result");
+var Ye = external_exports.object({ successful: external_exports.array(Ke).describe("Destinations that processed successfully"), queued: external_exports.array(Ke).describe("Destinations that queued events"), failed: external_exports.array(Ke).describe("Destinations that failed to process") }).describe("Overall destination processing result");
+var Ze = external_exports.array(external_exports.tuple([oe, external_exports.unknown()])).describe("Dead letter queue: [(event, error), ...]");
+var en = t(Oe);
+var nn = t(Te);
+var on = t(Be);
+var tn = t(Ne);
+var rn = t(He);
+var an = t(_e);
+var sn = t(Ye);
+var cn = {};
+n2(cn, { CommandTypeSchema: () => ln, ConfigSchema: () => dn, DestinationsSchema: () => gn, InitConfigSchema: () => un, InstanceSchema: () => fn, PushContextSchema: () => mn, SessionDataSchema: () => pn, SourcesSchema: () => bn, commandTypeJsonSchema: () => hn, configJsonSchema: () => Sn, initConfigJsonSchema: () => yn, instanceJsonSchema: () => kn, pushContextJsonSchema: () => wn, sessionDataJsonSchema: () => vn });
+var ln = external_exports.union([external_exports.enum(["action", "config", "consent", "context", "destination", "elb", "globals", "hook", "init", "link", "run", "user", "walker"]), external_exports.string()]).describe("Collector command type: standard commands or custom string for extensions");
+var dn = external_exports.object({ run: external_exports.boolean().describe("Whether to run collector automatically on initialization").optional(), tagging: p2, globalsStatic: F2.describe("Static global properties that persist across collector runs"), sessionStatic: external_exports.record(external_exports.string(), external_exports.unknown()).describe("Static session data that persists across collector runs"), verbose: external_exports.boolean().describe("Enable verbose logging for debugging"), onError: h2.optional(), onLog: S2.optional() }).describe("Core collector configuration");
+var pn = F2.and(external_exports.object({ isStart: external_exports.boolean().describe("Whether this is a new session start"), storage: external_exports.boolean().describe("Whether storage is available"), id: c.describe("Session identifier").optional(), start: l.describe("Session start timestamp").optional(), marketing: external_exports.literal(true).optional().describe("Marketing attribution flag"), updated: l.describe("Last update timestamp").optional(), isNew: external_exports.boolean().describe("Whether this is a new session").optional(), device: c.describe("Device identifier").optional(), count: d2.describe("Event count in session").optional(), runs: d2.describe("Number of runs").optional() })).describe("Session state and tracking data");
+var un = dn.partial().extend({ consent: X2.optional().describe("Initial consent state"), user: Y2.optional().describe("Initial user data"), globals: F2.optional().describe("Initial global properties"), sources: external_exports.unknown().optional().describe("Source configurations"), destinations: external_exports.unknown().optional().describe("Destination configurations"), custom: F2.optional().describe("Initial custom implementation-specific properties") }).describe("Collector initialization configuration with initial state");
+var mn = external_exports.object({ mapping: je.optional().describe("Source-level mapping configuration") }).describe("Push context with optional source mapping");
+var bn = external_exports.record(external_exports.string(), external_exports.unknown()).describe("Map of source IDs to source instances");
+var gn = external_exports.record(external_exports.string(), external_exports.unknown()).describe("Map of destination IDs to destination instances");
+var fn = external_exports.object({ push: external_exports.unknown().describe("Push function for processing events"), command: external_exports.unknown().describe("Command function for walker commands"), allowed: external_exports.boolean().describe("Whether event processing is allowed"), config: dn.describe("Current collector configuration"), consent: X2.describe("Current consent state"), count: external_exports.number().describe("Event count (increments with each event)"), custom: F2.describe("Custom implementation-specific properties"), sources: bn.describe("Registered source instances"), destinations: gn.describe("Registered destination instances"), globals: F2.describe("Current global properties"), group: external_exports.string().describe("Event grouping identifier"), hooks: external_exports.unknown().describe("Lifecycle hook functions"), on: external_exports.unknown().describe("Event lifecycle configuration"), queue: external_exports.array(oe).describe("Queued events awaiting processing"), round: external_exports.number().describe("Collector run count (increments with each run)"), session: external_exports.union([pn]).describe("Current session state"), timing: external_exports.number().describe("Event processing timing information"), user: Y2.describe("Current user data"), version: external_exports.string().describe("Walker implementation version") }).describe("Collector instance with state and methods");
+var hn = t(ln);
+var Sn = t(dn);
+var vn = t(pn);
+var yn = t(un);
+var wn = t(mn);
+var kn = t(fn);
+var Cn = {};
+n2(Cn, { BaseEnvSchema: () => jn, ConfigSchema: () => Pn, InitSchema: () => Dn, InitSourceSchema: () => xn, InitSourcesSchema: () => In, InstanceSchema: () => En, PartialConfigSchema: () => Jn, baseEnvJsonSchema: () => Rn, configJsonSchema: () => Ln, initSourceJsonSchema: () => Mn, initSourcesJsonSchema: () => On, instanceJsonSchema: () => qn, partialConfigJsonSchema: () => zn });
+var jn = external_exports.object({ push: external_exports.unknown().describe("Collector push function"), command: external_exports.unknown().describe("Collector command function"), sources: external_exports.unknown().optional().describe("Map of registered source instances"), elb: external_exports.unknown().describe("Public API function (alias for collector.push)") }).catchall(external_exports.unknown()).describe("Base environment for dependency injection - platform-specific sources extend this");
+var Pn = je.extend({ settings: external_exports.any().describe("Implementation-specific configuration").optional(), env: jn.optional().describe("Environment dependencies (platform-specific)"), id: c.describe("Source identifier (defaults to source key)").optional(), onError: h2.optional(), disabled: external_exports.boolean().describe("Set to true to disable").optional(), primary: external_exports.boolean().describe("Mark as primary (only one can be primary)").optional() }).describe("Source configuration with mapping and environment");
+var Jn = Pn.partial().describe("Partial source configuration with all fields optional");
+var En = external_exports.object({ type: external_exports.string().describe('Source type identifier (e.g., "browser", "dataLayer")'), config: Pn.describe("Current source configuration"), push: external_exports.any().describe("Push function - THE HANDLER (flexible signature for platform compatibility)"), destroy: external_exports.any().optional().describe("Cleanup function called when source is removed"), on: external_exports.unknown().optional().describe("Lifecycle hook function for event types") }).describe("Source instance with push handler and lifecycle methods");
+var Dn = external_exports.any().describe("Source initialization function: (config, env) => Instance | Promise<Instance>");
+var xn = external_exports.object({ code: Dn.describe("Source initialization function"), config: Jn.optional().describe("Partial configuration overrides"), env: jn.partial().optional().describe("Partial environment overrides"), primary: external_exports.boolean().optional().describe("Mark as primary source (only one can be primary)") }).describe("Source initialization configuration");
+var In = external_exports.record(external_exports.string(), xn).describe("Map of source IDs to initialization configurations");
+var Rn = t(jn);
+var Ln = t(Pn);
+var zn = t(Jn);
+var qn = t(En);
+var Mn = t(xn);
+var On = t(In);
+var Tn = {};
+n2(Tn, { ConfigSchema: () => Vn, DestinationReferenceSchema: () => Nn, PrimitiveSchema: () => Un, SetupSchema: () => Wn, SourceReferenceSchema: () => Bn, configJsonSchema: () => Fn, destinationReferenceJsonSchema: () => Kn, parseConfig: () => Gn, parseSetup: () => An, safeParseConfig: () => _n, safeParseSetup: () => Hn, setupJsonSchema: () => Qn, sourceReferenceJsonSchema: () => $n });
+var Un = external_exports.union([external_exports.string(), external_exports.number(), external_exports.boolean()]).describe("Primitive value: string, number, or boolean");
+var Bn = external_exports.object({ package: external_exports.string().min(1, "Package name cannot be empty").describe('Package specifier with optional version (e.g., "@walkeros/web-source-browser@2.0.0")'), config: external_exports.unknown().optional().describe("Source-specific configuration object"), env: external_exports.unknown().optional().describe("Source environment configuration"), primary: external_exports.boolean().optional().describe("Mark as primary source (provides main elb). Only one source should be primary.") }).describe("Source package reference with configuration");
+var Nn = external_exports.object({ package: external_exports.string().min(1, "Package name cannot be empty").describe('Package specifier with optional version (e.g., "@walkeros/web-destination-gtag@2.0.0")'), config: external_exports.unknown().optional().describe("Destination-specific configuration object"), env: external_exports.unknown().optional().describe("Destination environment configuration") }).describe("Destination package reference with configuration");
+var Vn = external_exports.object({ platform: external_exports.enum(["web", "server"], { error: 'Platform must be "web" or "server"' }).describe('Target platform: "web" for browser-based tracking, "server" for Node.js server-side collection'), sources: external_exports.record(external_exports.string(), Bn).optional().describe("Source configurations (data capture) keyed by unique identifier"), destinations: external_exports.record(external_exports.string(), Nn).optional().describe("Destination configurations (data output) keyed by unique identifier"), collector: external_exports.unknown().optional().describe("Collector configuration for event processing (uses Collector.InitConfig)"), env: external_exports.record(external_exports.string(), external_exports.string()).optional().describe("Environment-specific variables (override root-level variables)") }).passthrough().describe("Single environment configuration for one deployment target");
+var Wn = external_exports.object({ version: external_exports.literal(1, { error: "Only version 1 is currently supported" }).describe("Configuration schema version (currently only 1 is supported)"), $schema: external_exports.string().url("Schema URL must be a valid URL").optional().describe('JSON Schema reference for IDE validation (e.g., "https://walkeros.io/schema/flow/v1.json")'), variables: external_exports.record(external_exports.string(), Un).optional().describe("Shared variables for interpolation across all environments (use ${VAR_NAME:default} syntax)"), definitions: external_exports.record(external_exports.string(), external_exports.unknown()).optional().describe("Reusable configuration definitions (reference with JSON Schema $ref syntax)"), environments: external_exports.record(external_exports.string(), Vn).refine((e5) => Object.keys(e5).length > 0, { message: "At least one environment is required" }).describe("Named environment configurations (e.g., web_prod, server_stage)") }).describe("Complete multi-environment walkerOS configuration (walkeros.config.json)");
+function An(e5) {
+  return Wn.parse(e5);
+}
+function Hn(e5) {
+  return Wn.safeParse(e5);
+}
+function Gn(e5) {
+  return Vn.parse(e5);
+}
+function _n(e5) {
+  return Vn.safeParse(e5);
+}
+var Qn = external_exports.toJSONSchema(Wn, { target: "draft-7" });
+var Fn = t(Vn);
+var $n = t(Bn);
+var Kn = t(Nn);
+function Xn(e5, n5) {
+  const i3 = [], o2 = {};
+  for (const [n6, t4] of Object.entries(e5)) {
+    t4.required && i3.push(n6);
+    const e6 = { type: t4.type };
+    if (t4.description && (e6.description = t4.description), t4.pattern && (e6.pattern = t4.pattern), void 0 !== t4.minLength && (e6.minLength = t4.minLength), void 0 !== t4.maxLength && (e6.maxLength = t4.maxLength), void 0 !== t4.minimum && (e6.minimum = t4.minimum), void 0 !== t4.maximum && (e6.maximum = t4.maximum), t4.enum && (e6.enum = [...t4.enum]), void 0 !== t4.default && (e6.default = t4.default), "object" === t4.type && t4.properties) {
+      const n7 = {};
+      for (const [e7, i4] of Object.entries(t4.properties))
+        n7[e7] = Yn(i4);
+      e6.properties = n7;
     }
-    if (!u2.length)
-      return { id: o4, destination: t4, skipped: true };
-    const l4 = [], m2 = u2.filter((e6) => {
-      const n6 = zt(t4.config.consent, s3, e6.consent);
-      return !n6 || (e6.consent = n6, l4.push(e6), false);
-    });
-    if (t4.queue.concat(m2), !l4.length)
-      return { id: o4, destination: t4, queue: u2 };
-    if (!await Kt(v2)(e5, t4))
-      return { id: o4, destination: t4, queue: u2 };
-    let f2 = false;
-    return t4.dlq || (t4.dlq = []), await Promise.all(l4.map(async (n6) => (n6.globals = vt(a4, n6.globals), n6.user = vt(i2, n6.user), await Kt(k2, (o5) => (e5.config.onError && e5.config.onError(o5, e5), f2 = true, t4.dlq.push([n6, o5]), false))(e5, t4, n6), n6))), { id: o4, destination: t4, error: f2 };
-  })), l3 = [], m = [], f = [];
-  for (const e6 of u) {
-    if (e6.skipped)
-      continue;
-    const n6 = e6.destination, o4 = { id: e6.id, destination: n6 };
-    e6.error ? f.push(o4) : e6.queue && e6.queue.length ? (n6.queue = (n6.queue || []).concat(e6.queue), m.push(o4)) : l3.push(o4);
+    "array" === t4.type && t4.items && (e6.items = Yn(t4.items)), o2[n6] = e6;
   }
-  return w2({ ok: !f.length, event: n5, successful: l3, queued: m, failed: f });
+  const t3 = { type: "object", properties: o2 };
+  return n5 && (t3.title = n5), i3.length > 0 && (t3.required = i3), t3;
 }
-async function v2(e5, n5) {
-  if (n5.init && !n5.config.init) {
-    const o3 = { collector: e5, config: n5.config, env: q2(n5.env, n5.config.env) }, t3 = await ai(n5.init, "DestinationInit", e5.hooks)(o3);
-    if (false === t3)
-      return t3;
-    n5.config = { ...t3 || n5.config, init: true };
+function Yn(e5) {
+  const n5 = { type: e5.type };
+  if (e5.description && (n5.description = e5.description), e5.pattern && (n5.pattern = e5.pattern), void 0 !== e5.minLength && (n5.minLength = e5.minLength), void 0 !== e5.maxLength && (n5.maxLength = e5.maxLength), void 0 !== e5.minimum && (n5.minimum = e5.minimum), void 0 !== e5.maximum && (n5.maximum = e5.maximum), e5.enum && (n5.enum = [...e5.enum]), void 0 !== e5.default && (n5.default = e5.default), "object" === e5.type && e5.properties) {
+    const i3 = {};
+    for (const [n6, o2] of Object.entries(e5.properties))
+      i3[n6] = Yn(o2);
+    n5.properties = i3;
   }
-  return true;
+  return "array" === e5.type && e5.items && (n5.items = Yn(e5.items)), n5;
 }
-async function k2(e5, n5, o3) {
-  const { config: t3 } = n5, s3 = await Xt(o3, t3, e5);
-  if (s3.ignore)
-    return false;
-  const a4 = { collector: e5, config: t3, data: s3.data, mapping: s3.mapping, env: q2(n5.env, t3.env) }, i2 = s3.mapping;
-  if (i2?.batch && n5.pushBatch) {
-    const o4 = i2.batched || { key: s3.mappingKey || "", events: [], data: [] };
-    o4.events.push(s3.event), xt(s3.data) && o4.data.push(s3.data), i2.batchFn = i2.batchFn || Wt((e6, n6) => {
-      const a5 = { collector: n6, config: t3, data: s3.data, mapping: i2, env: q2(e6.env, t3.env) };
-      ai(e6.pushBatch, "DestinationPushBatch", n6.hooks)(o4, a5), o4.events = [], o4.data = [];
-    }, i2.batch), i2.batched = o4, i2.batchFn?.(n5, e5);
-  } else
-    await ai(n5.push, "DestinationPush", e5.hooks)(s3.event, a4);
-  return true;
+function Zn(e5, n5) {
+  const i3 = { type: "array", items: Yn(e5) };
+  return void 0 !== n5?.minItems && (i3.minItems = n5.minItems), void 0 !== n5?.maxItems && (i3.maxItems = n5.maxItems), n5?.description && (i3.description = n5.description), n5?.title && (i3.title = n5.title), i3;
 }
-function w2(e5) {
-  return vt({ ok: !e5?.failed?.length, successful: [], queued: [], failed: [] }, e5);
+function ei(e5, n5 = "string", i3) {
+  const o2 = { type: n5, enum: [...e5] };
+  return i3?.description && (o2.description = i3.description), i3?.title && (o2.title = i3.title), o2;
 }
-async function C2(e5, n5 = {}) {
-  const o3 = {};
-  for (const [e6, t3] of Object.entries(n5)) {
-    const { code: n6, config: s3 = {}, env: a4 = {} } = t3, i2 = { ...n6.config, ...s3 }, c2 = q2(n6.env, a4);
-    o3[e6] = { ...n6, config: i2, env: c2 };
-  }
-  return o3;
+function ni(e5, n5, i3) {
+  return Zn({ type: "object" }, { minItems: 2, maxItems: 2, description: i3 || "Tuple with exactly 2 elements [source, transform]" });
 }
-function q2(e5, n5) {
-  return e5 || n5 ? n5 ? e5 && Ot(e5) && Ot(n5) ? { ...e5, ...n5 } : n5 : e5 : {};
-}
-function O2(e5, n5, o3) {
-  const t3 = e5.on, s3 = t3[n5] || [], a4 = wt(o3) ? o3 : [o3];
-  a4.forEach((e6) => {
-    s3.push(e6);
-  }), t3[n5] = s3, A2(e5, n5, a4);
-}
-function A2(e5, n5, t3, s3) {
-  let a4, i2 = t3 || [];
-  switch (t3 || (i2 = e5.on[n5] || []), n5) {
-    case o.Commands.Consent:
-      a4 = s3 || e5.consent;
-      break;
-    case o.Commands.Session:
-      a4 = e5.session;
-      break;
-    case o.Commands.Ready:
-    case o.Commands.Run:
-    default:
-      a4 = void 0;
-  }
-  if (Object.values(e5.sources).forEach((e6) => {
-    e6.on && _t(e6.on)(n5, a4);
-  }), Object.values(e5.destinations).forEach((e6) => {
-    if (e6.on) {
-      const o3 = e6.on;
-      _t(o3)(n5, a4);
-    }
-  }), i2.length)
-    switch (n5) {
-      case o.Commands.Consent:
-        !function(e6, n6, o3) {
-          const t4 = o3 || e6.consent;
-          n6.forEach((n7) => {
-            Object.keys(t4).filter((e7) => e7 in n7).forEach((o4) => {
-              _t(n7[o4])(e6, t4);
-            });
-          });
-        }(e5, i2, s3);
-        break;
-      case o.Commands.Ready:
-      case o.Commands.Run:
-        !function(e6, n6) {
-          e6.allowed && n6.forEach((n7) => {
-            _t(n7)(e6);
-          });
-        }(e5, i2);
-        break;
-      case o.Commands.Session:
-        !function(e6, n6) {
-          if (!e6.session)
-            return;
-          n6.forEach((n7) => {
-            _t(n7)(e6, e6.session);
-          });
-        }(e5, i2);
-    }
-}
-async function S2(e5, n5) {
-  const { consent: o3 } = e5;
-  let t3 = false;
-  const s3 = {};
-  return Object.entries(n5).forEach(([e6, n6]) => {
-    const o4 = !!n6;
-    s3[e6] = o4, t3 = t3 || o4;
-  }), e5.consent = vt(o3, s3), A2(e5, "consent", void 0, s3), t3 ? y(e5) : w2({ ok: true });
-}
-async function B2(e5, n5, t3, s3) {
-  let a4;
-  switch (n5) {
-    case o.Commands.Config:
-      Ot(t3) && vt(e5.config, t3, { shallow: false });
-      break;
-    case o.Commands.Consent:
-      Ot(t3) && (a4 = await S2(e5, t3));
-      break;
-    case o.Commands.Custom:
-      Ot(t3) && (e5.custom = vt(e5.custom, t3));
-      break;
-    case o.Commands.Destination:
-      Ot(t3) && Pt(t3.push) && (a4 = await h2(e5, { code: t3 }, s3));
-      break;
-    case o.Commands.Globals:
-      Ot(t3) && (e5.globals = vt(e5.globals, t3));
-      break;
-    case o.Commands.On:
-      It(t3) && O2(e5, t3, s3);
-      break;
-    case o.Commands.Ready:
-      A2(e5, "ready");
-      break;
-    case o.Commands.Run:
-      a4 = await G(e5, t3);
-      break;
-    case o.Commands.Session:
-      A2(e5, "session");
-      break;
-    case o.Commands.User:
-      Ot(t3) && vt(e5.user, t3, { shallow: false });
-  }
-  return a4 || { ok: true, successful: [], queued: [], failed: [] };
-}
-function F(e5, n5) {
-  if (!n5.name)
-    throw new Error("Event name is required");
-  const [o3, t3] = n5.name.split(" ");
-  if (!o3 || !t3)
-    throw new Error("Event name is invalid");
-  ++e5.count;
-  const { timestamp: s3 = Date.now(), group: a4 = e5.group, count: i2 = e5.count } = n5, { name: c2 = `${o3} ${t3}`, data: r2 = {}, context: u = {}, globals: l3 = e5.globals, custom: d2 = {}, user: m = e5.user, nested: f = [], consent: g2 = e5.consent, id: p2 = `${s3}-${a4}-${i2}`, trigger: b = "", entity: h3 = o3, action: y2 = t3, timing: v3 = 0, version: k3 = { source: e5.version, tagging: e5.config.tagging || 0 }, source: w3 = { type: "collector", id: "", previous_id: "" } } = n5;
-  return { name: c2, data: r2, context: u, globals: l3, custom: d2, user: m, nested: f, consent: g2, id: p2, trigger: b, entity: h3, action: y2, timestamp: s3, timing: v3, group: a4, count: i2, version: k3, source: w3 };
-}
-async function G(e5, n5) {
-  e5.allowed = true, e5.count = 0, e5.group = Tt(), e5.timing = Date.now(), n5 && (n5.consent && (e5.consent = vt(e5.consent, n5.consent)), n5.user && (e5.user = vt(e5.user, n5.user)), n5.globals && (e5.globals = vt(e5.config.globalsStatic || {}, n5.globals)), n5.custom && (e5.custom = vt(e5.custom, n5.custom))), Object.values(e5.destinations).forEach((e6) => {
-    e6.queue = [];
-  }), e5.queue = [], e5.round++;
-  const o3 = await y(e5);
-  return A2(e5, "run"), o3;
-}
-function _2(e5, n5) {
-  return ai(async (o3, t3 = {}) => await Kt(async () => {
-    let s3 = o3;
-    if (t3.mapping) {
-      const n6 = await Xt(s3, t3.mapping, e5);
-      if (n6.ignore)
-        return w2({ ok: true });
-      if (t3.mapping.consent) {
-        if (!zt(t3.mapping.consent, e5.consent, n6.event.consent))
-          return w2({ ok: true });
-      }
-      s3 = n6.event;
-    }
-    const a4 = n5(s3), i2 = F(e5, a4);
-    return await y(e5, i2);
-  }, () => w2({ ok: false }))(), "Push", e5.hooks);
-}
-async function J2(e5) {
-  const n5 = vt({ globalsStatic: {}, sessionStatic: {}, tagging: 0, verbose: false, onLog: o3, run: true }, e5, { merge: false, extend: false });
-  function o3(e6, o4) {
-    ei({ message: e6 }, o4 || n5.verbose);
-  }
-  n5.onLog = o3;
-  const t3 = { ...n5.globalsStatic, ...e5.globals }, s3 = { allowed: false, config: n5, consent: e5.consent || {}, count: 0, custom: e5.custom || {}, destinations: {}, globals: t3, group: "", hooks: {}, on: {}, queue: [], round: 0, session: void 0, timing: Date.now(), user: e5.user || {}, version: "0.3.1", sources: {}, push: void 0, command: void 0 };
-  return s3.push = _2(s3, (e6) => ({ timing: Math.round((Date.now() - s3.timing) / 10) / 100, source: { type: "collector", id: "", previous_id: "" }, ...e6 })), s3.command = function(e6, n6) {
-    return ai(async (o4, t4, s4) => await Kt(async () => await n6(e6, o4, t4, s4), () => w2({ ok: false }))(), "Command", e6.hooks);
-  }(s3, B2), s3.destinations = await C2(0, e5.destinations || {}), s3;
-}
-async function Q(e5, n5 = {}) {
-  const o3 = {};
-  for (const [t3, s3] of Object.entries(n5)) {
-    const { code: n6, config: a4 = {}, env: i2 = {}, primary: c2 } = s3, r2 = { push: (n7, o4 = {}) => e5.push(n7, { ...o4, mapping: a4 }), command: e5.command, sources: e5.sources, elb: e5.sources.elb.push, ...i2 }, u = await Kt(n6)(a4, r2);
-    u && (c2 && (u.config = { ...u.config, primary: c2 }), o3[t3] = u);
-  }
-  return o3;
-}
-async function T2(e5) {
-  e5 = e5 || {};
-  const n5 = await J2(e5), o3 = (t3 = n5, { type: "elb", config: {}, push: async (e6, n6, o4, s4, a5, i3) => {
-    if ("string" == typeof e6 && e6.startsWith("walker ")) {
-      const s5 = e6.replace("walker ", "");
-      return t3.command(s5, n6, o4);
-    }
-    let c3;
-    if ("string" == typeof e6)
-      c3 = { name: e6 }, n6 && "object" == typeof n6 && !Array.isArray(n6) && (c3.data = n6);
-    else {
-      if (!e6 || "object" != typeof e6)
-        return { ok: false, successful: [], queued: [], failed: [] };
-      c3 = e6, n6 && "object" == typeof n6 && !Array.isArray(n6) && (c3.data = { ...c3.data || {}, ...n6 });
-    }
-    return s4 && "object" == typeof s4 && (c3.context = s4), a5 && Array.isArray(a5) && (c3.nested = a5), i3 && "object" == typeof i3 && (c3.custom = i3), t3.push(c3);
-  } });
-  var t3;
-  n5.sources.elb = o3;
-  const s3 = await Q(n5, e5.sources || {});
-  Object.assign(n5.sources, s3);
-  const { consent: a4, user: i2, globals: c2, custom: r2 } = e5;
-  a4 && await n5.command("consent", a4), i2 && await n5.command("user", i2), c2 && Object.assign(n5.globals, c2), r2 && Object.assign(n5.custom, r2), n5.config.run && await n5.command("run");
-  let u = o3.push;
-  const l3 = Object.values(n5.sources).filter((e6) => "elb" !== e6.type), d2 = l3.find((e6) => e6.config.primary);
-  return d2 ? u = d2.push : l3.length > 0 && (u = l3[0].push), { collector: n5, elb: u };
+function ii(e5) {
+  return external_exports.toJSONSchema(e5, { target: "draft-7" });
 }
 
 // node_modules/@walkeros/server-source-express/dist/index.mjs
-import e3 from "express";
-import o2 from "cors";
-var r = external_exports.enum(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]);
+var r2 = external_exports.enum(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]);
 var n3 = external_exports.union([external_exports.string(), external_exports.array(external_exports.string()), external_exports.literal("*")]);
-var a2 = external_exports.object({ origin: n3.describe("Allowed origins (* for all, URL string, or array of URLs)").optional(), methods: external_exports.array(r).describe("Allowed HTTP methods").optional(), headers: external_exports.array(external_exports.string()).describe("Allowed request headers").optional(), credentials: external_exports.boolean().describe("Allow credentials (cookies, authorization headers)").optional(), maxAge: external_exports.number().int().positive().describe("Preflight cache duration in seconds").optional() });
-var l = external_exports.object({ port: external_exports.number().int().min(0).max(65535).describe("HTTP server port to listen on. Use 0 for random available port. If not provided, server will not start (app only mode)").optional(), path: external_exports.string().describe("Event collection endpoint path").default("/collect"), cors: external_exports.union([external_exports.boolean(), a2]).describe("CORS configuration: false = disabled, true = allow all origins (default), object = custom configuration").default(true), status: external_exports.boolean().describe("Enable health check endpoints (/health, /ready)").default(true) });
-function c(e5, o3 = true) {
-  if (false !== o3)
-    if (true === o3)
+var a2 = external_exports.object({ origin: n3.describe("Allowed origins (* for all, URL string, or array of URLs)").optional(), methods: external_exports.array(r2).describe("Allowed HTTP methods").optional(), headers: external_exports.array(external_exports.string()).describe("Allowed request headers").optional(), credentials: external_exports.boolean().describe("Allow credentials (cookies, authorization headers)").optional(), maxAge: external_exports.number().int().positive().describe("Preflight cache duration in seconds").optional() });
+var l2 = external_exports.object({ port: external_exports.number().int().min(0).max(65535).describe("HTTP server port to listen on. Use 0 for random available port. If not provided, server will not start (app only mode)").optional(), path: external_exports.string().describe("Event collection endpoint path").default("/collect"), cors: external_exports.union([external_exports.boolean(), a2]).describe("CORS configuration: false = disabled, true = allow all origins (default), object = custom configuration").default(true), status: external_exports.boolean().describe("Enable health check endpoints (/health, /ready)").default(true) });
+function c2(e5, o2 = true) {
+  if (false !== o2)
+    if (true === o2)
       e5.set("Access-Control-Allow-Origin", "*"), e5.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS"), e5.set("Access-Control-Allow-Headers", "Content-Type");
     else {
-      if (o3.origin) {
-        const s3 = Array.isArray(o3.origin) ? o3.origin.join(", ") : o3.origin;
+      if (o2.origin) {
+        const s3 = Array.isArray(o2.origin) ? o2.origin.join(", ") : o2.origin;
         e5.set("Access-Control-Allow-Origin", s3);
       }
-      o3.methods && e5.set("Access-Control-Allow-Methods", o3.methods.join(", ")), o3.headers && e5.set("Access-Control-Allow-Headers", o3.headers.join(", ")), o3.credentials && e5.set("Access-Control-Allow-Credentials", "true"), o3.maxAge && e5.set("Access-Control-Max-Age", String(o3.maxAge));
+      o2.methods && e5.set("Access-Control-Allow-Methods", o2.methods.join(", ")), o2.headers && e5.set("Access-Control-Allow-Headers", o2.headers.join(", ")), o2.credentials && e5.set("Access-Control-Allow-Credentials", "true"), o2.maxAge && e5.set("Access-Control-Max-Age", String(o2.maxAge));
     }
 }
-var d = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
-var p = async (t3, r2) => {
-  const n5 = l.parse(t3.settings || {}), a4 = e3();
+var d3 = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
+var p3 = async (t3, r3) => {
+  const n5 = l2.parse(t3.settings || {}), a4 = e3();
   if (a4.use(e3.json({ limit: "1mb" })), false !== n5.cors) {
     const e5 = true === n5.cors ? {} : n5.cors;
-    a4.use(o2(e5));
+    a4.use(o(e5));
   }
-  const i2 = async (e5, o3) => {
+  const i3 = async (e5, o2) => {
     try {
       if ("OPTIONS" === e5.method)
-        return c(o3, n5.cors), void o3.status(204).send();
+        return c2(o2, n5.cors), void o2.status(204).send();
       if ("GET" === e5.method) {
-        const t4 = ni(e5.url);
-        return t4 && "object" == typeof t4 && await r2.push(t4), o3.set("Content-Type", "image/gif"), o3.set("Cache-Control", "no-cache, no-store, must-revalidate"), void o3.send(d);
+        const t4 = Y(e5.url);
+        return t4 && "object" == typeof t4 && await r3.push(t4), o2.set("Content-Type", "image/gif"), o2.set("Cache-Control", "no-cache, no-store, must-revalidate"), void o2.send(d3);
       }
       if ("POST" === e5.method) {
         const s3 = e5.body;
-        return s3 && "object" == typeof s3 ? (await r2.push(s3), void o3.json({ success: true, timestamp: Date.now() })) : void o3.status(400).json({ success: false, error: "Invalid event: body must be an object" });
+        return s3 && "object" == typeof s3 ? (await r3.push(s3), void o2.json({ success: true, timestamp: Date.now() })) : void o2.status(400).json({ success: false, error: "Invalid event: body must be an object" });
       }
-      o3.status(405).json({ success: false, error: "Method not allowed. Use POST, GET, or OPTIONS." });
+      o2.status(405).json({ success: false, error: "Method not allowed. Use POST, GET, or OPTIONS." });
     } catch (e6) {
-      o3.status(500).json({ success: false, error: e6 instanceof Error ? e6.message : "Internal server error" });
+      o2.status(500).json({ success: false, error: e6 instanceof Error ? e6.message : "Internal server error" });
     }
   };
-  let p2;
-  if (a4.post(n5.path, i2), a4.get(n5.path, i2), a4.options(n5.path, i2), n5.status && (a4.get("/health", (e5, o3) => {
-    o3.json({ status: "ok", timestamp: Date.now(), source: "express" });
-  }), a4.get("/ready", (e5, o3) => {
-    o3.json({ status: "ready", timestamp: Date.now(), source: "express" });
+  let p4;
+  if (a4.post(n5.path, i3), a4.get(n5.path, i3), a4.options(n5.path, i3), n5.status && (a4.get("/health", (e5, o2) => {
+    o2.json({ status: "ok", timestamp: Date.now(), source: "express" });
+  }), a4.get("/ready", (e5, o2) => {
+    o2.json({ status: "ready", timestamp: Date.now(), source: "express" });
   })), void 0 !== n5.port) {
-    p2 = a4.listen(n5.port, () => {
+    p4 = a4.listen(n5.port, () => {
       console.log(`\u2705 Express source listening on port ${n5.port}`), console.log(`   POST ${n5.path} - Event collection (JSON body)`), console.log(`   GET ${n5.path} - Pixel tracking (query params)`), console.log(`   OPTIONS ${n5.path} - CORS preflight`), n5.status && (console.log("   GET /health - Health check"), console.log("   GET /ready - Readiness check"));
     });
     const e5 = () => {
-      p2 && p2.close();
+      p4 && p4.close();
     };
     process.on("SIGTERM", e5), process.on("SIGINT", e5);
   }
-  return { type: "express", config: { ...t3, settings: n5 }, push: i2, app: a4, server: p2 };
+  return { type: "express", config: { ...t3, settings: n5 }, push: i3, app: a4, server: p4 };
 };
 
 // node_modules/@walkeros/destination-demo/dist/index.mjs
 var e4 = Object.defineProperty;
-var n4 = (n5, o3) => {
-  for (var i2 in o3)
-    e4(n5, i2, { get: o3[i2], enumerable: true });
+var n4 = (n5, o2) => {
+  for (var i3 in o2)
+    e4(n5, i3, { get: o2[i3], enumerable: true });
 };
-var i = {};
-n4(i, { env: () => t2 });
+var i2 = {};
+n4(i2, { env: () => t2 });
 var t2 = {};
-n4(t2, { init: () => s2, push: () => a3, simulation: () => l2 });
+n4(t2, { init: () => s2, push: () => a3, simulation: () => l3 });
 var s2 = { log: void 0 };
 var a3 = { log: Object.assign(() => {
 }, {}) };
-var l2 = ["call:log"];
-var g = { type: "demo", config: { settings: { name: "demo" } }, init({ config: e5, env: n5 }) {
+var l3 = ["call:log"];
+var g3 = { type: "demo", config: { settings: { name: "demo" } }, init({ config: e5, env: n5 }) {
   (n5?.log || console.log)(`[${{ name: "demo", ...e5?.settings }.name}] initialized`);
-}, push(e5, { config: n5, env: o3 }) {
-  const i2 = o3?.log || console.log, t3 = { name: "demo", ...n5?.settings }, s3 = t3.values ? function(e6, n6) {
-    const o4 = {};
-    for (const i3 of n6) {
-      const n7 = i3.split(".").reduce((e7, n8) => e7?.[n8], e6);
-      void 0 !== n7 && (o4[i3] = n7);
+}, push(e5, { config: n5, env: o2 }) {
+  const i3 = o2?.log || console.log, t3 = { name: "demo", ...n5?.settings }, s3 = t3.values ? function(e6, n6) {
+    const o3 = {};
+    for (const i4 of n6) {
+      const n7 = i4.split(".").reduce((e7, n8) => e7?.[n8], e6);
+      void 0 !== n7 && (o3[i4] = n7);
     }
-    return o4;
+    return o3;
   }(e5, t3.values) : e5;
-  i2(`[${t3.name}] ${JSON.stringify(s3, null, 2)}`);
+  i3(`[${t3.name}] ${JSON.stringify(s3, null, 2)}`);
 } };
 
 // entry.js
 async function entry_default(context = {}) {
-  const { tracker } = context;
-  const __simulationTracker = tracker;
-  const window = typeof globalThis.window !== "undefined" ? globalThis.window : void 0;
-  const document2 = typeof globalThis.document !== "undefined" ? globalThis.document : void 0;
   const config2 = {
     sources: {
       http: {
-        code: p,
+        code: p3,
         config: {
           settings: {
             path: "/collect",
@@ -13338,7 +13508,7 @@ async function entry_default(context = {}) {
     },
     destinations: {
       demo: {
-        code: g,
+        code: g3,
         config: {
           settings: {
             name: "Server Collection Demo",
@@ -13362,7 +13532,7 @@ async function entry_default(context = {}) {
       }
     }
   };
-  const result = await T2(config2);
+  const result = await z(config2);
   return result;
 }
 export {
