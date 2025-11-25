@@ -17,6 +17,8 @@ describe('Bundler', () => {
   beforeEach(async () => {
     // Ensure test output directory exists
     await fs.ensureDir(testOutputDir);
+    // Clean build cache to ensure each test starts fresh
+    await fs.remove(path.join('.tmp', 'cache', 'builds'));
     // Create a silent logger for tests
     logger = createLogger({ silent: true });
     // Mock console.log to suppress output during tests

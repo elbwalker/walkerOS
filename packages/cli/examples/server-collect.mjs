@@ -477,7 +477,7 @@ async function W2(n5) {
     Q({ message: n6 }, o3 || e5.verbose);
   }
   e5.onLog = o2;
-  const s3 = { ...e5.globalsStatic, ...n5.globals }, t3 = { allowed: false, config: e5, consent: n5.consent || {}, count: 0, custom: n5.custom || {}, destinations: {}, globals: s3, group: "", hooks: {}, on: {}, queue: [], round: 0, session: void 0, timing: Date.now(), user: n5.user || {}, version: "0.3.1", sources: {}, push: void 0, command: void 0 };
+  const s3 = { ...e5.globalsStatic, ...n5.globals }, t3 = { allowed: false, config: e5, consent: n5.consent || {}, count: 0, custom: n5.custom || {}, destinations: {}, globals: s3, group: "", hooks: {}, on: {}, queue: [], round: 0, session: void 0, timing: Date.now(), user: n5.user || {}, version: "0.4.1", sources: {}, push: void 0, command: void 0 };
   return t3.push = I(t3, (n6) => ({ timing: Math.round((Date.now() - t3.timing) / 10) / 100, source: { type: "collector", id: "", previous_id: "" }, ...n6 })), t3.command = function(n6, e6) {
     return re(async (o3, s4, t4) => await W(async () => await e6(n6, o3, s4, t4), () => b2({ ok: false }))(), "Command", n6.hooks);
   }(t3, P2), t3.destinations = await k2(0, n5.destinations || {}), t3;

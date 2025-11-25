@@ -8,12 +8,37 @@ import { downloadPackages } from './package-manager.js';
 import { TemplateEngine } from './template-engine.js';
 import type { Logger } from '../../core/index.js';
 import { getTempDir } from '../../config/index.js';
+import {
+  isBuildCached,
+  getCachedBuild,
+  cacheBuild,
+} from '../../core/build-cache.js';
 
 export interface BundleStats {
   totalSize: number;
   packages: { name: string; size: number }[];
   buildTime: number;
   treeshakingEffective: boolean;
+}
+
+/**
+ * Generate cache key content from flow config and build options.
+ * Excludes non-deterministic fields (tempDir, output) from cache key.
+ */
+function generateCacheKeyContent(
+  flowConfig: Flow.Config,
+  buildOptions: BuildOptions,
+): string {
+  const configForCache = {
+    flow: flowConfig,
+    build: {
+      ...buildOptions,
+      // Exclude non-deterministic fields from cache key
+      tempDir: undefined,
+      output: undefined,
+    },
+  };
+  return JSON.stringify(configForCache);
 }
 
 export async function bundleCore(
@@ -31,6 +56,46 @@ export async function bundleCore(
       ? buildOptions.tempDir
       : path.resolve(buildOptions.tempDir)
     : getTempDir();
+
+  // Check build cache if caching is enabled
+  if (buildOptions.cache !== false) {
+    const configContent = generateCacheKeyContent(flowConfig, buildOptions);
+
+    const cached = await isBuildCached(configContent);
+    if (cached) {
+      const cachedBuild = await getCachedBuild(configContent);
+      if (cachedBuild) {
+        logger.info('✨ Using cached build');
+
+        // Write cached build to output
+        const outputPath = path.resolve(buildOptions.output);
+        await fs.ensureDir(path.dirname(outputPath));
+        await fs.writeFile(outputPath, cachedBuild);
+
+        logger.gray(`Output: ${outputPath}`);
+        logger.success('✅ Build completed (from cache)');
+
+        // Return stats if requested
+        if (showStats) {
+          const stats = await fs.stat(outputPath);
+          // Generate basic package stats from buildOptions
+          const packageStats = Object.entries(buildOptions.packages).map(
+            ([name, pkg]) => ({
+              name: `${name}@${pkg.version || 'latest'}`,
+              size: 0, // Size estimation not available for cached builds
+            }),
+          );
+          return {
+            totalSize: stats.size,
+            packages: packageStats,
+            buildTime: Date.now() - bundleStartTime,
+            treeshakingEffective: true,
+          };
+        }
+        return;
+      }
+    }
+  }
 
   try {
     // Step 1: Prepare temporary directory
@@ -123,7 +188,15 @@ export async function bundleCore(
 
     logger.gray(`Output: ${outputPath}`);
 
-    // Step 5: Collect stats if requested
+    // Step 5: Cache the build result if caching is enabled
+    if (buildOptions.cache !== false) {
+      const configContent = generateCacheKeyContent(flowConfig, buildOptions);
+      const buildOutput = await fs.readFile(outputPath, 'utf-8');
+      await cacheBuild(configContent, buildOutput);
+      logger.debug('Build cached for future use');
+    }
+
+    // Step 6: Collect stats if requested
     let stats: BundleStats | undefined;
     if (showStats) {
       stats = await collectBundleStats(
@@ -134,7 +207,7 @@ export async function bundleCore(
       );
     }
 
-    // Step 6: Cleanup
+    // Step 7: Cleanup
     // Only cleanup if we created our own temp dir (not shared with simulator)
     if (!buildOptions.tempDir) {
       await fs.remove(TEMP_DIR);

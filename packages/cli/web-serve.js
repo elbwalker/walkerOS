@@ -687,7 +687,7 @@
         session: void 0,
         timing: Date.now(),
         user: t.user || {},
-        version: '0.3.1',
+        version: '0.4.1',
         sources: {},
         push: void 0,
         command: void 0,
