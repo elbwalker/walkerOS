@@ -14,7 +14,7 @@
  * @packageDocumentation
  */
 
-import { z, toJsonSchema, zodToJsonSchema } from './validation';
+import { z, toJsonSchema } from './validation';
 
 // ========================================
 // Primitive Type Schemas
@@ -205,7 +205,7 @@ export const SetupSchema = z
  *
  * @example
  * ```typescript
- * import { parseSetup } from '@walkeros/core/schemas';
+ * import { parseSetup } from '@walkeros/core/dev';
  * import { readFileSync } from 'fs';
  *
  * const raw = JSON.parse(readFileSync('walkeros.config.json', 'utf8'));
@@ -225,7 +225,7 @@ export function parseSetup(data: unknown): z.infer<typeof SetupSchema> {
  *
  * @example
  * ```typescript
- * import { safeParseSetup } from '@walkeros/core/schemas';
+ * import { safeParseSetup } from '@walkeros/core/dev';
  *
  * const result = safeParseSetup(rawData);
  * if (result.success) {
@@ -248,7 +248,7 @@ export function safeParseSetup(data: unknown) {
  *
  * @example
  * ```typescript
- * import { parseConfig } from '@walkeros/core/schemas';
+ * import { parseConfig } from '@walkeros/core/dev';
  *
  * const envConfig = parseConfig(rawEnvData);
  * console.log(`Platform: ${envConfig.platform}`);
@@ -283,7 +283,7 @@ export function safeParseConfig(data: unknown) {
  *
  * @example
  * ```typescript
- * import { setupJsonSchema } from '@walkeros/core/schemas';
+ * import { setupJsonSchema } from '@walkeros/core/dev';
  * import { writeFileSync } from 'fs';
  *
  * writeFileSync(

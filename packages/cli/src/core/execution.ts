@@ -4,9 +4,13 @@
  * Determines whether to execute commands locally or in Docker.
  */
 
-import type { GlobalOptions } from '../types/global';
-import { executeInDocker, isDockerAvailable } from './docker';
-import type { Logger } from './logger';
+import type { GlobalOptions } from '../types/global.js';
+import {
+  executeInDocker,
+  executeRunInDocker,
+  isDockerAvailable,
+} from './docker.js';
+import type { Logger } from './logger.js';
 
 /**
  * Execution mode
@@ -20,7 +24,13 @@ export type ExecutionMode = 'local' | 'docker';
  * @returns Execution mode
  */
 export function getExecutionMode(options: GlobalOptions): ExecutionMode {
-  return options.local ? 'local' : 'docker';
+  // Force local mode if:
+  // 1. --local flag is provided, OR
+  // 2. Running inside a Docker container (WALKEROS_CONTAINER env var)
+  if (options.local || process.env.WALKEROS_CONTAINER === 'true') {
+    return 'local';
+  }
+  return 'docker';
 }
 
 /**
@@ -36,6 +46,7 @@ export type ExecuteHandler = () => Promise<void>;
  * @param dockerArgs - Docker command arguments
  * @param options - Global options
  * @param logger - Logger instance
+ * @param configFile - Optional config file path to mount in Docker
  */
 export async function executeCommand(
   localHandler: ExecuteHandler,
@@ -43,6 +54,7 @@ export async function executeCommand(
   dockerArgs: string[],
   options: GlobalOptions,
   logger?: Logger,
+  configFile?: string,
 ): Promise<void> {
   const mode = getExecutionMode(options);
 
@@ -77,6 +89,6 @@ export async function executeCommand(
     if (logger && !options.silent) {
       logger.info('🐳 Executing in Docker container...');
     }
-    await executeInDocker(dockerCommand, dockerArgs, options);
+    await executeInDocker(dockerCommand, dockerArgs, options, configFile);
   }
 }

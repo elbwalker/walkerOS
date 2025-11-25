@@ -1,10 +1,13 @@
+import { simulateCore, formatSimulationResult } from './simulator.js';
 import {
-  simulateCore,
-  parseEventInput,
-  formatSimulationResult,
-} from './simulator';
-import { createLogger, executeCommand } from '../../core';
-import type { SimulateCommandOptions } from './types';
+  createCommandLogger,
+  createLogger,
+  executeCommand,
+  getErrorMessage,
+  buildCommonDockerArgs,
+} from '../../core/index.js';
+import { loadJsonFromSource } from '../../config/index.js';
+import type { SimulateCommandOptions } from './types.js';
 
 /**
  * CLI command handler for simulate command
@@ -12,26 +15,22 @@ import type { SimulateCommandOptions } from './types';
 export async function simulateCommand(
   options: SimulateCommandOptions,
 ): Promise<void> {
-  const logger = createLogger({
-    verbose: options.verbose,
-    silent: options.silent ?? false,
-    json: options.json,
-  });
+  const logger = createCommandLogger(options);
 
-  // Build Docker args
-  const dockerArgs = [options.config];
+  // Build Docker args - start with common flags
+  const dockerArgs = buildCommonDockerArgs(options);
+  // Add simulate-specific flag
   if (options.event) dockerArgs.push('--event', options.event);
-  if (options.json) dockerArgs.push('--json');
-  if (options.verbose) dockerArgs.push('--verbose');
-  if (options.silent) dockerArgs.push('--silent');
 
   await executeCommand(
     async () => {
       const startTime = Date.now();
 
       try {
-        // Parse event input
-        const event = parseEventInput(options.event);
+        // Load event from inline JSON, file path, or URL
+        const event = await loadJsonFromSource(options.event, {
+          name: 'event',
+        });
 
         // Execute simulation
         const result = await simulateCore(options.config, event, {
@@ -58,8 +57,7 @@ export async function simulateCommand(
           process.exit(1);
         }
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = getErrorMessage(error);
 
         if (options.json) {
           // JSON error output - create output logger that always logs
@@ -87,6 +85,7 @@ export async function simulateCommand(
     dockerArgs,
     options,
     logger,
+    options.config,
   );
 }
 
@@ -151,5 +150,5 @@ export async function simulate(
 }
 
 // Re-export types and utilities for testing
-export * from './types';
-export * from './simulator';
+export * from './types.js';
+export * from './simulator.js';

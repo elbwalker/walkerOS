@@ -20,9 +20,6 @@ export * as SourceBrowser from './types';
 // Export examples
 export * as examples from './examples';
 
-// Export schemas
-export * as schemas from './schemas';
-
 // Export walker utility functions
 export {
   getAllEvents,
@@ -46,7 +43,7 @@ export const sourceBrowser: Source.Init<Types> = async (
   config: Partial<Source.Config<Types>>,
   env: Env,
 ) => {
-  const { elb, window, document } = env;
+  const { elb, command, window, document } = env;
 
   const userSettings = config?.settings || {};
   const actualWindow =
@@ -89,7 +86,7 @@ export const sourceBrowser: Source.Init<Types> = async (
     if (settings.session && elb) {
       const sessionConfig =
         typeof settings.session === 'boolean' ? {} : settings.session;
-      sessionStart(elb, sessionConfig);
+      sessionStart(elb, sessionConfig, command);
     }
 
     // Setup global triggers (click, submit) when DOM is ready
@@ -146,7 +143,7 @@ export const sourceBrowser: Source.Init<Types> = async (
         if (settings.session && context && elb) {
           const sessionConfig =
             typeof settings.session === 'boolean' ? {} : settings.session;
-          sessionStart(elb, sessionConfig);
+          sessionStart(elb, sessionConfig, command);
         }
         break;
 

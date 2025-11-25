@@ -14,13 +14,22 @@ export interface Settings {
   bigquery?: BigQueryOptions;
 }
 
+export interface InitSettings {
+  projectId: string;
+  client?: BigQuery;
+  datasetId?: string;
+  tableId?: string;
+  location?: string;
+  bigquery?: BigQueryOptions;
+}
+
 export interface Mapping {}
 
 export interface Env extends DestinationServer.Env {
   BigQuery?: typeof BigQuery;
 }
 
-export type Types = CoreDestination.Types<Settings, Mapping, Env>;
+export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
 
 export interface Destination extends DestinationServer.Destination<Types> {
   init: DestinationServer.InitFn<Types>;

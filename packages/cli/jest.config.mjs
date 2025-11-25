@@ -12,6 +12,8 @@ const config = {
   // requires spdx-license-ids and spdx-exceptions JSON modules, which Jest cannot resolve by default
   moduleNameMapper: {
     ...baseConfig.moduleNameMapper,
+    // ESM: Map .js imports to .ts files for Jest (TypeScript source files use .js extensions for Node.js ESM)
+    '^(\\.{1,2}/.*)\\.js$': '$1',
     '^spdx-license-ids$':
       '<rootDir>/../../node_modules/spdx-license-ids/index.json',
     '^spdx-license-ids/deprecated$':

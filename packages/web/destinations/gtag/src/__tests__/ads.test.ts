@@ -1,5 +1,5 @@
 import { initAds, pushAdsEvent } from '../ads';
-import { examples } from '../index';
+import { examples } from '../dev';
 import { clone } from '@walkeros/core';
 import type { AdsSettings, AdsMapping } from '../types';
 

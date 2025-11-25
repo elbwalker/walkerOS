@@ -1,6 +1,6 @@
 import type { Elb } from '@walkeros/core';
-import type { GlobalOptions } from '../../types';
-import type { ApiCall } from './tracker';
+import type { GlobalOptions } from '../../types/index.js';
+import type { ApiCall } from './tracker.js';
 
 export interface SimulateCommandOptions extends GlobalOptions {
   config: string;

@@ -1,6 +1,6 @@
 import type { WalkerOS, Source, Elb } from '@walkeros/core';
 import type { SettingsSchema } from '../schemas';
-import { z } from '@walkeros/core';
+import { z } from '@walkeros/core/dev';
 
 declare global {
   interface Window {
@@ -21,6 +21,9 @@ export interface Settings extends Omit<BaseSettings, 'filter'> {
   filter?: (event: unknown) => WalkerOS.PromiseOrValue<boolean>;
 }
 
+// InitSettings: user input (all optional)
+export type InitSettings = Partial<Settings>;
+
 export interface Mapping {}
 
 export type Push = Elb.Fn;
@@ -29,7 +32,9 @@ export interface Env extends Source.BaseEnv {
   window?: Window & typeof globalThis;
 }
 
-export type Types = Source.Types<Settings, Mapping, Push, Env>;
+export type Types = Source.Types<Settings, Mapping, Push, Env, InitSettings>;
+
+export type Config = Source.Config<Types>;
 
 export type DataLayerEvent = {
   event: string;

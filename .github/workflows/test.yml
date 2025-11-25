@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - '*'
+  pull_request:
+    branches:
+      - main
 
   workflow_dispatch:
 
@@ -22,5 +25,26 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm install
-      - run: npm run test
+      - name: Run tests
+        run: npm run test -- ${{ (github.ref == 'refs/heads/main' || github.base_ref == 'main') && '--force' || '' }}
+        env:
+          CI: true
+      - name: Show test summary
+        if: always()
+        run: |
+          echo "Test run complete. Check logs above for details."
+          if [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.base_ref }}" = "main" ]; then
+            echo "✅ Ran with --force (no cache) for main branch accuracy"
+          else
+            echo "✅ Used cache for faster feedback"
+          fi
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: |
+            packages/*/coverage/
+            packages/*/.tmp/
+          retention-days: 7
       - run: npm run lint

@@ -1,7 +1,7 @@
 import type { Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
 import { clone, createEvent } from '@walkeros/core';
-import { examples } from '../';
+import * as examples from '../examples';
 
 const { env } = examples;
 

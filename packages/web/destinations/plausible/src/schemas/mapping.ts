@@ -1,4 +1,4 @@
-import { z } from '@walkeros/core';
+import { z } from '@walkeros/core/dev';
 
 /**
  * Plausible Mapping Schema

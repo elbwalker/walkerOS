@@ -1,4 +1,5 @@
-import { destinationGtag, examples, resetConsentState } from '../index';
+import { destinationGtag, resetConsentState } from '../index';
+import { examples } from '../dev';
 import type { Settings, Rule, Include } from '../types';
 import { type WalkerOS, type Collector } from '@walkeros/core';
 import { clone } from '@walkeros/core';

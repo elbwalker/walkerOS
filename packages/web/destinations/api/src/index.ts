@@ -5,12 +5,6 @@ import { getEnv, sendWeb } from '@walkeros/web-core';
 // Types
 export * as DestinationAPI from './types';
 
-// Examples
-export * as examples from './examples';
-
-// Schemas
-export * as schemas from './schemas';
-
 export const destinationAPI: Destination = {
   type: 'api',
 

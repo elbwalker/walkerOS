@@ -6,22 +6,25 @@
 
 import path from 'path';
 import {
+  createCommandLogger,
   createLogger,
   createTimer,
   createSuccessOutput,
   createErrorOutput,
   executeCommand,
-} from '../../core';
+  getErrorMessage,
+  buildCommonDockerArgs,
+} from '../../core/index.js';
 import {
   loadJsonConfig,
   loadBundleConfig,
   loadAllEnvironments,
   parseBundleConfig,
   type LoadConfigResult,
-} from '../../config';
-import type { GlobalOptions } from '../../types';
-import { bundleCore } from './bundler';
-import { displayStats, createStatsSummary } from './stats';
+} from '../../config/index.js';
+import type { GlobalOptions } from '../../types/index.js';
+import { bundleCore } from './bundler.js';
+import { displayStats, createStatsSummary } from './stats.js';
 
 export interface BundleCommandOptions extends GlobalOptions {
   config: string;
@@ -38,21 +41,15 @@ export async function bundleCommand(
   const timer = createTimer();
   timer.start();
 
-  const logger = createLogger({
-    verbose: options.verbose,
-    silent: options.silent ?? false,
-    json: options.json,
-  });
+  const logger = createCommandLogger(options);
 
-  // Build Docker args
-  const dockerArgs = [options.config];
+  // Build Docker args - start with common flags
+  const dockerArgs = buildCommonDockerArgs(options);
+  // Add bundle-specific flags
   if (options.env) dockerArgs.push('--env', options.env);
   if (options.all) dockerArgs.push('--all');
   if (options.stats) dockerArgs.push('--stats');
-  if (options.json) dockerArgs.push('--json');
   if (options.cache === false) dockerArgs.push('--no-cache');
-  if (options.verbose) dockerArgs.push('--verbose');
-  if (options.silent) dockerArgs.push('--silent');
 
   await executeCommand(
     async () => {
@@ -64,7 +61,8 @@ export async function bundleCommand(
 
         // Step 1: Read configuration file
         logger.info('📦 Reading configuration...');
-        const configPath = path.resolve(options.config);
+        // Don't resolve URLs - pass them through as-is for download
+        const configPath = options.config;
         const rawConfig = await loadJsonConfig(configPath);
 
         // Step 2: Load configuration(s) based on flags
@@ -125,8 +123,7 @@ export async function bundleCommand(
               displayStats(stats, logger);
             }
           } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
+            const errorMessage = getErrorMessage(error);
             results.push({
               environment,
               success: false,
@@ -185,8 +182,7 @@ export async function bundleCommand(
         }
       } catch (error) {
         const duration = timer.getElapsed() / 1000;
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = getErrorMessage(error);
 
         if (options.json) {
           // JSON error output for CI/CD
@@ -204,6 +200,7 @@ export async function bundleCommand(
     dockerArgs,
     options,
     logger,
+    options.config,
   );
 }
 
@@ -262,10 +259,7 @@ export async function bundle(
   }
 
   // 4. Create logger internally
-  const logger = createLogger({
-    silent: options.silent ?? false,
-    verbose: options.verbose ?? false,
-  });
+  const logger = createCommandLogger(options);
 
   // 5. Call core bundler
   return await bundleCore(

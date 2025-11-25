@@ -57,18 +57,15 @@ describe('CLI Bundle Command', () => {
           '@walkeros/core': { imports: ['getId'] },
         },
         code: 'export const test = getId();',
+        template: '', // Disable template for raw code bundling
+        format: 'esm' as const,
         output: path.join(testOutputDir, 'test.js'),
       },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
 
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      testConfigPath,
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
 
     expect(result.exitCode).toBe(0);
 
@@ -113,18 +110,15 @@ describe('CLI Bundle Command', () => {
           '@walkeros/core': { imports: ['getId'] },
         },
         code: 'export const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
+        template: '', // Disable template for raw code bundling
+        format: 'esm' as const,
         output: path.join(testOutputDir, 'error-test.js'),
       },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
 
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      testConfigPath,
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
 
     expect(result.exitCode).toBe(1);
 
@@ -139,12 +133,7 @@ describe('CLI Bundle Command', () => {
   });
 
   it('should output JSON format when config file not found', async () => {
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      'nonexistent.json',
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', 'nonexistent.json', '--json']);
 
     expect(result.exitCode).toBe(1);
 
@@ -163,18 +152,15 @@ describe('CLI Bundle Command', () => {
       build: {
         packages: { '@walkeros/core': { imports: ['getId'] } },
         code: 'export const test = getId;',
+        template: '', // Disable template for raw code bundling
+        format: 'esm' as const,
         output: path.join(testOutputDir, 'wildcard-test.js'),
       },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
 
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      testConfigPath,
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
 
     expect(result.exitCode).toBe(0);
 
@@ -191,18 +177,15 @@ describe('CLI Bundle Command', () => {
       build: {
         packages: { '@walkeros/core': { imports: ['getId'] } },
         code: 'export const test = getId();',
+        template: '', // Disable template for raw code bundling
+        format: 'esm' as const,
         output: path.join(testOutputDir, 'minimal-test.js'),
       },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
 
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      testConfigPath,
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
 
     expect(result.exitCode).toBe(0);
 
@@ -218,90 +201,6 @@ describe('CLI Bundle Command', () => {
 });
 
 describe('CLI Simulate Command', () => {
-  const testConfigPath = path.join(__dirname, '../../examples/web-serve.json');
-
-  beforeEach(() => {
-    // Mock console.log and console.error to suppress output during tests
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    // Restore console methods
-    jest.restoreAllMocks();
-  });
-
-  const runCLI = (
-    args: string[],
-  ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
-    return new Promise((resolve) => {
-      // Add --local flag to run tests without Docker
-      const child = spawn('node', ['dist/index.js', ...args, '--local'], {
-        stdio: 'pipe',
-        shell: false,
-      });
-
-      let stdout = '';
-      let stderr = '';
-
-      child.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
-
-      child.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-
-      child.on('close', (exitCode) => {
-        resolve({ stdout, stderr, exitCode: exitCode || 0 });
-      });
-    });
-  };
-
-  it('should output JSON format for simulation', async () => {
-    const result = await runCLI([
-      'simulate',
-      '--config',
-      testConfigPath,
-      '--event',
-      '{"name":"product view","data":{"id":"P123"}}',
-      '--json',
-    ]);
-
-    if (result.exitCode !== 0) {
-      console.log('STDERR:', result.stderr);
-      console.log('STDOUT:', result.stdout);
-    }
-
-    expect(result.exitCode).toBe(0);
-
-    const output = JSON.parse(result.stdout);
-    expect(output).toMatchObject({
-      result: {
-        ok: true,
-        successful: expect.arrayContaining([
-          expect.objectContaining({ id: 'demo' }),
-        ]),
-        queued: [],
-        failed: [],
-        event: expect.objectContaining({
-          name: 'product view',
-          data: { id: 'P123' },
-        }),
-      },
-      usage: {
-        demo: expect.any(Array),
-      },
-      duration: expect.any(Number),
-    });
-
-    // Verify demo destination log calls
-    expect(output.usage.demo.length).toBeGreaterThan(0);
-    expect(output.usage.demo[0]).toMatchObject({
-      type: 'call',
-      path: 'log',
-      timestamp: expect.any(Number),
-      args: expect.any(Array),
-    });
-  });
+  // Placeholder for future simulate command tests
+  // Current simulate functionality is tested in cli-e2e.test.ts
 });

@@ -1,4 +1,4 @@
-import { zodToSchema } from '@walkeros/core';
+import { zodToSchema } from '@walkeros/core/dev';
 import { SettingsSchema } from './settings';
 
 // Export primitives

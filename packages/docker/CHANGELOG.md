@@ -1,5 +1,42 @@
 # @walkeros/docker
 
+## 0.2.1
+
+### Patch Changes
+
+- dev entry
+
+## 0.2.0
+
+### Minor Changes
+
+- Consolidate schemas and examples under `/dev` export
+
+## 0.1.5
+
+### Patch Changes
+
+- port path and name
+
+## 0.1.4
+
+### Patch Changes
+
+- cli usage
+
+## 0.1.3
+
+### Patch Changes
+
+- Fix serve mode health endpoint by moving route before static middleware to
+  prevent permission errors
+
+## 0.1.2
+
+### Patch Changes
+
+- walkeros cli with docker
+
 ## 0.1.1
 
 ### Patch Changes

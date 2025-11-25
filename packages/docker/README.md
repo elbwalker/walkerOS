@@ -1,20 +1,22 @@
 # @walkeros/docker
 
-Pure runtime Docker container for walkerOS - executes pre-built flow bundles
-with instant startup and minimal footprint.
+Runtime Docker container for walkerOS - executes pre-built flow bundles with
+instant startup and includes working demos for quick testing.
 
 ## Overview
 
-This is a **runtime-only** container designed for production deployment. It does
-NOT bundle or build flows - it only executes pre-built `.mjs` bundles.
+This is a **demo-enabled runtime container** designed for both testing and
+production deployment. It executes pre-built `.mjs` bundles and includes
+ready-to-run demo flows for instant exploration.
 
 **Key Characteristics:**
 
 - ⚡ **<1s startup** - No npm downloads or build steps at runtime
-- 📦 **~50MB image** - Only runtime dependencies (express, cors, zod)
+- 📦 **~199MB image** - Runtime dependencies + demo bundles for instant testing
+- 🎯 **Dual-purpose** - Test with included demos OR deploy your own flows
 - 🔒 **Secure** - No build tools or package managers in production
 - ☁️ **Cloud-optimized** - Perfect for GCP Cloud Run, Kubernetes, ECS
-- 🎯 **Single responsibility** - Execute flows, nothing else
+- 🚀 **Try instantly** - Pre-built demos work out-of-the-box
 
 ## Architecture
 
@@ -28,8 +30,8 @@ CLI bundles              Docker imports & runs
 flow.mjs  ──────────────→  Running collector
 ```
 
-**What's included:** Express server, flow executor, graceful shutdown **What's
-NOT included:** CLI, bundler, npm, build tools
+**What's included:** Express server, flow executor, graceful shutdown, demo
+bundles **What's NOT included:** CLI, bundler, npm, build tools
 
 See [docs/CAPABILITIES.md](./docs/CAPABILITIES.md) for detailed architecture
 documentation.
@@ -405,15 +407,15 @@ docker pull walkeros/docker:0.1.0
 
 ## What's Different from CLI?
 
-| Feature             | @walkeros/docker      | @walkeros/cli               |
-| ------------------- | --------------------- | --------------------------- |
-| **Purpose**         | Runtime execution     | Build + orchestration       |
-| **Bundling**        | ❌ No                 | ✅ Yes                      |
-| **Dependencies**    | 3 (runtime only)      | 10 (includes Docker)        |
-| **Image Size**      | ~50MB                 | N/A                         |
-| **Startup**         | <1s                   | N/A                         |
-| **Docker Required** | For containerization  | No (uses Docker as library) |
-| **Use Case**        | Production deployment | Development + build         |
+| Feature             | @walkeros/docker     | @walkeros/cli               |
+| ------------------- | -------------------- | --------------------------- |
+| **Purpose**         | Runtime execution    | Build + orchestration       |
+| **Bundling**        | ❌ No                | ✅ Yes                      |
+| **Dependencies**    | Runtime + demos      | 10 (includes Docker)        |
+| **Image Size**      | ~199MB               | N/A                         |
+| **Startup**         | <1s                  | N/A                         |
+| **Docker Required** | For containerization | No (uses Docker as library) |
+| **Use Case**        | Testing + Production | Development + build         |
 
 ## Version & Status
 
@@ -422,11 +424,12 @@ changes)
 
 ### Production Ready ✅
 
-- ✅ Pure runtime architecture - zero build dependencies
+- ✅ Demo-enabled runtime architecture - zero build dependencies
+- ✅ Included demo bundles for instant testing
 - ✅ Library exports for CLI integration
 - ✅ Collect and serve modes
 - ✅ <1s startup time
-- ✅ ~50MB Docker image
+- ✅ ~199MB Docker image
 - ✅ Graceful shutdown handling
 - ✅ GCP Cloud Run optimized
 

@@ -55,15 +55,18 @@ export interface BuildOptions
    * User code to include in bundle.
    *
    * @remarks
-   * Custom JavaScript/TypeScript code that will be included in the bundle.
+   * Optional custom JavaScript/TypeScript code that will be included in the bundle.
    * Can reference imported packages and will be executed when bundle loads.
+   * If omitted, the template's default behavior will be used.
+   *
+   * @default ""
    *
    * @example
    * ```typescript
    * "export default () => startFlow({ sources: {...}, destinations: {...} })"
    * ```
    */
-  code: string;
+  code?: string;
 
   /**
    * Output file path.
@@ -119,27 +122,6 @@ export interface BuildOptions
   cache?: boolean;
 
   /**
-   * Global variable name for IIFE bundles.
-   *
-   * @remarks
-   * Only used when format=iife.
-   * Creates a global variable on the window object.
-   *
-   * @default "walkerOS"
-   *
-   * @example
-   * ```json
-   * {
-   *   "format": "iife",
-   *   "globalName": "myTracker"
-   * }
-   * ```
-   *
-   * Results in: `window.myTracker = { ... }`
-   */
-  globalName?: string;
-
-  /**
    * Minification options.
    *
    * @remarks
@@ -147,6 +129,42 @@ export interface BuildOptions
    * Only applies when minify=true.
    */
   minifyOptions?: MinifyOptions;
+
+  /**
+   * Window property name for collector instance (web platform only).
+   *
+   * @remarks
+   * Only used when platform=browser and format=iife.
+   * The collector instance will be assigned to window[windowCollector].
+   * Ignored for server platform.
+   *
+   * @default "collector"
+   *
+   * @example
+   * ```json
+   * {
+   *   "build": {
+   *     "windowCollector": "tracker",
+   *     "windowElb": "track"
+   *   }
+   * }
+   * ```
+   *
+   * Results in: `window.tracker = collector; window.track = elb;`
+   */
+  windowCollector?: string;
+
+  /**
+   * Window property name for elb function (web platform only).
+   *
+   * @remarks
+   * Only used when platform=browser and format=iife.
+   * The elb function will be assigned to window[windowElb].
+   * Ignored for server platform.
+   *
+   * @default "elb"
+   */
+  windowElb?: string;
 }
 
 /**

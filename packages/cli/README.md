@@ -31,24 +31,31 @@ npm install @walkeros/cli
 Generate optimized JavaScript bundles from flow configurations.
 
 ```bash
-walkeros bundle --config flow.json [options]
+walkeros bundle <config-file> [options]
+```
+
+Config files can be local paths or HTTP(S) URLs:
+
+```bash
+walkeros bundle ./config.json                                    # Local file
+walkeros bundle https://example.com/config.json                  # Remote URL
 ```
 
 **Options:**
 
-- `-c, --config <path>` - Flow configuration file (required)
 - `-e, --env <name>` - Build specific environment (multi-env configs)
 - `--all` - Build all environments
 - `-s, --stats` - Show bundle statistics
 - `--json` - Output stats as JSON
 - `--no-cache` - Disable package caching
+- `--local` - Run locally without Docker
 - `-v, --verbose` - Verbose output
 
 **Example:**
 
 ```bash
 # Bundle with stats
-walkeros bundle --config examples/server-collect.json --stats
+walkeros bundle examples/server-collect.json --stats
 ```
 
 The output path is specified in the config's `build.output` field.
@@ -58,14 +65,14 @@ The output path is specified in the config's `build.output` field.
 Test event processing with simulated events.
 
 ```bash
-walkeros simulate --config flow.json --event '{"name":"page view"}' [options]
+walkeros simulate <config-file> --event '{"name":"page view"}' [options]
 ```
 
 **Options:**
 
-- `-c, --config <path>` - Bundle configuration file (required)
 - `-e, --event <json>` - Event JSON string (required)
 - `--json` - Output results as JSON
+- `--local` - Run locally without Docker
 - `-v, --verbose` - Verbose output
 
 **Example:**
@@ -73,7 +80,7 @@ walkeros simulate --config flow.json --event '{"name":"page view"}' [options]
 ```bash
 # Simulate page view
 walkeros simulate \
-  --config examples/web-serve.json \
+  examples/web-serve.json \
   --event '{"name":"page view","data":{"title":"Home"}}' \
   --json
 ```
@@ -84,7 +91,7 @@ Run flows locally using @walkeros/docker as a library (no Docker daemon
 required).
 
 ```bash
-walkeros run <mode> --config <path> [options]
+walkeros run <mode> <config-file> [options]
 ```
 
 **Modes:**
@@ -94,10 +101,10 @@ walkeros run <mode> --config <path> [options]
 
 **Options:**
 
-- `-c, --config <path>` - Flow config (.json) or bundle (.mjs)
 - `-p, --port <number>` - Server port
 - `-h, --host <host>` - Server host
 - `--static-dir <dir>` - Static directory (serve mode)
+- `--local` - Run locally without Docker
 - `--json` - JSON output
 - `-v, --verbose` - Verbose output
 
@@ -105,13 +112,13 @@ walkeros run <mode> --config <path> [options]
 
 ```bash
 # Run collection server (auto-bundles JSON)
-walkeros run collect --config examples/server-collect.json --port 3000
+walkeros run collect examples/server-collect.json --port 3000
 
 # Run with pre-built bundle
-walkeros run collect --config examples/server-collect.mjs --port 3000
+walkeros run collect examples/server-collect.mjs --port 3000
 
 # Serve static files
-walkeros run serve --config flow.json --port 8080 --static-dir ./dist
+walkeros run serve flow.json --port 8080 --static-dir ./dist
 ```
 
 **How it works:**
@@ -219,15 +226,15 @@ Try them:
 
 ```bash
 # Bundle example
-walkeros bundle --config examples/server-collect.json --stats
+walkeros bundle examples/server-collect.json --stats
 
 # Simulate
 walkeros simulate \
-  --config examples/web-serve.json \
+  examples/web-serve.json \
   --event '{"name":"product view","data":{"id":"P123"}}'
 
 # Run server
-walkeros run collect --config examples/server-collect.json --port 3000
+walkeros run collect examples/server-collect.json --port 3000
 ```
 
 ## Development Workflow
@@ -239,16 +246,16 @@ Typical development cycle:
 vim my-flow.json
 
 # 2. Bundle and check stats
-walkeros bundle --config my-flow.json --stats
+walkeros bundle my-flow.json --stats
 
 # 3. Test with simulation
 walkeros simulate \
-  --config my-flow.json \
+  my-flow.json \
   --event '{"name":"test event"}' \
   --verbose
 
 # 4. Run locally
-walkeros run collect --config my-flow.json --port 3000
+walkeros run collect my-flow.json --port 3000
 
 # 5. In another terminal, test it
 curl -X POST http://localhost:3000/collect \
@@ -266,6 +273,21 @@ CLI (downloads packages + bundles with esbuild)
 ```
 
 **Key principle**: CLI handles build-time, Docker handles runtime.
+
+## Docker Images
+
+By default, CLI uses **explicit version tags** (not `:latest`):
+
+- `walkeros/cli:0.3.5` - Build tools (bundle, simulate)
+- `walkeros/docker:0.1.4` - Production runtime
+
+Override with environment variables:
+
+```bash
+export WALKEROS_CLI_DOCKER_IMAGE=walkeros/cli:0.3.4
+export WALKEROS_RUNTIME_DOCKER_IMAGE=walkeros/docker:latest
+walkeros bundle config.json
+```
 
 ## Requirements
 

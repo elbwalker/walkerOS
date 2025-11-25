@@ -6,12 +6,6 @@ import { getEnv } from '@walkeros/web-core';
 // Types
 export * as DestinationMeta from './types';
 
-// Examples
-export * as examples from './examples';
-
-// Schemas
-export * as schemas from './schemas';
-
 export const destinationMeta: Destination = {
   type: 'meta-pixel',
 

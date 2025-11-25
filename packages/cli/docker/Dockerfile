@@ -17,9 +17,16 @@ RUN npm install --omit=dev --no-audit
 # Copy built CLI distribution
 COPY dist ./dist
 
+# Copy templates and examples for zero-config usage
+COPY templates ./templates
+COPY examples ./examples
+
 # Set working directory for user projects
 # All commands will run relative to this directory
 WORKDIR /workspace
+
+# Set environment variable to indicate container environment
+ENV WALKEROS_CONTAINER=true
 
 # Entry point is the CLI
 # Users can run: docker run walkeros/cli:latest bundle config.json

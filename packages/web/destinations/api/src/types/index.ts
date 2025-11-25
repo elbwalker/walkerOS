@@ -15,13 +15,16 @@ export interface Settings {
   transport?: SendWebTransport;
 }
 
+// InitSettings: user input (all optional)
+export type InitSettings = Partial<Settings>;
+
 export interface Mapping {}
 
 export interface Env extends DestinationWeb.Env {
   sendWeb?: typeof sendWeb;
 }
 
-export type Types = CoreDestination.Types<Settings, Mapping, Env>;
+export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
 
 export type Destination = DestinationWeb.Destination<Types>;
 export type Config = DestinationWeb.Config<Types>;

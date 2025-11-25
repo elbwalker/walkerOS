@@ -2,7 +2,7 @@ import type { WalkerOS } from '@walkeros/core';
 import type { DestinationMeta } from '.';
 import { startFlow } from '@walkeros/collector';
 import { getEvent, clone } from '@walkeros/core';
-import { examples } from '.';
+import { examples } from './dev';
 
 const { events, mapping } = examples;
 

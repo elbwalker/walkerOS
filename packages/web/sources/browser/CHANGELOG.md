@@ -1,5 +1,36 @@
 # @walkeros/web-source-browser
 
+## 0.4.1
+
+### Patch Changes
+
+- dev entry
+- Updated dependencies
+  - @walkeros/collector@0.4.1
+  - @walkeros/web-core@0.4.1
+
+## 0.4.0
+
+### Minor Changes
+
+- Consolidate schemas and examples under `/dev` export
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/collector@0.4.0
+  - @walkeros/web-core@0.4.0
+
+## 0.3.2
+
+### Patch Changes
+
+- Fix browser source initialization failure when session tracking is enabled.
+  The browser source was creating an incomplete collector interface missing the
+  `command` function, causing session initialization to fail with "command is
+  not a function" error. The fix ensures the `command` function from the
+  environment is properly passed through to session initialization.
+
 ## 0.3.1
 
 ### Patch Changes

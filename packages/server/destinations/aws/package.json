@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-aws",
   "description": "AWS server destination for walkerOS",
-  "version": "0.3.1",
+  "version": "0.4.1",
   "license": "MIT",
   "exports": {
     ".": {
@@ -9,10 +9,10 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
-    "./schemas": {
-      "types": "./dist/schemas.d.ts",
-      "import": "./dist/schemas.mjs",
-      "require": "./dist/schemas.js"
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
     },
     "./examples": {
       "types": "./dist/examples/index.d.ts",
@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-firehose": "^3.606.0",
-    "@walkeros/server-core": "0.3.1"
+    "@walkeros/server-core": "0.4.1"
   },
   "devDependencies": {},
   "repository": {

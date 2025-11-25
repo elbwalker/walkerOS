@@ -8,7 +8,7 @@ import {
   loadBundleConfig,
   loadAllEnvironments,
   getAvailableEnvironments,
-} from '../config';
+} from '../config/index.js';
 
 describe('Config Loader', () => {
   // ========================================
@@ -74,7 +74,8 @@ describe('Config Loader', () => {
       expect(result.buildOptions.platform).toBe('browser');
       expect(result.buildOptions.format).toBe('iife');
       expect(result.buildOptions.target).toBe('es2020');
-      expect(result.buildOptions.output).toBe('./dist/walker.js');
+      // Output path is resolved relative to config file directory
+      expect(result.buildOptions.output).toBe('/test/dist/walker.js');
     });
 
     test('applies platform-specific defaults for server', () => {
@@ -96,7 +97,8 @@ describe('Config Loader', () => {
       expect(result.buildOptions.platform).toBe('node');
       expect(result.buildOptions.format).toBe('esm');
       expect(result.buildOptions.target).toBe('node20');
-      expect(result.buildOptions.output).toBe('./dist/bundle.js');
+      // Output path is resolved relative to config file directory
+      expect(result.buildOptions.output).toBe('/test/dist/bundle.js');
     });
 
     test('merges custom build options with defaults', () => {
@@ -122,7 +124,7 @@ describe('Config Loader', () => {
       expect(result.buildOptions.target).toBe('es2020'); // Default preserved
     });
 
-    test('does not auto-select templates', () => {
+    test('auto-selects templates based on platform', () => {
       const config = {
         flow: {
           platform: 'web' as const,
@@ -138,7 +140,8 @@ describe('Config Loader', () => {
         configPath: '/test/config.json',
       });
 
-      expect(result.buildOptions.template).toBeUndefined();
+      // Should auto-select web.hbs for web platform
+      expect(result.buildOptions.template).toBe('web.hbs');
     });
   });
 
@@ -311,7 +314,7 @@ describe('Config Loader', () => {
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow('Invalid configuration format');
+      ).toThrow('Invalid platform "invalid". Must be "web" or "server".');
     });
 
     test('throws error for missing required fields', () => {
@@ -475,7 +478,8 @@ describe('Config Loader', () => {
         ).sources?.browser?.package,
       ).toBe('@walkeros/web-source-browser@2.0.0');
       expect(result.buildOptions.minify).toBe(true);
-      expect(result.buildOptions.output).toBe('./dist/walker.min.js');
+      // Output path is resolved relative to config file directory
+      expect(result.buildOptions.output).toBe('/test/dist/walker.min.js');
     });
   });
 });

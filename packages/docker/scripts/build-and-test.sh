@@ -28,7 +28,7 @@ docker ps -q --filter "ancestor=${FULL_IMAGE}" | xargs -r docker stop > /dev/nul
 echo ""
 
 # Step 1: Build Docker image
-echo -e "${BLUE}[1/4] Building Docker image...${NC}"
+echo -e "${BLUE}[1/3] Building Docker image...${NC}"
 docker build \
   -f packages/docker/Dockerfile \
   -t "${FULL_IMAGE}" \
@@ -36,36 +36,13 @@ docker build \
 
 echo -e "${GREEN}✓ Docker image built: ${FULL_IMAGE}${NC}\n"
 
-# Step 2: Test Bundle Mode
-echo -e "${BLUE}[2/4] Testing Bundle Mode...${NC}"
+# Step 2: Test Serve Mode
+echo -e "${BLUE}[2/3] Testing Serve Mode...${NC}"
 
-# Create temporary directory for bundle output
-TEST_DIR=$(mktemp -d)
-trap "rm -rf ${TEST_DIR}" EXIT
-
-docker run --rm \
-  -e MODE=bundle \
-  -e FLOW=/app/flows/bundle-web.json \
-  -v "${TEST_DIR}:/app/dist" \
-  -e GA4_MEASUREMENT_ID="G-TEST123" \
-  "${FULL_IMAGE}"
-
-# Verify bundle was created
-if [ -f "${TEST_DIR}/walker.js" ]; then
-  BUNDLE_SIZE=$(stat -f%z "${TEST_DIR}/walker.js" 2>/dev/null || stat -c%s "${TEST_DIR}/walker.js")
-  echo -e "${GREEN}✓ Bundle mode: walker.js created (${BUNDLE_SIZE} bytes)${NC}\n"
-else
-  echo -e "${RED}✗ Bundle mode: Failed to create walker.js${NC}"
-  exit 1
-fi
-
-# Step 3: Test Serve Mode
-echo -e "${BLUE}[3/4] Testing Serve Mode...${NC}"
-
-# Start serve mode container (no FLOW needed)
+# Start serve mode container (serve demo files)
 SERVE_CONTAINER=$(docker run -d \
   -e MODE=serve \
-  -v "${TEST_DIR}:/app/dist:ro" \
+  -e STATIC_DIR=/app/demos \
   -p 8081:8080 \
   "${FULL_IMAGE}")
 
@@ -82,11 +59,11 @@ else
   exit 1
 fi
 
-# Test static file serving
-if curl -sf http://localhost:8081/walker.js | head -c 100 > /dev/null; then
+# Test serving demo files (built into image)
+if curl -sf http://localhost:8081/demo-collect.mjs | head -c 100 > /dev/null; then
   echo -e "${GREEN}✓ Serve mode: Static file serving works${NC}\n"
 else
-  echo -e "${RED}✗ Serve mode: Failed to serve walker.js${NC}"
+  echo -e "${RED}✗ Serve mode: Failed to serve demo files${NC}"
   docker logs "${SERVE_CONTAINER}"
   docker stop "${SERVE_CONTAINER}"
   exit 1
@@ -99,13 +76,13 @@ echo ""
 # Wait a moment for port to be released
 sleep 1
 
-# Step 4: Test Collect Mode
-echo -e "${BLUE}[4/4] Testing Collect Mode...${NC}"
+# Step 3: Test Collect Mode
+echo -e "${BLUE}[3/3] Testing Collect Mode...${NC}"
 
-# Start collect mode container (using built-in flow)
+# Start collect mode container (using built-in demo)
 if ! COLLECT_CONTAINER=$(docker run -d \
   -e MODE=collect \
-  -e FLOW=/app/flows/collect-console.json \
+  -e FLOW=/app/demos/demo-collect.mjs \
   -p 8080:8080 \
   "${FULL_IMAGE}" 2>&1); then
   echo -e "${RED}✗ Failed to start collect mode container${NC}"

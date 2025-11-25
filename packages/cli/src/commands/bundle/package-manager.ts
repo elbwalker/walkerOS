@@ -1,7 +1,7 @@
 import pacote from 'pacote';
 import path from 'path';
 import fs from 'fs-extra';
-import { Logger } from '../../core';
+import { Logger } from '../../core/index.js';
 
 export interface Package {
   name: string;

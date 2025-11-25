@@ -1,54 +1,61 @@
 import { Command } from 'commander';
-import { bundleCommand } from './commands/bundle';
-import { simulateCommand } from './commands/simulate';
-import { runCommand } from './commands/run';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { bundleCommand } from './commands/bundle/index.js';
+import { simulateCommand } from './commands/simulate/index.js';
+import { pushCommand } from './commands/push/index.js';
+import { runCommand } from './commands/run/index.js';
+
+// Get package version dynamically
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(
+  readFileSync(join(__dirname, '../package.json'), 'utf-8'),
+);
+const VERSION = packageJson.version;
 
 // === CLI Commands ===
 // Export CLI command handlers
-export { bundleCommand, simulateCommand, runCommand };
+export { bundleCommand, simulateCommand, pushCommand, runCommand };
 
 // === Programmatic API ===
 // High-level functions for library usage
-export { bundle } from './commands/bundle';
-export { simulate } from './commands/simulate';
-export { run } from './commands/run';
+export { bundle } from './commands/bundle/index.js';
+export { simulate } from './commands/simulate/index.js';
+export { run } from './commands/run/index.js';
 
 // === Types ===
 // Export types for programmatic usage
-export type { BuildOptions, EnvironmentConfig, Setup } from './types/bundle';
-export type { BundleStats } from './commands/bundle/bundler';
-export type { SimulationResult } from './commands/simulate/types';
+export type { BuildOptions, EnvironmentConfig, Setup } from './types/bundle.js';
+export type { BundleStats } from './commands/bundle/bundler.js';
+export type { SimulationResult } from './commands/simulate/types.js';
 export type {
   SourceDestinationItem,
   TemplateVariables,
   ProcessedTemplateVariables,
   TemplateSource,
   TemplateDestination,
-} from './types/template';
+} from './types/template.js';
 export type {
   RunMode,
   RunCommandOptions,
   RunOptions,
   RunResult,
-} from './commands/run';
-export type { GlobalOptions } from './types/global';
+} from './commands/run/index.js';
+export type { GlobalOptions } from './types/global.js';
 
 const program = new Command();
 
 program
   .name('walkeros')
   .description('walkerOS CLI - Bundle and deploy walkerOS components')
-  .version('0.1.0');
+  .version(VERSION);
 
 // Bundle command
 program
-  .command('bundle')
+  .command('bundle [file]')
   .description('Bundle NPM packages with custom code')
-  .option(
-    '-c, --config <path>',
-    'configuration file path',
-    'bundle.config.json',
-  )
   .option(
     '-e, --env <name>',
     'environment to build (for multi-environment configs)',
@@ -61,9 +68,9 @@ program
   .option('--local', 'execute in local Node.js instead of Docker')
   .option('--dry-run', 'preview command without executing')
   .option('--silent', 'suppress output')
-  .action(async (options) => {
+  .action(async (file, options) => {
     await bundleCommand({
-      config: options.config,
+      config: file || 'bundle.config.json',
       env: options.env,
       all: options.all,
       stats: options.stats,
@@ -78,28 +85,51 @@ program
 
 // Simulate command
 program
-  .command('simulate')
+  .command('simulate [file]')
   .description('Simulate event processing and capture API calls')
   .option(
-    '-c, --config <path>',
-    'Bundle configuration file',
-    'bundle.config.json',
+    '-e, --event <source>',
+    'Event to simulate (JSON string, file path, or URL)',
   )
-  .option('-e, --event <json>', 'Event to simulate (JSON string)')
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
   .option('--local', 'execute in local Node.js instead of Docker')
   .option('--dry-run', 'preview command without executing')
   .option('--silent', 'suppress output')
-  .action(async (options) => {
+  .action(async (file, options) => {
     await simulateCommand({
-      config: options.config,
+      config: file || 'bundle.config.json',
       event: options.event,
       json: options.json,
       verbose: options.verbose,
       local: options.local,
       dryRun: options.dryRun,
       silent: options.silent,
+    });
+  });
+
+// Push command
+program
+  .command('push [file]')
+  .description('Push an event through the flow with real API execution')
+  .requiredOption(
+    '-e, --event <source>',
+    'Event to push (JSON string, file path, or URL)',
+  )
+  .option('--env <name>', 'Environment name (for multi-environment configs)')
+  .option('--json', 'Output results as JSON')
+  .option('-v, --verbose', 'Verbose output')
+  .option('-s, --silent', 'Suppress output')
+  .option('--local', 'Execute in local Node.js instead of Docker')
+  .action(async (file, options) => {
+    await pushCommand({
+      config: file || 'bundle.config.json',
+      event: options.event,
+      env: options.env,
+      json: options.json,
+      verbose: options.verbose,
+      silent: options.silent,
+      local: options.local,
     });
   });
 
@@ -110,8 +140,10 @@ const runCmd = program
 
 // Run collect subcommand
 runCmd
-  .command('collect <file>')
-  .description('Run collector mode (event collection endpoint)')
+  .command('collect [file]')
+  .description(
+    'Run collector mode (event collection endpoint). Defaults to server-collect.mjs if no file specified.',
+  )
   .option('-p, --port <number>', 'Port to listen on (default: 8080)', parseInt)
   .option('-h, --host <address>', 'Host address (default: 0.0.0.0)')
   .option('--json', 'Output results as JSON')
@@ -121,7 +153,7 @@ runCmd
   .option('--silent', 'suppress output')
   .action(async (file, options) => {
     await runCommand('collect', {
-      config: file,
+      config: file || 'server-collect.mjs',
       port: options.port,
       host: options.host,
       json: options.json,
@@ -134,11 +166,14 @@ runCmd
 
 // Run serve subcommand
 runCmd
-  .command('serve <file>')
-  .description('Run serve mode (static file server for browser bundles)')
+  .command('serve [file]')
+  .description(
+    'Run serve mode (single-file server for browser bundles). Defaults to baked-in web-serve.js if no file specified.',
+  )
   .option('-p, --port <number>', 'Port to listen on (default: 8080)', parseInt)
   .option('-h, --host <address>', 'Host address (default: 0.0.0.0)')
-  .option('--static-dir <dir>', 'Static directory for serve mode')
+  .option('--name <filename>', 'Filename in URL (default: walker.js)')
+  .option('--path <directory>', 'URL directory path (e.g., libs/v1)')
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
   .option('--local', 'execute in local Node.js instead of Docker')
@@ -146,10 +181,11 @@ runCmd
   .option('--silent', 'suppress output')
   .action(async (file, options) => {
     await runCommand('serve', {
-      config: file,
+      config: file || 'web-serve.js',
       port: options.port,
       host: options.host,
-      staticDir: options.staticDir,
+      serveName: options.name,
+      servePath: options.path,
       json: options.json,
       verbose: options.verbose,
       local: options.local,
@@ -158,11 +194,7 @@ runCmd
     });
   });
 
-// Only run CLI if this file is executed directly (not imported as a module)
-// Check if the resolved file path matches the first CLI argument
-import { fileURLToPath } from 'url';
-const isMainModule =
-  process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
-if (isMainModule) {
-  program.parse();
-}
+// Run the CLI
+// Note: This file is marked as a bin script in package.json,
+// so it's always executed directly (never imported as a library)
+program.parse();

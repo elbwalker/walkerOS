@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-meta",
   "description": "Meta pixel web destination for walkerOS",
-  "version": "0.3.1",
+  "version": "0.4.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -16,6 +16,11 @@
       "types": "./dist/examples/index.d.ts",
       "import": "./dist/examples/index.mjs",
       "require": "./dist/examples/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
     }
   },
   "files": [
@@ -30,7 +35,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/web-core": "0.3.1"
+    "@walkeros/web-core": "0.4.1"
   },
   "devDependencies": {
     "@types/facebook-pixel": "^0.0.31"

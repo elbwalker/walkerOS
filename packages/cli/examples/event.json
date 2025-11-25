@@ -1,0 +1,53 @@
+{
+  "name": "order complete",
+  "data": {
+    "id": "ORD-2024-12345",
+    "total": 299.99,
+    "currency": "USD",
+    "tax": 24.99,
+    "shipping": 15.0
+  },
+  "user": {
+    "id": "user_abc123",
+    "email": "customer@example.com",
+    "gclid": "CjwKCAiA_xyz123ABC"
+  },
+  "source": {
+    "id": "https://example.com/thankyou.html?email=customer@example.com&order=ORD-2024-12345&gclid=CjwKCAiA_xyz123ABC",
+    "type": "web"
+  },
+  "nested": [
+    {
+      "type": "product",
+      "data": {
+        "id": "PROD-001",
+        "name": "Wireless Headphones",
+        "price": 149.99,
+        "quantity": 1,
+        "category": "Electronics"
+      }
+    },
+    {
+      "type": "product",
+      "data": {
+        "id": "PROD-002",
+        "name": "Phone Case",
+        "price": 29.99,
+        "quantity": 2,
+        "category": "Accessories"
+      }
+    }
+  ],
+  "consent": {
+    "functional": true,
+    "marketing": true
+  },
+  "globals": {
+    "language": "en",
+    "country": "US"
+  },
+  "context": {
+    "session": ["sess_xyz789", 1],
+    "page": ["/thankyou", 0]
+  }
+}

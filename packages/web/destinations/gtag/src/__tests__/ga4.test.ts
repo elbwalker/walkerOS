@@ -1,5 +1,5 @@
 import { initGA4, pushGA4Event } from '../ga4';
-import { examples } from '../index';
+import { examples } from '../dev';
 import { clone } from '@walkeros/core';
 import type { GA4Settings } from '../types';
 

@@ -4,7 +4,7 @@
  * Platform-specific default build options.
  */
 
-import type { BuildOptions } from '../types/bundle';
+import type { BuildOptions } from '../types/bundle.js';
 
 /**
  * Get default build configuration for platform.
@@ -39,7 +39,6 @@ export function getDefaultBuildOptions(
       format: 'iife',
       target: 'es2020',
       output: output || './dist/walker.js',
-      globalName: 'walkerOS',
     };
   }
 
@@ -74,9 +73,6 @@ export function ensureBuildOptions(
   );
 
   // Validate required fields
-  if (!buildOptions.code && !defaults.code) {
-    throw new Error('BuildOptions.code is required');
-  }
   if (!buildOptions.output && !defaults.output) {
     throw new Error('BuildOptions.output is required');
   }
@@ -84,7 +80,7 @@ export function ensureBuildOptions(
   return {
     ...defaults,
     ...buildOptions,
-    code: buildOptions.code || defaults.code!,
+    code: buildOptions.code || defaults.code || '',
     output: buildOptions.output || defaults.output!,
     packages: buildOptions.packages || defaults.packages!,
   } as BuildOptions;

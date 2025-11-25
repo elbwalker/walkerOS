@@ -5,8 +5,8 @@
  */
 
 import { existsSync } from 'fs';
-import { resolve } from 'path';
-import type { RunMode } from './types';
+import { resolveAsset } from '../../core/asset-resolver.js';
+import type { RunMode } from './types.js';
 
 /**
  * Valid run modes
@@ -32,12 +32,13 @@ export function validateMode(mode: string): asserts mode is RunMode {
 /**
  * Validates flow file exists
  *
- * @param filePath - Path to flow configuration file
+ * @param filePath - Path to flow configuration file (bare name, relative, or absolute)
  * @returns Absolute path to flow file
  * @throws Error if file doesn't exist
  */
 export function validateFlowFile(filePath: string): string {
-  const absolutePath = resolve(filePath);
+  // Use asset resolver to handle bare names, relative paths, and absolute paths
+  const absolutePath = resolveAsset(filePath, 'bundle');
 
   if (!existsSync(absolutePath)) {
     throw new Error(

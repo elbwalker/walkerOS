@@ -2,15 +2,38 @@ import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, DestinationInterface, Settings } from '../types';
 import { getEvent } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
+import type { OAuth2Client } from 'google-auth-library';
+
+jest.mock('../auth', () => ({
+  createAuthClient: jest.fn(),
+  getAccessToken: jest.fn(),
+  AuthError: class AuthError extends Error {
+    constructor(
+      message: string,
+      public cause?: Error,
+    ) {
+      super(message);
+      this.name = 'DataManagerAuthError';
+    }
+  },
+}));
+
+import { createAuthClient, getAccessToken } from '../auth';
 
 describe('Server Destination Data Manager', () => {
   let destination: DestinationInterface;
   let elb: WalkerOS.Elb;
-  const accessToken = 'ya29.c.test_token';
+  const mockAuthClient = {
+    getAccessToken: jest.fn(),
+  } as unknown as OAuth2Client;
   const mockFetch = jest.fn();
+  const mockAccessToken = 'ya29.c.test_token';
 
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    (createAuthClient as jest.Mock).mockResolvedValue(mockAuthClient);
+    (getAccessToken as jest.Mock).mockResolvedValue(mockAccessToken);
 
     // Reset mockFetch to default successful response
     mockFetch.mockResolvedValue({
@@ -45,7 +68,7 @@ describe('Server Destination Data Manager', () => {
   }
 
   describe('init', () => {
-    test('throws error when accessToken is missing', async () => {
+    test('throws error when destinations is missing', async () => {
       const mockCollector = {} as Collector.Instance;
       await expect(
         destination.init({
@@ -53,14 +76,14 @@ describe('Server Destination Data Manager', () => {
           collector: mockCollector,
           env: {},
         }),
-      ).rejects.toThrow('Config settings accessToken missing');
+      ).rejects.toThrow('Config settings destinations missing or empty');
     });
 
-    test('throws error when destinations is missing', async () => {
+    test('throws error when destinations is empty', async () => {
       const mockCollector = {} as Collector.Instance;
       await expect(
         destination.init({
-          config: { settings: { accessToken } as Settings },
+          config: { settings: { destinations: [] } as Settings },
           collector: mockCollector,
           env: {},
         }),
@@ -69,7 +92,6 @@ describe('Server Destination Data Manager', () => {
 
     test('succeeds with valid configuration', async () => {
       const config = await getConfig({
-        accessToken,
         destinations: [
           {
             operatingAccount: {
@@ -84,7 +106,6 @@ describe('Server Destination Data Manager', () => {
       expect(config).toEqual(
         expect.objectContaining({
           settings: expect.objectContaining({
-            accessToken,
             destinations: expect.arrayContaining([
               expect.objectContaining({
                 operatingAccount: expect.objectContaining({
@@ -94,6 +115,36 @@ describe('Server Destination Data Manager', () => {
               }),
             ]),
           }),
+          env: expect.objectContaining({
+            authClient: mockAuthClient,
+          }),
+        }),
+      );
+    });
+
+    test('creates auth client during init', async () => {
+      await getConfig({
+        credentials: {
+          client_email: 'test@example.com',
+          private_key:
+            '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
+        },
+        destinations: [
+          {
+            operatingAccount: {
+              accountId: '123-456-7890',
+              accountType: 'GOOGLE_ADS',
+            },
+            productDestinationId: 'AW-CONVERSION-123',
+          },
+        ],
+      });
+
+      expect(createAuthClient).toHaveBeenCalledWith(
+        expect.objectContaining({
+          credentials: expect.objectContaining({
+            client_email: 'test@example.com',
+          }),
         }),
       );
     });
@@ -101,7 +152,6 @@ describe('Server Destination Data Manager', () => {
 
   describe('push', () => {
     const defaultSettings: Settings = {
-      accessToken,
       destinations: [
         {
           operatingAccount: {
@@ -122,20 +172,22 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: defaultSettings,
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       };
 
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: config.env!,
       });
 
+      expect(getAccessToken).toHaveBeenCalledWith(mockAuthClient);
       expect(mockFetch).toHaveBeenCalledWith(
         'https://datamanager.googleapis.com/v1/events:ingest',
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${mockAccessToken}`,
             'Content-Type': 'application/json',
           }),
         }),
@@ -153,7 +205,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config: { settings: defaultSettings },
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -182,7 +234,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -208,7 +260,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -230,7 +282,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -245,7 +297,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config: { settings: defaultSettings },
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -272,7 +324,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -296,7 +348,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -317,7 +369,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -338,7 +390,7 @@ describe('Server Destination Data Manager', () => {
         destination.push(event, {
           config: { settings: defaultSettings },
           collector: mockCollector,
-          env: { fetch: mockFetch },
+          env: { authClient: mockAuthClient, fetch: mockFetch },
         }),
       ).rejects.toThrow('Data Manager API error (400)');
     });
@@ -365,7 +417,7 @@ describe('Server Destination Data Manager', () => {
         destination.push(event, {
           config: { settings: defaultSettings },
           collector: mockCollector,
-          env: { fetch: mockFetch },
+          env: { authClient: mockAuthClient, fetch: mockFetch },
         }),
       ).rejects.toThrow('Validation errors');
     });
@@ -384,7 +436,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -399,7 +451,6 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
-          accessToken,
           destinations: [
             {
               operatingAccount: {
@@ -422,7 +473,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -444,7 +495,6 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config: {
           settings: {
-            accessToken,
             destinations: [
               {
                 operatingAccount: {
@@ -457,7 +507,7 @@ describe('Server Destination Data Manager', () => {
           },
         },
         collector: mockCollector,
-        env: { fetch: customFetch },
+        env: { authClient: mockAuthClient, fetch: customFetch },
       });
 
       expect(customFetch).toHaveBeenCalled();
@@ -472,7 +522,6 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
-          accessToken,
           destinations: [
             {
               operatingAccount: {
@@ -492,7 +541,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -507,7 +556,6 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
-          accessToken,
           destinations: [
             {
               operatingAccount: {
@@ -525,7 +573,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -542,7 +590,6 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
-          accessToken,
           destinations: [
             {
               operatingAccount: {
@@ -559,7 +606,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -576,7 +623,6 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
-          accessToken,
           destinations: [
             {
               operatingAccount: {
@@ -598,7 +644,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -617,7 +663,6 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
-          accessToken,
           destinations: [
             {
               operatingAccount: {
@@ -635,7 +680,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -651,7 +696,6 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
-          accessToken,
           destinations: [
             {
               operatingAccount: {
@@ -669,7 +713,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -689,7 +733,6 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
-          accessToken,
           destinations: [
             {
               operatingAccount: {
@@ -705,7 +748,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -725,7 +768,6 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
-          accessToken,
           destinations: [
             {
               operatingAccount: {
@@ -742,7 +784,7 @@ describe('Server Destination Data Manager', () => {
       await destination.push(event, {
         config,
         collector: mockCollector,
-        env: { fetch: mockFetch },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);

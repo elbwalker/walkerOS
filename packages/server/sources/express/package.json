@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-source-express",
   "description": "Express server source for walkerOS",
-  "version": "0.3.1",
+  "version": "0.4.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -48,5 +48,17 @@
       "type": "GitHub Sponsors",
       "url": "https://github.com/sponsors/elbwalker"
     }
-  ]
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
+    }
+  }
 }

@@ -3,11 +3,30 @@ import type {
   Destination as CoreDestination,
 } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
+import type { OAuth2Client } from 'google-auth-library';
 import type { LogLevel } from '../utils';
 
 export interface Settings {
-  /** OAuth 2.0 access token with datamanager scope */
-  accessToken: string;
+  /**
+   * Service account credentials (client_email + private_key)
+   * Recommended for serverless environments (AWS Lambda, Docker, etc.)
+   */
+  credentials?: {
+    client_email: string;
+    private_key: string;
+  };
+
+  /**
+   * Path to service account JSON file
+   * For local development or environments with filesystem access
+   */
+  keyFilename?: string;
+
+  /**
+   * OAuth scopes for Data Manager API
+   * @default ['https://www.googleapis.com/auth/datamanager']
+   */
+  scopes?: string[];
 
   /** Array of destination accounts and conversion actions/user lists */
   destinations: Destination[];
@@ -65,9 +84,12 @@ export interface Mapping {
 
 export interface Env extends DestinationServer.Env {
   fetch?: typeof fetch;
+  authClient?: OAuth2Client | null;
 }
 
-export type Types = CoreDestination.Types<Settings, Mapping, Env>;
+export type InitSettings = Partial<Settings>;
+
+export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
 
 export interface DestinationInterface
   extends DestinationServer.Destination<Types> {
@@ -96,17 +118,26 @@ export type Rules = WalkerOSMapping.Rules<Rule>;
  * https://developers.google.com/data-manager/api/reference/rest/v1/Destination
  */
 export interface Destination {
-  /** Operating account details */
-  operatingAccount: OperatingAccount;
+  /** Reference identifier for this destination */
+  reference?: string;
+
+  /** Login account (account initiating the request) */
+  loginAccount?: ProductAccount;
+
+  /** Linked account (child account linked to login account) */
+  linkedAccount?: ProductAccount;
+
+  /** Operating account (account where data is sent) */
+  operatingAccount?: ProductAccount;
 
   /** Product-specific destination ID (conversion action or user list) */
-  productDestinationId: string;
+  productDestinationId?: string;
 }
 
 /**
- * Operating account information
+ * Product account information
  */
-export interface OperatingAccount {
+export interface ProductAccount {
   /** Account ID (e.g., "123-456-7890" for Google Ads) */
   accountId: string;
 
@@ -115,10 +146,12 @@ export interface OperatingAccount {
 }
 
 export type AccountType =
+  | 'ACCOUNT_TYPE_UNSPECIFIED'
   | 'GOOGLE_ADS'
   | 'DISPLAY_VIDEO_ADVERTISER'
   | 'DISPLAY_VIDEO_PARTNER'
-  | 'GOOGLE_ANALYTICS_PROPERTY';
+  | 'GOOGLE_ANALYTICS_PROPERTY'
+  | 'DATA_PARTNER';
 
 export type EventSource = 'WEB' | 'APP' | 'IN_STORE' | 'PHONE' | 'OTHER';
 
@@ -141,14 +174,11 @@ export type ConsentStatus = 'CONSENT_GRANTED' | 'CONSENT_DENIED';
  * https://developers.google.com/data-manager/api/reference/rest/v1/events/ingest
  */
 export interface IngestEventsRequest {
-  /** OAuth 2.0 access token */
-  access_token?: string;
+  /** Array of destinations for these events (max 10) */
+  destinations: Destination[];
 
   /** Array of events to ingest (max 2000) */
   events: Event[];
-
-  /** Array of destinations for these events (max 10) */
-  destinations: Destination[];
 
   /** Request-level consent (overridden by event-level) */
   consent?: Consent;
@@ -165,11 +195,53 @@ export interface IngestEventsRequest {
  * https://developers.google.com/data-manager/api/reference/rest/v1/Event
  */
 export interface Event {
-  /** Event timestamp in RFC 3339 format */
-  eventTimestamp: string;
+  /** Destination references for routing */
+  destinationReferences?: string[];
 
   /** Transaction ID for deduplication (max 512 chars) */
   transactionId?: string;
+
+  /** Event timestamp in RFC 3339 format */
+  eventTimestamp?: string;
+
+  /** Last updated timestamp in RFC 3339 format */
+  lastUpdatedTimestamp?: string;
+
+  /** User data with identifiers (max 10 identifiers) */
+  userData?: UserData;
+
+  /** Event-level consent (overrides request-level) */
+  consent?: Consent;
+
+  /** Attribution identifiers */
+  adIdentifiers?: AdIdentifiers;
+
+  /** Currency code (ISO 4217, 3 chars) */
+  currency?: string;
+
+  /** Conversion value */
+  conversionValue?: number;
+
+  /** Source of the event */
+  eventSource?: EventSource;
+
+  /** Device information for the event */
+  eventDeviceInfo?: DeviceInfo;
+
+  /** Shopping cart data */
+  cartData?: CartData;
+
+  /** Custom variables for the event */
+  customVariables?: CustomVariable[];
+
+  /** Experimental fields (subject to change) */
+  experimentalFields?: ExperimentalField[];
+
+  /** User properties */
+  userProperties?: UserProperties;
+
+  /** Event name for GA4 (max 40 chars, required for GA4) */
+  eventName?: string;
 
   /** Google Analytics client ID (max 255 chars) */
   clientId?: string;
@@ -177,29 +249,57 @@ export interface Event {
   /** First-party user ID (max 256 chars) */
   userId?: string;
 
-  /** User data with identifiers (max 10 identifiers) */
-  userData?: UserData;
+  /** Additional event parameters */
+  additionalEventParameters?: EventParameter[];
+}
 
-  /** Attribution identifiers */
-  adIdentifiers?: AdIdentifiers;
+/**
+ * Device information
+ */
+export interface DeviceInfo {
+  /** User agent string */
+  userAgent?: string;
+}
 
-  /** Conversion value */
-  conversionValue?: number;
+/**
+ * Custom variable
+ */
+export interface CustomVariable {
+  /** Variable name */
+  name?: string;
 
-  /** Currency code (ISO 4217, 3 chars) */
-  currency?: string;
+  /** Variable value */
+  value?: string;
+}
 
-  /** Shopping cart data */
-  cartData?: CartData;
+/**
+ * Experimental field
+ */
+export interface ExperimentalField {
+  /** Field name */
+  name?: string;
 
-  /** Event name for GA4 (max 40 chars, required for GA4) */
-  eventName?: string;
+  /** Field value */
+  value?: string;
+}
 
-  /** Source of the event */
-  eventSource?: EventSource;
+/**
+ * User properties
+ */
+export interface UserProperties {
+  /** Property values */
+  [key: string]: string | number | boolean | undefined;
+}
 
-  /** Event-level consent (overrides request-level) */
-  consent?: Consent;
+/**
+ * Event parameter
+ */
+export interface EventParameter {
+  /** Parameter name */
+  name?: string;
+
+  /** Parameter value */
+  value?: string | number;
 }
 
 /**
@@ -242,6 +342,9 @@ export interface Address {
  * https://developers.google.com/data-manager/api/reference/rest/v1/AdIdentifiers
  */
 export interface AdIdentifiers {
+  /** Session attributes (privacy-safe attribution) */
+  sessionAttributes?: string;
+
   /** Google Click ID (primary attribution) */
   gclid?: string;
 
@@ -251,8 +354,8 @@ export interface AdIdentifiers {
   /** Web-to-app attribution identifier */
   wbraid?: string;
 
-  /** Session attributes (privacy-safe attribution) */
-  sessionAttributes?: string;
+  /** Device information for landing page */
+  landingPageDeviceInfo?: DeviceInfo;
 }
 
 /**

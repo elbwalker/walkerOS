@@ -4,7 +4,7 @@
  * Types for running walkerOS flows via CLI using @walkeros/docker as a library
  */
 
-import type { GlobalOptions } from '../../types';
+import type { GlobalOptions } from '../../types/index.js';
 
 /**
  * Run mode - determines which execution mode to use
@@ -24,8 +24,11 @@ export interface RunCommandOptions extends GlobalOptions {
   /** Server host (default: 0.0.0.0) */
   host?: string;
 
-  /** Static directory for serve mode */
-  staticDir?: string;
+  /** Serve path (URL directory path, e.g., 'libs/v1') */
+  servePath?: string;
+
+  /** Serve name (filename in URL, default: walker.js) */
+  serveName?: string;
 
   /** Enable JSON output */
   json?: boolean;
@@ -44,8 +47,11 @@ export interface RunOptions {
   /** Server host */
   host?: string;
 
-  /** Static directory for serve mode */
-  staticDir?: string;
+  /** Serve path (URL directory path, e.g., 'libs/v1') */
+  servePath?: string;
+
+  /** Serve name (filename in URL, default: walker.js) */
+  serveName?: string;
 
   /** Suppress output */
   silent?: boolean;

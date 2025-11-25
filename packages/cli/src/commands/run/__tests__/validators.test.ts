@@ -1,7 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
-import { validateMode, validateFlowFile, validatePort } from '../validators';
+import { validateMode, validateFlowFile, validatePort } from '../validators.js';
 
 describe('validators', () => {
   describe('validateMode', () => {

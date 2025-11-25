@@ -1,4 +1,4 @@
-import { z } from '@walkeros/core';
+import { z } from '@walkeros/core/dev';
 
 // Data Manager uses flexible mapping via walkerOS mapping system
 // No event-specific mapping schema needed (similar to Meta CAPI pattern)

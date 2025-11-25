@@ -1,0 +1,865 @@
+---
+title: Docker
+description: Deploy walkerOS flows with Docker containers
+sidebar_position: 3
+package: '@walkeros/docker'
+---
+
+# walkerOS Docker
+
+The walkerOS Docker package (`@walkeros/docker`) is a **pure runtime container** for executing pre-built flow bundles in production. It's designed for fast startup (< 1 second), minimal footprint (~150-200MB), and cloud-native deployment.
+
+**Key Philosophy**: Docker handles runtime, [CLI](/docs/apps/cli) handles build-time. You bundle with the CLI, deploy with Docker.
+
+## What It Does
+
+- ✅ **Executes pre-built `.mjs` bundles** from the CLI
+- ✅ **Runs collection servers** (HTTP endpoints for event ingestion)
+- ✅ **Serves static files** (web tracking scripts)
+- ✅ **Sub-1 second startup** - No npm downloads, no build steps
+- ✅ **Production-ready** - Health checks, non-root user, signal handling
+
+## What It Doesn't Do
+
+- ❌ **No bundling** - Flows must be pre-built with the CLI
+- ❌ **No package downloads** - All dependencies must be bundled
+- ❌ **No configuration generation** - Configuration comes from your bundle
+
+Think of it as the **deployment target**, not the build tool.
+
+## Prerequisites
+
+- Docker installed ([Get Docker](https://docs.docker.com/get-docker/))
+- (Optional) Pre-built flow bundle from the [CLI](/docs/apps/cli)
+
+## Quick Start with Demos
+
+The Docker image includes demo bundles for instant testing.
+
+### Demo: Event Collection
+
+<CodeSnippet
+  code={`docker run -p 8080:8080 \\
+  -e MODE=collect \\
+  -e FLOW=/app/demos/demo-collect.mjs \\
+  walkeros/docker:latest`}
+  language="bash"
+/>
+
+Output:
+```
+✓ Loading flow: /app/demos/demo-collect.mjs
+✓ Starting collection server on port 8080
+✓ Health check available at /health
+
+[Demo Output] page view
+[Demo Output] product add
+```
+
+The demo is self-contained and generates test events automatically.
+
+### Demo: Static File Serving
+
+<CodeSnippet
+  code={`docker run -p 3000:3000 \\
+  -e MODE=serve \\
+  -e PORT=3000 \\
+  -e STATIC_DIR=/app/demos \\
+  walkeros/docker:latest`}
+  language="bash"
+/>
+
+Visit `http://localhost:3000/demo-serve.js` to download the demo web bundle.
+
+## Configuration
+
+The Docker container is configured via environment variables:
+
+### Collect Mode
+
+<CodeSnippet
+  code={`docker run -p 8080:8080 \\
+  -v $(pwd)/flow.mjs:/app/flow.mjs \\
+  -e MODE=collect \\
+  -e FLOW=/app/flow.mjs \\
+  -e PORT=8080 \\
+  -e HOST=0.0.0.0 \\
+  walkeros/docker:latest`}
+  language="bash"
+/>
+
+| Environment Variable | Required | Default | Description |
+|---------------------|----------|---------|-------------|
+| `MODE` | Yes | - | Must be `collect` |
+| `FLOW` | Yes | - | Path to pre-built `.mjs` bundle |
+| `PORT` | No | `8080` | Server port |
+| `HOST` | No | `0.0.0.0` | Bind address |
+
+### Serve Mode
+
+<CodeSnippet
+  code={`docker run -p 3000:3000 \\
+  -v $(pwd)/dist:/app/static \\
+  -e MODE=serve \\
+  -e STATIC_DIR=/app/static \\
+  -e PORT=3000 \\
+  walkeros/docker:latest`}
+  language="bash"
+/>
+
+| Environment Variable | Required | Default | Description |
+|---------------------|----------|---------|-------------|
+| `MODE` | Yes | - | Must be `serve` |
+| `STATIC_DIR` | No | `/app/dist` | Directory to serve |
+| `PORT` | No | `3000` | Server port |
+| `HOST` | No | `0.0.0.0` | Bind address |
+
+## Deployment Workflows
+
+### Workflow 1: Volume Mount (Development)
+
+Mount pre-built bundles directly into the container.
+
+**1. Build with CLI**
+
+<CodeSnippet
+  code={`walkeros bundle server-collect.json`}
+  language="bash"
+/>
+
+This creates `dist/flow.mjs`.
+
+**2. Run with Docker**
+
+<CodeSnippet
+  code={`docker run -d \\
+  -p 8080:8080 \\
+  -v $(pwd)/dist/flow.mjs:/app/flow.mjs \\
+  -e MODE=collect \\
+  -e FLOW=/app/flow.mjs \\
+  --name walkeros-collector \\
+  walkeros/docker:latest`}
+  language="bash"
+/>
+
+**3. Test it**
+
+<CodeSnippet
+  code={`curl -X POST http://localhost:8080/collect \\
+  -H "Content-Type: application/json" \\
+  -d '{"name":"page view","data":{"title":"Home"}}'`}
+  language="bash"
+/>
+
+**4. View logs**
+
+<CodeSnippet
+  code={`docker logs -f walkeros-collector`}
+  language="bash"
+/>
+
+### Workflow 2: Custom Docker Image (Production)
+
+Build a custom Docker image with your bundle baked in.
+
+**1. Build with CLI**
+
+<CodeSnippet
+  code={`walkeros bundle production.json -e production --output flow.mjs`}
+  language="bash"
+/>
+
+**2. Create Dockerfile**
+
+<CodeSnippet
+  code={`FROM walkeros/docker:latest
+
+# Copy pre-built bundle
+COPY flow.mjs /app/flow.mjs
+
+# Configure runtime
+ENV MODE=collect
+ENV FLOW=/app/flow.mjs
+ENV PORT=8080
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
+  CMD node -e "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"`}
+  language="dockerfile"
+/>
+
+**3. Build image**
+
+<CodeSnippet
+  code={`docker build -t my-analytics-collector:v1.0.0 .`}
+  language="bash"
+/>
+
+**4. Run it**
+
+<CodeSnippet
+  code={`docker run -d -p 8080:8080 my-analytics-collector:v1.0.0`}
+  language="bash"
+/>
+
+**5. Push to registry**
+
+<CodeSnippet
+  code={`docker tag my-analytics-collector:v1.0.0 gcr.io/my-project/analytics:v1.0.0
+docker push gcr.io/my-project/analytics:v1.0.0`}
+  language="bash"
+/>
+
+### Workflow 3: Multi-Stage Build
+
+Build and bundle in a single Dockerfile.
+
+<CodeSnippet
+  code={`# Build stage
+FROM walkeros/cli:latest AS builder
+WORKDIR /build
+COPY flow.json .
+RUN walkeros bundle flow.json --local --output flow.mjs
+
+# Runtime stage
+FROM walkeros/docker:latest
+COPY --from=builder /build/flow.mjs /app/flow.mjs
+
+ENV MODE=collect
+ENV FLOW=/app/flow.mjs
+EXPOSE 8080`}
+  language="dockerfile"
+/>
+
+Build and run:
+
+<CodeSnippet
+  code={`docker build -t analytics-collector .
+docker run -d -p 8080:8080 analytics-collector`}
+  language="bash"
+/>
+
+## Docker Compose
+
+### Single Service
+
+<CodeSnippet
+  code={`version: '3.8'
+
+services:
+  collector:
+    image: walkeros/docker:latest
+    environment:
+      MODE: collect
+      FLOW: /app/flow.mjs
+      PORT: 8080
+    volumes:
+      - ./dist/flow.mjs:/app/flow.mjs
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3`}
+  language="yaml"
+/>
+
+Run it:
+
+<CodeSnippet
+  code={`docker-compose up -d
+docker-compose logs -f`}
+  language="bash"
+/>
+
+### Multiple Services (Web + Server)
+
+<CodeSnippet
+  code={`version: '3.8'
+
+services:
+  # Server-side event collection
+  collector:
+    image: walkeros/docker:latest
+    environment:
+      MODE: collect
+      FLOW: /app/server-flow.mjs
+    volumes:
+      - ./dist/server-flow.mjs:/app/server-flow.mjs
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  # Web bundle serving
+  tracker:
+    image: walkeros/docker:latest
+    environment:
+      MODE: serve
+      STATIC_DIR: /app/static
+      PORT: 3000
+    volumes:
+      - ./dist:/app/static
+    ports:
+      - "3000:3000"
+    restart: unless-stopped`}
+  language="yaml"
+/>
+
+## Cloud Deployment
+
+### Google Cloud Run
+
+Cloud Run is ideal for serverless deployment of walkerOS flows.
+
+#### Deploy Collection Endpoint
+
+**1. Create server flow**
+
+Create `bigquery-collect.json`:
+
+<CodeSnippet
+  code={`{
+  "flow": {
+    "platform": "server",
+    "sources": {
+      "http": {
+        "code": "sourceExpress",
+        "config": {
+          "settings": {
+            "path": "/collect",
+            "port": 8080,
+            "cors": true
+          }
+        }
+      }
+    },
+    "destinations": {
+      "bigquery": {
+        "code": "destinationGCP",
+        "config": {
+          "settings": {
+            "projectId": "my-project",
+            "datasetId": "analytics",
+            "tableId": "events"
+          }
+        }
+      },
+      "console": {
+        "code": "destinationDemo",
+        "config": {
+          "settings": { "name": "Logger" }
+        }
+      }
+    },
+    "collector": { "run": true }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
+      "@walkeros/server-source-express": { "version": "latest", "imports": ["sourceExpress"] },
+      "@walkeros/server-destination-gcp": { "version": "latest", "imports": ["destinationGCP"] },
+      "@walkeros/destination-demo": { "version": "latest", "imports": ["destinationDemo"] }
+    }
+  }
+}`}
+  language="json"
+/>
+
+:::tip Starting with Console
+The config above includes **both** BigQuery and console destinations. This is a best practice:
+- Console logs help debug issues in Cloud Run logs
+- Start with console only, verify events flow correctly
+- Then uncomment BigQuery destination for production
+
+To start console-only: remove the `bigquery` destination block.
+:::
+
+**2. Bundle the flow**
+
+<CodeSnippet
+  code={`walkeros bundle bigquery-collect.json --output flow.mjs`}
+  language="bash"
+/>
+
+**3. Create Dockerfile**
+
+<CodeSnippet
+  code={`FROM walkeros/docker:latest
+COPY flow.mjs /app/flow.mjs
+ENV MODE=collect
+ENV FLOW=/app/flow.mjs
+ENV PORT=8080`}
+  language="dockerfile"
+/>
+
+**4. Build and push to Google Container Registry**
+
+<CodeSnippet
+  code={`# Set your GCP project
+export PROJECT_ID=my-project
+export SERVICE_NAME=analytics-collector
+export REGION=us-central1
+
+# Build and push
+docker build -t gcr.io/$PROJECT_ID/$SERVICE_NAME .
+docker push gcr.io/$PROJECT_ID/$SERVICE_NAME`}
+  language="bash"
+/>
+
+**5. Deploy to Cloud Run**
+
+<CodeSnippet
+  code={`gcloud run deploy $SERVICE_NAME \\
+  --image gcr.io/$PROJECT_ID/$SERVICE_NAME \\
+  --platform managed \\
+  --region $REGION \\
+  --allow-unauthenticated \\
+  --port 8080 \\
+  --memory 512Mi \\
+  --cpu 1 \\
+  --max-instances 10 \\
+  --timeout 60s`}
+  language="bash"
+/>
+
+**6. Get the URL**
+
+<CodeSnippet
+  code={`gcloud run services describe $SERVICE_NAME \\
+  --platform managed \\
+  --region $REGION \\
+  --format 'value(status.url)'
+
+# Output: https://analytics-collector-xxxxx-uc.a.run.app`}
+  language="bash"
+/>
+
+**7. Test it**
+
+<CodeSnippet
+  code={`curl -X POST https://analytics-collector-xxxxx-uc.a.run.app/collect \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "page view",
+    "data": {
+      "title": "Landing Page",
+      "path": "/landing"
+    },
+    "user": {
+      "id": "user123"
+    }
+  }'`}
+  language="bash"
+/>
+
+**8. View logs**
+
+<CodeSnippet
+  code={`gcloud run logs read $SERVICE_NAME \\
+  --region $REGION \\
+  --limit 50`}
+  language="bash"
+/>
+
+You should see console logs showing the received events.
+
+#### Deploy Web Bundle Server
+
+**1. Create web flow**
+
+Create `web-tracker.json`:
+
+<CodeSnippet
+  code={`{
+  "flow": {
+    "platform": "web",
+    "sources": {
+      "browser": {
+        "code": "sourceBrowser",
+        "config": {
+          "settings": {
+            "pageview": true,
+            "session": true
+          }
+        }
+      }
+    },
+    "destinations": {
+      "api": {
+        "code": "destinationAPI",
+        "config": {
+          "settings": {
+            "url": "https://analytics-collector-xxxxx-uc.a.run.app/collect",
+            "method": "POST"
+          }
+        }
+      }
+    },
+    "collector": { "run": true }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
+      "@walkeros/web-source-browser": { "version": "latest", "imports": ["sourceBrowser"] },
+      "@walkeros/web-destination-api": { "version": "latest", "imports": ["destinationAPI"] }
+    },
+    "output": "./tracker.js",
+    "format": "iife",
+    "windowElb": "track"
+  }
+}`}
+  language="json"
+/>
+
+**2. Bundle**
+
+<CodeSnippet
+  code={`walkeros bundle web-tracker.json`}
+  language="bash"
+/>
+
+This creates `tracker.js`.
+
+**3. Create Dockerfile for serving**
+
+<CodeSnippet
+  code={`FROM walkeros/docker:latest
+COPY tracker.js /app/static/tracker.js
+ENV MODE=serve
+ENV STATIC_DIR=/app/static
+ENV PORT=8080`}
+  language="dockerfile"
+/>
+
+**4. Deploy to Cloud Run**
+
+<CodeSnippet
+  code={`# Build and push
+docker build -t gcr.io/$PROJECT_ID/tracker-server .
+docker push gcr.io/$PROJECT_ID/tracker-server
+
+# Deploy
+gcloud run deploy tracker-server \\
+  --image gcr.io/$PROJECT_ID/tracker-server \\
+  --platform managed \\
+  --region $REGION \\
+  --allow-unauthenticated \\
+  --port 8080`}
+  language="bash"
+/>
+
+**5. Use in your website**
+
+<CodeSnippet
+  code={`<script src="https://tracker-server-xxxxx-uc.a.run.app/tracker.js"></script>
+<script>
+  // Track custom events
+  track('button click', { label: 'signup' });
+</script>`}
+  language="html"
+/>
+
+:::tip Production Considerations
+For production, consider:
+- **Use a CDN**: Serve static files from Cloud Storage + Cloud CDN instead of Cloud Run
+- **Custom domain**: Map your own domain (e.g., `cdn.example.com/tracker.js`)
+- **Versioning**: Include version in filename (e.g., `tracker.v1.2.3.js`)
+- **Caching**: Set appropriate cache headers
+:::
+
+### AWS (ECS/Fargate)
+
+Similar workflow for AWS:
+
+<CodeSnippet
+  code={`# Push to ECR
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com
+
+docker tag my-analytics-collector:latest $AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/analytics-collector:latest
+
+docker push $AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/analytics-collector:latest
+
+# Create task definition and service using ECS console or CLI
+# Configure port 8080, environment variables, and health check`}
+  language="bash"
+/>
+
+### Kubernetes
+
+Deploy to any Kubernetes cluster:
+
+<CodeSnippet
+  code={`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: walkeros-collector
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: walkeros-collector
+  template:
+    metadata:
+      labels:
+        app: walkeros-collector
+    spec:
+      containers:
+      - name: collector
+        image: gcr.io/my-project/analytics-collector:v1.0.0
+        ports:
+        - containerPort: 8080
+        env:
+        - name: MODE
+          value: "collect"
+        - name: FLOW
+          value: "/app/flow.mjs"
+        - name: PORT
+          value: "8080"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: walkeros-collector
+spec:
+  selector:
+    app: walkeros-collector
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer`}
+  language="yaml"
+/>
+
+Apply:
+
+<CodeSnippet
+  code={`kubectl apply -f deployment.yaml
+kubectl get services walkeros-collector`}
+  language="bash"
+/>
+
+## Health Checks
+
+The Docker container provides a `/health` endpoint:
+
+<CodeSnippet
+  code={`curl http://localhost:8080/health`}
+  language="bash"
+/>
+
+Response:
+
+<CodeSnippet
+  code={`{
+  "status": "ok",
+  "timestamp": 1701234567890,
+  "mode": "collect",
+  "file": "/app/flow.mjs"
+}`}
+  language="json"
+/>
+
+Use this for:
+- Docker health checks
+- Kubernetes liveness/readiness probes
+- Load balancer health checks
+- Monitoring systems
+
+## Monitoring and Logs
+
+### View Docker Logs
+
+<CodeSnippet
+  code={`# Follow logs
+docker logs -f walkeros-collector
+
+# Last 100 lines
+docker logs --tail 100 walkeros-collector
+
+# With timestamps
+docker logs -t walkeros-collector`}
+  language="bash"
+/>
+
+### Cloud Run Logs
+
+<CodeSnippet
+  code={`# Recent logs
+gcloud run logs read $SERVICE_NAME --region $REGION --limit 50
+
+# Tail logs
+gcloud run logs tail $SERVICE_NAME --region $REGION
+
+# Filter by severity
+gcloud run logs read $SERVICE_NAME --region $REGION --log-filter="severity>=ERROR"`}
+  language="bash"
+/>
+
+### Structured Logging
+
+For better observability, use structured logging in your destinations:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "structured-logger": {
+      "code": "destinationDemo",
+      "config": {
+        "settings": {
+          "format": "json"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Security
+
+The Docker image follows security best practices:
+
+- ✅ **Non-root user** - Runs as `walker` (UID 1001)
+- ✅ **Minimal base** - Alpine Linux (~150-200MB)
+- ✅ **No build tools** - Production dependencies only
+- ✅ **Signal handling** - Graceful shutdown with Tini
+- ✅ **Health checks** - Built-in endpoint for orchestrators
+
+### Environment Secrets
+
+For sensitive configuration (API keys, credentials), use environment variables:
+
+<CodeSnippet
+  code={`# Docker
+docker run -e BIGQUERY_KEY="$(cat key.json)" walkeros/docker
+
+# Cloud Run
+gcloud run deploy $SERVICE_NAME \\
+  --set-secrets="BIGQUERY_KEY=bigquery-key:latest"
+
+# Kubernetes
+kubectl create secret generic analytics-secrets \\
+  --from-file=bigquery-key=key.json`}
+  language="bash"
+/>
+
+Reference secrets in your flow configuration using environment variable substitution.
+
+## Performance
+
+### Startup Time
+
+- **Cold start**: < 1 second (flow already bundled)
+- **Warm start**: < 100ms (container reuse)
+
+### Resource Usage
+
+Typical resource consumption:
+
+| Metric | Idle | Active (1000 req/min) |
+|--------|------|----------------------|
+| Memory | ~50MB | ~100-150MB |
+| CPU | < 1% | 5-15% |
+| Startup | < 1s | < 1s |
+
+### Scaling
+
+The container is designed for horizontal scaling:
+
+<CodeSnippet
+  code={`# Docker Swarm
+docker service scale walkeros-collector=5
+
+# Kubernetes
+kubectl scale deployment walkeros-collector --replicas=5
+
+# Cloud Run (auto-scaling)
+gcloud run services update $SERVICE_NAME --max-instances=100`}
+  language="bash"
+/>
+
+## Troubleshooting
+
+### Container Won't Start
+
+<CodeSnippet
+  code={`# Check logs
+docker logs walkeros-collector
+
+# Common issues:
+# - FLOW path doesn't exist
+# - MODE not set or invalid
+# - Port already in use`}
+  language="bash"
+/>
+
+### Events Not Being Received
+
+<CodeSnippet
+  code={`# Verify container is running
+docker ps | grep walkeros
+
+# Check health endpoint
+curl http://localhost:8080/health
+
+# Test event submission
+curl -X POST http://localhost:8080/collect \\
+  -H "Content-Type: application/json" \\
+  -d '{"name":"test event","data":{}}'
+
+# Check logs for errors
+docker logs walkeros-collector`}
+  language="bash"
+/>
+
+### Port Conflicts
+
+<CodeSnippet
+  code={`# Use a different host port
+docker run -p 8081:8080 walkeros/docker
+
+# Or find and kill the conflicting process
+lsof -ti:8080 | xargs kill`}
+  language="bash"
+/>
+
+### Bundle Not Found
+
+<CodeSnippet
+  code={`# Verify volume mount
+docker run -v $(pwd)/dist/flow.mjs:/app/flow.mjs walkeros/docker
+
+# Check if file exists in container
+docker run --rm -it walkeros/docker ls -la /app/
+
+# Verify FLOW environment variable
+docker run -e FLOW=/app/flow.mjs walkeros/docker`}
+  language="bash"
+/>
+
+## Next Steps
+
+- **[CLI](/docs/apps/cli)** - Learn how to build flows
+- **[Flow Configuration](/docs/getting-started/flow)** - Understand flow structure
+- **[Sources](/docs/sources/)** - Configure event sources
+- **[Destinations](/docs/destinations/)** - Set up analytics destinations
+- **[Docker Hub](https://hub.docker.com/r/walkeros/docker)** - Official Docker images

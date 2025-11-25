@@ -1,0 +1,1158 @@
+---
+title: CLI
+description: walkerOS command-line tool for building, testing, and running flows
+sidebar_position: 2
+package: '@walkeros/cli'
+---
+
+# walkerOS CLI
+
+The walkerOS CLI (`@walkeros/cli`) is a command-line tool for building, testing, and running event collection flows. It handles the complete workflow from configuration to deployment—bundling flows into optimized JavaScript, testing with simulated events, and running collection servers locally or in Docker.
+
+If you're familiar with tools like **Segment's CLI** or **Amplitude's SDK**—the walkerOS CLI is your build pipeline for analytics infrastructure.
+
+## Installation
+
+### Global Installation (Recommended)
+
+Install globally to use the `walkeros` command anywhere:
+
+<CodeSnippet
+  code={`npm install -g @walkeros/cli
+
+# Verify installation
+walkeros --version`}
+  language="bash"
+/>
+
+### Local Installation
+
+Install in your project for team consistency:
+
+<CodeSnippet
+  code={`npm install --save-dev @walkeros/cli
+
+# Use with npx
+npx walkeros --version`}
+  language="bash"
+/>
+
+## Commands Overview
+
+| Command | Purpose | Use Case |
+|---------|---------|----------|
+| `bundle` | Build production-ready bundle from flow config | Create deployable JavaScript from configuration |
+| `simulate` | Test flow with sample events (mocked) | Validate configuration before deployment |
+| `push` | Execute event with real API calls | Integration testing, production validation |
+| `run collect` | Start HTTP event collection server | Accept incoming events via HTTP POST |
+| `run serve` | Serve web bundles as static files | Host browser tracking scripts |
+
+## Getting Started
+
+Before using the CLI, you need a [flow configuration file](/docs/getting-started/flow). Here's a minimal example:
+
+<CodeSnippet
+  code={`{
+  "flow": {
+    "platform": "server",
+    "sources": {
+      "http": {
+        "code": "sourceExpress",
+        "config": {
+          "settings": { "path": "/collect", "port": 8080 }
+        }
+      }
+    },
+    "destinations": {
+      "console": {
+        "code": "destinationDemo",
+        "config": {
+          "settings": { "name": "Console Logger" }
+        }
+      }
+    },
+    "collector": { "run": true }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": {
+        "version": "latest",
+        "imports": ["startFlow"]
+      },
+      "@walkeros/server-source-express": {
+        "version": "latest",
+        "imports": ["sourceExpress"]
+      },
+      "@walkeros/destination-demo": {
+        "version": "latest",
+        "imports": ["destinationDemo"]
+      }
+    },
+    "output": "./dist/flow.mjs"
+  }
+}`}
+  language="json"
+/>
+
+Save this as `flow.json`.
+
+## Bundle Command
+
+The `bundle` command builds production-ready JavaScript bundles from flow configurations.
+
+### Use Case
+
+You've defined your sources, destinations, and transformations in a flow configuration file. Now you need to:
+- Download the required npm packages
+- Bundle everything into a single optimized JavaScript file
+- Deploy it to production (Docker, Cloud Run, serverless functions)
+
+The bundle command handles all of this.
+
+### Basic Usage
+
+<CodeSnippet
+  code={`walkeros bundle flow.json`}
+  language="bash"
+/>
+
+This creates an optimized bundle at the path specified in `build.output`.
+
+### Step-by-Step Guide
+
+**1. Create a flow configuration**
+
+Create `server-collect.json`:
+
+<CodeSnippet
+  code={`{
+  "flow": {
+    "platform": "server",
+    "sources": {
+      "http": {
+        "code": "sourceExpress",
+        "config": {
+          "settings": {
+            "path": "/collect",
+            "port": 8080,
+            "cors": true
+          }
+        }
+      }
+    },
+    "destinations": {
+      "console": {
+        "code": "destinationDemo",
+        "config": {
+          "settings": {
+            "name": "Event Logger",
+            "values": ["name", "data.title", "timestamp"]
+          }
+        }
+      }
+    },
+    "collector": { "run": true }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": {
+        "version": "latest",
+        "imports": ["startFlow"]
+      },
+      "@walkeros/server-source-express": {
+        "version": "latest",
+        "imports": ["sourceExpress"]
+      },
+      "@walkeros/destination-demo": {
+        "version": "latest",
+        "imports": ["destinationDemo"]
+      }
+    },
+    "output": "./dist/server-flow.mjs",
+    "minify": true
+  }
+}`}
+  language="json"
+/>
+
+**2. Bundle the flow**
+
+<CodeSnippet
+  code={`walkeros bundle server-collect.json --stats`}
+  language="bash"
+/>
+
+Output:
+```
+📦 Downloading packages from npm...
+✓ @walkeros/collector@latest
+✓ @walkeros/server-source-express@latest
+✓ @walkeros/destination-demo@latest
+
+🔨 Bundling...
+✓ Bundle created: ./dist/server-flow.mjs
+
+📊 Bundle Statistics:
+   Size: 45.2 KB (minified)
+   Packages: 3
+   Format: ESM
+```
+
+**3. Review the bundle**
+
+<CodeSnippet
+  code={`ls -lh dist/
+# -rw-r--r--  1 user  staff   45K  server-flow.mjs
+
+file dist/server-flow.mjs
+# dist/server-flow.mjs: JavaScript source, UTF-8 Unicode text`}
+  language="bash"
+/>
+
+The bundle is now ready to deploy!
+
+### Options
+
+<CodeSnippet
+  code={`walkeros bundle <config-file> [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `-e, --env <name>` | Build specific environment (for multi-env configs) |
+| `--all` | Build all environments |
+| `-s, --stats` | Show bundle statistics |
+| `--json` | Output statistics as JSON (for CI/CD) |
+| `--no-cache` | Skip package cache, download fresh |
+| `--local` | Execute locally without Docker |
+| `-v, --verbose` | Detailed logging |
+
+### Multi-Environment Example
+
+<CodeSnippet
+  code={`# Bundle development environment
+walkeros bundle config.json --env development
+
+# Bundle production with stats
+walkeros bundle config.json --env production --stats
+
+# Bundle all environments
+walkeros bundle config.json --all`}
+  language="bash"
+/>
+
+## Simulate Command
+
+The `simulate` command tests your flow configuration with sample events without deploying to production.
+
+### Use Case
+
+Before deploying your flow, you want to:
+- Verify your configuration is valid
+- Test event transformations and mappings
+- See what data would be sent to destinations
+- Debug issues locally
+
+Simulate executes your flow with test events and captures all destination API calls.
+
+### Basic Usage
+
+<CodeSnippet
+  code={`walkeros simulate flow.json --event '{"name":"page view","data":{"title":"Home"}}'`}
+  language="bash"
+/>
+
+### Step-by-Step Guide
+
+**1. Create a flow to test**
+
+Create `test-flow.json`:
+
+<CodeSnippet
+  code={`{
+  "flow": {
+    "platform": "server",
+    "destinations": {
+      "demo": {
+        "code": "destinationDemo",
+        "config": {
+          "settings": {
+            "name": "Test Destination"
+          },
+          "mapping": {
+            "page": {
+              "view": {
+                "name": "pageview",
+                "data": {
+                  "map": {
+                    "page_title": "data.title",
+                    "page_path": "data.path"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "collector": { "run": true }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
+      "@walkeros/destination-demo": { "version": "latest", "imports": ["destinationDemo"] }
+    }
+  }
+}`}
+  language="json"
+/>
+
+**2. Run simulation**
+
+<CodeSnippet
+  code={`walkeros simulate test-flow.json --event '{
+  "name": "page view",
+  "data": {
+    "title": "Welcome to Analytics",
+    "path": "/welcome"
+  }
+}'`}
+  language="bash"
+/>
+
+**3. Review output**
+
+```json
+{
+  "success": true,
+  "event": {
+    "name": "page view",
+    "entity": "page",
+    "action": "view",
+    "data": {
+      "title": "Welcome to Analytics",
+      "path": "/welcome"
+    },
+    "timestamp": 1701234567890
+  },
+  "captured": [
+    {
+      "destination": "demo",
+      "event": {
+        "name": "pageview",
+        "data": {
+          "page_title": "Welcome to Analytics",
+          "page_path": "/welcome"
+        }
+      }
+    }
+  ]
+}
+```
+
+The simulation shows:
+- ✅ Event was processed successfully
+- ✅ Mapping transformed `"page view"` → `"pageview"`
+- ✅ Data mapping extracted `title` → `page_title` and `path` → `page_path`
+
+### Options
+
+<CodeSnippet
+  code={`walkeros simulate <config-file> [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--event <json>` | Event JSON string to test |
+| `--event-file <path>` | Path to JSON file with event(s) |
+| `--json` | Output as JSON |
+| `--local` | Execute locally without Docker |
+| `-v, --verbose` | Detailed logging |
+
+### Multiple Events
+
+Test multiple events at once:
+
+<CodeSnippet
+  code={`# Create events.json
+echo '[
+  {"name":"page view","data":{"title":"Home"}},
+  {"name":"product view","data":{"id":"P123","name":"Laptop"}},
+  {"name":"order complete","data":{"value":999,"id":"ORD-456"}}
+]' > events.json
+
+# Simulate all events
+walkeros simulate flow.json --event-file events.json`}
+  language="bash"
+/>
+
+## Push Command
+
+The `push` command executes your flow with a real event, making actual API calls to your configured destinations. Unlike `simulate` which mocks API calls for safe testing, `push` performs real HTTP requests—ideal for integration testing and production validation.
+
+### Use Case
+
+You've validated your configuration with `simulate` and now need to:
+- Test with real third-party APIs (GA4, Meta, BigQuery, etc.)
+- Verify production credentials and endpoints work
+- Debug actual API responses and errors
+- Perform integration testing before deployment
+
+Push is your bridge between local testing and production deployment.
+
+### Basic Usage
+
+<CodeSnippet
+  code={`walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}' --local`}
+  language="bash"
+/>
+
+### Step-by-Step Guide
+
+**1. Create a flow configuration**
+
+Create `api-flow.json` with a destination that makes real HTTP calls:
+
+<CodeSnippet
+  code={`{
+  "flow": {
+    "platform": "server",
+    "destinations": {
+      "api": {
+        "code": "destinationAPI",
+        "config": {
+          "settings": {
+            "url": "https://your-endpoint.com/events",
+            "method": "POST"
+          }
+        }
+      }
+    },
+    "collector": { "run": true }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
+      "@walkeros/web-destination-api": { "version": "latest", "imports": ["destinationAPI"] }
+    }
+  }
+}`}
+  language="json"
+/>
+
+**2. Create an event file**
+
+Create `event.json`:
+
+<CodeSnippet
+  code={`{
+  "name": "order complete",
+  "data": {
+    "id": "ORD-12345",
+    "total": 299.99,
+    "currency": "USD"
+  },
+  "user": {
+    "id": "user_abc123"
+  }
+}`}
+  language="json"
+/>
+
+**3. Push the event**
+
+<CodeSnippet
+  code={`walkeros push api-flow.json --event event.json --local --verbose`}
+  language="bash"
+/>
+
+**4. Review the output**
+
+```
+📥 Loading event...
+📦 Loading flow configuration...
+🔨 Bundling flow configuration...
+🖥️  Executing in server environment (Node.js)...
+Pushing event: order complete
+✅ Event pushed successfully
+   Event ID: 1701234567890-abc12-1
+   Entity: order
+   Action: complete
+   Duration: 1234ms
+```
+
+The event was sent to your real API endpoint!
+
+### Options
+
+<CodeSnippet
+  code={`walkeros push <config-file> [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `-e, --event <source>` | **Required.** Event to push (JSON string, file path, or URL) |
+| `--env <name>` | Environment name (for multi-environment configs) |
+| `--json` | Output results as JSON |
+| `-v, --verbose` | Verbose output with debug information |
+| `-s, --silent` | Suppress output (for CI/CD) |
+| `--local` | Execute in local Node.js instead of Docker |
+
+### Event Input Formats
+
+The `--event` parameter accepts three formats:
+
+**Inline JSON string:**
+<CodeSnippet
+  code={`walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}'`}
+  language="bash"
+/>
+
+**File path:**
+<CodeSnippet
+  code={`walkeros push flow.json --event ./events/order.json`}
+  language="bash"
+/>
+
+**URL:**
+<CodeSnippet
+  code={`walkeros push flow.json --event https://example.com/sample-event.json`}
+  language="bash"
+/>
+
+### Push vs Simulate
+
+| Feature | `push` | `simulate` |
+|---------|--------|------------|
+| API Calls | Real HTTP requests | Mocked (captured) |
+| Use Case | Integration testing | Safe local testing |
+| Side Effects | Full (writes to DBs, sends to APIs) | None |
+| Output | Success/error from real APIs | Captured call data |
+
+**When to use each:**
+- Use `simulate` first to validate configuration without side effects
+- Use `push` to verify real integrations work before deployment
+
+### JSON Output
+
+For CI/CD pipelines, use `--json` for machine-readable output:
+
+<CodeSnippet
+  code={`walkeros push flow.json --event '{"name":"page view"}' --json --silent --local`}
+  language="bash"
+/>
+
+Output:
+```json
+{
+  "success": true,
+  "event": {
+    "id": "1701234567890-abc12-1",
+    "name": "page view",
+    "entity": "page",
+    "action": "view"
+  },
+  "duration": 1234
+}
+```
+
+On error:
+```json
+{
+  "success": false,
+  "error": "Connection refused: https://your-endpoint.com/events",
+  "duration": 5023
+}
+```
+
+### Multi-Environment
+
+Push to specific environments:
+
+<CodeSnippet
+  code={`# Push to staging
+walkeros push flow.json --event event.json --env staging --local
+
+# Push to production
+walkeros push flow.json --event event.json --env production --local`}
+  language="bash"
+/>
+
+## Run Collect Command
+
+The `run collect` command starts an HTTP server that accepts events and processes them through your flow.
+
+### Use Case
+
+You need an HTTP endpoint to:
+- Receive events from browser clients, mobile apps, or server-side sources
+- Process events through your collector and destinations
+- Test the full event pipeline locally before deploying to production
+
+This is similar to running a Segment or Jitsu collection endpoint.
+
+### Basic Usage
+
+<CodeSnippet
+  code={`walkeros run collect flow.json --port 8080`}
+  language="bash"
+/>
+
+### Step-by-Step Guide
+
+**1. Create a collection flow**
+
+Create `collect.json`:
+
+<CodeSnippet
+  code={`{
+  "flow": {
+    "platform": "server",
+    "sources": {
+      "http": {
+        "code": "sourceExpress",
+        "config": {
+          "settings": {
+            "path": "/collect",
+            "port": 8080,
+            "cors": true
+          }
+        }
+      }
+    },
+    "destinations": {
+      "console": {
+        "code": "destinationDemo",
+        "config": {
+          "settings": {
+            "name": "Event Collector",
+            "values": ["name", "data", "user.id", "timestamp"]
+          }
+        }
+      }
+    },
+    "collector": {
+      "run": true,
+      "globals": {
+        "environment": "development"
+      }
+    }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
+      "@walkeros/server-source-express": { "version": "latest", "imports": ["sourceExpress"] },
+      "@walkeros/destination-demo": { "version": "latest", "imports": ["destinationDemo"] }
+    }
+  }
+}`}
+  language="json"
+/>
+
+**2. Start the collector**
+
+<CodeSnippet
+  code={`walkeros run collect collect.json`}
+  language="bash"
+/>
+
+Output:
+```
+📦 Bundling flow...
+✓ Bundle ready
+
+🚀 Starting collection server...
+✓ Server running on http://localhost:8080
+✓ Endpoint: POST http://localhost:8080/collect
+✓ Health check: GET http://localhost:8080/health
+```
+
+**3. Send test events**
+
+Open a new terminal and send events:
+
+<CodeSnippet
+  code={`# Page view event
+curl -X POST http://localhost:8080/collect \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "page view",
+    "data": {
+      "title": "Home Page",
+      "path": "/"
+    },
+    "user": {
+      "id": "user123"
+    }
+  }'
+
+# Product view event
+curl -X POST http://localhost:8080/collect \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "product view",
+    "data": {
+      "id": "P123",
+      "name": "Laptop",
+      "price": 999
+    }
+  }'`}
+  language="bash"
+/>
+
+**4. See events in console**
+
+The collector terminal shows:
+```
+[Event Collector] page view
+  data: {"title":"Home Page","path":"/"}
+  user.id: user123
+  timestamp: 1701234567890
+
+[Event Collector] product view
+  data: {"id":"P123","name":"Laptop","price":999}
+  timestamp: 1701234567891
+```
+
+### Options
+
+<CodeSnippet
+  code={`walkeros run collect <config-or-bundle> [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--port <number>` | Server port (default: 8080) |
+| `--local` | Execute locally without Docker |
+| `-v, --verbose` | Detailed logging |
+
+### Running Pre-Built Bundles
+
+You can also run pre-built bundles directly:
+
+<CodeSnippet
+  code={`# First, bundle
+walkeros bundle collect.json
+
+# Then run the bundle
+walkeros run collect dist/flow.mjs --port 8080`}
+  language="bash"
+/>
+
+## Run Serve Command
+
+The `run serve` command serves web bundles as static files for browser-side tracking.
+
+### Use Case
+
+You've created a web flow (browser event tracking) and need to:
+- Host the JavaScript bundle for your website to load
+- Test browser tracking locally before deploying to a CDN
+- Serve multiple versions or configurations
+
+This is like hosting a tracking script (similar to Segment's analytics.js or Amplitude's SDK).
+
+### Basic Usage
+
+<CodeSnippet
+  code={`walkeros run serve web-flow.json --port 3000`}
+  language="bash"
+/>
+
+### Step-by-Step Guide
+
+**1. Create a web flow**
+
+Create `web-track.json`:
+
+<CodeSnippet
+  code={`{
+  "flow": {
+    "platform": "web",
+    "sources": {
+      "browser": {
+        "code": "sourceBrowser",
+        "config": {
+          "settings": {
+            "pageview": true,
+            "session": true
+          }
+        }
+      }
+    },
+    "destinations": {
+      "api": {
+        "code": "destinationAPI",
+        "config": {
+          "settings": {
+            "url": "http://localhost:8080/collect",
+            "method": "POST"
+          }
+        }
+      }
+    },
+    "collector": { "run": true }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
+      "@walkeros/web-source-browser": { "version": "latest", "imports": ["sourceBrowser"] },
+      "@walkeros/web-destination-api": { "version": "latest", "imports": ["destinationAPI"] }
+    },
+    "output": "./dist/tracker.js",
+    "format": "iife",
+    "windowCollector": "walkerCollector",
+    "windowElb": "track"
+  }
+}`}
+  language="json"
+/>
+
+**2. Start the serve mode**
+
+<CodeSnippet
+  code={`walkeros run serve web-track.json --port 3000 --path /scripts`}
+  language="bash"
+/>
+
+Output:
+```
+📦 Bundling flow...
+✓ Bundle ready: tracker.js
+
+🌐 Starting static file server...
+✓ Server running on http://localhost:3000
+✓ Script available at: http://localhost:3000/scripts/tracker.js
+✓ Health check: GET http://localhost:3000/health
+```
+
+**3. Use in HTML**
+
+Create `test.html`:
+
+<CodeSnippet
+  code={`<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Tracking</title>
+  <script src="http://localhost:3000/scripts/tracker.js"></script>
+</head>
+<body>
+  <h1>Welcome</h1>
+  <button onclick="track('button click', {label: 'test'})">
+    Click Me
+  </button>
+</body>
+</html>`}
+  language="html"
+/>
+
+**4. Test in browser**
+
+Open `test.html` in your browser. Events will be sent to `http://localhost:8080/collect`.
+
+### Options
+
+<CodeSnippet
+  code={`walkeros run serve <config-or-bundle> [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--port <number>` | Server port (default: 3000) |
+| `--path <string>` | URL path to serve script (default: `/`) |
+| `--name <string>` | Script filename (default: from config) |
+| `--local` | Execute locally without Docker |
+| `-v, --verbose` | Detailed logging |
+
+## Complete Example: Web → Server Flow
+
+This example demonstrates a complete analytics pipeline:
+- Browser events captured by web flow
+- Sent to server collection endpoint
+- Logged to console (swap for BigQuery in production)
+
+### 1. Create Server Collection Flow
+
+Create `server-collect.json`:
+
+<CodeSnippet
+  code={`{
+  "flow": {
+    "platform": "server",
+    "sources": {
+      "http": {
+        "code": "sourceExpress",
+        "config": {
+          "settings": { "path": "/collect", "port": 8080, "cors": true }
+        }
+      }
+    },
+    "destinations": {
+      "console": {
+        "code": "destinationDemo",
+        "config": {
+          "settings": { "name": "Server Logger" }
+        }
+      }
+    },
+    "collector": { "run": true }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
+      "@walkeros/server-source-express": { "version": "latest", "imports": ["sourceExpress"] },
+      "@walkeros/destination-demo": { "version": "latest", "imports": ["destinationDemo"] }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### 2. Create Web Tracking Flow
+
+Create `web-track.json`:
+
+<CodeSnippet
+  code={`{
+  "flow": {
+    "platform": "web",
+    "sources": {
+      "browser": {
+        "code": "sourceBrowser",
+        "config": {
+          "settings": { "pageview": true, "session": true }
+        }
+      }
+    },
+    "destinations": {
+      "api": {
+        "code": "destinationAPI",
+        "config": {
+          "settings": {
+            "url": "http://localhost:8080/collect",
+            "method": "POST"
+          }
+        }
+      }
+    },
+    "collector": { "run": true }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
+      "@walkeros/web-source-browser": { "version": "latest", "imports": ["sourceBrowser"] },
+      "@walkeros/web-destination-api": { "version": "latest", "imports": ["destinationAPI"] }
+    },
+    "output": "./dist/tracker.js",
+    "format": "iife",
+    "windowElb": "track"
+  }
+}`}
+  language="json"
+/>
+
+### 3. Start Collection Server
+
+Terminal 1:
+
+<CodeSnippet
+  code={`walkeros run collect server-collect.json`}
+  language="bash"
+/>
+
+### 4. Start Web Server
+
+Terminal 2:
+
+<CodeSnippet
+  code={`walkeros run serve web-track.json --port 3000`}
+  language="bash"
+/>
+
+### 5. Test in Browser
+
+Create `demo.html`:
+
+<CodeSnippet
+  code={`<!DOCTYPE html>
+<html>
+<head>
+  <script src="http://localhost:3000/tracker.js"></script>
+</head>
+<body>
+  <h1 data-elb="promotion" data-elb-promotion="name:Get Started">
+    Welcome to walkerOS
+  </h1>
+  <button data-elbaction="click:cta">Start Tracking</button>
+
+  <script>
+    // Manual tracking
+    track('custom event', { action: 'demo', value: 42 });
+  </script>
+</body>
+</html>`}
+  language="html"
+/>
+
+Open in browser. Terminal 1 shows:
+```
+[Server Logger] page view
+[Server Logger] promotion view
+[Server Logger] promotion cta
+[Server Logger] custom event
+```
+
+## Global Options
+
+These options work with all commands:
+
+<CodeSnippet
+  code={`walkeros [command] [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--local` | Execute without Docker (faster, requires local Node.js) |
+| `--verbose` | Show detailed logs |
+| `--silent` | Suppress output |
+| `--json` | Output as JSON (for CI/CD) |
+| `--help` | Show help for command |
+| `--version` | Show CLI version |
+
+## Execution Modes
+
+### Docker Mode (Default)
+
+By default, the CLI uses Docker for isolated execution:
+
+<CodeSnippet
+  code={`walkeros bundle flow.json`}
+  language="bash"
+/>
+
+**Advantages**:
+- Consistent environment across machines
+- Isolated from local Node.js setup
+- Reproducible builds
+
+**Requirements**:
+- Docker installed and running
+
+### Local Mode
+
+Use `--local` to execute in your current Node.js environment:
+
+<CodeSnippet
+  code={`walkeros bundle flow.json --local`}
+  language="bash"
+/>
+
+**Advantages**:
+- Faster execution (no container startup)
+- No Docker dependency
+- Useful in CI/CD or containers
+
+**Requirements**:
+- Node.js 18+ installed locally
+
+## CI/CD Integration
+
+### GitHub Actions
+
+<CodeSnippet
+  code={`name: Build Flows
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install CLI
+        run: npm install -g @walkeros/cli
+
+      - name: Bundle flows
+        run: walkeros bundle flow.json --all --stats --json > stats.json
+
+      - name: Upload bundles
+        uses: actions/upload-artifact@v3
+        with:
+          name: flows
+          path: dist/`}
+  language="yaml"
+/>
+
+### Docker Build
+
+<CodeSnippet
+  code={`FROM walkeros/cli:latest AS builder
+COPY flow.json .
+RUN walkeros bundle flow.json --local
+
+FROM walkeros/docker:latest
+COPY --from=builder /dist/flow.mjs /app/flow.mjs
+ENV MODE=collect
+ENV FLOW=/app/flow.mjs`}
+  language="dockerfile"
+/>
+
+## Troubleshooting
+
+### Package Download Issues
+
+If packages fail to download:
+
+<CodeSnippet
+  code={`# Clear cache and retry
+walkeros bundle flow.json --no-cache
+
+# Check npm registry access
+npm ping`}
+  language="bash"
+/>
+
+### Docker Permission Issues
+
+On Linux, you may need to run Docker commands with sudo or add your user to the `docker` group:
+
+<CodeSnippet
+  code={`# Use local mode instead
+walkeros bundle flow.json --local
+
+# Or fix Docker permissions
+sudo usermod -aG docker $USER
+# Then log out and back in`}
+  language="bash"
+/>
+
+### Port Already in Use
+
+If the port is already in use:
+
+<CodeSnippet
+  code={`# Use a different port
+walkeros run collect flow.json --port 8081
+
+# Or kill the process using the port
+lsof -ti:8080 | xargs kill`}
+  language="bash"
+/>
+
+## Next Steps
+
+- **[Flow Configuration](/docs/getting-started/flow)** - Learn about flow config structure
+- **[Docker Deployment](/docs/apps/docker)** - Deploy flows to production
+- **[Sources](/docs/sources/)** - Explore event sources
+- **[Destinations](/docs/destinations/)** - Configure analytics tools
+- **[Mapping](/docs/mapping)** - Transform events for destinations

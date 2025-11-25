@@ -2,12 +2,12 @@ import esbuild from 'esbuild';
 import path from 'path';
 import fs from 'fs-extra';
 import type { Flow } from '@walkeros/core';
-import type { BuildOptions } from '../../types/bundle';
-import type { SourceDestinationItem } from '../../types/template';
-import { downloadPackages } from './package-manager';
-import { TemplateEngine } from './template-engine';
-import type { Logger } from '../../core';
-import { getTempDir } from '../../config';
+import type { BuildOptions } from '../../types/bundle.js';
+import type { SourceDestinationItem } from '../../types/template.js';
+import { downloadPackages } from './package-manager.js';
+import { TemplateEngine } from './template-engine.js';
+import type { Logger } from '../../core/index.js';
+import { getTempDir } from '../../config/index.js';
 
 export interface BundleStats {
   totalSize: number;
@@ -115,7 +115,10 @@ export async function bundleCore(
       await esbuild.build(esbuildOptions);
     } catch (buildError) {
       // Enhanced error handling for build failures
-      throw createBuildError(buildError as EsbuildError, buildOptions.code);
+      throw createBuildError(
+        buildError as EsbuildError,
+        buildOptions.code || '',
+      );
     }
 
     logger.gray(`Output: ${outputPath}`);
@@ -257,19 +260,12 @@ function createEsbuildOptions(
     ];
     // Mark runtime dependencies as external
     // These packages are installed in the Docker container and should not be bundled
-    // - zod: Prevents double-loading issues (used by @walkeros/core)
     // - express/cors: Runtime dependencies for server sources
+    // Note: zod is bundled inline via @walkeros/core (not marked external)
     // Use wildcard patterns to match both ESM and CJS imports
-    const npmPackages = [
-      'zod',
-      'zod/*',
-      'express',
-      'express/*',
-      'cors',
-      'cors/*',
-    ];
+    const npmPackages = ['express', 'express/*', 'cors', 'cors/*'];
     // All downloaded @walkeros packages will be bundled into the output
-    // Only Node.js built-ins and problematic packages (zod) are marked external
+    // Only Node.js built-ins and runtime server packages (express/cors) are marked external
     baseOptions.external = buildOptions.external
       ? [...nodeBuiltins, ...npmPackages, ...buildOptions.external]
       : [...nodeBuiltins, ...npmPackages];
@@ -282,11 +278,6 @@ function createEsbuildOptions(
     baseOptions.target = 'node18';
   } else {
     baseOptions.target = 'es2018';
-  }
-
-  // Set global name for IIFE format
-  if (buildOptions.globalName && buildOptions.format === 'iife') {
-    baseOptions.globalName = buildOptions.globalName;
   }
 
   return baseOptions;
@@ -304,22 +295,16 @@ function packageNameToVariable(packageName: string): string {
     .join('');
 }
 
-async function createEntryPoint(
-  flowConfig: Flow.Config,
-  buildOptions: BuildOptions,
-  packagePaths: Map<string, string>,
-): Promise<string> {
-  // Generate import statements from packages
-  const importStatements: string[] = [];
-  const examplesMappings: string[] = [];
-
-  // For simulation mode, automatically import examples from destination packages
-  // This ensures examples are loaded in the SAME execution context as the bundle
-  // preventing zod double-loading issues
+/**
+ * Detects destination packages from flow configuration.
+ * Extracts package names from destinations that have explicit 'package' field.
+ */
+function detectDestinationPackages(flowConfig: Flow.Config): Set<string> {
   const destinationPackages = new Set<string>();
   const destinations = (
     flowConfig as unknown as { destinations?: Record<string, unknown> }
   ).destinations;
+
   if (destinations) {
     for (const [destKey, destConfig] of Object.entries(destinations)) {
       // Require explicit package field - no inference for any packages
@@ -335,9 +320,26 @@ async function createEntryPoint(
     }
   }
 
-  for (const [packageName, packageConfig] of Object.entries(
-    buildOptions.packages,
-  )) {
+  return destinationPackages;
+}
+
+interface ImportGenerationResult {
+  importStatements: string[];
+  examplesMappings: string[];
+}
+
+/**
+ * Generates import statements and examples mappings from build packages.
+ * Handles explicit imports, namespace imports, and auto-imports for destination packages.
+ */
+function generateImportStatements(
+  packages: BuildOptions['packages'],
+  destinationPackages: Set<string>,
+): ImportGenerationResult {
+  const importStatements: string[] = [];
+  const examplesMappings: string[] = [];
+
+  for (const [packageName, packageConfig] of Object.entries(packages)) {
     if (packageConfig.imports && packageConfig.imports.length > 0) {
       // Remove duplicates within the same package
       const uniqueImports = [...new Set(packageConfig.imports)];
@@ -398,42 +400,20 @@ async function createEntryPoint(
       );
     }
 
-    // Auto-import examples for destination packages
-    if (destinationPackages.has(packageName)) {
-      const destinationMatch = packageName.match(
-        /@walkeros\/(?:(?:web|server)-)?destination-(.+)$/,
-      );
-      if (destinationMatch) {
-        const destinationName = destinationMatch[1];
-        const examplesVarName = `${destinationName.replace(/-/g, '_')}_examples`;
-        // Try importing from /examples subpath first (standard packages)
-        // Fall back to importing { examples } from main module (demo packages)
-        const isDemoPackage = packageName.includes('-demo');
-        if (isDemoPackage) {
-          importStatements.push(
-            `import { examples as ${examplesVarName} } from '${packageName}';`,
-          );
-        } else {
-          importStatements.push(
-            `import * as ${examplesVarName} from '${packageName}/examples';`,
-          );
-        }
-        examplesMappings.push(`  ${destinationName}: ${examplesVarName}`);
-      }
-    }
+    // Examples are no longer auto-imported - simulator loads them dynamically
   }
 
-  // Create examples object if we have any mappings
-  const examplesObject =
-    examplesMappings.length > 0
-      ? `const examples = {\n${examplesMappings.join(',\n')}\n};\n\n`
-      : '';
+  return { importStatements, examplesMappings };
+}
 
-  // Separate imports from template processing
-  const importsCode = importStatements.join('\n');
-
-  // Apply template if configured, otherwise just use code directly
-  let templatedCode: string;
+/**
+ * Processes template if configured, otherwise returns code directly.
+ * Applies TemplateEngine to transform code with flow configuration.
+ */
+async function processTemplate(
+  flowConfig: Flow.Config,
+  buildOptions: BuildOptions,
+): Promise<string> {
   if (buildOptions.template) {
     const templateEngine = new TemplateEngine();
     const flowWithProps = flowConfig as unknown as {
@@ -441,9 +421,9 @@ async function createEntryPoint(
       destinations?: Record<string, unknown>;
       collector?: Record<string, unknown>;
     };
-    templatedCode = await templateEngine.process(
+    return await templateEngine.process(
       buildOptions.template,
-      buildOptions.code, // Pass user code as parameter
+      buildOptions.code || '', // Pass user code as parameter (empty if undefined)
       (flowWithProps.sources || {}) as unknown as Record<
         string,
         SourceDestinationItem
@@ -457,36 +437,97 @@ async function createEntryPoint(
     );
   } else {
     // No template - just use the code directly
-    templatedCode = buildOptions.code;
+    return buildOptions.code || '';
+  }
+}
+
+/**
+ * Wraps code for specific output formats.
+ * Adds export wrapper for ESM without template when no export exists.
+ */
+function wrapCodeForFormat(
+  code: string,
+  format: BuildOptions['format'],
+  hasTemplate: boolean,
+): string {
+  // Template outputs ready-to-use code - no wrapping needed
+  if (hasTemplate) {
+    return code;
   }
 
-  // Apply module format wrapping if needed
-  let wrappedCode = templatedCode;
+  // Only add export wrapper for server ESM without template
+  if (format === 'esm') {
+    // Check if code already has export statements
+    const hasExport = /^\s*export\s/m.test(code);
 
-  // Check if code already has any export statements (default, named, etc.)
-  const hasExport = /^\s*export\s/m.test(templatedCode);
-
-  if (!hasExport) {
-    if (buildOptions.format === 'esm') {
-      // Export as default for ESM
-      wrappedCode = `export default ${templatedCode}`;
-    } else if (buildOptions.platform === 'browser' && buildOptions.globalName) {
-      // Assign to window for browser builds with globalName
-      wrappedCode = `window['${buildOptions.globalName}'] = ${templatedCode}`;
+    if (!hasExport) {
+      // Raw code without export - wrap as default export
+      return `export default ${code}`;
     }
   }
 
-  // Combine imports, examples object, and wrapped code
+  return code;
+}
+
+/**
+ * Assembles the final entry point code from all components.
+ * Combines imports, examples object, and wrapped code with format-specific exports.
+ */
+function assembleFinalCode(
+  importStatements: string[],
+  examplesObject: string,
+  wrappedCode: string,
+  format: BuildOptions['format'],
+): string {
+  const importsCode = importStatements.join('\n');
+
   let finalCode = importsCode
     ? `${importsCode}\n\n${examplesObject}${wrappedCode}`
     : `${examplesObject}${wrappedCode}`;
 
-  // If we have examples, export them as a named export
-  if (examplesObject && buildOptions.format === 'esm') {
+  // Make examples available for ESM
+  if (examplesObject && format === 'esm') {
+    // ESM: export as named export
     finalCode += `\n\nexport { examples };`;
   }
 
   return finalCode;
+}
+
+async function createEntryPoint(
+  flowConfig: Flow.Config,
+  buildOptions: BuildOptions,
+  packagePaths: Map<string, string>,
+): Promise<string> {
+  // Detect destination packages for auto-importing examples
+  const destinationPackages = detectDestinationPackages(flowConfig);
+
+  // Generate import statements (examples generation removed)
+  const { importStatements } = generateImportStatements(
+    buildOptions.packages,
+    destinationPackages,
+  );
+
+  // No longer generate examples in bundles - simulator loads them dynamically
+  const examplesObject = '';
+
+  // Process template or use code directly
+  const templatedCode = await processTemplate(flowConfig, buildOptions);
+
+  // Wrap code for specific output format
+  const wrappedCode = wrapCodeForFormat(
+    templatedCode,
+    buildOptions.format,
+    !!buildOptions.template,
+  );
+
+  // Assemble final entry point code
+  return assembleFinalCode(
+    importStatements,
+    examplesObject,
+    wrappedCode,
+    buildOptions.format,
+  );
 }
 
 interface EsbuildError {

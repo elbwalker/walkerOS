@@ -3,7 +3,7 @@ import type { DestinationPlausible } from '.';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { startFlow } from '@walkeros/collector';
 import { getEvent, mockEnv } from '@walkeros/core';
-import { examples } from '.';
+import { examples } from './dev';
 
 const { events, mapping } = examples;
 

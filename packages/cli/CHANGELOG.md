@@ -1,5 +1,65 @@
 # @walkeros/cli
 
+## 0.4.1
+
+### Patch Changes
+
+- dev entry
+- Updated dependencies
+  - @walkeros/server-core@0.4.1
+  - @walkeros/docker@0.2.1
+  - @walkeros/core@0.4.1
+
+## 0.4.0
+
+### Minor Changes
+
+- Consolidate schemas and examples under `/dev` export
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/docker@0.2.0
+  - @walkeros/core@0.4.0
+
+## 0.3.6
+
+### Patch Changes
+
+- port path and name
+- df4b2a1: Read CLI version dynamically from package.json instead of hardcoded
+  value
+- Updated dependencies
+  - @walkeros/docker@0.1.5
+
+## 0.3.5
+
+### Patch Changes
+
+- cli usage
+- Updated dependencies
+  - @walkeros/docker@0.1.4
+
+## 0.3.4
+
+### Patch Changes
+
+- main module exec
+
+## 0.3.3
+
+### Patch Changes
+
+- force local
+
+## 0.3.2
+
+### Patch Changes
+
+- walkeros cli with docker
+- Updated dependencies
+  - @walkeros/docker@0.1.2
+
 ## 0.3.1
 
 ### Patch Changes

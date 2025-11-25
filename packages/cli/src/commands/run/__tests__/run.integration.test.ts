@@ -5,7 +5,7 @@
  * No Docker daemon required - runs directly in Node.js process
  */
 
-import { runCommand } from '../index';
+import { runCommand } from '../index.js';
 import { join } from 'path';
 import { existsSync } from 'fs';
 

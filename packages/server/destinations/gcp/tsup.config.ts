@@ -13,4 +13,8 @@ export default defineConfig([
     entry: ['src/schemas.ts'],
     terserOptions: {},
   }),
+  buildModules({
+    entry: ['src/dev.ts'],
+    outDir: 'dist',
+  }),
 ]);

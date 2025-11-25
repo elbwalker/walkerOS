@@ -1,0 +1,20 @@
+{
+  "flow": {
+    "platform": "server",
+    "destinations": {
+      "demo": {
+        "code": "destinationDemo"
+      }
+    }
+  },
+  "build": {
+    "packages": {
+      "@walkeros/collector": {
+        "imports": ["startFlow"]
+      },
+      "@walkeros/destination-demo": {
+        "imports": ["destinationDemo"]
+      }
+    }
+  }
+}

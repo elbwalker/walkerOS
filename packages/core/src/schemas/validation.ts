@@ -32,25 +32,3 @@ export function toJsonSchema(
     target,
   });
 }
-
-/**
- * Legacy alias for backward compatibility
- * @deprecated Use toJsonSchema() instead
- */
-export function zodToJsonSchema(
-  schema: z.ZodTypeAny,
-  options?: {
-    target?: string;
-    name?: string;
-    $refStrategy?: string;
-    definitions?: Record<string, z.ZodTypeAny>;
-  },
-) {
-  const target =
-    options?.target === 'jsonSchema7'
-      ? 'draft-7'
-      : (options?.target as 'draft-7' | 'draft-2020-12' | 'openapi-3.0');
-  return z.toJSONSchema(schema, {
-    target: target || 'draft-7',
-  });
-}

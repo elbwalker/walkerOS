@@ -1,7 +1,7 @@
 import type { Config, Settings, Destination, Env } from '../types';
 import type { WalkerOS, Collector } from '@walkeros/core';
 import { createEvent, mockEnv } from '@walkeros/core';
-import { examples } from '../';
+import * as examples from '../examples';
 
 const { env } = examples;
 

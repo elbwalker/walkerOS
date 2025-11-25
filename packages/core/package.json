@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/core",
   "description": "Core types and platform-agnostic utilities for walkerOS",
-  "version": "0.3.1",
+  "version": "0.4.1",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -9,6 +9,18 @@
   "files": [
     "dist/**"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
+    }
+  },
   "scripts": {
     "build": "tsup --silent",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",

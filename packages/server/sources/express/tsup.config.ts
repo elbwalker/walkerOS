@@ -4,4 +4,9 @@ export default defineConfig([
   buildModules({
     terserOptions: {}, // Don't mangle here
   }),
+  // Schemas build (separate entry for documentation/tooling)
+  buildModules({
+    entry: ['src/dev.ts'],
+    outDir: 'dist',
+  }),
 ]);

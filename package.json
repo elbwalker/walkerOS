@@ -14,7 +14,10 @@
     "packages/web/sources/*",
     "apps/quickstart",
     "apps/walkerjs",
+    "apps/cli",
     "apps/storybook-addon",
+    "apps/demos/destination",
+    "apps/demos/source",
     "apps/demos/react",
     "apps/demos/storybook",
     "website"
@@ -26,7 +29,8 @@
     "dev": "turbo run dev --output-logs=errors-only",
     "format": "prettier --write .",
     "lint": "turbo run lint --filter=!@walkeros/website --output-logs=errors-only",
-    "publish-packages": "npm run build lint test && changeset version && changeset publish",
+    "publish-packages": "turbo run build lint test --filter=!@walkeros/website --output-logs=errors-only && changeset version && changeset publish",
+    "publish-docker": "npm run -w @walkeros/cli docker:publish && npm run -w @walkeros/docker docker:publish",
     "test": "turbo run test --filter=!@walkeros/website --output-logs=errors-only",
     "prepare": "husky || true"
   },

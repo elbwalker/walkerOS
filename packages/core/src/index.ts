@@ -1,5 +1,4 @@
 export * from './types';
-export * from './schemas';
 
 export * from './anonymizeIP';
 export * from './assign';

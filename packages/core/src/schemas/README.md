@@ -242,9 +242,9 @@ export const SourceTypeSchema = z.enum([...]);
 ### JSON Schemas (camelCase + "JsonSchema")
 
 ```typescript
-export const eventJsonSchema = zodToJsonSchema(EventSchema, ...);
-export const userJsonSchema = zodToJsonSchema(UserSchema, ...);
-export const sourceTypeJsonSchema = zodToJsonSchema(SourceTypeSchema, ...);
+export const eventJsonSchema = toJsonSchema(EventSchema, ...);
+export const userJsonSchema = toJsonSchema(UserSchema, ...);
+export const sourceTypeJsonSchema = toJsonSchema(SourceTypeSchema, ...);
 ```
 
 **Pattern**: `{typeName}JsonSchema`

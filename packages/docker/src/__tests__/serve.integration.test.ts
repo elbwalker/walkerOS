@@ -1,7 +1,7 @@
 /**
  * Serve Mode Integration Tests
  *
- * Tests the static file server functionality
+ * Tests the single-file server functionality
  */
 
 import { spawn, ChildProcess, execSync } from 'child_process';
@@ -22,16 +22,15 @@ describe('Serve Mode Integration', () => {
       execSync('npm run build', { cwd: projectRoot, stdio: 'inherit' });
     }
 
-    // Create test static directory
-    const testDir = join(projectRoot, '.tmp/test-static');
+    // Create test file
+    const testDir = join(projectRoot, '.tmp');
     if (!existsSync(testDir)) {
       mkdirSync(testDir, { recursive: true });
-      writeFileSync(
-        join(testDir, 'index.html'),
-        '<html><body>Test Page</body></html>',
-      );
-      writeFileSync(join(testDir, 'test.txt'), 'Hello World');
     }
+    writeFileSync(
+      join(testDir, 'test-bundle.js'),
+      '(function(){console.log("test bundle");})();',
+    );
   });
 
   beforeEach(() => {
@@ -45,15 +44,15 @@ describe('Serve Mode Integration', () => {
     }
   });
 
-  it('should start static file server', async () => {
-    const staticDir = join(projectRoot, '.tmp/test-static');
+  it('should start single-file server with default settings', async () => {
+    const filePath = join(projectRoot, '.tmp/test-bundle.js');
 
     serverProcess = spawn('node', ['dist/index.mjs'], {
       cwd: projectRoot,
       env: {
         ...process.env,
         MODE: 'serve',
-        STATIC_DIR: staticDir,
+        FILE_PATH: filePath,
         PORT: port.toString(),
       },
     });
@@ -75,17 +74,19 @@ describe('Serve Mode Integration', () => {
     const health = (await healthRes.json()) as any;
     expect(health.status).toBe('ok');
     expect(health.mode).toBe('serve');
+    expect(health.file).toBe(filePath);
+    expect(health.url).toBe('/walker.js');
   }, 35000);
 
-  it('should serve static files', async () => {
-    const staticDir = join(projectRoot, '.tmp/test-static');
+  it('should serve single file at default URL', async () => {
+    const filePath = join(projectRoot, '.tmp/test-bundle.js');
 
     serverProcess = spawn('node', ['dist/index.mjs'], {
       cwd: projectRoot,
       env: {
         ...process.env,
         MODE: 'serve',
-        STATIC_DIR: staticDir,
+        FILE_PATH: filePath,
         PORT: port.toString(),
       },
     });
@@ -100,17 +101,48 @@ describe('Serve Mode Integration', () => {
 
     await waitForServer(`http://localhost:${port}/health`, 30000);
 
-    // Test serving HTML file
-    const htmlRes = await fetch(`http://localhost:${port}/index.html`);
-    expect(htmlRes.status).toBe(200);
-    const html = await htmlRes.text();
-    expect(html).toContain('Test Page');
+    // Test serving bundle at default /walker.js
+    const bundleRes = await fetch(`http://localhost:${port}/walker.js`);
+    expect(bundleRes.status).toBe(200);
+    const bundle = await bundleRes.text();
+    expect(bundle).toContain('test bundle');
+  }, 35000);
 
-    // Test serving text file
-    const txtRes = await fetch(`http://localhost:${port}/test.txt`);
-    expect(txtRes.status).toBe(200);
-    const txt = await txtRes.text();
-    expect(txt).toBe('Hello World');
+  it('should serve file with custom name and path', async () => {
+    const filePath = join(projectRoot, '.tmp/test-bundle.js');
+
+    serverProcess = spawn('node', ['dist/index.mjs'], {
+      cwd: projectRoot,
+      env: {
+        ...process.env,
+        MODE: 'serve',
+        FILE_PATH: filePath,
+        SERVE_NAME: 'custom.js',
+        SERVE_PATH: 'libs/v1',
+        PORT: port.toString(),
+      },
+    });
+
+    // Capture output for debugging
+    serverProcess.stdout?.on('data', (data) => {
+      console.log(`[Server stdout]: ${data}`);
+    });
+    serverProcess.stderr?.on('data', (data) => {
+      console.error(`[Server stderr]: ${data}`);
+    });
+
+    await waitForServer(`http://localhost:${port}/health`, 30000);
+
+    // Test health endpoint shows custom URL
+    const healthRes = await fetch(`http://localhost:${port}/health`);
+    const health = (await healthRes.json()) as any;
+    expect(health.url).toBe('/libs/v1/custom.js');
+
+    // Test serving bundle at custom URL
+    const bundleRes = await fetch(`http://localhost:${port}/libs/v1/custom.js`);
+    expect(bundleRes.status).toBe(200);
+    const bundle = await bundleRes.text();
+    expect(bundle).toContain('test bundle');
   }, 35000);
 
   it('should export runServeMode function', async () => {

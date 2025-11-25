@@ -13,6 +13,8 @@ export interface Settings {
   firehose?: FirehoseConfig;
 }
 
+export type InitSettings = Partial<Settings>;
+
 export interface Mapping {}
 
 export interface Env extends DestinationServer.Env {
@@ -22,7 +24,7 @@ export interface Env extends DestinationServer.Env {
   };
 }
 
-export type Types = CoreDestination.Types<Settings, Mapping, Env>;
+export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
 
 export interface Destination extends DestinationServer.Destination<Types> {
   init: DestinationServer.InitFn<Types>;

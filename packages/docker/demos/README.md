@@ -1,27 +1,19 @@
-# WalkerOS Docker Demo Bundles
+# walkerOS Docker Demos
 
-## Overview
+This directory contains **pre-built demo bundles** ready to use immediately with
+the walkerOS Docker image. No CLI setup or bundling required - just run and
+test!
 
-This directory contains pre-built demo bundles for quickly testing walkerOS
-Docker functionality. These bundles are **static files**, manually created from
-CLI examples and committed to the repository.
+## Included Demo Bundles
 
-## Available Demos
+This directory contains two ready-to-run demo bundles:
 
-### demo-collect.mjs
+### 1. `demo-collect.mjs` (~96KB)
 
-**Purpose**: Minimal server-side event collection endpoint
+Server-side event collection demo. Starts an HTTP server that receives and
+processes events.
 
-**Source**: Built from `@walkeros/cli/examples/server-collect.json`
-
-**What it does**:
-
-- Starts Express server on configured port (default: 8080)
-- Listens for POST requests at `/collect`
-- Logs received events to console
-- Returns `{"success": true}` response
-
-**Usage**:
+**Run instantly:**
 
 ```bash
 docker run -p 8080:8080 \
@@ -30,28 +22,19 @@ docker run -p 8080:8080 \
   walkeros/docker:latest
 ```
 
-**Test**:
+**Test it:**
 
 ```bash
 curl -X POST http://localhost:8080/collect \
   -H "Content-Type: application/json" \
-  -d '{"name":"page view","data":{"title":"Test"}}'
+  -d '{"name":"page view","data":{"title":"Test Page"}}'
 ```
 
-### demo-serve.mjs
+### 2. `demo-serve.mjs` (~376KB)
 
-**Purpose**: Browser bundle that sends events to collector
+Web bundle demo with automatic browser event tracking.
 
-**Source**: Built from `@walkeros/cli/examples/web-serve.json`
-
-**What it does**:
-
-- Serves a web bundle with walker.js
-- Includes demo event source (generates automatic test events)
-- Sends events to console (browser)
-- Sends events to API destination at `http://localhost:8080/collect`
-
-**Usage**:
+**Run instantly:**
 
 ```bash
 docker run -p 3000:8080 \
@@ -60,13 +43,13 @@ docker run -p 3000:8080 \
   walkeros/docker:latest
 ```
 
-**Access**: Open http://localhost:3000 in your browser
+**Open in browser:** http://localhost:3000
 
-## Full Demo Loop
+## Complete Demo Flow
 
-Run both demos together to see the complete event flow:
+Run both demos together to see the full event pipeline (browser → collector):
 
-**Terminal 1 - Start Collector**:
+**Terminal 1 - Start Collector:**
 
 ```bash
 docker run -p 8080:8080 \
@@ -76,7 +59,7 @@ docker run -p 8080:8080 \
   walkeros/docker:latest
 ```
 
-**Terminal 2 - Start Web Serve**:
+**Terminal 2 - Start Web Bundle:**
 
 ```bash
 docker run -p 3000:8080 \
@@ -86,64 +69,26 @@ docker run -p 3000:8080 \
   walkeros/docker:latest
 ```
 
-**Test the Flow**:
+Open http://localhost:3000 and watch events flow to Terminal 1.
 
-1. Open http://localhost:3000 in your browser
-2. Check browser console for walker events
-3. Check Terminal 1 for collector receiving those events
-4. Events flow: Browser → http://localhost:8080/collect → Console logs
-
-**Cleanup**:
+**Cleanup:**
 
 ```bash
-docker stop walker-collector walker-web
-docker rm walker-collector walker-web
+docker stop walker-collector walker-web && docker rm walker-collector walker-web
 ```
 
-## How These Were Built
+## Custom Production Deployment
 
-These bundles were manually created using the walkerOS CLI:
+For production, bundle your own flow configuration:
+
+**Step 1: Bundle your flow**
 
 ```bash
-# Install CLI
 npm install -g @walkeros/cli
-
-# Bundle from JSON configs
-walkeros bundle examples/server-collect.json -o server-collect.mjs
-walkeros bundle examples/web-serve.json -o web-serve.mjs
-
-# Copy to Docker package
-cp server-collect.mjs packages/docker/demos/demo-collect.mjs
-cp web-serve.mjs packages/docker/demos/demo-serve.mjs
+walkeros bundle --config my-flow.json --output my-flow.mjs
 ```
 
-## Creating Custom Bundles
-
-To create your own bundles:
-
-1. **Create flow config** (`my-flow.json`):
-
-```json
-{
-  "flow": {
-    "platform": "server",
-    "sources": { ... },
-    "destinations": { ... }
-  },
-  "build": {
-    "packages": { ... },
-    "output": "my-flow.mjs"
-  }
-}
-```
-
-2. **Bundle it**:
-
-```bash
-walkeros bundle my-flow.json
-```
-
-3. **Run with Docker**:
+**Step 2: Deploy to Docker**
 
 ```bash
 docker run -p 8080:8080 \
@@ -153,17 +98,48 @@ docker run -p 8080:8080 \
   walkeros/docker:latest
 ```
 
-## Bundle Details
+Or build a custom image:
 
-| File             | Size   | Dependencies                                                                                | Purpose                   |
-| ---------------- | ------ | ------------------------------------------------------------------------------------------- | ------------------------- |
-| demo-collect.mjs | ~54KB  | @walkeros/server-source-express, @walkeros/destination-demo                                 | Event collection endpoint |
-| demo-serve.mjs   | ~376KB | @walkeros/web-source-demo, @walkeros/web-destination-console, @walkeros/web-destination-api | Browser event tracking    |
+```dockerfile
+FROM walkeros/docker:latest
+COPY my-flow.mjs /app/flow.mjs
+ENV MODE=collect
+ENV FLOW=/app/flow.mjs
+```
 
-## Notes
+## Rebuilding Demo Bundles
 
-- These bundles are **static files** committed to git
-- They are NOT generated during Docker build
-- They are version-controlled alongside the runtime code
-- Update them manually when examples change (infrequent)
-- Keep them minimal for quick startup and testing
+These demos are built from the CLI examples. To rebuild:
+
+```bash
+cd packages/cli
+
+# Rebuild collector demo
+node dist/index.mjs bundle --config examples/server-collect.json --local
+cp server-collect.mjs ../docker/demos/demo-collect.mjs
+
+# Rebuild serve demo
+node dist/index.mjs bundle --config examples/web-serve.json --local
+cp web-serve.js ../docker/demos/demo-serve.js
+```
+
+## Documentation
+
+- [Docker Package README](../README.md) - Full Docker documentation
+- [CLI Documentation](../../cli/README.md) - Building custom flows
+- [walkerOS Documentation](https://github.com/elbwalker/walkerOS) - Complete
+  guide
+
+## Why Include Pre-built Demos?
+
+The walkerOS Docker image includes demos for optimal user experience:
+
+- **Instant Testing**: Try walkerOS in 30 seconds without any setup
+- **Working Examples**: See real event collection and tracking in action
+- **No Bloat for Production**: 199MB image size is reasonable for cloud
+  deployments
+- **Onboarding**: New users can validate functionality immediately
+- **Documentation**: Demos serve as executable documentation
+
+The demos don't interfere with production usage - simply mount your own flow
+bundle and the container ignores the demos entirely.

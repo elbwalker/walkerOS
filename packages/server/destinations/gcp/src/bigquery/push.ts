@@ -4,9 +4,15 @@ import { isObject, isArray } from '@walkeros/core';
 
 export const push: PushFn = async function (
   event,
-  { config, mapping: _mapping, data, collector, env },
+  { config, mapping: _mapping, data },
 ) {
   const { client, datasetId, tableId } = config.settings!;
+
+  if (!client || !datasetId || !tableId) {
+    throw new Error(
+      'Missing required BigQuery configuration. Ensure init() was called successfully.',
+    );
+  }
 
   let row: WalkerOS.AnyObject | undefined;
 
