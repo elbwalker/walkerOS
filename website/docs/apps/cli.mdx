@@ -46,6 +46,7 @@ npx walkeros --version`}
 | `push` | Execute event with real API calls | Integration testing, production validation |
 | `run collect` | Start HTTP event collection server | Accept incoming events via HTTP POST |
 | `run serve` | Serve web bundles as static files | Host browser tracking scripts |
+| `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
 
 ## Getting Started
 
@@ -1007,6 +1008,95 @@ Open in browser. Terminal 1 shows:
 [Server Logger] promotion cta
 [Server Logger] custom event
 ```
+
+## Cache Command
+
+The `cache` command manages the CLI's package and build caches.
+
+### Use Case
+
+The CLI caches downloaded npm packages and compiled builds to speed up repeated operations. You may need to:
+- Clear stale cached packages when debugging version issues
+- Free up disk space by removing old cached builds
+- View cache statistics to understand cache usage
+
+### How Caching Works
+
+**Package Cache** (`.tmp/cache/packages/`):
+- Mutable versions (`latest`, `^`, `~`) are re-checked daily
+- Exact versions (`0.4.1`) are cached indefinitely
+- Saves network time on repeated builds
+
+**Build Cache** (`.tmp/cache/builds/`):
+- Caches compiled bundles based on flow.json content + date
+- Identical configs reuse cached builds within the same day
+- Dramatically speeds up repeated builds (~100x faster)
+
+### Basic Usage
+
+<CodeSnippet
+  code={`# View cache statistics
+walkeros cache info
+
+# Clear all caches
+walkeros cache clear`}
+  language="bash"
+/>
+
+### Commands
+
+**View cache info:**
+
+<CodeSnippet
+  code={`walkeros cache info`}
+  language="bash"
+/>
+
+Output:
+```
+Cache directory: .tmp/cache
+Cached packages: 12
+Cached builds: 5
+```
+
+**Clear all caches:**
+
+<CodeSnippet
+  code={`walkeros cache clear`}
+  language="bash"
+/>
+
+**Clear only package cache:**
+
+<CodeSnippet
+  code={`walkeros cache clear --packages`}
+  language="bash"
+/>
+
+**Clear only build cache:**
+
+<CodeSnippet
+  code={`walkeros cache clear --builds`}
+  language="bash"
+/>
+
+### Bypassing Cache
+
+To skip the cache for a single build operation:
+
+<CodeSnippet
+  code={`walkeros bundle flow.json --no-cache`}
+  language="bash"
+/>
+
+This downloads fresh packages and rebuilds without using or updating the cache.
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--packages` | Clear only the package cache |
+| `--builds` | Clear only the build cache |
 
 ## Global Options
 

@@ -2,6 +2,7 @@ import pacote from 'pacote';
 import path from 'path';
 import fs from 'fs-extra';
 import { Logger } from '../../core/index.js';
+import { getPackageCacheKey } from '../../core/cache-utils.js';
 
 export interface Package {
   name: string;
@@ -30,18 +31,20 @@ function getPackageDirectory(
   return path.join(baseDir, 'node_modules', packageName);
 }
 
-function getCachedPackagePath(pkg: Package, tempDir: string): string {
+async function getCachedPackagePath(
+  pkg: Package,
+  tempDir: string,
+): Promise<string> {
   const cacheDir = path.join('.tmp', 'cache', 'packages');
-  // Use safe file system name for cache (replace / with -)
-  const safeName = pkg.name.replace(/\//g, '-').replace(/@/g, '');
-  return path.join(cacheDir, `${safeName}-${pkg.version}`);
+  const cacheKey = await getPackageCacheKey(pkg.name, pkg.version);
+  return path.join(cacheDir, cacheKey);
 }
 
 async function isPackageCached(
   pkg: Package,
   tempDir: string,
 ): Promise<boolean> {
-  const cachedPath = getCachedPackagePath(pkg, tempDir);
+  const cachedPath = await getCachedPackagePath(pkg, tempDir);
   return fs.pathExists(cachedPath);
 }
 
@@ -142,7 +145,7 @@ export async function downloadPackages(
     const packageSpec = `${pkg.name}@${pkg.version}`;
     // Use proper node_modules structure: node_modules/@scope/package
     const packageDir = getPackageDirectory(targetDir, pkg.name, pkg.version);
-    const cachedPath = getCachedPackagePath(pkg, targetDir);
+    const cachedPath = await getCachedPackagePath(pkg, targetDir);
 
     if (useCache && (await isPackageCached(pkg, targetDir))) {
       logger.debug(`Using cached ${packageSpec}...`);

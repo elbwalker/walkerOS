@@ -128,6 +128,41 @@ walkeros run serve flow.json --port 8080 --static-dir ./dist
 3. Runs in current Node.js process (no containers)
 4. Press Ctrl+C for graceful shutdown
 
+## Caching
+
+The CLI implements intelligent caching for faster builds:
+
+### Package Cache
+
+- NPM packages are cached in `.tmp/cache/packages/`
+- Mutable versions (`latest`, `^`, `~`) are re-checked daily
+- Exact versions (`0.4.1`) are cached indefinitely
+
+### Build Cache
+
+- Compiled bundles are cached in `.tmp/cache/builds/`
+- Cache key based on flow.json content + current date
+- Identical configs reuse cached build within the same day
+
+### Cache Management
+
+```bash
+# View cache info
+walkeros cache info
+
+# Clear all caches
+walkeros cache clear
+
+# Clear only package cache
+walkeros cache clear --packages
+
+# Clear only build cache
+walkeros cache clear --builds
+
+# Disable caching for a single build
+walkeros bundle flow.json --no-cache
+```
+
 ## Flow Configuration
 
 Minimal example:

@@ -6,6 +6,7 @@ import { bundleCommand } from './commands/bundle/index.js';
 import { simulateCommand } from './commands/simulate/index.js';
 import { pushCommand } from './commands/push/index.js';
 import { runCommand } from './commands/run/index.js';
+import { registerCacheCommand } from './commands/cache.js';
 
 // Get package version dynamically
 const __filename = fileURLToPath(import.meta.url);
@@ -193,6 +194,9 @@ runCmd
       silent: options.silent,
     });
   });
+
+// Cache command
+registerCacheCommand(program);
 
 // Run the CLI
 // Note: This file is marked as a bin script in package.json,
