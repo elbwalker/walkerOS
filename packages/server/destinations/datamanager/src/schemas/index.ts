@@ -6,9 +6,5 @@ import { zodToSchema } from '@walkeros/core/dev';
 import { SettingsSchema } from './settings';
 import { MappingSchema } from './mapping';
 
-import type { JSONSchema } from '@walkeros/core/dev';
-
-export const schemas: Record<string, JSONSchema> = {
-  settings: zodToSchema(SettingsSchema),
-  mapping: zodToSchema(MappingSchema),
-};
+export const settings = zodToSchema(SettingsSchema);
+export const mapping = zodToSchema(MappingSchema);

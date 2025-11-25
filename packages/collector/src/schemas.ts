@@ -1,6 +1,6 @@
 import type { RJSFSchema } from '@rjsf/utils';
 
-export const settingsSchema: RJSFSchema = {
+export const settings: RJSFSchema = {
   type: 'object',
   properties: {
     run: {
@@ -37,6 +37,5 @@ export const settingsSchema: RJSFSchema = {
   },
 };
 
-export const schemas = {
-  settings: settingsSchema,
-};
+// Backward compatibility alias
+export const settingsSchema = settings;
