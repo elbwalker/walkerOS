@@ -41,15 +41,22 @@ echo -e "${BLUE}[3/4] Testing bundle command with built-in examples...${NC}"
 TEST_DIR=$(mktemp -d)
 trap "rm -rf ${TEST_DIR}" EXIT
 
+# Copy example config to workspace (output paths resolve relative to config location)
+docker run --rm \
+  --entrypoint sh \
+  -v "${TEST_DIR}:/workspace" \
+  "${FULL_IMAGE}" \
+  -c "cp /cli/examples/server-collect.json /workspace/" > /dev/null 2>&1
+
 if docker run --rm \
   --user "$(id -u):$(id -g)" \
   -v "${TEST_DIR}:/workspace" \
   -w /workspace \
   "${FULL_IMAGE}" \
-  bundle /cli/examples/server-collect.json \
+  bundle server-collect.json \
   --stats > /dev/null 2>&1; then
 
-  # Check if output file was created
+  # Check if output file was created (output resolves relative to config in workspace)
   if [ -f "${TEST_DIR}/server-collect.mjs" ]; then
     BUNDLE_SIZE=$(stat -f%z "${TEST_DIR}/server-collect.mjs" 2>/dev/null || stat -c%s "${TEST_DIR}/server-collect.mjs")
     echo -e "${GREEN}✓ Bundle created successfully (${BUNDLE_SIZE} bytes)${NC}\n"

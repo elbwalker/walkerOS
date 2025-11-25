@@ -8,8 +8,8 @@ import type { DestinationDataManager } from '..';
 export const awsLambda: DestinationDataManager.Config = {
   settings: {
     credentials: {
-      client_email: process.env.GOOGLE_CLIENT_EMAIL!,
-      private_key: process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+      client_email: process.env.GOOGLE_CLIENT_EMAIL || '',
+      private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
     },
     destinations: [
       {
@@ -95,8 +95,8 @@ export const dockerKubernetes: DestinationDataManager.Config = {
 export const customScopes: DestinationDataManager.Config = {
   settings: {
     credentials: {
-      client_email: process.env.GOOGLE_CLIENT_EMAIL!,
-      private_key: process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+      client_email: process.env.GOOGLE_CLIENT_EMAIL || '',
+      private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
     },
     scopes: ['https://www.googleapis.com/auth/datamanager'],
     destinations: [
