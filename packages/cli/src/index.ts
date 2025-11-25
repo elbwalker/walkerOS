@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { bundleCommand } from './commands/bundle/index.js';
 import { simulateCommand } from './commands/simulate/index.js';
+import { pushCommand } from './commands/push/index.js';
 import { runCommand } from './commands/run/index.js';
 
 // Get package version dynamically
@@ -16,7 +17,7 @@ const VERSION = packageJson.version;
 
 // === CLI Commands ===
 // Export CLI command handlers
-export { bundleCommand, simulateCommand, runCommand };
+export { bundleCommand, simulateCommand, pushCommand, runCommand };
 
 // === Programmatic API ===
 // High-level functions for library usage
@@ -104,6 +105,31 @@ program
       local: options.local,
       dryRun: options.dryRun,
       silent: options.silent,
+    });
+  });
+
+// Push command
+program
+  .command('push [file]')
+  .description('Push an event through the flow with real API execution')
+  .requiredOption(
+    '-e, --event <source>',
+    'Event to push (JSON string, file path, or URL)',
+  )
+  .option('--env <name>', 'Environment name (for multi-environment configs)')
+  .option('--json', 'Output results as JSON')
+  .option('-v, --verbose', 'Verbose output')
+  .option('-s, --silent', 'Suppress output')
+  .option('--local', 'Execute in local Node.js instead of Docker')
+  .action(async (file, options) => {
+    await pushCommand({
+      config: file || 'bundle.config.json',
+      event: options.event,
+      env: options.env,
+      json: options.json,
+      verbose: options.verbose,
+      silent: options.silent,
+      local: options.local,
     });
   });
 
