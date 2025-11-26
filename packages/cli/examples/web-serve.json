@@ -1,6 +1,9 @@
 {
   "flow": {
-    "platform": "web",
+    "web": {
+      "windowCollector": "collector",
+      "windowElb": "elb"
+    },
     "sources": {
       "demo": {
         "code": "sourceDemo",
@@ -68,8 +71,6 @@
       }
     },
     "minify": true,
-    "output": "web-serve.js",
-    "windowCollector": "collector",
-    "windowElb": "elb"
+    "output": "web-serve.js"
   }
 }

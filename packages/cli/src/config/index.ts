@@ -43,6 +43,7 @@ export type { LoadConfigResult, LoadConfigOptions } from './loader.js';
 export type {
   BuildOptions,
   MinifyOptions,
+  Flow,
   EnvironmentConfig,
   Setup,
 } from '../types/bundle.js';

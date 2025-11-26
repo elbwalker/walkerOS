@@ -15,7 +15,8 @@ import {
   isObject,
   isSingleEnvConfig,
   isMultiEnvConfig,
-  validatePlatform,
+  detectPlatform,
+  hasValidPlatform,
 } from './validators.js';
 
 /**
@@ -160,18 +161,19 @@ export function normalizeAndValidate(
   buildOptions: unknown,
   configPath?: string,
 ): ParsedConfig {
-  // Extract and validate platform (ONCE - not in type guards)
-  if (!isObject(flowConfig) || !('platform' in flowConfig)) {
+  // Extract and validate platform (supports both web/server keys and legacy platform property)
+  if (!isObject(flowConfig)) {
     throw new Error(
-      `Invalid flow config: missing "platform" field. Expected "web" or "server".`,
+      `Invalid flow config: expected object, got ${typeof flowConfig}`,
     );
   }
 
-  const platform = (flowConfig as { platform: unknown }).platform;
+  const platform = detectPlatform(flowConfig);
 
-  if (!validatePlatform(platform)) {
+  if (!platform) {
     throw new Error(
-      `Invalid platform "${platform}". Must be "web" or "server".`,
+      `Invalid flow config: missing platform. ` +
+        `Expected either "web" or "server" key, or legacy "platform" property.`,
     );
   }
 
@@ -215,13 +217,18 @@ export function normalizeAndValidate(
     merged.template = platform === 'server' ? 'server.hbs' : 'web.hbs';
   }
 
-  // Apply window assignment defaults for browser IIFE
+  // Apply window assignment for browser IIFE
+  // Priority: flow.web config > build options > defaults
   if (merged.format === 'iife' && merged.platform === 'browser') {
+    const webConfig = flowConfig.web as Record<string, unknown> | undefined;
+
+    // Extract from flow.web first, then fall back to build options, then defaults
     if (merged.windowCollector === undefined) {
-      merged.windowCollector = 'collector';
+      merged.windowCollector =
+        (webConfig?.windowCollector as string | undefined) || 'collector';
     }
     if (merged.windowElb === undefined) {
-      merged.windowElb = 'elb';
+      merged.windowElb = (webConfig?.windowElb as string | undefined) || 'elb';
     }
   }
 
@@ -298,18 +305,18 @@ export function parseBundleConfig(data: unknown): ParsedConfig {
     throw new Error(`Invalid config: expected object, got ${typeof data}`);
   }
 
-  // Check for new format { flow, build }
+  // Check for { flow, build } format
   if (!('flow' in data) || !isObject(data.flow)) {
     throw new Error(
       `Invalid config: missing "flow" field. ` +
-        `Expected format: { flow: { platform: "web" | "server", ... }, build: { ... } }`,
+        `Expected format: { flow: { web: {...} | server: {...}, ... }, build: { ... } }`,
     );
   }
 
   if (!('build' in data) || !isObject(data.build)) {
     throw new Error(
       `Invalid config: missing "build" field. ` +
-        `Expected format: { flow: { platform: "web" | "server", ... }, build: { ... } }`,
+        `Expected format: { flow: { web: {...} | server: {...}, ... }, build: { ... } }`,
     );
   }
 

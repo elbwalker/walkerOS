@@ -310,11 +310,12 @@ describe('Config Loader', () => {
         build: { packages: {}, code: 'export {};', output: '' },
       };
 
+      // Invalid platform value causes config to fail format detection
       expect(() =>
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow('Invalid platform "invalid". Must be "web" or "server".');
+      ).toThrow('Invalid configuration format');
     });
 
     test('throws error for missing required fields', () => {

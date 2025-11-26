@@ -42,7 +42,8 @@ describe('Run Command Integration', () => {
       const config = require(configPath);
       expect(config.flow).toBeDefined();
       expect(config.build).toBeDefined();
-      expect(config.flow.platform).toBe('server');
+      // New format uses server: {} key instead of platform property
+      expect(config.flow.server).toBeDefined();
     });
   });
 

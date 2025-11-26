@@ -1,6 +1,6 @@
 {
   "flow": {
-    "platform": "server",
+    "server": {},
     "destinations": {
       "demo": {
         "code": "destinationDemo"

@@ -28,6 +28,37 @@ export function validatePlatform(
 }
 
 /**
+ * Detect platform from flow config.
+ *
+ * @remarks
+ * Supports both legacy format (platform property) and new format (web/server keys).
+ * New format takes precedence.
+ */
+export function detectPlatform(
+  flowConfig: Record<string, unknown>,
+): 'web' | 'server' | undefined {
+  // New format: web/server keys
+  if ('web' in flowConfig && flowConfig.web !== undefined) {
+    return 'web';
+  }
+  if ('server' in flowConfig && flowConfig.server !== undefined) {
+    return 'server';
+  }
+  // Legacy format: platform property
+  if ('platform' in flowConfig && validatePlatform(flowConfig.platform)) {
+    return flowConfig.platform;
+  }
+  return undefined;
+}
+
+/**
+ * Check if flow config has valid platform (new or legacy format).
+ */
+export function hasValidPlatform(flowConfig: Record<string, unknown>): boolean {
+  return detectPlatform(flowConfig) !== undefined;
+}
+
+/**
  * Type guard: Check if config is multi-environment format.
  */
 export function isMultiEnvConfig(data: unknown): data is Setup {
@@ -44,7 +75,7 @@ export function isMultiEnvConfig(data: unknown): data is Setup {
  * Type guard: Check if config is single-environment format.
  *
  * @remarks
- * Only checks structural shape. Platform validation happens later in normalization.
+ * Only checks structural shape. Supports both legacy (platform) and new (web/server) formats.
  */
 export function isSingleEnvConfig(data: unknown): data is EnvironmentConfig {
   return (
@@ -53,7 +84,7 @@ export function isSingleEnvConfig(data: unknown): data is EnvironmentConfig {
     'build' in data &&
     isObject(data.flow) &&
     isObject(data.build) &&
-    'platform' in data.flow
+    hasValidPlatform(data.flow as Record<string, unknown>)
   );
 }
 

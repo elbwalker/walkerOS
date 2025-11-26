@@ -1,6 +1,6 @@
 {
   "flow": {
-    "platform": "web",
+    "web": {},
     "destinations": {
       "demo": {
         "code": "destinationDemo"

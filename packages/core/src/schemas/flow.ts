@@ -32,6 +32,67 @@ export const PrimitiveSchema = z
   .describe('Primitive value: string, number, or boolean');
 
 // ========================================
+// Shared Type Schemas
+// ========================================
+
+/**
+ * Variables schema for interpolation.
+ */
+export const VariablesSchema = z
+  .record(z.string(), PrimitiveSchema)
+  .describe('Variables for interpolation');
+
+/**
+ * Definitions schema for reusable configurations.
+ */
+export const DefinitionsSchema = z
+  .record(z.string(), z.unknown())
+  .describe('Reusable configuration definitions');
+
+/**
+ * Packages schema for build configuration.
+ */
+export const PackagesSchema = z
+  .record(
+    z.string(),
+    z.object({
+      version: z.string().optional(),
+      imports: z.array(z.string()).optional(),
+    }),
+  )
+  .describe('NPM packages to bundle');
+
+// ========================================
+// Platform Configuration Schemas
+// ========================================
+
+/**
+ * Web platform configuration schema.
+ */
+export const WebSchema = z
+  .object({
+    windowCollector: z
+      .string()
+      .optional()
+      .describe(
+        'Window property name for collector instance (default: "collector")',
+      ),
+    windowElb: z
+      .string()
+      .optional()
+      .describe('Window property name for elb function (default: "elb")'),
+  })
+  .describe('Web platform configuration');
+
+/**
+ * Server platform configuration schema.
+ */
+export const ServerSchema = z
+  .object({})
+  .passthrough()
+  .describe('Server platform configuration (reserved for future options)');
+
+// ========================================
 // Source Reference Schema
 // ========================================
 
@@ -61,6 +122,12 @@ export const SourceReferenceSchema = z
       .describe(
         'Mark as primary source (provides main elb). Only one source should be primary.',
       ),
+    variables: VariablesSchema.optional().describe(
+      'Source-level variables (highest priority in cascade)',
+    ),
+    definitions: DefinitionsSchema.optional().describe(
+      'Source-level definitions (highest priority in cascade)',
+    ),
   })
   .describe('Source package reference with configuration');
 
@@ -91,6 +158,12 @@ export const DestinationReferenceSchema = z
       .unknown()
       .optional()
       .describe('Destination environment configuration'),
+    variables: VariablesSchema.optional().describe(
+      'Destination-level variables (highest priority in cascade)',
+    ),
+    definitions: DefinitionsSchema.optional().describe(
+      'Destination-level definitions (highest priority in cascade)',
+    ),
   })
   .describe('Destination package reference with configuration');
 
@@ -103,17 +176,17 @@ export const DestinationReferenceSchema = z
  *
  * @remarks
  * Represents a single deployment environment (e.g., web_prod, server_stage).
- * Uses `.passthrough()` to allow package-specific extensions (build, docker, etc.).
+ * Platform is determined by presence of `web` or `server` key.
+ * Exactly one must be present.
  */
 export const ConfigSchema = z
   .object({
-    platform: z
-      .enum(['web', 'server'], {
-        error: 'Platform must be "web" or "server"',
-      })
-      .describe(
-        'Target platform: "web" for browser-based tracking, "server" for Node.js server-side collection',
-      ),
+    web: WebSchema.optional().describe(
+      'Web platform configuration (browser-based tracking). Mutually exclusive with server.',
+    ),
+    server: ServerSchema.optional().describe(
+      'Server platform configuration (Node.js). Mutually exclusive with web.',
+    ),
     sources: z
       .record(z.string(), SourceReferenceSchema)
       .optional()
@@ -132,14 +205,24 @@ export const ConfigSchema = z
       .describe(
         'Collector configuration for event processing (uses Collector.InitConfig)',
       ),
-    env: z
-      .record(z.string(), z.string())
-      .optional()
-      .describe(
-        'Environment-specific variables (override root-level variables)',
-      ),
+    packages: PackagesSchema.optional().describe('NPM packages to bundle'),
+    variables: VariablesSchema.optional().describe(
+      'Environment-level variables (override Setup.variables, overridden by source/destination variables)',
+    ),
+    definitions: DefinitionsSchema.optional().describe(
+      'Environment-level definitions (extend Setup.definitions, overridden by source/destination definitions)',
+    ),
   })
-  .passthrough() // Allow extension fields (build, docker, lambda, etc.)
+  .refine(
+    (data) => {
+      const hasWeb = data.web !== undefined;
+      const hasServer = data.server !== undefined;
+      return (hasWeb || hasServer) && !(hasWeb && hasServer);
+    },
+    {
+      message: 'Exactly one of "web" or "server" must be present',
+    },
+  )
   .describe('Single environment configuration for one deployment target');
 
 // ========================================
@@ -167,25 +250,19 @@ export const SetupSchema = z
       .describe(
         'JSON Schema reference for IDE validation (e.g., "https://walkeros.io/schema/flow/v1.json")',
       ),
-    variables: z
-      .record(z.string(), PrimitiveSchema)
-      .optional()
-      .describe(
-        'Shared variables for interpolation across all environments (use ${VAR_NAME:default} syntax)',
-      ),
-    definitions: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .describe(
-        'Reusable configuration definitions (reference with JSON Schema $ref syntax)',
-      ),
+    variables: VariablesSchema.optional().describe(
+      'Shared variables for interpolation across all environments (use ${VAR_NAME} or ${VAR_NAME:default} syntax)',
+    ),
+    definitions: DefinitionsSchema.optional().describe(
+      'Reusable configuration definitions (reference with JSON Schema $ref syntax: { "$ref": "#/definitions/name" })',
+    ),
     environments: z
       .record(z.string(), ConfigSchema)
       .refine((envs) => Object.keys(envs).length > 0, {
         message: 'At least one environment is required',
       })
       .describe(
-        'Named environment configurations (e.g., web_prod, server_stage)',
+        'Named environment configurations (e.g., production, staging, development)',
       ),
   })
   .describe(

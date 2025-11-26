@@ -1,6 +1,6 @@
 {
   "flow": {
-    "platform": "web",
+    "web": {},
     "destinations": {
       "ga4": {
         "code": "destinationGtag",

@@ -2,7 +2,7 @@ import path from 'path';
 import os from 'os';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
-import type { Elb } from '@walkeros/core';
+import { getPlatform, type Elb } from '@walkeros/core';
 import {
   createCommandLogger,
   createLogger,
@@ -71,7 +71,7 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
             logger,
           });
 
-        const platform = flowConfig.platform;
+        const platform = getPlatform(flowConfig);
 
         // Step 3: Bundle to temp file
         logger.info('🔨 Bundling flow configuration...');

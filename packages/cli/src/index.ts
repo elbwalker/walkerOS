@@ -28,7 +28,13 @@ export { run } from './commands/run/index.js';
 
 // === Types ===
 // Export types for programmatic usage
-export type { BuildOptions, EnvironmentConfig, Setup } from './types/bundle.js';
+// Config structure uses Flow.Setup and Flow.Config from @walkeros/core
+export type {
+  Flow,
+  CLIBuildOptions,
+  BuildOptions,
+  MinifyOptions,
+} from './types/bundle.js';
 export type { BundleStats } from './commands/bundle/bundler.js';
 export type { SimulationResult } from './commands/simulate/types.js';
 export type {
