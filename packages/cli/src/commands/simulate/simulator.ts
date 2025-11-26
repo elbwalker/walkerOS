@@ -4,9 +4,9 @@ import type { Flow } from '@walkeros/core';
 import { createLogger, getErrorMessage } from '../../core/index.js';
 import {
   loadJsonConfig,
+  loadBundleConfig,
   getTempDir,
   isObject,
-  parseBundleConfig,
   type BuildOptions,
 } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
@@ -44,7 +44,7 @@ export async function simulateCore(
     logger.info('📦 Loading bundle configuration...');
     const fullConfigPath = path.resolve(configPath);
     const rawConfig = await loadJsonConfig(fullConfigPath);
-    parseBundleConfig(rawConfig); // Validate config format
+    loadBundleConfig(rawConfig, { configPath: fullConfigPath });
 
     // Execute simulation
     logger.info(`🚀 Executing simulation with event: ${JSON.stringify(event)}`);
@@ -122,7 +122,9 @@ export async function executeSimulation(
 
     // 1. Load config
     const rawConfig = await loadJsonConfig(configPath);
-    const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
+    const { flowConfig, buildOptions } = loadBundleConfig(rawConfig, {
+      configPath,
+    });
 
     // 2. Download packages to temp directory
     // This ensures we use clean npm packages, not workspace packages

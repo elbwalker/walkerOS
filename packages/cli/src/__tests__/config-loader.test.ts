@@ -1,7 +1,7 @@
 /**
  * Config Loader Tests
  *
- * Tests for multi-environment configuration loading.
+ * Tests for Flow.Setup configuration loading with the new format.
  */
 
 import {
@@ -12,32 +12,33 @@ import {
 
 describe('Config Loader', () => {
   // ========================================
-  // Single Environment Tests
+  // Single Environment (Flow.Setup with one env)
   // ========================================
 
-  describe('Single Environment Config', () => {
-    test('loads single-environment config successfully', () => {
+  describe('Single Environment (Flow.Setup)', () => {
+    test('loads Flow.Setup with single environment automatically', () => {
       const config = {
-        flow: {
-          platform: 'web' as const,
-          sources: {
-            browser: {
-              package: '@walkeros/web-source-browser',
+        version: 1,
+        environments: {
+          default: {
+            web: {},
+            packages: {
+              '@walkeros/core': { imports: ['getId'] },
             },
-          },
-          destinations: {
-            gtag: {
-              package: '@walkeros/web-destination-gtag',
-              config: {
-                settings: { ga4: { measurementId: 'G-123' } },
+            sources: {
+              browser: {
+                package: '@walkeros/web-source-browser',
+              },
+            },
+            destinations: {
+              gtag: {
+                package: '@walkeros/web-destination-gtag',
+                config: {
+                  settings: { ga4: { measurementId: 'G-123' } },
+                },
               },
             },
           },
-        },
-        build: {
-          packages: {},
-          code: 'export {};',
-          output: './dist/test.js',
         },
       };
 
@@ -47,23 +48,18 @@ describe('Config Loader', () => {
 
       expect(result.environment).toBe('default');
       expect(result.isMultiEnvironment).toBe(false);
-      expect(
-        (result.flowConfig as unknown as { platform: string }).platform,
-      ).toBe('web');
-      expect(
-        (result.flowConfig as unknown as { sources: unknown }).sources,
-      ).toBeDefined();
+      expect(result.flowConfig.web).toBeDefined();
+      expect(result.flowConfig.sources).toBeDefined();
     });
 
     test('applies platform-specific defaults for web', () => {
       const config = {
-        flow: {
-          platform: 'web' as const,
-        },
-        build: {
-          packages: {},
-          code: 'export {};',
-          output: '',
+        version: 1,
+        environments: {
+          default: {
+            web: {},
+            packages: {},
+          },
         },
       };
 
@@ -74,19 +70,20 @@ describe('Config Loader', () => {
       expect(result.buildOptions.platform).toBe('browser');
       expect(result.buildOptions.format).toBe('iife');
       expect(result.buildOptions.target).toBe('es2020');
+      expect(result.buildOptions.minify).toBe(true);
+      expect(result.buildOptions.template).toBe('web.hbs');
       // Output path is resolved relative to config file directory
       expect(result.buildOptions.output).toBe('/test/dist/walker.js');
     });
 
     test('applies platform-specific defaults for server', () => {
       const config = {
-        flow: {
-          platform: 'server' as const,
-        },
-        build: {
-          packages: {},
-          code: 'export {};',
-          output: '',
+        version: 1,
+        environments: {
+          default: {
+            server: {},
+            packages: {},
+          },
         },
       };
 
@@ -97,42 +94,23 @@ describe('Config Loader', () => {
       expect(result.buildOptions.platform).toBe('node');
       expect(result.buildOptions.format).toBe('esm');
       expect(result.buildOptions.target).toBe('node20');
-      // Output path is resolved relative to config file directory
-      expect(result.buildOptions.output).toBe('/test/dist/bundle.js');
-    });
-
-    test('merges custom build options with defaults', () => {
-      const config = {
-        flow: {
-          platform: 'web' as const,
-        },
-        build: {
-          packages: {},
-          code: 'export {};',
-          output: '',
-          minify: true,
-          format: 'esm' as const,
-        },
-      };
-
-      const result = loadBundleConfig(config, {
-        configPath: '/test/config.json',
-      });
-
       expect(result.buildOptions.minify).toBe(true);
-      expect(result.buildOptions.format).toBe('esm'); // Custom overrides default
-      expect(result.buildOptions.target).toBe('es2020'); // Default preserved
+      expect(result.buildOptions.template).toBe('server.hbs');
+      // Output path is resolved relative to config file directory
+      expect(result.buildOptions.output).toBe('/test/dist/bundle.mjs');
     });
 
-    test('auto-selects templates based on platform', () => {
+    test('extracts packages from flowConfig', () => {
       const config = {
-        flow: {
-          platform: 'web' as const,
-        },
-        build: {
-          packages: {},
-          code: 'export {};',
-          output: '',
+        version: 1,
+        environments: {
+          default: {
+            web: {},
+            packages: {
+              '@walkeros/core': { imports: ['getId', 'clone'] },
+              '@walkeros/destination-demo': { imports: ['destinationDemo'] },
+            },
+          },
         },
       };
 
@@ -140,8 +118,33 @@ describe('Config Loader', () => {
         configPath: '/test/config.json',
       });
 
-      // Should auto-select web.hbs for web platform
-      expect(result.buildOptions.template).toBe('web.hbs');
+      expect(result.buildOptions.packages).toEqual({
+        '@walkeros/core': { imports: ['getId', 'clone'] },
+        '@walkeros/destination-demo': { imports: ['destinationDemo'] },
+      });
+    });
+
+    test('respects build overrides from CLI', () => {
+      const config = {
+        version: 1,
+        environments: {
+          default: {
+            web: {},
+            packages: {},
+          },
+        },
+      };
+
+      const result = loadBundleConfig(config, {
+        configPath: '/test/config.json',
+        buildOverrides: {
+          minify: false,
+          output: '/custom/output.js',
+        },
+      });
+
+      expect(result.buildOptions.minify).toBe(false);
+      expect(result.buildOptions.output).toBe('/custom/output.js');
     });
   });
 
@@ -154,60 +157,42 @@ describe('Config Loader', () => {
       version: 1,
       environments: {
         web_prod: {
-          flow: {
-            platform: 'web' as const,
-            sources: {
-              browser: {
-                package: '@walkeros/web-source-browser',
-              },
-            },
-            destinations: {
-              gtag: {
-                package: '@walkeros/web-destination-gtag',
-                config: { settings: { ga4: { measurementId: 'G-PROD' } } },
-              },
+          web: {},
+          packages: {},
+          sources: {
+            browser: {
+              package: '@walkeros/web-source-browser',
             },
           },
-          build: {
-            packages: {},
-            code: 'export {};',
-            output: './dist/prod.js',
+          destinations: {
+            gtag: {
+              package: '@walkeros/web-destination-gtag',
+              config: { settings: { ga4: { measurementId: 'G-PROD' } } },
+            },
           },
         },
         web_stage: {
-          flow: {
-            platform: 'web' as const,
-            sources: {
-              browser: {
-                package: '@walkeros/web-source-browser',
-              },
-            },
-            destinations: {
-              gtag: {
-                package: '@walkeros/web-destination-gtag',
-                config: { settings: { ga4: { measurementId: 'G-STAGE' } } },
-              },
+          web: {},
+          packages: {},
+          sources: {
+            browser: {
+              package: '@walkeros/web-source-browser',
             },
           },
-          build: {
-            packages: {},
-            code: 'export {};',
-            output: './dist/stage.js',
+          destinations: {
+            gtag: {
+              package: '@walkeros/web-destination-gtag',
+              config: { settings: { ga4: { measurementId: 'G-STAGE' } } },
+            },
           },
         },
         server_prod: {
-          flow: {
-            platform: 'server' as const,
-            destinations: {
-              api: {
-                package: '@walkeros/server-destination-api',
-              },
+          server: {},
+          packages: {},
+          destinations: {
+            api: {
+              package: '@walkeros/server-destination-api',
             },
-          },
-          build: {
-            packages: {},
-            code: 'export {};',
-            output: './dist/server.js',
           },
         },
       },
@@ -226,9 +211,7 @@ describe('Config Loader', () => {
         'web_stage',
         'server_prod',
       ]);
-      expect(
-        (result.flowConfig as unknown as { platform: string }).platform,
-      ).toBe('web');
+      expect(result.flowConfig.web).toBeDefined();
     });
 
     test('throws error if environment not specified for multi-env config', () => {
@@ -259,41 +242,14 @@ describe('Config Loader', () => {
         'web_stage',
         'server_prod',
       ]);
-      expect(
-        (results[0].flowConfig as unknown as { platform: string }).platform,
-      ).toBe('web');
-      expect(
-        (results[2].flowConfig as unknown as { platform: string }).platform,
-      ).toBe('server');
-    });
-
-    test('throws error if --all used with single-environment config', () => {
-      const singleConfig = {
-        flow: { platform: 'web' as const },
-        build: { packages: {}, code: 'export {};', output: '' },
-      };
-
-      expect(() =>
-        loadAllEnvironments(singleConfig, {
-          configPath: '/test/config.json',
-        }),
-      ).toThrow('--all flag requires a multi-environment configuration');
+      expect(results[0].flowConfig.web).toBeDefined();
+      expect(results[2].flowConfig.server).toBeDefined();
     });
 
     test('gets available environments from multi-env config', () => {
       const environments = getAvailableEnvironments(multiEnvConfig);
 
       expect(environments).toEqual(['web_prod', 'web_stage', 'server_prod']);
-    });
-
-    test('returns empty array for single-env config', () => {
-      const singleConfig = {
-        flow: { platform: 'web' as const },
-        build: { packages: {}, code: 'export {};', output: '' },
-      };
-      const environments = getAvailableEnvironments(singleConfig);
-
-      expect(environments).toEqual([]);
     });
   });
 
@@ -302,39 +258,66 @@ describe('Config Loader', () => {
   // ========================================
 
   describe('Error Handling', () => {
-    test('throws detailed error for invalid config format', () => {
+    test('throws error for invalid config format (missing version)', () => {
       const invalidConfig = {
-        flow: {
-          platform: 'invalid',
+        environments: {
+          default: { web: {} },
         },
-        build: { packages: {}, code: 'export {};', output: '' },
       };
 
-      // Invalid platform value causes config to fail format detection
       expect(() =>
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow('Invalid configuration format');
+      ).toThrow(/Invalid configuration.*version/);
     });
 
-    test('throws error for missing required fields', () => {
-      const invalidConfig = {};
-
-      expect(() =>
-        loadBundleConfig(invalidConfig, {
-          configPath: '/test/config.json',
-        }),
-      ).toThrow();
-    });
-
-    test('throws error for invalid version in multi-env config', () => {
+    test('throws error for invalid config format (wrong version)', () => {
       const invalidConfig = {
         version: 2,
         environments: {
-          prod: {
-            flow: { platform: 'web' as const },
-            build: { packages: {}, code: 'export {};', output: '' },
+          default: { web: {} },
+        },
+      };
+
+      expect(() =>
+        loadBundleConfig(invalidConfig, {
+          configPath: '/test/config.json',
+        }),
+      ).toThrow(/Invalid configuration.*version/);
+    });
+
+    test('throws error for invalid config format (missing environments)', () => {
+      const invalidConfig = {
+        version: 1,
+      };
+
+      expect(() =>
+        loadBundleConfig(invalidConfig, {
+          configPath: '/test/config.json',
+        }),
+      ).toThrow(/Invalid configuration.*environments/);
+    });
+
+    test('throws error for empty environments', () => {
+      const invalidConfig = {
+        version: 1,
+        environments: {},
+      };
+
+      expect(() =>
+        loadBundleConfig(invalidConfig, {
+          configPath: '/test/config.json',
+        }),
+      ).toThrow(/must contain at least one environment/);
+    });
+
+    test('throws error for environment without web/server key', () => {
+      const invalidConfig = {
+        version: 1,
+        environments: {
+          default: {
+            packages: {},
           },
         },
       };
@@ -342,9 +325,18 @@ describe('Config Loader', () => {
       expect(() =>
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
-          environment: 'prod',
         }),
-      ).toThrow();
+      ).toThrow(/must have a "web" or "server" key/);
+    });
+
+    test('returns empty array for non-Flow.Setup config', () => {
+      const oldFormatConfig = {
+        flow: { platform: 'web' },
+        build: { packages: {} },
+      };
+      const environments = getAvailableEnvironments(oldFormatConfig);
+
+      expect(environments).toEqual([]);
     });
   });
 
@@ -363,8 +355,12 @@ describe('Config Loader', () => {
         version: 1,
         environments: {
           prod: {
-            flow: { platform: 'web' as const },
-            build: { packages: {}, code: 'export {};', output: '' },
+            web: {},
+            packages: {},
+          },
+          stage: {
+            web: {},
+            packages: {},
           },
         },
       };
@@ -380,32 +376,29 @@ describe('Config Loader', () => {
       );
     });
 
-    test('logs warning for ignored --env flag on single-env config', () => {
+    test('does not log for single-environment config', () => {
       const logger = {
         info: jest.fn(),
         warn: jest.fn(),
       };
 
       const config = {
-        flow: {
-          platform: 'web' as const,
-        },
-        build: {
-          packages: {},
-          code: 'export {};',
-          output: '',
+        version: 1,
+        environments: {
+          default: {
+            web: {},
+            packages: {},
+          },
         },
       };
 
       loadBundleConfig(config, {
         configPath: '/test/config.json',
-        environment: 'ignored',
         logger,
       });
 
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('configuration is single-environment'),
-      );
+      // Should not log environment selection for single-env
+      expect(logger.info).not.toHaveBeenCalled();
     });
   });
 
@@ -417,7 +410,6 @@ describe('Config Loader', () => {
     test('loads complex multi-environment setup', () => {
       const complexConfig = {
         version: 1,
-        $schema: 'https://walkeros.io/schema/flow/v1.json',
         variables: {
           CURRENCY: 'USD',
         },
@@ -428,36 +420,34 @@ describe('Config Loader', () => {
         },
         environments: {
           web_production: {
-            flow: {
-              platform: 'web' as const,
-              sources: {
-                browser: {
-                  package: '@walkeros/web-source-browser@2.0.0',
-                  config: {
-                    settings: { pageview: true },
-                  },
-                  primary: true,
-                },
-              },
-              destinations: {
-                gtag: {
-                  package: '@walkeros/web-destination-gtag@2.0.0',
-                  config: {
-                    settings: { ga4: { measurementId: 'G-PROD' } },
-                  },
-                },
-              },
-              collector: {
-                run: true,
-                tagging: 1,
+            web: {},
+            packages: {
+              '@walkeros/collector': { imports: ['startFlow'] },
+              '@walkeros/web-source-browser': { imports: ['sourceBrowser'] },
+              '@walkeros/web-destination-gtag': {
+                imports: ['destinationGtag'],
               },
             },
-            build: {
-              packages: {},
-              code: 'export {};',
-              minify: true,
-              sourcemap: false,
-              output: './dist/walker.min.js',
+            sources: {
+              browser: {
+                package: '@walkeros/web-source-browser@2.0.0',
+                config: {
+                  settings: { pageview: true },
+                },
+                primary: true,
+              },
+            },
+            destinations: {
+              gtag: {
+                package: '@walkeros/web-destination-gtag@2.0.0',
+                config: {
+                  settings: { ga4: { measurementId: 'G-PROD' } },
+                },
+              },
+            },
+            collector: {
+              run: true,
+              tagging: 1,
             },
           },
         },
@@ -468,19 +458,40 @@ describe('Config Loader', () => {
         environment: 'web_production',
       });
 
-      expect(
-        (result.flowConfig as unknown as { platform: string }).platform,
-      ).toBe('web');
-      expect(
-        (
-          result.flowConfig as unknown as {
-            sources?: Record<string, { package?: string }>;
-          }
-        ).sources?.browser?.package,
-      ).toBe('@walkeros/web-source-browser@2.0.0');
+      expect(result.flowConfig.web).toBeDefined();
+      expect(result.flowConfig.sources?.browser?.package).toBe(
+        '@walkeros/web-source-browser@2.0.0',
+      );
       expect(result.buildOptions.minify).toBe(true);
-      // Output path is resolved relative to config file directory
-      expect(result.buildOptions.output).toBe('/test/dist/walker.min.js');
+      // Output uses convention default
+      expect(result.buildOptions.output).toBe('/test/dist/walker.js');
+    });
+
+    test('extracts windowCollector and windowElb from web config', () => {
+      const config = {
+        version: 1,
+        environments: {
+          default: {
+            web: {
+              windowCollector: 'myCollector',
+              windowElb: 'myElb',
+            },
+            packages: {},
+          },
+        },
+      };
+
+      const result = loadBundleConfig(config, {
+        configPath: '/test/config.json',
+      });
+
+      // Web config values should be in flowConfig
+      expect(
+        (result.flowConfig.web as { windowCollector?: string }).windowCollector,
+      ).toBe('myCollector');
+      expect((result.flowConfig.web as { windowElb?: string }).windowElb).toBe(
+        'myElb',
+      );
     });
   });
 });

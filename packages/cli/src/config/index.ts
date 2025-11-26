@@ -1,16 +1,28 @@
 /**
  * Configuration Module
  *
- * Unified configuration loading, parsing, and validation.
+ * Config format: Flow.Setup from @walkeros/core
+ * Build options: Static platform defaults from build-defaults.ts
  */
 
 // Type guards and validators
 export {
   isObject,
-  validatePlatform,
-  isMultiEnvConfig,
-  isSingleEnvConfig,
+  detectPlatform,
+  hasValidPlatform,
+  isFlowSetup,
+  validateFlowSetup,
+  getAvailableEnvironments as getEnvironmentNames,
 } from './validators.js';
+
+// Build defaults
+export {
+  WEB_BUILD_DEFAULTS,
+  SERVER_BUILD_DEFAULTS,
+  DEFAULT_OUTPUT_PATHS,
+  getBuildDefaults,
+  getDefaultOutput,
+} from './build-defaults.js';
 
 // Utility functions
 export {
@@ -20,17 +32,6 @@ export {
   getTempDir,
 } from './utils.js';
 
-// Platform defaults
-export { getDefaultBuildOptions, ensureBuildOptions } from './defaults.js';
-
-// Parser
-export {
-  parseBundleConfig,
-  safeParseBundleConfig,
-  normalizeConfigs,
-} from './parser.js';
-export type { ParsedConfig } from './parser.js';
-
 // Loader
 export {
   loadBundleConfig,
@@ -39,11 +40,10 @@ export {
 } from './loader.js';
 export type { LoadConfigResult, LoadConfigOptions } from './loader.js';
 
-// Type re-exports from bundle types
+// Type re-exports
 export type {
   BuildOptions,
+  CLIBuildOptions,
   MinifyOptions,
   Flow,
-  EnvironmentConfig,
-  Setup,
 } from '../types/bundle.js';

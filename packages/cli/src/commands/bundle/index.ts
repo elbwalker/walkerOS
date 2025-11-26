@@ -19,7 +19,6 @@ import {
   loadJsonConfig,
   loadBundleConfig,
   loadAllEnvironments,
-  parseBundleConfig,
   type LoadConfigResult,
 } from '../../config/index.js';
 import type { GlobalOptions } from '../../types/index.js';
@@ -209,24 +208,27 @@ export async function bundleCommand(
  *
  * Handles configuration loading, parsing, and logger creation internally.
  *
- * @param configOrPath - Bundle configuration object or path to config file
+ * @param configOrPath - Bundle configuration (Flow.Setup) or path to config file
  * @param options - Bundle options
  * @param options.silent - Suppress all output (default: false)
  * @param options.verbose - Enable verbose logging (default: false)
  * @param options.stats - Collect and return bundle statistics (default: false)
  * @param options.cache - Enable package caching (default: true)
+ * @param options.environment - Environment to use (required for multi-env configs)
  * @returns Bundle statistics if stats option is true, otherwise void
  *
  * @example
  * ```typescript
- * // With config object
+ * // With Flow.Setup config object
  * await bundle({
- *   platform: 'web',
- *   packages: { '@walkeros/collector': { imports: ['startFlow'] } },
- *   sources: { browser: { code: 'sourceBrowser' } },
- *   destinations: { api: { code: 'destinationApi' } },
- *   code: 'export default startFlow({ sources, destinations })',
- *   output: './dist/walker.js'
+ *   version: 1,
+ *   environments: {
+ *     default: {
+ *       web: {},
+ *       packages: { '@walkeros/collector': { imports: ['startFlow'] } },
+ *       destinations: { api: { code: 'destinationApi' } },
+ *     }
+ *   }
  * });
  *
  * // With config file
@@ -240,18 +242,25 @@ export async function bundle(
     verbose?: boolean;
     stats?: boolean;
     cache?: boolean;
+    environment?: string;
   } = {},
 ): Promise<import('./bundler').BundleStats | void> {
   // 1. Load config if path provided
   let rawConfig: unknown;
+  // Use current working directory as base when config is passed as object
+  let configPath = path.resolve(process.cwd(), 'walkeros.config.json');
   if (typeof configOrPath === 'string') {
+    configPath = path.resolve(configOrPath);
     rawConfig = await loadJsonConfig(configOrPath);
   } else {
     rawConfig = configOrPath;
   }
 
-  // 2. Parse and normalize config
-  const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
+  // 2. Load and resolve config using Flow.Setup format
+  const { flowConfig, buildOptions } = loadBundleConfig(rawConfig, {
+    configPath,
+    environment: options.environment,
+  });
 
   // 3. Handle cache option
   if (options.cache !== undefined) {

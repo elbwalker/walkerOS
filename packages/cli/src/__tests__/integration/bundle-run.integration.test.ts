@@ -13,24 +13,29 @@ const projectRoot = process.cwd();
 
 describe('Bundle → Run Integration', () => {
   const testDir = join(projectRoot, '.tmp/integration-tests');
+  // Output path is now convention-based: ./dist/bundle.mjs for server
+  const bundlePath = join(projectRoot, 'examples/dist/bundle.mjs');
 
   beforeAll(async () => {
     await fs.ensureDir(testDir);
+    // Ensure the dist directory exists
+    await fs.ensureDir(join(projectRoot, 'examples/dist'));
   });
 
   afterAll(async () => {
     await fs.remove(testDir).catch(() => {});
+    // Clean up the dist directory
+    await fs.remove(join(projectRoot, 'examples/dist')).catch(() => {});
   });
 
   it('should create functional bundle from config', async () => {
-    // Step 1: Bundle example config
+    // Step 1: Bundle example config (Flow.Setup format)
     await bundle(join(projectRoot, 'examples/server-collect.json'), {
       verbose: false,
       silent: true,
     });
 
-    // Step 2: Verify bundle exists
-    const bundlePath = join(projectRoot, 'examples/server-collect.mjs');
+    // Step 2: Verify bundle exists at convention-based path
     expect(fs.existsSync(bundlePath)).toBe(true);
 
     // Step 3: Verify it's valid ESM
@@ -49,7 +54,6 @@ describe('Bundle → Run Integration', () => {
   }, 60000);
 
   it('should bundle with correct dependencies included', async () => {
-    const bundlePath = join(projectRoot, 'examples/server-collect.mjs');
     const content = fs.readFileSync(bundlePath, 'utf-8');
 
     // Should include runtime dependencies

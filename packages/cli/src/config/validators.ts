@@ -4,7 +4,7 @@
  * Type checking utilities for configuration validation.
  */
 
-import type { Setup, EnvironmentConfig } from '../types/bundle.js';
+import type { Flow } from '@walkeros/core';
 
 /**
  * Type guard: Check if value is a plain object.
@@ -19,74 +19,125 @@ export function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Type guard: Validate platform value.
- */
-export function validatePlatform(
-  platform: unknown,
-): platform is 'web' | 'server' {
-  return platform === 'web' || platform === 'server';
-}
-
-/**
  * Detect platform from flow config.
  *
- * @remarks
- * Supports both legacy format (platform property) and new format (web/server keys).
- * New format takes precedence.
+ * Platform is determined by the presence of `web` or `server` key.
  */
 export function detectPlatform(
   flowConfig: Record<string, unknown>,
 ): 'web' | 'server' | undefined {
-  // New format: web/server keys
   if ('web' in flowConfig && flowConfig.web !== undefined) {
     return 'web';
   }
   if ('server' in flowConfig && flowConfig.server !== undefined) {
     return 'server';
   }
-  // Legacy format: platform property
-  if ('platform' in flowConfig && validatePlatform(flowConfig.platform)) {
-    return flowConfig.platform;
-  }
   return undefined;
 }
 
 /**
- * Check if flow config has valid platform (new or legacy format).
+ * Check if flow config has valid platform.
  */
 export function hasValidPlatform(flowConfig: Record<string, unknown>): boolean {
   return detectPlatform(flowConfig) !== undefined;
 }
 
 /**
- * Type guard: Check if config is multi-environment format.
+ * Type guard: Check if config is a valid Flow.Setup structure.
+ *
+ * @remarks
+ * Flow.Setup is the only supported config format.
+ * It must have:
+ * - version: 1
+ * - environments: object with at least one environment
+ *
+ * @example
+ * ```typescript
+ * if (isFlowSetup(config)) {
+ *   const flowConfig = getFlowConfig(config, 'production');
+ * }
+ * ```
  */
-export function isMultiEnvConfig(data: unknown): data is Setup {
-  return (
-    isObject(data) &&
-    'version' in data &&
-    data.version === 1 &&
-    'environments' in data &&
-    isObject(data.environments)
-  );
+export function isFlowSetup(data: unknown): data is Flow.Setup {
+  if (!isObject(data)) return false;
+  if (!('version' in data) || data.version !== 1) return false;
+  if (!('environments' in data) || !isObject(data.environments)) return false;
+
+  // Must have at least one environment
+  const envKeys = Object.keys(data.environments);
+  if (envKeys.length === 0) return false;
+
+  // Each environment must be a valid Flow.Config (has web or server key)
+  for (const key of envKeys) {
+    const env = (data.environments as Record<string, unknown>)[key];
+    if (!isObject(env)) return false;
+    if (!hasValidPlatform(env)) return false;
+  }
+
+  return true;
 }
 
 /**
- * Type guard: Check if config is single-environment format.
+ * Validate Flow.Setup and throw descriptive error if invalid.
  *
- * @remarks
- * Only checks structural shape. Supports both legacy (platform) and new (web/server) formats.
+ * @param data - Raw configuration data
+ * @returns Validated Flow.Setup
+ * @throws Error with descriptive message if validation fails
  */
-export function isSingleEnvConfig(data: unknown): data is EnvironmentConfig {
-  return (
-    isObject(data) &&
-    'flow' in data &&
-    'build' in data &&
-    isObject(data.flow) &&
-    isObject(data.build) &&
-    hasValidPlatform(data.flow as Record<string, unknown>)
-  );
+export function validateFlowSetup(data: unknown): Flow.Setup {
+  if (!isObject(data)) {
+    throw new Error(
+      `Invalid configuration: expected object, got ${typeof data}`,
+    );
+  }
+
+  if (!('version' in data) || data.version !== 1) {
+    throw new Error(
+      `Invalid configuration: missing or invalid "version" field.\n` +
+        `Expected: { "version": 1, "environments": { ... } }`,
+    );
+  }
+
+  if (!('environments' in data) || !isObject(data.environments)) {
+    throw new Error(
+      `Invalid configuration: missing or invalid "environments" field.\n` +
+        `Expected: { "version": 1, "environments": { "default": { web: {}, ... } } }`,
+    );
+  }
+
+  const envKeys = Object.keys(data.environments);
+  if (envKeys.length === 0) {
+    throw new Error(
+      `Invalid configuration: "environments" must contain at least one environment.\n` +
+        `Example: { "version": 1, "environments": { "default": { web: {}, ... } } }`,
+    );
+  }
+
+  // Validate each environment
+  for (const key of envKeys) {
+    const env = (data.environments as Record<string, unknown>)[key];
+    if (!isObject(env)) {
+      throw new Error(
+        `Invalid configuration: environment "${key}" must be an object.`,
+      );
+    }
+    if (!hasValidPlatform(env)) {
+      throw new Error(
+        `Invalid configuration: environment "${key}" must have a "web" or "server" key.\n` +
+          `Example: { "web": {}, "destinations": { ... } }`,
+      );
+    }
+  }
+
+  return data as unknown as Flow.Setup;
 }
 
-// Legacy format support removed in v0.3.0
-// See docs/MIGRATION.md for migration guide
+/**
+ * Get available environment names from a Flow.Setup.
+ *
+ * @param setup - Flow.Setup configuration
+ * @returns Array of environment names
+ */
+export function getAvailableEnvironments(setup: Flow.Setup): string[] {
+  return Object.keys(setup.environments);
+}

@@ -48,18 +48,16 @@ describe('CLI Bundle Command', () => {
   };
 
   it('should output JSON format for successful bundle', async () => {
+    // Flow.Setup format
     const testConfig = {
-      flow: {
-        platform: 'web',
-      },
-      build: {
-        packages: {
-          '@walkeros/core': { imports: ['getId'] },
+      version: 1,
+      environments: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
         },
-        code: 'export const test = getId();',
-        template: '', // Disable template for raw code bundling
-        format: 'esm' as const,
-        output: path.join(testOutputDir, 'test.js'),
       },
     };
 
@@ -100,19 +98,17 @@ describe('CLI Bundle Command', () => {
     );
   });
 
-  it('should output JSON format for failed bundle', async () => {
+  it('should output JSON format for failed bundle (invalid syntax)', async () => {
+    // Flow.Setup format - but bundler will fail on invalid destination code
     const testConfig = {
-      flow: {
-        platform: 'web',
-      },
-      build: {
-        packages: {
-          '@walkeros/core': { imports: ['getId'] },
+      version: 1,
+      environments: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/nonexistent-package-xyz': { imports: ['nonexistent'] },
+          },
         },
-        code: 'export const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
-        template: '', // Disable template for raw code bundling
-        format: 'esm' as const,
-        output: path.join(testOutputDir, 'error-test.js'),
       },
     };
 
@@ -125,11 +121,9 @@ describe('CLI Bundle Command', () => {
     const output = JSON.parse(result.stdout);
     expect(output).toMatchObject({
       success: false,
-      error: expect.stringContaining('Code syntax error'),
+      error: expect.any(String),
       duration: expect.any(Number),
     });
-
-    expect(output.error).toContain('line 4, column 23');
   });
 
   it('should output JSON format when config file not found', async () => {
@@ -145,16 +139,16 @@ describe('CLI Bundle Command', () => {
   });
 
   it('should collect stats when --json flag is used (implies --stats)', async () => {
+    // Flow.Setup format
     const testConfig = {
-      flow: {
-        platform: 'web',
-      },
-      build: {
-        packages: { '@walkeros/core': { imports: ['getId'] } },
-        code: 'export const test = getId;',
-        template: '', // Disable template for raw code bundling
-        format: 'esm' as const,
-        output: path.join(testOutputDir, 'wildcard-test.js'),
+      version: 1,
+      environments: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
+        },
       },
     };
 
@@ -166,20 +160,20 @@ describe('CLI Bundle Command', () => {
 
     const output = JSON.parse(result.stdout);
     expect(output.success).toBe(true);
-    expect(output.data.environments[0].stats.treeshakingEffective).toBe(true); // Should be effective with named imports
+    expect(output.data.environments[0].stats.treeshakingEffective).toBe(true);
   });
 
   it('should suppress decorative output in JSON mode', async () => {
+    // Flow.Setup format
     const testConfig = {
-      flow: {
-        platform: 'web',
-      },
-      build: {
-        packages: { '@walkeros/core': { imports: ['getId'] } },
-        code: 'export const test = getId();',
-        template: '', // Disable template for raw code bundling
-        format: 'esm' as const,
-        output: path.join(testOutputDir, 'minimal-test.js'),
+      version: 1,
+      environments: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
+        },
       },
     };
 
@@ -197,6 +191,28 @@ describe('CLI Bundle Command', () => {
     // Should be valid JSON
     const output = JSON.parse(result.stdout);
     expect(output.success).toBe(true);
+  });
+
+  it('should reject invalid config format', async () => {
+    // Old format - no longer supported
+    const testConfig = {
+      flow: {
+        platform: 'web',
+      },
+      build: {
+        packages: {},
+      },
+    };
+
+    await fs.writeJson(testConfigPath, testConfig);
+
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
+
+    expect(result.exitCode).toBe(1);
+
+    const output = JSON.parse(result.stdout);
+    expect(output.success).toBe(false);
+    expect(output.error).toContain('Invalid configuration');
   });
 });
 
