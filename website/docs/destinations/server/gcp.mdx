@@ -41,3 +41,102 @@ tableId: 'YOUR_TABLE_ID',
 ## Configuration reference
 
 <PropertyTable schema={schemas.settings} />
+
+## Default Table Schema
+
+By default, the destination sends the full walkerOS event to BigQuery. All object
+and array fields are JSON stringified before insertion.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `timestamp` | TIMESTAMP | Event timestamp |
+| `createdAt` | TIMESTAMP | Row insertion time |
+| `name` | STRING | Full event name ("entity action") |
+| `id` | STRING | Unique event ID |
+| `entity` | STRING | Entity name |
+| `action` | STRING | Action name |
+| `trigger` | STRING | Event trigger |
+| `group` | STRING | Event group |
+| `timing` | FLOAT64 | Event timing |
+| `count` | INT64 | Event count |
+| `data` | STRING | JSON stringified data object |
+| `context` | STRING | JSON stringified context |
+| `globals` | STRING | JSON stringified globals |
+| `custom` | STRING | JSON stringified custom data |
+| `user` | STRING | JSON stringified user object |
+| `nested` | STRING | JSON stringified nested entities |
+| `consent` | STRING | JSON stringified consent |
+| `version` | STRING | JSON stringified version |
+| `source` | STRING | JSON stringified source |
+
+### Create Table Query
+
+Use this SQL query to create the default table schema in BigQuery:
+
+<CodeSnippet
+  code={`CREATE TABLE IF NOT EXISTS \`YOUR_PROJECT.walkeros.events\` (
+  timestamp TIMESTAMP,
+  createdAt TIMESTAMP,
+  name STRING,
+  id STRING,
+  entity STRING,
+  action STRING,
+  trigger STRING,
+  \`group\` STRING,
+  timing FLOAT64,
+  count INT64,
+  data STRING,
+  context STRING,
+  globals STRING,
+  custom STRING,
+  user STRING,
+  nested STRING,
+  consent STRING,
+  version STRING,
+  source STRING
+);`}
+  language="sql"
+/>
+
+## Custom Schema Mapping
+
+You can send a custom schema by using the `data` configuration to map specific
+fields. This is useful when you only need a subset of the event data.
+
+### Example: Simple Schema
+
+This example sends only `name`, `id`, `data`, and `timestamp`:
+
+<CodeSnippet
+  code={`import { elb } from '@walkeros/collector';
+import { destinationBigQuery } from '@walkeros/server-destination-gcp';
+
+elb('walker destination', destinationBigQuery, {
+  settings: {
+    projectId: 'YOUR_PROJECT_ID',
+    datasetId: 'YOUR_DATASET_ID',
+    tableId: 'events_simple',
+  },
+  data: {
+    map: {
+      name: 'name',
+      id: 'id',
+      data: 'data',
+      timestamp: 'timestamp',
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+With the corresponding simpler table:
+
+<CodeSnippet
+  code={`CREATE TABLE IF NOT EXISTS \`YOUR_PROJECT.walkeros.events_simple\` (
+  name STRING,
+  id STRING,
+  data STRING,
+  timestamp INT64
+);`}
+  language="sql"
+/>
