@@ -120,6 +120,19 @@ export interface BuildOptions extends CLIBuildOptions {
    * @default "elb"
    */
   windowElb?: string;
+
+  /**
+   * Folders to include in the output directory.
+   * These folders are copied alongside the bundle for runtime access.
+   * @default ["./shared"] if folder exists
+   */
+  include?: string[];
+
+  /**
+   * Base directory for resolving include paths.
+   * Typically the directory containing the config file.
+   */
+  configDir?: string;
 }
 
 /**

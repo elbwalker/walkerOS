@@ -1,5 +1,4 @@
 import path from 'path';
-import os from 'os';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
 import { getPlatform, type Elb } from '@walkeros/core';
@@ -16,7 +15,7 @@ import {
   loadJsonFromSource,
   loadBundleConfig,
 } from '../../config/index.js';
-import { bundle } from '../bundle/index.js';
+import { bundleCore } from '../bundle/bundler.js';
 import type { PushCommandOptions, PushResult } from './types.js';
 
 /**
@@ -73,34 +72,34 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
 
         const platform = getPlatform(flowConfig);
 
-        // Step 3: Bundle to temp file
+        // Step 3: Bundle to temp file in config directory (so Node.js can find node_modules)
         logger.info('🔨 Bundling flow configuration...');
+        const configDir = path.dirname(configPath);
+        const tempDir = path.join(
+          configDir,
+          '.tmp',
+          `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        );
+        await fs.ensureDir(tempDir);
         const tempPath = path.join(
-          os.tmpdir(),
-          `walkeros-push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${platform === 'web' ? 'js' : 'mjs'}`,
+          tempDir,
+          `bundle.${platform === 'web' ? 'js' : 'mjs'}`,
         );
 
-        const configWithOutput = {
-          flow: flowConfig,
-          build: {
-            ...buildOptions,
-            output: tempPath,
-            // Web uses IIFE for browser-like execution, server uses ESM
-            format: platform === 'web' ? ('iife' as const) : ('esm' as const),
-            platform:
-              platform === 'web' ? ('browser' as const) : ('node' as const),
-            ...(platform === 'web' && {
-              windowCollector: 'collector',
-              windowElb: 'elb',
-            }),
-          },
+        const pushBuildOptions = {
+          ...buildOptions,
+          output: tempPath,
+          // Web uses IIFE for browser-like execution, server uses ESM
+          format: platform === 'web' ? ('iife' as const) : ('esm' as const),
+          platform:
+            platform === 'web' ? ('browser' as const) : ('node' as const),
+          ...(platform === 'web' && {
+            windowCollector: 'collector',
+            windowElb: 'elb',
+          }),
         };
 
-        await bundle(configWithOutput, {
-          cache: true,
-          verbose: options.verbose,
-          silent: !options.verbose,
-        });
+        await bundleCore(flowConfig, pushBuildOptions, logger, false);
 
         logger.debug(`Bundle created: ${tempPath}`);
 
@@ -161,9 +160,9 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
           }
         }
 
-        // Cleanup
+        // Cleanup temp directory
         try {
-          await fs.remove(tempPath);
+          await fs.remove(tempDir);
         } catch {
           // Ignore cleanup errors
         }

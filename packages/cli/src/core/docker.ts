@@ -6,37 +6,13 @@
 
 import { spawn } from 'child_process';
 import path from 'path';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
 import { VERSION as DOCKER_VERSION } from '@walkeros/docker';
 import { isUrl } from '../config/utils.js';
 import type { GlobalOptions } from '../types/global.js';
 
-// Read CLI version from own package.json
-// Handle both development (src/) and production (dist/) paths
-function readPackageVersion(): string {
-  // Get the directory of this module (ESM-compatible)
-  const moduleFilename = fileURLToPath(import.meta.url);
-  const moduleDir = path.dirname(moduleFilename);
-
-  // Try production path first (dist/index.js -> ../package.json)
-  const prodPath = path.join(moduleDir, '../package.json');
-  try {
-    const pkg = JSON.parse(readFileSync(prodPath, 'utf-8')) as {
-      version: string;
-    };
-    return pkg.version;
-  } catch {
-    // Fall back to development path (src/core/docker.ts -> ../../package.json)
-    const devPath = path.join(moduleDir, '../../package.json');
-    const pkg = JSON.parse(readFileSync(devPath, 'utf-8')) as {
-      version: string;
-    };
-    return pkg.version;
-  }
-}
-
-const CLI_VERSION = readPackageVersion();
+// Version injected at build time via tsup define
+declare const __VERSION__: string;
+const CLI_VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : '0.0.0';
 
 /**
  * Docker image for CLI/build tools (bundle, simulate)
@@ -255,11 +231,15 @@ export function buildDockerRunCommand(
   // Set MODE environment variable
   cmd.push('-e', `MODE=${mode}`);
 
-  // Mount flow bundle for collect mode
+  // Mount entire dist folder for collect mode (includes bundle + shared folders)
+  // Must mount to /app/dist (not /app) to preserve container's node_modules
+  // This allows relative paths like ./shared/credentials/sa.json to work
   if (mode === 'collect' && flowPath) {
     const absoluteFlowPath = path.resolve(cwd, flowPath);
-    cmd.push('-v', `${absoluteFlowPath}:/app/flow.mjs:ro`);
-    cmd.push('-e', 'FLOW=/app/flow.mjs');
+    const flowDir = path.dirname(absoluteFlowPath);
+    const flowFile = path.basename(absoluteFlowPath);
+    cmd.push('-v', `${flowDir}:/app/dist:ro`);
+    cmd.push('-e', `FLOW=/app/dist/${flowFile}`);
   }
 
   // Mount custom file for serve mode

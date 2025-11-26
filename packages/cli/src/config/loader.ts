@@ -6,6 +6,7 @@
  */
 
 import path from 'path';
+import fs from 'fs-extra';
 import { getFlowConfig, getPlatform, type Flow } from '@walkeros/core';
 import type { BuildOptions } from '../types/bundle.js';
 import {
@@ -14,6 +15,9 @@ import {
   getAvailableFlows as getFlowNames,
 } from './validators.js';
 import { getBuildDefaults, getDefaultOutput } from './build-defaults.js';
+
+/** Default folder for includes if it exists */
+const DEFAULT_INCLUDE_FOLDER = './shared';
 
 /**
  * Result of configuration loading.
@@ -104,10 +108,21 @@ export function loadBundleConfig(
     output = options.buildOverrides.output;
   }
 
+  // Get config directory for relative path resolution
+  const configDir = path.dirname(options.configPath);
+
   // Make output path absolute relative to config file
   if (!path.isAbsolute(output)) {
-    const configDir = path.dirname(options.configPath);
     output = path.resolve(configDir, output);
+  }
+
+  // Get includes from config or use default if ./shared exists
+  let includes = setup.include;
+  if (!includes) {
+    const defaultIncludePath = path.resolve(configDir, DEFAULT_INCLUDE_FOLDER);
+    if (fs.pathExistsSync(defaultIncludePath)) {
+      includes = [DEFAULT_INCLUDE_FOLDER];
+    }
   }
 
   // Merge build options: defaults + CLI overrides
@@ -115,6 +130,8 @@ export function loadBundleConfig(
     ...buildDefaults,
     packages,
     output,
+    include: includes,
+    configDir,
     ...options.buildOverrides,
   };
 

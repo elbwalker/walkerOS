@@ -14,6 +14,7 @@ import {
   executeCommand,
   getErrorMessage,
   buildCommonDockerArgs,
+  resolveAsset,
 } from '../../core/index.js';
 import {
   loadJsonConfig,
@@ -22,6 +23,7 @@ import {
   type LoadConfigResult,
 } from '../../config/index.js';
 import type { GlobalOptions } from '../../types/index.js';
+import type { BuildOptions } from '../../types/bundle.js';
 import { bundleCore } from './bundler.js';
 import { displayStats, createStatsSummary } from './stats.js';
 
@@ -60,8 +62,8 @@ export async function bundleCommand(
 
         // Step 1: Read configuration file
         logger.info('📦 Reading configuration...');
-        // Don't resolve URLs - pass them through as-is for download
-        const configPath = options.config;
+        // Resolve bare names to examples directory, keep paths/URLs as-is
+        const configPath = resolveAsset(options.config, 'config');
         const rawConfig = await loadJsonConfig(configPath);
 
         // Step 2: Load configuration(s) based on flags
@@ -243,6 +245,7 @@ export async function bundle(
     stats?: boolean;
     cache?: boolean;
     flowName?: string;
+    buildOverrides?: Partial<BuildOptions>;
   } = {},
 ): Promise<import('./bundler').BundleStats | void> {
   // 1. Load config if path provided
@@ -250,8 +253,9 @@ export async function bundle(
   // Use current working directory as base when config is passed as object
   let configPath = path.resolve(process.cwd(), 'walkeros.config.json');
   if (typeof configOrPath === 'string') {
-    configPath = path.resolve(configOrPath);
-    rawConfig = await loadJsonConfig(configOrPath);
+    // Resolve bare names to examples directory, keep paths as-is
+    configPath = resolveAsset(configOrPath, 'config');
+    rawConfig = await loadJsonConfig(configPath);
   } else {
     rawConfig = configOrPath;
   }
@@ -260,6 +264,7 @@ export async function bundle(
   const { flowConfig, buildOptions } = loadBundleConfig(rawConfig, {
     configPath,
     flowName: options.flowName,
+    buildOverrides: options.buildOverrides,
   });
 
   // 3. Handle cache option

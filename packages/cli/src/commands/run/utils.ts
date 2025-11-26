@@ -5,12 +5,14 @@
  */
 
 import path from 'path';
-import os from 'os';
-import { loadJsonConfig } from '../../config/index.js';
+import fs from 'fs-extra';
 import { bundle } from '../bundle/index.js';
 
 /**
- * Prepares a JSON config file for execution by bundling it to a temporary location
+ * Prepares a JSON config file for execution by bundling it to a temporary location.
+ *
+ * Creates bundle in .tmp/ directory relative to config file (not /tmp)
+ * so Node.js module resolution finds node_modules.
  *
  * @param configPath - Path to the JSON configuration file
  * @param options - Bundle options
@@ -25,41 +27,28 @@ export async function prepareBundleForRun(
     silent?: boolean;
   },
 ): Promise<string> {
-  // Load JSON config
-  const rawConfig = await loadJsonConfig(configPath);
-
-  // Generate unique temp path
-  const tempPath = path.join(
-    os.tmpdir(),
-    `walkeros-${Date.now()}-${Math.random().toString(36).slice(2, 9)}.mjs`,
+  // Create temp directory relative to config (ensures node_modules is findable)
+  const configDir = path.dirname(path.resolve(configPath));
+  const tempDir = path.join(
+    configDir,
+    '.tmp',
+    `run-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   );
+  await fs.ensureDir(tempDir);
 
-  // Extract existing build config if present
-  const existingBuild =
-    typeof rawConfig === 'object' &&
-    rawConfig !== null &&
-    'build' in rawConfig &&
-    typeof (rawConfig as Record<string, unknown>).build === 'object'
-      ? ((rawConfig as Record<string, unknown>).build as Record<
-          string,
-          unknown
-        >)
-      : {};
+  // Generate output path in temp directory
+  const tempPath = path.join(tempDir, 'bundle.mjs');
 
-  // Create config with temp output path
-  const configWithOutput = {
-    ...(rawConfig as Record<string, unknown>),
-    build: {
-      ...existingBuild,
-      output: tempPath,
-    },
-  };
-
-  // Bundle the config
-  await bundle(configWithOutput, {
+  // Bundle with proper output override
+  await bundle(configPath, {
     cache: true,
     verbose: options.verbose,
     silent: options.silent,
+    buildOverrides: {
+      output: tempPath,
+      format: 'esm',
+      platform: 'node',
+    },
   });
 
   return tempPath;

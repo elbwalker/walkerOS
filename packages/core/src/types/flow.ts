@@ -102,6 +102,25 @@ export interface Setup {
   $schema?: string;
 
   /**
+   * Folders to include in the bundle output.
+   * These folders are copied to dist/ during bundle, making them available
+   * at runtime for both local and Docker execution.
+   *
+   * @remarks
+   * Use for credential files, configuration, or other runtime assets.
+   * Paths are relative to the config file location.
+   * Default: `["./shared"]` if the folder exists, otherwise `[]`.
+   *
+   * @example
+   * ```json
+   * {
+   *   "include": ["./credentials", "./config"]
+   * }
+   * ```
+   */
+  include?: string[];
+
+  /**
    * Shared variables for interpolation.
    * Resolution: process.env > Config.variables > Setup.variables > inline default
    * Syntax: ${VAR_NAME} or ${VAR_NAME:default}

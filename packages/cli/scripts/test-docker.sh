@@ -41,12 +41,26 @@ echo -e "${BLUE}[3/4] Testing bundle command with built-in examples...${NC}"
 TEST_DIR=$(mktemp -d)
 trap "rm -rf ${TEST_DIR}" EXIT
 
-# Copy example config to workspace (output paths resolve relative to config location)
-docker run --rm \
-  --entrypoint sh \
-  -v "${TEST_DIR}:/workspace" \
-  "${FULL_IMAGE}" \
-  -c "cp /cli/examples/server-collect.json /workspace/" > /dev/null 2>&1
+# Create a simple config file directly (no entrypoint hack needed)
+cat > "${TEST_DIR}/server-collect.json" << 'EOF'
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": {
+          "version": "latest",
+          "imports": ["startFlow"]
+        }
+      },
+      "collector": {
+        "run": true
+      }
+    }
+  }
+}
+EOF
 
 if docker run --rm \
   --user "$(id -u):$(id -g)" \
