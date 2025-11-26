@@ -63,11 +63,8 @@ program
 program
   .command('bundle [file]')
   .description('Bundle NPM packages with custom code')
-  .option(
-    '-e, --env <name>',
-    'environment to build (for multi-environment configs)',
-  )
-  .option('--all', 'build all environments (for multi-environment configs)')
+  .option('-f, --flow <name>', 'flow to build (for multi-flow configs)')
+  .option('--all', 'build all flows (for multi-flow configs)')
   .option('-s, --stats', 'show bundle statistics')
   .option('--json', 'output statistics in JSON format (implies --stats)')
   .option('--no-cache', 'disable package caching and download fresh packages')
@@ -78,7 +75,7 @@ program
   .action(async (file, options) => {
     await bundleCommand({
       config: file || 'bundle.config.json',
-      env: options.env,
+      flow: options.flow,
       all: options.all,
       stats: options.stats,
       json: options.json,
@@ -123,7 +120,7 @@ program
     '-e, --event <source>',
     'Event to push (JSON string, file path, or URL)',
   )
-  .option('--env <name>', 'Environment name (for multi-environment configs)')
+  .option('--flow <name>', 'Flow name (for multi-flow configs)')
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
   .option('-s, --silent', 'Suppress output')
@@ -132,7 +129,7 @@ program
     await pushCommand({
       config: file || 'bundle.config.json',
       event: options.event,
-      env: options.env,
+      flow: options.flow,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,

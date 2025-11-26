@@ -39,9 +39,9 @@ describe('Run Command Integration', () => {
 
       // New Flow.Setup format
       expect(config.version).toBe(1);
-      expect(config.environments).toBeDefined();
-      expect(config.environments.default).toBeDefined();
-      expect(config.environments.default.server).toBeDefined();
+      expect(config.flows).toBeDefined();
+      expect(config.flows.default).toBeDefined();
+      expect(config.flows.default.server).toBeDefined();
     });
   });
 

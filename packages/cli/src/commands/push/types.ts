@@ -7,7 +7,7 @@ import type { GlobalOptions } from '../../types/index.js';
 export interface PushCommandOptions extends GlobalOptions {
   config: string;
   event: string;
-  env?: string;
+  flow?: string;
   json?: boolean;
 }
 

@@ -229,43 +229,56 @@ Browser → destinationAPI (POST /collect) → sourceExpress → destinationData
 
 ### Flow Configuration Structure
 
+Flow configs use the `Flow.Setup` format:
+
 ```json
 {
-  "flow": {
-    "platform": "web" | "server",
-    "sources": {
-      "<source_name>": {
-        "code": "<imported_function_name>",
-        "config": { "settings": { /* source config */ } }
-      }
-    },
-    "destinations": {
-      "<destination_name>": {
-        "code": "<imported_function_name>",
-        "config": {
-          "settings": { /* destination config */ },
-          "mapping": { /* event mappings */ }
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "packages": {
+        "<package_name>": { "imports": ["<function_name>"] }
+      },
+      "sources": {
+        "<source_name>": {
+          "code": "<imported_function_name>",
+          "config": {
+            "settings": {
+              /* source config */
+            }
+          }
+        }
+      },
+      "destinations": {
+        "<destination_name>": {
+          "code": "<imported_function_name>",
+          "config": {
+            "settings": {
+              /* destination config */
+            },
+            "mapping": {
+              /* event mappings */
+            }
+          }
+        }
+      },
+      "collector": {
+        "run": true,
+        "globals": {
+          /* global properties */
         }
       }
-    },
-    "collector": {
-      "run": true,
-      "globals": { /* global properties */ }
     }
-  },
-  "build": {
-    "packages": {
-      "<package_name>": {
-        "version": "latest",
-        "imports": ["<function_name>"]
-      }
-    },
-    "code": "// Optional custom code\n",
-    "template": "templates/base.hbs",
-    "output": "./dist/bundle.js"
   }
 }
 ```
+
+**Key points:**
+
+- Platform via `web: {}` or `server: {}` key (not `platform: "web"`)
+- Output path is convention-based: `./dist/walker.js` (web) or
+  `./dist/bundle.mjs` (server)
 
 ### Available Sources
 

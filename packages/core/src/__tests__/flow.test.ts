@@ -330,7 +330,7 @@ describe('Flow Schemas', () => {
     test('accepts minimal valid setup', () => {
       const validSetup = {
         version: 1 as const,
-        environments: {
+        flows: {
           prod: {
             web: {},
           },
@@ -354,7 +354,7 @@ describe('Flow Schemas', () => {
             },
           },
         },
-        environments: {
+        flows: {
           web_prod: {
             web: {},
             sources: {
@@ -384,7 +384,7 @@ describe('Flow Schemas', () => {
     test('requires version field', () => {
       expect(() =>
         SetupSchema.parse({
-          environments: { prod: { web: {} } },
+          flows: { prod: { web: {} } },
         }),
       ).toThrow();
     });
@@ -393,7 +393,7 @@ describe('Flow Schemas', () => {
       expect(() =>
         SetupSchema.parse({
           version: 2,
-          environments: { prod: { web: {} } },
+          flows: { prod: { web: {} } },
         }),
       ).toThrow('Only version 1 is currently supported');
     });
@@ -403,7 +403,7 @@ describe('Flow Schemas', () => {
         SetupSchema.parse({
           version: 1,
           $schema: 'not-a-url',
-          environments: { prod: { web: {} } },
+          flows: { prod: { web: {} } },
         }),
       ).toThrow();
 
@@ -411,18 +411,18 @@ describe('Flow Schemas', () => {
         SetupSchema.parse({
           version: 1,
           $schema: 'https://walkeros.io/schema/flow/v1.json',
-          environments: { prod: { web: {} } },
+          flows: { prod: { web: {} } },
         }),
       ).toHaveProperty('$schema', 'https://walkeros.io/schema/flow/v1.json');
     });
 
-    test('requires at least one environment', () => {
+    test('requires at least one flow', () => {
       expect(() =>
         SetupSchema.parse({
           version: 1,
-          environments: {},
+          flows: {},
         }),
-      ).toThrow('At least one environment is required');
+      ).toThrow('At least one flow is required');
     });
 
     test('validates variables as primitive record', () => {
@@ -434,7 +434,7 @@ describe('Flow Schemas', () => {
             NUMBER: 42,
             BOOLEAN: true,
           },
-          environments: { prod: { web: {} } },
+          flows: { prod: { web: {} } },
         }),
       ).toHaveProperty('variables', {
         STRING: 'value',
@@ -451,17 +451,17 @@ describe('Flow Schemas', () => {
           mapping2: ['array', 'values'],
           mapping3: 'simple string',
         },
-        environments: {
+        flows: {
           prod: { web: {} },
         },
       };
       expect(() => SetupSchema.parse(validSetup)).not.toThrow();
     });
 
-    test('validates multiple environments with different platforms', () => {
+    test('validates multiple flows with different platforms', () => {
       const validSetup = {
         version: 1 as const,
-        environments: {
+        flows: {
           web_prod: { web: {} },
           web_stage: { web: {} },
           server_prod: { server: {} },
@@ -480,7 +480,7 @@ describe('Flow Schemas', () => {
     test('successfully parses valid setup', () => {
       const validSetup = {
         version: 1,
-        environments: {
+        flows: {
           prod: { web: {} },
         },
       };
@@ -497,7 +497,7 @@ describe('Flow Schemas', () => {
     test('returns success for valid setup', () => {
       const validSetup = {
         version: 1,
-        environments: {
+        flows: {
           prod: { web: {} },
         },
       };
@@ -517,7 +517,7 @@ describe('Flow Schemas', () => {
     test('provides detailed error messages', () => {
       const result = safeParseSetup({
         version: 2,
-        environments: {},
+        flows: {},
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -525,7 +525,7 @@ describe('Flow Schemas', () => {
         expect(errorMessages).toContain(
           'Only version 1 is currently supported',
         );
-        expect(errorMessages).toContain('At least one environment is required');
+        expect(errorMessages).toContain('At least one flow is required');
       }
     });
   });
@@ -568,9 +568,7 @@ describe('Flow Schemas', () => {
       expect(setupJsonSchema).toHaveProperty('type', 'object');
       expect(setupJsonSchema).toHaveProperty('properties');
       expect((setupJsonSchema as any).properties).toHaveProperty('version');
-      expect((setupJsonSchema as any).properties).toHaveProperty(
-        'environments',
-      );
+      expect((setupJsonSchema as any).properties).toHaveProperty('flows');
     });
 
     test('configJsonSchema is valid JSON Schema', () => {
@@ -605,7 +603,7 @@ describe('Flow Schemas', () => {
   // ========================================
 
   describe('Real-world Scenarios', () => {
-    test('complete multi-environment setup', () => {
+    test('complete multi-flow setup', () => {
       const realWorldSetup = {
         version: 1,
         $schema: 'https://walkeros.io/schema/flow/v1.json',
@@ -628,7 +626,7 @@ describe('Flow Schemas', () => {
             },
           },
         },
-        environments: {
+        flows: {
           web_production: {
             web: {},
             sources: {
@@ -729,9 +727,9 @@ describe('Flow Schemas', () => {
 
       expect(() => parseSetup(realWorldSetup)).not.toThrow();
       const parsed = parseSetup(realWorldSetup);
-      expect(Object.keys(parsed.environments)).toHaveLength(3);
-      expect(parsed.environments.web_production.web).toBeDefined();
-      expect(parsed.environments.server_production.server).toBeDefined();
+      expect(Object.keys(parsed.flows)).toHaveLength(3);
+      expect(parsed.flows.web_production.web).toBeDefined();
+      expect(parsed.flows.server_production.server).toBeDefined();
     });
 
     test('setup with variable interpolation structure', () => {
@@ -742,7 +740,7 @@ describe('Flow Schemas', () => {
           GA4_STAGE: 'G-STAGE456',
           CURRENCY: 'USD',
         },
-        environments: {
+        flows: {
           prod: {
             web: {},
             variables: {
@@ -763,7 +761,7 @@ describe('Flow Schemas', () => {
             page: { view: { name: 'page_view' } },
           },
         },
-        environments: {
+        flows: {
           prod: {
             web: {},
             destinations: {
@@ -821,10 +819,10 @@ describe('Flow Schemas', () => {
       expect(() => ConfigSchema.parse(deepConfig)).not.toThrow();
     });
 
-    test('validates environment names are non-empty strings', () => {
+    test('validates flow names are non-empty strings', () => {
       const setup = {
         version: 1,
-        environments: {
+        flows: {
           '': { web: {} }, // Empty string key
         },
       };
@@ -885,7 +883,7 @@ describe('Flow Schemas', () => {
           GLOBAL: 'setup-level',
           OVERRIDE_TEST: 'setup',
         },
-        environments: {
+        flows: {
           prod: {
             web: {},
             variables: {
@@ -953,7 +951,7 @@ describe('Flow Schemas', () => {
             page: { view: { name: 'page_view' } },
           },
         },
-        environments: {
+        flows: {
           prod: {
             web: {},
             definitions: {
@@ -1036,10 +1034,10 @@ describe('Flow Schemas', () => {
       expect(() => ConfigSchema.parse(config)).not.toThrow();
     });
 
-    test('validates complete setup with packages at environment level', () => {
+    test('validates complete setup with packages at flow level', () => {
       const setup = {
         version: 1,
-        environments: {
+        flows: {
           prod: {
             web: { windowCollector: 'tracker' },
             packages: {

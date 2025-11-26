@@ -12,7 +12,7 @@ export {
   hasValidPlatform,
   isFlowSetup,
   validateFlowSetup,
-  getAvailableEnvironments as getEnvironmentNames,
+  getAvailableFlows as getFlowNames,
 } from './validators.js';
 
 // Build defaults
@@ -33,11 +33,7 @@ export {
 } from './utils.js';
 
 // Loader
-export {
-  loadBundleConfig,
-  loadAllEnvironments,
-  getAvailableEnvironments,
-} from './loader.js';
+export { loadBundleConfig, loadAllFlows, getAvailableFlows } from './loader.js';
 export type { LoadConfigResult, LoadConfigOptions } from './loader.js';
 
 // Type re-exports

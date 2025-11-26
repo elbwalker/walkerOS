@@ -11,7 +11,7 @@ import type { BuildOptions } from '../types/bundle.js';
 import {
   validateFlowSetup,
   isFlowSetup,
-  getAvailableEnvironments as getEnvNames,
+  getAvailableFlows as getFlowNames,
 } from './validators.js';
 import { getBuildDefaults, getDefaultOutput } from './build-defaults.js';
 
@@ -23,12 +23,12 @@ export interface LoadConfigResult {
   flowConfig: Flow.Config;
   /** Build-time configuration */
   buildOptions: BuildOptions;
-  /** Name of the selected environment */
-  environment: string;
-  /** Whether multiple environments are available */
-  isMultiEnvironment: boolean;
-  /** All available environment names */
-  availableEnvironments: string[];
+  /** Name of the selected flow */
+  flowName: string;
+  /** Whether multiple flows are available */
+  isMultiFlow: boolean;
+  /** All available flow names */
+  availableFlows: string[];
 }
 
 /**
@@ -37,8 +37,8 @@ export interface LoadConfigResult {
 export interface LoadConfigOptions {
   /** Path to config file */
   configPath: string;
-  /** Environment name to load (required for multi-env, optional for single-env) */
-  environment?: string;
+  /** Flow name to load (required for multi-flow, optional for single-flow) */
+  flowName?: string;
   /** CLI build overrides (future: --output, --minify, etc.) */
   buildOverrides?: Partial<BuildOptions>;
   /** Logger for warnings */
@@ -66,7 +66,7 @@ export interface LoadConfigOptions {
  * ```typescript
  * const config = loadBundleConfig(rawConfig, {
  *   configPath: './walkeros.config.json',
- *   environment: 'production',
+ *   flowName: 'production',
  * });
  * ```
  */
@@ -76,23 +76,19 @@ export function loadBundleConfig(
 ): LoadConfigResult {
   // Validate as Flow.Setup
   const setup = validateFlowSetup(rawConfig);
-  const availableEnvironments = getEnvNames(setup);
+  const availableFlows = getFlowNames(setup);
 
-  // Determine which environment to use
-  const environment = resolveEnvironment(
-    setup,
-    options.environment,
-    availableEnvironments,
-  );
+  // Determine which flow to use
+  const flowName = resolveFlow(setup, options.flowName, availableFlows);
 
   // Use core getFlowConfig() for resolution (variables, $refs, cascading)
-  const flowConfig = getFlowConfig(setup, environment);
+  const flowConfig = getFlowConfig(setup, flowName);
 
   // Detect platform from resolved config
   const platform = getPlatform(flowConfig);
   if (!platform) {
     throw new Error(
-      `Invalid configuration: environment "${environment}" must have a "web" or "server" key.`,
+      `Invalid configuration: flow "${flowName}" must have a "web" or "server" key.`,
     );
   }
 
@@ -122,103 +118,103 @@ export function loadBundleConfig(
     ...options.buildOverrides,
   };
 
-  // Log environment selection
-  const isMultiEnvironment = availableEnvironments.length > 1;
-  if (isMultiEnvironment && options.logger) {
+  // Log flow selection
+  const isMultiFlow = availableFlows.length > 1;
+  if (isMultiFlow && options.logger) {
     options.logger.info(
-      `📦 Using environment: ${environment} (${availableEnvironments.length} total)`,
+      `📦 Using flow: ${flowName} (${availableFlows.length} total)`,
     );
   }
 
   return {
     flowConfig,
     buildOptions,
-    environment,
-    isMultiEnvironment,
-    availableEnvironments,
+    flowName,
+    isMultiFlow,
+    availableFlows,
   };
 }
 
 /**
- * Resolve which environment to use.
+ * Resolve which flow to use.
  *
  * @param setup - Flow.Setup configuration
- * @param requestedEnv - Environment name from CLI (optional)
- * @param available - Available environment names
- * @returns Environment name to use
- * @throws Error if environment selection is invalid
+ * @param requestedFlow - Flow name from CLI (optional)
+ * @param available - Available flow names
+ * @returns Flow name to use
+ * @throws Error if flow selection is invalid
  */
-function resolveEnvironment(
+function resolveFlow(
   setup: Flow.Setup,
-  requestedEnv: string | undefined,
+  requestedFlow: string | undefined,
   available: string[],
 ): string {
-  // If only one environment, use it automatically
+  // If only one flow, use it automatically
   if (available.length === 1) {
     return available[0];
   }
 
-  // Multiple environments require explicit selection
-  if (!requestedEnv) {
+  // Multiple flows require explicit selection
+  if (!requestedFlow) {
     throw new Error(
-      `Multiple environments found. Please specify an environment using --env flag.\n` +
-        `Available environments: ${available.join(', ')}`,
+      `Multiple flows found. Please specify a flow using --flow flag.\n` +
+        `Available flows: ${available.join(', ')}`,
     );
   }
 
-  // Validate the requested environment exists
-  if (!available.includes(requestedEnv)) {
+  // Validate the requested flow exists
+  if (!available.includes(requestedFlow)) {
     throw new Error(
-      `Environment "${requestedEnv}" not found in configuration.\n` +
-        `Available environments: ${available.join(', ')}`,
+      `Flow "${requestedFlow}" not found in configuration.\n` +
+        `Available flows: ${available.join(', ')}`,
     );
   }
 
-  return requestedEnv;
+  return requestedFlow;
 }
 
 /**
- * Load all environments from a configuration.
+ * Load all flows from a configuration.
  *
  * @remarks
- * Used by the --all flag to build all environments.
+ * Used by the --all flag to build all flows.
  *
  * @param rawConfig - Raw configuration object
- * @param options - Loading options (without environment)
- * @returns Array of loaded configurations for all environments
+ * @param options - Loading options (without flowName)
+ * @returns Array of loaded configurations for all flows
  */
-export function loadAllEnvironments(
+export function loadAllFlows(
   rawConfig: unknown,
-  options: Omit<LoadConfigOptions, 'environment'>,
+  options: Omit<LoadConfigOptions, 'flowName'>,
 ): LoadConfigResult[] {
   // Validate as Flow.Setup
   const setup = validateFlowSetup(rawConfig);
-  const environments = getEnvNames(setup);
+  const flows = getFlowNames(setup);
 
   if (options.logger) {
     options.logger.info(
-      `📦 Loading all ${environments.length} environments: ${environments.join(', ')}`,
+      `📦 Loading all ${flows.length} flows: ${flows.join(', ')}`,
     );
   }
 
-  // Load each environment
-  return environments.map((envName) =>
+  // Load each flow
+  return flows.map((name) =>
     loadBundleConfig(rawConfig, {
       ...options,
-      environment: envName,
+      flowName: name,
     }),
   );
 }
 
 /**
- * Get list of available environments from configuration.
+ * Get list of available flows from configuration.
  *
  * @param rawConfig - Raw configuration object
- * @returns Array of environment names
+ * @returns Array of flow names
  */
-export function getAvailableEnvironments(rawConfig: unknown): string[] {
+export function getAvailableFlows(rawConfig: unknown): string[] {
   if (isFlowSetup(rawConfig)) {
-    return getEnvNames(rawConfig);
+    return getFlowNames(rawConfig);
   }
   return [];
 }

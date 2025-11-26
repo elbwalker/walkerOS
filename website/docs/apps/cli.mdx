@@ -48,48 +48,49 @@ npx walkeros --version`}
 | `run serve` | Serve web bundles as static files | Host browser tracking scripts |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
 
+## Configuration Types
+
+The CLI uses types from `@walkeros/core`:
+
+- **`Flow.Setup`** - Root config file format (`version`, `flows`)
+- **`Flow.Config`** - Single flow (has `web`/`server`, `sources`, `destinations`)
+- **`Collector.InitConfig`** - Runtime type passed to `startFlow()`
+
+The CLI transforms `Flow.Setup` → `Flow.Config` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
+
 ## Getting Started
 
 Before using the CLI, you need a [flow configuration file](/docs/getting-started/flow). Here's a minimal example:
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "server",
-    "sources": {
-      "http": {
-        "code": "sourceExpress",
-        "config": {
-          "settings": { "path": "/collect", "port": 8080 }
-        }
-      }
-    },
-    "destinations": {
-      "console": {
-        "code": "destinationDemo",
-        "config": {
-          "settings": { "name": "Console Logger" }
-        }
-      }
-    },
-    "collector": { "run": true }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": {
-        "version": "latest",
-        "imports": ["startFlow"]
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
       },
-      "@walkeros/server-source-express": {
-        "version": "latest",
-        "imports": ["sourceExpress"]
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": { "path": "/collect", "port": 8080 }
+          }
+        }
       },
-      "@walkeros/destination-demo": {
-        "version": "latest",
-        "imports": ["destinationDemo"]
-      }
-    },
-    "output": "./dist/flow.mjs"
+      "destinations": {
+        "console": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": { "name": "Console Logger" }
+          }
+        }
+      },
+      "collector": { "run": true }
+    }
   }
 }`}
   language="json"
@@ -117,7 +118,7 @@ The bundle command handles all of this.
   language="bash"
 />
 
-This creates an optimized bundle at the path specified in `build.output`.
+This creates an optimized bundle at the convention-based output path (`./dist/bundle.mjs` for server, `./dist/walker.js` for web).
 
 ### Step-by-Step Guide
 
@@ -127,50 +128,40 @@ Create `server-collect.json`:
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "server",
-    "sources": {
-      "http": {
-        "code": "sourceExpress",
-        "config": {
-          "settings": {
-            "path": "/collect",
-            "port": 8080,
-            "cors": true
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": {
+              "path": "/collect",
+              "port": 8080,
+              "cors": true
+            }
           }
         }
-      }
-    },
-    "destinations": {
-      "console": {
-        "code": "destinationDemo",
-        "config": {
-          "settings": {
-            "name": "Event Logger",
-            "values": ["name", "data.title", "timestamp"]
+      },
+      "destinations": {
+        "console": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": {
+              "name": "Event Logger",
+              "values": ["name", "data.title", "timestamp"]
+            }
           }
         }
-      }
-    },
-    "collector": { "run": true }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": {
-        "version": "latest",
-        "imports": ["startFlow"]
       },
-      "@walkeros/server-source-express": {
-        "version": "latest",
-        "imports": ["sourceExpress"]
-      },
-      "@walkeros/destination-demo": {
-        "version": "latest",
-        "imports": ["destinationDemo"]
-      }
-    },
-    "output": "./dist/server-flow.mjs",
-    "minify": true
+      "collector": { "run": true }
+    }
   }
 }`}
   language="json"
@@ -191,7 +182,7 @@ Output:
 ✓ @walkeros/destination-demo@latest
 
 🔨 Bundling...
-✓ Bundle created: ./dist/server-flow.mjs
+✓ Bundle created: ./dist/bundle.mjs
 
 📊 Bundle Statistics:
    Size: 45.2 KB (minified)
@@ -203,10 +194,10 @@ Output:
 
 <CodeSnippet
   code={`ls -lh dist/
-# -rw-r--r--  1 user  staff   45K  server-flow.mjs
+# -rw-r--r--  1 user  staff   45K  bundle.mjs
 
-file dist/server-flow.mjs
-# dist/server-flow.mjs: JavaScript source, UTF-8 Unicode text`}
+file dist/bundle.mjs
+# dist/bundle.mjs: JavaScript source, UTF-8 Unicode text`}
   language="bash"
 />
 
@@ -221,24 +212,24 @@ The bundle is now ready to deploy!
 
 | Option | Description |
 |--------|-------------|
-| `-e, --env <name>` | Build specific environment (for multi-env configs) |
-| `--all` | Build all environments |
+| `-f, --flow <name>` | Build specific flow (for multi-flow configs) |
+| `--all` | Build all flows |
 | `-s, --stats` | Show bundle statistics |
 | `--json` | Output statistics as JSON (for CI/CD) |
 | `--no-cache` | Skip package cache, download fresh |
 | `--local` | Execute locally without Docker |
 | `-v, --verbose` | Detailed logging |
 
-### Multi-Environment Example
+### Multi-Flow Example
 
 <CodeSnippet
-  code={`# Bundle development environment
-walkeros bundle config.json --env development
+  code={`# Bundle development flow
+walkeros bundle config.json --flow development
 
 # Bundle production with stats
-walkeros bundle config.json --env production --stats
+walkeros bundle config.json --flow production --stats
 
-# Bundle all environments
+# Bundle all flows
 walkeros bundle config.json --all`}
   language="bash"
 />
@@ -272,37 +263,38 @@ Create `test-flow.json`:
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "server",
-    "destinations": {
-      "demo": {
-        "code": "destinationDemo",
-        "config": {
-          "settings": {
-            "name": "Test Destination"
-          },
-          "mapping": {
-            "page": {
-              "view": {
-                "name": "pageview",
-                "data": {
-                  "map": {
-                    "page_title": "data.title",
-                    "page_path": "data.path"
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      },
+      "destinations": {
+        "demo": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": {
+              "name": "Test Destination"
+            },
+            "mapping": {
+              "page": {
+                "view": {
+                  "name": "pageview",
+                  "data": {
+                    "map": {
+                      "page_title": "data.title",
+                      "page_path": "data.path"
+                    }
                   }
                 }
               }
             }
           }
         }
-      }
-    },
-    "collector": { "run": true }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
-      "@walkeros/destination-demo": { "version": "latest", "imports": ["destinationDemo"] }
+      },
+      "collector": { "run": true }
     }
   }
 }`}
@@ -353,9 +345,9 @@ Create `test-flow.json`:
 ```
 
 The simulation shows:
-- ✅ Event was processed successfully
-- ✅ Mapping transformed `"page view"` → `"pageview"`
-- ✅ Data mapping extracted `title` → `page_title` and `path` → `page_path`
+- Event was processed successfully
+- Mapping transformed `"page view"` → `"pageview"`
+- Data mapping extracted `title` → `page_title` and `path` → `page_path`
 
 ### Options
 
@@ -418,25 +410,26 @@ Create `api-flow.json` with a destination that makes real HTTP calls:
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "server",
-    "destinations": {
-      "api": {
-        "code": "destinationAPI",
-        "config": {
-          "settings": {
-            "url": "https://your-endpoint.com/events",
-            "method": "POST"
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
+      },
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "settings": {
+              "url": "https://your-endpoint.com/events",
+              "method": "POST"
+            }
           }
         }
-      }
-    },
-    "collector": { "run": true }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
-      "@walkeros/web-destination-api": { "version": "latest", "imports": ["destinationAPI"] }
+      },
+      "collector": { "run": true }
     }
   }
 }`}
@@ -496,7 +489,7 @@ The event was sent to your real API endpoint!
 | Option | Description |
 |--------|-------------|
 | `-e, --event <source>` | **Required.** Event to push (JSON string, file path, or URL) |
-| `--env <name>` | Environment name (for multi-environment configs) |
+| `--flow <name>` | Flow name (for multi-flow configs) |
 | `--json` | Output results as JSON |
 | `-v, --verbose` | Verbose output with debug information |
 | `-s, --silent` | Suppress output (for CI/CD) |
@@ -569,16 +562,16 @@ On error:
 }
 ```
 
-### Multi-Environment
+### Multi-Flow
 
-Push to specific environments:
+Push to specific flows:
 
 <CodeSnippet
   code={`# Push to staging
-walkeros push flow.json --event event.json --env staging --local
+walkeros push flow.json --event event.json --flow staging --local
 
 # Push to production
-walkeros push flow.json --event event.json --env production --local`}
+walkeros push flow.json --event event.json --flow production --local`}
   language="bash"
 />
 
@@ -610,43 +603,44 @@ Create `collect.json`:
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "server",
-    "sources": {
-      "http": {
-        "code": "sourceExpress",
-        "config": {
-          "settings": {
-            "path": "/collect",
-            "port": 8080,
-            "cors": true
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": {
+              "path": "/collect",
+              "port": 8080,
+              "cors": true
+            }
           }
         }
-      }
-    },
-    "destinations": {
-      "console": {
-        "code": "destinationDemo",
-        "config": {
-          "settings": {
-            "name": "Event Collector",
-            "values": ["name", "data", "user.id", "timestamp"]
+      },
+      "destinations": {
+        "console": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": {
+              "name": "Event Collector",
+              "values": ["name", "data", "user.id", "timestamp"]
+            }
           }
         }
+      },
+      "collector": {
+        "run": true,
+        "globals": {
+          "environment": "development"
+        }
       }
-    },
-    "collector": {
-      "run": true,
-      "globals": {
-        "environment": "development"
-      }
-    }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
-      "@walkeros/server-source-express": { "version": "latest", "imports": ["sourceExpress"] },
-      "@walkeros/destination-demo": { "version": "latest", "imports": ["destinationDemo"] }
     }
   }
 }`}
@@ -740,7 +734,7 @@ You can also run pre-built bundles directly:
 walkeros bundle collect.json
 
 # Then run the bundle
-walkeros run collect dist/flow.mjs --port 8080`}
+walkeros run collect dist/bundle.mjs --port 8080`}
   language="bash"
 />
 
@@ -772,42 +766,41 @@ Create `web-track.json`:
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "web",
-    "sources": {
-      "browser": {
-        "code": "sourceBrowser",
-        "config": {
-          "settings": {
-            "pageview": true,
-            "session": true
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {
+        "windowElb": "track"
+      },
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
+        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
+      },
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": {
+            "settings": {
+              "pageview": true,
+              "session": true
+            }
           }
         }
-      }
-    },
-    "destinations": {
-      "api": {
-        "code": "destinationAPI",
-        "config": {
-          "settings": {
-            "url": "http://localhost:8080/collect",
-            "method": "POST"
+      },
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "settings": {
+              "url": "http://localhost:8080/collect",
+              "method": "POST"
+            }
           }
         }
-      }
-    },
-    "collector": { "run": true }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
-      "@walkeros/web-source-browser": { "version": "latest", "imports": ["sourceBrowser"] },
-      "@walkeros/web-destination-api": { "version": "latest", "imports": ["destinationAPI"] }
-    },
-    "output": "./dist/tracker.js",
-    "format": "iife",
-    "windowCollector": "walkerCollector",
-    "windowElb": "track"
+      },
+      "collector": { "run": true }
+    }
   }
 }`}
   language="json"
@@ -823,11 +816,11 @@ Create `web-track.json`:
 Output:
 ```
 📦 Bundling flow...
-✓ Bundle ready: tracker.js
+✓ Bundle ready: walker.js
 
 🌐 Starting static file server...
 ✓ Server running on http://localhost:3000
-✓ Script available at: http://localhost:3000/scripts/tracker.js
+✓ Script available at: http://localhost:3000/scripts/walker.js
 ✓ Health check: GET http://localhost:3000/health
 ```
 
@@ -840,7 +833,7 @@ Create `test.html`:
 <html>
 <head>
   <title>Test Tracking</title>
-  <script src="http://localhost:3000/scripts/tracker.js"></script>
+  <script src="http://localhost:3000/scripts/walker.js"></script>
 </head>
 <body>
   <h1>Welcome</h1>
@@ -884,31 +877,32 @@ Create `server-collect.json`:
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "server",
-    "sources": {
-      "http": {
-        "code": "sourceExpress",
-        "config": {
-          "settings": { "path": "/collect", "port": 8080, "cors": true }
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": { "path": "/collect", "port": 8080, "cors": true }
+          }
         }
-      }
-    },
-    "destinations": {
-      "console": {
-        "code": "destinationDemo",
-        "config": {
-          "settings": { "name": "Server Logger" }
+      },
+      "destinations": {
+        "console": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": { "name": "Server Logger" }
+          }
         }
-      }
-    },
-    "collector": { "run": true }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
-      "@walkeros/server-source-express": { "version": "latest", "imports": ["sourceExpress"] },
-      "@walkeros/destination-demo": { "version": "latest", "imports": ["destinationDemo"] }
+      },
+      "collector": { "run": true }
     }
   }
 }`}
@@ -921,38 +915,38 @@ Create `web-track.json`:
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "web",
-    "sources": {
-      "browser": {
-        "code": "sourceBrowser",
-        "config": {
-          "settings": { "pageview": true, "session": true }
-        }
-      }
-    },
-    "destinations": {
-      "api": {
-        "code": "destinationAPI",
-        "config": {
-          "settings": {
-            "url": "http://localhost:8080/collect",
-            "method": "POST"
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {
+        "windowElb": "track"
+      },
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
+        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
+      },
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": {
+            "settings": { "pageview": true, "session": true }
           }
         }
-      }
-    },
-    "collector": { "run": true }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
-      "@walkeros/web-source-browser": { "version": "latest", "imports": ["sourceBrowser"] },
-      "@walkeros/web-destination-api": { "version": "latest", "imports": ["destinationAPI"] }
-    },
-    "output": "./dist/tracker.js",
-    "format": "iife",
-    "windowElb": "track"
+      },
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "settings": {
+              "url": "http://localhost:8080/collect",
+              "method": "POST"
+            }
+          }
+        }
+      },
+      "collector": { "run": true }
+    }
   }
 }`}
   language="json"
@@ -984,7 +978,7 @@ Create `demo.html`:
   code={`<!DOCTYPE html>
 <html>
 <head>
-  <script src="http://localhost:3000/tracker.js"></script>
+  <script src="http://localhost:3000/walker.js"></script>
 </head>
 <body>
   <h1 data-elb="promotion" data-elb-promotion="name:Get Started">
@@ -1191,7 +1185,7 @@ COPY flow.json .
 RUN walkeros bundle flow.json --local
 
 FROM walkeros/docker:latest
-COPY --from=builder /dist/flow.mjs /app/flow.mjs
+COPY --from=builder /dist/bundle.mjs /app/flow.mjs
 ENV MODE=collect
 ENV FLOW=/app/flow.mjs`}
   language="dockerfile"

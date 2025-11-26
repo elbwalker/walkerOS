@@ -6,20 +6,20 @@
 
 import {
   loadBundleConfig,
-  loadAllEnvironments,
-  getAvailableEnvironments,
+  loadAllFlows,
+  getAvailableFlows,
 } from '../config/index.js';
 
 describe('Config Loader', () => {
   // ========================================
-  // Single Environment (Flow.Setup with one env)
+  // Single Flow (Flow.Setup with one flow)
   // ========================================
 
-  describe('Single Environment (Flow.Setup)', () => {
-    test('loads Flow.Setup with single environment automatically', () => {
+  describe('Single Flow (Flow.Setup)', () => {
+    test('loads Flow.Setup with single flow automatically', () => {
       const config = {
         version: 1,
-        environments: {
+        flows: {
           default: {
             web: {},
             packages: {
@@ -46,8 +46,8 @@ describe('Config Loader', () => {
         configPath: '/test/config.json',
       });
 
-      expect(result.environment).toBe('default');
-      expect(result.isMultiEnvironment).toBe(false);
+      expect(result.flowName).toBe('default');
+      expect(result.isMultiFlow).toBe(false);
       expect(result.flowConfig.web).toBeDefined();
       expect(result.flowConfig.sources).toBeDefined();
     });
@@ -55,7 +55,7 @@ describe('Config Loader', () => {
     test('applies platform-specific defaults for web', () => {
       const config = {
         version: 1,
-        environments: {
+        flows: {
           default: {
             web: {},
             packages: {},
@@ -79,7 +79,7 @@ describe('Config Loader', () => {
     test('applies platform-specific defaults for server', () => {
       const config = {
         version: 1,
-        environments: {
+        flows: {
           default: {
             server: {},
             packages: {},
@@ -103,7 +103,7 @@ describe('Config Loader', () => {
     test('extracts packages from flowConfig', () => {
       const config = {
         version: 1,
-        environments: {
+        flows: {
           default: {
             web: {},
             packages: {
@@ -127,7 +127,7 @@ describe('Config Loader', () => {
     test('respects build overrides from CLI', () => {
       const config = {
         version: 1,
-        environments: {
+        flows: {
           default: {
             web: {},
             packages: {},
@@ -149,13 +149,13 @@ describe('Config Loader', () => {
   });
 
   // ========================================
-  // Multi-Environment Tests
+  // Multi-Flow Tests
   // ========================================
 
-  describe('Multi-Environment Config', () => {
-    const multiEnvConfig = {
+  describe('Multi-Flow Config', () => {
+    const multiFlowConfig = {
       version: 1,
-      environments: {
+      flows: {
         web_prod: {
           web: {},
           packages: {},
@@ -198,15 +198,15 @@ describe('Config Loader', () => {
       },
     };
 
-    test('loads specific environment from multi-environment config', () => {
-      const result = loadBundleConfig(multiEnvConfig, {
+    test('loads specific flow from multi-flow config', () => {
+      const result = loadBundleConfig(multiFlowConfig, {
         configPath: '/test/config.json',
-        environment: 'web_prod',
+        flowName: 'web_prod',
       });
 
-      expect(result.environment).toBe('web_prod');
-      expect(result.isMultiEnvironment).toBe(true);
-      expect(result.availableEnvironments).toEqual([
+      expect(result.flowName).toBe('web_prod');
+      expect(result.isMultiFlow).toBe(true);
+      expect(result.availableFlows).toEqual([
         'web_prod',
         'web_stage',
         'server_prod',
@@ -214,30 +214,30 @@ describe('Config Loader', () => {
       expect(result.flowConfig.web).toBeDefined();
     });
 
-    test('throws error if environment not specified for multi-env config', () => {
+    test('throws error if flow not specified for multi-flow config', () => {
       expect(() =>
-        loadBundleConfig(multiEnvConfig, {
+        loadBundleConfig(multiFlowConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow('Please specify an environment using --env flag');
+      ).toThrow('Please specify a flow using --flow flag');
     });
 
-    test('throws error if specified environment not found', () => {
+    test('throws error if specified flow not found', () => {
       expect(() =>
-        loadBundleConfig(multiEnvConfig, {
+        loadBundleConfig(multiFlowConfig, {
           configPath: '/test/config.json',
-          environment: 'nonexistent',
+          flowName: 'nonexistent',
         }),
-      ).toThrow('Environment "nonexistent" not found');
+      ).toThrow('Flow "nonexistent" not found');
     });
 
-    test('loads all environments', () => {
-      const results = loadAllEnvironments(multiEnvConfig, {
+    test('loads all flows', () => {
+      const results = loadAllFlows(multiFlowConfig, {
         configPath: '/test/config.json',
       });
 
       expect(results).toHaveLength(3);
-      expect(results.map((r) => r.environment)).toEqual([
+      expect(results.map((r) => r.flowName)).toEqual([
         'web_prod',
         'web_stage',
         'server_prod',
@@ -246,10 +246,10 @@ describe('Config Loader', () => {
       expect(results[2].flowConfig.server).toBeDefined();
     });
 
-    test('gets available environments from multi-env config', () => {
-      const environments = getAvailableEnvironments(multiEnvConfig);
+    test('gets available flows from multi-flow config', () => {
+      const flows = getAvailableFlows(multiFlowConfig);
 
-      expect(environments).toEqual(['web_prod', 'web_stage', 'server_prod']);
+      expect(flows).toEqual(['web_prod', 'web_stage', 'server_prod']);
     });
   });
 
@@ -260,7 +260,7 @@ describe('Config Loader', () => {
   describe('Error Handling', () => {
     test('throws error for invalid config format (missing version)', () => {
       const invalidConfig = {
-        environments: {
+        flows: {
           default: { web: {} },
         },
       };
@@ -275,7 +275,7 @@ describe('Config Loader', () => {
     test('throws error for invalid config format (wrong version)', () => {
       const invalidConfig = {
         version: 2,
-        environments: {
+        flows: {
           default: { web: {} },
         },
       };
@@ -287,7 +287,7 @@ describe('Config Loader', () => {
       ).toThrow(/Invalid configuration.*version/);
     });
 
-    test('throws error for invalid config format (missing environments)', () => {
+    test('throws error for invalid config format (missing flows)', () => {
       const invalidConfig = {
         version: 1,
       };
@@ -296,26 +296,26 @@ describe('Config Loader', () => {
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow(/Invalid configuration.*environments/);
+      ).toThrow(/Invalid configuration.*flows/);
     });
 
-    test('throws error for empty environments', () => {
+    test('throws error for empty flows', () => {
       const invalidConfig = {
         version: 1,
-        environments: {},
+        flows: {},
       };
 
       expect(() =>
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow(/must contain at least one environment/);
+      ).toThrow(/must contain at least one flow/);
     });
 
-    test('throws error for environment without web/server key', () => {
+    test('throws error for flow without web/server key', () => {
       const invalidConfig = {
         version: 1,
-        environments: {
+        flows: {
           default: {
             packages: {},
           },
@@ -334,9 +334,9 @@ describe('Config Loader', () => {
         flow: { platform: 'web' },
         build: { packages: {} },
       };
-      const environments = getAvailableEnvironments(oldFormatConfig);
+      const flows = getAvailableFlows(oldFormatConfig);
 
-      expect(environments).toEqual([]);
+      expect(flows).toEqual([]);
     });
   });
 
@@ -345,7 +345,7 @@ describe('Config Loader', () => {
   // ========================================
 
   describe('Logger Integration', () => {
-    test('logs info message for multi-environment config', () => {
+    test('logs info message for multi-flow config', () => {
       const logger = {
         info: jest.fn(),
         warn: jest.fn(),
@@ -353,7 +353,7 @@ describe('Config Loader', () => {
 
       const config = {
         version: 1,
-        environments: {
+        flows: {
           prod: {
             web: {},
             packages: {},
@@ -367,16 +367,16 @@ describe('Config Loader', () => {
 
       loadBundleConfig(config, {
         configPath: '/test/config.json',
-        environment: 'prod',
+        flowName: 'prod',
         logger,
       });
 
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Using environment: prod'),
+        expect.stringContaining('Using flow: prod'),
       );
     });
 
-    test('does not log for single-environment config', () => {
+    test('does not log for single-flow config', () => {
       const logger = {
         info: jest.fn(),
         warn: jest.fn(),
@@ -384,7 +384,7 @@ describe('Config Loader', () => {
 
       const config = {
         version: 1,
-        environments: {
+        flows: {
           default: {
             web: {},
             packages: {},
@@ -397,7 +397,7 @@ describe('Config Loader', () => {
         logger,
       });
 
-      // Should not log environment selection for single-env
+      // Should not log flow selection for single-flow
       expect(logger.info).not.toHaveBeenCalled();
     });
   });
@@ -407,7 +407,7 @@ describe('Config Loader', () => {
   // ========================================
 
   describe('Real-World Scenarios', () => {
-    test('loads complex multi-environment setup', () => {
+    test('loads complex multi-flow setup', () => {
       const complexConfig = {
         version: 1,
         variables: {
@@ -418,7 +418,7 @@ describe('Config Loader', () => {
             page: { view: { name: 'page_view' } },
           },
         },
-        environments: {
+        flows: {
           web_production: {
             web: {},
             packages: {
@@ -455,7 +455,7 @@ describe('Config Loader', () => {
 
       const result = loadBundleConfig(complexConfig, {
         configPath: '/test/config.json',
-        environment: 'web_production',
+        flowName: 'web_production',
       });
 
       expect(result.flowConfig.web).toBeDefined();
@@ -470,7 +470,7 @@ describe('Config Loader', () => {
     test('extracts windowCollector and windowElb from web config', () => {
       const config = {
         version: 1,
-        environments: {
+        flows: {
           default: {
             web: {
               windowCollector: 'myCollector',

@@ -28,7 +28,7 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
   // Build Docker args
   const dockerArgs = buildCommonDockerArgs(options);
   dockerArgs.push('--event', options.event);
-  if (options.env) dockerArgs.push('--env', options.env);
+  if (options.flow) dockerArgs.push('--flow', options.flow);
 
   await executeCommand(
     async () => {
@@ -64,10 +64,10 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
         logger.info('📦 Loading flow configuration...');
         const configPath = path.resolve(options.config);
         const rawConfig = await loadJsonConfig(configPath);
-        const { flowConfig, buildOptions, environment, isMultiEnvironment } =
+        const { flowConfig, buildOptions, flowName, isMultiFlow } =
           loadBundleConfig(rawConfig, {
             configPath: options.config,
-            environment: options.env,
+            flowName: options.flow,
             logger,
           });
 

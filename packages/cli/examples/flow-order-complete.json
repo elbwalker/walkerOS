@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "environments": {
+  "flows": {
     "default": {
       "web": {},
       "packages": {

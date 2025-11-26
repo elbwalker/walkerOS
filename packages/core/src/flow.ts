@@ -126,12 +126,12 @@ function resolveRefs(value: unknown, definitions: Flow.Definitions): unknown {
 }
 
 /**
- * Get resolved flow configuration for an environment.
+ * Get resolved flow configuration for a named flow.
  *
  * @param setup - The complete setup configuration
- * @param environment - Environment name (auto-selected if only one exists)
+ * @param flowName - Flow name (auto-selected if only one exists)
  * @returns Resolved Config with variables/definitions interpolated and $refs resolved
- * @throws Error if environment is required but not specified, or not found
+ * @throws Error if flow selection is required but not specified, or flow not found
  *
  * @example
  * ```typescript
@@ -139,35 +139,35 @@ function resolveRefs(value: unknown, definitions: Flow.Definitions): unknown {
  *
  * const setup = JSON.parse(fs.readFileSync('walkeros.config.json', 'utf8'));
  *
- * // Auto-select if only one environment
+ * // Auto-select if only one flow
  * const config = getFlowConfig(setup);
  *
- * // Or specify environment
+ * // Or specify flow
  * const prodConfig = getFlowConfig(setup, 'production');
  * ```
  */
 export function getFlowConfig(
   setup: Flow.Setup,
-  environment?: string,
+  flowName?: string,
 ): Flow.Config {
-  const envNames = Object.keys(setup.environments);
+  const flowNames = Object.keys(setup.flows);
 
-  // Auto-select if only one environment
-  if (!environment) {
-    if (envNames.length === 1) {
-      environment = envNames[0];
+  // Auto-select if only one flow
+  if (!flowName) {
+    if (flowNames.length === 1) {
+      flowName = flowNames[0];
     } else {
       throw new Error(
-        `Multiple environments found (${envNames.join(', ')}). Please specify an environment.`,
+        `Multiple flows found (${flowNames.join(', ')}). Please specify a flow.`,
       );
     }
   }
 
-  // Check environment exists
-  const config = setup.environments[environment];
+  // Check flow exists
+  const config = setup.flows[flowName];
   if (!config) {
     throw new Error(
-      `Environment "${environment}" not found. Available: ${envNames.join(', ')}`,
+      `Flow "${flowName}" not found. Available: ${flowNames.join(', ')}`,
     );
   }
 

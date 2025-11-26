@@ -4,7 +4,7 @@
  * Mirrors: types/flow.ts
  * Purpose: Runtime validation and JSON Schema generation for Flow configurations
  *
- * The Flow system provides unified configuration across all walkerOS environments.
+ * The Flow system provides unified configuration across all walkerOS flows.
  * These schemas enable:
  * - Runtime validation of config files
  * - Clear error messages for configuration issues
@@ -168,14 +168,14 @@ export const DestinationReferenceSchema = z
   .describe('Destination package reference with configuration');
 
 // ========================================
-// Flow Environment Configuration Schema
+// Flow Configuration Schema (Single Flow)
 // ========================================
 
 /**
- * Flow environment configuration schema.
+ * Single flow configuration schema.
  *
  * @remarks
- * Represents a single deployment environment (e.g., web_prod, server_stage).
+ * Represents a single deployment target (e.g., web_prod, server_stage).
  * Platform is determined by presence of `web` or `server` key.
  * Exactly one must be present.
  */
@@ -207,10 +207,10 @@ export const ConfigSchema = z
       ),
     packages: PackagesSchema.optional().describe('NPM packages to bundle'),
     variables: VariablesSchema.optional().describe(
-      'Environment-level variables (override Setup.variables, overridden by source/destination variables)',
+      'Flow-level variables (override Setup.variables, overridden by source/destination variables)',
     ),
     definitions: DefinitionsSchema.optional().describe(
-      'Environment-level definitions (extend Setup.definitions, overridden by source/destination definitions)',
+      'Flow-level definitions (extend Setup.definitions, overridden by source/destination definitions)',
     ),
   })
   .refine(
@@ -223,7 +223,7 @@ export const ConfigSchema = z
       message: 'Exactly one of "web" or "server" must be present',
     },
   )
-  .describe('Single environment configuration for one deployment target');
+  .describe('Single flow configuration for one deployment target');
 
 // ========================================
 // Flow Setup Schema (Root Configuration)
@@ -234,7 +234,7 @@ export const ConfigSchema = z
  *
  * @remarks
  * This is the complete schema for walkeros.config.json files.
- * Contains multiple named environments with shared variables and definitions.
+ * Contains multiple named flows with shared variables and definitions.
  */
 export const SetupSchema = z
   .object({
@@ -251,22 +251,22 @@ export const SetupSchema = z
         'JSON Schema reference for IDE validation (e.g., "https://walkeros.io/schema/flow/v1.json")',
       ),
     variables: VariablesSchema.optional().describe(
-      'Shared variables for interpolation across all environments (use ${VAR_NAME} or ${VAR_NAME:default} syntax)',
+      'Shared variables for interpolation across all flows (use ${VAR_NAME} or ${VAR_NAME:default} syntax)',
     ),
     definitions: DefinitionsSchema.optional().describe(
       'Reusable configuration definitions (reference with JSON Schema $ref syntax: { "$ref": "#/definitions/name" })',
     ),
-    environments: z
+    flows: z
       .record(z.string(), ConfigSchema)
-      .refine((envs) => Object.keys(envs).length > 0, {
-        message: 'At least one environment is required',
+      .refine((flows) => Object.keys(flows).length > 0, {
+        message: 'At least one flow is required',
       })
       .describe(
-        'Named environment configurations (e.g., production, staging, development)',
+        'Named flow configurations (e.g., production, staging, development)',
       ),
   })
   .describe(
-    'Complete multi-environment walkerOS configuration (walkeros.config.json)',
+    'Complete multi-flow walkerOS configuration (walkeros.config.json)',
   );
 
 // ========================================
@@ -287,7 +287,7 @@ export const SetupSchema = z
  *
  * const raw = JSON.parse(readFileSync('walkeros.config.json', 'utf8'));
  * const config = parseSetup(raw);
- * console.log(`Found ${Object.keys(config.environments).length} environments`);
+ * console.log(`Found ${Object.keys(config.flows).length} flows`);
  * ```
  */
 export function parseSetup(data: unknown): z.infer<typeof SetupSchema> {
@@ -317,9 +317,9 @@ export function safeParseSetup(data: unknown) {
 }
 
 /**
- * Parse and validate Flow.Config (single environment).
+ * Parse and validate Flow.Config (single flow).
  *
- * @param data - Raw JSON data for single environment
+ * @param data - Raw JSON data for single flow
  * @returns Validated Flow.Config object
  * @throws ZodError if validation fails
  *
@@ -327,8 +327,8 @@ export function safeParseSetup(data: unknown) {
  * ```typescript
  * import { parseConfig } from '@walkeros/core/dev';
  *
- * const envConfig = parseConfig(rawEnvData);
- * console.log(`Platform: ${envConfig.platform}`);
+ * const flowConfig = parseConfig(rawFlowData);
+ * console.log(`Platform: ${flowConfig.web ? 'web' : 'server'}`);
  * ```
  */
 export function parseConfig(data: unknown): z.infer<typeof ConfigSchema> {
@@ -338,7 +338,7 @@ export function parseConfig(data: unknown): z.infer<typeof ConfigSchema> {
 /**
  * Safely parse Flow.Config without throwing.
  *
- * @param data - Raw JSON data for single environment
+ * @param data - Raw JSON data for single flow
  * @returns Success result with data or error result with issues
  */
 export function safeParseConfig(data: unknown) {
@@ -377,7 +377,7 @@ export const setupJsonSchema = z.toJSONSchema(SetupSchema, {
  * Generate JSON Schema for Flow.Config.
  *
  * @remarks
- * Used for validating individual environment configurations.
+ * Used for validating individual flow configurations.
  *
  * @returns JSON Schema (Draft 7) representation of ConfigSchema
  */

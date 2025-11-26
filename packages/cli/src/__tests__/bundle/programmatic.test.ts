@@ -38,7 +38,7 @@ describe('Programmatic Bundle API', () => {
   it('should bundle with Flow.Setup config object', async () => {
     const config: Flow.Setup = {
       version: 1,
-      environments: {
+      flows: {
         default: {
           web: {},
           packages: {
@@ -66,7 +66,7 @@ describe('Programmatic Bundle API', () => {
   it('should return stats when requested', async () => {
     const config: Flow.Setup = {
       version: 1,
-      environments: {
+      flows: {
         default: {
           web: {},
           packages: {
@@ -87,7 +87,7 @@ describe('Programmatic Bundle API', () => {
   it('should return undefined when stats not requested', async () => {
     const config: Flow.Setup = {
       version: 1,
-      environments: {
+      flows: {
         default: {
           web: {},
           packages: {
@@ -105,7 +105,7 @@ describe('Programmatic Bundle API', () => {
   it('should handle cache option', async () => {
     const config: Flow.Setup = {
       version: 1,
-      environments: {
+      flows: {
         default: {
           web: {},
           packages: {
@@ -123,7 +123,7 @@ describe('Programmatic Bundle API', () => {
   it('should handle verbose option', async () => {
     const config: Flow.Setup = {
       version: 1,
-      environments: {
+      flows: {
         default: {
           web: {},
           packages: {
@@ -146,10 +146,10 @@ describe('Programmatic Bundle API', () => {
     );
   });
 
-  it('should select environment from multi-env config', async () => {
+  it('should select flow from multi-flow config', async () => {
     const config: Flow.Setup = {
       version: 1,
-      environments: {
+      flows: {
         production: {
           web: {},
           packages: {
@@ -166,7 +166,7 @@ describe('Programmatic Bundle API', () => {
     };
 
     await expect(
-      bundle(config, { silent: true, environment: 'production' }),
+      bundle(config, { silent: true, flowName: 'production' }),
     ).resolves.not.toThrow();
   });
 

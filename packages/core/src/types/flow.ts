@@ -5,7 +5,7 @@
  * Platform-agnostic, runtime-focused.
  *
  * The Flow system enables "one config to rule them all" - a single
- * walkeros.config.json file that manages multiple environments
+ * walkeros.config.json file that manages multiple flows
  * (web_prod, web_stage, server_prod, etc.) with shared configuration,
  * variables, and reusable definitions.
  *
@@ -70,12 +70,12 @@ export interface Server {
 }
 
 /**
- * Complete multi-environment configuration.
+ * Complete multi-flow configuration.
  * Root type for walkeros.config.json files.
  *
  * @remarks
- * If only one environment exists, it's auto-selected without --env flag.
- * Convention: use "default" as the environment name for single-env configs.
+ * If only one flow exists, it's auto-selected without --flow flag.
+ * Convention: use "default" as the flow name for single-flow configs.
  *
  * @example
  * ```json
@@ -83,7 +83,7 @@ export interface Server {
  *   "version": 1,
  *   "$schema": "https://walkeros.io/schema/flow/v1.json",
  *   "variables": { "CURRENCY": "USD" },
- *   "environments": {
+ *   "flows": {
  *     "default": { "web": {}, ... }
  *   }
  * }
@@ -115,14 +115,14 @@ export interface Setup {
   definitions?: Definitions;
 
   /**
-   * Named environment configurations.
-   * If only one environment exists, it's auto-selected.
+   * Named flow configurations.
+   * If only one flow exists, it's auto-selected.
    */
-  environments: Record<string, Config>;
+  flows: Record<string, Config>;
 }
 
 /**
- * Single environment configuration.
+ * Single flow configuration.
  * Represents one deployment target (e.g., web_prod, server_stage).
  *
  * @remarks
@@ -248,13 +248,13 @@ export interface Config {
   packages?: Packages;
 
   /**
-   * Environment-level variables.
+   * Flow-level variables.
    * Override Setup.variables, overridden by source/destination variables.
    */
   variables?: Variables;
 
   /**
-   * Environment-level definitions.
+   * Flow-level definitions.
    * Extend Setup.definitions, overridden by source/destination definitions.
    */
   definitions?: Definitions;
@@ -325,7 +325,7 @@ export interface SourceReference {
    *
    * @remarks
    * The primary source's ELB function is returned by `startFlow()`.
-   * Only one source should be marked as primary per environment.
+   * Only one source should be marked as primary per flow.
    *
    * @default false
    */
@@ -333,13 +333,13 @@ export interface SourceReference {
 
   /**
    * Source-level variables (highest priority in cascade).
-   * Overrides environment and setup variables.
+   * Overrides flow and setup variables.
    */
   variables?: Variables;
 
   /**
    * Source-level definitions (highest priority in cascade).
-   * Overrides environment and setup definitions.
+   * Overrides flow and setup definitions.
    */
   definitions?: Definitions;
 }
@@ -408,13 +408,13 @@ export interface DestinationReference {
 
   /**
    * Destination-level variables (highest priority in cascade).
-   * Overrides environment and setup variables.
+   * Overrides flow and setup variables.
    */
   variables?: Variables;
 
   /**
    * Destination-level definitions (highest priority in cascade).
-   * Overrides environment and setup definitions.
+   * Overrides flow and setup definitions.
    */
   definitions?: Definitions;
 }

@@ -36,7 +36,7 @@
       },
       "required": ["platform"],
       "additionalProperties": true,
-      "description": "Single environment configuration for one deployment target"
+      "description": "Single flow configuration for one deployment target"
     },
     "SourceReference": {
       "type": "object",
@@ -102,24 +102,24 @@
           "additionalProperties": {
             "$ref": "#/definitions/Primitive"
           },
-          "description": "Shared variables for interpolation across all environments (use ${VAR_NAME:default} syntax)"
+          "description": "Shared variables for interpolation across all flows (use ${VAR_NAME:default} syntax)"
         },
         "definitions": {
           "type": "object",
           "additionalProperties": {},
           "description": "Reusable configuration definitions (reference with JSON Schema $ref syntax)"
         },
-        "environments": {
+        "flows": {
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/FlowConfig"
           },
-          "description": "Named environment configurations (e.g., web_prod, server_stage)"
+          "description": "Named flow configurations (e.g., web_prod, server_stage)"
         }
       },
-      "required": ["version", "environments"],
+      "required": ["version", "flows"],
       "additionalProperties": false,
-      "description": "Complete multi-environment walkerOS configuration (walkeros.config.json)"
+      "description": "Complete multi-flow walkerOS configuration (walkeros.config.json)"
     }
   },
   "$schema": "http://json-schema.org/draft-07/schema#"

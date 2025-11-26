@@ -49,7 +49,7 @@ export function hasValidPlatform(flowConfig: Record<string, unknown>): boolean {
  * Flow.Setup is the only supported config format.
  * It must have:
  * - version: 1
- * - environments: object with at least one environment
+ * - flows: object with at least one flow
  *
  * @example
  * ```typescript
@@ -61,17 +61,17 @@ export function hasValidPlatform(flowConfig: Record<string, unknown>): boolean {
 export function isFlowSetup(data: unknown): data is Flow.Setup {
   if (!isObject(data)) return false;
   if (!('version' in data) || data.version !== 1) return false;
-  if (!('environments' in data) || !isObject(data.environments)) return false;
+  if (!('flows' in data) || !isObject(data.flows)) return false;
 
-  // Must have at least one environment
-  const envKeys = Object.keys(data.environments);
-  if (envKeys.length === 0) return false;
+  // Must have at least one flow
+  const flowKeys = Object.keys(data.flows);
+  if (flowKeys.length === 0) return false;
 
-  // Each environment must be a valid Flow.Config (has web or server key)
-  for (const key of envKeys) {
-    const env = (data.environments as Record<string, unknown>)[key];
-    if (!isObject(env)) return false;
-    if (!hasValidPlatform(env)) return false;
+  // Each flow must be a valid Flow.Config (has web or server key)
+  for (const key of flowKeys) {
+    const flow = (data.flows as Record<string, unknown>)[key];
+    if (!isObject(flow)) return false;
+    if (!hasValidPlatform(flow)) return false;
   }
 
   return true;
@@ -94,36 +94,36 @@ export function validateFlowSetup(data: unknown): Flow.Setup {
   if (!('version' in data) || data.version !== 1) {
     throw new Error(
       `Invalid configuration: missing or invalid "version" field.\n` +
-        `Expected: { "version": 1, "environments": { ... } }`,
+        `Expected: { "version": 1, "flows": { ... } }`,
     );
   }
 
-  if (!('environments' in data) || !isObject(data.environments)) {
+  if (!('flows' in data) || !isObject(data.flows)) {
     throw new Error(
-      `Invalid configuration: missing or invalid "environments" field.\n` +
-        `Expected: { "version": 1, "environments": { "default": { web: {}, ... } } }`,
+      `Invalid configuration: missing or invalid "flows" field.\n` +
+        `Expected: { "version": 1, "flows": { "default": { web: {}, ... } } }`,
     );
   }
 
-  const envKeys = Object.keys(data.environments);
-  if (envKeys.length === 0) {
+  const flowKeys = Object.keys(data.flows);
+  if (flowKeys.length === 0) {
     throw new Error(
-      `Invalid configuration: "environments" must contain at least one environment.\n` +
-        `Example: { "version": 1, "environments": { "default": { web: {}, ... } } }`,
+      `Invalid configuration: "flows" must contain at least one flow.\n` +
+        `Example: { "version": 1, "flows": { "default": { web: {}, ... } } }`,
     );
   }
 
-  // Validate each environment
-  for (const key of envKeys) {
-    const env = (data.environments as Record<string, unknown>)[key];
-    if (!isObject(env)) {
+  // Validate each flow
+  for (const key of flowKeys) {
+    const flow = (data.flows as Record<string, unknown>)[key];
+    if (!isObject(flow)) {
       throw new Error(
-        `Invalid configuration: environment "${key}" must be an object.`,
+        `Invalid configuration: flow "${key}" must be an object.`,
       );
     }
-    if (!hasValidPlatform(env)) {
+    if (!hasValidPlatform(flow)) {
       throw new Error(
-        `Invalid configuration: environment "${key}" must have a "web" or "server" key.\n` +
+        `Invalid configuration: flow "${key}" must have a "web" or "server" key.\n` +
           `Example: { "web": {}, "destinations": { ... } }`,
       );
     }
@@ -133,11 +133,11 @@ export function validateFlowSetup(data: unknown): Flow.Setup {
 }
 
 /**
- * Get available environment names from a Flow.Setup.
+ * Get available flow names from a Flow.Setup.
  *
  * @param setup - Flow.Setup configuration
- * @returns Array of environment names
+ * @returns Array of flow names
  */
-export function getAvailableEnvironments(setup: Flow.Setup): string[] {
-  return Object.keys(setup.environments);
+export function getAvailableFlows(setup: Flow.Setup): string[] {
+  return Object.keys(setup.flows);
 }

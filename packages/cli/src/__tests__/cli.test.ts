@@ -51,7 +51,7 @@ describe('CLI Bundle Command', () => {
     // Flow.Setup format
     const testConfig = {
       version: 1,
-      environments: {
+      flows: {
         default: {
           web: {},
           packages: {
@@ -71,9 +71,9 @@ describe('CLI Bundle Command', () => {
     expect(output).toMatchObject({
       success: true,
       data: {
-        environments: expect.arrayContaining([
+        flows: expect.arrayContaining([
           {
-            environment: 'default',
+            flowName: 'default',
             success: true,
             stats: {
               totalSize: expect.any(Number),
@@ -92,8 +92,8 @@ describe('CLI Bundle Command', () => {
       duration: expect.any(Number),
     });
 
-    expect(output.data.environments[0].stats.packages).toHaveLength(1);
-    expect(output.data.environments[0].stats.packages[0].name).toBe(
+    expect(output.data.flows[0].stats.packages).toHaveLength(1);
+    expect(output.data.flows[0].stats.packages[0].name).toBe(
       '@walkeros/core@latest',
     );
   });
@@ -102,7 +102,7 @@ describe('CLI Bundle Command', () => {
     // Flow.Setup format - but bundler will fail on invalid destination code
     const testConfig = {
       version: 1,
-      environments: {
+      flows: {
         default: {
           web: {},
           packages: {
@@ -142,7 +142,7 @@ describe('CLI Bundle Command', () => {
     // Flow.Setup format
     const testConfig = {
       version: 1,
-      environments: {
+      flows: {
         default: {
           web: {},
           packages: {
@@ -160,14 +160,14 @@ describe('CLI Bundle Command', () => {
 
     const output = JSON.parse(result.stdout);
     expect(output.success).toBe(true);
-    expect(output.data.environments[0].stats.treeshakingEffective).toBe(true);
+    expect(output.data.flows[0].stats.treeshakingEffective).toBe(true);
   });
 
   it('should suppress decorative output in JSON mode', async () => {
     // Flow.Setup format
     const testConfig = {
       version: 1,
-      environments: {
+      flows: {
         default: {
           web: {},
           packages: {

@@ -17,7 +17,7 @@ function createFlowSetup(
 ): Flow.Setup {
   return {
     version: 1,
-    environments: {
+    flows: {
       default: {
         ...(platform === 'web' ? { web: {} } : { server: {} }),
         packages,
