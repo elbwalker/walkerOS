@@ -1,7 +1,7 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { DestinationAPI } from '.';
 import { startFlow } from '@walkeros/collector';
-import { createEvent, clone } from '@walkeros/core';
+import { createEvent, clone, createMockLogger } from '@walkeros/core';
 import { examples } from './dev';
 
 describe('Destination API', () => {
@@ -31,6 +31,7 @@ describe('Destination API', () => {
       collector: {} as Collector.Instance,
       config: {},
       env: testEnv,
+      logger: createMockLogger(),
     });
     expect(mockSendWeb).not.toHaveBeenCalled();
 
@@ -39,6 +40,7 @@ describe('Destination API', () => {
       collector: {} as Collector.Instance,
       config: { settings: { url } },
       env: testEnv,
+      logger: createMockLogger(),
     });
     expect(mockSendWeb).toHaveBeenCalledTimes(1);
 
@@ -62,6 +64,7 @@ describe('Destination API', () => {
         settings: { url },
       },
       env: customEnv,
+      logger: createMockLogger(),
     });
 
     expect(customSendWeb).toHaveBeenCalledTimes(1);
@@ -82,6 +85,7 @@ describe('Destination API', () => {
         settings: { url, transform: () => 'transformed' },
       },
       env: testEnv,
+      logger: createMockLogger(),
     });
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -97,6 +101,7 @@ describe('Destination API', () => {
         settings: { url, headers: { foo: 'bar' } },
       },
       env: testEnv,
+      logger: createMockLogger(),
     });
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -114,6 +119,7 @@ describe('Destination API', () => {
         settings: { url, method: 'POST' },
       },
       env: testEnv,
+      logger: createMockLogger(),
     });
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -132,6 +138,7 @@ describe('Destination API', () => {
         mapping: examples.mapping.config,
       },
       env: testEnv,
+      logger: createMockLogger(),
     });
 
     expect(mockSendWeb).toHaveBeenCalledWith(

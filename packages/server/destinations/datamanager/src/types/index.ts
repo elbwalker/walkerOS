@@ -4,7 +4,6 @@ import type {
 } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
 import type { OAuth2Client } from 'google-auth-library';
-import type { LogLevel } from '../utils';
 
 export interface Settings {
   /**
@@ -51,9 +50,6 @@ export interface Settings {
 
   /** Test event code for debugging (optional) */
   testEventCode?: string;
-
-  /** Log level for debugging (optional) */
-  logLevel?: LogLevel;
 
   /** Guided helpers: User data mapping (applies to all events) */
   userData?: WalkerOSMapping.Map;

@@ -2,12 +2,11 @@ import type { PushFn } from './types';
 import type { IngestEventsRequest, IngestEventsResponse } from './types';
 import { getMappingValue, isObject } from '@walkeros/core';
 import { formatEvent, formatConsent } from './format';
-import { createLogger } from './utils';
 import { getAccessToken } from './auth';
 
 export const push: PushFn = async function (
   event,
-  { config, mapping, data, collector, env },
+  { config, mapping, data, collector, env, logger },
 ) {
   const {
     destinations,
@@ -16,7 +15,6 @@ export const push: PushFn = async function (
     url = 'https://datamanager.googleapis.com/v1',
     consent: requestConsent,
     testEventCode,
-    logLevel = 'none',
     userData,
     userId,
     clientId,
@@ -24,8 +22,6 @@ export const push: PushFn = async function (
     consentAdUserData,
     consentAdPersonalization,
   } = config.settings!;
-
-  const logger = createLogger(logLevel);
 
   // Extract Settings guided helpers
   const userDataMapped = userData

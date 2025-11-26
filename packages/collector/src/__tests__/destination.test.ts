@@ -1,6 +1,6 @@
 import type { Collector } from '@walkeros/core';
 import type { Destination, WalkerOS } from '@walkeros/core';
-import { clone, createEvent } from '@walkeros/core';
+import { clone, createEvent, createMockLogger } from '@walkeros/core';
 import { pushToDestinations, startFlow } from '..';
 
 describe('Destination', () => {
@@ -26,7 +26,6 @@ describe('Destination', () => {
   ): Collector.Config {
     return {
       tagging: 1,
-      verbose: false,
       globalsStatic: {},
       sessionStatic: {},
       ...overrides,
@@ -47,6 +46,7 @@ describe('Destination', () => {
       destinations: { foo: destination },
       globals: {},
       hooks: {},
+      logger: createMockLogger(),
       user: {},
       consent: {},
       queue: [],

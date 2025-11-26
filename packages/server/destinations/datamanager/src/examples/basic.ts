@@ -108,6 +108,5 @@ export const debug: DestinationDataManager.Config = {
         productDestinationId: 'AW-CONVERSION-123',
       },
     ],
-    logLevel: 'debug', // Shows all API calls and responses
   },
 };

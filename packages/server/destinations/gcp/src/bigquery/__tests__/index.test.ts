@@ -1,6 +1,6 @@
 import type { Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
-import { clone, createEvent } from '@walkeros/core';
+import { clone, createEvent, createMockLogger } from '@walkeros/core';
 import * as examples from '../examples';
 
 const { env } = examples;
@@ -24,6 +24,7 @@ describe('Server Destination BigQuery', () => {
       config: { settings: settings as Settings },
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
     })) as Config;
   }
 
@@ -70,6 +71,7 @@ describe('Server Destination BigQuery', () => {
         config: { settings: { datasetId, tableId } as Settings },
         collector: mockCollector,
         env: testEnv,
+        logger: createMockLogger(),
       }),
     ).rejects.toThrow('Config settings projectId missing');
 
@@ -94,6 +96,7 @@ describe('Server Destination BigQuery', () => {
       data: undefined,
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
     });
     expect(mockInsert).toHaveBeenCalledWith('insert', [
       {
@@ -132,6 +135,7 @@ describe('Server Destination BigQuery', () => {
       data,
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
     });
     expect(mockInsert).toHaveBeenCalledWith('insert', [{ foo: 'bar' }]);
   });

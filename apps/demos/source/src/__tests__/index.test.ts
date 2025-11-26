@@ -1,5 +1,6 @@
 import { startFlow } from '@walkeros/collector';
 import type { WalkerOS } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import { sourceDemo } from '../index';
 
 describe('Demo Source', () => {
@@ -53,6 +54,7 @@ describe('Demo Source', () => {
         elb: collector.push as unknown as WalkerOS.Elb,
         push: collector.push,
         command: collector.command,
+        logger: createMockLogger(),
       },
     );
 
@@ -94,6 +96,7 @@ describe('Demo Source', () => {
         elb: collector.push as unknown as WalkerOS.Elb,
         push: collector.push,
         command: collector.command,
+        logger: createMockLogger(),
       },
     );
 
@@ -143,6 +146,7 @@ describe('Demo Source', () => {
         elb: collector.push as unknown as WalkerOS.Elb,
         push: collector.push,
         command: collector.command,
+        logger: createMockLogger(),
       },
     );
 

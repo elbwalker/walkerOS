@@ -1,6 +1,7 @@
 import { sourceCloudFunction } from '../index';
 import type { EventRequest, Request, Response, Types } from '../types';
-import type { WalkerOS, Source } from '@walkeros/core';
+import type { Source } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 
 // Mock request/response for testing
 function createMockRequest(
@@ -59,6 +60,7 @@ function createMockResponse(): Response & {
 describe('sourceCloudFunction', () => {
   let mockPush: jest.MockedFunction<(...args: unknown[]) => unknown>;
   let mockCommand: jest.MockedFunction<(...args: unknown[]) => unknown>;
+  let mockLogger: ReturnType<typeof createMockLogger>;
 
   beforeEach(() => {
     mockPush = jest.fn().mockResolvedValue({
@@ -74,6 +76,7 @@ describe('sourceCloudFunction', () => {
       queued: [],
       failed: [],
     });
+    mockLogger = createMockLogger();
   });
 
   describe('initialization', () => {
@@ -84,6 +87,7 @@ describe('sourceCloudFunction', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: mockLogger,
         },
       );
 
@@ -106,6 +110,7 @@ describe('sourceCloudFunction', () => {
         push: mockPush as never,
         command: mockCommand as never,
         elb: jest.fn() as never,
+        logger: mockLogger,
       });
 
       expect(source.config.settings).toEqual({
@@ -123,6 +128,7 @@ describe('sourceCloudFunction', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: mockLogger,
         },
       );
       const req = createMockRequest('OPTIONS');
@@ -142,6 +148,7 @@ describe('sourceCloudFunction', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: mockLogger,
         },
       );
       const req = createMockRequest('GET');
@@ -163,6 +170,7 @@ describe('sourceCloudFunction', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: mockLogger,
         },
       );
       const req = createMockRequest('POST', undefined);
@@ -186,6 +194,7 @@ describe('sourceCloudFunction', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: mockLogger,
         },
       );
       const eventRequest: EventRequest = {
@@ -223,6 +232,7 @@ describe('sourceCloudFunction', () => {
           push: errorPush,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: mockLogger,
         },
       );
       const eventRequest: EventRequest = {
@@ -251,6 +261,7 @@ describe('sourceCloudFunction', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: mockLogger,
         },
       );
 
@@ -287,6 +298,7 @@ describe('sourceCloudFunction', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: mockLogger,
         },
       );
 
@@ -321,6 +333,7 @@ describe('sourceCloudFunction', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: mockLogger,
         },
       );
 
@@ -341,6 +354,7 @@ describe('sourceCloudFunction', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: mockLogger,
         },
       );
       const req = createMockRequest('POST', { invalid: 'format' });
@@ -364,6 +378,7 @@ describe('sourceCloudFunction', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: mockLogger,
         },
       );
 

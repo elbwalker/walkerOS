@@ -136,14 +136,16 @@ export const sourceExpress = async (
 
   if (settings.port !== undefined) {
     server = app.listen(settings.port, () => {
-      console.log(`✅ Express source listening on port ${settings.port}`);
-      console.log(`   POST ${settings.path} - Event collection (JSON body)`);
-      console.log(`   GET ${settings.path} - Pixel tracking (query params)`);
-      console.log(`   OPTIONS ${settings.path} - CORS preflight`);
-      if (settings.status) {
-        console.log(`   GET /health - Health check`);
-        console.log(`   GET /ready - Readiness check`);
-      }
+      const statusRoutes = settings.status
+        ? `\n   GET /health - Health check\n   GET /ready - Readiness check`
+        : '';
+      env.logger.info(
+        `Express source listening on port ${settings.port}\n` +
+          `   POST ${settings.path} - Event collection (JSON body)\n` +
+          `   GET ${settings.path} - Pixel tracking (query params)\n` +
+          `   OPTIONS ${settings.path} - CORS preflight` +
+          statusRoutes,
+      );
     });
 
     // Graceful shutdown handlers

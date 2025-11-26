@@ -1,0 +1,215 @@
+---
+title: Logger
+description: Centralized logging system for walkerOS
+path: /docs/collector/logger
+package: '@walkeros/core'
+sidebar_position: 3
+---
+
+# Logger
+
+walkerOS provides a centralized logging system that enables consistent logging
+across the collector, sources, and destinations. The logger supports three log
+levels and provides scoped logging for better debugging.
+
+## Configuration
+
+Configure logging when initializing the collector:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+
+const { collector, elb } = await startFlow({
+  run: true,
+  logger: {
+    level: 'DEBUG', // 'ERROR' | 'INFO' | 'DEBUG'
+  },
+});`}
+  language="typescript"
+/>
+
+### Log levels
+
+| Level   | Value | Description                              |
+| ------- | ----- | ---------------------------------------- |
+| `ERROR` | 0     | Only errors (default)                    |
+| `INFO`  | 1     | Errors and informational messages        |
+| `DEBUG` | 2     | All messages including debug information |
+
+## Using the logger
+
+The logger is automatically available in destination and source contexts:
+
+### In destinations
+
+<CodeSnippet
+  code={`const myDestination = {
+  type: 'my-destination',
+  config: {},
+
+  push(event, { logger }) {
+    logger.debug('Processing event', { name: event.name });
+
+    try {
+      // Send event to service
+      sendToService(event);
+      logger.info('Event sent successfully');
+    } catch (error) {
+      logger.error('Failed to send event', error);
+    }
+  },
+};`}
+  language="typescript"
+/>
+
+### In sources
+
+<CodeSnippet
+  code={`const mySource = async (config, env) => {
+  const { logger } = env;
+
+  logger.info('Source initialized');
+
+  return {
+    type: 'my-source',
+    config,
+    push: async (event) => {
+      logger.debug('Received event', event);
+      await env.push(event);
+    },
+  };
+};`}
+  language="typescript"
+/>
+
+## Logger API
+
+### Methods
+
+| Method                       | Description                                              |
+| ---------------------------- | -------------------------------------------------------- |
+| `error(message, context?)`   | Log an error message                                     |
+| `info(message, context?)`    | Log an informational message                             |
+| `debug(message, context?)`   | Log a debug message                                      |
+| `throw(message, context?)`   | Log an error and throw an exception (returns `never`)    |
+| `scope(name)`                | Create a scoped logger with a prefixed scope             |
+
+### Error handling
+
+The logger accepts `Error` objects directly and automatically extracts relevant
+information:
+
+<CodeSnippet
+  code={`try {
+  await riskyOperation();
+} catch (error) {
+  // Error properties (message, name, stack, cause) are extracted automatically
+  logger.error(error);
+
+  // Or with additional context
+  logger.error('Operation failed', { error, operation: 'sync' });
+}`}
+  language="typescript"
+/>
+
+### Throwing errors
+
+Use `logger.throw()` to log an error and throw in a single call:
+
+<CodeSnippet
+  code={`function validateConfig(config) {
+  if (!config.apiKey) {
+    // Logs the error AND throws - returns 'never' type
+    logger.throw('API key is required');
+  }
+
+  // TypeScript knows apiKey exists here due to 'never' return type
+  return config.apiKey;
+}`}
+  language="typescript"
+/>
+
+## Scoped loggers
+
+Scoped loggers prefix log messages with context information, making it easier to
+trace logs to their origin:
+
+<CodeSnippet
+  code={`// In a destination, the logger is already scoped: [google-gtag:myGtag]
+push(event, { logger }) {
+  logger.info('Processing'); // Output: [google-gtag:myGtag] Processing
+
+  // Create nested scope
+  const ga4Logger = logger.scope('ga4');
+  ga4Logger.debug('Sending to GA4'); // Output: [google-gtag:myGtag:ga4] Sending to GA4
+}`}
+  language="typescript"
+/>
+
+## Custom handler
+
+For advanced use cases like sending logs to external services, configure a
+custom handler:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+
+const { collector, elb } = await startFlow({
+  run: true,
+  logger: {
+    level: 'INFO',
+    handler: (level, message, context, scope, originalHandler) => {
+      // Send to external logging service
+      loggingService.log({
+        level,
+        message,
+        context,
+        scope: scope.join(':'),
+        timestamp: Date.now(),
+      });
+
+      // Optionally call the original console handler
+      originalHandler(level, message, context, scope);
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+The handler receives:
+
+| Parameter         | Type            | Description                                  |
+| ----------------- | --------------- | -------------------------------------------- |
+| `level`           | `Level`         | Log level enum (ERROR=0, INFO=1, DEBUG=2)    |
+| `message`         | `string`        | The log message                              |
+| `context`         | `LogContext`    | Additional context object                    |
+| `scope`           | `string[]`      | Array of scope names                         |
+| `originalHandler` | `DefaultHandler`| The default console handler                  |
+
+## Testing
+
+Use the mock logger utility for testing destinations and sources:
+
+<CodeSnippet
+  code={`import { createMockLogger } from '@walkeros/core';
+
+describe('MyDestination', () => {
+  it('logs events correctly', async () => {
+    const mockLogger = createMockLogger();
+
+    await myDestination.push(testEvent, {
+      config: {},
+      logger: mockLogger,
+    });
+
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      'Event sent successfully'
+    );
+  });
+});`}
+  language="typescript"
+/>
+
+The mock logger provides jest mock functions for all logger methods plus:
+
+- `scopedLoggers`: Array of scoped loggers created via `scope()`

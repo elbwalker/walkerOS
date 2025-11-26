@@ -21,18 +21,16 @@ export const settings: RJSFSchema = {
       type: 'object',
       description: 'Initial consent state to control routing of events',
     },
-    verbose: {
-      type: 'boolean',
-      description: 'Enable verbose logging for debugging',
-    },
-    onError: {
-      type: 'string',
-      description:
-        'Error handler triggered when the collector encounters failures',
-    },
-    onLog: {
-      type: 'string',
-      description: 'Custom log handler for collector messages',
+    logger: {
+      type: 'object',
+      description: 'Logger configuration with level and custom handler',
+      properties: {
+        level: {
+          type: 'string',
+          enum: ['ERROR', 'INFO', 'DEBUG'],
+          description: 'Minimum log level to display',
+        },
+      },
     },
   },
 };

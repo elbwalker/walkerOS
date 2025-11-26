@@ -39,18 +39,15 @@ describe('Auto-run functionality', () => {
 
     test('config state is preserved correctly for different run values', async () => {
       // Test with run: true
-      const collectorTrue = await startFlow({ run: true, verbose: true });
+      const collectorTrue = await startFlow({ run: true });
       expect(collectorTrue.collector.config.run).toBe(true);
-      expect(collectorTrue.collector.config.verbose).toBe(true);
       expect(collectorTrue.collector.allowed).toBe(true);
 
       // Test with run: false
       const collectorFalse = await startFlow({
         run: false,
-        verbose: true,
       });
       expect(collectorFalse.collector.config.run).toBe(false);
-      expect(collectorFalse.collector.config.verbose).toBe(true);
       expect(collectorFalse.collector.allowed).toBe(false);
     });
   });

@@ -120,12 +120,8 @@ api: {
   },
 },
 },
-verbose: true,
-onError: (error: unknown) => {
-console.error('Collector error:', error);
-},
-onLog: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => {
-console.log(\`[\${level}] \${message}\`);
+logger: {
+level: 'DEBUG', // Show all logs (ERROR, INFO, DEBUG)
 },
 });`}
   language="typescript"

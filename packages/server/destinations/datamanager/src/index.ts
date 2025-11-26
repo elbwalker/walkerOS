@@ -41,8 +41,8 @@ export const destinationDataManager: DestinationInterface = {
     }
   },
 
-  async push(event, { config, mapping, data, collector, env }) {
-    return await push(event, { config, mapping, data, collector, env });
+  async push(event, { config, mapping, data, collector, env, logger }) {
+    return await push(event, { config, mapping, data, collector, env, logger });
   },
 };
 

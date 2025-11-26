@@ -29,11 +29,15 @@ export async function initSources(
       });
     };
 
+    // Create initial logger scoped to sourceId (type will be added after init)
+    const initialLogger = collector.logger.scope('source').scope(sourceId);
+
     const cleanEnv: Source.Env = {
       push: wrappedPush,
       command: collector.command,
       sources: collector.sources, // Provide access to all sources for chaining
       elb: collector.sources.elb.push, // ELB source is always available
+      logger: initialLogger,
       ...env,
     };
 
@@ -41,6 +45,11 @@ export async function initSources(
     const sourceInstance = await tryCatchAsync(code)(config, cleanEnv);
 
     if (!sourceInstance) continue; // Skip failed source initialization
+
+    // Update logger with actual source type: [type:sourceId] or [unknown:sourceId]
+    const sourceType = sourceInstance.type || 'unknown';
+    const sourceLogger = collector.logger.scope(sourceType).scope(sourceId);
+    cleanEnv.logger = sourceLogger;
 
     // Store the primary flag in the source config for later access
     if (primary) {

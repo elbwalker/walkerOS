@@ -2,8 +2,8 @@ import type {
   Source,
   Destination,
   Elb as ElbTypes,
-  Handler,
   Hooks,
+  Logger,
   On,
   WalkerOS,
   Mapping,
@@ -21,12 +21,8 @@ export interface Config {
   globalsStatic: WalkerOS.Properties;
   /** Static session data even on a new run */
   sessionStatic: Partial<SessionData>;
-  /** Enable verbose logging */
-  verbose: boolean;
-  /** Error handler */
-  onError?: Handler.Error;
-  /** Log handler */
-  onLog?: Handler.Log;
+  /** Logger configuration */
+  logger?: Logger.Config;
 }
 
 /**
@@ -153,6 +149,7 @@ export interface Instance {
   globals: WalkerOS.Properties;
   group: string;
   hooks: Hooks.Functions;
+  logger: Logger.Instance;
   on: On.OnConfig;
   queue: WalkerOS.Events;
   round: number;

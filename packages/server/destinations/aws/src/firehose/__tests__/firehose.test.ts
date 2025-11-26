@@ -1,6 +1,6 @@
 import type { Config, Settings, Destination, Env } from '../types';
 import type { WalkerOS, Collector } from '@walkeros/core';
-import { createEvent, mockEnv } from '@walkeros/core';
+import { createEvent, mockEnv, createMockLogger } from '@walkeros/core';
 import * as examples from '../examples';
 
 const { env } = examples;
@@ -23,6 +23,7 @@ describe('Firehose', () => {
       config: { settings },
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
     })) as Config;
   }
 
@@ -86,6 +87,7 @@ describe('Firehose', () => {
       config,
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
     });
 
     // Get the client instance send method
