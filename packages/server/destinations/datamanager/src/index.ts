@@ -10,18 +10,18 @@ export const destinationDataManager: DestinationInterface = {
 
   config: {},
 
-  async init({ config: partialConfig, env }) {
-    const config = getConfig(partialConfig);
+  async init({ config: partialConfig, env, logger }) {
+    const config = getConfig(partialConfig, logger);
 
     if (!config.settings) {
-      throw new Error('Settings required for Data Manager destination');
+      logger.throw('Settings required for Data Manager destination');
     }
 
     if (
       !config.settings.destinations ||
       config.settings.destinations.length === 0
     ) {
-      throw new Error('At least one destination required in settings');
+      logger.throw('At least one destination required in settings');
     }
 
     try {
@@ -35,7 +35,7 @@ export const destinationDataManager: DestinationInterface = {
         },
       };
     } catch (error) {
-      throw new Error(
+      logger.throw(
         `Data Manager authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }

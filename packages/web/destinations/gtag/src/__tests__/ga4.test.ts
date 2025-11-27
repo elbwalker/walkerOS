@@ -1,6 +1,6 @@
 import { initGA4, pushGA4Event } from '../ga4';
 import { examples } from '../dev';
-import { clone } from '@walkeros/core';
+import { clone, createMockLogger } from '@walkeros/core';
 import type { GA4Settings } from '../types';
 
 describe('GA4 Implementation', () => {
@@ -8,17 +8,27 @@ describe('GA4 Implementation', () => {
   const mockEnv = clone(examples.env.push);
   mockEnv.window.gtag = mockGtag;
 
+  // Create a mock logger that actually throws
+  const createThrowingLogger = () => {
+    const logger = createMockLogger();
+    logger.throw = (message: string) => {
+      throw new Error(message);
+    };
+    return logger;
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   describe('initGA4', () => {
-    it('should return early if no measurementId', () => {
+    it('should throw error if no measurementId', () => {
       const settings: GA4Settings = { measurementId: '' };
+      const logger = createThrowingLogger();
 
-      initGA4(settings, undefined, mockEnv);
-
-      expect(mockGtag).not.toHaveBeenCalled();
+      expect(() => initGA4(settings, undefined, mockEnv, logger)).toThrow(
+        'Config settings ga4.measurementId missing',
+      );
     });
 
     it('should initialize GA4 with basic settings', () => {
@@ -78,12 +88,13 @@ describe('GA4 Implementation', () => {
       id: 'test-id',
     } as any;
 
-    it('should return early if no measurementId', () => {
+    it('should throw error if no measurementId', () => {
       const settings: GA4Settings = { measurementId: '' };
+      const logger = createThrowingLogger();
 
-      pushGA4Event(mockEvent, settings, {}, {}, mockEnv);
-
-      expect(mockGtag).not.toHaveBeenCalled();
+      expect(() =>
+        pushGA4Event(mockEvent, settings, {}, {}, mockEnv, logger),
+      ).toThrow('Config settings ga4.measurementId missing');
     });
 
     it('should push event with snake_case name by default', () => {

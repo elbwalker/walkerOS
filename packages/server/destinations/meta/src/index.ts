@@ -10,8 +10,8 @@ export const destinationMeta: Destination = {
 
   config: {},
 
-  async init({ config: partialConfig }) {
-    const config = getConfig(partialConfig);
+  async init({ config: partialConfig, logger }) {
+    const config = getConfig(partialConfig, logger);
     return config;
   },
 

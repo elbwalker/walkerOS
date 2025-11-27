@@ -15,6 +15,9 @@ describe('Destination API', () => {
   const testEnv = clone(examples.env.push);
   testEnv.sendWeb = mockSendWeb;
 
+  // Mock logger
+  const mockLogger = createMockLogger();
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -26,13 +29,15 @@ describe('Destination API', () => {
   });
 
   test('init', () => {
-    // Test with no URL - should not call sendWeb
-    destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {},
-      env: testEnv,
-      logger: createMockLogger(),
-    });
+    // Test with no URL - should throw error
+    expect(() =>
+      destination.push(event, {
+        collector: {} as Collector.Instance,
+        config: {},
+        env: testEnv,
+        logger: mockLogger,
+      }),
+    ).toThrow('Config settings url missing');
     expect(mockSendWeb).not.toHaveBeenCalled();
 
     // Test with URL - should call sendWeb
@@ -40,7 +45,7 @@ describe('Destination API', () => {
       collector: {} as Collector.Instance,
       config: { settings: { url } },
       env: testEnv,
-      logger: createMockLogger(),
+      logger: mockLogger,
     });
     expect(mockSendWeb).toHaveBeenCalledTimes(1);
 
@@ -64,7 +69,7 @@ describe('Destination API', () => {
         settings: { url },
       },
       env: customEnv,
-      logger: createMockLogger(),
+      logger: mockLogger,
     });
 
     expect(customSendWeb).toHaveBeenCalledTimes(1);
@@ -85,7 +90,7 @@ describe('Destination API', () => {
         settings: { url, transform: () => 'transformed' },
       },
       env: testEnv,
-      logger: createMockLogger(),
+      logger: mockLogger,
     });
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -101,7 +106,7 @@ describe('Destination API', () => {
         settings: { url, headers: { foo: 'bar' } },
       },
       env: testEnv,
-      logger: createMockLogger(),
+      logger: mockLogger,
     });
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -119,7 +124,7 @@ describe('Destination API', () => {
         settings: { url, method: 'POST' },
       },
       env: testEnv,
-      logger: createMockLogger(),
+      logger: mockLogger,
     });
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -138,7 +143,7 @@ describe('Destination API', () => {
         mapping: examples.mapping.config,
       },
       env: testEnv,
-      logger: createMockLogger(),
+      logger: mockLogger,
     });
 
     expect(mockSendWeb).toHaveBeenCalledWith(

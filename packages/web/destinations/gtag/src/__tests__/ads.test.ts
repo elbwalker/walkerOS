@@ -1,6 +1,6 @@
 import { initAds, pushAdsEvent } from '../ads';
 import { examples } from '../dev';
-import { clone } from '@walkeros/core';
+import { clone, createMockLogger } from '@walkeros/core';
 import type { AdsSettings, AdsMapping } from '../types';
 
 describe('Google Ads Implementation', () => {
@@ -8,17 +8,27 @@ describe('Google Ads Implementation', () => {
   const mockEnv = clone(examples.env.push);
   mockEnv.window.gtag = mockGtag;
 
+  // Create a mock logger that actually throws
+  const createThrowingLogger = () => {
+    const logger = createMockLogger();
+    logger.throw = (message: string) => {
+      throw new Error(message);
+    };
+    return logger;
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   describe('initAds', () => {
-    it('should return early if no conversionId', () => {
+    it('should throw error if no conversionId', () => {
       const settings: AdsSettings = { conversionId: '' };
+      const logger = createThrowingLogger();
 
-      initAds(settings, undefined, mockEnv);
-
-      expect(mockGtag).not.toHaveBeenCalled();
+      expect(() => initAds(settings, undefined, mockEnv, logger)).toThrow(
+        'Config settings ads.conversionId missing',
+      );
     });
 
     it('should initialize Ads with basic settings', () => {
@@ -72,10 +82,20 @@ describe('Google Ads Implementation', () => {
       currency: 'EUR',
     };
 
-    it('should return early if no mapping name', () => {
-      pushAdsEvent(mockEvent as any, settings, {}, {}, undefined, mockEnv);
+    it('should throw error if no mapping name', () => {
+      const logger = createThrowingLogger();
 
-      expect(mockGtag).not.toHaveBeenCalled();
+      expect(() =>
+        pushAdsEvent(
+          mockEvent as any,
+          settings,
+          {},
+          {},
+          undefined,
+          mockEnv,
+          logger,
+        ),
+      ).toThrow('Config mapping ads.label missing');
     });
 
     it('should push conversion event with correct parameters', () => {
@@ -190,12 +210,21 @@ describe('Google Ads Implementation', () => {
       });
     });
 
-    it('should return early when neither mapping.label nor mappingName is provided', () => {
+    it('should throw error when neither mapping.label nor mappingName is provided', () => {
       const mapping: AdsMapping = {};
+      const logger = createThrowingLogger();
 
-      pushAdsEvent(mockEvent as any, settings, mapping, {}, undefined, mockEnv);
-
-      expect(mockGtag).not.toHaveBeenCalled();
+      expect(() =>
+        pushAdsEvent(
+          mockEvent as any,
+          settings,
+          mapping,
+          {},
+          undefined,
+          mockEnv,
+          logger,
+        ),
+      ).toThrow('Config mapping ads.label missing');
     });
   });
 });

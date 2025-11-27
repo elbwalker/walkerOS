@@ -2,7 +2,7 @@ import { destinationGtag, resetConsentState } from '../index';
 import { examples } from '../dev';
 import type { Settings, Rule, Include } from '../types';
 import { type WalkerOS, type Collector } from '@walkeros/core';
-import { clone } from '@walkeros/core';
+import { clone, createMockLogger } from '@walkeros/core';
 
 // Mock all tool implementations
 jest.mock('../ga4', () => ({
@@ -28,6 +28,16 @@ describe('Unified Gtag Destination', () => {
   const mockEnv = examples.env.push;
   const mockCollector = {} as Collector.Instance;
 
+  // Create a mock logger that actually throws
+  const createThrowingLogger = () => {
+    const logger = createMockLogger();
+    logger.throw = (message: string) => {
+      throw new Error(message);
+    };
+    return logger;
+  };
+  const mockLogger = createThrowingLogger();
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -47,16 +57,17 @@ describe('Unified Gtag Destination', () => {
   });
 
   describe('init', () => {
-    it('should return false when no tools are configured', () => {
+    it('should throw when no tools are configured', () => {
       const config = { settings: {} };
 
-      const result = destinationGtag.init!({
-        config,
-        env: mockEnv,
-        collector: mockCollector,
-      });
-
-      expect(result).toBe(false);
+      expect(() =>
+        destinationGtag.init!({
+          config,
+          env: mockEnv,
+          collector: mockCollector,
+          logger: mockLogger,
+        }),
+      ).toThrow('Config settings missing');
     });
 
     it('should initialize GA4 only', () => {
@@ -69,10 +80,16 @@ describe('Unified Gtag Destination', () => {
         config,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(result).toBe(config);
-      expect(initGA4).toHaveBeenCalledWith(settings.ga4, true, mockEnv);
+      expect(initGA4).toHaveBeenCalledWith(
+        settings.ga4,
+        true,
+        mockEnv,
+        mockLogger,
+      );
       expect(initAds).not.toHaveBeenCalled();
       expect(initGTM).not.toHaveBeenCalled();
     });
@@ -87,10 +104,16 @@ describe('Unified Gtag Destination', () => {
         config,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(result).toBe(config);
-      expect(initAds).toHaveBeenCalledWith(settings.ads, true, mockEnv);
+      expect(initAds).toHaveBeenCalledWith(
+        settings.ads,
+        true,
+        mockEnv,
+        mockLogger,
+      );
       expect(initGA4).not.toHaveBeenCalled();
       expect(initGTM).not.toHaveBeenCalled();
     });
@@ -105,10 +128,16 @@ describe('Unified Gtag Destination', () => {
         config,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(result).toBe(config);
-      expect(initGTM).toHaveBeenCalledWith(settings.gtm, true, mockEnv);
+      expect(initGTM).toHaveBeenCalledWith(
+        settings.gtm,
+        true,
+        mockEnv,
+        mockLogger,
+      );
       expect(initGA4).not.toHaveBeenCalled();
       expect(initAds).not.toHaveBeenCalled();
     });
@@ -125,12 +154,28 @@ describe('Unified Gtag Destination', () => {
         config,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(result).toBe(config);
-      expect(initGA4).toHaveBeenCalledWith(settings.ga4, true, mockEnv);
-      expect(initAds).toHaveBeenCalledWith(settings.ads, true, mockEnv);
-      expect(initGTM).toHaveBeenCalledWith(settings.gtm, true, mockEnv);
+      expect(initGA4).toHaveBeenCalledWith(
+        settings.ga4,
+        true,
+        mockEnv,
+        mockLogger,
+      );
+      expect(initAds).toHaveBeenCalledWith(
+        settings.ads,
+        true,
+        mockEnv,
+        mockLogger,
+      );
+      expect(initGTM).toHaveBeenCalledWith(
+        settings.gtm,
+        true,
+        mockEnv,
+        mockLogger,
+      );
     });
 
     it('should pass loadScript parameter correctly', () => {
@@ -139,9 +184,19 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: false };
 
-      destinationGtag.init!({ config, env: mockEnv, collector: mockCollector });
+      destinationGtag.init!({
+        config,
+        env: mockEnv,
+        collector: mockCollector,
+        logger: mockLogger,
+      });
 
-      expect(initGA4).toHaveBeenCalledWith(settings.ga4, false, mockEnv);
+      expect(initGA4).toHaveBeenCalledWith(
+        settings.ga4,
+        false,
+        mockEnv,
+        mockLogger,
+      );
     });
   });
 
@@ -166,6 +221,7 @@ describe('Unified Gtag Destination', () => {
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
@@ -174,6 +230,7 @@ describe('Unified Gtag Destination', () => {
         mapping.settings?.ga4,
         mockData,
         mockEnv,
+        mockLogger,
       );
     });
 
@@ -193,6 +250,7 @@ describe('Unified Gtag Destination', () => {
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(pushAdsEvent).toHaveBeenCalledWith(
@@ -202,6 +260,7 @@ describe('Unified Gtag Destination', () => {
         mockData,
         'PURCHASE_CONVERSION',
         mockEnv,
+        mockLogger,
       );
     });
 
@@ -218,6 +277,7 @@ describe('Unified Gtag Destination', () => {
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(pushAdsEvent).not.toHaveBeenCalled();
@@ -236,6 +296,7 @@ describe('Unified Gtag Destination', () => {
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(pushGTMEvent).toHaveBeenCalledWith(
@@ -244,6 +305,7 @@ describe('Unified Gtag Destination', () => {
         mapping.settings.gtm,
         mockData,
         mockEnv,
+        mockLogger,
       );
     });
 
@@ -269,6 +331,7 @@ describe('Unified Gtag Destination', () => {
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
@@ -277,6 +340,7 @@ describe('Unified Gtag Destination', () => {
         mapping.settings?.ga4,
         mockData,
         mockEnv,
+        mockLogger,
       );
       expect(pushAdsEvent).toHaveBeenCalledWith(
         mockEvent,
@@ -285,6 +349,7 @@ describe('Unified Gtag Destination', () => {
         mockData,
         'PURCHASE_CONVERSION',
         mockEnv,
+        mockLogger,
       );
       expect(pushGTMEvent).toHaveBeenCalledWith(
         mockEvent,
@@ -292,6 +357,7 @@ describe('Unified Gtag Destination', () => {
         mapping.settings.gtm,
         mockData,
         mockEnv,
+        mockLogger,
       );
     });
 
@@ -308,6 +374,7 @@ describe('Unified Gtag Destination', () => {
           data: mockData,
           env: mockEnv,
           collector: mockCollector,
+          logger: mockLogger,
         }),
       ).resolves.not.toThrow();
     });
@@ -325,6 +392,7 @@ describe('Unified Gtag Destination', () => {
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
@@ -333,6 +401,7 @@ describe('Unified Gtag Destination', () => {
         undefined,
         mockData,
         mockEnv,
+        mockLogger,
       );
     });
   });
@@ -366,6 +435,7 @@ describe('Unified Gtag Destination', () => {
           data: {},
           env: mockEnvWithGtag,
           collector: mockCollector,
+          logger: mockLogger,
         });
 
         // Verify no gtag consent calls were made
@@ -412,6 +482,7 @@ describe('Unified Gtag Destination', () => {
           data: {},
           env: mockEnvWithGtag,
           collector: mockCollector,
+          logger: mockLogger,
         });
 
         // Verify regular event processing still works
@@ -501,6 +572,7 @@ describe('Unified Gtag Destination', () => {
           data: {},
           env: mockEnvWithGtag,
           collector: mockCollector,
+          logger: mockLogger,
         });
 
         // Verify regular event processing still works

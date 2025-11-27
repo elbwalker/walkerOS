@@ -10,8 +10,8 @@ export const destinationBigQuery: Destination = {
 
   config: {},
 
-  async init({ config: partialConfig, env }) {
-    const config = getConfig(partialConfig, env);
+  async init({ config: partialConfig, env, logger }) {
+    const config = getConfig(partialConfig, env, logger);
 
     return config;
   },

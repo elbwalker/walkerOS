@@ -10,7 +10,7 @@ export const destinationAPI: Destination = {
 
   config: {},
 
-  push(event, { config, mapping, data, env }) {
+  push(event, { config, mapping, data, env, logger }) {
     const { settings } = config;
     const {
       url,
@@ -20,7 +20,7 @@ export const destinationAPI: Destination = {
       transport = 'fetch',
     } = settings || {};
 
-    if (!url) return;
+    if (!url) logger.throw('Config settings url missing');
 
     const eventData = isDefined(data) ? data : event;
     const body = transform
@@ -28,7 +28,7 @@ export const destinationAPI: Destination = {
       : JSON.stringify(eventData);
 
     const sendWebFn = (env as Env)?.sendWeb || sendWeb;
-    sendWebFn(url, body, { headers, method, transport });
+    sendWebFn(url!, body, { headers, method, transport });
   },
 };
 

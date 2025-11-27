@@ -11,10 +11,11 @@ export const destinationFirehose: Destination = {
 
   config: {},
 
-  async init({ config: partialConfig, env }) {
+  async init({ config: partialConfig, env, logger }) {
     const config = getConfig(partialConfig, env);
 
-    if (!isSameType(config.settings, {} as Settings)) return false;
+    if (!isSameType(config.settings, {} as Settings))
+      logger.throw('Config settings invalid');
 
     return config;
   },
