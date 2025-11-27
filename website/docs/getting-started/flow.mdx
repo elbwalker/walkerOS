@@ -135,6 +135,23 @@ Specifies npm packages to download and bundle:
 **Properties:**
 - **`version`** - npm version (semver or "latest", defaults to "latest")
 - **`imports`** - Array of named exports to import
+- **`path`** - Local filesystem path (takes precedence over `version`)
+
+For development or custom packages, use `path` to reference a local directory:
+
+<CodeSnippet
+  code={`{
+  "packages": {
+    "@my/custom-destination": {
+      "path": "./my-destination",
+      "imports": ["myDestination"]
+    }
+  }
+}`}
+  language="json"
+/>
+
+See [Local Packages](/docs/apps/cli#local-packages) in the CLI documentation for more details.
 
 ### Sources
 

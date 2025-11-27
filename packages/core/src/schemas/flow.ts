@@ -58,6 +58,7 @@ export const PackagesSchema = z
     z.object({
       version: z.string().optional(),
       imports: z.array(z.string()).optional(),
+      path: z.string().optional(), // Local path (takes precedence over version)
     }),
   )
   .describe('NPM packages to bundle');

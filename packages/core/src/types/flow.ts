@@ -34,7 +34,14 @@ export type Definitions = Record<string, unknown>;
 /**
  * Packages configuration for build.
  */
-export type Packages = Record<string, { version?: string; imports?: string[] }>;
+export type Packages = Record<
+  string,
+  {
+    version?: string;
+    imports?: string[];
+    path?: string; // Local path to package directory (takes precedence over version)
+  }
+>;
 
 /**
  * Web platform configuration.

@@ -6,3 +6,4 @@ export * from './docker.js';
 export * from './temp-manager.js';
 export * from './asset-resolver.js';
 export * from './utils.js';
+export * from './local-packages.js';

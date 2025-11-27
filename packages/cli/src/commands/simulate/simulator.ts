@@ -11,7 +11,6 @@ import {
   type BuildOptions,
 } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
-import { downloadPackages } from '../bundle/package-manager.js';
 import { CallTracker } from './tracker.js';
 import { executeInJSDOM } from './jsdom-executor.js';
 import { executeInNode } from './node-executor.js';
@@ -131,31 +130,10 @@ export async function executeSimulation(
     // Detect platform from flowConfig
     const platform = getPlatform(flowConfig);
 
-    // 2. Download packages to temp directory
-    // This ensures we use clean npm packages, not workspace packages
-    const packagesArray = Object.entries(buildOptions.packages).map(
-      ([name, packageConfig]) => ({
-        name,
-        version:
-          (typeof packageConfig === 'object' &&
-          packageConfig !== null &&
-          'version' in packageConfig &&
-          typeof packageConfig.version === 'string'
-            ? packageConfig.version
-            : undefined) || 'latest',
-      }),
-    );
-    const packagePaths = await downloadPackages(
-      packagesArray,
-      tempDir, // downloadPackages will add 'node_modules' subdirectory itself
-      createLogger({ silent: true }),
-      buildOptions.cache,
-    );
-
-    // 3. Create tracker
+    // 2. Create tracker
     const tracker = new CallTracker();
 
-    // 4. Create temporary bundle
+    // 3. Create temporary bundle
     const tempOutput = path.join(
       tempDir,
       `simulation-bundle-${generateId()}.${platform === 'web' ? 'js' : 'mjs'}`,
@@ -184,7 +162,7 @@ export async function executeSimulation(
           }),
     };
 
-    // 5. Bundle with downloaded packages (they're already in tempDir/node_modules)
+    // 4. Bundle (downloads packages internally)
     await bundleCore(
       flowConfig,
       simulationBuildOptions,
@@ -193,10 +171,10 @@ export async function executeSimulation(
     );
     bundlePath = tempOutput;
 
-    // 6. Load env examples dynamically from destination packages
+    // 5. Load env examples dynamically from destination packages
     const envs = await loadDestinationEnvs(destinations || {});
 
-    // 7. Execute based on platform
+    // 6. Execute based on platform
     let result;
     if (platform === 'web') {
       result = await executeInJSDOM(

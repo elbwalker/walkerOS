@@ -58,6 +58,68 @@ The CLI uses types from `@walkeros/core`:
 
 The CLI transforms `Flow.Setup` → `Flow.Config` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
 
+## Local Packages
+
+By default, the CLI downloads packages from npm. For development or testing unpublished packages, you can use local packages instead by specifying a `path` property.
+
+### Configuration
+
+Add a `path` property to any package to use a local directory instead of npm:
+
+<CodeSnippet
+  code={`{
+  "packages": {
+    "@walkeros/collector": {
+      "version": "latest",
+      "imports": ["startFlow"]
+    },
+    "@my/custom-destination": {
+      "path": "./my-custom-destination",
+      "imports": ["myDestination"]
+    }
+  }
+}`}
+  language="json"
+/>
+
+### Resolution Rules
+
+- **`path` takes precedence** - When both `path` and `version` are specified, `path` is used
+- **Relative paths** - Resolved relative to the config file's directory
+- **Absolute paths** - Used as-is
+- **dist folder** - If a `dist/` folder exists, it's used; otherwise the package root is used
+
+### Use Cases
+
+**Development of custom packages:**
+<CodeSnippet
+  code={`{
+  "packages": {
+    "@my-org/destination-custom": {
+      "path": "../my-destination",
+      "imports": ["destinationCustom"]
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Testing local changes to walkerOS packages:**
+<CodeSnippet
+  code={`{
+  "packages": {
+    "@walkeros/collector": {
+      "version": "latest",
+      "path": "../../packages/collector",
+      "imports": ["startFlow"]
+    }
+  }
+}`}
+  language="json"
+/>
+
+When ready for production, simply remove the `path` property to use the published npm version.
+
 ## Getting Started
 
 Before using the CLI, you need a [flow configuration file](/docs/getting-started/flow). Here's a minimal example:

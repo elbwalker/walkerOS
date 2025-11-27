@@ -138,6 +138,7 @@ export async function bundleCore(
       ([name, packageConfig]) => ({
         name,
         version: packageConfig.version || 'latest',
+        path: packageConfig.path, // Pass local path if defined
       }),
     );
     // downloadPackages adds 'node_modules' subdirectory automatically
@@ -146,6 +147,7 @@ export async function bundleCore(
       TEMP_DIR,
       logger,
       buildOptions.cache,
+      buildOptions.configDir, // For resolving relative local paths
     );
 
     // Fix @walkeros packages to have proper ESM exports
