@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import type { Flow } from '@walkeros/core';
+import { getPlatform } from '@walkeros/core';
 import { createLogger, getErrorMessage } from '../../core/index.js';
 import {
   loadJsonConfig,
@@ -13,6 +14,7 @@ import { bundleCore } from '../bundle/bundler.js';
 import { downloadPackages } from '../bundle/package-manager.js';
 import { CallTracker } from './tracker.js';
 import { executeInJSDOM } from './jsdom-executor.js';
+import { executeInNode } from './node-executor.js';
 import { loadDestinationEnvs } from './env-loader.js';
 import type { SimulateCommandOptions, SimulationResult } from './types.js';
 
@@ -126,6 +128,9 @@ export async function executeSimulation(
       configPath,
     });
 
+    // Detect platform from flowConfig
+    const platform = getPlatform(flowConfig);
+
     // 2. Download packages to temp directory
     // This ensures we use clean npm packages, not workspace packages
     const packagesArray = Object.entries(buildOptions.packages).map(
@@ -150,26 +155,33 @@ export async function executeSimulation(
     // 3. Create tracker
     const tracker = new CallTracker();
 
-    // 4. Create temporary bundle as production IIFE (not ESM!)
+    // 4. Create temporary bundle
     const tempOutput = path.join(
       tempDir,
-      `simulation-bundle-${generateId()}.js`,
+      `simulation-bundle-${generateId()}.${platform === 'web' ? 'js' : 'mjs'}`,
     );
 
     const destinations = (
       flowConfig as unknown as { destinations?: Record<string, unknown> }
     ).destinations;
 
-    // Create build options for simulation - bundle as IIFE to test actual production code
+    // Create build options for simulation - platform-aware bundling
     const simulationBuildOptions: BuildOptions = {
       ...buildOptions,
-      code: buildOptions.code || '', // No code modification - use original
+      code: buildOptions.code || '',
       output: tempOutput,
-      tempDir, // Use same temp dir for bundle
-      format: 'iife' as const, // ← Test actual production format!
-      platform: 'browser' as const, // ← Browser platform for IIFE
-      windowCollector: 'collector', // ← Ensure window assignment
-      windowElb: 'elb',
+      tempDir,
+      ...(platform === 'web'
+        ? {
+            format: 'iife' as const,
+            platform: 'browser' as const,
+            windowCollector: 'collector',
+            windowElb: 'elb',
+          }
+        : {
+            format: 'esm' as const,
+            platform: 'node' as const,
+          }),
     };
 
     // 5. Bundle with downloaded packages (they're already in tempDir/node_modules)
@@ -184,15 +196,27 @@ export async function executeSimulation(
     // 6. Load env examples dynamically from destination packages
     const envs = await loadDestinationEnvs(destinations || {});
 
-    // 7. Execute IIFE in JSDOM with env-based mocking
-    const result = await executeInJSDOM(
-      tempOutput,
-      destinations || {},
-      typedEvent,
-      tracker,
-      envs, // Pass dynamically loaded envs
-      10000, // 10s timeout
-    );
+    // 7. Execute based on platform
+    let result;
+    if (platform === 'web') {
+      result = await executeInJSDOM(
+        tempOutput,
+        destinations || {},
+        typedEvent,
+        tracker,
+        envs,
+        10000,
+      );
+    } else {
+      result = await executeInNode(
+        tempOutput,
+        destinations || {},
+        typedEvent,
+        tracker,
+        envs,
+        30000,
+      );
+    }
 
     const elbResult = result.elbResult;
     const usage = result.usage;

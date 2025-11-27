@@ -37,3 +37,5 @@ async function mockSendServer(
 export const push: Env = {
   sendServer: mockSendServer,
 };
+
+export const simulation = ['sendServer'];

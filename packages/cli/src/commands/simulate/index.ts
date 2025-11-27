@@ -152,3 +152,4 @@ export async function simulate(
 // Re-export types and utilities for testing
 export * from './types.js';
 export * from './simulator.js';
+export { executeInNode } from './node-executor.js';
