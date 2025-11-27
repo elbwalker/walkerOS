@@ -203,6 +203,56 @@ Flow configs use the `Flow.Setup` format with `version` and `flows`:
 
 Platform is determined by the `web: {}` or `server: {}` key presence.
 
+### Local Packages
+
+Use local packages instead of npm for development or testing unpublished
+packages:
+
+```json
+{
+  "packages": {
+    "@walkeros/collector": {
+      "path": "../packages/collector",
+      "imports": ["startFlow"]
+    },
+    "@my/custom-destination": {
+      "path": "./my-destination",
+      "imports": ["myDestination"]
+    }
+  }
+}
+```
+
+**Resolution rules:**
+
+- `path` takes precedence over `version`
+- Relative paths are resolved from the config file's directory
+- If `dist/` folder exists, it's used; otherwise package root is used
+
+**Dependency resolution:**
+
+When a local package has dependencies on other packages that are also specified
+with local paths, the CLI will use the local versions for those dependencies
+too. This prevents npm versions from overwriting your local packages.
+
+```json
+{
+  "packages": {
+    "@walkeros/core": {
+      "path": "../packages/core",
+      "imports": []
+    },
+    "@walkeros/collector": {
+      "path": "../packages/collector",
+      "imports": ["startFlow"]
+    }
+  }
+}
+```
+
+In this example, even though `@walkeros/collector` depends on `@walkeros/core`,
+the local version of core will be used (not downloaded from npm).
+
 See [examples/](./examples/) for complete working configurations.
 
 ## Programmatic API

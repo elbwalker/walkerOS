@@ -134,6 +134,14 @@ export async function downloadPackages(
   const downloadQueue: Package[] = [...packages];
   const processed = new Set<string>();
 
+  // Track packages that should use local paths (to prevent npm overwriting them)
+  const localPackageMap = new Map<string, string>();
+  for (const pkg of packages) {
+    if (pkg.path) {
+      localPackageMap.set(pkg.name, pkg.path);
+    }
+  }
+
   // Validate no duplicate packages with different versions in initial list
   validateNoDuplicatePackages(packages);
 
@@ -148,6 +156,11 @@ export async function downloadPackages(
       continue;
     }
     processed.add(pkgKey);
+
+    // If this package was specified with a local path, use it even if discovered as a dependency
+    if (!pkg.path && localPackageMap.has(pkg.name)) {
+      pkg.path = localPackageMap.get(pkg.name);
+    }
 
     // Handle local packages first
     if (pkg.path) {

@@ -89,6 +89,28 @@ Add a `path` property to any package to use a local directory instead of npm:
 - **Absolute paths** - Used as-is
 - **dist folder** - If a `dist/` folder exists, it's used; otherwise the package root is used
 
+### Dependency Resolution
+
+When a local package has dependencies on other packages that are also specified with local paths, the CLI will use the local versions for those dependencies too. This prevents npm versions from overwriting your local packages.
+
+<CodeSnippet
+  code={`{
+  "packages": {
+    "@walkeros/core": {
+      "path": "../packages/core",
+      "imports": []
+    },
+    "@walkeros/collector": {
+      "path": "../packages/collector",
+      "imports": ["startFlow"]
+    }
+  }
+}`}
+  language="json"
+/>
+
+In this example, even though `@walkeros/collector` depends on `@walkeros/core`, the local version of core will be used (not downloaded from npm). This is essential when testing changes across multiple interdependent packages.
+
 ### Use Cases
 
 **Development of custom packages:**

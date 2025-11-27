@@ -58,6 +58,9 @@ export async function resolveLocalPackage(
 
 /**
  * Copy local package to target node_modules directory
+ *
+ * Copies package.json and dist/ folder to preserve the package structure
+ * expected by module resolution (package.json exports reference ./dist/...)
  */
 export async function copyLocalPackage(
   localPkg: LocalPackageInfo,
@@ -68,14 +71,27 @@ export async function copyLocalPackage(
 
   await fs.ensureDir(path.dirname(packageDir));
 
-  // Copy dist folder contents (or package root if no dist)
-  await fs.copy(localPkg.distPath, packageDir);
-
   // Always copy package.json for module resolution
   await fs.copy(
     path.join(localPkg.absolutePath, 'package.json'),
     path.join(packageDir, 'package.json'),
   );
+
+  // Copy dist folder AS dist folder (preserving structure for exports like ./dist/index.mjs)
+  if (localPkg.hasDistFolder) {
+    await fs.copy(localPkg.distPath, path.join(packageDir, 'dist'));
+  } else {
+    // No dist folder - copy package root contents (excluding node_modules, etc.)
+    const entries = await fs.readdir(localPkg.absolutePath);
+    for (const entry of entries) {
+      if (!['node_modules', '.turbo', '.git'].includes(entry)) {
+        await fs.copy(
+          path.join(localPkg.absolutePath, entry),
+          path.join(packageDir, entry),
+        );
+      }
+    }
+  }
 
   logger.info(`📦 Using local: ${localPkg.name} from ${localPkg.absolutePath}`);
 
