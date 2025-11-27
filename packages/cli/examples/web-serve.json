@@ -22,7 +22,7 @@
       },
       "sources": {
         "demo": {
-          "code": "sourceDemo",
+          "package": "@walkeros/source-demo",
           "config": {
             "settings": {
               "events": [
@@ -48,7 +48,6 @@
       "destinations": {
         "demo": {
           "package": "@walkeros/destination-demo",
-          "code": "destinationDemo",
           "config": {
             "settings": {
               "name": "demo"
@@ -56,7 +55,7 @@
           }
         },
         "api": {
-          "code": "destinationAPI",
+          "package": "@walkeros/web-destination-api",
           "config": {
             "settings": {
               "url": "http://localhost:8080/collect"

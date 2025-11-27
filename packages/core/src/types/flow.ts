@@ -308,6 +308,15 @@ export interface SourceReference {
   package: string;
 
   /**
+   * Resolved import variable name.
+   *
+   * @remarks
+   * Auto-resolved from packages[package].imports[0] during getFlowConfig().
+   * Can also be provided explicitly for advanced use cases.
+   */
+  code?: string;
+
+  /**
    * Source-specific configuration.
    *
    * @remarks
@@ -381,6 +390,15 @@ export interface DestinationReference {
    * "package": "@walkeros/web-destination-gtag@2.0.0"
    */
   package: string;
+
+  /**
+   * Resolved import variable name.
+   *
+   * @remarks
+   * Auto-resolved from packages[package].imports[0] during getFlowConfig().
+   * Can also be provided explicitly for advanced use cases.
+   */
+  code?: string;
 
   /**
    * Destination-specific configuration.

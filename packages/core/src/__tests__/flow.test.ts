@@ -14,6 +14,7 @@ import {
   sourceReferenceJsonSchema,
   destinationReferenceJsonSchema,
 } from '../schemas/flow';
+import { getFlowConfig, getPlatform } from '../flow';
 
 describe('Flow Schemas', () => {
   // ========================================
@@ -1115,5 +1116,229 @@ describe('Flow Schemas', () => {
       };
       expect(() => ConfigSchema.parse(config)).toThrow(z.ZodError);
     });
+  });
+});
+
+// ========================================
+// getFlowConfig Tests
+// ========================================
+
+describe('getFlowConfig', () => {
+  describe('code resolution from package', () => {
+    test('resolves code from package for sources', () => {
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: {
+            server: {},
+            packages: {
+              '@walkeros/server-source-express': {
+                imports: ['sourceExpress'],
+              },
+            },
+            sources: {
+              http: {
+                package: '@walkeros/server-source-express',
+                config: { port: 8080 },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.sources?.http.code).toBe('sourceExpress');
+    });
+
+    test('resolves code from package for destinations', () => {
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: {
+            web: {},
+            packages: {
+              '@walkeros/web-destination-gtag': {
+                imports: ['destinationGtag'],
+              },
+            },
+            destinations: {
+              ga4: {
+                package: '@walkeros/web-destination-gtag',
+                config: { measurementId: 'G-123' },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.ga4.code).toBe('destinationGtag');
+    });
+
+    test('preserves explicit code if provided', () => {
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: {
+            server: {},
+            packages: {
+              '@walkeros/server-source-express': {
+                imports: ['sourceExpress'],
+              },
+            },
+            sources: {
+              http: {
+                package: '@walkeros/server-source-express',
+                code: 'customCode', // Explicit code should be preserved
+                config: {},
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.sources?.http.code).toBe('customCode');
+    });
+
+    test('does not set code if package not in packages config', () => {
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: {
+            server: {},
+            packages: {}, // Empty packages
+            sources: {
+              http: {
+                package: '@walkeros/server-source-express',
+                config: {},
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.sources?.http.code).toBeUndefined();
+    });
+
+    test('does not set code if package has no imports', () => {
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: {
+            server: {},
+            packages: {
+              '@walkeros/server-source-express': {
+                version: 'latest',
+                // No imports array
+              },
+            },
+            sources: {
+              http: {
+                package: '@walkeros/server-source-express',
+                config: {},
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.sources?.http.code).toBeUndefined();
+    });
+
+    test('resolves code for multiple sources and destinations', () => {
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: {
+            server: {},
+            packages: {
+              '@walkeros/server-source-express': {
+                imports: ['sourceExpress'],
+              },
+              '@walkeros/destination-demo': {
+                imports: ['destinationDemo'],
+              },
+              '@walkeros/server-destination-gcp': {
+                imports: ['destinationBigQuery'],
+              },
+            },
+            sources: {
+              http: {
+                package: '@walkeros/server-source-express',
+                config: {},
+              },
+            },
+            destinations: {
+              demo: {
+                package: '@walkeros/destination-demo',
+                config: {},
+              },
+              bigquery: {
+                package: '@walkeros/server-destination-gcp',
+                config: {},
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.sources?.http.code).toBe('sourceExpress');
+      expect(config.destinations?.demo.code).toBe('destinationDemo');
+      expect(config.destinations?.bigquery.code).toBe('destinationBigQuery');
+    });
+  });
+
+  describe('flow selection', () => {
+    test('auto-selects single flow', () => {
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: { web: {} },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.web).toBeDefined();
+    });
+
+    test('throws for multiple flows without name', () => {
+      const setup = {
+        version: 1 as const,
+        flows: {
+          prod: { web: {} },
+          stage: { web: {} },
+        },
+      };
+      expect(() => getFlowConfig(setup as any)).toThrow('Multiple flows found');
+    });
+
+    test('selects named flow', () => {
+      const setup = {
+        version: 1 as const,
+        flows: {
+          prod: { web: {} },
+          stage: { server: {} },
+        },
+      };
+      const config = getFlowConfig(setup as any, 'stage');
+      expect(config.server).toBeDefined();
+    });
+  });
+});
+
+// ========================================
+// getPlatform Tests
+// ========================================
+
+describe('getPlatform', () => {
+  test('returns web for web config', () => {
+    expect(getPlatform({ web: {} } as any)).toBe('web');
+  });
+
+  test('returns server for server config', () => {
+    expect(getPlatform({ server: {} } as any)).toBe('server');
+  });
+
+  test('throws for config without platform', () => {
+    expect(() => getPlatform({} as any)).toThrow(
+      'Config must have web or server key',
+    );
   });
 });

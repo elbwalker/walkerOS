@@ -32,7 +32,7 @@ describe('Server Simulation Integration', () => {
           },
           destinations: {
             demo: {
-              code: 'destinationDemo',
+              package: '@walkeros/destination-demo',
               config: { settings: { name: 'Test', values: ['name'] } },
             },
           },

@@ -2,9 +2,13 @@
  * Configuration Type Guards and Validators
  *
  * Type checking utilities for configuration validation.
+ * Uses Zod schemas from @walkeros/core for Flow.Setup validation.
  */
 
 import type { Flow } from '@walkeros/core';
+import { schemas } from '@walkeros/core/dev';
+
+const { safeParseSetup } = schemas;
 
 /**
  * Type guard: Check if value is a plain object.
@@ -36,20 +40,11 @@ export function detectPlatform(
 }
 
 /**
- * Check if flow config has valid platform.
- */
-export function hasValidPlatform(flowConfig: Record<string, unknown>): boolean {
-  return detectPlatform(flowConfig) !== undefined;
-}
-
-/**
  * Type guard: Check if config is a valid Flow.Setup structure.
  *
  * @remarks
- * Flow.Setup is the only supported config format.
- * It must have:
- * - version: 1
- * - flows: object with at least one flow
+ * Uses Zod validation from @walkeros/core.
+ * Returns false instead of throwing on invalid input.
  *
  * @example
  * ```typescript
@@ -59,77 +54,39 @@ export function hasValidPlatform(flowConfig: Record<string, unknown>): boolean {
  * ```
  */
 export function isFlowSetup(data: unknown): data is Flow.Setup {
-  if (!isObject(data)) return false;
-  if (!('version' in data) || data.version !== 1) return false;
-  if (!('flows' in data) || !isObject(data.flows)) return false;
-
-  // Must have at least one flow
-  const flowKeys = Object.keys(data.flows);
-  if (flowKeys.length === 0) return false;
-
-  // Each flow must be a valid Flow.Config (has web or server key)
-  for (const key of flowKeys) {
-    const flow = (data.flows as Record<string, unknown>)[key];
-    if (!isObject(flow)) return false;
-    if (!hasValidPlatform(flow)) return false;
-  }
-
-  return true;
+  const result = safeParseSetup(data);
+  return result.success;
 }
 
 /**
  * Validate Flow.Setup and throw descriptive error if invalid.
+ *
+ * @remarks
+ * Uses Zod validation from @walkeros/core.
+ * Provides detailed error messages from Zod.
  *
  * @param data - Raw configuration data
  * @returns Validated Flow.Setup
  * @throws Error with descriptive message if validation fails
  */
 export function validateFlowSetup(data: unknown): Flow.Setup {
-  if (!isObject(data)) {
-    throw new Error(
-      `Invalid configuration: expected object, got ${typeof data}`,
-    );
+  const result = safeParseSetup(data);
+
+  if (!result.success) {
+    // Format Zod errors for CLI display
+    const errors = result.error.issues
+      .map((issue) => {
+        const path =
+          issue.path.length > 0 ? issue.path.map(String).join('.') : 'root';
+        return `  - ${path}: ${issue.message}`;
+      })
+      .join('\n');
+
+    throw new Error(`Invalid configuration:\n${errors}`);
   }
 
-  if (!('version' in data) || data.version !== 1) {
-    throw new Error(
-      `Invalid configuration: missing or invalid "version" field.\n` +
-        `Expected: { "version": 1, "flows": { ... } }`,
-    );
-  }
-
-  if (!('flows' in data) || !isObject(data.flows)) {
-    throw new Error(
-      `Invalid configuration: missing or invalid "flows" field.\n` +
-        `Expected: { "version": 1, "flows": { "default": { web: {}, ... } } }`,
-    );
-  }
-
-  const flowKeys = Object.keys(data.flows);
-  if (flowKeys.length === 0) {
-    throw new Error(
-      `Invalid configuration: "flows" must contain at least one flow.\n` +
-        `Example: { "version": 1, "flows": { "default": { web: {}, ... } } }`,
-    );
-  }
-
-  // Validate each flow
-  for (const key of flowKeys) {
-    const flow = (data.flows as Record<string, unknown>)[key];
-    if (!isObject(flow)) {
-      throw new Error(
-        `Invalid configuration: flow "${key}" must be an object.`,
-      );
-    }
-    if (!hasValidPlatform(flow)) {
-      throw new Error(
-        `Invalid configuration: flow "${key}" must have a "web" or "server" key.\n` +
-          `Example: { "web": {}, "destinations": { ... } }`,
-      );
-    }
-  }
-
-  return data as unknown as Flow.Setup;
+  // Cast to Flow.Setup since Zod's inferred type is compatible but not identical
+  return result.data as Flow.Setup;
 }
 
 /**

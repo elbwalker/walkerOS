@@ -269,7 +269,7 @@ describe('Config Loader', () => {
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow(/Invalid configuration.*version/);
+      ).toThrow(/Invalid configuration[\s\S]*version/);
     });
 
     test('throws error for invalid config format (wrong version)', () => {
@@ -284,7 +284,7 @@ describe('Config Loader', () => {
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow(/Invalid configuration.*version/);
+      ).toThrow(/Invalid configuration[\s\S]*version/);
     });
 
     test('throws error for invalid config format (missing flows)', () => {
@@ -296,7 +296,7 @@ describe('Config Loader', () => {
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow(/Invalid configuration.*flows/);
+      ).toThrow(/Invalid configuration[\s\S]*flows/);
     });
 
     test('throws error for empty flows', () => {
@@ -309,7 +309,7 @@ describe('Config Loader', () => {
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow(/must contain at least one flow/);
+      ).toThrow(/at least one flow/i);
     });
 
     test('throws error for flow without web/server key', () => {
@@ -326,7 +326,7 @@ describe('Config Loader', () => {
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow(/must have a "web" or "server" key/);
+      ).toThrow(/web.*or.*server|Exactly one of/i);
     });
 
     test('returns empty array for non-Flow.Setup config', () => {

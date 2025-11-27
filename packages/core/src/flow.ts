@@ -89,6 +89,30 @@ function interpolateVariables(
 }
 
 /**
+ * Resolve code from package reference.
+ * Looks up the import name from the packages configuration.
+ */
+function resolveCodeFromPackage(
+  packageName: string | undefined,
+  existingCode: string | undefined,
+  packages: Flow.Packages | undefined,
+): string | undefined {
+  // If code already exists, preserve it
+  if (existingCode) return existingCode;
+
+  // If no package or packages config, nothing to resolve
+  if (!packageName || !packages) return undefined;
+
+  // Look up the package in packages config
+  const pkgConfig = packages[packageName];
+  if (pkgConfig?.imports?.[0]) {
+    return pkgConfig.imports[0];
+  }
+
+  return undefined;
+}
+
+/**
  * Resolve $ref references in a value.
  */
 function resolveRefs(value: unknown, definitions: Flow.Definitions): unknown {
@@ -191,7 +215,18 @@ export function getFlowConfig(
       let processedConfig = resolveRefs(source.config, defs);
       processedConfig = interpolateVariables(processedConfig, vars);
 
-      result.sources[name] = { ...source, config: processedConfig };
+      // Resolve code from package reference
+      const resolvedCode = resolveCodeFromPackage(
+        source.package,
+        source.code,
+        result.packages,
+      );
+
+      result.sources[name] = {
+        ...source,
+        config: processedConfig,
+        ...(resolvedCode && { code: resolvedCode }),
+      };
     }
   }
 
@@ -212,7 +247,18 @@ export function getFlowConfig(
       let processedConfig = resolveRefs(dest.config, defs);
       processedConfig = interpolateVariables(processedConfig, vars);
 
-      result.destinations[name] = { ...dest, config: processedConfig };
+      // Resolve code from package reference
+      const resolvedCode = resolveCodeFromPackage(
+        dest.package,
+        dest.code,
+        result.packages,
+      );
+
+      result.destinations[name] = {
+        ...dest,
+        config: processedConfig,
+        ...(resolvedCode && { code: resolvedCode }),
+      };
     }
   }
 

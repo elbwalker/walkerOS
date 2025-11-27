@@ -19,7 +19,7 @@
       },
       "destinations": {
         "ga4": {
-          "code": "destinationGtag",
+          "package": "@walkeros/web-destination-gtag",
           "config": {
             "consent": {
               "marketing": true
@@ -61,7 +61,7 @@
           }
         },
         "demo": {
-          "code": "destinationDemo",
+          "package": "@walkeros/destination-demo",
           "config": {
             "settings": {
               "name": "Order Complete Demo",

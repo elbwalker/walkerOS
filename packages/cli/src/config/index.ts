@@ -9,7 +9,6 @@
 export {
   isObject,
   detectPlatform,
-  hasValidPlatform,
   isFlowSetup,
   validateFlowSetup,
   getAvailableFlows as getFlowNames,

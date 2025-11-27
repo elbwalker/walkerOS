@@ -2,6 +2,7 @@ import path from 'path';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
 import { getPlatform, type Elb } from '@walkeros/core';
+import { schemas } from '@walkeros/core/dev';
 import {
   createCommandLogger,
   createLogger,
@@ -40,22 +41,34 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
           name: 'event',
         });
 
-        // Validate event format
-        if (
-          !event ||
-          typeof event !== 'object' ||
-          !('name' in event) ||
-          typeof event.name !== 'string'
-        ) {
-          throw new Error(
-            'Event must be an object with a "name" property (string)',
-          );
+        // Validate event format using Zod schema
+        const eventResult = schemas.PartialEventSchema.safeParse(event);
+        if (!eventResult.success) {
+          const errors = eventResult.error.issues
+            .map((issue) => `${String(issue.path.join('.'))}: ${issue.message}`)
+            .join(', ');
+          throw new Error(`Invalid event: ${errors}`);
         }
 
-        // Warn about event naming format
-        if (!event.name.includes(' ')) {
+        const parsedEvent = eventResult.data as {
+          name?: string;
+          data?: Record<string, unknown>;
+        };
+        if (!parsedEvent.name) {
+          throw new Error('Invalid event: Missing required "name" property');
+        }
+
+        // Create typed event object for execution
+        const validatedEvent: { name: string; data: Record<string, unknown> } =
+          {
+            name: parsedEvent.name,
+            data: (parsedEvent.data || {}) as Record<string, unknown>,
+          };
+
+        // Warn about event naming format (walkerOS business logic)
+        if (!validatedEvent.name.includes(' ')) {
           logger.warn(
-            `Event name "${event.name}" should follow "ENTITY ACTION" format (e.g., "page view")`,
+            `Event name "${validatedEvent.name}" should follow "ENTITY ACTION" format (e.g., "page view")`,
           );
         }
 
@@ -108,10 +121,10 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
 
         if (platform === 'web') {
           logger.info('🌐 Executing in web environment (JSDOM)...');
-          result = await executeWebPush(tempPath, event, logger);
+          result = await executeWebPush(tempPath, validatedEvent, logger);
         } else if (platform === 'server') {
           logger.info('🖥️  Executing in server environment (Node.js)...');
-          result = await executeServerPush(tempPath, event, logger);
+          result = await executeServerPush(tempPath, validatedEvent, logger);
         } else {
           throw new Error(`Unsupported platform: ${platform}`);
         }
@@ -200,11 +213,19 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
 }
 
 /**
+ * Typed event input for push command
+ */
+interface PushEventInput {
+  name: string;
+  data: Record<string, unknown>;
+}
+
+/**
  * Execute push for web platform using JSDOM with real APIs
  */
 async function executeWebPush(
   bundlePath: string,
-  event: Record<string, unknown>,
+  event: PushEventInput,
   logger: Logger,
 ): Promise<PushResult> {
   const startTime = Date.now();
@@ -244,8 +265,7 @@ async function executeWebPush(
 
     // Push event
     logger.info(`Pushing event: ${event.name}`);
-    const eventData = (event.data || {}) as Record<string, unknown>;
-    const elbResult = await elb(event.name as string, eventData);
+    const elbResult = await elb(event.name, event.data);
 
     return {
       success: true,
@@ -266,7 +286,7 @@ async function executeWebPush(
  */
 async function executeServerPush(
   bundlePath: string,
-  event: Record<string, unknown>,
+  event: PushEventInput,
   logger: Logger,
   timeout: number = 60000, // 60 second default timeout
 ): Promise<PushResult> {
@@ -305,13 +325,12 @@ async function executeServerPush(
 
       // Push event
       logger.info(`Pushing event: ${event.name}`);
-      const eventData = (event.data || {}) as Record<string, unknown>;
       const elbResult = await (
         elb as (
           name: string,
           data: Record<string, unknown>,
         ) => Promise<Elb.PushResult>
-      )(event.name as string, eventData);
+      )(event.name, event.data);
 
       return {
         success: true,
