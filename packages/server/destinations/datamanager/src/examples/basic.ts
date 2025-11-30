@@ -10,7 +10,6 @@ export const minimal: DestinationDataManager.Config = {
       private_key:
         '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n',
     },
-    eventSource: 'WEB',
     destinations: [
       {
         operatingAccount: {
@@ -49,7 +48,6 @@ export const complete: DestinationDataManager.Config = {
         productDestinationId: 'G-XXXXXXXXXX',
       },
     ],
-    eventSource: 'WEB',
     batchSize: 100,
     batchInterval: 5000,
     validateOnly: false,
@@ -69,11 +67,6 @@ export const complete: DestinationDataManager.Config = {
     clientId: 'user.device',
     sessionAttributes: 'context.sessionAttributes',
   },
-  data: {
-    map: {
-      eventSource: { value: 'WEB' },
-    },
-  },
 };
 
 /**
@@ -90,7 +83,6 @@ export const ga4: DestinationDataManager.Config = {
         productDestinationId: 'G-XXXXXXXXXX',
       },
     ],
-    eventSource: 'WEB',
   },
 };
 
@@ -100,7 +92,6 @@ export const ga4: DestinationDataManager.Config = {
 export const debug: DestinationDataManager.Config = {
   settings: {
     keyFilename: './service-account.json',
-    eventSource: 'WEB',
     destinations: [
       {
         operatingAccount: {

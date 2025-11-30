@@ -11,7 +11,6 @@ export const awsLambda: DestinationDataManager.Config = {
       client_email: process.env.GOOGLE_CLIENT_EMAIL || '',
       private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
     },
-    eventSource: 'WEB',
     destinations: [
       {
         operatingAccount: {
@@ -32,7 +31,6 @@ export const awsLambda: DestinationDataManager.Config = {
 export const gcpCloudFunctions: DestinationDataManager.Config = {
   settings: {
     // No auth config needed - ADC works automatically on GCP!
-    eventSource: 'WEB',
     destinations: [
       {
         operatingAccount: {
@@ -53,7 +51,6 @@ export const gcpCloudFunctions: DestinationDataManager.Config = {
 export const localDevelopment: DestinationDataManager.Config = {
   settings: {
     keyFilename: './service-account.json',
-    eventSource: 'WEB',
     destinations: [
       {
         operatingAccount: {
@@ -79,7 +76,6 @@ export const localDevelopment: DestinationDataManager.Config = {
 export const dockerKubernetes: DestinationDataManager.Config = {
   settings: {
     // No explicit config - ADC uses GOOGLE_APPLICATION_CREDENTIALS env var
-    eventSource: 'WEB',
     destinations: [
       {
         operatingAccount: {
@@ -103,7 +99,6 @@ export const customScopes: DestinationDataManager.Config = {
       private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
     },
     scopes: ['https://www.googleapis.com/auth/datamanager'],
-    eventSource: 'WEB',
     destinations: [
       {
         operatingAccount: {

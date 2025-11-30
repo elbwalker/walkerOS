@@ -94,7 +94,6 @@ export const mapping = {
 export const userDataMapping: DestinationDataManager.Config = {
   settings: {
     keyFilename: './service-account.json',
-    eventSource: 'WEB',
     destinations: [
       {
         operatingAccount: {

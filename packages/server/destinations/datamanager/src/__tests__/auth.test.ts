@@ -34,7 +34,6 @@ describe('Authentication', () => {
           private_key:
             '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
         },
-        eventSource: 'WEB',
         destinations: [],
       };
 
@@ -50,7 +49,6 @@ describe('Authentication', () => {
     test('creates client with keyFilename', async () => {
       const settings: Settings = {
         keyFilename: '/path/to/key.json',
-        eventSource: 'WEB',
         destinations: [],
       };
 
@@ -65,7 +63,6 @@ describe('Authentication', () => {
 
     test('uses ADC as fallback when no auth config provided', async () => {
       const settings: Settings = {
-        eventSource: 'WEB',
         destinations: [],
       };
 
@@ -85,7 +82,6 @@ describe('Authentication', () => {
             '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
         },
         scopes: ['https://www.googleapis.com/auth/custom-scope'],
-        eventSource: 'WEB',
         destinations: [],
       };
 
@@ -105,7 +101,6 @@ describe('Authentication', () => {
             '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
         },
         keyFilename: '/path/to/key.json',
-        eventSource: 'WEB',
         destinations: [],
       };
 
@@ -118,7 +113,6 @@ describe('Authentication', () => {
 
     test('throws AuthError on failure', async () => {
       const settings: Settings = {
-        eventSource: 'WEB',
         destinations: [],
       };
 
@@ -133,7 +127,6 @@ describe('Authentication', () => {
 
     test('AuthError includes cause', async () => {
       const settings: Settings = {
-        eventSource: 'WEB',
         destinations: [],
       };
 
