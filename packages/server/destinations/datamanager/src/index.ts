@@ -11,21 +11,22 @@ export const destinationDataManager: DestinationInterface = {
   config: {},
 
   async init({ config: partialConfig, env, logger }) {
+    logger.debug('Data Manager init started');
+    logger.info('Data Manager initializing...');
+
+    // getConfig validates required fields and returns ValidatedConfig
     const config = getConfig(partialConfig, logger);
 
-    if (!config.settings) {
-      logger.throw('Settings required for Data Manager destination');
-    }
-
-    if (
-      !config.settings.destinations ||
-      config.settings.destinations.length === 0
-    ) {
-      logger.throw('At least one destination required in settings');
-    }
+    logger.debug('Settings validated', {
+      validateOnly: config.settings.validateOnly,
+      destinationCount: config.settings.destinations.length,
+      eventSource: config.settings.eventSource,
+    });
 
     try {
+      logger.debug('Creating auth client...');
       const authClient = await createAuthClient(config.settings);
+      logger.debug('Auth client created successfully');
 
       return {
         ...config,

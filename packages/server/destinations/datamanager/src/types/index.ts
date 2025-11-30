@@ -30,8 +30,8 @@ export interface Settings {
   /** Array of destination accounts and conversion actions/user lists */
   destinations: Destination[];
 
-  /** Default event source if not specified per event */
-  eventSource?: EventSource;
+  /** Event source for all events (required) */
+  eventSource: EventSource;
 
   /** Maximum number of events to batch before sending (max 2000) */
   batchSize?: number;
@@ -95,6 +95,14 @@ export interface DestinationInterface
 export type Config = {
   settings: Settings;
 } & DestinationServer.Config<Types>;
+
+/**
+ * Config after validation - settings is guaranteed to exist with required fields
+ * Use this type after calling getConfig() to get proper type narrowing
+ */
+export type ValidatedConfig = Omit<Config, 'settings'> & {
+  settings: Settings;
+};
 
 export type InitFn = DestinationServer.InitFn<Types>;
 export type PushFn = DestinationServer.PushFn<Types>;

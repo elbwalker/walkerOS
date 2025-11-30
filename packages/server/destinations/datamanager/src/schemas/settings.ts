@@ -20,8 +20,8 @@ export const SettingsSchema = z.object({
       'Array of destination accounts and conversion actions/user lists (max 10)',
     ),
   eventSource: EventSourceSchema.describe(
-    'Default event source if not specified per event (like WEB)',
-  ).optional(),
+    'Event source for all events (required). Values: WEB, APP, IN_STORE, PHONE, OTHER',
+  ),
   batchSize: z
     .number()
     .int()

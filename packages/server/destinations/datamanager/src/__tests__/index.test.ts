@@ -86,7 +86,9 @@ describe('Server Destination Data Manager', () => {
       const mockCollector = {} as Collector.Instance;
       await expect(
         destination.init({
-          config: { settings: { destinations: [] } as Settings },
+          config: {
+            settings: { eventSource: 'WEB', destinations: [] } as Settings,
+          },
           collector: mockCollector,
           env: {},
           logger: mockLogger,
@@ -156,6 +158,7 @@ describe('Server Destination Data Manager', () => {
 
   describe('push', () => {
     const defaultSettings: Settings = {
+      eventSource: 'WEB',
       destinations: [
         {
           operatingAccount: {
@@ -467,6 +470,7 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
+          eventSource: 'WEB',
           destinations: [
             {
               operatingAccount: {
@@ -540,6 +544,7 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
+          eventSource: 'WEB',
           destinations: [
             {
               operatingAccount: {
@@ -575,6 +580,7 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
+          eventSource: 'WEB',
           destinations: [
             {
               operatingAccount: {
@@ -610,6 +616,7 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
+          eventSource: 'WEB',
           destinations: [
             {
               operatingAccount: {
@@ -644,6 +651,7 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
+          eventSource: 'WEB',
           destinations: [
             {
               operatingAccount: {
@@ -685,6 +693,7 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
+          eventSource: 'WEB',
           destinations: [
             {
               operatingAccount: {
@@ -719,6 +728,7 @@ describe('Server Destination Data Manager', () => {
 
       const config: Config = {
         settings: {
+          eventSource: 'WEB',
           destinations: [
             {
               operatingAccount: {

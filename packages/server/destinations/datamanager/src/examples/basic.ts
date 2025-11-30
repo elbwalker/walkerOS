@@ -10,6 +10,7 @@ export const minimal: DestinationDataManager.Config = {
       private_key:
         '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n',
     },
+    eventSource: 'WEB',
     destinations: [
       {
         operatingAccount: {
@@ -99,6 +100,7 @@ export const ga4: DestinationDataManager.Config = {
 export const debug: DestinationDataManager.Config = {
   settings: {
     keyFilename: './service-account.json',
+    eventSource: 'WEB',
     destinations: [
       {
         operatingAccount: {
