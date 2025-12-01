@@ -1,5 +1,22 @@
 # @walkeros/website
 
+## 0.3.2
+
+### Patch Changes
+
+- cli cache
+- Updated dependencies
+- Updated dependencies
+  - @walkeros/core@0.4.2
+  - @walkeros/walker.js@0.4.2
+  - @walkeros/collector@0.4.2
+  - @walkeros/web-destination-piwikpro@0.4.2
+  - @walkeros/web-source-browser@0.4.2
+  - @walkeros/web-destination-api@0.4.2
+  - @walkeros/web-destination-gtag@0.4.2
+  - @walkeros/web-destination-meta@0.4.2
+  - @walkeros/web-destination-plausible@0.4.2
+
 ## 0.3.1
 
 ### Patch Changes

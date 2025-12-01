@@ -1,5 +1,18 @@
 # @walkeros/cli
 
+## 0.4.2
+
+### Patch Changes
+
+- simulate server and local packages
+- cli cache
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+  - @walkeros/core@0.4.2
+  - @walkeros/docker@0.2.2
+  - @walkeros/server-core@0.4.2
+
 ## 0.4.1
 
 ### Patch Changes

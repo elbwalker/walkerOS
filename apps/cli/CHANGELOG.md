@@ -1,5 +1,14 @@
 # walkeros
 
+## 0.4.2
+
+### Patch Changes
+
+- cli cache
+- Updated dependencies
+- Updated dependencies
+  - @walkeros/cli@0.4.2
+
 ## 0.4.1
 
 ### Patch Changes
