@@ -11,7 +11,7 @@ export const destinationMeta: Destination = {
 
   config: {},
 
-  init({ config, env }) {
+  init({ config, env, logger }) {
     const { settings, loadScript } = config;
     const { pixelId } = settings || {};
 
@@ -19,14 +19,14 @@ export const destinationMeta: Destination = {
     if (loadScript) addScript(env);
 
     // Required pixel id
-    if (!pixelId) return false;
+    if (!pixelId) logger.throw('Config settings pixelId missing');
 
     // fbq function setup
     setup(env);
 
     const { window } = getEnv(env);
     const fbq = window.fbq as facebook.Pixel.Event;
-    fbq('init', pixelId);
+    fbq('init', pixelId!);
   },
 
   push(event, { config, mapping = {}, data, env }) {

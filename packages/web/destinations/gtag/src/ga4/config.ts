@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { WalkerOS, Logger } from '@walkeros/core';
 import type { GA4Settings } from '../types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { addScript, initializeGtag } from '../shared/gtag';
@@ -6,14 +6,15 @@ import { getEnv } from '@walkeros/web-core';
 
 export function initGA4(
   settings: GA4Settings,
-  loadScript?: boolean,
-  env?: DestinationWeb.Env,
+  loadScript: boolean | undefined,
+  env: DestinationWeb.Env | undefined,
+  logger: Logger.Instance,
 ): void {
   const { window, document } = getEnv(env);
   const { measurementId, transport_url, server_container_url, pageview } =
     settings;
 
-  if (!measurementId) return;
+  if (!measurementId) logger.throw('Config settings ga4.measurementId missing');
 
   // Load the gtag script
   if (loadScript) addScript(measurementId, undefined, document as Document);

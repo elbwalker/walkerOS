@@ -1,19 +1,20 @@
 {
-  "flow": {
-    "platform": "server",
-    "destinations": {
-      "demo": {
-        "code": "destinationDemo"
-      }
-    }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": {
-        "imports": ["startFlow"]
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": {
+          "imports": ["startFlow"]
+        },
+        "@walkeros/destination-demo": {
+          "imports": ["destinationDemo"]
+        }
       },
-      "@walkeros/destination-demo": {
-        "imports": ["destinationDemo"]
+      "destinations": {
+        "demo": {
+          "code": "destinationDemo"
+        }
       }
     }
   }

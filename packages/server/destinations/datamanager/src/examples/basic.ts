@@ -48,7 +48,6 @@ export const complete: DestinationDataManager.Config = {
         productDestinationId: 'G-XXXXXXXXXX',
       },
     ],
-    eventSource: 'WEB',
     batchSize: 100,
     batchInterval: 5000,
     validateOnly: false,
@@ -68,11 +67,6 @@ export const complete: DestinationDataManager.Config = {
     clientId: 'user.device',
     sessionAttributes: 'context.sessionAttributes',
   },
-  data: {
-    map: {
-      eventSource: { value: 'WEB' },
-    },
-  },
 };
 
 /**
@@ -89,7 +83,6 @@ export const ga4: DestinationDataManager.Config = {
         productDestinationId: 'G-XXXXXXXXXX',
       },
     ],
-    eventSource: 'WEB',
   },
 };
 
@@ -108,6 +101,5 @@ export const debug: DestinationDataManager.Config = {
         productDestinationId: 'AW-CONVERSION-123',
       },
     ],
-    logLevel: 'debug', // Shows all API calls and responses
   },
 };

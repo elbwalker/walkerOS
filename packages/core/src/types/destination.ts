@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type {
   Collector,
-  Handler,
+  Logger,
   Mapping as WalkerOSMapping,
   On,
   WalkerOS,
@@ -76,12 +76,10 @@ export interface Config<T extends TypesGeneric = Types> {
   id?: string;
   init?: boolean;
   loadScript?: boolean;
+  logger?: Logger.Config;
   mapping?: WalkerOSMapping.Rules<WalkerOSMapping.Rule<Mapping<T>>>;
   policy?: Policy;
   queue?: boolean;
-  verbose?: boolean;
-  onError?: Handler.Error;
-  onLog?: Handler.Log;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
@@ -115,6 +113,7 @@ export interface Context<T extends TypesGeneric = Types> {
   config: Config<T>;
   data?: Data;
   env: Env<T>;
+  logger: Logger.Instance;
 }
 
 export interface InitContext<T extends TypesGeneric = Types> {
@@ -122,6 +121,7 @@ export interface InitContext<T extends TypesGeneric = Types> {
   config: Config<Types<Partial<Settings<T>>, Mapping<T>, Env<T>>>;
   data?: Data;
   env: Env<T>;
+  logger: Logger.Instance;
 }
 
 export interface PushContext<T extends TypesGeneric = Types>

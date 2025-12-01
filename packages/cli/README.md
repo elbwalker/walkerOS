@@ -43,8 +43,8 @@ walkeros bundle https://example.com/config.json                  # Remote URL
 
 **Options:**
 
-- `-e, --env <name>` - Build specific environment (multi-env configs)
-- `--all` - Build all environments
+- `-f, --flow <name>` - Build specific flow (multi-flow configs)
+- `--all` - Build all flows
 - `-s, --stats` - Show bundle statistics
 - `--json` - Output stats as JSON
 - `--no-cache` - Disable package caching
@@ -58,7 +58,8 @@ walkeros bundle https://example.com/config.json                  # Remote URL
 walkeros bundle examples/server-collect.json --stats
 ```
 
-The output path is specified in the config's `build.output` field.
+The output path uses convention-based defaults: `./dist/bundle.mjs` for server,
+`./dist/walker.js` for web.
 
 ### simulate
 
@@ -165,58 +166,92 @@ walkeros bundle flow.json --no-cache
 
 ## Flow Configuration
 
-Minimal example:
+Flow configs use the `Flow.Setup` format with `version` and `flows`:
 
 ```json
 {
-  "flow": {
-    "platform": "server",
-    "sources": {
-      "http": {
-        "code": "sourceExpress",
-        "config": {
-          "settings": {
-            "path": "/collect",
-            "port": 8080
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      },
+      "sources": {
+        "http": {
+          "code": "sourceExpress",
+          "config": {
+            "settings": { "path": "/collect", "port": 8080 }
           }
         }
-      }
-    },
-    "destinations": {
-      "demo": {
-        "code": "destinationDemo",
-        "config": {
-          "settings": {
-            "name": "Demo"
+      },
+      "destinations": {
+        "demo": {
+          "code": "destinationDemo",
+          "config": {
+            "settings": { "name": "Demo" }
           }
         }
-      }
-    },
-    "collector": {
-      "run": true
+      },
+      "collector": { "run": true }
     }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": {
-        "version": "latest",
-        "imports": ["startFlow"]
-      },
-      "@walkeros/server-source-express": {
-        "version": "latest",
-        "imports": ["sourceExpress"]
-      },
-      "@walkeros/destination-demo": {
-        "version": "latest",
-        "imports": ["destinationDemo"]
-      }
-    },
-    "code": "// Custom code here\n",
-    "output": "bundle.mjs",
-    "template": "./templates/base.hbs"
   }
 }
 ```
+
+Platform is determined by the `web: {}` or `server: {}` key presence.
+
+### Local Packages
+
+Use local packages instead of npm for development or testing unpublished
+packages:
+
+```json
+{
+  "packages": {
+    "@walkeros/collector": {
+      "path": "../packages/collector",
+      "imports": ["startFlow"]
+    },
+    "@my/custom-destination": {
+      "path": "./my-destination",
+      "imports": ["myDestination"]
+    }
+  }
+}
+```
+
+**Resolution rules:**
+
+- `path` takes precedence over `version`
+- Relative paths are resolved from the config file's directory
+- If `dist/` folder exists, it's used; otherwise package root is used
+
+**Dependency resolution:**
+
+When a local package has dependencies on other packages that are also specified
+with local paths, the CLI will use the local versions for those dependencies
+too. This prevents npm versions from overwriting your local packages.
+
+```json
+{
+  "packages": {
+    "@walkeros/core": {
+      "path": "../packages/core",
+      "imports": []
+    },
+    "@walkeros/collector": {
+      "path": "../packages/collector",
+      "imports": ["startFlow"]
+    }
+  }
+}
+```
+
+In this example, even though `@walkeros/collector` depends on `@walkeros/core`,
+the local version of core will be used (not downloaded from npm).
 
 See [examples/](./examples/) for complete working configurations.
 

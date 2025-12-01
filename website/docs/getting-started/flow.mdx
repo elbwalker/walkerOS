@@ -6,7 +6,7 @@ sidebar_position: 4
 
 # Flow Configuration
 
-Flow configuration is walkerOS's **"configuration as code"** approach. A single JSON file defines your entire event collection pipeline—sources, collector, destinations, and build settings—making it portable, version-controlled, and deployable across environments.
+Flow configuration is walkerOS's **"configuration as code"** approach. A single JSON file defines your entire event collection pipeline—sources, collector, destinations, and packages—making it portable, version-controlled, and deployable across environments.
 
 ## Philosophy
 
@@ -19,59 +19,49 @@ If you're familiar with **Segment**, **Jitsu**, or **Amplitude**—think of flow
 
 ## Configuration Structure
 
-A flow configuration has two main sections:
+A flow configuration uses the `Flow.Setup` format with two required fields:
 
-1. **`flow`** - Runtime configuration (sources, destinations, collector)
-2. **`build`** - Build-time configuration (packages, output format, optimization)
+1. **`version`** - Schema version (currently `1`)
+2. **`flows`** - Named flow configurations
 
 ### Basic Example
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "server",
-    "sources": {
-      "http": {
-        "code": "sourceExpress",
-        "config": {
-          "settings": {
-            "path": "/collect",
-            "port": 8080
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": {
+              "path": "/collect",
+              "port": 8080
+            }
           }
         }
-      }
-    },
-    "destinations": {
-      "console": {
-        "code": "destinationDemo",
-        "config": {
-          "settings": {
-            "name": "Console Logger"
+      },
+      "destinations": {
+        "console": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": {
+              "name": "Console Logger"
+            }
           }
         }
+      },
+      "collector": {
+        "run": true
       }
-    },
-    "collector": {
-      "run": true
     }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": {
-        "version": "latest",
-        "imports": ["startFlow"]
-      },
-      "@walkeros/server-source-express": {
-        "version": "latest",
-        "imports": ["sourceExpress"]
-      },
-      "@walkeros/destination-demo": {
-        "version": "latest",
-        "imports": ["destinationDemo"]
-      }
-    },
-    "output": "./dist/flow.mjs",
-    "minify": true
   }
 }`}
   language="json"
@@ -79,38 +69,101 @@ A flow configuration has two main sections:
 
 This creates an HTTP event collection endpoint that logs events to the console.
 
-## Flow Section
+## Flow Configuration (Flow.Config)
 
-The `flow` section defines **runtime behavior**—what happens when your application runs.
+Each flow in `flows` is a `Flow.Config` that defines runtime behavior.
 
 ### Platform
 
-Specifies the execution environment:
+Platform is determined by the presence of the `web` or `server` key:
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "server"  // or "web"
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {}  // Server platform (Node.js)
+    }
   }
 }`}
   language="json"
 />
 
-**Options**:
-- `"server"` - Node.js server environment (HTTP endpoints, cloud functions)
-- `"web"` - Browser environment (client-side tracking)
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {}  // Web platform (browser)
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Platform options:**
+- `"server": {}` - Node.js server environment (HTTP endpoints, cloud functions)
+- `"web": {}` - Browser environment (client-side tracking)
+
+The CLI automatically applies platform-specific build defaults:
+- **Web**: IIFE format, ES2020 target, output to `./dist/walker.js`
+- **Server**: ESM format, Node20 target, output to `./dist/bundle.mjs`
+
+### Packages
+
+Specifies npm packages to download and bundle:
+
+<CodeSnippet
+  code={`{
+  "packages": {
+    "@walkeros/collector": {
+      "version": "latest",
+      "imports": ["startFlow"]
+    },
+    "@walkeros/server-source-express": {
+      "version": "0.4.0",
+      "imports": ["sourceExpress"]
+    },
+    "@walkeros/destination-demo": {
+      "imports": ["destinationDemo", "destinationDemo2"]
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Properties:**
+- **`version`** - npm version (semver or "latest", defaults to "latest")
+- **`imports`** - Array of named exports to import
+- **`path`** - Local filesystem path (takes precedence over `version`)
+
+For development or custom packages, use `path` to reference a local directory:
+
+<CodeSnippet
+  code={`{
+  "packages": {
+    "@my/custom-destination": {
+      "path": "./my-destination",
+      "imports": ["myDestination"]
+    }
+  }
+}`}
+  language="json"
+/>
+
+See [Local Packages](/docs/apps/cli#local-packages) in the CLI documentation for more details.
 
 ### Sources
 
 Sources capture events from various inputs. Each source needs:
-- **`code`** - The imported function name (from `build.packages.imports`)
+- **`package`** - The npm package (with optional version)
 - **`config`** - Source-specific settings
 
 <CodeSnippet
   code={`{
   "sources": {
     "http": {
-      "code": "sourceExpress",
+      "package": "@walkeros/server-source-express",
       "config": {
         "settings": {
           "path": "/collect",
@@ -124,7 +177,7 @@ Sources capture events from various inputs. Each source needs:
   language="json"
 />
 
-**Common Sources**:
+**Common Sources:**
 - `@walkeros/server-source-express` - HTTP event collection endpoint
 - `@walkeros/web-source-browser` - Browser DOM event tracking
 - `@walkeros/web-source-dataLayer` - DataLayer integration
@@ -133,13 +186,13 @@ See [Sources documentation](/docs/sources/) for all available options.
 
 ### Destinations
 
-Destinations receive processed events and send them to analytics tools, databases, or APIs. Structure is similar to sources:
+Destinations receive processed events and send them to analytics tools, databases, or APIs:
 
 <CodeSnippet
   code={`{
   "destinations": {
     "bigquery": {
-      "code": "destinationGCP",
+      "package": "@walkeros/server-destination-gcp",
       "config": {
         "settings": {
           "projectId": "my-project",
@@ -156,7 +209,7 @@ Destinations receive processed events and send them to analytics tools, database
       }
     },
     "console": {
-      "code": "destinationDemo",
+      "package": "@walkeros/destination-demo",
       "config": {
         "settings": {
           "name": "Debug Logger"
@@ -168,13 +221,13 @@ Destinations receive processed events and send them to analytics tools, database
   language="json"
 />
 
-**Configuration Options**:
+**Configuration options:**
 - **`settings`** - Destination-specific configuration (API keys, endpoints, etc.)
 - **`mapping`** - Event transformation rules (see [Mapping documentation](/docs/mapping))
 - **`consent`** - Required consent states
 - **`policy`** - Processing rules
 
-**Common Destinations**:
+**Common Destinations:**
 - `@walkeros/destination-demo` - Console logging (great for testing)
 - `@walkeros/server-destination-gcp` - Google BigQuery
 - `@walkeros/server-destination-aws` - AWS services
@@ -185,7 +238,7 @@ See [Destinations documentation](/docs/destinations/) for all available options.
 
 ### Collector
 
-The collector processes events from sources and routes them to destinations.
+The collector processes events from sources and routes them to destinations:
 
 <CodeSnippet
   code={`{
@@ -202,131 +255,120 @@ The collector processes events from sources and routes them to destinations.
   language="json"
 />
 
-**Options**:
+**Options:**
 - **`run`** - Whether to start the collector automatically (default: `true`)
 - **`globals`** - Properties added to every event
 - **`consent`** - Default consent state
 
 See [Collector documentation](/docs/collector/) for complete options.
 
-## Build Section
-
-The `build` section defines **build-time behavior**—how your flow is bundled into executable code.
-
-### Packages
-
-Specifies npm packages to download and bundle:
-
-<CodeSnippet
-  code={`{
-  "build": {
-    "packages": {
-      "@walkeros/collector": {
-        "version": "latest",
-        "imports": ["startFlow"]
-      },
-      "@walkeros/server-source-express": {
-        "version": "0.4.0",
-        "imports": ["sourceExpress"]
-      },
-      "@walkeros/destination-demo": {
-        "version": "latest",
-        "imports": ["destinationDemo", "destinationDemo2"]
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
-**Properties**:
-- **`version`** - npm version (semver or "latest")
-- **`imports`** - Array of named exports to import
-
-### Output Options
-
-<CodeSnippet
-  code={`{
-  "build": {
-    "output": "./dist/flow.mjs",
-    "minify": true,
-    "format": "esm"
-  }
-}`}
-  language="json"
-/>
-
-**Properties**:
-- **`output`** - Output file path (default: `./dist/bundle.js`)
-- **`minify`** - Minify the output (default: `true`)
-- **`format`** - Output format: `"esm"`, `"cjs"`, or `"iife"` (default: `"esm"`)
-
 ### Web-Specific Options
 
-For browser bundles (`platform: "web"`):
+For browser bundles, you can configure window variable names:
 
 <CodeSnippet
   code={`{
-  "build": {
+  "web": {
     "windowCollector": "walkerCollector",
-    "windowElb": "elb",
-    "format": "iife"
+    "windowElb": "elb"
   }
 }`}
   language="json"
 />
 
-**Properties**:
-- **`windowCollector`** - Global variable name for collector instance
-- **`windowElb`** - Global variable name for event tracking function
+**Properties:**
+- **`windowCollector`** - Global variable name for collector instance (default: `"collector"`)
+- **`windowElb`** - Global variable name for event tracking function (default: `"elb"`)
 
-## Multi-Environment Configuration
+## Multi-Flow Configuration
 
-For managing dev/staging/production environments in one file:
+For managing dev/staging/production flows in one file:
 
 <CodeSnippet
   code={`{
   "version": 1,
   "variables": {
-    "GA_ID": "G-XXXXXXXXXX",
-    "API_ENDPOINT": "/collect"
+    "GA_ID": "G-XXXXXXXXXX"
   },
-  "environments": {
+  "flows": {
     "development": {
-      "flow": {
-        "platform": "server",
-        "sources": { /* ... */ },
-        "destinations": {
-          "console": {
-            "code": "destinationDemo"
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      },
+      "destinations": {
+        "console": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": { "name": "Dev Logger" }
           }
         }
       },
-      "build": {
-        "packages": { /* ... */ },
-        "output": "./dist/dev.mjs",
-        "minify": false
-      }
+      "collector": { "run": true }
     },
     "production": {
-      "flow": {
-        "platform": "server",
-        "sources": { /* ... */ },
-        "destinations": {
-          "bigquery": {
-            "code": "destinationGCP",
-            "config": {
-              "settings": {
-                "projectId": "prod-project"
-              }
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] }
+      },
+      "destinations": {
+        "bigquery": {
+          "package": "@walkeros/server-destination-gcp",
+          "config": {
+            "settings": {
+              "projectId": "prod-project"
             }
           }
         }
       },
-      "build": {
-        "packages": { /* ... */ },
-        "output": "./dist/prod.mjs",
-        "minify": true
+      "collector": { "run": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Build specific flows using the CLI:
+
+<CodeSnippet
+  code={`# Build development flow
+walkeros bundle config.json --flow development
+
+# Build production flow
+walkeros bundle config.json --flow production
+
+# Build all flows
+walkeros bundle config.json --all`}
+  language="bash"
+/>
+
+## Variables and Definitions
+
+### Variables
+
+Variables allow dynamic values with environment variable support:
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "variables": {
+    "GA_ID": "\${GA_MEASUREMENT_ID:G-DEFAULT}",
+    "API_ENDPOINT": "/collect"
+  },
+  "flows": {
+    "default": {
+      "web": {},
+      "destinations": {
+        "gtag": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "settings": {
+              "ga4": { "measurementId": "\${GA_ID}" }
+            }
+          }
+        }
       }
     }
   }
@@ -334,19 +376,83 @@ For managing dev/staging/production environments in one file:
   language="json"
 />
 
-Build specific environments using the CLI:
+**Variable syntax:**
+- `${VAR_NAME}` - Required variable
+- `${VAR_NAME:default}` - Variable with default value
+
+**Resolution order:**
+1. `process.env` (environment variables)
+2. Config-level `variables`
+3. Setup-level `variables`
+4. Inline default value
+
+### Definitions
+
+Definitions allow reusable configuration blocks:
 
 <CodeSnippet
-  code={`# Build development environment
-walkeros bundle config.json --env development
-
-# Build production environment
-walkeros bundle config.json --env production
-
-# Build all environments
-walkeros bundle config.json --all`}
-  language="bash"
+  code={`{
+  "version": 1,
+  "definitions": {
+    "commonMapping": {
+      "page": {
+        "view": { "name": "page_view" }
+      }
+    }
+  },
+  "flows": {
+    "default": {
+      "web": {},
+      "destinations": {
+        "gtag": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "mapping": { "$ref": "#/definitions/commonMapping" }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
 />
+
+## Type Hierarchy
+
+walkerOS uses a clear type hierarchy:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Flow.Setup (config file)                                       │
+│  ├── version: 1                                                 │
+│  ├── variables?: { GA_ID: "G-XXX" }                            │
+│  ├── definitions?: { commonMapping: {...} }                     │
+│  └── flows:                                                     │
+│       └── default: Flow.Config                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ CLI resolves variables, $refs
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Flow.Config (resolved flow)                                    │
+│  ├── web: {} or server: {}                                      │
+│  ├── packages: { ... }                                          │
+│  ├── sources: { ... }                                           │
+│  ├── destinations: { ... }                                      │
+│  └── collector: { ... }                                         │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ CLI bundles and transforms
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Collector.InitConfig (runtime)                                 │
+│  Passed to startFlow() at runtime                               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+- **`Flow.Setup`** - Root config file format for CLI
+- **`Flow.Config`** - Single flow configuration
+- **`Collector.InitConfig`** - Runtime type passed to `startFlow()`
 
 ## Complete Example
 
@@ -354,88 +460,75 @@ Here's a production-ready flow that accepts HTTP events and sends them to BigQue
 
 <CodeSnippet
   code={`{
-  "flow": {
-    "platform": "server",
-    "sources": {
-      "http": {
-        "code": "sourceExpress",
-        "config": {
-          "settings": {
-            "path": "/collect",
-            "port": 8080,
-            "cors": true
-          }
-        }
-      }
-    },
-    "destinations": {
-      "bigquery": {
-        "code": "destinationGCP",
-        "config": {
-          "settings": {
-            "projectId": "my-analytics-project",
-            "datasetId": "events",
-            "tableId": "raw_events"
-          },
-          "mapping": {
-            "page": {
-              "view": {
-                "name": "page_view",
-                "data": {
-                  "map": {
-                    "page_title": "data.title",
-                    "page_path": "data.path",
-                    "timestamp": "timestamp"
-                  }
-                }
-              }
-            },
-            "product": {
-              "view": { "name": "product_view" },
-              "add": { "name": "add_to_cart" }
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
+        "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": {
+              "path": "/collect",
+              "port": 8080,
+              "cors": true
             }
           }
         }
       },
-      "console": {
-        "code": "destinationDemo",
-        "config": {
-          "settings": {
-            "name": "Debug Logger",
-            "values": ["name", "data", "timestamp"]
+      "destinations": {
+        "bigquery": {
+          "package": "@walkeros/server-destination-gcp",
+          "config": {
+            "settings": {
+              "projectId": "my-analytics-project",
+              "datasetId": "events",
+              "tableId": "raw_events"
+            },
+            "mapping": {
+              "page": {
+                "view": {
+                  "name": "page_view",
+                  "data": {
+                    "map": {
+                      "page_title": "data.title",
+                      "page_path": "data.path",
+                      "timestamp": "timestamp"
+                    }
+                  }
+                }
+              },
+              "product": {
+                "view": { "name": "product_view" },
+                "add": { "name": "add_to_cart" }
+              }
+            }
+          }
+        },
+        "console": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": {
+              "name": "Debug Logger",
+              "values": ["name", "data", "timestamp"]
+            }
           }
         }
-      }
-    },
-    "collector": {
-      "run": true,
-      "globals": {
-        "environment": "production",
-        "version": "1.0.0"
+      },
+      "collector": {
+        "run": true,
+        "globals": {
+          "environment": "production",
+          "version": "1.0.0"
+        }
       }
     }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": {
-        "version": "latest",
-        "imports": ["startFlow"]
-      },
-      "@walkeros/server-source-express": {
-        "version": "latest",
-        "imports": ["sourceExpress"]
-      },
-      "@walkeros/server-destination-gcp": {
-        "version": "latest",
-        "imports": ["destinationGCP"]
-      },
-      "@walkeros/destination-demo": {
-        "version": "latest",
-        "imports": ["destinationDemo"]
-      }
-    },
-    "output": "./dist/server-flow.mjs",
-    "minify": true
   }
 }`}
   language="json"
@@ -443,22 +536,31 @@ Here's a production-ready flow that accepts HTTP events and sends them to BigQue
 
 ## Programmatic Usage
 
-You can also use flow configuration programmatically with the `startFlow` function:
+You can also use configuration programmatically with the `startFlow` function:
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
+import { sourceExpress } from '@walkeros/server-source-express';
+import { destinationDemo } from '@walkeros/destination-demo';
 
 const { collector, elb } = await startFlow({
-  platform: 'server',
   sources: {
-    http: sourceExpress({
-      settings: { path: '/collect', port: 8080 }
-    })
+    http: {
+      ...sourceExpress,
+      config: {
+        settings: { path: '/collect', port: 8080 }
+      }
+    }
   },
   destinations: {
-    console: destinationDemo({ settings: { name: 'Logger' } })
+    console: {
+      ...destinationDemo,
+      config: {
+        settings: { name: 'Logger' }
+      }
+    }
   },
-  collector: { run: true }
+  run: true
 });
 
 // Collector is now running and ready to process events`}

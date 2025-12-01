@@ -1,5 +1,5 @@
 import type { Env } from '../types';
-import type { Elb } from '@walkeros/core';
+import type { Elb, Logger } from '@walkeros/core';
 
 /**
  * Example environment configurations for browser source
@@ -21,6 +21,17 @@ const createMockElbFn = (): Elb.Fn => {
       failed: [],
     })) as Elb.Fn;
   return fn;
+};
+
+// Simple no-op logger for demo purposes
+const noopLogger: Logger.Instance = {
+  error: noop,
+  info: noop,
+  debug: noop,
+  throw: (message: string | Error) => {
+    throw typeof message === 'string' ? new Error(message) : message;
+  },
+  scope: () => noopLogger,
 };
 
 /**
@@ -109,4 +120,5 @@ export const push: Env = {
   get document() {
     return createMockDocument() as unknown as typeof document;
   },
+  logger: noopLogger,
 };

@@ -1,4 +1,4 @@
-import type { Settings, Mapping, Destination } from './types';
+import type { Mapping, Destination } from './types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { getMappingValue, isArray } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
@@ -11,14 +11,15 @@ export const destinationPiwikPro: Destination = {
 
   config: {},
 
-  init({ config, env }) {
+  init({ config, env, logger }) {
     const { window } = getEnv(env);
     const w = window as Window;
     const { settings, loadScript } = config;
     const { appId, url } = settings || {};
 
     // Required parameters
-    if (!appId || !url) return false;
+    if (!appId) logger.throw('Config settings appId missing');
+    if (!url) logger.throw('Config settings url missing');
 
     // Set up the Piwik Pro interface _paq
     w._paq = w._paq || [];
@@ -26,7 +27,7 @@ export const destinationPiwikPro: Destination = {
     const paq = w._paq.push;
     if (loadScript) {
       // Load the JavaScript Tracking Client
-      addScript(url, env);
+      addScript(url!, env);
 
       // Register the tracker url only with script loading
       paq(['setTrackerUrl', url + 'ppms.php']);
@@ -39,7 +40,7 @@ export const destinationPiwikPro: Destination = {
     if (settings?.linkTracking !== false) paq(['enableLinkTracking']);
   },
 
-  async push(event, { config, mapping = {}, data, env }) {
+  async push(event, { mapping = {}, data, env }) {
     const { window } = getEnv(env);
     const paq = (window as Window)._paq!.push;
 

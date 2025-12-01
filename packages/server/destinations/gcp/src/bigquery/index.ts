@@ -10,14 +10,14 @@ export const destinationBigQuery: Destination = {
 
   config: {},
 
-  async init({ config: partialConfig, env }) {
-    const config = getConfig(partialConfig, env);
+  async init({ config: partialConfig, env, logger }) {
+    const config = getConfig(partialConfig, env, logger);
 
     return config;
   },
 
-  async push(event, { config, mapping, data, collector, env }) {
-    return await push(event, { config, mapping, data, collector, env });
+  async push(event, { config, mapping, data, collector, env, logger }) {
+    return await push(event, { config, mapping, data, collector, env, logger });
   },
 };
 

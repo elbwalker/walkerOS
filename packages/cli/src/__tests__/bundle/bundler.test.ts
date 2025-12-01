@@ -1,11 +1,51 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { bundleCore as bundle } from '../../commands/bundle/bundler.js';
-import { parseBundleConfig } from '../../config/index.js';
+import { loadBundleConfig } from '../../config/index.js';
 import { createLogger, type Logger } from '../../core/index.js';
-import { getId } from '@walkeros/core';
+import { getId, type Flow } from '@walkeros/core';
+import type { BuildOptions } from '../../types/bundle.js';
 
 // No mocks - test with real package downloads and bundling
+
+/**
+ * Helper to create a Flow.Setup config for testing.
+ */
+function createFlowSetup(
+  platform: 'web' | 'server',
+  packages: Flow.Packages,
+): Flow.Setup {
+  return {
+    version: 1,
+    flows: {
+      default: {
+        ...(platform === 'web' ? { web: {} } : { server: {} }),
+        packages,
+      },
+    },
+  };
+}
+
+/**
+ * Helper to create build options for testing.
+ * Uses minimal defaults with test-specific overrides.
+ */
+function createBuildOptions(
+  overrides: Partial<BuildOptions> & { output: string },
+): BuildOptions {
+  return {
+    format: 'esm',
+    platform: 'browser',
+    target: 'es2020',
+    minify: false,
+    sourcemap: false,
+    cache: true,
+    tempDir: '.tmp',
+    packages: {},
+    code: '',
+    ...overrides,
+  };
+}
 
 describe('Bundler', () => {
   const testOutputDir = path.resolve(
@@ -43,87 +83,75 @@ describe('Bundler', () => {
   });
 
   it('should bundle minimal config successfully', async () => {
-    // Inline minimal configuration to avoid path dependencies
-    const rawConfig = {
-      flow: {
-        platform: 'web' as const,
-      },
-      build: {
-        packages: {
-          '@walkeros/core': {
-            imports: ['getId'],
-          },
+    const flowConfig: Flow.Config = {
+      web: {},
+      packages: {
+        '@walkeros/core': {
+          imports: ['getId'],
         },
-        code: 'export const test = getId(8);',
-        template: '', // Explicitly disable template for raw code bundling
-        platform: 'browser' as const,
-        format: 'esm' as const,
-        output: path.join(testOutputDir, 'minimal.js'),
       },
     };
 
-    const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
+    const buildOptions = createBuildOptions({
+      packages: flowConfig.packages || {},
+      code: 'export const test = getId(8);',
+      template: '',
+      platform: 'browser',
+      format: 'esm',
+      output: path.join(testOutputDir, 'minimal.js'),
+    });
 
-    // Run bundler with real dependencies
     await expect(
       bundle(flowConfig, buildOptions, logger),
     ).resolves.not.toThrow();
   });
 
   it('should bundle server config with ESM format', async () => {
-    // Inline server configuration
-    const rawConfig = {
-      flow: {
-        platform: 'server' as const,
-      },
-      build: {
-        packages: {
-          '@walkeros/core': {
-            imports: ['trim', 'isString'],
-          },
+    const flowConfig: Flow.Config = {
+      server: {},
+      packages: {
+        '@walkeros/core': {
+          imports: ['trim', 'isString'],
         },
-        code: 'export default { processText: (text) => trim(text) };',
-        template: '', // Explicitly disable template for raw code bundling
-        platform: 'node' as const,
-        format: 'esm' as const,
-        output: path.join(testOutputDir, 'server-bundle.mjs'),
       },
     };
 
-    const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
+    const buildOptions = createBuildOptions({
+      packages: flowConfig.packages || {},
+      code: 'export default { processText: (text) => trim(text) };',
+      template: '',
+      platform: 'node',
+      format: 'esm',
+      output: path.join(testOutputDir, 'server-bundle.mjs'),
+    });
 
-    // Run bundler with real dependencies
     await expect(
       bundle(flowConfig, buildOptions, logger),
     ).resolves.not.toThrow();
   });
 
   it('should bundle advanced config with minification', async () => {
-    // Inline advanced configuration
-    const rawConfig = {
-      flow: {
-        platform: 'web' as const,
-      },
-      build: {
-        packages: {
-          '@walkeros/core': {
-            imports: ['getId', 'getByPath', 'clone', 'trim', 'isObject'],
-          },
+    const flowConfig: Flow.Config = {
+      web: {},
+      packages: {
+        '@walkeros/core': {
+          imports: ['getId', 'getByPath', 'clone', 'trim', 'isObject'],
         },
-        code: "export function processData(data) {\n  return data.map(item => ({\n    ...item,\n    id: getId(8),\n    timestamp: new Date().toISOString().split('T')[0],\n    processed: true\n  }));\n}\n\nexport function extractNestedValues(data, path) {\n  return data.map(item => getByPath(item, path, null)).filter(val => val !== null);\n}\n\nexport function deepCloneData(data) {\n  return clone(data);\n}\n\nexport function cleanStringData(data) {\n  return data.map(item => ({\n    ...item,\n    name: typeof item.name === 'string' ? trim(item.name) : item.name\n  }));\n}\n\n// Re-export walkerOS utilities\nexport { getId, getByPath, clone, trim, isObject };",
-        template: '', // Explicitly disable template for raw code bundling
-        platform: 'browser' as const,
-        format: 'esm' as const,
-        target: 'es2020',
-        minify: true,
-        sourcemap: true,
-        output: path.join(testOutputDir, 'advanced-bundle.js'),
       },
     };
 
-    const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
+    const buildOptions = createBuildOptions({
+      packages: flowConfig.packages || {},
+      code: "export function processData(data) {\n  return data.map(item => ({\n    ...item,\n    id: getId(8),\n    timestamp: new Date().toISOString().split('T')[0],\n    processed: true\n  }));\n}\n\nexport function extractNestedValues(data, path) {\n  return data.map(item => getByPath(item, path, null)).filter(val => val !== null);\n}\n\nexport function deepCloneData(data) {\n  return clone(data);\n}\n\nexport function cleanStringData(data) {\n  return data.map(item => ({\n    ...item,\n    name: typeof item.name === 'string' ? trim(item.name) : item.name\n  }));\n}\n\n// Re-export walkerOS utilities\nexport { getId, getByPath, clone, trim, isObject };",
+      template: '',
+      platform: 'browser',
+      format: 'esm',
+      target: 'es2020',
+      minify: true,
+      sourcemap: true,
+      output: path.join(testOutputDir, 'advanced-bundle.js'),
+    });
 
-    // Run bundler with real dependencies
     await expect(
       bundle(flowConfig, buildOptions, logger),
     ).resolves.not.toThrow();
@@ -131,24 +159,22 @@ describe('Bundler', () => {
 
   describe('Stats Collection', () => {
     it('should collect bundle stats when requested', async () => {
-      const rawConfig = {
-        flow: {
-          platform: 'web' as const,
-        },
-        build: {
-          packages: {
-            '@walkeros/core': {
-              imports: ['getId'],
-            },
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: {
+          '@walkeros/core': {
+            imports: ['getId'],
           },
-          code: 'export const test = getId(8);',
-          template: '', // Explicitly disable template for raw code bundling
-          format: 'esm' as const,
-          output: path.join(testOutputDir, 'stats-test.js'),
         },
       };
 
-      const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
+      const buildOptions = createBuildOptions({
+        packages: flowConfig.packages || {},
+        code: 'export const test = getId(8);',
+        template: '',
+        format: 'esm',
+        output: path.join(testOutputDir, 'stats-test.js'),
+      });
 
       const stats = await bundle(flowConfig, buildOptions, logger, true);
 
@@ -161,17 +187,17 @@ describe('Bundler', () => {
     });
 
     it('should detect ineffective tree-shaking with wildcard imports', async () => {
-      const { flowConfig, buildOptions } = parseBundleConfig({
-        flow: {
-          platform: 'web' as const,
-        },
-        build: {
-          packages: { '@walkeros/core': {} },
-          code: 'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
-          template: '', // Explicitly disable template for raw code bundling
-          format: 'esm' as const,
-          output: path.join(testOutputDir, 'test.js'),
-        },
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: { '@walkeros/core': {} },
+      };
+
+      const buildOptions = createBuildOptions({
+        packages: flowConfig.packages || {},
+        code: 'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
+        template: '',
+        format: 'esm',
+        output: path.join(testOutputDir, 'test.js'),
       });
 
       const stats = await bundle(flowConfig, buildOptions, logger, true);
@@ -180,24 +206,22 @@ describe('Bundler', () => {
     });
 
     it('should return undefined when stats not requested', async () => {
-      const rawConfig = {
-        flow: {
-          platform: 'web' as const,
-        },
-        build: {
-          packages: {
-            '@walkeros/core': {
-              imports: ['getId'],
-            },
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: {
+          '@walkeros/core': {
+            imports: ['getId'],
           },
-          code: 'export const test = getId(8);',
-          template: '', // Explicitly disable template for raw code bundling
-          format: 'esm' as const,
-          output: path.join(testOutputDir, 'no-stats.js'),
         },
       };
 
-      const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
+      const buildOptions = createBuildOptions({
+        packages: flowConfig.packages || {},
+        code: 'export const test = getId(8);',
+        template: '',
+        format: 'esm',
+        output: path.join(testOutputDir, 'no-stats.js'),
+      });
 
       const result = await bundle(flowConfig, buildOptions, logger, false);
 
@@ -211,18 +235,18 @@ describe('Bundler', () => {
       const templatePath = path.join(testOutputDir, 'test.hbs');
       await fs.writeFile(templatePath, '{{{CODE}}}\n// Template footer');
 
-      const { flowConfig, buildOptions } = parseBundleConfig({
-        flow: {
-          platform: 'web' as const,
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
         },
-        build: {
-          packages: {
-            '@walkeros/core': { imports: ['getId'] },
-          },
-          code: 'export const generateId = () => getId(8);',
-          template: templatePath,
-          output: path.join(testOutputDir, 'template-test.js'),
-        },
+      };
+
+      const buildOptions = createBuildOptions({
+        packages: flowConfig.packages || {},
+        code: 'export const generateId = () => getId(8);',
+        template: templatePath,
+        output: path.join(testOutputDir, 'template-test.js'),
       });
 
       await expect(
@@ -231,19 +255,19 @@ describe('Bundler', () => {
     });
 
     it('should handle missing template variables gracefully', async () => {
-      const { flowConfig, buildOptions } = parseBundleConfig({
-        flow: {
-          platform: 'web' as const,
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: {
+          '@walkeros/core': { imports: ['trim'] },
         },
-        build: {
-          packages: {
-            '@walkeros/core': { imports: ['trim'] },
-          },
-          code: 'export const test = trim("hello");',
-          template: '', // Explicitly disable template for raw code bundling
-          format: 'esm' as const,
-          output: path.join(testOutputDir, 'missing-vars.js'),
-        },
+      };
+
+      const buildOptions = createBuildOptions({
+        packages: flowConfig.packages || {},
+        code: 'export const test = trim("hello");',
+        template: '',
+        format: 'esm',
+        output: path.join(testOutputDir, 'missing-vars.js'),
       });
 
       await expect(
@@ -252,19 +276,19 @@ describe('Bundler', () => {
     });
 
     it('should append bundle code when placeholder not found', async () => {
-      const { flowConfig, buildOptions } = parseBundleConfig({
-        flow: {
-          platform: 'web' as const,
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
         },
-        build: {
-          packages: {
-            '@walkeros/core': { imports: ['getId'] },
-          },
-          code: 'export const test = getId(6);',
-          template: '', // Explicitly disable template for raw code bundling
-          format: 'esm' as const,
-          output: path.join(testOutputDir, 'append-test.js'),
-        },
+      };
+
+      const buildOptions = createBuildOptions({
+        packages: flowConfig.packages || {},
+        code: 'export const test = getId(6);',
+        template: '',
+        format: 'esm',
+        output: path.join(testOutputDir, 'append-test.js'),
       });
 
       await expect(
@@ -275,20 +299,20 @@ describe('Bundler', () => {
 
   describe('Configuration Scenarios', () => {
     it('should handle custom temp directory configuration', async () => {
-      const { flowConfig, buildOptions } = parseBundleConfig({
-        flow: {
-          platform: 'web' as const,
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: {
+          '@walkeros/core': { imports: ['getId'] },
         },
-        build: {
-          packages: {
-            '@walkeros/core': { imports: ['getId'] },
-          },
-          code: 'export const test = getId();',
-          template: '', // Explicitly disable template for raw code bundling
-          format: 'esm' as const,
-          tempDir: '/tmp/my-custom-bundler-temp',
-          output: path.join(testOutputDir, 'custom-temp-example.js'),
-        },
+      };
+
+      const buildOptions = createBuildOptions({
+        packages: flowConfig.packages || {},
+        code: 'export const test = getId();',
+        template: '',
+        format: 'esm',
+        tempDir: '/tmp/my-custom-bundler-temp',
+        output: path.join(testOutputDir, 'custom-temp-example.js'),
       });
 
       await expect(
@@ -297,21 +321,21 @@ describe('Bundler', () => {
     });
 
     it('should handle version pinning correctly', async () => {
-      const { flowConfig, buildOptions } = parseBundleConfig({
-        flow: {
-          platform: 'web' as const,
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: {
+          '@walkeros/core': { version: '0.0.7', imports: ['getId'] },
         },
-        build: {
-          packages: {
-            '@walkeros/core': { version: '0.0.7', imports: ['getId'] },
-          },
-          code: '// Test version pinning\nexport const test = getId();',
-          template: '', // Explicitly disable template for raw code bundling
-          platform: 'browser' as const,
-          format: 'esm' as const,
-          target: 'es2020',
-          output: path.join(testOutputDir, 'version-test.js'),
-        },
+      };
+
+      const buildOptions = createBuildOptions({
+        packages: flowConfig.packages || {},
+        code: '// Test version pinning\nexport const test = getId();',
+        template: '',
+        platform: 'browser',
+        format: 'esm',
+        target: 'es2020',
+        output: path.join(testOutputDir, 'version-test.js'),
       });
 
       await expect(
@@ -321,20 +345,21 @@ describe('Bundler', () => {
   });
 
   describe('Error Handling', () => {
-    it('should validate configuration properly', async () => {
-      // Test configuration validation instead of runtime errors
+    it('should reject invalid config structure', async () => {
+      // Test that loader rejects invalid config structure
       expect(() => {
-        parseBundleConfig({
-          flow: {
-            platform: 'web' as const,
+        loadBundleConfig(
+          {
+            flow: {
+              platform: 'web',
+            },
+            build: {
+              packages: {},
+            },
           },
-          build: {
-            packages: 'invalid', // should be object
-            code: 'test',
-            output: path.join(testOutputDir, 'test.js'),
-          },
-        });
-      }).toThrow();
+          { configPath: '/test/config.json' },
+        );
+      }).toThrow(/Invalid configuration/);
     });
   });
 });

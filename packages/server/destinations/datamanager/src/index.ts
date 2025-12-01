@@ -10,22 +10,23 @@ export const destinationDataManager: DestinationInterface = {
 
   config: {},
 
-  async init({ config: partialConfig, env }) {
-    const config = getConfig(partialConfig);
+  async init({ config: partialConfig, env, logger }) {
+    logger.debug('Data Manager init started');
+    logger.info('Data Manager initializing...');
 
-    if (!config.settings) {
-      throw new Error('Settings required for Data Manager destination');
-    }
+    // getConfig validates required fields and returns ValidatedConfig
+    const config = getConfig(partialConfig, logger);
 
-    if (
-      !config.settings.destinations ||
-      config.settings.destinations.length === 0
-    ) {
-      throw new Error('At least one destination required in settings');
-    }
+    logger.debug('Settings validated', {
+      validateOnly: config.settings.validateOnly,
+      destinationCount: config.settings.destinations.length,
+      eventSource: config.settings.eventSource,
+    });
 
     try {
+      logger.debug('Creating auth client...');
       const authClient = await createAuthClient(config.settings);
+      logger.debug('Auth client created successfully');
 
       return {
         ...config,
@@ -35,14 +36,14 @@ export const destinationDataManager: DestinationInterface = {
         },
       };
     } catch (error) {
-      throw new Error(
+      logger.throw(
         `Data Manager authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
   },
 
-  async push(event, { config, mapping, data, collector, env }) {
-    return await push(event, { config, mapping, data, collector, env });
+  async push(event, { config, mapping, data, collector, env, logger }) {
+    return await push(event, { config, mapping, data, collector, env, logger });
   },
 };
 

@@ -1,4 +1,4 @@
-import type { WalkerOS, On, Collector } from '@walkeros/core';
+import type { WalkerOS, On, Collector, Logger } from '@walkeros/core';
 import type { Settings, Destination, ConsentMapping } from './types';
 import { initGA4, pushGA4Event } from './ga4';
 import { initAds, pushAdsEvent } from './ads';
@@ -29,34 +29,36 @@ export const destinationGtag: Destination = {
 
   config: { settings: {} },
 
-  init({ config, env }) {
+  init({ config, env, logger }) {
     const { settings = {} as Partial<Settings>, loadScript } = config;
     const { ga4, ads, gtm } = settings;
 
+    // Fail if no tools are configured
+    if (!ga4?.measurementId && !ads?.conversionId && !gtm?.containerId) {
+      logger.throw(
+        'Config settings missing. Set ga4.measurementId, ads.conversionId, or gtm.containerId',
+      );
+    }
+
     // Initialize GA4 if configured
     if (ga4?.measurementId) {
-      initGA4(ga4, loadScript, env);
+      initGA4(ga4, loadScript, env, logger);
     }
 
     // Initialize Google Ads if configured
     if (ads?.conversionId) {
-      initAds(ads, loadScript, env);
+      initAds(ads, loadScript, env, logger);
     }
 
     // Initialize GTM if configured
     if (gtm?.containerId) {
-      initGTM(gtm, loadScript, env);
-    }
-
-    // Fail if no tools are configured
-    if (!ga4?.measurementId && !ads?.conversionId && !gtm?.containerId) {
-      return false;
+      initGTM(gtm, loadScript, env, logger);
     }
 
     return config;
   },
 
-  async push(event, { config, mapping = {}, data, env, collector }) {
+  async push(event, { config, mapping = {}, data, env, collector, logger }) {
     const { settings = {} } = config;
     const { ga4, ads, gtm } = settings;
     const eventMapping = mapping.settings || {};
@@ -86,18 +88,26 @@ export const destinationGtag: Destination = {
 
     // Push to GA4 if configured
     if (ga4?.measurementId) {
-      pushGA4Event(event, ga4, eventMapping.ga4, ga4Data, env);
+      pushGA4Event(event, ga4, eventMapping.ga4, ga4Data, env, logger);
     }
 
     // @TODO: Fix condition - should check for mapping.settings?.ads?.label || mapping.name
     // Currently requires mapping.name even when label is provided via settings.ads.label
     if (ads?.conversionId && mapping.name) {
-      pushAdsEvent(event, ads, eventMapping.ads, adsData, mapping.name, env);
+      pushAdsEvent(
+        event,
+        ads,
+        eventMapping.ads,
+        adsData,
+        mapping.name,
+        env,
+        logger,
+      );
     }
 
     // Push to GTM if configured
     if (gtm?.containerId) {
-      pushGTMEvent(event, gtm, eventMapping.gtm, gtmData, env);
+      pushGTMEvent(event, gtm, eventMapping.gtm, gtmData, env, logger);
     }
   },
 

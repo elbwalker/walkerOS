@@ -1,32 +1,32 @@
 {
-  "flow": {
-    "platform": "web",
-    "destinations": {
-      "demo": {
-        "code": "destinationDemo",
-        "config": {
-          "settings": {
-            "name": "Simple Demo",
-            "values": ["name", "data", "user", "consent"]
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "packages": {
+        "@walkeros/collector": {
+          "version": "latest",
+          "imports": ["startFlow"]
+        },
+        "@walkeros/destination-demo": {
+          "version": "latest",
+          "imports": ["destinationDemo"]
+        }
+      },
+      "destinations": {
+        "demo": {
+          "code": "destinationDemo",
+          "config": {
+            "settings": {
+              "name": "Simple Demo",
+              "values": ["name", "data", "user", "consent"]
+            }
           }
         }
-      }
-    },
-    "collector": {
-      "run": true
-    }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": {
-        "version": "latest",
-        "imports": ["startFlow"]
       },
-      "@walkeros/destination-demo": {
-        "version": "latest",
-        "imports": ["destinationDemo"]
+      "collector": {
+        "run": true
       }
-    },
-    "output": "flow-simple.js"
+    }
   }
 }

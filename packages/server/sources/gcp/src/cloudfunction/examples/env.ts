@@ -1,5 +1,5 @@
 import type { Env } from '../types';
-import type { Elb } from '@walkeros/core';
+import type { Elb, Logger } from '@walkeros/core';
 
 /**
  * Example environment configurations for GCP Cloud Function source
@@ -20,6 +20,18 @@ const createMockElbFn = (): Elb.Fn => {
   return fn;
 };
 
+// Simple no-op logger for demo purposes
+const noopFn = () => {};
+const noopLogger: Logger.Instance = {
+  error: noopFn,
+  info: noopFn,
+  debug: noopFn,
+  throw: (message: string | Error) => {
+    throw typeof message === 'string' ? new Error(message) : message;
+  },
+  scope: () => noopLogger,
+};
+
 /**
  * Standard mock environment for testing cloud function source
  *
@@ -36,4 +48,5 @@ export const push: Env = {
   get elb() {
     return createMockElbFn();
   },
+  logger: noopLogger,
 };

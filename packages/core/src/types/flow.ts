@@ -5,7 +5,7 @@
  * Platform-agnostic, runtime-focused.
  *
  * The Flow system enables "one config to rule them all" - a single
- * walkeros.config.json file that manages multiple environments
+ * walkeros.config.json file that manages multiple flows
  * (web_prod, web_stage, server_prod, etc.) with shared configuration,
  * variables, and reusable definitions.
  *
@@ -20,25 +20,78 @@ import type { Source, Destination, Collector } from '.';
 export type Primitive = string | number | boolean;
 
 /**
- * Complete multi-environment configuration.
- * This is the root type for walkeros.config.json files.
+ * Variables record type for interpolation.
+ * Used at Setup, Config, Source, and Destination levels.
+ */
+export type Variables = Record<string, Primitive>;
+
+/**
+ * Definitions record type for reusable configurations.
+ * Used at Setup, Config, Source, and Destination levels.
+ */
+export type Definitions = Record<string, unknown>;
+
+/**
+ * Packages configuration for build.
+ */
+export type Packages = Record<
+  string,
+  {
+    version?: string;
+    imports?: string[];
+    path?: string; // Local path to package directory (takes precedence over version)
+  }
+>;
+
+/**
+ * Web platform configuration.
  *
  * @remarks
- * The Setup interface represents the entire configuration file,
- * containing multiple named environments that can share variables
- * and definitions.
+ * Presence of this key indicates web platform (browser-based tracking).
+ * Builds to IIFE format, ES2020 target, browser platform.
+ */
+export interface Web {
+  /**
+   * Window property name for collector instance.
+   * @default "collector"
+   */
+  windowCollector?: string;
+
+  /**
+   * Window property name for elb function.
+   * @default "elb"
+   */
+  windowElb?: string;
+}
+
+/**
+ * Server platform configuration.
+ *
+ * @remarks
+ * Presence of this key indicates server platform (Node.js).
+ * Builds to ESM format, Node18 target, node platform.
+ * Reserved for future server-specific options.
+ */
+export interface Server {
+  // Reserved for future server-specific options
+}
+
+/**
+ * Complete multi-flow configuration.
+ * Root type for walkeros.config.json files.
+ *
+ * @remarks
+ * If only one flow exists, it's auto-selected without --flow flag.
+ * Convention: use "default" as the flow name for single-flow configs.
  *
  * @example
  * ```json
  * {
  *   "version": 1,
  *   "$schema": "https://walkeros.io/schema/flow/v1.json",
- *   "variables": {
- *     "CURRENCY": "USD"
- *   },
- *   "environments": {
- *     "web_prod": { "platform": "web", ... },
- *     "server_prod": { "platform": "server", ... }
+ *   "variables": { "CURRENCY": "USD" },
+ *   "flows": {
+ *     "default": { "web": {}, ... }
  *   }
  * }
  * ```
@@ -46,146 +99,78 @@ export type Primitive = string | number | boolean;
 export interface Setup {
   /**
    * Configuration schema version.
-   * Used for compatibility checks and migrations.
-   *
-   * @remarks
-   * - Version 1: Initial Flow configuration system
-   * - Future versions will be documented as they're released
    */
   version: 1;
 
   /**
-   * JSON Schema reference for IDE validation and autocomplete.
-   *
-   * @remarks
-   * When set, IDEs like VSCode will provide:
-   * - Autocomplete for all fields
-   * - Inline documentation
-   * - Validation errors before deployment
-   *
-   * @example
-   * "$schema": "https://walkeros.io/schema/flow/v1.json"
+   * JSON Schema reference for IDE validation.
+   * @example "https://walkeros.io/schema/flow/v1.json"
    */
   $schema?: string;
 
   /**
-   * Shared variables for interpolation across all environments.
+   * Folders to include in the bundle output.
+   * These folders are copied to dist/ during bundle, making them available
+   * at runtime for both local and Docker execution.
    *
    * @remarks
-   * Variables can be referenced using `${VAR_NAME:default}` syntax.
-   * Resolution order:
-   * 1. Environment variable (process.env.VAR_NAME)
-   * 2. Config variable (config.variables.VAR_NAME)
-   * 3. Inline default value
+   * Use for credential files, configuration, or other runtime assets.
+   * Paths are relative to the config file location.
+   * Default: `["./shared"]` if the folder exists, otherwise `[]`.
    *
    * @example
    * ```json
    * {
-   *   "variables": {
-   *     "CURRENCY": "USD",
-   *     "GA4_ID": "G-DEFAULT"
-   *   },
-   *   "environments": {
-   *     "prod": {
-   *       "collector": {
-   *         "globals": {
-   *           "currency": "${CURRENCY}"
-   *         }
-   *       }
-   *     }
-   *   }
+   *   "include": ["./credentials", "./config"]
    * }
    * ```
    */
-  variables?: Record<string, Primitive>;
+  include?: string[];
+
+  /**
+   * Shared variables for interpolation.
+   * Resolution: process.env > Config.variables > Setup.variables > inline default
+   * Syntax: ${VAR_NAME} or ${VAR_NAME:default}
+   */
+  variables?: Variables;
 
   /**
    * Reusable configuration definitions.
-   *
-   * @remarks
-   * Definitions can be referenced using JSON Schema `$ref` syntax.
-   * Useful for sharing mapping rules, common settings, etc.
-   *
-   * @example
-   * ```json
-   * {
-   *   "definitions": {
-   *     "gtag_base_mapping": {
-   *       "page": {
-   *         "view": { "name": "page_view" }
-   *       }
-   *     }
-   *   },
-   *   "environments": {
-   *     "prod": {
-   *       "destinations": {
-   *         "gtag": {
-   *           "config": {
-   *             "mapping": { "$ref": "#/definitions/gtag_base_mapping" }
-   *           }
-   *         }
-   *       }
-   *     }
-   *   }
-   * }
-   * ```
+   * Referenced via JSON Schema $ref syntax: { "$ref": "#/definitions/name" }
    */
-  definitions?: Record<string, unknown>;
+  definitions?: Definitions;
 
   /**
-   * Named environment configurations.
-   *
-   * @remarks
-   * Each environment represents a deployment target:
-   * - web_prod, web_stage, web_dev (client-side tracking)
-   * - server_prod, server_stage (server-side collection)
-   *
-   * Environment names are arbitrary and user-defined.
-   *
-   * @example
-   * ```json
-   * {
-   *   "environments": {
-   *     "web_prod": {
-   *       "platform": "web",
-   *       "sources": { ... },
-   *       "destinations": { ... }
-   *     },
-   *     "server_prod": {
-   *       "platform": "server",
-   *       "destinations": { ... }
-   *     }
-   *   }
-   * }
-   * ```
+   * Named flow configurations.
+   * If only one flow exists, it's auto-selected.
    */
-  environments: Record<string, Config>;
+  flows: Record<string, Config>;
 }
 
 /**
- * Single environment configuration.
+ * Single flow configuration.
  * Represents one deployment target (e.g., web_prod, server_stage).
  *
  * @remarks
- * This is the core runtime configuration used by `startFlow()`.
- * Platform-agnostic and independent of build/deployment tools.
+ * Platform is determined by presence of `web` or `server` key.
+ * Exactly one must be present.
  *
- * Extensions (build, docker, etc.) are added via `[key: string]: unknown`.
+ * Variables/definitions cascade: source/destination > config > setup
  */
 export interface Config {
   /**
-   * Target platform for this environment.
-   *
-   * @remarks
-   * - `web`: Browser-based tracking (IIFE bundles, browser sources)
-   * - `server`: Node.js server-side collection (CJS bundles, HTTP sources)
-   *
-   * This determines:
-   * - Available packages (web-* vs server-*)
-   * - Default build settings
-   * - Template selection
+   * Web platform configuration.
+   * Presence indicates web platform (browser-based tracking).
+   * Mutually exclusive with `server`.
    */
-  platform: 'web' | 'server';
+  web?: Web;
+
+  /**
+   * Server platform configuration.
+   * Presence indicates server platform (Node.js).
+   * Mutually exclusive with `web`.
+   */
+  server?: Server;
 
   /**
    * Source configurations (data capture).
@@ -284,36 +269,21 @@ export interface Config {
   collector?: Collector.InitConfig;
 
   /**
-   * Environment-specific variables.
-   *
-   * @remarks
-   * These override root-level variables for this specific environment.
-   * Useful for environment-specific API keys, endpoints, etc.
-   *
-   * @example
-   * ```json
-   * {
-   *   "env": {
-   *     "API_ENDPOINT": "https://api.production.com",
-   *     "DEBUG": "false"
-   *   }
-   * }
-   * ```
+   * NPM packages to bundle.
    */
-  env?: Record<string, string>;
+  packages?: Packages;
 
   /**
-   * Extension point for package-specific fields.
-   *
-   * @remarks
-   * Allows packages to add their own configuration fields:
-   * - CLI adds `build` field (Bundle.Config)
-   * - Docker adds `docker` field (Docker.Config)
-   * - Lambda adds `lambda` field (Lambda.Config)
-   *
-   * Core doesn't validate these fields - packages handle validation.
+   * Flow-level variables.
+   * Override Setup.variables, overridden by source/destination variables.
    */
-  [key: string]: unknown;
+  variables?: Variables;
+
+  /**
+   * Flow-level definitions.
+   * Extend Setup.definitions, overridden by source/destination definitions.
+   */
+  definitions?: Definitions;
 }
 
 /**
@@ -343,6 +313,15 @@ export interface SourceReference {
    * "package": "@walkeros/web-source-browser@latest"
    */
   package: string;
+
+  /**
+   * Resolved import variable name.
+   *
+   * @remarks
+   * Auto-resolved from packages[package].imports[0] during getFlowConfig().
+   * Can also be provided explicitly for advanced use cases.
+   */
+  code?: string;
 
   /**
    * Source-specific configuration.
@@ -381,11 +360,23 @@ export interface SourceReference {
    *
    * @remarks
    * The primary source's ELB function is returned by `startFlow()`.
-   * Only one source should be marked as primary per environment.
+   * Only one source should be marked as primary per flow.
    *
    * @default false
    */
   primary?: boolean;
+
+  /**
+   * Source-level variables (highest priority in cascade).
+   * Overrides flow and setup variables.
+   */
+  variables?: Variables;
+
+  /**
+   * Source-level definitions (highest priority in cascade).
+   * Overrides flow and setup definitions.
+   */
+  definitions?: Definitions;
 }
 
 /**
@@ -406,6 +397,15 @@ export interface DestinationReference {
    * "package": "@walkeros/web-destination-gtag@2.0.0"
    */
   package: string;
+
+  /**
+   * Resolved import variable name.
+   *
+   * @remarks
+   * Auto-resolved from packages[package].imports[0] during getFlowConfig().
+   * Can also be provided explicitly for advanced use cases.
+   */
+  code?: string;
 
   /**
    * Destination-specific configuration.
@@ -449,4 +449,16 @@ export interface DestinationReference {
    * Merged with default destination environment.
    */
   env?: unknown;
+
+  /**
+   * Destination-level variables (highest priority in cascade).
+   * Overrides flow and setup variables.
+   */
+  variables?: Variables;
+
+  /**
+   * Destination-level definitions (highest priority in cascade).
+   * Overrides flow and setup definitions.
+   */
+  definitions?: Definitions;
 }

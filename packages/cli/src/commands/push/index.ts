@@ -1,8 +1,8 @@
 import path from 'path';
-import os from 'os';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
-import type { Elb } from '@walkeros/core';
+import { getPlatform, type Elb } from '@walkeros/core';
+import { schemas } from '@walkeros/core/dev';
 import {
   createCommandLogger,
   createLogger,
@@ -16,7 +16,7 @@ import {
   loadJsonFromSource,
   loadBundleConfig,
 } from '../../config/index.js';
-import { bundle } from '../bundle/index.js';
+import { bundleCore } from '../bundle/bundler.js';
 import type { PushCommandOptions, PushResult } from './types.js';
 
 /**
@@ -28,7 +28,7 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
   // Build Docker args
   const dockerArgs = buildCommonDockerArgs(options);
   dockerArgs.push('--event', options.event);
-  if (options.env) dockerArgs.push('--env', options.env);
+  if (options.flow) dockerArgs.push('--flow', options.flow);
 
   await executeCommand(
     async () => {
@@ -41,22 +41,34 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
           name: 'event',
         });
 
-        // Validate event format
-        if (
-          !event ||
-          typeof event !== 'object' ||
-          !('name' in event) ||
-          typeof event.name !== 'string'
-        ) {
-          throw new Error(
-            'Event must be an object with a "name" property (string)',
-          );
+        // Validate event format using Zod schema
+        const eventResult = schemas.PartialEventSchema.safeParse(event);
+        if (!eventResult.success) {
+          const errors = eventResult.error.issues
+            .map((issue) => `${String(issue.path.join('.'))}: ${issue.message}`)
+            .join(', ');
+          throw new Error(`Invalid event: ${errors}`);
         }
 
-        // Warn about event naming format
-        if (!event.name.includes(' ')) {
+        const parsedEvent = eventResult.data as {
+          name?: string;
+          data?: Record<string, unknown>;
+        };
+        if (!parsedEvent.name) {
+          throw new Error('Invalid event: Missing required "name" property');
+        }
+
+        // Create typed event object for execution
+        const validatedEvent: { name: string; data: Record<string, unknown> } =
+          {
+            name: parsedEvent.name,
+            data: (parsedEvent.data || {}) as Record<string, unknown>,
+          };
+
+        // Warn about event naming format (walkerOS business logic)
+        if (!validatedEvent.name.includes(' ')) {
           logger.warn(
-            `Event name "${event.name}" should follow "ENTITY ACTION" format (e.g., "page view")`,
+            `Event name "${validatedEvent.name}" should follow "ENTITY ACTION" format (e.g., "page view")`,
           );
         }
 
@@ -64,43 +76,43 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
         logger.info('📦 Loading flow configuration...');
         const configPath = path.resolve(options.config);
         const rawConfig = await loadJsonConfig(configPath);
-        const { flowConfig, buildOptions, environment, isMultiEnvironment } =
+        const { flowConfig, buildOptions, flowName, isMultiFlow } =
           loadBundleConfig(rawConfig, {
             configPath: options.config,
-            environment: options.env,
+            flowName: options.flow,
             logger,
           });
 
-        const platform = flowConfig.platform;
+        const platform = getPlatform(flowConfig);
 
-        // Step 3: Bundle to temp file
+        // Step 3: Bundle to temp file in config directory (so Node.js can find node_modules)
         logger.info('🔨 Bundling flow configuration...');
+        const configDir = path.dirname(configPath);
+        const tempDir = path.join(
+          configDir,
+          '.tmp',
+          `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        );
+        await fs.ensureDir(tempDir);
         const tempPath = path.join(
-          os.tmpdir(),
-          `walkeros-push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${platform === 'web' ? 'js' : 'mjs'}`,
+          tempDir,
+          `bundle.${platform === 'web' ? 'js' : 'mjs'}`,
         );
 
-        const configWithOutput = {
-          flow: flowConfig,
-          build: {
-            ...buildOptions,
-            output: tempPath,
-            // Web uses IIFE for browser-like execution, server uses ESM
-            format: platform === 'web' ? ('iife' as const) : ('esm' as const),
-            platform:
-              platform === 'web' ? ('browser' as const) : ('node' as const),
-            ...(platform === 'web' && {
-              windowCollector: 'collector',
-              windowElb: 'elb',
-            }),
-          },
+        const pushBuildOptions = {
+          ...buildOptions,
+          output: tempPath,
+          // Web uses IIFE for browser-like execution, server uses ESM
+          format: platform === 'web' ? ('iife' as const) : ('esm' as const),
+          platform:
+            platform === 'web' ? ('browser' as const) : ('node' as const),
+          ...(platform === 'web' && {
+            windowCollector: 'collector',
+            windowElb: 'elb',
+          }),
         };
 
-        await bundle(configWithOutput, {
-          cache: true,
-          verbose: options.verbose,
-          silent: !options.verbose,
-        });
+        await bundleCore(flowConfig, pushBuildOptions, logger, false);
 
         logger.debug(`Bundle created: ${tempPath}`);
 
@@ -109,10 +121,10 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
 
         if (platform === 'web') {
           logger.info('🌐 Executing in web environment (JSDOM)...');
-          result = await executeWebPush(tempPath, event, logger);
+          result = await executeWebPush(tempPath, validatedEvent, logger);
         } else if (platform === 'server') {
           logger.info('🖥️  Executing in server environment (Node.js)...');
-          result = await executeServerPush(tempPath, event, logger);
+          result = await executeServerPush(tempPath, validatedEvent, logger);
         } else {
           throw new Error(`Unsupported platform: ${platform}`);
         }
@@ -161,9 +173,9 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
           }
         }
 
-        // Cleanup
+        // Cleanup temp directory
         try {
-          await fs.remove(tempPath);
+          await fs.remove(tempDir);
         } catch {
           // Ignore cleanup errors
         }
@@ -201,11 +213,19 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
 }
 
 /**
+ * Typed event input for push command
+ */
+interface PushEventInput {
+  name: string;
+  data: Record<string, unknown>;
+}
+
+/**
  * Execute push for web platform using JSDOM with real APIs
  */
 async function executeWebPush(
   bundlePath: string,
-  event: Record<string, unknown>,
+  event: PushEventInput,
   logger: Logger,
 ): Promise<PushResult> {
   const startTime = Date.now();
@@ -245,8 +265,7 @@ async function executeWebPush(
 
     // Push event
     logger.info(`Pushing event: ${event.name}`);
-    const eventData = (event.data || {}) as Record<string, unknown>;
-    const elbResult = await elb(event.name as string, eventData);
+    const elbResult = await elb(event.name, event.data);
 
     return {
       success: true,
@@ -267,7 +286,7 @@ async function executeWebPush(
  */
 async function executeServerPush(
   bundlePath: string,
-  event: Record<string, unknown>,
+  event: PushEventInput,
   logger: Logger,
   timeout: number = 60000, // 60 second default timeout
 ): Promise<PushResult> {
@@ -306,13 +325,12 @@ async function executeServerPush(
 
       // Push event
       logger.info(`Pushing event: ${event.name}`);
-      const eventData = (event.data || {}) as Record<string, unknown>;
       const elbResult = await (
         elb as (
           name: string,
           data: Record<string, unknown>,
         ) => Promise<Elb.PushResult>
-      )(event.name as string, eventData);
+      )(event.name, event.data);
 
       return {
         success: true,

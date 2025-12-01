@@ -6,7 +6,7 @@
  */
 
 import { pathToFileURL } from 'url';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
 
 export interface RuntimeConfig {
   port?: number;
@@ -27,6 +27,13 @@ export async function runFlow(
 
   try {
     const absolutePath = resolve(flowPath);
+    const flowDir = dirname(absolutePath);
+
+    // Change working directory to flow's directory
+    // This ensures relative paths (e.g., ./shared/credentials.json) work
+    // consistently in both local and Docker execution modes
+    process.chdir(flowDir);
+
     const fileUrl = pathToFileURL(absolutePath).href;
     const module = await import(fileUrl);
 

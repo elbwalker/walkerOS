@@ -4,7 +4,6 @@ import type {
 } from '@walkeros/core';
 import type { DestinationServer } from '@walkeros/server-core';
 import type { OAuth2Client } from 'google-auth-library';
-import type { LogLevel } from '../utils';
 
 export interface Settings {
   /**
@@ -31,7 +30,7 @@ export interface Settings {
   /** Array of destination accounts and conversion actions/user lists */
   destinations: Destination[];
 
-  /** Default event source if not specified per event */
+  /** Event source for all events. Defaults to WEB if not specified */
   eventSource?: EventSource;
 
   /** Maximum number of events to batch before sending (max 2000) */
@@ -51,9 +50,6 @@ export interface Settings {
 
   /** Test event code for debugging (optional) */
   testEventCode?: string;
-
-  /** Log level for debugging (optional) */
-  logLevel?: LogLevel;
 
   /** Guided helpers: User data mapping (applies to all events) */
   userData?: WalkerOSMapping.Map;
@@ -99,6 +95,15 @@ export interface DestinationInterface
 export type Config = {
   settings: Settings;
 } & DestinationServer.Config<Types>;
+
+/**
+ * Config after validation - settings is guaranteed to exist with required fields
+ * Use this type after calling getConfig() to get proper type narrowing
+ * After validation, eventSource is always set (defaults to 'WEB')
+ */
+export type ValidatedConfig = Omit<Config, 'settings'> & {
+  settings: Settings & { eventSource: EventSource };
+};
 
 export type InitFn = DestinationServer.InitFn<Types>;
 export type PushFn = DestinationServer.PushFn<Types>;

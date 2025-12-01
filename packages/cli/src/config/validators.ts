@@ -2,9 +2,13 @@
  * Configuration Type Guards and Validators
  *
  * Type checking utilities for configuration validation.
+ * Uses Zod schemas from @walkeros/core for Flow.Setup validation.
  */
 
-import type { Setup, EnvironmentConfig } from '../types/bundle.js';
+import type { Flow } from '@walkeros/core';
+import { schemas } from '@walkeros/core/dev';
+
+const { safeParseSetup } = schemas;
 
 /**
  * Type guard: Check if value is a plain object.
@@ -19,43 +23,78 @@ export function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Type guard: Validate platform value.
+ * Detect platform from flow config.
+ *
+ * Platform is determined by the presence of `web` or `server` key.
  */
-export function validatePlatform(
-  platform: unknown,
-): platform is 'web' | 'server' {
-  return platform === 'web' || platform === 'server';
+export function detectPlatform(
+  flowConfig: Record<string, unknown>,
+): 'web' | 'server' | undefined {
+  if ('web' in flowConfig && flowConfig.web !== undefined) {
+    return 'web';
+  }
+  if ('server' in flowConfig && flowConfig.server !== undefined) {
+    return 'server';
+  }
+  return undefined;
 }
 
 /**
- * Type guard: Check if config is multi-environment format.
- */
-export function isMultiEnvConfig(data: unknown): data is Setup {
-  return (
-    isObject(data) &&
-    'version' in data &&
-    data.version === 1 &&
-    'environments' in data &&
-    isObject(data.environments)
-  );
-}
-
-/**
- * Type guard: Check if config is single-environment format.
+ * Type guard: Check if config is a valid Flow.Setup structure.
  *
  * @remarks
- * Only checks structural shape. Platform validation happens later in normalization.
+ * Uses Zod validation from @walkeros/core.
+ * Returns false instead of throwing on invalid input.
+ *
+ * @example
+ * ```typescript
+ * if (isFlowSetup(config)) {
+ *   const flowConfig = getFlowConfig(config, 'production');
+ * }
+ * ```
  */
-export function isSingleEnvConfig(data: unknown): data is EnvironmentConfig {
-  return (
-    isObject(data) &&
-    'flow' in data &&
-    'build' in data &&
-    isObject(data.flow) &&
-    isObject(data.build) &&
-    'platform' in data.flow
-  );
+export function isFlowSetup(data: unknown): data is Flow.Setup {
+  const result = safeParseSetup(data);
+  return result.success;
 }
 
-// Legacy format support removed in v0.3.0
-// See docs/MIGRATION.md for migration guide
+/**
+ * Validate Flow.Setup and throw descriptive error if invalid.
+ *
+ * @remarks
+ * Uses Zod validation from @walkeros/core.
+ * Provides detailed error messages from Zod.
+ *
+ * @param data - Raw configuration data
+ * @returns Validated Flow.Setup
+ * @throws Error with descriptive message if validation fails
+ */
+export function validateFlowSetup(data: unknown): Flow.Setup {
+  const result = safeParseSetup(data);
+
+  if (!result.success) {
+    // Format Zod errors for CLI display
+    const errors = result.error.issues
+      .map((issue) => {
+        const path =
+          issue.path.length > 0 ? issue.path.map(String).join('.') : 'root';
+        return `  - ${path}: ${issue.message}`;
+      })
+      .join('\n');
+
+    throw new Error(`Invalid configuration:\n${errors}`);
+  }
+
+  // Cast to Flow.Setup since Zod's inferred type is compatible but not identical
+  return result.data as Flow.Setup;
+}
+
+/**
+ * Get available flow names from a Flow.Setup.
+ *
+ * @param setup - Flow.Setup configuration
+ * @returns Array of flow names
+ */
+export function getAvailableFlows(setup: Flow.Setup): string[] {
+  return Object.keys(setup.flows);
+}

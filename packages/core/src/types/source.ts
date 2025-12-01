@@ -2,7 +2,7 @@
 import type {
   Elb,
   On,
-  Handler,
+  Logger,
   Mapping as WalkerOSMapping,
   Collector,
 } from './index';
@@ -19,6 +19,7 @@ export interface BaseEnv {
   command: Collector.CommandFn;
   sources?: Collector.Sources;
   elb: Elb.Fn;
+  logger: Logger.Instance;
 }
 
 /**
@@ -75,7 +76,7 @@ export interface Config<T extends TypesGeneric = Types>
   settings?: InitSettings<T>;
   env?: Env<T>;
   id?: string;
-  onError?: Handler.Error;
+  logger?: Logger.Config;
   disabled?: boolean;
   primary?: boolean;
 }

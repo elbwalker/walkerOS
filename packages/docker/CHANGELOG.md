@@ -1,5 +1,11 @@
 # @walkeros/docker
 
+## 0.2.2
+
+### Patch Changes
+
+- simulate server and local packages
+
 ## 0.2.1
 
 ### Patch Changes

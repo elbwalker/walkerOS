@@ -163,12 +163,12 @@ describe('Translation Layer', () => {
         { elb: mockElb, settings: createTestSettings() },
         'walker config',
         {
-          verbose: true,
+          tagging: 2,
         },
       );
 
       // Walker commands should pass through without source info
-      expect(mockPush).toHaveBeenCalledWith('walker config', { verbose: true });
+      expect(mockPush).toHaveBeenCalledWith('walker config', { tagging: 2 });
     });
 
     test('does not add source information to object events', async () => {

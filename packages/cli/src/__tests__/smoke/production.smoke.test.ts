@@ -12,13 +12,21 @@ import fs from 'fs-extra';
 const projectRoot = process.cwd();
 
 describe('Production Smoke Tests', () => {
-  const bundlePath = join(projectRoot, 'examples/server-collect.mjs');
+  // Output path is now convention-based: ./dist/bundle.mjs for server
+  const bundlePath = join(projectRoot, 'examples/dist/bundle.mjs');
 
   beforeAll(async () => {
-    // Ensure fresh bundle
+    // Ensure the dist directory exists
+    await fs.ensureDir(join(projectRoot, 'examples/dist'));
+    // Create fresh bundle from Flow.Setup config
     await bundle(join(projectRoot, 'examples/server-collect.json'), {
       silent: true,
     });
+  });
+
+  afterAll(async () => {
+    // Clean up the dist directory
+    await fs.remove(join(projectRoot, 'examples/dist')).catch(() => {});
   });
 
   it('bundle should exist and be non-empty', () => {

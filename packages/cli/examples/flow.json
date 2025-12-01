@@ -1,82 +1,82 @@
 {
-  "flow": {
-    "platform": "web",
-    "destinations": {
-      "ga4": {
-        "code": "destinationGtag",
-        "config": {
-          "consent": {
-            "marketing": true
-          },
-          "settings": {
-            "ga4": {
-              "measurementId": "G-XXXXXXXXXX"
-            }
-          },
-          "mapping": {
-            "order": {
-              "complete": {
-                "name": "purchase",
-                "data": {
-                  "map": {
-                    "transaction_id": "data.id",
-                    "value": "data.total",
-                    "currency": "data.currency",
-                    "tax": "data.tax",
-                    "shipping": "data.shipping",
-                    "email": {
-                      "key": "user.email",
-                      "consent": {
-                        "marketing": true
-                      }
-                    },
-                    "gclid": {
-                      "key": "user.gclid",
-                      "consent": {
-                        "marketing": true
-                      }
-                    },
-                    "source_url": "source.id"
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "packages": {
+        "@walkeros/collector": {
+          "version": "latest",
+          "imports": ["startFlow"]
+        },
+        "@walkeros/web-destination-gtag": {
+          "version": "latest",
+          "imports": ["destinationGtag"]
+        },
+        "@walkeros/destination-demo": {
+          "version": "latest",
+          "imports": ["destinationDemo"]
+        }
+      },
+      "destinations": {
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "consent": {
+              "marketing": true
+            },
+            "settings": {
+              "ga4": {
+                "measurementId": "G-XXXXXXXXXX"
+              }
+            },
+            "mapping": {
+              "order": {
+                "complete": {
+                  "name": "purchase",
+                  "data": {
+                    "map": {
+                      "transaction_id": "data.id",
+                      "value": "data.total",
+                      "currency": "data.currency",
+                      "tax": "data.tax",
+                      "shipping": "data.shipping",
+                      "email": {
+                        "key": "user.email",
+                        "consent": {
+                          "marketing": true
+                        }
+                      },
+                      "gclid": {
+                        "key": "user.gclid",
+                        "consent": {
+                          "marketing": true
+                        }
+                      },
+                      "source_url": "source.id"
+                    }
                   }
                 }
               }
             }
           }
-        }
-      },
-      "demo": {
-        "code": "destinationDemo",
-        "config": {
-          "settings": {
-            "name": "Order Complete Demo",
-            "values": ["name", "data", "user", "source", "consent"]
+        },
+        "demo": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": {
+              "name": "Order Complete Demo",
+              "values": ["name", "data", "user", "source", "consent"]
+            }
           }
         }
-      }
-    },
-    "collector": {
-      "run": true,
-      "globals": {
-        "environment": "production",
-        "version": "1.0.0"
+      },
+      "collector": {
+        "run": true,
+        "globals": {
+          "environment": "production",
+          "version": "1.0.0"
+        }
       }
     }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": {
-        "version": "latest",
-        "imports": ["startFlow"]
-      },
-      "@walkeros/web-destination-gtag": {
-        "version": "latest",
-        "imports": ["destinationGtag"]
-      },
-      "@walkeros/destination-demo": {
-        "version": "latest",
-        "imports": ["destinationDemo"]
-      }
-    },
-    "output": "flow.js"
   }
 }

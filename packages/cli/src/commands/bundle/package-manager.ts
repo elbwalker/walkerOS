@@ -1,12 +1,17 @@
 import pacote from 'pacote';
 import path from 'path';
 import fs from 'fs-extra';
-import { Logger } from '../../core/index.js';
+import {
+  Logger,
+  resolveLocalPackage,
+  copyLocalPackage,
+} from '../../core/index.js';
 import { getPackageCacheKey } from '../../core/cache-utils.js';
 
 export interface Package {
   name: string;
   version: string;
+  path?: string; // Local path to package directory
 }
 
 /**
@@ -123,10 +128,19 @@ export async function downloadPackages(
   targetDir: string,
   logger: Logger,
   useCache = true,
+  configDir?: string, // For resolving relative local paths
 ): Promise<Map<string, string>> {
   const packagePaths = new Map<string, string>();
   const downloadQueue: Package[] = [...packages];
   const processed = new Set<string>();
+
+  // Track packages that should use local paths (to prevent npm overwriting them)
+  const localPackageMap = new Map<string, string>();
+  for (const pkg of packages) {
+    if (pkg.path) {
+      localPackageMap.set(pkg.name, pkg.path);
+    }
+  }
 
   // Validate no duplicate packages with different versions in initial list
   validateNoDuplicatePackages(packages);
@@ -142,6 +156,34 @@ export async function downloadPackages(
       continue;
     }
     processed.add(pkgKey);
+
+    // If this package was specified with a local path, use it even if discovered as a dependency
+    if (!pkg.path && localPackageMap.has(pkg.name)) {
+      pkg.path = localPackageMap.get(pkg.name);
+    }
+
+    // Handle local packages first
+    if (pkg.path) {
+      const localPkg = await resolveLocalPackage(
+        pkg.name,
+        pkg.path,
+        configDir || process.cwd(),
+        logger,
+      );
+      const installedPath = await copyLocalPackage(localPkg, targetDir, logger);
+      packagePaths.set(pkg.name, installedPath);
+
+      // Resolve dependencies from local package
+      const deps = await resolveDependencies(pkg, installedPath, logger);
+      for (const dep of deps) {
+        const depKey = `${dep.name}@${dep.version}`;
+        if (!processed.has(depKey)) {
+          downloadQueue.push(dep);
+        }
+      }
+      continue;
+    }
+
     const packageSpec = `${pkg.name}@${pkg.version}`;
     // Use proper node_modules structure: node_modules/@scope/package
     const packageDir = getPackageDirectory(targetDir, pkg.name, pkg.version);

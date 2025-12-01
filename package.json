@@ -29,7 +29,7 @@
     "dev": "turbo run dev --output-logs=errors-only",
     "format": "prettier --write .",
     "lint": "turbo run lint --filter=!@walkeros/website --output-logs=errors-only",
-    "publish-packages": "turbo run build lint test --filter=!@walkeros/website --output-logs=errors-only && changeset version && changeset publish",
+    "publish-packages": "rm -rf .turbo/cache && npm run build && npm run lint && npm run test && changeset version && changeset publish",
     "publish-docker": "npm run -w @walkeros/cli docker:publish && npm run -w @walkeros/docker docker:publish",
     "test": "turbo run test --filter=!@walkeros/website --output-logs=errors-only",
     "prepare": "husky || true"

@@ -2,13 +2,15 @@ import type { PushFn } from './types';
 import type { IngestEventsRequest, IngestEventsResponse } from './types';
 import { getMappingValue, isObject } from '@walkeros/core';
 import { formatEvent, formatConsent } from './format';
-import { createLogger } from './utils';
 import { getAccessToken } from './auth';
+import { getConfig } from './config';
 
 export const push: PushFn = async function (
   event,
-  { config, mapping, data, collector, env },
+  { config, mapping, data, collector, env, logger },
 ) {
+  // Validate config and get typed settings
+  const validatedConfig = getConfig(config, logger);
   const {
     destinations,
     eventSource,
@@ -16,16 +18,13 @@ export const push: PushFn = async function (
     url = 'https://datamanager.googleapis.com/v1',
     consent: requestConsent,
     testEventCode,
-    logLevel = 'none',
     userData,
     userId,
     clientId,
     sessionAttributes,
     consentAdUserData,
     consentAdPersonalization,
-  } = config.settings!;
-
-  const logger = createLogger(logLevel);
+  } = validatedConfig.settings;
 
   // Extract Settings guided helpers
   const userDataMapped = userData
@@ -71,8 +70,8 @@ export const push: PushFn = async function (
     settingsHelpers.adPersonalization = consentAdPersonalizationValue;
 
   // Get mapped data from destination config and event mapping
-  const configData = config.data
-    ? await getMappingValue(event, config.data)
+  const configData = validatedConfig.data
+    ? await getMappingValue(event, validatedConfig.data)
     : {};
   const eventData = isObject(data) ? data : {};
 
@@ -92,8 +91,8 @@ export const push: PushFn = async function (
     timestamp: event.timestamp,
   });
 
-  // Apply event source from settings if not set
-  if (!dataManagerEvent.eventSource && eventSource) {
+  // Apply event source from settings (required)
+  if (!dataManagerEvent.eventSource) {
     dataManagerEvent.eventSource = eventSource;
   }
 
@@ -102,8 +101,18 @@ export const push: PushFn = async function (
     dataManagerEvent.consent = requestConsent;
   }
 
-  if (!destinations || destinations.length === 0) {
-    throw new Error('Destinations are required');
+  // Validate required fields before API call
+  if (!dataManagerEvent.transactionId) {
+    logger.throw('transactionId is required');
+  }
+
+  // Check if any destination is GA4 (requires eventName)
+  const hasGA4Destination = destinations.some(
+    (d) => d.operatingAccount?.accountType === 'GOOGLE_ANALYTICS_PROPERTY',
+  );
+
+  if (hasGA4Destination && !dataManagerEvent.eventName) {
+    logger.throw('eventName is required for GA4 destinations');
   }
 
   // Build API request
@@ -127,7 +136,7 @@ export const push: PushFn = async function (
 
   const authClient = env?.authClient;
   if (!authClient) {
-    throw new Error(
+    return logger.throw(
       'Auth client not initialized. Ensure init() was called successfully.',
     );
   }
@@ -161,13 +170,7 @@ export const push: PushFn = async function (
 
   if (!response.ok) {
     const errorText = await response.text();
-    logger.error('API request failed', {
-      status: response.status,
-      error: errorText,
-    });
-    throw new Error(
-      `Data Manager API error (${response.status}): ${errorText}`,
-    );
+    logger.throw(`Data Manager API error (${response.status}): ${errorText}`);
   }
 
   const result: IngestEventsResponse = await response.json();
@@ -179,10 +182,7 @@ export const push: PushFn = async function (
 
   // If validation errors exist, throw them
   if (result.validationErrors && result.validationErrors.length > 0) {
-    logger.error('Validation errors', {
-      errors: result.validationErrors,
-    });
-    throw new Error(
+    logger.throw(
       `Validation errors: ${JSON.stringify(result.validationErrors)}`,
     );
   }

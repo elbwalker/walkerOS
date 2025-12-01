@@ -49,6 +49,39 @@ elb('walker destination', destinationBigQuery, {
 | `location`  | `string`          | Geographic location for the BigQuery dataset     | No       | `'US'`                                     |
 | `bigquery`  | `BigQueryOptions` | Additional BigQuery client configuration options | No       | `{ keyFilename: "path/to/key.json" }`      |
 
+## Table Schema
+
+By default, the destination sends the full walkerOS event. Create the table
+with:
+
+```sql
+CREATE TABLE IF NOT EXISTS `YOUR_PROJECT.walkeros.events` (
+  timestamp TIMESTAMP,
+  createdAt TIMESTAMP,
+  name STRING,
+  id STRING,
+  entity STRING,
+  action STRING,
+  trigger STRING,
+  `group` STRING,
+  timing FLOAT64,
+  count INT64,
+  data STRING,
+  context STRING,
+  globals STRING,
+  custom STRING,
+  user STRING,
+  nested STRING,
+  consent STRING,
+  version STRING,
+  source STRING
+);
+```
+
+Object and array fields (`data`, `context`, `globals`, etc.) are JSON
+stringified. For custom schemas using the `data` mapping config, see the
+[full documentation](https://www.elbwalker.com/docs/destinations/server/gcp).
+
 ## Contribute
 
 Feel free to contribute by submitting an

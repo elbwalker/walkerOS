@@ -1,36 +1,40 @@
 /**
  * Run Command Validators
  *
- * Validation logic for run command inputs
+ * Validation logic for run command inputs.
+ * Uses Zod schemas for type-safe validation.
  */
 
 import { existsSync } from 'fs';
 import { resolveAsset } from '../../core/asset-resolver.js';
-import type { RunMode } from './types.js';
+import {
+  RunModeSchema,
+  PortSchema,
+  type RunMode,
+} from '../../schemas/index.js';
 
 /**
- * Valid run modes
- */
-const VALID_MODES: RunMode[] = ['collect', 'serve'];
-
-/**
- * Validates run mode
+ * Validates run mode using Zod schema.
  *
  * @param mode - Mode to validate
  * @throws Error if mode is invalid
  */
 export function validateMode(mode: string): asserts mode is RunMode {
-  if (!VALID_MODES.includes(mode as RunMode)) {
+  const result = RunModeSchema.safeParse(mode);
+  if (!result.success) {
     throw new Error(
       `Invalid mode: "${mode}"\n` +
-        `   Valid modes: ${VALID_MODES.join(', ')}\n` +
+        `   Valid modes: collect, serve\n` +
         `   Example: walkeros run collect ./flow.json`,
     );
   }
 }
 
 /**
- * Validates flow file exists
+ * Validates flow file exists.
+ *
+ * @remarks
+ * File existence cannot be validated by Zod, so this remains a custom check.
  *
  * @param filePath - Path to flow configuration file (bare name, relative, or absolute)
  * @returns Absolute path to flow file
@@ -52,13 +56,14 @@ export function validateFlowFile(filePath: string): string {
 }
 
 /**
- * Validates port number
+ * Validates port number using Zod schema.
  *
  * @param port - Port number to validate
  * @throws Error if port is invalid
  */
 export function validatePort(port: number): void {
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  const result = PortSchema.safeParse(port);
+  if (!result.success) {
     throw new Error(
       `Invalid port: ${port}\n` +
         `   Port must be an integer between 1 and 65535\n` +

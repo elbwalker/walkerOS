@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { WalkerOS, Logger } from '@walkeros/core';
 import type { GA4Settings, GA4Mapping, Parameters } from '../types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { isObject } from '@walkeros/core';
@@ -11,11 +11,13 @@ export function pushGA4Event(
   settings: GA4Settings,
   mapping: GA4Mapping = {},
   data: WalkerOS.AnyObject,
-  env?: DestinationWeb.Env,
+  env: DestinationWeb.Env | undefined,
+  logger: Logger.Instance,
 ): void {
   const { window } = getEnv(env);
 
-  if (!settings.measurementId) return;
+  if (!settings.measurementId)
+    logger.throw('Config settings ga4.measurementId missing');
 
   const eventData = isObject(data) ? data : {};
 

@@ -56,3 +56,5 @@ export const push: Env = {
     return createMockBigQuery() as unknown as Env['BigQuery'];
   },
 };
+
+export const simulation = ['BigQuery'];

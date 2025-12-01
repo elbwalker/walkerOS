@@ -1,4 +1,5 @@
 import type { WalkerOS, Elb, Collector, Source } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import { sourceDataLayer } from '../index';
 import type { Types } from '../types';
 
@@ -74,5 +75,6 @@ export async function createDataLayerSource(
     command: collector.command.bind(collector),
     elb: collector.sources.elb.push,
     window,
+    logger: createMockLogger(),
   });
 }

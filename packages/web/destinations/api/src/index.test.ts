@@ -1,7 +1,7 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { DestinationAPI } from '.';
 import { startFlow } from '@walkeros/collector';
-import { createEvent, clone } from '@walkeros/core';
+import { createEvent, clone, createMockLogger } from '@walkeros/core';
 import { examples } from './dev';
 
 describe('Destination API', () => {
@@ -15,6 +15,9 @@ describe('Destination API', () => {
   const testEnv = clone(examples.env.push);
   testEnv.sendWeb = mockSendWeb;
 
+  // Mock logger
+  const mockLogger = createMockLogger();
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -26,12 +29,15 @@ describe('Destination API', () => {
   });
 
   test('init', () => {
-    // Test with no URL - should not call sendWeb
-    destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {},
-      env: testEnv,
-    });
+    // Test with no URL - should throw error
+    expect(() =>
+      destination.push(event, {
+        collector: {} as Collector.Instance,
+        config: {},
+        env: testEnv,
+        logger: mockLogger,
+      }),
+    ).toThrow('Config settings url missing');
     expect(mockSendWeb).not.toHaveBeenCalled();
 
     // Test with URL - should call sendWeb
@@ -39,6 +45,7 @@ describe('Destination API', () => {
       collector: {} as Collector.Instance,
       config: { settings: { url } },
       env: testEnv,
+      logger: mockLogger,
     });
     expect(mockSendWeb).toHaveBeenCalledTimes(1);
 
@@ -62,6 +69,7 @@ describe('Destination API', () => {
         settings: { url },
       },
       env: customEnv,
+      logger: mockLogger,
     });
 
     expect(customSendWeb).toHaveBeenCalledTimes(1);
@@ -82,6 +90,7 @@ describe('Destination API', () => {
         settings: { url, transform: () => 'transformed' },
       },
       env: testEnv,
+      logger: mockLogger,
     });
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -97,6 +106,7 @@ describe('Destination API', () => {
         settings: { url, headers: { foo: 'bar' } },
       },
       env: testEnv,
+      logger: mockLogger,
     });
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -114,6 +124,7 @@ describe('Destination API', () => {
         settings: { url, method: 'POST' },
       },
       env: testEnv,
+      logger: mockLogger,
     });
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -132,6 +143,7 @@ describe('Destination API', () => {
         mapping: examples.mapping.config,
       },
       env: testEnv,
+      logger: mockLogger,
     });
 
     expect(mockSendWeb).toHaveBeenCalledWith(

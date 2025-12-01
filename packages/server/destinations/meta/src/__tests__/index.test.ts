@@ -1,6 +1,6 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
-import { clone, getEvent } from '@walkeros/core';
+import { clone, getEvent, createMockLogger } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import { hashEvent } from '../hash';
@@ -45,6 +45,7 @@ describe('Server Destination Meta', () => {
       config: { settings: settings as Settings },
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
     })) as Config;
   }
 
@@ -55,6 +56,7 @@ describe('Server Destination Meta', () => {
         config: {},
         collector: mockCollector,
         env: testEnv,
+        logger: createMockLogger(),
       }),
     ).rejects.toThrow('Config settings accessToken missing');
     await expect(
@@ -62,6 +64,7 @@ describe('Server Destination Meta', () => {
         config: { settings: { accessToken, pixelId: '' } },
         collector: mockCollector,
         env: testEnv,
+        logger: createMockLogger(),
       }),
     ).rejects.toThrow('Config settings pixelId missing');
 
@@ -85,6 +88,7 @@ describe('Server Destination Meta', () => {
       config,
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
     });
 
     expect(mockSendServer).toHaveBeenCalled();
@@ -106,6 +110,7 @@ describe('Server Destination Meta', () => {
       config,
       collector: {} as Collector.Instance,
       env: customEnv,
+      logger: createMockLogger(),
     });
 
     expect(customSendServer).toHaveBeenCalled();
@@ -137,6 +142,7 @@ describe('Server Destination Meta', () => {
         config,
         collector: mockCollector,
         env: testEnv,
+        logger: createMockLogger(),
       }),
     ).rejects.toThrow();
   });
@@ -157,6 +163,7 @@ describe('Server Destination Meta', () => {
       config,
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
     });
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
     expect(requestBody.data[0].user_data.fbc).toContain('.abc');

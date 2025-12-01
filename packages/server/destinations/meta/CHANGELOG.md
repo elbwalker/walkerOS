@@ -1,5 +1,14 @@
 # @walkeros/server-destination-meta
 
+## 0.4.2
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies
+  - @walkeros/core@0.4.2
+  - @walkeros/server-core@0.4.2
+
 ## 0.4.1
 
 ### Patch Changes

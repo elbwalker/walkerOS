@@ -1,6 +1,7 @@
 import { sourceExpress } from '../index';
 import type { EventRequest, Types } from '../types';
 import type { WalkerOS, Source } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import type { Request, Response } from 'express';
 
 // Mock request/response for testing
@@ -88,6 +89,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -115,6 +117,7 @@ describe('sourceExpress', () => {
         push: mockPush as never,
         command: mockCommand as never,
         elb: jest.fn() as never,
+        logger: createMockLogger(),
       });
 
       expect(source.config.settings).toEqual({
@@ -133,6 +136,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -154,6 +158,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -186,6 +191,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -212,6 +218,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -241,6 +248,7 @@ describe('sourceExpress', () => {
           push: errorPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -268,6 +276,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -296,6 +305,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -320,6 +330,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -350,6 +361,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -379,6 +391,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -404,6 +417,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -433,6 +447,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -451,6 +466,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 
@@ -466,6 +482,7 @@ describe('sourceExpress', () => {
           push: mockPush as never,
           command: mockCommand as never,
           elb: jest.fn() as never,
+          logger: createMockLogger(),
         },
       );
 

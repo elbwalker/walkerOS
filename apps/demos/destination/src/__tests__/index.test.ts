@@ -1,5 +1,5 @@
-import { startFlow } from '@walkeros/collector';
 import type { WalkerOS } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import { destinationDemo } from '../index';
 
 describe('Demo Destination', () => {
@@ -11,6 +11,7 @@ describe('Demo Destination', () => {
       collector: mockCollector,
       config: { settings: { name: 'test' } },
       env: { log: mockLog },
+      logger: createMockLogger(),
     });
 
     expect(mockLog).toHaveBeenCalledWith('[test] initialized');
@@ -45,6 +46,7 @@ describe('Demo Destination', () => {
       collector: mockCollector,
       config: { settings: { name: 'full' } },
       env: { log: mockLog },
+      logger: createMockLogger(),
     });
 
     expect(mockLog).toHaveBeenCalledTimes(1);
@@ -88,6 +90,7 @@ describe('Demo Destination', () => {
         },
       },
       env: { log: mockLog },
+      logger: createMockLogger(),
     });
 
     const logCall = mockLog.mock.calls[0][0];
@@ -138,6 +141,7 @@ describe('Demo Destination', () => {
         },
       },
       env: { log: mockLog },
+      logger: createMockLogger(),
     });
 
     const logCall = mockLog.mock.calls[0][0];
@@ -177,6 +181,7 @@ describe('Demo Destination', () => {
       collector: mockCollector,
       config: {},
       env: {},
+      logger: createMockLogger(),
     });
 
     expect(console.log).toHaveBeenCalled();
@@ -217,6 +222,7 @@ describe('Demo Destination', () => {
         },
       },
       env: { log: mockLog },
+      logger: createMockLogger(),
     });
 
     const logCall = mockLog.mock.calls[0][0];

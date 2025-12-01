@@ -1,7 +1,12 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { bundle } from '../../commands/bundle/index.js';
-import { getId } from '@walkeros/core';
+import { getId, type Flow } from '@walkeros/core';
+import {
+  loadBundleConfig,
+  getBuildDefaults,
+  getDefaultOutput,
+} from '../../config/index.js';
 
 describe('Programmatic Bundle API', () => {
   const testOutputDir = path.join(
@@ -30,25 +35,22 @@ describe('Programmatic Bundle API', () => {
     jest.restoreAllMocks();
   });
 
-  it('should bundle with config object', async () => {
-    const config = {
-      flow: {
-        platform: 'web' as const,
-      },
-      build: {
-        packages: {
-          '@walkeros/core': {
-            imports: ['getId', 'trim'],
+  it('should bundle with Flow.Setup config object', async () => {
+    const config: Flow.Setup = {
+      version: 1,
+      flows: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/core': {
+              imports: ['getId', 'trim'],
+            },
           },
         },
-        code: 'export const test = getId(8); export const clean = (s) => trim(s);',
-        template: '', // Disable template for raw code bundling
-        platform: 'browser',
-        format: 'esm',
-        output: path.join(testOutputDir, 'config-object.js'),
       },
     };
 
+    // Bundle will use convention-based output path
     await expect(bundle(config, { silent: true })).resolves.not.toThrow();
   });
 
@@ -62,18 +64,15 @@ describe('Programmatic Bundle API', () => {
   });
 
   it('should return stats when requested', async () => {
-    const config = {
-      flow: {
-        platform: 'web' as const,
-      },
-      build: {
-        packages: {
-          '@walkeros/core': { imports: ['getId'] },
+    const config: Flow.Setup = {
+      version: 1,
+      flows: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
         },
-        code: 'export const test = getId(8);',
-        template: '', // Disable template for raw code bundling
-        format: 'esm' as const,
-        output: path.join(testOutputDir, 'with-stats.js'),
       },
     };
 
@@ -86,18 +85,15 @@ describe('Programmatic Bundle API', () => {
   });
 
   it('should return undefined when stats not requested', async () => {
-    const config = {
-      flow: {
-        platform: 'web' as const,
-      },
-      build: {
-        packages: {
-          '@walkeros/core': { imports: ['getId'] },
+    const config: Flow.Setup = {
+      version: 1,
+      flows: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
         },
-        code: 'export const test = getId(8);',
-        template: '', // Disable template for raw code bundling
-        format: 'esm' as const,
-        output: path.join(testOutputDir, 'no-stats.js'),
       },
     };
 
@@ -107,18 +103,15 @@ describe('Programmatic Bundle API', () => {
   });
 
   it('should handle cache option', async () => {
-    const config = {
-      flow: {
-        platform: 'web' as const,
-      },
-      build: {
-        packages: {
-          '@walkeros/core': { imports: ['getId'] },
+    const config: Flow.Setup = {
+      version: 1,
+      flows: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
         },
-        code: 'export const test = getId(8);',
-        template: '', // Disable template for raw code bundling
-        format: 'esm' as const,
-        output: path.join(testOutputDir, 'with-cache.js'),
       },
     };
 
@@ -128,18 +121,15 @@ describe('Programmatic Bundle API', () => {
   });
 
   it('should handle verbose option', async () => {
-    const config = {
-      flow: {
-        platform: 'web' as const,
-      },
-      build: {
-        packages: {
-          '@walkeros/core': { imports: ['getId'] },
+    const config: Flow.Setup = {
+      version: 1,
+      flows: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
         },
-        code: 'export const test = getId(8);',
-        template: '', // Disable template for raw code bundling
-        format: 'esm' as const,
-        output: path.join(testOutputDir, 'verbose.js'),
       },
     };
 
@@ -154,5 +144,49 @@ describe('Programmatic Bundle API', () => {
     await expect(bundle(invalidConfigPath, { silent: true })).rejects.toThrow(
       'Configuration file not found',
     );
+  });
+
+  it('should select flow from multi-flow config', async () => {
+    const config: Flow.Setup = {
+      version: 1,
+      flows: {
+        production: {
+          web: {},
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
+        },
+        staging: {
+          web: {},
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
+        },
+      },
+    };
+
+    await expect(
+      bundle(config, { silent: true, flowName: 'production' }),
+    ).resolves.not.toThrow();
+  });
+
+  it('should apply platform-specific build defaults', () => {
+    // Verify build defaults are correctly applied
+    const webDefaults = getBuildDefaults('web');
+    expect(webDefaults.format).toBe('iife');
+    expect(webDefaults.platform).toBe('browser');
+    expect(webDefaults.target).toBe('es2020');
+    expect(webDefaults.template).toBe('web.hbs');
+
+    const serverDefaults = getBuildDefaults('server');
+    expect(serverDefaults.format).toBe('esm');
+    expect(serverDefaults.platform).toBe('node');
+    expect(serverDefaults.target).toBe('node20');
+    expect(serverDefaults.template).toBe('server.hbs');
+  });
+
+  it('should use convention-based output paths', () => {
+    expect(getDefaultOutput('web')).toBe('./dist/walker.js');
+    expect(getDefaultOutput('server')).toBe('./dist/bundle.mjs');
   });
 });

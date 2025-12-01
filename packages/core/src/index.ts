@@ -1,6 +1,7 @@
 export * from './types';
 
 export * from './anonymizeIP';
+export * from './flow';
 export * from './assign';
 export * from './byPath';
 export * from './castValue';
@@ -12,9 +13,10 @@ export * from './getId';
 export * from './getMarketingParameters';
 export * from './invocations';
 export * from './is';
+export * from './logger';
 export * from './mapping';
 export * from './mockEnv';
-export * from './onLog';
+export * from './mockLogger';
 export * from './property';
 export * from './request';
 export * from './send';
@@ -24,3 +26,4 @@ export * from './tryCatch';
 export * from './useHooks';
 export * from './userAgent';
 export * from './validate';
+export * from './wrapInlineCode';

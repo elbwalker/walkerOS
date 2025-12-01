@@ -1,7 +1,7 @@
 /**
  * Bundle Command
  *
- * Supports both single-environment and multi-environment builds.
+ * Supports both single-flow and multi-flow builds.
  */
 
 import path from 'path';
@@ -14,21 +14,22 @@ import {
   executeCommand,
   getErrorMessage,
   buildCommonDockerArgs,
+  resolveAsset,
 } from '../../core/index.js';
 import {
   loadJsonConfig,
   loadBundleConfig,
-  loadAllEnvironments,
-  parseBundleConfig,
+  loadAllFlows,
   type LoadConfigResult,
 } from '../../config/index.js';
 import type { GlobalOptions } from '../../types/index.js';
+import type { BuildOptions } from '../../types/bundle.js';
 import { bundleCore } from './bundler.js';
 import { displayStats, createStatsSummary } from './stats.js';
 
 export interface BundleCommandOptions extends GlobalOptions {
   config: string;
-  env?: string;
+  flow?: string;
   all?: boolean;
   stats?: boolean;
   json?: boolean;
@@ -46,7 +47,7 @@ export async function bundleCommand(
   // Build Docker args - start with common flags
   const dockerArgs = buildCommonDockerArgs(options);
   // Add bundle-specific flags
-  if (options.env) dockerArgs.push('--env', options.env);
+  if (options.flow) dockerArgs.push('--flow', options.flow);
   if (options.all) dockerArgs.push('--all');
   if (options.stats) dockerArgs.push('--stats');
   if (options.cache === false) dockerArgs.push('--no-cache');
@@ -55,30 +56,30 @@ export async function bundleCommand(
     async () => {
       try {
         // Validate flag combination
-        if (options.env && options.all) {
-          throw new Error('Cannot use both --env and --all flags together');
+        if (options.flow && options.all) {
+          throw new Error('Cannot use both --flow and --all flags together');
         }
 
         // Step 1: Read configuration file
         logger.info('📦 Reading configuration...');
-        // Don't resolve URLs - pass them through as-is for download
-        const configPath = options.config;
+        // Resolve bare names to examples directory, keep paths/URLs as-is
+        const configPath = resolveAsset(options.config, 'config');
         const rawConfig = await loadJsonConfig(configPath);
 
         // Step 2: Load configuration(s) based on flags
         const configsToBundle: LoadConfigResult[] = options.all
-          ? loadAllEnvironments(rawConfig, { configPath, logger })
+          ? loadAllFlows(rawConfig, { configPath, logger })
           : [
               loadBundleConfig(rawConfig, {
                 configPath,
-                environment: options.env,
+                flowName: options.flow,
                 logger,
               }),
             ];
 
         // Step 3: Bundle each configuration
         const results: Array<{
-          environment: string;
+          flowName: string;
           success: boolean;
           stats?: unknown;
           error?: string;
@@ -87,8 +88,8 @@ export async function bundleCommand(
         for (const {
           flowConfig,
           buildOptions,
-          environment,
-          isMultiEnvironment,
+          flowName,
+          isMultiFlow,
         } of configsToBundle) {
           try {
             // Override cache setting from CLI if provided
@@ -96,9 +97,9 @@ export async function bundleCommand(
               buildOptions.cache = options.cache;
             }
 
-            // Log environment being built (for multi-environment setups)
-            if (isMultiEnvironment || options.all) {
-              logger.info(`\n🔧 Building environment: ${environment}`);
+            // Log flow being built (for multi-flow setups)
+            if (isMultiFlow || options.all) {
+              logger.info(`\n🔧 Building flow: ${flowName}`);
             } else {
               logger.info('🔧 Starting bundle process...');
             }
@@ -113,7 +114,7 @@ export async function bundleCommand(
             );
 
             results.push({
-              environment,
+              flowName,
               success: true,
               stats,
             });
@@ -125,13 +126,13 @@ export async function bundleCommand(
           } catch (error) {
             const errorMessage = getErrorMessage(error);
             results.push({
-              environment,
+              flowName,
               success: false,
               error: errorMessage,
             });
 
             if (!options.all) {
-              throw error; // Re-throw for single environment builds
+              throw error; // Re-throw for single flow builds
             }
           }
         }
@@ -148,7 +149,7 @@ export async function bundleCommand(
             failureCount === 0
               ? createSuccessOutput(
                   {
-                    environments: results,
+                    flows: results,
                     summary: {
                       total: results.length,
                       success: successCount,
@@ -158,7 +159,7 @@ export async function bundleCommand(
                   duration,
                 )
               : createErrorOutput(
-                  `${failureCount} environment(s) failed to build`,
+                  `${failureCount} flow(s) failed to build`,
                   duration,
                 );
           outputLogger.log('white', JSON.stringify(output, null, 2));
@@ -177,7 +178,7 @@ export async function bundleCommand(
               `\n✅ Bundle created successfully in ${timer.format()}`,
             );
           } else {
-            throw new Error(`${failureCount} environment(s) failed to build`);
+            throw new Error(`${failureCount} flow(s) failed to build`);
           }
         }
       } catch (error) {
@@ -209,24 +210,27 @@ export async function bundleCommand(
  *
  * Handles configuration loading, parsing, and logger creation internally.
  *
- * @param configOrPath - Bundle configuration object or path to config file
+ * @param configOrPath - Bundle configuration (Flow.Setup) or path to config file
  * @param options - Bundle options
  * @param options.silent - Suppress all output (default: false)
  * @param options.verbose - Enable verbose logging (default: false)
  * @param options.stats - Collect and return bundle statistics (default: false)
  * @param options.cache - Enable package caching (default: true)
+ * @param options.flowName - Flow to use (required for multi-flow configs)
  * @returns Bundle statistics if stats option is true, otherwise void
  *
  * @example
  * ```typescript
- * // With config object
+ * // With Flow.Setup config object
  * await bundle({
- *   platform: 'web',
- *   packages: { '@walkeros/collector': { imports: ['startFlow'] } },
- *   sources: { browser: { code: 'sourceBrowser' } },
- *   destinations: { api: { code: 'destinationApi' } },
- *   code: 'export default startFlow({ sources, destinations })',
- *   output: './dist/walker.js'
+ *   version: 1,
+ *   flows: {
+ *     default: {
+ *       web: {},
+ *       packages: { '@walkeros/collector': { imports: ['startFlow'] } },
+ *       destinations: { api: { code: 'destinationApi' } },
+ *     }
+ *   }
  * });
  *
  * // With config file
@@ -240,18 +244,28 @@ export async function bundle(
     verbose?: boolean;
     stats?: boolean;
     cache?: boolean;
+    flowName?: string;
+    buildOverrides?: Partial<BuildOptions>;
   } = {},
 ): Promise<import('./bundler').BundleStats | void> {
   // 1. Load config if path provided
   let rawConfig: unknown;
+  // Use current working directory as base when config is passed as object
+  let configPath = path.resolve(process.cwd(), 'walkeros.config.json');
   if (typeof configOrPath === 'string') {
-    rawConfig = await loadJsonConfig(configOrPath);
+    // Resolve bare names to examples directory, keep paths as-is
+    configPath = resolveAsset(configOrPath, 'config');
+    rawConfig = await loadJsonConfig(configPath);
   } else {
     rawConfig = configOrPath;
   }
 
-  // 2. Parse and normalize config
-  const { flowConfig, buildOptions } = parseBundleConfig(rawConfig);
+  // 2. Load and resolve config using Flow.Setup format
+  const { flowConfig, buildOptions } = loadBundleConfig(rawConfig, {
+    configPath,
+    flowName: options.flowName,
+    buildOverrides: options.buildOverrides,
+  });
 
   // 3. Handle cache option
   if (options.cache !== undefined) {

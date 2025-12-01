@@ -148,9 +148,12 @@ export async function pushToDestinations(
           event.user = assign(user, event.user);
 
           await tryCatchAsync(destinationPush, (err) => {
-            // Call custom error handling if available
-            if (collector.config.onError)
-              collector.config.onError(err, collector);
+            // Log the error with destination scope
+            const destType = destination.type || 'unknown';
+            collector.logger.scope(destType).error('Push failed', {
+              error: err,
+              event: event.name,
+            });
             error = true; // oh no
 
             // Add failed event to destinations DLQ
@@ -212,10 +215,15 @@ export async function destinationInit<Destination extends Destination.Instance>(
 ): Promise<boolean> {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
+    // Create scoped logger for this destination: [type:id] or [unknown:id]
+    const destType = destination.type || 'unknown';
+    const destLogger = collector.logger.scope(destType);
+
     const context = {
       collector,
       config: destination.config,
       env: mergeEnvironments(destination.env, destination.config.env),
+      logger: destLogger,
     } as Destination.InitContext;
 
     const configResult = await useHooks(
@@ -258,12 +266,17 @@ export async function destinationPush<Destination extends Destination.Instance>(
 
   if (processed.ignore) return false;
 
+  // Create scoped logger for this destination: [type] or [unknown]
+  const destType = destination.type || 'unknown';
+  const destLogger = collector.logger.scope(destType);
+
   const context: Destination.PushContext = {
     collector,
     config,
     data: processed.data,
     mapping: processed.mapping,
     env: mergeEnvironments(destination.env, config.env),
+    logger: destLogger,
   };
 
   const eventMapping = processed.mapping;
@@ -279,12 +292,16 @@ export async function destinationPush<Destination extends Destination.Instance>(
     eventMapping.batchFn =
       eventMapping.batchFn ||
       debounce((destination, collector) => {
+        const batchDestType = destination.type || 'unknown';
+        const batchLogger = collector.logger.scope(batchDestType);
+
         const batchContext: Destination.PushBatchContext = {
           collector,
           config,
           data: processed.data,
           mapping: eventMapping,
           env: mergeEnvironments(destination.env, config.env),
+          logger: batchLogger,
         };
 
         useHooks(

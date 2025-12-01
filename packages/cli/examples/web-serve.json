@@ -1,75 +1,74 @@
 {
-  "flow": {
-    "platform": "web",
-    "sources": {
-      "demo": {
-        "code": "sourceDemo",
-        "config": {
-          "settings": {
-            "events": [
-              {
-                "name": "page view",
-                "data": { "title": "Home", "path": "/" },
-                "delay": 0
-              },
-              {
-                "name": "product view",
-                "data": {
-                  "id": "P123",
-                  "name": "Test Product",
-                  "price": 99.99
-                },
-                "delay": 100
-              }
-            ]
-          }
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {
+        "windowCollector": "collector",
+        "windowElb": "elb"
+      },
+      "packages": {
+        "@walkeros/collector": {
+          "imports": ["startFlow"]
+        },
+        "@walkeros/source-demo": {
+          "imports": ["sourceDemo"]
+        },
+        "@walkeros/destination-demo": {
+          "imports": ["destinationDemo"]
+        },
+        "@walkeros/web-destination-api": {
+          "imports": ["destinationAPI"]
         }
-      }
-    },
-    "destinations": {
-      "demo": {
-        "package": "@walkeros/destination-demo",
-        "code": "destinationDemo",
-        "config": {
-          "settings": {
-            "name": "demo"
+      },
+      "sources": {
+        "demo": {
+          "package": "@walkeros/source-demo",
+          "config": {
+            "settings": {
+              "events": [
+                {
+                  "name": "page view",
+                  "data": { "title": "Home", "path": "/" },
+                  "delay": 0
+                },
+                {
+                  "name": "product view",
+                  "data": {
+                    "id": "P123",
+                    "name": "Test Product",
+                    "price": 99.99
+                  },
+                  "delay": 100
+                }
+              ]
+            }
           }
         }
       },
-      "api": {
-        "code": "destinationAPI",
-        "config": {
-          "settings": {
-            "url": "http://localhost:8080/collect"
+      "destinations": {
+        "demo": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": {
+              "name": "demo"
+            }
+          }
+        },
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "settings": {
+              "url": "http://localhost:8080/collect"
+            }
           }
         }
-      }
-    },
-    "collector": {
-      "run": true,
-      "globals": {
-        "language": "en"
+      },
+      "collector": {
+        "run": true,
+        "globals": {
+          "language": "en"
+        }
       }
     }
-  },
-  "build": {
-    "packages": {
-      "@walkeros/collector": {
-        "imports": ["startFlow"]
-      },
-      "@walkeros/source-demo": {
-        "imports": ["sourceDemo"]
-      },
-      "@walkeros/destination-demo": {
-        "imports": ["destinationDemo"]
-      },
-      "@walkeros/web-destination-api": {
-        "imports": ["destinationAPI"]
-      }
-    },
-    "minify": true,
-    "output": "web-serve.js",
-    "windowCollector": "collector",
-    "windowElb": "elb"
   }
 }

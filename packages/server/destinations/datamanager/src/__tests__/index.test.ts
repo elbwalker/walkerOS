@@ -1,6 +1,6 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, DestinationInterface, Settings } from '../types';
-import { getEvent } from '@walkeros/core';
+import { getEvent, createMockLogger } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import type { OAuth2Client } from 'google-auth-library';
 
@@ -28,6 +28,7 @@ describe('Server Destination Data Manager', () => {
   } as unknown as OAuth2Client;
   const mockFetch = jest.fn();
   const mockAccessToken = 'ya29.c.test_token';
+  const mockLogger = createMockLogger();
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -64,6 +65,7 @@ describe('Server Destination Data Manager', () => {
       config: { settings: settings as Settings },
       collector: mockCollector,
       env: {},
+      logger: mockLogger,
     })) as Config;
   }
 
@@ -75,6 +77,7 @@ describe('Server Destination Data Manager', () => {
           config: {},
           collector: mockCollector,
           env: {},
+          logger: mockLogger,
         }),
       ).rejects.toThrow('Config settings destinations missing or empty');
     });
@@ -83,9 +86,12 @@ describe('Server Destination Data Manager', () => {
       const mockCollector = {} as Collector.Instance;
       await expect(
         destination.init({
-          config: { settings: { destinations: [] } as Settings },
+          config: {
+            settings: { destinations: [] } as Settings,
+          },
           collector: mockCollector,
           env: {},
+          logger: mockLogger,
         }),
       ).rejects.toThrow('Config settings destinations missing or empty');
     });
@@ -150,19 +156,28 @@ describe('Server Destination Data Manager', () => {
     });
   });
 
-  describe('push', () => {
-    const defaultSettings: Settings = {
-      destinations: [
-        {
-          operatingAccount: {
-            accountId: '123-456-7890',
-            accountType: 'GOOGLE_ADS',
-          },
-          productDestinationId: 'AW-CONVERSION-123',
+  const defaultSettings: Settings = {
+    destinations: [
+      {
+        operatingAccount: {
+          accountId: '123-456-7890',
+          accountType: 'GOOGLE_ADS',
         },
-      ],
-    };
+        productDestinationId: 'AW-CONVERSION-123',
+      },
+    ],
+  };
 
+  const defaultConfig: Config = {
+    settings: defaultSettings,
+    data: {
+      map: {
+        transactionId: 'id',
+      },
+    },
+  };
+
+  describe('push', () => {
     test('sends event to Data Manager API', async () => {
       const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
@@ -171,7 +186,7 @@ describe('Server Destination Data Manager', () => {
       (event.data as Record<string, unknown>).currency = 'USD';
 
       const config: Config = {
-        settings: defaultSettings,
+        ...defaultConfig,
         env: { authClient: mockAuthClient, fetch: mockFetch },
       };
 
@@ -179,6 +194,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: config.env!,
+        logger: mockLogger,
       });
 
       expect(getAccessToken).toHaveBeenCalledWith(mockAuthClient);
@@ -203,9 +219,10 @@ describe('Server Destination Data Manager', () => {
       const event = getEvent('page view');
 
       await destination.push(event, {
-        config: { settings: defaultSettings },
+        config: defaultConfig,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -235,6 +252,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -248,9 +266,10 @@ describe('Server Destination Data Manager', () => {
       (event.data as Record<string, unknown>).currency = 'EUR';
 
       const config: Config = {
-        settings: defaultSettings,
+        ...defaultConfig,
         data: {
           map: {
+            transactionId: 'id',
             conversionValue: 'data.total',
             currency: 'data.currency',
           },
@@ -261,6 +280,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -268,14 +288,30 @@ describe('Server Destination Data Manager', () => {
       expect(requestBody.events[0].currency).toBe('EUR');
     });
 
-    test('applies eventSource from settings', async () => {
+    test('applies default eventSource (WEB) when not specified', async () => {
+      const mockCollector = {} as Collector.Instance;
+      const event = getEvent('page view');
+
+      await destination.push(event, {
+        config: defaultConfig,
+        collector: mockCollector,
+        env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
+      });
+
+      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(requestBody.events[0].eventSource).toBe('WEB');
+    });
+
+    test('applies custom eventSource from settings', async () => {
       const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           ...defaultSettings,
-          eventSource: 'WEB',
+          eventSource: 'APP',
         },
       };
 
@@ -283,10 +319,11 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(requestBody.events[0].eventSource).toBe('WEB');
+      expect(requestBody.events[0].eventSource).toBe('APP');
     });
 
     test('includes consent information', async () => {
@@ -295,9 +332,10 @@ describe('Server Destination Data Manager', () => {
       event.consent = { marketing: true, personalization: false };
 
       await destination.push(event, {
-        config: { settings: defaultSettings },
+        config: defaultConfig,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -312,6 +350,7 @@ describe('Server Destination Data Manager', () => {
       const event = getEvent('page view');
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           ...defaultSettings,
           consent: {
@@ -325,6 +364,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -339,6 +379,7 @@ describe('Server Destination Data Manager', () => {
       const event = getEvent('page view');
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           ...defaultSettings,
           validateOnly: true,
@@ -349,6 +390,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -360,6 +402,7 @@ describe('Server Destination Data Manager', () => {
       const event = getEvent('page view');
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           ...defaultSettings,
           testEventCode: 'TEST12345',
@@ -370,6 +413,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -388,9 +432,10 @@ describe('Server Destination Data Manager', () => {
 
       await expect(
         destination.push(event, {
-          config: { settings: defaultSettings },
+          config: defaultConfig,
           collector: mockCollector,
           env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
         }),
       ).rejects.toThrow('Data Manager API error (400)');
     });
@@ -415,9 +460,10 @@ describe('Server Destination Data Manager', () => {
 
       await expect(
         destination.push(event, {
-          config: { settings: defaultSettings },
+          config: defaultConfig,
           collector: mockCollector,
           env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
         }),
       ).rejects.toThrow('Validation errors');
     });
@@ -427,6 +473,7 @@ describe('Server Destination Data Manager', () => {
       const event = getEvent('page view');
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           ...defaultSettings,
           url: 'https://custom-endpoint.com/v1',
@@ -437,6 +484,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -450,6 +498,7 @@ describe('Server Destination Data Manager', () => {
       const event = getEvent('order complete');
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           destinations: [
             {
@@ -468,12 +517,19 @@ describe('Server Destination Data Manager', () => {
             },
           ],
         },
+        data: {
+          map: {
+            transactionId: 'id',
+            eventName: { value: 'purchase' },
+          },
+        },
       };
 
       await destination.push(event, {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -494,6 +550,7 @@ describe('Server Destination Data Manager', () => {
 
       await destination.push(event, {
         config: {
+          ...defaultConfig,
           settings: {
             destinations: [
               {
@@ -508,6 +565,7 @@ describe('Server Destination Data Manager', () => {
         },
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: customFetch },
+        logger: mockLogger,
       });
 
       expect(customFetch).toHaveBeenCalled();
@@ -521,6 +579,7 @@ describe('Server Destination Data Manager', () => {
       (event.data as Record<string, unknown>).phone = '+1234567890';
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           destinations: [
             {
@@ -542,6 +601,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -555,6 +615,7 @@ describe('Server Destination Data Manager', () => {
       event.user = { id: 'user-123', device: 'device-456' };
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           destinations: [
             {
@@ -574,6 +635,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -589,6 +651,7 @@ describe('Server Destination Data Manager', () => {
       };
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           destinations: [
             {
@@ -607,6 +670,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -622,6 +686,7 @@ describe('Server Destination Data Manager', () => {
       event.user = { id: 'default-user' };
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           destinations: [
             {
@@ -636,6 +701,7 @@ describe('Server Destination Data Manager', () => {
         },
         data: {
           map: {
+            transactionId: 'id',
             userId: { value: 'override-user' }, // Event mapping override
           },
         },
@@ -645,6 +711,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -662,6 +729,7 @@ describe('Server Destination Data Manager', () => {
       };
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           destinations: [
             {
@@ -681,6 +749,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -695,6 +764,7 @@ describe('Server Destination Data Manager', () => {
       const event = getEvent('order complete');
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           destinations: [
             {
@@ -714,6 +784,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -732,6 +803,7 @@ describe('Server Destination Data Manager', () => {
       };
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           destinations: [
             {
@@ -749,6 +821,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -767,6 +840,7 @@ describe('Server Destination Data Manager', () => {
       };
 
       const config: Config = {
+        ...defaultConfig,
         settings: {
           destinations: [
             {
@@ -785,6 +859,7 @@ describe('Server Destination Data Manager', () => {
         config,
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
+        logger: mockLogger,
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
