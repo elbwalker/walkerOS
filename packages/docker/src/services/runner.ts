@@ -7,6 +7,7 @@
 
 import { pathToFileURL } from 'url';
 import { resolve, dirname } from 'path';
+import type { Logger } from '@walkeros/core';
 
 export interface RuntimeConfig {
   port?: number;
@@ -18,12 +19,14 @@ export interface RuntimeConfig {
  *
  * @param flowPath - Absolute path to pre-built .mjs flow file
  * @param config - Optional runtime configuration
+ * @param logger - Logger instance for output
  */
 export async function runFlow(
   flowPath: string,
-  config?: RuntimeConfig,
+  config: RuntimeConfig | undefined,
+  logger: Logger.Instance,
 ): Promise<void> {
-  console.log(`🚀 Loading flow from ${flowPath}`);
+  logger.info(`Loading flow from ${flowPath}`);
 
   try {
     const absolutePath = resolve(flowPath);
@@ -38,7 +41,7 @@ export async function runFlow(
     const module = await import(fileUrl);
 
     if (!module.default || typeof module.default !== 'function') {
-      throw new Error(
+      logger.throw(
         `Invalid flow bundle: ${flowPath} must export a default function`,
       );
     }
@@ -47,31 +50,32 @@ export async function runFlow(
     const result = await module.default(config);
 
     if (!result || !result.collector) {
-      throw new Error(
+      logger.throw(
         `Invalid flow bundle: ${flowPath} must return { collector }`,
       );
     }
 
     const { collector } = result;
 
-    console.log('✅ Flow running');
+    logger.info('Flow running');
     if (config?.port) {
-      console.log(`   Port: ${config.port}`);
+      logger.info(`Port: ${config.port}`);
     }
 
     // Graceful shutdown handler
     const shutdown = async (signal: string) => {
-      console.log(`\n📡 Received ${signal}, shutting down gracefully...`);
+      logger.info(`Received ${signal}, shutting down gracefully...`);
 
       try {
         // Use collector's shutdown command if available
         if (collector.command) {
           await collector.command('shutdown');
         }
-        console.log('✅ Shutdown complete');
+        logger.info('Shutdown complete');
         process.exit(0);
       } catch (error) {
-        console.error('❌ Error during shutdown:', error);
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error(`Error during shutdown: ${message}`);
         process.exit(1);
       }
     };
@@ -83,10 +87,10 @@ export async function runFlow(
     // Keep process alive
     await new Promise(() => {});
   } catch (error) {
-    console.error('❌ Failed to run flow:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`Failed to run flow: ${message}`);
     if (error instanceof Error && error.stack) {
-      console.error('\nStack trace:');
-      console.error(error.stack);
+      logger.debug('Stack trace:', { stack: error.stack });
     }
     throw error;
   }

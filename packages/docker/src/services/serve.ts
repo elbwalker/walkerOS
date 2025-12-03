@@ -1,5 +1,5 @@
 import express from 'express';
-import path from 'path';
+import type { Logger } from '@walkeros/core';
 import { VERSION } from '../version';
 
 export interface ServeConfig {
@@ -12,8 +12,14 @@ export interface ServeConfig {
 
 /**
  * Run serve mode - serve single file (typically generated bundle)
+ *
+ * @param config - Server configuration
+ * @param logger - Logger instance for output
  */
-export async function runServeMode(config?: ServeConfig): Promise<void> {
+export async function runServeMode(
+  config: ServeConfig | undefined,
+  logger: Logger.Instance,
+): Promise<void> {
   // Port priority: ENV variable > config > default
   const port = process.env.PORT
     ? parseInt(process.env.PORT, 10)
@@ -35,9 +41,9 @@ export async function runServeMode(config?: ServeConfig): Promise<void> {
   // Build full URL path
   const urlPath = servePath ? `/${servePath}/${serveName}` : `/${serveName}`;
 
-  console.log('📁 Serve mode: Starting single-file server...');
-  console.log(`   File: ${filePath}`);
-  console.log(`   URL: http://${host}:${port}${urlPath}`);
+  logger.info('Starting single-file server...');
+  logger.info(`File: ${filePath}`);
+  logger.info(`URL: http://${host}:${port}${urlPath}`);
 
   try {
     const app = express();
@@ -61,27 +67,28 @@ export async function runServeMode(config?: ServeConfig): Promise<void> {
 
     // Start server
     const server = app.listen(port, host, () => {
-      console.log(`✅ Server listening on http://${host}:${port}`);
-      console.log(`   GET ${urlPath} - Bundle file`);
-      console.log(`   GET /health - Health check`);
+      logger.info(`Server listening on http://${host}:${port}`);
+      logger.info(`GET ${urlPath} - Bundle file`);
+      logger.info(`GET /health - Health check`);
     });
 
     // Graceful shutdown
     const shutdownHandler = (signal: string) => {
-      console.log(`\n⏹️  Received ${signal}, shutting down...`);
+      logger.info(`Received ${signal}, shutting down...`);
       server.close(() => {
-        console.log('✅ Server closed');
+        logger.info('Server closed');
         process.exit(0);
       });
     };
 
-    process.on('SIGTERM', shutdownHandler);
-    process.on('SIGINT', shutdownHandler);
+    process.on('SIGTERM', () => shutdownHandler('SIGTERM'));
+    process.on('SIGINT', () => shutdownHandler('SIGINT'));
 
     // Keep process alive
     await new Promise(() => {});
   } catch (error) {
-    console.error('❌ Server failed:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`Server failed: ${message}`);
     process.exit(1);
   }
 }

@@ -1,11 +1,17 @@
 #!/usr/bin/env node
 
+import { createLogger, Level } from '@walkeros/core';
+import type { Logger } from '@walkeros/core';
 import { runFlow } from './services/runner';
 import { runServeMode } from './services/serve';
 import { VERSION } from './version';
 
 // Re-export version for external consumers
 export { VERSION } from './version';
+
+// Create logger - DEBUG level when VERBOSE, otherwise INFO
+const logLevel = process.env.VERBOSE === 'true' ? Level.DEBUG : Level.INFO;
+const logger = createLogger({ level: logLevel });
 
 /**
  * walkerOS Docker Container
@@ -21,24 +27,25 @@ async function main() {
   const mode = process.env.MODE;
 
   if (!mode) {
-    console.error('❌ Error: MODE environment variable required');
-    console.error('   Valid modes: collect | serve');
-    console.error('   Example: MODE=collect FLOW=/app/flow.mjs');
+    logger.error('MODE environment variable required');
+    logger.info('Valid modes: collect | serve');
+    logger.info('Example: MODE=collect FLOW=/app/flow.mjs');
     process.exit(1);
   }
 
   if (!['collect', 'serve'].includes(mode)) {
-    console.error(`❌ Error: Invalid MODE="${mode}"`);
-    console.error('   Valid modes: collect | serve');
-    console.error('   Note: Build flows with @walkeros/cli first');
+    logger.error(`Invalid MODE="${mode}"`);
+    logger.info('Valid modes: collect | serve');
+    logger.info('Note: Build flows with @walkeros/cli first');
     process.exit(1);
   }
 
+  // Display banner (always shown, not through logger)
   console.log('╔════════════════════════════════════════╗');
   console.log('║      walkerOS Docker Container         ║');
   console.log(`║              v${VERSION.padStart(6)}                   ║`);
   console.log('╚════════════════════════════════════════╝\n');
-  console.log(`Mode: ${mode.toUpperCase()}\n`);
+  logger.info(`Mode: ${mode.toUpperCase()}`);
 
   try {
     // Run the appropriate mode
@@ -47,10 +54,10 @@ async function main() {
         const flowPath = process.env.FLOW;
 
         if (!flowPath) {
-          throw new Error(
-            'FLOW environment variable required. ' +
-              'Example: FLOW=/app/flow.mjs',
+          logger.throw(
+            'FLOW environment variable required. Example: FLOW=/app/flow.mjs',
           );
+          return; // TypeScript narrowing (never reached)
         }
 
         // Extract port from environment if set
@@ -59,7 +66,7 @@ async function main() {
           : undefined;
         const host = process.env.HOST;
 
-        await runFlow(flowPath, { port, host });
+        await runFlow(flowPath, { port, host }, logger.scope('runner'));
         break;
       }
 
@@ -71,18 +78,18 @@ async function main() {
           staticDir: process.env.STATIC_DIR || '/app/dist',
         };
 
-        await runServeMode(config);
+        await runServeMode(config, logger.scope('serve'));
         break;
       }
 
       default:
-        throw new Error(`Unhandled mode: ${mode}`);
+        logger.throw(`Unhandled mode: ${mode}`);
     }
   } catch (error) {
-    console.error('\n❌ Fatal error:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`Fatal error: ${message}`);
     if (error instanceof Error && error.stack) {
-      console.error('\nStack trace:');
-      console.error(error.stack);
+      logger.debug('Stack trace:', { stack: error.stack });
     }
     process.exit(1);
   }
@@ -90,13 +97,17 @@ async function main() {
 
 // Handle uncaught errors
 process.on('uncaughtException', (error) => {
-  console.error('\n❌ Uncaught exception:', error);
+  logger.error(`Uncaught exception: ${error.message}`);
+  logger.debug('Stack trace:', { stack: error.stack });
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('\n❌ Unhandled rejection at:', promise);
-  console.error('Reason:', reason);
+process.on('unhandledRejection', (reason) => {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  logger.error(`Unhandled rejection: ${message}`);
+  if (reason instanceof Error && reason.stack) {
+    logger.debug('Stack trace:', { stack: reason.stack });
+  }
   process.exit(1);
 });
 

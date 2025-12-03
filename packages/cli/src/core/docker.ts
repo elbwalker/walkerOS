@@ -166,7 +166,9 @@ export async function executeInDocker(
       if (code === 0) {
         resolve();
       } else {
-        reject(new Error(`Docker command exited with code ${code}`));
+        // Docker already logged the error via stdio inherit
+        // Just exit with same code - no duplicate message
+        process.exit(code || 1);
       }
     });
   });
@@ -323,7 +325,9 @@ export async function executeRunInDocker(
       if (code === 0) {
         resolve();
       } else {
-        reject(new Error(`Docker command exited with code ${code}`));
+        // Docker already logged the error via stdio inherit
+        // Just exit with same code - no duplicate message
+        process.exit(code || 1);
       }
     });
   });
