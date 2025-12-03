@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import { VERSION } from '../version';
 
 export interface ServeConfig {
   port?: number;
@@ -45,6 +46,7 @@ export async function runServeMode(config?: ServeConfig): Promise<void> {
     app.get('/health', (req, res) => {
       res.json({
         status: 'ok',
+        version: VERSION,
         timestamp: Date.now(),
         mode: 'serve',
         file: filePath,

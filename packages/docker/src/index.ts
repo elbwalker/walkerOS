@@ -1,22 +1,11 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import path from 'path';
 import { runFlow } from './services/runner';
 import { runServeMode } from './services/serve';
+import { VERSION } from './version';
 
-// Read version from package.json (ESM-compatible)
-const moduleFilename = fileURLToPath(import.meta.url);
-const moduleDir = path.dirname(moduleFilename);
-const packageJson = JSON.parse(
-  readFileSync(path.join(moduleDir, '../package.json'), 'utf-8'),
-) as { version: string };
-
-/**
- * Package version - exported for use by @walkeros/cli
- */
-export const VERSION = packageJson.version;
+// Re-export version for external consumers
+export { VERSION } from './version';
 
 /**
  * walkerOS Docker Container
@@ -47,6 +36,7 @@ async function main() {
 
   console.log('╔════════════════════════════════════════╗');
   console.log('║      walkerOS Docker Container         ║');
+  console.log(`║              v${VERSION.padStart(6)}                   ║`);
   console.log('╚════════════════════════════════════════╝\n');
   console.log(`Mode: ${mode.toUpperCase()}\n`);
 
