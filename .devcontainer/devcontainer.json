@@ -9,7 +9,6 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "unifiedjs.vscode-mdx",
         "esbenp.prettier-vscode",
         "streetsidesoftware.code-spell-checker",
         "chakrounanas.turbo-console-log",
@@ -34,6 +33,9 @@
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
+
+  // Resource limits for the container
+  "runArgs": ["--memory=8g", "--memory-swap=10g", "--cpus=4"],
 
   // Use 'postCreateCommand' to run commands after the container is created.
   "postCreateCommand": "npm install && npm install -g @anthropic-ai/claude-code @openai/codex && npm run build"
