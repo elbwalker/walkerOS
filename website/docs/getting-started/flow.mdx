@@ -234,6 +234,26 @@ Destinations receive processed events and send them to analytics tools, database
 - `@walkeros/web-destination-gtag` - Google Analytics 4
 - `@walkeros/web-destination-meta-pixel` - Meta Pixel
 
+**Built-in Code Destination:**
+
+For custom logic without external packages, use `code: true`:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "custom": {
+      "code": true,
+      "config": {
+        "settings": {
+          "push": "console.log('Event:', event.name, event.data)"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
 See [Destinations documentation](/docs/destinations/) for all available options.
 
 ### Collector

@@ -426,7 +426,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command
-        destination.on?.('consent', { marketing: true, functional: false });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: true, functional: false },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Call a regular event
         const event = { name: 'button click', data: { id: 'test-btn' } };
@@ -457,7 +463,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command with denied consent
-        destination.on?.('consent', { marketing: false, functional: false });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: false, functional: false },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Verify gtag consent default was called with all denied values first
         expect(mockGtag).toHaveBeenCalledWith('consent', 'default', {
@@ -498,7 +510,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // First consent call (should use 'default' then 'update')
-        destination.on?.('consent', { marketing: false, functional: false });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: false, functional: false },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         expect(mockGtag).toHaveBeenCalledWith('consent', 'default', {
           ad_storage: 'denied',
@@ -518,7 +536,13 @@ describe('Unified Gtag Destination', () => {
         mockGtag.mockClear();
 
         // Second consent call (should only use 'update')
-        destination.on?.('consent', { marketing: false, functional: true });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: false, functional: true },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Should NOT call default again
         expect(mockGtag).not.toHaveBeenCalledWith(
@@ -547,7 +571,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command with granted consent
-        destination.on?.('consent', { marketing: true, functional: true });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: true, functional: true },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Verify gtag consent default was called with all denied values first
         expect(mockGtag).toHaveBeenCalledWith('consent', 'default', {
@@ -594,7 +624,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command
-        destination.on?.('consent', { marketing: true, analytics: false });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: true, analytics: false },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Verify default consent was called with all denied values first
         expect(mockGtag).toHaveBeenCalledWith('consent', 'default', {
@@ -620,7 +656,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command with only marketing consent
-        destination.on?.('consent', { marketing: true });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: true },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Verify default consent was called with all denied values first
         expect(mockGtag).toHaveBeenCalledWith('consent', 'default', {
@@ -647,7 +689,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command with unknown consent group
-        destination.on?.('consent', { unknown_group: true });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { unknown_group: true },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Verify default consent was called (because mapping has known parameters)
         expect(mockGtag).toHaveBeenCalledWith('consent', 'default', {
@@ -677,7 +725,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command
-        destination.on?.('consent', { marketing: true });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: true },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Verify no gtag consent calls were made (empty mapping = no parameters)
         expect(mockGtag).not.toHaveBeenCalledWith(
