@@ -1,8 +1,8 @@
 ---
 name: create-destination
 description:
-  Use when creating a new walkerOS destination (web or server). Step-by-step
-  workflow from research to documentation.
+  Use when creating a new walkerOS destination. Example-driven workflow starting
+  with research and examples before implementation.
 ---
 
 # Create a New Destination
@@ -20,45 +20,293 @@ Before starting, read these skills:
 - [testing-strategy](../testing-strategy/SKILL.md) - How to test with env
   pattern
 
-## Process Checklist
+## Process Overview
 
-### 1. Research Phase
+```
+1. Research     → Find SDK, understand vendor API
+2. Examples     → Create dev entry with real usage patterns
+3. Mapping      → Define walkerOS → vendor transformation
+4. Scaffold     → Copy template and configure
+5. Implement    → Build using examples as test fixtures
+6. Test         → Verify against example variations
+7. Document     → Write README
+```
 
-- [ ] Identify target platform API documentation
-- [ ] List required credentials/configuration (API keys, IDs, endpoints)
-- [ ] Define default event mappings (walkerOS event → vendor format)
-- [ ] Check existing similar destinations for patterns
+---
 
-### 2. Scaffold Phase
+## Phase 1: Research
+
+**Goal:** Understand the vendor API before writing any code.
+
+### 1.1 Find Official Resources
+
+- [ ] **Vendor API Documentation** - Endpoints, authentication, rate limits
+- [ ] **Official TypeScript SDK** - Check npm for `@vendor/sdk` or
+      `vendor-types`
+- [ ] **Event Schema** - What fields are required/optional for each event type
+
+```bash
+# Search npm for official packages
+npm search [vendor-name]
+npm search @[vendor]
+
+# Check for TypeScript types
+npm info @types/[vendor]
+```
+
+### 1.2 Identify Event Types
+
+List the vendor's event types and their required fields:
+
+| Vendor Event | Required Fields       | walkerOS Equivalent  |
+| ------------ | --------------------- | -------------------- |
+| `pageview`   | `url`, `title`        | `page view`          |
+| `track`      | `event`, `properties` | `product view`, etc. |
+| `identify`   | `userId`, `traits`    | User identification  |
+
+### 1.3 Check Existing Patterns
+
+Review similar destinations in the codebase:
+
+```bash
+# List existing destinations
+ls packages/web/destinations/
+
+# Reference implementations
+# - plausible: Simple, script-based
+# - gtag: Complex, multiple services
+# - meta: Pixel with custom events
+```
+
+---
+
+## Phase 2: Create Examples (BEFORE Implementation)
+
+**Goal:** Define expected API calls in `dev` entry FIRST.
+
+### 2.1 Scaffold Directory Structure
+
+```bash
+mkdir -p packages/web/destinations/[name]/src/{examples,schemas,types}
+```
+
+### 2.2 Create Output Examples
+
+**What the vendor API expects when we call it:**
+
+`src/examples/outputs.ts`:
+
+```typescript
+/**
+ * Examples of vendor API calls we will make.
+ * These define the CONTRACT - implementation must produce these outputs.
+ */
+
+// Page view call
+export const pageViewCall = {
+  method: 'track',
+  args: ['pageview', { url: '/home', title: 'Home Page' }],
+};
+
+// E-commerce event call
+export const purchaseCall = {
+  method: 'track',
+  args: [
+    'purchase',
+    {
+      transaction_id: 'T-123',
+      value: 99.99,
+      currency: 'USD',
+      items: [{ item_id: 'P-1', item_name: 'Widget', price: 99.99 }],
+    },
+  ],
+};
+
+// Custom event call
+export const customEventCall = {
+  method: 'track',
+  args: ['button_click', { button_id: 'cta', button_text: 'Sign Up' }],
+};
+```
+
+### 2.3 Create Input Examples
+
+**walkerOS events that will trigger these outputs:**
+
+`src/examples/events.ts`:
+
+```typescript
+import type { WalkerOS } from '@walkeros/core';
+
+/**
+ * walkerOS events that trigger destination calls.
+ * Maps to outputs.ts examples.
+ */
+export const events: Record<string, WalkerOS.Event> = {
+  // Maps to pageViewCall
+  pageView: {
+    event: 'page view',
+    data: { title: 'Home Page', path: '/home' },
+    context: {},
+    globals: {},
+    user: { device: 'device-123' },
+    nested: [],
+    consent: { analytics: true },
+    id: '1-abc-1',
+    trigger: 'load',
+    entity: 'page',
+    action: 'view',
+    timestamp: 1700000000000,
+    timing: 0,
+    group: 'group-1',
+    count: 1,
+    version: { tagging: 1, config: 1 },
+    source: { type: 'web', id: '', previous_id: '' },
+  },
+
+  // Maps to purchaseCall
+  purchase: {
+    event: 'order complete',
+    data: { id: 'T-123', total: 99.99 },
+    // ... full event structure
+  },
+
+  // Maps to customEventCall
+  buttonClick: {
+    event: 'button click',
+    data: { id: 'cta', text: 'Sign Up' },
+    // ... full event structure
+  },
+};
+```
+
+### 2.4 Create Environment Mock
+
+`src/examples/env.ts`:
+
+```typescript
+import type { DestinationWeb } from '@walkeros/web-core';
+
+/**
+ * Mock environment capturing vendor SDK calls.
+ */
+export const env: { push: DestinationWeb.Env } = {
+  push: {
+    window: {
+      vendorSdk: jest.fn(), // Captures all calls for verification
+    } as unknown as Window,
+    document: {} as Document,
+  },
+};
+```
+
+### 2.5 Export via dev.ts
+
+`src/dev.ts`:
+
+```typescript
+export * as schemas from './schemas';
+export * as examples from './examples';
+```
+
+---
+
+## Phase 3: Define Mapping
+
+**Goal:** Document transformation from walkerOS events to vendor format.
+
+### 3.1 Create Mapping Examples
+
+`src/examples/mapping.ts`:
+
+```typescript
+import type { Mapping } from '@walkeros/core';
+
+/**
+ * Default mapping: walkerOS events → vendor format.
+ */
+export const defaultMapping: Mapping.Rules = {
+  page: {
+    view: {
+      name: 'pageview', // Vendor event name
+      data: {
+        map: {
+          url: 'data.path',
+          title: 'data.title',
+        },
+      },
+    },
+  },
+  order: {
+    complete: {
+      name: 'purchase',
+      data: {
+        map: {
+          transaction_id: 'data.id',
+          value: 'data.total',
+          currency: { value: 'USD' },
+        },
+      },
+    },
+  },
+  button: {
+    click: {
+      name: 'button_click',
+      data: {
+        map: {
+          button_id: 'data.id',
+          button_text: 'data.text',
+        },
+      },
+    },
+  },
+};
+```
+
+### 3.2 Verify Mapping Logic
+
+Create a mental (or actual) trace:
+
+```
+Input: events.pageView
+  ↓ Apply mapping
+  ↓ page.view rule matches
+  ↓ name: 'pageview'
+  ↓ data.path → url, data.title → title
+Output: Should match outputs.pageViewCall
+```
+
+---
+
+## Phase 4: Scaffold
 
 **Template destination:** `packages/web/destinations/plausible/`
 
 ```bash
-# Copy template
 cp -r packages/web/destinations/plausible packages/web/destinations/[name]
-
-# Update package.json
 cd packages/web/destinations/[name]
-# Edit: name, description, repository.directory
+
+# Update package.json: name, description, repository.directory
 ```
 
-**Actual directory structure:**
+**Directory structure:**
 
 ```
 packages/web/destinations/[name]/
 ├── src/
-│   ├── index.ts           # Main destination object (init + push)
-│   ├── index.test.ts      # Tests
+│   ├── index.ts           # Main destination (init + push)
+│   ├── index.test.ts      # Tests against examples
 │   ├── dev.ts             # Exports schemas and examples
-│   ├── examples/          # Test fixtures
+│   ├── examples/
 │   │   ├── index.ts       # Re-exports
 │   │   ├── env.ts         # Mock environment
-│   │   ├── events.ts      # Sample events
-│   │   └── mapping.ts     # Sample mappings
-│   ├── schemas/           # Zod schemas
-│   │   └── index.ts
+│   │   ├── events.ts      # Input events
+│   │   ├── outputs.ts     # Expected outputs
+│   │   └── mapping.ts     # Default mapping
+│   ├── schemas/
+│   │   └── index.ts       # Zod schemas
 │   └── types/
-│       └── index.ts       # Settings, Config, Destination types
+│       └── index.ts       # Settings, Config types
 ├── package.json
 ├── tsconfig.json
 ├── tsup.config.ts
@@ -66,26 +314,31 @@ packages/web/destinations/[name]/
 └── README.md
 ```
 
-### 3. Implementation Phase
+---
 
-**Step 1: Define types** (`src/types/index.ts`)
+## Phase 5: Implement
+
+**Now write code to produce the outputs defined in Phase 2.**
+
+### 5.1 Define Types
+
+`src/types/index.ts`:
 
 ```typescript
 import type { DestinationWeb } from '@walkeros/web-core';
 
 export interface Settings {
-  domain?: string;
-  // Add destination-specific settings
+  apiKey?: string;
+  // Add vendor-specific settings
 }
 
 export interface Config extends DestinationWeb.Config<Settings> {}
-
 export interface Destination extends DestinationWeb.Destination<Config> {}
 ```
 
-**Step 2: Implement destination** (`src/index.ts`)
+### 5.2 Implement Destination
 
-The destination is a single object with `type`, `config`, `init`, and `push`:
+`src/index.ts`:
 
 ```typescript
 import type { Config, Destination } from './types';
@@ -93,25 +346,24 @@ import type { DestinationWeb } from '@walkeros/web-core';
 import { isObject } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 
-export * as DestinationYourName from './types';
+export * as DestinationVendor from './types';
 
-export const destinationYourName: Destination = {
-  type: 'yourname',
-
+export const destinationVendor: Destination = {
+  type: 'vendor',
   config: {},
 
   init({ config, env }) {
     const { window } = getEnv(env);
     const settings = config.settings || {};
 
-    // Load vendor script if needed
     if (config.loadScript) addScript(settings, env);
 
-    // Initialize vendor SDK
+    // Initialize vendor SDK queue
     (window as Window).vendorSdk =
       (window as Window).vendorSdk ||
       function () {
-        // Queue calls until loaded
+        ((window as Window).vendorSdk.q =
+          (window as Window).vendorSdk.q || []).push(arguments);
       };
 
     return config;
@@ -121,99 +373,73 @@ export const destinationYourName: Destination = {
     const params = isObject(data) ? data : {};
     const { window } = getEnv(env);
 
-    // Call vendor API
+    // Call vendor API - must match outputs.ts examples
     (window as Window).vendorSdk('track', event.name, params);
   },
 };
 
-export default destinationYourName;
+function addScript(settings: Settings, env?: DestinationWeb.Env) {
+  const { document } = getEnv(env);
+  const script = document.createElement('script');
+  script.src = `https://vendor.com/sdk.js?key=${settings.apiKey}`;
+  document.head.appendChild(script);
+}
+
+export default destinationVendor;
 ```
 
-**Step 3: Create examples** (`src/examples/`)
+---
 
-`src/examples/env.ts`:
+## Phase 6: Test Against Examples
 
-```typescript
-import type { DestinationWeb } from '@walkeros/web-core';
+**Verify implementation produces expected outputs.**
 
-export const env: { push: DestinationWeb.Env } = {
-  push: {
-    window: {
-      vendorSdk: jest.fn(),
-    } as unknown as Window,
-    document: {} as Document,
-  },
-};
-```
-
-`src/examples/events.ts`:
+`src/index.test.ts`:
 
 ```typescript
-import type { WalkerOS } from '@walkeros/core';
-
-export const events: Record<string, WalkerOS.Event> = {
-  pageView: {
-    name: 'page view',
-    data: { title: 'Test', path: '/' },
-    // ... other required event fields
-  },
-};
-```
-
-`src/dev.ts`:
-
-```typescript
-export * as schemas from './schemas';
-export * as examples from './examples';
-```
-
-### 4. Testing Phase
-
-**Test file:** `src/index.test.ts`
-
-```typescript
-import type { DestinationWeb } from '@walkeros/web-core';
-import { destinationYourName } from '.';
+import { destinationVendor } from '.';
 import { examples } from './dev';
 
-describe('destinationYourName', () => {
-  const config: DestinationWeb.Config = {};
-
+describe('destinationVendor', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test('push calls vendor SDK', () => {
+  test('page view produces correct output', () => {
     const mockSdk = jest.fn();
     const env = {
       ...examples.env.push,
       window: { vendorSdk: mockSdk } as unknown as Window,
     };
 
-    destinationYourName.push(examples.events.pageView, {
-      config,
+    destinationVendor.push(examples.events.pageView, {
+      config: {},
+      data: { url: '/home', title: 'Home Page' },
       env,
     });
 
+    // Verify against expected output
     expect(mockSdk).toHaveBeenCalledWith(
-      'track',
-      'page view',
-      expect.any(Object),
+      examples.outputs.pageViewCall.method,
+      ...examples.outputs.pageViewCall.args,
     );
+  });
+
+  test('purchase produces correct output', () => {
+    // Similar test against purchaseCall
+  });
+
+  test('custom event produces correct output', () => {
+    // Similar test against customEventCall
   });
 });
 ```
 
-**Run tests:**
+---
 
-```bash
-cd packages/web/destinations/[name]
-npm run test
-```
+## Phase 7: Document
 
-### 5. Documentation Phase
-
-**README.md template:**
+**README.md:**
 
 ```markdown
 # @walkeros/web-destination-[name]
@@ -227,25 +453,38 @@ npm run test
 ## Quick Start
 
 \`\`\`typescript import { startFlow } from '@walkeros/collector'; import
-destinationYourName from '@walkeros/web-destination-[name]';
+destinationVendor from '@walkeros/web-destination-[name]';
 
-const { elb } = await startFlow({ destinations: { yourname: {
-...destinationYourName, config: { settings: { /_ your settings _/ }, }, }, },
+const { elb } = await startFlow({ destinations: { vendor: {
+...destinationVendor, config: { settings: { apiKey: 'YOUR_API_KEY' }, }, }, },
 }); \`\`\`
+
+## Event Mapping
+
+| walkerOS Event   | Vendor Event | Notes            |
+| ---------------- | ------------ | ---------------- |
+| `page view`      | `pageview`   | Automatic        |
+| `order complete` | `purchase`   | Requires mapping |
 
 ## Configuration
 
-| Setting | Type   | Required | Description |
-| ------- | ------ | -------- | ----------- |
-| domain  | string | No       | Your domain |
+| Setting | Type   | Required | Description  |
+| ------- | ------ | -------- | ------------ |
+| apiKey  | string | Yes      | Your API key |
 ```
 
-### 6. Validation
+---
+
+## Validation Checklist
 
 - [ ] `npm run build` passes
 - [ ] `npm run test` passes
 - [ ] `npm run lint` passes
-- [ ] README is complete
+- [ ] Examples cover main use cases
+- [ ] Tests verify against example outputs
+- [ ] README documents configuration
+
+---
 
 ## Reference Files
 

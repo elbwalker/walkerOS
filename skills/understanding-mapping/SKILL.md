@@ -187,12 +187,67 @@ const destinationConfig = {
 };
 ```
 
+## Example-Driven Development
+
+When creating sources or destinations, define mapping examples BEFORE
+implementation:
+
+### 1. Create Input/Output Examples First
+
+```typescript
+// src/examples/inputs.ts - What we receive
+export const pageViewInput = {
+  event: 'page_view',
+  properties: { page_title: 'Home', page_path: '/home' },
+};
+
+// src/examples/outputs.ts - What we must produce
+export const pageViewOutput = {
+  method: 'track',
+  args: ['pageview', { url: '/home', title: 'Home' }],
+};
+```
+
+### 2. Define Mapping to Connect Them
+
+```typescript
+// src/examples/mapping.ts
+export const defaultMapping = {
+  page: {
+    view: {
+      name: 'pageview',
+      data: {
+        map: {
+          url: 'data.path',
+          title: 'data.title',
+        },
+      },
+    },
+  },
+};
+```
+
+### 3. Test Against Examples
+
+```typescript
+test('produces expected output', () => {
+  const result = transform(examples.inputs.pageViewInput);
+  expect(result).toMatchObject(examples.outputs.pageViewOutput);
+});
+```
+
+**See:**
+
+- [create-destination skill](../create-destination/SKILL.md) - Full workflow
+- [create-source skill](../create-source/SKILL.md) - Full workflow
+
 ## Where Mapping Lives
 
 | Location                        | Purpose                                   |
 | ------------------------------- | ----------------------------------------- |
 | Source config                   | Transform raw input → walkerOS events     |
 | Destination config              | Transform walkerOS events → vendor format |
+| `src/examples/mapping.ts`       | Default mapping examples (example-driven) |
 | `packages/core/src/mapping.ts`  | Core mapping functions                    |
 | `apps/quickstart/src/mappings/` | Validated examples                        |
 
