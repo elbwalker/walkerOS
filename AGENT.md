@@ -25,6 +25,7 @@ Learn the concepts before coding:
 | [understanding-mapping](skills/understanding-mapping/SKILL.md)           | Event transformation, data/map/loop             |
 | [understanding-destinations](skills/understanding-destinations/SKILL.md) | Destination interface, env pattern              |
 | [understanding-sources](skills/understanding-sources/SKILL.md)           | Source interface, capture patterns              |
+| [using-logger](skills/using-logger/SKILL.md)                             | Logger access, DRY principles, when to log      |
 
 ## Creating Things
 
@@ -71,3 +72,33 @@ apps/
 - **XP principles:** DRY, KISS, YAGNI, TDD
 - **Test first:** Watch it fail before implementing
 - **Verify:** Run tests before claiming complete
+
+## Creating/Maintaining Skills
+
+Skills live in two locations that must stay in sync:
+
+| Location                         | Purpose                                   |
+| -------------------------------- | ----------------------------------------- |
+| `skills/[name]/SKILL.md`         | Primary content (tool-agnostic)           |
+| `.claude/skills/[name]/SKILL.md` | Claude Code reference (points to primary) |
+
+**To create a new skill:**
+
+1. Create primary content: `skills/[name]/SKILL.md`
+2. Create Claude reference: `.claude/skills/[name]/SKILL.md` with:
+
+```markdown
+---
+name: [name]
+description: [When to use - shown in Claude Code skill list]
+---
+
+# [Title]
+
+The actual content is maintained in:
+
+Read @skills/[name]/SKILL.md
+```
+
+3. Add to AGENT.md tables above (Understanding or Creating section)
+4. Add to [skills/README.md](skills/README.md) index

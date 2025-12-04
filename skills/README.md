@@ -15,6 +15,7 @@ Tool-agnostic and accessible to Claude, Cursor, Copilot, and other AI tools.
 | [understanding-mapping](./understanding-mapping/SKILL.md)           | Event transformation, data/map/loop/condition             |
 | [understanding-destinations](./understanding-destinations/SKILL.md) | Destination interface, env pattern, configuration         |
 | [understanding-sources](./understanding-sources/SKILL.md)           | Source interface, capture patterns                        |
+| [using-logger](./using-logger/SKILL.md)                             | Logger access, DRY principles, API logging patterns       |
 
 ### Task Skills
 
