@@ -226,6 +226,8 @@ export async function destinationInit<Destination extends Destination.Instance>(
       logger: destLogger,
     } as Destination.InitContext;
 
+    destLogger.debug('init');
+
     const configResult = await useHooks(
       destination.init,
       'DestinationInit',
@@ -240,6 +242,8 @@ export async function destinationInit<Destination extends Destination.Instance>(
       ...(configResult || destination.config),
       init: true, // Remember that the destination was initialized
     };
+
+    destLogger.debug('init done');
   }
 
   return true; // Destination is ready to push
@@ -304,11 +308,17 @@ export async function destinationPush<Destination extends Destination.Instance>(
           logger: batchLogger,
         };
 
+        batchLogger.debug('push batch', {
+          events: batched.events.length,
+        });
+
         useHooks(
           destination.pushBatch!,
           'DestinationPushBatch',
           (collector as Collector.Instance).hooks,
         )(batched, batchContext);
+
+        batchLogger.debug('push batch done');
 
         batched.events = [];
         batched.data = [];
@@ -317,12 +327,16 @@ export async function destinationPush<Destination extends Destination.Instance>(
     eventMapping.batched = batched;
     eventMapping.batchFn?.(destination, collector);
   } else {
+    destLogger.debug('push', { event: processed.event.name });
+
     // It's time to go to the destination's side now
     await useHooks(
       destination.push,
       'DestinationPush',
       collector.hooks,
     )(processed.event, context);
+
+    destLogger.debug('push done');
   }
 
   return true;

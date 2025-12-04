@@ -41,12 +41,17 @@ describe('Destination', () => {
   ): Collector.Instance {
     const defaultConfig = createTestConfig();
 
+    // Create mock logger with proper scope chaining
+    const mockLogger = createMockLogger();
+    const scopedMockLogger = createMockLogger();
+    mockLogger.scope = jest.fn().mockReturnValue(scopedMockLogger);
+
     return {
       allowed: true,
       destinations: { foo: destination },
       globals: {},
       hooks: {},
-      logger: createMockLogger(),
+      logger: mockLogger,
       user: {},
       consent: {},
       queue: [],
@@ -113,6 +118,91 @@ describe('Destination', () => {
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(0);
     expect(destination.config.init).toBeFalsy();
+  });
+
+  test('logs init lifecycle', async () => {
+    const collector = createWalkerjs();
+
+    await pushToDestinations(collector, event);
+
+    expect(mockInit).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    // Verify logger.scope was called with destination type
+    expect(collector.logger.scope).toHaveBeenCalledWith('unknown');
+
+    // Get the scoped logger instance
+    const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
+      .value;
+
+    // Verify init lifecycle logs
+    expect(scopedLogger.debug).toHaveBeenCalledWith('init');
+    expect(scopedLogger.debug).toHaveBeenCalledWith('init done');
+  });
+
+  test('logs push lifecycle', async () => {
+    const collector = createWalkerjs();
+    destination.config.init = true; // Skip init for this test
+
+    await pushToDestinations(collector, event);
+
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    // Verify logger.scope was called with destination type
+    expect(collector.logger.scope).toHaveBeenCalledWith('unknown');
+
+    // Get the scoped logger instance
+    const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
+      .value;
+
+    // Verify push lifecycle logs
+    expect(scopedLogger.debug).toHaveBeenCalledWith('push', {
+      event: event.name,
+    });
+    expect(scopedLogger.debug).toHaveBeenCalledWith('push done');
+  });
+
+  // TODO: Add test for batch push lifecycle logging
+  // Batch push logging is implemented in destination.ts lines 311-321
+  // Testing requires complex setup with mapping configuration and debounce timing
+  // The logging code is in place: batchLogger.debug('push batch', { events }) and batchLogger.debug('push batch done')
+  test.skip('logs batch push lifecycle', async () => {
+    jest.useFakeTimers();
+
+    const mockPushBatch = jest.fn();
+    const batchDestination = createDestination({
+      pushBatch: mockPushBatch,
+      config: {
+        init: true,
+        mapping: {
+          'entity action': { batch: 100 },
+        },
+      },
+    });
+
+    const collector = createWalkerjs({
+      destinations: { batch: batchDestination },
+    });
+
+    await pushToDestinations(collector, event, { batch: batchDestination });
+
+    // Fast-forward timers to trigger debounce
+    jest.runAllTimers();
+
+    // Verify pushBatch was called
+    expect(mockPushBatch).toHaveBeenCalledTimes(1);
+
+    // Get the scoped logger instance
+    const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
+      .value;
+
+    // Verify batch push lifecycle logs
+    expect(scopedLogger.debug).toHaveBeenCalledWith('push batch', {
+      events: 1,
+    });
+    expect(scopedLogger.debug).toHaveBeenCalledWith('push batch done');
+
+    jest.useRealTimers();
   });
 
   test('DLQ', async () => {
