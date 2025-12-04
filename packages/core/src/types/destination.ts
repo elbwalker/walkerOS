@@ -94,8 +94,10 @@ export interface Policy {
   [key: string]: WalkerOSMapping.Value;
 }
 
+export type Code<T extends TypesGeneric = Types> = Instance<T> | true;
+
 export type Init<T extends TypesGeneric = Types> = {
-  code: Instance<T>;
+  code: Code<T>;
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
 };

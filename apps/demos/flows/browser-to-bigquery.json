@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "variables": {
+    "COLLECT_URL": "http://localhost:8080/collect",
+    "GCP_PROJECT_ID": "playground-388912"
+  },
+  "flows": {
+    "web": {
+      "web": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
+        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      },
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": {
+            "settings": {
+              "pageview": true,
+              "session": true
+            }
+          }
+        }
+      },
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "settings": {
+              "url": "${COLLECT_URL}"
+            }
+          }
+        },
+        "demo": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": {
+              "name": "Browser Demo"
+            }
+          }
+        }
+      },
+      "collector": {
+        "run": true
+      }
+    },
+    "server": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] },
+        "@walkeros/server-destination-gcp": {
+          "imports": ["destinationBigQuery"]
+        }
+      },
+      "sources": {
+        "express": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": {
+              "path": "/collect",
+              "port": 8080,
+              "status": true
+            }
+          }
+        }
+      },
+      "destinations": {
+        "demo": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": {
+              "name": "Server Demo",
+              "values": ["name", "data", "timestamp"]
+            }
+          }
+        },
+        "bigquery": {
+          "package": "@walkeros/server-destination-gcp",
+          "config": {
+            "settings": {
+              "projectId": "${GCP_PROJECT_ID}",
+              "datasetId": "walkerOS",
+              "tableId": "events",
+              "location": "EU",
+              "bigquery": {
+                "keyFilename": "./shared/credentials/sa-bigquery.json"
+              }
+            }
+          }
+        }
+      },
+      "collector": {
+        "run": true,
+        "logger": {
+          "level": "DEBUG"
+        }
+      }
+    }
+  }
+}

@@ -11,6 +11,11 @@ import {
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
+import { destinationCode } from './destination-code';
+
+function resolveCode(code: Destination.Instance | true): Destination.Instance {
+  return code === true ? destinationCode : code;
+}
 
 /**
  * Adds a new destination to the collector.
@@ -28,10 +33,11 @@ export async function addDestination(
   const { code, config: dataConfig = {}, env = {} } = data;
   const config = options || dataConfig || { init: false };
 
+  const resolved = resolveCode(code);
   const destination: Destination.Instance = {
-    ...code,
+    ...resolved,
     config,
-    env: mergeEnvironments(code.env, env),
+    env: mergeEnvironments(resolved.env, env),
   };
 
   let id = destination.config.id; // Use given id
@@ -378,19 +384,17 @@ export async function initDestinations(
 
   for (const [name, destinationDef] of Object.entries(destinations)) {
     const { code, config = {}, env = {} } = destinationDef;
+    const resolved = resolveCode(code);
 
-    // Merge config: destination default + provided config
     const mergedConfig = {
-      ...code.config,
+      ...resolved.config,
       ...config,
     };
 
-    // Merge environment: destination default + provided env
-    const mergedEnv = mergeEnvironments(code.env, env);
+    const mergedEnv = mergeEnvironments(resolved.env, env);
 
-    // Create destination instance by spreading code and overriding config/env
     result[name] = {
-      ...code,
+      ...resolved,
       config: mergedConfig,
       env: mergedEnv,
     };
@@ -403,7 +407,7 @@ export async function initDestinations(
  * Merges destination environment with config environment
  * Config env takes precedence over destination env for overrides
  */
-function mergeEnvironments(
+export function mergeEnvironments(
   destinationEnv?: Destination.Env,
   configEnv?: Destination.Env,
 ): Destination.Env {
