@@ -1,0 +1,288 @@
+# @walkeros/server-source-fetch
+
+> Web Standard Fetch API source for walkerOS - Deploy to any modern
+> edge/serverless platform
+
+## What This Source Does
+
+**Accepts** walkerOS events via HTTP (Fetch API) **Forwards** events to
+collector for processing **Returns** HTTP responses with CORS support
+
+This is an HTTP transport layer - it accepts events in walkerOS format and
+forwards them to the collector. Not a transformation source.
+
+## Features
+
+- ✅ **Web Standard Fetch API** - Native `(Request) => Response` signature
+- ✅ **Platform Agnostic** - Cloudflare Workers, Vercel Edge, Deno, Bun, Node.js
+  18+
+- ✅ **Event Validation** - Zod schema validation with detailed error messages
+- ✅ **Batch Processing** - Handle multiple events in single request
+- ✅ **CORS Support** - Configurable cross-origin resource sharing
+- ✅ **Pixel Tracking** - 1x1 transparent GIF for GET requests
+- ✅ **Request Limits** - Configurable size and batch limits
+- ✅ **Health Checks** - Built-in `/health` endpoint
+
+## Installation
+
+```bash
+npm install @walkeros/server-source-fetch @walkeros/collector @walkeros/core
+```
+
+## Quick Start
+
+```typescript
+import { sourceFetch } from '@walkeros/server-source-fetch';
+import { collector } from '@walkeros/collector';
+
+// Create collector with destinations
+const { instance, elb } = await collector({
+  destinations: {
+    // Your destinations here
+  },
+});
+
+// Create fetch source
+const source = await sourceFetch(
+  {
+    settings: {
+      path: '/collect',
+      cors: true,
+      maxRequestSize: 1024 * 100, // 100KB
+      maxBatchSize: 100,
+    },
+  },
+  {
+    push: instance.push,
+    command: instance.command,
+    elb,
+    logger: console,
+  },
+);
+
+// Deploy to Cloudflare Workers
+export default { fetch: source.push };
+```
+
+## Platform Deployment
+
+### Cloudflare Workers
+
+```typescript
+import { sourceFetch } from '@walkeros/server-source-fetch';
+import { collector } from '@walkeros/collector';
+
+const { instance, elb } = await collector({
+  /* config */
+});
+const source = await sourceFetch(
+  {},
+  { push: instance.push, command: instance.command, elb, logger: console },
+);
+
+export default { fetch: source.push };
+```
+
+**Deploy:** `wrangler deploy`
+
+### Vercel Edge Functions
+
+```typescript
+// api/collect.ts
+export const config = { runtime: 'edge' };
+
+import { sourceFetch } from '@walkeros/server-source-fetch';
+import { collector } from '@walkeros/collector';
+
+const { instance, elb } = await collector({
+  /* config */
+});
+const source = await sourceFetch(
+  {},
+  { push: instance.push, command: instance.command, elb, logger: console },
+);
+
+export default source.push;
+```
+
+### Deno Deploy
+
+```typescript
+import { sourceFetch } from '@walkeros/server-source-fetch';
+import { collector } from '@walkeros/collector';
+
+const { instance, elb } = await collector({
+  /* config */
+});
+const source = await sourceFetch(
+  {},
+  { push: instance.push, command: instance.command, elb, logger: console },
+);
+
+Deno.serve(source.push);
+```
+
+### Bun
+
+```typescript
+import { sourceFetch } from '@walkeros/server-source-fetch';
+import { collector } from '@walkeros/collector';
+
+const { instance, elb } = await collector({
+  /* config */
+});
+const source = await sourceFetch(
+  {},
+  { push: instance.push, command: instance.command, elb, logger: console },
+);
+
+Bun.serve({ fetch: source.push, port: 3000 });
+```
+
+## Usage Examples
+
+### Single Event (POST)
+
+```javascript
+fetch('https://your-endpoint.com/collect', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    name: 'page view',
+    data: { title: 'Home', path: '/' },
+    user: { id: 'user-123' },
+    globals: { language: 'en' },
+  }),
+});
+```
+
+### Batch Events (POST)
+
+```javascript
+fetch('https://your-endpoint.com/collect', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    batch: [
+      { name: 'page view', data: { title: 'Home' } },
+      { name: 'button click', data: { id: 'cta' } },
+      { name: 'form submit', data: { formId: 'contact' } },
+    ],
+  }),
+});
+```
+
+### Pixel Tracking (GET)
+
+```html
+<img
+  src="https://your-endpoint.com/collect?event=page%20view&data[title]=Home&user[id]=user123"
+  width="1"
+  height="1"
+/>
+```
+
+### Health Check
+
+```bash
+curl https://your-endpoint.com/health
+# {"status":"ok","timestamp":1234567890,"source":"fetch"}
+```
+
+## Configuration
+
+```typescript
+interface Settings {
+  path: string; // Collection path (default: '/collect')
+  cors: boolean | CorsOptions; // CORS config (default: true)
+  healthPath: string; // Health check path (default: '/health')
+  maxRequestSize: number; // Max bytes (default: 102400 = 100KB)
+  maxBatchSize: number; // Max events per batch (default: 100)
+}
+
+interface CorsOptions {
+  origin?: string | string[] | '*';
+  methods?: string[];
+  headers?: string[];
+  credentials?: boolean;
+  maxAge?: number;
+}
+```
+
+## Error Responses
+
+### Validation Error
+
+```json
+{
+  "success": false,
+  "error": "Event validation failed",
+  "validationErrors": [
+    { "path": "name", "message": "Event name is required" },
+    { "path": "nested.0.entity", "message": "Required" }
+  ]
+}
+```
+
+### Batch Partial Failure (207 Multi-Status)
+
+```json
+{
+  "success": false,
+  "processed": 2,
+  "failed": 1,
+  "errors": [
+    { "index": 1, "error": "Validation failed: Event name is required" }
+  ]
+}
+```
+
+## Input Format
+
+Accepts standard walkerOS events. See
+[@walkeros/core Event documentation](../../../core#event-structure).
+
+Required field:
+
+- `name` (string) - Event name in "entity action" format (e.g., "page view")
+
+Optional fields:
+
+- `data` - Event-specific properties
+- `user` - User identification
+- `context` - Ordered context properties
+- `globals` - Global properties
+- `custom` - Custom properties
+- `nested` - Nested entities
+- `consent` - Consent flags
+
+## Testing
+
+```bash
+npm test        # Run tests
+npm run dev     # Watch mode
+npm run lint    # Type check + lint
+npm run build   # Build package
+```
+
+## Development
+
+Follows walkerOS XP principles:
+
+- **DRY** - Uses @walkeros/core utilities
+- **KISS** - Minimal HTTP wrapper
+- **TDD** - Example-driven tests
+- **No `any`** - Strict TypeScript
+
+See [AGENT.md](../../../../AGENT.md) for walkerOS development guide.
+
+## Related
+
+- [understanding-sources skill](../../../../skills/understanding-sources/SKILL.md)
+- [using-logger skill](../../../../skills/using-logger/SKILL.md)
+- [@walkeros/server-source-express](../../express/) - Alternative for Express.js
+- [@walkeros/core](../../../../packages/core/) - Core utilities
+
+## License
+
+MIT
