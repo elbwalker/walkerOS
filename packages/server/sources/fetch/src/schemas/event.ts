@@ -35,7 +35,7 @@ const UserSchema = z
 const ConsentSchema = z.record(z.string(), z.boolean());
 
 // Entity schema (recursive for nested entities)
-const EntitySchema: z.ZodType<any> = z.lazy(() =>
+const EntitySchema: z.ZodTypeAny = z.lazy(() =>
   z
     .object({
       entity: z.string(),
