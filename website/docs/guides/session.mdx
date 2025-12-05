@@ -1,17 +1,16 @@
 ---
 title: Session
-sidebar_position: 6
+description: Detect and track user sessions with configurable storage and consent options
+sidebar_position: 4
 ---
-
-import Link from '@docusaurus/Link';
 
 # Session
 
 import PackageLink from '@site/src/components/docs/package-link';
 
 <PackageLink
-  github="packages/web/collector/src/utils/session"
-  npm="@walkerOS/web-collector"
+  github="packages/web/core/src/session"
+  npm="@walkeros/web-core"
 />
 
 There are multiple ways to define and measure a session. Sessions represent a
@@ -31,8 +30,7 @@ is used. With config parameter `storage: true`, the
 
 :::note
 
-Working with [Storage](/docs/utils/storage) usually requires consent and is not
-activated by default. Use the [consent](#consent) option to control the storage
+Working with storage usually requires consent and is not activated by default. Use the [consent](#consent) option to control the storage
 access permissions.
 
 :::
@@ -67,8 +65,8 @@ extended with the following:
 
 Example of calling `sessionStart` on a user's first visit:
 
-```js
-// On page https://www.elbwalker.com/docs/session?utm_campaign=docs
+<CodeSnippet
+  code={`// On page https://www.elbwalker.com/docs/session?utm_campaign=docs
 sessionStart({ storage: true });
 
 // will automatically create the event
@@ -89,8 +87,9 @@ sessionStart({ storage: true });
     runs: 1,
   },
   // ...
-}
-```
+}`}
+  language="javascript"
+/>
 
 :::info
 
@@ -121,25 +120,27 @@ There are additional config parameters [for storage](#sessionstorage) and
 
 Setting a consent state to wait for before detecting a new session is used to
 decide if storage access is allowed or not. If set, it registers an
-[on consent event](/docs/collectors/web/commands#on) and won't start until a
+[on consent event](/docs/collector/commands#on) and won't start until a
 consent choice is available. If at least one permission was granted, the
 `sessionStorage` detects a new session; otherwise, the `sessionWindow`.
 
-```js
-sessionStart({ consent: 'marketing' }); // Won't start automatically
+<CodeSnippet
+  code={`sessionStart({ consent: 'marketing' }); // Won't start automatically
 // User makes a consent choice and CMP calls:
 elb('walker consent', { marketing: true }); // Triggers the session detection
-// Returns a session with storage access
-```
+// Returns a session with storage access`}
+  language="javascript"
+/>
 
 #### Storage
 
 Option to enable enable [sessionStorage](#sessionstorage) util to detect a new
 session with more accuracy and enhanced data.
 
-```js
-sessionStart({ storage: true });
-```
+<CodeSnippet
+  code={`sessionStart({ storage: true });`}
+  language="javascript"
+/>
 
 #### Callback
 
@@ -149,23 +150,24 @@ is `true`. And additionally, with `storage: true`, the user's `session` and
 `device` ids are also set via `elb('walker user', user);`. The default callback
 function is passed as the third parameter.
 
-```js
-const session = sessionStart({ cb: false }); // Disables the default callback
+<CodeSnippet
+  code={`const session = sessionStart({ cb: false }); // Disables the default callback
 
 sessionStart({
   cb: (session, instance, defaultCb) => {
     console.log(session);
     defaultCb(session, instance); // Call the default callback
   },
-});
-```
+});`}
+  language="javascript"
+/>
 
 ### Detection process
 
 Based on the [storage](#storage) option either the
 [sessionStorage](#sessionstorage) or the [sessionWindow](#sessionwindow) is used
 to detect a new session. If a [consent](#consent) state is set, the session
-detection gets scheduled via an [on-consent](/docs/collectors/web/commands#on)
+detection gets scheduled via an [on-consent](/docs/collector/commands#on)
 command. It will only run once per `run`.
 
 ```mermaid
@@ -203,7 +205,7 @@ callback --> returnSession
 
 ### Config parameters
 
-Additional config parameters, based on the [Storage](/docs/utils/storage) util:
+Additional config parameters for storage-based session detection:
 
 | Property       | Type    | Description                                                  | Default      |
 | -------------- | ------- | ------------------------------------------------------------ | ------------ |
@@ -275,10 +277,11 @@ saveSession --> returnSession
 Enhance the default `data` properties with custom information, like a session
 count:
 
-```js
-const count = 2;
-const session = sessionStart({ data: { count } });
-```
+<CodeSnippet
+  code={`const count = 2;
+const session = sessionStart({ data: { count } });`}
+  language="javascript"
+/>
 
 This will return a `data` object like `{ id: "r4nd0m", count: 2 }`.
 
@@ -287,11 +290,12 @@ This will return a `data` object like `{ id: "r4nd0m", count: 2 }`.
 Define internal domains to prevent new sessions from triggering when navigating
 between them:
 
-```js
-const session = sessionStart({
+<CodeSnippet
+  code={`const session = sessionStart({
   domains: ['subdomain.elbwalker.com', 'example.com'],
-});
-```
+});`}
+  language="javascript"
+/>
 
 A user coming from `subdomain.elbwalker.com` or `example.com` to e.b.
 `www.elbwalker.com`, will no longer trigger a new session.
@@ -305,20 +309,20 @@ Usually, the `sessionId` written to the storage is set up to expire and should
 be updated with each page view. If the `sessionId` is missing, it may be an
 expired but at least a new session.
 
-```js
-if (!storageRead('sessionId')) {
+<CodeSnippet
+  code={`if (!storageRead('sessionId')) {
   const session = sessionStart({ isStart: true });
   storageWrite('sessionId', session.id);
-}
-```
+}`}
+  language="javascript"
+/>
 
-> For more information on storage and expiration,
-> see&nbsp;<Link to="/docs/utils/storage">Utils/Storage</Link>
+> For more information on storage and expiration, check the storage
+> configuration options in this guide.
 
 #### Marketing Parameters
 
-The helper util <Link to="/docs/utils/helper#getmarketingparameters">
-getMarketingParameters</Link> is used to extract common parameters like all
+The helper util `getMarketingParameters` is used to extract common parameters like all
 `utm variants`, typical clickIds like `fbclid`, `gclid`, and others.
 
 To enhance the default and support custom ones add `parameters`, like
@@ -328,24 +332,26 @@ with `?elb_campaign=docs`.
 A session with marketing parameters will be flagged with `data.marketing = true`
 automatically.
 
-```ts
-interface MarketingParameters {
+<CodeSnippet
+  code={`interface MarketingParameters {
   [key: string]: string;
 }
 
 sessionStart({
   parameters: { elb_campaign: 'docs' },
-});
-```
+});`}
+  language="typescript"
+/>
 
 #### Referrer Customization
 
 By default the `document.referrer` is used, but it can be overwritten with the
 `referrer` parameter.
 
-```js
-sessionStart({ referrer: 'https://example.com' });
-```
+<CodeSnippet
+  code={`sessionStart({ referrer: 'https://example.com' });`}
+  language="javascript"
+/>
 
 domains can be extended, e.g., internal sub-domains. `Data` can be pre-defined,
 e.g., to use your ID.
@@ -355,9 +361,10 @@ e.g., to use your ID.
 By default, the `window.location.href` is used, but it can be overwritten with
 the `url` parameter.
 
-```js
-sessionStart({ url: 'https://example.com' });
-```
+<CodeSnippet
+  code={`sessionStart({ url: 'https://example.com' });`}
+  language="javascript"
+/>
 
 ### Detection process
 
