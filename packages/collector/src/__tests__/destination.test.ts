@@ -41,12 +41,17 @@ describe('Destination', () => {
   ): Collector.Instance {
     const defaultConfig = createTestConfig();
 
+    // Create mock logger with proper scope chaining
+    const mockLogger = createMockLogger();
+    const scopedMockLogger = createMockLogger();
+    mockLogger.scope = jest.fn().mockReturnValue(scopedMockLogger);
+
     return {
       allowed: true,
       destinations: { foo: destination },
       globals: {},
       hooks: {},
-      logger: createMockLogger(),
+      logger: mockLogger,
       user: {},
       consent: {},
       queue: [],
@@ -115,6 +120,48 @@ describe('Destination', () => {
     expect(destination.config.init).toBeFalsy();
   });
 
+  test('logs init lifecycle', async () => {
+    const collector = createWalkerjs();
+
+    await pushToDestinations(collector, event);
+
+    expect(mockInit).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    // Verify logger.scope was called with destination type
+    expect(collector.logger.scope).toHaveBeenCalledWith('unknown');
+
+    // Get the scoped logger instance
+    const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
+      .value;
+
+    // Verify init lifecycle logs
+    expect(scopedLogger.debug).toHaveBeenCalledWith('init');
+    expect(scopedLogger.debug).toHaveBeenCalledWith('init done');
+  });
+
+  test('logs push lifecycle', async () => {
+    const collector = createWalkerjs();
+    destination.config.init = true; // Skip init for this test
+
+    await pushToDestinations(collector, event);
+
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    // Verify logger.scope was called with destination type
+    expect(collector.logger.scope).toHaveBeenCalledWith('unknown');
+
+    // Get the scoped logger instance
+    const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
+      .value;
+
+    // Verify push lifecycle logs
+    expect(scopedLogger.debug).toHaveBeenCalledWith('push', {
+      event: event.name,
+    });
+    expect(scopedLogger.debug).toHaveBeenCalledWith('push done');
+  });
+
   test('DLQ', async () => {
     const event = createEvent();
     // Simulate a failing push
@@ -155,7 +202,16 @@ describe('Destination', () => {
       await elb('walker consent', { marketing: true });
 
       // Verify the destination's on method was called with consent context
-      expect(mockOnMethod).toHaveBeenCalledWith('consent', { marketing: true });
+      expect(mockOnMethod).toHaveBeenCalledWith(
+        'consent',
+        expect.objectContaining({
+          data: { marketing: true },
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
 
     it('should call destination on method when session event is triggered', async () => {
@@ -178,7 +234,16 @@ describe('Destination', () => {
       await elb('walker session');
 
       // Verify the destination's on method was called with session context
-      expect(mockOnMethod).toHaveBeenCalledWith('session', collector.session);
+      expect(mockOnMethod).toHaveBeenCalledWith(
+        'session',
+        expect.objectContaining({
+          data: collector.session,
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
 
     it('should call destination on method when ready event is triggered', async () => {
@@ -195,7 +260,16 @@ describe('Destination', () => {
       await elb('walker ready');
 
       // Verify the destination's on method was called
-      expect(mockOnMethod).toHaveBeenCalledWith('ready', undefined);
+      expect(mockOnMethod).toHaveBeenCalledWith(
+        'ready',
+        expect.objectContaining({
+          data: undefined,
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
 
     it('should call destination on method when run event is triggered', async () => {
@@ -212,7 +286,16 @@ describe('Destination', () => {
       await elb('walker run');
 
       // Verify the destination's on method was called
-      expect(mockOnMethod).toHaveBeenCalledWith('run', undefined);
+      expect(mockOnMethod).toHaveBeenCalledWith(
+        'run',
+        expect.objectContaining({
+          data: undefined,
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
 
     it('should not fail if destination does not have on method', async () => {
@@ -248,9 +331,16 @@ describe('Destination', () => {
       await elb('walker consent', { marketing: true });
 
       // Verify the async destination's on method was called
-      expect(asyncOnMethod).toHaveBeenCalledWith('consent', {
-        marketing: true,
-      });
+      expect(asyncOnMethod).toHaveBeenCalledWith(
+        'consent',
+        expect.objectContaining({
+          data: { marketing: true },
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
 
     it('should call on method for multiple destinations', async () => {
@@ -278,8 +368,26 @@ describe('Destination', () => {
       await elb('walker consent', { marketing: true });
 
       // Both destinations should receive the event
-      expect(mockOn1).toHaveBeenCalledWith('consent', { marketing: true });
-      expect(mockOn2).toHaveBeenCalledWith('consent', { marketing: true });
+      expect(mockOn1).toHaveBeenCalledWith(
+        'consent',
+        expect.objectContaining({
+          data: { marketing: true },
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
+      expect(mockOn2).toHaveBeenCalledWith(
+        'consent',
+        expect.objectContaining({
+          data: { marketing: true },
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
 
     it('should handle on method errors gracefully', async () => {
@@ -302,9 +410,16 @@ describe('Destination', () => {
       }).not.toThrow();
 
       // On method should still have been called
-      expect(errorOnMethod).toHaveBeenCalledWith('consent', {
-        marketing: true,
-      });
+      expect(errorOnMethod).toHaveBeenCalledWith(
+        'consent',
+        expect.objectContaining({
+          data: { marketing: true },
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
   });
 });

@@ -112,6 +112,12 @@ export const SourceReferenceSchema = z
       .describe(
         'Package specifier with optional version (e.g., "@walkeros/web-source-browser@2.0.0")',
       ),
+    code: z
+      .string()
+      .optional()
+      .describe(
+        'Named export to use from the package (e.g., "sourceExpress"). If omitted, uses default export.',
+      ),
     config: z
       .unknown()
       .optional()
@@ -150,6 +156,12 @@ export const DestinationReferenceSchema = z
       .min(1, 'Package name cannot be empty')
       .describe(
         'Package specifier with optional version (e.g., "@walkeros/web-destination-gtag@2.0.0")',
+      ),
+    code: z
+      .string()
+      .optional()
+      .describe(
+        'Named export to use from the package (e.g., "destinationAnalytics"). If omitted, uses default export.',
       ),
     config: z
       .unknown()

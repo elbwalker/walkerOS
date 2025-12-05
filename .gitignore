@@ -92,6 +92,9 @@ typings/
 # Turbobuild
 .turbo
 
+# Claude Code data (conversations, cache)
+.claude/data/
+
 .DS_Store
 .npm-cache
 .tmp

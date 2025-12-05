@@ -89,27 +89,46 @@ function interpolateVariables(
 }
 
 /**
+ * Convert package name to valid JavaScript variable name.
+ * Used for deterministic default import naming.
+ * @example
+ * packageNameToVariable('@walkeros/server-destination-api')
+ * // → '_walkerosServerDestinationApi'
+ */
+export function packageNameToVariable(packageName: string): string {
+  const hasScope = packageName.startsWith('@');
+  const normalized = packageName
+    .replace('@', '')
+    .replace(/[/-]/g, '_')
+    .split('_')
+    .filter((part) => part.length > 0)
+    .map((part, i) =>
+      i === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1),
+    )
+    .join('');
+
+  return hasScope ? '_' + normalized : normalized;
+}
+
+/**
  * Resolve code from package reference.
- * Looks up the import name from the packages configuration.
+ * Preserves explicit code fields, or auto-generates from package name.
  */
 function resolveCodeFromPackage(
   packageName: string | undefined,
   existingCode: string | undefined,
   packages: Flow.Packages | undefined,
 ): string | undefined {
-  // If code already exists, preserve it
+  // Preserve explicit code first
   if (existingCode) return existingCode;
 
-  // If no package or packages config, nothing to resolve
+  // Auto-generate code from package name if package exists
   if (!packageName || !packages) return undefined;
 
-  // Look up the package in packages config
   const pkgConfig = packages[packageName];
-  if (pkgConfig?.imports?.[0]) {
-    return pkgConfig.imports[0];
-  }
+  if (!pkgConfig) return undefined;
 
-  return undefined;
+  return packageNameToVariable(packageName);
 }
 
 /**

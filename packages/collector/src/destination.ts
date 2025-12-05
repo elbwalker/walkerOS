@@ -11,6 +11,11 @@ import {
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
+import { destinationCode } from './destination-code';
+
+function resolveCode(code: Destination.Instance | true): Destination.Instance {
+  return code === true ? destinationCode : code;
+}
 
 /**
  * Adds a new destination to the collector.
@@ -28,10 +33,11 @@ export async function addDestination(
   const { code, config: dataConfig = {}, env = {} } = data;
   const config = options || dataConfig || { init: false };
 
+  const resolved = resolveCode(code);
   const destination: Destination.Instance = {
-    ...code,
+    ...resolved,
     config,
-    env: mergeEnvironments(code.env, env),
+    env: mergeEnvironments(resolved.env, env),
   };
 
   let id = destination.config.id; // Use given id
@@ -226,6 +232,8 @@ export async function destinationInit<Destination extends Destination.Instance>(
       logger: destLogger,
     } as Destination.InitContext;
 
+    destLogger.debug('init');
+
     const configResult = await useHooks(
       destination.init,
       'DestinationInit',
@@ -240,6 +248,8 @@ export async function destinationInit<Destination extends Destination.Instance>(
       ...(configResult || destination.config),
       init: true, // Remember that the destination was initialized
     };
+
+    destLogger.debug('init done');
   }
 
   return true; // Destination is ready to push
@@ -304,11 +314,17 @@ export async function destinationPush<Destination extends Destination.Instance>(
           logger: batchLogger,
         };
 
+        batchLogger.debug('push batch', {
+          events: batched.events.length,
+        });
+
         useHooks(
           destination.pushBatch!,
           'DestinationPushBatch',
           (collector as Collector.Instance).hooks,
         )(batched, batchContext);
+
+        batchLogger.debug('push batch done');
 
         batched.events = [];
         batched.data = [];
@@ -317,12 +333,16 @@ export async function destinationPush<Destination extends Destination.Instance>(
     eventMapping.batched = batched;
     eventMapping.batchFn?.(destination, collector);
   } else {
+    destLogger.debug('push', { event: processed.event.name });
+
     // It's time to go to the destination's side now
     await useHooks(
       destination.push,
       'DestinationPush',
       collector.hooks,
     )(processed.event, context);
+
+    destLogger.debug('push done');
   }
 
   return true;
@@ -364,19 +384,17 @@ export async function initDestinations(
 
   for (const [name, destinationDef] of Object.entries(destinations)) {
     const { code, config = {}, env = {} } = destinationDef;
+    const resolved = resolveCode(code);
 
-    // Merge config: destination default + provided config
     const mergedConfig = {
-      ...code.config,
+      ...resolved.config,
       ...config,
     };
 
-    // Merge environment: destination default + provided env
-    const mergedEnv = mergeEnvironments(code.env, env);
+    const mergedEnv = mergeEnvironments(resolved.env, env);
 
-    // Create destination instance by spreading code and overriding config/env
     result[name] = {
-      ...code,
+      ...resolved,
       config: mergedConfig,
       env: mergedEnv,
     };
@@ -389,7 +407,7 @@ export async function initDestinations(
  * Merges destination environment with config environment
  * Config env takes precedence over destination env for overrides
  */
-function mergeEnvironments(
+export function mergeEnvironments(
   destinationEnv?: Destination.Env,
   configEnv?: Destination.Env,
 ): Destination.Env {

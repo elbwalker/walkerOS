@@ -85,12 +85,6 @@ export const push: PushFn = async function (
   // Format event for Data Manager API
   const dataManagerEvent = await formatEvent(event, finalData);
 
-  logger.debug('Processing event', {
-    name: event.name,
-    id: event.id,
-    timestamp: event.timestamp,
-  });
-
   // Apply event source from settings (required)
   if (!dataManagerEvent.eventSource) {
     dataManagerEvent.eventSource = eventSource;
@@ -186,8 +180,4 @@ export const push: PushFn = async function (
       `Validation errors: ${JSON.stringify(result.validationErrors)}`,
     );
   }
-
-  logger.info('Event processed successfully', {
-    requestId: result.requestId,
-  });
 };

@@ -97,10 +97,10 @@ const config = {
   moduleNameMapper: getModuleMapper(),
   globals: getGlobals(),
   
-  // Performance settings - fixed values for consistent behavior
-  maxWorkers: 4,
+  // Performance settings - reduced for devcontainer memory constraints
+  maxWorkers: 2,
   testTimeout: 30000,
-  forceExit: true,
+  // forceExit disabled to allow proper cleanup and detect handle leaks
   clearMocks: true,
   restoreMocks: true,
   detectOpenHandles: true,

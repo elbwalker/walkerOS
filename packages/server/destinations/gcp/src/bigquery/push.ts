@@ -4,15 +4,13 @@ import { isObject, isArray } from '@walkeros/core';
 
 export const push: PushFn = async function (
   event,
-  { config, mapping: _mapping, data },
+  { config, mapping: _mapping, data, logger },
 ) {
   const { client, datasetId, tableId } = config.settings!;
 
-  if (!client || !datasetId || !tableId) {
-    throw new Error(
-      'Missing required BigQuery configuration. Ensure init() was called successfully.',
-    );
-  }
+  if (!client) return logger.throw('client is missing');
+  if (!datasetId) return logger.throw('datasetId is missing');
+  if (!tableId) return logger.throw('tableId is missing');
 
   let row: WalkerOS.AnyObject | undefined;
 
@@ -29,7 +27,15 @@ export const push: PushFn = async function (
 
   const rows = [mapEvent(row)];
 
+  logger.debug('Calling BigQuery API', {
+    dataset: datasetId,
+    table: tableId,
+    rowCount: rows.length,
+  });
+
   await client.dataset(datasetId).table(tableId).insert(rows);
+
+  logger.debug('BigQuery API response', { ok: true });
 
   return;
 };

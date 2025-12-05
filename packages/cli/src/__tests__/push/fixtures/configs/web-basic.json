@@ -7,9 +7,7 @@
         "@walkeros/collector": {
           "imports": ["startFlow"]
         },
-        "@walkeros/destination-demo": {
-          "imports": ["destinationDemo"]
-        }
+        "@walkeros/destination-demo": {}
       },
       "destinations": {
         "demo": {

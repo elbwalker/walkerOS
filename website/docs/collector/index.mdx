@@ -75,9 +75,11 @@ browser: {
 },
 destinations: {
 console: {
-  code: {
-    type: 'console',
-    push: (event) => console.log('Event:', event),
+  code: true, // Built-in code destination
+  config: {
+    settings: {
+      push: "console.log('Event:', event)",
+    },
   },
 },
 },

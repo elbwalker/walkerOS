@@ -42,12 +42,6 @@ export interface CLIBuildOptions
   tempDir?: string;
 
   /**
-   * Custom template file path.
-   * @default undefined (uses platform-specific default)
-   */
-  template?: string;
-
-  /**
    * Enable package caching.
    * @default true
    */
