@@ -112,16 +112,23 @@ export function packageNameToVariable(packageName: string): string {
 
 /**
  * Resolve code from package reference.
- * Preserves explicit code fields, but doesn't generate code automatically.
+ * Preserves explicit code fields, or auto-generates from package name.
  */
 function resolveCodeFromPackage(
   packageName: string | undefined,
   existingCode: string | undefined,
   packages: Flow.Packages | undefined,
 ): string | undefined {
-  // Only preserve explicit code - don't generate
+  // Preserve explicit code first
   if (existingCode) return existingCode;
-  return undefined;
+
+  // Auto-generate code from package name if package exists
+  if (!packageName || !packages) return undefined;
+
+  const pkgConfig = packages[packageName];
+  if (!pkgConfig) return undefined;
+
+  return packageNameToVariable(packageName);
 }
 
 /**

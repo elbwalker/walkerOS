@@ -1145,7 +1145,7 @@ describe('getFlowConfig', () => {
       expect(config.sources?.http.code).toBeUndefined();
     });
 
-    test('does not generate code when not provided', () => {
+    test('auto-generates code when not provided', () => {
       const setup = {
         version: 1 as const,
         flows: {
@@ -1166,10 +1166,10 @@ describe('getFlowConfig', () => {
         },
       };
       const config = getFlowConfig(setup as any);
-      expect(config.sources?.http.code).toBeUndefined();
+      expect(config.sources?.http.code).toBe('_walkerosServerSourceExpress');
     });
 
-    test('does not generate code for multiple sources and destinations when not provided', () => {
+    test('auto-generates code for multiple sources and destinations when not provided', () => {
       const setup = {
         version: 1 as const,
         flows: {
@@ -1200,9 +1200,11 @@ describe('getFlowConfig', () => {
         },
       };
       const config = getFlowConfig(setup as any);
-      expect(config.sources?.http.code).toBeUndefined();
-      expect(config.destinations?.demo.code).toBeUndefined();
-      expect(config.destinations?.bigquery.code).toBeUndefined();
+      expect(config.sources?.http.code).toBe('_walkerosServerSourceExpress');
+      expect(config.destinations?.demo.code).toBe('_walkerosDestinationDemo');
+      expect(config.destinations?.bigquery.code).toBe(
+        '_walkerosServerDestinationGcp',
+      );
     });
   });
 
@@ -1297,7 +1299,7 @@ describe('packageNameToVariable', () => {
 // ========================================
 
 describe('resolveCodeFromPackage - default export fallback', () => {
-  test('does not auto-generate code when not provided', () => {
+  test('auto-generates code when not provided', () => {
     const setup = {
       version: 1 as const,
       flows: {
@@ -1316,7 +1318,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
       },
     };
     const config = getFlowConfig(setup as any);
-    expect(config.destinations?.api.code).toBeUndefined();
+    expect(config.destinations?.api.code).toBe('_walkerosServerDestinationApi');
   });
 
   test('uses explicit code when provided', () => {
@@ -1365,7 +1367,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
     expect(config.destinations?.bq.code).toBe('destinationBigQuery');
   });
 
-  test('does not auto-generate code for multiple destinations with same package', () => {
+  test('auto-generates code for multiple destinations with same package', () => {
     const setup = {
       version: 1 as const,
       flows: {
@@ -1388,7 +1390,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
       },
     };
     const config = getFlowConfig(setup as any);
-    expect(config.destinations?.api1.code).toBeUndefined();
-    expect(config.destinations?.api2.code).toBeUndefined();
+    expect(config.destinations?.api1.code).toBe('_walkerosWebDestinationApi');
+    expect(config.destinations?.api2.code).toBe('_walkerosWebDestinationApi');
   });
 });
