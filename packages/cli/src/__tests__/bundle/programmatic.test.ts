@@ -176,13 +176,11 @@ describe('Programmatic Bundle API', () => {
     expect(webDefaults.format).toBe('iife');
     expect(webDefaults.platform).toBe('browser');
     expect(webDefaults.target).toBe('es2020');
-    expect(webDefaults.template).toBe('web.hbs');
 
     const serverDefaults = getBuildDefaults('server');
     expect(serverDefaults.format).toBe('esm');
     expect(serverDefaults.platform).toBe('node');
     expect(serverDefaults.target).toBe('node20');
-    expect(serverDefaults.template).toBe('server.hbs');
   });
 
   it('should use convention-based output paths', () => {

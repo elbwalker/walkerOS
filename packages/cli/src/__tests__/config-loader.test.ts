@@ -71,7 +71,6 @@ describe('Config Loader', () => {
       expect(result.buildOptions.format).toBe('iife');
       expect(result.buildOptions.target).toBe('es2020');
       expect(result.buildOptions.minify).toBe(true);
-      expect(result.buildOptions.template).toBe('web.hbs');
       // Output path is resolved relative to config file directory
       expect(result.buildOptions.output).toBe('/test/dist/walker.js');
     });
@@ -95,7 +94,6 @@ describe('Config Loader', () => {
       expect(result.buildOptions.format).toBe('esm');
       expect(result.buildOptions.target).toBe('node20');
       expect(result.buildOptions.minify).toBe(true);
-      expect(result.buildOptions.template).toBe('server.hbs');
       // Output path is resolved relative to config file directory
       expect(result.buildOptions.output).toBe('/test/dist/bundle.mjs');
     });

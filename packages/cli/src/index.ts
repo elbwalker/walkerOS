@@ -39,13 +39,6 @@ export type {
 export type { BundleStats } from './commands/bundle/bundler.js';
 export type { SimulationResult } from './commands/simulate/types.js';
 export type {
-  SourceDestinationItem,
-  TemplateVariables,
-  ProcessedTemplateVariables,
-  TemplateSource,
-  TemplateDestination,
-} from './types/template.js';
-export type {
   RunMode,
   RunCommandOptions,
   RunOptions,

@@ -9,13 +9,14 @@
       "web": {},
       "packages": {
         "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
-        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] },
-        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+        "@walkeros/web-source-browser": {},
+        "@walkeros/web-destination-api": {},
+        "@walkeros/destination-demo": {}
       },
       "sources": {
         "browser": {
           "package": "@walkeros/web-source-browser",
+          "code": "sourceBrowser",
           "config": {
             "settings": {
               "pageview": true,
@@ -27,6 +28,7 @@
       "destinations": {
         "api": {
           "package": "@walkeros/web-destination-api",
+          "code": "destinationAPI",
           "config": {
             "settings": {
               "url": "${COLLECT_URL}"
@@ -35,6 +37,7 @@
         },
         "demo": {
           "package": "@walkeros/destination-demo",
+          "code": "destinationDemo",
           "config": {
             "settings": {
               "name": "Browser Demo"
@@ -50,15 +53,14 @@
       "server": {},
       "packages": {
         "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
-        "@walkeros/destination-demo": { "imports": ["destinationDemo"] },
-        "@walkeros/server-destination-gcp": {
-          "imports": ["destinationBigQuery"]
-        }
+        "@walkeros/server-source-express": {},
+        "@walkeros/destination-demo": {},
+        "@walkeros/server-destination-gcp": {}
       },
       "sources": {
         "express": {
           "package": "@walkeros/server-source-express",
+          "code": "sourceExpress",
           "config": {
             "settings": {
               "path": "/collect",
@@ -71,6 +73,7 @@
       "destinations": {
         "demo": {
           "package": "@walkeros/destination-demo",
+          "code": "destinationDemo",
           "config": {
             "settings": {
               "name": "Server Demo",
@@ -80,6 +83,7 @@
         },
         "bigquery": {
           "package": "@walkeros/server-destination-gcp",
+          "code": "destinationBigQuery",
           "config": {
             "settings": {
               "projectId": "${GCP_PROJECT_ID}",

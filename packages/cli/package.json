@@ -17,7 +17,6 @@
   },
   "files": [
     "dist/**",
-    "templates/**",
     "examples/**",
     "README.md",
     "CHANGELOG.md"
@@ -41,7 +40,6 @@
     "commander": "^11.0.0",
     "esbuild": "^0.19.0",
     "fs-extra": "^11.0.0",
-    "handlebars": "^4.7.8",
     "jsdom": "^22.1.0",
     "pacote": "^17.0.0"
   },

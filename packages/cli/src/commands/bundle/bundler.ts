@@ -2,10 +2,9 @@ import esbuild from 'esbuild';
 import path from 'path';
 import fs from 'fs-extra';
 import type { Flow } from '@walkeros/core';
+import { packageNameToVariable } from '@walkeros/core';
 import type { BuildOptions } from '../../types/bundle.js';
-import type { SourceDestinationItem } from '../../types/template.js';
 import { downloadPackages } from './package-manager.js';
-import { TemplateEngine } from './template-engine.js';
 import type { Logger } from '../../core/index.js';
 import { getTempDir } from '../../config/index.js';
 import {
@@ -403,18 +402,6 @@ function createEsbuildOptions(
   return baseOptions;
 }
 
-// Helper function to convert package name to JS variable name
-function packageNameToVariable(packageName: string): string {
-  return packageName
-    .replace('@', '_')
-    .replace(/[/-]/g, '_')
-    .split('_')
-    .map((part, i) =>
-      i === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1),
-    )
-    .join('');
-}
-
 /**
  * Detects destination packages from flow configuration.
  * Extracts package names from destinations that have explicit 'package' field.
@@ -443,6 +430,91 @@ function detectDestinationPackages(flowConfig: Flow.Config): Set<string> {
   return destinationPackages;
 }
 
+/**
+ * Detects source packages from flow configuration.
+ * Extracts package names from sources that have explicit 'package' field.
+ */
+function detectSourcePackages(flowConfig: Flow.Config): Set<string> {
+  const sourcePackages = new Set<string>();
+  const sources = (
+    flowConfig as unknown as { sources?: Record<string, unknown> }
+  ).sources;
+
+  if (sources) {
+    for (const [sourceKey, sourceConfig] of Object.entries(sources)) {
+      // Require explicit package field - no inference for any packages
+      if (
+        typeof sourceConfig === 'object' &&
+        sourceConfig !== null &&
+        'package' in sourceConfig &&
+        typeof sourceConfig.package === 'string'
+      ) {
+        sourcePackages.add(sourceConfig.package);
+      }
+    }
+  }
+
+  return sourcePackages;
+}
+
+/**
+ * Detects explicit code imports from destinations and sources.
+ * Returns a map of package names to sets of export names.
+ */
+function detectExplicitCodeImports(
+  flowConfig: Flow.Config,
+): Map<string, Set<string>> {
+  const explicitCodeImports = new Map<string, Set<string>>();
+
+  // Check destinations
+  const destinations = (
+    flowConfig as unknown as { destinations?: Record<string, unknown> }
+  ).destinations;
+
+  if (destinations) {
+    for (const [destKey, destConfig] of Object.entries(destinations)) {
+      if (
+        typeof destConfig === 'object' &&
+        destConfig !== null &&
+        'package' in destConfig &&
+        typeof destConfig.package === 'string' &&
+        'code' in destConfig &&
+        typeof destConfig.code === 'string'
+      ) {
+        if (!explicitCodeImports.has(destConfig.package)) {
+          explicitCodeImports.set(destConfig.package, new Set());
+        }
+        explicitCodeImports.get(destConfig.package)!.add(destConfig.code);
+      }
+    }
+  }
+
+  // Check sources
+  const sources = (
+    flowConfig as unknown as { sources?: Record<string, unknown> }
+  ).sources;
+
+  if (sources) {
+    for (const [sourceKey, sourceConfig] of Object.entries(sources)) {
+      if (
+        typeof sourceConfig === 'object' &&
+        sourceConfig !== null &&
+        'package' in sourceConfig &&
+        typeof sourceConfig.package === 'string' &&
+        'code' in sourceConfig &&
+        typeof sourceConfig.code === 'string'
+      ) {
+        if (!explicitCodeImports.has(sourceConfig.package)) {
+          explicitCodeImports.set(sourceConfig.package, new Set());
+        }
+        explicitCodeImports.get(sourceConfig.package)!.add(sourceConfig.code);
+      }
+    }
+  }
+
+  return explicitCodeImports;
+}
+
 interface ImportGenerationResult {
   importStatements: string[];
   examplesMappings: string[];
@@ -450,17 +522,24 @@ interface ImportGenerationResult {
 
 /**
  * Generates import statements and examples mappings from build packages.
- * Handles explicit imports, namespace imports, and auto-imports for destination packages.
+ * Handles explicit imports, default imports for destinations/sources, and utility imports.
  */
 function generateImportStatements(
   packages: BuildOptions['packages'],
   destinationPackages: Set<string>,
+  sourcePackages: Set<string>,
+  explicitCodeImports: Map<string, Set<string>>,
 ): ImportGenerationResult {
   const importStatements: string[] = [];
   const examplesMappings: string[] = [];
+  const usedPackages = new Set([...destinationPackages, ...sourcePackages]);
 
   for (const [packageName, packageConfig] of Object.entries(packages)) {
+    const isUsedByDestOrSource = usedPackages.has(packageName);
+    const hasExplicitCode = explicitCodeImports.has(packageName);
+
     if (packageConfig.imports && packageConfig.imports.length > 0) {
+      // Explicit imports (utilities) - existing logic
       // Remove duplicates within the same package
       const uniqueImports = [...new Set(packageConfig.imports)];
 
@@ -511,14 +590,20 @@ function generateImportStatements(
           );
         }
       }
-    } else {
-      // No imports specified - import as namespace with a warning comment
-      // User should specify explicit imports for better tree-shaking
-      const varName = packageNameToVariable(packageName);
+    } else if (hasExplicitCode) {
+      // Package with explicit code specified in destinations/sources
+      // → Generate named imports
+      const codes = Array.from(explicitCodeImports.get(packageName)!);
       importStatements.push(
-        `import * as ${varName} from '${packageName}'; // Consider specifying explicit imports`,
+        `import { ${codes.join(', ')} } from '${packageName}';`,
       );
+    } else if (isUsedByDestOrSource) {
+      // Package used by destination/source but no explicit imports or code
+      // → Generate default import
+      const varName = packageNameToVariable(packageName);
+      importStatements.push(`import ${varName} from '${packageName}';`);
     }
+    // If package declared but not used by any dest/source, skip import
 
     // Examples are no longer auto-imported - simulator loads them dynamically
   }
@@ -527,127 +612,52 @@ function generateImportStatements(
 }
 
 /**
- * Processes template if configured, otherwise returns code directly.
- * Applies TemplateEngine to transform code with flow configuration.
+ * Creates the entry point code for the bundle.
+ * Generates imports, config object, and platform-specific wrapper programmatically.
  */
-async function processTemplate(
-  flowConfig: Flow.Config,
-  buildOptions: BuildOptions,
-): Promise<string> {
-  if (buildOptions.template) {
-    const templateEngine = new TemplateEngine();
-    const flowWithProps = flowConfig as unknown as {
-      sources?: Record<string, unknown>;
-      destinations?: Record<string, unknown>;
-      collector?: Record<string, unknown>;
-    };
-    return await templateEngine.process(
-      buildOptions.template,
-      buildOptions.code || '', // Pass user code as parameter (empty if undefined)
-      (flowWithProps.sources || {}) as unknown as Record<
-        string,
-        SourceDestinationItem
-      >,
-      (flowWithProps.destinations || {}) as unknown as Record<
-        string,
-        SourceDestinationItem
-      >,
-      (flowWithProps.collector || {}) as unknown as Record<string, unknown>,
-      buildOptions as unknown as Record<string, unknown>, // Pass build config to template
-    );
-  } else {
-    // No template - just use the code directly
-    return buildOptions.code || '';
-  }
-}
-
-/**
- * Wraps code for specific output formats.
- * Adds export wrapper for ESM without template when no export exists.
- */
-function wrapCodeForFormat(
-  code: string,
-  format: BuildOptions['format'],
-  hasTemplate: boolean,
-): string {
-  // Template outputs ready-to-use code - no wrapping needed
-  if (hasTemplate) {
-    return code;
-  }
-
-  // Only add export wrapper for server ESM without template
-  if (format === 'esm') {
-    // Check if code already has export statements
-    const hasExport = /^\s*export\s/m.test(code);
-
-    if (!hasExport) {
-      // Raw code without export - wrap as default export
-      return `export default ${code}`;
-    }
-  }
-
-  return code;
-}
-
-/**
- * Assembles the final entry point code from all components.
- * Combines imports, examples object, and wrapped code with format-specific exports.
- */
-function assembleFinalCode(
-  importStatements: string[],
-  examplesObject: string,
-  wrappedCode: string,
-  format: BuildOptions['format'],
-): string {
-  const importsCode = importStatements.join('\n');
-
-  let finalCode = importsCode
-    ? `${importsCode}\n\n${examplesObject}${wrappedCode}`
-    : `${examplesObject}${wrappedCode}`;
-
-  // Make examples available for ESM
-  if (examplesObject && format === 'esm') {
-    // ESM: export as named export
-    finalCode += `\n\nexport { examples };`;
-  }
-
-  return finalCode;
-}
-
-async function createEntryPoint(
+export async function createEntryPoint(
   flowConfig: Flow.Config,
   buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
 ): Promise<string> {
-  // Detect destination packages for auto-importing examples
+  // Detect packages used by destinations and sources
   const destinationPackages = detectDestinationPackages(flowConfig);
+  const sourcePackages = detectSourcePackages(flowConfig);
+  const explicitCodeImports = detectExplicitCodeImports(flowConfig);
 
-  // Generate import statements (examples generation removed)
+  // Generate import statements
   const { importStatements } = generateImportStatements(
     buildOptions.packages,
     destinationPackages,
+    sourcePackages,
+    explicitCodeImports,
   );
 
-  // No longer generate examples in bundles - simulator loads them dynamically
-  const examplesObject = '';
+  const importsCode = importStatements.join('\n');
+  const hasFlow = destinationPackages.size > 0 || sourcePackages.size > 0;
 
-  // Process template or use code directly
-  const templatedCode = await processTemplate(flowConfig, buildOptions);
+  // If no sources/destinations, just return user code with imports (no flow wrapper)
+  if (!hasFlow) {
+    const userCode = buildOptions.code || '';
+    return importsCode ? `${importsCode}\n\n${userCode}` : userCode;
+  }
 
-  // Wrap code for specific output format
-  const wrappedCode = wrapCodeForFormat(
-    templatedCode,
-    buildOptions.format,
-    !!buildOptions.template,
+  // Build config object programmatically (DRY - single source of truth)
+  const configObject = buildConfigObject(flowConfig, explicitCodeImports);
+
+  // Generate platform-specific wrapper
+  const wrappedCode = generatePlatformWrapper(
+    configObject,
+    buildOptions.code || '',
+    buildOptions as {
+      platform: string;
+      windowCollector?: string;
+      windowElb?: string;
+    },
   );
 
-  // Assemble final entry point code
-  return assembleFinalCode(
-    importStatements,
-    examplesObject,
-    wrappedCode,
-    buildOptions.format,
-  );
+  // Assemble final code
+  return importsCode ? `${importsCode}\n\n${wrappedCode}` : wrappedCode;
 }
 
 interface EsbuildError {
@@ -692,4 +702,130 @@ function createBuildError(buildError: EsbuildError, code: string): Error {
         ? `  at ${location.file}:${location.line}:${location.column}`
         : ''),
   );
+}
+
+/**
+ * Build config object string from flow configuration.
+ * Respects import strategy decisions from detectExplicitCodeImports.
+ */
+export function buildConfigObject(
+  flowConfig: Flow.Config,
+  explicitCodeImports: Map<string, Set<string>>,
+): string {
+  const flowWithProps = flowConfig as unknown as {
+    sources?: Record<
+      string,
+      { package: string; code?: string; config?: unknown; env?: unknown }
+    >;
+    destinations?: Record<
+      string,
+      { package: string; code?: string; config?: unknown; env?: unknown }
+    >;
+    collector?: unknown;
+  };
+
+  const sources = flowWithProps.sources || {};
+  const destinations = flowWithProps.destinations || {};
+
+  // Build sources
+  const sourcesEntries = Object.entries(sources).map(([key, source]) => {
+    const hasExplicitCode =
+      source.code && explicitCodeImports.has(source.package);
+    const codeVar = hasExplicitCode
+      ? source.code
+      : packageNameToVariable(source.package);
+
+    const configStr = source.config ? processConfigValue(source.config) : '{}';
+    const envStr = source.env
+      ? `,\n      env: ${processConfigValue(source.env)}`
+      : '';
+
+    return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
+  });
+
+  // Build destinations
+  const destinationsEntries = Object.entries(destinations).map(
+    ([key, dest]) => {
+      const hasExplicitCode =
+        dest.code && explicitCodeImports.has(dest.package);
+      const codeVar = hasExplicitCode
+        ? dest.code
+        : packageNameToVariable(dest.package);
+
+      const configStr = dest.config ? processConfigValue(dest.config) : '{}';
+      const envStr = dest.env
+        ? `,\n      env: ${processConfigValue(dest.env)}`
+        : '';
+
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
+    },
+  );
+
+  // Build collector
+  const collectorStr = flowWithProps.collector
+    ? `,\n  ...${processConfigValue(flowWithProps.collector)}`
+    : '';
+
+  return `{
+  sources: {
+${sourcesEntries.join(',\n')}
+  },
+  destinations: {
+${destinationsEntries.join(',\n')}
+  }${collectorStr}
+}`;
+}
+
+/**
+ * Process config value for serialization.
+ * Uses existing serializer utilities.
+ */
+function processConfigValue(value: unknown): string {
+  return JSON.stringify(value, null, 2);
+}
+
+/**
+ * Generate platform-specific wrapper code.
+ */
+export function generatePlatformWrapper(
+  configObject: string,
+  userCode: string,
+  buildOptions: {
+    platform: string;
+    windowCollector?: string;
+    windowElb?: string;
+  },
+): string {
+  if (buildOptions.platform === 'browser') {
+    // Web platform: IIFE with browser globals
+    const windowAssignments = [];
+    if (buildOptions.windowCollector) {
+      windowAssignments.push(
+        `  if (typeof window !== 'undefined') window['${buildOptions.windowCollector}'] = collector;`,
+      );
+    }
+    if (buildOptions.windowElb) {
+      windowAssignments.push(
+        `  if (typeof window !== 'undefined') window['${buildOptions.windowElb}'] = elb;`,
+      );
+    }
+    const assignments =
+      windowAssignments.length > 0 ? '\n' + windowAssignments.join('\n') : '';
+
+    return `(async () => {
+  const config = ${configObject};
+
+  ${userCode}
+
+  const { collector, elb } = await startFlow(config);${assignments}
+})();`;
+  } else {
+    // Server platform: Export default function
+    const codeSection = userCode ? `\n  ${userCode}\n` : '';
+
+    return `export default async function(context = {}) {
+  const config = ${configObject};${codeSection}
+  return await startFlow(config);
+}`;
+  }
 }

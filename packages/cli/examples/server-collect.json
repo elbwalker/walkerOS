@@ -9,17 +9,16 @@
           "imports": ["startFlow"]
         },
         "@walkeros/server-source-express": {
-          "version": "latest",
-          "imports": ["sourceExpress"]
+          "version": "latest"
         },
         "@walkeros/destination-demo": {
-          "version": "latest",
-          "imports": ["destinationDemo"]
+          "version": "latest"
         }
       },
       "sources": {
         "http": {
           "package": "@walkeros/server-source-express",
+          "code": "sourceExpress",
           "config": {
             "settings": {
               "path": "/collect",
@@ -33,6 +32,7 @@
       "destinations": {
         "demo": {
           "package": "@walkeros/destination-demo",
+          "code": "destinationDemo",
           "config": {
             "settings": {
               "name": "Server Collection Demo",
