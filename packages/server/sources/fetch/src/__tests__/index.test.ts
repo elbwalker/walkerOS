@@ -40,6 +40,8 @@ describe('sourceFetch', () => {
         path: '/collect',
         cors: true,
         healthPath: '/health',
+        maxRequestSize: 102400,
+        maxBatchSize: 100,
       });
       expect(typeof source.push).toBe('function');
     });
@@ -65,6 +67,8 @@ describe('sourceFetch', () => {
         path: '/events',
         cors: false,
         healthPath: '/status',
+        maxRequestSize: 102400,
+        maxBatchSize: 100,
       });
     });
   });
