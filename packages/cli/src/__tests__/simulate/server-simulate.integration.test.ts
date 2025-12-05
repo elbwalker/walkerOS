@@ -27,7 +27,6 @@ describe('Server Simulation Integration', () => {
             },
             '@walkeros/destination-demo': {
               version: 'latest',
-              imports: ['destinationDemo'],
             },
           },
           destinations: {
