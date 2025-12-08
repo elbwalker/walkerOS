@@ -493,14 +493,6 @@ walkeros bundle config.json
 - **Node.js**: 18+ or 22+
 - **Docker**: Not required for CLI (only for production deployment)
 
-## Documentation
-
-Detailed guides in [docs/](./docs/):
-
-- [RUN_COMMAND.md](./docs/RUN_COMMAND.md) - Run command details
-- [PUBLISHING.md](./docs/PUBLISHING.md) - Publishing guide
-- [MANUAL_TESTING_GUIDE.md](./docs/MANUAL_TESTING_GUIDE.md) - Testing guide
-
 ## Type Definitions
 
 See [src/types.ts](./src/types.ts) for TypeScript interfaces.

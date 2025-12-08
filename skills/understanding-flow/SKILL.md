@@ -40,9 +40,8 @@ A Flow combines components. You can:
 
 ### The Flow Type
 
-See
-[packages/collector/src/types/flow.ts](../../packages/collector/src/types/flow.ts)
-for the canonical interface.
+See [packages/core/src/types/flow.ts](../../packages/core/src/types/flow.ts) for
+the canonical interface.
 
 ```typescript
 // Conceptual structure (see source for full type)

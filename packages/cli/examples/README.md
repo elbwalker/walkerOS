@@ -340,4 +340,4 @@ The event name is parsed as: `const [entity, action] = event.split(' ')`
 1. Try each example with `walkeros bundle` and `walkeros simulate`
 2. Modify examples to match your tracking requirements
 3. Create custom flow files for your use case
-4. Deploy to production (see [PUBLISHING.md](../docs/PUBLISHING.md))
+4. Deploy to production

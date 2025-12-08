@@ -155,8 +155,7 @@ Source configuration schemas:
 
 #### [`utilities.ts`](./utilities.ts)
 
-Mirrors [`types/storage.ts`](../types/storage.ts) +
-[`types/handler.ts`](../types/handler.ts)
+Mirrors [`types/storage.ts`](../types/storage.ts)
 
 Utility type schemas:
 

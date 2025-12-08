@@ -43,8 +43,9 @@ separation.
 
 ## Event Properties
 
-See [packages/core/src/types/event.ts](../../packages/core/src/types/event.ts)
-for canonical types.
+See
+[packages/core/src/types/walkeros.ts](../../packages/core/src/types/walkeros.ts)
+for canonical types (Event interface).
 
 | Property    | Type   | Purpose                    | Example                               |
 | ----------- | ------ | -------------------------- | ------------------------------------- |
@@ -165,10 +166,9 @@ await elb(
 
 **Source Files:**
 
-- [packages/core/src/types/event.ts](../../packages/core/src/types/event.ts) -
+- [packages/core/src/types/walkeros.ts](../../packages/core/src/types/walkeros.ts) -
   Event types
-- [packages/core/src/schemas/event.ts](../../packages/core/src/schemas/event.ts) -
-  Event schemas
+- [packages/core/src/schemas/](../../packages/core/src/schemas/) - Event schemas
 
 **Documentation:**
 

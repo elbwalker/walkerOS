@@ -33,8 +33,7 @@ flow.mjs  ──────────────→  Running collector
 **What's included:** Express server, flow executor, graceful shutdown, demo
 bundles **What's NOT included:** CLI, bundler, npm, build tools
 
-See [docs/CAPABILITIES.md](./docs/CAPABILITIES.md) for detailed architecture
-documentation.
+This is a minimal runtime image optimized for production deployments.
 
 ## Quick Start
 
@@ -326,13 +325,6 @@ docker run -p 8080:8080 \
 ```bash
 npm test
 ```
-
-See comprehensive guides in [docs/](./docs/):
-
-- **[CAPABILITIES.md](./docs/CAPABILITIES.md)** - Architecture and capabilities
-- **[LOCAL-TESTING.md](./docs/LOCAL-TESTING.md)** - Testing Docker images
-  locally
-- **[DOCKER-HUB.md](./docs/DOCKER-HUB.md)** - Publishing to Docker Hub
 
 ## Library Usage
 

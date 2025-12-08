@@ -275,6 +275,5 @@ product: {
   concepts
 - [packages/core/src/mapping.ts](../../packages/core/src/mapping.ts) -
   Implementation
-- [apps/quickstart/src/mappings/](../../apps/quickstart/src/mappings/) -
-  Validated examples
+- [apps/quickstart/src/](../../apps/quickstart/src/) - Validated examples
 - [← Back to Hub](../../AGENT.md)

@@ -280,7 +280,7 @@ See [AGENT.md](../../../../AGENT.md) for walkerOS development guide.
 
 - [understanding-sources skill](../../../../skills/understanding-sources/SKILL.md)
 - [using-logger skill](../../../../skills/using-logger/SKILL.md)
-- [@walkeros/server-source-express](../../express/) - Alternative for Express.js
+- [@walkeros/server-source-express](../express/) - Alternative for Express.js
 - [@walkeros/core](../../../../packages/core/) - Core utilities
 
 ## License
