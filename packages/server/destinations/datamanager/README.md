@@ -791,6 +791,15 @@ authentication**
 | `eventName`       | string | 40         | Event name (required for GA4)    |
 | `eventSource`     | string |            | WEB, APP, IN_STORE, PHONE, OTHER |
 
+## Type Definitions
+
+See [src/types/](./src/types/) for TypeScript interfaces.
+
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/destinations/server/datamanager/)
+- [Destination Interface](../../../core/src/types/destination.ts)
+
 ## Resources
 
 - [Google Data Manager API Documentation](https://developers.google.com/data-manager/api)

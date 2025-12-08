@@ -15,7 +15,35 @@ data manipulation, validation, mapping, and more.
 
 ## Installation
 
-Import the core utilities directly from the `@walkeros/core` package:
+```bash
+npm install @walkeros/core
+```
+
+## Quick Start
+
+The core package provides types and utilities used across walkerOS. In a Flow
+configuration:
+
+```json
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "url": "https://collect.example.com/events"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Import utilities directly:
 
 ```ts
 import { assign, anonymizeIP, getMappingValue } from '@walkeros/core';
@@ -300,12 +328,22 @@ validates event structure and throws on invalid events.
 
 Validates that values conform to walkerOS property types.
 
----
+## Type Definitions
 
-For platform-specific utilities, see:
+See [src/types/](./src/types/) for TypeScript interfaces:
 
-- [Web Core](https://www.walkeros.io/docs/core/web) - Browser-specific functions
-- [Server Core](https://www.walkeros.io/docs/core/server) - Node.js server
+- [event.ts](./src/types/event.ts) - Event structure
+- [destination.ts](./src/types/destination.ts) - Destination interface
+- [source.ts](./src/types/source.ts) - Source interface
+- [mapping.ts](./src/types/mapping.ts) - Mapping configuration
+
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/)
+- [Collector Package](../collector/) - Event processing engine
+- [Web Core](https://www.walkeros.io/docs/sources/web/) - Browser-specific
+  functions
+- [Server Core](https://www.walkeros.io/docs/sources/server/) - Node.js server
   functions
 
 ## Contribute

@@ -24,6 +24,22 @@ npm install -g @walkeros/cli
 npm install @walkeros/cli
 ```
 
+## Quick Start
+
+```bash
+# Bundle a flow configuration
+walkeros bundle flow.json
+
+# Test with simulated events (no real API calls)
+walkeros simulate flow.json --event '{"name":"page view"}'
+
+# Push real events to destinations
+walkeros push flow.json --event '{"name":"page view"}'
+
+# Run a collection server locally
+walkeros run collect flow.json --port 3000
+```
+
 ## Commands
 
 ### bundle
@@ -484,6 +500,16 @@ Detailed guides in [docs/](./docs/):
 - [RUN_COMMAND.md](./docs/RUN_COMMAND.md) - Run command details
 - [PUBLISHING.md](./docs/PUBLISHING.md) - Publishing guide
 - [MANUAL_TESTING_GUIDE.md](./docs/MANUAL_TESTING_GUIDE.md) - Testing guide
+
+## Type Definitions
+
+See [src/types.ts](./src/types.ts) for TypeScript interfaces.
+
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/cli/)
+- [Flow Configuration](https://www.walkeros.io/docs/getting-started/flow/)
+- [Docker Package](../docker/) - Production runtime
 
 ## License
 

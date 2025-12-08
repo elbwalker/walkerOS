@@ -22,27 +22,60 @@ and analysis.
 npm install @walkeros/server-destination-aws
 ```
 
-## Usage
+## Quick Start
 
-Here's a basic example of how to use the AWS Firehose destination:
+Configure in your Flow JSON:
+
+```json
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "destinations": {
+        "firehose": {
+          "package": "@walkeros/server-destination-aws",
+          "config": {
+            "settings": {
+              "firehose": {
+                "streamName": "your-firehose-stream-name",
+                "region": "eu-central-1"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Or programmatically:
 
 ```typescript
-import { elb } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationFirehose } from '@walkeros/server-destination-aws';
 
-elb('walker destination', destinationFirehose, {
-  settings: {
-    firehose: {
-      streamName: 'your-firehose-stream-name',
-      region: 'eu-central-1',
+const { elb } = await startFlow({
+  destinations: [
+    {
+      destination: destinationFirehose,
       config: {
-        credentials: {
-          accessKeyId: 'your-access-key-id',
-          secretAccessKey: 'your-secret-access-key',
+        settings: {
+          firehose: {
+            streamName: 'your-firehose-stream-name',
+            region: 'eu-central-1',
+            config: {
+              credentials: {
+                accessKeyId: 'your-access-key-id',
+                secretAccessKey: 'your-secret-access-key',
+              },
+            },
+          },
         },
       },
     },
-  },
+  ],
 });
 ```
 
@@ -62,6 +95,15 @@ The `firehose` object has the following properties:
 | `client`     | `FirehoseClient`       | Pre-configured AWS Firehose client instance       | No       | `new FirehoseClient(config)`      |
 | `region`     | `string`               | AWS region for the Firehose service               | No       | `'us-east-1'`                     |
 | `config`     | `FirehoseClientConfig` | AWS SDK client configuration options              | No       | `{ credentials: awsCredentials }` |
+
+## Type Definitions
+
+See [src/types/](./src/types/) for TypeScript interfaces.
+
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/destinations/server/aws/)
+- [Destination Interface](../../../core/src/types/destination.ts)
 
 ## Contribute
 

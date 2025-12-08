@@ -25,26 +25,52 @@ single destination configuration.
 npm install @walkeros/web-destination-gtag
 ```
 
-## Usage
+## Quick Start
+
+Configure in your Flow JSON:
+
+```json
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "destinations": {
+        "gtag": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "settings": {
+              "ga4": { "measurementId": "G-XXXXXXXXXX" },
+              "ads": { "conversionId": "AW-XXXXXXXXX" },
+              "gtm": { "containerId": "GTM-XXXXXXX" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Or programmatically:
 
 ```typescript
 import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationGtag, {
-  settings: {
-    ga4: {
-      measurementId: 'G-XXXXXXXXXX', // Required for GA4
+const { elb } = await startFlow({
+  destinations: [
+    {
+      destination: destinationGtag,
+      config: {
+        settings: {
+          ga4: { measurementId: 'G-XXXXXXXXXX' },
+          ads: { conversionId: 'AW-XXXXXXXXX' },
+          gtm: { containerId: 'GTM-XXXXXXX' },
+        },
+      },
     },
-    ads: {
-      conversionId: 'AW-XXXXXXXXX', // Required for Google Ads
-    },
-    gtm: {
-      containerId: 'GTM-XXXXXXX', // Required for GTM
-    },
-  },
+  ],
 });
 ```
 
@@ -266,6 +292,15 @@ const rules: DestinationGtag.Rules = {
 - Verify the container ID is correct
 - Check the dataLayer name matches your GTM configuration
 - Use GTM Preview mode to debug event flow
+
+## Type Definitions
+
+See [src/types/](./src/types/) for TypeScript interfaces.
+
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/destinations/web/gtag/)
+- [Destination Interface](../../../core/src/types/destination.ts)
 
 ## Contribute
 

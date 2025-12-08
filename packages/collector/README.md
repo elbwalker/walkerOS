@@ -75,7 +75,7 @@ action by space the collector won't process it.
 npm install @walkeros/collector
 ```
 
-## Setup
+## Quick Start
 
 ### Basic setup
 
@@ -126,6 +126,20 @@ const { collector, elb } = await startFlow({
 | `destinations` | `array`   | Configurations for destinations receiving processed events   | No       | `[{ destination, config }]`             |
 | `consent`      | `object`  | Initial consent state to control routing of events           | No       | `{ analytics: true, marketing: false }` |
 | `logger`       | `object`  | Logger configuration with level and custom handler           | No       | `{ level: 'info', handler: fn }`        |
+
+## Type Definitions
+
+See [src/types/](./src/types/) for TypeScript interfaces:
+
+- [flow.ts](./src/types/flow.ts) - Flow configuration
+- [collector.ts](./src/types/collector.ts) - Collector interface
+
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/getting-started/flow/)
+- [Core Package](../core/) - Types and utilities
+- [Web Sources](../web/sources/) - Browser event sources
+- [Server Sources](../server/sources/) - Node.js event sources
 
 ## Contribute
 
