@@ -19,13 +19,14 @@ Tool-agnostic and accessible to Claude, Cursor, Copilot, and other AI tools.
 
 ### Task Skills
 
-| Skill                                                     | Description                                   |
-| --------------------------------------------------------- | --------------------------------------------- |
-| [testing-strategy](./testing-strategy/SKILL.md)           | Testing patterns, env mocking, dev examples   |
-| [create-destination](./create-destination/SKILL.md)       | Step-by-step destination creation             |
-| [create-source](./create-source/SKILL.md)                 | Step-by-step source creation                  |
-| [mapping-configuration](./mapping-configuration/SKILL.md) | Mapping recipes for GA4, Meta, custom APIs    |
-| [debugging](./debugging/SKILL.md)                         | Troubleshooting event flow and mapping issues |
+| Skill                                                     | Description                                    |
+| --------------------------------------------------------- | ---------------------------------------------- |
+| [testing-strategy](./testing-strategy/SKILL.md)           | Testing patterns, env mocking, dev examples    |
+| [create-destination](./create-destination/SKILL.md)       | Step-by-step destination creation              |
+| [create-source](./create-source/SKILL.md)                 | Step-by-step source creation                   |
+| [mapping-configuration](./mapping-configuration/SKILL.md) | Mapping recipes for GA4, Meta, custom APIs     |
+| [debugging](./debugging/SKILL.md)                         | Troubleshooting event flow and mapping issues  |
+| [writing-documentation](./writing-documentation/SKILL.md) | Documentation standards, validation, templates |
 
 ## Architecture
 

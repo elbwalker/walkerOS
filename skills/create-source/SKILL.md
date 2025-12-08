@@ -19,6 +19,8 @@ Before starting, read these skills:
 - [understanding-mapping](../understanding-mapping/SKILL.md) - Transform raw
   input to events
 - [testing-strategy](../testing-strategy/SKILL.md) - How to test
+- [writing-documentation](../writing-documentation/SKILL.md) - Documentation
+  standards (for Phase 7)
 
 ## Source Types
 
@@ -26,6 +28,25 @@ Before starting, read these skills:
 | ------ | -------- | ----------------------- | ----------------------------------- |
 | Web    | Browser  | DOM events, dataLayer   | `browser`, `dataLayer`              |
 | Server | Node.js  | HTTP requests, webhooks | `gcp`, `express`, `lambda`, `fetch` |
+
+## Source Categories
+
+Sources fall into two categories based on their primary function:
+
+| Category           | Purpose                                   | Examples                | Key Concern          |
+| ------------------ | ----------------------------------------- | ----------------------- | -------------------- |
+| **Transformation** | Convert external format → walkerOS events | `dataLayer`, `fetch`    | Mapping accuracy     |
+| **Transport**      | Receive events from specific platform     | `gcp`, `aws`, `express` | Platform integration |
+
+**Transformation sources** focus on data conversion - they take input in one
+format and produce walkerOS events. The `fetch` source is the purest example.
+
+**Transport sources** focus on platform integration - they handle
+platform-specific concerns (authentication, request parsing, response format)
+while delegating transformation. The `gcp` and `aws` sources wrap HTTP handlers
+for their respective cloud platforms.
+
+Many sources are both - they handle platform transport AND transform data.
 
 ## Process Overview
 
@@ -558,51 +579,19 @@ describe('HTTP handler', () => {
 
 ## Phase 7: Document
 
-**README.md:**
+Follow the [writing-documentation](../writing-documentation/SKILL.md) skill for:
 
-```markdown
-# @walkeros/server-source-[name]
+- README structure and templates
+- Example validation against `apps/quickstart/`
+- Quality checklist before publishing
 
-> walkerOS source for [Platform/Input Type]
+Key requirements for source documentation:
 
-## Installation
-
-\`\`\`bash npm install @walkeros/server-source-[name] \`\`\`
-
-## Quick Start
-
-\`\`\`typescript import source from '@walkeros/server-source-[name]';
-
-// Transform single input const event = source.transformInput({ event:
-'page_view', properties: { page_title: 'Home' }, });
-
-// Use as HTTP handler app.post('/events', async (req, res) => { const result =
-await source.push(req); res.json(result); }); \`\`\`
-
-## Input Format
-
-| Field      | Type   | Required | Description     |
-| ---------- | ------ | -------- | --------------- |
-| event      | string | Yes      | Event type      |
-| properties | object | No       | Event data      |
-| userId     | string | No       | User identifier |
-| timestamp  | number | No       | Event time (ms) |
-
-## Event Name Mapping
-
-| Input Event    | walkerOS Event   |
-| -------------- | ---------------- |
-| `page_view`    | `page view`      |
-| `purchase`     | `order complete` |
-| `button_click` | `button click`   |
-
-## Configuration
-
-| Option       | Type                   | Description               |
-| ------------ | ---------------------- | ------------------------- |
-| eventNameMap | Record<string, string> | Custom event name mapping |
-| mapping      | Mapping.Rules          | Data transformation rules |
-```
+- [ ] Input format table documenting expected fields
+- [ ] Event name mapping table (source format → walkerOS format)
+- [ ] Configuration options table
+- [ ] Working code example with imports
+- [ ] Installation instructions
 
 ---
 

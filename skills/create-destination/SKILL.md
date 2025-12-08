@@ -19,6 +19,8 @@ Before starting, read these skills:
   transformation
 - [testing-strategy](../testing-strategy/SKILL.md) - How to test with env
   pattern
+- [writing-documentation](../writing-documentation/SKILL.md) - Documentation
+  standards (for Phase 7)
 
 ## Process Overview
 
@@ -439,39 +441,18 @@ describe('destinationVendor', () => {
 
 ## Phase 7: Document
 
-**README.md:**
+Follow the [writing-documentation](../writing-documentation/SKILL.md) skill for:
 
-```markdown
-# @walkeros/web-destination-[name]
+- README structure and templates
+- Example validation against `apps/quickstart/`
+- Quality checklist before publishing
 
-> walkerOS destination for [Vendor Name]
+Key requirements for destination documentation:
 
-## Installation
-
-\`\`\`bash npm install @walkeros/web-destination-[name] \`\`\`
-
-## Quick Start
-
-\`\`\`typescript import { startFlow } from '@walkeros/collector'; import
-destinationVendor from '@walkeros/web-destination-[name]';
-
-const { elb } = await startFlow({ destinations: { vendor: {
-...destinationVendor, config: { settings: { apiKey: 'YOUR_API_KEY' }, }, }, },
-}); \`\`\`
-
-## Event Mapping
-
-| walkerOS Event   | Vendor Event | Notes            |
-| ---------------- | ------------ | ---------------- |
-| `page view`      | `pageview`   | Automatic        |
-| `order complete` | `purchase`   | Requires mapping |
-
-## Configuration
-
-| Setting | Type   | Required | Description  |
-| ------- | ------ | -------- | ------------ |
-| apiKey  | string | Yes      | Your API key |
-```
+- [ ] Event mapping table (walkerOS → vendor format)
+- [ ] Configuration options table (use PropertyTable if schema exists)
+- [ ] Working code example with imports
+- [ ] Installation instructions
 
 ---
 
