@@ -108,27 +108,24 @@ const { collector, elb } = await startFlow({
   destinations: [
     // add your event destinations
   ],
-  verbose: true,
-  onError: (error: unknown) => {
-    console.error('Collector error:', error);
-  },
-  onLog: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => {
-    console.log(`[${level}] ${message}`);
+  logger: {
+    level: 'debug', // 'debug' | 'info' | 'warn' | 'error'
+    handler: (message, level) => {
+      console.log(`[${level}] ${message}`);
+    },
   },
 });
 ```
 
 ## Configuration
 
-| Name           | Type       | Description                                                    | Required | Example                                    |
-| -------------- | ---------- | -------------------------------------------------------------- | -------- | ------------------------------------------ |
-| `run`          | `boolean`  | Automatically start the collector pipeline on initialization   | No       | `true`                                     |
-| `sources`      | `array`    | Configurations for sources providing events to the collector   | No       | `[{ source, config }]`                     |
-| `destinations` | `array`    | Configurations for destinations receiving processed events     | No       | `[{ destination, config }]`                |
-| `consent`      | `object`   | Initial consent state to control routing of events             | No       | `{ analytics: true, marketing: false }`    |
-| `verbose`      | `boolean`  | Enable verbose logging for debugging                           | No       | `false`                                    |
-| `onError`      | `function` | Error handler triggered when the collector encounters failures | No       | `(error) => console.error(error)`          |
-| `onLog`        | `function` | Custom log handler for collector messages                      | No       | `(message, level) => console.log(message)` |
+| Name           | Type      | Description                                                  | Required | Example                                 |
+| -------------- | --------- | ------------------------------------------------------------ | -------- | --------------------------------------- |
+| `run`          | `boolean` | Automatically start the collector pipeline on initialization | No       | `true`                                  |
+| `sources`      | `array`   | Configurations for sources providing events to the collector | No       | `[{ source, config }]`                  |
+| `destinations` | `array`   | Configurations for destinations receiving processed events   | No       | `[{ destination, config }]`             |
+| `consent`      | `object`  | Initial consent state to control routing of events           | No       | `{ analytics: true, marketing: false }` |
+| `logger`       | `object`  | Logger configuration with level and custom handler           | No       | `{ level: 'info', handler: fn }`        |
 
 ## Contribute
 

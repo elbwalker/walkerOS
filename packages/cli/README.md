@@ -86,6 +86,49 @@ walkeros simulate \
   --json
 ```
 
+### push
+
+Execute your flow with real API calls to configured destinations. Unlike
+`simulate` which mocks API calls, `push` performs actual HTTP requests.
+
+```bash
+walkeros push <config-file> --event '<json>' [options]
+```
+
+**Options:**
+
+- `-e, --event <source>` - Event to push (JSON string, file path, or URL)
+  **Required**
+- `--flow <name>` - Flow name (for multi-flow configs)
+- `--json` - Output results as JSON
+- `-v, --verbose` - Verbose output
+- `-s, --silent` - Suppress output (for CI/CD)
+- `--local` - Execute locally without Docker
+
+**Event input formats:**
+
+```bash
+# Inline JSON
+walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}'
+
+# File path
+walkeros push flow.json --event ./events/order.json
+
+# URL
+walkeros push flow.json --event https://example.com/sample-event.json
+```
+
+**Push vs Simulate:**
+
+| Feature      | `push`                              | `simulate`         |
+| ------------ | ----------------------------------- | ------------------ |
+| API Calls    | Real HTTP requests                  | Mocked (captured)  |
+| Use Case     | Integration testing                 | Safe local testing |
+| Side Effects | Full (writes to DBs, sends to APIs) | None               |
+
+Use `simulate` first to validate configuration safely, then `push` to verify
+real integrations.
+
 ### run
 
 Run flows locally using @walkeros/docker as a library (no Docker daemon
