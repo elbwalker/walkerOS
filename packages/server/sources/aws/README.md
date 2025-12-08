@@ -300,6 +300,6 @@ MIT
 
 ## Support
 
-- [Documentation](https://www.elbwalker.com/docs)
+- [Documentation](https://www.walkeros.io/docs)
 - [GitHub Issues](https://github.com/elbwalker/walkerOS/issues)
 - [Discord Community](https://discord.gg/elbwalker)

@@ -1,6 +1,6 @@
 <p align="left">
-  <a href="https://elbwalker.com">
-    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
+  <a href="https://www.walkeros.io">
+    <img title="elbwalker" src="https://www.walkeros.io/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
@@ -37,16 +37,16 @@ const { elb } = await startFlow();
 
 elb('walker destination', destinationPlausible, {
   settings: {
-    domain: 'elbwalker.com', // Optional, domain of your site as registered
+    domain: 'walkeros.io', // Optional, domain of your site as registered
   },
 });
 ```
 
 ## Configuration
 
-| Name     | Type     | Description                                        | Required | Example           |
-| -------- | -------- | -------------------------------------------------- | -------- | ----------------- |
-| `domain` | `string` | The domain of your site as registered in Plausible | No       | `'elbwalker.com'` |
+| Name     | Type     | Description                                        | Required | Example         |
+| -------- | -------- | -------------------------------------------------- | -------- | --------------- |
+| `domain` | `string` | The domain of your site as registered in Plausible | No       | `'walkeros.io'` |
 
 ## Contribute
 

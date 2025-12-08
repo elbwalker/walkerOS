@@ -796,7 +796,7 @@ authentication**
 - [Google Data Manager API Documentation](https://developers.google.com/data-manager/api)
 - [Data Formatting Guidelines](https://developers.google.com/data-manager/api/devguides/concepts/formatting)
 - [DMA Compliance](https://developers.google.com/data-manager/api/devguides/concepts/dma)
-- [walkerOS Documentation](https://www.elbwalker.com/docs/)
+- [walkerOS Documentation](https://www.walkeros.io/docs/)
 
 ## License
 
@@ -807,5 +807,5 @@ MIT
 For issues and questions:
 
 - [GitHub Issues](https://github.com/elbwalker/walkerOS/issues)
-- [walkerOS Documentation](https://www.elbwalker.com/docs/)
+- [walkerOS Documentation](https://www.walkeros.io/docs/)
 - [Google Data Manager Support](https://developers.google.com/data-manager/api/support/contact)

@@ -1,6 +1,6 @@
 <p align="left">
-  <a href="https://elbwalker.com">
-    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
+  <a href="https://www.walkeros.io">
+    <img title="elbwalker" src="https://www.walkeros.io/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
@@ -119,7 +119,7 @@ getId(10); // Returns 10-character string
 
 `getMappingValue(event: WalkerOS.Event, mapping: Mapping.Data, options?: Mapping.Options): Promise<WalkerOS.Property | undefined>`
 extracts values from events using
-[mapping configurations](https://www.elbwalker.com/docs/destinations/event-mapping).
+[mapping configurations](https://www.walkeros.io/docs/destinations/event-mapping).
 
 ```ts
 // Simple path mapping
@@ -304,9 +304,8 @@ Validates that values conform to walkerOS property types.
 
 For platform-specific utilities, see:
 
-- [Web Core](https://www.elbwalker.com/docs/core/web) - Browser-specific
-  functions
-- [Server Core](https://www.elbwalker.com/docs/core/server) - Node.js server
+- [Web Core](https://www.walkeros.io/docs/core/web) - Browser-specific functions
+- [Server Core](https://www.walkeros.io/docs/core/server) - Node.js server
   functions
 
 ## Contribute

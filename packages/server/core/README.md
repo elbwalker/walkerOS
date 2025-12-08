@@ -1,6 +1,6 @@
 <p align="left">
-  <a href="https://elbwalker.com">
-    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
+  <a href="https://www.walkeros.io">
+    <img title="elbwalker" src="https://www.walkeros.io/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
@@ -240,7 +240,7 @@ await sendServer('https://secure-api.example.com/events', data, {
 ## Integration with Core
 
 Server utilities work seamlessly with
-[Core Utilities](https://www.elbwalker.com/docs/core):
+[Core Utilities](https://www.walkeros.io/docs/core):
 
 ```js
 import { getMappingValue, anonymizeIP } from '@walkeros/core';
@@ -265,7 +265,7 @@ async function processServerSideEvent(rawEvent, clientIP) {
 ---
 
 For platform-agnostic utilities, see
-[Core Utilities](https://www.elbwalker.com/docs/core).
+[Core Utilities](https://www.walkeros.io/docs/core).
 
 ## Contribute
 

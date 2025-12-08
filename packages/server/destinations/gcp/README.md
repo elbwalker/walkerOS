@@ -1,6 +1,6 @@
 <p align="left">
-  <a href="https://elbwalker.com">
-    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
+  <a href="https://www.walkeros.io">
+    <img title="elbwalker" src="https://www.walkeros.io/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS `YOUR_PROJECT.walkeros.events` (
 
 Object and array fields (`data`, `context`, `globals`, etc.) are JSON
 stringified. For custom schemas using the `data` mapping config, see the
-[full documentation](https://www.elbwalker.com/docs/destinations/server/gcp).
+[full documentation](https://www.walkeros.io/docs/destinations/server/gcp).
 
 ## Contribute
 
