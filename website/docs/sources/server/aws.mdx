@@ -1,0 +1,131 @@
+---
+title: AWS Lambda Source
+description: AWS Lambda HTTP handler for event collection
+sidebar_position: 3
+package: '@walkeros/server-source-aws'
+---
+
+<PackageLink env="server" github="packages/server/sources/aws" npm="@walkeros/server-source-aws" />
+
+# AWS Lambda Source
+
+AWS Lambda source for walkerOS - works with API Gateway v1/v2 and Lambda Function URLs.
+
+## Features
+
+* **Multi-platform**: API Gateway REST (v1), HTTP API (v2), Function URLs
+* **Auto-detection**: Automatically detects API Gateway version
+* **Pixel tracking**: Optional GET requests with 1x1 GIF response
+* **Health checks**: Built-in health check endpoint
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-source-aws`}
+  language="bash"
+/>
+
+## Quick Start
+
+<CodeSnippet
+  code={`import { sourceLambda } from '@walkeros/server-source-aws';
+import { startFlow } from '@walkeros/collector';
+
+let handler: any;
+
+async function init() {
+  if (handler) return handler;
+
+  const { sources } = await startFlow({
+    sources: {
+      lambda: {
+        code: sourceLambda,
+        config: {
+          settings: { cors: true, healthPath: '/health' },
+        },
+      },
+    },
+    destinations: {
+      // Your destinations
+    },
+  });
+
+  handler = sources.lambda.push;
+  return handler;
+}
+
+export const main = async (event: any, context: any) => {
+  const h = await init();
+  return h(event, context);
+};
+
+export { main as handler };`}
+  language="typescript"
+/>
+
+## Deployment
+
+### Lambda Function URL (Simplest)
+
+<CodeSnippet
+  code={`import * as lambda from 'aws-cdk-lib/aws-lambda';
+
+const fn = new lambda.Function(this, 'Walker', {
+  runtime: lambda.Runtime.NODEJS_20_X,
+  handler: 'index.handler',
+  code: lambda.Code.fromAsset('./dist'),
+});
+
+fn.addFunctionUrl({
+  authType: lambda.FunctionUrlAuthType.NONE,
+  cors: {
+    allowedOrigins: ['*'],
+    allowedMethods: [lambda.HttpMethod.GET, lambda.HttpMethod.POST],
+  },
+});`}
+  language="typescript"
+/>
+
+### Serverless Framework
+
+<CodeSnippet
+  code={`# serverless.yml
+service: walkeros-collector
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+
+functions:
+  collector:
+    handler: dist/index.handler
+    events:
+      - httpApi:
+          path: /collect
+          method: post
+      - httpApi:
+          path: /collect
+          method: get
+      - httpApi:
+          path: /health
+          method: get`}
+  language="yaml"
+/>
+
+## Configuration
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `cors` | `boolean \| object` | `true` | CORS configuration |
+| `timeout` | `number` | `30000` | Request timeout (ms) |
+| `enablePixelTracking` | `boolean` | `true` | Enable GET tracking |
+| `healthPath` | `string` | `/health` | Health check path |
+
+## Supported Platforms
+
+| Platform | Status |
+|----------|--------|
+| API Gateway REST API (v1) | ✅ |
+| API Gateway HTTP API (v2) | ✅ |
+| Lambda Function URLs | ✅ |
+| Direct Lambda invocation | ✅ |

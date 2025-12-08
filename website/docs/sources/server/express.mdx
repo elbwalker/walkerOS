@@ -1,0 +1,110 @@
+---
+title: Express Source
+description: Turn-key HTTP event collection server with Express.js
+sidebar_position: 1
+package: '@walkeros/server-source-express'
+---
+
+<PackageLink env="server" github="packages/server/sources/express" npm="@walkeros/server-source-express" />
+
+# Express Source
+
+Turn-key HTTP event collection server with Express.js. Handles JSON POST events, pixel tracking (GET), CORS, and health checks.
+
+## Features
+
+* **Standalone or embedded**: Start server automatically or integrate with existing Express app
+* **CORS support**: Configurable cross-origin resource sharing
+* **Pixel tracking**: 1x1 transparent GIF for GET requests
+* **Health checks**: Built-in `/health` and `/ready` endpoints
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-source-express`}
+  language="bash"
+/>
+
+## Quick Start
+
+### Standalone Server
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceExpress } from '@walkeros/server-source-express';
+
+const { collector } = await startFlow({
+  sources: {
+    express: {
+      code: sourceExpress,
+      config: {
+        settings: {
+          port: 8080,
+          cors: true,
+        },
+      },
+    },
+  },
+  destinations: {
+    // Your destinations
+  },
+});
+
+// Server running at http://localhost:8080
+// POST /collect - JSON event ingestion
+// GET  /collect - Pixel tracking
+// GET  /health  - Health check`}
+  language="typescript"
+/>
+
+### App-Only Mode
+
+<CodeSnippet
+  code={`const { collector } = await startFlow({
+  sources: {
+    express: {
+      code: sourceExpress,
+      config: {
+        settings: {
+          // No port = app only mode
+          path: '/events',
+        },
+      },
+    },
+  },
+});
+
+// Access Express app for custom integration
+const app = collector.sources.express.app;
+app.use(yourAuthMiddleware);
+app.listen(3000);`}
+  language="typescript"
+/>
+
+## Configuration
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `port` | `number` | - | Port to listen on. If not set, runs in app-only mode |
+| `path` | `string` | `/collect` | Event collection endpoint path |
+| `cors` | `boolean \| object` | `true` | CORS configuration |
+| `status` | `boolean` | `true` | Enable health check endpoints |
+
+## HTTP Methods
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/collect` | JSON event ingestion |
+| GET | `/collect` | Pixel tracking (returns 1x1 GIF) |
+| OPTIONS | `/collect` | CORS preflight |
+| GET | `/health` | Liveness check |
+| GET | `/ready` | Readiness check |
+
+## Example Request
+
+<CodeSnippet
+  code={`curl -X POST http://localhost:8080/collect \\
+  -H "Content-Type: application/json" \\
+  -d '{"event":"page view","data":{"title":"Home"}}'`}
+  language="bash"
+/>
