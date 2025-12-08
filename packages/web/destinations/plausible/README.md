@@ -33,11 +33,16 @@ Here's a basic example of how to use the Plausible destination:
 import { startFlow } from '@walkeros/collector';
 import { destinationPlausible } from '@walkeros/web-destination-plausible';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationPlausible, {
-  settings: {
-    domain: 'walkeros.io', // Optional, domain of your site as registered
+await startFlow({
+  destinations: {
+    plausible: {
+      code: destinationPlausible,
+      config: {
+        settings: {
+          domain: 'walkeros.io', // Optional, domain of your site as registered
+        },
+      },
+    },
   },
 });
 ```

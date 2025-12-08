@@ -29,17 +29,18 @@ Learn the concepts before coding:
 
 ## Creating Things
 
-| Task               | Skill                                                          |
-| ------------------ | -------------------------------------------------------------- |
-| Write tests        | [testing-strategy](skills/testing-strategy/SKILL.md)           |
-| Create destination | [create-destination](skills/create-destination/SKILL.md)       |
-| Create source      | [create-source](skills/create-source/SKILL.md)                 |
-| Configure mappings | [mapping-configuration](skills/mapping-configuration/SKILL.md) |
-| Debug event flow   | [debugging](skills/debugging/SKILL.md)                         |
+| Task                | Skill                                                          |
+| ------------------- | -------------------------------------------------------------- |
+| Write tests         | [testing-strategy](skills/testing-strategy/SKILL.md)           |
+| Create destination  | [create-destination](skills/create-destination/SKILL.md)       |
+| Create source       | [create-source](skills/create-source/SKILL.md)                 |
+| Configure mappings  | [mapping-configuration](skills/mapping-configuration/SKILL.md) |
+| Debug event flow    | [debugging](skills/debugging/SKILL.md)                         |
+| Write documentation | [writing-documentation](skills/writing-documentation/SKILL.md) |
 
 ## Package Navigation
 
-```
+```text
 packages/
 ├── core/           # Types, utilities, schemas (@walkeros/core)
 ├── collector/      # Event processing engine

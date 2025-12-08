@@ -33,12 +33,17 @@ Here's a basic example of how to use the Piwik PRO destination:
 import { startFlow } from '@walkeros/collector';
 import { destinationPiwikPro } from '@walkeros/web-destination-piwikpro';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationPiwikPro, {
-  settings: {
-    appId: 'XXX-XXX-XXX-XXX-XXX', // Required
-    url: 'https://your_account_name.piwik.pro/', // Required
+await startFlow({
+  destinations: {
+    piwikpro: {
+      code: destinationPiwikPro,
+      config: {
+        settings: {
+          appId: 'XXX-XXX-XXX-XXX-XXX', // Required
+          url: 'https://your_account_name.piwik.pro/', // Required
+        },
+      },
+    },
   },
 });
 ```

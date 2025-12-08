@@ -66,7 +66,7 @@ extended with the following:
 Example of calling `sessionStart` on a user's first visit:
 
 <CodeSnippet
-  code={`// On page https://www.elbwalker.com/docs/session?utm_campaign=docs
+  code={`// On page https://www.walkeros.io/docs/session?utm_campaign=docs
 sessionStart({ storage: true });
 
 // will automatically create the event
@@ -292,13 +292,13 @@ between them:
 
 <CodeSnippet
   code={`const session = sessionStart({
-  domains: ['subdomain.elbwalker.com', 'example.com'],
+  domains: ['subdomain.walkeros.io', 'example.com'],
 });`}
   language="javascript"
 />
 
-A user coming from `subdomain.elbwalker.com` or `example.com` to e.b.
-`www.elbwalker.com`, will no longer trigger a new session.
+A user coming from `subdomain.walkeros.io` or `example.com` to e.g.
+`www.walkeros.io`, will no longer trigger a new session.
 
 #### Manual New Session Control
 

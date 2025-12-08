@@ -1,5 +1,16 @@
 # WalkerOS CLI & Docker Demos
 
+## Installation
+
+These are demo configurations - see the main [CLI README](../README.md) for
+installation.
+
+## Usage
+
+Run `./quick-demo.sh` for a 5-minute interactive demo of the complete workflow.
+
+---
+
 This directory contains practical demonstrations of walkerOS CLI and Docker
 functionality.
 

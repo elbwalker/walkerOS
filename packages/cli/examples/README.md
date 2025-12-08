@@ -1,5 +1,17 @@
 # walkerOS Flow Examples
 
+## Installation
+
+These are example configurations - see the main [CLI README](../README.md) for
+installation.
+
+## Usage
+
+Use `walkeros bundle <example>.json` to build any example, then `walkeros run`
+to execute.
+
+---
+
 This directory contains example flow configurations demonstrating various
 walkerOS use cases.
 

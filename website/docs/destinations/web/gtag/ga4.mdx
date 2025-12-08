@@ -39,12 +39,17 @@ function calls.
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationGtag, {
-  settings: {
-    ga4: {
-      measurementId: 'G-XXXXXXXXXX',
+await startFlow({
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        settings: {
+          ga4: {
+            measurementId: 'G-XXXXXXXXXX',
+          },
+        },
+      },
     },
   },
 });`}

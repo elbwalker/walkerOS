@@ -27,13 +27,20 @@ npm install @walkeros/server-destination-meta
 Here's a basic example of how to use the Meta CAPI destination:
 
 ```typescript
-import { elb } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/server-destination-meta';
 
-elb('walker destination', destinationMeta, {
-  settings: {
-    accessToken: 'YOUR_ACCESS_TOKEN',
-    pixelId: 'YOUR_PIXEL_ID',
+await startFlow({
+  destinations: {
+    meta: {
+      code: destinationMeta,
+      config: {
+        settings: {
+          accessToken: 'YOUR_ACCESS_TOKEN',
+          pixelId: 'YOUR_PIXEL_ID',
+        },
+      },
+    },
   },
 });
 ```

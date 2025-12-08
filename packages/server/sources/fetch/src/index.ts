@@ -286,6 +286,7 @@ async function processBatch(
 }
 
 export type * from './types';
+export * as SourceFetch from './types';
 export * from './utils';
 export * as schemas from './schemas';
 export * as examples from './examples';

@@ -39,11 +39,16 @@ care of loading the script and the function calls.
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationPlausible } from '@walkeros/web-destination-plausible';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationPlausible, {
-  settings: {
-    domain: 'elbwalker.com', // Optional, domain of your site as registered
+await startFlow({
+  destinations: {
+    plausible: {
+      code: destinationPlausible,
+      config: {
+        settings: {
+          domain: 'walkeros.io', // Optional, domain of your site as registered
+        },
+      },
+    },
   },
 });`}
   language="typescript"
@@ -56,7 +61,7 @@ elb('walker destination', destinationPlausible, {
 <DestinationInitDemo
   destination={destination}
   settings={{
-    domain: 'elbwalker.com',
+    domain: 'walkeros.io',
   }}
 />
 
@@ -77,7 +82,7 @@ events</Link> manually using the JavaScript function
 <DestinationDemo
   destination={destination}
   settings={{
-    domain: 'elbwalker.com',
+    domain: 'walkeros.io',
   }}
   event={getEvent()}
   mapping={examples.mapping.customEvent}
@@ -93,7 +98,7 @@ Plausible.
 <DestinationDemo
   destination={destination}
   settings={{
-    domain: 'elbwalker.com',
+    domain: 'walkeros.io',
   }}
   event={getEvent('order complete')}
   mapping={examples.mapping.purchase}

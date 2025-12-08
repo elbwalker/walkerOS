@@ -5,30 +5,20 @@
  * to maximize warm start performance.
  */
 
-import { sourceLambda } from '@walkeros/server-source-aws';
+import { sourceLambda, type SourceLambda } from '@walkeros/server-source-aws';
 import { startFlow } from '@walkeros/collector';
-import type {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-  Context,
-} from 'aws-lambda';
 
 // Handler singleton - reused across warm invocations
-let handler:
-  | ((
-      event: APIGatewayProxyEvent,
-      context: Context,
-    ) => Promise<APIGatewayProxyResult>)
-  | null = null;
+let handler: SourceLambda.Push;
 
 /**
  * Initialize the Lambda source and collector
  * Only runs once per Lambda container lifecycle
  */
-async function initialize() {
+async function setup() {
   if (handler) return handler;
 
-  const { sources } = await startFlow({
+  const { elb } = await startFlow<SourceLambda.Push>({
     sources: {
       lambda: {
         code: sourceLambda,
@@ -47,7 +37,7 @@ async function initialize() {
     },
   });
 
-  handler = sources.lambda.push;
+  handler = elb;
   return handler;
 }
 
@@ -55,11 +45,8 @@ async function initialize() {
  * Lambda handler entry point
  * AWS invokes this function for each request
  */
-export const main = async (
-  event: APIGatewayProxyEvent,
-  context: Context,
-): Promise<APIGatewayProxyResult> => {
-  const h = await initialize();
+export const main: SourceLambda.Push = async (event, context) => {
+  const h = await setup();
   return h(event, context);
 };
 

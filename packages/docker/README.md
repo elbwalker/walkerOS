@@ -3,6 +3,12 @@
 Runtime Docker container for walkerOS - executes pre-built flow bundles with
 instant startup and includes working demos for quick testing.
 
+## Installation
+
+```bash
+docker pull walkeros/docker:latest
+```
+
 ## Overview
 
 This is a **demo-enabled runtime container** designed for both testing and

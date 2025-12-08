@@ -32,36 +32,14 @@ npm install @walkeros/server-source-fetch @walkeros/collector @walkeros/core
 ## Quick Start
 
 ```typescript
-import { sourceFetch } from '@walkeros/server-source-fetch';
-import { collector } from '@walkeros/collector';
+import { sourceFetch, type SourceFetch } from '@walkeros/server-source-fetch';
+import { startFlow } from '@walkeros/collector';
 
-// Create collector with destinations
-const { instance, elb } = await collector({
-  destinations: {
-    // Your destinations here
-  },
+const { elb } = await startFlow<SourceFetch.Push>({
+  sources: { api: { code: sourceFetch } },
 });
 
-// Create fetch source
-const source = await sourceFetch(
-  {
-    settings: {
-      path: '/collect',
-      cors: true,
-      maxRequestSize: 1024 * 100, // 100KB
-      maxBatchSize: 100,
-    },
-  },
-  {
-    push: instance.push,
-    command: instance.command,
-    elb,
-    logger: console,
-  },
-);
-
-// Deploy to Cloudflare Workers
-export default { fetch: source.push };
+export default { fetch: elb };
 ```
 
 ## Platform Deployment
@@ -69,18 +47,22 @@ export default { fetch: source.push };
 ### Cloudflare Workers
 
 ```typescript
-import { sourceFetch } from '@walkeros/server-source-fetch';
-import { collector } from '@walkeros/collector';
+import { sourceFetch, type SourceFetch } from '@walkeros/server-source-fetch';
+import { startFlow } from '@walkeros/collector';
 
-const { instance, elb } = await collector({
-  /* config */
+const { elb } = await startFlow<SourceFetch.Push>({
+  sources: {
+    api: {
+      code: sourceFetch,
+      config: { settings: { cors: true } },
+    },
+  },
+  destinations: {
+    // Your destinations
+  },
 });
-const source = await sourceFetch(
-  {},
-  { push: instance.push, command: instance.command, elb, logger: console },
-);
 
-export default { fetch: source.push };
+export default { fetch: elb };
 ```
 
 **Deploy:** `wrangler deploy`
@@ -91,52 +73,40 @@ export default { fetch: source.push };
 // api/collect.ts
 export const config = { runtime: 'edge' };
 
-import { sourceFetch } from '@walkeros/server-source-fetch';
-import { collector } from '@walkeros/collector';
+import { sourceFetch, type SourceFetch } from '@walkeros/server-source-fetch';
+import { startFlow } from '@walkeros/collector';
 
-const { instance, elb } = await collector({
-  /* config */
+const { elb } = await startFlow<SourceFetch.Push>({
+  sources: { api: { code: sourceFetch } },
 });
-const source = await sourceFetch(
-  {},
-  { push: instance.push, command: instance.command, elb, logger: console },
-);
 
-export default source.push;
+export default elb;
 ```
 
 ### Deno Deploy
 
 ```typescript
-import { sourceFetch } from '@walkeros/server-source-fetch';
-import { collector } from '@walkeros/collector';
+import { sourceFetch, type SourceFetch } from '@walkeros/server-source-fetch';
+import { startFlow } from '@walkeros/collector';
 
-const { instance, elb } = await collector({
-  /* config */
+const { elb } = await startFlow<SourceFetch.Push>({
+  sources: { api: { code: sourceFetch } },
 });
-const source = await sourceFetch(
-  {},
-  { push: instance.push, command: instance.command, elb, logger: console },
-);
 
-Deno.serve(source.push);
+Deno.serve(elb);
 ```
 
 ### Bun
 
 ```typescript
-import { sourceFetch } from '@walkeros/server-source-fetch';
-import { collector } from '@walkeros/collector';
+import { sourceFetch, type SourceFetch } from '@walkeros/server-source-fetch';
+import { startFlow } from '@walkeros/collector';
 
-const { instance, elb } = await collector({
-  /* config */
+const { elb } = await startFlow<SourceFetch.Push>({
+  sources: { api: { code: sourceFetch } },
 });
-const source = await sourceFetch(
-  {},
-  { push: instance.push, command: instance.command, elb, logger: console },
-);
 
-Bun.serve({ fetch: source.push, port: 3000 });
+Bun.serve({ fetch: elb, port: 3000 });
 ```
 
 ## Usage Examples

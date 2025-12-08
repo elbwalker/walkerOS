@@ -9,6 +9,21 @@ for AWS services.
 npm install @walkeros/server-source-aws @types/aws-lambda
 ```
 
+## Usage
+
+```typescript
+import { sourceLambda, type SourceLambda } from '@walkeros/server-source-aws';
+import { startFlow } from '@walkeros/collector';
+
+const { elb } = await startFlow<SourceLambda.Push>({
+  sources: { lambda: { code: sourceLambda } },
+});
+
+export const handler = elb;
+```
+
+---
+
 ## Lambda Source
 
 The Lambda source provides an HTTP handler that receives walker events and
@@ -18,15 +33,16 @@ v2 (HTTP API), and Lambda Function URLs.
 ### Basic Usage
 
 ```typescript
-import { sourceLambda } from '@walkeros/server-source-aws';
+import { sourceLambda, type SourceLambda } from '@walkeros/server-source-aws';
 import { startFlow } from '@walkeros/collector';
 
-let handler: any;
+// Handler singleton - reused across warm invocations
+let handler: SourceLambda.Push;
 
-async function init() {
+async function setup() {
   if (handler) return handler;
 
-  const { sources } = await startFlow({
+  const { elb } = await startFlow<SourceLambda.Push>({
     sources: {
       lambda: {
         code: sourceLambda,
@@ -43,12 +59,12 @@ async function init() {
     },
   });
 
-  handler = sources.lambda.push;
+  handler = elb;
   return handler;
 }
 
-export const main = async (event: any, context: any) => {
-  const h = await init();
+export const main: SourceLambda.Push = async (event, context) => {
+  const h = await setup();
   return h(event, context);
 };
 

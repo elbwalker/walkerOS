@@ -1,5 +1,17 @@
 # AWS Lambda Deployment Examples
 
+## Installation
+
+These are example configurations - see the main
+[AWS Source README](../README.md) for installation.
+
+## Usage
+
+Copy an example to your project, configure destinations, and deploy with SAM,
+Serverless, or CDK.
+
+---
+
 This directory contains working deployment examples for the walkerOS AWS Lambda
 source.
 
@@ -10,7 +22,7 @@ source.
 - **`serverless.yml`** - Serverless Framework configuration
 - **`cdk-stack.ts`** - AWS CDK TypeScript stack
 
-## Quick Start
+## Getting Started
 
 ### 1. Build Your Handler
 

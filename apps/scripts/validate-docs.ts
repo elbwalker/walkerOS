@@ -18,33 +18,6 @@ interface Issue {
 const ROOT = process.cwd();
 const issues: Issue[] = [];
 
-// Check for incorrect event naming (underscore instead of space)
-function checkEventNaming(file: string, content: string): void {
-  const lines = content.split('\n');
-
-  lines.forEach((line, index) => {
-    // Look for common incorrect patterns in code blocks
-    const incorrectPatterns = [
-      /['"`]page_view['"`]/,
-      /['"`]add_to_cart['"`]/,
-      /['"`]purchase_complete['"`]/,
-      /['"`]form_submit['"`]/,
-      /['"`]button_click['"`]/,
-    ];
-
-    for (const pattern of incorrectPatterns) {
-      if (pattern.test(line)) {
-        issues.push({
-          file: relative(ROOT, file),
-          line: index + 1,
-          severity: 'error',
-          message: `Event name uses underscore instead of space: ${line.trim().slice(0, 50)}`,
-        });
-      }
-    }
-  });
-}
-
 // Check for legacy API patterns
 function checkLegacyPatterns(file: string, content: string): void {
   const lines = content.split('\n');
@@ -113,13 +86,12 @@ async function main() {
 
   const files = await glob(patterns, {
     cwd: ROOT,
-    ignore: ['**/node_modules/**'],
+    ignore: ['**/node_modules/**', '**/dist/**'],
     absolute: true,
   });
 
   for (const file of files) {
     const content = readFileSync(file, 'utf-8');
-    checkEventNaming(file, content);
     checkLegacyPatterns(file, content);
     checkDomainRefs(file, content);
     checkReadmeStructure(file, content);

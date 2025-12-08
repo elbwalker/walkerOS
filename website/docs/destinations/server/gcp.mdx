@@ -25,15 +25,22 @@ machine learning workloads.
 ## Setup
 
 <CodeSnippet
-  code={`import { elb } from '@walkeros/collector';
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationBigQuery } from '@walkeros/server-destination-gcp';
 
-elb('walker destination', destinationBigQuery, {
-settings: {
-projectId: 'YOUR_PROJECT_ID',
-datasetId: 'YOUR_DATASET_ID',
-tableId: 'YOUR_TABLE_ID',
-},
+await startFlow({
+  destinations: {
+    bigquery: {
+      code: destinationBigQuery,
+      config: {
+        settings: {
+          projectId: 'YOUR_PROJECT_ID',
+          datasetId: 'YOUR_DATASET_ID',
+          tableId: 'YOUR_TABLE_ID',
+        },
+      },
+    },
+  },
 });`}
   language="typescript"
 />
@@ -108,21 +115,28 @@ fields. This is useful when you only need a subset of the event data.
 This example sends only `name`, `id`, `data`, and `timestamp`:
 
 <CodeSnippet
-  code={`import { elb } from '@walkeros/collector';
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationBigQuery } from '@walkeros/server-destination-gcp';
 
-elb('walker destination', destinationBigQuery, {
-  settings: {
-    projectId: 'YOUR_PROJECT_ID',
-    datasetId: 'YOUR_DATASET_ID',
-    tableId: 'events_simple',
-  },
-  data: {
-    map: {
-      name: 'name',
-      id: 'id',
-      data: 'data',
-      timestamp: 'timestamp',
+await startFlow({
+  destinations: {
+    bigquery: {
+      code: destinationBigQuery,
+      config: {
+        settings: {
+          projectId: 'YOUR_PROJECT_ID',
+          datasetId: 'YOUR_DATASET_ID',
+          tableId: 'events_simple',
+        },
+        data: {
+          map: {
+            name: 'name',
+            id: 'id',
+            data: 'data',
+            timestamp: 'timestamp',
+          },
+        },
+      },
     },
   },
 });`}
