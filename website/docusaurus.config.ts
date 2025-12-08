@@ -13,7 +13,7 @@ const config: Config = {
   favicon: 'img/favicon.png',
 
   // Set the production url of your site here
-  url: 'https://www.elbwalker.com',
+  url: 'https://www.walkeros.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
@@ -93,7 +93,7 @@ const config: Config = {
           label: 'Documentation',
         },
         { to: '/playground/', label: 'Playground', position: 'left' },
-        { to: '/services', label: 'Services', position: 'left' },
+        { to: '/blog/', label: 'Blog', position: 'left' },
         {
           href: vars.github,
           label: 'GitHub',
@@ -143,19 +143,23 @@ const config: Config = {
           items: [
             {
               label: 'About us',
-              to: '/company',
+              href: 'https://www.elbwalker.com/company',
+            },
+            {
+              label: 'Services',
+              href: 'https://www.elbwalker.com/services',
             },
             {
               label: 'Privacy Policy',
-              to: '/legal/privacy',
+              href: 'https://www.elbwalker.com/legal/privacy',
             },
             {
               label: 'Terms of Services',
-              to: '/legal/terms',
+              href: 'https://www.elbwalker.com/legal/terms',
             },
             {
               label: 'Imprint',
-              to: '/legal/imprint',
+              href: 'https://www.elbwalker.com/legal/imprint',
             },
           ],
         },

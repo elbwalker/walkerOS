@@ -274,5 +274,5 @@ test('produces expected output', () => {
 **Documentation:**
 
 - [Website: Mapping](../../website/docs/mapping.mdx) - User-facing docs
-- [elbwalker.com/docs/destinations/event-mapping](https://www.elbwalker.com/docs/destinations/event-mapping) -
+- [walkeros.io/docs/destinations/event-mapping](https://www.walkeros.io/docs/destinations/event-mapping) -
   Public documentation

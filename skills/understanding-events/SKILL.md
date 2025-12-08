@@ -174,4 +174,4 @@ await elb(
 
 - [Website: Event Model](../../website/docs/getting-started/event-model.mdx) -
   User-facing docs
-- [elbwalker.com/docs](https://www.elbwalker.com/docs/) - Public documentation
+- [walkeros.io/docs](https://www.walkeros.io/docs/) - Public documentation

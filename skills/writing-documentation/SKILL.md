@@ -319,7 +319,7 @@ backticks)
 
 ```
 
-CORRECT: www.walkeros.io or relative paths WRONG: www.elbwalker.com (legacy)
+CORRECT: www.walkeros.io or relative paths DO NOT USE: legacy domain references
 
 ```
 
