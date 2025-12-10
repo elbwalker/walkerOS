@@ -34,7 +34,7 @@ const { collector, elb } = await startFlow({
   language="typescript"
 />
 
-## Configuration Reference
+## Configuration reference
 
 ### Settings
 
@@ -54,7 +54,7 @@ Event-specific code can override settings via mapping:
 | `push`      | `string` | Code to run for this specific event   |
 | `pushBatch` | `string` | Code to run for batched events        |
 
-## Context Variables
+## Context variables
 
 Each code string has access to specific variables:
 
@@ -97,7 +97,7 @@ Each code string has access to specific variables:
 
 ## Examples
 
-### Basic Logging
+### Basic logging
 
 <CodeSnippet
   code={`const { elb } = await startFlow({
@@ -115,7 +115,7 @@ Each code string has access to specific variables:
   language="typescript"
 />
 
-### API Calls
+### API calls
 
 <CodeSnippet
   code={`const { elb } = await startFlow({
@@ -143,7 +143,7 @@ Each code string has access to specific variables:
   language="typescript"
 />
 
-### Consent Handling
+### Consent handling
 
 <CodeSnippet
   code={`const { elb } = await startFlow({
@@ -167,7 +167,7 @@ Each code string has access to specific variables:
   language="typescript"
 />
 
-### Event-Specific Overrides
+### Event-specific overrides
 
 Use mapping to override the default push code for specific events:
 
@@ -216,7 +216,7 @@ Use mapping to override the default push code for specific events:
   language="typescript"
 />
 
-### Batched Events
+### Batched events
 
 <CodeSnippet
   code={`const { elb } = await startFlow({
@@ -251,7 +251,7 @@ Use mapping to override the default push code for specific events:
   language="typescript"
 />
 
-## Error Handling
+## Error handling
 
 All code execution is wrapped in try-catch blocks. Errors are logged using the
 destination's scoped logger and don't affect other destinations or event
@@ -268,7 +268,7 @@ settings: {
   language="typescript"
 />
 
-## Security Considerations
+## Security considerations
 
 The code destination uses `new Function()` to execute code strings. This is
 similar to `eval()` and should only be used with trusted code. Never execute

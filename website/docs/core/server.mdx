@@ -18,7 +18,7 @@ Import server utilities from the `@walkeros/server-core` package:
 
 <CodeSnippet code={`import { sendServer, getHashServer } from '@walkeros/server-core';`} language="typescript" />
 
-## Server Communication
+## Server communication
 
 ### sendServer
 
@@ -72,7 +72,7 @@ error?: string; // Error message (if request failed)
   language="typescript"
 />
 
-## Cryptographic Operations
+## Cryptographic operations
 
 ### getHashServer
 
@@ -103,7 +103,7 @@ This function is commonly used for:
 * **Data Deduplication**: Creating consistent identifiers
 * **Privacy Compliance**: Hashing PII for GDPR/CCPA compliance
 
-## Usage Examples
+## Usage examples
 
 ### Event Processing Pipeline
 
@@ -158,7 +158,7 @@ return await getHashServer(fingerprint, 20);
   language="javascript"
 />
 
-## Error Handling
+## Error handling
 
 Server utilities include comprehensive error handling:
 
@@ -180,7 +180,7 @@ console.error('Network error:', error.message);
   language="javascript"
 />
 
-## Performance Considerations
+## Performance considerations
 
 ### Timeout Configuration
 
@@ -222,7 +222,7 @@ timeout: 10000,
 The underlying Node.js HTTP agent automatically reuses connections for better
 performance with multiple requests to the same host.
 
-## Security Notes
+## Security notes
 
 * **HTTPS Only**: Use HTTPS URLs in production for encrypted transmission
 * **API Keys**: Store sensitive credentials in environment variables

@@ -1,5 +1,5 @@
 ---
-title: GCP Cloud Functions Source
+title: GCP Cloud Functions
 description: Google Cloud Functions HTTP handler for event collection
 sidebar_position: 4
 package: '@walkeros/server-source-gcp'
@@ -7,7 +7,7 @@ package: '@walkeros/server-source-gcp'
 
 <PackageLink env="server" github="packages/server/sources/gcp" npm="@walkeros/server-source-gcp" />
 
-# GCP Cloud Functions Source
+# GCP Cloud Functions
 
 Google Cloud Functions source for walkerOS - lightweight runtime adapter for GCP services.
 
@@ -24,7 +24,7 @@ Google Cloud Functions source for walkerOS - lightweight runtime adapter for GCP
   language="bash"
 />
 
-## Quick Start
+## Quick start
 
 <CodeSnippet
   code={`import { sourceCloudFunction } from '@walkeros/server-source-gcp';
@@ -59,9 +59,9 @@ http('walkerHandler', sources.gcp.push);`}
 | `maxBatchSize` | `number` | `100` | Max events per batch |
 | `timeout` | `number` | `30000` | Request timeout (ms) |
 
-## Request Format
+## Request format
 
-### Single Event
+### Single event
 
 <CodeSnippet
   code={`{
@@ -74,7 +74,7 @@ http('walkerHandler', sources.gcp.push);`}
   language="json"
 />
 
-### Batch Events
+### Batch events
 
 <CodeSnippet
   code={`{

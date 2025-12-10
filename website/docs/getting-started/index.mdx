@@ -43,10 +43,9 @@ a complete **first-party tracking system** for modern teams and the modern web.
     Install the package from npm:
 
     <CodeSnippet
-  code={`    npm install @walkeros/collector @walkeros/web-source-browser
-    `}
-  language="bash"
-/>
+      code={`npm install @walkeros/collector @walkeros/web-source-browser`}
+      language="bash"
+    />
 
     Initialize walkerOS in your project. See the quickstart guides for more details.
 
@@ -92,42 +91,41 @@ console: {
     For websites without build tools install from CDN or host the files yourself:
 
     <CodeSnippet
-  code={`    <script>
-      // Load the collector and source
-      const { startFlow } = await import(
-        'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
-      );
-      const { sourceBrowser } = await import(
-        'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
-      );
+      code={`<script>
+  // Load the collector and source
+  const { startFlow } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
+  );
+  const { sourceBrowser } = await import(
+    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
+  );
 
-      // Initialize walkerOS
-      const { collector, elb } = await startFlow({
-        sources: {
-          browser: {
-            code: sourceBrowser,
-            config: {
-              settings: {
-                prefix: 'data-elb',
-                pageview: true,
-                session: true,
-              },
-            },
+  // Initialize walkerOS
+  const { collector, elb } = await startFlow({
+    sources: {
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            prefix: 'data-elb',
+            pageview: true,
+            session: true,
           },
         },
-        destinations: {
-          console: {
-            code: {
-              type: 'console',
-              push: (event) => console.log('Event:', event),
-            },
-          },
+      },
+    },
+    destinations: {
+      console: {
+        code: {
+          type: 'console',
+          push: (event) => console.log('Event:', event),
         },
-      });
-    </script>
-    `}
-  language="html"
-/>
+      },
+    },
+  });
+</script>`}
+      language="html"
+    />
   </TabItem>
 </Tabs>
 

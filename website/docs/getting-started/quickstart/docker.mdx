@@ -5,7 +5,7 @@ description: Get walkerOS running with Docker in 5 minutes
 
 # Docker Quick Start
 
-## Try the Demo
+## Try the demo
 
 ```bash
 docker run -e MODE=collect -e FLOW=/app/flows/demo.json walkeros/docker:latest
@@ -31,7 +31,7 @@ The demo is self-contained:
 - Logs output
 - No external APIs needed
 
-## HTTP Event Collection
+## HTTP event collection
 
 ```bash
 docker run -d -p 8080:8080 \
@@ -45,7 +45,7 @@ curl -X POST http://localhost:8080/collect \
   -d '{"event":"page view","data":{"title":"Home"}}'
 ```
 
-## Built-in Flows
+## Built-in flows
 
 The Docker image includes flows at `/app/flows/`:
 
@@ -54,9 +54,9 @@ The Docker image includes flows at `/app/flows/`:
 - `bundle-web.json` - Web bundle
 - `serve.json` - Static server
 
-## Custom Flow
+## Custom flow
 
-### Build Custom Image
+### Build custom image
 
 ```dockerfile
 FROM walkeros/docker:latest
@@ -68,7 +68,7 @@ docker build -t my-walker .
 docker run -e MODE=collect -e FLOW=/app/flows/custom.json my-walker
 ```
 
-## Docker Compose
+## Docker compose
 
 ```yaml
 version: '3.8'
@@ -96,7 +96,7 @@ services:
     restart: unless-stopped
 ```
 
-## Flow Configuration
+## Flow configuration
 
 Flow files use the NEW format with separate `flow` and `build` sections:
 
@@ -151,7 +151,7 @@ Flow files use the NEW format with separate `flow` and `build` sections:
 }
 ```
 
-### Configuration Structure
+### Configuration structure
 
 **Flow section** (runtime configuration):
 - **platform**: "web" or "server"
@@ -165,8 +165,8 @@ Flow files use the NEW format with separate `flow` and `build` sections:
 - **template**: Path to Handlebars template for bundle generation
 - **tempDir**: Temporary directory for build artifacts
 
-## Next Steps
+## Next steps
 
-- [Available Sources](../../sources/)
-- [Available Destinations](../../destinations/)
+- [Available sources](../../sources/)
+- [Available destinations](../../destinations/)
 - [Docker Package README](https://github.com/elbwalker/walkerOS/tree/main/packages/docker)

@@ -18,7 +18,7 @@ Import web utilities from the `@walkeros/web-core` package:
 
 <CodeSnippet code={`import { getAttribute, sendWeb, sessionStart } from '@walkeros/web-core';`} language="typescript" />
 
-## DOM Utilities
+## DOM utilities
 
 ### getAttribute
 
@@ -64,7 +64,7 @@ configuration strings from HTML attributes.
   language="javascript"
 />
 
-## Browser Information
+## Browser information
 
 ### getLanguage
 
@@ -95,7 +95,7 @@ dimensions.
   language="javascript"
 />
 
-## Element Visibility
+## Element visibility
 
 ### isVisible
 
@@ -117,7 +117,7 @@ This function considers:
 * Parent element visibility
 * Intersection with the visible area
 
-## Storage Management
+## Storage management
 
 ### Storage Operations
 
@@ -162,7 +162,7 @@ storageDelete('session_temp', 'sessionStorage');`}
   language="javascript"
 />
 
-## Session Management
+## Session management
 
 ### sessionStart
 
@@ -197,7 +197,7 @@ Session data includes:
 * `sessionStorage` - Session-specific storage operations
 * `sessionWindow` - Window/tab session management
 
-## Web Communication
+## Web communication
 
 ### sendWeb
 
@@ -260,7 +260,7 @@ const response = sendWebAsXhr(url, data, { method: 'POST' });`}
   language="javascript"
 />
 
-## Web Hashing
+## Web hashing
 
 ### getHashWeb
 
@@ -277,7 +277,7 @@ navigator.userAgent + navigator.language + screen.width,
   language="javascript"
 />
 
-## Configuration Types
+## Configuration types
 
 ### SendWebOptions
 
@@ -311,7 +311,7 @@ sampling?: number; // Sampling rate (0-1)
 
 <CodeSnippet code={`type StorageType = 'localStorage' | 'sessionStorage' | 'cookie';`} language="typescript" />
 
-## Usage Notes
+## Usage notes
 
 * **Consent Required**: Browser information functions may require user consent
   depending on privacy regulations

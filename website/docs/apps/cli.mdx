@@ -37,7 +37,7 @@ npx walkeros --version`}
   language="bash"
 />
 
-## Commands Overview
+## Commands overview
 
 | Command | Purpose | Use Case |
 |---------|---------|----------|
@@ -48,7 +48,7 @@ npx walkeros --version`}
 | `run serve` | Serve web bundles as static files | Host browser tracking scripts |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
 
-## Configuration Types
+## Configuration types
 
 The CLI uses types from `@walkeros/core`:
 
@@ -58,7 +58,7 @@ The CLI uses types from `@walkeros/core`:
 
 The CLI transforms `Flow.Setup` → `Flow.Config` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
 
-## Local Packages
+## Local packages
 
 By default, the CLI downloads packages from npm. For development or testing unpublished packages, you can use local packages instead by specifying a `path` property.
 
@@ -142,7 +142,7 @@ In this example, even though `@walkeros/collector` depends on `@walkeros/core`, 
 
 When ready for production, simply remove the `path` property to use the published npm version.
 
-## Getting Started
+## Getting started
 
 Before using the CLI, you need a [flow configuration file](/docs/getting-started/flow). Here's a minimal example:
 
@@ -182,7 +182,7 @@ Before using the CLI, you need a [flow configuration file](/docs/getting-started
 
 Save this as `flow.json`.
 
-## Bundle Command
+## Bundle command
 
 The `bundle` command builds production-ready JavaScript bundles from flow configurations.
 
@@ -318,7 +318,7 @@ walkeros bundle config.json --all`}
   language="bash"
 />
 
-## Simulate Command
+## Simulate command
 
 The `simulate` command tests your flow configuration with sample events without deploying to production.
 
@@ -465,7 +465,7 @@ walkeros simulate flow.json --event-file events.json`}
   language="bash"
 />
 
-## Push Command
+## Push command
 
 The `push` command executes your flow with a real event, making actual API calls to your configured destinations. Unlike `simulate` which mocks API calls for safe testing, `push` performs real HTTP requests—ideal for integration testing and production validation.
 
@@ -659,7 +659,7 @@ walkeros push flow.json --event event.json --flow production --local`}
   language="bash"
 />
 
-## Run Collect Command
+## Run collect command
 
 The `run collect` command starts an HTTP server that accepts events and processes them through your flow.
 
@@ -822,7 +822,7 @@ walkeros run collect dist/bundle.mjs --port 8080`}
   language="bash"
 />
 
-## Run Serve Command
+## Run serve command
 
 The `run serve` command serves web bundles as static files for browser-side tracking.
 
@@ -948,7 +948,7 @@ Open `test.html` in your browser. Events will be sent to `http://localhost:8080/
 | `--local` | Execute locally without Docker |
 | `-v, --verbose` | Detailed logging |
 
-## Complete Example: Web → Server Flow
+## Complete example: Web → Server flow
 
 This example demonstrates a complete analytics pipeline:
 - Browser events captured by web flow
@@ -1087,7 +1087,7 @@ Open in browser. Terminal 1 shows:
 [Server Logger] custom event
 ```
 
-## Cache Command
+## Cache command
 
 The `cache` command manages the CLI's package and build caches.
 
@@ -1176,7 +1176,7 @@ This downloads fresh packages and rebuilds without using or updating the cache.
 | `--packages` | Clear only the package cache |
 | `--builds` | Clear only the build cache |
 
-## Global Options
+## Global options
 
 These options work with all commands:
 
@@ -1194,7 +1194,7 @@ These options work with all commands:
 | `--help` | Show help for command |
 | `--version` | Show CLI version |
 
-## Execution Modes
+## Execution modes
 
 ### Docker Mode (Default)
 
@@ -1230,7 +1230,7 @@ Use `--local` to execute in your current Node.js environment:
 **Requirements**:
 - Node.js 18+ installed locally
 
-## CI/CD Integration
+## CI/CD integration
 
 ### GitHub Actions
 
@@ -1317,7 +1317,7 @@ lsof -ti:8080 | xargs kill`}
   language="bash"
 />
 
-## Next Steps
+## Next steps
 
 - **[Flow Configuration](/docs/getting-started/flow)** - Learn about flow config structure
 - **[Docker Deployment](/docs/apps/docker)** - Deploy flows to production

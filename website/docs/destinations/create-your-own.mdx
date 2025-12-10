@@ -8,12 +8,12 @@ sidebar_position: 99
 
 This guide provides the essentials for building a custom walkerOS destination.
 
-## What is a Destination?
+## What is a destination?
 
 A destination is a function that receives events from walkerOS and sends them to
 an external service, such as an analytics platform, an API, or a database.
 
-## The Destination Interface
+## The destination interface
 
 A destination is an object that implements the `Destination` interface. The most
 important property is the `push` function, which is called for every event.
@@ -50,7 +50,7 @@ settings?: Settings;
   language="typescript"
 />
 
-## Example: A Simple Webhook Destination
+## Example: A simple webhook destination
 
 Here is an example of a simple destination that sends events to a webhook URL.
 
@@ -84,7 +84,7 @@ body: JSON.stringify(event),
   language="typescript"
 />
 
-## Schema Validation (Optional)
+## Schema validation (optional)
 
 Destinations can export Zod schemas to provide runtime validation and TypeScript
 IDE support for configuration options. Export a `schemas` namespace containing
@@ -156,7 +156,7 @@ config: {
   language="typescript"
 />
 
-## Advanced Example: Session Management
+## Advanced example: Session management
 
 Here's a more advanced example that demonstrates session handling and cleanup:
 
@@ -209,7 +209,7 @@ body: JSON.stringify(event),
   language="typescript"
 />
 
-## TypeScript Integration
+## TypeScript integration
 
 To get full TypeScript support for your destination's configuration, you can
 extend the `WalkerOS.Destinations` interface.
@@ -229,7 +229,7 @@ webhook: Destination.Config<WebhookSettings>;
   language="typescript"
 />
 
-## Environment Dependencies (Testing)
+## Environment dependencies (testing)
 
 The `env` parameter enables dependency injection for external APIs and SDKs.
 This allows you to test your destination logic without making actual API calls

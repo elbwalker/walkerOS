@@ -1,5 +1,5 @@
 ---
-title: Express Source
+title: Express
 description: Turn-key HTTP event collection server with Express.js
 sidebar_position: 1
 package: '@walkeros/server-source-express'
@@ -7,7 +7,7 @@ package: '@walkeros/server-source-express'
 
 <PackageLink env="server" github="packages/server/sources/express" npm="@walkeros/server-source-express" />
 
-# Express Source
+# Express
 
 Turn-key HTTP event collection server with Express.js. Handles JSON POST events, pixel tracking (GET), CORS, and health checks.
 
@@ -25,9 +25,9 @@ Turn-key HTTP event collection server with Express.js. Handles JSON POST events,
   language="bash"
 />
 
-## Quick Start
+## Quick start
 
-### Standalone Server
+### Standalone server
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -90,7 +90,7 @@ app.listen(3000);`}
 | `cors` | `boolean \| object` | `true` | CORS configuration |
 | `status` | `boolean` | `true` | Enable health check endpoints |
 
-## HTTP Methods
+## HTTP methods
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -100,7 +100,7 @@ app.listen(3000);`}
 | GET | `/health` | Liveness check |
 | GET | `/ready` | Readiness check |
 
-## Example Request
+## Example request
 
 <CodeSnippet
   code={`curl -X POST http://localhost:8080/collect \\
