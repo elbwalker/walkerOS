@@ -1,59 +1,55 @@
 ---
-title: Flow Configuration
+title: Flow
 description: Understanding the walkerOS flow configuration file structure
 sidebar_position: 4
 ---
 
-# Flow Configuration
+# Flow
 
 Flow configuration is walkerOS's **"configuration as code"** approach. A single JSON file defines your entire event collection pipeline—sources, collector, destinations, and packages—making it portable, version-controlled, and deployable across environments.
 
-## Philosophy
-
-If you're familiar with **Segment**, **Jitsu**, or **Amplitude**—think of flow configuration as your sources, destinations, and transformation rules defined in one file instead of a web UI. This approach provides:
-
-- **Version control**: Track changes in git like any other code
-- **Reproducibility**: Same config = same behavior across environments
-- **Portability**: Move between local, staging, and production seamlessly
-- **Transparency**: No hidden settings in external dashboards
-
-## Configuration Structure
+## Configuration structure
 
 A flow configuration uses the `Flow.Setup` format with two required fields:
 
 1. **`version`** - Schema version (currently `1`)
 2. **`flows`** - Named flow configurations
 
-### Basic Example
+### Basic example
 
 <CodeSnippet
   code={`{
   "version": 1,
   "flows": {
     "default": {
-      "server": {},
+      "web": {},
       "packages": {
         "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
-        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
+        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
       },
       "sources": {
-        "http": {
-          "package": "@walkeros/server-source-express",
+        "browser": {
+          "package": "@walkeros/web-source-browser",
           "config": {
             "settings": {
-              "path": "/collect",
-              "port": 8080
+              "pageview": true,
+              "session": true
             }
           }
         }
       },
       "destinations": {
-        "console": {
-          "package": "@walkeros/destination-demo",
+        "api": {
+          "package": "@walkeros/web-destination-api",
           "config": {
             "settings": {
-              "name": "Console Logger"
+              "url": "https://analytics.example.com/events",
+              "method": "POST",
+              "headers": {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer your-api-key"
+              }
             }
           }
         }
@@ -67,9 +63,9 @@ A flow configuration uses the `Flow.Setup` format with two required fields:
   language="json"
 />
 
-This creates an HTTP event collection endpoint that logs events to the console.
+This captures browser DOM events and sends them to your analytics API endpoint via HTTP POST requests.
 
-## Flow Configuration (Flow.Config)
+## Flow configuration (Flow.Config)
 
 Each flow in `flows` is a `Flow.Config` that defines runtime behavior.
 
@@ -120,12 +116,12 @@ Specifies npm packages to download and bundle:
       "version": "latest",
       "imports": ["startFlow"]
     },
-    "@walkeros/server-source-express": {
+    "@walkeros/web-source-browser": {
       "version": "0.4.0",
-      "imports": ["sourceExpress"]
+      "imports": ["sourceBrowser"]
     },
-    "@walkeros/destination-demo": {
-      "imports": ["destinationDemo", "destinationDemo2"]
+    "@walkeros/web-destination-api": {
+      "imports": ["destinationAPI"]
     }
   }
 }`}
@@ -177,11 +173,6 @@ Sources capture events from various inputs. Each source needs:
   language="json"
 />
 
-**Common Sources:**
-- `@walkeros/server-source-express` - HTTP event collection endpoint
-- `@walkeros/web-source-browser` - Browser DOM event tracking
-- `@walkeros/web-source-dataLayer` - DataLayer integration
-
 See [Sources documentation](/docs/sources/) for all available options.
 
 ### Destinations
@@ -227,12 +218,25 @@ Destinations receive processed events and send them to analytics tools, database
 - **`consent`** - Required consent states
 - **`policy`** - Processing rules
 
-**Common Destinations:**
-- `@walkeros/destination-demo` - Console logging (great for testing)
-- `@walkeros/server-destination-gcp` - Google BigQuery
-- `@walkeros/server-destination-aws` - AWS services
-- `@walkeros/web-destination-gtag` - Google Analytics 4
-- `@walkeros/web-destination-meta-pixel` - Meta Pixel
+**Built-in Code Destination:**
+
+For custom logic without external packages, use `code: true`:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "custom": {
+      "code": true,
+      "config": {
+        "settings": {
+          "push": "console.log('Event:', event.name, event.data)"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
 
 See [Destinations documentation](/docs/destinations/) for all available options.
 
@@ -262,7 +266,7 @@ The collector processes events from sources and routes them to destinations:
 
 See [Collector documentation](/docs/collector/) for complete options.
 
-### Web-Specific Options
+### Web-specific options
 
 For browser bundles, you can configure window variable names:
 
@@ -280,7 +284,7 @@ For browser bundles, you can configure window variable names:
 - **`windowCollector`** - Global variable name for collector instance (default: `"collector"`)
 - **`windowElb`** - Global variable name for event tracking function (default: `"elb"`)
 
-## Multi-Flow Configuration
+## Multi-flow configuration
 
 For managing dev/staging/production flows in one file:
 
@@ -344,7 +348,7 @@ walkeros bundle config.json --all`}
   language="bash"
 />
 
-## Variables and Definitions
+## Variables and definitions
 
 ### Variables
 
@@ -417,7 +421,7 @@ Definitions allow reusable configuration blocks:
   language="json"
 />
 
-## Type Hierarchy
+## Type hierarchy
 
 walkerOS uses a clear type hierarchy:
 
@@ -454,7 +458,7 @@ walkerOS uses a clear type hierarchy:
 - **`Flow.Config`** - Single flow configuration
 - **`Collector.InitConfig`** - Runtime type passed to `startFlow()`
 
-## Complete Example
+## Complete example
 
 Here's a production-ready flow that accepts HTTP events and sends them to BigQuery:
 
@@ -534,7 +538,7 @@ Here's a production-ready flow that accepts HTTP events and sends them to BigQue
   language="json"
 />
 
-## Programmatic Usage
+## Programmatic usage
 
 You can also use configuration programmatically with the `startFlow` function:
 
@@ -569,7 +573,7 @@ const { collector, elb } = await startFlow({
 
 See the [Collector documentation](/docs/collector/) for complete API reference.
 
-## Next Steps
+## Next steps
 
 - **[CLI](/docs/apps/cli)** - Learn how to bundle and test flows
 - **[Docker](/docs/apps/docker)** - Deploy flows in containers

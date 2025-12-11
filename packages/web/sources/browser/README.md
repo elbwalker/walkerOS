@@ -1,6 +1,6 @@
 <p align="left">
-  <a href="https://elbwalker.com">
-    <img title="elbwalker" src='https://www.elbwalker.com/img/elbwalker_logo.png' width="256px"/>
+  <a href="https://www.walkeros.io">
+    <img title="elbwalker" src='https://www.walkeros.io/img/elbwalker_logo.png' width="256px"/>
   </a>
 </p>
 
@@ -11,6 +11,17 @@
 
 The Browser Source is walkerOS's primary web tracking solution that you can use
 to capture user interactions directly from the browsers DOM.
+
+## Quick Start
+
+```bash
+npm install @walkeros/web-source-browser
+```
+
+```typescript
+import { sourceBrowser } from '@walkeros/web-source-browser';
+await startFlow({ sources: { browser: { code: sourceBrowser } } });
+```
 
 ## What It Does
 
@@ -115,8 +126,8 @@ Load the source via dynamic import:
 > Use **separate source creation** for direct access to the enhanced elb
 > function, or access it via `collector.sources.browser.elb` in the unified API.
 >
-> See [Commands](https://www.elbwalker.com/docs/sources/web/browser/commands)
-> for full browser source API documentation.
+> See [Commands](https://www.walkeros.io/docs/sources/web/browser/commands) for
+> full browser source API documentation.
 
 ## Contribute
 

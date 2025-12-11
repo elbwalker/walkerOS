@@ -183,7 +183,7 @@ export default {
 
 ## License
 
-MIT © [elbwalker GmbH](https://www.elbwalker.com)
+MIT © [elbwalker GmbH](https://www.walkeros.io)
 
 ## Links
 

@@ -1,4 +1,4 @@
-import type { Destination } from '@walkeros/core';
+import type { Destination, Logger } from '@walkeros/core';
 import type { FirehoseConfig, Env } from '../types';
 import { throwError } from '@walkeros/core';
 
@@ -38,9 +38,10 @@ export function getConfigFirehose(
 export async function pushFirehose(
   pushEvents: Destination.PushEvents,
   config: FirehoseConfig,
-  env?: unknown,
+  context: Destination.PushContext,
 ) {
   const { client, streamName } = config;
+  const { env, logger } = context;
 
   if (!client) return { queue: pushEvents };
 
@@ -48,6 +49,11 @@ export async function pushFirehose(
   const records = pushEvents.map(({ event }) => ({
     Data: Buffer.from(JSON.stringify(event)),
   }));
+
+  logger.debug('Calling AWS Firehose API', {
+    stream: streamName,
+    recordCount: records.length,
+  });
 
   // Use environment-injected SDK command or fall back to direct import
   if (isAWSEnvironment(env)) {
@@ -67,4 +73,6 @@ export async function pushFirehose(
       }),
     );
   }
+
+  logger?.debug('AWS Firehose API response', { ok: true });
 }

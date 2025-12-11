@@ -13,7 +13,7 @@ export default function HomeHero() {
         elbAction: 'start',
       }}
       secondaryButton={{
-        link: '/services',
+        link: 'https://www.elbwalker.com/services',
         children: 'Services',
         elbAction: 'services',
       }}

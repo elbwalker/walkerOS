@@ -791,12 +791,21 @@ authentication**
 | `eventName`       | string | 40         | Event name (required for GA4)    |
 | `eventSource`     | string |            | WEB, APP, IN_STORE, PHONE, OTHER |
 
+## Type Definitions
+
+See [src/types/](./src/types/) for TypeScript interfaces.
+
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/destinations/server/datamanager/)
+- [Destination Interface](../../../core/src/types/destination.ts)
+
 ## Resources
 
 - [Google Data Manager API Documentation](https://developers.google.com/data-manager/api)
 - [Data Formatting Guidelines](https://developers.google.com/data-manager/api/devguides/concepts/formatting)
 - [DMA Compliance](https://developers.google.com/data-manager/api/devguides/concepts/dma)
-- [walkerOS Documentation](https://www.elbwalker.com/docs/)
+- [walkerOS Documentation](https://www.walkeros.io/docs/)
 
 ## License
 
@@ -807,5 +816,5 @@ MIT
 For issues and questions:
 
 - [GitHub Issues](https://github.com/elbwalker/walkerOS/issues)
-- [walkerOS Documentation](https://www.elbwalker.com/docs/)
+- [walkerOS Documentation](https://www.walkeros.io/docs/)
 - [Google Data Manager Support](https://developers.google.com/data-manager/api/support/contact)

@@ -1,5 +1,18 @@
 # walkerOS Docker Demos
 
+## Installation
+
+These are demo configurations - see the main [Docker README](../README.md) for
+installation.
+
+## Usage
+
+Run
+`docker run -p 8080:8080 -e MODE=collect -e FLOW=/app/demos/demo-collect.mjs walkeros/docker`
+for instant testing.
+
+---
+
 This directory contains **pre-built demo bundles** ready to use immediately with
 the walkerOS Docker image. No CLI setup or bundling required - just run and
 test!

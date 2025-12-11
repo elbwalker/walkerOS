@@ -1,6 +1,6 @@
 <p align="left">
-  <a href="https://elbwalker.com">
-    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
+  <a href="https://www.walkeros.io">
+    <img title="elbwalker" src="https://www.walkeros.io/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
@@ -35,27 +35,56 @@ npm install @walkeros/web-destination-api
 | `transform` | `function`                     | Function to transform event data before sending  | No       | `(data, config, mapping) => JSON.stringify(data)`                         |
 | `transport` | `'fetch' \| 'xhr' \| 'beacon'` | Transport method for sending requests            | No       | `'fetch'`                                                                 |
 
-## Usage
+## Quick Start
 
-### Basic Usage
+Configure in your Flow JSON:
+
+```json
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "settings": {
+              "url": "https://api.example.com/events",
+              "method": "POST",
+              "headers": { "Authorization": "Bearer your-token" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Or programmatically:
 
 ```typescript
 import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationAPI, {
-  settings: {
-    url: 'https://api.example.com/events',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer your-token',
+const { elb } = await startFlow({
+  destinations: [
+    {
+      destination: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://api.example.com/events',
+          method: 'POST',
+          headers: { Authorization: 'Bearer your-token' },
+        },
+      },
     },
-  },
+  ],
 });
 ```
+
+## Usage
 
 ### Advanced Usage with Transform
 
@@ -63,22 +92,26 @@ elb('walker destination', destinationAPI, {
 import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationAPI, {
-  settings: {
-    url: 'https://api.example.com/events',
-    transport: 'fetch',
-    transform: (event, config, mapping) => {
-      // Custom transformation logic
-      return JSON.stringify({
-        timestamp: Date.now(),
-        event_name: `${event.entity}_${event.action}`,
-        properties: event.data,
-        context: event.context,
-      });
+const { elb } = await startFlow({
+  destinations: [
+    {
+      destination: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://api.example.com/events',
+          transport: 'fetch',
+          transform: (event, config, mapping) => {
+            return JSON.stringify({
+              timestamp: Date.now(),
+              event_name: `${event.entity}_${event.action}`,
+              properties: event.data,
+              context: event.context,
+            });
+          },
+        },
+      },
     },
-  },
+  ],
 });
 ```
 
@@ -86,64 +119,66 @@ elb('walker destination', destinationAPI, {
 
 ### Sending to Analytics API
 
-```typescript
-import { startFlow } from '@walkeros/collector';
-import { destinationAPI } from '@walkeros/web-destination-api';
-
-const { elb } = await startFlow();
-
-// Configure for analytics API
-elb('walker destination', destinationAPI, {
-  settings: {
-    url: 'https://analytics.example.com/track',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': 'your-api-key',
-    },
-    transform: (event) => {
-      return JSON.stringify({
-        event_type: `${event.entity}_${event.action}`,
-        user_id: event.user?.id,
-        session_id: event.user?.session,
-        properties: event.data,
-        timestamp: event.timing,
-      });
-    },
-  },
-});
+```json
+{
+  "destinations": {
+    "analytics": {
+      "package": "@walkeros/web-destination-api",
+      "config": {
+        "settings": {
+          "url": "https://analytics.example.com/track",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json",
+            "X-API-Key": "your-api-key"
+          }
+        }
+      }
+    }
+  }
+}
 ```
 
 ### Using Beacon Transport
 
 For critical events that need to be sent even when the page is unloading:
 
-```typescript
-elb('walker destination', destinationAPI, {
-  settings: {
-    url: 'https://api.example.com/critical-events',
-    transport: 'beacon', // Reliable for page unload scenarios
-  },
-});
+```json
+{
+  "destinations": {
+    "critical": {
+      "package": "@walkeros/web-destination-api",
+      "config": {
+        "settings": {
+          "url": "https://api.example.com/critical-events",
+          "transport": "beacon"
+        }
+      }
+    }
+  }
+}
 ```
 
 ### Custom Data Mapping
 
 Use mapping rules to control which events are sent:
 
-```typescript
-elb('walker destination', destinationAPI, {
-  settings: {
-    url: 'https://api.example.com/events',
-  },
-  mapping: {
-    entity: {
-      action: {
-        data: 'data',
-      },
-    },
-  },
-});
+```json
+{
+  "destinations": {
+    "api": {
+      "package": "@walkeros/web-destination-api",
+      "config": {
+        "settings": { "url": "https://api.example.com/events" },
+        "mapping": {
+          "entity": {
+            "action": { "data": "data" }
+          }
+        }
+      }
+    }
+  }
+}
 ```
 
 ## Transport Methods
@@ -152,6 +187,15 @@ elb('walker destination', destinationAPI, {
 - **xhr**: Traditional XMLHttpRequest for older browser compatibility
 - **beacon**: Uses Navigator.sendBeacon() for reliable data transmission during
   page unload
+
+## Type Definitions
+
+See [src/types/](./src/types/) for TypeScript interfaces.
+
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/destinations/web/api/)
+- [Destination Interface](../../../core/src/types/destination.ts)
 
 ## Contribute
 

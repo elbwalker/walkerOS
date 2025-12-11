@@ -19,9 +19,11 @@ Sources capture events in their native format and send them to the collector:
 2. **Transform**: Convert to walkerOS event format (`entity action`, data)
 3. **Send**: Forward to collector for processing and routing to destinations
 
-## Available Sources
+## Available sources
 
-### Browser
+### Web
+
+#### Browser
 
 Captures events from web pages using DOM attributes:
 
@@ -31,7 +33,7 @@ Captures events from web pages using DOM attributes:
 
 [Learn more →](./web/browser/)
 
-### dataLayer
+#### dataLayer
 
 Integrates with existing analytics implementations:
 
@@ -41,7 +43,51 @@ Integrates with existing analytics implementations:
 
 [Learn more →](./web/dataLayer/)
 
-## Basic Setup
+### Server
+
+Server sources accept HTTP requests containing walkerOS events and forward them to the collector.
+
+#### Express
+
+Turn-key HTTP event collection server with Express.js:
+
+* Standalone or embedded: Start server automatically or integrate with existing Express app
+* CORS support and health checks
+* Pixel tracking with 1x1 transparent GIF
+
+[Learn more →](./server/express)
+
+#### Fetch
+
+Web Standard Fetch API source for edge and serverless platforms:
+
+* Platform agnostic: Cloudflare Workers, Vercel Edge, Deno, Bun, Node.js 18+
+* Web Standard `(Request) => Response` signature
+* Batch processing and CORS support
+
+[Learn more →](./server/fetch)
+
+#### AWS Lambda
+
+AWS Lambda HTTP handler for event collection:
+
+* Multi-platform: API Gateway REST (v1), HTTP API (v2), Function URLs
+* Auto-detection of API Gateway version
+* Pixel tracking and health checks
+
+[Learn more →](./server/aws)
+
+#### GCP Cloud Functions
+
+Google Cloud Functions HTTP handler for event collection:
+
+* Plug-and-play: Direct assignment to Cloud Functions handler
+* Batch processing support
+* Configurable CORS
+
+[Learn more →](./server/gcp)
+
+## Basic setup
 
 Sources are configured in `startFlow`:
 
@@ -73,7 +119,7 @@ await elb('product view', { id: 'P123', name: 'Laptop' });`}
   language="typescript"
 />
 
-## Primary Source
+## Primary source
 
 `startFlow` returns an `elb` function based on your sources:
 
@@ -95,7 +141,7 @@ dataLayer: { code: sourceDataLayer, primary: true }, // Override
   language="typescript"
 />
 
-## Reactive Event Handling
+## Reactive event handling
 
 Sources can react to collector events via the optional `on` method:
 
@@ -121,12 +167,12 @@ if (event === 'consent') {
 * `ready` - Collector ready state
 * `run` - Collector run events
 
-## Creating Custom Sources
+## Creating custom sources
 
 See [Create Your Own Source](./create-your-own) for a complete guide to building custom sources.
 
-## Next Steps
+## Next steps
 
-* **[Browser Source](./web/browser/)** - DOM-based tracking
-* **[DataLayer Source](./web/dataLayer/)** - Legacy integration
-* **[Create Your Own](./create-your-own)** - Custom source guide
+* **[Browser source](./web/browser/)** - DOM-based tracking
+* **[DataLayer source](./web/dataLayer/)** - Legacy integration
+* **[Create your own](./create-your-own)** - Custom source guide

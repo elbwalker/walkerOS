@@ -5,12 +5,32 @@ import {
   ConsentSchema,
 } from './primitives';
 
-export const SettingsSchema = z.object({
-  accessToken: z
+/**
+ * Service account credentials schema
+ */
+const CredentialsSchema = z.object({
+  client_email: z.string().email().describe('Service account email'),
+  private_key: z
     .string()
     .min(1)
+    .describe('Service account private key (PEM format)'),
+});
+
+export const SettingsSchema = z.object({
+  credentials: CredentialsSchema.optional().describe(
+    'Service account credentials (client_email + private_key). Recommended for serverless environments.',
+  ),
+  keyFilename: z
+    .string()
+    .optional()
     .describe(
-      'OAuth 2.0 access token with datamanager scope (like ya29.c.xxx)',
+      'Path to service account JSON file. For local development or environments with filesystem access.',
+    ),
+  scopes: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'OAuth scopes for Data Manager API. Defaults to datamanager scope.',
     ),
   destinations: z
     .array(DestinationSchema)

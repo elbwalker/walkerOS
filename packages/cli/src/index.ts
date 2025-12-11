@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { VERSION as DOCKER_VERSION } from '@walkeros/docker';
 import { bundleCommand } from './commands/bundle/index.js';
 import { simulateCommand } from './commands/simulate/index.js';
 import { pushCommand } from './commands/push/index.js';
@@ -38,13 +39,6 @@ export type {
 export type { BundleStats } from './commands/bundle/bundler.js';
 export type { SimulationResult } from './commands/simulate/types.js';
 export type {
-  SourceDestinationItem,
-  TemplateVariables,
-  ProcessedTemplateVariables,
-  TemplateSource,
-  TemplateDestination,
-} from './types/template.js';
-export type {
   RunMode,
   RunCommandOptions,
   RunOptions,
@@ -58,6 +52,16 @@ program
   .name('walkeros')
   .description('walkerOS CLI - Bundle and deploy walkerOS components')
   .version(VERSION);
+
+// Display startup banner before any command runs
+program.hook('preAction', (thisCommand, actionCommand) => {
+  const options = actionCommand.opts();
+  // Skip banner for --silent, --json, or --help flags
+  if (!options.silent && !options.json) {
+    console.log(`🚀 walkerOS CLI v${VERSION}`);
+    console.log(`🐳 Using Docker runtime: walkeros/docker:${DOCKER_VERSION}`);
+  }
+});
 
 // Bundle command
 program

@@ -1,5 +1,17 @@
 # walkerOS Flow Examples
 
+## Installation
+
+These are example configurations - see the main [CLI README](../README.md) for
+installation.
+
+## Usage
+
+Use `walkeros bundle <example>.json` to build any example, then `walkeros run`
+to execute.
+
+---
+
 This directory contains example flow configurations demonstrating various
 walkerOS use cases.
 
@@ -340,4 +352,4 @@ The event name is parsed as: `const [entity, action] = event.split(' ')`
 1. Try each example with `walkeros bundle` and `walkeros simulate`
 2. Modify examples to match your tracking requirements
 3. Create custom flow files for your use case
-4. Deploy to production (see [PUBLISHING.md](../docs/PUBLISHING.md))
+4. Deploy to production

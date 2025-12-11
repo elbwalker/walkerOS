@@ -11,22 +11,12 @@ export const destinationDataManager: DestinationInterface = {
   config: {},
 
   async init({ config: partialConfig, env, logger }) {
-    logger.debug('Data Manager init started');
-    logger.info('Data Manager initializing...');
-
     // getConfig validates required fields and returns ValidatedConfig
     const config = getConfig(partialConfig, logger);
 
-    logger.debug('Settings validated', {
-      validateOnly: config.settings.validateOnly,
-      destinationCount: config.settings.destinations.length,
-      eventSource: config.settings.eventSource,
-    });
-
     try {
-      logger.debug('Creating auth client...');
       const authClient = await createAuthClient(config.settings);
-      logger.debug('Auth client created successfully');
+      logger.debug('Auth client created');
 
       return {
         ...config,

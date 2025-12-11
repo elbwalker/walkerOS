@@ -35,13 +35,18 @@ and add third-party integrations to your website.
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationGtag, {
-  settings: {
-    gtm: {
-      containerId: 'GTM-XXXXXXX', // Required
-      dataLayer: 'dataLayer', // Optional custom dataLayer name
+await startFlow({
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        settings: {
+          gtm: {
+            containerId: 'GTM-XXXXXXX', // Required
+            dataLayer: 'dataLayer', // Optional custom dataLayer name
+          },
+        },
+      },
     },
   },
 });`}

@@ -1,5 +1,16 @@
 # WalkerOS CLI & Docker Demos
 
+## Installation
+
+These are demo configurations - see the main [CLI README](../README.md) for
+installation.
+
+## Usage
+
+Run `./quick-demo.sh` for a 5-minute interactive demo of the complete workflow.
+
+---
+
 This directory contains practical demonstrations of walkerOS CLI and Docker
 functionality.
 
@@ -90,20 +101,10 @@ node packages/cli/dist/index.js run serve static-walker.js \
     --no-pull
 ```
 
-## Testing
-
-For comprehensive testing instructions, see:
-
-- [Manual Testing Guide](../docs/MANUAL_TESTING_GUIDE.md)
-
 ## Documentation
 
-For detailed documentation:
-
 - [CLI Documentation](../README.md)
-- [Run Command Guide](../docs/RUN_COMMAND.md)
-- [Publishing Guide](../docs/PUBLISHING.md)
-- [Docker Build Strategy](../../docker/docs/BUILD_STRATEGY.md)
+- [Docker Package](../../docker/README.md)
 
 ## Support
 

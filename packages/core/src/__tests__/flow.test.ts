@@ -14,7 +14,7 @@ import {
   sourceReferenceJsonSchema,
   destinationReferenceJsonSchema,
 } from '../schemas/flow';
-import { getFlowConfig, getPlatform } from '../flow';
+import { getFlowConfig, getPlatform, packageNameToVariable } from '../flow';
 
 describe('Flow Schemas', () => {
   // ========================================
@@ -1125,79 +1125,6 @@ describe('Flow Schemas', () => {
 
 describe('getFlowConfig', () => {
   describe('code resolution from package', () => {
-    test('resolves code from package for sources', () => {
-      const setup = {
-        version: 1 as const,
-        flows: {
-          default: {
-            server: {},
-            packages: {
-              '@walkeros/server-source-express': {
-                imports: ['sourceExpress'],
-              },
-            },
-            sources: {
-              http: {
-                package: '@walkeros/server-source-express',
-                config: { port: 8080 },
-              },
-            },
-          },
-        },
-      };
-      const config = getFlowConfig(setup as any);
-      expect(config.sources?.http.code).toBe('sourceExpress');
-    });
-
-    test('resolves code from package for destinations', () => {
-      const setup = {
-        version: 1 as const,
-        flows: {
-          default: {
-            web: {},
-            packages: {
-              '@walkeros/web-destination-gtag': {
-                imports: ['destinationGtag'],
-              },
-            },
-            destinations: {
-              ga4: {
-                package: '@walkeros/web-destination-gtag',
-                config: { measurementId: 'G-123' },
-              },
-            },
-          },
-        },
-      };
-      const config = getFlowConfig(setup as any);
-      expect(config.destinations?.ga4.code).toBe('destinationGtag');
-    });
-
-    test('preserves explicit code if provided', () => {
-      const setup = {
-        version: 1 as const,
-        flows: {
-          default: {
-            server: {},
-            packages: {
-              '@walkeros/server-source-express': {
-                imports: ['sourceExpress'],
-              },
-            },
-            sources: {
-              http: {
-                package: '@walkeros/server-source-express',
-                code: 'customCode', // Explicit code should be preserved
-                config: {},
-              },
-            },
-          },
-        },
-      };
-      const config = getFlowConfig(setup as any);
-      expect(config.sources?.http.code).toBe('customCode');
-    });
-
     test('does not set code if package not in packages config', () => {
       const setup = {
         version: 1 as const,
@@ -1218,7 +1145,7 @@ describe('getFlowConfig', () => {
       expect(config.sources?.http.code).toBeUndefined();
     });
 
-    test('does not set code if package has no imports', () => {
+    test('auto-generates code when not provided', () => {
       const setup = {
         version: 1 as const,
         flows: {
@@ -1227,7 +1154,6 @@ describe('getFlowConfig', () => {
             packages: {
               '@walkeros/server-source-express': {
                 version: 'latest',
-                // No imports array
               },
             },
             sources: {
@@ -1240,25 +1166,19 @@ describe('getFlowConfig', () => {
         },
       };
       const config = getFlowConfig(setup as any);
-      expect(config.sources?.http.code).toBeUndefined();
+      expect(config.sources?.http.code).toBe('_walkerosServerSourceExpress');
     });
 
-    test('resolves code for multiple sources and destinations', () => {
+    test('auto-generates code for multiple sources and destinations when not provided', () => {
       const setup = {
         version: 1 as const,
         flows: {
           default: {
             server: {},
             packages: {
-              '@walkeros/server-source-express': {
-                imports: ['sourceExpress'],
-              },
-              '@walkeros/destination-demo': {
-                imports: ['destinationDemo'],
-              },
-              '@walkeros/server-destination-gcp': {
-                imports: ['destinationBigQuery'],
-              },
+              '@walkeros/server-source-express': {},
+              '@walkeros/destination-demo': {},
+              '@walkeros/server-destination-gcp': {},
             },
             sources: {
               http: {
@@ -1280,9 +1200,11 @@ describe('getFlowConfig', () => {
         },
       };
       const config = getFlowConfig(setup as any);
-      expect(config.sources?.http.code).toBe('sourceExpress');
-      expect(config.destinations?.demo.code).toBe('destinationDemo');
-      expect(config.destinations?.bigquery.code).toBe('destinationBigQuery');
+      expect(config.sources?.http.code).toBe('_walkerosServerSourceExpress');
+      expect(config.destinations?.demo.code).toBe('_walkerosDestinationDemo');
+      expect(config.destinations?.bigquery.code).toBe(
+        '_walkerosServerDestinationGcp',
+      );
     });
   });
 
@@ -1340,5 +1262,135 @@ describe('getPlatform', () => {
     expect(() => getPlatform({} as any)).toThrow(
       'Config must have web or server key',
     );
+  });
+});
+
+// ========================================
+// packageNameToVariable Tests
+// ========================================
+
+describe('packageNameToVariable', () => {
+  test('converts scoped package names to valid variable names', () => {
+    expect(packageNameToVariable('@walkeros/server-destination-api')).toBe(
+      '_walkerosServerDestinationApi',
+    );
+  });
+
+  test('converts unscoped package names', () => {
+    expect(packageNameToVariable('lodash')).toBe('lodash');
+  });
+
+  test('handles multiple hyphens and slashes', () => {
+    expect(packageNameToVariable('@custom/my-helper')).toBe('_customMyHelper');
+    expect(packageNameToVariable('@scope/package-name-test')).toBe(
+      '_scopePackageNameTest',
+    );
+  });
+
+  test('handles package names with numbers', () => {
+    expect(packageNameToVariable('@walkeros/web-destination-gtag')).toBe(
+      '_walkerosWebDestinationGtag',
+    );
+  });
+});
+
+// ========================================
+// resolveCodeFromPackage with default exports
+// ========================================
+
+describe('resolveCodeFromPackage - default export fallback', () => {
+  test('auto-generates code when not provided', () => {
+    const setup = {
+      version: 1 as const,
+      flows: {
+        default: {
+          server: {},
+          packages: {
+            '@walkeros/server-destination-api': {}, // No imports specified
+          },
+          destinations: {
+            api: {
+              package: '@walkeros/server-destination-api',
+              config: {},
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowConfig(setup as any);
+    expect(config.destinations?.api.code).toBe('_walkerosServerDestinationApi');
+  });
+
+  test('uses explicit code when provided', () => {
+    const setup = {
+      version: 1 as const,
+      flows: {
+        default: {
+          server: {},
+          packages: {
+            '@walkeros/server-destination-api': {},
+          },
+          destinations: {
+            api: {
+              package: '@walkeros/server-destination-api',
+              code: 'myCustomCode', // Explicit code should be preserved
+              config: {},
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowConfig(setup as any);
+    expect(config.destinations?.api.code).toBe('myCustomCode');
+  });
+
+  test('uses explicit code for named exports', () => {
+    const setup = {
+      version: 1 as const,
+      flows: {
+        default: {
+          server: {},
+          packages: {
+            '@walkeros/server-destination-gcp': {},
+          },
+          destinations: {
+            bq: {
+              package: '@walkeros/server-destination-gcp',
+              code: 'destinationBigQuery',
+              config: {},
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowConfig(setup as any);
+    expect(config.destinations?.bq.code).toBe('destinationBigQuery');
+  });
+
+  test('auto-generates code for multiple destinations with same package', () => {
+    const setup = {
+      version: 1 as const,
+      flows: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/web-destination-api': {},
+          },
+          destinations: {
+            api1: {
+              package: '@walkeros/web-destination-api',
+              config: { endpoint: 'https://api1.example.com' },
+            },
+            api2: {
+              package: '@walkeros/web-destination-api',
+              config: { endpoint: 'https://api2.example.com' },
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowConfig(setup as any);
+    expect(config.destinations?.api1.code).toBe('_walkerosWebDestinationApi');
+    expect(config.destinations?.api2.code).toBe('_walkerosWebDestinationApi');
   });
 });

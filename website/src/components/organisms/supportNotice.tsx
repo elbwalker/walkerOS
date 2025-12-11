@@ -18,7 +18,7 @@ export default function SupportNotice(): React.JSX.Element {
       <div>
         Need professional support with your walkerOS implementation? Check out
         our{' '}
-        <Link href="/services" target="_blank">
+        <Link href="https://www.elbwalker.com/services" target="_blank">
           services
         </Link>
         .

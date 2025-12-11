@@ -14,7 +14,7 @@ The tagger is a utility for generating HTML data attributes that the walkerOS
 browser source uses for event tracking. It provides a fluent interface to create
 properly formatted and escaped data attributes for your HTML elements.
 
-## Why Use the Tagger?
+## Why use the tagger?
 
 The tagger solves several challenges when working with walkerOS data attributes:
 
@@ -27,7 +27,7 @@ The tagger solves several challenges when working with walkerOS data attributes:
 * **Fluent API** - Chainable methods for building complex attribute sets
 * **Maintainability** - Centralized logic for attribute generation
 
-## When to Use the Tagger
+## When to use the tagger
 
 Use the tagger when you need to:
 
@@ -65,7 +65,7 @@ prefix: 'data-elb',
 
 <PropertyTable schema={schemas.tagger} />
 
-## Usage Examples
+## Usage examples
 
 ### Basic Data Tagging (Without Entity)
 
@@ -191,7 +191,7 @@ const attributes = tagger('product')
   language="typescript"
 />
 
-## Available Methods (API Reference)
+## Available methods (API reference)
 
 ##### `tagger(scope?: string)`
 
@@ -331,7 +331,7 @@ const attributes = tagger().entity('product').data('id', '123').get();
 All methods return the tagger instance for method chaining, except `get()` which
 returns the final attributes object.
 
-## Common Use Cases
+## Common use cases
 
 ### Product Listing Page
 

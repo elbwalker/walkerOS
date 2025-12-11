@@ -1,6 +1,6 @@
 <p align="left">
-  <a href="https://elbwalker.com">
-    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
+  <a href="https://www.walkeros.io">
+    <img title="elbwalker" src="https://www.walkeros.io/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
@@ -25,21 +25,46 @@ events, and audience building data to optimize your Meta advertising campaigns.
 npm install @walkeros/web-destination-meta
 ```
 
-## Usage
+## Quick Start
 
-Here's a basic example of how to use the Meta Pixel destination:
+Configure in your Flow JSON:
+
+```json
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "destinations": {
+        "meta": {
+          "package": "@walkeros/web-destination-meta",
+          "config": {
+            "settings": { "pixelId": "1234567890" },
+            "loadScript": true
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Or programmatically:
 
 ```typescript
 import { startFlow } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/web-destination-meta';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationMeta, {
-  settings: {
-    pixelId: '1234567890', // Your Meta Pixel ID
-  },
-  loadScript: true, // Load Meta Pixel script automatically
+const { elb } = await startFlow({
+  destinations: [
+    {
+      destination: destinationMeta,
+      config: {
+        settings: { pixelId: '1234567890' },
+        loadScript: true,
+      },
+    },
+  ],
 });
 ```
 
@@ -49,6 +74,15 @@ elb('walker destination', destinationMeta, {
 | ------------ | --------- | ----------------------------------------------------------------- | -------- | -------------- |
 | `pixelId`    | `string`  | Your Meta Pixel ID from Facebook Business Manager                 | Yes      | `'1234567890'` |
 | `loadScript` | `boolean` | Whether to automatically load the Meta Pixel script (fbevents.js) | No       | `true`         |
+
+## Type Definitions
+
+See [src/types/](./src/types/) for TypeScript interfaces.
+
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/destinations/web/meta/)
+- [Destination Interface](../../../core/src/types/destination.ts)
 
 ## Contribute
 

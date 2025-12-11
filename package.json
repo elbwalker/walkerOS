@@ -32,7 +32,10 @@
     "publish-packages": "rm -rf .turbo/cache && npm run build && npm run lint && npm run test && changeset version && changeset publish",
     "publish-docker": "npm run -w @walkeros/cli docker:publish && npm run -w @walkeros/docker docker:publish",
     "test": "turbo run test --filter=!@walkeros/website --output-logs=errors-only",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "validate:links": "npx tsx apps/scripts/validate-links.ts",
+    "validate:docs": "npx tsx apps/scripts/validate-docs.ts",
+    "validate": "npm run validate:links && npm run validate:docs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.28.1",

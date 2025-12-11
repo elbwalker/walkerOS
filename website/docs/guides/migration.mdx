@@ -10,9 +10,9 @@ sidebar_position: 1
 This guide helps you migrate from the old elbwalker packages to the new walkerOS
 packages.
 
-## Quick Reference
+## Quick reference
 
-### Core Package Changes
+### Core package changes
 
 * `@elbwalker/walker.js` → `@walkeros/collector` +
   `@walkeros/web-source-browser`
@@ -20,9 +20,9 @@ packages.
 * `@elbwalker/destination-web-*` → `@walkeros/web-destination-*`
 * `@elbwalker/destination-node-*` → `@walkeros/server-destination-*`
 
-## Step-by-Step Migration
+## Step-by-step migration
 
-### 1. Update Dependencies
+### 1. Update dependencies
 
 **Before:**
 
@@ -107,7 +107,7 @@ config: {
   language="typescript"
 />
 
-## Breaking Changes
+## Breaking changes
 
 ### 1. Unified Collector
 
@@ -129,7 +129,7 @@ config: {
 * GA4, Google Ads, and GTM are now unified in `@walkeros/web-destination-gtag`
 * Configure all Google services through a single destination
 
-## Destination Configuration Patterns
+## Destination configuration patterns
 
 ### Unified Configuration Approach
 
@@ -166,7 +166,7 @@ config: {
 * No manual destination registration needed
 * Clean separation between code and configuration
 
-## Migration Checklist
+## Migration checklist
 
 ### Package Dependencies
 
@@ -182,7 +182,7 @@ config: {
 * \[ ] Update type imports to use `@walkeros/core`
 * \[ ] Test functionality after migration
 
-## Common Issues
+## Common issues
 
 **"Cannot find module @walkeros/web-collector"**\
 Solution: Use `@walkeros/collector` + `@walkeros/web-source-browser`

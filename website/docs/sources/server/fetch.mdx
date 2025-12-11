@@ -1,0 +1,143 @@
+---
+title: Fetch
+description: Web Standard Fetch API source for edge and serverless platforms
+sidebar_position: 2
+package: '@walkeros/server-source-fetch'
+---
+
+<PackageLink env="server" github="packages/server/sources/fetch" npm="@walkeros/server-source-fetch" />
+
+# Fetch
+
+Web Standard Fetch API source for walkerOS - deploy to any modern edge or serverless platform.
+
+## Features
+
+* **Platform agnostic**: Cloudflare Workers, Vercel Edge, Deno, Bun, Node.js 18+
+* **Web Standard**: Native `(Request) => Response` signature
+* **Batch processing**: Handle multiple events in single request
+* **CORS support**: Configurable cross-origin resource sharing
+* **Pixel tracking**: 1x1 transparent GIF for GET requests
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-source-fetch`}
+  language="bash"
+/>
+
+## Platform examples
+
+### Cloudflare Workers
+
+<CodeSnippet
+  code={`import { sourceFetch } from '@walkeros/server-source-fetch';
+import { startFlow } from '@walkeros/collector';
+
+const { sources } = await startFlow({
+  sources: {
+    fetch: {
+      code: sourceFetch,
+      config: {
+        settings: { path: '/collect', cors: true },
+      },
+    },
+  },
+});
+
+export default { fetch: sources.fetch.push };`}
+  language="typescript"
+/>
+
+### Vercel Edge
+
+<CodeSnippet
+  code={`// api/collect.ts
+export const config = { runtime: 'edge' };
+
+import { sourceFetch } from '@walkeros/server-source-fetch';
+import { startFlow } from '@walkeros/collector';
+
+const { sources } = await startFlow({
+  sources: {
+    fetch: { code: sourceFetch, config: {} },
+  },
+});
+
+export default sources.fetch.push;`}
+  language="typescript"
+/>
+
+### Deno Deploy
+
+<CodeSnippet
+  code={`import { sourceFetch } from '@walkeros/server-source-fetch';
+import { startFlow } from '@walkeros/collector';
+
+const { sources } = await startFlow({
+  sources: {
+    fetch: { code: sourceFetch, config: {} },
+  },
+});
+
+Deno.serve(sources.fetch.push);`}
+  language="typescript"
+/>
+
+### Bun
+
+<CodeSnippet
+  code={`import { sourceFetch } from '@walkeros/server-source-fetch';
+import { startFlow } from '@walkeros/collector';
+
+const { sources } = await startFlow({
+  sources: {
+    fetch: { code: sourceFetch, config: {} },
+  },
+});
+
+Bun.serve({ fetch: sources.fetch.push, port: 3000 });`}
+  language="typescript"
+/>
+
+## Configuration
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `path` | `string` | `/collect` | Collection endpoint path |
+| `cors` | `boolean \| object` | `true` | CORS configuration |
+| `healthPath` | `string` | `/health` | Health check endpoint |
+| `maxRequestSize` | `number` | `102400` | Max request size in bytes (100KB) |
+| `maxBatchSize` | `number` | `100` | Max events per batch request |
+
+## Usage
+
+### Single Event
+
+<CodeSnippet
+  code={`fetch('https://your-endpoint.com/collect', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    name: 'page view',
+    data: { title: 'Home', path: '/' },
+  }),
+});`}
+  language="javascript"
+/>
+
+### Batch Events
+
+<CodeSnippet
+  code={`fetch('https://your-endpoint.com/collect', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    batch: [
+      { name: 'page view', data: { title: 'Home' } },
+      { name: 'button click', data: { id: 'cta' } },
+    ],
+  }),
+});`}
+  language="javascript"
+/>

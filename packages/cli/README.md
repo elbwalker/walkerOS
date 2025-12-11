@@ -24,6 +24,22 @@ npm install -g @walkeros/cli
 npm install @walkeros/cli
 ```
 
+## Quick Start
+
+```bash
+# Bundle a flow configuration
+walkeros bundle flow.json
+
+# Test with simulated events (no real API calls)
+walkeros simulate flow.json --event '{"name":"page view"}'
+
+# Push real events to destinations
+walkeros push flow.json --event '{"name":"page view"}'
+
+# Run a collection server locally
+walkeros run collect flow.json --port 3000
+```
+
 ## Commands
 
 ### bundle
@@ -85,6 +101,49 @@ walkeros simulate \
   --event '{"name":"page view","data":{"title":"Home"}}' \
   --json
 ```
+
+### push
+
+Execute your flow with real API calls to configured destinations. Unlike
+`simulate` which mocks API calls, `push` performs actual HTTP requests.
+
+```bash
+walkeros push <config-file> --event '<json>' [options]
+```
+
+**Options:**
+
+- `-e, --event <source>` - Event to push (JSON string, file path, or URL)
+  **Required**
+- `--flow <name>` - Flow name (for multi-flow configs)
+- `--json` - Output results as JSON
+- `-v, --verbose` - Verbose output
+- `-s, --silent` - Suppress output (for CI/CD)
+- `--local` - Execute locally without Docker
+
+**Event input formats:**
+
+```bash
+# Inline JSON
+walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}'
+
+# File path
+walkeros push flow.json --event ./events/order.json
+
+# URL
+walkeros push flow.json --event https://example.com/sample-event.json
+```
+
+**Push vs Simulate:**
+
+| Feature      | `push`                              | `simulate`         |
+| ------------ | ----------------------------------- | ------------------ |
+| API Calls    | Real HTTP requests                  | Mocked (captured)  |
+| Use Case     | Integration testing                 | Safe local testing |
+| Side Effects | Full (writes to DBs, sends to APIs) | None               |
+
+Use `simulate` first to validate configuration safely, then `push` to verify
+real integrations.
 
 ### run
 
@@ -176,12 +235,12 @@ Flow configs use the `Flow.Setup` format with `version` and `flows`:
       "server": {},
       "packages": {
         "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
-        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+        "@walkeros/server-source-express": {},
+        "@walkeros/destination-demo": {}
       },
       "sources": {
         "http": {
-          "code": "sourceExpress",
+          "package": "@walkeros/server-source-express",
           "config": {
             "settings": { "path": "/collect", "port": 8080 }
           }
@@ -189,7 +248,7 @@ Flow configs use the `Flow.Setup` format with `version` and `flows`:
       },
       "destinations": {
         "demo": {
-          "code": "destinationDemo",
+          "package": "@walkeros/destination-demo",
           "config": {
             "settings": { "name": "Demo" }
           }
@@ -202,6 +261,76 @@ Flow configs use the `Flow.Setup` format with `version` and `flows`:
 ```
 
 Platform is determined by the `web: {}` or `server: {}` key presence.
+
+### Package Configuration Patterns
+
+The CLI automatically resolves imports based on how you configure packages:
+
+**1. Default exports (recommended for single-export packages):**
+
+```json
+{
+  "packages": {
+    "@walkeros/server-destination-api": {}
+  },
+  "destinations": {
+    "api": {
+      "package": "@walkeros/server-destination-api"
+    }
+  }
+}
+```
+
+The CLI generates:
+`import _walkerosServerDestinationApi from '@walkeros/server-destination-api';`
+
+**2. Named exports (for multi-export packages):**
+
+```json
+{
+  "packages": {
+    "@walkeros/server-destination-gcp": {}
+  },
+  "destinations": {
+    "bigquery": {
+      "package": "@walkeros/server-destination-gcp",
+      "code": "destinationBigQuery"
+    },
+    "analytics": {
+      "package": "@walkeros/server-destination-gcp",
+      "code": "destinationAnalytics"
+    }
+  }
+}
+```
+
+The CLI generates:
+`import { destinationBigQuery, destinationAnalytics } from '@walkeros/server-destination-gcp';`
+
+**3. Utility imports (for helper functions):**
+
+```json
+{
+  "packages": {
+    "lodash": { "imports": ["get", "set"] }
+  },
+  "mappings": {
+    "custom": {
+      "data": "({ data }) => get(data, 'user.email')"
+    }
+  }
+}
+```
+
+The CLI generates: `import { get, set } from 'lodash';`
+
+**Key points:**
+
+- Omit `packages.imports` for destinations/sources - the default export is used
+  automatically
+- Only specify `code` when using a specific named export from a multi-export
+  package
+- Use `packages.imports` only for utilities needed in mappings or custom code
 
 ### Local Packages
 
@@ -364,13 +493,15 @@ walkeros bundle config.json
 - **Node.js**: 18+ or 22+
 - **Docker**: Not required for CLI (only for production deployment)
 
-## Documentation
+## Type Definitions
 
-Detailed guides in [docs/](./docs/):
+See [src/types.ts](./src/types.ts) for TypeScript interfaces.
 
-- [RUN_COMMAND.md](./docs/RUN_COMMAND.md) - Run command details
-- [PUBLISHING.md](./docs/PUBLISHING.md) - Publishing guide
-- [MANUAL_TESTING_GUIDE.md](./docs/MANUAL_TESTING_GUIDE.md) - Testing guide
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/cli/)
+- [Flow Configuration](https://www.walkeros.io/docs/getting-started/flow/)
+- [Docker Package](../docker/) - Production runtime
 
 ## License
 

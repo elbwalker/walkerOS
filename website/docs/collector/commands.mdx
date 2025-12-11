@@ -22,41 +22,31 @@ Commands</Link>.
 
 ## destination
 
-Add destinations to the collector for event processing. Destinations handle the
-actual delivery of events to third-party services.
+Add destinations to the collector. The recommended approach is to configure
+destinations during initialization with `startFlow()`:
 
 <CodeSnippet
-  code={`// Add destination dynamically at runtime
-const destinationLog = { push: console.log };
-elb('walker destination', destinationLog);
-
-// Real destination example
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
-elb('walker destination', destinationGtag, {
-/* custom config */
-});`}
-  language="javascript"
-/>
 
-:::tip
-
-Destinations are typically configured during collector initialization:
-
-<CodeSnippet
-  code={`const { collector, elb } = await startFlow({
-destinations: {
-gtag: {
-code: destinationGtag,
-config: {
-  /* custom config */
-},
-},
-},
+const { collector, elb } = await startFlow({
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        settings: { /* custom config */ },
+      },
+    },
+  },
 });`}
   language="typescript"
 />
 
-See destination-specific documentation for configuration options.
+:::tip
+
+For dynamic scenarios requiring runtime destination addition, use
+`elb('walker destination')` command or `collector.addDestination()`. See destination-specific documentation for
+configuration options.
 
 :::
 

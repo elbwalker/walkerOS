@@ -1,0 +1,49 @@
+service: walkeros-collector
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  memorySize: 256
+  timeout: 30
+  region: us-east-1
+  environment:
+    NODE_ENV: production
+
+  # IAM permissions for destinations
+  # iam:
+  #   role:
+  #     statements:
+  #       - Effect: Allow
+  #         Action:
+  #           - kinesis:PutRecord
+  #           - s3:PutObject
+  #         Resource: "*"
+
+functions:
+  collector:
+    handler: dist/index.handler
+    events:
+      # HTTP API (v2) - recommended for lower cost
+      - httpApi:
+          path: /collect
+          method: post
+      - httpApi:
+          path: /collect
+          method: get
+      - httpApi:
+          path: /health
+          method: get
+
+    # CloudWatch Logs
+    logRetentionInDays: 7
+
+    # Reserved concurrency to prevent runaway costs
+    # reservedConcurrency: 10
+
+plugins:
+  - serverless-plugin-typescript
+
+custom:
+  # Build configuration
+  serverless-plugin-typescript:
+    tsConfigFileLocation: './tsconfig.json'

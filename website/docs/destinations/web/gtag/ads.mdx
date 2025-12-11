@@ -39,21 +39,26 @@ function calls.
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationGtag, {
-  settings: {
-    ads: {
-      conversionId: 'AW-XXXXXXXXX', // Required
-      currency: 'EUR', // Default currency for conversions
-    },
-  },
-  mapping: {
-    order: {
-      complete: {
+const { elb } = await startFlow({
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
         settings: {
           ads: {
-            label: 'purchase_conversion', // Conversion label for order complete
+            conversionId: 'AW-XXXXXXXXX', // Required
+            currency: 'EUR', // Default currency for conversions
+          },
+        },
+        mapping: {
+          order: {
+            complete: {
+              settings: {
+                ads: {
+                  label: 'purchase_conversion', // Conversion label for order complete
+                },
+              },
+            },
           },
         },
       },

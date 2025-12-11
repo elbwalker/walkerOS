@@ -91,14 +91,14 @@ Walker.js supports multiple configuration approaches with different priorities:
 
 ### Settings
 
-| Name        | Type                | Default                                                              | Description                                                                                                      |
-| :---------- | :------------------ | :------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------- |
-| `elb`       | `string`            | `"elb"`                                                              | Global function name for event tracking                                                                          |
-| `name`      | `string`            | `"walkerjs"`                                                         | Global instance name                                                                                             |
-| `run`       | `boolean`           | `true`                                                               | Auto-initialize walker.js on load                                                                                |
-| `browser`   | `object \| boolean` | `{ run: true, session: true, scope: document.body, pageview: true }` | [Browser source configuration](https://www.elbwalker.com/docs/sources/web/browser/)                              |
-| `dataLayer` | `object \| boolean` | `false`                                                              | [DataLayer source configuration](https://www.elbwalker.com/docs/sources/web/dataLayer)                           |
-| `collector` | `object`            | `{}`                                                                 | [Collector configuration](https://www.elbwalker.com/docs/collector/) including destinations and consent settings |
+| Name        | Type                | Default                                                              | Description                                                                                                    |
+| :---------- | :------------------ | :------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------- |
+| `elb`       | `string`            | `"elb"`                                                              | Global function name for event tracking                                                                        |
+| `name`      | `string`            | `"walkerjs"`                                                         | Global instance name                                                                                           |
+| `run`       | `boolean`           | `true`                                                               | Auto-initialize walker.js on load                                                                              |
+| `browser`   | `object \| boolean` | `{ run: true, session: true, scope: document.body, pageview: true }` | [Browser source configuration](https://www.walkeros.io/docs/sources/web/browser/)                              |
+| `dataLayer` | `object \| boolean` | `false`                                                              | [DataLayer source configuration](https://www.walkeros.io/docs/sources/web/dataLayer)                           |
+| `collector` | `object`            | `{}`                                                                 | [Collector configuration](https://www.walkeros.io/docs/collector/) including destinations and consent settings |
 
 #### Browser Source Settings
 
@@ -119,10 +119,10 @@ Walker.js supports multiple configuration approaches with different priorities:
 
 #### Collector Settings
 
-| Name                     | Type     | Default                | Description                                                               |
-| :----------------------- | :------- | :--------------------- | :------------------------------------------------------------------------ |
-| `collector.consent`      | `object` | `{ functional: true }` | Default consent state                                                     |
-| `collector.destinations` | `object` | `{}`                   | [Destination configurations](https://www.elbwalker.com/docs/destinations) |
+| Name                     | Type     | Default                | Description                                                             |
+| :----------------------- | :------- | :--------------------- | :---------------------------------------------------------------------- |
+| `collector.consent`      | `object` | `{ functional: true }` | Default consent state                                                   |
+| `collector.destinations` | `object` | `{}`                   | [Destination configurations](https://www.walkeros.io/docs/destinations) |
 
 ### Full Configuration Object
 
@@ -212,7 +212,7 @@ Walker.js automatically tracks events based on HTML data attributes:
 ```
 
 For detailed information on data attributes, see the
-[Browser Source documentation](https://www.elbwalker.com/docs/sources/web/browser/tagging).
+[Browser Source documentation](https://www.walkeros.io/docs/sources/web/browser/tagging).
 
 ### Manual Event Tracking
 
@@ -324,7 +324,7 @@ window.elbConfig = {
 ```
 
 For comprehensive destination options, see the
-[Destinations documentation](https://www.elbwalker.com/docs/destinations/).
+[Destinations documentation](https://www.walkeros.io/docs/destinations/).
 
 ## Troubleshooting
 
@@ -391,13 +391,13 @@ npm run preview       # Serve examples on localhost:3333
 
 ## Related Documentation
 
-- **[Browser Source](https://www.elbwalker.com/docs/sources/web/browser/)** -
+- **[Browser Source](https://www.walkeros.io/docs/sources/web/browser/)** -
   Detailed DOM tracking capabilities
-- **[Collector](https://www.elbwalker.com/docs/collector/)** - Event processing
+- **[Collector](https://www.walkeros.io/docs/collector/)** - Event processing
   and routing
-- **[Destinations](https://www.elbwalker.com/docs/destinations/)** - Available
+- **[Destinations](https://www.walkeros.io/docs/destinations/)** - Available
   destination options
-- **[DataLayer Source](https://www.elbwalker.com/docs/sources/web/dataLayer/)** -
+- **[DataLayer Source](https://www.walkeros.io/docs/sources/web/dataLayer/)** -
   DataLayer integration details
 
 Walker.js combines all these components into a single, easy-to-use package

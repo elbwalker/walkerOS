@@ -8,7 +8,7 @@ sidebar_position: 99
 
 A source captures events from an environment (browser, server, third-party API) and forwards them to the walkerOS collector.
 
-## The Source Interface
+## The source interface
 
 Sources are async functions that receive configuration and environment, then return a source instance:
 
@@ -33,7 +33,7 @@ on?(event, context): void | Promise<void>; // Optional reactive hooks
   language="typescript"
 />
 
-## Types Bundle
+## Types bundle
 
 Sources use a `Types` interface to bundle all TypeScript types:
 
@@ -63,7 +63,7 @@ interface Types extends Source.Types<Settings, never, Elb.Fn, Env> {}`}
 3. **Push**: External push signature (what `source.push` exposes)
 4. **Env**: Internal dependencies (what source calls via `env.elb`)
 
-## Environment Parameter
+## Environment parameter
 
 The `env` parameter is always provided by the collector and contains:
 
@@ -88,7 +88,7 @@ elb('my event', { data: 'value' });
 
 The collector always provides `env.elb`. You provide other dependencies (like `window`, `document`, custom APIs) when configuring the source.
 
-## Minimal Example
+## Minimal example
 
 <CodeSnippet
   code={`import type { Source, Elb } from '@walkeros/core';
@@ -123,7 +123,7 @@ push: elb,
   language="typescript"
 />
 
-## Complete Example: Event API Source
+## Complete example: Event API source
 
 Capturing events from a third-party API with event listeners:
 
@@ -202,7 +202,7 @@ handlers.forEach((handler, event) => api.off(event, handler));
   language="typescript"
 />
 
-## Using Your Source
+## Using your source
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -229,7 +229,7 @@ env: {
   language="typescript"
 />
 
-## Testing Your Source
+## Testing your source
 
 ### Test Utilities
 
@@ -310,7 +310,7 @@ expect(api.off).toHaveBeenCalled();
   language="typescript"
 />
 
-## Common Patterns
+## Common patterns
 
 ### Polling for API Readiness
 
@@ -333,7 +333,7 @@ const api = await waitForAPI(() => window.myAPI || null);`}
   language="typescript"
 />
 
-## Source as Adapter Pattern
+## Source as adapter pattern
 
 Sources bridge external systems and the collector:
 
@@ -368,7 +368,7 @@ export type Push = Elb.Fn;`}
 
 The `Push` type parameter defines what your source exposes externally. Internally, all sources use `env.elb` to forward to the collector.
 
-## Key Concepts
+## Key concepts
 
 * **env is always provided**: Collector ensures env exists with elb
 * **Validate custom dependencies**: Only check optional env properties your source needs
@@ -377,7 +377,7 @@ The `Push` type parameter defines what your source exposes externally. Internall
 * **Cleanup**: Implement `destroy()` to remove listeners
 * **Stateless**: Let collector manage state
 
-## Next Steps
+## Next steps
 
 * Review <Link to="/docs/sources/web/browser">Browser Source</Link> for DOM patterns
 * Review <Link to="/docs/sources/web/dataLayer">DataLayer Source</Link> for interception patterns
