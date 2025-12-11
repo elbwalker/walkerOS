@@ -347,7 +347,5 @@ CORRECT: www.walkeros.io or relative paths DO NOT USE: legacy domain references
 
 ## Related
 
-- [Documentation Principles](../../docs/guidelines/documentation-principles.md) - Full guidelines
-- [Audit Summary](../../docs/audit/SUMMARY.md) - Known issues
 - [← Back to Hub](../../AGENT.md)
 ```
