@@ -246,16 +246,12 @@ product: {
 {
   mapping: {
     // Map incoming field names to walkerOS structure
-    data: {
+    name: { fn: (input) => `${input.entity} ${input.action}` },
+    data: 'payload',
+    user: {
       map: {
-        name: { fn: (input) => `${input.entity} ${input.action}` },
-        data: 'payload',
-        user: {
-          map: {
-            id: 'userId',
-            session: 'sessionId',
-          },
-        },
+        id: 'userId',
+        session: 'sessionId',
       },
     },
   },

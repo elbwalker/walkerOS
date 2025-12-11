@@ -57,7 +57,7 @@ AI-generated examples can be:
 
 ### Source of Truth Hierarchy
 
-```
+```text
 TIER 1: apps/quickstart/
   ✓ Tested  ✓ Compiled  ✓ CI-validated
   → USE FOR: All code examples
@@ -104,9 +104,9 @@ Before publishing ANY code example:
 
 ```mdx
 import { schemas } from '@walkeros/web-destination-gtag/dev';
-<PropertyTable schema={schemas.settings} /
+<PropertyTable schema={schemas.settings} />;
 
->
+;
 ```
 
 **When NOT to use:**
@@ -278,8 +278,7 @@ sidebar_position: [N]
 
 - [Related guide 1](/docs/...)
 
-```
-
+````mdx
 ---
 
 ## Priority Matrix
@@ -299,16 +298,16 @@ sidebar_position: [N]
 
 ### Event Naming
 
-```
+```text
 
 CORRECT: "page view", "product add", "order complete" WRONG: "page_view",
 "pageView", "PAGE VIEW"
-
 ```
+````
 
 ### Package References
 
-```
+```text
 
 CORRECT: `@walkeros/collector` (with backticks) WRONG: @walkeros/collector (no
 backticks)
@@ -317,9 +316,10 @@ backticks)
 
 ### Domain References
 
-```
+```text
 
-CORRECT: www.walkeros.io or relative paths DO NOT USE: legacy domain references
+CORRECT: `www.walkeros.io` or relative paths DO NOT USE: legacy domain
+references
 
 ```
 
@@ -348,4 +348,7 @@ CORRECT: www.walkeros.io or relative paths DO NOT USE: legacy domain references
 ## Related
 
 - [← Back to Hub](../../AGENT.md)
+
+```
+
 ```

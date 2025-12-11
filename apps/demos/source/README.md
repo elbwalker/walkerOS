@@ -1,6 +1,6 @@
 <div align="center">
-  <a href="https://www.elbwalker.com">
-    <img alt="elbwalker" src="https://www.elbwalker.com/img/elbwalker-logo.png" height="40px" />
+  <a href="https://www.walkeros.io">
+    <img alt="elbwalker" src="https://www.walkeros.io/img/elbwalker-logo.png" height="40px" />
   </a>
 </div>
 

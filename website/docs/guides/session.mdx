@@ -37,7 +37,7 @@ access permissions.
 
 ## Session data
 
-Depending on the `storage` parameter `consent`, the `sessionStart` function
+Depending on the `storage` and `consent` parameters, the `sessionStart` function
 returns an object with several properties. If a new session is detected,
 `isStart` is set to `true`, otherwise `false`.
 
@@ -47,7 +47,7 @@ returns an object with several properties. If a new session is detected,
 | storage   | boolean | If the storage was used to determine the session    |
 | id        | string  | Randomly generated or previously stored session id  |
 | start     | number  | Timestamp of session start                          |
-| marketing | true    | If the session was started by a marketing parameter |
+| marketing | boolean | If the session was started by a marketing parameter |
 | referrer  | string  | Hostname of the referring site if available         |
 
 With `storage: true` and granted `consent`, the returning object will be
@@ -107,7 +107,7 @@ are optional for customization:
 | ------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------- |
 | [consent](#consent) | Array&lt;string&gt;    | The consent state to permit or deny storage access                                                   |
 | [storage](#storage) | boolean                | If the storage should be used                                                                        |
-| [cb](#callback)     | false or<br />function | Callback function that gets called after the detection process. <br />Or to disable default callback |
+| [cb](#callback)     | false or<br />function | Callback function called after detection, or `false` to disable the default callback |
 
 :::info
 
@@ -134,7 +134,7 @@ elb('walker consent', { marketing: true }); // Triggers the session detection
 
 #### Storage
 
-Option to enable enable [sessionStorage](#sessionstorage) util to detect a new
+Option to enable the [sessionStorage](#sessionstorage) util to detect a new
 session with more accuracy and enhanced data.
 
 <CodeSnippet
@@ -353,7 +353,7 @@ By default the `document.referrer` is used, but it can be overwritten with the
   language="javascript"
 />
 
-domains can be extended, e.g., internal sub-domains. `Data` can be pre-defined,
+Domains can be extended, e.g., internal sub-domains. Data can be pre-defined,
 e.g., to use your ID.
 
 #### URL Customization

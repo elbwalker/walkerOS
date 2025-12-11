@@ -1,5 +1,6 @@
 # Website
 
-Visit [www.elbwalker.com](https://www.elbwalker.com/)
+Visit [www.walkeros.io](https://www.walkeros.io/)
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+This website is built using [Docusaurus](https://docusaurus.io/), a modern
+static website generator.

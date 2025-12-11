@@ -101,7 +101,7 @@ describe('destination plausible', () => {
   });
 
   test('init with domain', async () => {
-    const domain = 'elbwalker.com';
+    const domain = 'walkeros.io';
     const mockScript = {
       src: '',
       dataset: {} as Record<string, string>,

@@ -43,13 +43,13 @@ const mapping = {
   },
 
   // Wildcard: any action
-  product: {
-    '*': { name: 'product_interaction' },
+  foo: {
+    '*': { name: 'foo_interaction' },
   },
 
   // Wildcard: any entity
   '*': {
-    click: { name: 'generic_click' },
+    bar: { name: 'generic_bar' },
   },
 };
 ```
@@ -243,13 +243,13 @@ test('produces expected output', () => {
 
 ## Where Mapping Lives
 
-| Location                        | Purpose                                   |
-| ------------------------------- | ----------------------------------------- |
-| Source config                   | Transform raw input → walkerOS events     |
-| Destination config              | Transform walkerOS events → vendor format |
-| `src/examples/mapping.ts`       | Default mapping examples (example-driven) |
-| `packages/core/src/mapping.ts`  | Core mapping functions                    |
-| `apps/quickstart/src/mappings/` | Validated examples                        |
+| Location                       | Purpose                                   |
+| ------------------------------ | ----------------------------------------- |
+| Source config                  | Transform raw input → walkerOS events     |
+| Destination config             | Transform walkerOS events → vendor format |
+| `src/examples/mapping.ts`      | Default mapping examples (example-driven) |
+| `packages/core/src/mapping.ts` | Core mapping functions                    |
+| `apps/quickstart/src/`         | Validated examples                        |
 
 ## Related
 

@@ -3,7 +3,7 @@ import { sendWeb } from '..';
 describe('sendWeb', () => {
   const data = { key: 'value' };
   const dataStringified = JSON.stringify({ key: 'value' });
-  const url = 'https://api.elbwalker.com/';
+  const url = 'https://api.walkeros.io/';
 
   const mockFetch = jest.fn(
     () =>
