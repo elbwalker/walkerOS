@@ -55,6 +55,33 @@ describe('destinationCode', () => {
       expect(settings.scripts).toHaveLength(2);
     });
 
+    it('injects script tags for each URL in scripts array', () => {
+      const initialScriptCount =
+        document.head.querySelectorAll('script').length;
+
+      const context: InitContext = {
+        collector: createMockCollector(),
+        config: {
+          settings: {
+            scripts: ['https://example.com/a.js', 'https://example.com/b.js'],
+          },
+        },
+        env: {},
+        logger: createMockLogger(),
+      };
+
+      destinationCode.init!(context);
+
+      const scripts = document.head.querySelectorAll('script');
+      expect(scripts.length).toBe(initialScriptCount + 2);
+
+      const addedScripts = Array.from(scripts).slice(-2);
+      expect(addedScripts[0].src).toBe('https://example.com/a.js');
+      expect(addedScripts[0].async).toBe(true);
+      expect(addedScripts[1].src).toBe('https://example.com/b.js');
+      expect(addedScripts[1].async).toBe(true);
+    });
+
     it('executes init code string', () => {
       const mockLogger = createMockLogger();
       const context: InitContext = {

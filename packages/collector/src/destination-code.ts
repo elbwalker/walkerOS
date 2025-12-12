@@ -7,7 +7,21 @@ export const destinationCode: Destination.Instance = {
 
   init(context) {
     const { config, logger } = context;
-    const initCode = (config.settings as Settings | undefined)?.init;
+    const settings = config.settings as Settings | undefined;
+
+    // Inject scripts (fire and forget)
+    const scripts = settings?.scripts;
+    if (scripts && typeof document !== 'undefined') {
+      for (const src of scripts) {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        document.head.appendChild(script);
+      }
+    }
+
+    // Execute init code
+    const initCode = settings?.init;
     if (!initCode) return;
     try {
       const fn = new Function('context', initCode);
