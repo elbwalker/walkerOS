@@ -27,7 +27,16 @@ jobs:
 
       - run: npm ci
       - run: npm run build
-      - run: npm run build:website
+
+      - name: Build website (production)
+        if: github.event_name != 'pull_request'
+        run: npm run build:website
+
+      - name: Build website (PR preview)
+        if: github.event_name == 'pull_request'
+        run: npm run build:website
+        env:
+          DOCUSAURUS_BASEURL: /preview/pr-${{ github.event.pull_request.number }}/
 
       - name: Deploy to production
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
