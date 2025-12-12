@@ -39,7 +39,9 @@ const { collector, elb } = await startFlow({
 Load external scripts during initialization - useful for tag management:
 
 <CodeSnippet
-  code={`const { elb } = await startFlow({
+  code={`import { startFlow } from '@walkeros/collector';
+
+const { elb } = await startFlow({
   destinations: {
     gtm: {
       code: true,
