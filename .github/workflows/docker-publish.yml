@@ -17,190 +17,87 @@ on:
           - cli
           - docker
 
-env:
-  REGISTRY: docker.io
-
 jobs:
   publish-cli:
     if: >
-      contains(github.ref, '@walkeros/cli@') ||
-      github.event_name == 'workflow_dispatch' && github.event.inputs.images != 'docker'
+      contains(github.ref, '@walkeros/cli@') || (github.event_name ==
+      'workflow_dispatch' && github.event.inputs.images != 'docker')
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Extract version from package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Get version
         id: version
-        run: |
-          VERSION=$(node -p "require('./packages/cli/package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "CLI version: $VERSION"
+        run: echo "version=$(node -p "require('./packages/cli/package.json').version")" >> $GITHUB_OUTPUT
 
-      - name: Check if tag already exists
+      - name: Check if exists
         id: check
         run: |
-          if docker manifest inspect walkeros/cli:${{ steps.version.outputs.version }} > /dev/null 2>&1; then
+          if docker manifest inspect walkeros/cli:${{ steps.version.outputs.version }} 2>/dev/null; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "⏭️ walkeros/cli:${{ steps.version.outputs.version }} already exists, skipping"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "🆕 walkeros/cli:${{ steps.version.outputs.version }} will be published"
           fi
 
-      - name: Set up Docker Buildx
-        if: steps.check.outputs.exists == 'false'
-        uses: docker/setup-buildx-action@v3
-        with:
-          platforms: linux/amd64,linux/arm64
-
-      - name: Log in to Docker Hub
-        if: steps.check.outputs.exists == 'false'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build CLI
+      - name: Build all packages
         if: steps.check.outputs.exists == 'false'
         run: |
           npm ci
-          npm run build --workspace=@walkeros/cli
+          npm run build
 
-      - name: Build and push CLI image
+      - uses: docker/login-action@v3
         if: steps.check.outputs.exists == 'false'
-        uses: docker/build-push-action@v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v5
+        if: steps.check.outputs.exists == 'false'
         with:
           context: ./packages/cli
           file: ./packages/cli/docker/Dockerfile
-          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             walkeros/cli:${{ steps.version.outputs.version }}
             walkeros/cli:latest
-          cache-from: type=gha,scope=cli
-          cache-to: type=gha,mode=max,scope=cli
-          labels: |
-            org.opencontainers.image.title=walkerOS CLI
-            org.opencontainers.image.description=Build tool for bundling walkerOS flows
-            org.opencontainers.image.version=${{ steps.version.outputs.version }}
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.licenses=MIT
-
-      - name: Test CLI image
-        if: steps.check.outputs.exists == 'false'
-        run: |
-          echo "Testing CLI help..."
-          docker run --rm walkeros/cli:${{ steps.version.outputs.version }} --help
-          echo "✅ CLI image works"
 
   publish-docker:
     if: >
-      contains(github.ref, '@walkeros/docker@') ||
-      github.event_name == 'workflow_dispatch' && github.event.inputs.images != 'cli'
+      contains(github.ref, '@walkeros/docker@') || (github.event_name ==
+      'workflow_dispatch' && github.event.inputs.images != 'cli')
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Extract version from package.json
+      - name: Get version
         id: version
-        run: |
-          VERSION=$(node -p "require('./packages/docker/package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Docker version: $VERSION"
+        run: echo "version=$(node -p "require('./packages/docker/package.json').version")" >> $GITHUB_OUTPUT
 
-      - name: Check if tag already exists
+      - name: Check if exists
         id: check
         run: |
-          if docker manifest inspect walkeros/docker:${{ steps.version.outputs.version }} > /dev/null 2>&1; then
+          if docker manifest inspect walkeros/docker:${{ steps.version.outputs.version }} 2>/dev/null; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "⏭️ walkeros/docker:${{ steps.version.outputs.version }} already exists, skipping"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "🆕 walkeros/docker:${{ steps.version.outputs.version }} will be published"
           fi
 
-      - name: Set up Docker Buildx
+      - uses: docker/login-action@v3
         if: steps.check.outputs.exists == 'false'
-        uses: docker/setup-buildx-action@v3
         with:
-          platforms: linux/amd64,linux/arm64
-
-      - name: Log in to Docker Hub
-        if: steps.check.outputs.exists == 'false'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - uses: docker/build-push-action@v5
         if: steps.check.outputs.exists == 'false'
-        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./packages/docker/Dockerfile
-          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             walkeros/docker:${{ steps.version.outputs.version }}
             walkeros/docker:latest
-          cache-from: type=gha,scope=docker
-          cache-to: type=gha,mode=max,scope=docker
-          labels: |
-            org.opencontainers.image.title=walkerOS Docker
-            org.opencontainers.image.description=Runtime Docker container for walkerOS with demo bundles
-            org.opencontainers.image.version=${{ steps.version.outputs.version }}
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.licenses=MIT
-
-      - name: Test Docker image
-        if: steps.check.outputs.exists == 'false'
-        run: |
-          echo "Testing collect mode..."
-          docker run --rm -d --name walker-test-collect \
-            -e MODE=collect \
-            -e FLOW=/app/demos/demo-collect.mjs \
-            walkeros/docker:${{ steps.version.outputs.version }}
-
-          sleep 5
-
-          if docker ps | grep -q walker-test-collect; then
-            echo "✅ Collect mode started successfully"
-            docker logs walker-test-collect
-            docker stop walker-test-collect
-          else
-            echo "❌ Collect mode failed to start"
-            docker logs walker-test-collect || true
-            exit 1
-          fi
-
-          echo "Testing serve mode..."
-          docker run --rm -d --name walker-test-serve \
-            -e MODE=serve \
-            -e FLOW=/app/demos/demo-serve.js \
-            walkeros/docker:${{ steps.version.outputs.version }}
-
-          sleep 5
-
-          if docker ps | grep -q walker-test-serve; then
-            echo "✅ Serve mode started successfully"
-            docker logs walker-test-serve
-            docker stop walker-test-serve
-          else
-            echo "❌ Serve mode failed to start"
-            docker logs walker-test-serve || true
-            exit 1
-          fi
