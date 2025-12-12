@@ -82,6 +82,34 @@ describe('destinationCode', () => {
       expect(addedScripts[1].async).toBe(true);
     });
 
+    it('injects scripts before running init code', () => {
+      const initialScriptCount =
+        document.head.querySelectorAll('script').length;
+      const mockLogger = createMockLogger();
+
+      const context: InitContext = {
+        collector: createMockCollector(),
+        config: {
+          settings: {
+            scripts: ['https://example.com/lib.js'],
+            init: "context.logger.info('init ran')",
+          },
+        },
+        env: {},
+        logger: mockLogger,
+      };
+
+      destinationCode.init!(context);
+
+      // Scripts should be injected
+      const scripts = document.head.querySelectorAll('script');
+      expect(scripts.length).toBe(initialScriptCount + 1);
+      expect(Array.from(scripts).pop()?.src).toBe('https://example.com/lib.js');
+
+      // Init code should also run
+      expect(mockLogger.info).toHaveBeenCalledWith('init ran');
+    });
+
     it('executes init code string', () => {
       const mockLogger = createMockLogger();
       const context: InitContext = {
