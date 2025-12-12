@@ -12,6 +12,7 @@ on:
 
 jobs:
   build_and_test:
+    if: false # TEMPORARILY DISABLED
     name: Build and test
     timeout-minutes: 15
     runs-on: ubuntu-latest

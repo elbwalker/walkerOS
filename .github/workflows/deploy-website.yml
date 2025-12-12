@@ -15,7 +15,7 @@ on:
 
 jobs:
   deploy:
-    if: github.event.action != 'closed'
+    if: false # TEMPORARILY DISABLED (was: github.event.action != 'closed')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

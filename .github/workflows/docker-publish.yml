@@ -2,28 +2,13 @@ name: Docker Publish
 
 on:
   push:
-    tags:
-      - '@walkeros/cli@*'
-      - '@walkeros/docker@*'
     branches:
-      - 570-docker-publish
+      - main
+      - 570-docker-publish  # TODO: Remove after testing
   workflow_dispatch:
-    inputs:
-      images:
-        description: 'Images to publish'
-        required: true
-        default: 'both'
-        type: choice
-        options:
-          - both
-          - cli
-          - docker
 
 jobs:
   publish-cli:
-    if: >
-      contains(github.ref, '@walkeros/cli@') || (github.event_name ==
-      'workflow_dispatch' && github.event.inputs.images != 'docker')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -74,9 +59,6 @@ jobs:
             walkeros/cli:latest
 
   publish-docker:
-    if: >
-      contains(github.ref, '@walkeros/docker@') || (github.event_name ==
-      'workflow_dispatch' && github.event.inputs.images != 'cli')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
