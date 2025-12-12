@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-plausible",
   "description": "Plausible web destination for walkerOS",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -35,7 +35,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/web-core": "0.4.2"
+    "@walkeros/web-core": "0.5.0"
   },
   "devDependencies": {},
   "repository": {

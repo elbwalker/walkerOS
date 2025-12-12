@@ -46,18 +46,20 @@ Setup in your project:
 
 ```javascript
 import { startFlow } from '@walkeros/collector';
-import { createSource } from '@walkeros/core';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector } = await startFlow({
   sources: {
-    browser: createSource(sourceBrowser, {
-      settings: {
-        pageview: true,
-        session: true,
-        elb: 'elb', // Browser source will set window.elb automatically
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          pageview: true,
+          session: true,
+          elb: 'elb', // Browser source will set window.elb automatically
+        },
       },
-    }),
+    },
   },
 });
 ```
@@ -68,12 +70,9 @@ Load the source via dynamic import:
 
 ```html
 <script>
-  // Load the collector, core utilities, and source
+  // Load the collector and source
   const { startFlow } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
-  );
-  const { createSource } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/core/dist/index.mjs'
   );
   const { sourceBrowser } = await import(
     'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
@@ -81,13 +80,16 @@ Load the source via dynamic import:
 
   const { collector, elb } = await startFlow({
     sources: {
-      browser: createSource(sourceBrowser, {
-        settings: {
-          prefix: 'data-elb',
-          pageview: true,
-          session: true,
+      browser: {
+        code: sourceBrowser,
+        config: {
+          settings: {
+            prefix: 'data-elb',
+            pageview: true,
+            session: true,
+          },
         },
-      }),
+      },
     },
   });
 </script>
@@ -113,8 +115,8 @@ Load the source via dynamic import:
 >
 > 1.  **Collector elb** (`elb` from `startFlow`): Basic event tracking that
 >     works with all sources and destinations
-> 2.  **Browser Source elb** (`collector.sources.browser.elb` or direct from
->     `createSource`): Enhanced function with browser-specific features
+> 2.  **Browser Source elb** (`collector.sources.browser.elb`): Enhanced
+>     function with browser-specific features
 >
 > **Browser Source elb adds:**
 >
@@ -123,8 +125,7 @@ Load the source via dynamic import:
 > - **elbLayer Integration**: Automatic processing of queued commands
 > - **Element parameters**: Support for element parameters in DOM commands
 >
-> Use **separate source creation** for direct access to the enhanced elb
-> function, or access it via `collector.sources.browser.elb` in the unified API.
+> Access the enhanced elb via `collector.sources.browser.elb`.
 >
 > See [Commands](https://www.walkeros.io/docs/sources/web/browser/commands) for
 > full browser source API documentation.

@@ -1,5 +1,20 @@
 # @walkeros/storybook-addon
 
+## 0.4.0
+
+### Minor Changes
+
+- just flow
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies [22cd09c]
+  - @walkeros/web-source-browser@0.5.0
+  - @walkeros/collector@0.5.0
+  - @walkeros/core@0.5.0
+  - @walkeros/web-core@0.5.0
+
 ## 0.3.0
 
 ### Minor Changes

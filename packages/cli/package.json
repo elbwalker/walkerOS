@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/cli",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
@@ -33,7 +33,7 @@
     "docker:publish": "bash scripts/publish-docker.sh"
   },
   "dependencies": {
-    "@walkeros/core": "^0.4.2",
+    "@walkeros/core": "^0.5.0",
     "@walkeros/docker": "*",
     "@walkeros/server-core": "*",
     "chalk": "^5.3.0",

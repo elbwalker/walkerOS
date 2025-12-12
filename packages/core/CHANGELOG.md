@@ -1,5 +1,11 @@
 # @walkeros/core
 
+## 0.5.0
+
+### Minor Changes
+
+- just flow
+
 ## 0.4.2
 
 ### Patch Changes
