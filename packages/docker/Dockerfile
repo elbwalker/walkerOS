@@ -1,33 +1,7 @@
 # walkerOS Docker Container
-# Runtime container with baked-in web bundle and demo bundles
-# Multi-stage build for optimized production images
+# Runtime container for executing pre-built flows
+# Expects dist/ to be pre-built before docker build
 
-# ============================================================================
-# Stage 1: Build Docker Runtime
-# ============================================================================
-FROM node:22-alpine AS builder
-
-WORKDIR /app
-
-# Copy workspace configuration
-COPY package.json package-lock.json turbo.json ./
-COPY packages/docker/package.json ./packages/docker/
-
-# Copy only config package (for build tools)
-COPY packages/config ./packages/config
-
-# Install dependencies (including devDependencies for build)
-RUN npm ci
-
-# Copy docker source code
-COPY packages/docker ./packages/docker
-
-# Build the docker package (pure runtime only)
-RUN npm run build --workspace=@walkeros/docker
-
-# ============================================================================
-# Stage 2: Production Runtime
-# ============================================================================
 FROM node:22-alpine
 
 WORKDIR /app
@@ -35,24 +9,15 @@ WORKDIR /app
 # Install tini for proper signal handling
 RUN apk add --no-cache tini
 
-# Install production dependencies only
-COPY package.json package-lock.json ./
-COPY packages/docker/package.json ./packages/docker/
-
-# Copy only the Docker runtime (no build tools, no other packages)
-COPY --from=builder /app/packages/docker/dist ./packages/docker/dist
-
-# Copy pre-built web bundle (checked into repo)
-COPY packages/cli/examples/web-serve.js /app/web-serve.js
+# Copy pre-built dist (built in CI before docker build)
+COPY packages/docker/dist ./packages/docker/dist
 
 # Copy demo bundles for quick-start testing
-# Note: Demo bundles are self-contained (only use express/cors at runtime)
 COPY packages/docker/demos /app/demos
 
-# Install production dependencies
-# - Workspace install: For runtime code (packages/docker/dist)
-# After Phase 1, demo bundles are self-contained (no @walkeros/core needed)
-RUN npm ci --production --workspace=@walkeros/docker
+# Install only the runtime dependencies (express, cors)
+# Note: @walkeros/core is bundled into dist, not needed at runtime
+RUN npm install express@^4.18.2 cors@^2.8.5 --omit=dev
 
 # Create non-root user
 RUN addgroup -g 1001 walker && \
