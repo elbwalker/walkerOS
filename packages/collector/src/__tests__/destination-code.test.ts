@@ -128,6 +128,33 @@ describe('destinationCode', () => {
       expect(mockLogger.info).toHaveBeenCalledWith('initialized');
     });
 
+    it('handles empty scripts array gracefully', () => {
+      const initialScriptCount =
+        document.head.querySelectorAll('script').length;
+      const mockLogger = createMockLogger();
+      const context: InitContext = {
+        collector: createMockCollector(),
+        config: {
+          settings: {
+            scripts: [],
+            init: "context.logger.info('init ran')",
+          },
+        },
+        env: {},
+        logger: mockLogger,
+      };
+
+      expect(() => destinationCode.init!(context)).not.toThrow();
+
+      // No scripts should be added
+      expect(document.head.querySelectorAll('script').length).toBe(
+        initialScriptCount,
+      );
+
+      // Init code should still run
+      expect(mockLogger.info).toHaveBeenCalledWith('init ran');
+    });
+
     it('handles missing init code gracefully', () => {
       const context: InitContext = {
         collector: createMockCollector(),
