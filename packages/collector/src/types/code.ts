@@ -1,6 +1,7 @@
 import type { Destination, Mapping, On, WalkerOS } from '@walkeros/core';
 
 export interface Settings {
+  scripts?: string[];
   init?: string;
   on?: string;
   push?: string;

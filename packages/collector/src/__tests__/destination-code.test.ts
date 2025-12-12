@@ -44,6 +44,17 @@ describe('destinationCode', () => {
   });
 
   describe('init', () => {
+    it('accepts scripts array in settings', () => {
+      const settings: Settings = {
+        scripts: [
+          'https://example.com/analytics.js',
+          'https://example.com/pixel.js',
+        ],
+        init: "console.log('ready')",
+      };
+      expect(settings.scripts).toHaveLength(2);
+    });
+
     it('executes init code string', () => {
       const mockLogger = createMockLogger();
       const context: InitContext = {
