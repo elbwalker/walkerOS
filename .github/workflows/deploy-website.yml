@@ -17,9 +17,6 @@ jobs:
   deploy:
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: website
     steps:
       - uses: actions/checkout@v4
 
@@ -27,13 +24,13 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: website/package-lock.json
 
       - run: npm ci
-      - run: npm run build
+      - run: npm run build:website
 
       - name: Deploy to production
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: website
         run: node scripts/deploy-bunny.mjs
         env:
           BUNNY_STORAGE_ZONE: ${{ secrets.BUNNY_WEBSITE_STORAGE_ZONE }}
@@ -43,6 +40,7 @@ jobs:
 
       - name: Deploy PR preview
         if: github.event_name == 'pull_request'
+        working-directory: website
         run: node scripts/deploy-bunny.mjs
         env:
           BUNNY_STORAGE_ZONE: ${{ secrets.BUNNY_WEBSITE_STORAGE_ZONE }}
