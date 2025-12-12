@@ -1,5 +1,22 @@
 # walkeros-demo-react
 
+## 1.3.0
+
+### Minor Changes
+
+- just flow
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies [22cd09c]
+  - @walkeros/web-source-browser@0.5.0
+  - @walkeros/collector@0.5.0
+  - @walkeros/core@0.5.0
+  - @walkeros/web-core@0.5.0
+  - @walkeros/web-destination-api@0.5.0
+  - @walkeros/web-destination-gtag@0.5.0
+
 ## 1.2.0
 
 ### Minor Changes

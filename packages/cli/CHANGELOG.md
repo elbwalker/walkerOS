@@ -1,5 +1,18 @@
 # @walkeros/cli
 
+## 0.5.0
+
+### Minor Changes
+
+- just flow
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/core@0.5.0
+  - @walkeros/docker@0.3.0
+  - @walkeros/server-core@0.5.0
+
 ## 0.4.2
 
 ### Patch Changes

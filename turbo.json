@@ -5,7 +5,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**"]
+      "outputs": ["dist/**", "build/**"],
+      "env": ["DOCUSAURUS_BASEURL"]
     },
     "build:website": {
       "dependsOn": ["^build"],

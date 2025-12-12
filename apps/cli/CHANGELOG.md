@@ -1,5 +1,16 @@
 # walkeros
 
+## 0.5.0
+
+### Minor Changes
+
+- just flow
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/cli@0.5.0
+
 ## 0.4.2
 
 ### Patch Changes

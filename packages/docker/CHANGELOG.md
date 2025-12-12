@@ -1,5 +1,16 @@
 # @walkeros/docker
 
+## 0.3.0
+
+### Minor Changes
+
+- just flow
+
+### Patch Changes
+
+- Updated dependencies
+  - @walkeros/core@0.5.0
+
 ## 0.2.2
 
 ### Patch Changes

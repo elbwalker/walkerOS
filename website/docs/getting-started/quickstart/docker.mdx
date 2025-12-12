@@ -143,10 +143,7 @@ Flow files use the NEW format with separate `flow` and `build` sections:
         "version": "latest",
         "imports": ["destinationDemo"]
       }
-    },
-    "code": "// Custom initialization\n",
-    "template": "/app/packages/cli/templates/base.hbs",
-    "tempDir": "/tmp"
+    }
   }
 }
 ```
@@ -161,9 +158,6 @@ Flow files use the NEW format with separate `flow` and `build` sections:
 
 **Build section** (build-time configuration):
 - **packages**: npm packages to download dynamically with version and imports
-- **code**: Custom initialization code (required, can be a comment)
-- **template**: Path to Handlebars template for bundle generation
-- **tempDir**: Temporary directory for build artifacts
 
 ## Next steps
 

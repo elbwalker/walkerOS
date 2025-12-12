@@ -1,0 +1,110 @@
+name: Deploy Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - '.github/workflows/deploy-website.yml'
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - 'website/**'
+      - '.github/workflows/deploy-website.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Build website (production)
+        if: github.event_name != 'pull_request'
+        run: npm run build:website
+
+      - name: Build website (PR preview)
+        if: github.event_name == 'pull_request'
+        run: npm run build:website
+        env:
+          DOCUSAURUS_BASEURL: /preview/pr-${{ github.event.pull_request.number }}/
+
+      - name: Deploy to production
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: website
+        run: node scripts/deploy-bunny.mjs
+        env:
+          BUNNY_STORAGE_ZONE: ${{ secrets.BUNNY_WEBSITE_STORAGE_ZONE }}
+          BUNNY_STORAGE_PASSWORD: ${{ secrets.BUNNY_WEBSITE_STORAGE_PASSWORD }}
+          BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+          BUNNY_PULLZONE_URL: ${{ secrets.BUNNY_WEBSITE_PULLZONE_URL }}
+
+      - name: Deploy PR preview
+        if: github.event_name == 'pull_request'
+        working-directory: website
+        run: node scripts/deploy-bunny.mjs
+        env:
+          BUNNY_STORAGE_ZONE: ${{ secrets.BUNNY_WEBSITE_STORAGE_ZONE }}
+          BUNNY_STORAGE_PASSWORD: ${{ secrets.BUNNY_WEBSITE_STORAGE_PASSWORD }}
+          BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+          BUNNY_PULLZONE_URL: ${{ secrets.BUNNY_WEBSITE_PULLZONE_URL }}
+          DEPLOY_PATH: preview/pr-${{ github.event.pull_request.number }}
+
+      - name: Comment PR with preview URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previewUrl = `${{ secrets.BUNNY_WEBSITE_PULLZONE_URL }}/preview/pr-${{ github.event.pull_request.number }}/`;
+            const body = `### Preview deployed\n\n${previewUrl}`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes('### Preview deployed'));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  cleanup:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete preview folder
+        run: |
+          curl -X DELETE \
+            "https://storage.bunnycdn.com/${{ secrets.BUNNY_WEBSITE_STORAGE_ZONE }}/preview/pr-${{ github.event.pull_request.number }}/" \
+            -H "AccessKey: ${{ secrets.BUNNY_WEBSITE_STORAGE_PASSWORD }}"
+          echo "Deleted preview/pr-${{ github.event.pull_request.number }}/"
+
+      - name: Purge preview cache
+        run: |
+          curl -X POST \
+            "https://api.bunny.net/purge?url=$(echo '${{ secrets.BUNNY_WEBSITE_PULLZONE_URL }}/preview/pr-${{ github.event.pull_request.number }}/*' | jq -sRr @uri)" \
+            -H "AccessKey: ${{ secrets.BUNNY_API_KEY }}"
+          echo "Cache purged"

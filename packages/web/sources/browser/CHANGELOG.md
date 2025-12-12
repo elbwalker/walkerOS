@@ -1,5 +1,18 @@
 # @walkeros/web-source-browser
 
+## 0.5.0
+
+### Minor Changes
+
+- just flow
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies [22cd09c]
+  - @walkeros/collector@0.5.0
+  - @walkeros/web-core@0.5.0
+
 ## 0.4.2
 
 ### Patch Changes
