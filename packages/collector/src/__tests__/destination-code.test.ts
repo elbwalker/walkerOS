@@ -44,6 +44,72 @@ describe('destinationCode', () => {
   });
 
   describe('init', () => {
+    it('accepts scripts array in settings', () => {
+      const settings: Settings = {
+        scripts: [
+          'https://example.com/analytics.js',
+          'https://example.com/pixel.js',
+        ],
+        init: "console.log('ready')",
+      };
+      expect(settings.scripts).toHaveLength(2);
+    });
+
+    it('injects script tags for each URL in scripts array', () => {
+      const initialScriptCount =
+        document.head.querySelectorAll('script').length;
+
+      const context: InitContext = {
+        collector: createMockCollector(),
+        config: {
+          settings: {
+            scripts: ['https://example.com/a.js', 'https://example.com/b.js'],
+          },
+        },
+        env: {},
+        logger: createMockLogger(),
+      };
+
+      destinationCode.init!(context);
+
+      const scripts = document.head.querySelectorAll('script');
+      expect(scripts.length).toBe(initialScriptCount + 2);
+
+      const addedScripts = Array.from(scripts).slice(-2);
+      expect(addedScripts[0].src).toBe('https://example.com/a.js');
+      expect(addedScripts[0].async).toBe(true);
+      expect(addedScripts[1].src).toBe('https://example.com/b.js');
+      expect(addedScripts[1].async).toBe(true);
+    });
+
+    it('injects scripts before running init code', () => {
+      const initialScriptCount =
+        document.head.querySelectorAll('script').length;
+      const mockLogger = createMockLogger();
+
+      const context: InitContext = {
+        collector: createMockCollector(),
+        config: {
+          settings: {
+            scripts: ['https://example.com/lib.js'],
+            init: "context.logger.info('init ran')",
+          },
+        },
+        env: {},
+        logger: mockLogger,
+      };
+
+      destinationCode.init!(context);
+
+      // Scripts should be injected
+      const scripts = document.head.querySelectorAll('script');
+      expect(scripts.length).toBe(initialScriptCount + 1);
+      expect(Array.from(scripts).pop()?.src).toBe('https://example.com/lib.js');
+
+      // Init code should also run
+      expect(mockLogger.info).toHaveBeenCalledWith('init ran');
+    });
+
     it('executes init code string', () => {
       const mockLogger = createMockLogger();
       const context: InitContext = {
@@ -60,6 +126,33 @@ describe('destinationCode', () => {
       destinationCode.init!(context);
 
       expect(mockLogger.info).toHaveBeenCalledWith('initialized');
+    });
+
+    it('handles empty scripts array gracefully', () => {
+      const initialScriptCount =
+        document.head.querySelectorAll('script').length;
+      const mockLogger = createMockLogger();
+      const context: InitContext = {
+        collector: createMockCollector(),
+        config: {
+          settings: {
+            scripts: [],
+            init: "context.logger.info('init ran')",
+          },
+        },
+        env: {},
+        logger: mockLogger,
+      };
+
+      expect(() => destinationCode.init!(context)).not.toThrow();
+
+      // No scripts should be added
+      expect(document.head.querySelectorAll('script').length).toBe(
+        initialScriptCount,
+      );
+
+      // Init code should still run
+      expect(mockLogger.info).toHaveBeenCalledWith('init ran');
     });
 
     it('handles missing init code gracefully', () => {
