@@ -48,6 +48,14 @@ for their respective cloud platforms.
 
 Many sources are both - they handle platform transport AND transform data.
 
+## Choose Your Template
+
+| Complexity            | Template       | When to Use                           |
+| --------------------- | -------------- | ------------------------------------- |
+| Simple transformation | `fetch/`       | Generic HTTP handler, data conversion |
+| Platform transport    | `gcp/`, `aws/` | Cloud platform integration            |
+| Browser interception  | `dataLayer/`   | DOM events, array interception        |
+
 ## Process Overview
 
 ```
@@ -118,6 +126,24 @@ ls packages/server/sources/
 # - fetch: Generic HTTP handler (simplest server pattern)
 # - gcp: Cloud Functions specific
 ```
+
+### Gate: Research Complete
+
+Before proceeding, confirm:
+
+- [ ] Input trigger identified (HTTP, webhook, DOM, dataLayer)
+- [ ] Input schema documented (required/optional fields)
+- [ ] Fields mapped to walkerOS event structure
+
+### Checkpoint: Research Review (Optional)
+
+If working with human oversight, pause here to confirm:
+
+- Input format and trigger mechanism correct?
+- Event name mapping makes sense?
+- Any platform quirks or auth requirements?
+
+Continue only after approval.
 
 ---
 
@@ -276,6 +302,12 @@ export * as schemas from './schemas';
 export * as examples from './examples';
 ```
 
+### Gate: Examples Valid
+
+- [ ] All example files compile (`npm run build`)
+- [ ] Can trace: input → expected output for each example
+- [ ] Edge cases included (minimal input, invalid input)
+
 ---
 
 ## Phase 3: Define Mapping
@@ -341,6 +373,11 @@ Input: inputs.pageViewInput
   ↓ properties.page_path → path
 Output: Should match outputs.pageViewEvent
 ```
+
+### Gate: Mapping Verified
+
+- [ ] Event name map covers main input types
+- [ ] Each mapping rule traces correctly to expected output
 
 ---
 
@@ -485,6 +522,11 @@ export async function push(
 export default { transformInput, transformBatch, push };
 ```
 
+### Gate: Implementation Compiles
+
+- [ ] `npm run build` passes
+- [ ] `npm run lint` passes
+
 ---
 
 ## Phase 6: Test Against Examples
@@ -575,6 +617,12 @@ describe('HTTP handler', () => {
 });
 ```
 
+### Gate: Tests Pass
+
+- [ ] `npm run test` passes
+- [ ] Tests verify against example outputs (not hardcoded values)
+- [ ] Invalid input handled gracefully (no crashes)
+
 ---
 
 ## Phase 7: Document
@@ -595,15 +643,15 @@ Key requirements for source documentation:
 
 ---
 
-## Validation Checklist
+## Source-Specific Validation
 
-- [ ] `npm run build` passes
-- [ ] `npm run test` passes
-- [ ] `npm run lint` passes
-- [ ] Examples cover main input patterns
-- [ ] Tests verify against example outputs
-- [ ] Invalid input handled gracefully
-- [ ] README documents input format
+Beyond [understanding-development](../understanding-development/SKILL.md)
+requirements (build, test, lint, no `any`):
+
+- [ ] `dev.ts` exports `schemas` and `examples`
+- [ ] Examples include edge cases (minimal, invalid input)
+- [ ] Invalid input returns gracefully (no crashes, clear error)
+- [ ] Tests use examples for assertions (not hardcoded values)
 
 ---
 
