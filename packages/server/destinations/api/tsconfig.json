@@ -1,0 +1,9 @@
+{
+  "extends": "@walkeros/config/tsconfig/node.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "module": "es2020"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
