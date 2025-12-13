@@ -17,19 +17,19 @@ export interface RuntimeConfig {
 /**
  * Run a pre-built flow bundle
  *
- * @param flowPath - Absolute path to pre-built .mjs flow file
+ * @param file - Absolute path to pre-built .mjs flow file
  * @param config - Optional runtime configuration
  * @param logger - Logger instance for output
  */
 export async function runFlow(
-  flowPath: string,
+  file: string,
   config: RuntimeConfig | undefined,
   logger: Logger.Instance,
 ): Promise<void> {
-  logger.info(`Loading flow from ${flowPath}`);
+  logger.info(`Loading flow from ${file}`);
 
   try {
-    const absolutePath = resolve(flowPath);
+    const absolutePath = resolve(file);
     const flowDir = dirname(absolutePath);
 
     // Change working directory to flow's directory
@@ -42,7 +42,7 @@ export async function runFlow(
 
     if (!module.default || typeof module.default !== 'function') {
       logger.throw(
-        `Invalid flow bundle: ${flowPath} must export a default function`,
+        `Invalid flow bundle: ${file} must export a default function`,
       );
     }
 
@@ -50,9 +50,7 @@ export async function runFlow(
     const result = await module.default(config);
 
     if (!result || !result.collector) {
-      logger.throw(
-        `Invalid flow bundle: ${flowPath} must return { collector }`,
-      );
+      logger.throw(`Invalid flow bundle: ${file} must return { collector }`);
     }
 
     const { collector } = result;

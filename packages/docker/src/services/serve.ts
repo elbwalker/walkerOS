@@ -7,7 +7,7 @@ export interface ServeConfig {
   host?: string;
   servePath?: string;
   serveName?: string;
-  filePath?: string;
+  file?: string;
 }
 
 /**
@@ -29,8 +29,7 @@ export async function runServeMode(
   const host = process.env.HOST || config?.host || '0.0.0.0';
 
   // File path: ENV variable > config > baked-in default
-  const filePath =
-    process.env.FILE_PATH || config?.filePath || '/app/web-serve.js';
+  const file = process.env.FILE || config?.file || '/app/web-serve.js';
 
   // Serve name (filename in URL): ENV variable > config > default
   const serveName = process.env.SERVE_NAME || config?.serveName || 'walker.js';
@@ -42,7 +41,7 @@ export async function runServeMode(
   const urlPath = servePath ? `/${servePath}/${serveName}` : `/${serveName}`;
 
   logger.info('Starting single-file server...');
-  logger.info(`File: ${filePath}`);
+  logger.info(`File: ${file}`);
   logger.info(`URL: http://${host}:${port}${urlPath}`);
 
   try {
@@ -55,14 +54,14 @@ export async function runServeMode(
         version: VERSION,
         timestamp: Date.now(),
         mode: 'serve',
-        file: filePath,
+        file: file,
         url: urlPath,
       });
     });
 
     // Serve single file at custom URL path
     app.get(urlPath, (req, res) => {
-      res.sendFile(filePath);
+      res.sendFile(file);
     });
 
     // Start server

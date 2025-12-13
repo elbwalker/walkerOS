@@ -4,11 +4,26 @@ on:
   push:
     branches:
       - '*'
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.mdx'
+      - 'docs/**'
+      - 'website/**'
+      - '.github/workflows/website.yml'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'website/**'
+      - '.github/workflows/website.yml'
 
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build_and_test:
@@ -22,11 +37,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
-      - run: npm install
+      - run: npm ci
       - name: Run tests
-        run: npm run test -- ${{ (github.ref == 'refs/heads/main' || github.base_ref == 'main') && '--force' || '' }}
+        run:
+          npm run test -- ${{ (github.ref == 'refs/heads/main' ||
+          github.base_ref == 'main') && '--force' || '' }}
         env:
           CI: true
       - name: Show test summary

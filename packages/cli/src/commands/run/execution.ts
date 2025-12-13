@@ -42,7 +42,7 @@ export async function executeRunLocal(
         host: options.host,
         serveName: options.serveName,
         servePath: options.servePath,
-        filePath: flowPath || undefined,
+        file: flowPath || undefined,
       };
       await runServeMode(config, logger.scope('serve'));
       break;

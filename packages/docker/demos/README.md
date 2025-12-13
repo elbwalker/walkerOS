@@ -8,7 +8,7 @@ installation.
 ## Usage
 
 Run
-`docker run -p 8080:8080 -e MODE=collect -e FLOW=/app/demos/demo-collect.mjs walkeros/docker`
+`docker run -p 8080:8080 -e MODE=collect -e FILE=/app/demos/demo-collect.mjs walkeros/docker`
 for instant testing.
 
 ---
@@ -31,7 +31,7 @@ processes events.
 ```bash
 docker run -p 8080:8080 \
   -e MODE=collect \
-  -e FLOW=/app/demos/demo-collect.mjs \
+  -e FILE=/app/demos/demo-collect.mjs \
   walkeros/docker:latest
 ```
 
@@ -52,7 +52,7 @@ Web bundle demo with automatic browser event tracking.
 ```bash
 docker run -p 3000:8080 \
   -e MODE=serve \
-  -e FLOW=/app/demos/demo-serve.mjs \
+  -e FILE=/app/demos/demo-serve.js \
   walkeros/docker:latest
 ```
 
@@ -67,7 +67,7 @@ Run both demos together to see the full event pipeline (browser → collector):
 ```bash
 docker run -p 8080:8080 \
   -e MODE=collect \
-  -e FLOW=/app/demos/demo-collect.mjs \
+  -e FILE=/app/demos/demo-collect.mjs \
   --name walker-collector \
   walkeros/docker:latest
 ```
@@ -77,7 +77,7 @@ docker run -p 8080:8080 \
 ```bash
 docker run -p 3000:8080 \
   -e MODE=serve \
-  -e FLOW=/app/demos/demo-serve.mjs \
+  -e FILE=/app/demos/demo-serve.js \
   --name walker-web \
   walkeros/docker:latest
 ```
@@ -107,7 +107,7 @@ walkeros bundle --config my-flow.json --output my-flow.mjs
 docker run -p 8080:8080 \
   -v $(pwd)/my-flow.mjs:/app/flow.mjs \
   -e MODE=collect \
-  -e FLOW=/app/flow.mjs \
+  -e FILE=/app/flow.mjs \
   walkeros/docker:latest
 ```
 
@@ -117,7 +117,7 @@ Or build a custom image:
 FROM walkeros/docker:latest
 COPY my-flow.mjs /app/flow.mjs
 ENV MODE=collect
-ENV FLOW=/app/flow.mjs
+ENV FILE=/app/flow.mjs
 ```
 
 ## Rebuilding Demo Bundles
