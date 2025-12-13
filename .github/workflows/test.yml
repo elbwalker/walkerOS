@@ -5,7 +5,8 @@ on:
     branches:
       - '*'
     paths-ignore:
-      - '**.md'
+      - '**/*.md'
+      - '**/*.mdx'
       - 'docs/**'
       - 'website/**'
       - '.github/workflows/website.yml'
@@ -40,7 +41,9 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - name: Run tests
-        run: npm run test -- ${{ (github.ref == 'refs/heads/main' || github.base_ref == 'main') && '--force' || '' }}
+        run:
+          npm run test -- ${{ (github.ref == 'refs/heads/main' ||
+          github.base_ref == 'main') && '--force' || '' }}
         env:
           CI: true
       - name: Show test summary

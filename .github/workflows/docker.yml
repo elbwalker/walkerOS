@@ -82,7 +82,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: dist
-          path: packages/
+          path: .
 
       - uses: docker/login-action@v3
         with:
@@ -108,7 +108,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: dist
-          path: packages/
+          path: .
 
       - uses: docker/login-action@v3
         with:
