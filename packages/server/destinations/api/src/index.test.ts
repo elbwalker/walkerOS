@@ -1,11 +1,10 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { DestinationAPI } from '.';
-import { createCollector } from '@walkeros/collector';
-import { createEvent, clone } from '@walkeros/core';
+import { createEvent, clone, createMockLogger } from '@walkeros/core';
 import { examples } from '.';
 
 describe('Destination API', () => {
-  const mockSendServer = jest.fn(); //.mockImplementation(console.log);
+  const mockSendServer = jest.fn();
 
   let destination: DestinationAPI.Destination;
   let event: WalkerOS.Event;
@@ -14,6 +13,8 @@ describe('Destination API', () => {
   // Create test environment using clone and modify sendServer function
   const testEnv = clone(examples.env.standard);
   testEnv.sendServer = mockSendServer;
+
+  const mockLogger = createMockLogger();
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -28,6 +29,7 @@ describe('Destination API', () => {
       collector: {} as Collector.Instance,
       config: {},
       env: testEnv,
+      logger: mockLogger,
     });
     expect(mockSendServer).not.toHaveBeenCalled();
 
@@ -36,6 +38,7 @@ describe('Destination API', () => {
       collector: {} as Collector.Instance,
       config: { settings: { url } },
       env: testEnv,
+      logger: mockLogger,
     });
     expect(mockSendServer).toHaveBeenCalledTimes(1);
 
@@ -61,6 +64,7 @@ describe('Destination API', () => {
         settings: { url },
       },
       env: customEnv,
+      logger: mockLogger,
     });
 
     expect(customSendServer).toHaveBeenCalledTimes(1);
@@ -81,6 +85,7 @@ describe('Destination API', () => {
         settings: { url, transform: () => 'transformed' },
       },
       env: testEnv,
+      logger: mockLogger,
     });
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
@@ -96,6 +101,7 @@ describe('Destination API', () => {
         settings: { url, headers: { foo: 'bar' } },
       },
       env: testEnv,
+      logger: mockLogger,
     });
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
@@ -113,6 +119,7 @@ describe('Destination API', () => {
         settings: { url, method: 'POST' },
       },
       env: testEnv,
+      logger: mockLogger,
     });
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
@@ -130,6 +137,7 @@ describe('Destination API', () => {
         settings: { url, timeout: 10000 },
       },
       env: testEnv,
+      logger: mockLogger,
     });
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
@@ -148,12 +156,38 @@ describe('Destination API', () => {
         mapping: examples.mapping.config,
       },
       env: testEnv,
+      logger: mockLogger,
     });
 
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
       JSON.stringify(event),
       expect.any(Object),
+    );
+  });
+
+  test('logging', async () => {
+    const testLogger = createMockLogger();
+
+    await destination.push(event, {
+      collector: {} as Collector.Instance,
+      config: { settings: { url, method: 'PUT' } },
+      env: testEnv,
+      logger: testLogger,
+    });
+
+    expect(testLogger.debug).toHaveBeenCalledWith(
+      'API destination sending request',
+      expect.objectContaining({
+        url,
+        method: 'PUT',
+        eventName: event.name,
+      }),
+    );
+
+    expect(testLogger.debug).toHaveBeenCalledWith(
+      'API destination response',
+      expect.objectContaining({ ok: undefined }),
     );
   });
 });

@@ -66,8 +66,16 @@ const sidebars: SidebarsConfig = {
         id: 'destinations/index',
       },
       items: [
-        // Web destinations - flattened
-        'destinations/web/api',
+        // API destination (web + server)
+        {
+          type: 'category',
+          label: 'API',
+          link: {
+            type: 'doc',
+            id: 'destinations/api/index',
+          },
+          items: ['destinations/api/web', 'destinations/api/server'],
+        },
         {
           type: 'category',
           label: 'Google tag (gtag)',

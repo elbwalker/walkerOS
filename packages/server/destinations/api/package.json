@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-api",
   "description": "API server destination for walkerOS",
-  "version": "0.1.2",
+  "version": "0.5.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -11,6 +11,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
     },
     "./examples": {
       "types": "./dist/examples/index.d.ts",
@@ -30,8 +35,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "0.1.2",
-    "@walkeros/server-core": "0.1.2"
+    "@walkeros/core": "0.5.0",
+    "@walkeros/server-core": "0.5.0"
   },
   "devDependencies": {},
   "repository": {

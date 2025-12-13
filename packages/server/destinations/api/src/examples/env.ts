@@ -1,4 +1,4 @@
-import type { Environment } from '../types';
+import type { Env } from '../types';
 
 /**
  * Example environment configurations for API destination
@@ -9,12 +9,12 @@ import type { Environment } from '../types';
 
 const noop = () => Promise.resolve({ ok: true });
 
-export const init: Environment | undefined = {
+export const init: Env | undefined = {
   sendServer: undefined,
 };
 
-export const standard: Environment = {
+export const standard: Env = {
   sendServer: Object.assign(noop, {
     // Add any specific properties if needed for sendServer
-  }) as unknown as Environment['sendServer'],
+  }) as unknown as Env['sendServer'],
 };
