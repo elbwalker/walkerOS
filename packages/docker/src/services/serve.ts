@@ -1,5 +1,5 @@
 import express from 'express';
-import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
 import type { Logger } from '@walkeros/core';
 import { VERSION } from '../version';
 
@@ -29,8 +29,8 @@ export async function runServeMode(
   // Host priority: ENV variable > config > default
   const host = process.env.HOST || config?.host || '0.0.0.0';
 
-  // File path: ENV variable > config > baked-in default
-  const file = process.env.FILE || config?.file || '/app/web-serve.js';
+  // File path: ENV variable > config > baked-in default (resolve to absolute)
+  const file = resolve(process.env.FILE || config?.file || '/app/web-serve.js');
 
   // Serve name (filename in URL): ENV variable > config > default
   const serveName = process.env.SERVE_NAME || config?.serveName || 'walker.js';
@@ -62,19 +62,38 @@ export async function runServeMode(
 
     // Serve single file at custom URL path
     app.get(urlPath, (req, res) => {
-      try {
-        if (!existsSync(file)) {
-          logger.error(`File not found: ${file}`);
-          res.status(404).send('File not found');
-          return;
+      // Set content type before streaming
+      res.type('application/javascript');
+
+      // Allow dotfiles since file paths may include dotfile directories
+      res.sendFile(file, { dotfiles: 'allow' }, (err) => {
+        if (err && !res.headersSent) {
+          const errCode = (err as NodeJS.ErrnoException).code;
+          // Express 5 uses HTTP-style errors with status/statusCode
+          const errStatus =
+            (err as { status?: number; statusCode?: number }).status ||
+            (err as { status?: number; statusCode?: number }).statusCode;
+
+          // Log errors (except client disconnections)
+          if (errCode !== 'ECONNABORTED') {
+            logger.error(
+              `sendFile error for ${file}: ${err.message} (code: ${errCode}, status: ${errStatus})`,
+            );
+          }
+
+          // Send appropriate error response (check both Node.js codes and HTTP status)
+          if (
+            errStatus === 404 ||
+            errCode === 'ENOENT' ||
+            errCode === 'EISDIR' ||
+            errCode === 'ENOTDIR'
+          ) {
+            res.status(404).send('File not found');
+          } else if (errCode !== 'ECONNABORTED') {
+            res.status(500).send('Internal server error');
+          }
         }
-        const content = readFileSync(file, 'utf-8');
-        res.type('application/javascript').send(content);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        logger.error(`Failed to read file: ${message}`);
-        res.status(500).send('Internal server error');
-      }
+      });
     });
 
     // Start server

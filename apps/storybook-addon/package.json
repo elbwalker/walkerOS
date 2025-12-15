@@ -88,7 +88,7 @@
     "zx": "^8.8.5"
   },
   "peerDependencies": {
-    "storybook": "^9.0.0"
+    "storybook": "^10.0.0"
   },
   "engines": {
     "node": ">=20"
