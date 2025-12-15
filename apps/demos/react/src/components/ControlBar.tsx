@@ -2,18 +2,17 @@ import { useState, useEffect } from 'react';
 
 type ConsentState = 'unknown' | 'accepted' | 'denied';
 
+const consentKey = 'walker_consent';
+
 function ControlBar() {
-  const [consentState, setConsentState] = useState<ConsentState>('unknown');
-  const consentKey = 'walker_consent';
+  // Use lazy initializer to read from localStorage on mount
+  const [consentState, setConsentState] = useState<ConsentState>(() => {
+    const stored = localStorage.getItem(consentKey);
+    return stored ? (stored as ConsentState) : 'unknown';
+  });
 
   useEffect(() => {
-    // Check initial consent state from localStorage
-    const storedConsent = localStorage.getItem(consentKey);
-    if (storedConsent) {
-      setConsentState(storedConsent as ConsentState);
-    }
-
-    // Listen for consent changes
+    // Listen for consent changes from other tabs/windows
     const handleStorageChange = () => {
       const newConsent = localStorage.getItem(consentKey);
       setConsentState(newConsent ? (newConsent as ConsentState) : 'unknown');

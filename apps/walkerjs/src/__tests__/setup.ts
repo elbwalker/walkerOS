@@ -46,22 +46,6 @@ global.beforeEach(() => {
     takeRecords: jest.fn(),
   }));
 
-  // Other browser APIs that might be needed
-  Object.defineProperty(window, 'location', {
-    value: {
-      hostname: 'localhost',
-      pathname: '/',
-      search: '',
-      hash: '',
-      href: 'http://localhost:3000/',
-      origin: 'http://localhost:3000',
-      protocol: 'http:',
-      host: 'localhost:3000',
-      port: '3000',
-    },
-    writable: true,
-  });
-
   // Mock document.currentScript for auto-init tests
   Object.defineProperty(document, 'currentScript', {
     value: null,

@@ -1,4 +1,5 @@
 import express from 'express';
+import { readFileSync, existsSync } from 'fs';
 import type { Logger } from '@walkeros/core';
 import { VERSION } from '../version';
 
@@ -61,7 +62,19 @@ export async function runServeMode(
 
     // Serve single file at custom URL path
     app.get(urlPath, (req, res) => {
-      res.sendFile(file);
+      try {
+        if (!existsSync(file)) {
+          logger.error(`File not found: ${file}`);
+          res.status(404).send('File not found');
+          return;
+        }
+        const content = readFileSync(file, 'utf-8');
+        res.type('application/javascript').send(content);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error(`Failed to read file: ${message}`);
+        res.status(500).send('Internal server error');
+      }
     });
 
     // Start server

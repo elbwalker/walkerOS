@@ -30,7 +30,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "zod": "^4.1.12"
+    "zod": "^4.1.13"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

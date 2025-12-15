@@ -21,8 +21,8 @@
     "@walkeros/cli": "0.5.0"
   },
   "devDependencies": {
-    "tsup": "^8.4.0",
-    "typescript": "^5.8.2"
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
