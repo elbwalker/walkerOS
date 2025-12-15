@@ -1,8 +1,5 @@
-export * as schemas from './schemas';
+import { schemas as coreSchemas, type JSONSchema } from '@walkeros/core/dev';
 
-export {
-  settings,
-  browserConfig,
-  dataLayerConfig,
-  collectorConfig,
-} from './schemas';
+export const schemas: { settings: JSONSchema } = {
+  settings: coreSchemas.FlowSchemas.configJsonSchema,
+};
