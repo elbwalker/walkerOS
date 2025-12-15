@@ -23,7 +23,7 @@
     "@iconify/react": "^6.0.2",
     "@walkeros/collector": "0.5.0",
     "@walkeros/core": "0.5.0",
-    "@walkeros/explorer": "^0.3.1",
+    "@walkeros/explorer": "0.5.0",
     "@walkeros/walker.js": "0.5.0",
     "@walkeros/web-destination-api": "0.5.0",
     "@walkeros/web-destination-gtag": "0.5.0",
