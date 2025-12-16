@@ -6,7 +6,7 @@ import {
 
 export default defineConfig([
   buildModules({
-    terserOptions: {}, // Don't mangle here
+    terserOptions: { mangle: false }, // Don't mangle identifiers
   }),
   buildExamples(),
   buildModules({

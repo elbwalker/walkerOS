@@ -6,12 +6,12 @@ import {
 
 export default defineConfig([
   buildModules({
-    terserOptions: {},
+    terserOptions: { mangle: false },
   }),
   // Build browser-safe schemas export
   buildModules({
     entry: ['src/schemas.ts'],
-    terserOptions: {},
+    terserOptions: { mangle: false },
   }),
   buildExamples(),
   // Schemas build (separate entry for documentation/tooling)
