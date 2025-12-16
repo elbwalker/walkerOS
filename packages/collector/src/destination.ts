@@ -290,48 +290,62 @@ export async function destinationPush<Destination extends Destination.Instance>(
   };
 
   const eventMapping = processed.mapping;
+  const mappingKey = processed.mappingKey || '* *';
+
   if (eventMapping?.batch && destination.pushBatch) {
-    const batched = eventMapping.batched || {
-      key: processed.mappingKey || '',
-      events: [],
-      data: [],
-    };
-    batched.events.push(processed.event);
-    if (isDefined(processed.data)) batched.data.push(processed.data);
+    // Initialize batch registry on destination (not on shared mapping config)
+    destination.batches = destination.batches || {};
 
-    eventMapping.batchFn =
-      eventMapping.batchFn ||
-      debounce((destination, collector) => {
-        const batchDestType = destination.type || 'unknown';
-        const batchLogger = collector.logger.scope(batchDestType);
+    // Get or create batch state for this mapping key
+    if (!destination.batches[mappingKey]) {
+      const batched: Destination.Batch<unknown> = {
+        key: mappingKey,
+        events: [],
+        data: [],
+      };
 
-        const batchContext: Destination.PushBatchContext = {
-          collector,
-          config,
-          data: processed.data,
-          mapping: eventMapping,
-          env: mergeEnvironments(destination.env, config.env),
-          logger: batchLogger,
-        };
+      destination.batches[mappingKey] = {
+        batched,
+        batchFn: debounce(() => {
+          const batchState = destination.batches![mappingKey];
+          const currentBatched = batchState.batched;
 
-        batchLogger.debug('push batch', {
-          events: batched.events.length,
-        });
+          const batchContext: Destination.PushBatchContext = {
+            collector,
+            config,
+            // Note: batch.data contains all transformed data; context.data is for single events
+            data: undefined,
+            mapping: eventMapping,
+            env: mergeEnvironments(destination.env, config.env),
+            logger: destLogger,
+          };
 
-        useHooks(
-          destination.pushBatch!,
-          'DestinationPushBatch',
-          (collector as Collector.Instance).hooks,
-        )(batched, batchContext);
+          destLogger.debug('push batch', {
+            events: currentBatched.events.length,
+          });
 
-        batchLogger.debug('push batch done');
+          useHooks(
+            destination.pushBatch!,
+            'DestinationPushBatch',
+            collector.hooks,
+          )(currentBatched, batchContext);
 
-        batched.events = [];
-        batched.data = [];
-      }, eventMapping.batch);
+          destLogger.debug('push batch done');
 
-    eventMapping.batched = batched;
-    eventMapping.batchFn?.(destination, collector);
+          // Reset batch
+          currentBatched.events = [];
+          currentBatched.data = [];
+        }, eventMapping.batch),
+      };
+    }
+
+    // Add event to batch
+    const batchState = destination.batches[mappingKey];
+    batchState.batched.events.push(processed.event);
+    if (isDefined(processed.data)) batchState.batched.data.push(processed.data);
+
+    // Trigger debounced batch
+    batchState.batchFn();
   } else {
     destLogger.debug('push', { event: processed.event.name });
 

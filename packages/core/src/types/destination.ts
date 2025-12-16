@@ -60,6 +60,7 @@ export interface Instance<T extends TypesGeneric = Types> {
   config: Config<T>;
   queue?: WalkerOS.Events;
   dlq?: DLQ;
+  batches?: BatchRegistry<Mapping<T>>;
   type?: string;
   env?: Env<T>;
   init?: InitFn<T>;
@@ -126,13 +127,15 @@ export interface InitContext<T extends TypesGeneric = Types> {
   logger: Logger.Instance;
 }
 
-export interface PushContext<T extends TypesGeneric = Types>
-  extends Context<T> {
+export interface PushContext<
+  T extends TypesGeneric = Types,
+> extends Context<T> {
   mapping?: WalkerOSMapping.Rule<Mapping<T>>;
 }
 
-export interface PushBatchContext<T extends TypesGeneric = Types>
-  extends Context<T> {
+export interface PushBatchContext<
+  T extends TypesGeneric = Types,
+> extends Context<T> {
   mapping?: WalkerOSMapping.Rule<Mapping<T>>;
 }
 
@@ -161,6 +164,13 @@ export interface Batch<Mapping> {
   events: WalkerOS.Events;
   data: Array<Data>;
   mapping?: WalkerOSMapping.Rule<Mapping>;
+}
+
+export interface BatchRegistry<Mapping> {
+  [mappingKey: string]: {
+    batched: Batch<Mapping>;
+    batchFn: () => void;
+  };
 }
 
 export type Data =
