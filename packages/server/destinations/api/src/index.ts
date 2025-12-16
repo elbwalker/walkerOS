@@ -16,8 +16,8 @@ export const destinationAPI: Destination = {
   env: { sendServer },
 
   async push(event, { config, mapping, data, env, logger }) {
-    const { settings = {} as Settings } = config;
-    const { url, headers, method, transform, timeout } = settings;
+    const { settings } = config;
+    const { url, headers, method, transform, timeout } = settings || {};
 
     if (!url) return;
 

@@ -26,7 +26,10 @@ export const customOptionsPost = {
   url: 'https://api.example.com/events',
   body: JSON.stringify(sampleEvent),
   options: {
-    headers: { 'X-API-Key': 'secret', 'Content-Type': 'application/json' },
+    headers: {
+      'X-API-Key': 'YOUR_API_KEY',
+      'Content-Type': 'application/json',
+    },
     method: 'PUT',
     timeout: 10000,
   },
