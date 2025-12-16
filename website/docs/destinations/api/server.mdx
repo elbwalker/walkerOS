@@ -1,0 +1,207 @@
+---
+title: Server
+description: Server-side HTTP API destination for Node.js
+package: '@walkeros/server-destination-api'
+path: packages/server/destinations/api
+sidebar_position: 2
+---
+
+import { schemas } from '@walkeros/server-destination-api/dev';
+
+# Server API Destination
+
+<PackageLink
+  env="server"
+  github="packages/server/destinations/api"
+  npm="@walkeros/server-destination-api"
+/>
+
+The server API destination sends events from Node.js to any HTTP(S) endpoint
+using native HTTP/HTTPS modules.
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-api`}
+  language="bash"
+/>
+
+## Setup
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationAPI } from '@walkeros/server-destination-api';
+
+await startFlow({
+  destinations: {
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://api.example.com/events',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+## Configuration reference
+
+<PropertyTable schema={schemas.settings} />
+
+## Usage
+
+### Basic Usage
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationAPI } from '@walkeros/server-destination-api';
+
+await startFlow({
+  destinations: {
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://api.example.com/events',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer your-token',
+          },
+          timeout: 5000,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### With Custom Transform
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationAPI } from '@walkeros/server-destination-api';
+
+await startFlow({
+  destinations: {
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://api.example.com/events',
+          transform: (event, config, mapping) => {
+            return JSON.stringify({
+              timestamp: Date.now(),
+              event_name: event.name,
+              properties: event.data,
+            });
+          },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+## Examples
+
+### Webhook Integration
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationAPI } from '@walkeros/server-destination-api';
+
+await startFlow({
+  destinations: {
+    webhook: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://hooks.example.com/webhook',
+          headers: {
+            'X-Webhook-Secret': process.env.WEBHOOK_SECRET,
+          },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Custom Analytics Backend
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationAPI } from '@walkeros/server-destination-api';
+
+await startFlow({
+  destinations: {
+    analytics: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://analytics.internal.com/ingest',
+          method: 'PUT',
+          headers: {
+            'X-API-Key': process.env.ANALYTICS_API_KEY,
+          },
+          timeout: 10000,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### With Event Mapping
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationAPI } from '@walkeros/server-destination-api';
+
+await startFlow({
+  destinations: {
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: {
+          url: 'https://api.example.com/events',
+        },
+        mapping: {
+          page: {
+            view: {
+              data: {
+                map: {
+                  pageUrl: 'data.path',
+                  pageTitle: 'data.title',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+## Features
+
+- **Native HTTP/HTTPS** - Uses Node.js native modules for optimal performance
+- **Automatic Protocol Selection** - Chooses HTTP or HTTPS based on URL
+- **Configurable Timeout** - Default 5000ms, configurable per destination
+- **Custom Transform** - Transform event data before sending
+- **Dependency Injection** - Mock sendServer for testing
+
+## Related
+
+- [Web API Destination](/docs/destinations/api/web) - Browser-side variant
+- [Mapping](/docs/mapping) - Transform events before sending

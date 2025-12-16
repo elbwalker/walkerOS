@@ -6,13 +6,9 @@ import {
 
 export default defineConfig([
   buildModules({
-    terserOptions: { mangle: false }, // Don't mangle here
+    terserOptions: { mangle: false }, // Don't mangle identifiers
   }),
-  // Build browser-safe schemas export
-  buildModules({
-    entry: ['src/schemas.ts'],
-    terserOptions: { mangle: false },
-  }),
+  buildExamples(),
   buildModules({
     entry: ['src/dev.ts'],
     outDir: 'dist',

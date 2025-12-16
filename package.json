@@ -23,8 +23,10 @@
     "website"
   ],
   "scripts": {
-    "build": "turbo run build --filter=!@walkeros/website --output-logs=errors-only",
-    "build:website": "turbo run build --filter=@walkeros/website  --output-logs=errors-only",
+    "build": "npm run build:packages && npm run build:apps && npm run build:website",
+    "build:packages": "turbo run build --filter='./packages/**'",
+    "build:apps": "turbo run build --filter='./apps/*'",
+    "build:website": "turbo run build --filter=@walkeros/website",
     "clean": "turbo run clean",
     "dev": "turbo run dev --output-logs=errors-only",
     "format": "prettier --write .",
