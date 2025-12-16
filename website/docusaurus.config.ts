@@ -12,6 +12,22 @@ const config: Config = {
   tagline: 'Open-source event data collection platform',
   favicon: 'img/favicon.png',
 
+  // Build optimizations - reduces memory usage and build time significantly
+  // See: https://docusaurus.io/blog/releases/3.8
+  future: {
+    v4: {
+      removeLegacyPostBuildHeadAttribute: true,
+    },
+    experimental_faster: {
+      swcJsLoader: true, // Use SWC instead of Babel
+      swcJsMinimizer: true, // Use SWC instead of Terser (less memory)
+      swcHtmlMinimizer: true, // Use SWC for HTML minification
+      lightningCssMinimizer: true, // Use Lightning CSS instead of cssnano
+      rspackBundler: true, // Use Rspack instead of webpack (much faster, less memory)
+      mdxCrossCompilerCache: true, // Compile MDX only once
+    },
+  },
+
   // Set the production url of your site here
   url: 'https://www.walkeros.io',
   // Set the /<baseUrl>/ pathname under which your site is served

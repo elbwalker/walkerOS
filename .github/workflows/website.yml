@@ -32,6 +32,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - run: corepack enable
       - run: npm ci
       - run: npm run build
 

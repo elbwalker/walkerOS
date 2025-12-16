@@ -30,15 +30,16 @@
   "dependencies": {
     "@walkeros/core": "*",
     "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "express": "^5.2.1",
+    "router": "^2.2.0"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node-fetch": "^2.6.13",
     "@walkeros/config": "*",
     "node-fetch": "^3.3.2",
-    "tsx": "^4.0.0"
+    "tsx": "^4.21.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
