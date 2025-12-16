@@ -30,7 +30,8 @@
   "dependencies": {
     "@walkeros/core": "*",
     "cors": "^2.8.5",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "router": "^2.2.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

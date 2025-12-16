@@ -67,8 +67,8 @@
   },
   "devDependencies": {
     "@walkeros/config": "*",
-    "@storybook/addon-docs": "^10.1.8",
-    "@storybook/react-vite": "^10.1.8",
+    "@storybook/addon-docs": "^10.1.9",
+    "@storybook/react-vite": "^10.1.9",
     "@types/node": "^25",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
@@ -80,11 +80,11 @@
     "prompts": "^2.4.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "storybook": "^10.1.8",
+    "storybook": "^10.1.9",
     "ts-dedent": "^2.2.0",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
-    "vite": "^7.2.7",
+    "vite": "^7.3.0",
     "zx": "^8.8.5"
   },
   "peerDependencies": {

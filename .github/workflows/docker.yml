@@ -29,6 +29,8 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - run: corepack enable
+
       - name: Get versions
         id: versions
         run: |

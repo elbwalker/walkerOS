@@ -57,21 +57,10 @@
   },
   "browserslist": [
     "> 0.2%",
-    "not dead",
-    "not ie < 11",
-    "not op_mini all"
+    "not dead"
   ],
   "overrides": {
-    "ajv": {
-      "uri-js": "^4.4.1"
-    },
-    "jsdom": {
-      "whatwg-url": "^14.2.0"
-    },
-    "tsup": {
-      "source-map": {
-        "whatwg-url": "^14.2.0"
-      }
-    }
+    "@manypkg/get-packages": "^2.2.2",
+    "@manypkg/find-root": "^2.2.3"
   }
 }
