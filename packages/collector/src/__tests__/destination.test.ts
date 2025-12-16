@@ -422,4 +422,187 @@ describe('Destination', () => {
       );
     });
   });
+
+  describe('batch with wildcard mapping', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should not duplicate events when using wildcard batch config', async () => {
+      // Capture events at call time (since batched.events gets cleared after pushBatch)
+      const capturedBatches: { events: WalkerOS.Events; key: string }[] = [];
+      const mockPushBatch = jest.fn((batch) => {
+        // Clone the events array to capture at call time
+        capturedBatches.push({
+          events: [...batch.events],
+          key: batch.key,
+        });
+      });
+      const mockPush = jest.fn();
+
+      const destinationWithBatch: Destination.Instance = {
+        push: mockPush,
+        pushBatch: mockPushBatch,
+        config: {
+          init: true,
+          mapping: {
+            '*': {
+              '*': { batch: 50 }, // 50ms debounce
+            },
+          },
+        },
+      };
+
+      const { elb } = await startFlow({
+        destinations: { batchDest: { code: destinationWithBatch } },
+      });
+
+      // Send different event types (all should match wildcard)
+      await elb('page view');
+      await elb('product click');
+      await elb('button press');
+
+      // Advance timers to trigger debounce
+      jest.advanceTimersByTime(100);
+
+      // pushBatch should be called exactly once with all 3 events
+      expect(mockPushBatch).toHaveBeenCalledTimes(1);
+      expect(capturedBatches[0].events).toHaveLength(3);
+
+      // Verify all events are present (not duplicated)
+      const eventNames = capturedBatches[0].events.map((e) => e.name);
+      expect(eventNames).toContain('page view');
+      expect(eventNames).toContain('product click');
+      expect(eventNames).toContain('button press');
+
+      // Individual push should NOT be called (batch handles it)
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('should batch events separately per mapping key', async () => {
+      // Capture events at call time
+      const capturedBatches: { events: WalkerOS.Events; key: string }[] = [];
+      const mockPushBatch = jest.fn((batch) => {
+        capturedBatches.push({
+          events: [...batch.events],
+          key: batch.key,
+        });
+      });
+      const mockPush = jest.fn();
+
+      const destinationWithBatch: Destination.Instance = {
+        push: mockPush,
+        pushBatch: mockPushBatch,
+        config: {
+          init: true,
+          mapping: {
+            page: {
+              '*': { batch: 50 }, // page events batch together
+            },
+            product: {
+              '*': { batch: 50 }, // product events batch together
+            },
+          },
+        },
+      };
+
+      const { elb } = await startFlow({
+        destinations: { batchDest: { code: destinationWithBatch } },
+      });
+
+      // Send events that match different mapping keys
+      await elb('page view');
+      await elb('page scroll');
+      await elb('product click');
+      await elb('product view');
+
+      // Advance timers to trigger debounce
+      jest.advanceTimersByTime(100);
+
+      // pushBatch should be called twice (once per mapping key)
+      expect(mockPushBatch).toHaveBeenCalledTimes(2);
+
+      // Each batch should have 2 events
+      expect(capturedBatches[0].events).toHaveLength(2);
+      expect(capturedBatches[1].events).toHaveLength(2);
+    });
+
+    it('should isolate batch state when multiple destinations share same mapping config', async () => {
+      // This test reproduces the bug where shared mapping config causes duplicate events
+      // Two destinations with the SAME mapping config object (shared reference)
+      const sharedMapping = {
+        '*': {
+          '*': { batch: 50 },
+        },
+      };
+
+      const capturedBatches: {
+        destination: string;
+        events: WalkerOS.Events;
+        key: string;
+      }[] = [];
+
+      const mockPushBatch1 = jest.fn((batch) => {
+        capturedBatches.push({
+          destination: 'dest1',
+          events: [...batch.events],
+          key: batch.key,
+        });
+      });
+      const mockPushBatch2 = jest.fn((batch) => {
+        capturedBatches.push({
+          destination: 'dest2',
+          events: [...batch.events],
+          key: batch.key,
+        });
+      });
+
+      const destination1: Destination.Instance = {
+        push: jest.fn(),
+        pushBatch: mockPushBatch1,
+        config: {
+          init: true,
+          mapping: sharedMapping, // Shared reference!
+        },
+      };
+
+      const destination2: Destination.Instance = {
+        push: jest.fn(),
+        pushBatch: mockPushBatch2,
+        config: {
+          init: true,
+          mapping: sharedMapping, // Same shared reference!
+        },
+      };
+
+      const { elb } = await startFlow({
+        destinations: {
+          dest1: { code: destination1 },
+          dest2: { code: destination2 },
+        },
+      });
+
+      // Send events
+      await elb('page view');
+      await elb('product click');
+
+      // Advance timers to trigger debounce
+      jest.advanceTimersByTime(100);
+
+      // Each destination should receive its own batch
+      // BUG: Currently shared mapping causes only last destination to receive events
+      // or events get duplicated across destinations
+      const totalPushBatchCalls =
+        mockPushBatch1.mock.calls.length + mockPushBatch2.mock.calls.length;
+      expect(totalPushBatchCalls).toBe(2); // Should be 2 (one per destination)
+
+      // Each destination should receive exactly 2 events
+      expect(mockPushBatch1).toHaveBeenCalledTimes(1);
+      expect(mockPushBatch2).toHaveBeenCalledTimes(1);
+    });
+  });
 });
