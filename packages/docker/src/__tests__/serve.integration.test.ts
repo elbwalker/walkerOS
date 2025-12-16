@@ -52,7 +52,7 @@ describe('Serve Mode Integration', () => {
       env: {
         ...process.env,
         MODE: 'serve',
-        FILE_PATH: filePath,
+        FILE: filePath,
         PORT: port.toString(),
       },
     });
@@ -86,7 +86,7 @@ describe('Serve Mode Integration', () => {
       env: {
         ...process.env,
         MODE: 'serve',
-        FILE_PATH: filePath,
+        FILE: filePath,
         PORT: port.toString(),
       },
     });
@@ -116,7 +116,7 @@ describe('Serve Mode Integration', () => {
       env: {
         ...process.env,
         MODE: 'serve',
-        FILE_PATH: filePath,
+        FILE: filePath,
         SERVE_NAME: 'custom.js',
         SERVE_PATH: 'libs/v1',
         PORT: port.toString(),

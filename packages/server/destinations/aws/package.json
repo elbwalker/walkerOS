@@ -32,7 +32,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@aws-sdk/client-firehose": "^3.606.0",
+    "@aws-sdk/client-firehose": "^3.952.0",
     "@walkeros/server-core": "0.5.0"
   },
   "devDependencies": {},

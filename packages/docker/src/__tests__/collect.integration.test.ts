@@ -55,7 +55,7 @@ describe('Collect Mode Integration', () => {
       env: {
         ...process.env,
         MODE: 'collect',
-        FLOW: bundlePath,
+        FILE: bundlePath,
         PORT: port.toString(),
       },
     });

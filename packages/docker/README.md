@@ -61,7 +61,7 @@ walkeros bundle flow.json --output flow.mjs
 docker run -p 8080:8080 \
   -v $(pwd)/flow.mjs:/app/flow.mjs \
   -e MODE=collect \
-  -e FLOW=/app/flow.mjs \
+  -e FILE=/app/flow.mjs \
   walkeros/docker:latest
 ```
 
@@ -75,7 +75,7 @@ or bundling required:
 ```bash
 docker run -p 8080:8080 \
   -e MODE=collect \
-  -e FLOW=/app/demos/demo-collect.mjs \
+  -e FILE=/app/demos/demo-collect.mjs \
   walkeros/docker:latest
 ```
 
@@ -92,7 +92,7 @@ curl -X POST http://localhost:8080/collect \
 ```bash
 docker run -p 3000:8080 \
   -e MODE=serve \
-  -e FLOW=/app/demos/demo-serve.mjs \
+  -e FILE=/app/demos/demo-serve.js \
   walkeros/docker:latest
 ```
 
@@ -109,7 +109,7 @@ collector:
 ```bash
 docker run -p 8080:8080 \
   -e MODE=collect \
-  -e FLOW=/app/demos/demo-collect.mjs \
+  -e FILE=/app/demos/demo-collect.mjs \
   --name walker-collector \
   walkeros/docker:latest
 ```
@@ -119,7 +119,7 @@ docker run -p 8080:8080 \
 ```bash
 docker run -p 3000:8080 \
   -e MODE=serve \
-  -e FLOW=/app/demos/demo-serve.mjs \
+  -e FILE=/app/demos/demo-serve.js \
   --name walker-web \
   walkeros/docker:latest
 ```
@@ -147,7 +147,7 @@ walkeros bundle flow.json --output flow.mjs
 docker run -p 8080:8080 \
   -v $(pwd)/flow.mjs:/app/flow.mjs \
   -e MODE=collect \
-  -e FLOW=/app/flow.mjs \
+  -e FILE=/app/flow.mjs \
   walkeros/docker:latest
 ```
 
@@ -159,7 +159,7 @@ Build a custom image with your bundled flow:
 FROM walkeros/docker:latest
 COPY flow.mjs /app/flow.mjs
 ENV MODE=collect
-ENV FLOW=/app/flow.mjs
+ENV FILE=/app/flow.mjs
 ```
 
 ```bash
@@ -178,7 +178,7 @@ cat > Dockerfile <<EOF
 FROM walkeros/docker:latest
 COPY flow.mjs /app/flow.mjs
 ENV MODE=collect
-ENV FLOW=/app/flow.mjs
+ENV FILE=/app/flow.mjs
 EOF
 
 # Deploy
@@ -212,8 +212,8 @@ Serves static files (useful for web bundles):
 ```bash
 docker run -p 8080:8080 \
   -e MODE=serve \
-  -e STATIC_DIR=/app/dist \
-  -v $(pwd)/dist:/app/dist \
+  -e FILE=/app/web-serve.js \
+  -v $(pwd)/web-serve.js:/app/web-serve.js \
   walkeros/docker:latest
 ```
 
@@ -222,21 +222,21 @@ docker run -p 8080:8080 \
 ### Required
 
 - **`MODE`** - Operational mode: `collect` or `serve`
-- **`FLOW`** - Path to pre-built flow bundle (`.mjs` file) - **required for
-  collect mode**
+- **`FILE`** - Path to pre-bundled file (`.mjs` for collect, `.js` for serve)
 
 ### Optional
 
 - **`PORT`** - Server port (default: from flow or 8080)
 - **`HOST`** - Server host (default: 0.0.0.0)
-- **`STATIC_DIR`** - Static files directory for serve mode (default: /app/dist)
+- **`SERVE_NAME`** - Filename in URL for serve mode (default: walker.js)
+- **`SERVE_PATH`** - URL directory for serve mode (default: empty = root)
 
 **Example:**
 
 ```bash
 docker run -p 3000:3000 \
   -e MODE=collect \
-  -e FLOW=/app/flow.mjs \
+  -e FILE=/app/flow.mjs \
   -e PORT=3000 \
   -e HOST=0.0.0.0 \
   -v $(pwd)/flow.mjs:/app/flow.mjs \
@@ -255,7 +255,7 @@ services:
       dockerfile: Dockerfile
     environment:
       MODE: collect
-      FLOW: /app/flow.mjs
+      FILE: /app/flow.mjs
       PORT: 8080
     ports:
       - '8080:8080'
@@ -280,7 +280,7 @@ services:
 FROM walkeros/docker:latest
 COPY flow.mjs /app/flow.mjs
 ENV MODE=collect
-ENV FLOW=/app/flow.mjs
+ENV FILE=/app/flow.mjs
 ```
 
 ## Development
@@ -307,7 +307,7 @@ await runFlow('/path/to/flow.mjs', {
 // Or run serve mode
 await runServeMode({
   port: 8080,
-  staticDir: '/path/to/dist',
+  file: '/path/to/bundle.js',
 });
 ```
 
@@ -322,7 +322,7 @@ walkeros bundle flow.json --output flow.mjs
 docker run -p 8080:8080 \
   -v $(pwd)/flow.mjs:/app/flow.mjs \
   -e MODE=collect \
-  -e FLOW=/app/flow.mjs \
+  -e FILE=/app/flow.mjs \
   walkeros/docker:latest
 ```
 
@@ -353,7 +353,7 @@ await runFlow('/path/to/flow.mjs', {
 // Or run in serve mode
 await runServeMode({
   port: 3000,
-  staticDir: './dist',
+  file: './bundle.js',
 });
 ```
 
@@ -361,28 +361,28 @@ This is how `@walkeros/cli` uses the Docker package - no Docker daemon required!
 
 ## Troubleshooting
 
-### "FLOW environment variable required"
+### "FILE environment variable required"
 
-Ensure you're providing the FLOW env var pointing to a pre-built `.mjs` file:
+Ensure you're providing the FILE env var pointing to a pre-built bundle:
 
 ```bash
 docker run \
   -e MODE=collect \
-  -e FLOW=/app/flow.mjs \
+  -e FILE=/app/flow.mjs \
   -v $(pwd)/flow.mjs:/app/flow.mjs \
   walkeros/docker:latest
 ```
 
 ### "Cannot find module"
 
-The FLOW path must point to a pre-built `.mjs` bundle, not a `.json` config:
+The FILE path must point to a pre-built bundle, not a `.json` config:
 
 ```bash
 # ❌ Wrong - JSON config
--e FLOW=/app/flow.json
+-e FILE=/app/flow.json
 
 # ✅ Correct - Pre-built bundle
--e FLOW=/app/flow.mjs
+-e FILE=/app/flow.mjs
 ```
 
 ### Port already in use
@@ -434,7 +434,7 @@ changes)
 ### Breaking Changes from Previous Versions
 
 - ❌ No longer accepts JSON configs at runtime
-- ❌ Must receive pre-built .mjs bundles via FLOW env var
+- ❌ Must receive pre-built bundles via FILE env var
 - ❌ Removed all bundling, build, and package download capabilities
 - ✅ Use @walkeros/cli to bundle flows first
 

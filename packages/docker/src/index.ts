@@ -29,7 +29,7 @@ async function main() {
   if (!mode) {
     logger.error('MODE environment variable required');
     logger.info('Valid modes: collect | serve');
-    logger.info('Example: MODE=collect FLOW=/app/flow.mjs');
+    logger.info('Example: MODE=collect FILE=/app/bundle.mjs');
     process.exit(1);
   }
 
@@ -51,11 +51,11 @@ async function main() {
     // Run the appropriate mode
     switch (mode) {
       case 'collect': {
-        const flowPath = process.env.FLOW;
+        const file = process.env.FILE;
 
-        if (!flowPath) {
+        if (!file) {
           logger.throw(
-            'FLOW environment variable required. Example: FLOW=/app/flow.mjs',
+            'FILE environment variable required. Example: FILE=/app/bundle.mjs',
           );
           return; // TypeScript narrowing (never reached)
         }
@@ -66,16 +66,19 @@ async function main() {
           : undefined;
         const host = process.env.HOST;
 
-        await runFlow(flowPath, { port, host }, logger.scope('runner'));
+        await runFlow(file, { port, host }, logger.scope('runner'));
         break;
       }
 
       case 'serve': {
-        // Serve mode uses minimal config from environment variables
+        // Serve mode serves a single bundled file (e.g., walker.js)
+        // Uses FILE for the source file and SERVE_NAME for the URL
         const config = {
           port: process.env.PORT ? parseInt(process.env.PORT, 10) : 8080,
           host: process.env.HOST || '0.0.0.0',
-          staticDir: process.env.STATIC_DIR || '/app/dist',
+          file: process.env.FILE || '/app/web-serve.js',
+          serveName: process.env.SERVE_NAME || 'walker.js',
+          servePath: process.env.SERVE_PATH || '',
         };
 
         await runServeMode(config, logger.scope('serve'));

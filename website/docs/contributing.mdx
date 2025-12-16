@@ -4,141 +4,109 @@ description: Learn how to contribute to walkerOS
 position: 7
 ---
 
-walkerOS is an open-source project. There are multiple ways to contribute, and
-we appreciate them all. If you have any questions, feel free to reach out:
+walkerOS is open source and will remain open source. We believe companies should
+own their data infrastructure—true data ownership only comes when you control
+your data collection. No vendor lock-in, no surprises. You own your code, your
+data, your future.
 
-- <Link to="https://github.com/elbwalker/walkerOS/issues">open an issue</Link>
-- <Link to="mailto:hello@elbwalker.com">send an email</Link>
-- <Link to="https://calendly.com/elb-alexander/30min">schedule a call</Link>
-- <Link to="https://www.linkedin.com/in/alexanderkirtzel/">
-    write on LinkedIn
-  </Link>
+There are multiple ways to contribute, and we appreciate them all.
+
+## Getting started
+
+### Devcontainer (recommended)
+
+The easiest way to start developing is using the
+[devcontainer](https://code.visualstudio.com/docs/devcontainers/containers)
+setup. It automatically installs all dependencies, extensions, and AI-assisted
+development tooling.
+
+1. Install the
+   [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+   extension in VS Code
+2. Open the command palette and select `Dev Containers: Reopen in Container`
+3. Wait for the container to build—you're ready to code
+
+The `skills/` folder contains step-by-step guides that work with any AI
+assistant.
+
+### Manual setup
+
+If you prefer a local setup:
+
+<CodeSnippet
+  code={`npm install    # Install dependencies
+npm run build  # Build all packages
+npm run dev    # Start watch mode
+npm run test   # Run tests
+npm run lint   # Check code quality`}
+  language="bash"
+/>
+
+## Ways to contribute
+
+### Code
+
+- Fix bugs or implement new features
+- Create new destinations or sources (see `skills/create-destination` and
+  `skills/create-source` for guidance)
+- Improve existing packages
+
+### Documentation
+
+The documentation lives in `website/docs/`. To run the docs locally:
+
+<CodeSnippet
+  code={`cd website && npm run start`}
+  language="bash"
+/>
+
+- Improve existing documentation
+- Add examples and use cases
+- Fix typos and clarify explanations
+
+### Community
+
+- <Link to="https://github.com/elbwalker/walkerOS/issues">Report bugs</Link>{" "}
+  (issue templates available)
+- Suggest features
+- Answer questions from other users
 
 ## Development workflow
 
-The main language is TypeScript, but others are welcome as well. We use a
-test-driven development approach and write tests using
-[Jest](https://jestjs.io/). Since the docs are also part of the repository, they
-can directly be updated as well. Pushing code to the repository will trigger a
-test-pipeline that runs all tests and checks the code style.
+walkerOS uses a test-driven development approach with
+[Jest](https://jestjs.io/). Please run tests before submitting pull requests.
 
-### Devcontainer
+### Package structure
 
-Some IDEs, like [Visual Studio Code](https://code.visualstudio.com/), have a
-[`devcontainer`](https://code.visualstudio.com/docs/devcontainers/containers)
-setup available. It will automatically install all tools, dependencies and
-extensions. To use it, make sure to install the
-[Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-extension. Then, open the command palette and select
-`Remote-Containers: Reopen in Container`.
+The project is organized as a monorepo:
 
-## Packages
+```text
+packages/
+├── core/           # Types, utilities, schemas
+├── collector/      # Event processing engine
+├── config/         # Shared tooling config
+├── web/            # Browser: sources/, destinations/
+└── server/         # Node.js: sources/, destinations/
 
-walkerOS is separated into multiple packages and developed in a monorepo. The
-latest version is under the `develop` branch, while `main` contains the latest
-stable and released versions. The whole project can be tested and build using
-[TurboRepo](https://turbo.build/repo/). Run all commands from the root
-directory.
+apps/
+├── quickstart/     # Validated examples
+├── walkerjs/       # Browser bundle
+└── demos/          # Demo applications
+```
 
-<CodeSnippet
-  code={`# Make sure to install all dependencies first
-npm i
+## Resources
 
-# To start a local development server
-turbo run dev
+**For deeper guidance:**
 
-# To run all tests
-turbo run test
+- `skills/` — step-by-step guides for common tasks (creating destinations,
+  sources, testing strategies)
+- `AGENT.md` — quick reference for contributors and AI assistants
 
-# To build the whole project
-turbo run build
+**Get in touch:**
 
-# To develop or build a specific package use --filter option
-turbo run dev --filter=*walker.js
-turbo run build --filter=*walker.js --filter=*utils`}
-  language="bash"
-/>
-
-The `filter` option can be used to only run one or multiple packages. To filter
-use the `packages name` field in the `package.json` file.
-
-### Updates
-
-To update all npm packages to the latest version, run:
-
-<CodeSnippet
-  code={`npx npm-check-updates -u && npm update && npm install`}
-  language="bash"
-/>
-
-## Documentation
-
-The documentation is also included in the repository under the `website/docs`
-folder. It is built using [Docusaurus](https://docusaurus.io/). To start a local
-server with live reload make sure to run `npm i` first, go to the `website/`
-directory and call:
-
-<CodeSnippet
-  code={`npm run start`}
-  language="bash"
-/>
-
-## How to release
-
-How to update a package, create a changeset, and publish a (pre-)release.
-
-#### Making Changes and Creating a Changeset
-
-1. Implement Changes: Make the necessary updates or additions to your packages.
-
-2. Create a Changeset: From the root of your monorepo, run:
-
-<CodeSnippet
-  code={`$ npx changeset`}
-  language="bash"
-/>
-
-Select the packages that should be updated and describe the changes.
-
-#### Preparing for (Pre-)Release
-
-1. (Optional) Enter pre-release process:
-
-<CodeSnippet
-  code={`$ npx changeset pre enter next`}
-  language="bash"
-/>
-
-2. Bump Version for (Pre-)Release: Now, run:
-
-<CodeSnippet
-  code={`$ npx changeset version`}
-  language="bash"
-/>
-
-#### Publishing the Pre-Release
-
-1. Login to npm: Ensure you're logged into npm with `npm login` or set the token
-   with `export NPM_TOKEN="insert_npm_token_here"`.
-
-2. To publish with the current tag (`latest` by default or `next` for a
-   pre-release): From the root of the monorepo, run:
-
-<CodeSnippet
-  code={`$ npm run publish-packages`}
-  language="bash"
-/>
-
-#### (Optional) Exiting Pre-Release Mode
-
-After a pre-release is done and it's ready to be released as a stable version:
-
-1. Exit Pre-Release Mode: Run:
-
-<CodeSnippet
-  code={`$ npx changeset pre exit`}
-  language="bash"
-/>
-
-2. Follow the release process again: Create a new changeset for the stable
-   release, version, and then publish normally.
+- <Link to="https://github.com/elbwalker/walkerOS/issues">Open an issue</Link>
+- <Link to="mailto:hello@elbwalker.com">Send an email</Link>
+- <Link to="https://calendly.com/elb-alexander/30min">Schedule a call</Link>
+- <Link to="https://www.linkedin.com/in/alexanderkirtzel/">
+    Connect on LinkedIn
+  </Link>

@@ -22,6 +22,14 @@ Before starting, read these skills:
 - [writing-documentation](../writing-documentation/SKILL.md) - Documentation
   standards (for Phase 7)
 
+## Choose Your Template
+
+| Complexity | Template     | When to Use                         |
+| ---------- | ------------ | ----------------------------------- |
+| Simple     | `plausible/` | Single SDK call, minimal config     |
+| Complex    | `gtag/`      | Multiple services, sub-destinations |
+| Server     | `gcp/`       | Server-side, batching, SDK init     |
+
 ## Process Overview
 
 ```
@@ -79,6 +87,24 @@ ls packages/web/destinations/
 # - gtag: Complex, multiple services
 # - meta: Pixel with custom events
 ```
+
+### Gate: Research Complete
+
+Before proceeding, confirm:
+
+- [ ] API pattern identified (SDK function / HTTP / pixel)
+- [ ] Auth method documented (API key, token, none)
+- [ ] Event types mapped to walkerOS equivalents
+
+### Checkpoint: Research Review (Optional)
+
+If working with human oversight, pause here to confirm:
+
+- API pattern and auth method correct?
+- Event mapping makes sense for the use case?
+- Any vendor quirks or rate limits to handle?
+
+Continue only after approval.
 
 ---
 
@@ -211,6 +237,11 @@ export * as schemas from './schemas';
 export * as examples from './examples';
 ```
 
+### Gate: Examples Valid
+
+- [ ] All example files compile (`npm run build`)
+- [ ] Can trace: input event → expected output for each example
+
 ---
 
 ## Phase 3: Define Mapping
@@ -277,6 +308,11 @@ Input: events.pageView
   ↓ data.path → url, data.title → title
 Output: Should match outputs.pageViewCall
 ```
+
+### Gate: Mapping Verified
+
+- [ ] Mapping covers: page view + at least one conversion event
+- [ ] Each mapping rule traces correctly to expected output
 
 ---
 
@@ -390,6 +426,11 @@ function addScript(settings: Settings, env?: DestinationWeb.Env) {
 export default destinationVendor;
 ```
 
+### Gate: Implementation Compiles
+
+- [ ] `npm run build` passes
+- [ ] `npm run lint` passes
+
 ---
 
 ## Phase 6: Test Against Examples
@@ -437,6 +478,11 @@ describe('destinationVendor', () => {
 });
 ```
 
+### Gate: Tests Pass
+
+- [ ] `npm run test` passes
+- [ ] Tests verify against example outputs (not hardcoded values)
+
 ---
 
 ## Phase 7: Document
@@ -456,14 +502,15 @@ Key requirements for destination documentation:
 
 ---
 
-## Validation Checklist
+## Destination-Specific Validation
 
-- [ ] `npm run build` passes
-- [ ] `npm run test` passes
-- [ ] `npm run lint` passes
-- [ ] Examples cover main use cases
-- [ ] Tests verify against example outputs
-- [ ] README documents configuration
+Beyond [understanding-development](../understanding-development/SKILL.md)
+requirements (build, test, lint, no `any`):
+
+- [ ] Uses `getEnv(env)` pattern (never direct `window`/`document` access)
+- [ ] `dev.ts` exports `schemas` and `examples`
+- [ ] Examples match type signatures
+- [ ] Tests use examples for assertions (not hardcoded values)
 
 ---
 

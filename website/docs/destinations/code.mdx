@@ -34,16 +34,50 @@ const { collector, elb } = await startFlow({
   language="typescript"
 />
 
+## Script Loading
+
+Load external scripts during initialization - useful for tag management:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+
+const { elb } = await startFlow({
+  destinations: {
+    gtm: {
+      code: true,
+      config: {
+        consent: { marketing: true }, // Scripts only load when consent granted
+        settings: {
+          scripts: [
+            'https://www.googletagmanager.com/gtag/js?id=G-XXXXX',
+            'https://connect.facebook.net/en_US/fbevents.js',
+          ],
+          init: "window.dataLayer = window.dataLayer || [];",
+          push: "dataLayer.push({ event: event.name, ...event.data });",
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+Scripts are injected in parallel with `async="true"`. The collector only handles
+injection - loading, errors, and execution are managed by the browser. For
+advanced loading patterns (sequential loading, onload callbacks), use custom
+`init` code.
+
 ## Configuration reference
 
 ### Settings
 
-| Property    | Type     | Description                                      |
-| ----------- | -------- | ------------------------------------------------ |
-| `init`      | `string` | Code to run once when the destination initializes |
-| `on`        | `string` | Code to run on lifecycle events (consent, etc.)  |
-| `push`      | `string` | Default code to run for each event               |
-| `pushBatch` | `string` | Default code to run for batched events           |
+| Property    | Type       | Description                                       |
+| ----------- | ---------- | ------------------------------------------------- |
+| `scripts`   | `string[]` | URLs of external scripts to inject on init        |
+| `init`      | `string`   | Code to run once when the destination initializes |
+| `on`        | `string`   | Code to run on lifecycle events (consent, etc.)   |
+| `push`      | `string`   | Default code to run for each event                |
+| `pushBatch` | `string`   | Default code to run for batched events            |
 
 ### Mapping
 

@@ -5,26 +5,34 @@ on:
     branches: [main]
     paths:
       - 'website/**'
-      - '.github/workflows/deploy-website.yml'
+      - '.github/workflows/website.yml'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     paths:
       - 'website/**'
-      - '.github/workflows/deploy-website.yml'
+      - '.github/workflows/website.yml'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
+      - run: corepack enable
       - run: npm ci
       - run: npm run build
 
