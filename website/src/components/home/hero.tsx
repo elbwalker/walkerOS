@@ -4,24 +4,23 @@ import Hero from '@site/src/components/organisms/hero';
 export default function HomeHero() {
   return (
     <Hero
-      title={<div className="block text-elbwalker block">walkerOS</div>}
-      subtitle="Open-source event data collection"
-      text="Collect event data for digital analytics in a unified and privacy-centric way."
+      title="Tracking that passes code review"
+      text="Get the same rigor for your analytics as your application code. Write in TypeScript. Review in GitHub. Catch errors before production."
       primaryButton={{
         link: '/docs/',
-        children: 'Getting started',
+        children: 'Get started',
         elbAction: 'start',
       }}
       secondaryButton={{
-        link: 'https://www.elbwalker.com/services',
-        children: 'Services',
-        elbAction: 'services',
+        link: 'https://github.com/elbwalker/walkerOS',
+        children: 'View on GitHub',
+        elbAction: 'github',
       }}
       elbTitle="home"
       badges={[
-        'runs in your own infrastructure',
-        'integrates with all analytics & marketing tools',
-        'in-built consent mode',
+        'Version controlled in Git',
+        'Code reviewed and testable',
+        'Self-hosted on your infrastructure',
       ]}
     />
   );

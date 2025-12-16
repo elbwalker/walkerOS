@@ -33,7 +33,7 @@ export function Button({
   className = '',
   elbAction = 'click',
 }: ButtonProps) {
-  const buttonClasses = `dui-btn dui-btn-${variant} dui-btn-${size} mx-2 text-white ${className}`;
+  const buttonClasses = `dui-btn dui-btn-${variant} dui-btn-${size} text-white ${className}`;
   const content = text || children;
 
   return link ? (
