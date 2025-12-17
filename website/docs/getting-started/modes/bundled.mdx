@@ -1,0 +1,344 @@
+---
+title: Bundled Mode
+description: Configure walkerOS with JSON and build standalone bundles with the CLI
+sidebar_position: 3
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Bundled Mode
+
+In Bundled mode, you configure walkerOS with JSON files and build standalone bundles using the CLI. The output is a separate file that can be deployed independently of your application.
+
+## Quickstart
+
+### 1. Install the CLI
+
+<CodeSnippet
+  code={`npm install -g @walkeros/cli
+
+# Verify installation
+walkeros --version`}
+  language="bash"
+/>
+
+### 2. Create a flow configuration
+
+Create `flow.json`:
+
+<Tabs>
+  <TabItem value="web" label="Web (Browser)">
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] }
+      },
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": {
+            "settings": {
+              "pageview": true,
+              "session": true
+            }
+          }
+        }
+      },
+      "collector": { "run": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+  <TabItem value="server" label="Server (Node.js)">
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": { "path": "/collect", "port": 8080 }
+          }
+        }
+      },
+      "destinations": {
+        "console": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": { "name": "Event Logger" }
+          }
+        }
+      },
+      "collector": { "run": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+### 3. Build the bundle
+
+<CodeSnippet
+  code={`walkeros bundle flow.json`}
+  language="bash"
+/>
+
+This creates:
+- **Web**: `./dist/walker.js` (IIFE format, loadable via script tag)
+- **Server**: `./dist/bundle.mjs` (ESM format, runnable with Node.js)
+
+### 4. Deploy
+
+<Tabs>
+  <TabItem value="web" label="Web">
+
+Add to your HTML:
+
+```html
+<script src="/walker.js"></script>
+```
+
+  </TabItem>
+  <TabItem value="server" label="Server">
+
+Run directly:
+
+```bash
+node ./dist/bundle.mjs
+```
+
+Or with Docker:
+
+```bash
+walkeros run collect flow.json
+```
+
+  </TabItem>
+</Tabs>
+
+---
+
+## Adding Destinations
+
+Add destinations to your `flow.json`:
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
+        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] },
+        "@walkeros/web-destination-gtag": { "imports": ["destinationGtag"] }
+      },
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": { "settings": { "pageview": true } }
+        }
+      },
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "settings": { "url": "https://your-api.com/events" }
+          }
+        },
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "settings": {
+              "ga4": { "measurementId": "G-XXXXXXXXXX" }
+            }
+          }
+        }
+      },
+      "collector": { "run": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Rebuild: `walkeros bundle flow.json`
+
+---
+
+## Adding Consent
+
+Add consent requirements in the destination config:
+
+<CodeSnippet
+  code={`"destinations": {
+  "api": {
+    "package": "@walkeros/web-destination-api",
+    "config": {
+      "settings": { "url": "https://your-api.com/events" },
+      "consent": { "functional": true }
+    }
+  },
+  "ga4": {
+    "package": "@walkeros/web-destination-gtag",
+    "config": {
+      "settings": { "ga4": { "measurementId": "G-XXXXXXXXXX" } },
+      "consent": { "analytics": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Set consent at runtime:
+
+```javascript
+// After loading walker.js
+elb('walker consent', { functional: true, analytics: true });
+```
+
+---
+
+## Key Concepts
+
+### The `package:` Property
+
+In Bundled mode, you reference packages by name:
+
+```json
+"sources": {
+  "browser": {
+    "package": "@walkeros/web-source-browser"
+  }
+}
+```
+
+The CLI downloads and bundles the package. This differs from Integrated mode where you use `code:` with a direct import.
+
+### Variables and Environment
+
+Use variables for environment-specific values:
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "variables": {
+    "GA_ID": "\${GA_MEASUREMENT_ID:G-DEFAULT}",
+    "API_URL": "\${API_ENDPOINT:https://api.example.com}"
+  },
+  "flows": {
+    "default": {
+      "destinations": {
+        "ga4": {
+          "config": {
+            "settings": { "ga4": { "measurementId": "\${GA_ID}" } }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Variables are resolved from environment variables at build time.
+
+### Multiple Flows
+
+Define different flows for different environments:
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "flows": {
+    "development": {
+      "web": {},
+      "destinations": {
+        "console": { "package": "@walkeros/destination-demo" }
+      }
+    },
+    "production": {
+      "web": {},
+      "destinations": {
+        "ga4": { "package": "@walkeros/web-destination-gtag" }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Build specific flow: `walkeros bundle flow.json --flow production`
+
+---
+
+## CLI Commands
+
+| Command | Purpose |
+|---------|---------|
+| `walkeros bundle` | Build production bundle |
+| `walkeros simulate` | Test with mocked events |
+| `walkeros push` | Test with real API calls |
+| `walkeros run collect` | Start HTTP collection server |
+| `walkeros run serve` | Serve web bundles |
+
+See [CLI Documentation](/docs/apps/cli) for full details.
+
+---
+
+## Docker Deployment
+
+For production server deployments:
+
+<CodeSnippet
+  code={`# Build the bundle
+walkeros bundle flow.json
+
+# Run with Docker
+docker run -p 8080:8080 \\
+  -v $(pwd)/dist/bundle.mjs:/app/flow.mjs \\
+  -e MODE=collect \\
+  walkeros/docker:latest`}
+  language="bash"
+/>
+
+See [Docker Documentation](/docs/apps/docker) for complete deployment guides.
+
+---
+
+## Next Steps
+
+- [**Flow Configuration**](/docs/getting-started/flow) — Full configuration reference
+- [**CLI Documentation**](/docs/apps/cli) — All CLI commands and options
+- [**Docker Deployment**](/docs/apps/docker) — Production container deployment
+- [**Mapping**](/docs/mapping) — Transform events for destinations
+
+---
+
+## See Also
+
+- [**Integrated Mode**](/docs/getting-started/modes/integrated) — Build into your app with TypeScript
+- [**Collector Reference**](/docs/collector) — Understanding the collector engine

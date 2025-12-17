@@ -1,0 +1,83 @@
+---
+title: Operating Modes
+description: Two ways to use walkerOS - Integrated and Bundled
+sidebar_position: 1
+---
+
+# Operating Modes
+
+walkerOS offers two ways to configure and deploy your event collection. Both use the same underlying architecture—Sources, Collector, Destinations—just packaged differently.
+
+## Integrated Mode
+
+The collector lives **inside your application code**.
+
+```typescript
+import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+const { elb } = await startFlow({
+  sources: { browser: { code: sourceBrowser } },
+  run: true
+});
+```
+
+**Best for:**
+- Building walkerOS directly into your app
+- Full programmatic control and type safety
+- Custom logic and dynamic configuration
+- Teams comfortable with TypeScript
+
+[**Get started with Integrated Mode →**](/docs/getting-started/modes/integrated)
+
+---
+
+## Bundled Mode
+
+The collector is a **separate artifact** you configure with JSON and build with the CLI.
+
+```json
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "sources": { "browser": { "package": "@walkeros/web-source-browser" } }
+    }
+  }
+}
+```
+
+Then: `walkeros bundle flow.json` → outputs standalone file.
+
+**Best for:**
+- Config-as-code workflows (Git, PRs, CI/CD)
+- Independent versioning and deployment
+- Teams who prefer JSON over TypeScript
+- Docker deployments and server-side collection
+
+[**Get started with Bundled Mode →**](/docs/getting-started/modes/bundled)
+
+---
+
+## Same Core, Different Packaging
+
+Both modes use identical:
+- **Sources** - Browser, DataLayer, HTTP, custom
+- **Collector** - Event processing, consent, enrichment
+- **Destinations** - GA4, APIs, BigQuery, custom
+- **Mapping** - Event transformation rules
+
+The only difference is how you configure and deploy them.
+
+## Choosing Your Mode
+
+| If you... | Use |
+|-----------|-----|
+| Want full control in TypeScript | [Integrated](/docs/getting-started/modes/integrated) |
+| Prefer JSON configuration | [Bundled](/docs/getting-started/modes/bundled) |
+| Building a React/Next.js app | [Integrated](/docs/getting-started/modes/integrated) |
+| Deploying with Docker | [Bundled](/docs/getting-started/modes/bundled) |
+| Need dynamic runtime config | [Integrated](/docs/getting-started/modes/integrated) |
+| Want separate tracking script | [Bundled](/docs/getting-started/modes/bundled) |
+| Both? | You can use Integrated client-side and Bundled server-side |

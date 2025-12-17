@@ -128,3 +128,49 @@ level: 'DEBUG', // Show all logs (ERROR, INFO, DEBUG)
 });`}
   language="typescript"
 />
+
+## Event Transformation
+
+The collector works with **mapping** to transform events as they flow through the system. Mapping is configured at the destination level and controls how walkerOS events are converted to vendor-specific formats.
+
+```
+walkerOS Event → [DESTINATION MAPPING] → Vendor Format (GA4, API, etc.)
+```
+
+For example, transforming a `product add` event into GA4's `add_to_cart`:
+
+<CodeSnippet
+  code={`destinations: {
+  ga4: {
+    code: destinationGtag,
+    config: {
+      mapping: {
+        product: {
+          add: {
+            name: 'add_to_cart',
+            data: {
+              map: {
+                currency: { value: 'USD' },
+                value: 'data.price',
+                items: { loop: ['nested', { map: { item_id: 'data.id' } }] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="typescript"
+/>
+
+[**Learn more about Mapping →**](/docs/mapping)
+
+---
+
+## See Also
+
+- [**Operating Modes**](/docs/getting-started/modes) — Integrated vs Bundled approaches
+- [**CLI Documentation**](/docs/apps/cli) — Configure with JSON and build with CLI
+- [**Sources**](/docs/sources) — Available event capture sources
+- [**Destinations**](/docs/destinations) — Available event delivery destinations

@@ -65,6 +65,53 @@ A flow configuration uses the `Flow.Setup` format with two required fields:
 
 This captures browser DOM events and sends them to your analytics API endpoint via HTTP POST requests.
 
+## Config Syntax: `package:` vs `code:`
+
+When configuring sources and destinations, you'll see two different syntaxes depending on your operating mode.
+
+### Bundled Mode (JSON with CLI)
+
+Use `package:` with a string reference. The CLI downloads and bundles the npm package:
+
+<CodeSnippet
+  code={`"sources": {
+  "browser": {
+    "package": "@walkeros/web-source-browser",
+    "config": { "settings": { "pageview": true } }
+  }
+}`}
+  language="json"
+/>
+
+### Integrated Mode (TypeScript with startFlow)
+
+Use `code:` with a direct import reference:
+
+<CodeSnippet
+  code={`import { sourceBrowser } from '@walkeros/web-source-browser';
+
+const { elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: { settings: { pageview: true } }
+    }
+  }
+});`}
+  language="typescript"
+/>
+
+### Quick Reference
+
+| Property | Mode | Value | When to Use |
+|----------|------|-------|-------------|
+| `package:` | Bundled | `"@walkeros/..."` (string) | CLI resolves and bundles from npm |
+| `code:` | Integrated | `sourceBrowser` (import) | Direct code reference in your app |
+
+Both achieve the same result—the difference is whether the CLI bundles the code for you (Bundled) or you import it directly (Integrated).
+
+See [Operating Modes](/docs/getting-started/modes) for more details on choosing your approach.
+
 ## Flow configuration (Flow.Config)
 
 Each flow in `flows` is a `Flow.Config` that defines runtime behavior.

@@ -207,3 +207,21 @@ legal or internal requirements without vendor lock-in.
 
 The model supports diverse use cases beyond e-commerce, including media, (B2B)
 SaaS, and more, ensuring versatility and comparability.
+
+## How Events Get Transformed
+
+walkerOS events use a **vendor-agnostic format**. When sending to destinations like GA4, BigQuery, or your API, events are transformed using **mapping**.
+
+```
+walkerOS Event → [MAPPING] → Destination Format
+```
+
+For example, a `product add` event becomes `add_to_cart` for GA4, while the same event might be stored with different field names in BigQuery.
+
+Mapping lets you:
+- Rename events for each destination
+- Restructure data properties
+- Apply conditional transformations
+- Process nested entities (like products in an order)
+
+[**Learn more about Mapping →**](/docs/mapping)
