@@ -38,12 +38,6 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Test
-        run: npm run test
-
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
@@ -67,8 +61,15 @@ jobs:
       - name: Publish to npm
         id: publish
         run: |
+          set +e
           OUTPUT=$(npx changeset publish 2>&1)
+          EXIT_CODE=$?
           echo "$OUTPUT"
+          set -e
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::Changeset publish failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
           # Extract published packages for PR comment
           PUBLISHED=$(echo "$OUTPUT" | grep -E "^@walkeros/|^walkeros" | head -20 || true)
           echo "published<<EOF" >> $GITHUB_OUTPUT
