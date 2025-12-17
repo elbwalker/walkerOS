@@ -11,6 +11,10 @@ on:
           - 'pre-release (next)'
           - 'stable release'
 
+concurrency:
+  group: release
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -29,11 +33,6 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Debug npm auth
-        run: npm whoami
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Install dependencies
         run: npm ci
 
@@ -43,6 +42,23 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Version packages (stable)
+        if: inputs.release_type == 'stable release'
+        run: |
+          # Exit pre-release mode if active; skip if not in pre-release
+          if [ -f ".changeset/pre.json" ]; then
+            npx changeset pre exit
+          else
+            echo "Not in pre-release mode, skipping 'pre exit'"
+          fi
+          npx changeset version
+
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
@@ -51,13 +67,12 @@ jobs:
       - name: Version packages (pre-release)
         if: inputs.release_type == 'pre-release (next)'
         run: |
-          npx changeset pre enter next || true
-          npx changeset version
-
-      - name: Version packages (stable)
-        if: inputs.release_type == 'stable release'
-        run: |
-          npx changeset pre exit || true
+          # Check if already in pre-release mode; if so, skip entering
+          if [ -f ".changeset/pre.json" ]; then
+            echo "Already in pre-release mode, skipping 'pre enter'"
+          else
+            npx changeset pre enter next
+          fi
           npx changeset version
 
       - name: Update lock file
