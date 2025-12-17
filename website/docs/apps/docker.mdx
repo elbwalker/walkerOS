@@ -27,6 +27,40 @@ The walkerOS Docker package (`@walkeros/docker`) is a **pure runtime container**
 
 Think of it as the **deployment target**, not the build tool.
 
+## Build → Deploy Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       DEVELOPMENT                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   flow.json ──► walkeros bundle ──► flow.mjs                    │
+│      │              (CLI)              │                         │
+│      │                                 │                         │
+│   Config as code              Pre-built bundle                   │
+│   (sources, destinations)     (all deps included)                │
+│                                                                  │
+└────────────────────────────────┬────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                       PRODUCTION                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   flow.mjs ──► Docker Container ──► HTTP Server                 │
+│      │           (runtime only)        │                         │
+│      │                                 │                         │
+│   Mount or bake in         < 1 second startup                   │
+│                            /health, /collect                     │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+This separation means:
+- **CLI** handles complexity (npm resolution, bundling, TypeScript)
+- **Docker** stays simple (just runs JavaScript)
+- **Startup is instant** (no npm install, no build step)
+
 ## Prerequisites
 
 - Docker installed ([Get Docker](https://docs.docker.com/get-docker/))

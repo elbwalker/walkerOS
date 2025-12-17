@@ -5,6 +5,8 @@ sidebar_position: 1
 package: '@walkeros/web-destination-gtag'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import { schemas } from '@walkeros/web-destination-gtag/dev';
 
 # Google Gtag
@@ -19,14 +21,31 @@ The Google Gtag destination provides a unified interface for sending events to
 Google Analytics 4 (GA4), Google Ads, and Google Tag Manager (GTM) through a
 single destination configuration.
 
-## Installation
+:::info Where This Fits
+Gtag is a **destination** in the walkerOS flow:
+
+```
+Sources → Collector → Gtag Destination
+                          ↓
+                    GA4 / Google Ads / GTM
+```
+
+Events are transformed using [mapping rules](/docs/mapping) before being sent to Google.
+:::
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the package:
 
 <CodeSnippet
-  code={`npm install @walkeros/web-destination-gtag`}
+  code={`npm install @walkeros/collector @walkeros/web-destination-gtag`}
   language="bash"
 />
 
-## Setup
+Configure in your code:
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -39,21 +58,51 @@ const { collector, elb } = await startFlow({
       config: {
         settings: {
           ga4: {
-            measurementId: 'G-XXXXXXXXXX', // Required for GA4
-          },
-          ads: {
-            conversionId: 'AW-XXXXXXXXX', // Required for Google Ads
-          },
-          gtm: {
-            containerId: 'GTM-XXXXXXX', // Required for GTM
+            measurementId: 'G-XXXXXXXXXX',
           },
         },
       },
     },
   },
+  run: true,
 });`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Create `flow.json`:
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "destinations": {
+        "gtag": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "settings": {
+              "ga4": {
+                "measurementId": "G-XXXXXXXXXX"
+              }
+            }
+          }
+        }
+      },
+      "collector": { "run": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Build: `walkeros bundle flow.json`
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 
@@ -64,3 +113,10 @@ const { collector, elb } = await startFlow({
 For custom event mapping (`mapping.entity.action.settings`):
 
 <PropertyTable schema={schemas.mapping} />
+
+## Next Steps
+
+- [**Mapping**](/docs/mapping) — Transform events for Google's expected format
+- [**GA4 Configuration**](/docs/destinations/web/gtag/ga4) — Detailed GA4 setup
+- [**Google Ads**](/docs/destinations/web/gtag/ads) — Conversion tracking
+- [**Consent Management**](/docs/collector#consent) — Control when events are sent

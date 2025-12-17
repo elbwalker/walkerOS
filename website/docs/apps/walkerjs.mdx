@@ -6,6 +6,8 @@ package: '@walkeros/walker.js'
 ---
 
 import * as schemas from '@walkeros/walker.js/src/dev';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # walker.js
 
@@ -317,6 +319,86 @@ api: {
 
 For comprehensive destination options, see the
 [Destinations documentation](/docs/destinations/).
+
+## Growing Beyond walker.js
+
+Walker.js is a **convenience bundle** that combines Browser Source, DataLayer Source, and Collector into a single file. It's perfect for getting started, but you may outgrow it.
+
+### When to Stay with walker.js
+
+- ✅ Simple tracking needs (pageviews, clicks, forms)
+- ✅ Static sites or traditional server-rendered pages
+- ✅ Quick proof-of-concept or MVP
+- ✅ Teams who prefer minimal setup
+
+### When to Upgrade
+
+Consider moving to full [Integrated](/docs/getting-started/modes/integrated) or [Bundled](/docs/getting-started/modes/bundled) mode when you need:
+
+| Need | Solution |
+|------|----------|
+| Server-side tracking | Bundled mode with Docker |
+| Custom sources (HTTP, AWS, GCP) | Both modes support server sources |
+| Multiple flows per page | Full Collector configuration |
+| TypeScript integration | Integrated mode |
+| CI/CD versioned configs | Bundled mode |
+| Event mapping/transformation | Both modes with mapping config |
+
+### Migration Path
+
+Walker.js configuration maps directly to full modes:
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated">
+
+```typescript
+// walker.js equivalent in Integrated mode
+import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+const { elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: { settings: { pageview: true, session: true } },
+    },
+  },
+  destinations: {
+    // Your destinations here
+  },
+  run: true,
+});
+```
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+```json
+// walker.js equivalent in Bundled mode (flow.json)
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": { "settings": { "pageview": true, "session": true } }
+        }
+      },
+      "destinations": {
+        // Your destinations here
+      },
+      "collector": { "run": true }
+    }
+  }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+The mental model is the same—sources, collector, destinations—just with more control.
 
 ## Troubleshooting
 
