@@ -31,7 +31,8 @@
     "dev": "turbo run dev --output-logs=errors-only",
     "format": "prettier --write .",
     "lint": "turbo run lint --filter=!@walkeros/website --output-logs=errors-only",
-    "publish-packages": "rm -rf .turbo/cache && npm run build && npm run lint && npm run test && changeset version && changeset publish",
+    "publish-packages": "npm run clean && npm run build && npm run lint && npm run test && changeset version && changeset publish",
+    "reset": "rm -rf .turbo && rm -rf node_modules && npm ci",
     "publish-docker": "npm run -w @walkeros/cli docker:publish && npm run -w @walkeros/docker docker:publish",
     "test": "turbo run test --filter=!@walkeros/website --output-logs=errors-only",
     "prepare": "husky || true",
@@ -60,9 +61,5 @@
   "browserslist": [
     "> 0.2%",
     "not dead"
-  ],
-  "overrides": {
-    "@manypkg/get-packages": "^2.2.2",
-    "@manypkg/find-root": "^2.2.3"
-  }
+  ]
 }
