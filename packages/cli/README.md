@@ -14,6 +14,21 @@ The walkerOS CLI is a developer tool that:
 Think of it as your development toolchain for walkerOS - from config to running
 production bundles.
 
+### When to Use the CLI
+
+The CLI is for **Bundled mode** — when you want config-as-code and separate
+deployment:
+
+| Use CLI When                | Use Integrated Mode When |
+| --------------------------- | ------------------------ |
+| Static sites, landing pages | React/Next.js apps       |
+| Docker/server deployments   | TypeScript projects      |
+| CI/CD versioned configs     | Programmatic control     |
+| Marketing/GTM workflows     | Build-time type safety   |
+
+For Integrated mode (importing directly into your app), see the
+[Collector package](../collector/).
+
 ## Installation
 
 ```bash
@@ -499,9 +514,12 @@ See [src/types.ts](./src/types.ts) for TypeScript interfaces.
 
 ## Related
 
-- [Website Documentation](https://www.walkeros.io/docs/cli/)
+- [Website Documentation](https://www.walkeros.io/docs/apps/cli/)
 - [Flow Configuration](https://www.walkeros.io/docs/getting-started/flow/)
 - [Docker Package](../docker/) - Production runtime
+- [Collector Package](../collector/) - For Integrated mode (direct imports)
+- [Operating Modes](https://www.walkeros.io/docs/getting-started/modes/) -
+  Choosing between Integrated and Bundled
 
 ## License
 
