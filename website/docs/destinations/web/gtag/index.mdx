@@ -5,8 +5,6 @@ sidebar_position: 1
 package: '@walkeros/web-destination-gtag'
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
 import { schemas } from '@walkeros/web-destination-gtag/dev';
 
 # Google Gtag
@@ -72,34 +70,25 @@ const { collector, elb } = await startFlow({
   </TabItem>
   <TabItem value="bundled" label="Bundled">
 
-Create `flow.json`:
+Add to your `flow.json` destinations:
 
 <CodeSnippet
-  code={`{
-  "version": 1,
-  "flows": {
-    "default": {
-      "web": {},
-      "destinations": {
-        "gtag": {
-          "package": "@walkeros/web-destination-gtag",
-          "config": {
-            "settings": {
-              "ga4": {
-                "measurementId": "G-XXXXXXXXXX"
-              }
-            }
-          }
+  code={`"destinations": {
+  "gtag": {
+    "package": "@walkeros/web-destination-gtag",
+    "config": {
+      "settings": {
+        "ga4": {
+          "measurementId": "G-XXXXXXXXXX"
         }
-      },
-      "collector": { "run": true }
+      }
     }
   }
 }`}
   language="json"
 />
 
-Build: `walkeros bundle flow.json`
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
 
   </TabItem>
 </Tabs>

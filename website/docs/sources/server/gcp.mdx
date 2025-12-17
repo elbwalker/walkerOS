@@ -11,6 +11,20 @@ package: '@walkeros/server-source-gcp'
 
 Google Cloud Functions source for walkerOS - lightweight runtime adapter for GCP services.
 
+:::info Where This Fits
+The GCP Cloud Functions Source is a **server source** in the walkerOS flow:
+
+```
+GCP Source → Collector → Destinations
+     ↓
+   HTTP handler (Cloud Functions)
+```
+
+It receives events via HTTP and forwards them to your destinations.
+
+[Learn about Operating Modes →](/docs/getting-started/modes/)
+:::
+
 ## Features
 
 * **Plug-and-play**: Direct assignment to Cloud Functions handler
@@ -25,6 +39,9 @@ Google Cloud Functions source for walkerOS - lightweight runtime adapter for GCP
 />
 
 ## Quick start
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { sourceCloudFunction } from '@walkeros/server-source-gcp';
@@ -49,6 +66,33 @@ const { sources } = await startFlow({
 http('walkerHandler', sources.gcp.push);`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` sources:
+
+<CodeSnippet
+  code={`"sources": {
+  "gcp": {
+    "package": "@walkeros/server-source-gcp",
+    "config": {
+      "settings": {
+        "cors": true,
+        "batch": true
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Server sources require platform-specific handlers. For containerized deployments, see [Docker →](/docs/apps/docker).
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration
 

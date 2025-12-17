@@ -18,6 +18,20 @@ Turn-key HTTP event collection server with Express.js. Handles JSON POST events,
 * **Pixel tracking**: 1x1 transparent GIF for GET requests
 * **Health checks**: Built-in `/health` and `/ready` endpoints
 
+:::info Where This Fits
+The Express Source is a **server source** in the walkerOS flow:
+
+```
+Express Source → Collector → Destinations
+      ↓
+   HTTP events from clients
+```
+
+It receives events via HTTP (POST/GET) and forwards them to configured destinations.
+
+[Learn about Operating Modes →](/docs/getting-started/modes/)
+:::
+
 ## Installation
 
 <CodeSnippet
@@ -26,6 +40,9 @@ Turn-key HTTP event collection server with Express.js. Handles JSON POST events,
 />
 
 ## Quick start
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 ### Standalone server
 
@@ -80,6 +97,33 @@ app.use(yourAuthMiddleware);
 app.listen(3000);`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` sources:
+
+<CodeSnippet
+  code={`"sources": {
+  "express": {
+    "package": "@walkeros/server-source-express",
+    "config": {
+      "settings": {
+        "port": 8080,
+        "cors": true
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Server sources require platform-specific handlers. For containerized deployments, see [Docker →](/docs/apps/docker).
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration
 

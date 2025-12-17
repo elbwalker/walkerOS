@@ -32,6 +32,9 @@ customizable data transformation and transport methods.
 
 ## Setup
 
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationAPI } from '@walkeros/web-destination-api';
@@ -50,6 +53,30 @@ const { collector, elb } = await startFlow({
 });`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "api": {
+    "package": "@walkeros/web-destination-api",
+    "config": {
+      "settings": {
+        "url": "https://api.example.com/events"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 

@@ -36,6 +36,9 @@ function calls.
 
 ## Setup
 
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationPiwikPro } from '@walkeros/web-destination-piwikpro';
@@ -55,6 +58,31 @@ await startFlow({
 });`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "piwikpro": {
+    "package": "@walkeros/web-destination-piwikpro",
+    "config": {
+      "settings": {
+        "appId": "XXX-XXX-XXX-XXX-XXX",
+        "url": "https://your_account_name.piwik.pro/"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 

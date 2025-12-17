@@ -24,6 +24,9 @@ data lakes, and downstream processing.
 
 ## Setup
 
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationFirehose } from '@walkeros/server-destination-aws';
@@ -51,6 +54,40 @@ await startFlow({
 });`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "firehose": {
+    "package": "@walkeros/server-destination-aws",
+    "code": "destinationFirehose",
+    "config": {
+      "settings": {
+        "firehose": {
+          "streamName": "your-firehose-stream-name",
+          "region": "eu-central-1",
+          "config": {
+            "credentials": {
+              "accessKeyId": "your-access-key-id",
+              "secretAccessKey": "your-secret-access-key"
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 

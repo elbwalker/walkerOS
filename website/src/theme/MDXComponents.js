@@ -1,6 +1,8 @@
 // Import the original mapper
 import MDXComponents from '@theme-original/MDXComponents';
 import Link from '@docusaurus/Link';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import { Icon } from '@iconify/react';
 // Import explorer components (made available in all MDX files)
 import {
@@ -19,6 +21,8 @@ export default {
   ...MDXComponents,
   // Docusaurus components
   Link,
+  Tabs,
+  TabItem,
   // Custom components
   Icon,
   PackageLink,

@@ -11,6 +11,20 @@ package: '@walkeros/server-source-fetch'
 
 Web Standard Fetch API source for walkerOS - deploy to any modern edge or serverless platform.
 
+:::info Where This Fits
+The Fetch Source is a **server source** in the walkerOS flow:
+
+```
+Fetch Source → Collector → Destinations
+      ↓
+   Web Standard (Request) => Response
+```
+
+It receives events via the Fetch API and forwards them to your destinations. Works on any platform supporting Web Standards.
+
+[Learn about Operating Modes →](/docs/getting-started/modes/)
+:::
+
 ## Features
 
 * **Platform agnostic**: Cloudflare Workers, Vercel Edge, Deno, Bun, Node.js 18+
@@ -26,7 +40,10 @@ Web Standard Fetch API source for walkerOS - deploy to any modern edge or server
   language="bash"
 />
 
-## Platform examples
+## Quick start
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 ### Cloudflare Workers
 
@@ -48,6 +65,37 @@ const { sources } = await startFlow({
 export default { fetch: sources.fetch.push };`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` sources:
+
+<CodeSnippet
+  code={`"sources": {
+  "fetch": {
+    "package": "@walkeros/server-source-fetch",
+    "config": {
+      "settings": {
+        "path": "/collect",
+        "cors": true
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Server sources require platform-specific handlers. For containerized deployments, see [Docker →](/docs/apps/docker).
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## More platform examples
+
+The following examples show Integrated mode patterns for various platforms:
 
 ### Vercel Edge
 

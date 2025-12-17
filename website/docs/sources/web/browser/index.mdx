@@ -4,8 +4,6 @@ description: DOM-based event tracking for web applications
 sidebar_position: 1
 package: '@walkeros/web-source-browser'
 ---
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
 import { schemas } from '@walkeros/web-source-browser/dev';
 
 <PackageLink github="packages/web/sources/browser" npm="@walkeros/web-source-browser" />
@@ -73,45 +71,24 @@ const { collector, elb } = await startFlow({
   </TabItem>
   <TabItem value="bundled" label="Bundled">
 
-Create `flow.json`:
+Add to your `flow.json` sources:
 
 <CodeSnippet
-  code={`{
-  "version": 1,
-  "flows": {
-    "default": {
-      "web": {},
-      "sources": {
-        "browser": {
-          "package": "@walkeros/web-source-browser",
-          "config": {
-            "settings": {
-              "pageview": true,
-              "session": true
-            }
-          }
-        }
-      },
-      "collector": { "run": true }
+  code={`"sources": {
+  "browser": {
+    "package": "@walkeros/web-source-browser",
+    "config": {
+      "settings": {
+        "pageview": true,
+        "session": true
+      }
     }
   }
 }`}
   language="json"
 />
 
-Build the bundle:
-
-<CodeSnippet
-  code={`walkeros bundle flow.json`}
-  language="bash"
-/>
-
-Include in HTML:
-
-<CodeSnippet
-  code={`<script src="/walker.js"></script>`}
-  language="html"
-/>
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
 
   </TabItem>
 </Tabs>

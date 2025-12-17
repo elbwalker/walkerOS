@@ -36,6 +36,9 @@ function calls.
 
 ## Setup
 
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/web-destination-meta';
@@ -55,6 +58,31 @@ const { collector, elb } = await startFlow({
 });`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "meta": {
+    "package": "@walkeros/web-destination-meta",
+    "config": {
+      "settings": {
+        "pixelId": "1234567890"
+      },
+      "loadScript": true
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 
