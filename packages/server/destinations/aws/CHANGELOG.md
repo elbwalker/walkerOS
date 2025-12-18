@@ -1,5 +1,11 @@
 # @walkeros/server-destination-aws
 
+## 0.5.1-next.0
+
+### Patch Changes
+
+- @walkeros/server-core@0.5.1-next.0
+
 ## 0.5.0
 
 ### Minor Changes

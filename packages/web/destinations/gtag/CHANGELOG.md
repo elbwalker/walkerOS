@@ -1,5 +1,11 @@
 # @walkeros/web-destination-gtag
 
+## 0.5.1-next.0
+
+### Patch Changes
+
+- @walkeros/web-core@0.5.1-next.0
+
 ## 0.5.0
 
 ### Minor Changes

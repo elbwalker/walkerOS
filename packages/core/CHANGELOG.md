@@ -1,5 +1,11 @@
 # @walkeros/core
 
+## 0.5.1-next.0
+
+### Patch Changes
+
+- 5163b01: Add changeset documentation to contributing guide
+
 ## 0.5.0
 
 ### Minor Changes

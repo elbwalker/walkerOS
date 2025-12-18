@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/docker",
   "description": "Pure runtime Docker container for walkerOS - executes pre-built flows",
-  "version": "0.3.0",
+  "version": "0.3.1-next.0",
   "type": "module",
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -28,7 +28,7 @@
     "docker:publish": "bash scripts/publish.sh"
   },
   "dependencies": {
-    "@walkeros/core": "*",
+    "@walkeros/core": "0.5.1-next.0",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "router": "^2.2.0"
