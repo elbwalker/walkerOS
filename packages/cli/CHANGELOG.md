@@ -1,5 +1,12 @@
 # @walkeros/cli
 
+## 0.5.1-next.1
+
+### Patch Changes
+
+- 71b615f: Fix URL handling in resolveAsset - URLs are now passed through
+  unchanged instead of being mangled into invalid filesystem paths
+
 ## 0.5.1-next.0
 
 ### Patch Changes

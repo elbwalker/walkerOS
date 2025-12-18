@@ -1,5 +1,12 @@
 # walkeros
 
+## 0.5.1-next.1
+
+### Patch Changes
+
+- Updated dependencies [71b615f]
+  - @walkeros/cli@0.5.1-next.1
+
 ## 0.5.1-next.0
 
 ### Patch Changes
