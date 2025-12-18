@@ -1,5 +1,17 @@
 # @walkeros/cli
 
+## 0.7.0-next.0
+
+### Minor Changes
+
+- 42d06c8: Fix Docker runtime version display - versions now read reliably from
+  package.json at runtime instead of fragile build-time injection
+
+### Patch Changes
+
+- Updated dependencies [42d06c8]
+  - @walkeros/docker@0.7.0-next.0
+
 ## 0.5.1-next.1
 
 ### Patch Changes

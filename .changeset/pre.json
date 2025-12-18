@@ -34,5 +34,9 @@
     "@walkeros/web-source-datalayer": "0.5.0",
     "@walkeros/website": "0.4.0"
   },
-  "changesets": ["add-changeset-docs", "fix-cli-url-handling"]
+  "changesets": [
+    "add-changeset-docs",
+    "fix-cli-url-handling",
+    "fix-version-display"
+  ]
 }

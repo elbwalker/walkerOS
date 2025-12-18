@@ -1,5 +1,12 @@
 # @walkeros/docker
 
+## 0.7.0-next.0
+
+### Minor Changes
+
+- 42d06c8: Fix Docker runtime version display - versions now read reliably from
+  package.json at runtime instead of fragile build-time injection
+
 ## 0.3.1-next.0
 
 ### Patch Changes
