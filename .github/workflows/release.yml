@@ -21,6 +21,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,7 +33,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
@@ -104,6 +107,62 @@ jobs:
           git commit -m "chore: version packages" || echo "No changes to commit"
           git push
 
+      # Docker image publishing
+      - name: Get Docker package versions
+        id: versions
+        run: |
+          CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
+          DOCKER_VERSION=$(node -p "require('./packages/docker/package.json').version")
+          echo "cli=$CLI_VERSION" >> $GITHUB_OUTPUT
+          echo "docker=$DOCKER_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if CLI image exists
+        id: check-cli
+        run: |
+          if docker manifest inspect walkeros/cli:${{ steps.versions.outputs.cli }} 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if Docker image exists
+        id: check-docker
+        run: |
+          if docker manifest inspect walkeros/docker:${{ steps.versions.outputs.docker }} 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Docker Hub
+        if: steps.check-cli.outputs.exists == 'false' || steps.check-docker.outputs.exists == 'false'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push CLI image
+        if: steps.check-cli.outputs.exists == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./packages/cli
+          file: ./packages/cli/docker/Dockerfile
+          push: true
+          tags: |
+            walkeros/cli:${{ steps.versions.outputs.cli }}
+            walkeros/cli:${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}
+
+      - name: Build and push Docker image
+        if: steps.check-docker.outputs.exists == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./packages/docker/Dockerfile
+          push: true
+          tags: |
+            walkeros/docker:${{ steps.versions.outputs.docker }}
+            walkeros/docker:${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}
+
       - name: Comment on PR
         if: steps.publish.outputs.published != ''
         env:
@@ -116,17 +175,38 @@ jobs:
               EMOJI="📦"
               TITLE="Pre-release published (next)"
               INSTALL_TAG="@next"
+              DOCKER_TAG=":next"
             else
               EMOJI="🚀"
               TITLE="Stable release published"
               INSTALL_TAG="@latest"
+              DOCKER_TAG=":latest"
+            fi
+
+            # Build Docker section if any images were published
+            DOCKER_SECTION=""
+            if [ "${{ steps.check-cli.outputs.exists }}" = "false" ] || [ "${{ steps.check-docker.outputs.exists }}" = "false" ]; then
+              DOCKER_SECTION="
+
+          🐳 **Docker images published**"
+              if [ "${{ steps.check-cli.outputs.exists }}" = "false" ]; then
+                DOCKER_SECTION="$DOCKER_SECTION
+          - walkeros/cli:${{ steps.versions.outputs.cli }} ($DOCKER_TAG)"
+              fi
+              if [ "${{ steps.check-docker.outputs.exists }}" = "false" ]; then
+                DOCKER_SECTION="$DOCKER_SECTION
+          - walkeros/docker:${{ steps.versions.outputs.docker }} ($DOCKER_TAG)"
+              fi
+              DOCKER_SECTION="$DOCKER_SECTION
+
+          Docker: \`docker pull walkeros/cli$DOCKER_TAG\`"
             fi
 
             BODY="$EMOJI **$TITLE**
 
           ${{ steps.publish.outputs.published }}
 
-          Install: \`npm i @walkeros/core$INSTALL_TAG\`"
+          Install: \`npm i @walkeros/core$INSTALL_TAG\`$DOCKER_SECTION"
 
             gh pr comment "$PR_NUMBER" --body "$BODY"
             echo "Commented on PR #$PR_NUMBER"
