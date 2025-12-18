@@ -94,7 +94,7 @@ jobs:
             exit $EXIT_CODE
           fi
           # Extract published packages for PR comment
-          PUBLISHED=$(echo "$OUTPUT" | grep -E "^@walkeros/|^walkeros" | head -20 || true)
+          PUBLISHED=$(echo "$OUTPUT" | grep -E "^@walkeros/|^walkeros" | head -20 | sed 's/^/- /' || true)
           echo "published<<EOF" >> $GITHUB_OUTPUT
           echo "$PUBLISHED" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -204,6 +204,7 @@ jobs:
 
             BODY="$EMOJI **$TITLE**
 
+          **Packages**
           ${{ steps.publish.outputs.published }}
 
           Install: \`npm i @walkeros/core$INSTALL_TAG\`$DOCKER_SECTION"
