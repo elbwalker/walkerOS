@@ -60,13 +60,13 @@ export default function Benefits() {
               className="text-base/7 font-semibold"
               style={{ color: 'var(--color-primary)' }}
             >
-              Everything you need
+              Data ownership from the root
             </h2>
             <p
               className="mt-2 text-pretty text-4xl font-semibold tracking-tight sm:text-5xl"
               style={{ color: 'var(--color-base-content)' }}
             >
-              Tracking infrastructure that developers trust
+              Tracking infrastructure you can trust
             </p>
             <p
               className="mt-6 text-base/7"

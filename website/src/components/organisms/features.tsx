@@ -22,7 +22,7 @@ export default function Features() {
             className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl"
             style={{ color: 'var(--color-base-content)' }}
           >
-            Tracking infrastructure that developers trust
+            Ship tracking as code, not in configuration UIs{' '}
           </p>
         </div>
         <div className="mt-10 grid gap-4 sm:mt-16 lg:grid-cols-3">
