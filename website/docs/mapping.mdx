@@ -106,7 +106,7 @@ stage.
 This function finds the appropriate mapping configuration for an event based on
 its entity and action.
 
-### Basic Event Mapping
+### Basic event mapping
 
 Map specific entity-action combinations to custom event names:
 
@@ -130,7 +130,7 @@ mappingKey: "product view"
   fn={logEvent}
 />
 
-### Wildcard Mappings
+### Wildcard mappings
 
 Use wildcards (`*`) to match multiple entities or actions:
 
@@ -157,7 +157,7 @@ mappingKey: "product *"
   fn={logEvent}
 />
 
-### Conditional Mappings
+### Conditional mappings
 
 Use conditions to apply different mappings based on event properties:
 
@@ -190,7 +190,7 @@ mappingKey: "order complete"
   fn={logEvent}
 />
 
-### Ignoring Events
+### Ignoring events
 
 Skip processing certain events by setting `ignore: true`:
 
@@ -220,7 +220,7 @@ mappingKey: "test event"
 
 This function transforms values using various mapping strategies.
 
-### String Key Mapping
+### String key mapping
 
 Use a string to extract a value by its property path:
 
@@ -235,7 +235,7 @@ Use a string to extract a value by its property path:
   fn={logValue}
 />
 
-### Array Access
+### Array access
 
 Access array elements using dot notation:
 
@@ -250,7 +250,7 @@ Access array elements using dot notation:
   fn={logValue}
 />
 
-### Static Values
+### Static values
 
 Return static values using the `value` property:
 
@@ -265,7 +265,7 @@ Return static values using the `value` property:
   fn={logValue}
 />
 
-### Custom Functions
+### Custom functions
 
 Transform values using custom functions:
 
@@ -282,7 +282,7 @@ fn: (event) => event.user.email.split('@')[1]
   fn={logValue}
 />
 
-### Object Mapping
+### Object mapping
 
 Create new objects by mapping properties:
 
@@ -314,7 +314,7 @@ currency: "USD"
   fn={logValue}
 />
 
-### Array Processing with Loop
+### Array processing with loop
 
 Process arrays and transform each item:
 
@@ -360,7 +360,7 @@ validate: (value) => typeof value === 'string' && value.includes('@')
   fn={logValue}
 />
 
-### Consent-Based Mapping
+### Consent-based mapping
 
 Only return values when required consent is granted:
 
@@ -389,7 +389,7 @@ events) or **event-level** (specific entity-action combinations).
 **Processing order**: Config policy → Event matching → Event policy → Data
 transformation
 
-### Config-Level Policy
+### Config-level policy
 
 Global transformations applied to all events:
 
@@ -403,7 +403,7 @@ policy: {
   language="typescript"
 />
 
-### Event-Level Policy
+### Event-level policy
 
 Transformations for specific events:
 
@@ -428,7 +428,7 @@ config policy runs first, then event policy for the matched rule.
 
 ## Usage examples
 
-### Source Mapping
+### Source mapping
 
 Normalize events before they reach the collector:
 
@@ -463,7 +463,7 @@ config: {
   language="typescript"
 />
 
-### Destination Mapping
+### Destination mapping
 
 Transform for specific destination APIs:
 
@@ -494,7 +494,7 @@ config: {
   language="typescript"
 />
 
-### Combined Flow
+### Combined flow
 
 Event processed twice with different configs:
 

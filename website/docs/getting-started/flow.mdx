@@ -65,11 +65,11 @@ A flow configuration uses the `Flow.Setup` format with two required fields:
 
 This captures browser DOM events and sends them to your analytics API endpoint via HTTP POST requests.
 
-## Config Syntax: `package:` vs `code:`
+## Config syntax: `package:` vs `code:`
 
 When configuring sources and destinations, you'll see two different syntaxes depending on your operating mode.
 
-### Bundled Mode (JSON with CLI)
+### Bundled mode (JSON with CLI)
 
 Use `package:` with a string reference. The CLI downloads and bundles the npm package:
 
@@ -83,7 +83,7 @@ Use `package:` with a string reference. The CLI downloads and bundles the npm pa
   language="json"
 />
 
-### Integrated Mode (TypeScript with startFlow)
+### Integrated mode (TypeScript with startFlow)
 
 Use `code:` with a direct import reference:
 
@@ -101,7 +101,7 @@ const { elb } = await startFlow({
   language="typescript"
 />
 
-### Quick Reference
+### Quick reference
 
 | Property | Mode | Value | When to Use |
 |----------|------|-------|-------------|

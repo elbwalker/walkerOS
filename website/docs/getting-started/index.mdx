@@ -1,17 +1,17 @@
 ---
 slug: /
-title: Getting Started
+title: Getting started
 description: Event data collection as code - capture, transform, and route events with built-in consent management
 sidebar_position: 1
 ---
 
-# Getting Started with walkerOS
+# Getting started with walkerOS
 
 walkerOS is **event data collection as code**. Capture events from anywhere, transform them with mapping, and route them to any destination—all with built-in consent management.
 
 No fragile UI configs. No vendor lock-in. Just tracking you can version, test, and trust.
 
-## How It Works
+## How it works
 
 Every walkerOS setup follows one pattern:
 
@@ -26,7 +26,7 @@ Sources → Collector → Destinations
 
 A "flow" connects sources to destinations through a collector. You can have one flow or many—client-side, server-side, or both working together.
 
-## The Centerpiece: Mapping
+## The centerpiece: mapping
 
 **Mapping** transforms events between stages. It's how walkerOS adapts to any source or destination format.
 
@@ -36,15 +36,15 @@ Raw Input → [SOURCE MAPPING] → walkerOS Event → [DEST MAPPING] → Vendor 
 
 One transformation language works everywhere. This is what makes walkerOS truly composable.
 
-[Learn more about Mapping →](/docs/mapping)
+[Learn more about mapping →](/docs/mapping)
 
 ---
 
-## Two Ways to Use walkerOS
+## Two ways to use walkerOS
 
 Both modes use the same architecture. Choose based on how you want to configure and deploy.
 
-### Integrated Mode
+### Integrated mode
 
 The collector lives **inside your application code**.
 
@@ -60,11 +60,11 @@ const { elb } = await startFlow({
 
 **Best for:** Building into your app, full TypeScript control, dynamic configuration.
 
-[**Get started with Integrated Mode →**](/docs/getting-started/modes/integrated)
+[**Get started with integrated mode →**](/docs/getting-started/modes/integrated)
 
 ---
 
-### Bundled Mode
+### Bundled mode
 
 The collector is a **separate artifact** you configure with JSON.
 
@@ -84,24 +84,24 @@ Then: `walkeros bundle flow.json` → standalone file.
 
 **Best for:** Config-as-code, Docker deployments, separate tracking scripts.
 
-[**Get started with Bundled Mode →**](/docs/getting-started/modes/bundled)
+[**Get started with bundled mode →**](/docs/getting-started/modes/bundled)
 
 ---
 
-## Core Concepts
+## Core concepts
 
 | Concept | What It Is | Learn More |
 |---------|------------|------------|
-| **Flow** | Sources + Collector + Destinations configuration | [Flow Configuration](/docs/getting-started/flow) |
-| **Event Model** | How events are structured (`entity action` format) | [Event Model](/docs/getting-started/event-model) |
+| **Flow** | Sources + collector + destinations configuration | [Flow configuration](/docs/getting-started/flow) |
+| **Event model** | How events are structured (`entity action` format) | [Event model](/docs/getting-started/event-model) |
 | **Mapping** | Event transformation rules | [Mapping](/docs/mapping) |
-| **Consent** | Privacy controls at destination and property level | [Consent Management](/docs/collector#consent) |
+| **Consent** | Privacy controls at destination and property level | [Consent management](/docs/collector#consent) |
 | **Sources** | Event capture from browser, server, or custom code | [Sources](/docs/sources) |
 | **Destinations** | Event delivery to analytics, APIs, warehouses | [Destinations](/docs/destinations) |
 
 ---
 
-## Quick Links
+## Quick links
 
 **Just want to try it?**
 - [Integrated Quickstart](/docs/getting-started/modes/integrated#quickstart) — npm install and go

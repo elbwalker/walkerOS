@@ -5,12 +5,12 @@ path: /docs/getting-started/event-model
 sidebar_position: 3
 ---
 
-# Event Model
+# Event model
 
 The walkerOS event model was created to support analytics, marketing, privacy
 and data science needs.
 
-## Entity-Action Approach
+## Entity-action approach
 
 The Entity-Action approach is core of the walkerOS event model. It's a framework
 designed to capture user interactions in a **structured** yet **flexible** way.
@@ -31,7 +31,7 @@ everyone understands what is being measured, there will be **fewer
 misunderstandings, higher data quality**, and more **actionable data** in the
 organization.
 
-## Event Structure
+## Event structure
 
 A walkerOS event consists of three components:
 
@@ -120,7 +120,7 @@ flowchart
 The structure remains consistent across all interactions, whether the event e.g.
 is a `page view`, `session start`, `product visible`, or `order complete`.
 
-### Data Properties
+### Data properties
 
 Data properties describe the entity in **more detail**. Depending on the entity
 (e.g. *product*, *order*, *content*) they can vary and provide specific insights
@@ -208,7 +208,7 @@ legal or internal requirements without vendor lock-in.
 The model supports diverse use cases beyond e-commerce, including media, (B2B)
 SaaS, and more, ensuring versatility and comparability.
 
-## How Events Get Transformed
+## How events get transformed
 
 walkerOS events use a **vendor-agnostic format**. When sending to destinations like GA4, BigQuery, or your API, events are transformed using **mapping**.
 
@@ -224,4 +224,4 @@ Mapping lets you:
 - Apply conditional transformations
 - Process nested entities (like products in an order)
 
-[**Learn more about Mapping →**](/docs/mapping)
+[**Learn more about mapping →**](/docs/mapping)

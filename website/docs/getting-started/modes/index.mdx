@@ -1,14 +1,14 @@
 ---
-title: Operating Modes
-description: Two ways to use walkerOS - Integrated and Bundled
+title: Operating modes
+description: Two ways to use walkerOS - integrated and bundled
 sidebar_position: 1
 ---
 
-# Operating Modes
+# Operating modes
 
 walkerOS offers two ways to configure and deploy your event collection. Both use the same underlying architecture—Sources, Collector, Destinations—just packaged differently.
 
-## Integrated Mode
+## Integrated mode
 
 The collector lives **inside your application code**.
 
@@ -28,11 +28,11 @@ const { elb } = await startFlow({
 - Custom logic and dynamic configuration
 - Teams comfortable with TypeScript
 
-[**Get started with Integrated Mode →**](/docs/getting-started/modes/integrated)
+[**Get started with integrated mode →**](/docs/getting-started/modes/integrated)
 
 ---
 
-## Bundled Mode
+## Bundled mode
 
 The collector is a **separate artifact** you configure with JSON and build with the CLI.
 
@@ -56,11 +56,11 @@ Then: `walkeros bundle flow.json` → outputs standalone file.
 - Teams who prefer JSON over TypeScript
 - Docker deployments and server-side collection
 
-[**Get started with Bundled Mode →**](/docs/getting-started/modes/bundled)
+[**Get started with bundled mode →**](/docs/getting-started/modes/bundled)
 
 ---
 
-## Same Core, Different Packaging
+## Same core, different packaging
 
 Both modes use identical:
 - **Sources** - Browser, DataLayer, HTTP, custom
@@ -70,7 +70,7 @@ Both modes use identical:
 
 The only difference is how you configure and deploy them.
 
-## Choosing Your Mode
+## Choosing your mode
 
 | If you... | Use |
 |-----------|-----|

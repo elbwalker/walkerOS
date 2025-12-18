@@ -1,10 +1,10 @@
 ---
-title: Integrated Mode
+title: Integrated mode
 description: Build walkerOS directly into your application with full TypeScript control
 sidebar_position: 2
 ---
 
-# Integrated Mode
+# Integrated mode
 
 In Integrated mode, walkerOS lives inside your application code. You configure it with TypeScript, and it deploys as part of your app bundle.
 
@@ -47,7 +47,7 @@ That's it. You now have browser event collection running.
 
 ---
 
-## Adding Destinations
+## Adding destinations
 
 Install destination packages and add them to your config:
 
@@ -96,7 +96,7 @@ const { elb } = await startFlow({
 
 ---
 
-## Adding Consent
+## Adding consent
 
 Add consent requirements to control which destinations receive events:
 
@@ -134,7 +134,7 @@ elb('walker consent', { functional: true, analytics: true });`}
 
 ---
 
-## Key Concepts
+## Key concepts
 
 ### The `code:` Property
 
@@ -163,7 +163,7 @@ elb('product add', { id: 'abc', name: 'Widget', price: 29.99 });
 elb('order complete', { total: 99.99, currency: 'USD' });
 ```
 
-### Type Safety
+### Type safety
 
 Integrated mode gives you full TypeScript support:
 
@@ -177,7 +177,7 @@ const { elb } = await startFlow<WalkerOS.Elb>({
 
 ---
 
-## Framework Examples
+## Framework examples
 
 <Tabs>
   <TabItem value="react" label="React">
@@ -233,7 +233,7 @@ export function WalkerProvider({ children }: { children: React.ReactNode }) {
 
 ---
 
-## Next Steps
+## Next steps
 
 - [**Event Model**](/docs/getting-started/event-model) — How events are structured
 - [**Mapping**](/docs/mapping) — Transform events for destinations
@@ -242,7 +242,7 @@ export function WalkerProvider({ children }: { children: React.ReactNode }) {
 
 ---
 
-## See Also
+## See also
 
-- [**Bundled Mode**](/docs/getting-started/modes/bundled) — Configure with JSON, build with CLI
-- [**Collector Reference**](/docs/collector) — Full `startFlow()` API documentation
+- [**Bundled mode**](/docs/getting-started/modes/bundled) — Configure with JSON, build with CLI
+- [**Collector reference**](/docs/collector) — Full `startFlow()` API documentation

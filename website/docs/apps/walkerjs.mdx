@@ -18,7 +18,7 @@ complex setup or configuration.
 
 ## Installation
 
-### Option 1: NPM Package
+### Option 1: npm package
 
 <CodeSnippet
   code={`npm install @walkeros/walker.js`}
@@ -51,14 +51,14 @@ Add this script before walker.js loads to queue events during initialization:
   language="html"
 />
 
-### 2. Include Walker.js
+### 2. Include walker.js
 
 <CodeSnippet
   code={`<script async data-elbconfig="elbConfig" src="./walker.js"></script>`}
   language="html"
 />
 
-### 3. Configure Destinations
+### 3. Configure destinations
 
 <CodeSnippet
   code={`<script>
@@ -95,19 +95,19 @@ Walker.js supports multiple configuration approaches with different priorities:
 
 <PropertyTable schema={schemas.settings} />
 
-#### Browser Source Settings
+#### Browser source settings
 
 <PropertyTable schema={schemas.browserConfig} />
 
-#### DataLayer Settings
+#### DataLayer settings
 
 <PropertyTable schema={schemas.dataLayerConfig} />
 
-#### Collector Settings
+#### Collector settings
 
 <PropertyTable schema={schemas.collectorConfig} />
 
-### Full Configuration Object
+### Full configuration object
 
 <CodeSnippet
   code={`window.elbConfig = {
@@ -146,7 +146,7 @@ Walker.js supports multiple configuration approaches with different priorities:
   language="javascript"
 />
 
-### Inline Configuration
+### Inline configuration
 
 Configure directly in the script tag using simple key:value pairs:
 
@@ -159,7 +159,7 @@ Configure directly in the script tag using simple key:value pairs:
   language="html"
 />
 
-### Named Configuration Object
+### Named configuration object
 
 Use a custom configuration object name:
 
@@ -180,7 +180,7 @@ Use a custom configuration object name:
 
 ## Usage
 
-### Automatic DOM Tracking
+### Automatic DOM tracking
 
 Walker.js automatically tracks events based on HTML data attributes:
 
@@ -201,7 +201,7 @@ Walker.js automatically tracks events based on HTML data attributes:
 For detailed information on data attributes, see the
 [Browser Source documentation](/docs/sources/web/browser/tagging).
 
-### Manual Event Tracking
+### Manual event tracking
 
 Use the global `elb` function for manual tracking:
 
@@ -213,7 +213,7 @@ label: 'interesting',
   language="javascript"
 />
 
-### DataLayer Integration
+### DataLayer integration
 
 Walker.js can integrate with existing dataLayer implementations:
 
@@ -236,7 +236,7 @@ value: 25.42,
 
 ## Advanced features
 
-### Async Loading & Event Queueing
+### Async loading and event queueing
 
 Walker.js handles async loading gracefully with automatic event queueing:
 
@@ -256,7 +256,7 @@ Walker.js handles async loading gracefully with automatic event queueing:
   language="html"
 />
 
-### Build Variants
+### Build variants
 
 Walker.js provides multiple build formats for different environments:
 
@@ -265,7 +265,7 @@ Walker.js provides multiple build formats for different environments:
 * `index.mjs` - ES modules for modern bundlers
 * `index.js` - CommonJS for Node.js environments
 
-### Programmatic Usage
+### Programmatic usage
 
 Use walker.js programmatically in applications:
 
@@ -318,18 +318,18 @@ api: {
 For comprehensive destination options, see the
 [Destinations documentation](/docs/destinations/).
 
-## Growing Beyond walker.js
+## Growing beyond walker.js
 
 Walker.js is a **convenience bundle** that combines Browser Source, DataLayer Source, and Collector into a single file. It's perfect for getting started, but you may outgrow it.
 
-### When to Stay with walker.js
+### When to stay with walker.js
 
 - ✅ Simple tracking needs (pageviews, clicks, forms)
 - ✅ Static sites or traditional server-rendered pages
 - ✅ Quick proof-of-concept or MVP
 - ✅ Teams who prefer minimal setup
 
-### When to Upgrade
+### When to upgrade
 
 Consider moving to full [Integrated](/docs/getting-started/modes/integrated) or [Bundled](/docs/getting-started/modes/bundled) mode when you need:
 
@@ -342,7 +342,7 @@ Consider moving to full [Integrated](/docs/getting-started/modes/integrated) or 
 | CI/CD versioned configs | Bundled mode |
 | Event mapping/transformation | Both modes with mapping config |
 
-### Migration Path
+### Migration path
 
 Walker.js configuration maps directly to full modes:
 
@@ -400,7 +400,7 @@ The mental model is the same—sources, collector, destinations—just with more
 
 ## Troubleshooting
 
-### Common Issues
+### Common issues
 
 **Events not firing:** Check that walker.js loaded and configuration is valid.
 
@@ -411,18 +411,18 @@ object name.
 
 ## API reference
 
-### Factory Function
+### Factory function
 
 <CodeSnippet code={`createWalkerjs(config?: Config): Promise<Instance>`} language="typescript" />
 
 Creates a new walker.js instance with the provided configuration.
 
-### Instance Properties
+### Instance properties
 
 * `collector` - The walkerOS collector instance
 * `elb` - Browser push function for event tracking
 
-### Utility Functions
+### Utility functions
 
 <CodeSnippet
   code={`import { getAllEvents, getEvents, getGlobals } from '@walkeros/walker.js';

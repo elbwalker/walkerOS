@@ -9,9 +9,9 @@ package: '@walkeros/docker'
 
 The walkerOS Docker package (`@walkeros/docker`) is a **pure runtime container** for executing pre-built flow bundles in production. It's designed for fast startup (< 1 second), minimal footprint (~150-200MB), and cloud-native deployment.
 
-**Key Philosophy**: Docker handles runtime, [CLI](/docs/apps/cli) handles build-time. You bundle with the CLI, deploy with Docker.
+**Key philosophy**: Docker handles runtime, [CLI](/docs/apps/cli) handles build-time. You bundle with the CLI, deploy with Docker.
 
-## What It Does
+## What it does
 
 - ✅ **Executes pre-built `.mjs` bundles** from the CLI
 - ✅ **Runs collection servers** (HTTP endpoints for event ingestion)
@@ -19,7 +19,7 @@ The walkerOS Docker package (`@walkeros/docker`) is a **pure runtime container**
 - ✅ **Sub-1 second startup** - No npm downloads, no build steps
 - ✅ **Production-ready** - Health checks, non-root user, signal handling
 
-## What It Doesn't Do
+## What it doesn't do
 
 - ❌ **No bundling** - Flows must be pre-built with the CLI
 - ❌ **No package downloads** - All dependencies must be bundled
@@ -27,7 +27,7 @@ The walkerOS Docker package (`@walkeros/docker`) is a **pure runtime container**
 
 Think of it as the **deployment target**, not the build tool.
 
-## Build → Deploy Workflow
+## Build → deploy workflow
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -70,7 +70,7 @@ This separation means:
 
 The Docker image includes demo bundles for instant testing.
 
-### Demo: Event Collection
+### Demo: event collection
 
 <CodeSnippet
   code={`docker run -p 8080:8080 \\
@@ -92,7 +92,7 @@ Output:
 
 The demo is self-contained and generates test events automatically.
 
-### Demo: Static File Serving
+### Demo: static file serving
 
 <CodeSnippet
   code={`docker run -p 3000:3000 \\
@@ -109,7 +109,7 @@ Visit `http://localhost:3000/demo-serve.js` to download the demo web bundle.
 
 The Docker container is configured via environment variables:
 
-### Collect Mode
+### Collect mode
 
 <CodeSnippet
   code={`docker run -p 8080:8080 \\
@@ -129,7 +129,7 @@ The Docker container is configured via environment variables:
 | `PORT` | No | `8080` | Server port |
 | `HOST` | No | `0.0.0.0` | Bind address |
 
-### Serve Mode
+### Serve mode
 
 <CodeSnippet
   code={`docker run -p 3000:3000 \\
@@ -148,9 +148,9 @@ The Docker container is configured via environment variables:
 | `PORT` | No | `3000` | Server port |
 | `HOST` | No | `0.0.0.0` | Bind address |
 
-## Deployment Workflows
+## Deployment workflows
 
-### Workflow 1: Volume Mount (Development)
+### Workflow 1: volume mount (development)
 
 Mount pre-built bundles directly into the container.
 
@@ -192,7 +192,7 @@ This creates `dist/flow.mjs`.
   language="bash"
 />
 
-### Workflow 2: Custom Docker Image (Production)
+### Workflow 2: custom Docker image (production)
 
 Build a custom Docker image with your bundle baked in.
 
@@ -247,7 +247,7 @@ docker push gcr.io/my-project/analytics:v1.0.0`}
   language="bash"
 />
 
-### Workflow 3: Multi-Stage Build
+### Workflow 3: multi-stage build
 
 Build and bundle in a single Dockerfile.
 
@@ -278,7 +278,7 @@ docker run -d -p 8080:8080 analytics-collector`}
 
 ## Docker Compose
 
-### Single Service
+### Single service
 
 <CodeSnippet
   code={`version: '3.8'
@@ -311,7 +311,7 @@ docker-compose logs -f`}
   language="bash"
 />
 
-### Multiple Services (Web + Server)
+### Multiple services (web + server)
 
 <CodeSnippet
   code={`version: '3.8'
@@ -350,7 +350,7 @@ services:
 
 Cloud Run is ideal for serverless deployment of walkerOS flows.
 
-#### Deploy Collection Endpoint
+#### Deploy collection endpoint
 
 **1. Create server flow**
 
@@ -502,7 +502,7 @@ docker push gcr.io/$PROJECT_ID/$SERVICE_NAME`}
 
 You should see console logs showing the received events.
 
-#### Deploy Web Bundle Server
+#### Deploy web bundle server
 
 **1. Create web flow**
 
@@ -720,7 +720,7 @@ Use this for:
 
 ## Monitoring and logs
 
-### View Docker Logs
+### View Docker logs
 
 <CodeSnippet
   code={`# Follow logs
@@ -734,7 +734,7 @@ docker logs -t walkeros-collector`}
   language="bash"
 />
 
-### Cloud Run Logs
+### Cloud Run logs
 
 <CodeSnippet
   code={`# Recent logs
@@ -748,7 +748,7 @@ gcloud run logs read $SERVICE_NAME --region $REGION --log-filter="severity>=ERRO
   language="bash"
 />
 
-### Structured Logging
+### Structured logging
 
 For better observability, use structured logging in your destinations:
 
@@ -778,7 +778,7 @@ The Docker image follows security best practices:
 - ✅ **Signal handling** - Graceful shutdown with Tini
 - ✅ **Health checks** - Built-in endpoint for orchestrators
 
-### Environment Secrets
+### Environment secrets
 
 For sensitive configuration (API keys, credentials), use environment variables:
 
@@ -800,12 +800,12 @@ Reference secrets in your flow configuration using environment variable substitu
 
 ## Performance
 
-### Startup Time
+### Startup time
 
 - **Cold start**: < 1 second (flow already bundled)
 - **Warm start**: < 100ms (container reuse)
 
-### Resource Usage
+### Resource usage
 
 Typical resource consumption:
 
@@ -833,7 +833,7 @@ gcloud run services update $SERVICE_NAME --max-instances=100`}
 
 ## Troubleshooting
 
-### Container Won't Start
+### Container won't start
 
 <CodeSnippet
   code={`# Check logs
@@ -846,7 +846,7 @@ docker logs walkeros-collector
   language="bash"
 />
 
-### Events Not Being Received
+### Events not being received
 
 <CodeSnippet
   code={`# Verify container is running
@@ -865,7 +865,7 @@ docker logs walkeros-collector`}
   language="bash"
 />
 
-### Port Conflicts
+### Port conflicts
 
 <CodeSnippet
   code={`# Use a different host port
@@ -876,7 +876,7 @@ lsof -ti:8080 | xargs kill`}
   language="bash"
 />
 
-### Bundle Not Found
+### Bundle not found
 
 <CodeSnippet
   code={`# Verify volume mount

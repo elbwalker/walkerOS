@@ -6,7 +6,7 @@ sidebar_position: 3
 package: '@walkeros/core'
 ---
 
-# Core Utilities
+# Core utilities
 
 Core utilities are a collection of platform-agnostic functions that can be used
 across all walkerOS environments. They provide standardized building blocks for
@@ -41,7 +41,7 @@ assign(obj1, obj2, { merge: false }); // Returns { a: 1, b: [2, 3], c: 3 }`}
   language="typescript"
 />
 
-### Path Operations
+### Path operations
 
 #### getByPath
 
@@ -92,7 +92,7 @@ castValue('hello'); // Returns 'hello' (unchanged)`}
   language="javascript"
 />
 
-## Privacy & Security
+## Privacy and security
 
 ### anonymizeIP
 
@@ -152,7 +152,7 @@ await getMappingValue(event, mapping);`}
 `getMappingEvent(event: WalkerOS.PartialEvent, mapping?: Mapping.Rules): Promise<Mapping.Result>`
 finds the appropriate mapping rule for an event.
 
-## Marketing & Analytics
+## Marketing and analytics
 
 ### getMarketingParameters
 
@@ -172,7 +172,7 @@ getMarketingParameters(url, { utm_custom: 'custom', partner: 'partnerId' });`}
 
 ## Type validation
 
-### Type Checkers
+### Type checkers
 
 A comprehensive set of type checking functions:
 
@@ -181,7 +181,7 @@ A comprehensive set of type checking functions:
 * `isDefined(value)`, `isSameType(a, b)`
 * `isPropertyType(value)` - Checks if value is valid walkerOS property
 
-### Property Utilities
+### Property utilities
 
 * `castToProperty(value)` - Casts to valid property type
 * `filterValues(object)` - Filters object to valid properties only

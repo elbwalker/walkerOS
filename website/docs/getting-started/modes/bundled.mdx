@@ -1,10 +1,10 @@
 ---
-title: Bundled Mode
+title: Bundled mode
 description: Configure walkerOS with JSON and build standalone bundles with the CLI
 sidebar_position: 3
 ---
 
-# Bundled Mode
+# Bundled mode
 
 In Bundled mode, you configure walkerOS with JSON files and build standalone bundles using the CLI. The output is a separate file that can be deployed independently of your application.
 
@@ -25,7 +25,7 @@ walkeros --version`}
 Create `flow.json`:
 
 <Tabs>
-  <TabItem value="web" label="Web (Browser)">
+  <TabItem value="web" label="Web (browser)">
 
 <CodeSnippet
   code={`{
@@ -137,7 +137,7 @@ walkeros run collect flow.json
 
 ---
 
-## Adding Destinations
+## Adding destinations
 
 Add destinations to your `flow.json`:
 
@@ -186,7 +186,7 @@ Rebuild: `walkeros bundle flow.json`
 
 ---
 
-## Adding Consent
+## Adding consent
 
 Add consent requirements in the destination config:
 
@@ -219,9 +219,9 @@ elb('walker consent', { functional: true, analytics: true });
 
 ---
 
-## Key Concepts
+## Key concepts
 
-### The `package:` Property
+### The `package:` property
 
 In Bundled mode, you reference packages by name:
 
@@ -235,7 +235,7 @@ In Bundled mode, you reference packages by name:
 
 The CLI downloads and bundles the package. This differs from Integrated mode where you use `code:` with a direct import.
 
-### Variables and Environment
+### Variables and environment
 
 Use variables for environment-specific values:
 
@@ -263,7 +263,7 @@ Use variables for environment-specific values:
 
 Variables are resolved from environment variables at build time.
 
-### Multiple Flows
+### Multiple flows
 
 Define different flows for different environments:
 
@@ -292,7 +292,7 @@ Build specific flow: `walkeros bundle flow.json --flow production`
 
 ---
 
-## CLI Commands
+## CLI commands
 
 | Command | Purpose |
 |---------|---------|
@@ -302,11 +302,11 @@ Build specific flow: `walkeros bundle flow.json --flow production`
 | `walkeros run collect` | Start HTTP collection server |
 | `walkeros run serve` | Serve web bundles |
 
-See [CLI Documentation](/docs/apps/cli) for full details.
+See [CLI documentation](/docs/apps/cli) for full details.
 
 ---
 
-## Docker Deployment
+## Docker deployment
 
 For production server deployments:
 
@@ -322,20 +322,20 @@ docker run -p 8080:8080 \\
   language="bash"
 />
 
-See [Docker Documentation](/docs/apps/docker) for complete deployment guides.
+See [Docker documentation](/docs/apps/docker) for complete deployment guides.
 
 ---
 
-## Next Steps
+## Next steps
 
-- [**Flow Configuration**](/docs/getting-started/flow) — Full configuration reference
-- [**CLI Documentation**](/docs/apps/cli) — All CLI commands and options
-- [**Docker Deployment**](/docs/apps/docker) — Production container deployment
+- [**Flow configuration**](/docs/getting-started/flow) — Full configuration reference
+- [**CLI documentation**](/docs/apps/cli) — All CLI commands and options
+- [**Docker deployment**](/docs/apps/docker) — Production container deployment
 - [**Mapping**](/docs/mapping) — Transform events for destinations
 
 ---
 
-## See Also
+## See also
 
-- [**Integrated Mode**](/docs/getting-started/modes/integrated) — Build into your app with TypeScript
-- [**Collector Reference**](/docs/collector) — Understanding the collector engine
+- [**Integrated mode**](/docs/getting-started/modes/integrated) — Build into your app with TypeScript
+- [**Collector reference**](/docs/collector) — Understanding the collector engine
