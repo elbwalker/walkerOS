@@ -1,21 +1,11 @@
 import { Command } from 'commander';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import { VERSION as DOCKER_VERSION } from '@walkeros/docker';
+import { VERSION } from './version.js';
 import { bundleCommand } from './commands/bundle/index.js';
 import { simulateCommand } from './commands/simulate/index.js';
 import { pushCommand } from './commands/push/index.js';
 import { runCommand } from './commands/run/index.js';
 import { registerCacheCommand } from './commands/cache.js';
-
-// Get package version dynamically
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const packageJson = JSON.parse(
-  readFileSync(join(__dirname, '../package.json'), 'utf-8'),
-);
-const VERSION = packageJson.version;
 
 // === CLI Commands ===
 // Export CLI command handlers

@@ -6,13 +6,11 @@
 
 import { spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs-extra';
 import { VERSION as DOCKER_VERSION } from '@walkeros/docker';
-import { isUrl } from '../config/utils.js';
+import { VERSION as CLI_VERSION } from '../version.js';
+import { isUrl, downloadFromUrl } from '../config/utils.js';
 import type { GlobalOptions } from '../types/global.js';
-
-// Version injected at build time via tsup define
-declare const __VERSION__: string;
-const CLI_VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : '0.0.0';
 
 /**
  * Docker image for CLI/build tools (bundle, simulate)
@@ -128,10 +126,13 @@ export function buildDockerCommand(
 /**
  * Execute command in Docker container
  *
+ * For remote URLs, downloads the config to a temp file first since Docker
+ * containers can't access URLs directly via volume mounting.
+ *
  * @param command - CLI command
  * @param args - Command arguments
  * @param options - Global options
- * @param configFile - Optional config file path to mount in Docker
+ * @param configFile - Optional config file path or URL to mount in Docker
  * @returns Promise that resolves when command completes
  */
 export async function executeInDocker(
@@ -140,38 +141,59 @@ export async function executeInDocker(
   options: GlobalOptions = {},
   configFile?: string,
 ): Promise<void> {
-  // Force --local execution inside container to prevent nested Docker attempts
-  // Architecture: Host CLI decides environment (Docker vs local),
-  // Container CLI always executes locally (no Docker-in-Docker)
-  const containerArgs = [...args, '--local'];
+  let tempFile: string | undefined;
+  let effectiveConfigFile = configFile;
 
-  const dockerCmd = buildDockerCommand(
-    command,
-    containerArgs,
-    options,
-    configFile,
-  );
+  try {
+    // Pre-download URL configs to temp file for Docker mounting
+    // Docker can only mount local files, not remote URLs
+    if (configFile && isUrl(configFile)) {
+      tempFile = await downloadFromUrl(configFile);
+      effectiveConfigFile = tempFile;
+    }
 
-  return new Promise((resolve, reject) => {
-    const proc = spawn(dockerCmd[0], dockerCmd.slice(1), {
-      stdio: options.silent ? 'ignore' : 'inherit',
-      shell: false,
+    // Force --local execution inside container to prevent nested Docker attempts
+    // Architecture: Host CLI decides environment (Docker vs local),
+    // Container CLI always executes locally (no Docker-in-Docker)
+    const containerArgs = [...args, '--local'];
+
+    const dockerCmd = buildDockerCommand(
+      command,
+      containerArgs,
+      options,
+      effectiveConfigFile,
+    );
+
+    return await new Promise((resolve, reject) => {
+      const proc = spawn(dockerCmd[0], dockerCmd.slice(1), {
+        stdio: options.silent ? 'ignore' : 'inherit',
+        shell: false,
+      });
+
+      proc.on('error', (error) => {
+        reject(new Error(`Docker execution failed: ${error.message}`));
+      });
+
+      proc.on('exit', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          // Docker already logged the error via stdio inherit
+          // Just exit with same code - no duplicate message
+          process.exit(code || 1);
+        }
+      });
     });
-
-    proc.on('error', (error) => {
-      reject(new Error(`Docker execution failed: ${error.message}`));
-    });
-
-    proc.on('exit', (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        // Docker already logged the error via stdio inherit
-        // Just exit with same code - no duplicate message
-        process.exit(code || 1);
+  } finally {
+    // Clean up temp file if we created one
+    if (tempFile) {
+      try {
+        await fs.remove(tempFile);
+      } catch {
+        // Ignore cleanup errors
       }
-    });
-  });
+    }
+  }
 }
 
 /**
