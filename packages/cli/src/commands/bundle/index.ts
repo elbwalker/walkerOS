@@ -7,7 +7,6 @@
 import path from 'path';
 import {
   createCommandLogger,
-  createLogger,
   createTimer,
   createSuccessOutput,
   createErrorOutput,
@@ -46,9 +45,7 @@ export async function bundleCommand(
 
   // Handle dry-run
   if (options.dryRun) {
-    logger.info(
-      `[DRY-RUN] Would execute bundle with config: ${options.config}`,
-    );
+    logger.log(`[DRY-RUN] Would execute bundle with config: ${options.config}`);
     return;
   }
 
@@ -59,7 +56,6 @@ export async function bundleCommand(
     }
 
     // Step 1: Read configuration file
-    logger.info('📦 Reading configuration...');
     // Resolve bare names to examples directory, keep paths/URLs as-is
     const configPath = resolveAsset(options.config, 'config');
     const rawConfig = await loadJsonConfig(configPath);
@@ -95,11 +91,12 @@ export async function bundleCommand(
           buildOptions.cache = options.cache;
         }
 
-        // Log flow being built (for multi-flow setups)
+        // Log flow being built
+        const configBasename = path.basename(configPath);
         if (isMultiFlow || options.all) {
-          logger.info(`\n🔧 Building flow: ${flowName}`);
+          logger.log(`Bundling ${configBasename} (flow: ${flowName})...`);
         } else {
-          logger.info('🔧 Starting bundle process...');
+          logger.log(`Bundling ${configBasename}...`);
         }
 
         // Run bundler
@@ -142,7 +139,6 @@ export async function bundleCommand(
 
     if (options.json) {
       // JSON output for CI/CD
-      const outputLogger = createLogger({ silent: false, json: false });
       const output =
         failureCount === 0
           ? createSuccessOutput(
@@ -160,20 +156,18 @@ export async function bundleCommand(
               `${failureCount} flow(s) failed to build`,
               duration,
             );
-      outputLogger.log('white', JSON.stringify(output, null, 2));
+      logger.json(output);
     } else {
       if (options.all) {
-        logger.info(`\n📊 Build Summary:`);
-        logger.info(`   Total: ${results.length}`);
-        logger.success(`   ✅ Success: ${successCount}`);
+        logger.log(
+          `\nBuild Summary: ${successCount}/${results.length} succeeded`,
+        );
         if (failureCount > 0) {
-          logger.error(`   ❌ Failed: ${failureCount}`);
+          logger.error(`Failed: ${failureCount}`);
         }
       }
 
-      if (failureCount === 0) {
-        logger.success(`\n✅ Bundle created successfully in ${timer.format()}`);
-      } else {
+      if (failureCount > 0) {
         throw new Error(`${failureCount} flow(s) failed to build`);
       }
     }
@@ -183,12 +177,10 @@ export async function bundleCommand(
 
     if (options.json) {
       // JSON error output for CI/CD
-      const outputLogger = createLogger({ silent: false, json: false });
       const output = createErrorOutput(errorMessage, duration);
-      outputLogger.log('white', JSON.stringify(output, null, 2));
+      logger.json(output);
     } else {
-      logger.error('❌ Bundle failed:');
-      logger.error(errorMessage);
+      logger.error(`Error: ${errorMessage}`);
     }
     process.exit(1);
   }

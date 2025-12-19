@@ -47,9 +47,9 @@ async function main() {
   const cliLogger = createLogger({ silent: false, verbose: true });
   const logger = adaptLogger(cliLogger);
 
-  console.log(`Starting walkeros/flow in ${mode} mode`);
-  console.log(`File: ${file}`);
-  console.log(`Port: ${port}`);
+  cliLogger.log(`Starting walkeros/flow in ${mode} mode`);
+  cliLogger.log(`File: ${file}`);
+  cliLogger.log(`Port: ${port}`);
 
   try {
     if (mode === 'collect') {
@@ -57,11 +57,11 @@ async function main() {
     } else if (mode === 'serve') {
       await runServeMode({ file, port }, logger);
     } else {
-      console.error(`Unknown mode: ${mode}. Use 'collect' or 'serve'.`);
+      cliLogger.error(`Unknown mode: ${mode}. Use 'collect' or 'serve'.`);
       process.exit(1);
     }
   } catch (error) {
-    console.error('Failed to start:', error);
+    cliLogger.error(`Failed to start: ${error}`);
     process.exit(1);
   }
 }

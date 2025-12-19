@@ -5,7 +5,6 @@ import { getPlatform, type Elb } from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 import {
   createCommandLogger,
-  createLogger,
   getErrorMessage,
   type Logger,
 } from '../../core/index.js';
@@ -26,7 +25,7 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
 
   try {
     // Step 1: Load event
-    logger.info('📥 Loading event...');
+    logger.debug('Loading event');
     const event = await loadJsonFromSource(options.event, {
       name: 'event',
     });
@@ -56,13 +55,13 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
 
     // Warn about event naming format (walkerOS business logic)
     if (!validatedEvent.name.includes(' ')) {
-      logger.warn(
-        `Event name "${validatedEvent.name}" should follow "ENTITY ACTION" format (e.g., "page view")`,
+      logger.log(
+        `Warning: Event name "${validatedEvent.name}" should follow "ENTITY ACTION" format (e.g., "page view")`,
       );
     }
 
     // Step 2: Load config
-    logger.info('📦 Loading flow configuration...');
+    logger.debug('Loading flow configuration');
     const configPath = path.resolve(options.config);
     const rawConfig = await loadJsonConfig(configPath);
     const { flowConfig, buildOptions, flowName, isMultiFlow } =
@@ -75,7 +74,7 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
     const platform = getPlatform(flowConfig);
 
     // Step 3: Bundle to temp file in config directory (so Node.js can find node_modules)
-    logger.info('🔨 Bundling flow configuration...');
+    logger.debug('Bundling flow configuration');
     const configDir = path.dirname(configPath);
     const tempDir = path.join(
       configDir,
@@ -108,10 +107,10 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
     let result: PushResult;
 
     if (platform === 'web') {
-      logger.info('🌐 Executing in web environment (JSDOM)...');
+      logger.debug('Executing in web environment (JSDOM)');
       result = await executeWebPush(tempPath, validatedEvent, logger);
     } else if (platform === 'server') {
-      logger.info('🖥️  Executing in server environment (Node.js)...');
+      logger.debug('Executing in server environment (Node.js)');
       result = await executeServerPush(tempPath, validatedEvent, logger);
     } else {
       throw new Error(`Unsupported platform: ${platform}`);
@@ -121,42 +120,33 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
     const duration = Date.now() - startTime;
 
     if (options.json) {
-      // JSON output
-      const outputLogger = createLogger({ silent: false, json: false });
-      outputLogger.log(
-        'white',
-        JSON.stringify(
-          {
-            success: result.success,
-            event: result.elbResult,
-            duration,
-          },
-          null,
-          2,
-        ),
-      );
+      logger.json({
+        success: result.success,
+        event: result.elbResult,
+        duration,
+      });
     } else {
       // Standard output
       if (result.success) {
-        logger.success('✅ Event pushed successfully');
+        logger.log('Event pushed successfully');
         if (result.elbResult && typeof result.elbResult === 'object') {
           const pushResult = result.elbResult as unknown as Record<
             string,
             unknown
           >;
           if ('id' in pushResult && pushResult.id) {
-            logger.info(`   Event ID: ${pushResult.id}`);
+            logger.log(`  Event ID: ${pushResult.id}`);
           }
           if ('entity' in pushResult && pushResult.entity) {
-            logger.info(`   Entity: ${pushResult.entity}`);
+            logger.log(`  Entity: ${pushResult.entity}`);
           }
           if ('action' in pushResult && pushResult.action) {
-            logger.info(`   Action: ${pushResult.action}`);
+            logger.log(`  Action: ${pushResult.action}`);
           }
         }
-        logger.info(`   Duration: ${duration}ms`);
+        logger.log(`  Duration: ${duration}ms`);
       } else {
-        logger.error(`❌ Push failed: ${result.error}`);
+        logger.error(`Error: ${result.error}`);
         process.exit(1);
       }
     }
@@ -172,21 +162,13 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
     const errorMessage = getErrorMessage(error);
 
     if (options.json) {
-      const outputLogger = createLogger({ silent: false, json: false });
-      outputLogger.log(
-        'white',
-        JSON.stringify(
-          {
-            success: false,
-            error: errorMessage,
-            duration,
-          },
-          null,
-          2,
-        ),
-      );
+      logger.json({
+        success: false,
+        error: errorMessage,
+        duration,
+      });
     } else {
-      logger.error(`❌ Push command failed: ${errorMessage}`);
+      logger.error(`Error: ${errorMessage}`);
     }
 
     process.exit(1);
@@ -245,7 +227,7 @@ async function executeWebPush(
     ) => Promise<Elb.PushResult>;
 
     // Push event
-    logger.info(`Pushing event: ${event.name}`);
+    logger.log(`Pushing event: ${event.name}`);
     const elbResult = await elb(event.name, event.data);
 
     return {
@@ -305,7 +287,7 @@ async function executeServerPush(
       const { elb } = result;
 
       // Push event
-      logger.info(`Pushing event: ${event.name}`);
+      logger.log(`Pushing event: ${event.name}`);
       const elbResult = await (
         elb as (
           name: string,

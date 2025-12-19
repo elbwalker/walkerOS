@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import { Command } from 'commander';
 import { getTmpPath, getDefaultTmpRoot } from '../core/tmp.js';
+import { createLogger } from '../core/logger.js';
 
 export function registerCacheCommand(program: Command): void {
   const cache = program.command('cache').description('Manage the CLI cache');
@@ -11,17 +12,19 @@ export function registerCacheCommand(program: Command): void {
     .option('--packages', 'Clear only package cache')
     .option('--builds', 'Clear only build cache')
     .option('--tmp-dir <dir>', 'Custom temp directory')
+    .option('--silent', 'Suppress output')
     .action(async (options) => {
+      const logger = createLogger({ silent: options.silent });
       const tmpDir = options.tmpDir;
       if (options.packages) {
         await fs.remove(getTmpPath(tmpDir, 'cache', 'packages'));
-        console.log('Package cache cleared');
+        logger.log('Package cache cleared');
       } else if (options.builds) {
         await fs.remove(getTmpPath(tmpDir, 'cache', 'builds'));
-        console.log('Build cache cleared');
+        logger.log('Build cache cleared');
       } else {
         await fs.remove(getTmpPath(tmpDir, 'cache'));
-        console.log('All caches cleared');
+        logger.log('All caches cleared');
       }
     });
 
@@ -29,7 +32,9 @@ export function registerCacheCommand(program: Command): void {
     .command('info')
     .description('Show cache statistics')
     .option('--tmp-dir <dir>', 'Custom temp directory')
+    .option('--silent', 'Suppress output')
     .action(async (options) => {
+      const logger = createLogger({ silent: options.silent });
       const tmpDir = options.tmpDir;
       const packagesDir = getTmpPath(tmpDir, 'cache', 'packages');
       const buildsDir = getTmpPath(tmpDir, 'cache', 'builds');
@@ -37,9 +42,9 @@ export function registerCacheCommand(program: Command): void {
       const packageCount = await countEntries(packagesDir);
       const buildCount = await countEntries(buildsDir);
 
-      console.log(`Cache directory: ${getTmpPath(tmpDir, 'cache')}`);
-      console.log(`Cached packages: ${packageCount}`);
-      console.log(`Cached builds: ${buildCount}`);
+      logger.log(`Cache directory: ${getTmpPath(tmpDir, 'cache')}`);
+      logger.log(`Cached packages: ${packageCount}`);
+      logger.log(`Cached builds: ${buildCount}`);
     });
 }
 
@@ -51,10 +56,12 @@ export function registerCleanCommand(program: Command): void {
     .command('clean')
     .description('Clear the entire temp directory (.tmp/)')
     .option('--tmp-dir <dir>', 'Custom temp directory')
+    .option('--silent', 'Suppress output')
     .action(async (options) => {
+      const logger = createLogger({ silent: options.silent });
       const tmpDir = options.tmpDir || getDefaultTmpRoot();
       await fs.remove(tmpDir);
-      console.log(`Temp directory cleared: ${tmpDir}`);
+      logger.log(`Temp directory cleared: ${tmpDir}`);
     });
 }
 

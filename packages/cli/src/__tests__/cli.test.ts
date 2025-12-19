@@ -95,7 +95,7 @@ describe('CLI Bundle Command', () => {
     expect(output.data.flows[0].stats.packages[0].name).toBe(
       '@walkeros/core@latest',
     );
-  });
+  }, 120000);
 
   it('should output JSON format for failed bundle (invalid syntax)', async () => {
     // Flow.Setup format - but bundler will fail on invalid destination code

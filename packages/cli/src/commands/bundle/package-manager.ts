@@ -152,6 +152,9 @@ export async function downloadPackages(
   const downloadQueue: Package[] = [...packages];
   const processed = new Set<string>();
 
+  // Track user-specified packages (only these are logged per design)
+  const userSpecifiedPackages = new Set(packages.map((p) => p.name));
+
   // Track packages that should use local paths (to prevent npm overwriting them)
   const localPackageMap = new Map<string, string>();
   for (const pkg of packages) {
@@ -209,7 +212,10 @@ export async function downloadPackages(
     const cachedPath = await getCachedPackagePath(pkg);
 
     if (useCache && (await isPackageCached(pkg))) {
-      logger.debug(`Using cached ${packageSpec}...`);
+      // Only log user-specified packages per design
+      if (userSpecifiedPackages.has(pkg.name)) {
+        logger.debug(`Downloading ${packageSpec} (cached)`);
+      }
       try {
         // Ensure parent directories exist for scoped packages (@scope/package)
         await fs.ensureDir(path.dirname(packageDir));
@@ -231,8 +237,6 @@ export async function downloadPackages(
         );
       }
     }
-
-    logger.debug(`Downloading ${packageSpec}...`);
 
     try {
       // Ensure parent directories exist for scoped packages (@scope/package)
@@ -260,14 +264,23 @@ export async function downloadPackages(
         `Package download timed out after ${PACKAGE_DOWNLOAD_TIMEOUT_MS / 1000}s: ${packageSpec}`,
       );
 
+      // Only log user-specified packages per design
+      if (userSpecifiedPackages.has(pkg.name)) {
+        // Get package size for display
+        const pkgStats = await fs.stat(path.join(packageDir, 'package.json'));
+        const pkgJsonSize = pkgStats.size;
+        // Estimate total package size from package.json (rough approximation)
+        const sizeKB = (pkgJsonSize / 1024).toFixed(1);
+        logger.debug(`Downloading ${packageSpec} (${sizeKB} KB)`);
+      }
+
       // Cache the downloaded package for future use
       if (useCache) {
         try {
           await fs.ensureDir(path.dirname(cachedPath));
           await fs.copy(packageDir, cachedPath);
-          logger.debug(`Cached ${packageSpec} for future use`);
         } catch (cacheError) {
-          logger.debug(`Failed to cache ${packageSpec}: ${cacheError}`);
+          // Silent cache failures
         }
       }
 

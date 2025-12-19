@@ -53,38 +53,30 @@ export async function runCommand(
       if (isPreBuilt) {
         // Use pre-built bundle directly
         flowPath = path.resolve(configPath);
-        if (!options.json && !options.silent) {
-          logger.info(`📦 Using pre-built flow: ${path.basename(flowPath)}`);
-        }
+        logger.debug(`Using pre-built flow: ${path.basename(flowPath)}`);
       } else {
         // Bundle JSON config first
-        if (!options.json && !options.silent) {
-          logger.info('🔨 Building flow bundle...');
-        }
+        logger.debug('Building flow bundle');
 
         flowPath = await prepareBundleForRun(configPath, {
           verbose: options.verbose,
           silent: options.json || options.silent,
         });
 
-        if (!options.json && !options.silent) {
-          logger.success('✅ Bundle ready');
-        }
+        logger.debug('Bundle ready');
       }
     }
 
     // Step 3: Execute locally
     // Handle dry-run
     if (options.dryRun) {
-      logger.info(`[DRY-RUN] Would execute locally: run ${mode}`);
+      logger.log(`[DRY-RUN] Would execute locally: run ${mode}`);
       return;
     }
 
     // Execute locally using runtime module
-    if (!options.json && !options.silent) {
-      const modeLabel = mode === 'collect' ? 'Collector' : 'Server';
-      logger.info(`🖥️  Starting ${modeLabel} locally...`);
-    }
+    const modeLabel = mode === 'collect' ? 'Collector' : 'Server';
+    logger.log(`Starting ${modeLabel}...`);
 
     await executeRunLocal(mode as 'collect' | 'serve', flowPath, {
       port: options.port,
@@ -99,17 +91,14 @@ export async function runCommand(
     const errorMessage = getErrorMessage(error);
 
     if (options.json) {
-      const output = {
+      logger.json({
         success: false,
         mode,
         error: errorMessage,
         duration,
-      };
-      // eslint-disable-next-line no-console
-      console.log(JSON.stringify(output, null, 2));
+      });
     } else {
-      logger.error('❌ Run failed:');
-      logger.error(errorMessage);
+      logger.error(`Error: ${errorMessage}`);
     }
     process.exit(1);
   }

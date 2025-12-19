@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import chalk from 'chalk';
 import { VERSION } from './version.js';
 import { bundleCommand } from './commands/bundle/index.js';
 import { simulateCommand } from './commands/simulate/index.js';
@@ -50,7 +51,7 @@ program.hook('preAction', (thisCommand, actionCommand) => {
   const options = actionCommand.opts();
   // Skip banner for --silent, --json, or --help flags
   if (!options.silent && !options.json) {
-    console.log(`🚀 walkerOS CLI v${VERSION}`);
+    console.log(chalk.hex('#01b5e2')(`walkerOS v${VERSION}`));
   }
 });
 

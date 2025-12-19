@@ -84,15 +84,16 @@ export async function bundleCore(
     if (cached) {
       const cachedBuild = await getCachedBuild(configContent);
       if (cachedBuild) {
-        logger.info('✨ Using cached build');
+        logger.debug('Using cached build');
 
         // Write cached build to output
         const outputPath = path.resolve(buildOptions.output);
         await fs.ensureDir(path.dirname(outputPath));
         await fs.writeFile(outputPath, cachedBuild);
 
-        logger.gray(`Output: ${outputPath}`);
-        logger.success('✅ Build completed (from cache)');
+        const stats = await fs.stat(outputPath);
+        const sizeKB = (stats.size / 1024).toFixed(1);
+        logger.log(`Output: ${outputPath} (${sizeKB} KB, cached)`);
 
         // Return stats if requested
         if (showStats) {
@@ -121,7 +122,7 @@ export async function bundleCore(
     await fs.ensureDir(TEMP_DIR);
 
     // Step 2: Download packages
-    logger.info('📥 Downloading packages...');
+    logger.debug('Downloading packages');
     // Convert packages object to array format expected by downloadPackages
     const packagesArray = Object.entries(buildOptions.packages).map(
       ([name, packageConfig]) => ({
@@ -168,7 +169,7 @@ export async function bundleCore(
     );
 
     // Step 4: Create entry point
-    logger.info('📝 Creating entry point...');
+    logger.debug('Creating entry point');
     const entryContent = await createEntryPoint(
       flowConfig,
       buildOptions,
@@ -178,7 +179,9 @@ export async function bundleCore(
     await fs.writeFile(entryPath, entryContent);
 
     // Step 4: Bundle with esbuild
-    logger.info('⚡ Bundling with esbuild...');
+    logger.debug(
+      `Running esbuild (target: ${buildOptions.target || 'es2018'}, format: ${buildOptions.format})`,
+    );
     const outputPath = path.resolve(buildOptions.output);
 
     // Ensure output directory exists
@@ -203,7 +206,11 @@ export async function bundleCore(
       );
     }
 
-    logger.gray(`Output: ${outputPath}`);
+    // Get file size and calculate build time
+    const outputStats = await fs.stat(outputPath);
+    const sizeKB = (outputStats.size / 1024).toFixed(1);
+    const buildTime = ((Date.now() - bundleStartTime) / 1000).toFixed(1);
+    logger.log(`Output: ${outputPath} (${sizeKB} KB, ${buildTime}s)`);
 
     // Step 5: Cache the build result if caching is enabled
     if (buildOptions.cache !== false) {

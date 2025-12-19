@@ -94,7 +94,8 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Commit version changes
+      - name: Commit version changes (stable only)
+        if: inputs.release_type == 'stable release'
         run: |
           git add -A
           git commit -m "chore: version packages" || echo "No changes to commit"

@@ -1,9 +1,5 @@
 import { simulateCore, formatSimulationResult } from './simulator.js';
-import {
-  createCommandLogger,
-  createLogger,
-  getErrorMessage,
-} from '../../core/index.js';
+import { createCommandLogger, getErrorMessage } from '../../core/index.js';
 import { loadJsonFromSource } from '../../config/index.js';
 import type { SimulateCommandOptions } from './types.js';
 
@@ -17,7 +13,7 @@ export async function simulateCommand(
 
   // Handle dry-run
   if (options.dryRun) {
-    logger.info(
+    logger.log(
       `[DRY-RUN] Would execute simulate with config: ${options.config}`,
     );
     return;
@@ -44,12 +40,15 @@ export async function simulateCommand(
       duration: (Date.now() - startTime) / 1000,
     };
 
-    // Output results - create output logger that always logs
-    const outputLogger = createLogger({ silent: false, json: false });
-    const output = formatSimulationResult(resultWithDuration, {
-      json: options.json,
-    });
-    outputLogger.log('white', output);
+    // Output results
+    if (options.json) {
+      logger.json(resultWithDuration);
+    } else {
+      const output = formatSimulationResult(resultWithDuration, {
+        json: false,
+      });
+      logger.log(output);
+    }
 
     // Exit with error code if simulation failed
     if (!result.success) {
@@ -59,22 +58,13 @@ export async function simulateCommand(
     const errorMessage = getErrorMessage(error);
 
     if (options.json) {
-      // JSON error output - create output logger that always logs
-      const outputLogger = createLogger({ silent: false, json: false });
-      const errorOutput = JSON.stringify(
-        {
-          success: false,
-          error: errorMessage,
-          duration: (Date.now() - startTime) / 1000,
-        },
-        null,
-        2,
-      );
-      outputLogger.log('white', errorOutput);
+      logger.json({
+        success: false,
+        error: errorMessage,
+        duration: (Date.now() - startTime) / 1000,
+      });
     } else {
-      // Error output - create error logger that always logs
-      const errorLogger = createLogger({ silent: false, json: false });
-      errorLogger.error(`❌ Simulate command failed: ${errorMessage}`);
+      logger.error(`Error: ${errorMessage}`);
     }
 
     process.exit(1);
