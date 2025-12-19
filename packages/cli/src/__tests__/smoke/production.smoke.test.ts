@@ -12,12 +12,12 @@ import fs from 'fs-extra';
 const projectRoot = process.cwd();
 
 describe('Production Smoke Tests', () => {
-  // Output path is now convention-based: ./dist/bundle.mjs for server
-  const bundlePath = join(projectRoot, 'examples/dist/bundle.mjs');
+  // Output path is convention-based: ./dist/bundle.mjs relative to cwd
+  const bundlePath = join(projectRoot, 'dist/bundle.mjs');
 
   beforeAll(async () => {
     // Ensure the dist directory exists
-    await fs.ensureDir(join(projectRoot, 'examples/dist'));
+    await fs.ensureDir(join(projectRoot, 'dist'));
     // Create fresh bundle from Flow.Setup config
     await bundle(join(projectRoot, 'examples/server-collect.json'), {
       silent: true,
@@ -25,8 +25,8 @@ describe('Production Smoke Tests', () => {
   }, 120000);
 
   afterAll(async () => {
-    // Clean up the dist directory
-    await fs.remove(join(projectRoot, 'examples/dist')).catch(() => {});
+    // Clean up the generated bundle
+    await fs.remove(join(projectRoot, 'dist/bundle.mjs')).catch(() => {});
   });
 
   it('bundle should exist and be non-empty', () => {
