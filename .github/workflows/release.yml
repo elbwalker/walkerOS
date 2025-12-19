@@ -108,60 +108,38 @@ jobs:
           git push
 
       # Docker image publishing
-      - name: Get Docker package versions
+      - name: Get CLI version
         id: versions
         run: |
           CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
-          DOCKER_VERSION=$(node -p "require('./packages/docker/package.json').version")
           echo "cli=$CLI_VERSION" >> $GITHUB_OUTPUT
-          echo "docker=$DOCKER_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Check if CLI image exists
-        id: check-cli
+      - name: Check if Flow image exists
+        id: check-flow
         run: |
-          if docker manifest inspect walkeros/cli:${{ steps.versions.outputs.cli }} 2>/dev/null; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Check if Docker image exists
-        id: check-docker
-        run: |
-          if docker manifest inspect walkeros/docker:${{ steps.versions.outputs.docker }} 2>/dev/null; then
+          if docker manifest inspect walkeros/flow:${{ steps.versions.outputs.cli }} 2>/dev/null; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Login to Docker Hub
-        if: steps.check-cli.outputs.exists == 'false' || steps.check-docker.outputs.exists == 'false'
+        if: steps.check-flow.outputs.exists == 'false'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push CLI image
-        if: steps.check-cli.outputs.exists == 'false'
+      - name: Build and push Flow image
+        if: steps.check-flow.outputs.exists == 'false'
         uses: docker/build-push-action@v6
         with:
           context: ./packages/cli
-          file: ./packages/cli/docker/Dockerfile
+          file: ./packages/cli/Dockerfile
           push: true
           tags: |
-            walkeros/cli:${{ steps.versions.outputs.cli }}
-            walkeros/cli:${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}
-
-      - name: Build and push Docker image
-        if: steps.check-docker.outputs.exists == 'false'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./packages/docker/Dockerfile
-          push: true
-          tags: |
-            walkeros/docker:${{ steps.versions.outputs.docker }}
-            walkeros/docker:${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}
+            walkeros/flow:${{ steps.versions.outputs.cli }}
+            walkeros/flow:${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}
 
       - name: Comment on PR
         if: steps.publish.outputs.published != ''
@@ -183,23 +161,15 @@ jobs:
               DOCKER_TAG=":latest"
             fi
 
-            # Build Docker section if any images were published
+            # Build Docker section if flow image was published
             DOCKER_SECTION=""
-            if [ "${{ steps.check-cli.outputs.exists }}" = "false" ] || [ "${{ steps.check-docker.outputs.exists }}" = "false" ]; then
+            if [ "${{ steps.check-flow.outputs.exists }}" = "false" ]; then
               DOCKER_SECTION="
 
-          🐳 **Docker images published**"
-              if [ "${{ steps.check-cli.outputs.exists }}" = "false" ]; then
-                DOCKER_SECTION="$DOCKER_SECTION
-          - walkeros/cli:${{ steps.versions.outputs.cli }} ($DOCKER_TAG)"
-              fi
-              if [ "${{ steps.check-docker.outputs.exists }}" = "false" ]; then
-                DOCKER_SECTION="$DOCKER_SECTION
-          - walkeros/docker:${{ steps.versions.outputs.docker }} ($DOCKER_TAG)"
-              fi
-              DOCKER_SECTION="$DOCKER_SECTION
+          🐳 **Docker image published**
+          - walkeros/flow:${{ steps.versions.outputs.cli }} ($DOCKER_TAG)
 
-          Docker: \`docker pull walkeros/cli$DOCKER_TAG\`"
+          Docker: \`docker pull walkeros/flow$DOCKER_TAG\`"
             fi
 
             BODY="$EMOJI **$TITLE**

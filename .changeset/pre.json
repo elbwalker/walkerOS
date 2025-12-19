@@ -13,7 +13,6 @@
     "@walkeros/cli": "0.5.0",
     "@walkeros/collector": "0.5.0",
     "@walkeros/core": "0.5.0",
-    "@walkeros/docker": "0.3.0",
     "@walkeros/server-core": "0.5.0",
     "@walkeros/server-destination-api": "0.5.0",
     "@walkeros/server-destination-aws": "0.5.0",

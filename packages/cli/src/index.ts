@@ -1,5 +1,4 @@
 import { Command } from 'commander';
-import { VERSION as DOCKER_VERSION } from '@walkeros/docker';
 import { VERSION } from './version.js';
 import { bundleCommand } from './commands/bundle/index.js';
 import { simulateCommand } from './commands/simulate/index.js';
@@ -49,7 +48,6 @@ program.hook('preAction', (thisCommand, actionCommand) => {
   // Skip banner for --silent, --json, or --help flags
   if (!options.silent && !options.json) {
     console.log(`🚀 walkerOS CLI v${VERSION}`);
-    console.log(`🐳 Using Docker runtime: walkeros/docker:${DOCKER_VERSION}`);
   }
 });
 
@@ -63,7 +61,6 @@ program
   .option('--json', 'output statistics in JSON format (implies --stats)')
   .option('--no-cache', 'disable package caching and download fresh packages')
   .option('-v, --verbose', 'verbose output')
-  .option('--local', 'execute in local Node.js instead of Docker')
   .option('--dry-run', 'preview command without executing')
   .option('--silent', 'suppress output')
   .action(async (file, options) => {
@@ -75,7 +72,6 @@ program
       json: options.json,
       cache: options.cache,
       verbose: options.verbose,
-      local: options.local,
       dryRun: options.dryRun,
       silent: options.silent,
     });
@@ -91,7 +87,6 @@ program
   )
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
-  .option('--local', 'execute in local Node.js instead of Docker')
   .option('--dry-run', 'preview command without executing')
   .option('--silent', 'suppress output')
   .action(async (file, options) => {
@@ -100,7 +95,6 @@ program
       event: options.event,
       json: options.json,
       verbose: options.verbose,
-      local: options.local,
       dryRun: options.dryRun,
       silent: options.silent,
     });
@@ -118,7 +112,6 @@ program
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
   .option('-s, --silent', 'Suppress output')
-  .option('--local', 'Execute in local Node.js instead of Docker')
   .action(async (file, options) => {
     await pushCommand({
       config: file || 'bundle.config.json',
@@ -127,7 +120,6 @@ program
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,
-      local: options.local,
     });
   });
 
@@ -146,7 +138,6 @@ runCmd
   .option('-h, --host <address>', 'Host address (default: 0.0.0.0)')
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
-  .option('--local', 'execute in local Node.js instead of Docker')
   .option('--dry-run', 'preview command without executing')
   .option('--silent', 'suppress output')
   .action(async (file, options) => {
@@ -156,7 +147,6 @@ runCmd
       host: options.host,
       json: options.json,
       verbose: options.verbose,
-      local: options.local,
       dryRun: options.dryRun,
       silent: options.silent,
     });
@@ -174,7 +164,6 @@ runCmd
   .option('--path <directory>', 'URL directory path (e.g., libs/v1)')
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
-  .option('--local', 'execute in local Node.js instead of Docker')
   .option('--dry-run', 'preview command without executing')
   .option('--silent', 'suppress output')
   .action(async (file, options) => {
@@ -186,7 +175,6 @@ runCmd
       servePath: options.path,
       json: options.json,
       verbose: options.verbose,
-      local: options.local,
       dryRun: options.dryRun,
       silent: options.silent,
     });

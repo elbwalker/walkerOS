@@ -1,8 +1,7 @@
 /**
  * Run Command Integration Tests
  *
- * Tests the CLI run command that imports @walkeros/docker as a library
- * No Docker daemon required - runs directly in Node.js process
+ * Tests the CLI run command using local runtime module
  */
 
 import { runCommand } from '../index.js';
@@ -45,16 +44,16 @@ describe('Run Command Integration', () => {
     });
   });
 
-  describe('Integration with @walkeros/docker', () => {
-    it('should be able to import Docker package', async () => {
-      // Verify the dependency is available
-      const dockerModule = await import('@walkeros/docker');
+  describe('Integration with local runtime', () => {
+    it('should be able to import runtime module', async () => {
+      // Verify the runtime module is available
+      const runtimeModule = await import('../../../runtime/index.js');
 
-      expect(dockerModule.runFlow).toBeDefined();
-      expect(dockerModule.runServeMode).toBeDefined();
+      expect(runtimeModule.runFlow).toBeDefined();
+      expect(runtimeModule.runServeMode).toBeDefined();
     });
 
-    it('should have correct types from Docker package', () => {
+    it('should have correct types from runtime module', () => {
       // TypeScript compilation ensures this works
       // If this test runs, types are correctly exported
       expect(true).toBe(true);

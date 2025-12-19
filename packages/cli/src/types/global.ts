@@ -9,12 +9,6 @@
  */
 export interface GlobalOptions {
   /**
-   * Execute using local Node.js environment (vs Docker container)
-   * @default false (Docker mode)
-   */
-  local?: boolean;
-
-  /**
    * Show detailed execution logs
    * @default false
    */
@@ -31,18 +25,6 @@ export interface GlobalOptions {
    * @default false
    */
   dryRun?: boolean;
-}
-
-/**
- * Execution mode for commands
- */
-export type ExecutionMode = 'docker' | 'local';
-
-/**
- * Get execution mode from global options
- */
-export function getExecutionMode(options: GlobalOptions): ExecutionMode {
-  return options.local ? 'local' : 'docker';
 }
 
 /**

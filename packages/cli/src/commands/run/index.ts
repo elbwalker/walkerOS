@@ -1,18 +1,14 @@
 /**
  * Run Command
  *
- * Runs walkerOS flows using @walkeros/docker as a library
- * No Docker daemon required - runs directly in Node.js
+ * Runs walkerOS flows using local runtime
  */
 
 import path from 'path';
 import {
   createCommandLogger,
   createTimer,
-  getExecutionMode,
   getErrorMessage,
-  executeRunInDocker,
-  isDockerAvailable,
 } from '../../core/index.js';
 import { validateMode, validateFlowFile, validatePort } from './validators.js';
 import { prepareBundleForRun, isPreBuiltConfig } from './utils.js';
@@ -77,57 +73,27 @@ export async function runCommand(
       }
     }
 
-    // Step 3: Execute based on mode
-    const executionMode = getExecutionMode(options);
-
+    // Step 3: Execute locally
     // Handle dry-run
     if (options.dryRun) {
-      if (executionMode === 'docker') {
-        logger.info(
-          `[DRY-RUN] Would execute in Docker: run ${mode} with runtime image`,
-        );
-      } else {
-        logger.info(`[DRY-RUN] Would execute locally: run ${mode}`);
-      }
+      logger.info(`[DRY-RUN] Would execute locally: run ${mode}`);
       return;
     }
 
-    if (executionMode === 'docker') {
-      // Docker mode: Use production runtime image
-      const dockerAvailable = await isDockerAvailable();
-      if (!dockerAvailable) {
-        throw new Error(
-          'Docker is not available. Please install Docker or use --local flag to execute locally.',
-        );
-      }
-
-      if (!options.json && !options.silent) {
-        logger.info('🐳 Executing in production runtime container...');
-      }
-
-      await executeRunInDocker(mode as 'collect' | 'serve', flowPath, {
-        port: options.port,
-        host: options.host,
-        serveName: options.serveName,
-        servePath: options.servePath,
-        silent: options.silent,
-      });
-    } else {
-      // Local mode: Use library functions
-      if (!options.json && !options.silent) {
-        const modeLabel = mode === 'collect' ? 'Collector' : 'Server';
-        logger.info(`🖥️  Starting ${modeLabel} locally...`);
-      }
-
-      await executeRunLocal(mode as 'collect' | 'serve', flowPath, {
-        port: options.port,
-        host: options.host,
-        serveName: options.serveName,
-        servePath: options.servePath,
-      });
+    // Execute locally using runtime module
+    if (!options.json && !options.silent) {
+      const modeLabel = mode === 'collect' ? 'Collector' : 'Server';
+      logger.info(`🖥️  Starting ${modeLabel} locally...`);
     }
 
-    // Note: Both Docker and local modes run forever, so we won't reach here unless they fail
+    await executeRunLocal(mode as 'collect' | 'serve', flowPath, {
+      port: options.port,
+      host: options.host,
+      serveName: options.serveName,
+      servePath: options.servePath,
+    });
+
+    // Note: Server runs forever, so we won't reach here unless it fails
   } catch (error) {
     const duration = timer.getElapsed() / 1000;
     const errorMessage = getErrorMessage(error);
@@ -207,7 +173,7 @@ export async function run(
       });
     }
 
-    // Run the flow using Docker package
+    // Run the flow using local runtime
     await executeRunLocal(mode, flowPath, {
       port: options.port,
       host: options.host,
@@ -215,7 +181,7 @@ export async function run(
       servePath: options.servePath,
     });
 
-    // Success (though runFlow runs forever, so we typically don't reach here)
+    // Success (though server runs forever, so we typically don't reach here)
     return {
       success: true,
       exitCode: 0,

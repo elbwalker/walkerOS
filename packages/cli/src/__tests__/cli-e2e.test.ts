@@ -135,15 +135,10 @@ function runCLI(
   args: string[],
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    // Add --local flag to run tests without Docker
-    const child = spawn(
-      'node',
-      [join(projectRoot, 'dist/index.js'), ...args, '--local'],
-      {
-        cwd: projectRoot,
-        env: { ...process.env, FORCE_COLOR: '0' },
-      },
-    );
+    const child = spawn('node', [join(projectRoot, 'dist/index.js'), ...args], {
+      cwd: projectRoot,
+      env: { ...process.env, FORCE_COLOR: '0' },
+    });
 
     let stdout = '';
     let stderr = '';

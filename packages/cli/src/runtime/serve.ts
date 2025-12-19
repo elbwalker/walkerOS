@@ -1,3 +1,7 @@
+/**
+ * Serve mode - serve single file (typically generated bundle)
+ */
+
 import express from 'express';
 import { resolve } from 'path';
 import type { Logger } from '@walkeros/core';
@@ -29,8 +33,8 @@ export async function runServeMode(
   // Host priority: ENV variable > config > default
   const host = process.env.HOST || config?.host || '0.0.0.0';
 
-  // File path: ENV variable > config > baked-in default (resolve to absolute)
-  const file = resolve(process.env.FILE || config?.file || '/app/web-serve.js');
+  // File path: ENV variable > config > default (resolve to absolute)
+  const file = resolve(process.env.FILE || config?.file || './dist/walker.js');
 
   // Serve name (filename in URL): ENV variable > config > default
   const serveName = process.env.SERVE_NAME || config?.serveName || 'walker.js';
