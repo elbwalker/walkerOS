@@ -1,11 +1,13 @@
 import path from 'path';
 import fs from 'fs-extra';
-import type { Flow } from '@walkeros/core';
+import type { Flow, Logger as CoreLogger } from '@walkeros/core';
 import { getPlatform } from '@walkeros/core';
 import {
   createLogger,
+  createCollectorLoggerConfig,
   getErrorMessage,
   detectInput,
+  type Logger,
   type Platform,
 } from '../../core/index.js';
 import {
@@ -48,7 +50,10 @@ export async function simulateCore(
   try {
     // Execute simulation
     logger.debug(`Simulating event: ${JSON.stringify(event)}`);
-    const result = await executeSimulation(event, inputPath, options.platform);
+    const result = await executeSimulation(event, inputPath, options.platform, {
+      logger,
+      verbose: options.verbose,
+    });
 
     return result;
   } catch (error) {
@@ -92,9 +97,15 @@ export async function executeSimulation(
   event: unknown,
   inputPath: string,
   platformOverride?: Platform,
+  options: { logger?: Logger; verbose?: boolean } = {},
 ): Promise<SimulationResult> {
   const startTime = Date.now();
   const tempDir = getTmpPath();
+
+  // Create collector logger config for forwarding logs
+  const collectorLoggerConfig = options.logger
+    ? createCollectorLoggerConfig(options.logger, options.verbose)
+    : undefined;
 
   try {
     // Ensure temp directory exists
@@ -124,6 +135,7 @@ export async function executeSimulation(
         typedEvent,
         tempDir,
         startTime,
+        collectorLoggerConfig,
       );
     } else {
       // Bundle flow: execute directly without mocking
@@ -133,6 +145,7 @@ export async function executeSimulation(
         typedEvent,
         tempDir,
         startTime,
+        collectorLoggerConfig,
       );
     }
   } catch (error) {
@@ -161,6 +174,7 @@ async function executeConfigSimulation(
   typedEvent: { name: string; data?: unknown },
   tempDir: string,
   startTime: number,
+  loggerConfig?: CoreLogger.Config,
 ): Promise<SimulationResult> {
   // Load config
   const { flowConfig, buildOptions } = await loadFlowConfig(configPath);
@@ -230,6 +244,7 @@ async function executeConfigSimulation(
       tracker,
       envs,
       30000,
+      loggerConfig ? { logger: loggerConfig } : {},
     );
   }
 
@@ -253,6 +268,7 @@ async function executeBundleSimulation(
   typedEvent: { name: string; data?: unknown },
   tempDir: string,
   startTime: number,
+  loggerConfig?: CoreLogger.Config,
 ): Promise<SimulationResult> {
   // Write bundle to temp file
   const tempOutput = path.join(
@@ -283,6 +299,7 @@ async function executeBundleSimulation(
       tracker,
       {},
       30000,
+      loggerConfig ? { logger: loggerConfig } : {},
     );
   }
 

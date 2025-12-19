@@ -1,4 +1,5 @@
 export * from './logger.js';
+export * from './collector-logger.js';
 export * from './timer.js';
 export * from './output.js';
 export * from './tmp.js';

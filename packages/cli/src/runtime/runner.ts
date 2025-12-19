@@ -20,11 +20,13 @@ export interface RuntimeConfig {
  * @param file - Absolute path to pre-built .mjs flow file
  * @param config - Optional runtime configuration
  * @param logger - Logger instance for output
+ * @param loggerConfig - Optional logger config to forward to the flow's collector
  */
 export async function runFlow(
   file: string,
   config: RuntimeConfig | undefined,
   logger: Logger.Instance,
+  loggerConfig?: Logger.Config,
 ): Promise<void> {
   logger.info(`Loading flow from ${file}`);
 
@@ -46,8 +48,11 @@ export async function runFlow(
       );
     }
 
-    // Execute the flow's factory function
-    const result = await module.default(config);
+    // Execute the flow's factory function with runtime config and logger
+    const flowContext = loggerConfig
+      ? { ...config, logger: loggerConfig }
+      : config;
+    const result = await module.default(flowContext);
 
     if (!result || !result.collector) {
       logger.throw(`Invalid flow bundle: ${file} must return { collector }`);

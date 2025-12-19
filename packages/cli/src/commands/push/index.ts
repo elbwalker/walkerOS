@@ -1,10 +1,15 @@
 import path from 'path';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
-import { getPlatform, type Elb } from '@walkeros/core';
+import {
+  getPlatform,
+  type Elb,
+  type Logger as CoreLogger,
+} from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 import {
   createCommandLogger,
+  createCollectorLoggerConfig,
   getErrorMessage,
   detectInput,
   type Logger,
@@ -77,6 +82,10 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
       );
     } else {
       // Bundle flow: execute directly
+      const collectorLoggerConfig = createCollectorLoggerConfig(
+        logger,
+        options.verbose,
+      );
       result = await executeBundlePush(
         detected.content,
         detected.platform!,
@@ -85,6 +94,7 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
         (dir) => {
           tempDir = dir;
         },
+        { logger: collectorLoggerConfig },
       );
     }
 
@@ -201,7 +211,13 @@ async function executeConfigPush(
     return executeWebPush(tempPath, validatedEvent, logger);
   } else if (platform === 'server') {
     logger.debug('Executing in server environment (Node.js)');
-    return executeServerPush(tempPath, validatedEvent, logger);
+    const collectorLoggerConfig = createCollectorLoggerConfig(
+      logger,
+      options.verbose,
+    );
+    return executeServerPush(tempPath, validatedEvent, logger, 60000, {
+      logger: collectorLoggerConfig,
+    });
   } else {
     throw new Error(`Unsupported platform: ${platform}`);
   }
@@ -216,6 +232,7 @@ async function executeBundlePush(
   validatedEvent: { name: string; data: Record<string, unknown> },
   logger: Logger,
   setTempDir: (dir: string) => void,
+  context: { logger?: CoreLogger.Config } = {},
 ): Promise<PushResult> {
   // Write bundle to temp file
   const tempDir = path.join(
@@ -239,7 +256,7 @@ async function executeBundlePush(
     return executeWebPush(tempPath, validatedEvent, logger);
   } else {
     logger.debug('Executing in server environment (Node.js)');
-    return executeServerPush(tempPath, validatedEvent, logger);
+    return executeServerPush(tempPath, validatedEvent, logger, 60000, context);
   }
 }
 
@@ -280,23 +297,28 @@ async function executeWebPush(
     const bundleCode = await fs.readFile(bundlePath, 'utf8');
     window.eval(bundleCode);
 
-    // Wait for window.elb assignment
-    logger.debug('Waiting for elb...');
+    // Wait for window.collector assignment
+    logger.debug('Waiting for collector...');
     await waitForWindowProperty(
       window as unknown as Record<string, unknown>,
-      'elb',
+      'collector',
       5000,
     );
 
     const windowObj = window as unknown as Record<string, unknown>;
-    const elb = windowObj.elb as unknown as (
-      name: string,
-      data: Record<string, unknown>,
-    ) => Promise<Elb.PushResult>;
+    const collector = windowObj.collector as unknown as {
+      push: (event: {
+        name: string;
+        data: Record<string, unknown>;
+      }) => Promise<Elb.PushResult>;
+    };
 
-    // Push event
+    // Push event directly to collector (bypasses source handlers)
     logger.log(`Pushing event: ${event.name}`);
-    const elbResult = await elb(event.name, event.data);
+    const elbResult = await collector.push({
+      name: event.name,
+      data: event.data,
+    });
 
     return {
       success: true,
@@ -320,6 +342,7 @@ async function executeServerPush(
   event: PushEventInput,
   logger: Logger,
   timeout: number = 60000, // 60 second default timeout
+  context: { logger?: CoreLogger.Config } = {},
 ): Promise<PushResult> {
   const startTime = Date.now();
 
@@ -342,26 +365,28 @@ async function executeServerPush(
         throw new Error('Bundle does not export default factory function');
       }
 
-      // Call factory function to start flow
+      // Call factory function to start flow (pass context for verbose logging)
       logger.debug('Calling factory function...');
-      const result = await flowModule.default();
+      const result = await flowModule.default(context);
 
-      if (!result || !result.elb || typeof result.elb !== 'function') {
+      if (
+        !result ||
+        !result.collector ||
+        typeof result.collector.push !== 'function'
+      ) {
         throw new Error(
-          'Factory function did not return valid result with elb',
+          'Factory function did not return valid result with collector',
         );
       }
 
-      const { elb } = result;
+      const { collector } = result;
 
-      // Push event
+      // Push event directly to collector (bypasses source handlers)
       logger.log(`Pushing event: ${event.name}`);
-      const elbResult = await (
-        elb as (
-          name: string,
-          data: Record<string, unknown>,
-        ) => Promise<Elb.PushResult>
-      )(event.name, event.data);
+      const elbResult = await collector.push({
+        name: event.name,
+        data: event.data,
+      });
 
       return {
         success: true,
