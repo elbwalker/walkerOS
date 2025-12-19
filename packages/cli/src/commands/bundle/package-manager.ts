@@ -8,6 +8,23 @@ import {
 } from '../../core/index.js';
 import { getPackageCacheKey } from '../../core/cache-utils.js';
 
+/** Timeout for individual package downloads (60 seconds) */
+const PACKAGE_DOWNLOAD_TIMEOUT_MS = 60000;
+
+/**
+ * Wraps a promise with a timeout. Rejects with clear error if timeout exceeded.
+ */
+async function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  errorMessage: string,
+): Promise<T> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(errorMessage)), ms),
+  );
+  return Promise.race([promise, timeout]);
+}
+
 export interface Package {
   name: string;
   version: string;
@@ -223,19 +240,23 @@ export async function downloadPackages(
       // Use environment variable for cache location (Docker-friendly)
       const cacheDir =
         process.env.NPM_CACHE_DIR || path.join(process.cwd(), '.npm-cache');
-      await pacote.extract(packageSpec, packageDir, {
-        // Force npm registry download, prevent workspace resolution
-        registry: 'https://registry.npmjs.org',
+      await withTimeout(
+        pacote.extract(packageSpec, packageDir, {
+          // Force npm registry download, prevent workspace resolution
+          registry: 'https://registry.npmjs.org',
 
-        // Force online fetching from registry (don't use cached workspace packages)
-        preferOnline: true,
+          // Force online fetching from registry (don't use cached workspace packages)
+          preferOnline: true,
 
-        // Cache for performance
-        cache: cacheDir,
+          // Cache for performance
+          cache: cacheDir,
 
-        // Don't resolve relative to workspace context
-        where: undefined,
-      });
+          // Don't resolve relative to workspace context
+          where: undefined,
+        }),
+        PACKAGE_DOWNLOAD_TIMEOUT_MS,
+        `Package download timed out after ${PACKAGE_DOWNLOAD_TIMEOUT_MS / 1000}s: ${packageSpec}`,
+      );
 
       // Cache the downloaded package for future use
       if (useCache) {

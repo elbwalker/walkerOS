@@ -22,7 +22,7 @@ describe('Production Smoke Tests', () => {
     await bundle(join(projectRoot, 'examples/server-collect.json'), {
       silent: true,
     });
-  });
+  }, 120000);
 
   afterAll(async () => {
     // Clean up the dist directory

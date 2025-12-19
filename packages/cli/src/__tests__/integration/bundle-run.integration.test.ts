@@ -51,7 +51,7 @@ describe('Bundle → Run Integration', () => {
     // Verify it's a function that would return the right structure
     // by checking the module exports
     expect(module).toHaveProperty('default');
-  }, 60000);
+  }, 120000);
 
   it('should bundle with correct dependencies included', async () => {
     const content = fs.readFileSync(bundlePath, 'utf-8');
