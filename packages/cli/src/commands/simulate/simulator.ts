@@ -4,8 +4,7 @@ import type { Flow } from '@walkeros/core';
 import { getPlatform } from '@walkeros/core';
 import { createLogger, getErrorMessage } from '../../core/index.js';
 import {
-  loadJsonConfig,
-  loadBundleConfig,
+  loadFlowConfig,
   isObject,
   type BuildOptions,
 } from '../../config/index.js';
@@ -39,29 +38,17 @@ export async function simulateCore(
   });
 
   try {
-    logger.info('🎯 Starting walkerOS simulation...');
-
     // Load and validate configuration
-    logger.info('📦 Loading bundle configuration...');
-    const fullConfigPath = path.resolve(configPath);
-    const rawConfig = await loadJsonConfig(fullConfigPath);
-    loadBundleConfig(rawConfig, { configPath: fullConfigPath });
+    logger.debug('Loading configuration');
+    await loadFlowConfig(configPath);
 
     // Execute simulation
-    logger.info(`🚀 Executing simulation with event: ${JSON.stringify(event)}`);
-    const result = await executeSimulation(event, fullConfigPath);
-
-    // Report results
-    if (result.success) {
-      logger.info(`✅ Simulation completed successfully`);
-    } else {
-      logger.error(`❌ Simulation failed: ${result.error}`);
-    }
+    logger.debug(`Simulating event: ${JSON.stringify(event)}`);
+    const result = await executeSimulation(event, configPath);
 
     return result;
   } catch (error) {
     const errorMessage = getErrorMessage(error);
-    logger.error(`💥 Simulation error: ${errorMessage}`);
 
     return {
       success: false,
@@ -87,9 +74,9 @@ export function formatSimulationResult(
   }
 
   if (result.success) {
-    return '✅ Simulation completed successfully';
+    return 'Simulation completed';
   } else {
-    return `❌ Simulation failed: ${result.error}`;
+    return `Simulation failed: ${result.error}`;
   }
 }
 
@@ -122,10 +109,7 @@ export async function executeSimulation(
     await fs.ensureDir(tempDir);
 
     // 1. Load config
-    const rawConfig = await loadJsonConfig(configPath);
-    const { flowConfig, buildOptions } = loadBundleConfig(rawConfig, {
-      configPath,
-    });
+    const { flowConfig, buildOptions } = await loadFlowConfig(configPath);
 
     // Detect platform from flowConfig
     const platform = getPlatform(flowConfig);

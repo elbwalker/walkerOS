@@ -15,7 +15,7 @@ import {
   getAvailableFlows as getFlowNames,
 } from './validators.js';
 import { getBuildDefaults, getDefaultOutput } from './build-defaults.js';
-import { isUrl } from './utils.js';
+import { isUrl, loadJsonConfig } from './utils.js';
 
 /** Default folder for includes if it exists */
 const DEFAULT_INCLUDE_FOLDER = './shared';
@@ -231,4 +231,28 @@ export function getAvailableFlows(rawConfig: unknown): string[] {
     return getFlowNames(rawConfig);
   }
   return [];
+}
+
+/**
+ * Load flow configuration from file or URL.
+ *
+ * Single entry point for all commands (bundle, simulate, push).
+ * Handles URL vs local path detection automatically.
+ *
+ * @param configPath - Path to config file or URL
+ * @param options - Loading options (flowName, logger, buildOverrides)
+ * @returns Parsed configuration with flow and build options
+ *
+ * @example
+ * ```typescript
+ * const { flowConfig, buildOptions } = await loadFlowConfig('./flow.json');
+ * const { flowConfig } = await loadFlowConfig('https://example.com/flow.json');
+ * ```
+ */
+export async function loadFlowConfig(
+  configPath: string,
+  options?: Omit<LoadConfigOptions, 'configPath'>,
+): Promise<LoadConfigResult> {
+  const rawConfig = await loadJsonConfig(configPath);
+  return loadBundleConfig(rawConfig, { configPath, ...options });
 }

@@ -8,11 +8,7 @@ import {
   getErrorMessage,
   type Logger,
 } from '../../core/index.js';
-import {
-  loadJsonConfig,
-  loadJsonFromSource,
-  loadBundleConfig,
-} from '../../config/index.js';
+import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
 import type { PushCommandOptions, PushResult } from './types.js';
 
@@ -62,20 +58,17 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
 
     // Step 2: Load config
     logger.debug('Loading flow configuration');
-    const configPath = path.resolve(options.config);
-    const rawConfig = await loadJsonConfig(configPath);
-    const { flowConfig, buildOptions, flowName, isMultiFlow } =
-      loadBundleConfig(rawConfig, {
-        configPath: options.config,
-        flowName: options.flow,
-        logger,
-      });
+    const { flowConfig, buildOptions } = await loadFlowConfig(options.config, {
+      flowName: options.flow,
+      logger,
+    });
 
     const platform = getPlatform(flowConfig);
 
     // Step 3: Bundle to temp file in config directory (so Node.js can find node_modules)
     logger.debug('Bundling flow configuration');
-    const configDir = path.dirname(configPath);
+    // buildOptions.configDir already handles URLs (uses cwd) vs local paths
+    const configDir = buildOptions.configDir || process.cwd();
     const tempDir = path.join(
       configDir,
       '.tmp',
