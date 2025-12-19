@@ -1,7 +1,6 @@
 ---
 '@walkeros/cli': minor
-'@walkeros/docker': minor
 ---
 
-Fix Docker runtime version display - versions now read reliably from
-package.json at runtime instead of fragile build-time injection
+CLI simplification - removed Docker mode for build commands, merged runtime from
+@walkeros/docker into CLI, single walkeros/flow image for production
