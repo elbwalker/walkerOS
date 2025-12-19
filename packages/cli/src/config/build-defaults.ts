@@ -20,7 +20,6 @@ export const WEB_BUILD_DEFAULTS: Omit<BuildOptions, 'output' | 'packages'> = {
   minify: true,
   sourcemap: false,
   cache: true,
-  tempDir: '.tmp',
   windowCollector: 'collector',
   windowElb: 'elb',
 };
@@ -39,7 +38,6 @@ export const SERVER_BUILD_DEFAULTS: Omit<BuildOptions, 'output' | 'packages'> =
     minify: true,
     sourcemap: false,
     cache: true,
-    tempDir: '.tmp',
   };
 
 /**

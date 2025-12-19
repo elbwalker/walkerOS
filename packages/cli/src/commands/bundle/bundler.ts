@@ -6,7 +6,7 @@ import { packageNameToVariable } from '@walkeros/core';
 import type { BuildOptions } from '../../types/bundle.js';
 import { downloadPackages } from './package-manager.js';
 import type { Logger } from '../../core/index.js';
-import { getTempDir } from '../../config/index.js';
+import { getTmpPath } from '../../core/tmp.js';
 import {
   isBuildCached,
   getCachedBuild,
@@ -73,14 +73,8 @@ export async function bundleCore(
   showStats = false,
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
-  // Only generate a new temp dir if one isn't explicitly provided
-  // This allows simulator to share its temp dir with the bundler
-  // Ensure TEMP_DIR is always absolute (esbuild requirement)
-  const TEMP_DIR = buildOptions.tempDir
-    ? path.isAbsolute(buildOptions.tempDir)
-      ? buildOptions.tempDir
-      : path.resolve(buildOptions.tempDir)
-    : getTempDir();
+  // Use provided temp dir or default .tmp/
+  const TEMP_DIR = buildOptions.tempDir || getTmpPath();
 
   // Check build cache if caching is enabled
   if (buildOptions.cache !== false) {
@@ -123,12 +117,8 @@ export async function bundleCore(
   }
 
   try {
-    // Step 1: Prepare temporary directory
-    // Only clean if we created a new temp dir (don't clean shared simulator temp)
-    if (!buildOptions.tempDir) {
-      await fs.emptyDir(TEMP_DIR);
-    }
-    logger.debug('Cleaned temporary directory');
+    // Step 1: Ensure temporary directory exists
+    await fs.ensureDir(TEMP_DIR);
 
     // Step 2: Download packages
     logger.info('📥 Downloading packages...');
@@ -245,19 +235,10 @@ export async function bundleCore(
       );
     }
 
-    // Step 8: Cleanup
-    // Only cleanup if we created our own temp dir (not shared with simulator)
-    if (!buildOptions.tempDir) {
-      await fs.remove(TEMP_DIR);
-      logger.debug('Cleaned up temporary files');
-    }
+    // No auto-cleanup - user runs `walkeros clean` explicitly
 
     return stats;
   } catch (error) {
-    // Cleanup on error (only if we created our own temp dir)
-    if (!buildOptions.tempDir) {
-      await fs.remove(TEMP_DIR).catch(() => {});
-    }
     throw error;
   }
 }

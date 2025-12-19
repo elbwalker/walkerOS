@@ -4,7 +4,10 @@ import { bundleCommand } from './commands/bundle/index.js';
 import { simulateCommand } from './commands/simulate/index.js';
 import { pushCommand } from './commands/push/index.js';
 import { runCommand } from './commands/run/index.js';
-import { registerCacheCommand } from './commands/cache.js';
+import {
+  registerCacheCommand,
+  registerCleanCommand,
+} from './commands/cache.js';
 
 // === CLI Commands ===
 // Export CLI command handlers
@@ -182,6 +185,9 @@ runCmd
 
 // Cache command
 registerCacheCommand(program);
+
+// Clean command
+registerCleanCommand(program);
 
 // Run the CLI
 // Note: This file is marked as a bin script in package.json,

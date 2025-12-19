@@ -7,6 +7,7 @@ import {
   copyLocalPackage,
 } from '../../core/index.js';
 import { getPackageCacheKey } from '../../core/cache-utils.js';
+import { getTmpPath } from '../../core/tmp.js';
 
 /** Timeout for individual package downloads (60 seconds) */
 const PACKAGE_DOWNLOAD_TIMEOUT_MS = 60000;
@@ -55,18 +56,18 @@ function getPackageDirectory(
 
 async function getCachedPackagePath(
   pkg: Package,
-  tempDir: string,
+  tmpDir?: string,
 ): Promise<string> {
-  const cacheDir = path.join('.tmp', 'cache', 'packages');
+  const cacheDir = getTmpPath(tmpDir, 'cache', 'packages');
   const cacheKey = await getPackageCacheKey(pkg.name, pkg.version);
   return path.join(cacheDir, cacheKey);
 }
 
 async function isPackageCached(
   pkg: Package,
-  tempDir: string,
+  tmpDir?: string,
 ): Promise<boolean> {
-  const cachedPath = await getCachedPackagePath(pkg, tempDir);
+  const cachedPath = await getCachedPackagePath(pkg, tmpDir);
   return fs.pathExists(cachedPath);
 }
 
@@ -204,9 +205,10 @@ export async function downloadPackages(
     const packageSpec = `${pkg.name}@${pkg.version}`;
     // Use proper node_modules structure: node_modules/@scope/package
     const packageDir = getPackageDirectory(targetDir, pkg.name, pkg.version);
-    const cachedPath = await getCachedPackagePath(pkg, targetDir);
+    // Cache always uses the default .tmp/cache/packages location
+    const cachedPath = await getCachedPackagePath(pkg);
 
-    if (useCache && (await isPackageCached(pkg, targetDir))) {
+    if (useCache && (await isPackageCached(pkg))) {
       logger.debug(`Using cached ${packageSpec}...`);
       try {
         // Ensure parent directories exist for scoped packages (@scope/package)
