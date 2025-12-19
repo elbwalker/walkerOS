@@ -7,13 +7,10 @@
 import path from 'path';
 import {
   createCommandLogger,
-  createLogger,
   createTimer,
   createSuccessOutput,
   createErrorOutput,
-  executeCommand,
   getErrorMessage,
-  buildCommonDockerArgs,
   resolveAsset,
 } from '../../core/index.js';
 import {
@@ -22,18 +19,20 @@ import {
   loadAllFlows,
   type LoadConfigResult,
 } from '../../config/index.js';
-import type { GlobalOptions } from '../../types/index.js';
 import type { BuildOptions } from '../../types/bundle.js';
 import { bundleCore } from './bundler.js';
 import { displayStats, createStatsSummary } from './stats.js';
 
-export interface BundleCommandOptions extends GlobalOptions {
+export interface BundleCommandOptions {
   config: string;
   flow?: string;
   all?: boolean;
   stats?: boolean;
   json?: boolean;
   cache?: boolean;
+  verbose?: boolean;
+  dryRun?: boolean;
+  silent?: boolean;
 }
 
 export async function bundleCommand(
@@ -44,165 +43,147 @@ export async function bundleCommand(
 
   const logger = createCommandLogger(options);
 
-  // Build Docker args - start with common flags
-  const dockerArgs = buildCommonDockerArgs(options);
-  // Add bundle-specific flags
-  if (options.flow) dockerArgs.push('--flow', options.flow);
-  if (options.all) dockerArgs.push('--all');
-  if (options.stats) dockerArgs.push('--stats');
-  if (options.cache === false) dockerArgs.push('--no-cache');
+  // Handle dry-run
+  if (options.dryRun) {
+    logger.log(`[DRY-RUN] Would execute bundle with config: ${options.config}`);
+    return;
+  }
 
-  await executeCommand(
-    async () => {
+  try {
+    // Validate flag combination
+    if (options.flow && options.all) {
+      throw new Error('Cannot use both --flow and --all flags together');
+    }
+
+    // Step 1: Read configuration file
+    // Resolve bare names to examples directory, keep paths/URLs as-is
+    const configPath = resolveAsset(options.config, 'config');
+    const rawConfig = await loadJsonConfig(configPath);
+
+    // Step 2: Load configuration(s) based on flags
+    const configsToBundle: LoadConfigResult[] = options.all
+      ? loadAllFlows(rawConfig, { configPath, logger })
+      : [
+          loadBundleConfig(rawConfig, {
+            configPath,
+            flowName: options.flow,
+            logger,
+          }),
+        ];
+
+    // Step 3: Bundle each configuration
+    const results: Array<{
+      flowName: string;
+      success: boolean;
+      stats?: unknown;
+      error?: string;
+    }> = [];
+
+    for (const {
+      flowConfig,
+      buildOptions,
+      flowName,
+      isMultiFlow,
+    } of configsToBundle) {
       try {
-        // Validate flag combination
-        if (options.flow && options.all) {
-          throw new Error('Cannot use both --flow and --all flags together');
+        // Override cache setting from CLI if provided
+        if (options.cache !== undefined) {
+          buildOptions.cache = options.cache;
         }
 
-        // Step 1: Read configuration file
-        logger.info('📦 Reading configuration...');
-        // Resolve bare names to examples directory, keep paths/URLs as-is
-        const configPath = resolveAsset(options.config, 'config');
-        const rawConfig = await loadJsonConfig(configPath);
+        // Log flow being built
+        const configBasename = path.basename(configPath);
+        if (isMultiFlow || options.all) {
+          logger.log(`Bundling ${configBasename} (flow: ${flowName})...`);
+        } else {
+          logger.log(`Bundling ${configBasename}...`);
+        }
 
-        // Step 2: Load configuration(s) based on flags
-        const configsToBundle: LoadConfigResult[] = options.all
-          ? loadAllFlows(rawConfig, { configPath, logger })
-          : [
-              loadBundleConfig(rawConfig, {
-                configPath,
-                flowName: options.flow,
-                logger,
-              }),
-            ];
-
-        // Step 3: Bundle each configuration
-        const results: Array<{
-          flowName: string;
-          success: boolean;
-          stats?: unknown;
-          error?: string;
-        }> = [];
-
-        for (const {
+        // Run bundler
+        const shouldCollectStats = options.stats || options.json;
+        const stats = await bundleCore(
           flowConfig,
           buildOptions,
+          logger,
+          shouldCollectStats,
+        );
+
+        results.push({
           flowName,
-          isMultiFlow,
-        } of configsToBundle) {
-          try {
-            // Override cache setting from CLI if provided
-            if (options.cache !== undefined) {
-              buildOptions.cache = options.cache;
-            }
+          success: true,
+          stats,
+        });
 
-            // Log flow being built (for multi-flow setups)
-            if (isMultiFlow || options.all) {
-              logger.info(`\n🔧 Building flow: ${flowName}`);
-            } else {
-              logger.info('🔧 Starting bundle process...');
-            }
-
-            // Run bundler
-            const shouldCollectStats = options.stats || options.json;
-            const stats = await bundleCore(
-              flowConfig,
-              buildOptions,
-              logger,
-              shouldCollectStats,
-            );
-
-            results.push({
-              flowName,
-              success: true,
-              stats,
-            });
-
-            // Show stats if requested (for non-JSON, non-multi builds)
-            if (!options.json && !options.all && options.stats && stats) {
-              displayStats(stats, logger);
-            }
-          } catch (error) {
-            const errorMessage = getErrorMessage(error);
-            results.push({
-              flowName,
-              success: false,
-              error: errorMessage,
-            });
-
-            if (!options.all) {
-              throw error; // Re-throw for single flow builds
-            }
-          }
-        }
-
-        // Step 4: Report results
-        const duration = timer.end() / 1000;
-        const successCount = results.filter((r) => r.success).length;
-        const failureCount = results.filter((r) => !r.success).length;
-
-        if (options.json) {
-          // JSON output for CI/CD
-          const outputLogger = createLogger({ silent: false, json: false });
-          const output =
-            failureCount === 0
-              ? createSuccessOutput(
-                  {
-                    flows: results,
-                    summary: {
-                      total: results.length,
-                      success: successCount,
-                      failed: failureCount,
-                    },
-                  },
-                  duration,
-                )
-              : createErrorOutput(
-                  `${failureCount} flow(s) failed to build`,
-                  duration,
-                );
-          outputLogger.log('white', JSON.stringify(output, null, 2));
-        } else {
-          if (options.all) {
-            logger.info(`\n📊 Build Summary:`);
-            logger.info(`   Total: ${results.length}`);
-            logger.success(`   ✅ Success: ${successCount}`);
-            if (failureCount > 0) {
-              logger.error(`   ❌ Failed: ${failureCount}`);
-            }
-          }
-
-          if (failureCount === 0) {
-            logger.success(
-              `\n✅ Bundle created successfully in ${timer.format()}`,
-            );
-          } else {
-            throw new Error(`${failureCount} flow(s) failed to build`);
-          }
+        // Show stats if requested (for non-JSON, non-multi builds)
+        if (!options.json && !options.all && options.stats && stats) {
+          displayStats(stats, logger);
         }
       } catch (error) {
-        const duration = timer.getElapsed() / 1000;
         const errorMessage = getErrorMessage(error);
+        results.push({
+          flowName,
+          success: false,
+          error: errorMessage,
+        });
 
-        if (options.json) {
-          // JSON error output for CI/CD
-          const outputLogger = createLogger({ silent: false, json: false });
-          const output = createErrorOutput(errorMessage, duration);
-          outputLogger.log('white', JSON.stringify(output, null, 2));
-        } else {
-          logger.error('❌ Bundle failed:');
-          logger.error(errorMessage);
+        if (!options.all) {
+          throw error; // Re-throw for single flow builds
         }
-        process.exit(1);
       }
-    },
-    'bundle',
-    dockerArgs,
-    options,
-    logger,
-    options.config,
-  );
+    }
+
+    // Step 4: Report results
+    const duration = timer.end() / 1000;
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.filter((r) => !r.success).length;
+
+    if (options.json) {
+      // JSON output for CI/CD
+      const output =
+        failureCount === 0
+          ? createSuccessOutput(
+              {
+                flows: results,
+                summary: {
+                  total: results.length,
+                  success: successCount,
+                  failed: failureCount,
+                },
+              },
+              duration,
+            )
+          : createErrorOutput(
+              `${failureCount} flow(s) failed to build`,
+              duration,
+            );
+      logger.json(output);
+    } else {
+      if (options.all) {
+        logger.log(
+          `\nBuild Summary: ${successCount}/${results.length} succeeded`,
+        );
+        if (failureCount > 0) {
+          logger.error(`Failed: ${failureCount}`);
+        }
+      }
+
+      if (failureCount > 0) {
+        throw new Error(`${failureCount} flow(s) failed to build`);
+      }
+    }
+  } catch (error) {
+    const duration = timer.getElapsed() / 1000;
+    const errorMessage = getErrorMessage(error);
+
+    if (options.json) {
+      // JSON error output for CI/CD
+      const output = createErrorOutput(errorMessage, duration);
+      logger.json(output);
+    } else {
+      logger.error(`Error: ${errorMessage}`);
+    }
+    process.exit(1);
+  }
 }
 
 /**

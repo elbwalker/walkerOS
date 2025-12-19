@@ -1,5 +1,5 @@
 /**
- * Pure runtime executor for pre-built walkerOS flows
+ * Runtime executor for pre-built walkerOS flows
  *
  * This module runs pre-built .mjs flow bundles without any build-time operations.
  * All bundling, package downloading, and code generation happens BEFORE this runs.

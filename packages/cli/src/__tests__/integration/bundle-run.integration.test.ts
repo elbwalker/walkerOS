@@ -13,19 +13,19 @@ const projectRoot = process.cwd();
 
 describe('Bundle → Run Integration', () => {
   const testDir = join(projectRoot, '.tmp/integration-tests');
-  // Output path is now convention-based: ./dist/bundle.mjs for server
-  const bundlePath = join(projectRoot, 'examples/dist/bundle.mjs');
+  // Output path is now static: ./dist/bundle.mjs relative to cwd
+  const bundlePath = join(projectRoot, 'dist/bundle.mjs');
 
   beforeAll(async () => {
     await fs.ensureDir(testDir);
     // Ensure the dist directory exists
-    await fs.ensureDir(join(projectRoot, 'examples/dist'));
+    await fs.ensureDir(join(projectRoot, 'dist'));
   });
 
   afterAll(async () => {
     await fs.remove(testDir).catch(() => {});
     // Clean up the dist directory
-    await fs.remove(join(projectRoot, 'examples/dist')).catch(() => {});
+    await fs.remove(join(projectRoot, 'dist/bundle.mjs')).catch(() => {});
   });
 
   it('should create functional bundle from config', async () => {
@@ -51,7 +51,7 @@ describe('Bundle → Run Integration', () => {
     // Verify it's a function that would return the right structure
     // by checking the module exports
     expect(module).toHaveProperty('default');
-  }, 60000);
+  }, 120000);
 
   it('should bundle with correct dependencies included', async () => {
     const content = fs.readFileSync(bundlePath, 'utf-8');

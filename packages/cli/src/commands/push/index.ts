@@ -5,10 +5,7 @@ import { getPlatform, type Elb } from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 import {
   createCommandLogger,
-  createLogger,
-  executeCommand,
   getErrorMessage,
-  buildCommonDockerArgs,
   type Logger,
 } from '../../core/index.js';
 import {
@@ -24,192 +21,158 @@ import type { PushCommandOptions, PushResult } from './types.js';
  */
 export async function pushCommand(options: PushCommandOptions): Promise<void> {
   const logger = createCommandLogger(options);
+  const startTime = Date.now();
 
-  // Build Docker args
-  const dockerArgs = buildCommonDockerArgs(options);
-  dockerArgs.push('--event', options.event);
-  if (options.flow) dockerArgs.push('--flow', options.flow);
+  try {
+    // Step 1: Load event
+    logger.debug('Loading event');
+    const event = await loadJsonFromSource(options.event, {
+      name: 'event',
+    });
 
-  await executeCommand(
-    async () => {
-      const startTime = Date.now();
+    // Validate event format using Zod schema
+    const eventResult = schemas.PartialEventSchema.safeParse(event);
+    if (!eventResult.success) {
+      const errors = eventResult.error.issues
+        .map((issue) => `${String(issue.path.join('.'))}: ${issue.message}`)
+        .join(', ');
+      throw new Error(`Invalid event: ${errors}`);
+    }
 
-      try {
-        // Step 1: Load event
-        logger.info('📥 Loading event...');
-        const event = await loadJsonFromSource(options.event, {
-          name: 'event',
-        });
+    const parsedEvent = eventResult.data as {
+      name?: string;
+      data?: Record<string, unknown>;
+    };
+    if (!parsedEvent.name) {
+      throw new Error('Invalid event: Missing required "name" property');
+    }
 
-        // Validate event format using Zod schema
-        const eventResult = schemas.PartialEventSchema.safeParse(event);
-        if (!eventResult.success) {
-          const errors = eventResult.error.issues
-            .map((issue) => `${String(issue.path.join('.'))}: ${issue.message}`)
-            .join(', ');
-          throw new Error(`Invalid event: ${errors}`);
-        }
+    // Create typed event object for execution
+    const validatedEvent: { name: string; data: Record<string, unknown> } = {
+      name: parsedEvent.name,
+      data: (parsedEvent.data || {}) as Record<string, unknown>,
+    };
 
-        const parsedEvent = eventResult.data as {
-          name?: string;
-          data?: Record<string, unknown>;
-        };
-        if (!parsedEvent.name) {
-          throw new Error('Invalid event: Missing required "name" property');
-        }
+    // Warn about event naming format (walkerOS business logic)
+    if (!validatedEvent.name.includes(' ')) {
+      logger.log(
+        `Warning: Event name "${validatedEvent.name}" should follow "ENTITY ACTION" format (e.g., "page view")`,
+      );
+    }
 
-        // Create typed event object for execution
-        const validatedEvent: { name: string; data: Record<string, unknown> } =
-          {
-            name: parsedEvent.name,
-            data: (parsedEvent.data || {}) as Record<string, unknown>,
-          };
+    // Step 2: Load config
+    logger.debug('Loading flow configuration');
+    const configPath = path.resolve(options.config);
+    const rawConfig = await loadJsonConfig(configPath);
+    const { flowConfig, buildOptions, flowName, isMultiFlow } =
+      loadBundleConfig(rawConfig, {
+        configPath: options.config,
+        flowName: options.flow,
+        logger,
+      });
 
-        // Warn about event naming format (walkerOS business logic)
-        if (!validatedEvent.name.includes(' ')) {
-          logger.warn(
-            `Event name "${validatedEvent.name}" should follow "ENTITY ACTION" format (e.g., "page view")`,
-          );
-        }
+    const platform = getPlatform(flowConfig);
 
-        // Step 2: Load config
-        logger.info('📦 Loading flow configuration...');
-        const configPath = path.resolve(options.config);
-        const rawConfig = await loadJsonConfig(configPath);
-        const { flowConfig, buildOptions, flowName, isMultiFlow } =
-          loadBundleConfig(rawConfig, {
-            configPath: options.config,
-            flowName: options.flow,
-            logger,
-          });
+    // Step 3: Bundle to temp file in config directory (so Node.js can find node_modules)
+    logger.debug('Bundling flow configuration');
+    const configDir = path.dirname(configPath);
+    const tempDir = path.join(
+      configDir,
+      '.tmp',
+      `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    );
+    await fs.ensureDir(tempDir);
+    const tempPath = path.join(
+      tempDir,
+      `bundle.${platform === 'web' ? 'js' : 'mjs'}`,
+    );
 
-        const platform = getPlatform(flowConfig);
+    const pushBuildOptions = {
+      ...buildOptions,
+      output: tempPath,
+      // Web uses IIFE for browser-like execution, server uses ESM
+      format: platform === 'web' ? ('iife' as const) : ('esm' as const),
+      platform: platform === 'web' ? ('browser' as const) : ('node' as const),
+      ...(platform === 'web' && {
+        windowCollector: 'collector',
+        windowElb: 'elb',
+      }),
+    };
 
-        // Step 3: Bundle to temp file in config directory (so Node.js can find node_modules)
-        logger.info('🔨 Bundling flow configuration...');
-        const configDir = path.dirname(configPath);
-        const tempDir = path.join(
-          configDir,
-          '.tmp',
-          `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        );
-        await fs.ensureDir(tempDir);
-        const tempPath = path.join(
-          tempDir,
-          `bundle.${platform === 'web' ? 'js' : 'mjs'}`,
-        );
+    await bundleCore(flowConfig, pushBuildOptions, logger, false);
 
-        const pushBuildOptions = {
-          ...buildOptions,
-          output: tempPath,
-          // Web uses IIFE for browser-like execution, server uses ESM
-          format: platform === 'web' ? ('iife' as const) : ('esm' as const),
-          platform:
-            platform === 'web' ? ('browser' as const) : ('node' as const),
-          ...(platform === 'web' && {
-            windowCollector: 'collector',
-            windowElb: 'elb',
-          }),
-        };
+    logger.debug(`Bundle created: ${tempPath}`);
 
-        await bundleCore(flowConfig, pushBuildOptions, logger, false);
+    // Step 4: Execute based on platform
+    let result: PushResult;
 
-        logger.debug(`Bundle created: ${tempPath}`);
+    if (platform === 'web') {
+      logger.debug('Executing in web environment (JSDOM)');
+      result = await executeWebPush(tempPath, validatedEvent, logger);
+    } else if (platform === 'server') {
+      logger.debug('Executing in server environment (Node.js)');
+      result = await executeServerPush(tempPath, validatedEvent, logger);
+    } else {
+      throw new Error(`Unsupported platform: ${platform}`);
+    }
 
-        // Step 4: Execute based on platform
-        let result: PushResult;
+    // Step 5: Output results
+    const duration = Date.now() - startTime;
 
-        if (platform === 'web') {
-          logger.info('🌐 Executing in web environment (JSDOM)...');
-          result = await executeWebPush(tempPath, validatedEvent, logger);
-        } else if (platform === 'server') {
-          logger.info('🖥️  Executing in server environment (Node.js)...');
-          result = await executeServerPush(tempPath, validatedEvent, logger);
-        } else {
-          throw new Error(`Unsupported platform: ${platform}`);
-        }
-
-        // Step 5: Output results
-        const duration = Date.now() - startTime;
-
-        if (options.json) {
-          // JSON output
-          const outputLogger = createLogger({ silent: false, json: false });
-          outputLogger.log(
-            'white',
-            JSON.stringify(
-              {
-                success: result.success,
-                event: result.elbResult,
-                duration,
-              },
-              null,
-              2,
-            ),
-          );
-        } else {
-          // Standard output
-          if (result.success) {
-            logger.success('✅ Event pushed successfully');
-            if (result.elbResult && typeof result.elbResult === 'object') {
-              const pushResult = result.elbResult as unknown as Record<
-                string,
-                unknown
-              >;
-              if ('id' in pushResult && pushResult.id) {
-                logger.info(`   Event ID: ${pushResult.id}`);
-              }
-              if ('entity' in pushResult && pushResult.entity) {
-                logger.info(`   Entity: ${pushResult.entity}`);
-              }
-              if ('action' in pushResult && pushResult.action) {
-                logger.info(`   Action: ${pushResult.action}`);
-              }
-            }
-            logger.info(`   Duration: ${duration}ms`);
-          } else {
-            logger.error(`❌ Push failed: ${result.error}`);
-            process.exit(1);
+    if (options.json) {
+      logger.json({
+        success: result.success,
+        event: result.elbResult,
+        duration,
+      });
+    } else {
+      // Standard output
+      if (result.success) {
+        logger.log('Event pushed successfully');
+        if (result.elbResult && typeof result.elbResult === 'object') {
+          const pushResult = result.elbResult as unknown as Record<
+            string,
+            unknown
+          >;
+          if ('id' in pushResult && pushResult.id) {
+            logger.log(`  Event ID: ${pushResult.id}`);
+          }
+          if ('entity' in pushResult && pushResult.entity) {
+            logger.log(`  Entity: ${pushResult.entity}`);
+          }
+          if ('action' in pushResult && pushResult.action) {
+            logger.log(`  Action: ${pushResult.action}`);
           }
         }
-
-        // Cleanup temp directory
-        try {
-          await fs.remove(tempDir);
-        } catch {
-          // Ignore cleanup errors
-        }
-      } catch (error) {
-        const duration = Date.now() - startTime;
-        const errorMessage = getErrorMessage(error);
-
-        if (options.json) {
-          const outputLogger = createLogger({ silent: false, json: false });
-          outputLogger.log(
-            'white',
-            JSON.stringify(
-              {
-                success: false,
-                error: errorMessage,
-                duration,
-              },
-              null,
-              2,
-            ),
-          );
-        } else {
-          logger.error(`❌ Push command failed: ${errorMessage}`);
-        }
-
+        logger.log(`  Duration: ${duration}ms`);
+      } else {
+        logger.error(`Error: ${result.error}`);
         process.exit(1);
       }
-    },
-    'push',
-    dockerArgs,
-    options,
-    logger,
-    options.config,
-  );
+    }
+
+    // Cleanup temp directory
+    try {
+      await fs.remove(tempDir);
+    } catch {
+      // Ignore cleanup errors
+    }
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    const errorMessage = getErrorMessage(error);
+
+    if (options.json) {
+      logger.json({
+        success: false,
+        error: errorMessage,
+        duration,
+      });
+    } else {
+      logger.error(`Error: ${errorMessage}`);
+    }
+
+    process.exit(1);
+  }
 }
 
 /**
@@ -264,7 +227,7 @@ async function executeWebPush(
     ) => Promise<Elb.PushResult>;
 
     // Push event
-    logger.info(`Pushing event: ${event.name}`);
+    logger.log(`Pushing event: ${event.name}`);
     const elbResult = await elb(event.name, event.data);
 
     return {
@@ -324,7 +287,7 @@ async function executeServerPush(
       const { elb } = result;
 
       // Push event
-      logger.info(`Pushing event: ${event.name}`);
+      logger.log(`Pushing event: ${event.name}`);
       const elbResult = await (
         elb as (
           name: string,

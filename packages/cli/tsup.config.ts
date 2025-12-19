@@ -10,7 +10,7 @@ const version = packageJson.version || '0.0.0';
 
 export default defineConfig({
   ...baseConfig,
-  entry: ['src/index.ts'],
+  entry: ['src/index.ts', 'src/runtime/main.ts'],
   format: ['esm'],
   dts: true,
   sourcemap: true,

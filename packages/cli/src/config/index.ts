@@ -28,7 +28,7 @@ export {
   substituteEnvVariables,
   loadJsonConfig,
   loadJsonFromSource,
-  getTempDir,
+  isUrl,
 } from './utils.js';
 
 // Loader

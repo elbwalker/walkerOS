@@ -76,6 +76,27 @@ The documentation lives in `website/docs/`. To run the docs locally:
 walkerOS uses a test-driven development approach with
 [Jest](https://jestjs.io/). Please run tests before submitting pull requests.
 
+### Adding a changeset
+
+When your PR includes changes that should be released, add a changeset:
+
+<CodeSnippet
+  code={`npx changeset`}
+  language="bash"
+/>
+
+1. Select the packages your PR affects
+2. Choose the version bump type:
+   - **patch** — bug fixes, minor improvements
+   - **minor** — new features (backwards compatible)
+   - **major** — breaking changes
+3. Write a brief summary of the changes
+4. Commit the generated `.changeset/*.md` file with your PR
+
+Changesets help generate accurate changelogs and version packages correctly.
+Not every PR needs a changeset—skip it for documentation, CI changes, or internal
+refactoring that doesn't affect published packages.
+
 ### Package structure
 
 The project is organized as a monorepo:

@@ -104,7 +104,6 @@ node packages/cli/dist/index.js run serve static-walker.js \
 ## Documentation
 
 - [CLI Documentation](../README.md)
-- [Docker Package](../../docker/README.md)
 
 ## Support
 

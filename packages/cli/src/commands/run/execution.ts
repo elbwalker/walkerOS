@@ -1,6 +1,6 @@
 import { createLogger, Level } from '@walkeros/core';
-import type { RuntimeConfig, ServeConfig } from '@walkeros/docker';
-import { runFlow, runServeMode } from '@walkeros/docker';
+import type { RuntimeConfig, ServeConfig } from '../../runtime/index.js';
+import { runFlow, runServeMode } from '../../runtime/index.js';
 
 // Create logger for local execution - DEBUG level when VERBOSE, otherwise INFO
 const logLevel = process.env.VERBOSE === 'true' ? Level.DEBUG : Level.INFO;

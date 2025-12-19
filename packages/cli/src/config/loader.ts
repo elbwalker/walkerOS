@@ -15,6 +15,7 @@ import {
   getAvailableFlows as getFlowNames,
 } from './validators.js';
 import { getBuildDefaults, getDefaultOutput } from './build-defaults.js';
+import { isUrl } from './utils.js';
 
 /** Default folder for includes if it exists */
 const DEFAULT_INCLUDE_FOLDER = './shared';
@@ -102,19 +103,15 @@ export function loadBundleConfig(
   // Extract packages from flowConfig (if present)
   const packages = flowConfig.packages || {};
 
-  // Resolve output path relative to config directory
-  let output = getDefaultOutput(platform);
-  if (options.buildOverrides?.output) {
-    output = options.buildOverrides.output;
-  }
+  // Output path: use --output if provided, otherwise default
+  // Always relative to cwd, no dynamic resolution
+  const output = options.buildOverrides?.output || getDefaultOutput(platform);
 
-  // Get config directory for relative path resolution
-  const configDir = path.dirname(options.configPath);
-
-  // Make output path absolute relative to config file
-  if (!path.isAbsolute(output)) {
-    output = path.resolve(configDir, output);
-  }
+  // Get config directory for resolving includes and local packages
+  // For URLs, use cwd since there's no local config directory
+  const configDir = isUrl(options.configPath)
+    ? process.cwd()
+    : path.dirname(options.configPath);
 
   // Get includes from config or use default if ./shared exists
   let includes = setup.include;

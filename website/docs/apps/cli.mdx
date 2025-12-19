@@ -301,7 +301,6 @@ The bundle is now ready to deploy!
 | `-s, --stats` | Show bundle statistics |
 | `--json` | Output statistics as JSON (for CI/CD) |
 | `--no-cache` | Skip package cache, download fresh |
-| `--local` | Execute locally without Docker |
 | `-v, --verbose` | Detailed logging |
 
 ### Multi-Flow Example
@@ -445,7 +444,6 @@ The simulation shows:
 | `--event <json>` | Event JSON string to test |
 | `--event-file <path>` | Path to JSON file with event(s) |
 | `--json` | Output as JSON |
-| `--local` | Execute locally without Docker |
 | `-v, --verbose` | Detailed logging |
 
 ### Multiple Events
@@ -482,7 +480,7 @@ Push is your bridge between local testing and production deployment.
 ### Basic Usage
 
 <CodeSnippet
-  code={`walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}' --local`}
+  code={`walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}'`}
   language="bash"
 />
 
@@ -542,7 +540,7 @@ Create `event.json`:
 **3. Push the event**
 
 <CodeSnippet
-  code={`walkeros push api-flow.json --event event.json --local --verbose`}
+  code={`walkeros push api-flow.json --event event.json --verbose`}
   language="bash"
 />
 
@@ -577,7 +575,6 @@ The event was sent to your real API endpoint!
 | `--json` | Output results as JSON |
 | `-v, --verbose` | Verbose output with debug information |
 | `-s, --silent` | Suppress output (for CI/CD) |
-| `--local` | Execute in local Node.js instead of Docker |
 
 ### Event Input Formats
 
@@ -619,7 +616,7 @@ The `--event` parameter accepts three formats:
 For CI/CD pipelines, use `--json` for machine-readable output:
 
 <CodeSnippet
-  code={`walkeros push flow.json --event '{"name":"page view"}' --json --silent --local`}
+  code={`walkeros push flow.json --event '{"name":"page view"}' --json --silent`}
   language="bash"
 />
 
@@ -652,10 +649,10 @@ Push to specific flows:
 
 <CodeSnippet
   code={`# Push to staging
-walkeros push flow.json --event event.json --flow staging --local
+walkeros push flow.json --event event.json --flow staging
 
 # Push to production
-walkeros push flow.json --event event.json --flow production --local`}
+walkeros push flow.json --event event.json --flow production`}
   language="bash"
 />
 
@@ -806,7 +803,6 @@ The collector terminal shows:
 | Option | Description |
 |--------|-------------|
 | `--port <number>` | Server port (default: 8080) |
-| `--local` | Execute locally without Docker |
 | `-v, --verbose` | Detailed logging |
 
 ### Running Pre-Built Bundles
@@ -945,7 +941,6 @@ Open `test.html` in your browser. Events will be sent to `http://localhost:8080/
 | `--port <number>` | Server port (default: 3000) |
 | `--path <string>` | URL path to serve script (default: `/`) |
 | `--name <string>` | Script filename (default: from config) |
-| `--local` | Execute locally without Docker |
 | `-v, --verbose` | Detailed logging |
 
 ## Complete example: Web → Server flow
@@ -1187,48 +1182,11 @@ These options work with all commands:
 
 | Option | Description |
 |--------|-------------|
-| `--local` | Execute without Docker (faster, requires local Node.js) |
 | `--verbose` | Show detailed logs |
 | `--silent` | Suppress output |
 | `--json` | Output as JSON (for CI/CD) |
 | `--help` | Show help for command |
 | `--version` | Show CLI version |
-
-## Execution modes
-
-### Docker Mode (Default)
-
-By default, the CLI uses Docker for isolated execution:
-
-<CodeSnippet
-  code={`walkeros bundle flow.json`}
-  language="bash"
-/>
-
-**Advantages**:
-- Consistent environment across machines
-- Isolated from local Node.js setup
-- Reproducible builds
-
-**Requirements**:
-- Docker installed and running
-
-### Local Mode
-
-Use `--local` to execute in your current Node.js environment:
-
-<CodeSnippet
-  code={`walkeros bundle flow.json --local`}
-  language="bash"
-/>
-
-**Advantages**:
-- Faster execution (no container startup)
-- No Docker dependency
-- Useful in CI/CD or containers
-
-**Requirements**:
-- Node.js 18+ installed locally
 
 ## CI/CD integration
 
@@ -1264,12 +1222,14 @@ jobs:
 ### Docker Build
 
 <CodeSnippet
-  code={`FROM walkeros/cli:latest AS builder
+  code={`FROM node:18-alpine AS builder
+WORKDIR /build
+RUN npm install -g @walkeros/cli
 COPY flow.json .
-RUN walkeros bundle flow.json --local
+RUN walkeros bundle flow.json
 
-FROM walkeros/docker:latest
-COPY --from=builder /dist/bundle.mjs /app/flow.mjs
+FROM walkeros/flow:latest
+COPY --from=builder /build/dist/bundle.mjs /app/flow.mjs
 ENV MODE=collect
 ENV FLOW=/app/flow.mjs`}
   language="dockerfile"
@@ -1290,17 +1250,16 @@ npm ping`}
   language="bash"
 />
 
-### Docker Permission Issues
+### Build Issues
 
-On Linux, you may need to run Docker commands with sudo or add your user to the `docker` group:
+If you encounter build issues:
 
 <CodeSnippet
-  code={`# Use local mode instead
-walkeros bundle flow.json --local
+  code={`# Clear cache and retry
+walkeros cache clear
 
-# Or fix Docker permissions
-sudo usermod -aG docker $USER
-# Then log out and back in`}
+# Retry with verbose output
+walkeros bundle flow.json --verbose`}
   language="bash"
 />
 

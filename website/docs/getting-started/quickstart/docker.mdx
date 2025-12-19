@@ -8,7 +8,7 @@ description: Get walkerOS running with Docker in 5 minutes
 ## Try the demo
 
 ```bash
-docker run -p 8080:8080 -e MODE=collect -e FILE=/app/demos/demo-collect.mjs walkeros/docker:latest
+docker run -p 8080:8080 -e MODE=collect -e FILE=/app/demos/demo-collect.mjs walkeros/flow:latest
 ```
 
 Output:
@@ -34,7 +34,7 @@ curl -X POST http://localhost:8080/collect \
 docker run -d -p 8080:8080 \
   -e MODE=collect \
   -e FILE=/app/demos/demo-collect.mjs \
-  walkeros/docker
+  walkeros/flow
 
 # Send event
 curl -X POST http://localhost:8080/collect \
@@ -64,7 +64,7 @@ Docker runtime requires **pre-built bundles**, not JSON configs.
 ### Build custom image
 
 ```dockerfile
-FROM walkeros/docker:latest
+FROM walkeros/flow:latest
 COPY flow.mjs /app/flow.mjs
 ENV MODE=collect
 ENV FILE=/app/flow.mjs
@@ -82,7 +82,7 @@ version: '3.8'
 
 services:
   walkeros:
-    image: walkeros/docker:latest
+    image: walkeros/flow:latest
     environment:
       MODE: collect
       FILE: /app/demos/demo-collect.mjs

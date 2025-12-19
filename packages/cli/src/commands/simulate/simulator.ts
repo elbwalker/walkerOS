@@ -6,10 +6,10 @@ import { createLogger, getErrorMessage } from '../../core/index.js';
 import {
   loadJsonConfig,
   loadBundleConfig,
-  getTempDir,
   isObject,
   type BuildOptions,
 } from '../../config/index.js';
+import { getTmpPath } from '../../core/tmp.js';
 import { bundleCore } from '../bundle/bundler.js';
 import { CallTracker } from './tracker.js';
 import { executeInJSDOM } from './jsdom-executor.js';
@@ -102,7 +102,7 @@ export async function executeSimulation(
 ): Promise<SimulationResult> {
   const startTime = Date.now();
   let bundlePath: string | undefined;
-  const tempDir = getTempDir();
+  const tempDir = getTmpPath();
 
   try {
     // Validate event format

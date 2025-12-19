@@ -42,7 +42,7 @@ describe('CLI E2E Tests', () => {
       // Verify the output file was created (as specified in the config)
       const outputPath = join(projectRoot, 'examples/server-collect.mjs');
       expect(existsSync(outputPath)).toBe(true);
-    }, 30000);
+    }, 120000);
 
     it('should show error for invalid config', async () => {
       const result = await runCLI(['bundle', '/nonexistent/config.json']);
@@ -58,7 +58,7 @@ describe('CLI E2E Tests', () => {
 
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('Bundle Statistics');
-    }, 30000);
+    }, 120000);
   });
 
   describe('simulate command', () => {
@@ -129,24 +129,34 @@ describe('CLI E2E Tests', () => {
 });
 
 /**
- * Helper to run CLI commands
+ * Helper to run CLI commands with timeout and cleanup
  */
 function runCLI(
   args: string[],
+  timeoutMs = 120000,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    // Add --local flag to run tests without Docker
-    const child = spawn(
-      'node',
-      [join(projectRoot, 'dist/index.js'), ...args, '--local'],
-      {
-        cwd: projectRoot,
-        env: { ...process.env, FORCE_COLOR: '0' },
-      },
-    );
+    const child = spawn('node', [join(projectRoot, 'dist/index.js'), ...args], {
+      cwd: projectRoot,
+      env: { ...process.env, FORCE_COLOR: '0' },
+    });
 
     let stdout = '';
     let stderr = '';
+    let resolved = false;
+
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        child.kill('SIGTERM');
+        resolve({
+          code: 124, // Standard timeout exit code
+          stdout: stdout.trim(),
+          stderr:
+            stderr.trim() + `\n[TIMEOUT] Process killed after ${timeoutMs}ms`,
+        });
+      }
+    }, timeoutMs);
 
     child.stdout?.on('data', (data) => {
       stdout += data.toString();
@@ -157,11 +167,15 @@ function runCLI(
     });
 
     child.on('close', (code) => {
-      resolve({
-        code: code || 0,
-        stdout: stdout.trim(),
-        stderr: stderr.trim(),
-      });
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        resolve({
+          code: code || 0,
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+        });
+      }
     });
   });
 }

@@ -2,12 +2,12 @@
 title: Docker
 description: Deploy walkerOS flows with Docker containers
 sidebar_position: 3
-package: '@walkeros/docker'
+package: '@walkeros/cli'
 ---
 
 # walkerOS Docker
 
-The walkerOS Docker package (`@walkeros/docker`) is a **pure runtime container** for executing pre-built flow bundles in production. It's designed for fast startup (< 1 second), minimal footprint (~150-200MB), and cloud-native deployment.
+The walkerOS Docker image (`walkeros/flow`) is a **pure runtime container** for executing pre-built flow bundles in production. It's designed for fast startup (< 1 second), minimal footprint (~150-200MB), and cloud-native deployment.
 
 **Key Philosophy**: Docker handles runtime, [CLI](/docs/apps/cli) handles build-time. You bundle with the CLI, deploy with Docker.
 
@@ -42,7 +42,7 @@ The Docker image includes demo bundles for instant testing.
   code={`docker run -p 8080:8080 \\
   -e MODE=collect \\
   -e FLOW=/app/demos/demo-collect.mjs \\
-  walkeros/docker:latest`}
+  walkeros/flow:latest`}
   language="bash"
 />
 
@@ -65,7 +65,7 @@ The demo is self-contained and generates test events automatically.
   -e MODE=serve \\
   -e PORT=3000 \\
   -e STATIC_DIR=/app/demos \\
-  walkeros/docker:latest`}
+  walkeros/flow:latest`}
   language="bash"
 />
 
@@ -84,7 +84,7 @@ The Docker container is configured via environment variables:
   -e FLOW=/app/flow.mjs \\
   -e PORT=8080 \\
   -e HOST=0.0.0.0 \\
-  walkeros/docker:latest`}
+  walkeros/flow:latest`}
   language="bash"
 />
 
@@ -103,7 +103,7 @@ The Docker container is configured via environment variables:
   -e MODE=serve \\
   -e STATIC_DIR=/app/static \\
   -e PORT=3000 \\
-  walkeros/docker:latest`}
+  walkeros/flow:latest`}
   language="bash"
 />
 
@@ -138,7 +138,7 @@ This creates `dist/flow.mjs`.
   -e MODE=collect \\
   -e FLOW=/app/flow.mjs \\
   --name walkeros-collector \\
-  walkeros/docker:latest`}
+  walkeros/flow:latest`}
   language="bash"
 />
 
@@ -172,7 +172,7 @@ Build a custom Docker image with your bundle baked in.
 **2. Create Dockerfile**
 
 <CodeSnippet
-  code={`FROM walkeros/docker:latest
+  code={`FROM walkeros/flow:latest
 
 # Copy pre-built bundle
 COPY flow.mjs /app/flow.mjs
@@ -219,13 +219,14 @@ Build and bundle in a single Dockerfile.
 
 <CodeSnippet
   code={`# Build stage
-FROM walkeros/cli:latest AS builder
+FROM node:18-alpine AS builder
 WORKDIR /build
+RUN npm install -g @walkeros/cli
 COPY flow.json .
-RUN walkeros bundle flow.json --local --output flow.mjs
+RUN walkeros bundle flow.json --output flow.mjs
 
 # Runtime stage
-FROM walkeros/docker:latest
+FROM walkeros/flow:latest
 COPY --from=builder /build/flow.mjs /app/flow.mjs
 
 ENV MODE=collect
@@ -251,7 +252,7 @@ docker run -d -p 8080:8080 analytics-collector`}
 
 services:
   collector:
-    image: walkeros/docker:latest
+    image: walkeros/flow:latest
     environment:
       MODE: collect
       FLOW: /app/flow.mjs
@@ -285,7 +286,7 @@ docker-compose logs -f`}
 services:
   # Server-side event collection
   collector:
-    image: walkeros/docker:latest
+    image: walkeros/flow:latest
     environment:
       MODE: collect
       FLOW: /app/server-flow.mjs
@@ -297,7 +298,7 @@ services:
 
   # Web bundle serving
   tracker:
-    image: walkeros/docker:latest
+    image: walkeros/flow:latest
     environment:
       MODE: serve
       STATIC_DIR: /app/static
@@ -389,7 +390,7 @@ To start console-only: remove the `bigquery` destination block.
 **3. Create Dockerfile**
 
 <CodeSnippet
-  code={`FROM walkeros/docker:latest
+  code={`FROM walkeros/flow:latest
 COPY flow.mjs /app/flow.mjs
 ENV MODE=collect
 ENV FLOW=/app/flow.mjs
@@ -528,7 +529,7 @@ This creates `tracker.js`.
 **3. Create Dockerfile for serving**
 
 <CodeSnippet
-  code={`FROM walkeros/docker:latest
+  code={`FROM walkeros/flow:latest
 COPY tracker.js /app/static/tracker.js
 ENV MODE=serve
 ENV STATIC_DIR=/app/static
@@ -750,7 +751,7 @@ For sensitive configuration (API keys, credentials), use environment variables:
 
 <CodeSnippet
   code={`# Docker
-docker run -e BIGQUERY_KEY="$(cat key.json)" walkeros/docker
+docker run -e BIGQUERY_KEY="$(cat key.json)" walkeros/flow
 
 # Cloud Run
 gcloud run deploy $SERVICE_NAME \\
@@ -835,7 +836,7 @@ docker logs walkeros-collector`}
 
 <CodeSnippet
   code={`# Use a different host port
-docker run -p 8081:8080 walkeros/docker
+docker run -p 8081:8080 walkeros/flow
 
 # Or find and kill the conflicting process
 lsof -ti:8080 | xargs kill`}
@@ -846,13 +847,13 @@ lsof -ti:8080 | xargs kill`}
 
 <CodeSnippet
   code={`# Verify volume mount
-docker run -v $(pwd)/dist/flow.mjs:/app/flow.mjs walkeros/docker
+docker run -v $(pwd)/dist/flow.mjs:/app/flow.mjs walkeros/flow
 
 # Check if file exists in container
-docker run --rm -it walkeros/docker ls -la /app/
+docker run --rm -it walkeros/flow ls -la /app/
 
 # Verify FLOW environment variable
-docker run -e FLOW=/app/flow.mjs walkeros/docker`}
+docker run -e FLOW=/app/flow.mjs walkeros/flow`}
   language="bash"
 />
 
@@ -862,4 +863,4 @@ docker run -e FLOW=/app/flow.mjs walkeros/docker`}
 - **[Flow Configuration](/docs/getting-started/flow)** - Understand flow structure
 - **[Sources](/docs/sources/)** - Configure event sources
 - **[Destinations](/docs/destinations/)** - Set up analytics destinations
-- **[Docker Hub](https://hub.docker.com/r/walkeros/docker)** - Official Docker images
+- **[Docker Hub](https://hub.docker.com/r/walkeros/flow)** - Official Docker images
