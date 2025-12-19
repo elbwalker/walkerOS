@@ -69,14 +69,7 @@ jobs:
 
       - name: Version packages (pre-release)
         if: inputs.release_type == 'pre-release (next)'
-        run: |
-          # Check if already in pre-release mode; if so, skip entering
-          if [ -f ".changeset/pre.json" ]; then
-            echo "Already in pre-release mode, skipping 'pre enter'"
-          else
-            npx changeset pre enter next
-          fi
-          npx changeset version
+        run: npx changeset version --snapshot next
 
       - name: Update lock file
         run: npm install --package-lock-only
