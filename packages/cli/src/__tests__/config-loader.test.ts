@@ -71,8 +71,8 @@ describe('Config Loader', () => {
       expect(result.buildOptions.format).toBe('iife');
       expect(result.buildOptions.target).toBe('es2020');
       expect(result.buildOptions.minify).toBe(true);
-      // Output path is resolved relative to config file directory
-      expect(result.buildOptions.output).toBe('/test/dist/walker.js');
+      // Output path is static (relative to cwd)
+      expect(result.buildOptions.output).toBe('./dist/walker.js');
     });
 
     test('applies platform-specific defaults for server', () => {
@@ -94,8 +94,8 @@ describe('Config Loader', () => {
       expect(result.buildOptions.format).toBe('esm');
       expect(result.buildOptions.target).toBe('node20');
       expect(result.buildOptions.minify).toBe(true);
-      // Output path is resolved relative to config file directory
-      expect(result.buildOptions.output).toBe('/test/dist/bundle.mjs');
+      // Output path is static (relative to cwd)
+      expect(result.buildOptions.output).toBe('./dist/bundle.mjs');
     });
 
     test('extracts packages from flowConfig', () => {
@@ -461,8 +461,8 @@ describe('Config Loader', () => {
         '@walkeros/web-source-browser@2.0.0',
       );
       expect(result.buildOptions.minify).toBe(true);
-      // Output uses convention default
-      expect(result.buildOptions.output).toBe('/test/dist/walker.js');
+      // Output is static (relative to cwd)
+      expect(result.buildOptions.output).toBe('./dist/walker.js');
     });
 
     test('extracts windowCollector and windowElb from web config', () => {
