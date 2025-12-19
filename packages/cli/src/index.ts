@@ -89,6 +89,7 @@ program
     '-e, --event <source>',
     'Event to simulate (JSON string, file path, or URL)',
   )
+  .option('-p, --platform <platform>', 'Platform override (web or server)')
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
   .option('--dry-run', 'preview command without executing')
@@ -97,6 +98,7 @@ program
     await simulateCommand({
       config: file || 'bundle.config.json',
       event: options.event,
+      platform: options.platform,
       json: options.json,
       verbose: options.verbose,
       dryRun: options.dryRun,
@@ -113,6 +115,7 @@ program
     'Event to push (JSON string, file path, or URL)',
   )
   .option('--flow <name>', 'Flow name (for multi-flow configs)')
+  .option('-p, --platform <platform>', 'Platform override (web or server)')
   .option('--json', 'Output results as JSON')
   .option('-v, --verbose', 'Verbose output')
   .option('-s, --silent', 'Suppress output')
@@ -121,6 +124,7 @@ program
       config: file || 'bundle.config.json',
       event: options.event,
       flow: options.flow,
+      platform: options.platform,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,

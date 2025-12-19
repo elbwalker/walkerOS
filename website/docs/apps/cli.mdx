@@ -42,11 +42,13 @@ npx walkeros --version`}
 | Command | Purpose | Use Case |
 |---------|---------|----------|
 | `bundle` | Build production-ready bundle from flow config | Create deployable JavaScript from configuration |
-| `simulate` | Test flow with sample events (mocked) | Validate configuration before deployment |
+| `simulate` | Test flow with sample events (mocked) | Validate config or bundle before deployment |
 | `push` | Execute event with real API calls | Integration testing, production validation |
 | `run collect` | Start HTTP event collection server | Accept incoming events via HTTP POST |
 | `run serve` | Serve web bundles as static files | Host browser tracking scripts |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
+
+Both `simulate` and `push` accept either a config JSON or a pre-built bundle as input.
 
 ## Configuration types
 
@@ -319,7 +321,7 @@ walkeros bundle config.json --all`}
 
 ## Simulate command
 
-The `simulate` command tests your flow configuration with sample events without deploying to production.
+The `simulate` command tests your flow configuration with sample events without deploying to production. It accepts either a config JSON (which gets bundled) or a pre-built bundle (executed directly).
 
 ### Use Case
 
@@ -328,13 +330,18 @@ Before deploying your flow, you want to:
 - Test event transformations and mappings
 - See what data would be sent to destinations
 - Debug issues locally
+- Test a pre-built bundle without rebuilding
 
 Simulate executes your flow with test events and captures all destination API calls.
 
 ### Basic Usage
 
 <CodeSnippet
-  code={`walkeros simulate flow.json --event '{"name":"page view","data":{"title":"Home"}}'`}
+  code={`# With config JSON (auto-bundled)
+walkeros simulate flow.json --event '{"name":"page view","data":{"title":"Home"}}'
+
+# With pre-built bundle
+walkeros simulate dist/bundle.mjs --event '{"name":"page view"}'`}
   language="bash"
 />
 
@@ -435,16 +442,29 @@ The simulation shows:
 ### Options
 
 <CodeSnippet
-  code={`walkeros simulate <config-file> [options]`}
+  code={`walkeros simulate <input> [options]`}
   language="bash"
 />
 
 | Option | Description |
 |--------|-------------|
-| `--event <json>` | Event JSON string to test |
+| `-e, --event <json>` | Event JSON string to test |
 | `--event-file <path>` | Path to JSON file with event(s) |
+| `-p, --platform <platform>` | Platform override (`web` or `server`) |
 | `--json` | Output as JSON |
 | `-v, --verbose` | Detailed logging |
+
+### Input Types
+
+The CLI auto-detects the input type by attempting to parse as JSON:
+- **Config JSON** - Bundled and executed with destination mocking
+- **Pre-built bundle** (`.js`/`.mjs`) - Executed directly, no mocking
+
+When using pre-built bundles, platform is detected from file extension:
+- `.mjs` → server (ESM, Node.js)
+- `.js` → web (IIFE, JSDOM)
+
+Use `--platform` to override if extension doesn't match intended runtime.
 
 ### Multiple Events
 
@@ -465,7 +485,7 @@ walkeros simulate flow.json --event-file events.json`}
 
 ## Push command
 
-The `push` command executes your flow with a real event, making actual API calls to your configured destinations. Unlike `simulate` which mocks API calls for safe testing, `push` performs real HTTP requests—ideal for integration testing and production validation.
+The `push` command executes your flow with a real event, making actual API calls to your configured destinations. Unlike `simulate` which mocks API calls for safe testing, `push` performs real HTTP requests—ideal for integration testing and production validation. It accepts either a config JSON (which gets bundled) or a pre-built bundle.
 
 ### Use Case
 
@@ -474,13 +494,18 @@ You've validated your configuration with `simulate` and now need to:
 - Verify production credentials and endpoints work
 - Debug actual API responses and errors
 - Perform integration testing before deployment
+- Execute a pre-built bundle without rebuilding
 
 Push is your bridge between local testing and production deployment.
 
 ### Basic Usage
 
 <CodeSnippet
-  code={`walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}'`}
+  code={`# With config JSON (auto-bundled)
+walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}'
+
+# With pre-built bundle
+walkeros push dist/bundle.mjs --event '{"name":"page view"}'`}
   language="bash"
 />
 
@@ -564,7 +589,7 @@ The event was sent to your real API endpoint!
 ### Options
 
 <CodeSnippet
-  code={`walkeros push <config-file> [options]`}
+  code={`walkeros push <input> [options]`}
   language="bash"
 />
 
@@ -572,9 +597,22 @@ The event was sent to your real API endpoint!
 |--------|-------------|
 | `-e, --event <source>` | **Required.** Event to push (JSON string, file path, or URL) |
 | `--flow <name>` | Flow name (for multi-flow configs) |
+| `-p, --platform <platform>` | Platform override (`web` or `server`) |
 | `--json` | Output results as JSON |
 | `-v, --verbose` | Verbose output with debug information |
 | `-s, --silent` | Suppress output (for CI/CD) |
+
+### Input Types
+
+The CLI auto-detects the input type by attempting to parse as JSON:
+- **Config JSON** - Bundled and executed
+- **Pre-built bundle** (`.js`/`.mjs`) - Executed directly
+
+When using pre-built bundles, platform is detected from file extension:
+- `.mjs` → server (ESM, Node.js)
+- `.js` → web (IIFE, JSDOM)
+
+Use `--platform` to override if extension doesn't match intended runtime.
 
 ### Event Input Formats
 

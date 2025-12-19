@@ -8,6 +8,7 @@ export interface SimulateCommandOptions {
   verbose?: boolean;
   dryRun?: boolean;
   silent?: boolean;
+  platform?: 'web' | 'server';
 }
 
 export interface SimulationResult {

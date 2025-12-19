@@ -33,6 +33,9 @@ walkeros bundle flow.json
 # Test with simulated events (no real API calls)
 walkeros simulate flow.json --event '{"name":"product view"}'
 
+# Or test a pre-built bundle directly
+walkeros simulate dist/bundle.mjs --event '{"name":"product view"}'
+
 # Push real events to destinations
 walkeros push flow.json --event '{"name":"product view"}'
 
@@ -78,42 +81,74 @@ The output path uses convention-based defaults: `./dist/bundle.mjs` for server,
 
 ### simulate
 
-Test event processing with simulated events.
+Test event processing with simulated events. Accepts either a config JSON (which
+gets bundled) or a pre-built bundle (executed directly).
 
 ```bash
-walkeros simulate <config-file> --event '{"name":"page view"}' [options]
+walkeros simulate <input> --event '{"name":"page view"}' [options]
 ```
+
+**Input types:**
+
+- **Config JSON** - Bundled and executed with destination mocking
+- **Pre-built bundle** (`.js`/`.mjs`) - Executed directly, no mocking
+
+The CLI auto-detects the input type by attempting to parse as JSON.
 
 **Options:**
 
 - `-e, --event <json>` - Event JSON string (required)
+- `-p, --platform <platform>` - Platform override (`web` or `server`)
 - `--json` - Output results as JSON
 - `-v, --verbose` - Verbose output
 
-**Example:**
+**Examples:**
 
 ```bash
-# Simulate page view
-walkeros simulate \
-  examples/web-serve.json \
+# Simulate with config (auto-bundled)
+walkeros simulate examples/web-serve.json \
   --event '{"name":"page view","data":{"title":"Home"}}' \
   --json
+
+# Simulate with pre-built bundle
+walkeros simulate dist/bundle.mjs --event '{"name":"page view"}'
+
+# Override platform detection
+walkeros simulate dist/bundle.js --platform server --event '{"name":"page view"}'
 ```
+
+**Platform detection:**
+
+When using pre-built bundles, platform is detected from file extension:
+
+- `.mjs` → server (ESM, Node.js)
+- `.js` → web (IIFE, JSDOM)
+
+Use `--platform` to override if extension doesn't match intended runtime.
 
 ### push
 
 Execute your flow with real API calls to configured destinations. Unlike
-`simulate` which mocks API calls, `push` performs actual HTTP requests.
+`simulate` which mocks API calls, `push` performs actual HTTP requests. Accepts
+either a config JSON (which gets bundled) or a pre-built bundle.
 
 ```bash
-walkeros push <config-file> --event '<json>' [options]
+walkeros push <input> --event '<json>' [options]
 ```
+
+**Input types:**
+
+- **Config JSON** - Bundled and executed
+- **Pre-built bundle** (`.js`/`.mjs`) - Executed directly
+
+The CLI auto-detects the input type by attempting to parse as JSON.
 
 **Options:**
 
 - `-e, --event <source>` - Event to push (JSON string, file path, or URL)
   **Required**
 - `--flow <name>` - Flow name (for multi-flow configs)
+- `-p, --platform <platform>` - Platform override (`web` or `server`)
 - `--json` - Output results as JSON
 - `-v, --verbose` - Verbose output
 - `-s, --silent` - Suppress output (for CI/CD)
@@ -129,6 +164,16 @@ walkeros push flow.json --event ./events/order.json
 
 # URL
 walkeros push flow.json --event https://example.com/sample-event.json
+```
+
+**Bundle input:**
+
+```bash
+# Push with pre-built bundle
+walkeros push dist/bundle.mjs --event '{"name":"order complete"}'
+
+# Override platform detection
+walkeros push dist/bundle.js --platform server --event '{"name":"order complete"}'
 ```
 
 **Push vs Simulate:**

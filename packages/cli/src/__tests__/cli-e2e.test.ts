@@ -89,7 +89,8 @@ describe('CLI E2E Tests', () => {
       const result = await runCLI(['simulate', '/invalid/path.json']);
 
       expect(result.code).not.toBe(0);
-      expect(result.stderr || result.stdout).toContain('not found');
+      // Node.js file errors use "no such file or directory" or "ENOENT"
+      expect(result.stderr || result.stdout).toMatch(/no such file|ENOENT/i);
     }, 10000);
   });
 

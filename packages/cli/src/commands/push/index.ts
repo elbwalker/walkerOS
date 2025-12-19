@@ -6,7 +6,9 @@ import { schemas } from '@walkeros/core/dev';
 import {
   createCommandLogger,
   getErrorMessage,
+  detectInput,
   type Logger,
+  type Platform,
 } from '../../core/index.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
@@ -18,6 +20,7 @@ import type { PushCommandOptions, PushResult } from './types.js';
 export async function pushCommand(options: PushCommandOptions): Promise<void> {
   const logger = createCommandLogger(options);
   const startTime = Date.now();
+  let tempDir: string | undefined;
 
   try {
     // Step 1: Load event
@@ -56,60 +59,36 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
       );
     }
 
-    // Step 2: Load config
-    logger.debug('Loading flow configuration');
-    const { flowConfig, buildOptions } = await loadFlowConfig(options.config, {
-      flowName: options.flow,
-      logger,
-    });
+    // Step 2: Detect input type (config or bundle)
+    logger.debug('Detecting input type');
+    const detected = await detectInput(options.config, options.platform);
 
-    const platform = getPlatform(flowConfig);
-
-    // Step 3: Bundle to temp file in config directory (so Node.js can find node_modules)
-    logger.debug('Bundling flow configuration');
-    // buildOptions.configDir already handles URLs (uses cwd) vs local paths
-    const configDir = buildOptions.configDir || process.cwd();
-    const tempDir = path.join(
-      configDir,
-      '.tmp',
-      `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-    );
-    await fs.ensureDir(tempDir);
-    const tempPath = path.join(
-      tempDir,
-      `bundle.${platform === 'web' ? 'js' : 'mjs'}`,
-    );
-
-    const pushBuildOptions = {
-      ...buildOptions,
-      output: tempPath,
-      // Web uses IIFE for browser-like execution, server uses ESM
-      format: platform === 'web' ? ('iife' as const) : ('esm' as const),
-      platform: platform === 'web' ? ('browser' as const) : ('node' as const),
-      ...(platform === 'web' && {
-        windowCollector: 'collector',
-        windowElb: 'elb',
-      }),
-    };
-
-    await bundleCore(flowConfig, pushBuildOptions, logger, false);
-
-    logger.debug(`Bundle created: ${tempPath}`);
-
-    // Step 4: Execute based on platform
     let result: PushResult;
 
-    if (platform === 'web') {
-      logger.debug('Executing in web environment (JSDOM)');
-      result = await executeWebPush(tempPath, validatedEvent, logger);
-    } else if (platform === 'server') {
-      logger.debug('Executing in server environment (Node.js)');
-      result = await executeServerPush(tempPath, validatedEvent, logger);
+    if (detected.type === 'config') {
+      // Config flow: load config, bundle, execute
+      result = await executeConfigPush(
+        options,
+        validatedEvent,
+        logger,
+        (dir) => {
+          tempDir = dir;
+        },
+      );
     } else {
-      throw new Error(`Unsupported platform: ${platform}`);
+      // Bundle flow: execute directly
+      result = await executeBundlePush(
+        detected.content,
+        detected.platform!,
+        validatedEvent,
+        logger,
+        (dir) => {
+          tempDir = dir;
+        },
+      );
     }
 
-    // Step 5: Output results
+    // Step 3: Output results
     const duration = Date.now() - startTime;
 
     if (options.json) {
@@ -143,13 +122,6 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
         process.exit(1);
       }
     }
-
-    // Cleanup temp directory
-    try {
-      await fs.remove(tempDir);
-    } catch {
-      // Ignore cleanup errors
-    }
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = getErrorMessage(error);
@@ -165,6 +137,109 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
     }
 
     process.exit(1);
+  } finally {
+    // Cleanup temp directory
+    if (tempDir) {
+      await fs.remove(tempDir).catch(() => {
+        // Ignore cleanup errors
+      });
+    }
+  }
+}
+
+/**
+ * Execute push from config JSON (existing behavior)
+ */
+async function executeConfigPush(
+  options: PushCommandOptions,
+  validatedEvent: { name: string; data: Record<string, unknown> },
+  logger: Logger,
+  setTempDir: (dir: string) => void,
+): Promise<PushResult> {
+  // Load config
+  logger.debug('Loading flow configuration');
+  const { flowConfig, buildOptions } = await loadFlowConfig(options.config, {
+    flowName: options.flow,
+    logger,
+  });
+
+  const platform = getPlatform(flowConfig);
+
+  // Bundle to temp file in config directory (so Node.js can find node_modules)
+  logger.debug('Bundling flow configuration');
+  const configDir = buildOptions.configDir || process.cwd();
+  const tempDir = path.join(
+    configDir,
+    '.tmp',
+    `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+  );
+  setTempDir(tempDir);
+  await fs.ensureDir(tempDir);
+  const tempPath = path.join(
+    tempDir,
+    `bundle.${platform === 'web' ? 'js' : 'mjs'}`,
+  );
+
+  const pushBuildOptions = {
+    ...buildOptions,
+    output: tempPath,
+    format: platform === 'web' ? ('iife' as const) : ('esm' as const),
+    platform: platform === 'web' ? ('browser' as const) : ('node' as const),
+    ...(platform === 'web' && {
+      windowCollector: 'collector',
+      windowElb: 'elb',
+    }),
+  };
+
+  await bundleCore(flowConfig, pushBuildOptions, logger, false);
+
+  logger.debug(`Bundle created: ${tempPath}`);
+
+  // Execute based on platform
+  if (platform === 'web') {
+    logger.debug('Executing in web environment (JSDOM)');
+    return executeWebPush(tempPath, validatedEvent, logger);
+  } else if (platform === 'server') {
+    logger.debug('Executing in server environment (Node.js)');
+    return executeServerPush(tempPath, validatedEvent, logger);
+  } else {
+    throw new Error(`Unsupported platform: ${platform}`);
+  }
+}
+
+/**
+ * Execute push from pre-built bundle
+ */
+async function executeBundlePush(
+  bundleContent: string,
+  platform: Platform,
+  validatedEvent: { name: string; data: Record<string, unknown> },
+  logger: Logger,
+  setTempDir: (dir: string) => void,
+): Promise<PushResult> {
+  // Write bundle to temp file
+  const tempDir = path.join(
+    process.cwd(),
+    '.tmp',
+    `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+  );
+  setTempDir(tempDir);
+  await fs.ensureDir(tempDir);
+  const tempPath = path.join(
+    tempDir,
+    `bundle.${platform === 'server' ? 'mjs' : 'js'}`,
+  );
+  await fs.writeFile(tempPath, bundleContent, 'utf8');
+
+  logger.debug(`Bundle written to: ${tempPath}`);
+
+  // Execute based on platform
+  if (platform === 'web') {
+    logger.debug('Executing in web environment (JSDOM)');
+    return executeWebPush(tempPath, validatedEvent, logger);
+  } else {
+    logger.debug('Executing in server environment (Node.js)');
+    return executeServerPush(tempPath, validatedEvent, logger);
   }
 }
 
