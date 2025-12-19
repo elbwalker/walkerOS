@@ -19,7 +19,7 @@ RUN npm install express@^4.21.2 cors@^2.8.5 --omit=dev && \
     npm cache clean --force
 
 # Copy pre-built runtime code
-COPY packages/cli/dist/runtime/ ./runtime/
+COPY dist/runtime/ ./runtime/
 
 # Create flow directory for mounted bundles
 RUN mkdir -p /flow && chown -R walker:walker /app /flow
