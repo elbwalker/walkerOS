@@ -1,5 +1,21 @@
 # @walkeros/cli
 
+## 0.0.0-next-20251219153324
+
+### Minor Changes
+
+- 42d06c8: CLI simplification - removed Docker mode for build commands, merged
+  runtime from @walkeros/docker into CLI, single walkeros/flow image for
+  production
+
+### Patch Changes
+
+- 71b615f: Fix URL handling in resolveAsset - URLs are now passed through
+  unchanged instead of being mangled into invalid filesystem paths
+- Updated dependencies [5163b01]
+  - @walkeros/core@0.0.0-next-20251219153324
+  - @walkeros/server-core@0.0.0-next-20251219153324
+
 ## 0.7.0-next.0
 
 ### Minor Changes

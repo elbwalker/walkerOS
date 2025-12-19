@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-browser",
   "description": "Browser DOM source for walkerOS",
-  "version": "0.5.1-next.0",
+  "version": "0.0.0-next-20251219153324",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -30,8 +30,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/collector": "0.5.1-next.0",
-    "@walkeros/web-core": "0.5.1-next.0"
+    "@walkeros/collector": "0.0.0-next-20251219153324",
+    "@walkeros/web-core": "0.0.0-next-20251219153324"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

@@ -1,5 +1,17 @@
 # walkeros-demo-react
 
+## 0.0.0-next-20251219153324
+
+### Patch Changes
+
+- Updated dependencies [5163b01]
+  - @walkeros/core@0.0.0-next-20251219153324
+  - @walkeros/collector@0.0.0-next-20251219153324
+  - @walkeros/web-core@0.0.0-next-20251219153324
+  - @walkeros/web-source-browser@0.0.0-next-20251219153324
+  - @walkeros/web-destination-api@0.0.0-next-20251219153324
+  - @walkeros/web-destination-gtag@0.0.0-next-20251219153324
+
 ## 1.3.1-next.0
 
 ### Patch Changes
