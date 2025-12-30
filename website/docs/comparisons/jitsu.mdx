@@ -1,0 +1,88 @@
+---
+title: walkerOS vs. Jitsu
+sidebar_position: 9
+description: Compare walkerOS and Jitsu to understand which solution fits your needs.
+---
+
+[Jitsu](https://jitsu.com/) is an open-source data collection platform often
+positioned as a Segment alternative. It focuses on streaming event data to data
+warehouses. Here's how it compares to walkerOS.
+
+## Quick comparison
+
+| Feature              | Jitsu                            | walkerOS                          |
+| -------------------- | -------------------------------- | --------------------------------- |
+| Open-source          | Yes (MIT)                        | Yes (MIT)                         |
+| Pricing              | Free up to 200k events           | Free (paid support available)     |
+| Self-hosted option   | Yes                              | Yes                               |
+| Warehouse focus      | Primary destination              | One of many destinations          |
+| Event transformations| Yes (JavaScript functions)       | Yes (JavaScript mapping)          |
+| Identity resolution  | Yes (automatic)                  | Basic (session/user stitching)    |
+| Composable tagging   | No                               | Yes (tag once, use everywhere)    |
+| Custom domains       | Yes                              | Yes (first-party setup)           |
+| Setup complexity     | Low to medium                    | Low to medium                     |
+
+## Who should use what?
+
+### Choose Jitsu if
+
+- Your primary goal is streaming data to warehouses
+- You want automatic identity resolution built in
+- You need a simple tracking tag similar to Google Analytics
+- You want included ClickHouse storage on the free tier
+
+### Choose walkerOS if
+
+- You want composable, component-level tagging for web
+- You need flexibility beyond just warehouse destinations
+- You prefer HTML attribute-based tracking over JavaScript SDK
+- You want full control over event collection and consent handling
+- You're building with modern component frameworks
+
+## Key differences
+
+### Tagging approach
+
+**Jitsu:** JavaScript SDK similar to traditional analytics tools. Add a tracking
+script, then call tracking functions in your code.
+
+**walkerOS:** HTML attribute-based tagging. Add `data-elb` attributes to your
+components. Events are captured automatically based on user interactions without
+writing tracking code for each event.
+
+### Primary focus
+
+**Jitsu:** Warehouse-first. Built to stream data to Snowflake, BigQuery,
+Redshift, ClickHouse, etc. The warehouse is the core destination.
+
+**walkerOS:** Destination-agnostic. Send events to warehouses, analytics tools,
+marketing platforms, or your own APIs. No single destination type is prioritized.
+
+### Cost
+
+**Jitsu:** Free cloud tier up to 200k events/month with included ClickHouse.
+Paid plans start around $40/month. Self-hosted is free (MIT license).
+
+**walkerOS:** The software is free and open-source with no event limits. You pay
+for your own infrastructure costs. Optional paid services include implementation
+support (setup fees) and SLAs for teams that want help getting started or need
+guaranteed support.
+
+### Transformations
+
+**Jitsu:** Jitsu Functions — JavaScript-based processing that runs before data
+reaches your warehouse. Filter, modify, or enrich events.
+
+**walkerOS:** Mapping configuration — JavaScript-based transformations that run
+in the collector. Transform event data before sending to destinations.
+
+## Can they work together?
+
+Yes! You can use walkerOS for event collection and send data to Jitsu as a
+destination. This gives you walkerOS's composable tagging and consent handling
+on the frontend, with Jitsu's warehouse streaming on the backend.
+
+## Getting started
+
+Ready to try walkerOS? Check out the [quickstart guide](/docs/) to set up
+component-level tagging without traditional SDK tracking calls.

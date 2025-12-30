@@ -1,0 +1,106 @@
+---
+title: walkerOS vs. Segment
+sidebar_position: 7
+description: Compare walkerOS and Twilio Segment to understand which solution fits your needs.
+---
+
+[Segment](https://segment.com/) (owned by Twilio) is a Customer Data Platform
+(CDP) that collects, unifies, and routes customer data. It's one of the most
+well-known names in the space. Here's how it compares to walkerOS.
+
+## Quick comparison
+
+| Feature              | Segment                          | walkerOS                          |
+| -------------------- | -------------------------------- | --------------------------------- |
+| Open-source          | Partially (some SDKs)            | Yes (MIT)                         |
+| Pricing              | From $120/month (Team plan)      | Free (paid support available)     |
+| Self-hosted option   | No                               | Yes                               |
+| Vendor lock-in       | Yes (Twilio ecosystem)           | None                              |
+| Data ownership       | Segment servers                  | Your infrastructure               |
+| Pre-built integrations | 700+                           | Build your own or use existing    |
+| Identity resolution  | Yes (Unify)                      | Basic (session/user stitching)    |
+| Composable tagging   | No                               | Yes (tag once, use everywhere)    |
+| Target audience      | Marketing & data teams           | Developers                        |
+
+## Who should use what?
+
+### Choose Segment if
+
+- You need a full Customer Data Platform with identity resolution
+- You want 700+ pre-built integrations out of the box
+- Your team is marketing-focused and prefers GUI configuration
+- Budget allows for $120+/month (scales with MTUs)
+- You need enterprise features like audience building and journey orchestration
+
+### Choose walkerOS if
+
+- You want full control and self-hosting capability
+- You prefer open-source with no vendor lock-in
+- You're developer-focused and want code-first workflows
+- Cost matters — walkerOS is free
+- You need event collection and routing without the full CDP overhead
+- You want composable, component-level tagging
+
+## Key differences
+
+### Scope
+
+**Segment:** A full Customer Data Platform. Beyond event collection, it offers
+identity resolution, audience building, journey orchestration, and reverse ETL.
+It's designed for marketing and data teams who need unified customer profiles.
+
+**walkerOS:** Focused event collection and routing infrastructure. Collect
+events from sources, process them, send them to destinations. It does one thing
+well without the CDP overhead.
+
+### Cost
+
+**Segment:** Free tier limited to 1,000 MTUs. Team plan starts around
+$120/month. Pricing scales with monthly tracked users (MTUs) — enterprise
+customers often negotiate 70-80% discounts on list prices, but costs can grow
+quickly at scale.
+
+**walkerOS:** The software is free and open-source. You pay for your own
+infrastructure costs. Optional paid services include implementation support
+(setup fees) and SLAs for teams that want help getting started or need
+guaranteed support.
+
+### Integrations
+
+**Segment:** 700+ pre-built integrations. Connect to almost any marketing,
+analytics, or data tool without writing code. Great if your stack is covered.
+
+**walkerOS:** Fewer pre-built destinations, but full flexibility to build
+custom integrations. Send data anywhere via destinations you control. Better for
+teams with specific requirements or internal systems.
+
+### Data ownership
+
+**Segment:** Data flows through Segment's infrastructure. While they offer
+privacy features and compliance certifications, you're trusting a third party
+with your customer data.
+
+**walkerOS:** Self-hosted by default. Your data never leaves your
+infrastructure unless you explicitly send it somewhere. Full control over where
+data lives and how it's processed.
+
+### Developer experience
+
+**Segment:** SDK-based tracking with a GUI for configuration and debugging.
+Good documentation, but less control over the underlying behavior.
+
+**walkerOS:** Code-first, config-as-code approach. HTML attribute-based tagging
+for web. Version control your tracking setup, review in PRs, test before
+production.
+
+## Can they work together?
+
+Yes! You can use walkerOS for event collection and send data to Segment as a
+destination. This gives you walkerOS's composable tagging and consent handling
+on the frontend, while still feeding data into Segment's CDP for identity
+resolution and downstream integrations.
+
+## Getting started
+
+Ready to try walkerOS? Check out the [quickstart guide](/docs/) to set up
+lightweight event collection without CDP complexity.

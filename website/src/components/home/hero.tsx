@@ -4,8 +4,8 @@ import Hero from '@site/src/components/organisms/hero';
 export default function HomeHero() {
   return (
     <Hero
-      title="Tracking that passes code review"
-      text="Get the same rigor for your analytics as your application code. Write in TypeScript. Review in GitHub. Catch errors before production."
+      title="Open-source data collection and tag management"
+      text="Collect and route event data with full control. Privacy-first, vendor-free, and built for developers."
       primaryButton={{
         link: '/docs/',
         children: 'Get started',
@@ -19,8 +19,8 @@ export default function HomeHero() {
       elbTitle="home"
       badges={[
         'Version controlled in Git',
-        'Code reviewed and testable',
         'Self-hosted on your infrastructure',
+        'No vendor lock-in',
       ]}
     />
   );
