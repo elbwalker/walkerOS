@@ -137,7 +137,7 @@ This creates `dist/flow.mjs`.
   -v $(pwd)/dist/flow.mjs:/app/flow.mjs \\
   -e MODE=collect \\
   -e FLOW=/app/flow.mjs \\
-  --name walkeros-collector \\
+  --name walkeros-flow \\
   walkeros/flow:latest`}
   language="bash"
 />
@@ -154,7 +154,7 @@ This creates `dist/flow.mjs`.
 **4. View logs**
 
 <CodeSnippet
-  code={`docker logs -f walkeros-collector`}
+  code={`docker logs -f walkeros-flow`}
   language="bash"
 />
 
@@ -162,53 +162,34 @@ This creates `dist/flow.mjs`.
 
 Build a custom Docker image with your bundle baked in.
 
-**1. Build with CLI**
+**1. Build with CLI and generate Dockerfile**
 
 <CodeSnippet
-  code={`walkeros bundle production.json -e production --output flow.mjs`}
+  code={`walkeros bundle production.json --dockerfile`}
   language="bash"
 />
 
-**2. Create Dockerfile**
+This creates `dist/bundle.mjs` and `dist/Dockerfile`.
+
+**2. Build image**
 
 <CodeSnippet
-  code={`FROM walkeros/flow:latest
-
-# Copy pre-built bundle
-COPY flow.mjs /app/flow.mjs
-
-# Configure runtime
-ENV MODE=collect
-ENV FLOW=/app/flow.mjs
-ENV PORT=8080
-
-# Expose port
-EXPOSE 8080
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
-  CMD node -e "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"`}
-  language="dockerfile"
-/>
-
-**3. Build image**
-
-<CodeSnippet
-  code={`docker build -t my-analytics-collector:v1.0.0 .`}
+  code={`cd dist
+docker build -t my-analytics:v1.0.0 .`}
   language="bash"
 />
 
-**4. Run it**
+**3. Run it**
 
 <CodeSnippet
-  code={`docker run -d -p 8080:8080 my-analytics-collector:v1.0.0`}
+  code={`docker run -d -p 8080:8080 my-analytics:v1.0.0`}
   language="bash"
 />
 
-**5. Push to registry**
+**4. Push to registry**
 
 <CodeSnippet
-  code={`docker tag my-analytics-collector:v1.0.0 gcr.io/my-project/analytics:v1.0.0
+  code={`docker tag my-analytics:v1.0.0 gcr.io/my-project/analytics:v1.0.0
 docker push gcr.io/my-project/analytics:v1.0.0`}
   language="bash"
 />
@@ -598,16 +579,16 @@ Deploy to any Kubernetes cluster:
   code={`apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: walkeros-collector
+  name: walkeros-flow
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: walkeros-collector
+      app: walkeros-flow
   template:
     metadata:
       labels:
-        app: walkeros-collector
+        app: walkeros-flow
     spec:
       containers:
       - name: collector
@@ -638,10 +619,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: walkeros-collector
+  name: walkeros-flow
 spec:
   selector:
-    app: walkeros-collector
+    app: walkeros-flow
   ports:
   - protocol: TCP
     port: 80
@@ -654,7 +635,7 @@ Apply:
 
 <CodeSnippet
   code={`kubectl apply -f deployment.yaml
-kubectl get services walkeros-collector`}
+kubectl get services walkeros-flow`}
   language="bash"
 />
 
@@ -691,13 +672,13 @@ Use this for:
 
 <CodeSnippet
   code={`# Follow logs
-docker logs -f walkeros-collector
+docker logs -f walkeros-flow
 
 # Last 100 lines
-docker logs --tail 100 walkeros-collector
+docker logs --tail 100 walkeros-flow
 
 # With timestamps
-docker logs -t walkeros-collector`}
+docker logs -t walkeros-flow`}
   language="bash"
 />
 
@@ -788,10 +769,10 @@ The container is designed for horizontal scaling:
 
 <CodeSnippet
   code={`# Docker Swarm
-docker service scale walkeros-collector=5
+docker service scale walkeros-flow=5
 
 # Kubernetes
-kubectl scale deployment walkeros-collector --replicas=5
+kubectl scale deployment walkeros-flow --replicas=5
 
 # Cloud Run (auto-scaling)
 gcloud run services update $SERVICE_NAME --max-instances=100`}
@@ -804,7 +785,7 @@ gcloud run services update $SERVICE_NAME --max-instances=100`}
 
 <CodeSnippet
   code={`# Check logs
-docker logs walkeros-collector
+docker logs walkeros-flow
 
 # Common issues:
 # - FLOW path doesn't exist
@@ -828,7 +809,7 @@ curl -X POST http://localhost:8080/collect \\
   -d '{"name":"test event","data":{}}'
 
 # Check logs for errors
-docker logs walkeros-collector`}
+docker logs walkeros-flow`}
   language="bash"
 />
 

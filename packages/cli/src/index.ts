@@ -67,6 +67,7 @@ program
   .option('-v, --verbose', 'verbose output')
   .option('--dry-run', 'preview command without executing')
   .option('--silent', 'suppress output')
+  .option('--dockerfile', 'generate Dockerfile alongside bundle')
   .action(async (file, options) => {
     await bundleCommand({
       config: file || 'bundle.config.json',
@@ -78,6 +79,7 @@ program
       verbose: options.verbose,
       dryRun: options.dryRun,
       silent: options.silent,
+      dockerfile: options.dockerfile,
     });
   });
 
