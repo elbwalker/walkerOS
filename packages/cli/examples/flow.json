@@ -71,7 +71,6 @@
         }
       },
       "collector": {
-        "run": true,
         "globals": {
           "environment": "production",
           "version": "1.0.0"
