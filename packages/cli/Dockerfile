@@ -32,7 +32,7 @@ USER walker
 ENV NODE_ENV=production
 ENV MODE=collect
 ENV PORT=8080
-ENV FILE=/app/flow/bundle.mjs
+ENV FLOW=/app/flow/bundle.mjs
 
 # Expose default port
 EXPOSE 8080
