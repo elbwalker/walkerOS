@@ -8,14 +8,11 @@
 import fs from 'fs-extra';
 import { isUrl } from '../config/utils.js';
 
-export type InputType = 'config' | 'bundle';
 export type Platform = 'web' | 'server';
 
-export interface DetectedInput {
-  type: InputType;
-  content: string;
-  platform?: Platform; // Only set for bundles
-}
+export type DetectedInput =
+  | { type: 'config'; content: string }
+  | { type: 'bundle'; content: string; platform: Platform };
 
 /**
  * Detect if input is config JSON or pre-built bundle.
