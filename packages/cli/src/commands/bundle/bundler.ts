@@ -823,6 +823,11 @@ export function generatePlatformWrapper(
 
     return `export default async function(context = {}) {
   const config = ${configObject};${codeSection}
+  // Apply context overrides (e.g., logger config from CLI)
+  if (context.logger) {
+    config.logger = { ...config.logger, ...context.logger };
+  }
+
   return await startFlow(config);
 }`;
   }

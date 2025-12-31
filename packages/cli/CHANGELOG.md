@@ -1,5 +1,17 @@
 # @walkeros/cli
 
+## 0.6.1
+
+### Patch Changes
+
+- f6007dd: Fix consistent logger forwarding across CLI commands
+  - Remove duplicate `createCollectorLoggerConfig` from push command, import
+    from core
+  - Fix simulate command to use `collector.push` instead of `elb()` (same
+    pattern as push)
+  - Add logger forwarding to simulate command via `executeInNode`
+  - Add logger forwarding to run command via `runFlow`
+
 ## 0.0.0-next-20251219153324
 
 ### Minor Changes

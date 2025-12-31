@@ -1,13 +1,145 @@
 {
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$ref": "#/definitions/FlowSetup",
   "definitions": {
+    "Primitive": {
+      "type": ["string", "number", "boolean"],
+      "description": "Primitive value: string, number, or boolean"
+    },
+    "Variables": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/Primitive"
+      },
+      "description": "Variables for interpolation"
+    },
+    "Definitions": {
+      "type": "object",
+      "additionalProperties": {},
+      "description": "Reusable configuration definitions"
+    },
+    "PackageConfig": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Package version to use"
+        },
+        "imports": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Named exports to import from the package"
+        },
+        "path": {
+          "type": "string",
+          "description": "Local path (takes precedence over version)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Packages": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/PackageConfig"
+      },
+      "description": "NPM packages to bundle"
+    },
+    "WebConfig": {
+      "type": "object",
+      "properties": {
+        "windowCollector": {
+          "type": "string",
+          "description": "Window property name for collector instance (default: \"collector\")"
+        },
+        "windowElb": {
+          "type": "string",
+          "description": "Window property name for elb function (default: \"elb\")"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Web platform configuration"
+    },
+    "ServerConfig": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Server platform configuration (reserved for future options)"
+    },
+    "SourceReference": {
+      "type": "object",
+      "properties": {
+        "package": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Package specifier with optional version (e.g., \"@walkeros/web-source-browser@2.0.0\")"
+        },
+        "code": {
+          "type": "string",
+          "description": "Named export to use from the package (e.g., \"sourceExpress\"). If omitted, uses default export."
+        },
+        "config": {
+          "description": "Source-specific configuration object"
+        },
+        "env": {
+          "description": "Source environment configuration"
+        },
+        "primary": {
+          "type": "boolean",
+          "description": "Mark as primary source (provides main elb). Only one source should be primary."
+        },
+        "variables": {
+          "$ref": "#/definitions/Variables",
+          "description": "Source-level variables (highest priority in cascade)"
+        },
+        "definitions": {
+          "$ref": "#/definitions/Definitions",
+          "description": "Source-level definitions (highest priority in cascade)"
+        }
+      },
+      "required": ["package"],
+      "additionalProperties": false,
+      "description": "Source package reference with configuration"
+    },
+    "DestinationReference": {
+      "type": "object",
+      "properties": {
+        "package": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Package specifier with optional version (e.g., \"@walkeros/web-destination-gtag@2.0.0\")"
+        },
+        "code": {
+          "type": "string",
+          "description": "Named export to use from the package (e.g., \"destinationAnalytics\"). If omitted, uses default export."
+        },
+        "config": {
+          "description": "Destination-specific configuration object"
+        },
+        "env": {
+          "description": "Destination environment configuration"
+        },
+        "variables": {
+          "$ref": "#/definitions/Variables",
+          "description": "Destination-level variables (highest priority in cascade)"
+        },
+        "definitions": {
+          "$ref": "#/definitions/Definitions",
+          "description": "Destination-level definitions (highest priority in cascade)"
+        }
+      },
+      "required": ["package"],
+      "additionalProperties": false,
+      "description": "Destination package reference with configuration"
+    },
     "FlowConfig": {
       "type": "object",
       "properties": {
-        "platform": {
-          "type": "string",
-          "enum": ["web", "server"],
-          "description": "Target platform: \"web\" for browser-based tracking, \"server\" for Node.js server-side collection"
+        "web": {
+          "$ref": "#/definitions/WebConfig",
+          "description": "Web platform configuration (browser-based tracking). Mutually exclusive with server."
+        },
+        "server": {
+          "$ref": "#/definitions/ServerConfig",
+          "description": "Server platform configuration (Node.js). Mutually exclusive with web."
         },
         "sources": {
           "type": "object",
@@ -26,69 +158,31 @@
         "collector": {
           "description": "Collector configuration for event processing (uses Collector.InitConfig)"
         },
-        "env": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Environment-specific variables (override root-level variables)"
+        "packages": {
+          "$ref": "#/definitions/Packages",
+          "description": "NPM packages to bundle"
+        },
+        "variables": {
+          "$ref": "#/definitions/Variables",
+          "description": "Flow-level variables (override Setup.variables, overridden by source/destination variables)"
+        },
+        "definitions": {
+          "$ref": "#/definitions/Definitions",
+          "description": "Flow-level definitions (extend Setup.definitions, overridden by source/destination definitions)"
         }
       },
-      "required": ["platform"],
-      "additionalProperties": true,
-      "description": "Single flow configuration for one deployment target"
-    },
-    "SourceReference": {
-      "type": "object",
-      "properties": {
-        "package": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Package specifier with optional version (e.g., \"@walkeros/web-source-browser@2.0.0\")"
-        },
-        "config": {
-          "description": "Source-specific configuration object"
-        },
-        "env": {
-          "description": "Source environment configuration"
-        },
-        "primary": {
-          "type": "boolean",
-          "description": "Mark as primary source (provides main elb). Only one source should be primary."
-        }
-      },
-      "required": ["package"],
+      "oneOf": [
+        { "required": ["web"], "not": { "required": ["server"] } },
+        { "required": ["server"], "not": { "required": ["web"] } }
+      ],
       "additionalProperties": false,
-      "description": "Source package reference with configuration"
-    },
-    "DestinationReference": {
-      "type": "object",
-      "properties": {
-        "package": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Package specifier with optional version (e.g., \"@walkeros/web-destination-gtag@2.0.0\")"
-        },
-        "config": {
-          "description": "Destination-specific configuration object"
-        },
-        "env": {
-          "description": "Destination environment configuration"
-        }
-      },
-      "required": ["package"],
-      "additionalProperties": false,
-      "description": "Destination package reference with configuration"
-    },
-    "Primitive": {
-      "type": ["string", "number", "boolean"],
-      "description": "Primitive value: string, number, or boolean"
+      "description": "Single flow configuration for one deployment target. Exactly one of 'web' or 'server' must be present."
     },
     "FlowSetup": {
       "type": "object",
       "properties": {
         "version": {
-          "type": "number",
+          "type": "integer",
           "const": 1,
           "description": "Configuration schema version (currently only 1 is supported)"
         },
@@ -98,29 +192,25 @@
           "description": "JSON Schema reference for IDE validation (e.g., \"https://walkeros.io/schema/flow/v1.json\")"
         },
         "variables": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/Primitive"
-          },
-          "description": "Shared variables for interpolation across all flows (use ${VAR_NAME:default} syntax)"
+          "$ref": "#/definitions/Variables",
+          "description": "Shared variables for interpolation across all flows (use ${VAR_NAME} or ${VAR_NAME:default} syntax)"
         },
         "definitions": {
-          "type": "object",
-          "additionalProperties": {},
-          "description": "Reusable configuration definitions (reference with JSON Schema $ref syntax)"
+          "$ref": "#/definitions/Definitions",
+          "description": "Reusable configuration definitions (reference with JSON Schema $ref syntax: { \"$ref\": \"#/definitions/name\" })"
         },
         "flows": {
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/FlowConfig"
           },
-          "description": "Named flow configurations (e.g., web_prod, server_stage)"
+          "minProperties": 1,
+          "description": "Named flow configurations (e.g., production, staging, development)"
         }
       },
       "required": ["version", "flows"],
       "additionalProperties": false,
       "description": "Complete multi-flow walkerOS configuration (walkeros.config.json)"
     }
-  },
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  }
 }

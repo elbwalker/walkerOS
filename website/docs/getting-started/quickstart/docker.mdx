@@ -8,7 +8,7 @@ description: Get walkerOS running with Docker in 5 minutes
 ## Try the demo
 
 ```bash
-docker run -p 8080:8080 -e MODE=collect -e FILE=/app/demos/demo-collect.mjs walkeros/flow:latest
+docker run -p 8080:8080 -e MODE=collect -e FLOW=/app/demos/demo-collect.mjs walkeros/flow:latest
 ```
 
 Output:
@@ -33,7 +33,7 @@ curl -X POST http://localhost:8080/collect \
 ```bash
 docker run -d -p 8080:8080 \
   -e MODE=collect \
-  -e FILE=/app/demos/demo-collect.mjs \
+  -e FLOW=/app/demos/demo-collect.mjs \
   walkeros/flow
 
 # Send event
@@ -59,7 +59,7 @@ Docker runtime requires **pre-built bundles**, not JSON configs.
 
 1. Create JSON config: `flow.json`
 2. Bundle with CLI: `walkeros bundle flow.json --output flow.mjs`
-3. Run in Docker: `docker run -e MODE=collect -e FILE=/app/flow.mjs`
+3. Run in Docker: `docker run -e MODE=collect -e FLOW=/app/flow.mjs`
 
 ### Build custom image
 
@@ -67,7 +67,7 @@ Docker runtime requires **pre-built bundles**, not JSON configs.
 FROM walkeros/flow:latest
 COPY flow.mjs /app/flow.mjs
 ENV MODE=collect
-ENV FILE=/app/flow.mjs
+ENV FLOW=/app/flow.mjs
 ```
 
 ```bash
@@ -85,7 +85,7 @@ services:
     image: walkeros/flow:latest
     environment:
       MODE: collect
-      FILE: /app/demos/demo-collect.mjs
+      FLOW: /app/demos/demo-collect.mjs
     ports:
       - '8080:8080'
     restart: unless-stopped
@@ -96,7 +96,7 @@ services:
 | Variable     | Description                                         | Default           |
 | ------------ | --------------------------------------------------- | ----------------- |
 | `MODE`       | Operational mode: `collect` or `serve`              | Required          |
-| `FILE`       | Path to pre-bundled file                            | Required          |
+| `FLOW`       | Path to pre-bundled flow file                       | Required          |
 | `PORT`       | Server port                                         | 8080              |
 | `HOST`       | Server host                                         | 0.0.0.0           |
 | `SERVE_NAME` | Filename in URL (serve mode)                        | walker.js         |

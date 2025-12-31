@@ -99,7 +99,7 @@ fn.addFunctionUrl({
 
 ```yaml
 # serverless.yml
-service: walkeros-collector
+service: walkeros-flow
 
 provider:
   name: aws

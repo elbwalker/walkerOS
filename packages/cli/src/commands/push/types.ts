@@ -10,6 +10,7 @@ export interface PushCommandOptions {
   json?: boolean;
   verbose?: boolean;
   silent?: boolean;
+  platform?: 'web' | 'server';
 }
 
 /**

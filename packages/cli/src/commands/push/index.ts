@@ -1,18 +1,21 @@
 import path from 'path';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
-import { getPlatform, type Elb } from '@walkeros/core';
+import {
+  getPlatform,
+  type Elb,
+  type Logger as CoreLogger,
+} from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 import {
   createCommandLogger,
+  createCollectorLoggerConfig,
   getErrorMessage,
+  detectInput,
   type Logger,
+  type Platform,
 } from '../../core/index.js';
-import {
-  loadJsonConfig,
-  loadJsonFromSource,
-  loadBundleConfig,
-} from '../../config/index.js';
+import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
 import type { PushCommandOptions, PushResult } from './types.js';
 
@@ -22,6 +25,7 @@ import type { PushCommandOptions, PushResult } from './types.js';
 export async function pushCommand(options: PushCommandOptions): Promise<void> {
   const logger = createCommandLogger(options);
   const startTime = Date.now();
+  let tempDir: string | undefined;
 
   try {
     // Step 1: Load event
@@ -60,63 +64,41 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
       );
     }
 
-    // Step 2: Load config
-    logger.debug('Loading flow configuration');
-    const configPath = path.resolve(options.config);
-    const rawConfig = await loadJsonConfig(configPath);
-    const { flowConfig, buildOptions, flowName, isMultiFlow } =
-      loadBundleConfig(rawConfig, {
-        configPath: options.config,
-        flowName: options.flow,
-        logger,
-      });
+    // Step 2: Detect input type (config or bundle)
+    logger.debug('Detecting input type');
+    const detected = await detectInput(options.config, options.platform);
 
-    const platform = getPlatform(flowConfig);
-
-    // Step 3: Bundle to temp file in config directory (so Node.js can find node_modules)
-    logger.debug('Bundling flow configuration');
-    const configDir = path.dirname(configPath);
-    const tempDir = path.join(
-      configDir,
-      '.tmp',
-      `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-    );
-    await fs.ensureDir(tempDir);
-    const tempPath = path.join(
-      tempDir,
-      `bundle.${platform === 'web' ? 'js' : 'mjs'}`,
-    );
-
-    const pushBuildOptions = {
-      ...buildOptions,
-      output: tempPath,
-      // Web uses IIFE for browser-like execution, server uses ESM
-      format: platform === 'web' ? ('iife' as const) : ('esm' as const),
-      platform: platform === 'web' ? ('browser' as const) : ('node' as const),
-      ...(platform === 'web' && {
-        windowCollector: 'collector',
-        windowElb: 'elb',
-      }),
-    };
-
-    await bundleCore(flowConfig, pushBuildOptions, logger, false);
-
-    logger.debug(`Bundle created: ${tempPath}`);
-
-    // Step 4: Execute based on platform
     let result: PushResult;
 
-    if (platform === 'web') {
-      logger.debug('Executing in web environment (JSDOM)');
-      result = await executeWebPush(tempPath, validatedEvent, logger);
-    } else if (platform === 'server') {
-      logger.debug('Executing in server environment (Node.js)');
-      result = await executeServerPush(tempPath, validatedEvent, logger);
+    if (detected.type === 'config') {
+      // Config flow: load config, bundle, execute
+      result = await executeConfigPush(
+        options,
+        validatedEvent,
+        logger,
+        (dir) => {
+          tempDir = dir;
+        },
+      );
     } else {
-      throw new Error(`Unsupported platform: ${platform}`);
+      // Bundle flow: execute directly
+      const collectorLoggerConfig = createCollectorLoggerConfig(
+        logger,
+        options.verbose,
+      );
+      result = await executeBundlePush(
+        detected.content,
+        detected.platform!,
+        validatedEvent,
+        logger,
+        (dir) => {
+          tempDir = dir;
+        },
+        { logger: collectorLoggerConfig },
+      );
     }
 
-    // Step 5: Output results
+    // Step 3: Output results
     const duration = Date.now() - startTime;
 
     if (options.json) {
@@ -150,13 +132,6 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
         process.exit(1);
       }
     }
-
-    // Cleanup temp directory
-    try {
-      await fs.remove(tempDir);
-    } catch {
-      // Ignore cleanup errors
-    }
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = getErrorMessage(error);
@@ -172,6 +147,116 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
     }
 
     process.exit(1);
+  } finally {
+    // Cleanup temp directory
+    if (tempDir) {
+      await fs.remove(tempDir).catch(() => {
+        // Ignore cleanup errors
+      });
+    }
+  }
+}
+
+/**
+ * Execute push from config JSON (existing behavior)
+ */
+async function executeConfigPush(
+  options: PushCommandOptions,
+  validatedEvent: { name: string; data: Record<string, unknown> },
+  logger: Logger,
+  setTempDir: (dir: string) => void,
+): Promise<PushResult> {
+  // Load config
+  logger.debug('Loading flow configuration');
+  const { flowConfig, buildOptions } = await loadFlowConfig(options.config, {
+    flowName: options.flow,
+    logger,
+  });
+
+  const platform = getPlatform(flowConfig);
+
+  // Bundle to temp file in config directory (so Node.js can find node_modules)
+  logger.debug('Bundling flow configuration');
+  const configDir = buildOptions.configDir || process.cwd();
+  const tempDir = path.join(
+    configDir,
+    '.tmp',
+    `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+  );
+  setTempDir(tempDir);
+  await fs.ensureDir(tempDir);
+  const tempPath = path.join(
+    tempDir,
+    `bundle.${platform === 'web' ? 'js' : 'mjs'}`,
+  );
+
+  const pushBuildOptions = {
+    ...buildOptions,
+    output: tempPath,
+    format: platform === 'web' ? ('iife' as const) : ('esm' as const),
+    platform: platform === 'web' ? ('browser' as const) : ('node' as const),
+    ...(platform === 'web' && {
+      windowCollector: 'collector',
+      windowElb: 'elb',
+    }),
+  };
+
+  await bundleCore(flowConfig, pushBuildOptions, logger, false);
+
+  logger.debug(`Bundle created: ${tempPath}`);
+
+  // Execute based on platform
+  if (platform === 'web') {
+    logger.debug('Executing in web environment (JSDOM)');
+    return executeWebPush(tempPath, validatedEvent, logger);
+  } else if (platform === 'server') {
+    logger.debug('Executing in server environment (Node.js)');
+    const collectorLoggerConfig = createCollectorLoggerConfig(
+      logger,
+      options.verbose,
+    );
+    return executeServerPush(tempPath, validatedEvent, logger, 60000, {
+      logger: collectorLoggerConfig,
+    });
+  } else {
+    throw new Error(`Unsupported platform: ${platform}`);
+  }
+}
+
+/**
+ * Execute push from pre-built bundle
+ */
+async function executeBundlePush(
+  bundleContent: string,
+  platform: Platform,
+  validatedEvent: { name: string; data: Record<string, unknown> },
+  logger: Logger,
+  setTempDir: (dir: string) => void,
+  context: { logger?: CoreLogger.Config } = {},
+): Promise<PushResult> {
+  // Write bundle to temp file
+  const tempDir = path.join(
+    process.cwd(),
+    '.tmp',
+    `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+  );
+  setTempDir(tempDir);
+  await fs.ensureDir(tempDir);
+  const tempPath = path.join(
+    tempDir,
+    `bundle.${platform === 'server' ? 'mjs' : 'js'}`,
+  );
+  await fs.writeFile(tempPath, bundleContent, 'utf8');
+
+  logger.debug(`Bundle written to: ${tempPath}`);
+
+  // Execute based on platform
+  if (platform === 'web') {
+    logger.debug('Executing in web environment (JSDOM)');
+    return executeWebPush(tempPath, validatedEvent, logger);
+  } else {
+    logger.debug('Executing in server environment (Node.js)');
+    return executeServerPush(tempPath, validatedEvent, logger, 60000, context);
   }
 }
 
@@ -212,23 +297,28 @@ async function executeWebPush(
     const bundleCode = await fs.readFile(bundlePath, 'utf8');
     window.eval(bundleCode);
 
-    // Wait for window.elb assignment
-    logger.debug('Waiting for elb...');
+    // Wait for window.collector assignment
+    logger.debug('Waiting for collector...');
     await waitForWindowProperty(
       window as unknown as Record<string, unknown>,
-      'elb',
+      'collector',
       5000,
     );
 
     const windowObj = window as unknown as Record<string, unknown>;
-    const elb = windowObj.elb as unknown as (
-      name: string,
-      data: Record<string, unknown>,
-    ) => Promise<Elb.PushResult>;
+    const collector = windowObj.collector as unknown as {
+      push: (event: {
+        name: string;
+        data: Record<string, unknown>;
+      }) => Promise<Elb.PushResult>;
+    };
 
-    // Push event
+    // Push event directly to collector (bypasses source handlers)
     logger.log(`Pushing event: ${event.name}`);
-    const elbResult = await elb(event.name, event.data);
+    const elbResult = await collector.push({
+      name: event.name,
+      data: event.data,
+    });
 
     return {
       success: true,
@@ -252,6 +342,7 @@ async function executeServerPush(
   event: PushEventInput,
   logger: Logger,
   timeout: number = 60000, // 60 second default timeout
+  context: { logger?: CoreLogger.Config } = {},
 ): Promise<PushResult> {
   const startTime = Date.now();
 
@@ -274,26 +365,28 @@ async function executeServerPush(
         throw new Error('Bundle does not export default factory function');
       }
 
-      // Call factory function to start flow
+      // Call factory function to start flow (pass context for verbose logging)
       logger.debug('Calling factory function...');
-      const result = await flowModule.default();
+      const result = await flowModule.default(context);
 
-      if (!result || !result.elb || typeof result.elb !== 'function') {
+      if (
+        !result ||
+        !result.collector ||
+        typeof result.collector.push !== 'function'
+      ) {
         throw new Error(
-          'Factory function did not return valid result with elb',
+          'Factory function did not return valid result with collector',
         );
       }
 
-      const { elb } = result;
+      const { collector } = result;
 
-      // Push event
+      // Push event directly to collector (bypasses source handlers)
       logger.log(`Pushing event: ${event.name}`);
-      const elbResult = await (
-        elb as (
-          name: string,
-          data: Record<string, unknown>,
-        ) => Promise<Elb.PushResult>
-      )(event.name, event.data);
+      const elbResult = await collector.push({
+        name: event.name,
+        data: event.data,
+      });
 
       return {
         success: true,

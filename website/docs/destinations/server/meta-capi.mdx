@@ -43,3 +43,69 @@ await startFlow({
 ## Configuration reference
 
 <PropertyTable schema={schemas.settings} />
+
+## Docker Deployment
+
+### Step 1: Create Flow Configuration
+
+Use the `${VAR}` syntax in your flow configuration to reference environment variables at runtime:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "meta": {
+      "package": "@walkeros/server-destination-meta",
+      "config": {
+        "settings": {
+          "accessToken": "\${META_ACCESS_TOKEN}",
+          "pixelId": "\${META_PIXEL_ID}",
+          "test_event_code": "\${META_TEST_CODE:}"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle the Flow
+
+Bundle your flow configuration before running in Docker:
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e META_ACCESS_TOKEN=your-access-token \\
+  -e META_PIXEL_ID=1234567890 \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+### Docker Compose Example
+
+<CodeSnippet
+  code={`services:
+  walkeros:
+    image: walkeros/flow:latest
+    environment:
+      - META_ACCESS_TOKEN=\${META_ACCESS_TOKEN}
+      - META_PIXEL_ID=\${META_PIXEL_ID}
+    volumes:
+      - ./dist/bundle.mjs:/app/flow/bundle.mjs:ro
+    ports:
+      - "8080:8080"`}
+  language="yaml"
+/>
+
+:::tip Security Best Practice
+Never commit access tokens to version control. Use environment variables or a secrets manager to inject credentials at runtime.
+:::

@@ -15,14 +15,15 @@ WORKDIR /app
 
 # Install only production runtime dependencies
 # Note: @walkeros/core is bundled into dist, not needed at runtime
-RUN npm install express@^4.21.2 cors@^2.8.5 --omit=dev && \
-    npm cache clean --force
+RUN npm install express@^4.21.2 cors@^2.8.5 chalk --omit=dev && \
+    npm cache clean --force && \
+    node -e "const p=require('./package.json'); p.type='module'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))"
 
 # Copy pre-built runtime code
 COPY dist/runtime/ ./runtime/
 
 # Create flow directory for mounted bundles
-RUN mkdir -p /flow && chown -R walker:walker /app /flow
+RUN mkdir -p /app/flow && chown -R walker:walker /app
 
 # Switch to non-root user
 USER walker
@@ -31,7 +32,7 @@ USER walker
 ENV NODE_ENV=production
 ENV MODE=collect
 ENV PORT=8080
-ENV FILE=/flow/bundle.mjs
+ENV FLOW=/app/flow/bundle.mjs
 
 # Expose default port
 EXPOSE 8080

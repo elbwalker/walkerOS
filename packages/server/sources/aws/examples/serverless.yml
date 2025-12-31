@@ -1,4 +1,4 @@
-service: walkeros-collector
+service: walkeros-flow
 
 provider:
   name: aws
