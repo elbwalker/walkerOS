@@ -13,9 +13,6 @@ describe('Browser Source Edge Cases', () => {
     mockPush = jest.fn((...args: unknown[]) => {
       return Promise.resolve({
         ok: true,
-        successful: [],
-        queued: [],
-        failed: [],
       });
     }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
 

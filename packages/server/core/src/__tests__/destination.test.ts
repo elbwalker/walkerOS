@@ -49,7 +49,7 @@ describe('Destination', () => {
   });
 
   test('init call', async () => {
-    const { elb } = await getCollector();
+    const { elb, collector } = await getCollector();
 
     await elb(mockEvent);
     expect(mockInit).toHaveBeenCalledTimes(1);
@@ -92,15 +92,15 @@ describe('Destination', () => {
     });
 
     // Save config automatically
-    const destinationSave = (
-      await elb('walker destination', {
-        config: {},
-        init: jest.fn().mockImplementation(() => {
-          return { foo: 'bar' };
-        }),
-        push: mockPush,
-      })
-    ).successful[0].destination;
+    const addResult = await elb('walker destination', {
+      config: {},
+      init: jest.fn().mockImplementation(() => {
+        return { foo: 'bar' };
+      }),
+      push: mockPush,
+    });
+    const destId = Object.keys(addResult.done!)[0];
+    const destinationSave = collector.destinations[destId];
     expect(destinationSave.config).toEqual({ foo: 'bar', init: true });
 
     jest.clearAllMocks();
@@ -281,9 +281,9 @@ describe('Destination', () => {
     const { elb, collector } = await getCollector({});
 
     result = await elb(mockEvent);
-    expect(result.successful).toHaveProperty('length', 0);
-    expect(result.queued).toHaveProperty('length', 0);
-    expect(result.failed).toHaveProperty('length', 0);
+    expect(result.done).toBeUndefined();
+    expect(result.queued).toBeUndefined();
+    expect(result.failed).toBeUndefined();
     expect(collector.queue[0]).toEqual(
       expect.objectContaining({
         consent: mockEvent.consent,
@@ -298,8 +298,8 @@ describe('Destination', () => {
     collector.globals = { foo: 'bar' };
 
     result = await elb('walker destination', mockDestination, { id: 'later' });
-    expect(result.successful).toHaveProperty('length', 1);
-    expect(result.successful[0]).toHaveProperty('id', 'later');
+    expect(result.done).toBeDefined();
+    expect(result.done!['later']).toBeDefined();
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush.mock.calls[0][0]).toEqual(
       expect.objectContaining({
@@ -339,40 +339,23 @@ describe('Destination', () => {
 
     result = await elb('entity action');
 
-    expect(result).toEqual({
-      event: expect.any(Object),
-      ok: false,
-      successful: [
-        {
-          id: 'mock',
-          destination: expect.objectContaining({
-            ...mockDestination,
-            config: expect.objectContaining({
-              ...mockDestination.config,
-              init: true,
-            }),
-            env: expect.any(Object),
-          }),
-        },
-      ],
-      queued: [],
-      failed: [
-        {
-          id: 'initFail',
-          destination: expect.objectContaining({
-            ...initFail,
-            env: expect.any(Object),
-          }),
-        },
-        {
-          id: 'pushFail',
-          destination: expect.objectContaining({
-            ...pushFail,
-            env: expect.any(Object),
-          }),
-        },
-      ],
-    });
+    expect(result.ok).toBe(false);
+    expect(result.event).toBeDefined();
+
+    // Check done destinations
+    expect(result.done).toBeDefined();
+    expect(result.done!['mock']).toBeDefined();
+    expect(result.done!['mock'].type).toBe('unknown');
+
+    // Check failed destinations
+    expect(result.failed).toBeDefined();
+    expect(result.failed!['initFail']).toBeDefined();
+    expect(result.failed!['initFail'].error).toBeDefined();
+    expect(result.failed!['pushFail']).toBeDefined();
+    expect(result.failed!['pushFail'].error).toBeDefined();
+
+    // No queued destinations
+    expect(result.queued).toBeUndefined();
 
     // DLQ
     expect(collector.destinations['initFail'].dlq).toContainEqual([
@@ -402,23 +385,17 @@ describe('Destination', () => {
     });
 
     result = await elb(mockEvent);
-    expect(result).toStrictEqual(
-      expect.objectContaining({
-        ok: true,
-        successful: [expect.objectContaining({ id: 'mock' })],
-        queued: [expect.objectContaining({ id: 'destinationConsent' })],
-      }),
-    );
+    expect(result.ok).toBe(true);
+    expect(result.done).toBeDefined();
+    expect(result.done!['mock']).toBeDefined();
+    expect(result.queued).toBeDefined();
+    expect(result.queued!['destinationConsent']).toBeDefined();
 
     result = await elb('walker consent', { test: false });
-    expect(result).toStrictEqual(
-      expect.objectContaining({
-        ok: true,
-        successful: [],
-        queued: [],
-        failed: [],
-      }),
-    );
+    expect(result.ok).toBe(true);
+    expect(result.done).toBeUndefined();
+    expect(result.queued).toBeUndefined();
+    expect(result.failed).toBeUndefined();
 
     result = await elb('walker consent', { test: true });
 
@@ -427,13 +404,10 @@ describe('Destination', () => {
         consent: { test: true },
       }),
     );
-    expect(result).toStrictEqual(
-      expect.objectContaining({
-        ok: true,
-        successful: [expect.objectContaining({ id: 'destinationConsent' })],
-        queued: [],
-      }),
-    );
+    expect(result.ok).toBe(true);
+    expect(result.done).toBeDefined();
+    expect(result.done!['destinationConsent']).toBeDefined();
+    expect(result.queued).toBeUndefined();
   });
 
   test('policy', async () => {

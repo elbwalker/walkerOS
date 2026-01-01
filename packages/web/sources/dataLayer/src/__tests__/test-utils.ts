@@ -51,9 +51,6 @@ export function createMockPush(collectedEvents: WalkerOS.Event[]) {
     return Promise.resolve({
       ok: true,
       event: fullEvent,
-      successful: [],
-      queued: [],
-      failed: [],
     });
   });
 

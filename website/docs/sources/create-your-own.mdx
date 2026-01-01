@@ -241,9 +241,6 @@ export function createMockElb(): jest.MockedFunction<Elb.Fn> {
 const mock = jest.fn();
 mock.mockResolvedValue({
 ok: true,
-successful: [],
-queued: [],
-failed: [],
 });
 return mock as jest.MockedFunction<Elb.Fn>;
 }

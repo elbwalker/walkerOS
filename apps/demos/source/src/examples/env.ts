@@ -7,9 +7,6 @@ import type { Logger } from '@walkeros/core';
 
 const noop = async () => ({
   ok: true,
-  successful: [],
-  queued: [],
-  failed: [],
 });
 
 // Simple no-op logger for demo purposes

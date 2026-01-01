@@ -146,7 +146,7 @@ export type InitFn<T extends TypesGeneric = Types> = (
 export type PushFn<T extends TypesGeneric = Types> = (
   event: WalkerOS.Event,
   context: PushContext<T>,
-) => WalkerOS.PromiseOrValue<void>;
+) => WalkerOS.PromiseOrValue<void | unknown>;
 
 export type PushBatchFn<T extends TypesGeneric = Types> = (
   batch: Batch<Mapping<T>>,
@@ -178,10 +178,11 @@ export type Data =
   | undefined
   | Array<WalkerOS.Property | undefined>;
 
-export type Ref = {
-  id: string;
-  destination: Instance;
-};
+export interface Ref {
+  type: string; // Destination type ("gtag", "meta", "bigquery")
+  data?: unknown; // Response from push()
+  error?: unknown; // Error if failed
+}
 
 export type Push = {
   queue?: WalkerOS.Events;
@@ -189,9 +190,3 @@ export type Push = {
 };
 
 export type DLQ = Array<[WalkerOS.Event, unknown]>;
-
-export type Result = {
-  successful: Array<Ref>;
-  queued: Array<Ref>;
-  failed: Array<Ref>;
-};

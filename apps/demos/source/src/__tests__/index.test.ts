@@ -33,9 +33,6 @@ describe('Demo Source', () => {
   test('pushes events without delay immediately', async () => {
     const mockPush = jest.fn(async () => ({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     }));
 
     const { collector } = await startFlow();
@@ -74,9 +71,6 @@ describe('Demo Source', () => {
   test('pushes events with delay after timeout', async () => {
     const mockPush = jest.fn(async () => ({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     }));
 
     const { collector } = await startFlow();
@@ -128,9 +122,6 @@ describe('Demo Source', () => {
   test('handles empty events array', async () => {
     const mockPush = jest.fn(async () => ({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     }));
 
     const { collector } = await startFlow();

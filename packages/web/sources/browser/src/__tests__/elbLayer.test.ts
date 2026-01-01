@@ -37,9 +37,6 @@ describe('Elb Layer', () => {
       collectedEvents.push(args[0] as WalkerOS.Event);
       return Promise.resolve({
         ok: true,
-        successful: [],
-        queued: [],
-        failed: [],
       });
     }) as jest.MockedFunction<Collector.Instance['push']>;
 

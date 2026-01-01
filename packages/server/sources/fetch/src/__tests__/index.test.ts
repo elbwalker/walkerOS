@@ -11,15 +11,9 @@ describe('sourceFetch', () => {
     mockPush = jest.fn().mockResolvedValue({
       event: { id: 'test-id' },
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     });
     mockCommand = jest.fn().mockResolvedValue({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     });
   });
 

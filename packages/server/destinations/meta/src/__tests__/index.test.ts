@@ -255,7 +255,8 @@ describe('Server Destination Meta', () => {
     await elb('walker destination', destinationWithEnv, config);
     const result = await elb(event);
 
-    expect(result.successful).toHaveLength(1);
+    expect(result.done).toBeDefined();
+    expect(Object.keys(result.done!)).toHaveLength(1);
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
     expect(requestBody).toEqual(events.Purchase());
   });

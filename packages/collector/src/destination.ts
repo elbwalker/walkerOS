@@ -143,7 +143,8 @@ export async function pushToDestinations(
       if (!isInitialized) return { id, destination, queue: currentQueue };
 
       // Process the destinations event queue
-      let error = false;
+      let error: unknown;
+      let response: unknown;
       if (!destination.dlq) destination.dlq = [];
 
       // Process allowed events and store failed ones in the dead letter queue (DLQ)
@@ -153,57 +154,62 @@ export async function pushToDestinations(
           event.globals = assign(globals, event.globals);
           event.user = assign(user, event.user);
 
-          await tryCatchAsync(destinationPush, (err) => {
+          const result = await tryCatchAsync(destinationPush, (err) => {
             // Log the error with destination scope
             const destType = destination.type || 'unknown';
             collector.logger.scope(destType).error('Push failed', {
               error: err,
               event: event.name,
             });
-            error = true; // oh no
+            error = err; // oh no
 
             // Add failed event to destinations DLQ
             destination.dlq!.push([event, err]);
 
-            return false;
+            return undefined;
           })(collector, destination, event);
+
+          // Capture the last response (for single event pushes)
+          if (result !== undefined) response = result;
 
           return event;
         }),
       );
 
-      return { id, destination, error };
+      return { id, destination, error, response };
     }),
   );
 
-  const successful = [];
-  const queued = [];
-  const failed = [];
+  // Build result objects
+  const done: Record<string, Destination.Ref> = {};
+  const queued: Record<string, Destination.Ref> = {};
+  const failed: Record<string, Destination.Ref> = {};
 
   for (const result of results) {
     if (result.skipped) continue;
 
     const destination = result.destination;
-
-    const ref = { id: result.id, destination };
+    const ref: Destination.Ref = {
+      type: destination.type || 'unknown',
+      data: result.response, // Capture push() return value
+    };
 
     if (result.error) {
-      failed.push(ref);
+      ref.error = result.error;
+      failed[result.id] = ref;
     } else if (result.queue && result.queue.length) {
-      // Merge queue with existing queue
       destination.queue = (destination.queue || []).concat(result.queue);
-      queued.push(ref);
+      queued[result.id] = ref;
     } else {
-      successful.push(ref);
+      done[result.id] = ref;
     }
   }
 
   return createPushResult({
-    ok: !failed.length,
     event,
-    successful,
-    queued,
-    failed,
+    ...(Object.keys(done).length && { done }),
+    ...(Object.keys(queued).length && { queued }),
+    ...(Object.keys(failed).length && { failed }),
   });
 }
 
@@ -269,7 +275,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
   collector: Collector.Instance,
   destination: Destination,
   event: WalkerOS.Event,
-): Promise<boolean> {
+): Promise<unknown> {
   const { config } = destination;
 
   const processed = await processEventMapping(event, config, collector);
@@ -350,13 +356,15 @@ export async function destinationPush<Destination extends Destination.Instance>(
     destLogger.debug('push', { event: processed.event.name });
 
     // It's time to go to the destination's side now
-    await useHooks(
+    const response = await useHooks(
       destination.push,
       'DestinationPush',
       collector.hooks,
     )(processed.event, context);
 
     destLogger.debug('push done');
+
+    return response;
   }
 
   return true;
@@ -371,15 +379,10 @@ export async function destinationPush<Destination extends Destination.Instance>(
 export function createPushResult(
   partialResult?: Partial<Elb.PushResult>,
 ): Elb.PushResult {
-  return assign(
-    {
-      ok: !partialResult?.failed?.length,
-      successful: [],
-      queued: [],
-      failed: [],
-    },
-    partialResult,
-  );
+  return {
+    ok: !partialResult?.failed,
+    ...partialResult,
+  };
 }
 
 /**

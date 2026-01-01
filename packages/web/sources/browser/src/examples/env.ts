@@ -16,9 +16,6 @@ const createMockElbFn = (): Elb.Fn => {
   const fn = (() =>
     Promise.resolve({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     })) as Elb.Fn;
   return fn;
 };

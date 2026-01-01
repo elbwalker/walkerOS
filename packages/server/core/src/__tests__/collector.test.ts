@@ -77,24 +77,13 @@ describe('Server Collector', () => {
         config: mockDestination.config,
       }),
     );
-    expect(result).toEqual({
-      ok: true,
-      event: mockEvent,
-      successful: [
-        {
-          id: 'mock',
-          destination: expect.objectContaining({
-            config: mockDestination.config,
-            push: mockDestination.push,
-            queue: mockDestination.queue,
-            dlq: mockDestination.dlq,
-            env: expect.any(Object),
-          }),
-        },
-      ],
-      queued: [],
-      failed: [],
-    });
+    expect(result.ok).toBe(true);
+    expect(result.event).toEqual(mockEvent);
+    expect(result.done).toBeDefined();
+    expect(result.done!['mock']).toBeDefined();
+    expect(result.done!['mock'].type).toBe('unknown');
+    expect(result.queued).toBeUndefined();
+    expect(result.failed).toBeUndefined();
   });
 
   test('push event', async () => {
