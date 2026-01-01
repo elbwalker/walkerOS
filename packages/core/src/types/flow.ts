@@ -236,6 +236,35 @@ export interface Config {
   destinations?: Record<string, DestinationReference>;
 
   /**
+   * Processor configurations (event transformation).
+   *
+   * @remarks
+   * Processors transform events in the pipeline:
+   * - Pre-collector: Between sources and collector
+   * - Post-collector: Between collector and destinations
+   *
+   * Key = unique processor identifier (referenced by source.next or destination.before)
+   * Value = processor reference with package and config
+   *
+   * @example
+   * ```json
+   * {
+   *   "processors": {
+   *     "enrich": {
+   *       "package": "@walkeros/processor-enricher",
+   *       "config": { "apiUrl": "https://api.example.com" },
+   *       "next": "validate"
+   *     },
+   *     "validate": {
+   *       "package": "@walkeros/processor-validator"
+   *     }
+   *   }
+   * }
+   * ```
+   */
+  processors?: Record<string, ProcessorReference>;
+
+  /**
    * Collector configuration (event processing).
    *
    * @remarks
@@ -377,6 +406,85 @@ export interface SourceReference {
    * Overrides flow and setup definitions.
    */
   definitions?: Definitions;
+
+  /**
+   * First processor in post-source chain.
+   *
+   * @remarks
+   * Name of the processor to execute after this source captures an event.
+   * If omitted, events route directly to the collector.
+   */
+  next?: string;
+}
+
+/**
+ * Processor reference with inline package syntax.
+ *
+ * @remarks
+ * References a processor package and provides configuration.
+ * Processors transform events in the pipeline between sources and destinations.
+ */
+export interface ProcessorReference {
+  /**
+   * Package specifier with optional version.
+   *
+   * @remarks
+   * Same format as SourceReference.package
+   *
+   * @example
+   * "package": "@walkeros/processor-enricher@1.0.0"
+   */
+  package: string;
+
+  /**
+   * Resolved import variable name.
+   *
+   * @remarks
+   * Auto-resolved from packages[package].imports[0] during getFlowConfig().
+   * Can also be provided explicitly for advanced use cases.
+   */
+  code?: string;
+
+  /**
+   * Processor-specific configuration.
+   *
+   * @remarks
+   * Structure depends on the processor package.
+   * Passed to the processor's initialization function.
+   */
+  config?: unknown;
+
+  /**
+   * Processor environment configuration.
+   *
+   * @remarks
+   * Environment-specific settings for the processor.
+   * Merged with default processor environment.
+   */
+  env?: unknown;
+
+  /**
+   * Next processor in chain.
+   *
+   * @remarks
+   * Name of the next processor to execute after this one.
+   * If omitted:
+   * - Pre-collector: routes to collector
+   * - Post-collector: routes to destination
+   */
+  next?: string;
+
+  /**
+   * Processor-level variables (highest priority in cascade).
+   * Overrides flow and setup variables.
+   */
+  variables?: Variables;
+
+  /**
+   * Processor-level definitions (highest priority in cascade).
+   * Overrides flow and setup definitions.
+   */
+  definitions?: Definitions;
 }
 
 /**
@@ -461,4 +569,13 @@ export interface DestinationReference {
    * Overrides flow and setup definitions.
    */
   definitions?: Definitions;
+
+  /**
+   * First processor in pre-destination chain.
+   *
+   * @remarks
+   * Name of the processor to execute before sending events to this destination.
+   * If omitted, events are sent directly from the collector.
+   */
+  before?: string;
 }

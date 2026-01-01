@@ -12,6 +12,7 @@ import {
   useHooks,
 } from '@walkeros/core';
 import { destinationCode } from './destination-code';
+import { runProcessorChain } from './processor';
 
 function resolveCode(code: Destination.Instance | true): Destination.Instance {
   return code === true ? destinationCode : code;
@@ -147,6 +148,9 @@ export async function pushToDestinations(
       let response: unknown;
       if (!destination.dlq) destination.dlq = [];
 
+      // Get post-collector processor chain for this destination
+      const postChain = collector.processorChain?.post?.[id] || [];
+
       // Process allowed events and store failed ones in the dead letter queue (DLQ)
       await Promise.all(
         allowedEvents.map(async (event) => {
@@ -154,20 +158,43 @@ export async function pushToDestinations(
           event.globals = assign(globals, event.globals);
           event.user = assign(user, event.user);
 
+          // Run post-collector processor chain if configured for this destination
+          let processedEvent: WalkerOS.Event | null = event;
+          if (
+            postChain.length > 0 &&
+            collector.processors &&
+            Object.keys(collector.processors).length > 0
+          ) {
+            const chainResult = await runProcessorChain(
+              collector,
+              collector.processors,
+              postChain,
+              event,
+            );
+
+            if (chainResult === null) {
+              // Chain stopped - skip this event for this destination
+              return event;
+            }
+
+            // Use the processed event (cast back to full Event type)
+            processedEvent = chainResult as WalkerOS.Event;
+          }
+
           const result = await tryCatchAsync(destinationPush, (err) => {
             // Log the error with destination scope
             const destType = destination.type || 'unknown';
             collector.logger.scope(destType).error('Push failed', {
               error: err,
-              event: event.name,
+              event: processedEvent!.name,
             });
             error = err; // oh no
 
             // Add failed event to destinations DLQ
-            destination.dlq!.push([event, err]);
+            destination.dlq!.push([processedEvent!, err]);
 
             return undefined;
-          })(collector, destination, event);
+          })(collector, destination, processedEvent!);
 
           // Capture the last response (for single event pushes)
           if (result !== undefined) response = result;

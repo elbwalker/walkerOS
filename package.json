@@ -16,6 +16,7 @@
     "apps/cli",
     "apps/storybook-addon",
     "apps/demos/destination",
+    "apps/demos/processor",
     "apps/demos/source",
     "apps/demos/react",
     "apps/demos/storybook",

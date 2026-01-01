@@ -138,8 +138,59 @@ export const SourceReferenceSchema = z
     definitions: DefinitionsSchema.optional().describe(
       'Source-level definitions (highest priority in cascade)',
     ),
+    next: z
+      .string()
+      .optional()
+      .describe(
+        'First processor in post-source chain. If omitted, events route directly to collector.',
+      ),
   })
   .describe('Source package reference with configuration');
+
+// ========================================
+// Processor Reference Schema
+// ========================================
+
+/**
+ * Processor reference schema.
+ *
+ * @remarks
+ * Defines how to reference and configure a processor package.
+ * Processors transform events in the pipeline between sources and destinations.
+ */
+export const ProcessorReferenceSchema = z
+  .object({
+    package: z
+      .string()
+      .min(1, 'Package name cannot be empty')
+      .describe(
+        'Package specifier with optional version (e.g., "@walkeros/processor-enricher@1.0.0")',
+      ),
+    code: z
+      .string()
+      .optional()
+      .describe(
+        'Named export to use from the package (e.g., "processorEnricher"). If omitted, uses default export.',
+      ),
+    config: z
+      .unknown()
+      .optional()
+      .describe('Processor-specific configuration object'),
+    env: z.unknown().optional().describe('Processor environment configuration'),
+    next: z
+      .string()
+      .optional()
+      .describe(
+        'Next processor in chain. If omitted: pre-collector routes to collector, post-collector routes to destination.',
+      ),
+    variables: VariablesSchema.optional().describe(
+      'Processor-level variables (highest priority in cascade)',
+    ),
+    definitions: DefinitionsSchema.optional().describe(
+      'Processor-level definitions (highest priority in cascade)',
+    ),
+  })
+  .describe('Processor package reference with configuration');
 
 // ========================================
 // Destination Reference Schema
@@ -180,6 +231,12 @@ export const DestinationReferenceSchema = z
     definitions: DefinitionsSchema.optional().describe(
       'Destination-level definitions (highest priority in cascade)',
     ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'First processor in pre-destination chain. If omitted, events are sent directly from collector.',
+      ),
   })
   .describe('Destination package reference with configuration');
 
@@ -214,6 +271,12 @@ export const ConfigSchema = z
       .optional()
       .describe(
         'Destination configurations (data output) keyed by unique identifier',
+      ),
+    processors: z
+      .record(z.string(), ProcessorReferenceSchema)
+      .optional()
+      .describe(
+        'Processor configurations (event transformation) keyed by unique identifier',
       ),
     collector: z
       .unknown()
@@ -423,4 +486,17 @@ export const sourceReferenceJsonSchema = toJsonSchema(
 export const destinationReferenceJsonSchema = toJsonSchema(
   DestinationReferenceSchema,
   'DestinationReference',
+);
+
+/**
+ * Generate JSON Schema for ProcessorReference.
+ *
+ * @remarks
+ * Used for validating processor package references.
+ *
+ * @returns JSON Schema (Draft 7) representation of ProcessorReferenceSchema
+ */
+export const processorReferenceJsonSchema = toJsonSchema(
+  ProcessorReferenceSchema,
+  'ProcessorReference',
 );
