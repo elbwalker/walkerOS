@@ -20,68 +20,62 @@ export interface CollectorWithProcessors extends Collector.Instance {
 }
 
 /**
- * Resolves processor chains from flow configuration.
- * Builds ordered arrays of processor IDs for pre-collector and per-destination chains.
+ * Walks a processor chain starting from a given processor ID.
+ * Returns ordered array of processor IDs in the chain.
  *
- * @param sources - Source configurations with optional next property
+ * @param startId - First processor in chain
+ * @param processors - Available processor configs with optional `next` field
+ * @returns Ordered array of processor IDs
+ */
+export function walkChain(
+  startId: string | undefined,
+  processors: Record<string, { next?: string }> = {},
+): string[] {
+  if (!startId) return [];
+
+  const chain: string[] = [];
+  const visited = new Set<string>();
+  let current: string | undefined = startId;
+
+  while (current && processors[current]) {
+    if (visited.has(current)) {
+      // Circular reference detected - stop walking
+      break;
+    }
+    visited.add(current);
+    chain.push(current);
+    current = processors[current].next;
+  }
+
+  return chain;
+}
+
+/**
+ * Resolves processor chains from flow configuration.
+ * Builds per-destination post-collector chains.
+ * Note: Pre-chains are now resolved per-source in source.ts
+ *
+ * @param sources - Source configurations (unused, kept for API compatibility)
  * @param destinations - Destination configurations with optional before property
  * @param processors - Processor configurations with optional next property
  * @returns Resolved processor chains
  */
 export function resolveProcessorGraph(
-  sources: Record<string, { next?: string }> = {},
+  _sources: Record<string, { next?: string }> = {},
   destinations: Record<string, { before?: string }> = {},
   processors: Record<string, { next?: string }> = {},
 ): ProcessorChain {
-  const pre: string[] = [];
   const post: Record<string, string[]> = {};
-  const visited = new Set<string>();
-
-  /**
-   * Walks a processor chain starting from a given processor ID.
-   * Detects circular references.
-   */
-  function walkChain(startId: string | undefined): string[] {
-    const chain: string[] = [];
-    let current = startId;
-
-    while (current && processors[current]) {
-      if (visited.has(current)) {
-        // Circular reference detected - stop walking
-        break;
-      }
-      visited.add(current);
-      chain.push(current);
-      current = processors[current].next;
-    }
-
-    // Reset visited for next chain walk
-    visited.clear();
-    return chain;
-  }
-
-  // Build pre-collector chain from sources
-  // All sources with 'next' contribute to the same pre-collector chain
-  for (const source of Object.values(sources)) {
-    if (source.next) {
-      const chain = walkChain(source.next);
-      // Merge chains - in practice, sources should share the same pre-collector chain
-      for (const processorId of chain) {
-        if (!pre.includes(processorId)) {
-          pre.push(processorId);
-        }
-      }
-    }
-  }
 
   // Build post-collector chains from destinations
   for (const [destName, dest] of Object.entries(destinations)) {
     if (dest.before) {
-      post[destName] = walkChain(dest.before);
+      post[destName] = walkChain(dest.before, processors);
     }
   }
 
-  return { pre, post };
+  // Note: pre-chains are now resolved per-source in source.ts
+  return { pre: [], post };
 }
 
 /**
@@ -231,12 +225,15 @@ export async function runProcessorChain(
     }
 
     // Run the processor
-    const result = await tryCatchAsync(processorPush, (err) => {
+    const result = (await tryCatchAsync(processorPush, (err) => {
       collector.logger
         .scope(`processor:${processor.type || 'unknown'}`)
         .error('Push failed', { error: err });
-      return undefined; // Continue chain on error (processor should handle its own errors)
-    })(collector, processor, processedEvent);
+      return false; // Stop chain on error
+    })(collector, processor, processedEvent)) as
+      | WalkerOS.DeepPartialEvent
+      | false
+      | void;
 
     // Handle result
     if (result === false) {

@@ -1,5 +1,20 @@
 import type { Collector, Source, WalkerOS } from '@walkeros/core';
 import { tryCatchAsync } from '@walkeros/core';
+import { walkChain } from './processor';
+
+/**
+ * Extracts a simple {id: {next}} map from processor instances.
+ * Used for chain resolution.
+ */
+function extractProcessorNextMap(
+  processors: Record<string, { config: { next?: string } }>,
+): Record<string, { next?: string }> {
+  const result: Record<string, { next?: string }> = {};
+  for (const [id, processor] of Object.entries(processors)) {
+    result[id] = { next: processor.config.next };
+  }
+  return result;
+}
 
 /**
  * Initialize sources using the code/config/env pattern
@@ -15,17 +30,24 @@ export async function initSources(
   const result: Collector.Sources = {};
 
   for (const [sourceId, sourceDefinition] of Object.entries(sources)) {
-    const { code, config = {}, env = {}, primary } = sourceDefinition;
+    const { code, config = {}, env = {}, primary, next } = sourceDefinition;
 
-    // Create wrapped push that auto-applies source mapping config
+    // Resolve processor chain for this source
+    const preChain = walkChain(
+      next,
+      extractProcessorNextMap(collector.processors),
+    );
+
+    // Create wrapped push that auto-applies source mapping config and preChain
     const wrappedPush: Collector.PushFn = (
       event: WalkerOS.DeepPartialEvent,
       context: Collector.PushContext = {},
     ) => {
-      // Pass source config as mapping in context
+      // Pass source config as mapping in context, plus resolved preChain
       return collector.push(event, {
         ...context,
         mapping: config,
+        preChain, // Source-specific processor chain
       });
     };
 

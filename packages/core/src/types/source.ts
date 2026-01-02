@@ -71,8 +71,9 @@ export type Env<T extends TypesGeneric = Types> = T['env'];
  */
 export type TypesOf<I> = I extends Instance<infer T> ? T : never;
 
-export interface Config<T extends TypesGeneric = Types>
-  extends WalkerOSMapping.Config<Mapping<T>> {
+export interface Config<
+  T extends TypesGeneric = Types,
+> extends WalkerOSMapping.Config<Mapping<T>> {
   settings?: InitSettings<T>;
   env?: Env<T>;
   id?: string;
@@ -108,6 +109,7 @@ export type InitSource<T extends TypesGeneric = Types> = {
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
   primary?: boolean;
+  next?: string;
 };
 
 /**

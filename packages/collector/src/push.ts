@@ -59,16 +59,16 @@ export function createPush<T extends Collector.Instance>(
             partialEvent = processed.event;
           }
 
-          // Run pre-collector processor chain if configured
+          // Run pre-collector processor chain if provided in context
           if (
-            collector.processorChain?.pre?.length > 0 &&
+            context.preChain?.length &&
             collector.processors &&
             Object.keys(collector.processors).length > 0
           ) {
             const processedEvent = await runProcessorChain(
               collector,
               collector.processors,
-              collector.processorChain.pre,
+              context.preChain,
               partialEvent,
             );
 

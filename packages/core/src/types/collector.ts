@@ -102,6 +102,7 @@ export type CommandType =
  */
 export interface PushContext {
   mapping?: Mapping.Config;
+  preChain?: string[];
 }
 
 /**
