@@ -1,0 +1,174 @@
+---
+title: Create Your Own Processor
+description: Guide to building custom processors for walkerOS
+sidebar_position: 99
+---
+
+# Create Your Own Processor
+
+Build custom processors for validation, enrichment, or redaction.
+
+## The Processor Interface
+
+Processors are functions that receive configuration and return a processor instance:
+
+<CodeSnippet
+  code={`type Processor.Init<Types> = (
+  config: Partial<Processor.Config<Types>>,
+  env: Processor.Env<Types>,
+) => Processor.Instance<Types>;`}
+  language="typescript"
+/>
+
+The returned instance must implement:
+
+<CodeSnippet
+  code={`interface Processor.Instance {
+  type: string;           // Unique identifier
+  config: Processor.Config;
+  push(event, context): event | false | void;
+}`}
+  language="typescript"
+/>
+
+## Return Values
+
+| Return | Behavior |
+|--------|----------|
+| `event` | Continue chain with modified event |
+| `void` | Continue chain, event unchanged |
+| `false` | Stop chain, event dropped |
+
+## Minimal Example
+
+<CodeSnippet
+  code={`import type { Processor } from '@walkeros/core';
+
+interface Settings {
+  removeFields?: string[];
+}
+
+interface Types extends Processor.Types<Settings> {}
+
+export const processorRedact: Processor.Init<Types> = (config) => {
+  const settings = config.settings || {};
+
+  return {
+    type: 'redact',
+    config,
+
+    push(event, context) {
+      const { logger } = context;
+
+      for (const field of settings.removeFields || []) {
+        if (event.data?.[field]) {
+          delete event.data[field];
+          logger.debug('Redacted field', { field });
+        }
+      }
+
+      return event;
+    }
+  };
+};`}
+  language="typescript"
+/>
+
+## Context Object
+
+The `context` parameter provides:
+
+* **`logger`**: Scoped logger for output
+* **`collector`**: Access to collector instance
+
+<CodeSnippet
+  code={`push(event, context) {
+  const { logger, collector } = context;
+
+  logger.debug('Processing event', { name: event.name });
+
+  return event;
+}`}
+  language="typescript"
+/>
+
+## Examples
+
+### Enrich: Add Server-Side Data
+
+<CodeSnippet
+  code={`push(event, context) {
+  event.data = {
+    ...event.data,
+    enrichedAt: Date.now(),
+    region: 'eu-west-1',
+  };
+
+  return event;
+}`}
+  language="typescript"
+/>
+
+### Validate: Custom Check
+
+<CodeSnippet
+  code={`push(event, context) {
+  if (!event.data?.id) {
+    context.logger.error('Missing required id');
+    return false;  // Stop chain
+  }
+
+  return event;
+}`}
+  language="typescript"
+/>
+
+## Using Your Processor
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { processorRedact } from './processorRedact';
+
+await startFlow({
+  processors: {
+    redact: {
+      code: processorRedact,
+      config: {
+        settings: {
+          removeFields: ['email', 'phone']
+        }
+      }
+    }
+  }
+});`}
+  language="typescript"
+/>
+
+## Testing
+
+<CodeSnippet
+  code={`import { processorRedact } from '../index';
+
+describe('Redact Processor', () => {
+  it('removes specified fields', async () => {
+    const processor = processorRedact({
+      settings: { removeFields: ['email'] }
+    }, {});
+
+    const event = { data: { id: '123', email: 'test@example.com' } };
+    const context = { logger: { debug: jest.fn() } };
+
+    const result = processor.push(event, context);
+
+    expect(result.data.email).toBeUndefined();
+    expect(result.data.id).toBe('123');
+  });
+});`}
+  language="typescript"
+/>
+
+## Next Steps
+
+* Review <Link to="/docs/processors/validator">Validator</Link> source as reference
+* Learn about <Link to="/docs/sources/create-your-own">creating sources</Link>
+* Learn about <Link to="/docs/destinations/create-your-own">creating destinations</Link>

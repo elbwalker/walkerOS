@@ -57,6 +57,15 @@ const sidebars: SidebarsConfig = {
       },
       items: ['collector/commands'],
     },
+    {
+      type: 'category',
+      label: 'Processors',
+      link: {
+        type: 'doc',
+        id: 'processors/index',
+      },
+      items: ['processors/validator', 'processors/create-your-own'],
+    },
     'mapping',
     {
       type: 'category',
