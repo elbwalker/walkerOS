@@ -14,6 +14,8 @@ Before starting, read these skills:
 - [understanding-flow](../understanding-flow/SKILL.md) - How sources fit in
   architecture
 - [understanding-sources](../understanding-sources/SKILL.md) - Source interface
+- [understanding-processors](../understanding-processors/SKILL.md) - Processor
+  chaining from sources
 - [understanding-events](../understanding-events/SKILL.md) - Event structure
   sources emit
 - [understanding-mapping](../understanding-mapping/SKILL.md) - Transform raw
@@ -418,6 +420,32 @@ packages/server/sources/[name]/
 ├── tsup.config.ts
 ├── jest.config.mjs
 └── README.md
+```
+
+### Processor Chain Integration
+
+Sources can wire to processor chains via `next` in the init config:
+
+```typescript
+export type InitSource<T> = {
+  code: Init<T>;
+  config?: Partial<Config<T>>;
+  env?: Partial<Env<T>>;
+  primary?: boolean;
+  next?: string; // First processor in pre-collector chain
+};
+```
+
+Example usage:
+
+```typescript
+sources: {
+  mySource: {
+    code: sourceMySource,
+    config: { settings: { /* ... */ } },
+    next: 'validate'  // Events go through validator before collector
+  }
+}
 ```
 
 ---

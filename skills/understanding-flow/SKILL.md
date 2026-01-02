@@ -19,13 +19,13 @@ Components are composable and replaceable.
 ## The Flow Pattern
 
 ```
-Sources          →    Collector    →    Destinations
-(Data Capture)        (Processing)      (Delivery)
+Sources → [Pre-Processors] → Collector → [Post-Processors] → Destinations
+(Capture)  (source.next)    (Processing) (dest.before)       (Delivery)
 
-- Browser DOM         - Validation      - Google Analytics
-- DataLayer           - Enrichment      - Meta Pixel
-- Server HTTP         - Consent check   - Custom API
-- Cloud Functions     - Routing         - Data Warehouse
+- Browser DOM              - Validation   - Validation        - Google Analytics
+- DataLayer                - Enrichment   - Enrichment        - Meta Pixel
+- Server HTTP              - Redaction    - Consent check     - Custom API
+- Cloud Functions                         - Routing           - Data Warehouse
 ```
 
 ## Key Concepts
@@ -93,11 +93,66 @@ const { collector, elb } = await startFlow({
 | Transformation   | Mapping system | Raw push calls          |
 | Delivery         | Destinations   | Sources, Collector      |
 
+## Processor Chains
+
+Processors run at two points in the pipeline, configured via `next` and
+`before`:
+
+### Pre-Collector Chain
+
+Runs after source captures event, before collector processing:
+
+```typescript
+sources: {
+  browser: {
+    code: sourceBrowser,
+    next: 'validate'  // First processor in pre-chain
+  }
+},
+processors: {
+  validate: {
+    code: processorValidator,
+    config: { next: 'enrich' }  // Chain continues
+  },
+  enrich: {
+    code: processorEnrich
+    // No next = chain ends, event goes to collector
+  }
+}
+```
+
+### Post-Collector Chain
+
+Runs after collector enrichment, before destination receives event:
+
+```typescript
+destinations: {
+  gtag: {
+    code: destinationGtag,
+    before: 'redact'  // First processor in post-chain
+  }
+},
+processors: {
+  redact: {
+    code: processorRedact
+    // Event then goes to destination
+  }
+}
+```
+
+### Chain Resolution
+
+- `source.next` → starts pre-collector chain
+- `processor.config.next` → links processors together
+- `destination.before` → starts post-collector chain per destination
+
 ## Related
 
 **Skills:**
 
 - [understanding-events skill](../understanding-events/SKILL.md) - Event model
+- [understanding-processors skill](../understanding-processors/SKILL.md) -
+  Processor interface and chaining
 - [understanding-destinations skill](../understanding-destinations/SKILL.md) -
   Destination interface
 - [understanding-sources skill](../understanding-sources/SKILL.md) - Source

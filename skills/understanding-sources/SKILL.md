@@ -85,12 +85,31 @@ export const handler = source.push;
 See [packages/server/sources/gcp/](../../packages/server/sources/gcp/) for
 implementation.
 
+## Processor Wiring
+
+Sources can wire to pre-collector processor chains via the `next` property:
+
+```typescript
+sources: {
+  browser: {
+    code: sourceBrowser,
+    next: 'validate'  // First processor to run after this source
+  }
+}
+```
+
+The processor chain runs before events reach the collector. See
+[understanding-processors](../understanding-processors/SKILL.md) for chain
+details.
+
 ## Related
 
 **Skills:**
 
 - [understanding-flow skill](../understanding-flow/SKILL.md) - How sources fit
   in architecture
+- [understanding-processors skill](../understanding-processors/SKILL.md) -
+  Processor chaining from sources
 - [understanding-events skill](../understanding-events/SKILL.md) - Events that
   sources emit
 

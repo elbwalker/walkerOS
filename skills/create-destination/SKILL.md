@@ -15,6 +15,8 @@ Before starting, read these skills:
   architecture
 - [understanding-destinations](../understanding-destinations/SKILL.md) -
   Destination interface
+- [understanding-processors](../understanding-processors/SKILL.md) - Processor
+  chaining to destinations
 - [understanding-mapping](../understanding-mapping/SKILL.md) - Event
   transformation
 - [testing-strategy](../testing-strategy/SKILL.md) - How to test with env
@@ -351,6 +353,23 @@ packages/web/destinations/[name]/
 ├── jest.config.mjs
 └── README.md
 ```
+
+### Processor Chain Integration
+
+Destinations can wire to processor chains via `before` in the init config:
+
+```typescript
+destinations: {
+  myDestination: {
+    code: destinationMyDestination,
+    config: { settings: { /* ... */ } },
+    before: 'redact'  // Events go through redactor before this destination
+  }
+}
+```
+
+Each destination can have its own processor chain, allowing destination-specific
+transformations (e.g., redact PII only for external destinations).
 
 ---
 
