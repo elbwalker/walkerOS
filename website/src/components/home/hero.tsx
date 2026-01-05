@@ -21,6 +21,7 @@ export default function HomeHero() {
         'Version controlled in Git',
         'Self-hosted on your infrastructure',
         'No vendor lock-in',
+        'MIT-licensed',
       ]}
     />
   );

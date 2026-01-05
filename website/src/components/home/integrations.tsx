@@ -9,13 +9,16 @@ interface Integration {
   iconColor?: string;
 }
 
-const sources: Integration[] = [
+const clientSources: Integration[] = [
   { name: 'Browser', icon: 'mdi:web', link: '/docs/sources/web/browser/' },
   {
     name: 'dataLayer',
     icon: 'mdi:layers-outline',
     link: '/docs/sources/web/dataLayer/',
   },
+];
+
+const serverSources: Integration[] = [
   {
     name: 'Express',
     icon: 'simple-icons:express',
@@ -34,7 +37,7 @@ const sources: Integration[] = [
   },
 ];
 
-const destinations: Integration[] = [
+const clientDestinations: Integration[] = [
   {
     name: 'GA4',
     icon: 'logos:google-analytics',
@@ -66,6 +69,14 @@ const destinations: Integration[] = [
     icon: 'simple-icons:piwikpro',
     link: '/docs/destinations/web/piwikpro',
   },
+  {
+    name: 'API',
+    icon: 'simple-icons:api',
+    link: '/docs/destinations/web/api',
+  },
+];
+
+const serverDestinations: Integration[] = [
   { name: 'AWS', icon: 'logos:aws', link: '/docs/destinations/server/aws' },
   {
     name: 'BigQuery',
@@ -83,7 +94,7 @@ function IntegrationItem({ integration }: { integration: Integration }) {
   return (
     <Link
       to={integration.link}
-      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors no-underline"
+      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:text-elbwalker transition-colors no-underline"
     >
       <Icon
         icon={integration.icon}
@@ -102,23 +113,49 @@ function IntegrationItem({ integration }: { integration: Integration }) {
   );
 }
 
+function CategoryBox({
+  title,
+  items,
+}: {
+  title: string;
+  items: Integration[];
+}) {
+  return (
+    <div className="rounded-xl border-2 border-white dark:border-gray-600 bg-transparent p-4">
+      <h4
+        className="text-sm font-semibold mb-3 text-center"
+        style={{ color: 'var(--color-gray-500)' }}
+      >
+        {title}
+      </h4>
+      <div className="flex flex-col gap-1">
+        {items.map((item) => (
+          <IntegrationItem key={item.name} integration={item} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Integrations() {
   return (
     <section
       className="py-16 sm:py-24"
       style={{ backgroundColor: 'var(--ifm-background-color)' }}
     >
-      <div className="container mx-auto px-4">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2
             className="text-3xl font-semibold tracking-tight sm:text-4xl"
             style={{ color: 'var(--color-base-content)' }}
           >
-            Pre-built integrations
+            Pre-built integrations for{' '}
+            <span className="text-elbwalker">client-side</span> and{' '}
+            <span className="text-elbwalker">server-side</span> data collection
           </h2>
         </div>
 
-        <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-4">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-8">
           {/* Sources Column */}
           <div className="flex flex-col items-center">
             <h3
@@ -127,19 +164,18 @@ export default function Integrations() {
             >
               Sources
             </h3>
-            <div className="flex flex-col gap-1">
-              {sources.map((source) => (
-                <IntegrationItem key={source.name} integration={source} />
-              ))}
+            <div className="flex flex-col gap-4">
+              <CategoryBox title="Client-side" items={clientSources} />
+              <CategoryBox title="Server-side" items={serverSources} />
             </div>
           </div>
 
           {/* Arrow */}
           <div className="hidden lg:flex items-center text-elbwalker">
-            <Icon icon="mdi:arrow-right" className="w-8 h-8" />
+            <Icon icon="mdi:arrow-right" className="w-12 h-12" />
           </div>
           <div className="lg:hidden text-elbwalker">
-            <Icon icon="mdi:arrow-down" className="w-8 h-8" />
+            <Icon icon="mdi:arrow-down" className="w-12 h-12" />
           </div>
 
           {/* Collector (Center) */}
@@ -174,10 +210,10 @@ export default function Integrations() {
 
           {/* Arrow */}
           <div className="hidden lg:flex items-center text-elbwalker">
-            <Icon icon="mdi:arrow-right" className="w-8 h-8" />
+            <Icon icon="mdi:arrow-right" className="w-12 h-12" />
           </div>
           <div className="lg:hidden text-elbwalker">
-            <Icon icon="mdi:arrow-down" className="w-8 h-8" />
+            <Icon icon="mdi:arrow-down" className="w-12 h-12" />
           </div>
 
           {/* Destinations Column */}
@@ -188,13 +224,9 @@ export default function Integrations() {
             >
               Destinations
             </h3>
-            <div className="flex flex-col gap-1">
-              {destinations.map((destination) => (
-                <IntegrationItem
-                  key={destination.name}
-                  integration={destination}
-                />
-              ))}
+            <div className="flex flex-col gap-4">
+              <CategoryBox title="Client-side" items={clientDestinations} />
+              <CategoryBox title="Server-side" items={serverDestinations} />
             </div>
           </div>
         </div>

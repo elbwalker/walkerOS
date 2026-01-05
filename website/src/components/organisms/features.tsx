@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from '@docusaurus/Link';
 import { tagger } from '@site/src/components/walkerjs';
 
 export default function Features() {
@@ -162,6 +163,14 @@ export default function Features() {
                   </div>
                 </div>
               </div>
+              <div className="px-8 pb-8 sm:px-10 sm:pb-10">
+                <Link
+                  to="/docs/sources/web/browser/tagging"
+                  className="inline-flex items-center text-sm font-medium text-elbwalker hover:text-elbwalker-dark no-underline"
+                >
+                  Learn more about tagging →
+                </Link>
+              </div>
             </div>
             <div className="pointer-events-none absolute inset-px rounded-lg shadow outline outline-1 outline-black/5 dark:outline-white/15" />
           </div>
@@ -323,6 +332,14 @@ export default function Features() {
                   </div>
                 </div>
               </div>
+              <div className="px-8 pb-8 sm:px-10 sm:pb-10">
+                <Link
+                  to="/docs/mapping"
+                  className="inline-flex items-center text-sm font-medium text-elbwalker hover:text-elbwalker-dark no-underline"
+                >
+                  Learn more about mapping →
+                </Link>
+              </div>
             </div>
             <div className="pointer-events-none absolute inset-px rounded-lg shadow outline outline-1 outline-black/5 dark:outline-white/15" />
           </div>
@@ -430,6 +447,14 @@ export default function Features() {
                     </code>
                   </div>
                 </div>
+              </div>
+              <div className="px-8 pb-8 sm:px-10 sm:pb-10">
+                <Link
+                  to="/docs/guides/consent/"
+                  className="inline-flex items-center text-sm font-medium text-elbwalker hover:text-elbwalker-dark no-underline"
+                >
+                  Learn more about consent handling →
+                </Link>
               </div>
             </div>
             <div className="pointer-events-none absolute inset-px rounded-lg shadow outline outline-1 outline-black/5 dark:outline-white/15" />
