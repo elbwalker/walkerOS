@@ -52,14 +52,7 @@ const config: Config = {
           // Remove this to remove the "edit this page" links.
           editUrl: `${vars.github}edit/main/website/`,
         },
-        blog: {
-          blogSidebarTitle: 'All posts',
-          blogSidebarCount: 'ALL',
-          showReadingTime: true,
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl: `${vars.github}edit/main/website/`,
-        },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -93,7 +86,6 @@ const config: Config = {
           label: 'Documentation',
         },
         { to: '/playground/', label: 'Playground', position: 'left' },
-        { to: '/blog/', label: 'Blog', position: 'left' },
         {
           href: vars.github,
           label: 'GitHub',
@@ -118,10 +110,6 @@ const config: Config = {
             {
               label: 'Comparisons',
               to: '/docs/comparisons/',
-            },
-            {
-              label: 'Blog',
-              to: '/blog/',
             },
           ],
         },

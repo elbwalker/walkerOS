@@ -45,7 +45,10 @@ export default function Hero({
             <div className="mx-auto max-w-2xl">
               <div className="max-w-lg">
                 <div className="mt-24 sm:mt-32 lg:mt-16">
-                  <a href="/blog/" className="inline-flex space-x-6">
+                  <a
+                    href="https://github.com/elbwalker/walkerOS/releases"
+                    className="inline-flex space-x-6"
+                  >
                     <span className="rounded-full bg-[#01b5e2]/10 px-3 py-1 text-sm/6 font-semibold text-[#01b5e2] ring-1 ring-inset ring-[#01b5e2]/20 dark:bg-[#01b5e2]/10 dark:text-[#01b5e2] dark:ring-[#01b5e2]/25">
                       What's new
                     </span>
@@ -141,11 +144,18 @@ export default function Hero({
                       style={{ backgroundColor: 'var(--code-editor-bg)' }}
                     >
                       <div
-                        className="flex ring-1 ring-white/5"
+                        className="flex items-center ring-1 ring-white/5"
                         style={{
                           backgroundColor: 'var(--code-editor-header-bg)',
                         }}
                       >
+                        {/* Traffic light dots */}
+                        <div className="flex items-center gap-2 px-4">
+                          <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+                          <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+                          <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+                        </div>
+                        {/* File tabs */}
                         <div
                           className="-mb-px flex text-sm/6 font-medium"
                           style={{ color: 'var(--code-editor-text-muted)' }}

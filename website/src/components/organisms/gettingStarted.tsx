@@ -37,24 +37,31 @@ export default function GettingStarted() {
               maxWidth: '800px',
             }}
           >
-            {/* Terminal header with dots */}
+            {/* Editor header with dots and tabs */}
             <div
-              className="flex items-center gap-2 px-4 py-3 outline outline-1 outline-white/5"
+              className="flex items-center outline outline-1 outline-white/5"
               style={{ backgroundColor: 'var(--code-editor-header-bg)' }}
             >
-              <div className="flex gap-2">
+              {/* Traffic light dots */}
+              <div className="flex items-center gap-2 px-4">
+                <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+                <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+                <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+              </div>
+              {/* File tab */}
+              <div
+                className="-mb-px flex text-sm font-medium"
+                style={{ color: 'var(--code-editor-text-muted)' }}
+              >
                 <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: '#ff5f56' }}
-                />
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: '#ffbd2e' }}
-                />
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: '#27c93f' }}
-                />
+                  className="border-b border-r border-b-white/20 border-r-white/10 px-4 py-2"
+                  style={{
+                    backgroundColor: 'var(--code-editor-tab-active-bg)',
+                    color: 'var(--code-editor-text)',
+                  }}
+                >
+                  Terminal
+                </div>
               </div>
             </div>
 

@@ -9,7 +9,7 @@ export default function CTAStart() {
           A project by <span className="inline text-elbwalker">elbwalker</span>
         </>
       }
-      description="We are a team of passionate developers and analysts based in Hamburg"
+      description="We are a team of passionate analytics developers based in Hamburg"
       primaryButton={{
         link: 'https://www.elbwalker.com',
         children: 'About us',
