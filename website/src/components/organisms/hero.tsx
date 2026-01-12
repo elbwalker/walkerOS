@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { ChevronRightIcon } from '@heroicons/react/20/solid';
 import Link from '@docusaurus/Link';
+import { Icon } from '@iconify/react';
 import { Check } from '@site/src/components/atoms/icons';
 import { tagger } from '@site/src/components/walkerjs';
 
@@ -125,176 +126,256 @@ export default function Hero({
               </div>
             </div>
           </div>
-          <div className="mt-20 sm:mt-24 md:mx-auto md:max-w-2xl lg:mx-0 lg:mt-0 lg:w-screen">
-            <div
-              aria-hidden="true"
-              className="absolute inset-y-0 right-1/2 -z-10 -mr-10 w-[200%] skew-x-[-30deg] shadow-xl shadow-[#01b5e2]/10 ring-1 ring-[#01b5e2]/5 md:-mr-20 lg:-mr-36"
-              style={{ backgroundColor: 'var(--ifm-background-surface-color)' }}
-            />
-            <div className="shadow-lg md:rounded-3xl">
-              <div className="bg-[#01b5e2] [clip-path:inset(0)] md:[clip-path:inset(0_round_theme(borderRadius.3xl))]">
-                <div
-                  aria-hidden="true"
-                  className="absolute -inset-y-px left-1/2 -z-10 ml-10 w-[200%] skew-x-[-30deg] bg-[#01b5e2]/20 opacity-20 ring-1 ring-inset ring-white md:ml-20 lg:ml-36"
-                />
-                <div className="relative px-6 pt-8 sm:pt-16 md:pl-16 md:pr-0">
-                  <div className="mx-auto max-w-2xl md:mx-0 md:max-w-none">
-                    <div
-                      className="w-screen overflow-hidden rounded-tl-xl"
-                      style={{ backgroundColor: 'var(--code-editor-bg)' }}
+          <div className="mt-20 sm:mt-24 md:mx-auto md:max-w-2xl lg:mx-0 lg:mt-0 lg:flex lg:items-center">
+            {/* Architecture Diagram */}
+            <div className="flex flex-row items-center gap-8">
+              {/* Sources Column */}
+              <div className="flex flex-col items-center">
+                <span
+                  className="text-base font-semibold mb-4 uppercase tracking-wide"
+                  style={{ color: 'var(--color-gray-400)' }}
+                >
+                  Sources
+                </span>
+                <div className="flex flex-col gap-4">
+                  {/* Client-side */}
+                  <div
+                    className="rounded-xl border border-white/20 dark:border-gray-600 p-4"
+                    style={{ backgroundColor: 'var(--ifm-background-color)' }}
+                  >
+                    <span
+                      className="text-sm font-medium mb-3 block"
+                      style={{ color: 'var(--color-gray-500)' }}
                     >
+                      Client-side
+                    </span>
+                    <div className="flex flex-col gap-2">
                       <div
-                        className="flex items-center ring-1 ring-white/5"
-                        style={{
-                          backgroundColor: 'var(--code-editor-header-bg)',
-                        }}
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
                       >
-                        {/* Traffic light dots */}
-                        <div className="flex items-center gap-2 px-4">
-                          <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
-                          <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-                          <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
-                        </div>
-                        {/* File tabs */}
-                        <div
-                          className="-mb-px flex text-sm/6 font-medium"
-                          style={{ color: 'var(--code-editor-text-muted)' }}
-                        >
-                          <div
-                            className="border-b border-r border-b-white/20 border-r-white/10 px-4 py-2"
-                            style={{
-                              backgroundColor:
-                                'var(--code-editor-tab-active-bg)',
-                              color: 'var(--code-editor-text)',
-                            }}
-                          >
-                            flow.json
-                          </div>
-                          <div className="border-r border-gray-600/10 px-4 py-2">
-                            README.md
-                          </div>
-                        </div>
+                        <Icon icon="mdi:web" className="w-5 h-5" />
+                        <span className="text-base">Browser</span>
                       </div>
                       <div
-                        className="px-6 pb-14 pt-6 text-sm"
-                        style={{ color: 'var(--code-editor-text)' }}
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
                       >
-                        <code className="block">
-                          {'{'}
-                          <br />
-                          &nbsp;&nbsp;
-                          <span className="text-blue-400">"sources"</span>:{' '}
-                          {'{'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">"browser"</span>:{' '}
-                          {'{'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">"package"</span>:{' '}
-                          <span className="text-green-400">
-                            "@walkeros/web-source-browser"
-                          </span>
-                          ,<br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">"config"</span>: {'{'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">
-                            "settings"
-                          </span>: {'{'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">
-                            "pageview"
-                          </span>: <span className="text-yellow-400">true</span>
-                          ,<br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">"session"</span>:{' '}
-                          <span className="text-yellow-400">true</span>
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                          <br />
-                          &nbsp;&nbsp;{'}'},<br />
-                          &nbsp;&nbsp;
-                          <span className="text-blue-400">
-                            "destinations"
-                          </span>: {'{'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">"gtag"</span>: {'{'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">"package"</span>:{' '}
-                          <span className="text-green-400">
-                            "@walkeros/web-destination-gtag"
-                          </span>
-                          ,<br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">"config"</span>: {'{'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">
-                            "settings"
-                          </span>: {'{'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">"ga4"</span>: {'{'}{' '}
-                          <span className="text-blue-400">"measurementId"</span>
-                          :{' '}
-                          <span className="text-green-400">"G-XXXXXXXXXX"</span>{' '}
-                          {'}'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;{'}'},<br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">"api"</span>: {'{'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">"package"</span>:{' '}
-                          <span className="text-green-400">
-                            "@walkeros/web-destination-api"
-                          </span>
-                          ,<br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">"config"</span>: {'{'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">
-                            "settings"
-                          </span>: {'{'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <span className="text-blue-400">"url"</span>:{' '}
-                          <span className="text-green-400">
-                            "https://your-api.com/events"
-                          </span>
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                          <br />
-                          &nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                          <br />
-                          &nbsp;&nbsp;{'}'}
-                          <br />
-                          {'}'}
-                          <br />
-                        </code>
+                        <Icon icon="mdi:layers-outline" className="w-5 h-5" />
+                        <span className="text-base">dataLayer</span>
                       </div>
                     </div>
                   </div>
+                  {/* Server-side */}
                   <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-black/10 md:rounded-3xl"
-                  />
+                    className="rounded-xl border border-white/20 dark:border-gray-600 p-4"
+                    style={{ backgroundColor: 'var(--ifm-background-color)' }}
+                  >
+                    <span
+                      className="text-sm font-medium mb-3 block"
+                      style={{ color: 'var(--color-gray-500)' }}
+                    >
+                      Server-side
+                    </span>
+                    <div className="flex flex-col gap-2">
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon icon="simple-icons:express" className="w-5 h-5" />
+                        <span className="text-base">Express</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon icon="mdi:api" className="w-5 h-5" />
+                        <span className="text-base">Fetch</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon icon="logos:aws-lambda" className="w-5 h-5" />
+                        <span className="text-base whitespace-nowrap">
+                          AWS Lambda
+                        </span>
+                      </div>
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon
+                          icon="logos:google-cloud-functions"
+                          className="w-5 h-5"
+                        />
+                        <span className="text-base whitespace-nowrap">
+                          GCP Functions
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Arrow */}
+              <Icon
+                icon="mdi:arrow-right"
+                className="w-12 h-12 text-elbwalker flex-shrink-0"
+              />
+
+              {/* Collector */}
+              <div className="flex flex-col items-center">
+                <span
+                  className="text-base font-semibold mb-4 uppercase tracking-wide"
+                  style={{ color: 'var(--color-gray-400)' }}
+                >
+                  Collector
+                </span>
+                <img
+                  src="/img/walkerOS_logo_new.svg"
+                  alt="walkerOS"
+                  className="w-32 h-32"
+                />
+              </div>
+
+              {/* Arrow */}
+              <Icon
+                icon="mdi:arrow-right"
+                className="w-12 h-12 text-elbwalker flex-shrink-0"
+              />
+
+              {/* Destinations Column */}
+              <div className="flex flex-col items-center">
+                <span
+                  className="text-base font-semibold mb-4 uppercase tracking-wide"
+                  style={{ color: 'var(--color-gray-400)' }}
+                >
+                  Destinations
+                </span>
+                <div className="flex flex-col gap-4">
+                  {/* Client-side */}
+                  <div
+                    className="rounded-xl border border-white/20 dark:border-gray-600 p-4"
+                    style={{ backgroundColor: 'var(--ifm-background-color)' }}
+                  >
+                    <span
+                      className="text-sm font-medium mb-3 block"
+                      style={{ color: 'var(--color-gray-500)' }}
+                    >
+                      Client-side
+                    </span>
+                    <div className="flex flex-col gap-2">
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon
+                          icon="logos:google-analytics"
+                          className="w-5 h-5"
+                        />
+                        <span className="text-base">GA4</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon icon="logos:google-ads" className="w-5 h-5" />
+                        <span className="text-base whitespace-nowrap">
+                          Google Ads
+                        </span>
+                      </div>
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon
+                          icon="logos:google-tag-manager"
+                          className="w-5 h-5"
+                        />
+                        <span className="text-base">GTM</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon icon="logos:meta-icon" className="w-5 h-5" />
+                        <span className="text-base whitespace-nowrap">
+                          Meta Pixel
+                        </span>
+                      </div>
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon
+                          icon="simple-icons:plausibleanalytics"
+                          className="w-5 h-5"
+                          style={{ color: '#5850EC' }}
+                        />
+                        <span className="text-base">Plausible</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon
+                          icon="simple-icons:piwikpro"
+                          className="w-5 h-5"
+                        />
+                        <span className="text-base whitespace-nowrap">
+                          Piwik PRO
+                        </span>
+                      </div>
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon icon="mdi:api" className="w-5 h-5" />
+                        <span className="text-base">API</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Server-side */}
+                  <div
+                    className="rounded-xl border border-white/20 dark:border-gray-600 p-4"
+                    style={{ backgroundColor: 'var(--ifm-background-color)' }}
+                  >
+                    <span
+                      className="text-sm font-medium mb-3 block"
+                      style={{ color: 'var(--color-gray-500)' }}
+                    >
+                      Server-side
+                    </span>
+                    <div className="flex flex-col gap-2">
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon icon="logos:aws" className="w-5 h-5" />
+                        <span className="text-base">AWS</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon
+                          icon="logos:google-bigquery"
+                          className="w-5 h-5"
+                        />
+                        <span className="text-base">BigQuery</span>
+                      </div>
+                      <div
+                        className="flex items-center gap-3"
+                        style={{ color: 'var(--color-base-content)' }}
+                      >
+                        <Icon icon="logos:meta-icon" className="w-5 h-5" />
+                        <span className="text-base whitespace-nowrap">
+                          Meta CAPI
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
