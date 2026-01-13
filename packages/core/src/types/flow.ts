@@ -236,33 +236,33 @@ export interface Config {
   destinations?: Record<string, DestinationReference>;
 
   /**
-   * Processor configurations (event transformation).
+   * Transformer configurations (event transformation).
    *
    * @remarks
-   * Processors transform events in the pipeline:
+   * Transformers transform events in the pipeline:
    * - Pre-collector: Between sources and collector
    * - Post-collector: Between collector and destinations
    *
-   * Key = unique processor identifier (referenced by source.next or destination.before)
-   * Value = processor reference with package and config
+   * Key = unique transformer identifier (referenced by source.next or destination.before)
+   * Value = transformer reference with package and config
    *
    * @example
    * ```json
    * {
-   *   "processors": {
+   *   "transformers": {
    *     "enrich": {
-   *       "package": "@walkeros/processor-enricher",
+   *       "package": "@walkeros/transformer-enricher",
    *       "config": { "apiUrl": "https://api.example.com" },
    *       "next": "validate"
    *     },
    *     "validate": {
-   *       "package": "@walkeros/processor-validator"
+   *       "package": "@walkeros/transformer-validator"
    *     }
    *   }
    * }
    * ```
    */
-  processors?: Record<string, ProcessorReference>;
+  transformers?: Record<string, TransformerReference>;
 
   /**
    * Collector configuration (event processing).
@@ -408,23 +408,23 @@ export interface SourceReference {
   definitions?: Definitions;
 
   /**
-   * First processor in post-source chain.
+   * First transformer in post-source chain.
    *
    * @remarks
-   * Name of the processor to execute after this source captures an event.
+   * Name of the transformer to execute after this source captures an event.
    * If omitted, events route directly to the collector.
    */
   next?: string;
 }
 
 /**
- * Processor reference with inline package syntax.
+ * Transformer reference with inline package syntax.
  *
  * @remarks
- * References a processor package and provides configuration.
- * Processors transform events in the pipeline between sources and destinations.
+ * References a transformer package and provides configuration.
+ * Transformers transform events in the pipeline between sources and destinations.
  */
-export interface ProcessorReference {
+export interface TransformerReference {
   /**
    * Package specifier with optional version.
    *
@@ -432,7 +432,7 @@ export interface ProcessorReference {
    * Same format as SourceReference.package
    *
    * @example
-   * "package": "@walkeros/processor-enricher@1.0.0"
+   * "package": "@walkeros/transformer-enricher@1.0.0"
    */
   package: string;
 
@@ -446,28 +446,28 @@ export interface ProcessorReference {
   code?: string;
 
   /**
-   * Processor-specific configuration.
+   * Transformer-specific configuration.
    *
    * @remarks
-   * Structure depends on the processor package.
-   * Passed to the processor's initialization function.
+   * Structure depends on the transformer package.
+   * Passed to the transformer's initialization function.
    */
   config?: unknown;
 
   /**
-   * Processor environment configuration.
+   * Transformer environment configuration.
    *
    * @remarks
-   * Environment-specific settings for the processor.
-   * Merged with default processor environment.
+   * Environment-specific settings for the transformer.
+   * Merged with default transformer environment.
    */
   env?: unknown;
 
   /**
-   * Next processor in chain.
+   * Next transformer in chain.
    *
    * @remarks
-   * Name of the next processor to execute after this one.
+   * Name of the next transformer to execute after this one.
    * If omitted:
    * - Pre-collector: routes to collector
    * - Post-collector: routes to destination
@@ -475,13 +475,13 @@ export interface ProcessorReference {
   next?: string;
 
   /**
-   * Processor-level variables (highest priority in cascade).
+   * Transformer-level variables (highest priority in cascade).
    * Overrides flow and setup variables.
    */
   variables?: Variables;
 
   /**
-   * Processor-level definitions (highest priority in cascade).
+   * Transformer-level definitions (highest priority in cascade).
    * Overrides flow and setup definitions.
    */
   definitions?: Definitions;
@@ -571,10 +571,10 @@ export interface DestinationReference {
   definitions?: Definitions;
 
   /**
-   * First processor in pre-destination chain.
+   * First transformer in pre-destination chain.
    *
    * @remarks
-   * Name of the processor to execute before sending events to this destination.
+   * Name of the transformer to execute before sending events to this destination.
    * If omitted, events are sent directly from the collector.
    */
   before?: string;

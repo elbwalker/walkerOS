@@ -8,7 +8,7 @@ export * as Hooks from './hooks';
 export * as Logger from './logger';
 export * as Mapping from './mapping';
 export * as On from './on';
-export * as Processor from './processor';
+export * as Transformer from './transformer';
 export * as Request from './request';
 export * as Schema from './schema';
 export * as Source from './source';

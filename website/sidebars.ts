@@ -59,12 +59,12 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Processors',
+      label: 'Transformers',
       link: {
         type: 'doc',
-        id: 'processors/index',
+        id: 'transformers/index',
       },
-      items: ['processors/validator', 'processors/create-your-own'],
+      items: ['transformers/validator', 'transformers/create-your-own'],
     },
     'mapping',
     {

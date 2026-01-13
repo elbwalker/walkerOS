@@ -84,7 +84,7 @@ export interface Config<
   /**
    * Ingest metadata extraction mapping.
    * Extracts values from raw request objects (Express req, Lambda event, etc.)
-   * using walkerOS mapping syntax. Extracted data flows to processors/destinations.
+   * using walkerOS mapping syntax. Extracted data flows to transformers/destinations.
    *
    * @example
    * ingest: {
@@ -124,7 +124,7 @@ export interface Context<
   /**
    * Sets ingest metadata for the current request.
    * Extracts values from the raw request using config.ingest mapping.
-   * The extracted data is passed through to processors and destinations.
+   * The extracted data is passed through to transformers and destinations.
    *
    * @param value - Raw request object (Express req, Lambda event, etc.)
    */

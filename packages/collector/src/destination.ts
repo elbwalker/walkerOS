@@ -12,7 +12,7 @@ import {
   useHooks,
 } from '@walkeros/core';
 import { destinationCode } from './destination-code';
-import { runProcessorChain } from './processor';
+import { runTransformerChain } from './transformer';
 
 function resolveCode(code: Destination.Instance | true): Destination.Instance {
   return code === true ? destinationCode : code;
@@ -151,8 +151,8 @@ export async function pushToDestinations(
       let response: unknown;
       if (!destination.dlq) destination.dlq = [];
 
-      // Get post-collector processor chain for this destination
-      const postChain = collector.processorChain?.post?.[id] || [];
+      // Get post-collector transformer chain for this destination
+      const postChain = collector.transformerChain?.post?.[id] || [];
 
       // Process allowed events and store failed ones in the dead letter queue (DLQ)
       await Promise.all(
@@ -161,16 +161,16 @@ export async function pushToDestinations(
           event.globals = assign(globals, event.globals);
           event.user = assign(user, event.user);
 
-          // Run post-collector processor chain if configured for this destination
+          // Run post-collector transformer chain if configured for this destination
           let processedEvent: WalkerOS.Event | null = event;
           if (
             postChain.length > 0 &&
-            collector.processors &&
-            Object.keys(collector.processors).length > 0
+            collector.transformers &&
+            Object.keys(collector.transformers).length > 0
           ) {
-            const chainResult = await runProcessorChain(
+            const chainResult = await runTransformerChain(
               collector,
-              collector.processors,
+              collector.transformers,
               postChain,
               event,
               meta.ingest,

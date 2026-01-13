@@ -1,7 +1,7 @@
 {
   "name": "walkeros",
   "version": "1.0.0",
-  "description": "Development skills for walkerOS - the open-source event data collection platform. Learn architecture, create sources/destinations/processors, and build privacy-centric analytics pipelines.",
+  "description": "Development skills for walkerOS - the open-source event data collection platform. Learn architecture, create sources/destinations/transformers, and build privacy-centric analytics pipelines.",
   "author": "elbwalker",
   "repository": "https://github.com/elbwalker/walkerOS",
   "license": "MIT",
@@ -16,7 +16,7 @@
     "consent",
     "sources",
     "destinations",
-    "processors",
+    "transformers",
     "tag-management",
     "first-party-data",
     "data-collection"

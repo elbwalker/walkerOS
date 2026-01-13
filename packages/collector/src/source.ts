@@ -1,17 +1,17 @@
 import type { Collector, Source, WalkerOS } from '@walkeros/core';
 import { getMappingValue, tryCatchAsync } from '@walkeros/core';
-import { walkChain } from './processor';
+import { walkChain } from './transformer';
 
 /**
- * Extracts a simple {id: {next}} map from processor instances.
+ * Extracts a simple {id: {next}} map from transformer instances.
  * Used for chain resolution.
  */
-function extractProcessorNextMap(
-  processors: Record<string, { config: { next?: string } }>,
+function extractTransformerNextMap(
+  transformers: Record<string, { config: { next?: string } }>,
 ): Record<string, { next?: string }> {
   const result: Record<string, { next?: string }> = {};
-  for (const [id, processor] of Object.entries(processors)) {
-    result[id] = { next: processor.config.next };
+  for (const [id, transformer] of Object.entries(transformers)) {
+    result[id] = { next: transformer.config.next };
   }
   return result;
 }
@@ -35,10 +35,10 @@ export async function initSources(
     // Track current ingest metadata (set per-request by setIngest)
     let currentIngest: unknown = undefined;
 
-    // Resolve processor chain for this source
+    // Resolve transformer chain for this source
     const preChain = walkChain(
       next,
-      extractProcessorNextMap(collector.processors),
+      extractTransformerNextMap(collector.transformers),
     );
 
     // Create wrapped push that auto-applies source mapping config, preChain, and ingest
@@ -52,7 +52,7 @@ export async function initSources(
         id: sourceId,
         ingest: currentIngest,
         mapping: config,
-        preChain, // Source-specific processor chain
+        preChain, // Source-specific transformer chain
       });
     };
 

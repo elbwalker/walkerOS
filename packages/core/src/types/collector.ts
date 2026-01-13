@@ -5,7 +5,7 @@ import type {
   Hooks,
   Logger,
   On,
-  Processor,
+  Transformer,
   WalkerOS,
   Mapping,
 } from '.';
@@ -40,8 +40,8 @@ export interface InitConfig extends Partial<Config> {
   sources?: Source.InitSources;
   /** Destination configurations */
   destinations?: Destination.InitDestinations;
-  /** Processor configurations */
-  processors?: Processor.InitProcessors;
+  /** Transformer configurations */
+  transformers?: Transformer.InitTransformers;
   /** Initial custom properties */
   custom?: WalkerOS.Properties;
 }
@@ -67,17 +67,17 @@ export interface Destinations {
   [id: string]: Destination.Instance;
 }
 
-export interface Processors {
-  [id: string]: Processor.Instance;
+export interface Transformers {
+  [id: string]: Transformer.Instance;
 }
 
 /**
- * Resolved processor chains for a flow.
+ * Resolved transformer chains for a flow.
  */
-export interface ProcessorChain {
-  /** Ordered processor IDs to run before collector (from source.next) */
+export interface TransformerChain {
+  /** Ordered transformer IDs to run before collector (from source.next) */
   pre: string[];
-  /** Per-destination processor chains (from destination.before) */
+  /** Per-destination transformer chains (from destination.before) */
   post: Record<string, string[]>;
 }
 
@@ -167,8 +167,8 @@ export interface Instance {
   custom: WalkerOS.Properties;
   sources: Sources;
   destinations: Destinations;
-  processors: Processors;
-  processorChain: ProcessorChain;
+  transformers: Transformers;
+  transformerChain: TransformerChain;
   globals: WalkerOS.Properties;
   group: string;
   hooks: Hooks.Functions;

@@ -2,7 +2,7 @@ import type { Collector, Logger, WalkerOS } from '@walkeros/core';
 import { assign, createLogger } from '@walkeros/core';
 import { commonHandleCommand } from './handle';
 import { initDestinations } from './destination';
-import { initProcessors, resolveProcessorGraph } from './processor';
+import { initTransformers, resolveTransformerGraph } from './transformer';
 import { createPush } from './push';
 import { createCommand } from './command';
 import { initSources } from './source';
@@ -43,8 +43,8 @@ export async function collector(
     count: 0,
     custom: initConfig.custom || {},
     destinations: {},
-    processors: {},
-    processorChain: { pre: [], post: {} },
+    transformers: {},
+    transformerChain: { pre: [], post: {} },
     globals: finalGlobals,
     group: '',
     hooks: {},
@@ -81,13 +81,13 @@ export async function collector(
     initConfig.destinations || {},
   );
 
-  // Initialize processors
-  collector.processors = await initProcessors(
+  // Initialize transformers
+  collector.transformers = await initTransformers(
     collector,
-    initConfig.processors || {},
+    initConfig.transformers || {},
   );
 
-  // Resolve processor chains based on source/destination configuration
+  // Resolve transformer chains based on source/destination configuration
   // Note: This is a placeholder - actual chain resolution happens in startFlow
   // when sources are configured with 'next' and destinations with 'before'
 

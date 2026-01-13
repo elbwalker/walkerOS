@@ -25,6 +25,7 @@ Learn the concepts before coding:
 | [understanding-mapping](skills/understanding-mapping/SKILL.md)           | Event transformation, data/map/loop             |
 | [understanding-destinations](skills/understanding-destinations/SKILL.md) | Destination interface, env pattern              |
 | [understanding-sources](skills/understanding-sources/SKILL.md)           | Source interface, capture patterns              |
+| [understanding-transformers](skills/understanding-transformers/SKILL.md) | Transformer interface, chaining, pipeline       |
 | [using-logger](skills/using-logger/SKILL.md)                             | Logger access, DRY principles, when to log      |
 
 ## Creating Things
@@ -34,6 +35,7 @@ Learn the concepts before coding:
 | Write tests         | [testing-strategy](skills/testing-strategy/SKILL.md)           |
 | Create destination  | [create-destination](skills/create-destination/SKILL.md)       |
 | Create source       | [create-source](skills/create-source/SKILL.md)                 |
+| Create transformer  | [create-transformer](skills/create-transformer/SKILL.md)       |
 | Configure mappings  | [mapping-configuration](skills/mapping-configuration/SKILL.md) |
 | Debug event flow    | [debugging](skills/debugging/SKILL.md)                         |
 | Write documentation | [writing-documentation](skills/writing-documentation/SKILL.md) |

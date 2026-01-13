@@ -7,7 +7,7 @@ import {
 } from '@walkeros/core';
 import { createEvent } from './handle';
 import { pushToDestinations, createPushResult } from './destination';
-import { runProcessorChain } from './processor';
+import { runTransformerChain } from './transformer';
 
 /**
  * Creates the push function for the collector.
@@ -63,15 +63,15 @@ export function createPush<T extends Collector.Instance>(
             partialEvent = processed.event;
           }
 
-          // Run pre-collector processor chain if provided in options
+          // Run pre-collector transformer chain if provided in options
           if (
             preChain?.length &&
-            collector.processors &&
-            Object.keys(collector.processors).length > 0
+            collector.transformers &&
+            Object.keys(collector.transformers).length > 0
           ) {
-            const processedEvent = await runProcessorChain(
+            const processedEvent = await runTransformerChain(
               collector,
-              collector.processors,
+              collector.transformers,
               preChain,
               partialEvent,
               frozenIngest,
