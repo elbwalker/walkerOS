@@ -1,5 +1,21 @@
 # @walkeros/website
 
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies [f5120b2]
+  - @walkeros/core@0.7.0
+  - @walkeros/collector@0.7.0
+  - @walkeros/walker.js@0.6.1
+  - @walkeros/server-destination-api@0.6.1
+  - @walkeros/web-destination-piwikpro@0.6.1
+  - @walkeros/web-source-browser@0.6.1
+  - @walkeros/web-destination-api@0.6.1
+  - @walkeros/web-destination-gtag@0.6.1
+  - @walkeros/web-destination-meta@0.6.1
+  - @walkeros/web-destination-plausible@0.6.1
+
 ## 0.0.0-next-20251219153324
 
 ### Patch Changes

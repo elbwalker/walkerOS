@@ -1,5 +1,13 @@
 # @walkeros/cli
 
+## 0.6.2
+
+### Patch Changes
+
+- Updated dependencies [f5120b2]
+  - @walkeros/core@0.7.0
+  - @walkeros/server-core@0.6.1
+
 ## 0.6.1
 
 ### Patch Changes
