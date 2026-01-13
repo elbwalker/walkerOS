@@ -165,7 +165,7 @@ export default function Features() {
               </div>
               <div className="px-8 pb-8 sm:px-10 sm:pb-10">
                 <Link
-                  to="/docs/sources/web/browser/tagging"
+                  to="/docs/sources/web/browser/tagging/html-attributes"
                   className="inline-flex items-center text-sm font-medium text-elbwalker hover:text-elbwalker-dark no-underline"
                 >
                   Learn more about tagging →

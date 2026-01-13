@@ -5,7 +5,7 @@ export default function HomeHero() {
   return (
     <Hero
       title="Open-source data collection and tag management"
-      text="Collect and route event data with full control. Privacy-first, vendor-free, and built for developers."
+      text="Collect and route your behavioral data with full control and ownership. Privacy-first, vendor-free, and built for developers."
       primaryButton={{
         link: '/docs/',
         children: 'Get started',
@@ -18,9 +18,9 @@ export default function HomeHero() {
       }}
       elbTitle="home"
       badges={[
-        'Version controlled in Git',
-        'Self-hosted on your infrastructure',
-        'No vendor lock-in',
+        'Self-host on your infrastructure',
+        'Config-as-code',
+        'Version control in Git',
         'MIT-licensed',
       ]}
     />

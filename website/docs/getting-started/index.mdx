@@ -1,15 +1,29 @@
 ---
 slug: /
-title: Getting started
+title: What is walkerOS
 description: Event data collection as code - capture, transform, and route events with built-in consent management
 sidebar_position: 1
 ---
 
-# Getting started with walkerOS
+# What is walkerOS
 
 walkerOS is **event data collection as code**. Capture events from anywhere, transform them with mapping, and route them to any destination—all with built-in consent management.
 
 No fragile UI configs. No vendor lock-in. Just tracking you can version, test, and trust.
+
+import ArchitectureDiagram from '@site/src/components/docs/ArchitectureDiagram';
+
+<ArchitectureDiagram />
+
+## Why walkerOS?
+
+- **Open-Source** — MIT licensed, free forever, no restrictions
+- **Self-Hosted** — Your infrastructure, your data, full ownership
+- **Config-as-Code** — Version control, PRs, deploy with confidence
+- **Composable** — Mix sources, destinations, and mappings freely
+- **Developer-First** — TypeScript, no GUI, declarative tagging
+
+---
 
 ## How it works
 
@@ -116,13 +130,3 @@ Then: `walkeros bundle flow.json` → standalone file.
 
 **Need help choosing?**
 - [Operating Modes](/docs/getting-started/modes) — Detailed comparison
-
----
-
-## Why walkerOS?
-
-- **Vendor Independence** — One tracking implementation, any destination
-- **Privacy-First** — Consent and policy controls built in
-- **Type-Safe** — TypeScript catches errors at compile time
-- **Composable** — Mix sources, destinations, and mappings freely
-- **Testable** — Simulate events, version configs, review in PRs

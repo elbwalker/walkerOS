@@ -1,0 +1,149 @@
+---
+title: JavaScript
+sidebar_position: 2
+description: Capture events programmatically using the elb function
+---
+
+# JavaScript Event Capture
+
+Capture events programmatically using the `elb()` function instead of HTML
+attributes.
+
+## When to use
+
+- Dynamic events not tied to DOM elements
+- Custom application logic
+- Events triggered by API responses
+- Complex conditional tracking
+
+## Basic usage
+
+<CodeSnippet
+  code={`// Push an event
+elb('product view', { id: 'P123', name: 'Widget' });
+
+// With context
+elb('order complete', { total: 99.99 }, { test: 'checkout_v2' });`}
+  language="javascript"
+/>
+
+## Event structure
+
+The elb function accepts:
+
+1. **Event name**: `"entity action"` format (required)
+2. **Data object**: Properties for the event (optional)
+3. **Context**: Contextual information (optional)
+4. **Trigger**: The trigger name (optional)
+5. **Nested**: Nested entities (optional)
+
+<CodeSnippet
+  code={`elb('entity action', data, context, trigger, nested);`}
+  language="javascript"
+/>
+
+## Examples
+
+### Page events
+
+<CodeSnippet
+  code={`elb('page view', {
+  title: document.title,
+  path: location.pathname
+});`}
+  language="javascript"
+/>
+
+### User actions
+
+<CodeSnippet
+  code={`function handleAddToCart(product) {
+  elb('product add', {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    quantity: 1
+  });
+}`}
+  language="javascript"
+/>
+
+### Form submissions
+
+<CodeSnippet
+  code={`form.addEventListener('submit', (e) => {
+  elb('form submit', {
+    id: form.id,
+    type: form.dataset.formType
+  });
+});`}
+  language="javascript"
+/>
+
+### API response tracking
+
+<CodeSnippet
+  code={`async function fetchProducts() {
+  const response = await fetch('/api/products');
+  const products = await response.json();
+
+  elb('products load', {
+    count: products.length,
+    category: currentCategory
+  });
+
+  return products;
+}`}
+  language="javascript"
+/>
+
+### Error tracking
+
+<CodeSnippet
+  code={`window.addEventListener('error', (event) => {
+  elb('error occur', {
+    message: event.message,
+    source: event.filename,
+    line: event.lineno
+  });
+});`}
+  language="javascript"
+/>
+
+## Object syntax
+
+You can also pass events as objects:
+
+<CodeSnippet
+  code={`elb({
+  event: 'product view',
+  data: { id: 'P123', name: 'Widget' },
+  context: { test: 'engagement' }
+});`}
+  language="javascript"
+/>
+
+## Comparison with HTML Attributes
+
+| Use Case              | HTML Attributes | JavaScript |
+| --------------------- | --------------- | ---------- |
+| Click tracking        | Best            | Works      |
+| Visibility tracking   | Best            | Manual     |
+| Dynamic values        | Possible        | Best       |
+| Non-DOM events        | Not possible    | Required   |
+| API response events   | Not possible    | Required   |
+| Conditional tracking  | Limited         | Best       |
+
+:::tip
+
+Use HTML attributes for DOM-based interactions (clicks, visibility, hovers) and
+JavaScript for dynamic or non-DOM events.
+
+:::
+
+## See also
+
+- [HTML Attributes](/docs/sources/web/browser/tagging/html-attributes) -
+  Declarative DOM-based tracking
+- [Tagger](/docs/sources/web/browser/tagger) - Programmatic attribute generation
+- [Commands](/docs/sources/web/browser/commands) - Full elb API reference

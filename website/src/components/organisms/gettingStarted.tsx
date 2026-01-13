@@ -1,8 +1,53 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Link from '@docusaurus/Link';
 import { tagger } from '@site/src/components/walkerjs';
 
+const bundledCode = `{
+  "flows": {
+    "default": {
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": { "settings": { "pageview": true } }
+        }
+      },
+      "destinations": {
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "settings": { "ga4": { "measurementId": "G-XXX" } }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+const integratedCode = `import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+
+const { elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: { settings: { pageview: true } }
+    }
+  },
+  destinations: {
+    ga4: {
+      code: destinationGtag,
+      config: {
+        settings: { ga4: { measurementId: 'G-XXX' } }
+      }
+    }
+  },
+  run: true
+});`;
+
 export default function GettingStarted() {
+  const [mode, setMode] = useState<'bundled' | 'integrated'>('bundled');
+
   return (
     <div
       style={{ backgroundColor: 'var(--ifm-background-color)' }}
@@ -23,13 +68,57 @@ export default function GettingStarted() {
 
           {/* Description */}
           <p
-            className="text-center text-lg/8 mb-10"
+            className="text-center text-lg/8 mb-6"
             style={{ color: 'var(--color-base-content)' }}
           >
-            Install from npm and start tracking in minutes
+            Choose your preferred operating mode
           </p>
 
-          {/* Terminal mockup */}
+          {/* Mode selector */}
+          <div className="flex gap-4 mb-8 justify-center">
+            <button
+              onClick={() => setMode('bundled')}
+              className={`px-6 py-2 rounded-full font-semibold transition-colors ${
+                mode === 'bundled'
+                  ? 'bg-[#01b5e2] text-white'
+                  : 'bg-transparent border border-gray-400 hover:border-[#01b5e2]'
+              }`}
+              style={
+                mode !== 'bundled'
+                  ? { color: 'var(--color-base-content)' }
+                  : undefined
+              }
+            >
+              Bundled
+            </button>
+            <button
+              onClick={() => setMode('integrated')}
+              className={`px-6 py-2 rounded-full font-semibold transition-colors ${
+                mode === 'integrated'
+                  ? 'bg-[#01b5e2] text-white'
+                  : 'bg-transparent border border-gray-400 hover:border-[#01b5e2]'
+              }`}
+              style={
+                mode !== 'integrated'
+                  ? { color: 'var(--color-base-content)' }
+                  : undefined
+              }
+            >
+              Integrated
+            </button>
+          </div>
+
+          {/* Mode description */}
+          <p
+            className="text-center text-sm mb-6"
+            style={{ color: 'var(--color-gray-500)' }}
+          >
+            {mode === 'bundled'
+              ? 'Build a standalone script from JSON config with npx walkeros'
+              : 'Import directly into your TypeScript application'}
+          </p>
+
+          {/* Code editor mockup */}
           <div
             className="mx-auto rounded-2xl shadow-2xl outline outline-1 outline-white/10 overflow-hidden"
             style={{
@@ -60,30 +149,40 @@ export default function GettingStarted() {
                     color: 'var(--code-editor-text)',
                   }}
                 >
-                  Terminal
+                  {mode === 'bundled' ? 'flow.json' : 'tracking.ts'}
                 </div>
               </div>
             </div>
 
-            {/* Terminal content */}
-            <div className="px-6 py-8 font-mono text-sm">
-              <code>
-                <span style={{ color: 'var(--code-editor-text)' }}>
-                  npx walkeros
-                </span>
-              </code>
+            {/* Code content */}
+            <div className="px-6 py-6 font-mono text-sm overflow-x-auto">
+              <pre style={{ color: 'var(--code-editor-text)', margin: 0 }}>
+                <code>{mode === 'bundled' ? bundledCode : integratedCode}</code>
+              </pre>
             </div>
           </div>
 
-          {/* Link to quickstart */}
+          {/* Link to mode-specific docs */}
           <div className="text-center mt-10">
             <Link
-              to="/docs/getting-started/quickstart/"
+              to={
+                mode === 'bundled'
+                  ? '/docs/getting-started/modes/bundled/'
+                  : '/docs/getting-started/modes/integrated/'
+              }
               className="text-lg font-semibold"
               style={{ color: 'var(--color-base-content)' }}
-              {...tagger.action('click', 'quickstart').get()}
+              {...tagger
+                .action(
+                  'click',
+                  mode === 'bundled' ? 'bundled-docs' : 'integrated-docs',
+                )
+                .get()}
             >
-              See full Quickstart guide <span aria-hidden="true">→</span>
+              {mode === 'bundled'
+                ? 'Install walkerOS CLI'
+                : 'Install npm packages'}{' '}
+              <span aria-hidden="true">→</span>
             </Link>
           </div>
         </div>

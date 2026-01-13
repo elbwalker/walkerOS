@@ -126,18 +126,21 @@ export default function Hero({
               </div>
             </div>
           </div>
-          <div className="mt-20 sm:mt-24 md:mx-auto md:max-w-2xl lg:mx-0 lg:mt-0 lg:flex lg:items-center">
+          <div className="mt-20 sm:mt-24 md:mx-auto md:max-w-2xl lg:mx-0 lg:mt-0 lg:flex lg:items-center px-6 lg:px-0">
             {/* Architecture Diagram */}
-            <div className="flex flex-row items-center gap-8">
+            <div className="flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-8">
               {/* Sources Column */}
               <div className="flex flex-col items-center">
                 <span
-                  className="text-base font-semibold mb-4 uppercase tracking-wide"
+                  className="text-base font-semibold uppercase tracking-wide text-center mb-4"
                   style={{ color: 'var(--color-gray-400)' }}
                 >
                   Sources
                 </span>
-                <div className="flex flex-col gap-4">
+                <div
+                  className="flex flex-col gap-4 w-full"
+                  style={{ maxWidth: '200px' }}
+                >
                   {/* Client-side */}
                   <div
                     className="rounded-xl border border-white/20 dark:border-gray-600 p-4"
@@ -205,10 +208,7 @@ export default function Hero({
                         className="flex items-center gap-3"
                         style={{ color: 'var(--color-base-content)' }}
                       >
-                        <Icon
-                          icon="logos:google-cloud-functions"
-                          className="w-5 h-5"
-                        />
+                        <Icon icon="logos:google-cloud" className="w-5 h-5" />
                         <span className="text-base whitespace-nowrap">
                           GCP Functions
                         </span>
@@ -218,16 +218,18 @@ export default function Hero({
                 </div>
               </div>
 
-              {/* Arrow */}
-              <Icon
-                icon="mdi:arrow-right"
-                className="w-12 h-12 text-elbwalker flex-shrink-0"
-              />
+              {/* Arrow - Right on desktop, Down on mobile */}
+              <div className="hidden lg:flex items-center text-elbwalker">
+                <Icon icon="mdi:arrow-right" className="w-8 h-8" />
+              </div>
+              <div className="lg:hidden text-elbwalker">
+                <Icon icon="mdi:arrow-down" className="w-8 h-8" />
+              </div>
 
               {/* Collector */}
               <div className="flex flex-col items-center">
                 <span
-                  className="text-base font-semibold mb-4 uppercase tracking-wide"
+                  className="text-base font-semibold uppercase tracking-wide text-center mb-4"
                   style={{ color: 'var(--color-gray-400)' }}
                 >
                   Collector
@@ -235,25 +237,30 @@ export default function Hero({
                 <img
                   src="/img/walkerOS_logo_new.svg"
                   alt="walkerOS"
-                  className="w-32 h-32"
+                  className="w-24 h-24 lg:w-32 lg:h-32"
                 />
               </div>
 
-              {/* Arrow */}
-              <Icon
-                icon="mdi:arrow-right"
-                className="w-12 h-12 text-elbwalker flex-shrink-0"
-              />
+              {/* Arrow - Right on desktop, Down on mobile */}
+              <div className="hidden lg:flex items-center text-elbwalker">
+                <Icon icon="mdi:arrow-right" className="w-8 h-8" />
+              </div>
+              <div className="lg:hidden text-elbwalker">
+                <Icon icon="mdi:arrow-down" className="w-8 h-8" />
+              </div>
 
               {/* Destinations Column */}
               <div className="flex flex-col items-center">
                 <span
-                  className="text-base font-semibold mb-4 uppercase tracking-wide"
+                  className="text-base font-semibold uppercase tracking-wide text-center mb-4"
                   style={{ color: 'var(--color-gray-400)' }}
                 >
                   Destinations
                 </span>
-                <div className="flex flex-col gap-4">
+                <div
+                  className="flex flex-col gap-4 w-full"
+                  style={{ maxWidth: '200px' }}
+                >
                   {/* Client-side */}
                   <div
                     className="rounded-xl border border-white/20 dark:border-gray-600 p-4"
@@ -289,16 +296,6 @@ export default function Hero({
                         className="flex items-center gap-3"
                         style={{ color: 'var(--color-base-content)' }}
                       >
-                        <Icon
-                          icon="logos:google-tag-manager"
-                          className="w-5 h-5"
-                        />
-                        <span className="text-base">GTM</span>
-                      </div>
-                      <div
-                        className="flex items-center gap-3"
-                        style={{ color: 'var(--color-base-content)' }}
-                      >
                         <Icon icon="logos:meta-icon" className="w-5 h-5" />
                         <span className="text-base whitespace-nowrap">
                           Meta Pixel
@@ -319,10 +316,17 @@ export default function Hero({
                         className="flex items-center gap-3"
                         style={{ color: 'var(--color-base-content)' }}
                       >
-                        <Icon
-                          icon="simple-icons:piwikpro"
+                        <svg
                           className="w-5 h-5"
-                        />
+                          viewBox="0 0 32 32"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M23,19 L23,29 L18,29 L18,19 L23,19 Z M30,13 L30,29 L25,29 L25,13 L30,13 Z M16,16 L16,29 L11,29 L11,16 L16,16 Z M9,22 L9,29 L4,29 L4,22 L9,22 Z M21,21 L20,21 L20,27 L21,27 L21,21 Z M28,15 L27,15 L27,27 L28,27 L28,15 Z M14,18 L13,18 L13,27 L14,27 L14,18 Z M7,24 L6,24 L6,27 L7,27 L7,24 Z M30,3 L30,8 L28,8 L27.9991212,6.329 L19.9544292,13.3686427 L15.9699243,9.38413782 L3.93857049,20.4128788 L2.58712123,18.9385705 L16.0300757,6.61586218 L20.0455708,10.6313573 L26.4801212,5 L25,5 L25,3 L30,3 Z"
+                            fill="#006BD6"
+                          />
+                        </svg>
                         <span className="text-base whitespace-nowrap">
                           Piwik PRO
                         </span>
@@ -359,10 +363,7 @@ export default function Hero({
                         className="flex items-center gap-3"
                         style={{ color: 'var(--color-base-content)' }}
                       >
-                        <Icon
-                          icon="logos:google-bigquery"
-                          className="w-5 h-5"
-                        />
+                        <Icon icon="logos:google-cloud" className="w-5 h-5" />
                         <span className="text-base">BigQuery</span>
                       </div>
                       <div
