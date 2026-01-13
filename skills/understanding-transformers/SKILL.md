@@ -165,7 +165,7 @@ The `push` function receives a context with event metadata:
 push(event, context) {
   const { logger, id, ingest } = context;
 
-  logger.debug('Processing', { transformer: id, event: event.event });
+  logger.debug('Processing', { transformer: id, event: event.name });
 
   // Access request metadata if available
   if (ingest?.ip) {

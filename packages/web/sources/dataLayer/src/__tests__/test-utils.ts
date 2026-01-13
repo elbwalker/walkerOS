@@ -79,5 +79,6 @@ export async function createDataLayerSource(
     },
     id: 'test-datalayer',
     logger: createMockLogger(),
+    setIngest: async () => {},
   });
 }
