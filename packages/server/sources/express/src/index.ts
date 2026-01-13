@@ -51,6 +51,9 @@ export const sourceExpress = async (
         return;
       }
 
+      // Extract ingest metadata from request (if config.ingest is defined)
+      await context.setIngest(req);
+
       // Handle GET requests (pixel tracking)
       if (req.method === 'GET') {
         // Parse query parameters to event data using requestToData

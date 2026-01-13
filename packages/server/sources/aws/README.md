@@ -174,6 +174,50 @@ interface CorsOptions {
 }
 ```
 
+### Ingest Metadata
+
+Extract request metadata from Lambda events and forward it to processors and
+destinations:
+
+```typescript
+await startFlow({
+  sources: {
+    lambda: {
+      code: sourceLambda,
+      config: {
+        settings: { cors: true },
+        ingest: {
+          // API Gateway v1 (REST API)
+          ip: 'requestContext.identity.sourceIp',
+          ua: 'requestContext.identity.userAgent',
+          // Or API Gateway v2 (HTTP API) / Function URLs:
+          // ip: 'requestContext.http.sourceIp',
+          // ua: 'requestContext.http.userAgent',
+        },
+      },
+    },
+  },
+});
+```
+
+**Available ingest paths (API Gateway v1):**
+
+| Path                                | Description       |
+| ----------------------------------- | ----------------- |
+| `requestContext.identity.sourceIp`  | Client IP address |
+| `requestContext.identity.userAgent` | User agent string |
+| `headers.*`                         | HTTP headers      |
+| `httpMethod`                        | HTTP method       |
+
+**Available ingest paths (API Gateway v2 / Function URLs):**
+
+| Path                            | Description       |
+| ------------------------------- | ----------------- |
+| `requestContext.http.sourceIp`  | Client IP address |
+| `requestContext.http.userAgent` | User agent string |
+| `requestContext.http.method`    | HTTP method       |
+| `headers.*`                     | HTTP headers      |
+
 ### Request Format
 
 **POST - Single Event:**

@@ -15,6 +15,7 @@ function createSourceContext(
     logger: env.logger || createMockLogger(),
     id: 'test-fetch',
     collector: {} as Collector.Instance,
+    setIngest: jest.fn().mockResolvedValue(undefined),
   };
 }
 

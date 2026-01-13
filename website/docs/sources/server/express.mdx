@@ -100,6 +100,73 @@ app.listen(3000);`}
 | GET | `/health` | Liveness check |
 | GET | `/ready` | Readiness check |
 
+## Ingest Metadata
+
+Extract request metadata (IP, user agent, headers) and forward it through the pipeline to processors and destinations.
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceExpress } from '@walkeros/server-source-express';
+
+const { collector } = await startFlow({
+  sources: {
+    express: {
+      code: sourceExpress,
+      config: {
+        settings: { port: 8080 },
+        ingest: {
+          ip: 'ip',
+          ua: 'headers.user-agent',
+          origin: 'headers.origin',
+          referer: 'headers.referer',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Available Ingest Paths
+
+| Path | Description |
+|------|-------------|
+| `ip` | Client IP address |
+| `headers.*` | HTTP headers (user-agent, origin, referer, etc.) |
+| `protocol` | Request protocol (http/https) |
+| `method` | HTTP method (GET, POST, etc.) |
+| `hostname` | Request hostname |
+| `url` | Full request URL |
+
+### Advanced Mapping
+
+Use walkerOS mapping features for complex extraction:
+
+<CodeSnippet
+  code={`ingest: {
+  // Simple path
+  ip: 'ip',
+
+  // Custom function
+  country: { fn: (req) => geoip.lookup(req.ip)?.country },
+
+  // Conditional extraction
+  devMode: {
+    key: 'headers.x-debug',
+    condition: (req) => req.hostname === 'localhost',
+  },
+
+  // Nested structure
+  request: {
+    map: {
+      ua: 'headers.user-agent',
+      origin: 'headers.origin',
+    },
+  },
+}`}
+  language="typescript"
+/>
+
 ## Example request
 
 <CodeSnippet

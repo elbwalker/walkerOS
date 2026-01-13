@@ -14,6 +14,7 @@ function createSourceContext(
     logger: env.logger || createMockLogger(),
     id: 'test-cloudfunction',
     collector: {} as Collector.Instance,
+    setIngest: jest.fn().mockResolvedValue(undefined),
   };
 }
 

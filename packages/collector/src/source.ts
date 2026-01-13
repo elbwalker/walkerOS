@@ -1,5 +1,5 @@
 import type { Collector, Source, WalkerOS } from '@walkeros/core';
-import { tryCatchAsync } from '@walkeros/core';
+import { getMappingValue, tryCatchAsync } from '@walkeros/core';
 import { walkChain } from './processor';
 
 /**
@@ -32,21 +32,25 @@ export async function initSources(
   for (const [sourceId, sourceDefinition] of Object.entries(sources)) {
     const { code, config = {}, env = {}, primary, next } = sourceDefinition;
 
+    // Track current ingest metadata (set per-request by setIngest)
+    let currentIngest: unknown = undefined;
+
     // Resolve processor chain for this source
     const preChain = walkChain(
       next,
       extractProcessorNextMap(collector.processors),
     );
 
-    // Create wrapped push that auto-applies source mapping config and preChain
+    // Create wrapped push that auto-applies source mapping config, preChain, and ingest
     const wrappedPush: Collector.PushFn = (
       event: WalkerOS.DeepPartialEvent,
       options: Collector.PushOptions = {},
     ) => {
-      // Pass source config as mapping in options, plus resolved preChain and source id
+      // Pass source config as mapping in options, plus resolved preChain, source id, and ingest
       return collector.push(event, {
         ...options,
         id: sourceId,
+        ingest: currentIngest,
         mapping: config,
         preChain, // Source-specific processor chain
       });
@@ -64,6 +68,22 @@ export async function initSources(
       ...env,
     };
 
+    /**
+     * setIngest extracts metadata from raw request using config.ingest mapping.
+     * Opt-in: returns early if no config.ingest is defined.
+     */
+    const setIngest = async (value: unknown): Promise<void> => {
+      // Opt-in barrier: no processing when ingest not configured
+      if (!config.ingest) {
+        currentIngest = undefined;
+        return;
+      }
+
+      currentIngest = await getMappingValue(value, config.ingest, {
+        collector,
+      });
+    };
+
     // Build source context for init
     const sourceContext: Source.Context = {
       collector,
@@ -71,6 +91,7 @@ export async function initSources(
       id: sourceId,
       config,
       env: cleanEnv,
+      setIngest,
     };
 
     // Call source function with context

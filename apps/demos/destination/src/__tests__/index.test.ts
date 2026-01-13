@@ -12,6 +12,7 @@ describe('Demo Destination', () => {
       config: { settings: { name: 'test' } },
       env: { log: mockLog },
       logger: createMockLogger(),
+      id: 'test-destination',
     });
 
     expect(mockLog).toHaveBeenCalledWith('[test] initialized');
@@ -47,6 +48,7 @@ describe('Demo Destination', () => {
       config: { settings: { name: 'full' } },
       env: { log: mockLog },
       logger: createMockLogger(),
+      id: 'test-destination',
     });
 
     expect(mockLog).toHaveBeenCalledTimes(1);
@@ -91,6 +93,7 @@ describe('Demo Destination', () => {
       },
       env: { log: mockLog },
       logger: createMockLogger(),
+      id: 'test-destination',
     });
 
     const logCall = mockLog.mock.calls[0][0];
@@ -142,6 +145,7 @@ describe('Demo Destination', () => {
       },
       env: { log: mockLog },
       logger: createMockLogger(),
+      id: 'test-destination',
     });
 
     const logCall = mockLog.mock.calls[0][0];
@@ -182,6 +186,7 @@ describe('Demo Destination', () => {
       config: {},
       env: {},
       logger: createMockLogger(),
+      id: 'test-destination',
     });
 
     expect(console.log).toHaveBeenCalled();
@@ -223,6 +228,7 @@ describe('Demo Destination', () => {
       },
       env: { log: mockLog },
       logger: createMockLogger(),
+      id: 'test-destination',
     });
 
     const logCall = mockLog.mock.calls[0][0];

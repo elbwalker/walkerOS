@@ -16,6 +16,7 @@ function createSourceContext(
     logger: env.logger || createMockLogger(),
     id: 'test-lambda',
     collector: {} as Collector.Instance,
+    setIngest: jest.fn().mockResolvedValue(undefined),
   };
 }
 

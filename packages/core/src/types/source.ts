@@ -81,6 +81,19 @@ export interface Config<
   logger?: Logger.Config;
   disabled?: boolean;
   primary?: boolean;
+  /**
+   * Ingest metadata extraction mapping.
+   * Extracts values from raw request objects (Express req, Lambda event, etc.)
+   * using walkerOS mapping syntax. Extracted data flows to processors/destinations.
+   *
+   * @example
+   * ingest: {
+   *   ip: 'req.ip',
+   *   ua: 'req.headers.user-agent',
+   *   origin: 'req.headers.origin'
+   * }
+   */
+  ingest?: WalkerOSMapping.Data;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
@@ -108,6 +121,14 @@ export interface Context<
   T extends TypesGeneric = Types,
 > extends BaseContext.Base<Partial<Config<T>>, Env<T>> {
   id: string;
+  /**
+   * Sets ingest metadata for the current request.
+   * Extracts values from the raw request using config.ingest mapping.
+   * The extracted data is passed through to processors and destinations.
+   *
+   * @param value - Raw request object (Express req, Lambda event, etc.)
+   */
+  setIngest: (value: unknown) => Promise<void>;
 }
 
 export type Init<T extends TypesGeneric = Types> = (

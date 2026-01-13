@@ -330,8 +330,8 @@ export async function destinationPush<Destination extends Destination.Instance>(
     id: destId,
     config,
     data: processed.data,
-    rule: processed.mapping, // Renamed from mapping to rule
-    ingest, // Same frozen reference
+    rule: processed.mapping,
+    ingest,
     env: mergeEnvironments(destination.env, config.env),
   };
 

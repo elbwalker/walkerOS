@@ -20,7 +20,7 @@ export * as schemas from './schemas';
 export * as examples from './examples';
 
 export const sourceLambda: Source.Init<Types> = async (context) => {
-  const { config = {}, env } = context;
+  const { config = {}, env, setIngest } = context;
   const { push: envPush } = env;
 
   const settings = SettingsSchema.parse(config.settings || {});
@@ -58,6 +58,9 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
       if (parsed.method === 'OPTIONS') {
         return createResponse(204, '', corsHeaders, requestId);
       }
+
+      // Extract ingest metadata from Lambda event (if config.ingest is defined)
+      await setIngest(event);
 
       // Handle GET for pixel tracking
       if (parsed.method === 'GET') {

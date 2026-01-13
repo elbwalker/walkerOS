@@ -23,7 +23,7 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 export const sourceCloudFunction: Source.Init<Types> = async (context) => {
-  const { config = {}, env } = context;
+  const { config = {}, env, setIngest } = context;
   const { push: envPush } = env;
 
   const settings: Settings = {
@@ -44,6 +44,9 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
         res.status(204).send();
         return;
       }
+
+      // Extract ingest metadata from request (if config.ingest is defined)
+      await setIngest(req);
 
       if (req.method !== 'POST') {
         res.status(405).json({

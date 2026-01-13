@@ -121,6 +121,51 @@ functions:
 | `enablePixelTracking` | `boolean` | `true` | Enable GET tracking |
 | `healthPath` | `string` | `/health` | Health check path |
 
+## Ingest Metadata
+
+Extract request metadata from Lambda events and forward it through the pipeline.
+
+<CodeSnippet
+  code={`const { sources } = await startFlow({
+  sources: {
+    lambda: {
+      code: sourceLambda,
+      config: {
+        settings: { cors: true },
+        ingest: {
+          ip: 'requestContext.identity.sourceIp',           // v1
+          ua: 'requestContext.identity.userAgent',          // v1
+          // Or for API Gateway v2:
+          // ip: 'requestContext.http.sourceIp',
+          // ua: 'requestContext.http.userAgent',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Available Ingest Paths
+
+**API Gateway v1 (REST API):**
+
+| Path | Description |
+|------|-------------|
+| `requestContext.identity.sourceIp` | Client IP address |
+| `requestContext.identity.userAgent` | User agent string |
+| `headers.*` | HTTP headers |
+| `httpMethod` | HTTP method |
+
+**API Gateway v2 (HTTP API) / Function URLs:**
+
+| Path | Description |
+|------|-------------|
+| `requestContext.http.sourceIp` | Client IP address |
+| `requestContext.http.userAgent` | User agent string |
+| `requestContext.http.method` | HTTP method |
+| `headers.*` | HTTP headers |
+
 ## Supported platforms
 
 | Platform | Status |
