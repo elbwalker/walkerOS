@@ -56,6 +56,7 @@ describe('Demo Source', () => {
       },
       id: 'test-source',
       logger: createMockLogger(),
+      setIngest: async () => {},
     });
 
     // Fast-forward to execute setTimeout(..., 0)
@@ -98,6 +99,7 @@ describe('Demo Source', () => {
       },
       id: 'test-source',
       logger: createMockLogger(),
+      setIngest: async () => {},
     });
 
     // Immediate event fires
@@ -148,6 +150,7 @@ describe('Demo Source', () => {
       },
       id: 'test-source',
       logger: createMockLogger(),
+      setIngest: async () => {},
     });
 
     jest.runAllTimers();

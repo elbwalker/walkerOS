@@ -40,6 +40,7 @@ export async function createBrowserSource(
     env,
     id: 'test-browser',
     logger: createMockLogger(),
+    setIngest: async () => {},
   });
 
   // Use the source's own push method which includes proper translation
