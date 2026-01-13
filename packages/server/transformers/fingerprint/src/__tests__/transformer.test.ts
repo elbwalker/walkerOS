@@ -35,7 +35,7 @@ describe('Transformer Fingerprint', () => {
   });
 
   const baseEvent: WalkerOS.DeepPartialEvent = {
-    event: 'page view',
+    name: 'page view',
     data: { userId: 'user123' },
   };
 
@@ -136,7 +136,7 @@ describe('Transformer Fingerprint', () => {
     });
 
     it('should support key + fn transformation', async () => {
-      const anonymizeIP = (ip: string) => ip.replace(/\.\d+$/, '.0');
+      const anonymizeIP = (ip: unknown) => String(ip).replace(/\.\d+$/, '.0');
 
       const initContext = createInitContext({
         settings: {

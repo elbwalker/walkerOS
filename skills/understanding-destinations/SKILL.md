@@ -96,23 +96,23 @@ config: {
 
 Use as starting point: `packages/web/destinations/plausible/`
 
-## Processor Wiring
+## Transformer Wiring
 
-Destinations can wire to post-collector processor chains via the `before`
+Destinations can wire to post-collector transformer chains via the `before`
 property:
 
 ```typescript
 destinations: {
   gtag: {
     code: destinationGtag,
-    before: 'redact'  // First processor to run before this destination
+    before: 'redact'  // First transformer to run before this destination
   }
 }
 ```
 
-The processor chain runs after collector enrichment, before the destination
+The transformer chain runs after collector enrichment, before the destination
 receives events. Each destination can have its own chain. See
-[understanding-processors](../understanding-processors/SKILL.md) for chain
+[understanding-transformers](../understanding-transformers/SKILL.md) for chain
 details.
 
 ## Related
@@ -121,8 +121,8 @@ details.
 
 - [understanding-mapping skill](../understanding-mapping/SKILL.md) - Configure
   transformations
-- [understanding-processors skill](../understanding-processors/SKILL.md) -
-  Processor chaining to destinations
+- [understanding-transformers skill](../understanding-transformers/SKILL.md) -
+  Transformer chaining to destinations
 - [testing-strategy skill](../testing-strategy/SKILL.md) - Test with env pattern
 - [create-destination skill](../create-destination/SKILL.md) - Create new
   destination

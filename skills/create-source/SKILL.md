@@ -14,8 +14,8 @@ Before starting, read these skills:
 - [understanding-flow](../understanding-flow/SKILL.md) - How sources fit in
   architecture
 - [understanding-sources](../understanding-sources/SKILL.md) - Source interface
-- [understanding-processors](../understanding-processors/SKILL.md) - Processor
-  chaining from sources
+- [understanding-transformers](../understanding-transformers/SKILL.md) -
+  Transformer chaining from sources
 - [understanding-events](../understanding-events/SKILL.md) - Event structure
   sources emit
 - [understanding-mapping](../understanding-mapping/SKILL.md) - Transform raw
@@ -422,9 +422,9 @@ packages/server/sources/[name]/
 └── README.md
 ```
 
-### Processor Chain Integration
+### Transformer Chain Integration
 
-Sources can wire to processor chains via `next` in the init config:
+Sources can wire to transformer chains via `next` in the init config:
 
 ```typescript
 export type InitSource<T> = {
@@ -432,7 +432,7 @@ export type InitSource<T> = {
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
   primary?: boolean;
-  next?: string; // First processor in pre-collector chain
+  next?: string; // First transformer in pre-collector chain
 };
 ```
 

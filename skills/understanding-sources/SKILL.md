@@ -129,21 +129,21 @@ export const handler = source.push;
 See [packages/server/sources/gcp/](../../packages/server/sources/gcp/) for
 implementation.
 
-## Processor Wiring
+## Transformer Wiring
 
-Sources can wire to pre-collector processor chains via the `next` property:
+Sources can wire to pre-collector transformer chains via the `next` property:
 
 ```typescript
 sources: {
   browser: {
     code: sourceBrowser,
-    next: 'validate'  // First processor to run after this source
+    next: 'validate'  // First transformer to run after this source
   }
 }
 ```
 
-The processor chain runs before events reach the collector. See
-[understanding-processors](../understanding-processors/SKILL.md) for chain
+The transformer chain runs before events reach the collector. See
+[understanding-transformers](../understanding-transformers/SKILL.md) for chain
 details.
 
 ## Related
@@ -152,8 +152,8 @@ details.
 
 - [understanding-flow skill](../understanding-flow/SKILL.md) - How sources fit
   in architecture
-- [understanding-processors skill](../understanding-processors/SKILL.md) -
-  Processor chaining from sources
+- [understanding-transformers skill](../understanding-transformers/SKILL.md) -
+  Transformer chaining from sources
 - [understanding-events skill](../understanding-events/SKILL.md) - Events that
   sources emit
 

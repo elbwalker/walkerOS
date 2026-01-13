@@ -15,8 +15,8 @@ Before starting, read these skills:
   architecture
 - [understanding-destinations](../understanding-destinations/SKILL.md) -
   Destination interface
-- [understanding-processors](../understanding-processors/SKILL.md) - Processor
-  chaining to destinations
+- [understanding-transformers](../understanding-transformers/SKILL.md) -
+  Transformer chaining to destinations
 - [understanding-mapping](../understanding-mapping/SKILL.md) - Event
   transformation
 - [testing-strategy](../testing-strategy/SKILL.md) - How to test with env
@@ -354,9 +354,9 @@ packages/web/destinations/[name]/
 └── README.md
 ```
 
-### Processor Chain Integration
+### Transformer Chain Integration
 
-Destinations can wire to processor chains via `before` in the init config:
+Destinations can wire to transformer chains via `before` in the init config:
 
 ```typescript
 destinations: {
@@ -368,8 +368,9 @@ destinations: {
 }
 ```
 
-Each destination can have its own processor chain, allowing destination-specific
-transformations (e.g., redact PII only for external destinations).
+Each destination can have its own transformer chain, allowing
+destination-specific transformations (e.g., redact PII only for external
+destinations).
 
 ---
 
