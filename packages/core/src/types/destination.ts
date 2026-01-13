@@ -5,6 +5,7 @@ import type {
   Mapping as WalkerOSMapping,
   On,
   WalkerOS,
+  Context as BaseContext,
 } from '.';
 
 /**
@@ -111,36 +112,33 @@ export interface Destinations {
   [key: string]: Instance;
 }
 
-export interface Context<T extends TypesGeneric = Types> {
-  collector: Collector.Instance;
-  config: Config<T>;
+/**
+ * Context provided to destination functions.
+ * Extends base context with destination-specific properties.
+ */
+export interface Context<
+  T extends TypesGeneric = Types,
+> extends BaseContext.Base<Config<T>, Env<T>> {
+  id: string;
   data?: Data;
-  env: Env<T>;
-  logger: Logger.Instance;
-}
-
-export interface InitContext<T extends TypesGeneric = Types> {
-  collector: Collector.Instance;
-  config: Config<Types<Partial<Settings<T>>, Mapping<T>, Env<T>>>;
-  data?: Data;
-  env: Env<T>;
-  logger: Logger.Instance;
 }
 
 export interface PushContext<
   T extends TypesGeneric = Types,
 > extends Context<T> {
-  mapping?: WalkerOSMapping.Rule<Mapping<T>>;
+  ingest?: unknown;
+  rule?: WalkerOSMapping.Rule<Mapping<T>>;
 }
 
 export interface PushBatchContext<
   T extends TypesGeneric = Types,
 > extends Context<T> {
-  mapping?: WalkerOSMapping.Rule<Mapping<T>>;
+  ingest?: unknown;
+  rule?: WalkerOSMapping.Rule<Mapping<T>>;
 }
 
 export type InitFn<T extends TypesGeneric = Types> = (
-  context: InitContext<T>,
+  context: Context<T>,
 ) => WalkerOS.PromiseOrValue<void | false | Config<T>>;
 
 export type PushFn<T extends TypesGeneric = Types> = (

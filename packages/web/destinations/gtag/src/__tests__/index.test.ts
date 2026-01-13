@@ -217,11 +217,12 @@ describe('Unified Gtag Destination', () => {
 
       await destinationGtag.push(mockEvent, {
         config,
-        mapping,
+        rule: mapping,
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
         logger: mockLogger,
+        id: 'test',
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
@@ -246,11 +247,12 @@ describe('Unified Gtag Destination', () => {
 
       await destinationGtag.push(mockEvent, {
         config,
-        mapping,
+        rule: mapping,
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
         logger: mockLogger,
+        id: 'test',
       });
 
       expect(pushAdsEvent).toHaveBeenCalledWith(
@@ -273,11 +275,12 @@ describe('Unified Gtag Destination', () => {
 
       await destinationGtag.push(mockEvent, {
         config,
-        mapping,
+        rule: mapping,
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
         logger: mockLogger,
+        id: 'test',
       });
 
       expect(pushAdsEvent).not.toHaveBeenCalled();
@@ -292,11 +295,12 @@ describe('Unified Gtag Destination', () => {
 
       await destinationGtag.push(mockEvent, {
         config,
-        mapping,
+        rule: mapping,
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
         logger: mockLogger,
+        id: 'test',
       });
 
       expect(pushGTMEvent).toHaveBeenCalledWith(
@@ -327,11 +331,12 @@ describe('Unified Gtag Destination', () => {
 
       await destinationGtag.push(mockEvent, {
         config,
-        mapping,
+        rule: mapping,
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
         logger: mockLogger,
+        id: 'test',
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
@@ -388,11 +393,12 @@ describe('Unified Gtag Destination', () => {
 
       await destinationGtag.push(mockEvent, {
         config,
-        mapping,
+        rule: mapping,
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
         logger: mockLogger,
+        id: 'test',
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(

@@ -1,12 +1,8 @@
 import express, { type Request, type Response } from 'express';
 import cors from 'cors';
 import { requestToData } from '@walkeros/core';
-import type {
-  ExpressSource,
-  PartialConfig,
-  Types,
-  EventRequest,
-} from './types';
+import type { Source } from '@walkeros/core';
+import type { ExpressSource, Types, EventRequest } from './types';
 import { SettingsSchema } from './schemas';
 import { setCorsHeaders, TRANSPARENT_GIF } from './utils';
 
@@ -20,14 +16,14 @@ import { setCorsHeaders, TRANSPARENT_GIF } from './utils';
  * - Starts HTTP server (if port configured)
  * - Handles graceful shutdown
  *
- * @param config Partial source configuration
- * @param env Source environment with push, command, elb functions
+ * @param context Source context with config, env, logger, id
  * @returns Express source instance with app and push handler
  */
 export const sourceExpress = async (
-  config: PartialConfig,
-  env: Types['env'],
+  context: Source.Context<Types>,
 ): Promise<ExpressSource> => {
+  const { config = {}, env } = context;
+
   // Validate and apply default settings
   const settings = SettingsSchema.parse(config.settings || {});
 

@@ -20,6 +20,7 @@ describe('Contract Integration Tests', () => {
     config,
     env: {},
     logger: mockLogger,
+    id: 'test-processor',
   });
 
   const createEvent = (
@@ -69,8 +70,8 @@ describe('Contract Integration Tests', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       // Any product action should match
       const viewEvent = createEvent('product', 'view', { id: '123' });
@@ -101,8 +102,8 @@ describe('Contract Integration Tests', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const event = createEvent('item', 'purchase', { value: 100 });
 
@@ -130,8 +131,8 @@ describe('Contract Integration Tests', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const event = createEvent('anything', 'random', { foo: 'bar' });
 
@@ -166,8 +167,8 @@ describe('Contract Integration Tests', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       // Missing 'name' should fail exact match
       const event = createEvent('product', 'view', { id: '123' });
@@ -209,8 +210,8 @@ describe('Contract Integration Tests', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       // High quantity - needs warehouse
       const bulkEvent = createEvent('product', 'add', {
@@ -262,8 +263,8 @@ describe('Contract Integration Tests', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const event = createEvent('product', 'view', { id: '123' });
 
@@ -289,8 +290,8 @@ describe('Contract Integration Tests', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const event1 = createEvent('product', 'view', { id: '123' });
       const event2 = createEvent('product', 'view', { id: '456' });
@@ -328,8 +329,8 @@ describe('Contract Integration Tests', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       // Different entity/action - no matching rule
       const event = createEvent('product', 'view', { anything: 'goes' });
@@ -346,8 +347,8 @@ describe('Contract Integration Tests', () => {
           // No contract
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const event = createEvent('any', 'event', {});
 
@@ -373,8 +374,8 @@ describe('Contract Integration Tests', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const event = createEvent('product', 'view', { id: '123' });
 
@@ -398,8 +399,8 @@ describe('Contract Integration Tests', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const invalidEvent = {
         ...createEvent('product', 'view', { id: '123' }),

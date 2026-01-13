@@ -10,7 +10,7 @@ export const destinationAPI: Destination = {
 
   config: {},
 
-  push(event, { config, mapping, data, env, logger }) {
+  push(event, { config, rule, data, env, logger }) {
     const { settings } = config;
     const {
       url,
@@ -24,7 +24,7 @@ export const destinationAPI: Destination = {
 
     const eventData = isDefined(data) ? data : event;
     const body = transform
-      ? transform(eventData, config, mapping) // Transform event data
+      ? transform(eventData, config, rule) // Transform event data
       : JSON.stringify(eventData);
 
     const sendWebFn = (env as Env)?.sendWeb || sendWeb;

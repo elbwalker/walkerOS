@@ -478,77 +478,104 @@ export interface BatchInput {
 }
 ```
 
-### 5.2 Implement Source
+### 5.2 Implement Source (Context Pattern)
+
+Sources use the **context pattern** - they receive a single `context` object
+containing `config`, `env`, `logger`, `id`, and `collector`.
 
 `src/index.ts`:
 
 ```typescript
-import type { WalkerOS } from '@walkeros/core';
-import { createEvent, getMappingValue } from '@walkeros/core';
-import type { Config, Input } from './types';
+import type { Source } from '@walkeros/core';
+import type { Types, Input } from './types';
+import { SettingsSchema } from './schemas';
 
 export * as SourceName from './types';
+export * as schemas from './schemas';
+export * as examples from './examples';
 
 /**
- * Transform incoming input to walkerOS event(s).
+ * Source initialization using context pattern.
+ *
+ * @param context - Source context containing:
+ *   - config: Source configuration (settings, mapping)
+ *   - env: Environment with push, command, elb, logger
+ *   - logger: Logger instance
+ *   - id: Unique source identifier
+ *   - collector: Collector instance reference
  */
-export function transformInput(
-  input: Input,
-  config: Config = {},
-): WalkerOS.Event | undefined {
-  if (!input.event) return undefined;
+export const sourceMySource: Source.Init<Types> = async (context) => {
+  // Destructure what you need from context
+  const { config = {}, env } = context;
+  const { push: envPush, logger } = env;
 
-  // Map event name to "entity action" format
-  const eventName = config.eventNameMap?.[input.event] ?? input.event;
-  const [entity, action] = eventName.split(' ');
+  // Validate and apply default settings using Zod schema
+  const settings = SettingsSchema.parse(config.settings || {});
 
-  if (!entity || !action) return undefined;
+  const fullConfig: Source.Config<Types> = {
+    ...config,
+    settings,
+  };
 
-  // Build event
-  return createEvent({
-    event: eventName,
+  /**
+   * Push handler - receives incoming data and forwards to collector.
+   * The signature varies by source type (HTTP handler, DOM handler, etc.)
+   */
+  const push: Types['push'] = async (request) => {
+    try {
+      const body = await parseRequestBody(request);
+
+      if (!isValidInput(body)) {
+        return createErrorResponse(400, 'Invalid input format');
+      }
+
+      // Transform to walkerOS event format
+      const eventData = transformInput(body, settings);
+
+      // Forward to collector via env.push
+      await envPush(eventData);
+
+      return createSuccessResponse();
+    } catch (error) {
+      // Log errors per using-logger skill (only errors, not routine ops)
+      logger?.error('Source processing error', { error });
+      return createErrorResponse(500, 'Processing failed');
+    }
+  };
+
+  return {
+    type: 'my-source',
+    config: fullConfig,
+    push,
+  };
+};
+
+/**
+ * Transform incoming input to walkerOS event format.
+ */
+function transformInput(input: Input, settings: Types['settings']) {
+  const eventName = settings.eventNameMap?.[input.event] ?? input.event;
+
+  return {
+    name: eventName,
     data: input.properties ?? {},
     user: input.userId ? { id: input.userId } : undefined,
-    timestamp: input.timestamp,
-  });
+  };
 }
 
-/**
- * Process batch of inputs.
- */
-export function transformBatch(
-  inputs: Input[],
-  config: Config = {},
-): WalkerOS.Event[] {
-  return inputs
-    .map((input) => transformInput(input, config))
-    .filter((e): e is WalkerOS.Event => e !== undefined);
-}
-
-/**
- * HTTP handler - use directly with any HTTP framework.
- * Example: app.post('/events', source.push)
- */
-export async function push(
-  req: { body: Input | { batch: Input[] } },
-  config: Config = {},
-): Promise<{ events: WalkerOS.Event[]; error?: string }> {
-  try {
-    const body = req.body;
-
-    if ('batch' in body) {
-      return { events: transformBatch(body.batch, config) };
-    }
-
-    const event = transformInput(body, config);
-    return { events: event ? [event] : [] };
-  } catch (error) {
-    return { events: [], error: 'Invalid input' };
-  }
-}
-
-export default { transformInput, transformBatch, push };
+export default sourceMySource;
 ```
+
+**Key patterns:**
+
+1. **Context destructuring**: Extract `config`, `env`, `logger`, `id` from
+   context
+2. **Schema validation**: Use Zod schemas to validate settings and provide
+   defaults
+3. **Forward to collector**: Call `env.push()` to send events to the collector
+4. **Error logging**: Use `logger?.error()` for errors only, not routine
+   operations
+5. **Return Source.Instance**: Return `{ type, config, push }` object
 
 ### Gate: Implementation Compiles
 
@@ -561,89 +588,131 @@ export default { transformInput, transformBatch, push };
 
 **Verify implementation produces expected outputs.**
 
-`src/index.test.ts`:
+### 6.1 Test Helper Pattern
+
+Create a helper to build source context for tests:
+
+`src/__tests__/index.test.ts`:
 
 ```typescript
-import { transformInput, transformBatch, push } from '.';
-import { examples } from './dev';
+import { sourceMySource } from '../index';
+import type { Source, Collector } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
+import type { Types } from '../types';
+import { examples } from '../dev';
 
-describe('source transformation', () => {
-  const config = {
-    eventNameMap: examples.mapping.eventNameMap,
+// Helper to create source context for testing
+function createSourceContext(
+  config: Partial<Source.Config<Types>> = {},
+  env: Partial<Types['env']> = {},
+): Source.Context<Types> {
+  return {
+    config,
+    env: env as Types['env'],
+    logger: env.logger || createMockLogger(),
+    id: 'test-my-source',
+    collector: {} as Collector.Instance,
   };
+}
 
-  test('page view input produces correct event', () => {
-    const result = transformInput(examples.inputs.pageViewInput, config);
+describe('sourceMySource', () => {
+  let mockPush: jest.MockedFunction<(...args: unknown[]) => unknown>;
+  let mockLogger: ReturnType<typeof createMockLogger>;
 
-    expect(result).toMatchObject(examples.outputs.pageViewEvent);
+  beforeEach(() => {
+    mockPush = jest.fn().mockResolvedValue({
+      event: { id: 'test-id' },
+      ok: true,
+    });
+    mockLogger = createMockLogger();
   });
 
-  test('purchase input produces correct event', () => {
-    const result = transformInput(examples.inputs.purchaseInput, config);
+  describe('initialization', () => {
+    it('should initialize with default settings', async () => {
+      const source = await sourceMySource(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: jest.fn() as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
 
-    expect(result).toMatchObject(examples.outputs.purchaseEvent);
-  });
-
-  test('custom event produces correct event', () => {
-    const result = transformInput(examples.inputs.customEventInput, config);
-
-    expect(result).toMatchObject(examples.outputs.buttonClickEvent);
-  });
-
-  test('handles minimal input', () => {
-    const result = transformInput(examples.inputs.minimalInput, config);
-
-    // Should handle gracefully (may return undefined or minimal event)
-    expect(result).toBeDefined();
-  });
-
-  test('handles invalid input gracefully', () => {
-    const result = transformInput(examples.inputs.invalidInput as any, config);
-
-    expect(result).toBeUndefined();
-  });
-});
-
-describe('batch processing', () => {
-  test('transforms multiple inputs', () => {
-    const inputs = [
-      examples.inputs.pageViewInput,
-      examples.inputs.purchaseInput,
-    ];
-
-    const result = transformBatch(inputs, {
-      eventNameMap: examples.mapping.eventNameMap,
+      expect(source.type).toBe('my-source');
+      expect(typeof source.push).toBe('function');
     });
 
-    expect(result).toHaveLength(2);
-  });
-});
+    it('should merge custom settings with defaults', async () => {
+      const source = await sourceMySource(
+        createSourceContext(
+          { settings: { customOption: true } },
+          {
+            push: mockPush as never,
+            command: jest.fn() as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
 
-describe('HTTP handler', () => {
-  test('handles single event', async () => {
-    const req = { body: examples.inputs.pageViewInput };
-    const result = await push(req, {
-      eventNameMap: examples.mapping.eventNameMap,
+      expect(source.config.settings?.customOption).toBe(true);
+    });
+  });
+
+  describe('event processing', () => {
+    it('should process valid input and call env.push', async () => {
+      const source = await sourceMySource(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: jest.fn() as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      // Use examples for test input
+      const request = createMockRequest(examples.inputs.pageViewInput);
+      await source.push(request);
+
+      expect(mockPush).toHaveBeenCalled();
     });
 
-    expect(result.events).toHaveLength(1);
-    expect(result.error).toBeUndefined();
-  });
+    it('should handle errors gracefully', async () => {
+      const errorPush = jest.fn().mockRejectedValue(new Error('Failed'));
+      const source = await sourceMySource(
+        createSourceContext(
+          {},
+          {
+            push: errorPush as never,
+            command: jest.fn() as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
 
-  test('handles batch', async () => {
-    const req = {
-      body: {
-        batch: [examples.inputs.pageViewInput, examples.inputs.purchaseInput],
-      },
-    };
-    const result = await push(req, {
-      eventNameMap: examples.mapping.eventNameMap,
+      const request = createMockRequest(examples.inputs.pageViewInput);
+      const response = await source.push(request);
+
+      expect(response.status).toBe(500);
+      expect(mockLogger.error).toHaveBeenCalled();
     });
-
-    expect(result.events).toHaveLength(2);
   });
 });
 ```
+
+### 6.2 Key Test Patterns
+
+1. **Use `createSourceContext()` helper** - Standardizes context creation
+2. **Mock `env.push`** - Verify events are forwarded to collector
+3. **Use examples for test data** - Don't hardcode test values
+4. **Test error paths** - Verify graceful error handling and logging
 
 ### Gate: Tests Pass
 

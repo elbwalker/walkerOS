@@ -38,8 +38,9 @@ describe('Demo Source', () => {
     const { collector } = await startFlow();
     collector.push = mockPush;
 
-    await sourceDemo(
-      {
+    await sourceDemo({
+      collector,
+      config: {
         settings: {
           events: [
             { name: 'page view', data: { title: 'Home' } },
@@ -47,13 +48,15 @@ describe('Demo Source', () => {
           ],
         },
       },
-      {
+      env: {
         elb: collector.push as unknown as WalkerOS.Elb,
         push: collector.push,
         command: collector.command,
         logger: createMockLogger(),
       },
-    );
+      id: 'test-source',
+      logger: createMockLogger(),
+    });
 
     // Fast-forward to execute setTimeout(..., 0)
     jest.runAllTimers();
@@ -76,8 +79,9 @@ describe('Demo Source', () => {
     const { collector } = await startFlow();
     collector.push = mockPush;
 
-    await sourceDemo(
-      {
+    await sourceDemo({
+      collector,
+      config: {
         settings: {
           events: [
             { name: 'immediate', data: {} },
@@ -86,13 +90,15 @@ describe('Demo Source', () => {
           ],
         },
       },
-      {
+      env: {
         elb: collector.push as unknown as WalkerOS.Elb,
         push: collector.push,
         command: collector.command,
         logger: createMockLogger(),
       },
-    );
+      id: 'test-source',
+      logger: createMockLogger(),
+    });
 
     // Immediate event fires
     jest.advanceTimersByTime(0);
@@ -127,19 +133,22 @@ describe('Demo Source', () => {
     const { collector } = await startFlow();
     collector.push = mockPush;
 
-    await sourceDemo(
-      {
+    await sourceDemo({
+      collector,
+      config: {
         settings: {
           events: [],
         },
       },
-      {
+      env: {
         elb: collector.push as unknown as WalkerOS.Elb,
         push: collector.push,
         command: collector.command,
         logger: createMockLogger(),
       },
-    );
+      id: 'test-source',
+      logger: createMockLogger(),
+    });
 
     jest.runAllTimers();
     await Promise.resolve();

@@ -1,9 +1,23 @@
 import { sourceLambda } from '../index';
 import type { EventRequest, LambdaEvent, LambdaContext, Types } from '../types';
 import type { APIGatewayProxyEvent, APIGatewayProxyEventV2 } from 'aws-lambda';
-import type { Source } from '@walkeros/core';
+import type { Source, Collector } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import * as examples from '../examples';
+
+// Helper to create source context
+function createSourceContext(
+  config: Partial<Source.Config<Types>> = {},
+  env: Partial<Types['env']> = {},
+): Source.Context<Types> {
+  return {
+    config,
+    env: env as Types['env'],
+    logger: env.logger || createMockLogger(),
+    id: 'test-lambda',
+    collector: {} as Collector.Instance,
+  };
+}
 
 // Mock API Gateway v1 event
 function createMockEventV1(
@@ -130,13 +144,15 @@ describe('sourceLambda', () => {
   describe('initialization', () => {
     it('should initialize with default settings', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       expect(source.type).toBe('lambda');
@@ -157,12 +173,14 @@ describe('sourceLambda', () => {
         },
       };
 
-      const source = await sourceLambda(config, {
-        push: mockPush as never,
-        command: mockCommand as never,
-        elb: jest.fn() as never,
-        logger: mockLogger,
-      });
+      const source = await sourceLambda(
+        createSourceContext(config, {
+          push: mockPush as never,
+          command: mockCommand as never,
+          elb: jest.fn() as never,
+          logger: mockLogger,
+        }),
+      );
 
       expect(source.config.settings).toEqual({
         cors: false,
@@ -176,13 +194,15 @@ describe('sourceLambda', () => {
   describe('API Gateway v1 events', () => {
     it('should handle POST request with event data (v1)', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const eventRequest: EventRequest = {
@@ -213,13 +233,15 @@ describe('sourceLambda', () => {
 
     it('should handle OPTIONS request (v1)', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV1('OPTIONS');
@@ -233,13 +255,15 @@ describe('sourceLambda', () => {
 
     it('should handle GET request with pixel tracking (v1)', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV1('GET', undefined, {
@@ -258,13 +282,15 @@ describe('sourceLambda', () => {
 
     it('should reject GET when pixel tracking disabled (v1)', async () => {
       const source = await sourceLambda(
-        { settings: { enablePixelTracking: false } },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          { settings: { enablePixelTracking: false } },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV1('GET');
@@ -284,13 +310,15 @@ describe('sourceLambda', () => {
   describe('API Gateway v2 events', () => {
     it('should handle POST request with event data (v2)', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const eventRequest: EventRequest = {
@@ -321,13 +349,15 @@ describe('sourceLambda', () => {
 
     it('should handle OPTIONS request (v2)', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV2('OPTIONS');
@@ -341,13 +371,15 @@ describe('sourceLambda', () => {
 
     it('should handle GET request with query string (v2)', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV2(
@@ -368,13 +400,15 @@ describe('sourceLambda', () => {
   describe('error handling', () => {
     it('should require request body for POST', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV1('POST', null as unknown as string);
@@ -392,13 +426,15 @@ describe('sourceLambda', () => {
 
     it('should reject invalid event body', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV1(
@@ -422,13 +458,15 @@ describe('sourceLambda', () => {
         .fn()
         .mockRejectedValue(new Error('Processing failed'));
       const source = await sourceLambda(
-        {},
-        {
-          push: errorPush,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: errorPush,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const eventRequest: EventRequest = {
@@ -451,13 +489,15 @@ describe('sourceLambda', () => {
 
     it('should reject unsupported methods', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV1('PUT');
@@ -477,13 +517,15 @@ describe('sourceLambda', () => {
   describe('CORS handling', () => {
     it('should set default CORS headers when enabled', async () => {
       const source = await sourceLambda(
-        { settings: { cors: true } },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          { settings: { cors: true } },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV1('OPTIONS');
@@ -499,23 +541,25 @@ describe('sourceLambda', () => {
 
     it('should set custom CORS headers', async () => {
       const source = await sourceLambda(
-        {
-          settings: {
-            cors: {
-              origin: ['https://example.com'],
-              methods: ['POST'],
-              headers: ['Content-Type'],
-              credentials: true,
-              maxAge: 7200,
+        createSourceContext(
+          {
+            settings: {
+              cors: {
+                origin: ['https://example.com'],
+                methods: ['POST'],
+                headers: ['Content-Type'],
+                credentials: true,
+                maxAge: 7200,
+              },
             },
           },
-        },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV1('OPTIONS');
@@ -533,13 +577,15 @@ describe('sourceLambda', () => {
 
     it('should not set CORS headers when disabled', async () => {
       const source = await sourceLambda(
-        { settings: { cors: false } },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          { settings: { cors: false } },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV1('OPTIONS');
@@ -554,13 +600,15 @@ describe('sourceLambda', () => {
   describe('base64 encoding', () => {
     it('should decode base64 encoded body', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const eventRequest: EventRequest = {
@@ -590,7 +638,7 @@ describe('sourceLambda', () => {
   });
 
   describe('example-based tests', () => {
-    let env: Parameters<typeof sourceLambda>[1];
+    let env: Partial<Types['env']>;
 
     beforeEach(() => {
       env = {
@@ -602,7 +650,7 @@ describe('sourceLambda', () => {
     });
 
     it('processes v2 POST event correctly', async () => {
-      const source = await sourceLambda({}, env);
+      const source = await sourceLambda(createSourceContext({}, env));
       const context = createMockContext();
 
       const result = await source.push(
@@ -618,7 +666,7 @@ describe('sourceLambda', () => {
     });
 
     it('handles GET pixel tracking', async () => {
-      const source = await sourceLambda({}, env);
+      const source = await sourceLambda(createSourceContext({}, env));
       const context = createMockContext();
 
       const result = await source.push(
@@ -632,7 +680,7 @@ describe('sourceLambda', () => {
     });
 
     it('handles v1 POST event', async () => {
-      const source = await sourceLambda({}, env);
+      const source = await sourceLambda(createSourceContext({}, env));
       const context = createMockContext();
 
       const result = await source.push(
@@ -649,13 +697,15 @@ describe('sourceLambda', () => {
   describe('health check endpoint', () => {
     it('should respond to health check on configured path (v2)', async () => {
       const source = await sourceLambda(
-        { settings: { healthPath: '/health' } },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          { settings: { healthPath: '/health' } },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV2('GET');
@@ -676,13 +726,15 @@ describe('sourceLambda', () => {
 
     it('should respond to health check on configured path (v1)', async () => {
       const source = await sourceLambda(
-        { settings: { healthPath: '/health' } },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          { settings: { healthPath: '/health' } },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV1('GET');
@@ -701,13 +753,15 @@ describe('sourceLambda', () => {
 
     it('should not trigger health check on different path', async () => {
       const source = await sourceLambda(
-        { settings: { healthPath: '/health' } },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          { settings: { healthPath: '/health' } },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV2('GET');
@@ -725,13 +779,15 @@ describe('sourceLambda', () => {
   describe('logging', () => {
     it('should NOT log for successful requests (collector handles)', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const eventRequest: EventRequest = {
@@ -754,13 +810,15 @@ describe('sourceLambda', () => {
         .fn()
         .mockRejectedValue(new Error('Collector failed'));
       const source = await sourceLambda(
-        {},
-        {
-          push: errorPush,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: errorPush,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const eventRequest: EventRequest = {
@@ -786,13 +844,15 @@ describe('sourceLambda', () => {
 
     it('should log handler errors with context', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       // Completely invalid event structure that will cause parseEvent to throw
@@ -815,13 +875,15 @@ describe('sourceLambda', () => {
   describe('request ID tracking', () => {
     it('should include request ID in successful response (v2)', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const eventRequest: EventRequest = {
@@ -843,13 +905,15 @@ describe('sourceLambda', () => {
 
     it('should include request ID in error responses', async () => {
       const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       const event = createMockEventV1('POST', null as unknown as string);
@@ -866,11 +930,27 @@ describe('sourceLambda', () => {
     it('should reject invalid timeout value', async () => {
       await expect(
         sourceLambda(
-          {
-            settings: {
-              timeout: 999999999, // Exceeds 900000ms Lambda limit
+          createSourceContext(
+            {
+              settings: {
+                timeout: 999999999, // Exceeds 900000ms Lambda limit
+              },
             },
-          },
+            {
+              push: mockPush as never,
+              command: mockCommand as never,
+              elb: jest.fn() as never,
+              logger: mockLogger,
+            },
+          ),
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('should use default settings when none provided', async () => {
+      const source = await sourceLambda(
+        createSourceContext(
+          {},
           {
             push: mockPush as never,
             command: mockCommand as never,
@@ -878,18 +958,6 @@ describe('sourceLambda', () => {
             logger: mockLogger,
           },
         ),
-      ).rejects.toThrow();
-    });
-
-    it('should use default settings when none provided', async () => {
-      const source = await sourceLambda(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
       );
 
       expect(source.config.settings).toEqual({
@@ -902,17 +970,19 @@ describe('sourceLambda', () => {
 
     it('should merge partial settings with defaults', async () => {
       const source = await sourceLambda(
-        {
-          settings: {
-            cors: false,
+        createSourceContext(
+          {
+            settings: {
+              cors: false,
+            },
           },
-        },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: mockLogger,
-        },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
       );
 
       expect(source.config.settings).toEqual({

@@ -393,12 +393,16 @@ export interface Config extends DestinationWeb.Config<Settings> {}
 export interface Destination extends DestinationWeb.Destination<Config> {}
 ```
 
-### 5.2 Implement Destination
+### 5.2 Implement Destination (Context Pattern)
+
+Destinations use the **context pattern** - both `init` and `push` receive
+context objects containing `config`, `env`, `logger`, `id`, and other contextual
+data.
 
 `src/index.ts`:
 
 ```typescript
-import type { Config, Destination } from './types';
+import type { Config, Destination, Types } from './types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { isObject } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
@@ -409,7 +413,19 @@ export const destinationVendor: Destination = {
   type: 'vendor',
   config: {},
 
-  init({ config, env }) {
+  /**
+   * Initialize destination - receives context object.
+   *
+   * @param context - Init context containing:
+   *   - config: Destination configuration (settings, mapping, etc.)
+   *   - env: Environment with window, document, etc.
+   *   - logger: Logger instance
+   *   - id: Unique destination identifier
+   *   - collector: Collector instance reference
+   *   - data: Pre-computed data from mapping
+   */
+  init(context) {
+    const { config, env, logger } = context;
     const { window } = getEnv(env);
     const settings = config.settings || {};
 
@@ -426,7 +442,21 @@ export const destinationVendor: Destination = {
     return config;
   },
 
-  push(event, { config, data, env }) {
+  /**
+   * Push event to destination - receives event and push context.
+   *
+   * @param event - The walkerOS event to send
+   * @param context - Push context containing:
+   *   - config: Destination configuration
+   *   - env: Environment
+   *   - logger: Logger instance
+   *   - id: Destination identifier
+   *   - data: Pre-computed data from mapping
+   *   - rule: The matching mapping rule (renamed from 'mapping')
+   *   - ingest: Optional request metadata from source
+   */
+  push(event, context) {
+    const { config, data, env, rule } = context;
     const params = isObject(data) ? data : {};
     const { window } = getEnv(env);
 
@@ -435,7 +465,7 @@ export const destinationVendor: Destination = {
   },
 };
 
-function addScript(settings: Settings, env?: DestinationWeb.Env) {
+function addScript(settings: Types['settings'], env?: DestinationWeb.Env) {
   const { document } = getEnv(env);
   const script = document.createElement('script');
   script.src = `https://vendor.com/sdk.js?key=${settings.apiKey}`;
@@ -444,6 +474,15 @@ function addScript(settings: Settings, env?: DestinationWeb.Env) {
 
 export default destinationVendor;
 ```
+
+**Key patterns:**
+
+1. **Init receives context**: Destructure `config`, `env`, `logger`, `id` from
+   context
+2. **Push receives context**: Includes `data`, `rule` (renamed from `mapping`),
+   `ingest`
+3. **Use `getEnv(env)`**: Never access `window`/`document` directly
+4. **Return config from init**: Allows updating config during initialization
 
 ### Gate: Implementation Compiles
 
@@ -456,11 +495,34 @@ export default destinationVendor;
 
 **Verify implementation produces expected outputs.**
 
-`src/index.test.ts`:
+### 6.1 Test Helper Pattern
+
+Create helpers to build contexts for tests:
+
+`src/__tests__/index.test.ts`:
 
 ```typescript
-import { destinationVendor } from '.';
-import { examples } from './dev';
+import { destinationVendor } from '..';
+import type { Destination, Collector } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
+import type { Types } from '../types';
+import { examples } from '../dev';
+
+// Helper to create push context for testing
+function createPushContext(
+  overrides: Partial<Destination.PushContext<Types>> = {},
+): Destination.PushContext<Types> {
+  return {
+    config: {},
+    env: examples.env.push,
+    logger: createMockLogger(),
+    id: 'test-vendor',
+    collector: {} as Collector.Instance,
+    data: {},
+    rule: undefined,
+    ...overrides,
+  };
+}
 
 describe('destinationVendor', () => {
   beforeEach(() => {
@@ -469,16 +531,15 @@ describe('destinationVendor', () => {
 
   test('page view produces correct output', () => {
     const mockSdk = jest.fn();
-    const env = {
-      ...examples.env.push,
-      window: { vendorSdk: mockSdk } as unknown as Window,
-    };
-
-    destinationVendor.push(examples.events.pageView, {
-      config: {},
+    const context = createPushContext({
+      env: {
+        window: { vendorSdk: mockSdk } as unknown as Window,
+        document: {} as Document,
+      },
       data: { url: '/home', title: 'Home Page' },
-      env,
     });
+
+    destinationVendor.push(examples.events.pageView, context);
 
     // Verify against expected output
     expect(mockSdk).toHaveBeenCalledWith(
@@ -488,14 +549,21 @@ describe('destinationVendor', () => {
   });
 
   test('purchase produces correct output', () => {
-    // Similar test against purchaseCall
+    // Similar test against purchaseCall using createPushContext
   });
 
   test('custom event produces correct output', () => {
-    // Similar test against customEventCall
+    // Similar test against customEventCall using createPushContext
   });
 });
 ```
+
+### 6.2 Key Test Patterns
+
+1. **Use `createPushContext()` helper** - Standardizes context creation
+2. **Include `id` field** - Required in context (new requirement)
+3. **Use `rule` instead of `mapping`** - Property renamed in PushContext
+4. **Use examples for test data** - Don't hardcode test values
 
 ### Gate: Tests Pass
 

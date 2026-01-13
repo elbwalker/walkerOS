@@ -220,27 +220,56 @@ export interface Settings {
 export interface Types extends Processor.Types<Settings> {}
 ```
 
-### 4.2 Implement Processor
+### 4.2 Implement Processor (Context Pattern)
+
+Processors use the **context pattern** - they receive a single `context` object
+containing `config`, `env`, `logger`, `id`, and `collector`.
 
 `src/processor.ts`:
 
 ```typescript
 import type { Processor } from '@walkeros/core';
 import type { Settings, Types } from './types';
+import { SettingsSchema } from './schemas';
 
-export const processorRedact: Processor.Init<Types> = (config, env) => {
-  const settings: Settings = {
-    fieldsToRedact: [],
-    logRedactions: false,
-    ...config.settings,
+/**
+ * Processor initialization using context pattern.
+ *
+ * @param context - Processor context containing:
+ *   - config: Processor configuration (settings)
+ *   - env: Environment object
+ *   - logger: Logger instance
+ *   - id: Unique processor identifier
+ *   - collector: Collector instance reference
+ *   - ingest: Optional request metadata from source
+ */
+export const processorRedact: Processor.Init<Types> = (context) => {
+  // Destructure what you need from context
+  const { config = {} } = context;
+
+  // Validate and apply default settings using Zod schema
+  const settings = SettingsSchema.parse(config.settings || {});
+
+  const fullConfig: Processor.Config<Types> = {
+    ...config,
+    settings,
   };
 
   return {
     type: 'redact',
-    config: { ...config, settings },
+    config: fullConfig,
 
-    push(event, context) {
-      const { logger } = context;
+    /**
+     * Process event - receives event and push context.
+     *
+     * @param event - The event to process
+     * @param pushContext - Context for this specific push operation
+     * @returns event - continue with modified event
+     * @returns void - continue with current event unchanged
+     * @returns false - stop chain, cancel further processing
+     */
+    push(event, pushContext) {
+      const { logger } = pushContext;
       const fields = settings.fieldsToRedact || [];
 
       for (const field of fields) {
@@ -248,7 +277,7 @@ export const processorRedact: Processor.Init<Types> = (config, env) => {
           delete event.data[field];
 
           if (settings.logRedactions) {
-            logger.debug('Redacted field', { field });
+            logger?.debug('Redacted field', { field });
           }
         }
       }
@@ -258,6 +287,14 @@ export const processorRedact: Processor.Init<Types> = (config, env) => {
   };
 };
 ```
+
+**Key patterns:**
+
+1. **Context destructuring**: Extract `config`, `logger`, `id` from init context
+2. **Schema validation**: Use Zod schemas to validate settings and provide
+   defaults
+3. **Push receives pushContext**: The `push` function gets event + push context
+4. **Return values**: `event` (continue), `void` (passthrough), `false` (cancel)
 
 ### 4.3 Export
 
@@ -279,40 +316,60 @@ export type { Settings, Types } from './types';
 
 **Verify implementation produces expected outputs.**
 
-`src/index.test.ts`:
+### 5.1 Test Helper Pattern
+
+Create a helper to build processor context for tests:
+
+`src/__tests__/index.test.ts`:
 
 ```typescript
-import { processorRedact } from './processor';
-import { examples } from './dev';
+import { processorRedact } from '../processor';
+import type { Processor, Collector } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
+import type { Types } from '../types';
+import { examples } from '../dev';
+
+// Helper to create processor context for testing
+function createProcessorContext(
+  config: Partial<Processor.Config<Types>> = {},
+): Processor.Context<Types> {
+  return {
+    config,
+    env: {} as Types['env'],
+    logger: createMockLogger(),
+    id: 'test-redact',
+    collector: {} as Collector.Instance,
+  };
+}
+
+// Helper to create push context for testing
+function createPushContext(): Processor.Context<Types> {
+  return {
+    config: {},
+    env: {} as Types['env'],
+    logger: createMockLogger(),
+    id: 'test-redact',
+    collector: {} as Collector.Instance,
+  };
+}
 
 describe('Redact Processor', () => {
-  const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    error: jest.fn(),
-  };
-
-  const mockContext = {
-    logger: mockLogger,
-    collector: {} as any,
-    config: {},
-    env: {},
-  };
+  let mockLogger: ReturnType<typeof createMockLogger>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockLogger = createMockLogger();
   });
 
   test('redacts specified fields from valid event', () => {
     const processor = processorRedact(
-      {
+      createProcessorContext({
         settings: { fieldsToRedact: ['email'] },
-      },
-      {},
+      }),
     );
 
     const event = structuredClone(examples.events.validEvent);
-    const result = processor.push(event, mockContext);
+    const pushContext = createPushContext();
+    const result = processor.push(event, pushContext);
 
     expect(result).toMatchObject(examples.events.processedEvent);
     expect((result as any).data.email).toBeUndefined();
@@ -320,31 +377,34 @@ describe('Redact Processor', () => {
 
   test('passes through event when no fields match', () => {
     const processor = processorRedact(
-      {
+      createProcessorContext({
         settings: { fieldsToRedact: ['ssn'] },
-      },
-      {},
+      }),
     );
 
     const event = structuredClone(examples.events.validEvent);
-    const result = processor.push(event, mockContext);
+    const pushContext = createPushContext();
+    const result = processor.push(event, pushContext);
 
     expect((result as any).data.email).toBe('user@example.com');
   });
 
   test('logs redactions when enabled', () => {
     const processor = processorRedact(
-      {
+      createProcessorContext({
         settings: {
           fieldsToRedact: ['email'],
           logRedactions: true,
         },
-      },
-      {},
+      }),
     );
 
     const event = structuredClone(examples.events.validEvent);
-    processor.push(event, mockContext);
+    const pushContext = {
+      ...createPushContext(),
+      logger: mockLogger,
+    };
+    processor.push(event, pushContext);
 
     expect(mockLogger.debug).toHaveBeenCalledWith('Redacted field', {
       field: 'email',
@@ -352,6 +412,14 @@ describe('Redact Processor', () => {
   });
 });
 ```
+
+### 5.2 Key Test Patterns
+
+1. **Use `createProcessorContext()` helper** - Standardizes init context
+   creation
+2. **Use `createPushContext()` helper** - Standardizes push context creation
+3. **Use examples for test data** - Don't hardcode test values
+4. **Test return values** - Verify `event`, `void`, or `false` returns
 
 ### Gate: Tests Pass
 

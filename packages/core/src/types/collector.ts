@@ -98,9 +98,12 @@ export type CommandType =
   | string;
 
 /**
- * Context passed to collector.push for source mapping
+ * Options passed to collector.push() from sources.
+ * NOT a Context - just push metadata.
  */
-export interface PushContext {
+export interface PushOptions {
+  id?: string;
+  ingest?: unknown;
   mapping?: Mapping.Config;
   preChain?: string[];
 }
@@ -111,7 +114,7 @@ export interface PushContext {
 export interface PushFn {
   (
     event: WalkerOS.DeepPartialEvent,
-    context?: PushContext,
+    options?: PushOptions,
   ): Promise<ElbTypes.PushResult>;
 }
 

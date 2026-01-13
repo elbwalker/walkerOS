@@ -31,6 +31,39 @@ See
 [packages/core/src/types/processor.ts](../../packages/core/src/types/processor.ts)
 for canonical interface.
 
+### Init Function (Context Pattern)
+
+Processors use a context-based initialization pattern:
+
+```typescript
+import type { Processor } from '@walkeros/core';
+
+export const processorMyProcessor: Processor.Init<Types> = (context) => {
+  const { config = {}, env, logger, id } = context;
+  const settings = SettingsSchema.parse(config.settings || {});
+
+  return {
+    push(event, pushContext) {
+      // Process event
+      return event;
+    },
+  };
+};
+```
+
+**Init Context contains:**
+
+| Property    | Type                 | Purpose                       |
+| ----------- | -------------------- | ----------------------------- |
+| `config`    | `Processor.Config`   | Settings, mapping, next chain |
+| `env`       | `Types['env']`       | Environment dependencies      |
+| `logger`    | `Logger`             | Logging functions             |
+| `id`        | `string`             | Processor identifier          |
+| `collector` | `Collector.Instance` | Reference to collector        |
+| `ingest`    | `Ingest` (optional)  | Request metadata from source  |
+
+### Instance Methods
+
 | Method    | Purpose                              | Required     |
 | --------- | ------------------------------------ | ------------ |
 | `push`    | Process event, return modified/false | **Required** |
@@ -115,22 +148,29 @@ processors: {
 }
 ```
 
-## Processor Context
+## Push Context
 
-The `context` parameter provides:
+The `push` function receives a context with event metadata:
 
 | Property    | Purpose                      |
 | ----------- | ---------------------------- |
-| `logger`    | Scoped logger for output     |
-| `collector` | Access to collector instance |
 | `config`    | Processor configuration      |
 | `env`       | Environment dependencies     |
+| `logger`    | Scoped logger for output     |
+| `id`        | Processor identifier         |
+| `collector` | Access to collector instance |
+| `ingest`    | Request metadata from source |
 
 ```typescript
 push(event, context) {
-  const { logger, collector } = context;
+  const { logger, id, ingest } = context;
 
-  logger.debug('Processing', { name: event.event });
+  logger.debug('Processing', { processor: id, event: event.event });
+
+  // Access request metadata if available
+  if (ingest?.ip) {
+    event.data = { ...event.data, clientIp: ingest.ip };
+  }
 
   return event;
 }

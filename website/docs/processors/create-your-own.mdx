@@ -10,13 +10,26 @@ Build custom processors for validation, enrichment, or redaction.
 
 ## The Processor Interface
 
-Processors are functions that receive configuration and return a processor instance:
+Processors are functions that receive a context object and return a processor instance:
 
 <CodeSnippet
   code={`type Processor.Init<Types> = (
-  config: Partial<Processor.Config<Types>>,
-  env: Processor.Env<Types>,
+  context: Processor.Context<Types>,
 ) => Processor.Instance<Types>;`}
+  language="typescript"
+/>
+
+The context contains:
+
+<CodeSnippet
+  code={`interface Processor.Context<Types> {
+  config: Partial<Processor.Config<Types>>;  // Settings, mapping, next chain
+  env: Types['env'];                          // Environment dependencies
+  logger: Logger;                             // Logging functions
+  id: string;                                 // Processor identifier
+  collector: Collector.Instance;              // Collector reference
+  ingest?: Ingest;                            // Request metadata from source
+}`}
   language="typescript"
 />
 
@@ -50,15 +63,17 @@ interface Settings {
 
 interface Types extends Processor.Types<Settings> {}
 
-export const processorRedact: Processor.Init<Types> = (config) => {
+export const processorRedact: Processor.Init<Types> = (context) => {
+  // Destructure what you need from context
+  const { config = {} } = context;
   const settings = config.settings || {};
 
   return {
     type: 'redact',
     config,
 
-    push(event, context) {
-      const { logger } = context;
+    push(event, pushContext) {
+      const { logger } = pushContext;
 
       for (const field of settings.removeFields || []) {
         if (event.data?.[field]) {
@@ -74,18 +89,27 @@ export const processorRedact: Processor.Init<Types> = (config) => {
   language="typescript"
 />
 
-## Context Object
+## Push Context
 
-The `context` parameter provides:
+The `push` function receives an event and a push context:
 
+* **`config`**: Processor configuration
+* **`env`**: Environment dependencies
 * **`logger`**: Scoped logger for output
+* **`id`**: Processor identifier
 * **`collector`**: Access to collector instance
+* **`ingest`**: Request metadata from source (optional)
 
 <CodeSnippet
   code={`push(event, context) {
-  const { logger, collector } = context;
+  const { logger, id, ingest } = context;
 
-  logger.debug('Processing event', { name: event.name });
+  logger.debug('Processing event', { processor: id, event: event.name });
+
+  // Access request metadata if available
+  if (ingest?.ip) {
+    event.data = { ...event.data, clientIp: ingest.ip };
+  }
 
   return event;
 }`}
@@ -148,17 +172,45 @@ await startFlow({
 
 <CodeSnippet
   code={`import { processorRedact } from '../index';
+import type { Processor, Collector } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
+
+// Helper to create processor context for testing
+function createProcessorContext(
+  config: Partial<Processor.Config<Types>> = {},
+): Processor.Context<Types> {
+  return {
+    config,
+    env: {} as Types['env'],
+    logger: createMockLogger(),
+    id: 'test-redact',
+    collector: {} as Collector.Instance,
+  };
+}
+
+// Helper to create push context for testing
+function createPushContext(): Processor.Context<Types> {
+  return {
+    config: {},
+    env: {} as Types['env'],
+    logger: createMockLogger(),
+    id: 'test-redact',
+    collector: {} as Collector.Instance,
+  };
+}
 
 describe('Redact Processor', () => {
-  it('removes specified fields', async () => {
-    const processor = processorRedact({
-      settings: { removeFields: ['email'] }
-    }, {});
+  it('removes specified fields', () => {
+    const processor = processorRedact(
+      createProcessorContext({
+        settings: { removeFields: ['email'] }
+      })
+    );
 
     const event = { data: { id: '123', email: 'test@example.com' } };
-    const context = { logger: { debug: jest.fn() } };
+    const pushContext = createPushContext();
 
-    const result = processor.push(event, context);
+    const result = processor.push(event, pushContext);
 
     expect(result.data.email).toBeUndefined();
     expect(result.data.id).toBe('123');

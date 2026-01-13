@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { Collector, Logger, WalkerOS } from '.';
+import type { Collector, Logger, WalkerOS, Context as BaseContext } from '.';
 
 /**
  * Base environment interface for walkerOS processors.
@@ -61,12 +61,13 @@ export interface Config<T extends TypesGeneric = Types> {
 
 /**
  * Context provided to processor functions.
+ * Extends base context with processor-specific properties.
  */
-export interface Context<T extends TypesGeneric = Types> {
-  collector: Collector.Instance;
-  config: Config<T>;
-  env: Env<T>;
-  logger: Logger.Instance;
+export interface Context<
+  T extends TypesGeneric = Types,
+> extends BaseContext.Base<Config<T>, Env<T>> {
+  id: string;
+  ingest?: unknown;
 }
 
 /**
@@ -110,11 +111,10 @@ export interface Instance<T extends TypesGeneric = Types> {
 
 /**
  * Processor initialization function.
- * Creates a processor instance from config and env.
+ * Creates a processor instance from context.
  */
 export type Init<T extends TypesGeneric = Types> = (
-  config: Partial<Config<T>>,
-  env: Env<T>,
+  context: Context<Types<Partial<Settings<T>>, Env<T>, InitSettings<T>>>,
 ) => Instance<T> | Promise<Instance<T>>;
 
 /**

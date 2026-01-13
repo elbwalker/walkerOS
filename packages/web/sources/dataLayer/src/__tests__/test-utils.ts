@@ -67,11 +67,17 @@ export async function createDataLayerSource(
   collector: Collector.Instance,
   config?: Partial<Source.Config<Types>>,
 ): Promise<Source.Instance<Types>> {
-  return await sourceDataLayer(config || {}, {
-    push: collector.push.bind(collector),
-    command: collector.command.bind(collector),
-    elb: collector.sources.elb.push,
-    window,
+  return await sourceDataLayer({
+    collector,
+    config: config || {},
+    env: {
+      push: collector.push.bind(collector),
+      command: collector.command.bind(collector),
+      elb: collector.sources.elb.push,
+      window,
+      logger: createMockLogger(),
+    },
+    id: 'test-datalayer',
     logger: createMockLogger(),
   });
 }

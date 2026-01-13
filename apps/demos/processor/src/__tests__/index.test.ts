@@ -1,10 +1,23 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { WalkerOS, Processor } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { processorDemo } from '../index';
 import type { Types } from '../types';
 
 describe('Demo Processor', () => {
   const mockCollector = {} as any;
+
+  // Create init context for processor initialization
+  const createInitContext = (
+    config: Partial<Processor.Config<Types>> = {},
+    env: Partial<Processor.Env<Types>> = {},
+  ) =>
+    ({
+      collector: mockCollector,
+      config,
+      env,
+      logger: createMockLogger(),
+      id: 'test-processor',
+    }) as Processor.Context<Types>;
 
   // Use 'as any' to bypass strict type checking in tests
   const createContext = () =>
@@ -13,6 +26,7 @@ describe('Demo Processor', () => {
       config: {},
       env: {},
       logger: createMockLogger(),
+      id: 'test-processor',
     }) as any;
 
   const createEvent = (
@@ -25,7 +39,9 @@ describe('Demo Processor', () => {
 
   test('initializes and logs init message', async () => {
     const mockLog = jest.fn();
-    const instance = await processorDemo({}, { log: mockLog });
+    const instance = await processorDemo(
+      createInitContext({}, { log: mockLog }),
+    );
 
     await instance.init!(createContext());
 
@@ -35,8 +51,7 @@ describe('Demo Processor', () => {
   test('logs full event when fields not specified', async () => {
     const mockLog = jest.fn();
     const instance = await processorDemo(
-      { settings: { name: 'full' } },
-      { log: mockLog },
+      createInitContext({ settings: { name: 'full' } }, { log: mockLog }),
     );
 
     const event = createEvent();
@@ -52,13 +67,15 @@ describe('Demo Processor', () => {
   test('logs only specified fields with dot notation', async () => {
     const mockLog = jest.fn();
     const instance = await processorDemo(
-      {
-        settings: {
-          name: 'filtered',
-          fields: ['name', 'data.title'],
+      createInitContext(
+        {
+          settings: {
+            name: 'filtered',
+            fields: ['name', 'data.title'],
+          },
         },
-      },
-      { log: mockLog },
+        { log: mockLog },
+      ),
     );
 
     const event = createEvent({
@@ -75,7 +92,9 @@ describe('Demo Processor', () => {
 
   test('returns void for passthrough by default', async () => {
     const mockLog = jest.fn();
-    const instance = await processorDemo({}, { log: mockLog });
+    const instance = await processorDemo(
+      createInitContext({}, { log: mockLog }),
+    );
 
     const event = createEvent();
     const result = await instance.push(event, createContext());
@@ -86,13 +105,15 @@ describe('Demo Processor', () => {
   test('returns modified event when addProcessedFlag is true', async () => {
     const mockLog = jest.fn();
     const instance = await processorDemo(
-      {
-        settings: {
-          name: 'modifier',
-          addProcessedFlag: true,
+      createInitContext(
+        {
+          settings: {
+            name: 'modifier',
+            addProcessedFlag: true,
+          },
         },
-      },
-      { log: mockLog },
+        { log: mockLog },
+      ),
     );
 
     const event = createEvent();
@@ -106,12 +127,14 @@ describe('Demo Processor', () => {
   test('preserves existing event data when adding processed flag', async () => {
     const mockLog = jest.fn();
     const instance = await processorDemo(
-      {
-        settings: {
-          addProcessedFlag: true,
+      createInitContext(
+        {
+          settings: {
+            addProcessedFlag: true,
+          },
         },
-      },
-      { log: mockLog },
+        { log: mockLog },
+      ),
     );
 
     const event = createEvent({
@@ -128,7 +151,7 @@ describe('Demo Processor', () => {
     const originalLog = console.log;
     console.log = jest.fn();
 
-    const instance = await processorDemo({}, {});
+    const instance = await processorDemo(createInitContext({}, {}));
     const event = createEvent();
     await instance.push(event, createContext());
 
@@ -140,12 +163,14 @@ describe('Demo Processor', () => {
   test('handles missing nested values gracefully', async () => {
     const mockLog = jest.fn();
     const instance = await processorDemo(
-      {
-        settings: {
-          fields: ['name', 'missing.path', 'data.missing'],
+      createInitContext(
+        {
+          settings: {
+            fields: ['name', 'missing.path', 'data.missing'],
+          },
         },
-      },
-      { log: mockLog },
+        { log: mockLog },
+      ),
     );
 
     const event = createEvent({
@@ -159,7 +184,7 @@ describe('Demo Processor', () => {
   });
 
   test('has correct type property', async () => {
-    const instance = await processorDemo({}, {});
+    const instance = await processorDemo(createInitContext({}, {}));
     expect(instance.type).toBe('demo');
   });
 });

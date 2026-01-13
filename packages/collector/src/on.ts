@@ -76,7 +76,7 @@ export function onApply(
     }
   });
 
-  Object.values(collector.destinations).forEach((destination) => {
+  Object.entries(collector.destinations).forEach(([destId, destination]) => {
     if (destination.on) {
       const destType = destination.type || 'unknown';
       const destLogger = collector.logger
@@ -86,10 +86,11 @@ export function onApply(
 
       const context: Destination.Context = {
         collector,
+        logger: destLogger,
+        id: destId,
         config: destination.config,
         data: contextData as Destination.Data,
         env: mergeEnvironments(destination.env, destination.config.env),
-        logger: destLogger,
       };
 
       tryCatch(destination.on)(type, context);

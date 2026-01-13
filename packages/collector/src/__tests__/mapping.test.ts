@@ -15,10 +15,10 @@ describe('Mapping', () => {
 
     test('event name override', async () => {
       const mockSource = jest.fn(
-        (config: Source.Config, env: Source.Env): Source.Instance => ({
+        (context: Source.Context): Source.Instance => ({
           type: 'test',
-          config,
-          push: env.push as Elb.Fn,
+          config: context.config,
+          push: context.env.push as Elb.Fn,
         }),
       );
 
@@ -57,10 +57,10 @@ describe('Mapping', () => {
 
     test('ignore rule', async () => {
       const mockSource = jest.fn(
-        (config: Source.Config, env: Source.Env): Source.Instance => ({
+        (context: Source.Context): Source.Instance => ({
           type: 'test',
-          config,
-          push: env.push as Elb.Fn,
+          config: context.config,
+          push: context.env.push as Elb.Fn,
         }),
       );
 
@@ -97,10 +97,10 @@ describe('Mapping', () => {
 
     test('policy enrichment modifies event', async () => {
       const mockSource = jest.fn(
-        (config: Source.Config, env: Source.Env): Source.Instance => ({
+        (context: Source.Context): Source.Instance => ({
           type: 'test',
-          config,
-          push: env.push as Elb.Fn,
+          config: context.config,
+          push: context.env.push as Elb.Fn,
         }),
       );
 
@@ -144,10 +144,10 @@ describe('Mapping', () => {
 
     test('consent requirement', async () => {
       const mockSource = jest.fn(
-        (config: Source.Config, env: Source.Env): Source.Instance => ({
+        (context: Source.Context): Source.Instance => ({
           type: 'test',
-          config,
-          push: env.push as Elb.Fn,
+          config: context.config,
+          push: context.env.push as Elb.Fn,
         }),
       );
 
@@ -189,10 +189,10 @@ describe('Mapping', () => {
 
     test('event name override', async () => {
       const mockSource = jest.fn(
-        (config: Source.Config, env: Source.Env): Source.Instance => ({
+        (context: Source.Context): Source.Instance => ({
           type: 'test',
-          config,
-          push: env.push as Elb.Fn,
+          config: context.config,
+          push: context.env.push as Elb.Fn,
         }),
       );
 
@@ -232,10 +232,10 @@ describe('Mapping', () => {
 
     test('ignore rule', async () => {
       const mockSource = jest.fn(
-        (config: Source.Config, env: Source.Env): Source.Instance => ({
+        (context: Source.Context): Source.Instance => ({
           type: 'test',
-          config,
-          push: env.push as Elb.Fn,
+          config: context.config,
+          push: context.env.push as Elb.Fn,
         }),
       );
 
@@ -269,10 +269,10 @@ describe('Mapping', () => {
 
     test('data transformation', async () => {
       const mockSource = jest.fn(
-        (config: Source.Config, env: Source.Env): Source.Instance => ({
+        (context: Source.Context): Source.Instance => ({
           type: 'test',
-          config,
-          push: env.push as Elb.Fn,
+          config: context.config,
+          push: context.env.push as Elb.Fn,
         }),
       );
 
@@ -314,10 +314,10 @@ describe('Mapping', () => {
 
     test('global data transformation', async () => {
       const mockSource = jest.fn(
-        (config: Source.Config, env: Source.Env): Source.Instance => ({
+        (context: Source.Context): Source.Instance => ({
           type: 'test',
-          config,
-          push: env.push as Elb.Fn,
+          config: context.config,
+          push: context.env.push as Elb.Fn,
         }),
       );
 
@@ -357,10 +357,10 @@ describe('Mapping', () => {
 
     test('consent requirement', async () => {
       const mockSource = jest.fn(
-        (config: Source.Config, env: Source.Env): Source.Instance => ({
+        (context: Source.Context): Source.Instance => ({
           type: 'test',
-          config,
-          push: env.push as Elb.Fn,
+          config: context.config,
+          push: context.env.push as Elb.Fn,
         }),
       );
 

@@ -87,18 +87,31 @@ export function resolveProcessorGraph(
  * @returns Initialized processor instances
  */
 export async function initProcessors(
-  _collector: Collector.Instance,
+  collector: Collector.Instance,
   initProcessors: Processor.InitProcessors = {},
 ): Promise<Processor.Processors> {
   const result: Processor.Processors = {};
 
-  for (const [name, processorDef] of Object.entries(initProcessors)) {
+  for (const [processorId, processorDef] of Object.entries(initProcessors)) {
     const { code, config = {}, env = {} } = processorDef;
 
-    // Initialize the processor instance
-    const instance = await code(config, env as Processor.Env);
+    // Build processor context for init
+    const processorLogger = collector.logger
+      .scope('processor')
+      .scope(processorId);
 
-    result[name] = instance;
+    const context = {
+      collector,
+      logger: processorLogger,
+      id: processorId,
+      config,
+      env: env as Processor.Env,
+    };
+
+    // Initialize the processor instance with context
+    const instance = await code(context);
+
+    result[processorId] = instance;
   }
 
   return result;
@@ -110,11 +123,13 @@ export async function initProcessors(
  *
  * @param collector - The collector instance
  * @param processor - The processor to initialize
+ * @param processorId - The processor ID
  * @returns Whether initialization succeeded
  */
 export async function processorInit(
   collector: Collector.Instance,
   processor: Processor.Instance,
+  processorId: string,
 ): Promise<boolean> {
   // Check if already initialized
   if (processor.init && !processor.config.init) {
@@ -125,9 +140,10 @@ export async function processorInit(
 
     const context: Processor.Context = {
       collector,
+      logger: processorLogger,
+      id: processorId,
       config: processor.config,
       env: mergeProcessorEnvironments(processor.config.env),
-      logger: processorLogger,
     };
 
     processorLogger.debug('init');
@@ -158,22 +174,28 @@ export async function processorInit(
  *
  * @param collector - The collector instance
  * @param processor - The processor to push to
+ * @param processorId - The processor ID
  * @param event - The event to process
+ * @param ingest - Optional ingest metadata (frozen, same reference)
  * @returns The processed event, void for passthrough, or false to stop chain
  */
 export async function processorPush(
   collector: Collector.Instance,
   processor: Processor.Instance,
+  processorId: string,
   event: WalkerOS.DeepPartialEvent,
+  ingest?: unknown,
 ): Promise<WalkerOS.DeepPartialEvent | false | void> {
   const processorType = processor.type || 'unknown';
   const processorLogger = collector.logger.scope(`processor:${processorType}`);
 
   const context: Processor.Context = {
     collector,
+    logger: processorLogger,
+    id: processorId,
+    ingest, // Same frozen reference, no copying
     config: processor.config,
     env: mergeProcessorEnvironments(processor.config.env),
-    logger: processorLogger,
   };
 
   processorLogger.debug('push', { event: (event as { name?: string }).name });
@@ -196,6 +218,7 @@ export async function processorPush(
  * @param processors - Map of processor instances
  * @param chain - Ordered array of processor IDs to execute
  * @param event - The event to process
+ * @param ingest - Optional ingest metadata (frozen, same reference)
  * @returns The processed event or null if chain was stopped
  */
 export async function runProcessorChain(
@@ -203,6 +226,7 @@ export async function runProcessorChain(
   processors: Processor.Processors,
   chain: string[],
   event: WalkerOS.DeepPartialEvent,
+  ingest?: unknown,
 ): Promise<WalkerOS.DeepPartialEvent | null> {
   let processedEvent = event;
 
@@ -217,6 +241,7 @@ export async function runProcessorChain(
     const isInitialized = await tryCatchAsync(processorInit)(
       collector,
       processor,
+      processorName,
     );
 
     if (!isInitialized) {
@@ -230,7 +255,7 @@ export async function runProcessorChain(
         .scope(`processor:${processor.type || 'unknown'}`)
         .error('Push failed', { error: err });
       return false; // Stop chain on error
-    })(collector, processor, processedEvent)) as
+    })(collector, processor, processorName, processedEvent, ingest)) as
       | WalkerOS.DeepPartialEvent
       | false
       | void;

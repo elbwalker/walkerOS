@@ -46,6 +46,7 @@ describe('Server Destination Meta', () => {
       collector: mockCollector,
       env: testEnv,
       logger: createMockLogger(),
+      id: 'test-meta',
     })) as Config;
   }
 
@@ -57,6 +58,7 @@ describe('Server Destination Meta', () => {
         collector: mockCollector,
         env: testEnv,
         logger: createMockLogger(),
+        id: 'test-meta',
       }),
     ).rejects.toThrow('Config settings accessToken missing');
     await expect(
@@ -65,6 +67,7 @@ describe('Server Destination Meta', () => {
         collector: mockCollector,
         env: testEnv,
         logger: createMockLogger(),
+        id: 'test-meta',
       }),
     ).rejects.toThrow('Config settings pixelId missing');
 
@@ -89,6 +92,7 @@ describe('Server Destination Meta', () => {
       collector: mockCollector,
       env: testEnv,
       logger: createMockLogger(),
+      id: 'test-meta',
     });
 
     expect(mockSendServer).toHaveBeenCalled();
@@ -111,6 +115,7 @@ describe('Server Destination Meta', () => {
       collector: {} as Collector.Instance,
       env: customEnv,
       logger: createMockLogger(),
+      id: 'test-meta',
     });
 
     expect(customSendServer).toHaveBeenCalled();
@@ -143,6 +148,7 @@ describe('Server Destination Meta', () => {
         collector: mockCollector,
         env: testEnv,
         logger: createMockLogger(),
+        id: 'test-meta',
       }),
     ).rejects.toThrow();
   });
@@ -164,6 +170,7 @@ describe('Server Destination Meta', () => {
       collector: mockCollector,
       env: testEnv,
       logger: createMockLogger(),
+      id: 'test-meta',
     });
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
     expect(requestBody.data[0].user_data.fbc).toContain('.abc');

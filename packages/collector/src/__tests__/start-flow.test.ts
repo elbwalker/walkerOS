@@ -108,7 +108,9 @@ describe('Source Start Flow Integration', () => {
   it('should initialize complete setup from flow config', async () => {
     const mockPushCalls: WalkerOS.Event[] = [];
 
-    const mockSource: Source.Init = async (config, env) => {
+    const mockSource: Source.Init = async (context) => {
+      const { config, env } = context;
+
       expect(config).toEqual({
         settings: {
           test: 'value',

@@ -24,17 +24,21 @@ export function createPush<T extends Collector.Instance>(
   return useHooks(
     async (
       event: WalkerOS.DeepPartialEvent,
-      context: Collector.PushContext = {},
+      options: Collector.PushOptions = {},
     ): Promise<Elb.PushResult> => {
       return await tryCatchAsync(
         async (): Promise<Elb.PushResult> => {
+          const { id, ingest, mapping, preChain } = options;
           let partialEvent = event;
 
-          // Apply source mapping if provided in context
-          if (context.mapping) {
+          // Freeze ingest for performance (pass by reference, no copying)
+          const frozenIngest = ingest ? Object.freeze(ingest) : undefined;
+
+          // Apply source mapping if provided in options
+          if (mapping) {
             const processed = await processEventMapping(
               partialEvent,
-              context.mapping,
+              mapping,
               collector,
             );
 
@@ -44,9 +48,9 @@ export function createPush<T extends Collector.Instance>(
             }
 
             // Check consent requirements
-            if (context.mapping.consent) {
+            if (mapping.consent) {
               const grantedConsent = getGrantedConsent(
-                context.mapping.consent,
+                mapping.consent,
                 collector.consent,
                 processed.event.consent as WalkerOS.Consent | undefined,
               );
@@ -59,17 +63,18 @@ export function createPush<T extends Collector.Instance>(
             partialEvent = processed.event;
           }
 
-          // Run pre-collector processor chain if provided in context
+          // Run pre-collector processor chain if provided in options
           if (
-            context.preChain?.length &&
+            preChain?.length &&
             collector.processors &&
             Object.keys(collector.processors).length > 0
           ) {
             const processedEvent = await runProcessorChain(
               collector,
               collector.processors,
-              context.preChain,
+              preChain,
               partialEvent,
+              frozenIngest,
             );
 
             // Chain was stopped - event dropped
@@ -86,8 +91,11 @@ export function createPush<T extends Collector.Instance>(
           // Create full event
           const fullEvent = createEvent(collector, enrichedEvent);
 
-          // Push to destinations
-          return await pushToDestinations(collector, fullEvent);
+          // Push to destinations with id and ingest
+          return await pushToDestinations(collector, fullEvent, {
+            id,
+            ingest: frozenIngest,
+          });
         },
         () => {
           return createPushResult({ ok: false });

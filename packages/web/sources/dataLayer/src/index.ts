@@ -14,10 +14,8 @@ export * from './examples';
  * This source intercepts dataLayer.push calls and transforms them to WalkerOS events.
  * It works by replacing the dataLayer.push method with a custom handler.
  */
-export const sourceDataLayer: Source.Init<Types> = async (
-  config: Partial<Source.Config<Types>>,
-  env: Source.Env<Types>,
-) => {
+export const sourceDataLayer: Source.Init<Types> = async (context) => {
+  const { config, env } = context;
   const { elb, window: envWindow } = env;
 
   const settings: Source.Settings<Types> = {

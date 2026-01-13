@@ -41,11 +41,12 @@ export async function initSources(
     // Create wrapped push that auto-applies source mapping config and preChain
     const wrappedPush: Collector.PushFn = (
       event: WalkerOS.DeepPartialEvent,
-      context: Collector.PushContext = {},
+      options: Collector.PushOptions = {},
     ) => {
-      // Pass source config as mapping in context, plus resolved preChain
+      // Pass source config as mapping in options, plus resolved preChain and source id
       return collector.push(event, {
-        ...context,
+        ...options,
+        id: sourceId,
         mapping: config,
         preChain, // Source-specific processor chain
       });
@@ -63,8 +64,17 @@ export async function initSources(
       ...env,
     };
 
-    // Call source function with config and environment separately
-    const sourceInstance = await tryCatchAsync(code)(config, cleanEnv);
+    // Build source context for init
+    const sourceContext: Source.Context = {
+      collector,
+      logger: initialLogger,
+      id: sourceId,
+      config,
+      env: cleanEnv,
+    };
+
+    // Call source function with context
+    const sourceInstance = await tryCatchAsync(code)(sourceContext);
 
     if (!sourceInstance) continue; // Skip failed source initialization
 

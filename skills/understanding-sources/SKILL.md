@@ -20,6 +20,31 @@ collector and destinations.
 See [packages/core/src/types/source.ts](../../packages/core/src/types/source.ts)
 for canonical interface.
 
+### Init Function (Context Pattern)
+
+Sources use a context-based initialization pattern:
+
+```typescript
+import type { Source } from '@walkeros/core';
+
+export const sourceMySource: Source.Init<Types> = async (context) => {
+  const { config = {}, env, logger, id } = context;
+  // ...
+};
+```
+
+**Context contains:**
+
+| Property    | Type                 | Purpose                    |
+| ----------- | -------------------- | -------------------------- |
+| `config`    | `Source.Config<T>`   | Settings, mapping, options |
+| `env`       | `Types['env']`       | Environment (push, logger) |
+| `logger`    | `Logger`             | Logging functions          |
+| `id`        | `string`             | Source identifier          |
+| `collector` | `Collector.Instance` | Reference to collector     |
+
+### Push Method
+
 | Method        | Purpose                             |
 | ------------- | ----------------------------------- |
 | `push(input)` | Receive external input, emit events |
@@ -75,10 +100,29 @@ implementation.
 
 ## Server Sources
 
-Handle HTTP requests in cloud functions.
+Handle HTTP requests in cloud functions. Server sources use the context pattern:
 
 ```typescript
-// GCP Cloud Function
+import type { Source } from '@walkeros/core';
+
+export const sourceCloudFunction: Source.Init<Types> = async (context) => {
+  const { config = {}, env } = context;
+  const { push: envPush } = env;
+
+  // Validate settings with Zod schema
+  const settings = SettingsSchema.parse(config.settings || {});
+
+  const push = async (req: Request, res: Response): Promise<void> => {
+    // Transform HTTP request → walkerOS event
+    const event = transformRequest(req);
+    await envPush(event);
+    res.json({ success: true });
+  };
+
+  return { type: 'cloudfunction', config: { ...config, settings }, push };
+};
+
+// Direct deployment
 export const handler = source.push;
 ```
 

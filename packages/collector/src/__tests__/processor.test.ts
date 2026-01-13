@@ -316,7 +316,11 @@ describe('Processor', () => {
       const collector = createMockCollector();
       const processor = createMockProcessor();
 
-      const result = await processorInit(collector, processor);
+      const result = await processorInit(
+        collector,
+        processor,
+        'test-processor',
+      );
 
       expect(result).toBe(true);
     });
@@ -329,7 +333,11 @@ describe('Processor', () => {
         config: { init: false },
       });
 
-      const result = await processorInit(collector, processor);
+      const result = await processorInit(
+        collector,
+        processor,
+        'test-processor',
+      );
 
       expect(result).toBe(true);
       expect(mockInit).toHaveBeenCalled();
@@ -344,7 +352,11 @@ describe('Processor', () => {
         config: { init: false },
       });
 
-      const result = await processorInit(collector, processor);
+      const result = await processorInit(
+        collector,
+        processor,
+        'test-processor',
+      );
 
       expect(result).toBe(false);
     });
@@ -357,7 +369,11 @@ describe('Processor', () => {
         config: { init: true }, // Already initialized
       });
 
-      const result = await processorInit(collector, processor);
+      const result = await processorInit(
+        collector,
+        processor,
+        'test-processor',
+      );
 
       expect(result).toBe(true);
       expect(mockInit).not.toHaveBeenCalled();
@@ -371,7 +387,7 @@ describe('Processor', () => {
       const processor = createMockProcessor({ push: mockPush });
       const event: WalkerOS.DeepPartialEvent = { name: 'test event' };
 
-      await processorPush(collector, processor, event);
+      await processorPush(collector, processor, 'test-processor', event);
 
       expect(mockPush).toHaveBeenCalledWith(
         event,
@@ -389,7 +405,12 @@ describe('Processor', () => {
       const processor = createMockProcessor({ push: mockPush });
       const event: WalkerOS.DeepPartialEvent = { name: 'original' };
 
-      const result = await processorPush(collector, processor, event);
+      const result = await processorPush(
+        collector,
+        processor,
+        'test-processor',
+        event,
+      );
 
       expect(result).toEqual(modifiedEvent);
     });
@@ -400,7 +421,12 @@ describe('Processor', () => {
       const processor = createMockProcessor({ push: mockPush });
       const event: WalkerOS.DeepPartialEvent = { name: 'test' };
 
-      const result = await processorPush(collector, processor, event);
+      const result = await processorPush(
+        collector,
+        processor,
+        'test-processor',
+        event,
+      );
 
       expect(result).toBe(false);
     });

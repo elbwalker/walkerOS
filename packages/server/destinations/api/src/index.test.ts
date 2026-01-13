@@ -30,6 +30,7 @@ describe('Destination API', () => {
       config: {},
       env: testEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
     expect(mockSendServer).not.toHaveBeenCalled();
 
@@ -39,6 +40,7 @@ describe('Destination API', () => {
       config: { settings: { url } },
       env: testEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
     expect(mockSendServer).toHaveBeenCalledTimes(1);
 
@@ -65,6 +67,7 @@ describe('Destination API', () => {
       },
       env: customEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
 
     expect(customSendServer).toHaveBeenCalledTimes(1);
@@ -86,6 +89,7 @@ describe('Destination API', () => {
       },
       env: testEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
@@ -102,6 +106,7 @@ describe('Destination API', () => {
       },
       env: testEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
@@ -120,6 +125,7 @@ describe('Destination API', () => {
       },
       env: testEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
@@ -138,6 +144,7 @@ describe('Destination API', () => {
       },
       env: testEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
@@ -157,6 +164,7 @@ describe('Destination API', () => {
       },
       env: testEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
 
     expect(mockSendServer).toHaveBeenCalledWith(
@@ -174,6 +182,7 @@ describe('Destination API', () => {
       config: { settings: { url, method: 'PUT' } },
       env: testEnv,
       logger: testLogger,
+      id: 'test-api',
     });
 
     expect(testLogger.debug).toHaveBeenCalledWith(

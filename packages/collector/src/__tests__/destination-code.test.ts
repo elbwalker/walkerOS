@@ -5,7 +5,6 @@ import { initDestinations } from '../destination';
 import type {
   Settings,
   CodeMapping,
-  InitContext,
   PushContext,
   PushBatchContext,
   Context,
@@ -59,7 +58,7 @@ describe('destinationCode', () => {
       const initialScriptCount =
         document.head.querySelectorAll('script').length;
 
-      const context: InitContext = {
+      const context: Context = {
         collector: createMockCollector(),
         config: {
           settings: {
@@ -68,6 +67,7 @@ describe('destinationCode', () => {
         },
         env: {},
         logger: createMockLogger(),
+        id: 'test',
       };
 
       destinationCode.init!(context);
@@ -87,7 +87,7 @@ describe('destinationCode', () => {
         document.head.querySelectorAll('script').length;
       const mockLogger = createMockLogger();
 
-      const context: InitContext = {
+      const context: Context = {
         collector: createMockCollector(),
         config: {
           settings: {
@@ -97,6 +97,7 @@ describe('destinationCode', () => {
         },
         env: {},
         logger: mockLogger,
+        id: 'test',
       };
 
       destinationCode.init!(context);
@@ -112,7 +113,7 @@ describe('destinationCode', () => {
 
     it('executes init code string', () => {
       const mockLogger = createMockLogger();
-      const context: InitContext = {
+      const context: Context = {
         collector: createMockCollector(),
         config: {
           settings: {
@@ -121,6 +122,7 @@ describe('destinationCode', () => {
         },
         env: {},
         logger: mockLogger,
+        id: 'test',
       };
 
       destinationCode.init!(context);
@@ -132,7 +134,7 @@ describe('destinationCode', () => {
       const initialScriptCount =
         document.head.querySelectorAll('script').length;
       const mockLogger = createMockLogger();
-      const context: InitContext = {
+      const context: Context = {
         collector: createMockCollector(),
         config: {
           settings: {
@@ -142,6 +144,7 @@ describe('destinationCode', () => {
         },
         env: {},
         logger: mockLogger,
+        id: 'test',
       };
 
       expect(() => destinationCode.init!(context)).not.toThrow();
@@ -156,11 +159,12 @@ describe('destinationCode', () => {
     });
 
     it('handles missing init code gracefully', () => {
-      const context: InitContext = {
+      const context: Context = {
         collector: createMockCollector(),
         config: { settings: {} },
         env: {},
         logger: createMockLogger(),
+        id: 'test',
       };
 
       expect(() => destinationCode.init!(context)).not.toThrow();
@@ -168,7 +172,7 @@ describe('destinationCode', () => {
 
     it('catches and logs errors in init code', () => {
       const mockLogger = createMockLogger();
-      const context: InitContext = {
+      const context: Context = {
         collector: createMockCollector(),
         config: {
           settings: {
@@ -177,6 +181,7 @@ describe('destinationCode', () => {
         },
         env: {},
         logger: mockLogger,
+        id: 'test',
       };
 
       destinationCode.init!(context);
@@ -194,7 +199,8 @@ describe('destinationCode', () => {
         data: { transformed: true },
         env: {},
         logger: mockLogger,
-        mapping: {
+        id: 'test',
+        rule: {
           push: 'context.logger.info(event.name, context.data)',
         } as CodeMapping,
       };
@@ -218,7 +224,8 @@ describe('destinationCode', () => {
         data: {},
         env: {},
         logger: mockLogger,
-        mapping: {},
+        id: 'test',
+        rule: {},
       };
 
       destinationCode.push(createEvent({ name: 'product view' }), context);
@@ -238,7 +245,8 @@ describe('destinationCode', () => {
         data: {},
         env: {},
         logger: mockLogger,
-        mapping: {
+        id: 'test',
+        rule: {
           push: "context.logger.info('from mapping')",
         } as CodeMapping,
       };
@@ -255,7 +263,8 @@ describe('destinationCode', () => {
         config: {},
         env: {},
         logger: createMockLogger(),
-        mapping: {},
+        id: 'test',
+        rule: {},
         data: {},
       };
 
@@ -271,7 +280,8 @@ describe('destinationCode', () => {
         config: {},
         env: {},
         logger: mockLogger,
-        mapping: {
+        id: 'test',
+        rule: {
           push: "throw new Error('test error')",
         } as CodeMapping,
         data: {},
@@ -300,7 +310,8 @@ describe('destinationCode', () => {
         config: {},
         env: {},
         logger: mockLogger,
-        mapping: {
+        id: 'test',
+        rule: {
           pushBatch: "context.logger.info('batch size:', batch.events.length)",
         } as CodeMapping,
       };
@@ -327,7 +338,8 @@ describe('destinationCode', () => {
         },
         env: {},
         logger: mockLogger,
-        mapping: {},
+        id: 'test',
+        rule: {},
       };
 
       destinationCode.pushBatch!(batch, context);
@@ -347,7 +359,8 @@ describe('destinationCode', () => {
         config: {},
         env: {},
         logger: createMockLogger(),
-        mapping: {},
+        id: 'test',
+        rule: {},
       };
 
       expect(() => destinationCode.pushBatch!(batch, context)).not.toThrow();
@@ -366,7 +379,8 @@ describe('destinationCode', () => {
         config: {},
         env: {},
         logger: mockLogger,
-        mapping: {
+        id: 'test',
+        rule: {
           pushBatch: "throw new Error('test error')",
         } as CodeMapping,
       };
@@ -390,6 +404,7 @@ describe('destinationCode', () => {
         data: { marketing: true },
         env: {},
         logger: mockLogger,
+        id: 'test',
       };
 
       destinationCode.on!('consent', context);
@@ -405,6 +420,7 @@ describe('destinationCode', () => {
         config: { settings: {} },
         env: {},
         logger: createMockLogger(),
+        id: 'test',
       };
 
       expect(() => destinationCode.on!('consent', context)).not.toThrow();
@@ -421,6 +437,7 @@ describe('destinationCode', () => {
         },
         env: {},
         logger: mockLogger,
+        id: 'test',
       };
 
       destinationCode.on!('consent', context);

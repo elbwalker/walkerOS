@@ -39,10 +39,8 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
  * This source captures DOM events, manages sessions, handles pageviews,
  * and processes the elbLayer for browser environments.
  */
-export const sourceBrowser: Source.Init<Types> = async (
-  config: Partial<Source.Config<Types>>,
-  env: Env,
-) => {
+export const sourceBrowser: Source.Init<Types> = async (context) => {
+  const { config, env } = context;
   const { elb, command, window, document } = env;
 
   const userSettings = config?.settings || {};

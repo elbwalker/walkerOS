@@ -36,6 +36,7 @@ describe('Destination API', () => {
         config: {},
         env: testEnv,
         logger: mockLogger,
+        id: 'test-api',
       }),
     ).toThrow('Config settings url missing');
     expect(mockSendWeb).not.toHaveBeenCalled();
@@ -46,6 +47,7 @@ describe('Destination API', () => {
       config: { settings: { url } },
       env: testEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
     expect(mockSendWeb).toHaveBeenCalledTimes(1);
 
@@ -70,6 +72,7 @@ describe('Destination API', () => {
       },
       env: customEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
 
     expect(customSendWeb).toHaveBeenCalledTimes(1);
@@ -91,6 +94,7 @@ describe('Destination API', () => {
       },
       env: testEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -107,6 +111,7 @@ describe('Destination API', () => {
       },
       env: testEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -125,6 +130,7 @@ describe('Destination API', () => {
       },
       env: testEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -144,6 +150,7 @@ describe('Destination API', () => {
       },
       env: testEnv,
       logger: mockLogger,
+      id: 'test-api',
     });
 
     expect(mockSendWeb).toHaveBeenCalledWith(

@@ -15,7 +15,8 @@ export * as examples from './examples';
  * - fields: Array of dot-notation paths to log from the event (default: entire event)
  * - addProcessedFlag: If true, adds a 'processed' flag to the event data
  */
-export const processorDemo: Processor.Init<Types> = (config, env) => {
+export const processorDemo: Processor.Init<Types> = (initContext) => {
+  const { config, env } = initContext;
   const settings = {
     name: 'processor-demo',
     ...config?.settings,
@@ -25,14 +26,14 @@ export const processorDemo: Processor.Init<Types> = (config, env) => {
     type: 'demo',
     config: { ...config, settings },
 
-    init(context) {
+    init(context: Processor.Context<Types>) {
       // eslint-disable-next-line no-console
       const log = env?.log || console.log;
       context.logger.debug('initialized');
       log(`[${settings.name}] initialized`);
     },
 
-    push(event, context) {
+    push(event: WalkerOS.DeepPartialEvent, context: Processor.Context<Types>) {
       // eslint-disable-next-line no-console
       const log = env?.log || console.log;
 

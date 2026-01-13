@@ -1,18 +1,36 @@
 import { sourceFetch } from '../index';
 import { createMockLogger } from '@walkeros/core';
+import type { Source, Collector } from '@walkeros/core';
+import type { Types } from '../types';
+
+// Helper to create source context
+function createSourceContext(
+  config: Partial<Source.Config<Types>> = {},
+  env: Partial<Types['env']> = {},
+): Source.Context<Types> {
+  return {
+    config,
+    env: env as Types['env'],
+    logger: env.logger || createMockLogger(),
+    id: 'test-fetch',
+    collector: {} as Collector.Instance,
+  };
+}
 
 describe('logger usage', () => {
   it('should use logger.throw for validation errors', async () => {
     const mockLogger = createMockLogger();
 
     const source = await sourceFetch(
-      {},
-      {
-        push: jest.fn() as never,
-        command: jest.fn() as never,
-        elb: jest.fn() as never,
-        logger: mockLogger,
-      },
+      createSourceContext(
+        {},
+        {
+          push: jest.fn() as never,
+          command: jest.fn() as never,
+          elb: jest.fn() as never,
+          logger: mockLogger,
+        },
+      ),
     );
 
     const request = new Request('https://example.com/collect', {
@@ -33,13 +51,15 @@ describe('logger usage', () => {
     const mockLogger = createMockLogger();
 
     const source = await sourceFetch(
-      {},
-      {
-        push: jest.fn().mockResolvedValue({ event: { id: 'test' } }) as never,
-        command: jest.fn() as never,
-        elb: jest.fn() as never,
-        logger: mockLogger,
-      },
+      createSourceContext(
+        {},
+        {
+          push: jest.fn().mockResolvedValue({ event: { id: 'test' } }) as never,
+          command: jest.fn() as never,
+          elb: jest.fn() as never,
+          logger: mockLogger,
+        },
+      ),
     );
 
     const request = new Request('https://example.com/collect', {

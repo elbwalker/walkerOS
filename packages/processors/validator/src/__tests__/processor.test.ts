@@ -20,6 +20,7 @@ describe('Processor Validator', () => {
     config,
     env: {},
     logger: mockLogger,
+    id: 'test-processor',
   });
 
   const validEvent: WalkerOS.Event = {
@@ -52,8 +53,8 @@ describe('Processor Validator', () => {
       const config: Processor.Config<Processor.Types<ValidatorSettings>> = {
         settings: { format: true },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const result = await processor.push(validEvent, context);
 
@@ -65,8 +66,8 @@ describe('Processor Validator', () => {
       const config: Processor.Config<Processor.Types<ValidatorSettings>> = {
         settings: { format: true },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const invalidEvent = { ...validEvent, name: 'invalid' }; // Missing space
 
@@ -83,8 +84,8 @@ describe('Processor Validator', () => {
       const config: Processor.Config<Processor.Types<ValidatorSettings>> = {
         settings: { format: false },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const invalidEvent = { ...validEvent, name: 'invalid' };
 
@@ -98,8 +99,8 @@ describe('Processor Validator', () => {
       const config: Processor.Config<Processor.Types<ValidatorSettings>> = {
         settings: {},
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const invalidEvent = { ...validEvent, name: 'invalid' };
 
@@ -130,8 +131,8 @@ describe('Processor Validator', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const result = await processor.push(validEvent, context);
 
@@ -162,8 +163,8 @@ describe('Processor Validator', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       const result = await processor.push(validEvent, context);
 
@@ -194,8 +195,8 @@ describe('Processor Validator', () => {
           },
         },
       };
-      const processor = await processorValidator(config, {});
       const context = createContext(config);
+      const processor = await processorValidator(context);
 
       // product view doesn't match order complete
       const result = await processor.push(validEvent, context);

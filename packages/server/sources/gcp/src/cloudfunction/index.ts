@@ -1,12 +1,10 @@
 import type {
-  Env,
   CloudFunctionSource,
   Settings,
   EventResponse,
   RequestBody,
   Request,
   Response,
-  Mapping,
   Types,
 } from './types';
 import type { Source } from '@walkeros/core';
@@ -24,10 +22,8 @@ const DEFAULT_SETTINGS: Settings = {
   timeout: 30000,
 };
 
-export const sourceCloudFunction = async (
-  config: Partial<Source.Config<Types>> = {},
-  env: Env,
-): Promise<CloudFunctionSource> => {
+export const sourceCloudFunction: Source.Init<Types> = async (context) => {
+  const { config = {}, env } = context;
   const { push: envPush } = env;
 
   const settings: Settings = {

@@ -5,6 +5,7 @@ import type {
   Logger,
   Mapping as WalkerOSMapping,
   Collector,
+  Context as BaseContext,
 } from './index';
 
 /**
@@ -99,9 +100,18 @@ export interface Instance<T extends TypesGeneric = Types> {
   on?(event: On.Types, context?: unknown): void | Promise<void>;
 }
 
+/**
+ * Context provided to source init function.
+ * Extends base context with source-specific properties.
+ */
+export interface Context<
+  T extends TypesGeneric = Types,
+> extends BaseContext.Base<Partial<Config<T>>, Env<T>> {
+  id: string;
+}
+
 export type Init<T extends TypesGeneric = Types> = (
-  config: Partial<Config<T>>,
-  env: Env<T>,
+  context: Context<T>,
 ) => Instance<T> | Promise<Instance<T>>;
 
 export type InitSource<T extends TypesGeneric = Types> = {

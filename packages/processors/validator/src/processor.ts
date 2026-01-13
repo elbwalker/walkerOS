@@ -13,7 +13,8 @@ import type { ValidatorSettings, ContractRule, JsonSchema } from './types';
  */
 export const processorValidator: Processor.Init<
   Processor.Types<ValidatorSettings>
-> = (config) => {
+> = (context) => {
+  const { config } = context;
   const settings = config.settings || {};
   const { format = true, contract } = settings;
 

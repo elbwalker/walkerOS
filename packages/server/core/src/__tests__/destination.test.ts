@@ -149,7 +149,7 @@ describe('Destination', () => {
         name: 'NewEventName',
       }),
       expect.objectContaining({
-        mapping: eventMapping,
+        rule: eventMapping,
       }),
     );
   });
@@ -168,7 +168,7 @@ describe('Destination', () => {
         name: 'custom',
       }),
       expect.objectContaining({
-        mapping: eventMapping,
+        rule: eventMapping,
       }),
     );
   });
@@ -187,7 +187,7 @@ describe('Destination', () => {
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'entity action' }),
       expect.objectContaining({
-        mapping: eventMapping,
+        rule: eventMapping,
         data: 'bar',
       }),
     );
@@ -210,7 +210,7 @@ describe('Destination', () => {
     expect(mockPush).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({
-        mapping: eventMapping,
+        rule: eventMapping,
         data: {
           foo: 'bar',
           bar: 'baz',

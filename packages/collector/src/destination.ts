@@ -56,7 +56,7 @@ export async function addDestination(
   if (destination.config.queue !== false)
     destination.queue = [...collector.queue];
 
-  return pushToDestinations(collector, undefined, { [id]: destination });
+  return pushToDestinations(collector, undefined, {}, { [id]: destination });
 }
 
 /**
@@ -64,12 +64,14 @@ export async function addDestination(
  *
  * @param collector - The walkerOS collector instance.
  * @param event - The event to push.
+ * @param meta - Optional metadata with id and ingest.
  * @param destinations - The destinations to push to.
  * @returns The result of the push operation.
  */
 export async function pushToDestinations(
   collector: Collector.Instance,
   event?: WalkerOS.Event,
+  meta: { id?: string; ingest?: unknown } = {},
   destinations?: Collector.Destinations,
 ): Promise<Elb.PushResult> {
   const { allowed, consent, globals, user } = collector;
@@ -139,6 +141,7 @@ export async function pushToDestinations(
       const isInitialized = await tryCatchAsync(destinationInit)(
         collector,
         destination,
+        id,
       );
 
       if (!isInitialized) return { id, destination, queue: currentQueue };
@@ -170,6 +173,7 @@ export async function pushToDestinations(
               collector.processors,
               postChain,
               event,
+              meta.ingest,
             );
 
             if (chainResult === null) {
@@ -194,7 +198,7 @@ export async function pushToDestinations(
             destination.dlq!.push([processedEvent!, err]);
 
             return undefined;
-          })(collector, destination, processedEvent!);
+          })(collector, destination, id, processedEvent!, meta.ingest);
 
           // Capture the last response (for single event pushes)
           if (result !== undefined) response = result;
@@ -246,11 +250,13 @@ export async function pushToDestinations(
  * @template Destination
  * @param collector - The walkerOS collector instance.
  * @param destination - The destination to initialize.
+ * @param destId - The destination ID.
  * @returns Whether the destination was initialized successfully.
  */
 export async function destinationInit<Destination extends Destination.Instance>(
   collector: Collector.Instance,
   destination: Destination,
+  destId: string,
 ): Promise<boolean> {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
@@ -258,12 +264,13 @@ export async function destinationInit<Destination extends Destination.Instance>(
     const destType = destination.type || 'unknown';
     const destLogger = collector.logger.scope(destType);
 
-    const context = {
+    const context: Destination.Context = {
       collector,
+      logger: destLogger,
+      id: destId,
       config: destination.config,
       env: mergeEnvironments(destination.env, destination.config.env),
-      logger: destLogger,
-    } as Destination.InitContext;
+    };
 
     destLogger.debug('init');
 
@@ -295,13 +302,17 @@ export async function destinationInit<Destination extends Destination.Instance>(
  * @template Destination
  * @param collector - The walkerOS collector instance.
  * @param destination - The destination to push to.
+ * @param destId - The destination ID.
  * @param event - The event to push.
+ * @param ingest - Optional ingest metadata (frozen, same reference).
  * @returns Whether the event was pushed successfully.
  */
 export async function destinationPush<Destination extends Destination.Instance>(
   collector: Collector.Instance,
   destination: Destination,
+  destId: string,
   event: WalkerOS.Event,
+  ingest?: unknown,
 ): Promise<unknown> {
   const { config } = destination;
 
@@ -315,11 +326,13 @@ export async function destinationPush<Destination extends Destination.Instance>(
 
   const context: Destination.PushContext = {
     collector,
+    logger: destLogger,
+    id: destId,
     config,
     data: processed.data,
-    mapping: processed.mapping,
+    rule: processed.mapping, // Renamed from mapping to rule
+    ingest, // Same frozen reference
     env: mergeEnvironments(destination.env, config.env),
-    logger: destLogger,
   };
 
   const eventMapping = processed.mapping;
@@ -345,12 +358,14 @@ export async function destinationPush<Destination extends Destination.Instance>(
 
           const batchContext: Destination.PushBatchContext = {
             collector,
+            logger: destLogger,
+            id: destId,
             config,
             // Note: batch.data contains all transformed data; context.data is for single events
             data: undefined,
-            mapping: eventMapping,
+            rule: eventMapping, // Renamed from mapping to rule
+            ingest, // Same frozen reference
             env: mergeEnvironments(destination.env, config.env),
-            logger: destLogger,
           };
 
           destLogger.debug('push batch', {
