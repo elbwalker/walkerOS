@@ -51,6 +51,23 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Capture changeset descriptions
+        id: changesets
+        run: |
+          CHANGES=""
+          for file in .changeset/*.md; do
+            if [ -f "$file" ] && [ "$(basename $file)" != "README.md" ]; then
+              # Only include if core or collector is in the frontmatter
+              if grep -q '"@walkeros/core"\|"@walkeros/collector"' "$file"; then
+                CONTENT=$(sed -n '/^---$/,/^---$/d; p' "$file")
+                CHANGES="$CHANGES$CONTENT\n\n"
+              fi
+            fi
+          done
+          echo "changes<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$CHANGES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Version packages (stable)
         if: inputs.release_type == 'stable release'
         run: |
@@ -94,12 +111,47 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Check collector version change
+        id: collector-check
+        run: |
+          # Compare current collector version with published
+          CURRENT=$(node -p "require('./packages/collector/package.json').version")
+          # Check if this version was just published
+          if echo "${{ steps.publish.outputs.published }}" | grep -q "@walkeros/collector@"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "version=$CURRENT" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Commit version changes (stable only)
         if: inputs.release_type == 'stable release'
         run: |
           git add -A
           git commit -m "chore: version packages" || echo "No changes to commit"
           git push
+
+      - name: Create GitHub Release
+        if: |
+          inputs.release_type == 'stable release' &&
+          steps.collector-check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="v${{ steps.collector-check.outputs.version }}"
+
+          # Format published packages as npm links
+          PACKAGES=$(echo "${{ steps.publish.outputs.published }}" | sed 's/- \(@walkeros\/[^@]*\)@\([^ ]*\)/- [\1@\2](https:\/\/www.npmjs.com\/package\/\1)/g')
+
+          gh release create "$VERSION" \
+            --title "walkerOS $VERSION" \
+            --notes "## Changes
+
+          ${{ steps.changesets.outputs.changes }}
+
+          ## Published Packages
+
+          $PACKAGES"
 
       # Docker image publishing
       - name: Get CLI version
