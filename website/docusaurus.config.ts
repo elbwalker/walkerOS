@@ -23,7 +23,7 @@ const config: Config = {
       swcJsMinimizer: true, // Use SWC instead of Terser (less memory)
       swcHtmlMinimizer: true, // Use SWC for HTML minification
       lightningCssMinimizer: true, // Use Lightning CSS instead of cssnano
-      rspackBundler: true, // Use Rspack instead of webpack (much faster, less memory)
+      rspackBundler: false, // Disabled: Rspack has issues with npm workspace symlinks in dev mode
       mdxCrossCompilerCache: true, // Compile MDX only once
     },
   },
