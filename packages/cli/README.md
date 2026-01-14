@@ -585,7 +585,6 @@ See [src/types.ts](./src/types.ts) for TypeScript interfaces.
 
 - [Website Documentation](https://www.walkeros.io/docs/apps/cli/)
 - [Flow Configuration](https://www.walkeros.io/docs/getting-started/flow/)
-- [Docker Package](../docker/) - Production runtime
 - [Collector Package](../collector/) - For Integrated mode (direct imports)
 - [Operating Modes](https://www.walkeros.io/docs/getting-started/modes/) -
   Choosing between Integrated and Bundled

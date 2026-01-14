@@ -89,6 +89,8 @@ function FlowSection({
   sources,
   destinations,
   collectorFeatures,
+  sourcesLabel,
+  destinationsLabel,
 }: {
   title: string;
   sources: { icon: string; label: string; iconStyle?: React.CSSProperties }[];
@@ -98,6 +100,8 @@ function FlowSection({
     iconStyle?: React.CSSProperties;
   }[];
   collectorFeatures: string[];
+  sourcesLabel?: string;
+  destinationsLabel?: string;
 }) {
   return (
     <div className="flex-1">
@@ -114,7 +118,7 @@ function FlowSection({
             className="text-base font-semibold uppercase tracking-wide text-center mb-4"
             style={{ color: 'var(--color-gray-400)' }}
           >
-            Sources
+            {sourcesLabel ?? 'Sources'}
           </span>
           <SourceDestBox items={sources} />
         </div>
@@ -132,7 +136,7 @@ function FlowSection({
             className="text-base font-semibold uppercase tracking-wide text-center mb-4"
             style={{ color: 'var(--color-gray-400)' }}
           >
-            Destinations
+            {destinationsLabel ?? 'Destinations'}
           </span>
           <SourceDestBox items={destinations} />
         </div>

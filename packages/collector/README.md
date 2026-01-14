@@ -95,7 +95,6 @@ npm install @walkeros/collector
 import { startFlow } from '@walkeros/collector';
 
 const config = {
-  run: true,
   consent: { functional: true },
   sources: [
     // add your event sources
@@ -112,7 +111,6 @@ const { collector, elb } = await startFlow(config);
 import { startFlow } from '@walkeros/collector';
 
 const { collector, elb } = await startFlow({
-  run: true,
   consent: { functional: true },
   sources: [
     // add your event sources
@@ -146,7 +144,6 @@ For Bundled mode, the collector is configured via JSON:
 ```json
 {
   "collector": {
-    "run": true,
     "consent": { "functional": true }
   }
 }

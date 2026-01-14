@@ -196,16 +196,19 @@ export default function Integrations() {
                 className="w-24 h-24"
               />
             </Link>
-            <div className="h-8" />
-            <ul
-              className="text-sm space-y-2 list-disc pl-5"
-              style={{ color: 'var(--color-base-content)' }}
-            >
-              <li>Event processing</li>
-              <li>Consent management</li>
-              <li>Data enrichment</li>
-              <li>Destination routing</li>
-            </ul>
+            {/* Mobile only: spacer and feature list */}
+            <div className="md:hidden">
+              <div className="h-8" />
+              <ul
+                className="text-sm space-y-2 list-disc pl-5"
+                style={{ color: 'var(--color-base-content)' }}
+              >
+                <li>Event processing</li>
+                <li>Consent management</li>
+                <li>Data enrichment</li>
+                <li>Destination routing</li>
+              </ul>
+            </div>
           </div>
 
           {/* Arrow */}

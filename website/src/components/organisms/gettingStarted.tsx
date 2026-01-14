@@ -42,7 +42,6 @@ const { elb } = await startFlow({
       }
     }
   },
-  run: true
 });`;
 
 export default function GettingStarted() {

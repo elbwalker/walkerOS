@@ -7,7 +7,7 @@ package: '@walkeros/cli'
 
 # walkerOS CLI
 
-The walkerOS CLI (`@walkeros/cli`) is a command-line tool for building, testing, and running event collection flows. It handles the complete workflow from configuration to deployment—bundling flows into optimized JavaScript, testing with simulated events, and running collection servers locally or in Docker.
+The walkerOS CLI (`@walkeros/cli`) is a command-line tool for building, testing, and running event collection flows. It handles the complete workflow from configuration to deployment. It bundles flows into optimized JavaScript, testing with simulated events, and running collection servers locally or in Docker.
 
 ## Installation
 
@@ -484,7 +484,7 @@ walkeros simulate flow.json --event-file events.json`}
 
 ## Push command
 
-The `push` command executes your flow with a real event, making actual API calls to your configured destinations. Unlike `simulate` which mocks API calls for safe testing, `push` performs real HTTP requests—ideal for integration testing and production validation. It accepts either a config JSON (which gets bundled) or a pre-built bundle.
+The `push` command executes your flow with a real event, making actual API calls to your configured destinations. Unlike `simulate` which mocks API calls for safe testing, `push` performs real HTTP requests, ideal for integration testing and production validation. It accepts either a config JSON (which gets bundled) or a pre-built bundle.
 
 ### Use Case
 
@@ -1327,4 +1327,4 @@ lsof -ti:8080 | xargs kill`}
 
 **Using Integrated mode instead?** The CLI uses JSON configuration (Bundled mode). If you prefer TypeScript and want the collector built into your application, see [Integrated Mode](/docs/getting-started/modes/integrated) and the [Collector documentation](/docs/collector).
 
-Both approaches use the same underlying architecture—the difference is how you configure and deploy.
+Both approaches use the same underlying architecture. The difference is how you configure and deploy.

@@ -201,7 +201,6 @@ describe('Flow Schemas', () => {
           },
         },
         collector: {
-          run: true,
           tagging: 1,
           globals: {
             currency: 'USD',
@@ -614,7 +613,6 @@ describe('Flow Schemas', () => {
         },
         definitions: {
           base_collector: {
-            run: true,
             tagging: 1,
           },
           gtag_mapping: {
@@ -655,7 +653,6 @@ describe('Flow Schemas', () => {
               },
             },
             collector: {
-              run: true,
               tagging: 1,
               globals: {
                 currency: 'USD',
@@ -693,7 +690,6 @@ describe('Flow Schemas', () => {
               },
             },
             collector: {
-              run: true,
               tagging: 1,
               globals: {
                 currency: 'USD',

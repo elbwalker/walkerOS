@@ -60,7 +60,6 @@ data warehouses.
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector, elb } = await startFlow({
-run: true,
 consent: { functional: true },
 sources: {
 browser: {
@@ -99,7 +98,6 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await startFlow({
-run: true,
 consent: { functional: true },
 sources: {
 browser: {
@@ -170,7 +168,7 @@ For example, transforming a `product add` event into GA4's `add_to_cart`:
 
 ## See also
 
-- [**Operating modes**](/docs/getting-started/modes) — integrated vs bundled approaches
-- [**CLI documentation**](/docs/apps/cli) — configure with JSON and build with CLI
-- [**Sources**](/docs/sources) — available event capture sources
-- [**Destinations**](/docs/destinations) — available event delivery destinations
+- [**Operating modes**](/docs/getting-started/modes): integrated vs bundled approaches
+- [**CLI documentation**](/docs/apps/cli): configure with JSON and build with CLI
+- [**Sources**](/docs/sources): available event capture sources
+- [**Destinations**](/docs/destinations): available event delivery destinations

@@ -66,7 +66,6 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 
 await startFlow({
   sources: { browser: { code: sourceBrowser } },
-  run: true,
 });
 ```
 

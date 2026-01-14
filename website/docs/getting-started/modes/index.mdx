@@ -8,7 +8,7 @@ sidebar_position: 1
 
 ## Operating modes
 
-walkerOS offers two ways to configure and deploy your event collection. Both use the same underlying architecture—Sources, Collector, Destinations—just packaged differently.
+walkerOS offers two ways to configure and deploy your event collection. Both use the same underlying architecture (Sources, Collector, Destinations), just packaged differently.
 
 ## Integrated mode
 
@@ -20,7 +20,6 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { elb } = await startFlow({
   sources: { browser: { code: sourceBrowser } },
-  run: true
 });
 ```
 

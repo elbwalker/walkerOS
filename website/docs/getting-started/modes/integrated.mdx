@@ -35,7 +35,6 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-  run: true,
 });
 
 // Track events
@@ -89,7 +88,6 @@ const { elb } = await startFlow({
       },
     },
   },
-  run: true,
 });`}
   language="typescript"
 />
@@ -124,7 +122,6 @@ Add consent requirements to control which destinations receive events:
       },
     },
   },
-  run: true,
 });
 
 // When user accepts consent
@@ -196,7 +193,6 @@ export function useWalker() {
       sources: {
         browser: { code: sourceBrowser, config: { settings: { pageview: true } } },
       },
-      run: true,
     }).then(({ elb }) => setElb(() => elb));
   }, []);
 
@@ -220,7 +216,6 @@ export function WalkerProvider({ children }: { children: React.ReactNode }) {
       sources: {
         browser: { code: sourceBrowser, config: { settings: { pageview: true } } },
       },
-      run: true,
     });
   }, []);
 
@@ -235,14 +230,14 @@ export function WalkerProvider({ children }: { children: React.ReactNode }) {
 
 ## Next steps
 
-- [**Event Model**](/docs/getting-started/event-model) — How events are structured
-- [**Mapping**](/docs/mapping) — Transform events for destinations
-- [**Browser Source**](/docs/sources/web/browser) — DOM-based automatic tracking
-- [**Destinations**](/docs/destinations) — Available destination packages
+- [**Event Model**](/docs/getting-started/event-model): How events are structured
+- [**Mapping**](/docs/mapping): Transform events for destinations
+- [**Browser Source**](/docs/sources/web/browser): DOM-based automatic tracking
+- [**Destinations**](/docs/destinations): Available destination packages
 
 ---
 
 ## See also
 
-- [**Bundled mode**](/docs/getting-started/modes/bundled) — Configure with JSON, build with CLI
-- [**Collector reference**](/docs/collector) — Full `startFlow()` API documentation
+- [**Bundled mode**](/docs/getting-started/modes/bundled): Configure with JSON, build with CLI
+- [**Collector reference**](/docs/collector): Full `startFlow()` API documentation

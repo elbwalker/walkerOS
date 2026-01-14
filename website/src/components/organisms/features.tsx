@@ -45,7 +45,7 @@ export default function Features() {
                   className="mt-2 max-w-lg text-sm/6 max-lg:text-center"
                   style={{ color: 'var(--color-gray-500)' }}
                 >
-                  Tag your entire application with simple HTML attributes—no
+                  Tag your entire application with simple HTML attributes. No
                   custom JavaScript required. Bake analytics into component
                   libraries once & scale.
                 </p>
@@ -194,7 +194,7 @@ export default function Features() {
                   style={{ color: 'var(--color-gray-500)' }}
                 >
                   Transform events once at the source, then again for each
-                  destination. The same mapping syntax works everywhere—rename,
+                  destination. The same mapping syntax works everywhere: rename,
                   reshape, filter.
                 </p>
               </div>

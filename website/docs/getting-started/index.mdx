@@ -7,7 +7,7 @@ sidebar_position: 1
 
 # What is walkerOS
 
-walkerOS is **event data collection as code**. Capture events from anywhere, transform them with mapping, and route them to any destination—all with built-in consent management.
+walkerOS is **event data collection as code**. Capture events from anywhere, transform them with mapping, and route them to any destination, all with built-in consent management.
 
 No fragile UI configs. No vendor lock-in. Just tracking you can version, test, and trust.
 
@@ -17,11 +17,11 @@ import ArchitectureDiagram from '@site/src/components/docs/ArchitectureDiagram';
 
 ## Why walkerOS?
 
-- **Open-Source** — MIT licensed, free forever, no restrictions
-- **Self-Hosted** — Your infrastructure, your data, full ownership
-- **Config-as-Code** — Version control, PRs, deploy with confidence
-- **Composable** — Mix sources, destinations, and mappings freely
-- **Developer-First** — TypeScript, no GUI, declarative tagging
+- **Open-Source:** MIT licensed, free forever, no restrictions
+- **Self-Hosted:** Your infrastructure, your data, full ownership
+- **Config-as-Code:** Version control, PRs, deploy with confidence
+- **Composable:** Mix sources, destinations, and mappings freely
+- **Developer-First:** TypeScript, no GUI, declarative tagging
 
 ---
 
@@ -34,11 +34,11 @@ Sources → Collector → Destinations
 └──────────── Flow ────────────┘
 ```
 
-- **Sources** — Where events come from (browser DOM, dataLayer, HTTP endpoints, custom code)
-- **Collector** — The processing engine (consent, enrichment, routing)
-- **Destinations** — Where events go (GA4, your API, BigQuery, any service)
+- **Sources:** Where events come from (browser DOM, dataLayer, HTTP endpoints, custom code)
+- **Collector:** The processing engine (consent, enrichment, routing)
+- **Destinations:** Where events go (GA4, your API, BigQuery, any service)
 
-A "flow" connects sources to destinations through a collector. You can have one flow or many—client-side, server-side, or both working together.
+A "flow" connects sources to destinations through a collector. You can have one flow or many, client-side, server-side, or both working together.
 
 ## The centerpiece: mapping
 
@@ -68,7 +68,6 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { elb } = await startFlow({
   sources: { browser: { code: sourceBrowser } },
-  run: true,
 });
 ```
 
@@ -118,15 +117,15 @@ Then: `walkeros bundle flow.json` → standalone file.
 ## Quick links
 
 **Just want to try it?**
-- [Integrated Quickstart](/docs/getting-started/modes/integrated#quickstart) — npm install and go
-- [Bundled Quickstart](/docs/getting-started/modes/bundled#quickstart) — JSON config and CLI
+- [Integrated Quickstart](/docs/getting-started/modes/integrated#quickstart): npm install and go
+- [Bundled Quickstart](/docs/getting-started/modes/bundled#quickstart): JSON config and CLI
 
 **Deploying to production?**
-- [Docker Guide](/docs/apps/docker) — Container deployment
-- [CLI Reference](/docs/apps/cli) — Build and test commands
+- [Docker Guide](/docs/apps/docker): Container deployment
+- [CLI Reference](/docs/apps/cli): Build and test commands
 
 **Already using walker.js?**
-- [Walker.js Docs](/docs/apps/walkerjs) — Pre-built convenience bundle
+- [Walker.js Docs](/docs/apps/walkerjs): Pre-built convenience bundle
 
 **Need help choosing?**
-- [Operating Modes](/docs/getting-started/modes) — Detailed comparison
+- [Operating Modes](/docs/getting-started/modes): Detailed comparison
