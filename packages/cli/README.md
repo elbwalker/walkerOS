@@ -46,13 +46,16 @@ npm install @walkeros/cli
 walkeros bundle flow.json
 
 # Test with simulated events (no real API calls)
-walkeros simulate flow.json --event '{"name":"page view"}'
+walkeros simulate flow.json --event '{"name":"product view"}'
+
+# Or test a pre-built bundle directly
+walkeros simulate dist/bundle.mjs --event '{"name":"product view"}'
 
 # Push real events to destinations
-walkeros push flow.json --event '{"name":"page view"}'
+walkeros push flow.json --event '{"name":"product view"}'
 
 # Run a collection server locally
-walkeros run collect flow.json --port 3000
+walkeros run collect dist/bundle.mjs --port 3000
 ```
 
 ## Commands
@@ -79,7 +82,6 @@ walkeros bundle https://example.com/config.json                  # Remote URL
 - `-s, --stats` - Show bundle statistics
 - `--json` - Output stats as JSON
 - `--no-cache` - Disable package caching
-- `--local` - Run locally without Docker
 - `-v, --verbose` - Verbose output
 
 **Example:**
@@ -94,47 +96,77 @@ The output path uses convention-based defaults: `./dist/bundle.mjs` for server,
 
 ### simulate
 
-Test event processing with simulated events.
+Test event processing with simulated events. Accepts either a config JSON (which
+gets bundled) or a pre-built bundle (executed directly).
 
 ```bash
-walkeros simulate <config-file> --event '{"name":"page view"}' [options]
+walkeros simulate <input> --event '{"name":"page view"}' [options]
 ```
+
+**Input types:**
+
+- **Config JSON** - Bundled and executed with destination mocking
+- **Pre-built bundle** (`.js`/`.mjs`) - Executed directly, no mocking
+
+The CLI auto-detects the input type by attempting to parse as JSON.
 
 **Options:**
 
 - `-e, --event <json>` - Event JSON string (required)
+- `-p, --platform <platform>` - Platform override (`web` or `server`)
 - `--json` - Output results as JSON
-- `--local` - Run locally without Docker
 - `-v, --verbose` - Verbose output
 
-**Example:**
+**Examples:**
 
 ```bash
-# Simulate page view
-walkeros simulate \
-  examples/web-serve.json \
+# Simulate with config (auto-bundled)
+walkeros simulate examples/web-serve.json \
   --event '{"name":"page view","data":{"title":"Home"}}' \
   --json
+
+# Simulate with pre-built bundle
+walkeros simulate dist/bundle.mjs --event '{"name":"page view"}'
+
+# Override platform detection
+walkeros simulate dist/bundle.js --platform server --event '{"name":"page view"}'
 ```
+
+**Platform detection:**
+
+When using pre-built bundles, platform is detected from file extension:
+
+- `.mjs` → server (ESM, Node.js)
+- `.js` → web (IIFE, JSDOM)
+
+Use `--platform` to override if extension doesn't match intended runtime.
 
 ### push
 
 Execute your flow with real API calls to configured destinations. Unlike
-`simulate` which mocks API calls, `push` performs actual HTTP requests.
+`simulate` which mocks API calls, `push` performs actual HTTP requests. Accepts
+either a config JSON (which gets bundled) or a pre-built bundle.
 
 ```bash
-walkeros push <config-file> --event '<json>' [options]
+walkeros push <input> --event '<json>' [options]
 ```
+
+**Input types:**
+
+- **Config JSON** - Bundled and executed
+- **Pre-built bundle** (`.js`/`.mjs`) - Executed directly
+
+The CLI auto-detects the input type by attempting to parse as JSON.
 
 **Options:**
 
 - `-e, --event <source>` - Event to push (JSON string, file path, or URL)
   **Required**
 - `--flow <name>` - Flow name (for multi-flow configs)
+- `-p, --platform <platform>` - Platform override (`web` or `server`)
 - `--json` - Output results as JSON
 - `-v, --verbose` - Verbose output
 - `-s, --silent` - Suppress output (for CI/CD)
-- `--local` - Execute locally without Docker
 
 **Event input formats:**
 
@@ -147,6 +179,16 @@ walkeros push flow.json --event ./events/order.json
 
 # URL
 walkeros push flow.json --event https://example.com/sample-event.json
+```
+
+**Bundle input:**
+
+```bash
+# Push with pre-built bundle
+walkeros push dist/bundle.mjs --event '{"name":"order complete"}'
+
+# Override platform detection
+walkeros push dist/bundle.js --platform server --event '{"name":"order complete"}'
 ```
 
 **Push vs Simulate:**
@@ -162,8 +204,7 @@ real integrations.
 
 ### run
 
-Run flows locally using @walkeros/docker as a library (no Docker daemon
-required).
+Run flows locally (no Docker daemon required).
 
 ```bash
 walkeros run <mode> <config-file> [options]
@@ -179,7 +220,6 @@ walkeros run <mode> <config-file> [options]
 - `-p, --port <number>` - Server port
 - `-h, --host <host>` - Server host
 - `--static-dir <dir>` - Static directory (serve mode)
-- `--local` - Run locally without Docker
 - `--json` - JSON output
 - `-v, --verbose` - Verbose output
 
@@ -198,9 +238,9 @@ walkeros run serve flow.json --port 8080 --static-dir ./dist
 
 **How it works:**
 
-1. JSON configs are bundled to temp `.mjs` automatically
+1. JSON configs are auto-bundled to temp `.mjs`
 2. `.mjs` bundles are used directly
-3. Runs in current Node.js process (no containers)
+3. Runs in current Node.js process
 4. Press Ctrl+C for graceful shutdown
 
 ## Caching
@@ -459,17 +499,17 @@ Typical development cycle:
 # 1. Create/edit config
 vim my-flow.json
 
-# 2. Bundle and check stats
-walkeros bundle my-flow.json --stats
-
-# 3. Test with simulation
+# 2. Test with simulation (no real API calls)
 walkeros simulate \
   my-flow.json \
-  --event '{"name":"test event"}' \
+  --event '{"name":"product view"}' \
   --verbose
 
+# 3. Bundle and check stats
+walkeros bundle my-flow.json --stats
+
 # 4. Run locally
-walkeros run collect my-flow.json --port 3000
+walkeros run collect dist/bundle.mjs --port 3000
 
 # 5. In another terminal, test it
 curl -X POST http://localhost:3000/collect \
@@ -483,25 +523,54 @@ curl -X POST http://localhost:3000/collect \
 CLI (downloads packages + bundles with esbuild)
  ├─ Bundle → optimized .mjs file
  ├─ Simulate → test bundle with events
- └─ Run → import @walkeros/docker + execute bundle
+ └─ Run → execute bundle with built-in runtime
 ```
 
-**Key principle**: CLI handles build-time, Docker handles runtime.
+**Key principle**: CLI handles both build-time and runtime operations.
 
-## Docker Images
+## Production Deployment
 
-By default, CLI uses **explicit version tags** (not `:latest`):
+Deploy your flows using Docker or Node.js.
 
-- `walkeros/cli:0.3.5` - Build tools (bundle, simulate)
-- `walkeros/docker:0.1.4` - Production runtime
+### Using Docker
 
-Override with environment variables:
+The `walkeros/flow` image runs pre-built bundles in production:
 
 ```bash
-export WALKEROS_CLI_DOCKER_IMAGE=walkeros/cli:0.3.4
-export WALKEROS_RUNTIME_DOCKER_IMAGE=walkeros/docker:latest
-walkeros bundle config.json
+# Build your flow
+walkeros bundle flow.json
+
+# Run with Docker
+docker run -v ./dist:/flow -p 8080:8080 walkeros/flow
 ```
+
+**Custom image:**
+
+```dockerfile
+FROM walkeros/flow
+COPY dist/bundle.mjs /flow/
+```
+
+**Environment variables:**
+
+- `MODE` - `collect` or `serve` (default: `collect`)
+- `PORT` - Server port (default: `8080`)
+- `FILE` - Bundle path (default: `/flow/bundle.mjs`)
+
+### Using Node.js
+
+Run the bundle directly with the CLI:
+
+```bash
+# Build your flow
+walkeros bundle flow.json
+
+# Run in production
+walkeros run collect dist/bundle.mjs --port 8080
+```
+
+This runs the flow in the current Node.js process, suitable for deployment on
+platforms like AWS Lambda, Google Cloud Run, or any Node.js hosting.
 
 ## Requirements
 

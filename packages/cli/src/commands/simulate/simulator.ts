@@ -1,15 +1,21 @@
 import path from 'path';
 import fs from 'fs-extra';
-import type { Flow } from '@walkeros/core';
+import type { Flow, Logger as CoreLogger } from '@walkeros/core';
 import { getPlatform } from '@walkeros/core';
-import { createLogger, getErrorMessage } from '../../core/index.js';
 import {
-  loadJsonConfig,
-  loadBundleConfig,
-  getTempDir,
+  createLogger,
+  createCollectorLoggerConfig,
+  getErrorMessage,
+  detectInput,
+  type Logger,
+  type Platform,
+} from '../../core/index.js';
+import {
+  loadFlowConfig,
   isObject,
   type BuildOptions,
 } from '../../config/index.js';
+import { getTmpPath } from '../../core/tmp.js';
 import { bundleCore } from '../bundle/bundler.js';
 import { CallTracker } from './tracker.js';
 import { executeInJSDOM } from './jsdom-executor.js';
@@ -28,9 +34,12 @@ function generateId(): string {
  * Main simulation orchestrator
  */
 export async function simulateCore(
-  configPath: string,
+  inputPath: string,
   event: unknown,
-  options: Pick<SimulateCommandOptions, 'json' | 'verbose' | 'silent'> = {},
+  options: Pick<
+    SimulateCommandOptions,
+    'json' | 'verbose' | 'silent' | 'platform'
+  > = {},
 ): Promise<SimulationResult> {
   const logger = createLogger({
     verbose: options.verbose || false,
@@ -39,29 +48,16 @@ export async function simulateCore(
   });
 
   try {
-    logger.info('🎯 Starting walkerOS simulation...');
-
-    // Load and validate configuration
-    logger.info('📦 Loading bundle configuration...');
-    const fullConfigPath = path.resolve(configPath);
-    const rawConfig = await loadJsonConfig(fullConfigPath);
-    loadBundleConfig(rawConfig, { configPath: fullConfigPath });
-
     // Execute simulation
-    logger.info(`🚀 Executing simulation with event: ${JSON.stringify(event)}`);
-    const result = await executeSimulation(event, fullConfigPath);
-
-    // Report results
-    if (result.success) {
-      logger.info(`✅ Simulation completed successfully`);
-    } else {
-      logger.error(`❌ Simulation failed: ${result.error}`);
-    }
+    logger.debug(`Simulating event: ${JSON.stringify(event)}`);
+    const result = await executeSimulation(event, inputPath, options.platform, {
+      logger,
+      verbose: options.verbose,
+    });
 
     return result;
   } catch (error) {
     const errorMessage = getErrorMessage(error);
-    logger.error(`💥 Simulation error: ${errorMessage}`);
 
     return {
       success: false,
@@ -87,24 +83,37 @@ export function formatSimulationResult(
   }
 
   if (result.success) {
-    return '✅ Simulation completed successfully';
+    return 'Simulation completed';
   } else {
-    return `❌ Simulation failed: ${result.error}`;
+    return `Simulation failed: ${result.error}`;
   }
 }
 
 /**
- * Execute simulation using destination-provided mock environments
+ * Execute simulation using destination-provided mock environments.
+ * Supports both config JSON and pre-built bundle inputs.
  */
 export async function executeSimulation(
   event: unknown,
-  configPath: string,
+  inputPath: string,
+  platformOverride?: Platform,
+  options: { logger?: Logger; verbose?: boolean } = {},
 ): Promise<SimulationResult> {
   const startTime = Date.now();
-  let bundlePath: string | undefined;
-  const tempDir = getTempDir();
+  const tempDir = getTmpPath();
+
+  // Create collector logger config for forwarding logs
+  const collectorLoggerConfig = options.logger
+    ? createCollectorLoggerConfig(options.logger, options.verbose)
+    : undefined;
 
   try {
+    // Ensure temp directory exists
+    await fs.ensureDir(tempDir);
+
+    // Detect input type first (so file errors appear before event validation errors)
+    const detected = await detectInput(inputPath, platformOverride);
+
     // Validate event format
     if (
       !isObject(event) ||
@@ -118,96 +127,27 @@ export async function executeSimulation(
 
     const typedEvent = event as { name: string; data?: unknown };
 
-    // Ensure temp directory exists
-    await fs.ensureDir(tempDir);
-
-    // 1. Load config
-    const rawConfig = await loadJsonConfig(configPath);
-    const { flowConfig, buildOptions } = loadBundleConfig(rawConfig, {
-      configPath,
-    });
-
-    // Detect platform from flowConfig
-    const platform = getPlatform(flowConfig);
-
-    // 2. Create tracker
-    const tracker = new CallTracker();
-
-    // 3. Create temporary bundle
-    const tempOutput = path.join(
-      tempDir,
-      `simulation-bundle-${generateId()}.${platform === 'web' ? 'js' : 'mjs'}`,
-    );
-
-    const destinations = (
-      flowConfig as unknown as { destinations?: Record<string, unknown> }
-    ).destinations;
-
-    // Create build options for simulation - platform-aware bundling
-    const simulationBuildOptions: BuildOptions = {
-      ...buildOptions,
-      code: buildOptions.code || '',
-      output: tempOutput,
-      tempDir,
-      ...(platform === 'web'
-        ? {
-            format: 'iife' as const,
-            platform: 'browser' as const,
-            windowCollector: 'collector',
-            windowElb: 'elb',
-          }
-        : {
-            format: 'esm' as const,
-            platform: 'node' as const,
-          }),
-    };
-
-    // 4. Bundle (downloads packages internally)
-    await bundleCore(
-      flowConfig,
-      simulationBuildOptions,
-      createLogger({ silent: true }),
-      false,
-    );
-    bundlePath = tempOutput;
-
-    // 5. Load env examples dynamically from destination packages
-    const envs = await loadDestinationEnvs(destinations || {});
-
-    // 6. Execute based on platform
-    let result;
-    if (platform === 'web') {
-      result = await executeInJSDOM(
-        tempOutput,
-        destinations || {},
+    if (detected.type === 'config') {
+      // Config flow: load config, bundle, execute with mocking
+      return await executeConfigSimulation(
+        detected.content,
+        inputPath,
         typedEvent,
-        tracker,
-        envs,
-        10000,
+        tempDir,
+        startTime,
+        collectorLoggerConfig,
       );
     } else {
-      result = await executeInNode(
-        tempOutput,
-        destinations || {},
+      // Bundle flow: execute directly without mocking
+      return await executeBundleSimulation(
+        detected.content,
+        detected.platform!,
         typedEvent,
-        tracker,
-        envs,
-        30000,
+        tempDir,
+        startTime,
+        collectorLoggerConfig,
       );
     }
-
-    const elbResult = result.elbResult;
-    const usage = result.usage;
-
-    const duration = Date.now() - startTime;
-
-    return {
-      success: true,
-      elbResult,
-      usage,
-      duration,
-      logs: [],
-    };
   } catch (error) {
     const duration = Date.now() - startTime;
     return {
@@ -222,6 +162,154 @@ export async function executeSimulation(
         // Ignore cleanup errors - temp dirs will be cleaned eventually
       });
     }
-    // Note: JSDOM automatically cleans up its own isolated environment
   }
+}
+
+/**
+ * Execute simulation from config JSON (existing behavior with mocking)
+ */
+async function executeConfigSimulation(
+  _content: string,
+  configPath: string,
+  typedEvent: { name: string; data?: unknown },
+  tempDir: string,
+  startTime: number,
+  loggerConfig?: CoreLogger.Config,
+): Promise<SimulationResult> {
+  // Load config
+  const { flowConfig, buildOptions } = await loadFlowConfig(configPath);
+
+  // Detect platform from flowConfig
+  const platform = getPlatform(flowConfig);
+
+  // Create tracker
+  const tracker = new CallTracker();
+
+  // Create temporary bundle
+  const tempOutput = path.join(
+    tempDir,
+    `simulation-bundle-${generateId()}.${platform === 'web' ? 'js' : 'mjs'}`,
+  );
+
+  const destinations = (
+    flowConfig as unknown as { destinations?: Record<string, unknown> }
+  ).destinations;
+
+  // Create build options for simulation - platform-aware bundling
+  const simulationBuildOptions: BuildOptions = {
+    ...buildOptions,
+    code: buildOptions.code || '',
+    output: tempOutput,
+    tempDir,
+    ...(platform === 'web'
+      ? {
+          format: 'iife' as const,
+          platform: 'browser' as const,
+          windowCollector: 'collector',
+          windowElb: 'elb',
+        }
+      : {
+          format: 'esm' as const,
+          platform: 'node' as const,
+        }),
+  };
+
+  // Bundle (downloads packages internally)
+  await bundleCore(
+    flowConfig,
+    simulationBuildOptions,
+    createLogger({ silent: true }),
+    false,
+  );
+
+  // Load env examples dynamically from destination packages
+  const envs = await loadDestinationEnvs(destinations || {});
+
+  // Execute based on platform
+  let result;
+  if (platform === 'web') {
+    result = await executeInJSDOM(
+      tempOutput,
+      destinations || {},
+      typedEvent,
+      tracker,
+      envs,
+      10000,
+    );
+  } else {
+    result = await executeInNode(
+      tempOutput,
+      destinations || {},
+      typedEvent,
+      tracker,
+      envs,
+      30000,
+      loggerConfig ? { logger: loggerConfig } : {},
+    );
+  }
+
+  const duration = Date.now() - startTime;
+
+  return {
+    success: true,
+    elbResult: result.elbResult,
+    usage: result.usage,
+    duration,
+    logs: [],
+  };
+}
+
+/**
+ * Execute simulation from pre-built bundle (no mocking)
+ */
+async function executeBundleSimulation(
+  bundleContent: string,
+  platform: Platform,
+  typedEvent: { name: string; data?: unknown },
+  tempDir: string,
+  startTime: number,
+  loggerConfig?: CoreLogger.Config,
+): Promise<SimulationResult> {
+  // Write bundle to temp file
+  const tempOutput = path.join(
+    tempDir,
+    `bundle-${generateId()}.${platform === 'server' ? 'mjs' : 'js'}`,
+  );
+  await fs.writeFile(tempOutput, bundleContent, 'utf8');
+
+  // Create empty tracker (no mocking for pre-built bundles)
+  const tracker = new CallTracker();
+
+  // Execute based on platform (no destinations/envs for pre-built bundles)
+  let result;
+  if (platform === 'web') {
+    result = await executeInJSDOM(
+      tempOutput,
+      {},
+      typedEvent,
+      tracker,
+      {},
+      10000,
+    );
+  } else {
+    result = await executeInNode(
+      tempOutput,
+      {},
+      typedEvent,
+      tracker,
+      {},
+      30000,
+      loggerConfig ? { logger: loggerConfig } : {},
+    );
+  }
+
+  const duration = Date.now() - startTime;
+
+  return {
+    success: true,
+    elbResult: result.elbResult,
+    usage: result.usage,
+    duration,
+    logs: [],
+  };
 }

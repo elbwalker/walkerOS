@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
 /* walkerOS Element Highlighting Styles */
 .elb-globals [data-elbglobals] {

@@ -45,7 +45,6 @@ function createBuildOptions(
     minify: false,
     sourcemap: false,
     cache: true,
-    tempDir: '.tmp',
     packages: {},
     code: '',
     ...overrides,

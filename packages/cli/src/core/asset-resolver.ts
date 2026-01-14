@@ -8,6 +8,7 @@
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
 import path from 'path';
+import { isUrl } from '../config/utils.js';
 
 /**
  * Cached asset directory to avoid repeated filesystem checks
@@ -65,6 +66,11 @@ export function resolveAsset(
   assetType: AssetType,
   baseDir?: string,
 ): string {
+  // URL → pass through unchanged
+  if (isUrl(assetPath)) {
+    return assetPath;
+  }
+
   // Bare name → package asset (examples directory)
   if (!assetPath.includes('/') && !assetPath.includes('\\')) {
     const assetDir = getAssetDir();

@@ -22,9 +22,6 @@
             }
           }
         }
-      },
-      "collector": {
-        "run": true
       }
     }
   }

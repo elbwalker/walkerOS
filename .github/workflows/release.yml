@@ -1,0 +1,180 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        type: choice
+        options:
+          - 'pre-release (next)'
+          - 'stable release'
+
+concurrency:
+  group: release
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Clean
+        run: npm run clean
+
+      - name: Build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Version packages (stable)
+        if: inputs.release_type == 'stable release'
+        run: |
+          # Exit pre-release mode if active; skip if not in pre-release
+          if [ -f ".changeset/pre.json" ]; then
+            npx changeset pre exit
+          else
+            echo "Not in pre-release mode, skipping 'pre exit'"
+          fi
+          npx changeset version
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Version packages (pre-release)
+        if: inputs.release_type == 'pre-release (next)'
+        run: npx changeset version --snapshot next
+
+      - name: Update lock file
+        run: npm install --package-lock-only
+
+      - name: Publish to npm
+        id: publish
+        run: |
+          set +e
+          OUTPUT=$(npx changeset publish 2>&1)
+          EXIT_CODE=$?
+          echo "$OUTPUT"
+          set -e
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::Changeset publish failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+          # Extract published packages for PR comment
+          PUBLISHED=$(echo "$OUTPUT" | grep -E "^@walkeros/|^walkeros" | head -20 | sed 's/^/- /' || true)
+          echo "published<<EOF" >> $GITHUB_OUTPUT
+          echo "$PUBLISHED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Commit version changes (stable only)
+        if: inputs.release_type == 'stable release'
+        run: |
+          git add -A
+          git commit -m "chore: version packages" || echo "No changes to commit"
+          git push
+
+      # Docker image publishing
+      - name: Get CLI version
+        id: versions
+        run: |
+          CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
+          echo "cli=$CLI_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if Flow image exists
+        id: check-flow
+        run: |
+          if docker manifest inspect walkeros/flow:${{ steps.versions.outputs.cli }} 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Docker Hub
+        if: steps.check-flow.outputs.exists == 'false'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Flow image
+        if: steps.check-flow.outputs.exists == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./packages/cli
+          file: ./packages/cli/Dockerfile
+          push: true
+          tags: |
+            walkeros/flow:${{ steps.versions.outputs.cli }}
+            walkeros/flow:${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}
+
+      - name: Comment on PR
+        if: steps.publish.outputs.published != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=$(gh pr list --head "${{ github.ref_name }}" --state open --json number --jq '.[0].number' || true)
+
+          if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
+            if [ "${{ inputs.release_type }}" = "pre-release (next)" ]; then
+              EMOJI="📦"
+              TITLE="Pre-release published (next)"
+              INSTALL_TAG="@next"
+              DOCKER_TAG=":next"
+            else
+              EMOJI="🚀"
+              TITLE="Stable release published"
+              INSTALL_TAG="@latest"
+              DOCKER_TAG=":latest"
+            fi
+
+            # Build Docker section if flow image was published
+            DOCKER_SECTION=""
+            if [ "${{ steps.check-flow.outputs.exists }}" = "false" ]; then
+              DOCKER_SECTION="
+
+          🐳 **Docker image published**
+          - walkeros/flow:${{ steps.versions.outputs.cli }} ($DOCKER_TAG)
+
+          Docker: \`docker pull walkeros/flow$DOCKER_TAG\`"
+            fi
+
+            BODY="$EMOJI **$TITLE**
+
+          **Packages**
+          ${{ steps.publish.outputs.published }}
+
+          Install: \`npm i @walkeros/core$INSTALL_TAG\`$DOCKER_SECTION"
+
+            gh pr comment "$PR_NUMBER" --body "$BODY"
+            echo "Commented on PR #$PR_NUMBER"
+          else
+            echo "No open PR found for branch ${{ github.ref_name }}"
+          fi

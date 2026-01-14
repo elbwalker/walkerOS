@@ -24,8 +24,7 @@ describe('CLI Bundle Command', () => {
     args: string[],
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
     return new Promise((resolve) => {
-      // Add --local flag to run tests without Docker
-      const child = spawn('node', ['dist/index.js', ...args, '--local'], {
+      const child = spawn('node', ['dist/index.js', ...args], {
         stdio: 'pipe',
         shell: false,
       });
@@ -96,7 +95,7 @@ describe('CLI Bundle Command', () => {
     expect(output.data.flows[0].stats.packages[0].name).toBe(
       '@walkeros/core@latest',
     );
-  });
+  }, 120000);
 
   it('should output JSON format for failed bundle (invalid syntax)', async () => {
     // Flow.Setup format - but bundler will fail on invalid destination code

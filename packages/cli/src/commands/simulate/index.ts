@@ -1,11 +1,5 @@
 import { simulateCore, formatSimulationResult } from './simulator.js';
-import {
-  createCommandLogger,
-  createLogger,
-  executeCommand,
-  getErrorMessage,
-  buildCommonDockerArgs,
-} from '../../core/index.js';
+import { createCommandLogger, getErrorMessage } from '../../core/index.js';
 import { loadJsonFromSource } from '../../config/index.js';
 import type { SimulateCommandOptions } from './types.js';
 
@@ -17,76 +11,64 @@ export async function simulateCommand(
 ): Promise<void> {
   const logger = createCommandLogger(options);
 
-  // Build Docker args - start with common flags
-  const dockerArgs = buildCommonDockerArgs(options);
-  // Add simulate-specific flag
-  if (options.event) dockerArgs.push('--event', options.event);
+  // Handle dry-run
+  if (options.dryRun) {
+    logger.log(
+      `[DRY-RUN] Would execute simulate with config: ${options.config}`,
+    );
+    return;
+  }
 
-  await executeCommand(
-    async () => {
-      const startTime = Date.now();
+  const startTime = Date.now();
 
-      try {
-        // Load event from inline JSON, file path, or URL
-        const event = await loadJsonFromSource(options.event, {
-          name: 'event',
-        });
+  try {
+    // Load event from inline JSON, file path, or URL
+    const event = await loadJsonFromSource(options.event, {
+      name: 'event',
+    });
 
-        // Execute simulation
-        const result = await simulateCore(options.config, event, {
-          json: options.json,
-          verbose: options.verbose,
-          silent: options.silent,
-        });
+    // Execute simulation
+    const result = await simulateCore(options.config, event, {
+      json: options.json,
+      verbose: options.verbose,
+      silent: options.silent,
+    });
 
-        // Add duration to result
-        const resultWithDuration = {
-          ...result,
-          duration: (Date.now() - startTime) / 1000,
-        };
+    // Add duration to result
+    const resultWithDuration = {
+      ...result,
+      duration: (Date.now() - startTime) / 1000,
+    };
 
-        // Output results - create output logger that always logs
-        const outputLogger = createLogger({ silent: false, json: false });
-        const output = formatSimulationResult(resultWithDuration, {
-          json: options.json,
-        });
-        outputLogger.log('white', output);
+    // Output results
+    if (options.json) {
+      logger.json(resultWithDuration);
+    } else {
+      const output = formatSimulationResult(resultWithDuration, {
+        json: false,
+      });
+      logger.log(output);
+    }
 
-        // Exit with error code if simulation failed
-        if (!result.success) {
-          process.exit(1);
-        }
-      } catch (error) {
-        const errorMessage = getErrorMessage(error);
+    // Exit with error code if simulation failed
+    if (!result.success) {
+      process.exit(1);
+    }
+  } catch (error) {
+    const errorMessage = getErrorMessage(error);
 
-        if (options.json) {
-          // JSON error output - create output logger that always logs
-          const outputLogger = createLogger({ silent: false, json: false });
-          const errorOutput = JSON.stringify(
-            {
-              success: false,
-              error: errorMessage,
-              duration: (Date.now() - startTime) / 1000,
-            },
-            null,
-            2,
-          );
-          outputLogger.log('white', errorOutput);
-        } else {
-          // Error output - create error logger that always logs
-          const errorLogger = createLogger({ silent: false, json: false });
-          errorLogger.error(`❌ Simulate command failed: ${errorMessage}`);
-        }
+    if (options.json) {
+      logger.json({
+        success: false,
+        error: errorMessage,
+        duration: (Date.now() - startTime) / 1000,
+      });
+    } else {
+      logger.error(`Error: ${errorMessage}`);
+    }
 
-        process.exit(1);
-      }
-    },
-    'simulate',
-    dockerArgs,
-    options,
-    logger,
-    options.config,
-  );
+    process.exit(1);
+  }
 }
 
 /**

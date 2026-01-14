@@ -1,5 +1,61 @@
 # @walkeros/cli
 
+## 0.6.1
+
+### Patch Changes
+
+- f6007dd: Fix consistent logger forwarding across CLI commands
+  - Remove duplicate `createCollectorLoggerConfig` from push command, import
+    from core
+  - Fix simulate command to use `collector.push` instead of `elb()` (same
+    pattern as push)
+  - Add logger forwarding to simulate command via `executeInNode`
+  - Add logger forwarding to run command via `runFlow`
+
+## 0.0.0-next-20251219153324
+
+### Minor Changes
+
+- 42d06c8: CLI simplification - removed Docker mode for build commands, merged
+  runtime from @walkeros/docker into CLI, single walkeros/flow image for
+  production
+
+### Patch Changes
+
+- 71b615f: Fix URL handling in resolveAsset - URLs are now passed through
+  unchanged instead of being mangled into invalid filesystem paths
+- Updated dependencies [5163b01]
+  - @walkeros/core@0.0.0-next-20251219153324
+  - @walkeros/server-core@0.0.0-next-20251219153324
+
+## 0.7.0-next.0
+
+### Minor Changes
+
+- 42d06c8: Fix Docker runtime version display - versions now read reliably from
+  package.json at runtime instead of fragile build-time injection
+
+### Patch Changes
+
+- Updated dependencies [42d06c8]
+  - @walkeros/docker@0.7.0-next.0
+
+## 0.5.1-next.1
+
+### Patch Changes
+
+- 71b615f: Fix URL handling in resolveAsset - URLs are now passed through
+  unchanged instead of being mangled into invalid filesystem paths
+
+## 0.5.1-next.0
+
+### Patch Changes
+
+- Updated dependencies [5163b01]
+  - @walkeros/core@0.5.1-next.0
+  - @walkeros/docker@0.3.1-next.0
+  - @walkeros/server-core@0.5.1-next.0
+
 ## 0.5.0
 
 ### Minor Changes

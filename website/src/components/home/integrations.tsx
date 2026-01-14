@@ -72,7 +72,7 @@ const clientDestinations: Integration[] = [
   {
     name: 'API',
     icon: 'simple-icons:api',
-    link: '/docs/destinations/web/api',
+    link: '/docs/destinations/api/web',
   },
 ];
 

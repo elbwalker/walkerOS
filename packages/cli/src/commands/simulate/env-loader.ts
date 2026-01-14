@@ -53,12 +53,8 @@ export async function loadDestinationEnvs(
           simulation: envModule.simulation || [],
         };
       }
-    } catch (error) {
+    } catch {
       // Silently skip destinations without env or invalid packages
-      // eslint-disable-next-line no-console
-      console.warn(
-        `Warning: Could not load env for destination "${destKey}": ${error instanceof Error ? error.message : String(error)}`,
-      );
     }
   }
 

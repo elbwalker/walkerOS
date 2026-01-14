@@ -11,6 +11,9 @@
  * - JSON Schema generation for IDE support
  * - Type-safe parsing with Zod
  *
+ * SCHEMA SYNC: When modifying these schemas, update website/static/schema/flow/v1.json
+ * (served at https://walkeros.io/schema/flow/v1.json). For breaking changes, create v2.
+ *
  * @packageDocumentation
  */
 

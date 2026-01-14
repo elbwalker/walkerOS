@@ -1,5 +1,17 @@
 # @walkeros/web-destination-plausible
 
+## 0.0.0-next-20251219153324
+
+### Patch Changes
+
+- @walkeros/web-core@0.0.0-next-20251219153324
+
+## 0.5.1-next.0
+
+### Patch Changes
+
+- @walkeros/web-core@0.5.1-next.0
+
 ## 0.5.0
 
 ### Minor Changes

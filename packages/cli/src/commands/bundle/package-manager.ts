@@ -7,6 +7,24 @@ import {
   copyLocalPackage,
 } from '../../core/index.js';
 import { getPackageCacheKey } from '../../core/cache-utils.js';
+import { getTmpPath } from '../../core/tmp.js';
+
+/** Timeout for individual package downloads (60 seconds) */
+const PACKAGE_DOWNLOAD_TIMEOUT_MS = 60000;
+
+/**
+ * Wraps a promise with a timeout. Rejects with clear error if timeout exceeded.
+ */
+async function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  errorMessage: string,
+): Promise<T> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(errorMessage)), ms),
+  );
+  return Promise.race([promise, timeout]);
+}
 
 export interface Package {
   name: string;
@@ -38,18 +56,18 @@ function getPackageDirectory(
 
 async function getCachedPackagePath(
   pkg: Package,
-  tempDir: string,
+  tmpDir?: string,
 ): Promise<string> {
-  const cacheDir = path.join('.tmp', 'cache', 'packages');
+  const cacheDir = getTmpPath(tmpDir, 'cache', 'packages');
   const cacheKey = await getPackageCacheKey(pkg.name, pkg.version);
   return path.join(cacheDir, cacheKey);
 }
 
 async function isPackageCached(
   pkg: Package,
-  tempDir: string,
+  tmpDir?: string,
 ): Promise<boolean> {
-  const cachedPath = await getCachedPackagePath(pkg, tempDir);
+  const cachedPath = await getCachedPackagePath(pkg, tmpDir);
   return fs.pathExists(cachedPath);
 }
 
@@ -134,6 +152,9 @@ export async function downloadPackages(
   const downloadQueue: Package[] = [...packages];
   const processed = new Set<string>();
 
+  // Track user-specified packages (only these are logged per design)
+  const userSpecifiedPackages = new Set(packages.map((p) => p.name));
+
   // Track packages that should use local paths (to prevent npm overwriting them)
   const localPackageMap = new Map<string, string>();
   for (const pkg of packages) {
@@ -187,10 +208,14 @@ export async function downloadPackages(
     const packageSpec = `${pkg.name}@${pkg.version}`;
     // Use proper node_modules structure: node_modules/@scope/package
     const packageDir = getPackageDirectory(targetDir, pkg.name, pkg.version);
-    const cachedPath = await getCachedPackagePath(pkg, targetDir);
+    // Cache always uses the default .tmp/cache/packages location
+    const cachedPath = await getCachedPackagePath(pkg);
 
-    if (useCache && (await isPackageCached(pkg, targetDir))) {
-      logger.debug(`Using cached ${packageSpec}...`);
+    if (useCache && (await isPackageCached(pkg))) {
+      // Only log user-specified packages per design
+      if (userSpecifiedPackages.has(pkg.name)) {
+        logger.debug(`Downloading ${packageSpec} (cached)`);
+      }
       try {
         // Ensure parent directories exist for scoped packages (@scope/package)
         await fs.ensureDir(path.dirname(packageDir));
@@ -213,8 +238,6 @@ export async function downloadPackages(
       }
     }
 
-    logger.debug(`Downloading ${packageSpec}...`);
-
     try {
       // Ensure parent directories exist for scoped packages (@scope/package)
       await fs.ensureDir(path.dirname(packageDir));
@@ -222,29 +245,42 @@ export async function downloadPackages(
       // Extract package to proper node_modules structure
       // Use environment variable for cache location (Docker-friendly)
       const cacheDir =
-        process.env.NPM_CACHE_DIR || path.join(process.cwd(), '.npm-cache');
-      await pacote.extract(packageSpec, packageDir, {
-        // Force npm registry download, prevent workspace resolution
-        registry: 'https://registry.npmjs.org',
+        process.env.NPM_CACHE_DIR || getTmpPath(undefined, 'cache', 'npm');
+      await withTimeout(
+        pacote.extract(packageSpec, packageDir, {
+          // Force npm registry download, prevent workspace resolution
+          registry: 'https://registry.npmjs.org',
 
-        // Force online fetching from registry (don't use cached workspace packages)
-        preferOnline: true,
+          // Force online fetching from registry (don't use cached workspace packages)
+          preferOnline: true,
 
-        // Cache for performance
-        cache: cacheDir,
+          // Cache for performance
+          cache: cacheDir,
 
-        // Don't resolve relative to workspace context
-        where: undefined,
-      });
+          // Don't resolve relative to workspace context
+          where: undefined,
+        }),
+        PACKAGE_DOWNLOAD_TIMEOUT_MS,
+        `Package download timed out after ${PACKAGE_DOWNLOAD_TIMEOUT_MS / 1000}s: ${packageSpec}`,
+      );
+
+      // Only log user-specified packages per design
+      if (userSpecifiedPackages.has(pkg.name)) {
+        // Get package size for display
+        const pkgStats = await fs.stat(path.join(packageDir, 'package.json'));
+        const pkgJsonSize = pkgStats.size;
+        // Estimate total package size from package.json (rough approximation)
+        const sizeKB = (pkgJsonSize / 1024).toFixed(1);
+        logger.debug(`Downloading ${packageSpec} (${sizeKB} KB)`);
+      }
 
       // Cache the downloaded package for future use
       if (useCache) {
         try {
           await fs.ensureDir(path.dirname(cachedPath));
           await fs.copy(packageDir, cachedPath);
-          logger.debug(`Cached ${packageSpec} for future use`);
         } catch (cacheError) {
-          logger.debug(`Failed to cache ${packageSpec}: ${cacheError}`);
+          // Silent cache failures
         }
       }
 

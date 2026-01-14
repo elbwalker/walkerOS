@@ -2,12 +2,12 @@
 title: Docker
 description: Deploy walkerOS flows with Docker containers
 sidebar_position: 3
-package: '@walkeros/docker'
+package: '@walkeros/cli'
 ---
 
 # walkerOS Docker
 
-The walkerOS Docker package (`@walkeros/docker`) is a **pure runtime container** for executing pre-built flow bundles in production. It's designed for fast startup (< 1 second), minimal footprint (~150-200MB), and cloud-native deployment.
+The walkerOS Docker image (`walkeros/flow`) is a **pure runtime container** for executing pre-built flow bundles in production. It's designed for fast startup (< 1 second), minimal footprint (~150-200MB), and cloud-native deployment.
 
 **Key philosophy**: Docker handles runtime, [CLI](/docs/apps/cli) handles build-time. You bundle with the CLI, deploy with Docker.
 
@@ -76,7 +76,7 @@ The Docker image includes demo bundles for instant testing.
   code={`docker run -p 8080:8080 \\
   -e MODE=collect \\
   -e FLOW=/app/demos/demo-collect.mjs \\
-  walkeros/docker:latest`}
+  walkeros/flow:latest`}
   language="bash"
 />
 
@@ -99,7 +99,7 @@ The demo is self-contained and generates test events automatically.
   -e MODE=serve \\
   -e PORT=3000 \\
   -e STATIC_DIR=/app/demos \\
-  walkeros/docker:latest`}
+  walkeros/flow:latest`}
   language="bash"
 />
 
@@ -118,7 +118,7 @@ The Docker container is configured via environment variables:
   -e FLOW=/app/flow.mjs \\
   -e PORT=8080 \\
   -e HOST=0.0.0.0 \\
-  walkeros/docker:latest`}
+  walkeros/flow:latest`}
   language="bash"
 />
 
@@ -137,7 +137,7 @@ The Docker container is configured via environment variables:
   -e MODE=serve \\
   -e STATIC_DIR=/app/static \\
   -e PORT=3000 \\
-  walkeros/docker:latest`}
+  walkeros/flow:latest`}
   language="bash"
 />
 
@@ -171,8 +171,8 @@ This creates `dist/flow.mjs`.
   -v $(pwd)/dist/flow.mjs:/app/flow.mjs \\
   -e MODE=collect \\
   -e FLOW=/app/flow.mjs \\
-  --name walkeros-collector \\
-  walkeros/docker:latest`}
+  --name walkeros-flow \\
+  walkeros/flow:latest`}
   language="bash"
 />
 
@@ -188,7 +188,7 @@ This creates `dist/flow.mjs`.
 **4. View logs**
 
 <CodeSnippet
-  code={`docker logs -f walkeros-collector`}
+  code={`docker logs -f walkeros-flow`}
   language="bash"
 />
 
@@ -196,53 +196,34 @@ This creates `dist/flow.mjs`.
 
 Build a custom Docker image with your bundle baked in.
 
-**1. Build with CLI**
+**1. Build with CLI and generate Dockerfile**
 
 <CodeSnippet
-  code={`walkeros bundle production.json -e production --output flow.mjs`}
+  code={`walkeros bundle production.json --dockerfile`}
   language="bash"
 />
 
-**2. Create Dockerfile**
+This creates `dist/bundle.mjs` and `dist/Dockerfile`.
+
+**2. Build image**
 
 <CodeSnippet
-  code={`FROM walkeros/docker:latest
-
-# Copy pre-built bundle
-COPY flow.mjs /app/flow.mjs
-
-# Configure runtime
-ENV MODE=collect
-ENV FLOW=/app/flow.mjs
-ENV PORT=8080
-
-# Expose port
-EXPOSE 8080
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
-  CMD node -e "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"`}
-  language="dockerfile"
-/>
-
-**3. Build image**
-
-<CodeSnippet
-  code={`docker build -t my-analytics-collector:v1.0.0 .`}
+  code={`cd dist
+docker build -t my-analytics:v1.0.0 .`}
   language="bash"
 />
 
-**4. Run it**
+**3. Run it**
 
 <CodeSnippet
-  code={`docker run -d -p 8080:8080 my-analytics-collector:v1.0.0`}
+  code={`docker run -d -p 8080:8080 my-analytics:v1.0.0`}
   language="bash"
 />
 
-**5. Push to registry**
+**4. Push to registry**
 
 <CodeSnippet
-  code={`docker tag my-analytics-collector:v1.0.0 gcr.io/my-project/analytics:v1.0.0
+  code={`docker tag my-analytics:v1.0.0 gcr.io/my-project/analytics:v1.0.0
 docker push gcr.io/my-project/analytics:v1.0.0`}
   language="bash"
 />
@@ -253,13 +234,14 @@ Build and bundle in a single Dockerfile.
 
 <CodeSnippet
   code={`# Build stage
-FROM walkeros/cli:latest AS builder
+FROM node:18-alpine AS builder
 WORKDIR /build
+RUN npm install -g @walkeros/cli
 COPY flow.json .
-RUN walkeros bundle flow.json --local --output flow.mjs
+RUN walkeros bundle flow.json --output flow.mjs
 
 # Runtime stage
-FROM walkeros/docker:latest
+FROM walkeros/flow:latest
 COPY --from=builder /build/flow.mjs /app/flow.mjs
 
 ENV MODE=collect
@@ -285,7 +267,7 @@ docker run -d -p 8080:8080 analytics-collector`}
 
 services:
   collector:
-    image: walkeros/docker:latest
+    image: walkeros/flow:latest
     environment:
       MODE: collect
       FLOW: /app/flow.mjs
@@ -319,7 +301,7 @@ docker-compose logs -f`}
 services:
   # Server-side event collection
   collector:
-    image: walkeros/docker:latest
+    image: walkeros/flow:latest
     environment:
       MODE: collect
       FLOW: /app/server-flow.mjs
@@ -331,7 +313,7 @@ services:
 
   # Web bundle serving
   tracker:
-    image: walkeros/docker:latest
+    image: walkeros/flow:latest
     environment:
       MODE: serve
       STATIC_DIR: /app/static
@@ -423,7 +405,7 @@ To start console-only: remove the `bigquery` destination block.
 **3. Create Dockerfile**
 
 <CodeSnippet
-  code={`FROM walkeros/docker:latest
+  code={`FROM walkeros/flow:latest
 COPY flow.mjs /app/flow.mjs
 ENV MODE=collect
 ENV FLOW=/app/flow.mjs
@@ -562,7 +544,7 @@ This creates `tracker.js`.
 **3. Create Dockerfile for serving**
 
 <CodeSnippet
-  code={`FROM walkeros/docker:latest
+  code={`FROM walkeros/flow:latest
 COPY tracker.js /app/static/tracker.js
 ENV MODE=serve
 ENV STATIC_DIR=/app/static
@@ -631,16 +613,16 @@ Deploy to any Kubernetes cluster:
   code={`apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: walkeros-collector
+  name: walkeros-flow
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: walkeros-collector
+      app: walkeros-flow
   template:
     metadata:
       labels:
-        app: walkeros-collector
+        app: walkeros-flow
     spec:
       containers:
       - name: collector
@@ -671,10 +653,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: walkeros-collector
+  name: walkeros-flow
 spec:
   selector:
-    app: walkeros-collector
+    app: walkeros-flow
   ports:
   - protocol: TCP
     port: 80
@@ -687,7 +669,7 @@ Apply:
 
 <CodeSnippet
   code={`kubectl apply -f deployment.yaml
-kubectl get services walkeros-collector`}
+kubectl get services walkeros-flow`}
   language="bash"
 />
 
@@ -724,13 +706,13 @@ Use this for:
 
 <CodeSnippet
   code={`# Follow logs
-docker logs -f walkeros-collector
+docker logs -f walkeros-flow
 
 # Last 100 lines
-docker logs --tail 100 walkeros-collector
+docker logs --tail 100 walkeros-flow
 
 # With timestamps
-docker logs -t walkeros-collector`}
+docker logs -t walkeros-flow`}
   language="bash"
 />
 
@@ -784,7 +766,7 @@ For sensitive configuration (API keys, credentials), use environment variables:
 
 <CodeSnippet
   code={`# Docker
-docker run -e BIGQUERY_KEY="$(cat key.json)" walkeros/docker
+docker run -e BIGQUERY_KEY="$(cat key.json)" walkeros/flow
 
 # Cloud Run
 gcloud run deploy $SERVICE_NAME \\
@@ -821,10 +803,10 @@ The container is designed for horizontal scaling:
 
 <CodeSnippet
   code={`# Docker Swarm
-docker service scale walkeros-collector=5
+docker service scale walkeros-flow=5
 
 # Kubernetes
-kubectl scale deployment walkeros-collector --replicas=5
+kubectl scale deployment walkeros-flow --replicas=5
 
 # Cloud Run (auto-scaling)
 gcloud run services update $SERVICE_NAME --max-instances=100`}
@@ -837,7 +819,7 @@ gcloud run services update $SERVICE_NAME --max-instances=100`}
 
 <CodeSnippet
   code={`# Check logs
-docker logs walkeros-collector
+docker logs walkeros-flow
 
 # Common issues:
 # - FLOW path doesn't exist
@@ -861,7 +843,7 @@ curl -X POST http://localhost:8080/collect \\
   -d '{"name":"test event","data":{}}'
 
 # Check logs for errors
-docker logs walkeros-collector`}
+docker logs walkeros-flow`}
   language="bash"
 />
 
@@ -869,7 +851,7 @@ docker logs walkeros-collector`}
 
 <CodeSnippet
   code={`# Use a different host port
-docker run -p 8081:8080 walkeros/docker
+docker run -p 8081:8080 walkeros/flow
 
 # Or find and kill the conflicting process
 lsof -ti:8080 | xargs kill`}
@@ -880,13 +862,13 @@ lsof -ti:8080 | xargs kill`}
 
 <CodeSnippet
   code={`# Verify volume mount
-docker run -v $(pwd)/dist/flow.mjs:/app/flow.mjs walkeros/docker
+docker run -v $(pwd)/dist/flow.mjs:/app/flow.mjs walkeros/flow
 
 # Check if file exists in container
-docker run --rm -it walkeros/docker ls -la /app/
+docker run --rm -it walkeros/flow ls -la /app/
 
 # Verify FLOW environment variable
-docker run -e FLOW=/app/flow.mjs walkeros/docker`}
+docker run -e FLOW=/app/flow.mjs walkeros/flow`}
   language="bash"
 />
 
@@ -896,4 +878,4 @@ docker run -e FLOW=/app/flow.mjs walkeros/docker`}
 - **[Flow Configuration](/docs/getting-started/flow)** - Understand flow structure
 - **[Sources](/docs/sources/)** - Configure event sources
 - **[Destinations](/docs/destinations/)** - Set up analytics destinations
-- **[Docker Hub](https://hub.docker.com/r/walkeros/docker)** - Official Docker images
+- **[Docker Hub](https://hub.docker.com/r/walkeros/flow)** - Official Docker images

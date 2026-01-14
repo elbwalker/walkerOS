@@ -2,7 +2,10 @@ import baseConfig from '@walkeros/config/jest/node.config';
 
 const config = {
   testTimeout: 30000,
-  transformIgnorePatterns: ['/node_modules/(?!(@walkeros|chalk)/)'],
+  // Transform ESM packages: jsdom 27+ and its dependencies are pure ESM
+  transformIgnorePatterns: [
+    'node_modules/(?!(@walkeros|chalk|jsdom|parse5|nwsapi|entities)/)',
+  ],
   testPathIgnorePatterns: [
     ...(baseConfig.testPathIgnorePatterns || []),
     '\\.tmp',

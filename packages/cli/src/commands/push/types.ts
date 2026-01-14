@@ -1,14 +1,16 @@
 import type { Elb } from '@walkeros/core';
-import type { GlobalOptions } from '../../types/index.js';
 
 /**
  * Push command options
  */
-export interface PushCommandOptions extends GlobalOptions {
+export interface PushCommandOptions {
   config: string;
   event: string;
   flow?: string;
   json?: boolean;
+  verbose?: boolean;
+  silent?: boolean;
+  platform?: 'web' | 'server';
 }
 
 /**

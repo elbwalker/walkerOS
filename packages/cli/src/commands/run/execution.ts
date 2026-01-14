@@ -1,10 +1,11 @@
-import { createLogger, Level } from '@walkeros/core';
-import type { RuntimeConfig, ServeConfig } from '@walkeros/docker';
-import { runFlow, runServeMode } from '@walkeros/docker';
+import { createLogger, Level, type Logger } from '@walkeros/core';
+import type { RuntimeConfig, ServeConfig } from '../../runtime/index.js';
+import { runFlow, runServeMode } from '../../runtime/index.js';
 
 // Create logger for local execution - DEBUG level when VERBOSE, otherwise INFO
 const logLevel = process.env.VERBOSE === 'true' ? Level.DEBUG : Level.INFO;
-const logger = createLogger({ level: logLevel });
+const loggerConfig: Logger.Config = { level: logLevel };
+const logger = createLogger(loggerConfig);
 
 /**
  * Execute run command locally
@@ -32,7 +33,7 @@ export async function executeRunLocal(
         port: options.port,
         host: options.host,
       };
-      await runFlow(flowPath, config, logger.scope('runner'));
+      await runFlow(flowPath, config, logger.scope('runner'), loggerConfig);
       break;
     }
 

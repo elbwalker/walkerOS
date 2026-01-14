@@ -40,11 +40,13 @@ npx walkeros --version`}
 | Command | Purpose | Use Case |
 |---------|---------|----------|
 | `bundle` | Build production-ready bundle from flow config | Create deployable JavaScript from configuration |
-| `simulate` | Test flow with sample events (mocked) | Validate configuration before deployment |
+| `simulate` | Test flow with sample events (mocked) | Validate config or bundle before deployment |
 | `push` | Execute event with real API calls | Integration testing, production validation |
 | `run collect` | Start HTTP event collection server | Accept incoming events via HTTP POST |
 | `run serve` | Serve web bundles as static files | Host browser tracking scripts |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
+
+Both `simulate` and `push` accept either a config JSON or a pre-built bundle as input.
 
 ## Configuration types
 
@@ -296,10 +298,10 @@ The bundle is now ready to deploy!
 |--------|-------------|
 | `-f, --flow <name>` | Build specific flow (for multi-flow configs) |
 | `--all` | Build all flows |
+| `--dockerfile` | Generate Dockerfile alongside bundle |
 | `-s, --stats` | Show bundle statistics |
 | `--json` | Output statistics as JSON (for CI/CD) |
 | `--no-cache` | Skip package cache, download fresh |
-| `--local` | Execute locally without Docker |
 | `-v, --verbose` | Detailed logging |
 
 ### Multi-Flow Example
@@ -318,7 +320,7 @@ walkeros bundle config.json --all`}
 
 ## Simulate command
 
-The `simulate` command tests your flow configuration with sample events without deploying to production.
+The `simulate` command tests your flow configuration with sample events without deploying to production. It accepts either a config JSON (which gets bundled) or a pre-built bundle (executed directly).
 
 ### Use Case
 
@@ -327,13 +329,18 @@ Before deploying your flow, you want to:
 - Test event transformations and mappings
 - See what data would be sent to destinations
 - Debug issues locally
+- Test a pre-built bundle without rebuilding
 
 Simulate executes your flow with test events and captures all destination API calls.
 
 ### Basic Usage
 
 <CodeSnippet
-  code={`walkeros simulate flow.json --event '{"name":"page view","data":{"title":"Home"}}'`}
+  code={`# With config JSON (auto-bundled)
+walkeros simulate flow.json --event '{"name":"page view","data":{"title":"Home"}}'
+
+# With pre-built bundle
+walkeros simulate dist/bundle.mjs --event '{"name":"page view"}'`}
   language="bash"
 />
 
@@ -434,17 +441,29 @@ The simulation shows:
 ### Options
 
 <CodeSnippet
-  code={`walkeros simulate <config-file> [options]`}
+  code={`walkeros simulate <input> [options]`}
   language="bash"
 />
 
 | Option | Description |
 |--------|-------------|
-| `--event <json>` | Event JSON string to test |
+| `-e, --event <json>` | Event JSON string to test |
 | `--event-file <path>` | Path to JSON file with event(s) |
+| `-p, --platform <platform>` | Platform override (`web` or `server`) |
 | `--json` | Output as JSON |
-| `--local` | Execute locally without Docker |
 | `-v, --verbose` | Detailed logging |
+
+### Input Types
+
+The CLI auto-detects the input type by attempting to parse as JSON:
+- **Config JSON** - Bundled and executed with destination mocking
+- **Pre-built bundle** (`.js`/`.mjs`) - Executed directly, no mocking
+
+When using pre-built bundles, platform is detected from file extension:
+- `.mjs` → server (ESM, Node.js)
+- `.js` → web (IIFE, JSDOM)
+
+Use `--platform` to override if extension doesn't match intended runtime.
 
 ### Multiple Events
 
@@ -465,7 +484,7 @@ walkeros simulate flow.json --event-file events.json`}
 
 ## Push command
 
-The `push` command executes your flow with a real event, making actual API calls to your configured destinations. Unlike `simulate` which mocks API calls for safe testing, `push` performs real HTTP requests—ideal for integration testing and production validation.
+The `push` command executes your flow with a real event, making actual API calls to your configured destinations. Unlike `simulate` which mocks API calls for safe testing, `push` performs real HTTP requests—ideal for integration testing and production validation. It accepts either a config JSON (which gets bundled) or a pre-built bundle.
 
 ### Use Case
 
@@ -474,13 +493,18 @@ You've validated your configuration with `simulate` and now need to:
 - Verify production credentials and endpoints work
 - Debug actual API responses and errors
 - Perform integration testing before deployment
+- Execute a pre-built bundle without rebuilding
 
 Push is your bridge between local testing and production deployment.
 
 ### Basic Usage
 
 <CodeSnippet
-  code={`walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}' --local`}
+  code={`# With config JSON (auto-bundled)
+walkeros push flow.json --event '{"name":"page view","data":{"title":"Home"}}'
+
+# With pre-built bundle
+walkeros push dist/bundle.mjs --event '{"name":"page view"}'`}
   language="bash"
 />
 
@@ -540,7 +564,7 @@ Create `event.json`:
 **3. Push the event**
 
 <CodeSnippet
-  code={`walkeros push api-flow.json --event event.json --local --verbose`}
+  code={`walkeros push api-flow.json --event event.json --verbose`}
   language="bash"
 />
 
@@ -564,7 +588,7 @@ The event was sent to your real API endpoint!
 ### Options
 
 <CodeSnippet
-  code={`walkeros push <config-file> [options]`}
+  code={`walkeros push <input> [options]`}
   language="bash"
 />
 
@@ -572,10 +596,22 @@ The event was sent to your real API endpoint!
 |--------|-------------|
 | `-e, --event <source>` | **Required.** Event to push (JSON string, file path, or URL) |
 | `--flow <name>` | Flow name (for multi-flow configs) |
+| `-p, --platform <platform>` | Platform override (`web` or `server`) |
 | `--json` | Output results as JSON |
 | `-v, --verbose` | Verbose output with debug information |
 | `-s, --silent` | Suppress output (for CI/CD) |
-| `--local` | Execute in local Node.js instead of Docker |
+
+### Input Types
+
+The CLI auto-detects the input type by attempting to parse as JSON:
+- **Config JSON** - Bundled and executed
+- **Pre-built bundle** (`.js`/`.mjs`) - Executed directly
+
+When using pre-built bundles, platform is detected from file extension:
+- `.mjs` → server (ESM, Node.js)
+- `.js` → web (IIFE, JSDOM)
+
+Use `--platform` to override if extension doesn't match intended runtime.
 
 ### Event Input Formats
 
@@ -617,7 +653,7 @@ The `--event` parameter accepts three formats:
 For CI/CD pipelines, use `--json` for machine-readable output:
 
 <CodeSnippet
-  code={`walkeros push flow.json --event '{"name":"page view"}' --json --silent --local`}
+  code={`walkeros push flow.json --event '{"name":"page view"}' --json --silent`}
   language="bash"
 />
 
@@ -650,10 +686,10 @@ Push to specific flows:
 
 <CodeSnippet
   code={`# Push to staging
-walkeros push flow.json --event event.json --flow staging --local
+walkeros push flow.json --event event.json --flow staging
 
 # Push to production
-walkeros push flow.json --event event.json --flow production --local`}
+walkeros push flow.json --event event.json --flow production`}
   language="bash"
 />
 
@@ -804,7 +840,6 @@ The collector terminal shows:
 | Option | Description |
 |--------|-------------|
 | `--port <number>` | Server port (default: 8080) |
-| `--local` | Execute locally without Docker |
 | `-v, --verbose` | Detailed logging |
 
 ### Running Pre-Built Bundles
@@ -943,7 +978,6 @@ Open `test.html` in your browser. Events will be sent to `http://localhost:8080/
 | `--port <number>` | Server port (default: 3000) |
 | `--path <string>` | URL path to serve script (default: `/`) |
 | `--name <string>` | Script filename (default: from config) |
-| `--local` | Execute locally without Docker |
 | `-v, --verbose` | Detailed logging |
 
 ## Complete example: Web → Server flow
@@ -1185,48 +1219,11 @@ These options work with all commands:
 
 | Option | Description |
 |--------|-------------|
-| `--local` | Execute without Docker (faster, requires local Node.js) |
 | `--verbose` | Show detailed logs |
 | `--silent` | Suppress output |
 | `--json` | Output as JSON (for CI/CD) |
 | `--help` | Show help for command |
 | `--version` | Show CLI version |
-
-## Execution modes
-
-### Docker Mode (Default)
-
-By default, the CLI uses Docker for isolated execution:
-
-<CodeSnippet
-  code={`walkeros bundle flow.json`}
-  language="bash"
-/>
-
-**Advantages**:
-- Consistent environment across machines
-- Isolated from local Node.js setup
-- Reproducible builds
-
-**Requirements**:
-- Docker installed and running
-
-### Local Mode
-
-Use `--local` to execute in your current Node.js environment:
-
-<CodeSnippet
-  code={`walkeros bundle flow.json --local`}
-  language="bash"
-/>
-
-**Advantages**:
-- Faster execution (no container startup)
-- No Docker dependency
-- Useful in CI/CD or containers
-
-**Requirements**:
-- Node.js 18+ installed locally
 
 ## CI/CD integration
 
@@ -1262,12 +1259,14 @@ jobs:
 ### Docker Build
 
 <CodeSnippet
-  code={`FROM walkeros/cli:latest AS builder
+  code={`FROM node:18-alpine AS builder
+WORKDIR /build
+RUN npm install -g @walkeros/cli
 COPY flow.json .
-RUN walkeros bundle flow.json --local
+RUN walkeros bundle flow.json
 
-FROM walkeros/docker:latest
-COPY --from=builder /dist/bundle.mjs /app/flow.mjs
+FROM walkeros/flow:latest
+COPY --from=builder /build/dist/bundle.mjs /app/flow.mjs
 ENV MODE=collect
 ENV FLOW=/app/flow.mjs`}
   language="dockerfile"
@@ -1288,17 +1287,16 @@ npm ping`}
   language="bash"
 />
 
-### Docker Permission Issues
+### Build Issues
 
-On Linux, you may need to run Docker commands with sudo or add your user to the `docker` group:
+If you encounter build issues:
 
 <CodeSnippet
-  code={`# Use local mode instead
-walkeros bundle flow.json --local
+  code={`# Clear cache and retry
+walkeros cache clear
 
-# Or fix Docker permissions
-sudo usermod -aG docker $USER
-# Then log out and back in`}
+# Retry with verbose output
+walkeros bundle flow.json --verbose`}
   language="bash"
 />
 

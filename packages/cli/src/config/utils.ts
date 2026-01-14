@@ -4,8 +4,8 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import os from 'os';
 import { getErrorMessage } from '../core/index.js';
+import { getTmpPath } from '../core/tmp.js';
 
 /**
  * Check if a string is a valid URL
@@ -51,15 +51,12 @@ export async function downloadFromUrl(url: string): Promise<string> {
 
     const content = await response.text();
 
-    // Extract filename from URL or generate one
-    const urlObj = new URL(url);
-    const urlFilename = path.basename(urlObj.pathname);
-    const extension = path.extname(urlFilename) || '.json';
-    const randomId = Math.random().toString(36).substring(2, 11);
-    const filename = `walkeros-download-${Date.now()}-${randomId}${extension}`;
+    // Write to .tmp/downloads/ directory
+    const downloadsDir = getTmpPath(undefined, 'downloads');
+    await fs.ensureDir(downloadsDir);
 
-    // Write to system temp directory
-    const tempPath = path.join(os.tmpdir(), filename);
+    // Use a consistent filename - always re-downloaded fresh anyway
+    const tempPath = path.join(downloadsDir, 'flow.json');
     await fs.writeFile(tempPath, content, 'utf-8');
 
     return tempPath;
@@ -144,26 +141,6 @@ export async function loadJsonConfig<T>(configPath: string): Promise<T> {
       }
     }
   }
-}
-
-/**
- * Generate a unique temporary directory path.
- *
- * @param tempDir - Base temporary directory (default: ".tmp")
- * @returns Absolute path to unique temp directory
- *
- * @example
- * ```typescript
- * getTempDir() // "/workspaces/project/.tmp/cli-1647261462000-abc123"
- * getTempDir('/tmp') // "/tmp/cli-1647261462000-abc123"
- * ```
- */
-export function getTempDir(tempDir = '.tmp'): string {
-  const randomId = Math.random().toString(36).substring(2, 11);
-  const basePath = path.isAbsolute(tempDir)
-    ? tempDir
-    : path.join(process.cwd(), tempDir);
-  return path.join(basePath, `cli-${Date.now()}-${randomId}`);
 }
 
 /**

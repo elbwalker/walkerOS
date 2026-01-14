@@ -5,7 +5,7 @@
  */
 
 import { pathToFileURL } from 'url';
-import type { Elb } from '@walkeros/core';
+import type { Elb, Logger as CoreLogger } from '@walkeros/core';
 import { getErrorMessage } from '../../core/index.js';
 import type { CallTracker, ApiCall } from './tracker.js';
 
@@ -83,6 +83,7 @@ export async function executeInNode(
   tracker: CallTracker,
   envs: Record<string, DestinationEnv>,
   timeout: number = 30000,
+  context: { logger?: CoreLogger.Config } = {},
 ): Promise<ExecutionResult> {
   const start = Date.now();
 
@@ -103,11 +104,15 @@ export async function executeInNode(
         throw new Error('Bundle does not export default factory function');
       }
 
-      const result = await module.default();
+      const result = await module.default(context);
 
-      if (!result || !result.elb || typeof result.elb !== 'function') {
+      if (
+        !result ||
+        !result.collector ||
+        typeof result.collector.push !== 'function'
+      ) {
         throw new Error(
-          'Factory function did not return valid result with elb',
+          'Factory function did not return valid result with collector',
         );
       }
 
@@ -115,9 +120,11 @@ export async function executeInNode(
 
       let elbResult: Elb.PushResult | undefined;
       try {
-        elbResult = (await elb(event.name, event.data)) as
-          | Elb.PushResult
-          | undefined;
+        // Use collector.push directly (bypasses source handlers, same as push command)
+        elbResult = await collector.push({
+          name: event.name,
+          data: event.data,
+        });
       } catch (error) {
         throw new Error(`Event execution failed: ${getErrorMessage(error)}`);
       }

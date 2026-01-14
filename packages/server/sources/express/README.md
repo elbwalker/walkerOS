@@ -432,80 +432,21 @@ This design enables:
 
 ## Deployment
 
-### Docker
+Use the [walkerOS Docker image](https://hub.docker.com/r/walkeros/flow) for
+deployment:
 
-```dockerfile
-FROM node:18-alpine
+```bash
+# Bundle your flow with a Dockerfile
+walkeros bundle flow.json --dockerfile
 
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm install
-
-COPY . .
-
-ENV PORT=8080
-EXPOSE 8080
-
-CMD ["node", "server.js"]
+# Build and run
+cd dist
+docker build -t my-flow .
+docker run -p 8080:8080 my-flow
 ```
 
-**server.js:**
-
-```javascript
-import { startFlow } from '@walkeros/collector';
-import { sourceExpress } from '@walkeros/server-source-express';
-
-await startFlow({
-  sources: {
-    express: {
-      code: sourceExpress,
-      config: {
-        settings: {
-          port: process.env.PORT || 8080,
-        },
-      },
-    },
-  },
-  // Your destinations...
-});
-```
-
-### Kubernetes
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: walkeros-collector
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: walkeros-collector
-  template:
-    metadata:
-      labels:
-        app: walkeros-collector
-    spec:
-      containers:
-        - name: collector
-          image: your-registry/walkeros-collector:latest
-          ports:
-            - containerPort: 8080
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 5
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 3
-```
+See the [Docker documentation](https://www.walkeros.io/docs/apps/docker) for
+Cloud Run, Kubernetes, and other deployment options.
 
 ## Testing
 

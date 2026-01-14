@@ -28,11 +28,16 @@ export {
   substituteEnvVariables,
   loadJsonConfig,
   loadJsonFromSource,
-  getTempDir,
+  isUrl,
 } from './utils.js';
 
 // Loader
-export { loadBundleConfig, loadAllFlows, getAvailableFlows } from './loader.js';
+export {
+  loadBundleConfig,
+  loadAllFlows,
+  getAvailableFlows,
+  loadFlowConfig,
+} from './loader.js';
 export type { LoadConfigResult, LoadConfigOptions } from './loader.js';
 
 // Type re-exports

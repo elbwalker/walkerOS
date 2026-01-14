@@ -7,17 +7,17 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import { getFlowConfigCacheKey } from './cache-utils';
-
-const BUILD_CACHE_DIR = path.join('.tmp', 'cache', 'builds');
+import { getFlowConfigCacheKey } from './cache-utils.js';
+import { getTmpPath } from './tmp.js';
 
 /**
  * Get the cache file path for a flow.json configuration
  */
 export async function getBuildCachePath(
   configContent: string,
-  cacheDir: string = BUILD_CACHE_DIR,
+  tmpDir?: string,
 ): Promise<string> {
+  const cacheDir = getTmpPath(tmpDir, 'cache', 'builds');
   const cacheKey = await getFlowConfigCacheKey(configContent);
   return path.join(cacheDir, `${cacheKey}.js`);
 }
@@ -27,9 +27,9 @@ export async function getBuildCachePath(
  */
 export async function isBuildCached(
   configContent: string,
-  cacheDir: string = BUILD_CACHE_DIR,
+  tmpDir?: string,
 ): Promise<boolean> {
-  const cachePath = await getBuildCachePath(configContent, cacheDir);
+  const cachePath = await getBuildCachePath(configContent, tmpDir);
   return fs.pathExists(cachePath);
 }
 
@@ -39,9 +39,9 @@ export async function isBuildCached(
 export async function cacheBuild(
   configContent: string,
   buildOutput: string,
-  cacheDir: string = BUILD_CACHE_DIR,
+  tmpDir?: string,
 ): Promise<void> {
-  const cachePath = await getBuildCachePath(configContent, cacheDir);
+  const cachePath = await getBuildCachePath(configContent, tmpDir);
   await fs.ensureDir(path.dirname(cachePath));
   await fs.writeFile(cachePath, buildOutput, 'utf-8');
 }
@@ -51,9 +51,9 @@ export async function cacheBuild(
  */
 export async function getCachedBuild(
   configContent: string,
-  cacheDir: string = BUILD_CACHE_DIR,
+  tmpDir?: string,
 ): Promise<string | null> {
-  const cachePath = await getBuildCachePath(configContent, cacheDir);
+  const cachePath = await getBuildCachePath(configContent, tmpDir);
 
   if (await fs.pathExists(cachePath)) {
     return await fs.readFile(cachePath, 'utf-8');

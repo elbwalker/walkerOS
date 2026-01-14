@@ -94,3 +94,76 @@ Add to your `flow.json` destinations:
 Configuration options for the `settings.firehose` property:
 
 <PropertyTable schema={schemas.firehose} />
+
+## Docker Deployment
+
+### Step 1: Create Flow Configuration
+
+The AWS SDK automatically reads credentials from environment variables. Configure the stream name using the `${VAR}` syntax:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "firehose": {
+      "package": "@walkeros/server-destination-aws",
+      "config": {
+        "settings": {
+          "firehose": {
+            "streamName": "\${AWS_FIREHOSE_STREAM}",
+            "region": "\${AWS_REGION:eu-central-1}"
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
+/>
+
+### Step 2: Bundle the Flow
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e AWS_ACCESS_KEY_ID=AKIAXXXXXXXXXXXXXXXX \\
+  -e AWS_SECRET_ACCESS_KEY=your-secret-key \\
+  -e AWS_REGION=eu-central-1 \\
+  -e AWS_FIREHOSE_STREAM=walker-events \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+### Using IAM Roles (Recommended for AWS)
+
+When running on AWS infrastructure (ECS, Lambda, EC2), attach an IAM role instead of using access keys:
+
+<CodeSnippet
+  code={`# ECS Task Definition - no credentials needed
+docker run -d \\
+  -e AWS_REGION=eu-central-1 \\
+  -e AWS_FIREHOSE_STREAM=walker-events \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+### Credential Discovery Order
+
+The AWS SDK automatically discovers credentials from:
+1. Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
+2. ECS task role
+3. EC2 instance role
+4. Lambda execution role
+
+:::tip Security Best Practice
+Use IAM roles when running on AWS. Only use access keys for local development or non-AWS platforms.
+:::
