@@ -1,8 +1,7 @@
 import React, { ReactNode } from 'react';
 import { ChevronRightIcon } from '@heroicons/react/20/solid';
 import Link from '@docusaurus/Link';
-import { Icon } from '@iconify/react';
-import { ArchitectureFlow } from '@walkeros/explorer';
+import { ArchitectureFlow, Icon } from '@walkeros/explorer';
 import type { FlowColumn } from '@walkeros/explorer';
 import { Check } from '@site/src/components/atoms/icons';
 import { tagger } from '@site/src/components/walkerjs';

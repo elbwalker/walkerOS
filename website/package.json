@@ -20,7 +20,6 @@
     "@docusaurus/preset-classic": "^3.9.2",
     "@docusaurus/theme-live-codeblock": "^3.9.2",
     "@docusaurus/theme-mermaid": "^3.9.2",
-    "@iconify/react": "^6.0.2",
     "@walkeros/collector": "0.6.0",
     "@walkeros/core": "0.6.0",
     "@walkeros/explorer": "0.5.0",
