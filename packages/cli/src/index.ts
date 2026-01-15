@@ -51,7 +51,8 @@ program.hook('preAction', (thisCommand, actionCommand) => {
   const options = actionCommand.opts();
   // Skip banner for --silent, --json, or --help flags
   if (!options.silent && !options.json) {
-    console.log(chalk.hex('#01b5e2')(`walkerOS v${VERSION}`));
+    // eslint-disable-next-line no-console -- CLI banner is intentional
+    console.log(`${chalk.hex('#01b5e2')('walkerOS')} v${VERSION}`);
   }
 });
 

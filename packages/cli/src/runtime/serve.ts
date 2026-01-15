@@ -33,8 +33,10 @@ export async function runServeMode(
   // Host priority: ENV variable > config > default
   const host = process.env.HOST || config?.host || '0.0.0.0';
 
-  // File path: ENV variable > config > default (resolve to absolute)
-  const file = resolve(process.env.FILE || config?.file || './dist/walker.js');
+  // Bundle path: ENV variable > config > default (resolve to absolute)
+  const file = resolve(
+    process.env.BUNDLE || config?.file || './dist/walker.js',
+  );
 
   // Serve name (filename in URL): ENV variable > config > default
   const serveName = process.env.SERVE_NAME || config?.serveName || 'walker.js';

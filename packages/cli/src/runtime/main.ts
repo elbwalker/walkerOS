@@ -41,7 +41,7 @@ function adaptLogger(
 
 async function main() {
   const mode = process.env.MODE || 'collect';
-  const file = process.env.FILE || '/flow/bundle.mjs';
+  const file = process.env.BUNDLE || '/app/flow/bundle.mjs';
   const port = parseInt(process.env.PORT || '8080', 10);
 
   const cliLogger = createLogger({ silent: false, verbose: true });

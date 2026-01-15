@@ -302,7 +302,7 @@ FROM walkeros/flow:latest
 COPY ${bundleFilename} /app/flow/bundle.mjs
 
 ENV MODE=collect
-ENV FLOW=/app/flow/bundle.mjs
+ENV BUNDLE=/app/flow/bundle.mjs
 
 EXPOSE 8080
 `;
