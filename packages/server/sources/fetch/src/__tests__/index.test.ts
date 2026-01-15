@@ -1,7 +1,23 @@
 import { sourceFetch } from '../index';
-import type { WalkerOS } from '@walkeros/core';
+import type { WalkerOS, Source, Collector } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { examples } from '../dev';
+import type { Types } from '../types';
+
+// Helper to create source context
+function createSourceContext(
+  config: Partial<Source.Config<Types>> = {},
+  env: Partial<Types['env']> = {},
+): Source.Context<Types> {
+  return {
+    config,
+    env: env as Types['env'],
+    logger: env.logger || createMockLogger(),
+    id: 'test-fetch',
+    collector: {} as Collector.Instance,
+    setIngest: jest.fn().mockResolvedValue(undefined),
+  };
+}
 
 describe('sourceFetch', () => {
   let mockPush: jest.MockedFunction<(...args: unknown[]) => unknown>;
@@ -11,28 +27,24 @@ describe('sourceFetch', () => {
     mockPush = jest.fn().mockResolvedValue({
       event: { id: 'test-id' },
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     });
     mockCommand = jest.fn().mockResolvedValue({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     });
   });
 
   describe('initialization', () => {
     it('should initialize with default settings', async () => {
       const source = await sourceFetch(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       expect(source.type).toBe('fetch');
@@ -48,19 +60,21 @@ describe('sourceFetch', () => {
 
     it('should merge custom settings with defaults', async () => {
       const source = await sourceFetch(
-        {
-          settings: {
-            path: '/events',
-            cors: false,
-            healthPath: '/status',
+        createSourceContext(
+          {
+            settings: {
+              path: '/events',
+              cors: false,
+              healthPath: '/status',
+            },
           },
-        },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       expect(source.config.settings).toEqual({
@@ -76,13 +90,15 @@ describe('sourceFetch', () => {
   describe('POST request handling', () => {
     it('should process valid single event', async () => {
       const source = await sourceFetch(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const event: WalkerOS.DeepPartialEvent = {
@@ -109,13 +125,15 @@ describe('sourceFetch', () => {
 
     it('should reject POST with invalid JSON body', async () => {
       const source = await sourceFetch(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const request = new Request('https://example.com/collect', {
@@ -137,13 +155,15 @@ describe('sourceFetch', () => {
 
     it('should reject POST with non-object body', async () => {
       const source = await sourceFetch(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const request = new Request('https://example.com/collect', {
@@ -164,13 +184,15 @@ describe('sourceFetch', () => {
 
     it('should process complete event with all properties', async () => {
       const source = await sourceFetch(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const completeEvent: WalkerOS.DeepPartialEvent = {
@@ -209,13 +231,15 @@ describe('sourceFetch', () => {
         .mockRejectedValue(new Error('Collector error'));
 
       const source = await sourceFetch(
-        {},
-        {
-          push: errorPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: errorPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const request = new Request('https://example.com/collect', {
@@ -238,13 +262,15 @@ describe('sourceFetch', () => {
   describe('GET request handling (pixel tracking)', () => {
     it('should process event from query parameters', async () => {
       const source = await sourceFetch(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const request = new Request(
@@ -266,13 +292,15 @@ describe('sourceFetch', () => {
 
     it('should return 1x1 GIF for pixel tracking', async () => {
       const source = await sourceFetch(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const request = new Request(
@@ -291,13 +319,15 @@ describe('sourceFetch', () => {
   describe('OPTIONS request handling (CORS)', () => {
     it('should handle CORS preflight with default settings', async () => {
       const source = await sourceFetch(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const request = new Request('https://example.com/collect', {
@@ -314,20 +344,22 @@ describe('sourceFetch', () => {
 
     it('should handle CORS preflight with custom settings', async () => {
       const source = await sourceFetch(
-        {
-          settings: {
-            cors: {
-              origin: 'https://example.com',
-              credentials: true,
+        createSourceContext(
+          {
+            settings: {
+              cors: {
+                origin: 'https://example.com',
+                credentials: true,
+              },
             },
           },
-        },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const request = new Request('https://example.com/collect', {
@@ -348,15 +380,17 @@ describe('sourceFetch', () => {
 
     it('should not set CORS headers when disabled', async () => {
       const source = await sourceFetch(
-        {
-          settings: { cors: false },
-        },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {
+            settings: { cors: false },
+          },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const request = new Request('https://example.com/collect', {
@@ -373,13 +407,15 @@ describe('sourceFetch', () => {
   describe('health check', () => {
     it('should respond to health check endpoint', async () => {
       const source = await sourceFetch(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const request = new Request('https://example.com/health', {
@@ -402,13 +438,15 @@ describe('sourceFetch', () => {
   describe('unsupported methods', () => {
     it('should reject PUT requests', async () => {
       const source = await sourceFetch(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const request = new Request('https://example.com/collect', {
@@ -431,13 +469,15 @@ describe('sourceFetch', () => {
   describe('settings validation', () => {
     it('should apply default path', async () => {
       const source = await sourceFetch(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       expect(source.config.settings?.path).toBe('/collect');
@@ -445,15 +485,17 @@ describe('sourceFetch', () => {
 
     it('should accept custom path', async () => {
       const source = await sourceFetch(
-        {
-          settings: { path: '/events' },
-        },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {
+            settings: { path: '/events' },
+          },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       expect(source.config.settings?.path).toBe('/events');
@@ -467,13 +509,15 @@ describe('sourceFetch', () => {
         .mockResolvedValue({ event: { id: 'test-id' } });
 
       const source = await sourceFetch(
-        {},
-        {
-          push: mockPush as never,
-          command: jest.fn() as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: jest.fn() as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const request = new Request('https://example.com/collect', {

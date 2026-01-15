@@ -156,6 +156,40 @@ Bun.serve({ fetch: sources.fetch.push, port: 3000 });`}
 | `maxRequestSize` | `number` | `102400` | Max request size in bytes (100KB) |
 | `maxBatchSize` | `number` | `100` | Max events per batch request |
 
+## Ingest Metadata
+
+Extract request metadata and forward it through the pipeline.
+
+<CodeSnippet
+  code={`const { sources } = await startFlow({
+  sources: {
+    fetch: {
+      code: sourceFetch,
+      config: {
+        settings: { cors: true },
+        ingest: {
+          ua: { fn: (req) => req.headers.get('user-agent') },
+          origin: { fn: (req) => req.headers.get('origin') },
+          url: 'url',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Available Ingest Paths
+
+| Path | Description |
+|------|-------------|
+| `url` | Full request URL |
+| `headers.get('name')` | Via function: `{ fn: (req) => req.headers.get('name') }` |
+
+:::note
+The Fetch API uses `Request` objects where headers are accessed via `.get()` method. Use mapping functions for header extraction.
+:::
+
 ## Usage
 
 ### Single Event

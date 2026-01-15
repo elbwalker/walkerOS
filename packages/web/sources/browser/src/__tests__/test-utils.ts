@@ -33,8 +33,15 @@ export async function createBrowserSource(
     logger: createMockLogger(),
   };
 
-  // Call sourceBrowser directly with new pattern
-  const source = await sourceBrowser(config, env);
+  // Call sourceBrowser directly with context pattern
+  const source = await sourceBrowser({
+    collector,
+    config,
+    env,
+    id: 'test-browser',
+    logger: createMockLogger(),
+    setIngest: async () => {},
+  });
 
   // Use the source's own push method which includes proper translation
   return { ...source, elb: source.push };

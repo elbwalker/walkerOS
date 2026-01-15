@@ -1,0 +1,61 @@
+---
+title: Transformers
+description: Event processing middleware for walkerOS collector
+sidebar_position: 5
+---
+
+# Transformers
+
+Transformers are middleware for **validating**, **enriching**, and **redacting** events in the walkerOS pipeline.
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+
+await startFlow({
+  transformers: {
+    validate: {
+      package: '@walkeros/transformer-validator',
+      config: {
+        settings: { format: true }
+      }
+    }
+  }
+});`}
+  language="typescript"
+/>
+
+## Use cases
+
+| Use Case | Example |
+|----------|---------|
+| **Validate** | Ensure events match JSON Schema contracts |
+| **Enrich** | Add server-side data (user segments, geo) |
+| **Redact** | Remove PII before sending to destinations |
+
+## Execution points
+
+Transformers run in chains at two points in the pipeline:
+
+```
+Source → [Pre-Collector] → Collector → [Post-Collector] → Destination
+```
+
+* **Pre-collector**: After sources, before event enrichment
+* **Post-collector**: After enrichment, before destinations
+
+## Available transformers
+
+### Validator
+
+Validates events using JSON Schema:
+
+* Format validation (WalkerOS.Event structure)
+* Contract validation (entity/action business rules)
+* Configurable logging for validation results
+
+[Learn more →](./validator)
+
+## Next steps
+
+* **[Validator](./validator)** - JSON Schema validation
+* **[Create your own](./create-your-own)** - Custom transformer guide

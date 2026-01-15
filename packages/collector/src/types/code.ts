@@ -16,11 +16,10 @@ export interface CodeMapping extends Mapping.Rule<CodeMapping> {
 export type Types = Destination.Types<Settings, CodeMapping>;
 export type Config = Destination.Config<Types>;
 export type Context = Destination.Context<Types>;
-export type InitContext = Destination.InitContext<Types>;
 export type PushContext = Destination.PushContext<Types>;
 export type PushBatchContext = Destination.PushBatchContext<Types>;
 
-export type InitFn = (context: InitContext) => void;
+export type InitFn = (context: Context) => void;
 export type OnFn = (type: On.Types, context: Context) => void;
 export type PushFn = (event: WalkerOS.Event, context: PushContext) => void;
 export type PushBatchFn = (

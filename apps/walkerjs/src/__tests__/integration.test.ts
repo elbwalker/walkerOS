@@ -19,9 +19,6 @@ describe('Walker.js Integration Tests', () => {
       collectedEvents.push(args[0] as WalkerOS.Event);
       return Promise.resolve({
         ok: true,
-        successful: [],
-        queued: [],
-        failed: [],
       });
     }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
   });

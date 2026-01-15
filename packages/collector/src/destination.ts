@@ -12,6 +12,7 @@ import {
   useHooks,
 } from '@walkeros/core';
 import { destinationCode } from './destination-code';
+import { runTransformerChain } from './transformer';
 
 function resolveCode(code: Destination.Instance | true): Destination.Instance {
   return code === true ? destinationCode : code;
@@ -55,7 +56,7 @@ export async function addDestination(
   if (destination.config.queue !== false)
     destination.queue = [...collector.queue];
 
-  return pushToDestinations(collector, undefined, { [id]: destination });
+  return pushToDestinations(collector, undefined, {}, { [id]: destination });
 }
 
 /**
@@ -63,12 +64,14 @@ export async function addDestination(
  *
  * @param collector - The walkerOS collector instance.
  * @param event - The event to push.
+ * @param meta - Optional metadata with id and ingest.
  * @param destinations - The destinations to push to.
  * @returns The result of the push operation.
  */
 export async function pushToDestinations(
   collector: Collector.Instance,
   event?: WalkerOS.Event,
+  meta: { id?: string; ingest?: unknown } = {},
   destinations?: Collector.Destinations,
 ): Promise<Elb.PushResult> {
   const { allowed, consent, globals, user } = collector;
@@ -138,13 +141,18 @@ export async function pushToDestinations(
       const isInitialized = await tryCatchAsync(destinationInit)(
         collector,
         destination,
+        id,
       );
 
       if (!isInitialized) return { id, destination, queue: currentQueue };
 
       // Process the destinations event queue
-      let error = false;
+      let error: unknown;
+      let response: unknown;
       if (!destination.dlq) destination.dlq = [];
+
+      // Get post-collector transformer chain for this destination
+      const postChain = collector.transformerChain?.post?.[id] || [];
 
       // Process allowed events and store failed ones in the dead letter queue (DLQ)
       await Promise.all(
@@ -153,57 +161,86 @@ export async function pushToDestinations(
           event.globals = assign(globals, event.globals);
           event.user = assign(user, event.user);
 
-          await tryCatchAsync(destinationPush, (err) => {
+          // Run post-collector transformer chain if configured for this destination
+          let processedEvent: WalkerOS.Event | null = event;
+          if (
+            postChain.length > 0 &&
+            collector.transformers &&
+            Object.keys(collector.transformers).length > 0
+          ) {
+            const chainResult = await runTransformerChain(
+              collector,
+              collector.transformers,
+              postChain,
+              event,
+              meta.ingest,
+            );
+
+            if (chainResult === null) {
+              // Chain stopped - skip this event for this destination
+              return event;
+            }
+
+            // Use the processed event (cast back to full Event type)
+            processedEvent = chainResult as WalkerOS.Event;
+          }
+
+          const result = await tryCatchAsync(destinationPush, (err) => {
             // Log the error with destination scope
             const destType = destination.type || 'unknown';
             collector.logger.scope(destType).error('Push failed', {
               error: err,
-              event: event.name,
+              event: processedEvent!.name,
             });
-            error = true; // oh no
+            error = err; // oh no
 
             // Add failed event to destinations DLQ
-            destination.dlq!.push([event, err]);
+            destination.dlq!.push([processedEvent!, err]);
 
-            return false;
-          })(collector, destination, event);
+            return undefined;
+          })(collector, destination, id, processedEvent!, meta.ingest);
+
+          // Capture the last response (for single event pushes)
+          if (result !== undefined) response = result;
 
           return event;
         }),
       );
 
-      return { id, destination, error };
+      return { id, destination, error, response };
     }),
   );
 
-  const successful = [];
-  const queued = [];
-  const failed = [];
+  // Build result objects
+  const done: Record<string, Destination.Ref> = {};
+  const queued: Record<string, Destination.Ref> = {};
+  const failed: Record<string, Destination.Ref> = {};
 
   for (const result of results) {
     if (result.skipped) continue;
 
     const destination = result.destination;
-
-    const ref = { id: result.id, destination };
+    const ref: Destination.Ref = {
+      type: destination.type || 'unknown',
+      data: result.response, // Capture push() return value
+    };
 
     if (result.error) {
-      failed.push(ref);
+      ref.error = result.error;
+      failed[result.id] = ref;
     } else if (result.queue && result.queue.length) {
-      // Merge queue with existing queue
       destination.queue = (destination.queue || []).concat(result.queue);
-      queued.push(ref);
+      queued[result.id] = ref;
     } else {
-      successful.push(ref);
+      done[result.id] = ref;
     }
   }
 
   return createPushResult({
-    ok: !failed.length,
     event,
-    successful,
-    queued,
-    failed,
+    ...(Object.keys(done).length && { done }),
+    ...(Object.keys(queued).length && { queued }),
+    ...(Object.keys(failed).length && { failed }),
   });
 }
 
@@ -213,11 +250,13 @@ export async function pushToDestinations(
  * @template Destination
  * @param collector - The walkerOS collector instance.
  * @param destination - The destination to initialize.
+ * @param destId - The destination ID.
  * @returns Whether the destination was initialized successfully.
  */
 export async function destinationInit<Destination extends Destination.Instance>(
   collector: Collector.Instance,
   destination: Destination,
+  destId: string,
 ): Promise<boolean> {
   // Check if the destination was initialized properly or try to do so
   if (destination.init && !destination.config.init) {
@@ -225,12 +264,13 @@ export async function destinationInit<Destination extends Destination.Instance>(
     const destType = destination.type || 'unknown';
     const destLogger = collector.logger.scope(destType);
 
-    const context = {
+    const context: Destination.Context = {
       collector,
+      logger: destLogger,
+      id: destId,
       config: destination.config,
       env: mergeEnvironments(destination.env, destination.config.env),
-      logger: destLogger,
-    } as Destination.InitContext;
+    };
 
     destLogger.debug('init');
 
@@ -262,14 +302,18 @@ export async function destinationInit<Destination extends Destination.Instance>(
  * @template Destination
  * @param collector - The walkerOS collector instance.
  * @param destination - The destination to push to.
+ * @param destId - The destination ID.
  * @param event - The event to push.
+ * @param ingest - Optional ingest metadata (frozen, same reference).
  * @returns Whether the event was pushed successfully.
  */
 export async function destinationPush<Destination extends Destination.Instance>(
   collector: Collector.Instance,
   destination: Destination,
+  destId: string,
   event: WalkerOS.Event,
-): Promise<boolean> {
+  ingest?: unknown,
+): Promise<unknown> {
   const { config } = destination;
 
   const processed = await processEventMapping(event, config, collector);
@@ -282,11 +326,13 @@ export async function destinationPush<Destination extends Destination.Instance>(
 
   const context: Destination.PushContext = {
     collector,
+    logger: destLogger,
+    id: destId,
     config,
     data: processed.data,
-    mapping: processed.mapping,
+    rule: processed.mapping,
+    ingest,
     env: mergeEnvironments(destination.env, config.env),
-    logger: destLogger,
   };
 
   const eventMapping = processed.mapping;
@@ -312,12 +358,14 @@ export async function destinationPush<Destination extends Destination.Instance>(
 
           const batchContext: Destination.PushBatchContext = {
             collector,
+            logger: destLogger,
+            id: destId,
             config,
             // Note: batch.data contains all transformed data; context.data is for single events
             data: undefined,
-            mapping: eventMapping,
+            rule: eventMapping, // Renamed from mapping to rule
+            ingest, // Same frozen reference
             env: mergeEnvironments(destination.env, config.env),
-            logger: destLogger,
           };
 
           destLogger.debug('push batch', {
@@ -350,13 +398,15 @@ export async function destinationPush<Destination extends Destination.Instance>(
     destLogger.debug('push', { event: processed.event.name });
 
     // It's time to go to the destination's side now
-    await useHooks(
+    const response = await useHooks(
       destination.push,
       'DestinationPush',
       collector.hooks,
     )(processed.event, context);
 
     destLogger.debug('push done');
+
+    return response;
   }
 
   return true;
@@ -371,15 +421,10 @@ export async function destinationPush<Destination extends Destination.Instance>(
 export function createPushResult(
   partialResult?: Partial<Elb.PushResult>,
 ): Elb.PushResult {
-  return assign(
-    {
-      ok: !partialResult?.failed?.length,
-      successful: [],
-      queued: [],
-      failed: [],
-    },
-    partialResult,
-  );
+  return {
+    ok: !partialResult?.failed,
+    ...partialResult,
+  };
 }
 
 /**

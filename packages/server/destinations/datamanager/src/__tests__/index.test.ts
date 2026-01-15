@@ -66,6 +66,7 @@ describe('Server Destination Data Manager', () => {
       collector: mockCollector,
       env: {},
       logger: mockLogger,
+      id: 'test-dm',
     })) as Config;
   }
 
@@ -78,6 +79,7 @@ describe('Server Destination Data Manager', () => {
           collector: mockCollector,
           env: {},
           logger: mockLogger,
+          id: 'test-dm',
         }),
       ).rejects.toThrow('Config settings destinations missing or empty');
     });
@@ -92,6 +94,7 @@ describe('Server Destination Data Manager', () => {
           collector: mockCollector,
           env: {},
           logger: mockLogger,
+          id: 'test-dm',
         }),
       ).rejects.toThrow('Config settings destinations missing or empty');
     });
@@ -195,6 +198,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: config.env!,
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       expect(getAccessToken).toHaveBeenCalledWith(mockAuthClient);
@@ -223,6 +227,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -253,6 +258,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -281,6 +287,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -297,6 +304,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -320,6 +328,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -336,6 +345,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -365,6 +375,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -391,6 +402,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -414,6 +426,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -436,6 +449,7 @@ describe('Server Destination Data Manager', () => {
           collector: mockCollector,
           env: { authClient: mockAuthClient, fetch: mockFetch },
           logger: mockLogger,
+          id: 'test-dm',
         }),
       ).rejects.toThrow('Data Manager API error (400)');
     });
@@ -464,6 +478,7 @@ describe('Server Destination Data Manager', () => {
           collector: mockCollector,
           env: { authClient: mockAuthClient, fetch: mockFetch },
           logger: mockLogger,
+          id: 'test-dm',
         }),
       ).rejects.toThrow('Validation errors');
     });
@@ -485,6 +500,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -530,6 +546,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -566,6 +583,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: customFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       expect(customFetch).toHaveBeenCalled();
@@ -602,6 +620,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -636,6 +655,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -671,6 +691,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -712,6 +733,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -750,6 +772,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -785,6 +808,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -822,6 +846,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
@@ -860,6 +885,7 @@ describe('Server Destination Data Manager', () => {
         collector: mockCollector,
         env: { authClient: mockAuthClient, fetch: mockFetch },
         logger: mockLogger,
+        id: 'test-dm',
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);

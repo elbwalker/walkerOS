@@ -36,9 +36,6 @@ describe('Session', () => {
     mockElb = jest.fn().mockImplementation(() =>
       Promise.resolve({
         ok: true,
-        successful: [],
-        queued: [],
-        failed: [],
       }),
     );
 

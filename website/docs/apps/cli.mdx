@@ -1268,7 +1268,7 @@ RUN walkeros bundle flow.json
 FROM walkeros/flow:latest
 COPY --from=builder /build/dist/bundle.mjs /app/flow.mjs
 ENV MODE=collect
-ENV FLOW=/app/flow.mjs`}
+ENV BUNDLE=/app/flow.mjs`}
   language="dockerfile"
 />
 

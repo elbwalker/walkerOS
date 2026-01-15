@@ -15,9 +15,6 @@ describe('Source Start Flow Integration', () => {
   it('should return first source push as elb by default', async () => {
     const customPush: Elb.Fn = async () => ({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     });
 
     const mockSource: Source.Init = async () => ({
@@ -43,9 +40,6 @@ describe('Source Start Flow Integration', () => {
   it('should return primary source push as elb when marked', async () => {
     const customPush: Elb.Fn = async () => ({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     });
 
     const mockSource: Source.Init = async () => ({
@@ -75,16 +69,10 @@ describe('Source Start Flow Integration', () => {
   it('should override first source with primary flag', async () => {
     const firstPush: Elb.Fn = async () => ({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     });
 
     const secondPush: Elb.Fn = async () => ({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     });
 
     const mockSource1: Source.Init = async () => ({
@@ -120,7 +108,9 @@ describe('Source Start Flow Integration', () => {
   it('should initialize complete setup from flow config', async () => {
     const mockPushCalls: WalkerOS.Event[] = [];
 
-    const mockSource: Source.Init = async (config, env) => {
+    const mockSource: Source.Init = async (context) => {
+      const { config, env } = context;
+
       expect(config).toEqual({
         settings: {
           test: 'value',

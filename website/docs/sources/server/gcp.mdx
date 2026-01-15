@@ -128,6 +128,38 @@ Server sources require platform-specific handlers. For containerized deployments
   language="json"
 />
 
+## Ingest Metadata
+
+Extract request metadata and forward it through the pipeline.
+
+<CodeSnippet
+  code={`const { sources } = await startFlow({
+  sources: {
+    gcp: {
+      code: sourceCloudFunction,
+      config: {
+        settings: { cors: true },
+        ingest: {
+          ip: 'ip',
+          ua: 'headers.user-agent',
+          origin: 'headers.origin',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Available Ingest Paths
+
+| Path | Description |
+|------|-------------|
+| `ip` | Client IP address |
+| `headers.*` | HTTP headers (user-agent, origin, etc.) |
+| `method` | HTTP method |
+| `hostname` | Request hostname |
+
 ## Deployment
 
 <CodeSnippet

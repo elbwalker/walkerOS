@@ -548,14 +548,14 @@ docker run -v ./dist:/flow -p 8080:8080 walkeros/flow
 
 ```dockerfile
 FROM walkeros/flow
-COPY dist/bundle.mjs /flow/
+COPY dist/bundle.mjs /app/flow/
 ```
 
 **Environment variables:**
 
 - `MODE` - `collect` or `serve` (default: `collect`)
 - `PORT` - Server port (default: `8080`)
-- `FILE` - Bundle path (default: `/flow/bundle.mjs`)
+- `BUNDLE` - Bundle path (default: `/app/flow/bundle.mjs`)
 
 ### Using Node.js
 

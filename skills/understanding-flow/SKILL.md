@@ -19,13 +19,13 @@ Components are composable and replaceable.
 ## The Flow Pattern
 
 ```
-Sources          →    Collector    →    Destinations
-(Data Capture)        (Processing)      (Delivery)
+Sources → [Pre-Transformers] → Collector → [Post-Transformers] → Destinations
+(Capture)  (source.next)    (Processing) (dest.before)       (Delivery)
 
-- Browser DOM         - Validation      - Google Analytics
-- DataLayer           - Enrichment      - Meta Pixel
-- Server HTTP         - Consent check   - Custom API
-- Cloud Functions     - Routing         - Data Warehouse
+- Browser DOM              - Validation   - Validation        - Google Analytics
+- DataLayer                - Enrichment   - Enrichment        - Meta Pixel
+- Server HTTP              - Redaction    - Consent check     - Custom API
+- Cloud Functions                         - Routing           - Data Warehouse
 ```
 
 ## Key Concepts
@@ -93,11 +93,66 @@ const { collector, elb } = await startFlow({
 | Transformation   | Mapping system | Raw push calls          |
 | Delivery         | Destinations   | Sources, Collector      |
 
+## Transformer Chains
+
+Transformers run at two points in the pipeline, configured via `next` and
+`before`:
+
+### Pre-Collector Chain
+
+Runs after source captures event, before collector processing:
+
+```typescript
+sources: {
+  browser: {
+    code: sourceBrowser,
+    next: 'validate'  // First transformer in pre-chain
+  }
+},
+transformers: {
+  validate: {
+    code: transformerValidator,
+    config: { next: 'enrich' }  // Chain continues
+  },
+  enrich: {
+    code: transformerEnrich
+    // No next = chain ends, event goes to collector
+  }
+}
+```
+
+### Post-Collector Chain
+
+Runs after collector enrichment, before destination receives event:
+
+```typescript
+destinations: {
+  gtag: {
+    code: destinationGtag,
+    before: 'redact'  // First transformer in post-chain
+  }
+},
+transformers: {
+  redact: {
+    code: transformerRedact
+    // Event then goes to destination
+  }
+}
+```
+
+### Chain Resolution
+
+- `source.next` → starts pre-collector chain
+- `transformer.config.next` → links transformers together
+- `destination.before` → starts post-collector chain per destination
+
 ## Related
 
 **Skills:**
 
 - [understanding-events skill](../understanding-events/SKILL.md) - Event model
+- [understanding-transformers skill](../understanding-transformers/SKILL.md) -
+  Transformer interface and chaining
 - [understanding-destinations skill](../understanding-destinations/SKILL.md) -
   Destination interface
 - [understanding-sources skill](../understanding-sources/SKILL.md) - Source

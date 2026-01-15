@@ -1,6 +1,6 @@
 import { requestToData, isObject, isDefined } from '@walkeros/core';
-import type { WalkerOS, Collector } from '@walkeros/core';
-import type { FetchSource, PartialConfig, Types } from './types';
+import type { WalkerOS, Collector, Source } from '@walkeros/core';
+import type { FetchSource, Types } from './types';
 import { SettingsSchema, EventSchema } from './schemas';
 import {
   createCorsHeaders,
@@ -8,10 +8,8 @@ import {
   createJsonResponse,
 } from './utils';
 
-export const sourceFetch = async (
-  config: PartialConfig,
-  env: Types['env'],
-): Promise<FetchSource> => {
+export const sourceFetch: Source.Init<Types> = async (context) => {
+  const { config = {}, env, setIngest } = context;
   const settings = SettingsSchema.parse(config.settings || {});
   const { logger } = env;
 
@@ -37,6 +35,9 @@ export const sourceFetch = async (
       if (method === 'OPTIONS') {
         return new Response(null, { status: 204, headers: corsHeaders });
       }
+
+      // Extract ingest metadata from request (if config.ingest is defined)
+      await setIngest(request);
 
       // GET (pixel tracking - no logging, routine)
       if (method === 'GET') {

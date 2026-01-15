@@ -58,10 +58,10 @@ export const destinationGtag: Destination = {
     return config;
   },
 
-  async push(event, { config, mapping = {}, data, env, collector, logger }) {
+  async push(event, { config, rule = {}, data, env, collector, logger }) {
     const { settings = {} } = config;
     const { ga4, ads, gtm } = settings;
-    const eventMapping = mapping.settings || {};
+    const eventMapping = rule.settings || {};
 
     // Resolve data for each tool with proper priority
     const ga4Data = await getData(
@@ -91,15 +91,15 @@ export const destinationGtag: Destination = {
       pushGA4Event(event, ga4, eventMapping.ga4, ga4Data, env, logger);
     }
 
-    // @TODO: Fix condition - should check for mapping.settings?.ads?.label || mapping.name
-    // Currently requires mapping.name even when label is provided via settings.ads.label
-    if (ads?.conversionId && mapping.name) {
+    // @TODO: Fix condition - should check for rule.settings?.ads?.label || rule.name
+    // Currently requires rule.name even when label is provided via settings.ads.label
+    if (ads?.conversionId && rule.name) {
       pushAdsEvent(
         event,
         ads,
         eventMapping.ads,
         adsData,
-        mapping.name,
+        rule.name,
         env,
         logger,
       );

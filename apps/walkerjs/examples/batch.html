@@ -240,7 +240,7 @@
                 const entry = document.createElement('div');
                 entry.className = 'console-entry';
                 entry.innerHTML = `
-                <strong>📤 ${event.event}</strong><br>
+                <strong>📤 ${event.name}</strong><br>
                 Data: ${JSON.stringify(event.data)}<br>
                 Context: ${JSON.stringify(event.context)}
               `;
@@ -262,7 +262,7 @@
                   entry.className = 'console-entry';
                   entry.style.background = '#e3f2fd';
                   entry.innerHTML = `
-                  <strong>[${index + 1}/${events.length}] ${event.event}</strong><br>
+                  <strong>[${index + 1}/${events.length}] ${event.name}</strong><br>
                   Product: ${event.data.name || 'Unknown'}<br>
                   Batched at: ${new Date().toLocaleTimeString()}
                 `;

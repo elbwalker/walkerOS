@@ -41,9 +41,6 @@ describe('Translation Layer', () => {
       collectedEvents.push(args[0] as WalkerOS.Event);
       return Promise.resolve({
         ok: true,
-        successful: [],
-        queued: [],
-        failed: [],
       });
     }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
 
@@ -136,9 +133,6 @@ describe('Translation Layer', () => {
       // Test that walker commands are passed to elb (which handles routing to collector.command)
       const isolatedMockElb = jest.fn().mockResolvedValue({
         ok: true,
-        successful: [],
-        queued: [],
-        failed: [],
       });
 
       await translateToCoreCollector(

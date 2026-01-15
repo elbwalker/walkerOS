@@ -1,5 +1,11 @@
 # @walkeros/server-destination-aws
 
+## 0.6.1
+
+### Patch Changes
+
+- @walkeros/server-core@0.6.1
+
 ## 0.0.0-next-20251219153324
 
 ### Patch Changes

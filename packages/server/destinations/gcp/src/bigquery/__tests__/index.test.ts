@@ -25,6 +25,7 @@ describe('Server Destination BigQuery', () => {
       collector: mockCollector,
       env: testEnv,
       logger: createMockLogger(),
+      id: 'test-bq',
     })) as Config;
   }
 
@@ -72,6 +73,7 @@ describe('Server Destination BigQuery', () => {
         collector: mockCollector,
         env: testEnv,
         logger: createMockLogger(),
+        id: 'test-bq',
       }),
     ).rejects.toThrow('Config settings projectId missing');
 
@@ -92,11 +94,12 @@ describe('Server Destination BigQuery', () => {
 
     await destination.push(event, {
       config,
-      mapping: undefined,
+      rule: undefined,
       data: undefined,
       collector: mockCollector,
       env: testEnv,
       logger: createMockLogger(),
+      id: 'test-bq',
     });
     expect(mockInsert).toHaveBeenCalledWith('insert', [
       {
@@ -131,11 +134,12 @@ describe('Server Destination BigQuery', () => {
 
     await destination.push(event, {
       config,
-      mapping: {},
+      rule: {},
       data,
       collector: mockCollector,
       env: testEnv,
       logger: createMockLogger(),
+      id: 'test-bq',
     });
     expect(mockInsert).toHaveBeenCalledWith('insert', [{ foo: 'bar' }]);
   });

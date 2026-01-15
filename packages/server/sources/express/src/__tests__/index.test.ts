@@ -1,8 +1,23 @@
 import { sourceExpress } from '../index';
 import type { EventRequest, Types } from '../types';
-import type { WalkerOS, Source } from '@walkeros/core';
+import type { WalkerOS, Source, Collector } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import type { Request, Response } from 'express';
+
+// Helper to create source context
+function createSourceContext(
+  config: Partial<Source.Config<Types>> = {},
+  env: Partial<Types['env']> = {},
+): Source.Context<Types> {
+  return {
+    config,
+    env: env as Types['env'],
+    logger: env.logger || createMockLogger(),
+    id: 'test-express',
+    collector: {} as Collector.Instance,
+    setIngest: jest.fn().mockResolvedValue(undefined),
+  };
+}
 
 // Mock request/response for testing
 function createMockRequest(options: {
@@ -69,28 +84,24 @@ describe('sourceExpress', () => {
     mockPush = jest.fn().mockResolvedValue({
       event: { id: 'test-id' },
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     });
     mockCommand = jest.fn().mockResolvedValue({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     });
   });
 
   describe('initialization', () => {
     it('should initialize with default settings', async () => {
       const source = await sourceExpress(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       expect(source.type).toBe('express');
@@ -105,20 +116,23 @@ describe('sourceExpress', () => {
     });
 
     it('should merge custom settings with defaults', async () => {
-      const config: Partial<Source.Config<Types>> = {
-        settings: {
-          path: '/events',
-          cors: false,
-          status: false,
-        },
-      };
-
-      const source = await sourceExpress(config, {
-        push: mockPush as never,
-        command: mockCommand as never,
-        elb: jest.fn() as never,
-        logger: createMockLogger(),
-      });
+      const source = await sourceExpress(
+        createSourceContext(
+          {
+            settings: {
+              path: '/events',
+              cors: false,
+              status: false,
+            },
+          },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
 
       expect(source.config.settings).toEqual({
         path: '/events',
@@ -129,15 +143,17 @@ describe('sourceExpress', () => {
 
     it('should start server when port is configured', async () => {
       const source = await sourceExpress(
-        {
-          settings: { port: 0 }, // Port 0 = random available port
-        },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {
+            settings: { port: 0 }, // Port 0 = random available port
+          },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       expect(source.server).toBeDefined();
@@ -153,13 +169,15 @@ describe('sourceExpress', () => {
   describe('POST request handling', () => {
     it('should process valid single event', async () => {
       const source = await sourceExpress(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const eventRequest: EventRequest = {
@@ -186,13 +204,15 @@ describe('sourceExpress', () => {
 
     it('should reject POST with missing body', async () => {
       const source = await sourceExpress(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const req = createMockRequest({
@@ -213,13 +233,15 @@ describe('sourceExpress', () => {
 
     it('should reject POST with invalid body type', async () => {
       const source = await sourceExpress(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const req = createMockRequest({
@@ -243,13 +265,15 @@ describe('sourceExpress', () => {
         .mockRejectedValue(new Error('Collector error'));
 
       const source = await sourceExpress(
-        {},
-        {
-          push: errorPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: errorPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const req = createMockRequest({
@@ -271,13 +295,15 @@ describe('sourceExpress', () => {
   describe('GET request handling (pixel tracking)', () => {
     it('should process event from query parameters', async () => {
       const source = await sourceExpress(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const req = createMockRequest({
@@ -300,13 +326,15 @@ describe('sourceExpress', () => {
 
     it('should return 1x1 GIF for pixel tracking', async () => {
       const source = await sourceExpress(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const req = createMockRequest({
@@ -325,13 +353,15 @@ describe('sourceExpress', () => {
   describe('OPTIONS request handling (CORS)', () => {
     it('should handle CORS preflight with default settings', async () => {
       const source = await sourceExpress(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const req = createMockRequest({
@@ -349,20 +379,22 @@ describe('sourceExpress', () => {
 
     it('should handle CORS preflight with custom settings', async () => {
       const source = await sourceExpress(
-        {
-          settings: {
-            cors: {
-              origin: 'https://example.com',
-              credentials: true,
+        createSourceContext(
+          {
+            settings: {
+              cors: {
+                origin: 'https://example.com',
+                credentials: true,
+              },
             },
           },
-        },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const req = createMockRequest({
@@ -384,15 +416,17 @@ describe('sourceExpress', () => {
 
     it('should not set CORS headers when disabled', async () => {
       const source = await sourceExpress(
-        {
-          settings: { cors: false },
-        },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {
+            settings: { cors: false },
+          },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const req = createMockRequest({
@@ -412,13 +446,15 @@ describe('sourceExpress', () => {
   describe('unsupported methods', () => {
     it('should reject PUT requests', async () => {
       const source = await sourceExpress(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       const req = createMockRequest({
@@ -440,15 +476,17 @@ describe('sourceExpress', () => {
   describe('settings validation', () => {
     it('should accept valid port number', async () => {
       const source = await sourceExpress(
-        {
-          settings: { port: 8080 },
-        },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {
+            settings: { port: 8080 },
+          },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       expect(source.config.settings?.port).toBe(8080);
@@ -461,13 +499,15 @@ describe('sourceExpress', () => {
 
     it('should apply default path', async () => {
       const source = await sourceExpress(
-        {},
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       expect(source.config.settings?.path).toBe('/collect');
@@ -475,15 +515,17 @@ describe('sourceExpress', () => {
 
     it('should accept custom path', async () => {
       const source = await sourceExpress(
-        {
-          settings: { path: '/events' },
-        },
-        {
-          push: mockPush as never,
-          command: mockCommand as never,
-          elb: jest.fn() as never,
-          logger: createMockLogger(),
-        },
+        createSourceContext(
+          {
+            settings: { path: '/events' },
+          },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
       );
 
       expect(source.config.settings?.path).toBe('/events');

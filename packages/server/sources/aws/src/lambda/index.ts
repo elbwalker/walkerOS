@@ -1,4 +1,4 @@
-import type { LambdaSource, Env, Settings, EventRequest, Types } from './types';
+import type { LambdaSource, EventRequest, Types } from './types';
 import type { Source } from '@walkeros/core';
 import { requestToData } from '@walkeros/core';
 import {
@@ -19,10 +19,8 @@ export * as schemas from './schemas';
 // Export examples
 export * as examples from './examples';
 
-export const sourceLambda = async (
-  config: Partial<Source.Config<Types>> = {},
-  env: Env,
-): Promise<LambdaSource> => {
+export const sourceLambda: Source.Init<Types> = async (context) => {
+  const { config = {}, env, setIngest } = context;
   const { push: envPush } = env;
 
   const settings = SettingsSchema.parse(config.settings || {});
@@ -60,6 +58,9 @@ export const sourceLambda = async (
       if (parsed.method === 'OPTIONS') {
         return createResponse(204, '', corsHeaders, requestId);
       }
+
+      // Extract ingest metadata from Lambda event (if config.ingest is defined)
+      await setIngest(event);
 
       // Handle GET for pixel tracking
       if (parsed.method === 'GET') {

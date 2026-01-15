@@ -32,9 +32,9 @@ export const destinationCode: Destination.Instance = {
   },
 
   push(event, context) {
-    const { mapping, config, logger } = context;
+    const { rule, config, logger } = context;
     const pushCode =
-      (mapping as CodeMapping | undefined)?.push ??
+      (rule as CodeMapping | undefined)?.push ??
       (config.settings as Settings | undefined)?.push;
     if (!pushCode) return;
     try {
@@ -46,9 +46,9 @@ export const destinationCode: Destination.Instance = {
   },
 
   pushBatch(batch, context) {
-    const { mapping, config, logger } = context;
+    const { rule, config, logger } = context;
     const pushBatchCode =
-      (mapping as CodeMapping | undefined)?.pushBatch ??
+      (rule as CodeMapping | undefined)?.pushBatch ??
       (config.settings as Settings | undefined)?.pushBatch;
     if (!pushBatchCode) return;
     try {

@@ -125,7 +125,7 @@ The Docker container is configured via environment variables:
 | Environment Variable | Required | Default | Description |
 |---------------------|----------|---------|-------------|
 | `MODE` | Yes | - | Must be `collect` |
-| `FLOW` | Yes | - | Path to pre-built `.mjs` bundle |
+| `BUNDLE` | Yes | - | Path to pre-built `.mjs` bundle |
 | `PORT` | No | `8080` | Server port |
 | `HOST` | No | `0.0.0.0` | Bind address |
 
@@ -245,7 +245,7 @@ FROM walkeros/flow:latest
 COPY --from=builder /build/flow.mjs /app/flow.mjs
 
 ENV MODE=collect
-ENV FLOW=/app/flow.mjs
+ENV BUNDLE=/app/flow.mjs
 EXPOSE 8080`}
   language="dockerfile"
 />
@@ -408,7 +408,7 @@ To start console-only: remove the `bigquery` destination block.
   code={`FROM walkeros/flow:latest
 COPY flow.mjs /app/flow.mjs
 ENV MODE=collect
-ENV FLOW=/app/flow.mjs
+ENV BUNDLE=/app/flow.mjs
 ENV PORT=8080`}
   language="dockerfile"
 />

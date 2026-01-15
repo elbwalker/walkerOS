@@ -7,7 +7,7 @@ import { getConfig } from './config';
 
 export const push: PushFn = async function (
   event,
-  { config, mapping, data, collector, env, logger },
+  { config, rule, data, collector, env, logger },
 ) {
   // Validate config and get typed settings
   const validatedConfig = getConfig(config, logger);

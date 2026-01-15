@@ -179,6 +179,38 @@ interface CorsOptions {
 }
 ```
 
+## Ingest Metadata
+
+Extract request metadata and forward it to processors and destinations:
+
+```typescript
+const { elb } = await startFlow<SourceFetch.Push>({
+  sources: {
+    api: {
+      code: sourceFetch,
+      config: {
+        settings: { cors: true },
+        ingest: {
+          ua: { fn: (req) => req.headers.get('user-agent') },
+          origin: { fn: (req) => req.headers.get('origin') },
+          url: 'url',
+        },
+      },
+    },
+  },
+});
+```
+
+**Available ingest paths:**
+
+| Path                  | Description                                              |
+| --------------------- | -------------------------------------------------------- |
+| `url`                 | Full request URL                                         |
+| `headers.get('name')` | Via function: `{ fn: (req) => req.headers.get('name') }` |
+
+> **Note:** The Fetch API uses `Request` objects where headers are accessed via
+> `.get()` method. Use mapping functions for header extraction.
+
 ## Error Responses
 
 ### Validation Error

@@ -281,7 +281,7 @@ export async function bundle(
  *
  * Creates a minimal Dockerfile that:
  * - Uses walkeros/flow:latest as base image
- * - Copies the bundled flow to /app/flow.mjs
+ * - Copies the bundled flow to /app/flow/bundle.mjs
  * - Sets required environment variables
  * - Exposes port 8080
  *
@@ -302,7 +302,7 @@ FROM walkeros/flow:latest
 COPY ${bundleFilename} /app/flow/bundle.mjs
 
 ENV MODE=collect
-ENV FLOW=/app/flow/bundle.mjs
+ENV BUNDLE=/app/flow/bundle.mjs
 
 EXPOSE 8080
 `;

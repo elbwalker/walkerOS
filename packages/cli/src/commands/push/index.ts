@@ -88,7 +88,7 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
       );
       result = await executeBundlePush(
         detected.content,
-        detected.platform!,
+        detected.platform,
         validatedEvent,
         logger,
         (dir) => {

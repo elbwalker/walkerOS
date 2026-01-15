@@ -1,6 +1,10 @@
 import type { Collector, WalkerOS, Destination, Elb, On } from '@walkeros/core';
 import { Const } from './constants';
-import { addDestination, pushToDestinations } from './destination';
+import {
+  addDestination,
+  pushToDestinations,
+  createPushResult,
+} from './destination';
 import { assign, getId, isFunction, isString } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { setConsent } from './consent';
@@ -95,14 +99,7 @@ export async function commonHandleCommand(
       break;
   }
 
-  return (
-    result || {
-      ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
-    }
-  );
+  return result || createPushResult({ ok: true });
 }
 
 /**

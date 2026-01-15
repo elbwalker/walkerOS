@@ -138,8 +138,62 @@ export const SourceReferenceSchema = z
     definitions: DefinitionsSchema.optional().describe(
       'Source-level definitions (highest priority in cascade)',
     ),
+    next: z
+      .string()
+      .optional()
+      .describe(
+        'First transformer in post-source chain. If omitted, events route directly to collector.',
+      ),
   })
   .describe('Source package reference with configuration');
+
+// ========================================
+// Transformer Reference Schema
+// ========================================
+
+/**
+ * Transformer reference schema.
+ *
+ * @remarks
+ * Defines how to reference and configure a transformer package.
+ * Transformers transform events in the pipeline between sources and destinations.
+ */
+export const TransformerReferenceSchema = z
+  .object({
+    package: z
+      .string()
+      .min(1, 'Package name cannot be empty')
+      .describe(
+        'Package specifier with optional version (e.g., "@walkeros/transformer-enricher@1.0.0")',
+      ),
+    code: z
+      .string()
+      .optional()
+      .describe(
+        'Named export to use from the package (e.g., "transformerEnricher"). If omitted, uses default export.',
+      ),
+    config: z
+      .unknown()
+      .optional()
+      .describe('Transformer-specific configuration object'),
+    env: z
+      .unknown()
+      .optional()
+      .describe('Transformer environment configuration'),
+    next: z
+      .string()
+      .optional()
+      .describe(
+        'Next transformer in chain. If omitted: pre-collector routes to collector, post-collector routes to destination.',
+      ),
+    variables: VariablesSchema.optional().describe(
+      'Transformer-level variables (highest priority in cascade)',
+    ),
+    definitions: DefinitionsSchema.optional().describe(
+      'Transformer-level definitions (highest priority in cascade)',
+    ),
+  })
+  .describe('Transformer package reference with configuration');
 
 // ========================================
 // Destination Reference Schema
@@ -180,6 +234,12 @@ export const DestinationReferenceSchema = z
     definitions: DefinitionsSchema.optional().describe(
       'Destination-level definitions (highest priority in cascade)',
     ),
+    before: z
+      .string()
+      .optional()
+      .describe(
+        'First transformer in pre-destination chain. If omitted, events are sent directly from collector.',
+      ),
   })
   .describe('Destination package reference with configuration');
 
@@ -214,6 +274,12 @@ export const ConfigSchema = z
       .optional()
       .describe(
         'Destination configurations (data output) keyed by unique identifier',
+      ),
+    transformers: z
+      .record(z.string(), TransformerReferenceSchema)
+      .optional()
+      .describe(
+        'Transformer configurations (event transformation) keyed by unique identifier',
       ),
     collector: z
       .unknown()
@@ -423,4 +489,17 @@ export const sourceReferenceJsonSchema = toJsonSchema(
 export const destinationReferenceJsonSchema = toJsonSchema(
   DestinationReferenceSchema,
   'DestinationReference',
+);
+
+/**
+ * Generate JSON Schema for TransformerReference.
+ *
+ * @remarks
+ * Used for validating transformer package references.
+ *
+ * @returns JSON Schema (Draft 7) representation of TransformerReferenceSchema
+ */
+export const transformerReferenceJsonSchema = toJsonSchema(
+  TransformerReferenceSchema,
+  'TransformerReference',
 );

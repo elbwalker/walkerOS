@@ -15,7 +15,7 @@ export const destinationAPI: Destination = {
 
   env: { sendServer },
 
-  async push(event, { config, mapping, data, env, logger }) {
+  async push(event, { config, rule, data, env, logger }) {
     const { settings } = config;
     const { url, headers, method, transform, timeout } = settings || {};
 
@@ -23,7 +23,7 @@ export const destinationAPI: Destination = {
 
     const eventData = isDefined(data) ? data : event;
     const body = transform
-      ? transform(eventData, config, mapping) // Transform event data
+      ? transform(eventData, config, rule) // Transform event data
       : JSON.stringify(eventData);
 
     logger?.debug('API destination sending request', {

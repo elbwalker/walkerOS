@@ -40,17 +40,17 @@ export const destinationPiwikPro: Destination = {
     if (settings?.linkTracking !== false) paq(['enableLinkTracking']);
   },
 
-  async push(event, { mapping = {}, data, env }) {
+  async push(event, { rule = {}, data, env }) {
     const { window } = getEnv(env);
     const paq = (window as Window)._paq!.push;
 
     // Send pageviews if not disabled
-    if (event.name === 'page view' && !mapping.settings) {
+    if (event.name === 'page view' && !rule.settings) {
       paq(['trackPageView', await getMappingValue(event, 'data.title')]);
       return;
     }
 
-    const eventMapping: Mapping = mapping.settings || {};
+    const eventMapping: Mapping = rule.settings || {};
 
     const parameters = isArray(data) ? data : [data];
 

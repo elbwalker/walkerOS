@@ -90,6 +90,15 @@ const sidebars: SidebarsConfig = {
       },
       items: ['collector/commands'],
     },
+    {
+      type: 'category',
+      label: 'Transformers',
+      link: {
+        type: 'doc',
+        id: 'transformers/index',
+      },
+      items: ['transformers/validator', 'transformers/create-your-own'],
+    },
     'mapping',
     {
       type: 'category',

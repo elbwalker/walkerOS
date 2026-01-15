@@ -13,7 +13,7 @@ export const destinationDataLayer: Destination.InitDestination = {
 
     // Push event to dataLayer
     (w.dataLayer as Array<Record<string, unknown>>).push({
-      event: event.event,
+      event: event.name,
       ...event.data,
       walker: {
         entity: event.entity,

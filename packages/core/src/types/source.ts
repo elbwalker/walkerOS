@@ -5,6 +5,7 @@ import type {
   Logger,
   Mapping as WalkerOSMapping,
   Collector,
+  Context as BaseContext,
 } from './index';
 
 /**
@@ -71,14 +72,28 @@ export type Env<T extends TypesGeneric = Types> = T['env'];
  */
 export type TypesOf<I> = I extends Instance<infer T> ? T : never;
 
-export interface Config<T extends TypesGeneric = Types>
-  extends WalkerOSMapping.Config<Mapping<T>> {
+export interface Config<
+  T extends TypesGeneric = Types,
+> extends WalkerOSMapping.Config<Mapping<T>> {
   settings?: InitSettings<T>;
   env?: Env<T>;
   id?: string;
   logger?: Logger.Config;
   disabled?: boolean;
   primary?: boolean;
+  /**
+   * Ingest metadata extraction mapping.
+   * Extracts values from raw request objects (Express req, Lambda event, etc.)
+   * using walkerOS mapping syntax. Extracted data flows to transformers/destinations.
+   *
+   * @example
+   * ingest: {
+   *   ip: 'req.ip',
+   *   ua: 'req.headers.user-agent',
+   *   origin: 'req.headers.origin'
+   * }
+   */
+  ingest?: WalkerOSMapping.Data;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
@@ -98,9 +113,26 @@ export interface Instance<T extends TypesGeneric = Types> {
   on?(event: On.Types, context?: unknown): void | Promise<void>;
 }
 
+/**
+ * Context provided to source init function.
+ * Extends base context with source-specific properties.
+ */
+export interface Context<
+  T extends TypesGeneric = Types,
+> extends BaseContext.Base<Partial<Config<T>>, Env<T>> {
+  id: string;
+  /**
+   * Sets ingest metadata for the current request.
+   * Extracts values from the raw request using config.ingest mapping.
+   * The extracted data is passed through to transformers and destinations.
+   *
+   * @param value - Raw request object (Express req, Lambda event, etc.)
+   */
+  setIngest: (value: unknown) => Promise<void>;
+}
+
 export type Init<T extends TypesGeneric = Types> = (
-  config: Partial<Config<T>>,
-  env: Env<T>,
+  context: Context<T>,
 ) => Instance<T> | Promise<Instance<T>>;
 
 export type InitSource<T extends TypesGeneric = Types> = {
@@ -108,6 +140,7 @@ export type InitSource<T extends TypesGeneric = Types> = {
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
   primary?: boolean;
+  next?: string;
 };
 
 /**

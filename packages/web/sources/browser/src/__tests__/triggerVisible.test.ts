@@ -70,9 +70,6 @@ describe('triggerVisible', () => {
     // Create mock elb function
     mockElb = jest.fn().mockResolvedValue({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     });
 
     testScope = document;
