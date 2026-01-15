@@ -3,6 +3,17 @@ import Link from '@docusaurus/Link';
 import { CodeBox } from '@walkeros/explorer';
 import { tagger } from '@site/src/components/walkerjs';
 
+const composableTaggingHtmlCode = `<div
+  data-elb="product"
+  data-elb-product="id:123;name:Sneakers"
+  data-elbaction="load:view"
+>
+  <h1 data-elb-product="name">Sneakers</h1>
+  <button data-elbaction="click:add">
+    Add to Cart
+  </button>
+</div>`;
+
 const composableTaggingCode = `import { tagger } from '../walker';
 
 function ProductDetail({ product }) {
@@ -24,34 +35,19 @@ function ProductDetail({ product }) {
   );
 }`;
 
-const transformationCode = `// Source: Clean up what comes in
-sources: {
-  browser: {
-    config: {
-      mapping: {
-        product: {
-          click: { name: 'product view' }
-        },
-        test: {
-          '*': { ignore: true }
-        }
-      }
-    }
-  }
-}
-
-// Destination: Format for specific tools
-destinations: {
-  gtag: {
-    config: {
-      mapping: {
-        product: {
-          view: {
-            name: 'view_item',
+const webCode = `// Capture GA4 dataLayer events
+{
+  sources: {
+    dataLayer: {
+      config: {
+        mapping: {
+          add_to_cart: {
+            name: 'product add',
             data: {
               map: {
-                item_id: 'data.id',
-                value: 'data.price'
+                id: 'items.0.item_id',
+                name: 'items.0.item_name',
+                price: 'value'
               }
             }
           }
@@ -61,19 +57,53 @@ destinations: {
   }
 }`;
 
-const consentCode = `elb('walker on', 'consent', (instance, consent) => {
-  if (consent.marketing) {
-    gtag('consent', 'update', {
-      ad_user_data: 'granted',
-      ad_personalization: 'granted',
-      ad_storage: 'granted',
-      analytics_storage: 'granted',
-    });
+const serverCode = `// GET /collect?event=addToCart&data[itemId]=123&data[itemName]=Sneakers&data[amount]=49.99
+{
+  sources: {
+    express: {
+      config: {
+        mapping: {
+          addToCart: {
+            name: 'product add',
+            data: {
+              map: {
+                id: 'data.itemId',
+                name: 'data.itemName',
+                price: 'data.amount'
+              }
+            }
+          }
+        }
+      }
+    }
   }
-});
+}`;
 
-// When CMP detects consent choice
-elb('walker consent', { functional: true, marketing: false });`;
+const flowJsonCode = `{
+  destinations: {
+    ga4: {
+      config: {
+        consent: { marketing: true },
+        loadScript: false,
+        settings: {
+          measurementId: 'G-XXXXXXXXXX'
+        }
+      }
+    }
+  }
+}`;
+
+const cmpCode = `// When CMP detects user's consent choice
+elb('walker consent', { marketing: true });`;
+
+const gtagCode = `// Handled automatically:
+
+// No scripts loaded until consent
+// gtag('consent', 'default', {...})
+// gtag('consent', 'update', {...})
+
+// Full Consent Mode v2 support
+// Zero additional code needed`;
 
 export default function Features() {
   return (
@@ -127,8 +157,14 @@ export default function Features() {
                 <CodeBox
                   tabs={[
                     {
+                      id: 'html',
+                      label: 'product.html',
+                      code: composableTaggingHtmlCode,
+                      language: 'html',
+                    },
+                    {
                       id: 'product',
-                      label: 'ProductCard.tsx',
+                      label: 'ProductDetail.tsx',
                       code: composableTaggingCode,
                       language: 'typescript',
                     },
@@ -176,9 +212,15 @@ export default function Features() {
                 <CodeBox
                   tabs={[
                     {
-                      id: 'config',
-                      label: 'config.ts',
-                      code: transformationCode,
+                      id: 'web',
+                      label: 'web.ts',
+                      code: webCode,
+                      language: 'typescript',
+                    },
+                    {
+                      id: 'server',
+                      label: 'server.ts',
+                      code: serverCode,
                       language: 'typescript',
                     },
                   ]}
@@ -225,9 +267,21 @@ export default function Features() {
                 <CodeBox
                   tabs={[
                     {
-                      id: 'consent',
-                      label: 'consent-setup.js',
-                      code: consentCode,
+                      id: 'flow',
+                      label: 'flow.json',
+                      code: flowJsonCode,
+                      language: 'json',
+                    },
+                    {
+                      id: 'cmp',
+                      label: 'cmp.js',
+                      code: cmpCode,
+                      language: 'javascript',
+                    },
+                    {
+                      id: 'gtag',
+                      label: 'gtag.js',
+                      code: gtagCode,
                       language: 'javascript',
                     },
                   ]}

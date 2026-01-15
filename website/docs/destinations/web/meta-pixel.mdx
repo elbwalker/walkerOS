@@ -27,6 +27,18 @@ function. All you need to do is install the destination, and optionally map
 events to Meta's format. walkerOS takes care of loading the script and the
 function calls.
 
+:::info Where This Fits
+Meta Pixel is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Meta Pixel', highlight: true } }}
+/>
+
+Loads Meta Pixel script dynamically, initializes the fbq function with your pixel ID, and tracks page views and custom conversions for Facebook and Instagram ads.
+:::
+
 ## Installation
 
 <CodeSnippet

@@ -16,13 +16,11 @@ The GCP Cloud Functions Source is a **server source** in the walkerOS flow:
 
 <FlowMap
   sources={{ default: { label: 'Source', text: 'GCP', highlight: true } }}
-  collector={{}}
-  destinations={{ default: {} }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
 />
 
 It receives events via HTTP and forwards them to your destinations.
-
-[Learn about Operating Modes →](/docs/getting-started/modes/)
 :::
 
 ## Features

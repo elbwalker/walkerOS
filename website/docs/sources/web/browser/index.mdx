@@ -24,13 +24,11 @@ The Browser Source is a **source** in the walkerOS flow:
 
 <FlowMap
   sources={{ default: { label: 'Source', text: 'Browser', highlight: true } }}
-  collector={{}}
-  destinations={{ default: {} }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
 />
 
 It reads `data-elb-*` attributes from your HTML and generates events. The Collector routes these to your configured destinations.
-
-[Learn about Operating Modes →](/docs/getting-started/modes/)
 :::
 
 ## Installation

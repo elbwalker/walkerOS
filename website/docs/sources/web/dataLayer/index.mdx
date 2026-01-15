@@ -18,13 +18,11 @@ The DataLayer Source is a **web source** in the walkerOS flow:
 
 <FlowMap
   sources={{ default: { label: 'Source', text: 'dataLayer', highlight: true } }}
-  collector={{}}
-  destinations={{ default: {} }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
 />
 
 It bridges existing GA4/GTM implementations to walkerOS destinations.
-
-[Learn about Operating Modes →](/docs/getting-started/modes/)
 :::
 
 ## Installation

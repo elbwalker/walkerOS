@@ -23,6 +23,18 @@ export const destination = { ...destinationWebAPI, examples };
 The web API destination allows you to send events from the browser to any HTTP
 endpoint with customizable data transformation and transport methods.
 
+:::info Where This Fits
+Web API is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'API', highlight: true } }}
+/>
+
+Sends events from the browser to any HTTP endpoint using fetch, XHR, or beacon transport with customizable request formatting.
+:::
+
 ## Installation
 
 <CodeSnippet

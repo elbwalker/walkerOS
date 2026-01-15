@@ -23,13 +23,11 @@ The Express Source is a **server source** in the walkerOS flow:
 
 <FlowMap
   sources={{ default: { label: 'Source', text: 'Express', highlight: true } }}
-  collector={{}}
-  destinations={{ default: {} }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
 />
 
 It receives events via HTTP (POST/GET) and forwards them to configured destinations.
-
-[Learn about Operating Modes →](/docs/getting-started/modes/)
 :::
 
 ## Installation

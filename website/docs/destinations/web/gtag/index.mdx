@@ -23,12 +23,12 @@ single destination configuration.
 Gtag is a **destination** in the walkerOS flow:
 
 <FlowMap
-  sources={{ default: {} }}
-  collector={{}}
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
   destinations={{ default: { label: 'Destination', text: 'Gtag', highlight: true } }}
 />
 
-Events are transformed using [mapping rules](/docs/mapping) before being sent to Google.
+Loads gtag script dynamically, initializes the gtag function with your config, handles Consent Mode v2 commands automatically, and pushes mapped events to Google services.
 :::
 
 ## Setup

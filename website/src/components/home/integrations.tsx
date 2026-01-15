@@ -2,11 +2,15 @@ import React, { useState } from 'react';
 import { Box, FlowMap } from '@walkeros/explorer';
 
 type Mode = 'client' | 'server';
-type View = 'overview' | 'detailed';
 
-// FlowMap configurations for each mode/view combination
+// FlowMap configurations for each mode
 const configs = {
-  'client-overview': {
+  client: {
+    stageBefore: {
+      icon: 'mdi:code-tags',
+      label: 'HTML Tagging',
+      link: '/docs/sources/web/browser/tagging/',
+    },
     sources: {
       browser: {
         icon: 'mdi:web',
@@ -15,24 +19,19 @@ const configs = {
       },
     },
     collector: {
-      label: 'walker.js',
+      label: 'Collector',
       link: '/docs/collector',
     },
     destinations: {
       ga4: {
-        icon: 'logos:google-analytics',
+        icon: 'simple-icons:googleanalytics',
         label: 'GA4',
         link: '/docs/destinations/web/gtag/ga4',
       },
       meta: {
-        icon: 'logos:meta-icon',
+        icon: 'simple-icons:meta',
         label: 'Meta Pixel',
         link: '/docs/destinations/web/meta-pixel',
-      },
-      gtm: {
-        icon: 'logos:google-tag-manager',
-        label: 'GTM',
-        link: '/docs/destinations/web/gtag/gtm',
       },
       api: {
         icon: 'mdi:api',
@@ -41,90 +40,17 @@ const configs = {
       },
     },
   },
-  'client-detailed': {
-    stageBefore: {
-      icon: 'mdi:web',
-      label: 'Browser',
-      link: false,
-    },
-    sources: {
-      source: {
-        label: 'Source',
-        text: 'Capture',
-        link: '/docs/sources',
-      },
-    },
-    preTransformers: {
-      transform: {
-        label: 'Transformer',
-        text: 'Enrich',
-        link: '/docs/transformers',
-      },
-    },
-    collector: {
-      label: 'walker.js',
-      text: 'Process',
-      link: '/docs/collector',
-    },
-    destinations: {
-      ga4: {
-        icon: 'logos:google-analytics',
-        label: 'GA4',
-        link: '/docs/destinations/web/gtag/ga4',
-      },
-      meta: {
-        icon: 'logos:meta-icon',
-        label: 'Meta',
-        link: '/docs/destinations/web/meta-pixel',
-      },
-    },
-  },
-  'server-overview': {
-    sources: {
-      express: {
-        icon: 'simple-icons:express',
-        label: 'Express',
-        link: '/docs/sources/server/express',
-      },
-      lambda: {
-        icon: 'logos:aws-lambda',
-        label: 'Lambda',
-        link: '/docs/sources/server/aws',
-      },
-    },
-    collector: {
-      label: 'Node',
-      link: '/docs/collector',
-    },
-    destinations: {
-      bigquery: {
-        icon: 'logos:google-bigquery',
-        label: 'BigQuery',
-        link: '/docs/destinations/server/gcp',
-      },
-      aws: {
-        icon: 'logos:aws',
-        label: 'AWS',
-        link: '/docs/destinations/server/aws',
-      },
-      meta: {
-        icon: 'logos:meta-icon',
-        label: 'Meta CAPI',
-        link: '/docs/destinations/server/meta-capi',
-      },
-    },
-  },
-  'server-detailed': {
+  server: {
     stageBefore: {
       icon: 'mdi:api',
       label: 'API Request',
       link: false,
     },
     sources: {
-      source: {
-        label: 'Source',
-        text: 'Ingest',
-        link: '/docs/sources',
+      express: {
+        icon: 'simple-icons:express',
+        label: 'Express',
+        link: '/docs/sources/server/express',
       },
     },
     preTransformers: {
@@ -135,20 +61,29 @@ const configs = {
       },
     },
     collector: {
-      label: 'Node',
-      text: 'Route',
+      label: 'Collector',
       link: '/docs/collector',
     },
     destinations: {
       bigquery: {
-        icon: 'logos:google-bigquery',
+        icon: 'simple-icons:googlebigquery',
         label: 'BigQuery',
         link: '/docs/destinations/server/gcp',
       },
       aws: {
-        icon: 'logos:aws',
+        icon: 'mdi:aws',
         label: 'AWS',
         link: '/docs/destinations/server/aws',
+      },
+      meta: {
+        icon: 'simple-icons:meta',
+        label: 'Meta CAPI',
+        link: '/docs/destinations/server/meta-capi',
+      },
+      datamanager: {
+        icon: 'mdi:database',
+        label: 'Datamanager',
+        link: '/docs/destinations/server/datamanager',
       },
     },
   },
@@ -195,10 +130,8 @@ function PillButtons({
 
 export default function Integrations() {
   const [mode, setMode] = useState<Mode>('client');
-  const [view, setView] = useState<View>('overview');
 
-  const configKey = `${mode}-${view}` as keyof typeof configs;
-  const currentConfig = configs[configKey];
+  const currentConfig = configs[mode];
 
   return (
     <section
@@ -219,16 +152,7 @@ export default function Integrations() {
 
         <PillButtons mode={mode} onChange={setMode} />
 
-        <Box
-          tabs={[
-            { id: 'overview', label: 'Overview' },
-            { id: 'detailed', label: 'Detailed' },
-          ]}
-          activeTab={view}
-          onTabChange={(id) => setView(id as View)}
-          className="mx-auto"
-          style={{ maxWidth: '700px', height: 'auto' }}
-        >
+        <Box className="mx-auto" style={{ maxWidth: '700px', height: 'auto' }}>
           <div
             className="p-6 flex justify-center items-center"
             style={{ height: '320px' }}

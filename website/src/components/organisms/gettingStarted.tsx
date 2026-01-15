@@ -130,6 +130,7 @@ export default function GettingStarted() {
               },
             ]}
             disabled
+            autoHeight
             className="mx-auto shadow-2xl"
             style={{ maxWidth: '800px' }}
           />

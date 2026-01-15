@@ -27,6 +27,18 @@ function. All you need to do is install the destination, and optionally map
 events to Piwik Pro's format. walkerOS takes care of loading the script and the
 function calls.
 
+:::info Where This Fits
+Piwik PRO is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Piwik PRO', highlight: true } }}
+/>
+
+Loads Piwik PRO script, initializes the tracking container, and sends page views and custom events with GDPR-compliant analytics.
+:::
+
 ## Installation
 
 <CodeSnippet

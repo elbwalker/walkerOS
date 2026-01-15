@@ -34,6 +34,16 @@ formats
 **For Destinations:** Transform events to match what each tool expects (GA4,
 Meta, etc.)
 
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
+  markers={[
+    { position: 'source-collector', id: '1', text: 'Source mapping: Clean, filter, normalize incoming data' },
+    { position: 'collector-destination', id: '2', text: 'Destination mapping: Transform to tool-specific formats' },
+  ]}
+/>
+
 ## When to use
 
 **Source Mapping:**
@@ -54,47 +64,55 @@ Meta, etc.)
 Map events by their entity-action structure:
 
 <CodeSnippet
-  code={`// Source: Clean up what comes in
-sources: {
-browser: {
-config: {
-mapping: {
-  product: {
-    click: { name: 'product view' }  // Standardize clicks to views
+  code={`{
+  // Source: Normalize incoming dataLayer events
+  sources: {
+    dataLayer: {
+      config: {
+        mapping: {
+          add_to_cart: {  // GA4 event name maps directly
+            name: 'product add',  // walkerOS entity-action format
+            data: {
+              map: {
+                id: 'items.0.item_id',
+                name: 'items.0.item_name',
+                value: 'value',
+              },
+            },
+          },
+        },
+      },
+    },
   },
-  test: {
-    '*': { ignore: true }  // Filter out test events
-  }
-}
-}
-}
-}
 
-// Destination: Format for specific tools
-destinations: {
-gtag: {
-config: {
-mapping: {
-  product: {
-    view: {
-      name: 'view_item',  // GA4 expects this name
-      data: {
-        map: {
-          item_id: 'data.id',
-          value: 'data.price'
-        }
-      }
-    }
-  }
-}
-}
-}
+  // Destination: Transform for Meta Pixel
+  destinations: {
+    meta: {
+      config: {
+        mapping: {
+          product: {
+            add: {
+              name: 'AddToCart',  // Meta's event name
+              data: {
+                map: {
+                  content_ids: 'data.id',
+                  content_name: 'data.name',
+                  value: 'data.value',
+                  currency: { value: 'EUR' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
 }`}
   language="typescript"
 />
 
-Both mappings are independent - one event can be transformed differently at each
-stage.
+Both mappings are independent - the same event can be transformed differently at
+each stage.
 
 ## What you can do
 
@@ -118,21 +136,23 @@ its entity and action.
 Map specific entity-action combinations to custom event names:
 
 <LiveCode
-  showMiddle={false}
+  language="typescript"
   labelInput="Configuration"
-  input={`await getMappingEvent(
-{ name: 'product view' },
-{
-product: {
-  view: { name: 'product_viewed' },
-},
-}
+  rowHeight="synced"
+  input={`
+await getMappingEvent(
+  { name: 'product view' },
+  {
+    product: {
+      view: { name: 'product_viewed' },
+    },
+  }
 );`}
   output={`{
-eventMapping: {
-name: "product_viewed"
-},
-mappingKey: "product view"
+  eventMapping: {
+    name: "product_viewed"
+  },
+  mappingKey: "product view"
 }`}
   fn={logEvent}
 />
@@ -142,24 +162,26 @@ mappingKey: "product view"
 Use wildcards (`*`) to match multiple entities or actions:
 
 <LiveCode
-  showMiddle={false}
+  language="typescript"
   labelInput="Configuration"
-  input={`await getMappingEvent(
-{ name: 'product click' },
-{
-product: {
-  '*': { name: 'product_interaction' },
-},
-'*': {
-  click: { name: 'generic_click' },
-},
-}
+  rowHeight="synced"
+  input={`
+await getMappingEvent(
+  { name: 'product click' },
+  {
+    product: {
+      '*': { name: 'product_interaction' },
+    },
+    '*': {
+      click: { name: 'generic_click' },
+    },
+  }
 );`}
   output={`{
-eventMapping: {
-name: "product_interaction"
-},
-mappingKey: "product *"
+  eventMapping: {
+    name: "product_interaction"
+  },
+  mappingKey: "product *"
 }`}
   fn={logEvent}
 />
@@ -169,30 +191,32 @@ mappingKey: "product *"
 Use conditions to apply different mappings based on event properties:
 
 <LiveCode
-  showMiddle={false}
+  language="typescript"
   labelInput="Configuration"
-  input={`await getMappingEvent(
-{
-name: 'order complete',
-data: { value: 100 },
-},
-{
-order: {
-  complete: [
-    {
-      condition: (event) => event.data?.value > 50,
-      name: 'high_value_purchase',
+  rowHeight="synced"
+  input={`
+await getMappingEvent(
+  {
+    name: 'order complete',
+    data: { value: 100 },
+  },
+  {
+    order: {
+      complete: [
+        {
+          condition: (event) => event.data?.value > 50,
+          name: 'high_value_purchase',
+        },
+        { name: 'purchase' }, // Fallback
+      ],
     },
-    { name: 'purchase' }, // Fallback
-  ],
-},
-}
+  }
 );`}
   output={`{
-eventMapping: {
-name: "high_value_purchase"
-},
-mappingKey: "order complete"
+  eventMapping: {
+    name: "high_value_purchase"
+  },
+  mappingKey: "order complete"
 }`}
   fn={logEvent}
 />
@@ -202,21 +226,23 @@ mappingKey: "order complete"
 Skip processing certain events by setting `ignore: true`:
 
 <LiveCode
-  showMiddle={false}
+  language="typescript"
   labelInput="Configuration"
-  input={`await getMappingEvent(
-{ name: 'test event' },
-{
-test: {
-  event: { ignore: true },
-},
-}
+  rowHeight="synced"
+  input={`
+await getMappingEvent(
+  { name: 'test event' },
+  {
+    test: {
+      event: { ignore: true },
+    },
+  }
 );`}
   output={`{
-eventMapping: {
-ignore: true
-},
-mappingKey: "test event"
+  eventMapping: {
+    ignore: true
+  },
+  mappingKey: "test event"
 }`}
   fn={logEvent}
 />
@@ -232,11 +258,13 @@ This function transforms values using various mapping strategies.
 Use a string to extract a value by its property path:
 
 <LiveCode
-  showMiddle={false}
+  language="typescript"
   labelInput="Configuration"
-  input={`await getMappingValue(
-{ user: { id: '12345', name: 'John' } },
-'user.id'
+  rowHeight="synced"
+  input={`
+await getMappingValue(
+  { user: { id: '12345', name: 'John' } },
+  'user.id'
 );`}
   output={`"12345"`}
   fn={logValue}
@@ -247,11 +275,13 @@ Use a string to extract a value by its property path:
 Access array elements using dot notation:
 
 <LiveCode
-  showMiddle={false}
+  language="typescript"
   labelInput="Configuration"
-  input={`await getMappingValue(
-{ products: ['laptop', 'mouse', 'keyboard'] },
-'products.0'
+  rowHeight="synced"
+  input={`
+await getMappingValue(
+  { products: ['laptop', 'mouse', 'keyboard'] },
+  'products.0'
 );`}
   output={`"laptop"`}
   fn={logValue}
@@ -262,11 +292,13 @@ Access array elements using dot notation:
 Return static values using the `value` property:
 
 <LiveCode
-  showMiddle={false}
+  language="typescript"
   labelInput="Configuration"
-  input={`await getMappingValue(
-{ name: 'page view' },
-{ value: 'pageview' }
+  rowHeight="synced"
+  input={`
+await getMappingValue(
+  { name: 'page view' },
+  { value: 'pageview' }
 );`}
   output={`"pageview"`}
   fn={logValue}
@@ -277,13 +309,14 @@ Return static values using the `value` property:
 Transform values using custom functions:
 
 <LiveCode
-  showMiddle={false}
+  language="typescript"
   labelInput="Configuration"
+  rowHeight="synced"
   input={`await getMappingValue(
-{ user: { email: 'john@example.com' } },
-{
-fn: (event) => event.user.email.split('@')[1]
-}
+  { user: { email: 'john@example.com' } },
+  {
+    fn: (event) => event.user.email.split('@')[1]
+  }
 );`}
   output={`"example.com"`}
   fn={logValue}
@@ -294,29 +327,30 @@ fn: (event) => event.user.email.split('@')[1]
 Create new objects by mapping properties:
 
 <LiveCode
-  showMiddle={false}
+  language="typescript"
   labelInput="Configuration"
+  rowHeight="synced"
   input={`await getMappingValue(
-{
-product: { id: 'P123', name: 'Laptop', price: 999 },
-user: { id: 'U456' }
-},
-{
-map: {
-  item_id: 'product.id',
-  item_name: 'product.name',
-  value: 'product.price',
-  user_id: 'user.id',
-  currency: { value: 'USD' },
-}
-}
+  {
+    product: { id: 'P123', name: 'Laptop', price: 999 },
+    user: { id: 'U456' }
+  },
+  {
+    map: {
+      item_id: 'product.id',
+      item_name: 'product.name',
+      value: 'product.price',
+      user_id: 'user.id',
+      currency: { value: 'USD' },
+    }
+  }
 );`}
   output={`{
-item_id: "P123",
-item_name: "Laptop",
-value: 999,
-user_id: "U456",
-currency: "USD"
+  item_id: "P123",
+  item_name: "Laptop",
+  value: 999,
+  user_id: "U456",
+  currency: "USD"
 }`}
   fn={logValue}
 />
@@ -326,25 +360,26 @@ currency: "USD"
 Process arrays and transform each item:
 
 <LiveCode
-  showMiddle={false}
+  language="typescript"
   labelInput="Configuration"
+  rowHeight="synced"
   input={`await getMappingValue(
-{
-products: [
-  { id: 'P1', name: 'Laptop' },
-  { id: 'P2', name: 'Mouse' }
-]
-},
-{
-loop: [
-  'products',
-  { map: { item_id: 'id', item_name: 'name' } }
-]
-}
+  {
+    products: [
+      { id: 'P1', name: 'Laptop' },
+      { id: 'P2', name: 'Mouse' }
+    ]
+  },
+  {
+    loop: [
+      'products',
+      { map: { item_id: 'id', item_name: 'name' } }
+    ]
+  }
 );`}
   output={`[
-{ item_id: "P1", item_name: "Laptop" },
-{ item_id: "P2", item_name: "Mouse" }
+  { item_id: "P1", item_name: "Laptop" },
+  { item_id: "P2", item_name: "Mouse" }
 ]`}
   fn={logValue}
 />
@@ -354,14 +389,15 @@ loop: [
 Validate values and return undefined if validation fails:
 
 <LiveCode
-  showMiddle={false}
+  language="typescript"
   labelInput="Configuration"
+  rowHeight="synced"
   input={`await getMappingValue(
-{ email: 'john@example.com' },
-{
-key: 'email',
-validate: (value) => typeof value === 'string' && value.includes('@')
-}
+  { email: 'john@example.com' },
+  {
+    key: 'email',
+    validate: (value) => typeof value === 'string' && value.includes('@')
+  }
 );`}
   output={`"john@example.com"`}
   fn={logValue}
@@ -372,17 +408,18 @@ validate: (value) => typeof value === 'string' && value.includes('@')
 Only return values when required consent is granted:
 
 <LiveCode
-  showMiddle={false}
+  language="typescript"
   labelInput="Configuration"
+  rowHeight="synced"
   input={`await getMappingValue(
-{
-email: 'john@example.com',
-consent: { marketing: false, functional: true }
-},
-{
-key: 'email',
-consent: { marketing: true }
-}
+  {
+    email: 'john@example.com',
+    consent: { marketing: false, functional: true }
+  },
+  {
+    key: 'email',
+    consent: { marketing: true }
+  }
 );`}
   output={`undefined`}
   fn={logValue}
@@ -401,11 +438,13 @@ transformation
 Global transformations applied to all events:
 
 <CodeSnippet
-  code={`config: {
-policy: {
-'user.email': { fn: (e) => e.user?.email?.toLowerCase() },
-'data.timestamp': { fn: () => Date.now() },
-},
+  code={`{
+  config: {
+    policy: {
+      'user.email': { fn: (e) => e.user?.email?.toLowerCase() },
+      'data.timestamp': { fn: () => Date.now() },
+    },
+  },
 }`}
   language="typescript"
 />
@@ -415,17 +454,19 @@ policy: {
 Transformations for specific events:
 
 <CodeSnippet
-  code={`config: {
-mapping: {
-product: {
-view: {
-  name: 'view_item',
-  policy: {
-    'data.id': { fn: (e) => \`PRODUCT_\${e.data?.id}\` },
+  code={`{
+  config: {
+    mapping: {
+      product: {
+        view: {
+          name: 'view_item',
+          policy: {
+            'data.id': { fn: (e) => \`PRODUCT_\${e.data?.id}\` },
+          },
+        },
+      },
+    },
   },
-},
-},
-},
 }`}
   language="typescript"
 />
@@ -441,31 +482,31 @@ Normalize events before they reach the collector:
 
 <CodeSnippet
   code={`await startFlow({
-sources: {
-browser: {
-code: sourceBrowser,
-config: {
-  mapping: {
-    // Rename DOM clicks to views
-    product: {
-      click: {
-        name: 'product view',
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        mapping: {
+          // Rename DOM clicks to views
+          product: {
+            click: {
+              name: 'product view',
+              policy: {
+                // Event-level: normalize product IDs
+                'data.id': { fn: (e) => e.data?.id?.toUpperCase() },
+              },
+            },
+          },
+          // Ignore test events
+          test: { '*': { ignore: true } },
+        },
         policy: {
-          // Event-level: normalize product IDs
-          'data.id': { fn: (e) => e.data?.id?.toUpperCase() },
+          // Config-level: normalize user email for all events
+          'user.email': { fn: (e) => e.user?.email?.toLowerCase() },
         },
       },
     },
-    // Ignore test events
-    test: { '*': { ignore: true } },
   },
-  policy: {
-    // Config-level: normalize user email for all events
-    'user.email': { fn: (e) => e.user?.email?.toLowerCase() },
-  },
-},
-},
-},
 });`}
   language="typescript"
 />
@@ -476,27 +517,27 @@ Transform for specific destination APIs:
 
 <CodeSnippet
   code={`await startFlow({
-destinations: {
-gtag: {
-code: destinationGtag,
-config: {
-  mapping: {
-    product: {
-      view: {
-        name: 'view_item',
-        data: {
-          map: {
-            item_id: 'data.id',
-            value: 'data.price',
-            currency: { value: 'USD' },
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        mapping: {
+          product: {
+            view: {
+              name: 'view_item',
+              data: {
+                map: {
+                  item_id: 'data.id',
+                  value: 'data.price',
+                  currency: { value: 'USD' },
+                },
+              },
+            },
           },
         },
       },
     },
   },
-},
-},
-},
 });`}
   language="typescript"
 />

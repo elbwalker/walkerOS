@@ -39,9 +39,14 @@ The Collector transforms raw events into enriched, compliant data streams by:
 In the walkerOS data flow, the collector sits between sources and destinations:
 
 <FlowMap
-  sources={{ default: {} }}
-  collector={{}}
-  destinations={{ default: {} }}
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: true }}
+  destinations={{ default: { highlight: false } }}
+  markers={[
+    { position: 'source-collector', id: '1', text: 'Receive: Incoming mapped events from sources' },
+    { position: 'collector', id: '2', text: 'Process: State management, consent handling, enrichment' },
+    { position: 'collector-destination', id: '3', text: 'Route: Map events to destination-specific requirements' },
+  ]}
 />
 
 Sources capture events and send them to the collector, which processes and

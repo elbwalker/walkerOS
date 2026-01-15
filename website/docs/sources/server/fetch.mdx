@@ -16,13 +16,11 @@ The Fetch Source is a **server source** in the walkerOS flow:
 
 <FlowMap
   sources={{ default: { label: 'Source', text: 'Fetch', highlight: true } }}
-  collector={{}}
-  destinations={{ default: {} }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
 />
 
 It receives events via the Fetch API and forwards them to your destinations. Works on any platform supporting Web Standards.
-
-[Learn about Operating Modes →](/docs/getting-started/modes/)
 :::
 
 ## Features

@@ -11,6 +11,18 @@ custom JavaScript code strings. It provides a lightweight alternative to tag
 managers like GTM, allowing you to run arbitrary code in response to events
 without external dependencies.
 
+:::info Where This Fits
+Code is a **built-in destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Code', highlight: true } }}
+/>
+
+Executes custom JavaScript code strings on events, loads external scripts dynamically, and acts as a lightweight tag manager replacement.
+:::
+
 ## Setup
 
 Use `code: true` to enable the built-in code destination:
