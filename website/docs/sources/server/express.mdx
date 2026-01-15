@@ -21,11 +21,11 @@ Turn-key HTTP event collection server with Express.js. Handles JSON POST events,
 :::info Where This Fits
 The Express Source is a **server source** in the walkerOS flow:
 
-```
-Express Source → Collector → Destinations
-      ↓
-   HTTP events from clients
-```
+<FlowMap
+  sources={{ default: { label: 'Source', text: 'Express', highlight: true } }}
+  collector={{}}
+  destinations={{ default: {} }}
+/>
 
 It receives events via HTTP (POST/GET) and forwards them to configured destinations.
 

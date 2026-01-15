@@ -212,9 +212,11 @@ SaaS, and more, ensuring versatility and comparability.
 
 walkerOS events use a **vendor-agnostic format**. When sending to destinations like GA4, BigQuery, or your API, events are transformed using **mapping**.
 
-```
-walkerOS Event → [MAPPING] → Destination Format
-```
+<FlowMap
+  sources={{ default: { label: 'walkerOS', text: 'Event' } }}
+  collector={{ label: 'Mapping' }}
+  destinations={{ default: { label: 'Destination', text: 'Format' } }}
+/>
 
 For example, a `product add` event becomes `add_to_cart` for GA4, while the same event might be stored with different field names in BigQuery.
 
