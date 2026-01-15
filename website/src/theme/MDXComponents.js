@@ -6,12 +6,14 @@ import TabItem from '@theme/TabItem';
 import { Icon } from '@iconify/react';
 // Import explorer components (made available in all MDX files)
 import {
+  ArchitectureFlow,
   CodeBox,
   CodeSnippet,
-  PropertyTable,
-  DestinationInitDemo,
   DestinationDemo,
+  DestinationInitDemo,
+  FlowMap,
   LiveCode,
+  PropertyTable,
 } from '@walkeros/explorer';
 // Import website-specific components
 import PackageLink from '@site/src/components/docs/package-link';
@@ -27,10 +29,12 @@ export default {
   Icon,
   PackageLink,
   // Explorer components (no import needed in MDX files)
+  ArchitectureFlow,
   CodeBox,
   CodeSnippet,
-  PropertyTable,
-  DestinationInitDemo,
   DestinationDemo,
+  DestinationInitDemo,
+  FlowMap,
   LiveCode,
+  PropertyTable,
 };

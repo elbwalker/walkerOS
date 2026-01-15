@@ -73,10 +73,10 @@ Use `package:` with a string reference. The CLI downloads and bundles the npm pa
 
 <CodeSnippet
   code={`"sources": {
-  "browser": {
-    "package": "@walkeros/web-source-browser",
-    "config": { "settings": { "pageview": true } }
-  }
+    "browser": {
+      "package": "@walkeros/web-source-browser",
+      "config": { "settings": { "pageview": true } }
+    }
 }`}
   language="json"
 />
@@ -88,7 +88,7 @@ Use `code:` with a direct import reference:
 <CodeSnippet
   code={`import { sourceBrowser } from '@walkeros/web-source-browser';
 
-const { elb } = await startFlow({
+const flow = await startFlow({
   sources: {
     browser: {
       code: sourceBrowser,
@@ -120,24 +120,24 @@ Platform is determined by the presence of the `web` or `server` key:
 
 <CodeSnippet
   code={`{
-  "version": 1,
-  "flows": {
-    "default": {
-      "server": {}  // Server platform (Node.js)
+    "version": 1,
+    "flows": {
+      "default": {
+        "server": {}  // Server platform (Node.js)
+      }
     }
-  }
 }`}
   language="json"
 />
 
 <CodeSnippet
   code={`{
-  "version": 1,
-  "flows": {
-    "default": {
-      "web": {}  // Web platform (browser)
+    "version": 1,
+    "flows": {
+      "default": {
+        "web": {}  // Web platform (browser)
+      }
     }
-  }
 }`}
   language="json"
 />

@@ -1,143 +1,205 @@
-import React from 'react';
-import { Icon } from '@walkeros/explorer';
-import Link from '@docusaurus/Link';
+import React, { useState } from 'react';
+import { Box, FlowMap } from '@walkeros/explorer';
 
-interface Integration {
-  name: string;
-  icon: string;
-  link: string;
-  iconColor?: string;
-}
+type Mode = 'client' | 'server';
+type View = 'overview' | 'detailed';
 
-const clientSources: Integration[] = [
-  { name: 'Browser', icon: 'mdi:web', link: '/docs/sources/web/browser/' },
-  {
-    name: 'dataLayer',
-    icon: 'mdi:layers-outline',
-    link: '/docs/sources/web/dataLayer/',
+// FlowMap configurations for each mode/view combination
+const configs = {
+  'client-overview': {
+    sources: {
+      browser: {
+        icon: 'mdi:web',
+        label: 'Browser',
+        link: '/docs/sources/web/browser/',
+      },
+    },
+    collector: {
+      label: 'walker.js',
+      link: '/docs/collector',
+    },
+    destinations: {
+      ga4: {
+        icon: 'logos:google-analytics',
+        label: 'GA4',
+        link: '/docs/destinations/web/gtag/ga4',
+      },
+      meta: {
+        icon: 'logos:meta-icon',
+        label: 'Meta Pixel',
+        link: '/docs/destinations/web/meta-pixel',
+      },
+      gtm: {
+        icon: 'logos:google-tag-manager',
+        label: 'GTM',
+        link: '/docs/destinations/web/gtag/gtm',
+      },
+      api: {
+        icon: 'mdi:api',
+        label: 'API',
+        link: '/docs/destinations/api/web',
+      },
+    },
   },
-];
+  'client-detailed': {
+    stageBefore: {
+      icon: 'mdi:web',
+      label: 'Browser',
+      link: false,
+    },
+    sources: {
+      source: {
+        label: 'Source',
+        text: 'Capture',
+        link: '/docs/sources',
+      },
+    },
+    preTransformers: {
+      transform: {
+        label: 'Transformer',
+        text: 'Enrich',
+        link: '/docs/transformers',
+      },
+    },
+    collector: {
+      label: 'walker.js',
+      text: 'Process',
+      link: '/docs/collector',
+    },
+    destinations: {
+      ga4: {
+        icon: 'logos:google-analytics',
+        label: 'GA4',
+        link: '/docs/destinations/web/gtag/ga4',
+      },
+      meta: {
+        icon: 'logos:meta-icon',
+        label: 'Meta',
+        link: '/docs/destinations/web/meta-pixel',
+      },
+    },
+  },
+  'server-overview': {
+    sources: {
+      express: {
+        icon: 'simple-icons:express',
+        label: 'Express',
+        link: '/docs/sources/server/express',
+      },
+      lambda: {
+        icon: 'logos:aws-lambda',
+        label: 'Lambda',
+        link: '/docs/sources/server/aws',
+      },
+    },
+    collector: {
+      label: 'Node',
+      link: '/docs/collector',
+    },
+    destinations: {
+      bigquery: {
+        icon: 'logos:google-bigquery',
+        label: 'BigQuery',
+        link: '/docs/destinations/server/gcp',
+      },
+      aws: {
+        icon: 'logos:aws',
+        label: 'AWS',
+        link: '/docs/destinations/server/aws',
+      },
+      meta: {
+        icon: 'logos:meta-icon',
+        label: 'Meta CAPI',
+        link: '/docs/destinations/server/meta-capi',
+      },
+    },
+  },
+  'server-detailed': {
+    stageBefore: {
+      icon: 'mdi:api',
+      label: 'API Request',
+      link: false,
+    },
+    sources: {
+      source: {
+        label: 'Source',
+        text: 'Ingest',
+        link: '/docs/sources',
+      },
+    },
+    preTransformers: {
+      transform: {
+        label: 'Transformer',
+        text: 'Validate',
+        link: '/docs/transformers',
+      },
+    },
+    collector: {
+      label: 'Node',
+      text: 'Route',
+      link: '/docs/collector',
+    },
+    destinations: {
+      bigquery: {
+        icon: 'logos:google-bigquery',
+        label: 'BigQuery',
+        link: '/docs/destinations/server/gcp',
+      },
+      aws: {
+        icon: 'logos:aws',
+        label: 'AWS',
+        link: '/docs/destinations/server/aws',
+      },
+    },
+  },
+};
 
-const serverSources: Integration[] = [
-  {
-    name: 'Express',
-    icon: 'simple-icons:express',
-    link: '/docs/sources/server/express',
-  },
-  { name: 'Fetch', icon: 'mdi:api', link: '/docs/sources/server/fetch' },
-  {
-    name: 'AWS Lambda',
-    icon: 'logos:aws-lambda',
-    link: '/docs/sources/server/aws',
-  },
-  {
-    name: 'GCP Functions',
-    icon: 'logos:google-cloud-functions',
-    link: '/docs/sources/server/gcp',
-  },
-];
-
-const clientDestinations: Integration[] = [
-  {
-    name: 'GA4',
-    icon: 'logos:google-analytics',
-    link: '/docs/destinations/web/gtag/ga4',
-  },
-  {
-    name: 'Google Ads',
-    icon: 'logos:google-ads',
-    link: '/docs/destinations/web/gtag/ads',
-  },
-  {
-    name: 'GTM',
-    icon: 'logos:google-tag-manager',
-    link: '/docs/destinations/web/gtag/gtm',
-  },
-  {
-    name: 'Meta Pixel',
-    icon: 'logos:meta-icon',
-    link: '/docs/destinations/web/meta-pixel',
-  },
-  {
-    name: 'Plausible',
-    icon: 'simple-icons:plausibleanalytics',
-    link: '/docs/destinations/web/plausible',
-    iconColor: '#5850EC',
-  },
-  {
-    name: 'Piwik PRO',
-    icon: 'simple-icons:piwikpro',
-    link: '/docs/destinations/web/piwikpro',
-  },
-  {
-    name: 'API',
-    icon: 'simple-icons:api',
-    link: '/docs/destinations/api/web',
-  },
-];
-
-const serverDestinations: Integration[] = [
-  { name: 'AWS', icon: 'logos:aws', link: '/docs/destinations/server/aws' },
-  {
-    name: 'BigQuery',
-    icon: 'logos:google-bigquery',
-    link: '/docs/destinations/server/gcp',
-  },
-  {
-    name: 'Meta CAPI',
-    icon: 'logos:meta-icon',
-    link: '/docs/destinations/server/meta-capi',
-  },
-];
-
-function IntegrationItem({ integration }: { integration: Integration }) {
-  return (
-    <Link
-      to={integration.link}
-      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:text-elbwalker transition-colors no-underline"
-    >
-      <Icon
-        icon={integration.icon}
-        className="w-6 h-6"
-        style={
-          integration.iconColor ? { color: integration.iconColor } : undefined
-        }
-      />
-      <span
-        className="text-sm font-medium"
-        style={{ color: 'var(--color-base-content)' }}
-      >
-        {integration.name}
-      </span>
-    </Link>
-  );
-}
-
-function CategoryBox({
-  title,
-  items,
+function PillButtons({
+  mode,
+  onChange,
 }: {
-  title: string;
-  items: Integration[];
+  mode: Mode;
+  onChange: (mode: Mode) => void;
 }) {
   return (
-    <div className="rounded-xl border-2 border-white dark:border-gray-600 bg-transparent p-4">
-      <h4
-        className="text-sm font-semibold mb-3 text-center"
-        style={{ color: 'var(--color-gray-500)' }}
+    <div className="flex gap-4 mb-8 justify-center">
+      <button
+        onClick={() => onChange('client')}
+        className={`px-6 py-2 rounded-full font-semibold transition-colors ${
+          mode === 'client'
+            ? 'bg-[#01b5e2] text-white'
+            : 'bg-transparent border border-gray-400 hover:border-[#01b5e2]'
+        }`}
+        style={
+          mode !== 'client' ? { color: 'var(--color-base-content)' } : undefined
+        }
       >
-        {title}
-      </h4>
-      <div className="flex flex-col gap-1">
-        {items.map((item) => (
-          <IntegrationItem key={item.name} integration={item} />
-        ))}
-      </div>
+        Client
+      </button>
+      <button
+        onClick={() => onChange('server')}
+        className={`px-6 py-2 rounded-full font-semibold transition-colors ${
+          mode === 'server'
+            ? 'bg-[#01b5e2] text-white'
+            : 'bg-transparent border border-gray-400 hover:border-[#01b5e2]'
+        }`}
+        style={
+          mode !== 'server' ? { color: 'var(--color-base-content)' } : undefined
+        }
+      >
+        Server
+      </button>
     </div>
   );
 }
 
 export default function Integrations() {
+  const [mode, setMode] = useState<Mode>('client');
+  const [view, setView] = useState<View>('overview');
+
+  const configKey = `${mode}-${view}` as keyof typeof configs;
+  const currentConfig = configs[configKey];
+
   return (
     <section
       className="py-16 sm:py-24"
@@ -155,91 +217,25 @@ export default function Integrations() {
           </h2>
         </div>
 
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-8">
-          {/* Sources Column */}
-          <div className="flex flex-col items-center">
-            <h3
-              className="text-lg font-semibold mb-4"
-              style={{ color: 'var(--color-gray-500)' }}
-            >
-              Sources
-            </h3>
-            <div className="flex flex-col gap-4">
-              <CategoryBox title="Client-side" items={clientSources} />
-              <CategoryBox title="Server-side" items={serverSources} />
-            </div>
-          </div>
+        <PillButtons mode={mode} onChange={setMode} />
 
-          {/* Arrow */}
-          <div className="hidden lg:flex items-center text-elbwalker">
-            <Icon icon="mdi:arrow-right" className="w-12 h-12" />
-          </div>
-          <div className="lg:hidden text-elbwalker">
-            <Icon icon="mdi:arrow-down" className="w-12 h-12" />
-          </div>
-
-          {/* Collector (Center) */}
-          <div className="flex flex-col items-center px-8">
-            <h3
-              className="text-lg font-semibold mb-4"
-              style={{ color: 'var(--color-gray-500)' }}
-            >
-              Collector
-            </h3>
-            <Link
-              to="/docs/collector"
-              className="p-6 rounded-xl border-2 border-elbwalker bg-transparent hover:border-elbwalker-dark transition-colors no-underline"
-            >
-              <img
-                src="/img/walkerOS_logo_new.svg"
-                alt="walkerOS"
-                className="w-24 h-24"
-              />
-            </Link>
-            {/* Mobile only: spacer and feature list */}
-            <div className="md:hidden">
-              <div className="h-8" />
-              <ul
-                className="text-sm space-y-2 list-disc pl-5"
-                style={{ color: 'var(--color-base-content)' }}
-              >
-                <li>Event processing</li>
-                <li>Consent management</li>
-                <li>Data enrichment</li>
-                <li>Destination routing</li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Arrow */}
-          <div className="hidden lg:flex items-center text-elbwalker">
-            <Icon icon="mdi:arrow-right" className="w-12 h-12" />
-          </div>
-          <div className="lg:hidden text-elbwalker">
-            <Icon icon="mdi:arrow-down" className="w-12 h-12" />
-          </div>
-
-          {/* Destinations Column */}
-          <div className="flex flex-col items-center">
-            <h3
-              className="text-lg font-semibold mb-4"
-              style={{ color: 'var(--color-gray-500)' }}
-            >
-              Destinations
-            </h3>
-            <div className="flex flex-col gap-4">
-              <CategoryBox title="Client-side" items={clientDestinations} />
-              <CategoryBox title="Server-side" items={serverDestinations} />
-            </div>
-          </div>
-        </div>
-
-        <p
-          className="text-center mt-12 text-lg"
-          style={{ color: 'var(--color-gray-500)' }}
+        <Box
+          tabs={[
+            { id: 'overview', label: 'Overview' },
+            { id: 'detailed', label: 'Detailed' },
+          ]}
+          activeTab={view}
+          onTabChange={(id) => setView(id as View)}
+          className="mx-auto"
+          style={{ maxWidth: '700px', height: 'auto' }}
         >
-          More to come...
-        </p>
+          <div
+            className="p-6 flex justify-center items-center"
+            style={{ height: '320px' }}
+          >
+            <FlowMap {...currentConfig} />
+          </div>
+        </Box>
       </div>
     </section>
   );

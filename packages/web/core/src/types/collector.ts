@@ -14,7 +14,7 @@ import type { On } from '@walkeros/core';
 declare global {
   interface Window {
     elbwalker: Collector;
-    walkerjs: Collector;
+    walkerjs: CoreCollector.Instance;
     elbLayer: Layer;
     dataLayer: WalkerOS.Events | unknown | unknown[];
     elb: Elb.Fn<Promise<Elb.PushResult>>;

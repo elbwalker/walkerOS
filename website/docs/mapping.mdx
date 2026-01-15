@@ -5,7 +5,14 @@ sidebar_position: 4
 ---
 
 import { getMappingEvent, getMappingValue } from '@walkeros/core';
-import { parseInput } from '@site/src/components/molecules/codeBox';
+
+export const parseInput = (code, scope = {}) => {
+  const codeStr = String(code);
+  return new Function(
+    ...Object.keys(scope),
+    `"use strict"; return (async () => { return ${codeStr} })()`,
+  )(...Object.values(scope));
+};
 
 export const logEvent = async (input, config, log) => {
   log(await parseInput(input, { getMappingEvent }));

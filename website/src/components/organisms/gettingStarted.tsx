@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Link from '@docusaurus/Link';
+import { CodeBox } from '@walkeros/explorer';
 import { tagger } from '@site/src/components/walkerjs';
 
 const bundledCode = `{
@@ -117,49 +118,21 @@ export default function GettingStarted() {
               : 'Import directly into your TypeScript application'}
           </p>
 
-          {/* Code editor mockup */}
-          <div
-            className="mx-auto rounded-2xl shadow-2xl outline outline-1 outline-white/10 overflow-hidden"
-            style={{
-              backgroundColor: 'var(--code-editor-bg)',
-              maxWidth: '800px',
-            }}
-          >
-            {/* Editor header with dots and tabs */}
-            <div
-              className="flex items-center outline outline-1 outline-white/5"
-              style={{ backgroundColor: 'var(--code-editor-header-bg)' }}
-            >
-              {/* Traffic light dots */}
-              <div className="flex items-center gap-2 px-4">
-                <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
-                <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-                <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
-              </div>
-              {/* File tab */}
-              <div
-                className="-mb-px flex text-sm font-medium"
-                style={{ color: 'var(--code-editor-text-muted)' }}
-              >
-                <div
-                  className="border-b border-r border-b-white/20 border-r-white/10 px-4 py-2"
-                  style={{
-                    backgroundColor: 'var(--code-editor-tab-active-bg)',
-                    color: 'var(--code-editor-text)',
-                  }}
-                >
-                  {mode === 'bundled' ? 'flow.json' : 'tracking.ts'}
-                </div>
-              </div>
-            </div>
-
-            {/* Code content */}
-            <div className="px-6 py-6 font-mono text-sm overflow-x-auto">
-              <pre style={{ color: 'var(--code-editor-text)', margin: 0 }}>
-                <code>{mode === 'bundled' ? bundledCode : integratedCode}</code>
-              </pre>
-            </div>
-          </div>
+          {/* Code editor */}
+          <CodeBox
+            showTrafficLights
+            tabs={[
+              {
+                id: 'file',
+                label: mode === 'bundled' ? 'flow.json' : 'tracking.ts',
+                code: mode === 'bundled' ? bundledCode : integratedCode,
+                language: mode === 'bundled' ? 'json' : 'typescript',
+              },
+            ]}
+            disabled
+            className="mx-auto shadow-2xl"
+            style={{ maxWidth: '800px' }}
+          />
 
           {/* Link to mode-specific docs */}
           <div className="text-center mt-10">

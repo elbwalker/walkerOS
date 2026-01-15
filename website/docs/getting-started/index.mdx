@@ -11,9 +11,17 @@ walkerOS is **event data collection as code**. Capture events from anywhere, tra
 
 No fragile UI configs. No vendor lock-in. Just tracking you can version, test, and trust.
 
-import ArchitectureDiagram from '@site/src/components/docs/ArchitectureDiagram';
-
-<ArchitectureDiagram />
+<FlowMap
+  sources={{
+    browser: { icon: 'mdi:web', label: 'Browser', link: '/docs/sources/web/browser/' },
+    server: { icon: 'mdi:server', label: 'Server', link: '/docs/sources/server/' },
+  }}
+  collector={{ label: 'walkerOS', link: '/docs/collector' }}
+  destinations={{
+    ga4: { icon: 'logos:google-analytics', label: 'GA4', link: '/docs/destinations/web/gtag/ga4' },
+    api: { icon: 'mdi:api', label: 'Your API', link: '/docs/destinations/api/' },
+  }}
+/>
 
 ## Why walkerOS?
 
@@ -29,10 +37,11 @@ import ArchitectureDiagram from '@site/src/components/docs/ArchitectureDiagram';
 
 Every walkerOS setup follows one pattern:
 
-```
-Sources → Collector → Destinations
-└──────────── Flow ────────────┘
-```
+<FlowMap
+  sources={{ source: { label: 'Sources', text: 'Capture', link: '/docs/sources' } }}
+  collector={{ label: 'Collector', text: 'Process', link: '/docs/collector' }}
+  destinations={{ dest: { label: 'Destinations', text: 'Deliver', link: '/docs/destinations' } }}
+/>
 
 - **Sources:** Where events come from (browser DOM, dataLayer, HTTP endpoints, custom code)
 - **Collector:** The processing engine (consent, enrichment, routing)
@@ -44,9 +53,15 @@ A "flow" connects sources to destinations through a collector. You can have one 
 
 **Mapping** transforms events between stages. It's how walkerOS adapts to any source or destination format.
 
-```
-Raw Input → [SOURCE MAPPING] → walkerOS Event → [DEST MAPPING] → Vendor Format
-```
+<FlowMap
+  sources={{ source: { label: 'Source', link: '/docs/sources' } }}
+  collector={{ label: 'Collector', link: '/docs/collector' }}
+  destinations={{ dest: { label: 'Destination', link: '/docs/destinations' } }}
+  markers={[
+    { position: 'source-collector', id: '1', legend: 'Source Mapping' },
+    { position: 'collector-destination', id: '2', legend: 'Destination Mapping' },
+  ]}
+/>
 
 One transformation language works everywhere. This is what makes walkerOS truly composable.
 

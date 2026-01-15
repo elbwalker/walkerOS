@@ -1,6 +1,79 @@
 import React from 'react';
 import Link from '@docusaurus/Link';
+import { CodeBox } from '@walkeros/explorer';
 import { tagger } from '@site/src/components/walkerjs';
+
+const composableTaggingCode = `import { tagger } from '../walker';
+
+function ProductDetail({ product }) {
+  return (
+    <div
+      {...tagger()
+        .entity('product')
+        .action('load', 'view')
+        .data('productId', product.id)
+        .get()}
+    >
+      <h1 {...tagger('product').data('name', product.name).get()}>
+        {product.name}
+      </h1>
+      <button {...tagger().action('click', 'add').get()}>
+        Add to Cart
+      </button>
+    </div>
+  );
+}`;
+
+const transformationCode = `// Source: Clean up what comes in
+sources: {
+  browser: {
+    config: {
+      mapping: {
+        product: {
+          click: { name: 'product view' }
+        },
+        test: {
+          '*': { ignore: true }
+        }
+      }
+    }
+  }
+}
+
+// Destination: Format for specific tools
+destinations: {
+  gtag: {
+    config: {
+      mapping: {
+        product: {
+          view: {
+            name: 'view_item',
+            data: {
+              map: {
+                item_id: 'data.id',
+                value: 'data.price'
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+const consentCode = `elb('walker on', 'consent', (instance, consent) => {
+  if (consent.marketing) {
+    gtag('consent', 'update', {
+      ad_user_data: 'granted',
+      ad_personalization: 'granted',
+      ad_storage: 'granted',
+      analytics_storage: 'granted',
+    });
+  }
+});
+
+// When CMP detects consent choice
+elb('walker consent', { functional: true, marketing: false });`;
 
 export default function Features() {
   return (
@@ -51,117 +124,18 @@ export default function Features() {
                 </p>
               </div>
               <div className="flex flex-1 items-start max-lg:pb-12 max-lg:pt-10 lg:pb-2 lg:pt-4">
-                <div
-                  className="w-full mx-6 rounded-lg shadow-xl outline outline-1 outline-white/10 overflow-hidden"
-                  style={{ backgroundColor: 'var(--code-editor-bg)' }}
-                >
-                  <div
-                    className="flex outline outline-1 outline-white/5"
-                    style={{ backgroundColor: 'var(--code-editor-header-bg)' }}
-                  >
-                    <div
-                      className="-mb-px flex text-sm/6 font-medium"
-                      style={{ color: 'var(--code-editor-text-muted)' }}
-                    >
-                      <div
-                        className="border-b border-r border-b-white/20 border-r-white/10 px-4 py-2"
-                        style={{
-                          backgroundColor: 'var(--code-editor-tab-active-bg)',
-                          color: 'var(--code-editor-text)',
-                        }}
-                      >
-                        ProductCard.tsx
-                      </div>
-                      <div className="border-r border-gray-600/10 px-4 py-2">
-                        App.tsx
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    className="px-6 pb-6 pt-6 text-xs overflow-auto max-h-[500px]"
-                    style={{ color: 'var(--code-editor-text)' }}
-                  >
-                    <code className="block">
-                      <span className="text-purple-400">import</span> {'{'}{' '}
-                      tagger {'}'} <span className="text-purple-400">from</span>{' '}
-                      <span className="text-green-400">'../walker'</span>;<br />
-                      <br />
-                      <span className="text-purple-400">function</span>{' '}
-                      <span className="text-blue-400">ProductDetail</span>
-                      {'({'}
-                      <span className="text-yellow-400">
-                        {'{'} product {'}'}
-                      </span>
-                      {') {'}
-                      <br />
-                      &nbsp;&nbsp;
-                      <span className="text-purple-400">return</span> (<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;{'<'}
-                      <span className="text-blue-400">div</span>
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'{'}
-                      <span className="text-yellow-400">...tagger</span>()
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.
-                      <span className="text-yellow-400">entity</span>(
-                      <span className="text-green-400">'product'</span>)<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.
-                      <span className="text-yellow-400">action</span>(
-                      <span className="text-green-400">'load'</span>,{' '}
-                      <span className="text-green-400">'view'</span>)<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.
-                      <span className="text-yellow-400">data</span>(
-                      <span className="text-green-400">'productId'</span>,
-                      product.id)
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.
-                      <span className="text-yellow-400">get</span>(){'}'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;{'>'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'<'}
-                      <span className="text-blue-400">h1</span> {'{'}
-                      <span className="text-yellow-400">...tagger</span>(
-                      <span className="text-green-400">'product'</span>).
-                      <span className="text-yellow-400">data</span>(
-                      <span className="text-green-400">'name'</span>,
-                      product.name).<span className="text-yellow-400">get</span>
-                      (){'}'}
-                      {'>'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'{'}
-                      product.name{'}'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'</'}
-                      <span className="text-blue-400">h1</span>
-                      {'>'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'<'}
-                      <span className="text-blue-400">button</span> {'{'}
-                      <span className="text-yellow-400">...tagger</span>().
-                      <span className="text-yellow-400">action</span>(
-                      <span className="text-green-400">'click'</span>,{' '}
-                      <span className="text-green-400">'add'</span>).
-                      <span className="text-yellow-400">get</span>(){'}'}
-                      {'>'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Add to
-                      Cart
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'</'}
-                      <span className="text-blue-400">button</span>
-                      {'>'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;{'</'}
-                      <span className="text-blue-400">div</span>
-                      {'>'}
-                      <br />
-                      &nbsp;&nbsp;);
-                      <br />
-                      {'}'}
-                    </code>
-                  </div>
-                </div>
+                <CodeBox
+                  tabs={[
+                    {
+                      id: 'product',
+                      label: 'ProductCard.tsx',
+                      code: composableTaggingCode,
+                      language: 'typescript',
+                    },
+                  ]}
+                  disabled
+                  className="w-full mx-6 shadow-xl"
+                />
               </div>
               <div className="px-8 pb-8 sm:px-10 sm:pb-10">
                 <Link
@@ -199,138 +173,18 @@ export default function Features() {
                 </p>
               </div>
               <div className="flex flex-1 items-start max-lg:pb-12 max-lg:pt-10 lg:pb-2 lg:pt-4">
-                <div
-                  className="w-full mx-6 rounded-lg shadow-xl outline outline-1 outline-white/10 overflow-hidden"
-                  style={{ backgroundColor: 'var(--code-editor-bg)' }}
-                >
-                  <div
-                    className="flex outline outline-1 outline-white/5"
-                    style={{ backgroundColor: 'var(--code-editor-header-bg)' }}
-                  >
-                    <div
-                      className="-mb-px flex text-sm/6 font-medium"
-                      style={{ color: 'var(--code-editor-text-muted)' }}
-                    >
-                      <div
-                        className="border-b border-r border-b-white/20 border-r-white/10 px-4 py-2"
-                        style={{
-                          backgroundColor: 'var(--code-editor-tab-active-bg)',
-                          color: 'var(--code-editor-text)',
-                        }}
-                      >
-                        config.ts
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    className="px-6 pb-6 pt-6 text-xs overflow-auto max-h-[500px]"
-                    style={{ color: 'var(--code-editor-text)' }}
-                  >
-                    <code className="block">
-                      <span className="text-gray-400">
-                        // Source: Clean up what comes in
-                      </span>
-                      <br />
-                      <span className="text-blue-400">sources</span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;<span className="text-blue-400">browser</span>
-                      : {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">config</span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">mapping</span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">product</span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">click</span>: {'{'}{' '}
-                      <span className="text-blue-400">name</span>:{' '}
-                      <span className="text-green-400">'product view'</span>{' '}
-                      {'}'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'}'},
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">test</span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-green-400">'*'</span>: {'{'}{' '}
-                      <span className="text-blue-400">ignore</span>:{' '}
-                      <span className="text-yellow-400">true</span> {'}'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                      <br />
-                      &nbsp;&nbsp;{'}'}
-                      <br />
-                      {'}'}
-                      <br />
-                      <br />
-                      <span className="text-gray-400">
-                        // Destination: Format for specific tools
-                      </span>
-                      <br />
-                      <span className="text-blue-400">destinations</span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;<span className="text-blue-400">
-                        gtag
-                      </span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">config</span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">mapping</span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">product</span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">view</span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">name</span>:{' '}
-                      <span className="text-green-400">'view_item'</span>,<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">data</span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">map</span>: {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">item_id</span>:{' '}
-                      <span className="text-green-400">'data.id'</span>,<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">value</span>:{' '}
-                      <span className="text-green-400">'data.price'</span>
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      {'}'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      {'}'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      {'}'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;{'}'}
-                      <br />
-                      &nbsp;&nbsp;{'}'}
-                      <br />
-                      {'}'}
-                    </code>
-                  </div>
-                </div>
+                <CodeBox
+                  tabs={[
+                    {
+                      id: 'config',
+                      label: 'config.ts',
+                      code: transformationCode,
+                      language: 'typescript',
+                    },
+                  ]}
+                  disabled
+                  className="w-full mx-6 shadow-xl"
+                />
               </div>
               <div className="px-8 pb-8 sm:px-10 sm:pb-10">
                 <Link
@@ -368,85 +222,18 @@ export default function Features() {
                 </p>
               </div>
               <div className="flex flex-1 items-start max-lg:py-6 lg:pb-2 lg:pt-4">
-                <div
-                  className="w-full mx-6 rounded-lg shadow-xl outline outline-1 outline-white/10 overflow-hidden"
-                  style={{ backgroundColor: 'var(--code-editor-bg)' }}
-                >
-                  <div
-                    className="flex outline outline-1 outline-white/5"
-                    style={{ backgroundColor: 'var(--code-editor-header-bg)' }}
-                  >
-                    <div
-                      className="-mb-px flex text-sm/6 font-medium"
-                      style={{ color: 'var(--code-editor-text-muted)' }}
-                    >
-                      <div
-                        className="border-b border-r border-b-white/20 border-r-white/10 px-4 py-2"
-                        style={{
-                          backgroundColor: 'var(--code-editor-tab-active-bg)',
-                          color: 'var(--code-editor-text)',
-                        }}
-                      >
-                        consent-setup.js
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    className="px-6 pb-6 pt-6 text-xs overflow-auto max-h-[500px]"
-                    style={{ color: 'var(--code-editor-text)' }}
-                  >
-                    <code className="block">
-                      <span className="text-yellow-400">elb</span>(
-                      <span className="text-green-400">'walker on'</span>,{' '}
-                      <span className="text-green-400">'consent'</span>,
-                      (instance, consent) =&gt; {'{'}
-                      <br />
-                      &nbsp;&nbsp;<span className="text-purple-400">
-                        if
-                      </span>{' '}
-                      (consent.marketing) {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-yellow-400">gtag</span>(
-                      <span className="text-green-400">'consent'</span>,{' '}
-                      <span className="text-green-400">'update'</span>, {'{'}
-                      <br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">ad_user_data</span>:{' '}
-                      <span className="text-green-400">'granted'</span>,<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">
-                        ad_personalization
-                      </span>: <span className="text-green-400">'granted'</span>
-                      ,<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">ad_storage</span>:{' '}
-                      <span className="text-green-400">'granted'</span>,<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      <span className="text-blue-400">
-                        analytics_storage
-                      </span>: <span className="text-green-400">'granted'</span>
-                      ,<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;{'}'});
-                      <br />
-                      &nbsp;&nbsp;{'}'}
-                      <br />
-                      {'}'});
-                      <br />
-                      <br />
-                      <span className="text-gray-400">
-                        // When CMP detects consent choice
-                      </span>
-                      <br />
-                      <span className="text-yellow-400">elb</span>(
-                      <span className="text-green-400">'walker consent'</span>,{' '}
-                      {'{'} <span className="text-blue-400">functional</span>:{' '}
-                      <span className="text-yellow-400">true</span>,{' '}
-                      <span className="text-blue-400">marketing</span>:{' '}
-                      <span className="text-yellow-400">false</span> {'}'});
-                    </code>
-                  </div>
-                </div>
+                <CodeBox
+                  tabs={[
+                    {
+                      id: 'consent',
+                      label: 'consent-setup.js',
+                      code: consentCode,
+                      language: 'javascript',
+                    },
+                  ]}
+                  disabled
+                  className="w-full mx-6 shadow-xl"
+                />
               </div>
               <div className="px-8 pb-8 sm:px-10 sm:pb-10">
                 <Link
