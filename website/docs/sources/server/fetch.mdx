@@ -14,11 +14,11 @@ Web Standard Fetch API source for walkerOS - deploy to any modern edge or server
 :::info Where This Fits
 The Fetch Source is a **server source** in the walkerOS flow:
 
-```
-Fetch Source → Collector → Destinations
-      ↓
-   Web Standard (Request) => Response
-```
+<FlowMap
+  sources={{ default: { label: 'Source', text: 'Fetch', highlight: true } }}
+  collector={{}}
+  destinations={{ default: {} }}
+/>
 
 It receives events via the Fetch API and forwards them to your destinations. Works on any platform supporting Web Standards.
 

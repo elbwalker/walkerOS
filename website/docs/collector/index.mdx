@@ -38,9 +38,11 @@ The Collector transforms raw events into enriched, compliant data streams by:
 
 In the walkerOS data flow, the collector sits between sources and destinations:
 
-```
-Sources → Collector → Destinations
-```
+<FlowMap
+  sources={{ default: {} }}
+  collector={{}}
+  destinations={{ default: {} }}
+/>
 
 Sources capture events and send them to the collector, which processes and
 routes them to your chosen destinations like Google Analytics, custom APIs, or
@@ -133,9 +135,11 @@ level: 'DEBUG', // Show all logs (ERROR, INFO, DEBUG)
 
 The collector works with **mapping** to transform events as they flow through the system. Mapping is configured at the destination level and controls how walkerOS events are converted to vendor-specific formats.
 
-```
-walkerOS Event → [DESTINATION MAPPING] → Vendor Format (GA4, API, etc.)
-```
+<FlowMap
+  sources={{ default: { label: 'walkerOS', text: 'Event' } }}
+  collector={{ label: 'Dest', text: 'Mapping' }}
+  destinations={{ default: { label: 'Vendor', text: 'Format' } }}
+/>
 
 For example, transforming a `product add` event into GA4's `add_to_cart`:
 

@@ -22,11 +22,11 @@ Captures user interactions directly from the DOM using data attributes.
 :::info Where This Fits
 The Browser Source is a **source** in the walkerOS flow:
 
-```
-Browser Source → Collector → Destinations
-    ↓
-  Events from DOM
-```
+<FlowMap
+  sources={{ default: { label: 'Source', text: 'Browser', highlight: true } }}
+  collector={{}}
+  destinations={{ default: {} }}
+/>
 
 It reads `data-elb-*` attributes from your HTML and generates events. The Collector routes these to your configured destinations.
 

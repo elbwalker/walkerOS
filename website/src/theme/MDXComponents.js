@@ -12,6 +12,7 @@ import {
   DestinationInitDemo,
   DestinationDemo,
   LiveCode,
+  FlowMap,
 } from '@walkeros/explorer';
 // Import website-specific components
 import PackageLink from '@site/src/components/docs/package-link';
@@ -33,4 +34,5 @@ export default {
   DestinationInitDemo,
   DestinationDemo,
   LiveCode,
+  FlowMap,
 };

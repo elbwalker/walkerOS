@@ -28,9 +28,12 @@ for technical details.
 
 Destinations receive events from the collector after processing:
 
-```
-Sources → Collector → Destinations → External Platforms
-```
+<FlowMap
+  sources={{ default: {} }}
+  collector={{}}
+  destinations={{ default: { highlight: true } }}
+  stageAfter={{ label: 'External', text: 'Platforms' }}
+/>
 
 Each destination operates independently, so one failed destination won't affect
 others. This ensures reliable data delivery even when individual services have

@@ -14,11 +14,11 @@ Google Cloud Functions source for walkerOS - lightweight runtime adapter for GCP
 :::info Where This Fits
 The GCP Cloud Functions Source is a **server source** in the walkerOS flow:
 
-```
-GCP Source → Collector → Destinations
-     ↓
-   HTTP handler (Cloud Functions)
-```
+<FlowMap
+  sources={{ default: { label: 'Source', text: 'GCP', highlight: true } }}
+  collector={{}}
+  destinations={{ default: {} }}
+/>
 
 It receives events via HTTP and forwards them to your destinations.
 

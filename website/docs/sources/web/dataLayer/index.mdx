@@ -16,11 +16,11 @@ Integrates with existing Google Analytics 4 and GTM dataLayer implementations by
 :::info Where This Fits
 The DataLayer Source is a **web source** in the walkerOS flow:
 
-```
-DataLayer Source → Collector → Destinations
-       ↓
-   Intercepts dataLayer.push()
-```
+<FlowMap
+  sources={{ default: { label: 'Source', text: 'dataLayer', highlight: true } }}
+  collector={{}}
+  destinations={{ default: {} }}
+/>
 
 It bridges existing GA4/GTM implementations to walkerOS destinations.
 

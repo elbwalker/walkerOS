@@ -22,11 +22,11 @@ single destination configuration.
 :::info Where This Fits
 Gtag is a **destination** in the walkerOS flow:
 
-```
-Sources → Collector → Gtag Destination
-                          ↓
-                    GA4 / Google Ads / GTM
-```
+<FlowMap
+  sources={{ default: {} }}
+  collector={{}}
+  destinations={{ default: { label: 'Destination', text: 'Gtag', highlight: true } }}
+/>
 
 Events are transformed using [mapping rules](/docs/mapping) before being sent to Google.
 :::

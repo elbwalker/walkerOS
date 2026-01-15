@@ -14,11 +14,11 @@ AWS Lambda source for walkerOS - works with API Gateway v1/v2 and Lambda Functio
 :::info Where This Fits
 The AWS Lambda Source is a **server source** in the walkerOS flow:
 
-```
-AWS Lambda Source → Collector → Destinations
-       ↓
-   HTTP handler (API Gateway, Function URL)
-```
+<FlowMap
+  sources={{ default: { label: 'Source', text: 'AWS Lambda', highlight: true } }}
+  collector={{}}
+  destinations={{ default: {} }}
+/>
 
 It receives events via HTTP and forwards them to your destinations.
 

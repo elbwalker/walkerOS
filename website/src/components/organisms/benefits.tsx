@@ -8,9 +8,9 @@ const benefits = [
       'Your tracking code lives in your repository alongside your application code. Changes go through the same PR review, testing, and deployment process.',
   },
   {
-    name: 'Developer workflow',
+    name: 'AI-ready codebase',
     description:
-      'Rollback a broken event the same way you rollback broken code. No more "hope it works" deployments.',
+      'AGENT.md teaches AI assistants your tracking setup. Claude, Cursor, and Copilot work out of the box.',
   },
   {
     name: 'Infrastructure parity',
