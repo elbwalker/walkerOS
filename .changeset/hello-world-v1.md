@@ -1,7 +1,6 @@
 ---
 '@walkeros/cli': major
 '@walkeros/collector': major
-'@walkeros/config': major
 '@walkeros/core': major
 '@walkeros/destination-demo': major
 '@walkeros/quickstart': major
@@ -36,4 +35,5 @@
 
 Hello World! walkerOS v1.0.0
 
-A privacy-first, open-source event tracking infrastructure.
+Open-source event data collection. Collect event data for digital analytics in a
+unified and privacy-centric way.
