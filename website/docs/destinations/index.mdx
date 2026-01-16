@@ -28,9 +28,28 @@ for technical details.
 
 Destinations receive events from the collector after processing:
 
-```
-Sources → Collector → Destinations → External Platforms
-```
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{
+    ga4: {
+      label: 'Destination',
+      text: 'GA4',
+      highlight: true,
+      after: { label: 'External', text: 'Google Analytics', highlight: false },
+    },
+    api: {
+      label: 'Destination',
+      text: 'API',
+      highlight: true,
+      after: { label: 'External', text: 'Custom Endpoint', highlight: false },
+    },
+  }}
+  markers={[
+    { position: 'collector-destination', id: '1', text: 'Receive: Mapped events from collector ready for delivery' },
+    { position: 'destination-after', id: '2', text: 'Deliver: Tool-specific API calls, SDK initialization, and event dispatch' },
+  ]}
+/>
 
 Each destination operates independently, so one failed destination won't affect
 others. This ensures reliable data delivery even when individual services have

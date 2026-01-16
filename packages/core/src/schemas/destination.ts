@@ -280,14 +280,15 @@ export const DestinationsSchema = z
 
 /**
  * Ref - Destination reference
- * Links destination ID to instance
+ * Contains destination type and optional response data or error
  */
 export const RefSchema = z
   .object({
-    id: z.string().describe('Destination ID'),
-    destination: InstanceSchema.describe('Destination instance'),
+    type: z.string().describe('Destination type ("gtag", "meta", "bigquery")'),
+    data: z.unknown().optional().describe('Response from push()'),
+    error: z.unknown().optional().describe('Error if failed'),
   })
-  .describe('Destination reference (ID + instance)');
+  .describe('Destination reference with type and response data');
 
 /**
  * Push - Push operation result
@@ -304,17 +305,27 @@ export const PushResultSchema = z
 
 /**
  * Result - Overall processing result
- * Categorizes destinations by processing outcome
+ * Note: This type has been removed from types/destination.ts
+ * Results are now part of Elb.PushResult with Record<string, Ref> structure
  */
 export const ResultSchema = z
   .object({
-    successful: z
-      .array(RefSchema)
+    ok: z.boolean().describe('True if nothing failed'),
+    event: z.unknown().optional().describe('The processed event'),
+    done: z
+      .record(z.string(), RefSchema)
+      .optional()
       .describe('Destinations that processed successfully'),
-    queued: z.array(RefSchema).describe('Destinations that queued events'),
-    failed: z.array(RefSchema).describe('Destinations that failed to process'),
+    queued: z
+      .record(z.string(), RefSchema)
+      .optional()
+      .describe('Destinations that queued events'),
+    failed: z
+      .record(z.string(), RefSchema)
+      .optional()
+      .describe('Destinations that failed to process'),
   })
-  .describe('Overall destination processing result');
+  .describe('Push result with destination outcomes');
 
 /**
  * DLQ - Dead Letter Queue

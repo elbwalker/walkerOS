@@ -96,12 +96,33 @@ config: {
 
 Use as starting point: `packages/web/destinations/plausible/`
 
+## Transformer Wiring
+
+Destinations can wire to post-collector transformer chains via the `before`
+property:
+
+```typescript
+destinations: {
+  gtag: {
+    code: destinationGtag,
+    before: 'redact'  // First transformer to run before this destination
+  }
+}
+```
+
+The transformer chain runs after collector enrichment, before the destination
+receives events. Each destination can have its own chain. See
+[understanding-transformers](../understanding-transformers/SKILL.md) for chain
+details.
+
 ## Related
 
 **Skills:**
 
 - [understanding-mapping skill](../understanding-mapping/SKILL.md) - Configure
   transformations
+- [understanding-transformers skill](../understanding-transformers/SKILL.md) -
+  Transformer chaining to destinations
 - [testing-strategy skill](../testing-strategy/SKILL.md) - Test with env pattern
 - [create-destination skill](../create-destination/SKILL.md) - Create new
   destination

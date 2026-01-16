@@ -20,7 +20,6 @@ Configure logging when initializing the collector:
   code={`import { startFlow } from '@walkeros/collector';
 
 const { collector, elb } = await startFlow({
-  run: true,
   logger: {
     level: 'DEBUG', // 'ERROR' | 'INFO' | 'DEBUG'
   },
@@ -155,7 +154,6 @@ custom handler:
   code={`import { startFlow } from '@walkeros/collector';
 
 const { collector, elb } = await startFlow({
-  run: true,
   logger: {
     level: 'INFO',
     handler: (level, message, context, scope, originalHandler) => {

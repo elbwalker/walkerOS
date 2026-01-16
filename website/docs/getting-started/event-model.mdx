@@ -5,12 +5,12 @@ path: /docs/getting-started/event-model
 sidebar_position: 3
 ---
 
-# Event Model
+# Event model
 
 The walkerOS event model was created to support analytics, marketing, privacy
 and data science needs.
 
-## Entity-Action Approach
+## Entity-action approach
 
 The Entity-Action approach is core of the walkerOS event model. It's a framework
 designed to capture user interactions in a **structured** yet **flexible** way.
@@ -31,7 +31,7 @@ everyone understands what is being measured, there will be **fewer
 misunderstandings, higher data quality**, and more **actionable data** in the
 organization.
 
-## Event Structure
+## Event structure
 
 A walkerOS event consists of three components:
 
@@ -43,56 +43,61 @@ Here's an example of the structure and components of a walkerOS event. Keys are
 static, their content can be defined dynamically with different value types.
 
 <CodeSnippet
-  code={`{
-name: 'promotion view', // Name as a combination of entity and action
-data: {
-// Arbitrary properties related to the entity
-name: 'Setting up tracking easily',
-interactive: false,
-},
-context: {
-// Provides additional information about the state during the event
-stage: ['learning', 1], // A logical funnel stage
-test: ['engagement', 0], // Key, [value, order]
-},
-globals: {
-// General properties that apply to every event
-language: 'en',
-},
-custom: {}, // Additional space for individual setups
-user: {
-// Contains user identifiers for different identification levels
-// Require consent and set manually for sessions building and cross-device
-id: 'us3r1d',
-device: 'c00k131d',
-session: 's3ss10n1d',
-// More user-related properties, see below
-},
-nested: [
-// All nested entities within the main entity
-{ type: 'github', data: { repo: 'walkerOS' } },
-],
-consent: { functional: true, marketing: true }, // Status of the granted consent state(s)
-id: '1647261462000-01b5e2-2', // Timestamp, group & count of the event
-trigger: 'visible', // Name of the trigger that fired
-entity: 'promotion', // The entity name involved in the event
-action: 'view', // The specific action performed on the entity
-timestamp: 1647261462000, // Time when the event fired
-timing: 3.14, // Duration how long it took to trigger this event
-group: '01b5e2', // Random identifier for all events during a run
-count: 2, // Incremental counter of the events in the same run
-version: {
-// Information about the used implementation setup
-source: 'X.X.X', // Semantic version of the used source
-tagging: 42, // A version number of the then-used tagging status
-},
-source: {
-// Details about the origin of the event
-type: 'web', // Source type of the event (also app, server, or custom one)
-id: 'https://github.com/elbwalker/walkerOS', // Source of the event's origin
-previous_id: 'https://www.walkeros.io/', // Previous source (like referrer)
-},
-};
+  code={`
+{
+  name: 'promotion view', // Name as a combination of entity and action
+  data: {
+    // Arbitrary properties related to the entity
+    name: 'Setting up tracking easily',
+    interactive: false,
+  },
+  context: {
+    // Provides additional information about the state during the event
+    stage: ['learning', 1], // A logical funnel stage
+    test: ['engagement', 0], // Key, [value, order]
+  },
+  globals: {
+    // General properties that apply to every event
+    language: 'en',
+  },
+  custom: {}, // Additional space for individual setups
+  user: {
+    // Contains user identifiers for different identification levels
+    // Require consent and set manually for sessions building and cross-device
+    id: 'us3r1d',
+    device: 'c00k131d',
+    session: 's3ss10n1d',
+    // More user-related properties, see below
+  },
+  nested: [
+    // All nested entities within the main entity
+    { type: 'github', data: { repo: 'walkerOS' } },
+  ],
+  consent: {
+    // Status of the granted consent state(s)
+    functional: true,
+    marketing: true
+  },
+  id: '1647261462000-01b5e2-2', // Timestamp, group & count of the event
+  trigger: 'visible', // Name of the trigger that fired
+  entity: 'promotion', // The entity name involved in the event
+  action: 'view', // The specific action performed on the entity
+  timestamp: 1647261462000, // Time when the event fired
+  timing: 3.14, // Duration how long it took to trigger this event
+  group: '01b5e2', // Random identifier for all events during a run
+  count: 2, // Incremental counter of the events in the same run
+  version: {
+    // Information about the used implementation setup
+    source: 'X.X.X', // Semantic version of the used source
+    tagging: 42, // A version number of the then-used tagging status
+  },
+  source: {
+    // Details about the origin of the event
+    type: 'web', // Source type of the event (also app, server, or custom one)
+    id: 'https://github.com/elbwalker/walkerOS', // Source of the event's origin
+    previous_id: 'https://www.walkeros.io/', // Previous source (like referrer)
+  },
+}
 
 `}
   language="javascript"
@@ -109,18 +114,10 @@ flowchart
     A(event = entity + action)
 ```
 
-```mermaid
----
-title: Example
----
-flowchart
-    A(promotion view = promotion + view)
-```
-
 The structure remains consistent across all interactions, whether the event e.g.
 is a `page view`, `session start`, `product visible`, or `order complete`.
 
-### Data Properties
+### Data properties
 
 Data properties describe the entity in **more detail**. Depending on the entity
 (e.g. *product*, *order*, *content*) they can vary and provide specific insights
@@ -207,3 +204,23 @@ legal or internal requirements without vendor lock-in.
 
 The model supports diverse use cases beyond e-commerce, including media, (B2B)
 SaaS, and more, ensuring versatility and comparability.
+
+## How events get transformed
+
+walkerOS events use a **vendor-agnostic format**. When sending to destinations like GA4, BigQuery, or your API, events are transformed using **mapping**.
+
+<FlowMap
+  sources={{ default: { label: 'walkerOS', text: 'Event' } }}
+  collector={{ label: 'Mapping' }}
+  destinations={{ default: { label: 'Destination', text: 'Format' } }}
+/>
+
+For example, a `product add` event becomes `add_to_cart` for GA4, while the same event might be stored with different field names in BigQuery.
+
+Mapping lets you:
+- Rename events for each destination
+- Restructure data properties
+- Apply conditional transformations
+- Process nested entities (like products in an order)
+
+[**Learn more about mapping →**](/docs/mapping)

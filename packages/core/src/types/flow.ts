@@ -236,6 +236,35 @@ export interface Config {
   destinations?: Record<string, DestinationReference>;
 
   /**
+   * Transformer configurations (event transformation).
+   *
+   * @remarks
+   * Transformers transform events in the pipeline:
+   * - Pre-collector: Between sources and collector
+   * - Post-collector: Between collector and destinations
+   *
+   * Key = unique transformer identifier (referenced by source.next or destination.before)
+   * Value = transformer reference with package and config
+   *
+   * @example
+   * ```json
+   * {
+   *   "transformers": {
+   *     "enrich": {
+   *       "package": "@walkeros/transformer-enricher",
+   *       "config": { "apiUrl": "https://api.example.com" },
+   *       "next": "validate"
+   *     },
+   *     "validate": {
+   *       "package": "@walkeros/transformer-validator"
+   *     }
+   *   }
+   * }
+   * ```
+   */
+  transformers?: Record<string, TransformerReference>;
+
+  /**
    * Collector configuration (event processing).
    *
    * @remarks
@@ -377,6 +406,85 @@ export interface SourceReference {
    * Overrides flow and setup definitions.
    */
   definitions?: Definitions;
+
+  /**
+   * First transformer in post-source chain.
+   *
+   * @remarks
+   * Name of the transformer to execute after this source captures an event.
+   * If omitted, events route directly to the collector.
+   */
+  next?: string;
+}
+
+/**
+ * Transformer reference with inline package syntax.
+ *
+ * @remarks
+ * References a transformer package and provides configuration.
+ * Transformers transform events in the pipeline between sources and destinations.
+ */
+export interface TransformerReference {
+  /**
+   * Package specifier with optional version.
+   *
+   * @remarks
+   * Same format as SourceReference.package
+   *
+   * @example
+   * "package": "@walkeros/transformer-enricher@1.0.0"
+   */
+  package: string;
+
+  /**
+   * Resolved import variable name.
+   *
+   * @remarks
+   * Auto-resolved from packages[package].imports[0] during getFlowConfig().
+   * Can also be provided explicitly for advanced use cases.
+   */
+  code?: string;
+
+  /**
+   * Transformer-specific configuration.
+   *
+   * @remarks
+   * Structure depends on the transformer package.
+   * Passed to the transformer's initialization function.
+   */
+  config?: unknown;
+
+  /**
+   * Transformer environment configuration.
+   *
+   * @remarks
+   * Environment-specific settings for the transformer.
+   * Merged with default transformer environment.
+   */
+  env?: unknown;
+
+  /**
+   * Next transformer in chain.
+   *
+   * @remarks
+   * Name of the next transformer to execute after this one.
+   * If omitted:
+   * - Pre-collector: routes to collector
+   * - Post-collector: routes to destination
+   */
+  next?: string;
+
+  /**
+   * Transformer-level variables (highest priority in cascade).
+   * Overrides flow and setup variables.
+   */
+  variables?: Variables;
+
+  /**
+   * Transformer-level definitions (highest priority in cascade).
+   * Overrides flow and setup definitions.
+   */
+  definitions?: Definitions;
 }
 
 /**
@@ -461,4 +569,13 @@ export interface DestinationReference {
    * Overrides flow and setup definitions.
    */
   definitions?: Definitions;
+
+  /**
+   * First transformer in pre-destination chain.
+   *
+   * @remarks
+   * Name of the transformer to execute before sending events to this destination.
+   * If omitted, events are sent directly from the collector.
+   */
+  before?: string;
 }

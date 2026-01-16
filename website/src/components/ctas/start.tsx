@@ -4,15 +4,15 @@ import CTA from '@site/src/components/organisms/cta';
 export default function CTAStart() {
   return (
     <CTA
-      text={
+      title={
         <>
-          Get started with{' '}
-          <span className="inline text-elbwalker">walkerOS</span> now
+          A project by <span className="inline text-elbwalker">elbwalker</span>
         </>
       }
+      description="We are a team of passionate analytics developers based in Hamburg"
       primaryButton={{
-        link: '/docs/getting-started/quickstart/',
-        children: 'Quickstart',
+        link: 'https://www.elbwalker.com',
+        children: 'About us',
       }}
       secondaryButton={{
         link: 'https://calendly.com/elb-alexander/30min',

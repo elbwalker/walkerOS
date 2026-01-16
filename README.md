@@ -46,7 +46,47 @@ and **trust**.
 
 ![walkerOS event flow](website/static/diagrams/walkerosflowdark.png)
 
-## Quick Start
+## Two Ways to Use walkerOS
+
+walkerOS supports two operating modes—choose based on your workflow:
+
+| Mode           | Best For                                | Config Style               |
+| -------------- | --------------------------------------- | -------------------------- |
+| **Integrated** | React/Next.js apps, TypeScript projects | `code: sourceBrowser`      |
+| **Bundled**    | Static sites, Docker deployments, CI/CD | `package: "@walkeros/..."` |
+
+<details>
+<summary><strong>Quick comparison</strong></summary>
+
+**Integrated** (collector in your app):
+
+```typescript
+import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+await startFlow({
+  sources: { browser: { code: sourceBrowser } },
+});
+```
+
+**Bundled** (separate artifact via CLI):
+
+```json
+{
+  "sources": {
+    "browser": { "package": "@walkeros/web-source-browser" }
+  }
+}
+```
+
+Then: `walkeros bundle flow.json`
+
+</details>
+
+📖
+**[Full guide: Operating Modes](https://www.walkeros.io/docs/getting-started/modes/)**
+
+## Quick Start (Integrated Mode)
 
 ### npm
 
@@ -277,6 +317,46 @@ function ProductDetail({ productId }: { productId: string }) {
   );
 }
 ```
+
+## Quick Start (Bundled Mode)
+
+For config-as-code workflows with the CLI:
+
+**1. Install CLI:**
+
+```bash
+npm install -g @walkeros/cli
+```
+
+**2. Create `flow.json`:**
+
+```json
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": { "settings": { "pageview": true } }
+        }
+      },
+      "collector": { "run": true }
+    }
+  }
+}
+```
+
+**3. Bundle and deploy:**
+
+```bash
+walkeros bundle flow.json
+# Output: ./dist/walker.js
+```
+
+📖
+**[Full guide: Bundled Mode](https://www.walkeros.io/docs/getting-started/modes/bundled)**
 
 ## Destinations
 

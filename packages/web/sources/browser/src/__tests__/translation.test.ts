@@ -23,13 +23,8 @@ describe('Translation Layer', () => {
   beforeEach(async () => {
     collectedEvents = [];
 
-    // Mock window.location and document.referrer
-    Object.defineProperty(window, 'location', {
-      value: {
-        href: 'https://example.com/test-page',
-      },
-      writable: true,
-    });
+    // Set URL path (jsdom base URL is https://example.com)
+    window.history.replaceState({}, '', '/test-page');
 
     Object.defineProperty(document, 'referrer', {
       value: 'https://previous.com/page',
@@ -41,9 +36,6 @@ describe('Translation Layer', () => {
       collectedEvents.push(args[0] as WalkerOS.Event);
       return Promise.resolve({
         ok: true,
-        successful: [],
-        queued: [],
-        failed: [],
       });
     }) as unknown as jest.MockedFunction<Collector.Instance['push']>;
 
@@ -136,9 +128,6 @@ describe('Translation Layer', () => {
       // Test that walker commands are passed to elb (which handles routing to collector.command)
       const isolatedMockElb = jest.fn().mockResolvedValue({
         ok: true,
-        successful: [],
-        queued: [],
-        failed: [],
       });
 
       await translateToCoreCollector(
@@ -213,13 +202,8 @@ describe('Translation Layer', () => {
     });
 
     test('handles different URL formats', async () => {
-      // Test with different URL
-      Object.defineProperty(window, 'location', {
-        value: {
-          href: 'https://test.com/path?query=value#section',
-        },
-        writable: true,
-      });
+      // Test with different URL path including query and hash
+      window.history.replaceState({}, '', '/path?query=value#section');
 
       await translateToCoreCollector(
         { elb: mockElb, settings: createTestSettings() },
@@ -233,7 +217,7 @@ describe('Translation Layer', () => {
         expect.objectContaining({
           source: {
             type: 'browser',
-            id: 'https://test.com/path?query=value#section',
+            id: 'https://example.com/path?query=value#section',
             previous_id: 'https://previous.com/page',
           },
         }),
@@ -270,7 +254,7 @@ describe('Translation Layer', () => {
       expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'page',
-          data: { title: 'Test' },
+          data: { id: '/test-page', title: 'Test' },
           trigger: 'load',
           source: {
             type: 'browser',

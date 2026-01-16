@@ -19,14 +19,31 @@ The Google Gtag destination provides a unified interface for sending events to
 Google Analytics 4 (GA4), Google Ads, and Google Tag Manager (GTM) through a
 single destination configuration.
 
-## Installation
+:::info Where This Fits
+Gtag is a **destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Gtag', highlight: true } }}
+/>
+
+Loads gtag script dynamically, initializes the gtag function with your config, handles Consent Mode v2 commands automatically, and pushes mapped events to Google services.
+:::
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the package:
 
 <CodeSnippet
-  code={`npm install @walkeros/web-destination-gtag`}
+  code={`npm install @walkeros/collector @walkeros/web-destination-gtag`}
   language="bash"
 />
 
-## Setup
+Configure in your code:
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -39,13 +56,7 @@ const { collector, elb } = await startFlow({
       config: {
         settings: {
           ga4: {
-            measurementId: 'G-XXXXXXXXXX', // Required for GA4
-          },
-          ads: {
-            conversionId: 'AW-XXXXXXXXX', // Required for Google Ads
-          },
-          gtm: {
-            containerId: 'GTM-XXXXXXX', // Required for GTM
+            measurementId: 'G-XXXXXXXXXX',
           },
         },
       },
@@ -54,6 +65,32 @@ const { collector, elb } = await startFlow({
 });`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "gtag": {
+    "package": "@walkeros/web-destination-gtag",
+    "config": {
+      "settings": {
+        "ga4": {
+          "measurementId": "G-XXXXXXXXXX"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 
@@ -64,3 +101,10 @@ const { collector, elb } = await startFlow({
 For custom event mapping (`mapping.entity.action.settings`):
 
 <PropertyTable schema={schemas.mapping} />
+
+## Next Steps
+
+- [**Mapping**](/docs/mapping): Transform events for Google's expected format
+- [**GA4 Configuration**](/docs/destinations/web/gtag/ga4): Detailed GA4 setup
+- [**Google Ads**](/docs/destinations/web/gtag/ads): Conversion tracking
+- [**Consent Management**](/docs/guides/consent): Control when events are sent

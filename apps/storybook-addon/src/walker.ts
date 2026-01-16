@@ -72,7 +72,6 @@ export async function initializeWalker(config?: {
 
     // Create collector with browser source and destinations
     const result = await startFlow({
-      run: true,
       consent: { functional: true },
       sources: {
         browser: {

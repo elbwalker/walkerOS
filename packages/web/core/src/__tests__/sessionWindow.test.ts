@@ -80,14 +80,8 @@ describe('SessionStart', () => {
       }),
     ).toStrictEqual({ isStart: false, storage: false });
 
-    // Default url and referrer
-    Object.defineProperty(document, 'referrer', {
-      value: referrer,
-    });
-    Object.defineProperty(window, 'location', {
-      value: new URL(url),
-    });
-    expect(sessionWindow()).toStrictEqual(
+    // Default url and referrer (using params instead of mocking window.location for Jest 30 compat)
+    expect(sessionWindow({ url, referrer })).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
   });

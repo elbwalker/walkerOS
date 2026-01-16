@@ -11,9 +11,9 @@ export * as examples from './examples';
  * Perfect for testing and demonstrations without external dependencies.
  */
 export const sourceDemo: Source.Init<Types> = async (
-  config: Partial<Source.Config<Types>>,
-  env: Source.Env<Types>,
+  context,
 ): Promise<Source.Instance<Types>> => {
+  const { config, env } = context;
   const { elb } = env;
 
   const fullConfig: Source.Config<Types> = {

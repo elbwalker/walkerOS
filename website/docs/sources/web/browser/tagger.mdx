@@ -67,7 +67,7 @@ prefix: 'data-elb',
 
 ## Usage examples
 
-### Basic Data Tagging (Without Entity)
+### Basic data tagging (without entity)
 
 <CodeSnippet
   code={`const tagger = createTagger();
@@ -86,7 +86,7 @@ const attributes = tagger('product')
   language="typescript"
 />
 
-### Entity Tagging
+### Entity tagging
 
 <CodeSnippet
   code={`// To create an entity attribute, use the .entity() method
@@ -104,7 +104,7 @@ const attributes = tagger()
   language="typescript"
 />
 
-### Action Mapping
+### Action mapping
 
 <CodeSnippet
   code={`const attributes = tagger()
@@ -119,7 +119,7 @@ const attributes = tagger()
   language="typescript"
 />
 
-### Context and Global Properties
+### Context and global properties
 
 <CodeSnippet
   code={`const attributes = tagger('product')
@@ -138,7 +138,7 @@ const attributes = tagger()
   language="typescript"
 />
 
-### Multiple Entity Scopes
+### Multiple entity scopes
 
 <CodeSnippet
   code={`// Starting with a naming scope
@@ -157,7 +157,7 @@ const attributes = tagger('product')
   language="typescript"
 />
 
-### Order Matters
+### Order matters
 
 <CodeSnippet
   code={`// Data before entity uses original scope
@@ -177,7 +177,7 @@ const attributes = tagger('product')
   language="typescript"
 />
 
-### Value Escaping
+### Value escaping
 
 <CodeSnippet
   code={`const attributes = tagger()
@@ -333,7 +333,7 @@ returns the final attributes object.
 
 ## Common use cases
 
-### Product Listing Page
+### Product listing page
 
 <CodeSnippet
   code={`// For product cards with nearest entity tracking only
@@ -378,7 +378,7 @@ return (
   language="typescript"
 />
 
-### Shopping Cart
+### Shopping cart
 
 <CodeSnippet
   code={`// For cart items that need both entity and data attributes
@@ -402,7 +402,7 @@ return (
   language="typescript"
 />
 
-### Dynamic Component Tracking
+### Dynamic component tracking
 
 <CodeSnippet
   code={`// Reusable tracking function

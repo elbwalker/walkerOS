@@ -1,0 +1,87 @@
+---
+title: walkerOS vs. Stape
+sidebar_position: 5
+description: Compare walkerOS and Stape to understand which solution fits your needs.
+---
+
+[Stape](https://stape.io/) is a server-side tracking platform focused on hosting
+server-side Google Tag Manager (sGTM). They simplify sGTM infrastructure with
+managed hosting and power-ups. Here's how it compares to walkerOS.
+
+## Quick comparison
+
+| Feature              | Stape                       | walkerOS                          |
+| -------------------- | --------------------------- | --------------------------------- |
+| Open-source          | No                          | Yes                               |
+| Pricing              | From $20/month              | Free (paid support available)     |
+| Self-hosted option   | No (managed only)           | Yes                               |
+| Requires GTM         | Yes (sGTM-based)            | No (standalone)                   |
+| Vendor lock-in       | GTM + Stape                 | None                              |
+| Data ownership       | Stape servers               | Your infrastructure               |
+| Ad blocker bypass    | Yes (Custom Loader)         | Yes (first-party setup)           |
+| Cookie extension     | Yes (Cookie Keeper)         | Yes (configurable)                |
+| Setup complexity     | Medium (GTM knowledge)      | Medium (code-first)               |
+
+## Who should use what?
+
+### Choose Stape if
+
+- You're already using Google Tag Manager and want server-side
+- You prefer managed hosting over self-hosting
+- You want plug-and-play integrations for Shopify, WordPress, etc.
+- You need their specific power-ups (Cookie Keeper, Custom Loader)
+
+### Choose walkerOS if
+
+- You want full control without depending on GTM
+- You prefer open-source and no vendor lock-in
+- You want to self-host on your own infrastructure
+- You're building a code-first, version-controlled tracking setup
+- You want to avoid GTM complexity entirely
+
+## Key differences
+
+### Architecture
+
+**Stape:** A hosting layer on top of server-side GTM. You still configure
+tracking in GTM's interface. Stape handles the infrastructure. This means you
+need GTM knowledge (containers, tags, triggers, custom domains).
+
+**walkerOS:** A standalone event collection system. No GTM required. Define
+tracking in code, collect events through the source, process with the collector,
+and send to any destination.
+
+### Cost
+
+**Stape:** Starts at $20/month for basic sGTM hosting, scaling with traffic.
+High-volume sites can reach $200+/month. Compare to self-hosted sGTM on Google
+Cloud which starts around $120/month.
+
+**walkerOS:** The software is free and open-source. You pay for your own
+infrastructure costs. Optional paid services include implementation support
+(setup fees) and SLAs for teams that want help getting started or need
+guaranteed support.
+
+### GTM dependency
+
+**Stape:** Requires Google Tag Manager. You're configuring tracking in GTM's
+interface, with Stape providing the server-side infrastructure. If GTM changes,
+your setup changes.
+
+**walkerOS:** GTM-independent. While walkerOS can send events to GTM via the
+[GTM destination](/docs/destinations/web/gtag/gtm), it doesn't require GTM to
+function. Your tracking logic lives in your codebase.
+
+### Flexibility
+
+**Stape:** Focused on the Google ecosystem: GA4, Google Ads, plus Meta and
+TikTok gateways. Power-ups are pre-built by Stape.
+
+**walkerOS:** Send events anywhere. Build custom destinations for any API, data
+warehouse, or internal system. Full control over data transformation and
+routing.
+
+## Getting started
+
+Ready to try walkerOS? Check out the [quickstart guide](/docs/) to set up
+tracking without GTM dependencies.

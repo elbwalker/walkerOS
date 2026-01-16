@@ -1,0 +1,244 @@
+---
+title: Integrated mode
+sidebar_label: Integrated
+description: Build walkerOS directly into your application with full TypeScript control
+sidebar_position: 2
+---
+
+# Integrated mode
+
+In Integrated mode, walkerOS lives inside your application code. You configure it with TypeScript, and it deploys as part of your app bundle.
+
+## Quickstart
+
+### 1. Install packages
+
+<CodeSnippet
+  code={`npm install @walkeros/collector @walkeros/web-source-browser`}
+  language="bash"
+/>
+
+### 2. Initialize walkerOS
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+const { collector, elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          pageview: true,
+          session: true,
+        },
+      },
+    },
+  },
+});
+
+// Track events
+elb('page view', { title: document.title });`}
+  language="typescript"
+/>
+
+That's it. You now have browser event collection running.
+
+---
+
+## Adding destinations
+
+Install destination packages and add them to your config:
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-api @walkeros/web-destination-gtag`}
+  language="bash"
+/>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import { destinationAPI } from '@walkeros/web-destination-api';
+import { destinationGtag } from '@walkeros/web-destination-gtag';
+
+const { elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: { pageview: true, session: true },
+      },
+    },
+  },
+  destinations: {
+    // Send to your API
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: { url: 'https://your-api.com/events' },
+      },
+    },
+    // Send to Google Analytics 4
+    ga4: {
+      code: destinationGtag,
+      config: {
+        settings: {
+          ga4: { measurementId: 'G-XXXXXXXXXX' },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+---
+
+## Adding consent
+
+Add consent requirements to control which destinations receive events:
+
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: { settings: { pageview: true } },
+    },
+  },
+  destinations: {
+    api: {
+      code: destinationAPI,
+      config: {
+        settings: { url: 'https://your-api.com/events' },
+        consent: { functional: true }, // Requires functional consent
+      },
+    },
+    ga4: {
+      code: destinationGtag,
+      config: {
+        settings: { ga4: { measurementId: 'G-XXXXXXXXXX' } },
+        consent: { analytics: true }, // Requires analytics consent
+      },
+    },
+  },
+});
+
+// When user accepts consent
+elb('walker consent', { functional: true, analytics: true });`}
+  language="typescript"
+/>
+
+---
+
+## Key concepts
+
+### The `code:` Property
+
+In Integrated mode, you pass actual code references:
+
+```typescript
+sources: {
+  browser: {
+    code: sourceBrowser,  // Direct import, not a string
+  },
+},
+```
+
+This differs from Bundled mode where you use `package:` with a string reference.
+
+### The `elb` Function
+
+`startFlow()` returns an `elb` function for tracking events:
+
+```typescript
+const { elb } = await startFlow({ ... });
+
+// Track events with entity-action format
+elb('page view', { title: 'Home' });
+elb('product add', { id: 'abc', name: 'Widget', price: 29.99 });
+elb('order complete', { total: 99.99, currency: 'USD' });
+```
+
+### Type safety
+
+Integrated mode gives you full TypeScript support:
+
+```typescript
+import type { WalkerOS } from '@walkeros/core';
+
+const { elb } = await startFlow<WalkerOS.Elb>({
+  // Full autocomplete and type checking
+});
+```
+
+---
+
+## Framework examples
+
+<Tabs>
+  <TabItem value="react" label="React">
+
+```tsx
+// hooks/useWalker.ts
+import { useEffect, useState } from 'react';
+import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+export function useWalker() {
+  const [elb, setElb] = useState<WalkerOS.Elb | null>(null);
+
+  useEffect(() => {
+    startFlow({
+      sources: {
+        browser: { code: sourceBrowser, config: { settings: { pageview: true } } },
+      },
+    }).then(({ elb }) => setElb(() => elb));
+  }, []);
+
+  return elb;
+}
+```
+
+  </TabItem>
+  <TabItem value="nextjs" label="Next.js">
+
+```tsx
+// app/providers.tsx
+'use client';
+import { useEffect } from 'react';
+import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+
+export function WalkerProvider({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    startFlow({
+      sources: {
+        browser: { code: sourceBrowser, config: { settings: { pageview: true } } },
+      },
+    });
+  }, []);
+
+  return <>{children}</>;
+}
+```
+
+  </TabItem>
+</Tabs>
+
+---
+
+## Next steps
+
+- [**Event Model**](/docs/getting-started/event-model): How events are structured
+- [**Mapping**](/docs/mapping): Transform events for destinations
+- [**Browser Source**](/docs/sources/web/browser): DOM-based automatic tracking
+- [**Destinations**](/docs/destinations): Available destination packages
+
+---
+
+## See also
+
+- [**Bundled mode**](/docs/getting-started/modes/bundled): Configure with JSON, build with CLI
+- [**Collector reference**](/docs/collector): Full `startFlow()` API documentation

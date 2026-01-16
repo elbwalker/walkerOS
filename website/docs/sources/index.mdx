@@ -15,9 +15,16 @@ events that the collector can process.
 
 Sources capture events in their native format and send them to the collector:
 
-1. **Capture**: Listen for events (DOM clicks, API calls, player actions)
-2. **Transform**: Convert to walkerOS event format (`entity action`, data)
-3. **Send**: Forward to collector for processing and routing to destinations
+<FlowMap
+  sources={{ default: { label: 'Source', highlight: true } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
+  markers={[
+    { position: 'incoming', id: '1', text: 'Capture: Listen for events (DOM clicks, API calls, player actions)' },
+    { position: 'source', id: '2', text: 'Transform: Convert to walkerOS event format (entity action, data)' },
+    { position: 'source-collector', id: '3', text: 'Send: Forward to collector for processing and routing' },
+  ]}
+/>
 
 ## Available sources
 
@@ -127,7 +134,7 @@ await elb('product view', { id: 'P123', name: 'Laptop' });`}
 * **Multiple sources**: First source is primary by default
 * **No sources**: Returns `collector.push` (basic functionality)
 
-### Override Primary Source
+### Override primary source
 
 <CodeSnippet
   code={`const { elb } = await startFlow({

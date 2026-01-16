@@ -19,6 +19,18 @@ import { schemas } from '@walkeros/server-destination-api/dev';
 The server API destination sends events from Node.js to any HTTP(S) endpoint
 using native HTTP/HTTPS modules.
 
+:::info Where This Fits
+Server API is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'API', highlight: true } }}
+/>
+
+Sends events server-side to any HTTP endpoint using Node.js native modules with configurable request formatting and batching.
+:::
+
 ## Installation
 
 <CodeSnippet

@@ -56,7 +56,6 @@ describe('Auto-run functionality', () => {
     test('applies consent during auto-run', async () => {
       const testConsent = { functional: true, marketing: false };
       const { collector } = await startFlow({
-        run: true,
         consent: testConsent,
       });
 
@@ -67,7 +66,6 @@ describe('Auto-run functionality', () => {
     test('applies user data during auto-run', async () => {
       const testUser = { id: 'test-user-123', custom: { type: 'premium' } };
       const { collector } = await startFlow({
-        run: true,
         user: testUser,
       });
 
@@ -78,7 +76,6 @@ describe('Auto-run functionality', () => {
     test('applies globals during auto-run', async () => {
       const testGlobals = { page_title: 'Test Page', environment: 'test' };
       const { collector } = await startFlow({
-        run: true,
         globals: testGlobals,
       });
 
@@ -89,7 +86,6 @@ describe('Auto-run functionality', () => {
     test('applies custom data during auto-run', async () => {
       const testCustom = { tracking_id: 'GTM-12345', debug: true };
       const { collector } = await startFlow({
-        run: true,
         custom: testCustom,
       });
 

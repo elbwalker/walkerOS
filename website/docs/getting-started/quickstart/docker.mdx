@@ -1,9 +1,9 @@
 ---
-title: Docker Quick Start
+title: Docker
 description: Get walkerOS running with Docker in 5 minutes
 ---
 
-# Docker Quick Start
+# Docker
 
 ## Try the demo
 
@@ -67,7 +67,7 @@ Docker runtime requires **pre-built bundles**, not JSON configs.
 FROM walkeros/flow:latest
 COPY flow.mjs /app/flow.mjs
 ENV MODE=collect
-ENV FLOW=/app/flow.mjs
+ENV BUNDLE=/app/flow.mjs
 ```
 
 ```bash
@@ -96,7 +96,7 @@ services:
 | Variable     | Description                                         | Default           |
 | ------------ | --------------------------------------------------- | ----------------- |
 | `MODE`       | Operational mode: `collect` or `serve`              | Required          |
-| `FLOW`       | Path to pre-bundled flow file                       | Required          |
+| `BUNDLE`     | Path to pre-bundled flow file                       | Required          |
 | `PORT`       | Server port                                         | 8080              |
 | `HOST`       | Server host                                         | 0.0.0.0           |
 | `SERVE_NAME` | Filename in URL (serve mode)                        | walker.js         |

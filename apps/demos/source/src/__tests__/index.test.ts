@@ -33,16 +33,14 @@ describe('Demo Source', () => {
   test('pushes events without delay immediately', async () => {
     const mockPush = jest.fn(async () => ({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     }));
 
     const { collector } = await startFlow();
     collector.push = mockPush;
 
-    await sourceDemo(
-      {
+    await sourceDemo({
+      collector,
+      config: {
         settings: {
           events: [
             { name: 'page view', data: { title: 'Home' } },
@@ -50,13 +48,16 @@ describe('Demo Source', () => {
           ],
         },
       },
-      {
+      env: {
         elb: collector.push as unknown as WalkerOS.Elb,
         push: collector.push,
         command: collector.command,
         logger: createMockLogger(),
       },
-    );
+      id: 'test-source',
+      logger: createMockLogger(),
+      setIngest: async () => {},
+    });
 
     // Fast-forward to execute setTimeout(..., 0)
     jest.runAllTimers();
@@ -74,16 +75,14 @@ describe('Demo Source', () => {
   test('pushes events with delay after timeout', async () => {
     const mockPush = jest.fn(async () => ({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     }));
 
     const { collector } = await startFlow();
     collector.push = mockPush;
 
-    await sourceDemo(
-      {
+    await sourceDemo({
+      collector,
+      config: {
         settings: {
           events: [
             { name: 'immediate', data: {} },
@@ -92,13 +91,16 @@ describe('Demo Source', () => {
           ],
         },
       },
-      {
+      env: {
         elb: collector.push as unknown as WalkerOS.Elb,
         push: collector.push,
         command: collector.command,
         logger: createMockLogger(),
       },
-    );
+      id: 'test-source',
+      logger: createMockLogger(),
+      setIngest: async () => {},
+    });
 
     // Immediate event fires
     jest.advanceTimersByTime(0);
@@ -128,27 +130,28 @@ describe('Demo Source', () => {
   test('handles empty events array', async () => {
     const mockPush = jest.fn(async () => ({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     }));
 
     const { collector } = await startFlow();
     collector.push = mockPush;
 
-    await sourceDemo(
-      {
+    await sourceDemo({
+      collector,
+      config: {
         settings: {
           events: [],
         },
       },
-      {
+      env: {
         elb: collector.push as unknown as WalkerOS.Elb,
         push: collector.push,
         command: collector.command,
         logger: createMockLogger(),
       },
-    );
+      id: 'test-source',
+      logger: createMockLogger(),
+      setIngest: async () => {},
+    });
 
     jest.runAllTimers();
     await Promise.resolve();

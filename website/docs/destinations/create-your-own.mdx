@@ -35,20 +35,25 @@ context?: unknown,
 ## The `push` function
 
 The `push` function is where you'll implement the logic to send the event to
-your desired service. It receives the `event` and a `context` object containing
-the destination's configuration.
+your desired service. It receives the `event` and a `context` object.
 
 <CodeSnippet
   code={`type PushFn<Settings> = (
-event: WalkerOS.Event,
-context: {
-config: {
-settings?: Settings;
-};
-},
+  event: WalkerOS.Event,
+  context: Destination.PushContext<Settings>,
 ) => void;`}
   language="typescript"
 />
+
+The push context contains:
+
+* **`config`**: Destination configuration with settings
+* **`env`**: Environment with window, document, etc.
+* **`logger`**: Logger instance
+* **`id`**: Unique destination identifier
+* **`data`**: Pre-computed data from mapping
+* **`rule`**: The matching mapping rule for this event
+* **`ingest`**: Optional request metadata from source
 
 ## Example: A simple webhook destination
 
@@ -333,17 +338,36 @@ export * as env from './env';`}
 
 <CodeSnippet
   code={`import { clone } from '@walkeros/core';
+import type { Destination, Collector } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import { examples } from './index';
 
+// Helper to create push context for testing
+function createPushContext(
+  overrides: Partial<Destination.PushContext<Settings>> = {},
+): Destination.PushContext<Settings> {
+  return {
+    config: {},
+    env: examples.env.push,
+    logger: createMockLogger(),
+    id: 'test-destination',
+    collector: {} as Collector.Instance,
+    data: {},
+    rule: undefined,
+    ...overrides,
+  };
+}
+
 describe('My Destination', () => {
-it('calls custom API', async () => {
-// Clone the example env to avoid mutations
-const testEnv = clone(examples.env.push);
+  it('calls custom API', async () => {
+    // Clone the example env to avoid mutations
+    const testEnv = clone(examples.env.push);
 
-await destination.push(event, { config, env: testEnv });
+    const context = createPushContext({ env: testEnv });
+    await destination.push(event, context);
 
-expect(testEnv.window.customAPI).toHaveBeenCalledWith('page view');
-});
+    expect(testEnv.window.customAPI).toHaveBeenCalledWith('page view');
+  });
 });`}
   language="typescript"
 />
@@ -355,3 +379,4 @@ expect(testEnv.window.customAPI).toHaveBeenCalledWith('page view');
 * **Type Safety**: 3rd generic parameter gives full autocomplete
 * **Fallback**: `getEnv(env)` automatically uses real APIs if env not provided
 * **Reusable**: Store mock environments in `examples/env.ts` for consistency
+* **Context helper**: Use `createPushContext()` to standardize test context with `id` and `rule`

@@ -11,6 +11,20 @@ import { schemas } from '@walkeros/server-destination-meta/dev';
 
 <PackageLink env="server" github="packages/server/destinations/meta" npm="@walkeros/server-destination-meta" />
 
+Server-side event delivery to Meta's Conversions API for enhanced tracking accuracy and privacy compliance.
+
+:::info Where This Fits
+Meta CAPI is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Meta CAPI', highlight: true } }}
+/>
+
+Sends events server-side to Meta's Conversions API, bypassing browser limitations for improved data quality and privacy-compliant tracking.
+:::
+
 ## Installation
 
 <CodeSnippet
@@ -19,6 +33,9 @@ import { schemas } from '@walkeros/server-destination-meta/dev';
 />
 
 ## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -39,6 +56,32 @@ await startFlow({
 });`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "meta": {
+    "package": "@walkeros/server-destination-meta",
+    "code": "destinationMeta",
+    "config": {
+      "settings": {
+        "accessToken": "YOUR_ACCESS_TOKEN",
+        "pixelId": "YOUR_PIXEL_ID"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 

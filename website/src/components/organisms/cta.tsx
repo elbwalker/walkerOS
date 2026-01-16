@@ -3,43 +3,68 @@ import { Button, ButtonProps } from '@site/src/components/atoms/buttons';
 import { tagger } from '@site/src/components/walkerjs';
 
 interface CTAProps {
-  text: ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
   primaryButton?: ButtonProps;
   secondaryButton?: ButtonProps;
   elbTitle?: string;
 }
 
 export default function CTA({
-  text,
+  title,
+  description,
   primaryButton,
   secondaryButton,
   elbTitle,
 }: CTAProps) {
-  // Set default variant for secondaryButton if not provided
-  const secondaryButtonWithDefault = secondaryButton
-    ? { ...secondaryButton, variant: secondaryButton.variant || 'secondary' }
-    : undefined;
-
   return (
     <div
       {...tagger.entity('cta')}
       {...tagger.action('visible:impression')}
       {...tagger.context('component', 'cta')}
+      style={{ backgroundColor: 'var(--ifm-background-color)' }}
     >
-      <div className="mx-auto max-w-7xl py-12 px-4 text-center sm:px-6 lg:py-16 lg:px-8">
-        <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-          <span
+      <div className="px-6 py-24 sm:py-32 lg:px-8">
+        <div className="mx-auto max-w-4xl text-center">
+          <h2
             {...(elbTitle && tagger.property('title', elbTitle))}
-            className="block text-black dark:text-white"
+            className="text-4xl font-semibold tracking-tight sm:text-5xl"
+            style={{ color: 'var(--color-base-content)' }}
           >
-            {text}
-          </span>
-        </h2>
-        <div className="mx-auto mt-5 max-w-md sm:flex sm:justify-center md:mt-8">
-          {primaryButton && <Button {...primaryButton} />}
-          {secondaryButtonWithDefault && (
-            <Button {...secondaryButtonWithDefault} />
+            {title}
+          </h2>
+          {description && (
+            <p
+              className="mx-auto mt-6 text-lg/8"
+              style={{ color: 'var(--color-gray-500)' }}
+            >
+              {description}
+            </p>
           )}
+          <div className="mt-10 flex items-center justify-center gap-x-6">
+            {primaryButton && (
+              <a
+                href={primaryButton.link}
+                className="rounded-md px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm"
+                style={{
+                  backgroundColor: 'var(--color-primary)',
+                }}
+                {...tagger.action(primaryButton.elbAction || 'click')}
+              >
+                {primaryButton.children}
+              </a>
+            )}
+            {secondaryButton && (
+              <a
+                href={secondaryButton.link}
+                className="text-sm/6 font-semibold"
+                style={{ color: 'var(--color-base-content)' }}
+                {...tagger.action(secondaryButton.elbAction || 'click')}
+              >
+                {secondaryButton.children} <span aria-hidden="true">→</span>
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>

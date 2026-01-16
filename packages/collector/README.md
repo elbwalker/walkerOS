@@ -43,6 +43,18 @@ Sources capture events and send them to the collector, which processes and
 routes them to your chosen destinations like Google Analytics, custom APIs, or
 data warehouses.
 
+### Operating Modes
+
+The collector can be used in two ways:
+
+| Mode           | Usage                              | Config                     |
+| -------------- | ---------------------------------- | -------------------------- |
+| **Integrated** | Import directly in your app        | `code: sourceBrowser`      |
+| **Bundled**    | Bundle with CLI, deploy separately | `package: "@walkeros/..."` |
+
+This README shows **Integrated mode**. For Bundled mode, see the
+[CLI documentation](../cli/).
+
 ## Event Naming Convention
 
 walkerOS enforces a **"entity action"** naming convention for all events. It
@@ -75,7 +87,7 @@ action by space the collector won't process it.
 npm install @walkeros/collector
 ```
 
-## Quick Start
+## Quick Start (Integrated Mode)
 
 ### Basic setup
 
@@ -83,7 +95,6 @@ npm install @walkeros/collector
 import { startFlow } from '@walkeros/collector';
 
 const config = {
-  run: true,
   consent: { functional: true },
   sources: [
     // add your event sources
@@ -100,7 +111,6 @@ const { collector, elb } = await startFlow(config);
 import { startFlow } from '@walkeros/collector';
 
 const { collector, elb } = await startFlow({
-  run: true,
   consent: { functional: true },
   sources: [
     // add your event sources
@@ -126,6 +136,20 @@ const { collector, elb } = await startFlow({
 | `destinations` | `array`   | Configurations for destinations receiving processed events   | No       | `[{ destination, config }]`             |
 | `consent`      | `object`  | Initial consent state to control routing of events           | No       | `{ analytics: true, marketing: false }` |
 | `logger`       | `object`  | Logger configuration with level and custom handler           | No       | `{ level: 'info', handler: fn }`        |
+
+### Using with CLI (Bundled Mode)
+
+For Bundled mode, the collector is configured via JSON:
+
+```json
+{
+  "collector": {
+    "consent": { "functional": true }
+  }
+}
+```
+
+See [CLI documentation](../cli/) for complete flow configuration.
 
 ## Type Definitions
 

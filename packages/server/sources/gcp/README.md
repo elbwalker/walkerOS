@@ -104,6 +104,37 @@ interface CorsOptions {
 }
 ```
 
+### Ingest Metadata
+
+Extract request metadata and forward it to processors and destinations:
+
+```typescript
+await startFlow({
+  sources: {
+    api: {
+      code: sourceCloudFunction,
+      config: {
+        settings: { cors: true },
+        ingest: {
+          ip: 'ip',
+          ua: 'headers.user-agent',
+          origin: 'headers.origin',
+        },
+      },
+    },
+  },
+});
+```
+
+**Available ingest paths:**
+
+| Path        | Description                       |
+| ----------- | --------------------------------- |
+| `ip`        | Client IP address                 |
+| `headers.*` | HTTP headers (user-agent, origin) |
+| `method`    | HTTP method                       |
+| `hostname`  | Request hostname                  |
+
 ### Request Format
 
 **Single Event:**

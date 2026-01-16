@@ -306,6 +306,64 @@ await startFlow({
 // OPTIONS /api/v1/events
 ```
 
+### Ingest Metadata
+
+Extract request metadata (IP, headers) and forward it to processors and
+destinations:
+
+```typescript
+await startFlow({
+  sources: {
+    express: {
+      code: sourceExpress,
+      config: {
+        settings: { port: 8080 },
+        ingest: {
+          ip: 'ip',
+          ua: 'headers.user-agent',
+          origin: 'headers.origin',
+          referer: 'headers.referer',
+        },
+      },
+    },
+  },
+});
+```
+
+**Available ingest paths:**
+
+| Path        | Description                                      |
+| ----------- | ------------------------------------------------ |
+| `ip`        | Client IP address                                |
+| `headers.*` | HTTP headers (user-agent, origin, referer, etc.) |
+| `protocol`  | Request protocol (http/https)                    |
+| `method`    | HTTP method (GET, POST, etc.)                    |
+| `hostname`  | Request hostname                                 |
+| `url`       | Full request URL                                 |
+
+**Advanced mapping:**
+
+```typescript
+ingest: {
+  // Custom function for geo lookup
+  country: { fn: (req) => geoip.lookup(req.ip)?.country },
+
+  // Conditional extraction
+  devMode: {
+    key: 'headers.x-debug',
+    condition: (req) => req.hostname === 'localhost',
+  },
+
+  // Nested structure
+  request: {
+    map: {
+      ua: 'headers.user-agent',
+      origin: 'headers.origin',
+    },
+  },
+}
+```
+
 ### Extend Express App
 
 ```typescript

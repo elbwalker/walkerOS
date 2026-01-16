@@ -1,136 +1,146 @@
 ---
 slug: /
 title: What is walkerOS
-description: walkerOS description and installation
+description: Event data collection as code - capture, transform, and route events with built-in consent management
 sidebar_position: 1
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
+# What is walkerOS
 
+walkerOS is **event data collection as code**. Capture events from anywhere, transform them with mapping, and route them to any destination, all with built-in consent management.
 
-# Welcome to walkerOS
+No fragile UI configs. No vendor lock-in. Just tracking you can version, test, and trust.
 
-walkerOS is an **event data collection as code** solution. It captures,
-structures, and routes events with built-in support for consent management — all
-directly in your code. No fragile UI configs. No black-box logic. Just
-vendor-agnostic **tracking you can version, test, and trust**.
-
-The project started as the web tracking library walker.js, and has evolved into
-a complete **first-party tracking system** for modern teams and the modern web.
+<FlowMap
+  sources={{
+    browser: { icon: 'mdi:web', label: 'Browser', link: '/docs/sources/web/browser/' },
+    server: { icon: 'mdi:server', label: 'Server', link: '/docs/sources/server/' },
+  }}
+  collector={{ label: 'walkerOS', link: '/docs/collector' }}
+  destinations={{
+    ga4: { icon: 'logos:google-analytics', label: 'GA4', link: '/docs/destinations/web/gtag/ga4' },
+    api: { icon: 'mdi:api', label: 'Your API', link: '/docs/destinations/api/' },
+  }}
+/>
 
 ## Why walkerOS?
 
-* **Independence**: Make your your data collection independent from single
-  vendor specifications to reduce complexity and extra code whenever you add or
-  remove a new service. Keep maintenance effort to a minimum.
-* **Scalability**: DOM-based, component-level frontend tagging makes tracking
-  user behavior declarative, reusable, and easy to maintain.
-* **Privacy-first approach**: Built-in consent handling and privacy controls
-  help you meet compliance from day one.
-* **Type-safe tracking**: Built with TypeScript to catch tracking errors at
-  compile time, not in production. Get IDE autocomplete for APIs and destination
-  configs, prevent data structure mistakes.
+- **Open-Source:** MIT licensed, free forever, no restrictions
+- **Self-Hosted:** Your infrastructure, your data, full ownership
+- **Config-as-Code:** Version control, PRs, deploy with confidence
+- **Composable:** Mix sources, destinations, and mappings freely
+- **Developer-First:** TypeScript, no GUI, declarative tagging
+
+---
 
 ## How it works
 
-![event flow](/diagrams/walkerosflowdark.png)
+Every walkerOS setup follows one pattern:
 
-## How to install
+<FlowMap
+  sources={{ source: { label: 'Sources', text: 'Capture', link: '/docs/sources' } }}
+  collector={{ label: 'Collector', text: 'Process', link: '/docs/collector' }}
+  destinations={{ dest: { label: 'Destinations', text: 'Deliver', link: '/docs/destinations' } }}
+/>
 
-<Tabs>
-  <TabItem value="npm" label="npm" default>
-    Install the package from npm:
+- **Sources:** Where events come from (browser DOM, dataLayer, HTTP endpoints, custom code)
+- **Collector:** The processing engine (consent, enrichment, routing)
+- **Destinations:** Where events go (GA4, your API, BigQuery, any service)
 
-    <CodeSnippet
-      code={`npm install @walkeros/collector @walkeros/web-source-browser`}
-      language="bash"
-    />
+A "flow" connects sources to destinations through a collector. You can have one flow or many, client-side, server-side, or both working together.
 
-    Initialize walkerOS in your project. See the quickstart guides for more details.
+## The centerpiece: mapping
 
-    <CodeSnippet
-      code={`import type { WalkerOS } from '@walkeros/core';
+**Mapping** transforms events between stages. It's how walkerOS adapts to any source or destination format.
+
+<FlowMap
+  sources={{ source: { label: 'Source', link: '/docs/sources' } }}
+  collector={{ label: 'Collector', link: '/docs/collector' }}
+  destinations={{ dest: { label: 'Destination', link: '/docs/destinations' } }}
+  markers={[
+    { position: 'source-collector', id: '1', legend: 'Source Mapping' },
+    { position: 'collector-destination', id: '2', legend: 'Destination Mapping' },
+  ]}
+/>
+
+One transformation language works everywhere. This is what makes walkerOS truly composable.
+
+[Learn more about mapping →](/docs/mapping)
+
+---
+
+## Two ways to use walkerOS
+
+Both modes use the same architecture. Choose based on how you want to configure and deploy.
+
+### Integrated mode
+
+The collector lives **inside your application code**.
+
+```typescript
 import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
-// Initialize walkerOS
-export async function initializeWalker(): Promise<void> {
-const { collector, elb } = await startFlow({
-sources: {
-browser: {
-  code: sourceBrowser,
-  config: {
-    settings: {
-      pageview: true,
-      session: true,
-      elb: 'elb',
-    },
-  },
-},
-},
-destinations: {
-console: {
-  code: {
-    type: 'console',
-    push: (event) => console.log('Event:', event),
-  },
-},
-},
+const { elb } = await startFlow({
+  sources: { browser: { code: sourceBrowser } },
 });
-}`}
-      disabled
-      language="javascript"
-      label="Code Example"
-      showHeader={false}
-      autoHeight
-    />
-  </TabItem>
+```
 
-  <TabItem value="script" label="script">
-    For websites without build tools install from CDN or host the files yourself:
+**Best for:** Building into your app, full TypeScript control, dynamic configuration.
 
-    <CodeSnippet
-      code={`<script>
-  // Load the collector and source
-  const { startFlow } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
-  );
-  const { sourceBrowser } = await import(
-    'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
-  );
+[**Get started with integrated mode →**](/docs/getting-started/modes/integrated)
 
-  // Initialize walkerOS
-  const { collector, elb } = await startFlow({
-    sources: {
-      browser: {
-        code: sourceBrowser,
-        config: {
-          settings: {
-            prefix: 'data-elb',
-            pageview: true,
-            session: true,
-          },
-        },
-      },
-    },
-    destinations: {
-      console: {
-        code: {
-          type: 'console',
-          push: (event) => console.log('Event:', event),
-        },
-      },
-    },
-  });
-</script>`}
-      language="html"
-    />
-  </TabItem>
-</Tabs>
+---
 
-:::note
+### Bundled mode
 
-See the [quickstart guides](/docs/getting-started/quickstart/) for more details.
+The collector is a **separate artifact** you configure with JSON.
 
-:::
+```json
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "sources": { "browser": { "package": "@walkeros/web-source-browser" } }
+    }
+  }
+}
+```
+
+Then: `walkeros bundle flow.json` → standalone file.
+
+**Best for:** Config-as-code, Docker deployments, separate tracking scripts.
+
+[**Get started with bundled mode →**](/docs/getting-started/modes/bundled)
+
+---
+
+## Core concepts
+
+| Concept | What It Is | Learn More |
+|---------|------------|------------|
+| **Flow** | Sources + collector + destinations configuration | [Flow configuration](/docs/getting-started/flow) |
+| **Event model** | How events are structured (`entity action` format) | [Event model](/docs/getting-started/event-model) |
+| **Mapping** | Event transformation rules | [Mapping](/docs/mapping) |
+| **Consent** | Privacy controls at destination and property level | [Consent management](/docs/guides/consent) |
+| **Sources** | Event capture from browser, server, or custom code | [Sources](/docs/sources) |
+| **Destinations** | Event delivery to analytics, APIs, warehouses | [Destinations](/docs/destinations) |
+
+---
+
+## Quick links
+
+**Just want to try it?**
+- [Integrated Quickstart](/docs/getting-started/modes/integrated#quickstart): npm install and go
+- [Bundled Quickstart](/docs/getting-started/modes/bundled#quickstart): JSON config and CLI
+
+**Deploying to production?**
+- [Docker Guide](/docs/apps/docker): Container deployment
+- [CLI Reference](/docs/apps/cli): Build and test commands
+
+**Already using walker.js?**
+- [Walker.js Docs](/docs/apps/walkerjs): Pre-built convenience bundle
+
+**Need help choosing?**
+- [Operating Modes](/docs/getting-started/modes): Detailed comparison

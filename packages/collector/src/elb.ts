@@ -1,4 +1,5 @@
 import type { Collector, Source, WalkerOS, Elb } from '@walkeros/core';
+import { createPushResult } from './destination';
 
 /**
  * Creates the default ELB source.
@@ -54,7 +55,7 @@ export function createElbSource(
         }
       } else {
         // Invalid input
-        return { ok: false, successful: [], queued: [], failed: [] };
+        return createPushResult({ ok: false });
       }
 
       // Add optional properties if provided

@@ -5,7 +5,7 @@ sidebar_position: 1
 ---
 
 
-# Migration Guide: From @elbwalker to @walkerOS
+# Migration guide: from @elbwalker to @walkerOS
 
 This guide helps you migrate from the old elbwalker packages to the new walkerOS
 packages.
@@ -49,7 +49,7 @@ packages.
   language="json"
 />
 
-### 2. Update Imports
+### 2. Update imports
 
 **Before:**
 
@@ -70,7 +70,7 @@ import type { WalkerOS } from '@walkeros/core';`}
   language="typescript"
 />
 
-### 3. Update Function Calls
+### 3. Update function calls
 
 **Before:**
 
@@ -109,29 +109,29 @@ config: {
 
 ## Breaking changes
 
-### 1. Unified Collector
+### 1. Unified collector
 
 * Single `@walkeros/collector` package works across all platforms
 * Use `startFlow()` instead of `Walkerjs()` or `createSourceNode()`
 
-### 2. Modular Sources
+### 2. Modular sources
 
 * DOM tracking is now `@walkeros/web-source-browser`
 * Import and initialize sources separately
 
-### 3. Core Package Merger
+### 3. Core package merger
 
 * All types and utilities now come from `@walkeros/core`
 * Update all import statements accordingly
 
-### 4. Google Destinations Unified
+### 4. Google destinations unified
 
 * GA4, Google Ads, and GTM are now unified in `@walkeros/web-destination-gtag`
 * Configure all Google services through a single destination
 
 ## Destination configuration patterns
 
-### Unified Configuration Approach
+### Unified configuration approach
 
 Configure all sources and destinations in a single `startFlow` call:
 
@@ -168,14 +168,14 @@ config: {
 
 ## Migration checklist
 
-### Package Dependencies
+### Package dependencies
 
 * \[ ] Remove old `@elbwalker/*` packages
 * \[ ] Add `@walkeros/collector`
 * \[ ] Add required sources and destinations
 * \[ ] Add `@walkeros/core` for custom implementations
 
-### Code Updates
+### Code updates
 
 * \[ ] Update all imports to new packages
 * \[ ] Replace collector initialization with `startFlow()`
@@ -195,7 +195,7 @@ Solution: Import types from `@walkeros/core`
 
 ## data-elbaction vs data-elbactions
 
-### Breaking Change in @walkeros packages
+### Breaking change in @walkeros packages
 
 The behavior of `data-elbaction` has changed to improve performance and provide
 more precise entity targeting:
@@ -204,9 +204,9 @@ more precise entity targeting:
   DOM hierarchy
 * **@walkeros behavior**: `data-elbaction` applies to **nearest entity only**
 
-### Migration Strategy
+### Migration strategy
 
-#### Option 1: Keep Current Behavior (Recommended for migration)
+#### Option 1: keep current behavior (recommended for migration)
 
 Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
 
@@ -227,7 +227,7 @@ Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
   language="html"
 />
 
-#### Option 2: Use New Behavior (Recommended for new projects)
+#### Option 2: use new behavior (recommended for new projects)
 
 Use `data-elbaction` for more precise, performance-optimized tracking:
 
@@ -241,7 +241,7 @@ Use `data-elbaction` for more precise, performance-optimized tracking:
   language="html"
 />
 
-### When to Use Each
+### When to use each
 
 **Use `data-elbaction` (nearest entity) when:**
 
@@ -268,9 +268,9 @@ tagger().actions('click', 'select').get();`}
   language="typescript"
 />
 
-## visible vs impression Triggers
+## visible vs impression triggers
 
-### Breaking Change in @walkeros packages
+### Breaking change in @walkeros packages
 
 The visibility trigger names have been updated to better reflect their behavior:
 
@@ -279,9 +279,9 @@ The visibility trigger names have been updated to better reflect their behavior:
 * **`impression` trigger**: Fires **once only** when element first becomes
   visible (was `visible`)
 
-### Migration Strategy
+### Migration strategy
 
-#### Option 1: Update Trigger Names (Recommended)
+#### Option 1: update trigger names (recommended)
 
 Update your HTML to use the new trigger names:
 
@@ -296,14 +296,14 @@ Update your HTML to use the new trigger names:
   language="html"
 />
 
-#### Option 2: Understand the Behavior Change
+#### Option 2: understand the behavior change
 
 If you keep using the old names, understand the behavior has changed:
 
 * Old `visible` behavior (single-fire) → Now use `impression`
 * Old `visibles` behavior (multiple-fire) → Now use `visible`
 
-### When to Use Each
+### When to use each
 
 **Use `impression` trigger when:**
 

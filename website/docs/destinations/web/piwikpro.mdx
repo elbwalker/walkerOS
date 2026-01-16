@@ -27,6 +27,18 @@ function. All you need to do is install the destination, and optionally map
 events to Piwik Pro's format. walkerOS takes care of loading the script and the
 function calls.
 
+:::info Where This Fits
+Piwik PRO is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Piwik PRO', highlight: true } }}
+/>
+
+Loads Piwik PRO script, initializes the tracking container, and sends page views and custom events with GDPR-compliant analytics.
+:::
+
 ## Installation
 
 <CodeSnippet
@@ -35,6 +47,9 @@ function calls.
 />
 
 ## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -55,6 +70,31 @@ await startFlow({
 });`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "piwikpro": {
+    "package": "@walkeros/web-destination-piwikpro",
+    "config": {
+      "settings": {
+        "appId": "XXX-XXX-XXX-XXX-XXX",
+        "url": "https://your_account_name.piwik.pro/"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 

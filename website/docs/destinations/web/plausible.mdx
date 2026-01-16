@@ -26,6 +26,18 @@ Plausible via the `plausible` function. All you need to do is install the
 destination, and optionally map events to Plausible's format. walkerOS takes
 care of loading the script and the function calls.
 
+:::info Where This Fits
+Plausible is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Plausible', highlight: true } }}
+/>
+
+Loads Plausible script, initializes the plausible function, and tracks page views and custom events with privacy-first analytics.
+:::
+
 ## Installation
 
 <CodeSnippet
@@ -34,6 +46,9 @@ care of loading the script and the function calls.
 />
 
 ## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -53,6 +68,30 @@ await startFlow({
 });`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "plausible": {
+    "package": "@walkeros/web-destination-plausible",
+    "config": {
+      "settings": {
+        "domain": "walkeros.io"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 

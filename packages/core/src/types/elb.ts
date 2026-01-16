@@ -9,8 +9,7 @@ export interface EventFn<R = Promise<PushResult>> {
 
 // Complete function interface - can be extended by other interfaces
 export interface Fn<R = Promise<PushResult>, Config = unknown>
-  extends EventFn<R>,
-    WalkerCommands<R, Config> {
+  extends EventFn<R>, WalkerCommands<R, Config> {
   // Interface intentionally empty - combines EventFn and WalkerCommands
 }
 
@@ -56,9 +55,12 @@ export type PushData<Config = unknown> =
   | WalkerOS.User
   | WalkerOS.Properties;
 
-export interface PushResult extends Destination.Result {
-  event?: WalkerOS.Event;
+export interface PushResult {
   ok: boolean;
+  event?: WalkerOS.Event;
+  done?: Record<string, Destination.Ref>;
+  queued?: Record<string, Destination.Ref>;
+  failed?: Record<string, Destination.Ref>;
 }
 
 // Simplified Layer type for core collector

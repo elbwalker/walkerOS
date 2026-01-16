@@ -272,7 +272,7 @@ saveSession --> returnSession
 | [referrer](#referrer-customization)    | string  | Referrer customization                                                   |
 | [url](#url-customization)              | string  | URL customization                                                        |
 
-#### Custom Data
+#### Custom data
 
 Enhance the default `data` properties with custom information, like a session
 count:
@@ -285,7 +285,7 @@ const session = sessionStart({ data: { count } });`}
 
 This will return a `data` object like `{ id: "r4nd0m", count: 2 }`.
 
-#### Internal Domains
+#### Internal domains
 
 Define internal domains to prevent new sessions from triggering when navigating
 between them:
@@ -300,7 +300,7 @@ between them:
 A user coming from `subdomain.walkeros.io` or `example.com` to e.g.
 `www.walkeros.io`, will no longer trigger a new session.
 
-#### Manual New Session Control
+#### Manual new session control
 
 Determine if it's a new session using the `isStart` parameter. This might
 require consent for storage access, which isn't implemented by default.
@@ -320,7 +320,7 @@ expired but at least a new session.
 > For more information on storage and expiration, check the storage
 > configuration options in this guide.
 
-#### Marketing Parameters
+#### Marketing parameters
 
 The helper util `getMarketingParameters` is used to extract common parameters like all
 `utm variants`, typical clickIds like `fbclid`, `gclid`, and others.
@@ -343,7 +343,7 @@ sessionStart({
   language="typescript"
 />
 
-#### Referrer Customization
+#### Referrer customization
 
 By default the `document.referrer` is used, but it can be overwritten with the
 `referrer` parameter.
@@ -356,7 +356,7 @@ By default the `document.referrer` is used, but it can be overwritten with the
 Domains can be extended, e.g., internal sub-domains. Data can be pre-defined,
 e.g., to use your ID.
 
-#### URL Customization
+#### URL customization
 
 By default, the `window.location.href` is used, but it can be overwritten with
 the `url` parameter.

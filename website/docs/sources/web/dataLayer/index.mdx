@@ -13,6 +13,18 @@ import { schemas } from '@walkeros/web-source-datalayer/dev';
 
 Integrates with existing Google Analytics 4 and GTM dataLayer implementations by intercepting `dataLayer.push()` calls.
 
+:::info Where This Fits
+The DataLayer Source is a **web source** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { label: 'Source', text: 'dataLayer', highlight: true } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
+/>
+
+It bridges existing GA4/GTM implementations to walkerOS destinations.
+:::
+
 ## Installation
 
 <CodeSnippet
@@ -21,6 +33,9 @@ Integrates with existing Google Analytics 4 and GTM dataLayer implementations by
 />
 
 ## Basic Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -44,6 +59,31 @@ const { collector, elb } = await startFlow({
 });`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` sources:
+
+<CodeSnippet
+  code={`"sources": {
+  "dataLayer": {
+    "package": "@walkeros/web-source-datalayer",
+    "config": {
+      "settings": {
+        "name": "dataLayer",
+        "prefix": "dataLayer"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## How It Works
 

@@ -33,7 +33,7 @@
               push: (event, context) => {
                 const { container } = context.config;
                 const output = {
-                  event: event.event,
+                  event: event.name,
                   data: event.data,
                   context: event.context,
                   timing: event.timing,

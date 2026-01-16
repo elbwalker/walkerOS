@@ -29,13 +29,13 @@ export const destinationMeta: Destination = {
     fbq('init', pixelId!);
   },
 
-  push(event, { config, mapping = {}, data, env }) {
-    const { track, trackCustom } = mapping.settings || {};
+  push(event, { config, rule = {}, data, env }) {
+    const { track, trackCustom } = rule.settings || {};
     const { window } = getEnv(env);
     const fbq = window.fbq as facebook.Pixel.Event;
 
     // page view
-    if (event.name === 'page view' && !mapping.settings) {
+    if (event.name === 'page view' && !rule.settings) {
       // Define a custom mapping
       event.name = 'PageView';
     }

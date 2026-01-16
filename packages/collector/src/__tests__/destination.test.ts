@@ -96,10 +96,15 @@ describe('Destination', () => {
       config: {},
     };
 
-    await pushToDestinations(createWalkerjs(), event, {
-      destinationUpdate,
-      destination,
-    });
+    await pushToDestinations(
+      createWalkerjs(),
+      event,
+      {},
+      {
+        destinationUpdate,
+        destination,
+      },
+    );
     expect(mockPushUpdate).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith(
@@ -170,10 +175,16 @@ describe('Destination', () => {
     });
 
     const destination = createDestination();
-    const result = await pushToDestinations(createWalkerjs(), event, {
-      destination,
-    });
-    expect(result.failed).toHaveLength(1);
+    const result = await pushToDestinations(
+      createWalkerjs(),
+      event,
+      {},
+      {
+        destination,
+      },
+    );
+    expect(result.failed).toBeDefined();
+    expect(Object.keys(result.failed!)).toHaveLength(1);
     expect(result.ok).toBeFalsy();
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(destination.dlq).toContainEqual([event, new Error('kaputt')]);

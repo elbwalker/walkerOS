@@ -15,6 +15,18 @@ The AWS destination package provides server-side integration for streaming
 events from walkerOS to Amazon Kinesis Data Firehose for real-time analytics,
 data lakes, and downstream processing.
 
+:::info Where This Fits
+AWS Firehose is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Firehose', highlight: true } }}
+/>
+
+Streams events to Amazon Kinesis Data Firehose for real-time analytics, S3 data lakes, and downstream AWS services.
+:::
+
 ## Installation
 
 <CodeSnippet
@@ -23,6 +35,9 @@ data lakes, and downstream processing.
 />
 
 ## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -51,6 +66,40 @@ await startFlow({
 });`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "firehose": {
+    "package": "@walkeros/server-destination-aws",
+    "code": "destinationFirehose",
+    "config": {
+      "settings": {
+        "firehose": {
+          "streamName": "your-firehose-stream-name",
+          "region": "eu-central-1",
+          "config": {
+            "credentials": {
+              "accessKeyId": "your-access-key-id",
+              "secretAccessKey": "your-secret-access-key"
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 

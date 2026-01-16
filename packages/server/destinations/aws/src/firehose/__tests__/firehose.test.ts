@@ -24,6 +24,7 @@ describe('Firehose', () => {
       collector: mockCollector,
       env: testEnv,
       logger: createMockLogger(),
+      id: 'test-firehose',
     })) as Config;
   }
 
@@ -88,6 +89,7 @@ describe('Firehose', () => {
       collector: mockCollector,
       env: testEnv,
       logger: createMockLogger(),
+      id: 'test-firehose',
     });
 
     // Get the client instance send method

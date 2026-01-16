@@ -38,9 +38,16 @@ The Collector transforms raw events into enriched, compliant data streams by:
 
 In the walkerOS data flow, the collector sits between sources and destinations:
 
-```
-Sources → Collector → Destinations
-```
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: true }}
+  destinations={{ default: { highlight: false } }}
+  markers={[
+    { position: 'source-collector', id: '1', text: 'Receive: Incoming mapped events from sources' },
+    { position: 'collector', id: '2', text: 'Process: State management, consent handling, enrichment' },
+    { position: 'collector-destination', id: '3', text: 'Route: Map events to destination-specific requirements' },
+  ]}
+/>
 
 Sources capture events and send them to the collector, which processes and
 routes them to your chosen destinations like Google Analytics, custom APIs, or
@@ -60,7 +67,6 @@ data warehouses.
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector, elb } = await startFlow({
-run: true,
 consent: { functional: true },
 sources: {
 browser: {
@@ -99,7 +105,6 @@ import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await startFlow({
-run: true,
 consent: { functional: true },
 sources: {
 browser: {
@@ -128,3 +133,51 @@ level: 'DEBUG', // Show all logs (ERROR, INFO, DEBUG)
 });`}
   language="typescript"
 />
+
+## Event transformation
+
+The collector works with **mapping** to transform events as they flow through the system. Mapping is configured at the destination level and controls how walkerOS events are converted to vendor-specific formats.
+
+<FlowMap
+  sources={{ default: { label: 'walkerOS', text: 'Event' } }}
+  collector={{ label: 'Dest', text: 'Mapping' }}
+  destinations={{ default: { label: 'Vendor', text: 'Format' } }}
+/>
+
+For example, transforming a `product add` event into GA4's `add_to_cart`:
+
+<CodeSnippet
+  code={`destinations: {
+  ga4: {
+    code: destinationGtag,
+    config: {
+      mapping: {
+        product: {
+          add: {
+            name: 'add_to_cart',
+            data: {
+              map: {
+                currency: { value: 'USD' },
+                value: 'data.price',
+                items: { loop: ['nested', { map: { item_id: 'data.id' } }] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="typescript"
+/>
+
+[**Learn more about mapping →**](/docs/mapping)
+
+---
+
+## See also
+
+- [**Operating modes**](/docs/getting-started/modes): integrated vs bundled approaches
+- [**CLI documentation**](/docs/apps/cli): configure with JSON and build with CLI
+- [**Sources**](/docs/sources): available event capture sources
+- [**Destinations**](/docs/destinations): available event delivery destinations

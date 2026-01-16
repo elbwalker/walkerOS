@@ -11,6 +11,18 @@ package: '@walkeros/server-source-gcp'
 
 Google Cloud Functions source for walkerOS - lightweight runtime adapter for GCP services.
 
+:::info Where This Fits
+The GCP Cloud Functions Source is a **server source** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { label: 'Source', text: 'GCP', highlight: true } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
+/>
+
+It receives events via HTTP and forwards them to your destinations.
+:::
+
 ## Features
 
 * **Plug-and-play**: Direct assignment to Cloud Functions handler
@@ -25,6 +37,9 @@ Google Cloud Functions source for walkerOS - lightweight runtime adapter for GCP
 />
 
 ## Quick start
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
 
 <CodeSnippet
   code={`import { sourceCloudFunction } from '@walkeros/server-source-gcp';
@@ -49,6 +64,33 @@ const { sources } = await startFlow({
 http('walkerHandler', sources.gcp.push);`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` sources:
+
+<CodeSnippet
+  code={`"sources": {
+  "gcp": {
+    "package": "@walkeros/server-source-gcp",
+    "config": {
+      "settings": {
+        "cors": true,
+        "batch": true
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Server sources require platform-specific handlers. For containerized deployments, see [Docker →](/docs/apps/docker).
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration
 
@@ -85,6 +127,38 @@ http('walkerHandler', sources.gcp.push);`}
 }`}
   language="json"
 />
+
+## Ingest Metadata
+
+Extract request metadata and forward it through the pipeline.
+
+<CodeSnippet
+  code={`const { sources } = await startFlow({
+  sources: {
+    gcp: {
+      code: sourceCloudFunction,
+      config: {
+        settings: { cors: true },
+        ingest: {
+          ip: 'ip',
+          ua: 'headers.user-agent',
+          origin: 'headers.origin',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Available Ingest Paths
+
+| Path | Description |
+|------|-------------|
+| `ip` | Client IP address |
+| `headers.*` | HTTP headers (user-agent, origin, etc.) |
+| `method` | HTTP method |
+| `hostname` | Request hostname |
 
 ## Deployment
 

@@ -1,16 +1,14 @@
 ---
-title: Browser Source
+title: Browser source
 description: DOM-based event tracking for web applications
 sidebar_position: 1
 package: '@walkeros/web-source-browser'
 ---
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
 import { schemas } from '@walkeros/web-source-browser/dev';
 
 <PackageLink github="packages/web/sources/browser" npm="@walkeros/web-source-browser" />
 
-# Browser Source
+# Browser source
 
 Captures user interactions directly from the DOM using data attributes.
 
@@ -21,69 +19,74 @@ Captures user interactions directly from the DOM using data attributes.
 * **Pageview tracking**: Automatic or manual page view events
 * **DOM commands**: Enhanced `elb` function with `walker init` support
 
+:::info Where This Fits
+The Browser Source is a **source** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { label: 'Source', text: 'Browser', highlight: true } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
+/>
+
+It reads `data-elb-*` attributes from your HTML and generates events. The Collector routes these to your configured destinations.
+:::
+
 ## Installation
 
-<Tabs>
-  <TabItem value="npm" label="npm" default>
-    <CodeSnippet
-  code={`    npm install @walkeros/web-source-browser
-    `}
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the packages:
+
+<CodeSnippet
+  code={`npm install @walkeros/collector @walkeros/web-source-browser`}
   language="bash"
 />
 
-    <CodeSnippet
-      code={`import { startFlow } from '@walkeros/collector';
+Configure in your code:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector, elb } = await startFlow({
-sources: {
-browser: {
-code: sourceBrowser,
-config: {
-  settings: {
-    pageview: true,
-    session: true,
-    prefix: 'data-elb',
-  },
-},
-},
-},
-});`}
-      disabled
-      language="javascript"
-      label="Code Example"
-      showHeader={false}
-      autoHeight
-    />
-  </TabItem>
-
-  <TabItem value="script" label="script">
-    <CodeSnippet
-  code={`    <script>
-      const { startFlow } = await import(
-        'https://cdn.jsdelivr.net/npm/@walkeros/collector/dist/index.mjs'
-      );
-      const { sourceBrowser } = await import(
-        'https://cdn.jsdelivr.net/npm/@walkeros/web-source-browser/dist/index.mjs'
-      );
-
-      const { collector, elb } = await startFlow({
-        sources: {
-          browser: {
-            code: sourceBrowser,
-            config: {
-              settings: {
-                pageview: true,
-                session: true,
-              },
-            },
-          },
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: {
+        settings: {
+          pageview: true,
+          session: true,
         },
-      });
-    </script>
-    `}
-  language="html"
+      },
+    },
+  },
+});`}
+  language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` sources:
+
+<CodeSnippet
+  code={`"sources": {
+  "browser": {
+    "package": "@walkeros/web-source-browser",
+    "config": {
+      "settings": {
+        "pageview": true,
+        "session": true
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
   </TabItem>
 </Tabs>
 
@@ -116,6 +119,6 @@ See [Commands](/docs/sources/web/browser/commands) for complete API documentatio
 
 ## Next steps
 
-* [Tagging Guide](/docs/sources/web/browser/tagging) - Learn about data attributes
+* [Tagging Guide](/docs/sources/web/browser/tagging/html-attributes) - Learn about data attributes
 * [Commands Reference](/docs/sources/web/browser/commands) - Full API documentation
 * [Tagger Tool](/docs/sources/web/browser/tagger) - Visual tagging tool
