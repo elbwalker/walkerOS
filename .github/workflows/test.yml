@@ -40,7 +40,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: corepack enable
-      - run: npm install
+      - run: npm ci
       - name: Run tests
         run:
           npm run test -- ${{ (github.ref == 'refs/heads/main' ||

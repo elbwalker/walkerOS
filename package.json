@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "packages/cli",
+    "packages/config",
     "packages/core",
     "packages/collector",
     "packages/transformers/*",
@@ -63,5 +64,15 @@
   "browserslist": [
     "> 0.2%",
     "not dead"
-  ]
+  ],
+  "overrides": {
+    "ajv": "^8.17.1",
+    "@types/node": "^20.0.0",
+    "eslint": {
+      "ajv": "^6.12.6"
+    },
+    "schema-utils": {
+      "ajv": "^6.12.6"
+    }
+  }
 }
