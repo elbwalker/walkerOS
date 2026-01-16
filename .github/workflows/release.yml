@@ -51,22 +51,47 @@ jobs:
       - name: Test
         run: npm run test
 
-      - name: Capture changeset descriptions
+      - name: Capture changeset info
         id: changesets
         run: |
           CHANGES=""
+          PACKAGES=""
+          RELEASE_NEEDED="false"
+
           for file in .changeset/*.md; do
             if [ -f "$file" ] && [ "$(basename $file)" != "README.md" ]; then
-              # Only include if core or collector is in the frontmatter
-              if grep -q '"@walkeros/core"\|"@walkeros/collector"' "$file"; then
-                CONTENT=$(sed -n '/^---$/,/^---$/d; p' "$file")
+              # Extract package names from frontmatter
+              PKGS=$(sed -n '/^---$/,/^---$/p' "$file" | grep -oE "'@?walkeros[^']*'" | tr -d "'" | sort -u)
+              for pkg in $PKGS; do
+                # Add to packages list (dedupe later)
+                PACKAGES="$PACKAGES$pkg\n"
+              done
+
+              # Check if core or collector triggers release
+              if echo "$PKGS" | grep -qE "@walkeros/(core|collector)$"; then
+                RELEASE_NEEDED="true"
+              fi
+
+              # Capture description (text after frontmatter)
+              CONTENT=$(sed -n '/^---$/,/^---$/d; p' "$file" | sed '/^$/d')
+              if [ -n "$CONTENT" ]; then
                 CHANGES="$CHANGES$CONTENT\n\n"
               fi
             fi
           done
+
+          # Dedupe and format packages as markdown links
+          PACKAGES_FORMATTED=$(echo -e "$PACKAGES" | sort -u | grep -v '^$' | while read pkg; do
+            echo "- [$pkg](https://www.npmjs.com/package/$pkg)"
+          done)
+
           echo "changes<<EOF" >> $GITHUB_OUTPUT
           echo -e "$CHANGES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          echo "packages<<EOF" >> $GITHUB_OUTPUT
+          echo "$PACKAGES_FORMATTED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "release_needed=$RELEASE_NEEDED" >> $GITHUB_OUTPUT
 
       - name: Version packages (stable)
         if: inputs.release_type == 'stable release'
@@ -92,37 +117,9 @@ jobs:
         run: npm install --package-lock-only
 
       - name: Publish to npm
-        id: publish
-        run: |
-          set +e
-          OUTPUT=$(npx changeset publish 2>&1)
-          EXIT_CODE=$?
-          echo "$OUTPUT"
-          set -e
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "::error::Changeset publish failed with exit code $EXIT_CODE"
-            exit $EXIT_CODE
-          fi
-          # Extract published packages for PR comment
-          PUBLISHED=$(echo "$OUTPUT" | grep -E "^@walkeros/|^walkeros" | head -20 | sed 's/^/- /' || true)
-          echo "published<<EOF" >> $GITHUB_OUTPUT
-          echo "$PUBLISHED" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+        run: npx changeset publish
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Check collector version change
-        id: collector-check
-        run: |
-          # Compare current collector version with published
-          CURRENT=$(node -p "require('./packages/collector/package.json').version")
-          # Check if this version was just published
-          if echo "${{ steps.publish.outputs.published }}" | grep -q "@walkeros/collector@"; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "version=$CURRENT" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
 
       - name: Commit version changes (stable only)
         if: inputs.release_type == 'stable release'
@@ -134,14 +131,11 @@ jobs:
       - name: Create GitHub Release
         if: |
           inputs.release_type == 'stable release' &&
-          steps.collector-check.outputs.changed == 'true'
+          steps.changesets.outputs.release_needed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="v${{ steps.collector-check.outputs.version }}"
-
-          # Format published packages as npm links
-          PACKAGES=$(echo "${{ steps.publish.outputs.published }}" | sed 's/- \(@walkeros\/[^@]*\)@\([^ ]*\)/- [\1@\2](https:\/\/www.npmjs.com\/package\/\1)/g')
+          VERSION="v$(node -p "require('./packages/collector/package.json').version")"
 
           gh release create "$VERSION" \
             --title "walkerOS $VERSION" \
@@ -151,7 +145,7 @@ jobs:
 
           ## Published Packages
 
-          $PACKAGES"
+          ${{ steps.changesets.outputs.packages }}"
 
       # Docker image publishing
       - name: Get CLI version
@@ -188,7 +182,7 @@ jobs:
             walkeros/flow:${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}
 
       - name: Comment on PR
-        if: steps.publish.outputs.published != ''
+        if: steps.changesets.outputs.packages != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -221,7 +215,7 @@ jobs:
             BODY="$EMOJI **$TITLE**
 
           **Packages**
-          ${{ steps.publish.outputs.published }}
+          ${{ steps.changesets.outputs.packages }}
 
           Install: \`npm i @walkeros/core$INSTALL_TAG\`$DOCKER_SECTION"
 
