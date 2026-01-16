@@ -64,11 +64,8 @@ describe('Browser Source Integration Tests', () => {
     });
 
     test('processes pageview events correctly', async () => {
-      // Mock window.location for pageview
-      Object.defineProperty(window, 'location', {
-        value: { pathname: '/test-page' },
-        writable: true,
-      });
+      // Set URL path
+      window.history.replaceState({}, '', '/test-page');
 
       // Initialize source with pageview enabled - should automatically send pageview
       const source = await createBrowserSource(collector, { pageview: true });

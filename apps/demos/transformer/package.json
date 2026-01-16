@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/transformer-demo",
   "description": "Demo transformer for walkerOS - logs and passes through events",
-  "version": "0.6.1",
+  "version": "0.8.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -24,7 +24,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@walkeros/core": "0.7.0"
+    "@walkeros/core": "0.8.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

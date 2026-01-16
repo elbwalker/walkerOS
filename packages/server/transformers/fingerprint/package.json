@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-transformer-fingerprint",
   "description": "Fingerprint transformer for walkerOS server - hash configurable fields for session continuity",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -25,12 +25,12 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "peerDependencies": {
-    "@walkeros/core": "^0.7.0",
-    "@walkeros/server-core": "^0.6.1"
+    "@walkeros/core": "^0.8.0",
+    "@walkeros/server-core": "^0.8.0"
   },
   "devDependencies": {
-    "@walkeros/core": "0.7.0",
-    "@walkeros/server-core": "0.6.1"
+    "@walkeros/core": "0.8.0",
+    "@walkeros/server-core": "0.8.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

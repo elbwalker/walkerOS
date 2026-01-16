@@ -380,10 +380,7 @@ describe('Elb Layer', () => {
     });
 
     test('page events get pathname id', () => {
-      Object.defineProperty(window, 'location', {
-        value: { pathname: '/test-page' },
-        writable: true,
-      });
+      window.history.replaceState({}, '', '/test-page');
 
       setWindowElbLayer([['page view'] as unknown[]]);
 
@@ -400,11 +397,8 @@ describe('Elb Layer', () => {
     });
 
     test('source sends pageview when pageview enabled', async () => {
-      // Set up location mock
-      Object.defineProperty(window, 'location', {
-        value: { pathname: '/walker-run-test' },
-        writable: true,
-      });
+      // Set URL path
+      window.history.replaceState({}, '', '/walker-run-test');
 
       // Initialize source with pageview enabled - should send pageview immediately
       const source = await createBrowserSource(collector, { pageview: true });

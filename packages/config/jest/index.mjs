@@ -92,7 +92,7 @@ const config = {
   testMatch: ['<rootDir>/**/*.test.(ts|tsx|js|jsx)'],
   moduleFileExtensions: ['js', 'ts', 'tsx', 'mjs', 'json'],
   rootDir: '.',
-  moduleDirectories: ['node_modules', 'src'],
+  moduleDirectories: ['node_modules', 'src', path.join(packagesDir, 'node_modules')],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   moduleNameMapper: getModuleMapper(),
   globals: getGlobals(),
