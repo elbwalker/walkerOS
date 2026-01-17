@@ -1,28 +1,147 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Browser to BigQuery Demo</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>walkerOS Flow Demo</title>
   <style>
-    body { font-family: system-ui; max-width: 600px; margin: 2rem auto; padding: 1rem; }
-    button { padding: 0.5rem 1rem; margin: 0.25rem; cursor: pointer; }
-    .info { margin-top: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 4px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; color: #f8fafc; }
+    .subtitle { color: #94a3b8; margin-bottom: 2rem; }
+
+    .card {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid #334155;
+      margin-bottom: 1.5rem;
+    }
+    .card h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #f1f5f9; }
+
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .btn {
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-warning { background: #f59e0b; color: #1e293b; }
+    .btn-purple { background: #8b5cf6; color: white; }
+
+    .batch-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .batch-box {
+      aspect-ratio: 1;
+      background: #334155;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .batch-box:hover {
+      background: #10b981;
+      color: white;
+      transform: scale(1.05);
+    }
+
+    .info {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #1e293b;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+    .info code {
+      background: #334155;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
-  <h1>Browser to BigQuery Demo</h1>
-  <p>Click buttons to send events through the pipeline:</p>
+  <div class="container">
+    <h1>walkerOS Flow Demo</h1>
+    <p class="subtitle">Real 1st party data collection - events flow to YOUR infrastructure</p>
 
-  <div>
-    <button onclick="elb('page view', {title: 'Demo Page'})">page view</button>
-    <button onclick="elb('product view', {id: 'SKU-123', name: 'Test Product', price: 99.99})">product view</button>
-    <button onclick="elb('order complete', {id: 'ORD-456', total: 149.99, currency: 'EUR'})">order complete</button>
+    <div class="card">
+      <h2>Quick Events</h2>
+      <div class="btn-grid">
+        <button class="btn btn-primary" onclick="elb('page view', { title: 'Demo Page' })">
+          Page View
+        </button>
+        <button class="btn btn-success" onclick="elb('button click', { label: 'CTA Button' })">
+          Button Click
+        </button>
+        <button class="btn btn-warning" onclick="elb('form submit', { form: 'newsletter' })">
+          Form Submit
+        </button>
+        <button class="btn btn-purple" onclick="elb('order complete', { orderId: 'ORD-' + Date.now(), total: 99.99 })">
+          Order Complete
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Batch Demo (hover to trigger)</h2>
+      <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 0.75rem;">
+        Hover over boxes quickly - events batch together (100ms window)
+      </p>
+      <div class="batch-grid">
+        <div class="batch-box" data-elb="batch" data-elb-batch="id:1" data-elbaction="hover:me">1</div>
+        <div class="batch-box" data-elb="batch" data-elb-batch="id:2" data-elbaction="hover:me">2</div>
+        <div class="batch-box" data-elb="batch" data-elb-batch="id:3" data-elbaction="hover:me">3</div>
+        <div class="batch-box" data-elb="batch" data-elb-batch="id:4" data-elbaction="hover:me">4</div>
+        <div class="batch-box" data-elb="batch" data-elb-batch="id:5" data-elbaction="hover:me">5</div>
+        <div class="batch-box" data-elb="batch" data-elb-batch="id:6" data-elbaction="hover:me">6</div>
+        <div class="batch-box" data-elb="batch" data-elb-batch="id:7" data-elbaction="hover:me">7</div>
+        <div class="batch-box" data-elb="batch" data-elb-batch="id:8" data-elbaction="hover:me">8</div>
+        <div class="batch-box" data-elb="batch" data-elb-batch="id:9" data-elbaction="hover:me">9</div>
+        <div class="batch-box" data-elb="batch" data-elb-batch="id:10" data-elbaction="hover:me">10</div>
+      </div>
+    </div>
+
+    <div class="info">
+      <strong>Try in browser console:</strong>
+      <code>elb('custom event', { any: 'data' })</code>
+      <br><br>
+      <strong>Check Network tab:</strong> Events go to <code>walkeros-demo-xxx.run.app/collect</code> (YOUR endpoint)
+    </div>
   </div>
 
-  <div class="info">
-    <strong>Event Flow:</strong><br>
-    Browser → API Destination → Express Source → BigQuery
-  </div>
+  <!-- elb stub for queuing events before walker.js loads -->
+  <script>
+    function elb() {
+      (window.elbLayer = window.elbLayer || []).push(arguments);
+    }
+  </script>
 
-  <script src="./dist/walker.js"></script>
+  <!-- Load walker.js bundle (includes browser source + demo/api/ga4 destinations) -->
+  <script src="https://walkeros-serve-7cr5nwd5yq-ey.a.run.app/walker.js"></script>
 </body>
 </html>

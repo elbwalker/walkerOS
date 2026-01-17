@@ -1,3 +1,0 @@
-dist/
-shared/credentials/*.json
-!shared/credentials/.gitkeep

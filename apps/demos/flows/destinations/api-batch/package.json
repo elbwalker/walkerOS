@@ -1,0 +1,8 @@
+{
+  "name": "@walkeros/web-destination-api-batch",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs"
+  }
+}
