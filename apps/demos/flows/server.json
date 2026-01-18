@@ -38,9 +38,9 @@
           "code": "destinationBigQuery",
           "config": {
             "settings": {
-              "projectId": "playground-388912",
-              "datasetId": "walkerTut",
-              "tableId": "events",
+              "projectId": "$PROJECT_ID",
+              "datasetId": "$DATASET_ID",
+              "tableId": "$TABLE_ID",
               "location": "EU"
             }
           }

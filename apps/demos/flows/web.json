@@ -10,7 +10,7 @@
         "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/web-source-browser": {},
         "@walkeros/destination-demo": {},
-        "@walkeros/web-destination-api": { "path": "./destinations/api-batch" },
+        "@walkeros/web-destination-api": {},
         "@walkeros/web-destination-gtag": {}
       },
       "sources": {
@@ -41,11 +41,11 @@
           "code": "destinationAPI",
           "config": {
             "settings": {
-              "url": "https://walkeros-demo-589702085965.europe-west3.run.app/collect"
+              "url": "$ENDPOINT/collect"
             },
             "mapping": {
               "batch": {
-                "later": { "batch": 100 }
+                "me": { "batch": 100 }
               }
             }
           }

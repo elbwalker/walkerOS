@@ -14,9 +14,11 @@ production-ready live demo for data ownership and sovereignty.
 ```bash
 cd /workspaces/developer/walkerOS/apps/demos/flows
 
-export PROJECT_ID=playground-388912
-export REGION=europe-west3
-export ENDPOINT=https://walkeros-demo-589702085965.europe-west3.run.app
+export PROJECT_ID=YOUR_PROJECTID
+export DATASET_ID=YOUR_DATASET
+export TABLE_ID=events
+export REGION=YOUR_REGION
+export ENDPOINT=YOUR_ENDPOINT
 ```
 
 ---
@@ -95,7 +97,7 @@ export ENDPOINT=$(gcloud run services describe walkeros-demo --region $REGION --
 # Send a test event
 curl -X POST $ENDPOINT/collect \
   -H "Content-Type: application/json" \
-  -d '{"event":"test","data":{"step":1}}'
+  -d '{"name":"hey there","data":{"step":1}}'
 ```
 
 ---
@@ -147,9 +149,9 @@ Add the BigQuery destination to your flow.json:
           "code": "destinationBigQuery",
           "config": {
             "settings": {
-              "projectId": "playground-388912",
-              "datasetId": "analytics",
-              "tableId": "events",
+              "projectId": "$PROJECT_ID",
+              "datasetId": "$DATASET_ID",
+              "tableId": "$TABLE_ID",
               "location": "EU"
             }
           }
@@ -186,11 +188,11 @@ gcloud run deploy walkeros-demo \
 # Send test event
 curl -X POST $ENDPOINT/collect \
   -H "Content-Type: application/json" \
-  -d '{"event":"page view","data":{"title":"Demo Page"}}'
+  -d '{"name":"page view","data":{"title":"Demo Page"}}'
 
 # Query BigQuery (in GCP Console or bq CLI)
 bq query --use_legacy_sql=false \
-  "SELECT * FROM \`${PROJECT_ID}.analytics.events\` ORDER BY timestamp DESC LIMIT 5"
+  "SELECT * FROM \`${PROJECT_ID}.${DATASET_ID}.${TABLE_ID}\` ORDER BY timestamp DESC LIMIT 5"
 ```
 
 ---
@@ -248,7 +250,7 @@ Add the `web` flow to your flow.json:
           "code": "destinationAPI",
           "config": {
             "settings": {
-              "url": "https://walkeros-demo-589702085965.europe-west3.run.app/collect"
+              "url": "$ENDPOINT/collect"
             }
           }
         },
@@ -361,6 +363,8 @@ flows/
 | Variable      | Purpose                               |
 | ------------- | ------------------------------------- |
 | `$PROJECT_ID` | Your GCP project ID                   |
+| `$DATASET_ID` | Your BigQuery dataset                 |
+| `$TABLE_ID`   | Your BigQuery table (default: events) |
 | `$REGION`     | Cloud Run region (e.g., europe-west3) |
 | `$ENDPOINT`   | Your collect endpoint URL             |
 | `$SERVE_URL`  | Your walker.js hosting URL            |
