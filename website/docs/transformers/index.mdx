@@ -8,6 +8,28 @@ sidebar_position: 5
 
 Transformers are middleware for **validating**, **enriching**, and **redacting** events in the walkerOS pipeline.
 
+<FlowMap
+  sources={{ default: { label: 'Source', next: 'pre', highlight: false } }}
+  preTransformers={{ pre: { label: 'Transformer(s)', highlight: true } }}
+  collector={{ label: 'Collector', highlight: false }}
+  postTransformers={{ post: { label: 'Transformer(s)', highlight: true } }}
+  destinations={{ default: { label: 'Destination', before: 'post', highlight: false } }}
+  markers={[
+    { position: 'pre-pre', id: '1', text: 'Pre-collector: After sources, before event enrichment' },
+    { position: 'post-post', id: '2', text: 'Post-collector: After enrichment, before destinations' },
+  ]}
+/>
+
+## Use cases
+
+| Use Case | Example |
+|----------|---------|
+| **Validate** | Ensure events match JSON Schema contracts |
+| **Enrich** | Add server-side data (user segments, geo) |
+| **Redact** | Remove PII before sending to destinations |
+
+## Configuration
+
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 
@@ -23,25 +45,6 @@ await startFlow({
 });`}
   language="typescript"
 />
-
-## Use cases
-
-| Use Case | Example |
-|----------|---------|
-| **Validate** | Ensure events match JSON Schema contracts |
-| **Enrich** | Add server-side data (user segments, geo) |
-| **Redact** | Remove PII before sending to destinations |
-
-## Execution points
-
-Transformers run in chains at two points in the pipeline:
-
-```
-Source → [Pre-Collector] → Collector → [Post-Collector] → Destination
-```
-
-* **Pre-collector**: After sources, before event enrichment
-* **Post-collector**: After enrichment, before destinations
 
 ## Available transformers
 
