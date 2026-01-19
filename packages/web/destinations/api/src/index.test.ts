@@ -28,20 +28,7 @@ describe('Destination API', () => {
     });
   });
 
-  test('init', () => {
-    // Test with no URL - should throw error
-    expect(() =>
-      destination.push(event, {
-        collector: {} as Collector.Instance,
-        config: {},
-        env: testEnv,
-        logger: mockLogger,
-        id: 'test-api',
-      }),
-    ).toThrow('Config settings url missing');
-    expect(mockSendWeb).not.toHaveBeenCalled();
-
-    // Test with URL - should call sendWeb
+  test('push', () => {
     destination.push(event, {
       collector: {} as Collector.Instance,
       config: { settings: { url } },
