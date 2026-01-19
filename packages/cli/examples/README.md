@@ -39,6 +39,39 @@ cp examples/web-serve.js ../docker/demos/demo-serve.mjs
 **Important**: Always use `--local` flag when rebuilding examples in the
 devcontainer.
 
+## Comprehensive Example
+
+### flow-complete.json
+
+**Purpose**: Complete reference demonstrating ALL JSON-compatible walkerOS
+features
+
+**Features**: 51 features including variables, definitions, mapping (key, map,
+loop, set), transformers (validator, fingerprint), consent gating, wildcards,
+ingest metadata, and more.
+
+**Architecture**: Two named flows (`web` and `server`) showing full event
+pipeline from browser to server-side forwarding.
+
+**Documentation**: See [flow-complete.md](./flow-complete.md) for the complete
+Feature Inventory and usage examples.
+
+**Try it**:
+
+```bash
+# Web flow (opens browser with demo events)
+walkeros serve examples/flow-complete.json --flow web
+
+# Server flow (HTTP collection endpoint)
+walkeros run examples/flow-complete.json --flow server
+
+# Both (full pipeline)
+# Terminal 1: walkeros run examples/flow-complete.json --flow server
+# Terminal 2: walkeros serve examples/flow-complete.json --flow web
+```
+
+---
+
 ## Web Examples
 
 ### web-serve.json

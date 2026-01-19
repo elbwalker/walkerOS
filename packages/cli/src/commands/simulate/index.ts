@@ -10,15 +10,6 @@ export async function simulateCommand(
   options: SimulateCommandOptions,
 ): Promise<void> {
   const logger = createCommandLogger(options);
-
-  // Handle dry-run
-  if (options.dryRun) {
-    logger.log(
-      `[DRY-RUN] Would execute simulate with config: ${options.config}`,
-    );
-    return;
-  }
-
   const startTime = Date.now();
 
   try {
@@ -29,6 +20,7 @@ export async function simulateCommand(
 
     // Execute simulation
     const result = await simulateCore(options.config, event, {
+      flow: options.flow,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,

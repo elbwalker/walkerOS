@@ -34,9 +34,6 @@ export interface RunCommandOptions {
   /** Verbose logging */
   verbose?: boolean;
 
-  /** Dry-run mode */
-  dryRun?: boolean;
-
   /** Suppress output */
   silent?: boolean;
 }

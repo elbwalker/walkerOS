@@ -19,12 +19,6 @@ export interface GlobalOptions {
    * @default false
    */
   silent?: boolean;
-
-  /**
-   * Preview command without executing
-   * @default false
-   */
-  dryRun?: boolean;
 }
 
 /**
@@ -39,11 +33,4 @@ export function shouldShowOutput(options: GlobalOptions): boolean {
  */
 export function isVerbose(options: GlobalOptions): boolean {
   return options.verbose === true;
-}
-
-/**
- * Check if this is a dry run
- */
-export function isDryRun(options: GlobalOptions): boolean {
-  return options.dryRun === true;
 }

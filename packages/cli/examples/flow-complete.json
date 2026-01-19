@@ -1,0 +1,571 @@
+{
+  "$schema": "https://walkeros.io/schema/flow/v1.json",
+  "version": 1,
+  "variables": {
+    "currency": "EUR",
+    "flowVersion": "1.0.0",
+    "ga4MeasurementId": "${GA4_MEASUREMENT_ID:G-DEMO123456}",
+    "apiUrl": "${API_URL:http://localhost:8080/collect}"
+  },
+  "definitions": {
+    "ga4ItemsLoop": {
+      "loop": [
+        "nested",
+        {
+          "map": {
+            "item_id": "data.id",
+            "item_name": "data.name",
+            "price": "data.price",
+            "quantity": { "key": "data.quantity", "value": 1 }
+          }
+        }
+      ]
+    },
+    "metaContentsLoop": {
+      "loop": [
+        "nested",
+        {
+          "map": {
+            "id": "data.id",
+            "item_price": "data.price",
+            "quantity": { "key": "data.quantity", "value": 1 }
+          }
+        }
+      ]
+    }
+  },
+  "flows": {
+    "web": {
+      "web": {
+        "windowCollector": "collector",
+        "windowElb": "elb"
+      },
+      "packages": {
+        "@walkeros/collector": {},
+        "@walkeros/web-source-browser": {},
+        "@walkeros/web-source-datalayer": {},
+        "@walkeros/source-demo": {},
+        "@walkeros/web-destination-gtag": {},
+        "@walkeros/web-destination-api": {},
+        "@walkeros/transformer-validator": {}
+      },
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "primary": true,
+          "config": {
+            "settings": {
+              "prefix": "data-elb",
+              "pageview": true,
+              "session": {
+                "consent": { "marketing": true }
+              },
+              "elb": "elb",
+              "elbLayer": true
+            }
+          }
+        },
+        "dataLayer": {
+          "package": "@walkeros/web-source-datalayer",
+          "next": "dataLayerValidator",
+          "config": {
+            "settings": {
+              "name": "dataLayer",
+              "prefix": "gtag"
+            },
+            "mapping": {
+              "add_to_cart": {
+                "*": {
+                  "name": "product add",
+                  "data": {
+                    "map": {
+                      "id": "items.0.item_id",
+                      "name": "items.0.item_name",
+                      "price": "items.0.price",
+                      "currency": "currency",
+                      "quantity": { "key": "items.0.quantity", "value": 1 }
+                    }
+                  }
+                }
+              },
+              "purchase": {
+                "*": {
+                  "name": "order complete",
+                  "data": {
+                    "map": {
+                      "id": "transaction_id",
+                      "total": "value",
+                      "currency": "currency",
+                      "tax": "tax",
+                      "shipping": "shipping"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "demo": {
+          "package": "@walkeros/source-demo",
+          "config": {
+            "settings": {
+              "events": [
+                {
+                  "name": "page view",
+                  "data": { "title": "Home", "path": "/" },
+                  "delay": 0
+                },
+                {
+                  "name": "product view",
+                  "data": {
+                    "id": "SKU-001",
+                    "name": "Blue Shirt",
+                    "price": 49.99,
+                    "currency": "EUR",
+                    "category": "Clothing"
+                  },
+                  "delay": 300
+                },
+                {
+                  "name": "product add",
+                  "data": {
+                    "id": "SKU-001",
+                    "name": "Blue Shirt",
+                    "price": 49.99,
+                    "currency": "EUR",
+                    "quantity": 2
+                  },
+                  "delay": 600
+                },
+                {
+                  "name": "test debug",
+                  "data": { "message": "This should be ignored" },
+                  "delay": 800
+                },
+                {
+                  "name": "order complete",
+                  "data": {
+                    "id": "ORD-123",
+                    "total": 149.97,
+                    "currency": "EUR",
+                    "tax": 12.5,
+                    "shipping": 5.99
+                  },
+                  "user": {
+                    "email": "customer@example.com",
+                    "id": "U-456",
+                    "device": "d3v1c3",
+                    "session": "s3ss10n"
+                  },
+                  "nested": [
+                    {
+                      "entity": "product",
+                      "data": {
+                        "id": "SKU-001",
+                        "name": "Blue Shirt",
+                        "price": 49.99,
+                        "quantity": 2
+                      }
+                    },
+                    {
+                      "entity": "product",
+                      "data": {
+                        "id": "SKU-002",
+                        "name": "Red Cap",
+                        "price": 24.99,
+                        "quantity": 1
+                      }
+                    }
+                  ],
+                  "delay": 1000
+                }
+              ]
+            }
+          }
+        }
+      },
+      "transformers": {
+        "dataLayerValidator": {
+          "package": "@walkeros/transformer-validator",
+          "config": {
+            "settings": {
+              "contract": {
+                "product": {
+                  "add": {
+                    "schema": {
+                      "properties": {
+                        "data": {
+                          "required": ["id", "name"]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "destinations": {
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "consent": { "marketing": true },
+            "settings": {
+              "ga4": { "measurementId": "$variables.ga4MeasurementId" }
+            },
+            "mapping": {
+              "page": {
+                "view": {
+                  "name": "page_view",
+                  "data": {
+                    "map": {
+                      "page_title": "data.title",
+                      "page_location": "data.path"
+                    }
+                  }
+                }
+              },
+              "product": {
+                "view": {
+                  "name": "view_item",
+                  "data": {
+                    "map": {
+                      "currency": {
+                        "key": "data.currency",
+                        "value": "$variables.currency"
+                      },
+                      "value": "data.price",
+                      "items": {
+                        "loop": [
+                          "this",
+                          {
+                            "map": {
+                              "item_id": "data.id",
+                              "item_name": "data.name",
+                              "item_category": "data.category",
+                              "price": "data.price"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                "add": {
+                  "name": "add_to_cart",
+                  "data": {
+                    "map": {
+                      "currency": {
+                        "key": "data.currency",
+                        "value": "$variables.currency"
+                      },
+                      "value": "data.price",
+                      "items": {
+                        "loop": [
+                          "this",
+                          {
+                            "map": {
+                              "item_id": "data.id",
+                              "item_name": "data.name",
+                              "quantity": { "key": "data.quantity", "value": 1 }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "order": {
+                "complete": {
+                  "name": "purchase",
+                  "data": {
+                    "map": {
+                      "transaction_id": "data.id",
+                      "value": "data.total",
+                      "currency": {
+                        "key": "data.currency",
+                        "value": "$variables.currency"
+                      },
+                      "tax": "data.tax",
+                      "shipping": "data.shipping",
+                      "items": { "$ref": "#/definitions/ga4ItemsLoop" }
+                    }
+                  }
+                }
+              },
+              "test": {
+                "*": {
+                  "ignore": true
+                }
+              }
+            }
+          }
+        },
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "settings": {
+              "url": "$variables.apiUrl",
+              "batch": 5
+            },
+            "mapping": {
+              "order": {
+                "complete": {
+                  "data": {
+                    "map": {
+                      "transaction_id": "data.id",
+                      "value": "data.total",
+                      "currency": "data.currency",
+                      "user_email": {
+                        "key": "user.email",
+                        "consent": { "marketing": true }
+                      },
+                      "items": { "$ref": "#/definitions/ga4ItemsLoop" }
+                    }
+                  }
+                }
+              },
+              "test": {
+                "*": {
+                  "ignore": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "collector": {
+        "tagging": 1,
+        "consent": {
+          "functional": true,
+          "marketing": false
+        },
+        "user": {
+          "id": "anonymous"
+        },
+        "globals": {
+          "environment": "demo",
+          "version": "$variables.flowVersion"
+        },
+        "custom": {
+          "campaign": "flow-demo"
+        }
+      }
+    },
+    "server": {
+      "server": {},
+      "variables": {
+        "metaPixelId": "${META_PIXEL_ID:123456789012345}",
+        "metaAccessToken": "${META_ACCESS_TOKEN:demo_token}"
+      },
+      "packages": {
+        "@walkeros/collector": {},
+        "@walkeros/server-source-express": {},
+        "@walkeros/server-destination-meta": {},
+        "@walkeros/destination-demo": {},
+        "@walkeros/transformer-validator": {},
+        "@walkeros/server-transformer-fingerprint": {}
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "primary": true,
+          "config": {
+            "settings": {
+              "path": "/collect",
+              "port": 8080,
+              "cors": true,
+              "healthCheck": true
+            },
+            "ingest": {
+              "context.ip": "ip",
+              "context.userAgent": "headers.user-agent",
+              "context.language": "headers.accept-language",
+              "context.referer": "headers.referer"
+            }
+          }
+        }
+      },
+      "transformers": {
+        "fingerprint": {
+          "package": "@walkeros/server-transformer-fingerprint",
+          "next": "serverValidator",
+          "config": {
+            "settings": {
+              "fields": [
+                "context.ip",
+                "context.userAgent",
+                "context.language",
+                { "value": "2026-01-16" }
+              ],
+              "output": "user.hash",
+              "length": 16
+            }
+          }
+        },
+        "serverValidator": {
+          "package": "@walkeros/transformer-validator",
+          "config": {
+            "settings": {
+              "format": true,
+              "contract": {
+                "product": {
+                  "*": {
+                    "schema": {
+                      "properties": {
+                        "data": {
+                          "required": ["id", "name", "price"]
+                        }
+                      }
+                    }
+                  }
+                },
+                "order": {
+                  "complete": {
+                    "schema": {
+                      "properties": {
+                        "data": {
+                          "required": ["id", "total"]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "destinations": {
+        "meta": {
+          "package": "@walkeros/server-destination-meta",
+          "before": "fingerprint",
+          "config": {
+            "settings": {
+              "pixelId": "$variables.metaPixelId",
+              "accessToken": "$variables.metaAccessToken",
+              "user_data": {
+                "external_id": {
+                  "set": ["user.device", "user.session"]
+                }
+              }
+            },
+            "policy": {
+              "user_data.em": {
+                "key": "user.email",
+                "consent": { "marketing": true }
+              },
+              "user_data.external_id": "user.id",
+              "custom_data.server_processed": { "value": true },
+              "custom_data.request_meta": {
+                "map": {
+                  "ip": "context.ip",
+                  "ua": "context.userAgent"
+                }
+              }
+            },
+            "mapping": {
+              "page": {
+                "view": {
+                  "name": "PageView",
+                  "data": "data"
+                }
+              },
+              "product": {
+                "view": {
+                  "name": "ViewContent",
+                  "data": {
+                    "map": {
+                      "value": "data.price",
+                      "currency": {
+                        "key": "data.currency",
+                        "value": "$variables.currency"
+                      },
+                      "content_type": { "value": "product" },
+                      "content_ids": {
+                        "set": ["data.id"]
+                      }
+                    }
+                  }
+                },
+                "add": {
+                  "name": "AddToCart",
+                  "data": {
+                    "map": {
+                      "value": "data.price",
+                      "currency": {
+                        "key": "data.currency",
+                        "value": "$variables.currency"
+                      },
+                      "content_type": { "value": "product" },
+                      "contents": {
+                        "loop": [
+                          "this",
+                          {
+                            "map": {
+                              "id": "data.id",
+                              "quantity": { "key": "data.quantity", "value": 1 }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "order": {
+                "complete": {
+                  "name": "Purchase",
+                  "data": {
+                    "map": {
+                      "value": "data.total",
+                      "currency": {
+                        "key": "data.currency",
+                        "value": "$variables.currency"
+                      },
+                      "order_id": "data.id",
+                      "contents": { "$ref": "#/definitions/metaContentsLoop" }
+                    }
+                  }
+                }
+              },
+              "test": {
+                "*": {
+                  "ignore": true
+                }
+              },
+              "*": {
+                "click": {
+                  "name": "CustomEvent",
+                  "data": "data"
+                }
+              }
+            }
+          }
+        },
+        "demo": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": {
+              "name": "Server Events",
+              "values": ["name", "data", "nested", "user", "consent", "context"]
+            }
+          }
+        }
+      },
+      "collector": {
+        "tagging": 1,
+        "consent": {
+          "functional": true
+        },
+        "globals": {
+          "environment": "demo",
+          "version": "$variables.flowVersion",
+          "platform": "server"
+        }
+      }
+    }
+  }
+}
