@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "flows": {
+    "web": {
+      "web": {
+        "windowCollector": "collector",
+        "windowElb": "elb"
+      },
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/web-source-browser": {},
+        "@walkeros/destination-demo": {},
+        "@walkeros/web-destination-api": {},
+        "@walkeros/web-destination-gtag": {}
+      },
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "code": "sourceBrowser",
+          "config": {
+            "settings": {
+              "pageview": true,
+              "session": true
+            }
+          }
+        }
+      },
+      "destinations": {
+        "demo": {
+          "package": "@walkeros/destination-demo",
+          "code": "destinationDemo",
+          "config": {
+            "settings": {
+              "name": "console",
+              "values": ["name", "data", "context", "timestamp"]
+            }
+          }
+        },
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "code": "destinationAPI",
+          "config": {
+            "settings": {
+              "url": "$ENDPOINT/collect"
+            },
+            "mapping": {
+              "batch": {
+                "me": { "batch": 100 }
+              }
+            }
+          }
+        },
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag",
+          "code": "destinationGtag",
+          "config": {
+            "loadScript": true,
+            "settings": {
+              "ga4": {
+                "measurementId": "G-XXXXXXXXXX"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

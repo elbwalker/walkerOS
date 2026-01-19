@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/quickstart",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Verified code examples for walkerOS documentation",
   "license": "MIT",
@@ -18,7 +18,7 @@
     "@walkeros/web-core": "1.0.0",
     "@walkeros/web-source-browser": "1.0.0",
     "@walkeros/web-destination-gtag": "1.0.0",
-    "@walkeros/web-destination-api": "1.0.0"
+    "@walkeros/web-destination-api": "1.1.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

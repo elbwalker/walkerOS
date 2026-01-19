@@ -67,14 +67,7 @@ export async function runCommand(
       }
     }
 
-    // Step 3: Execute locally
-    // Handle dry-run
-    if (options.dryRun) {
-      logger.log(`[DRY-RUN] Would execute locally: run ${mode}`);
-      return;
-    }
-
-    // Execute locally using runtime module
+    // Step 3: Execute locally using runtime module
     const modeLabel = mode === 'collect' ? 'Collector' : 'Server';
     logger.log(`Starting ${modeLabel}...`);
 

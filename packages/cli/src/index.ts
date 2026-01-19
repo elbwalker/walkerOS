@@ -60,15 +60,17 @@ program.hook('preAction', (thisCommand, actionCommand) => {
 program
   .command('bundle [file]')
   .description('Bundle NPM packages with custom code')
-  .option('-f, --flow <name>', 'flow to build (for multi-flow configs)')
-  .option('--all', 'build all flows (for multi-flow configs)')
-  .option('-s, --stats', 'show bundle statistics')
-  .option('--json', 'output statistics in JSON format (implies --stats)')
-  .option('--no-cache', 'disable package caching and download fresh packages')
+  .option('--flow <name>', 'flow name for multi-flow configs')
+  .option('--all', 'build all flows for multi-flow configs')
+  .option('--stats', 'show bundle statistics')
+  .option('--json', 'output as JSON (implies --stats)')
+  .option('--no-cache', 'disable package caching')
   .option('-v, --verbose', 'verbose output')
-  .option('--dry-run', 'preview command without executing')
-  .option('--silent', 'suppress output')
-  .option('--dockerfile', 'generate Dockerfile alongside bundle')
+  .option('-s, --silent', 'suppress output')
+  .option(
+    '--dockerfile [file]',
+    'generate Dockerfile (or copy custom file) to dist/',
+  )
   .action(async (file, options) => {
     await bundleCommand({
       config: file || 'bundle.config.json',
@@ -78,7 +80,6 @@ program
       json: options.json,
       cache: options.cache,
       verbose: options.verbose,
-      dryRun: options.dryRun,
       silent: options.silent,
       dockerfile: options.dockerfile,
     });
@@ -90,21 +91,21 @@ program
   .description('Simulate event processing and capture API calls')
   .option(
     '-e, --event <source>',
-    'Event to simulate (JSON string, file path, or URL)',
+    'event to simulate (JSON string, file path, or URL)',
   )
-  .option('-p, --platform <platform>', 'Platform override (web or server)')
-  .option('--json', 'Output results as JSON')
-  .option('-v, --verbose', 'Verbose output')
-  .option('--dry-run', 'preview command without executing')
-  .option('--silent', 'suppress output')
+  .option('--flow <name>', 'flow name for multi-flow configs')
+  .option('-p, --platform <platform>', 'platform override (web or server)')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
   .action(async (file, options) => {
     await simulateCommand({
       config: file || 'bundle.config.json',
       event: options.event,
+      flow: options.flow,
       platform: options.platform,
       json: options.json,
       verbose: options.verbose,
-      dryRun: options.dryRun,
       silent: options.silent,
     });
   });
@@ -115,13 +116,13 @@ program
   .description('Push an event through the flow with real API execution')
   .requiredOption(
     '-e, --event <source>',
-    'Event to push (JSON string, file path, or URL)',
+    'event to push (JSON string, file path, or URL)',
   )
-  .option('--flow <name>', 'Flow name (for multi-flow configs)')
-  .option('-p, --platform <platform>', 'Platform override (web or server)')
-  .option('--json', 'Output results as JSON')
-  .option('-v, --verbose', 'Verbose output')
-  .option('-s, --silent', 'Suppress output')
+  .option('--flow <name>', 'flow name for multi-flow configs')
+  .option('-p, --platform <platform>', 'platform override (web or server)')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
   .action(async (file, options) => {
     await pushCommand({
       config: file || 'bundle.config.json',
@@ -145,12 +146,11 @@ runCmd
   .description(
     'Run collector mode (event collection endpoint). Defaults to server-collect.mjs if no file specified.',
   )
-  .option('-p, --port <number>', 'Port to listen on (default: 8080)', parseInt)
-  .option('-h, --host <address>', 'Host address (default: 0.0.0.0)')
-  .option('--json', 'Output results as JSON')
-  .option('-v, --verbose', 'Verbose output')
-  .option('--dry-run', 'preview command without executing')
-  .option('--silent', 'suppress output')
+  .option('-p, --port <number>', 'port to listen on (default: 8080)', parseInt)
+  .option('-h, --host <address>', 'host address (default: 0.0.0.0)')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
   .action(async (file, options) => {
     await runCommand('collect', {
       config: file || 'server-collect.mjs',
@@ -158,7 +158,6 @@ runCmd
       host: options.host,
       json: options.json,
       verbose: options.verbose,
-      dryRun: options.dryRun,
       silent: options.silent,
     });
   });
@@ -169,14 +168,13 @@ runCmd
   .description(
     'Run serve mode (single-file server for browser bundles). Defaults to baked-in web-serve.js if no file specified.',
   )
-  .option('-p, --port <number>', 'Port to listen on (default: 8080)', parseInt)
-  .option('-h, --host <address>', 'Host address (default: 0.0.0.0)')
-  .option('--name <filename>', 'Filename in URL (default: walker.js)')
+  .option('-p, --port <number>', 'port to listen on (default: 8080)', parseInt)
+  .option('-h, --host <address>', 'host address (default: 0.0.0.0)')
+  .option('--name <filename>', 'filename in URL (default: walker.js)')
   .option('--path <directory>', 'URL directory path (e.g., libs/v1)')
-  .option('--json', 'Output results as JSON')
-  .option('-v, --verbose', 'Verbose output')
-  .option('--dry-run', 'preview command without executing')
-  .option('--silent', 'suppress output')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
   .action(async (file, options) => {
     await runCommand('serve', {
       config: file || 'web-serve.js',
@@ -186,7 +184,6 @@ runCmd
       servePath: options.path,
       json: options.json,
       verbose: options.verbose,
-      dryRun: options.dryRun,
       silent: options.silent,
     });
   });

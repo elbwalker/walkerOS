@@ -1,5 +1,12 @@
 # @walkeros/web-destination-api
 
+## 1.1.0
+
+### Minor Changes
+
+- ae79bfa: Add batching support with `pushBatch` method and `init` for early URL
+  validation
+
 ## 1.0.0
 
 ### Major Changes

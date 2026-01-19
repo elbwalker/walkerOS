@@ -77,22 +77,31 @@ walkeros bundle https://example.com/config.json                  # Remote URL
 
 **Options:**
 
-- `-f, --flow <name>` - Build specific flow (multi-flow configs)
-- `--all` - Build all flows
-- `-s, --stats` - Show bundle statistics
-- `--json` - Output stats as JSON
+- `--flow <name>` - Flow name for multi-flow configs
+- `--all` - Build all flows for multi-flow configs
+- `--stats` - Show bundle statistics
+- `--json` - Output as JSON (implies --stats)
 - `--no-cache` - Disable package caching
+- `--dockerfile [file]` - Generate Dockerfile (or copy custom file) to dist/
 - `-v, --verbose` - Verbose output
+- `-s, --silent` - Suppress output
 
-**Example:**
+**Examples:**
 
 ```bash
 # Bundle with stats
 walkeros bundle examples/server-collect.json --stats
+
+# Bundle with auto-generated Dockerfile
+walkeros bundle flow.json --dockerfile
+
+# Bundle with custom Dockerfile
+walkeros bundle flow.json --dockerfile Dockerfile.custom
 ```
 
 The output path uses convention-based defaults: `./dist/bundle.mjs` for server,
-`./dist/walker.js` for web.
+`./dist/walker.js` for web. The `--dockerfile` flag generates a Dockerfile with
+the correct `MODE` (collect/serve) based on flow type.
 
 ### simulate
 
@@ -112,10 +121,12 @@ The CLI auto-detects the input type by attempting to parse as JSON.
 
 **Options:**
 
-- `-e, --event <json>` - Event JSON string (required)
+- `-e, --event <json>` - Event to simulate (JSON string, file path, or URL)
+- `--flow <name>` - Flow name for multi-flow configs
 - `-p, --platform <platform>` - Platform override (`web` or `server`)
-- `--json` - Output results as JSON
+- `--json` - Output as JSON
 - `-v, --verbose` - Verbose output
+- `-s, --silent` - Suppress output
 
 **Examples:**
 
@@ -124,6 +135,9 @@ The CLI auto-detects the input type by attempting to parse as JSON.
 walkeros simulate examples/web-serve.json \
   --event '{"name":"page view","data":{"title":"Home"}}' \
   --json
+
+# Simulate specific flow from multi-flow config
+walkeros simulate flow.json --flow server --event '{"name":"test"}'
 
 # Simulate with pre-built bundle
 walkeros simulate dist/bundle.mjs --event '{"name":"page view"}'
@@ -219,9 +233,9 @@ walkeros run <mode> <config-file> [options]
 
 - `-p, --port <number>` - Server port
 - `-h, --host <host>` - Server host
-- `--static-dir <dir>` - Static directory (serve mode)
-- `--json` - JSON output
+- `--json` - Output as JSON
 - `-v, --verbose` - Verbose output
+- `-s, --silent` - Suppress output
 
 **Examples:**
 
@@ -537,18 +551,24 @@ Deploy your flows using Docker or Node.js.
 The `walkeros/flow` image runs pre-built bundles in production:
 
 ```bash
-# Build your flow
-walkeros bundle flow.json
+# Build your flow with Dockerfile
+walkeros bundle flow.json --dockerfile
 
-# Run with Docker
+# Deploy (e.g., to Cloud Run)
+gcloud run deploy my-service --source ./dist
+```
+
+Or run locally:
+
+```bash
 docker run -v ./dist:/flow -p 8080:8080 walkeros/flow
 ```
 
-**Custom image:**
+**Custom Dockerfile:**
 
-```dockerfile
-FROM walkeros/flow
-COPY dist/bundle.mjs /app/flow/
+```bash
+# Use a custom Dockerfile with extra packages or configuration
+walkeros bundle flow.json --dockerfile Dockerfile.custom
 ```
 
 **Environment variables:**

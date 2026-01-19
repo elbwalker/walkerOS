@@ -1,0 +1,10 @@
+# walkerOS Serve Mode - Hosts walker.js bundle
+FROM walkeros/flow:latest
+
+ENV MODE=serve
+ENV BUNDLE=/app/flow/walker.js
+ENV PORT=8080
+
+COPY walker.js /app/flow/walker.js
+
+EXPOSE 8080

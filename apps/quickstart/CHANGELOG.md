@@ -1,5 +1,12 @@
 # @walkeros/quickstart
 
+## 1.0.1
+
+### Patch Changes
+
+- Updated dependencies [ae79bfa]
+  - @walkeros/web-destination-api@1.1.0
+
 ## 1.0.0
 
 ### Major Changes

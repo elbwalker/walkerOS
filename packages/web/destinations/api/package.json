@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-api",
   "description": "Web API destination for walkerOS",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

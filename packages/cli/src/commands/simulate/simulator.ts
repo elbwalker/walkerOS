@@ -38,7 +38,7 @@ export async function simulateCore(
   event: unknown,
   options: Pick<
     SimulateCommandOptions,
-    'json' | 'verbose' | 'silent' | 'platform'
+    'flow' | 'json' | 'verbose' | 'silent' | 'platform'
   > = {},
 ): Promise<SimulationResult> {
   const logger = createLogger({
@@ -51,6 +51,7 @@ export async function simulateCore(
     // Execute simulation
     logger.debug(`Simulating event: ${JSON.stringify(event)}`);
     const result = await executeSimulation(event, inputPath, options.platform, {
+      flow: options.flow,
       logger,
       verbose: options.verbose,
     });
@@ -97,7 +98,7 @@ export async function executeSimulation(
   event: unknown,
   inputPath: string,
   platformOverride?: Platform,
-  options: { logger?: Logger; verbose?: boolean } = {},
+  options: { flow?: string; logger?: Logger; verbose?: boolean } = {},
 ): Promise<SimulationResult> {
   const startTime = Date.now();
   const tempDir = getTmpPath();
@@ -136,6 +137,7 @@ export async function executeSimulation(
         tempDir,
         startTime,
         collectorLoggerConfig,
+        options.flow,
       );
     } else {
       // Bundle flow: execute directly without mocking
@@ -175,9 +177,12 @@ async function executeConfigSimulation(
   tempDir: string,
   startTime: number,
   loggerConfig?: CoreLogger.Config,
+  flowName?: string,
 ): Promise<SimulationResult> {
   // Load config
-  const { flowConfig, buildOptions } = await loadFlowConfig(configPath);
+  const { flowConfig, buildOptions } = await loadFlowConfig(configPath, {
+    flowName,
+  });
 
   // Detect platform from flowConfig
   const platform = getPlatform(flowConfig);

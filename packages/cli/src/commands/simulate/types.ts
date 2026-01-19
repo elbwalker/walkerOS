@@ -4,9 +4,9 @@ import type { ApiCall } from './tracker.js';
 export interface SimulateCommandOptions {
   config: string;
   event?: string;
+  flow?: string;
   json?: boolean;
   verbose?: boolean;
-  dryRun?: boolean;
   silent?: boolean;
   platform?: 'web' | 'server';
 }
