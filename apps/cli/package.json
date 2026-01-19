@@ -1,6 +1,6 @@
 {
   "name": "walkeros",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
@@ -18,7 +18,7 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
   },
   "dependencies": {
-    "@walkeros/cli": "1.0.0"
+    "@walkeros/cli": "1.0.1"
   },
   "devDependencies": {
     "tsup": "^8.5.1",

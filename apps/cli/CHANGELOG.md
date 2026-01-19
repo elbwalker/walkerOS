@@ -1,5 +1,12 @@
 # walkeros
 
+## 1.0.1
+
+### Patch Changes
+
+- Updated dependencies [eb878df]
+  - @walkeros/cli@1.0.1
+
 ## 1.0.0
 
 ### Major Changes
