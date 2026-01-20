@@ -13,10 +13,9 @@ looking for alternatives. Here's how walkerOS compares.
 | Feature                | GTM                    | walkerOS                  |
 | ---------------------- | ---------------------- | ------------------------- |
 | Open-source            | No                     | Yes                       |
-| Self-hosted option     | Limited flexibility    | Yes                       |
-| Server-side scaling    | Sandbox constraints    | Full control              |
-| Vendor lock-in         | Google ecosystem       | None                      |
-| Data ownership         | Google servers         | Your infrastructure       |
+| Self-hosted option     | Yes (sGTM)             | Yes                       |
+| Server-side runtime    | Sandboxed environment  | Full Node.js              |
+| Config location        | Google's UI            | Your codebase             |
 | Privacy/GDPR           | Requires configuration | Built-in consent handling |
 | Version control        | Limited UI history     | Git-native                |
 | Developer experience   | GUI-based              | Code-first                |
@@ -45,12 +44,13 @@ looking for alternatives. Here's how walkerOS compares.
 
 ### Data ownership & privacy
 
-**GTM:** Event data flows through Google's servers. While you can configure
-privacy settings, you're ultimately trusting Google with your user data.
+**GTM:** With client-side GTM, data flows through Google's servers. Server-side
+GTM (sGTM) lets you host your own endpoint, but your configuration still lives
+in Google's UI and the runtime is sandboxed.
 
 **walkerOS:** Self-hosted by default. Your data never touches third-party
-servers unless you explicitly send it there. Built-in consent management ensures
-you only track what you're allowed to.
+servers unless you explicitly send it there. Config lives in your codebase.
+Built-in consent management ensures you only track what you're allowed to.
 
 ### Developer experience
 
@@ -72,13 +72,12 @@ changing your tracking code.
 
 ### Cost
 
-**GTM:** Free to use, but you pay with your data. Server-side GTM has hosting
-costs.
+**GTM:** Client-side GTM is free but data flows through Google. Server-side GTM
+requires hosting infrastructure. Both are free software, costs come from hosting.
 
-**walkerOS:** The software is free and open-source. Self-host on your own
-infrastructure with full control over costs. Optional paid services include
-implementation support and SLAs for teams that need help getting started or
-require guaranteed support.
+**walkerOS:** Free and open-source. Self-host on your own infrastructure. Both
+solutions have similar hosting costs for server-side use - the difference is
+runtime flexibility, not price.
 
 ## Can they work together?
 
