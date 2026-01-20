@@ -22,7 +22,7 @@
     "@docusaurus/theme-mermaid": "^3.9.2",
     "@walkeros/collector": "^1.0.0",
     "@walkeros/core": "^1.0.0",
-    "@walkeros/explorer": "^1.0.0",
+    "@walkeros/explorer": "^1.0.2",
     "@walkeros/server-destination-api": "^1.0.0",
     "@walkeros/walker.js": "^1.0.0",
     "@walkeros/web-destination-api": "^1.0.0",
