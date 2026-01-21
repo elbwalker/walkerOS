@@ -88,10 +88,10 @@ export const destinationSnowplow: Destination = {
    * sends it as a Snowplow ecommerce self-describing event.
    *
    * @param event - The walkerOS event to process
-   * @param context - Push context with config, data, mapping, and env
+   * @param context - Push context with config, data, rule, and env
    */
-  push(event, { config, data = {}, mapping = {}, env }) {
-    const eventMapping = mapping.settings || {};
+  push(event, { config, data = {}, rule = {}, env }) {
+    const eventMapping = rule.settings || {};
     pushSnowplowEvent(
       event,
       eventMapping,
