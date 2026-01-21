@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "packages": {
+        "@walkeros/collector": {
+          "version": "latest",
+          "imports": ["startFlow"]
+        },
+        "@walkeros/destination-demo": {
+          "version": "latest"
+        }
+      },
+      "destinations": {
+        "demo": {
+          "code": "destinationDemo",
+          "config": {
+            "consent": {
+              "marketing": true
+            },
+            "settings": {
+              "name": "Order Complete with Consent Demo",
+              "values": ["name", "data", "user", "source", "consent"]
+            },
+            "mapping": {
+              "order": {
+                "complete": {
+                  "name": "purchase",
+                  "data": {
+                    "map": {
+                      "transaction_id": "data.id",
+                      "value": "data.total",
+                      "currency": "data.currency",
+                      "tax": "data.tax",
+                      "shipping": "data.shipping",
+                      "email": {
+                        "key": "user.email",
+                        "consent": {
+                          "marketing": true
+                        }
+                      },
+                      "gclid": {
+                        "key": "user.gclid",
+                        "consent": {
+                          "marketing": true
+                        }
+                      },
+                      "source_url": "source.id"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "collector": {
+        "globals": {
+          "environment": "production",
+          "version": "1.0.0"
+        }
+      }
+    }
+  }
+}

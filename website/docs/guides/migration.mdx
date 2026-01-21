@@ -1,208 +1,217 @@
 ---
 title: Migration
 description: How to migrate to the latest walkerOS packages
+sidebar_position: 1
 ---
 
-# Migration Guide: From @elbwalker to @walkerOS
+
+# Migration guide: from @elbwalker to @walkerOS
 
 This guide helps you migrate from the old elbwalker packages to the new walkerOS
 packages.
 
-## Quick Reference
+## Quick reference
 
-### Core Package Changes
+### Core package changes
 
-- `@elbwalker/walker.js` → `@walkeros/collector` +
+* `@elbwalker/walker.js` → `@walkeros/collector` +
   `@walkeros/web-source-browser`
-- `@elbwalker/types` + `@elbwalker/utils` → `@walkeros/core`
-- `@elbwalker/destination-web-*` → `@walkeros/web-destination-*`
-- `@elbwalker/destination-node-*` → `@walkeros/server-destination-*`
+* `@elbwalker/types` + `@elbwalker/utils` → `@walkeros/core`
+* `@elbwalker/destination-web-*` → `@walkeros/web-destination-*`
+* `@elbwalker/destination-node-*` → `@walkeros/server-destination-*`
 
-## Step-by-Step Migration
+## Step-by-step migration
 
-### 1. Update Dependencies
+### 1. Update dependencies
 
 **Before:**
 
-```json
-{
+<CodeSnippet
+  code={`{
   "dependencies": {
     "@elbwalker/walker.js": "^2.0.0",
     "@elbwalker/destination-web-google-ga4": "^2.0.0"
   }
-}
-```
+}`}
+  language="json"
+/>
 
 **After:**
 
-```json
-{
+<CodeSnippet
+  code={`{
   "dependencies": {
     "@walkeros/collector": "^0.0.7",
     "@walkeros/web-source-browser": "^0.0.7",
     "@walkeros/web-destination-gtag": "^0.0.7"
   }
-}
-```
+}`}
+  language="json"
+/>
 
-### 2. Update Imports
+### 2. Update imports
 
 **Before:**
 
-```typescript
-import { Walkerjs } from '@elbwalker/walker.js';
+<CodeSnippet
+  code={`import { Walkerjs } from '@elbwalker/walker.js';
 import { destinationGoogleGA4 } from '@elbwalker/destination-web-google-ga4';
-import type { WalkerOS } from '@elbwalker/types';
-```
+import type { WalkerOS } from '@elbwalker/types';`}
+  language="typescript"
+/>
 
 **After:**
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
-import type { WalkerOS } from '@walkeros/core';
-```
+import type { WalkerOS } from '@walkeros/core';`}
+  language="typescript"
+/>
 
-### 3. Update Function Calls
+### 3. Update function calls
 
 **Before:**
 
-```typescript
-const walker = Walkerjs({
-  destinations: [destinationGoogleGA4],
-});
-```
+<CodeSnippet
+  code={`const walker = Walkerjs({
+destinations: [destinationGoogleGA4],
+});`}
+  language="typescript"
+/>
 
 **After:**
 
-```typescript
-const { elb } = await startFlow({
-  sources: {
-    browser: {
-      code: sourceBrowser,
-      config: {
-        settings: { scope: document.body },
-      },
-    },
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+sources: {
+browser: {
+code: sourceBrowser,
+config: {
+  settings: { scope: document.body },
+},
+},
+},
+destinations: {
+gtag: {
+code: destinationGtag,
+config: {
+  settings: {
+    ga4: { measurementId: 'G-XXXXXXXXXX' },
   },
-  destinations: {
-    gtag: {
-      code: destinationGtag,
-      config: {
-        settings: {
-          ga4: { measurementId: 'G-XXXXXXXXXX' },
-        },
-      },
-    },
-  },
-});
-```
+},
+},
+},
+});`}
+  language="typescript"
+/>
 
-## Breaking Changes
+## Breaking changes
 
-### 1. Unified Collector
+### 1. Unified collector
 
-- Single `@walkeros/collector` package works across all platforms
-- Use `startFlow()` instead of `Walkerjs()` or `createSourceNode()`
+* Single `@walkeros/collector` package works across all platforms
+* Use `startFlow()` instead of `Walkerjs()` or `createSourceNode()`
 
-### 2. Modular Sources
+### 2. Modular sources
 
-- DOM tracking is now `@walkeros/web-source-browser`
-- Import and initialize sources separately
+* DOM tracking is now `@walkeros/web-source-browser`
+* Import and initialize sources separately
 
-### 3. Core Package Merger
+### 3. Core package merger
 
-- All types and utilities now come from `@walkeros/core`
-- Update all import statements accordingly
+* All types and utilities now come from `@walkeros/core`
+* Update all import statements accordingly
 
-### 4. Google Destinations Unified
+### 4. Google destinations unified
 
-- GA4, Google Ads, and GTM are now unified in `@walkeros/web-destination-gtag`
-- Configure all Google services through a single destination
+* GA4, Google Ads, and GTM are now unified in `@walkeros/web-destination-gtag`
+* Configure all Google services through a single destination
 
-## Destination Configuration Patterns
+## Destination configuration patterns
 
-### Unified Configuration Approach
+### Unified configuration approach
 
 Configure all sources and destinations in a single `startFlow` call:
 
-```typescript
-const { elb } = await startFlow({
-  sources: {
-    browser: {
-      code: sourceBrowser,
-      config: {
-        settings: { scope: document.body, session: true },
-      },
-    },
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+sources: {
+browser: {
+code: sourceBrowser,
+config: {
+  settings: { scope: document.body, session: true },
+},
+},
+},
+destinations: {
+gtag: {
+code: destinationGtag,
+config: {
+  settings: {
+    ga4: { measurementId: 'G-XXXXXXXXXX' },
   },
-  destinations: {
-    gtag: {
-      code: destinationGtag,
-      config: {
-        settings: {
-          ga4: { measurementId: 'G-XXXXXXXXXX' },
-        },
-      },
-    },
-  },
-});
-```
+},
+},
+},
+});`}
+  language="typescript"
+/>
 
 **Benefits:**
 
-- Single configuration describing entire tracking setup
-- Full type safety with proper config linking
-- No manual destination registration needed
-- Clean separation between code and configuration
+* Single configuration describing entire tracking setup
+* Full type safety with proper config linking
+* No manual destination registration needed
+* Clean separation between code and configuration
 
-## Migration Checklist
+## Migration checklist
 
-### Package Dependencies
+### Package dependencies
 
-- [ ] Remove old `@elbwalker/*` packages
-- [ ] Add `@walkeros/collector`
-- [ ] Add required sources and destinations
-- [ ] Add `@walkeros/core` for custom implementations
+* \[ ] Remove old `@elbwalker/*` packages
+* \[ ] Add `@walkeros/collector`
+* \[ ] Add required sources and destinations
+* \[ ] Add `@walkeros/core` for custom implementations
 
-### Code Updates
+### Code updates
 
-- [ ] Update all imports to new packages
-- [ ] Replace collector initialization with `startFlow()`
-- [ ] Update type imports to use `@walkeros/core`
-- [ ] Test functionality after migration
+* \[ ] Update all imports to new packages
+* \[ ] Replace collector initialization with `startFlow()`
+* \[ ] Update type imports to use `@walkeros/core`
+* \[ ] Test functionality after migration
 
-## Common Issues
+## Common issues
 
-**"Cannot find module @walkeros/web-collector"**  
+**"Cannot find module @walkeros/web-collector"**\
 Solution: Use `@walkeros/collector` + `@walkeros/web-source-browser`
 
-**"elb is not defined"**  
+**"elb is not defined"**\
 Solution: `elb` is returned by `startFlow()` function
 
-**TypeScript cannot find types**  
+**TypeScript cannot find types**\
 Solution: Import types from `@walkeros/core`
 
 ## data-elbaction vs data-elbactions
 
-### Breaking Change in @walkeros packages
+### Breaking change in @walkeros packages
 
 The behavior of `data-elbaction` has changed to improve performance and provide
 more precise entity targeting:
 
-- **@elbwalker behavior**: `data-elbaction` applied to **all entities** in the
+* **@elbwalker behavior**: `data-elbaction` applied to **all entities** in the
   DOM hierarchy
-- **@walkeros behavior**: `data-elbaction` applies to **nearest entity only**
+* **@walkeros behavior**: `data-elbaction` applies to **nearest entity only**
 
-### Migration Strategy
+### Migration strategy
 
-#### Option 1: Keep Current Behavior (Recommended for migration)
+#### Option 1: keep current behavior (recommended for migration)
 
 Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
 
-```html
-<!-- Before (@elbwalker) -->
+<CodeSnippet
+  code={`<!-- Before (@elbwalker) -->
 <div data-elb="parent">
   <div data-elb="child" data-elbaction="click:action">
     <!-- Triggered both parent and child entities -->
@@ -214,104 +223,109 @@ Replace `data-elbaction` with `data-elbactions` to maintain the same behavior:
   <div data-elb="child" data-elbactions="click:action">
     <!-- Triggers both parent and child entities -->
   </div>
-</div>
-```
+</div>`}
+  language="html"
+/>
 
-#### Option 2: Use New Behavior (Recommended for new projects)
+#### Option 2: use new behavior (recommended for new projects)
 
 Use `data-elbaction` for more precise, performance-optimized tracking:
 
-```html
-<!-- @walkeros - New behavior -->
+<CodeSnippet
+  code={`<!-- @walkeros - New behavior -->
 <div data-elb="parent">
   <div data-elb="child" data-elbaction="click:action">
     <!-- Only triggers child entity -->
   </div>
-</div>
-```
+</div>`}
+  language="html"
+/>
 
-### When to Use Each
+### When to use each
 
 **Use `data-elbaction` (nearest entity) when:**
 
-- You want precise tracking of only the specific entity
-- Performance is critical (fewer events)
-- Implementing new features
+* You want precise tracking of only the specific entity
+* Performance is critical (fewer events)
+* Implementing new features
 
 **Use `data-elbactions` (all entities) when:**
 
-- Migrating from @elbwalker and need same behavior
-- You need context from parent entities
-- Analytics requires full DOM hierarchy
+* Migrating from @elbwalker and need same behavior
+* You need context from parent entities
+* Analytics requires full DOM hierarchy
 
 ### Tagger API
 
 The tagger also provides both methods:
 
-```typescript
-// Nearest entity only (data-elbaction)
+<CodeSnippet
+  code={`// Nearest entity only (data-elbaction)
 tagger().action('click', 'select').get();
 
 // All entities (data-elbactions)
-tagger().actions('click', 'select').get();
-```
+tagger().actions('click', 'select').get();`}
+  language="typescript"
+/>
 
-## visible vs impression Triggers
+## visible vs impression triggers
 
-### Breaking Change in @walkeros packages
+### Breaking change in @walkeros packages
 
 The visibility trigger names have been updated to better reflect their behavior:
 
-- **`visible` trigger**: Now fires **multiple times** when element re-enters
+* **`visible` trigger**: Now fires **multiple times** when element re-enters
   viewport (was `visibles`)
-- **`impression` trigger**: Fires **once only** when element first becomes
+* **`impression` trigger**: Fires **once only** when element first becomes
   visible (was `visible`)
 
-### Migration Strategy
+### Migration strategy
 
-#### Option 1: Update Trigger Names (Recommended)
+#### Option 1: update trigger names (recommended)
 
 Update your HTML to use the new trigger names:
 
-```html
-<!-- Before (@elbwalker and early @walkeros) -->
+<CodeSnippet
+  code={`<!-- Before (@elbwalker and early @walkeros) -->
 <div data-elbaction="visible:view">Single fire</div>
 <div data-elbaction="visibles:track">Multiple fires</div>
 
 <!-- After (@walkeros current) -->
 <div data-elbaction="impression:view">Single fire</div>
-<div data-elbaction="visible:track">Multiple fires</div>
-```
+<div data-elbaction="visible:track">Multiple fires</div>`}
+  language="html"
+/>
 
-#### Option 2: Understand the Behavior Change
+#### Option 2: understand the behavior change
 
 If you keep using the old names, understand the behavior has changed:
 
-- Old `visible` behavior (single-fire) → Now use `impression`
-- Old `visibles` behavior (multiple-fire) → Now use `visible`
+* Old `visible` behavior (single-fire) → Now use `impression`
+* Old `visibles` behavior (multiple-fire) → Now use `visible`
 
-### When to Use Each
+### When to use each
 
 **Use `impression` trigger when:**
 
-- You want to track when content is first seen
-- Measuring ad impressions or content views
-- One-time engagement metrics
+* You want to track when content is first seen
+* Measuring ad impressions or content views
+* One-time engagement metrics
 
 **Use `visible` trigger when:**
 
-- You want to track repeated interactions
-- Measuring scroll behavior or re-engagement
-- Analytics requires multiple visibility events
+* You want to track repeated interactions
+* Measuring scroll behavior or re-engagement
+* Analytics requires multiple visibility events
 
 ### Tagger API
 
 The tagger supports both trigger types:
 
-```typescript
-// Single impression (fires once)
+<CodeSnippet
+  code={`// Single impression (fires once)
 tagger().action('impression', 'view').get();
 
 // Multiple visibility (fires each time visible)
-tagger().action('visible', 'track').get();
-```
+tagger().action('visible', 'track').get();`}
+  language="typescript"
+/>

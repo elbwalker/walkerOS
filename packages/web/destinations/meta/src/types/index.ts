@@ -12,8 +12,10 @@ declare global {
 }
 
 export interface Settings {
-  pixelId?: string;
+  pixelId: string;
 }
+
+export type InitSettings = Partial<Settings>;
 
 export interface Mapping {
   track?: StandardEventNames;
@@ -31,7 +33,7 @@ export interface Env extends DestinationWeb.Env {
   };
 }
 
-export type Types = CoreDestination.Types<Settings, Mapping, Env>;
+export type Types = CoreDestination.Types<Settings, Mapping, Env, InitSettings>;
 
 export type Destination = DestinationWeb.Destination<Types>;
 export type Config = DestinationWeb.Config<Types>;

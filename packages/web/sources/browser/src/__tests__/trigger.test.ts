@@ -52,9 +52,6 @@ describe('Trigger System', () => {
     // Mock elb function
     mockElb = jest.fn().mockResolvedValue({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     });
 
     // Mock event listeners

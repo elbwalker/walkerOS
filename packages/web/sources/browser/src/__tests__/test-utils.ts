@@ -1,4 +1,5 @@
 import type { Source, Collector } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import { sourceBrowser } from '../index';
 import type { Types } from '../types';
 
@@ -29,10 +30,18 @@ export async function createBrowserSource(
     elb: collector.sources.elb.push,
     window,
     document,
+    logger: createMockLogger(),
   };
 
-  // Call sourceBrowser directly with new pattern
-  const source = await sourceBrowser(config, env);
+  // Call sourceBrowser directly with context pattern
+  const source = await sourceBrowser({
+    collector,
+    config,
+    env,
+    id: 'test-browser',
+    logger: createMockLogger(),
+    setIngest: async () => {},
+  });
 
   // Use the source's own push method which includes proper translation
   return { ...source, elb: source.push };

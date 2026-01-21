@@ -1,11 +1,8 @@
 ---
 title: Destinations
-description:
-  Send events to analytics tools, marketing platforms, and custom endpoints
+description: "Send events to analytics tools, marketing platforms, and custom endpoints"
 sidebar_position: 5
 ---
-
-import Link from '@docusaurus/Link';
 
 # Destinations
 
@@ -15,48 +12,80 @@ analytics platforms, marketing tools, data warehouses, and custom APIs.
 
 Destinations handle the final step in the data pipeline by:
 
-- **Format Transformation** - Convert walkerOS events to platform-specific
+* **Format Transformation** - Convert walkerOS events to platform-specific
   formats
-- **API Integration** - Handle authentication and delivery to external services
-- **Error Handling** - Manage failed requests and retry logic
-- **Data Validation** - Ensure events meet destination requirements
+* **API Integration** - Handle authentication and delivery to external services
+* **Error Handling** - Manage failed requests and retry logic
+* **Data Validation** - Ensure events meet destination requirements
+
+All walkerOS destinations export Zod schemas for configuration validation,
+providing TypeScript type safety and IDE autocomplete for settings and mapping
+options. See the
+[Destination Schemas Guide](https://github.com/elbwalker/walkerOS/blob/main/DESTINATION_SCHEMAS.md)
+for technical details.
 
 ## Architecture
 
 Destinations receive events from the collector after processing:
 
-```
-Sources → Collector → Destinations → External Platforms
-```
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{
+    ga4: {
+      label: 'Destination',
+      text: 'GA4',
+      highlight: true,
+      after: { label: 'External', text: 'Google Analytics', highlight: false },
+    },
+    api: {
+      label: 'Destination',
+      text: 'API',
+      highlight: true,
+      after: { label: 'External', text: 'Custom Endpoint', highlight: false },
+    },
+  }}
+  markers={[
+    { position: 'collector-destination', id: '1', text: 'Receive: Mapped events from collector ready for delivery' },
+    { position: 'destination-after', id: '2', text: 'Deliver: Tool-specific API calls, SDK initialization, and event dispatch' },
+  ]}
+/>
 
 Each destination operates independently, so one failed destination won't affect
 others. This ensures reliable data delivery even when individual services have
 issues.
 
-## Types of Destinations
+## Types of destinations
 
-### Web Destinations
+### Built-in destinations
+
+Platform-agnostic destinations included in the collector:
+
+* **<Link to="/docs/destinations/code">Code</Link>** - Execute custom JavaScript
+  for maximum flexibility without external dependencies
+
+### Web destinations
 
 Client-side integrations that send events directly from the browser:
 
-- **<Link to="/docs/destinations/web/api">API</Link>** - Send events to your own
-  endpoints
-- **<Link to="/docs/destinations/web/gtag/">Google Analytics & Ads</Link>** -
+* **<Link to="/docs/destinations/api">API</Link>** - Send events to any HTTP
+  endpoint (also available server-side)
+* **<Link to="/docs/destinations/web/gtag/">Google Analytics & Ads</Link>** -
   GA4, Google Ads, and GTM integration
-- **<Link to="/docs/destinations/web/meta-pixel">Meta Pixel</Link>** - Facebook
+* **<Link to="/docs/destinations/web/meta-pixel">Meta Pixel</Link>** - Facebook
   and Instagram advertising
-- **<Link to="/docs/destinations/web/plausible">Plausible Analytics</Link>** -
+* **<Link to="/docs/destinations/web/plausible">Plausible Analytics</Link>** -
   Privacy-focused web analytics
-- **<Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>** -
+* **<Link to="/docs/destinations/web/piwikpro">Piwik PRO</Link>** -
   Privacy-focused analytics platform
 
-### Server Destinations
+### Server destinations
 
 Server-side integrations for enhanced privacy and data control:
 
-- **<Link to="/docs/destinations/server/aws">AWS Firehose</Link>** - Amazon
+* **<Link to="/docs/destinations/server/aws">AWS Firehose</Link>** - Amazon
   cloud services integration
-- **<Link to="/docs/destinations/server/gcp">BigQuery</Link>** - GCP services
+* **<Link to="/docs/destinations/server/gcp">BigQuery</Link>** - GCP services
   and BigQuery
-- **<Link to="/docs/destinations/server/meta-capi">Meta Conversions
+* **<Link to="/docs/destinations/server/meta-capi">Meta Conversions
   API</Link>** - Server-side Facebook/Instagram tracking

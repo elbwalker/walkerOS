@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/storybook-addon",
-  "version": "0.2.2",
+  "version": "1.0.0",
   "description": "Visualize, debug, and validate walkerOS event tracking in your Storybook stories. Real-time event capture with visual DOM highlighting for data-attribute based tagging.",
   "keywords": [
     "storybook-addons",
@@ -59,36 +59,36 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@walkeros/core": "*",
-    "@walkeros/collector": "*",
-    "@walkeros/web-core": "*",
-    "@walkeros/web-source-browser": "*",
-    "@storybook/icons": "^1.4.0"
+    "@walkeros/core": "1.0.0",
+    "@walkeros/collector": "1.0.0",
+    "@walkeros/web-core": "1.0.0",
+    "@walkeros/web-source-browser": "1.0.0",
+    "@storybook/icons": "^2.0.1"
   },
   "devDependencies": {
     "@walkeros/config": "*",
-    "@storybook/addon-docs": "^9.1.2",
-    "@storybook/react-vite": "^9.1.2",
-    "@types/node": "^22",
-    "@types/react": "^18.2.65",
-    "@types/react-dom": "^18.2.21",
-    "@vitejs/plugin-react": "^5.1.0",
-    "auto": "^11.1.1",
-    "boxen": "^7.1.1",
-    "npm-run-all2": "^6.2.3",
-    "prettier": "^3.3.3",
+    "@storybook/addon-docs": "^10.1.9",
+    "@storybook/react-vite": "^10.1.9",
+    "@types/node": "^25",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "auto": "^11.3.6",
+    "boxen": "^8.0.1",
+    "npm-run-all2": "^8.0.4",
+    "prettier": "^3.7.4",
     "prompts": "^2.4.2",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "storybook": "^9.1.2",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "storybook": "^10.1.9",
     "ts-dedent": "^2.2.0",
-    "tsup": "^8.2.4",
-    "typescript": "^5.8.2",
-    "vite": "^7.1.12",
-    "zx": "^8.4.1"
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0",
+    "zx": "^8.8.5"
   },
   "peerDependencies": {
-    "storybook": "^9.0.0"
+    "storybook": "^10.0.0"
   },
   "engines": {
     "node": ">=20"
@@ -121,6 +121,6 @@
       "web-components",
       "html"
     ],
-    "icon": "https://www.elbwalker.com/img/elbwalker_logo.png"
+    "icon": "https://www.walkeros.io/img/elbwalker_logo.png"
   }
 }

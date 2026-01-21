@@ -39,11 +39,9 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
  * This source captures DOM events, manages sessions, handles pageviews,
  * and processes the elbLayer for browser environments.
  */
-export const sourceBrowser: Source.Init<Types> = async (
-  config: Partial<Source.Config<Types>>,
-  env: Env,
-) => {
-  const { elb, window, document } = env;
+export const sourceBrowser: Source.Init<Types> = async (context) => {
+  const { config, env } = context;
+  const { elb, command, window, document } = env;
 
   const userSettings = config?.settings || {};
   const actualWindow =
@@ -86,7 +84,7 @@ export const sourceBrowser: Source.Init<Types> = async (
     if (settings.session && elb) {
       const sessionConfig =
         typeof settings.session === 'boolean' ? {} : settings.session;
-      sessionStart(elb, sessionConfig);
+      sessionStart(elb, sessionConfig, command);
     }
 
     // Setup global triggers (click, submit) when DOM is ready
@@ -143,7 +141,7 @@ export const sourceBrowser: Source.Init<Types> = async (
         if (settings.session && context && elb) {
           const sessionConfig =
             typeof settings.session === 'boolean' ? {} : settings.session;
-          sessionStart(elb, sessionConfig);
+          sessionStart(elb, sessionConfig, command);
         }
         break;
 

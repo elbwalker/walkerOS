@@ -1,7 +1,8 @@
-import type { Collector, On, WalkerOS } from '@walkeros/core';
+import type { Collector, On, WalkerOS, Destination } from '@walkeros/core';
 import { isArray } from '@walkeros/core';
 import { Const } from './constants';
 import { tryCatch } from '@walkeros/core';
+import { mergeEnvironments } from './destination';
 
 /**
  * Registers a callback for a specific event type.
@@ -75,11 +76,24 @@ export function onApply(
     }
   });
 
-  Object.values(collector.destinations).forEach((destination) => {
+  Object.entries(collector.destinations).forEach(([destId, destination]) => {
     if (destination.on) {
-      // Cast to runtime-compatible version for type safety
-      const onFn = destination.on as On.OnFnRuntime;
-      tryCatch(onFn)(type, contextData as On.AnyEventContext);
+      const destType = destination.type || 'unknown';
+      const destLogger = collector.logger
+        .scope(destType)
+        .scope('on')
+        .scope(type);
+
+      const context: Destination.Context = {
+        collector,
+        logger: destLogger,
+        id: destId,
+        config: destination.config,
+        data: contextData as Destination.Data,
+        env: mergeEnvironments(destination.env, destination.config.env),
+      };
+
+      tryCatch(destination.on)(type, context);
     }
   });
 

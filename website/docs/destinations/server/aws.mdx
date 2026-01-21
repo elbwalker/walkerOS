@@ -1,96 +1,181 @@
 ---
 title: AWS Firehose
-description:
-  Stream events to Amazon Kinesis Data Firehose for real-time analytics
+description: "Stream events to Amazon Kinesis Data Firehose for real-time analytics"
 path: /docs/destinations/server/aws
 sidebar_position: 1
 package: '@walkeros/server-destination-aws'
 ---
-
-import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { schemas } from '@walkeros/server-destination-aws/dev';
 
 # AWS Firehose
 
-<PackageLink
-  env="server"
-  github="packages/server/destinations/aws"
-  npm="@walkeros/server-destination-aws"
+<PackageLink env="server" github="packages/server/destinations/aws" npm="@walkeros/server-destination-aws" />
+
+The AWS destination package provides server-side integration for streaming
+events from walkerOS to Amazon Kinesis Data Firehose for real-time analytics,
+data lakes, and downstream processing.
+
+:::info Where This Fits
+AWS Firehose is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Firehose', highlight: true } }}
 />
+
+Streams events to Amazon Kinesis Data Firehose for real-time analytics, S3 data lakes, and downstream AWS services.
+:::
 
 ## Installation
 
-```bash
-npm install @walkeros/server-destination-aws
-```
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-aws`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { elb } from '@walkeros/collector';
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationFirehose } from '@walkeros/server-destination-aws';
 
-elb('walker destination', destinationFirehose, {
-  settings: {
+await startFlow({
+  destinations: {
     firehose: {
-      streamName: 'your-firehose-stream-name',
-      region: 'eu-central-1',
+      code: destinationFirehose,
       config: {
-        credentials: {
-          accessKeyId: 'your-access-key-id',
-          secretAccessKey: 'your-secret-access-key',
+        settings: {
+          firehose: {
+            streamName: 'your-firehose-stream-name',
+            region: 'eu-central-1',
+            config: {
+              credentials: {
+                accessKeyId: 'your-access-key-id',
+                secretAccessKey: 'your-secret-access-key',
+              },
+            },
+          },
         },
       },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "firehose": {
+    "package": "@walkeros/server-destination-aws",
+    "code": "destinationFirehose",
+    "config": {
+      "settings": {
+        "firehose": {
+          "streamName": "your-firehose-stream-name",
+          "region": "eu-central-1",
+          "config": {
+            "credentials": {
+              "accessKeyId": "your-access-key-id",
+              "secretAccessKey": "your-secret-access-key"
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'firehose',
-      type: 'FirehoseConfig',
-      description: 'AWS Firehose configuration settings',
-      required: false,
-      example: "{ streamName: 'walker-events', region: 'us-east-1' }",
-    },
-  ]}
+Configuration options for the `settings.firehose` property:
+
+<PropertyTable schema={schemas.firehose} />
+
+## Docker Deployment
+
+### Step 1: Create Flow Configuration
+
+The AWS SDK automatically reads credentials from environment variables. Configure the stream name using the `${VAR}` syntax:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "firehose": {
+      "package": "@walkeros/server-destination-aws",
+      "config": {
+        "settings": {
+          "firehose": {
+            "streamName": "\${AWS_FIREHOSE_STREAM}",
+            "region": "\${AWS_REGION:eu-central-1}"
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
 />
 
-### Firehose Configuration
+### Step 2: Bundle the Flow
 
-<SettingsTable
-  properties={[
-    {
-      name: 'streamName',
-      type: 'string',
-      description: 'Name of the Kinesis Data Firehose delivery stream',
-      required: true,
-      example: "'walker-events'",
-    },
-    {
-      name: 'client',
-      type: 'FirehoseClient',
-      description: 'Pre-configured AWS Firehose client instance',
-      required: false,
-      example: 'new FirehoseClient(config)',
-    },
-    {
-      name: 'region',
-      type: 'string',
-      description: 'AWS region for the Firehose service',
-      required: false,
-      example: "'us-east-1'",
-    },
-    {
-      name: 'config',
-      type: 'FirehoseClientConfig',
-      description: 'AWS SDK client configuration options',
-      required: false,
-      example: '{ credentials: awsCredentials }',
-    },
-  ]}
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
 />
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e AWS_ACCESS_KEY_ID=AKIAXXXXXXXXXXXXXXXX \\
+  -e AWS_SECRET_ACCESS_KEY=your-secret-key \\
+  -e AWS_REGION=eu-central-1 \\
+  -e AWS_FIREHOSE_STREAM=walker-events \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+### Using IAM Roles (Recommended for AWS)
+
+When running on AWS infrastructure (ECS, Lambda, EC2), attach an IAM role instead of using access keys:
+
+<CodeSnippet
+  code={`# ECS Task Definition - no credentials needed
+docker run -d \\
+  -e AWS_REGION=eu-central-1 \\
+  -e AWS_FIREHOSE_STREAM=walker-events \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+### Credential Discovery Order
+
+The AWS SDK automatically discovers credentials from:
+1. Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
+2. ECS task role
+3. EC2 instance role
+4. Lambda execution role
+
+:::tip Security Best Practice
+Use IAM roles when running on AWS. Only use access keys for local development or non-AWS platforms.
+:::

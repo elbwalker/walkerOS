@@ -252,7 +252,7 @@ describe('SessionStorage', () => {
     jest.advanceTimersByTime(1000);
 
     const newSession = sessionStorage({
-      url: 'https://www.elbwalker.com/?utm_campaign=new',
+      url: 'https://www.walkeros.io/?utm_campaign=new',
     });
 
     expect(newSession.id).not.toBe(session.id); // Expect a new session id

@@ -2,9 +2,10 @@ import type {
   Source,
   Destination,
   Elb as ElbTypes,
-  Handler,
   Hooks,
+  Logger,
   On,
+  Transformer,
   WalkerOS,
   Mapping,
 } from '.';
@@ -21,12 +22,8 @@ export interface Config {
   globalsStatic: WalkerOS.Properties;
   /** Static session data even on a new run */
   sessionStatic: Partial<SessionData>;
-  /** Enable verbose logging */
-  verbose: boolean;
-  /** Error handler */
-  onError?: Handler.Error;
-  /** Log handler */
-  onLog?: Handler.Log;
+  /** Logger configuration */
+  logger?: Logger.Config;
 }
 
 /**
@@ -43,6 +40,8 @@ export interface InitConfig extends Partial<Config> {
   sources?: Source.InitSources;
   /** Destination configurations */
   destinations?: Destination.InitDestinations;
+  /** Transformer configurations */
+  transformers?: Transformer.InitTransformers;
   /** Initial custom properties */
   custom?: WalkerOS.Properties;
 }
@@ -68,6 +67,20 @@ export interface Destinations {
   [id: string]: Destination.Instance;
 }
 
+export interface Transformers {
+  [id: string]: Transformer.Instance;
+}
+
+/**
+ * Resolved transformer chains for a flow.
+ */
+export interface TransformerChain {
+  /** Ordered transformer IDs to run before collector (from source.next) */
+  pre: string[];
+  /** Per-destination transformer chains (from destination.before) */
+  post: Record<string, string[]>;
+}
+
 export type CommandType =
   | 'action'
   | 'config'
@@ -85,10 +98,14 @@ export type CommandType =
   | string;
 
 /**
- * Context passed to collector.push for source mapping
+ * Options passed to collector.push() from sources.
+ * NOT a Context - just push metadata.
  */
-export interface PushContext {
+export interface PushOptions {
+  id?: string;
+  ingest?: unknown;
   mapping?: Mapping.Config;
+  preChain?: string[];
 }
 
 /**
@@ -97,7 +114,7 @@ export interface PushContext {
 export interface PushFn {
   (
     event: WalkerOS.DeepPartialEvent,
-    context?: PushContext,
+    options?: PushOptions,
   ): Promise<ElbTypes.PushResult>;
 }
 
@@ -150,9 +167,12 @@ export interface Instance {
   custom: WalkerOS.Properties;
   sources: Sources;
   destinations: Destinations;
+  transformers: Transformers;
+  transformerChain: TransformerChain;
   globals: WalkerOS.Properties;
   group: string;
   hooks: Hooks.Functions;
+  logger: Logger.Instance;
   on: On.OnConfig;
   queue: WalkerOS.Events;
   round: number;

@@ -1,7 +1,8 @@
-import type { Collector, WalkerOS } from '@walkeros/core';
-import { assign, onLog } from '@walkeros/core';
+import type { Collector, Logger, WalkerOS } from '@walkeros/core';
+import { assign, createLogger } from '@walkeros/core';
 import { commonHandleCommand } from './handle';
 import { initDestinations } from './destination';
+import { initTransformers, resolveTransformerGraph } from './transformer';
 import { createPush } from './push';
 import { createCommand } from './command';
 import { initSources } from './source';
@@ -17,8 +18,6 @@ export async function collector(
     globalsStatic: {},
     sessionStatic: {},
     tagging: 0,
-    verbose: false,
-    onLog: log,
     run: true,
   };
 
@@ -27,10 +26,12 @@ export async function collector(
     extend: false,
   });
 
-  function log(message: string, verbose?: boolean) {
-    onLog({ message }, verbose || config.verbose);
-  }
-  config.onLog = log;
+  // Create logger with config from initConfig
+  const loggerConfig: Logger.Config = {
+    level: initConfig.logger?.level,
+    handler: initConfig.logger?.handler,
+  };
+  const logger = createLogger(loggerConfig);
 
   // Enhanced globals with static globals from config
   const finalGlobals = { ...config.globalsStatic, ...initConfig.globals };
@@ -42,9 +43,12 @@ export async function collector(
     count: 0,
     custom: initConfig.custom || {},
     destinations: {},
+    transformers: {},
+    transformerChain: { pre: [], post: {} },
     globals: finalGlobals,
     group: '',
     hooks: {},
+    logger,
     on: {},
     queue: [],
     round: 0,
@@ -76,6 +80,16 @@ export async function collector(
     collector,
     initConfig.destinations || {},
   );
+
+  // Initialize transformers
+  collector.transformers = await initTransformers(
+    collector,
+    initConfig.transformers || {},
+  );
+
+  // Resolve transformer chains based on source/destination configuration
+  // Note: This is a placeholder - actual chain resolution happens in startFlow
+  // when sources are configured with 'next' and destinations with 'before'
 
   return collector;
 }

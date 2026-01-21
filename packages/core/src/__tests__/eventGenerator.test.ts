@@ -58,7 +58,7 @@ describe('createEvent', () => {
         data: {
           domain: 'www.example.com',
           title: 'walkerOS documentation',
-          referrer: 'https://www.elbwalker.com/',
+          referrer: 'https://www.walkeros.io/',
           search: '?foo=bar',
           hash: '#hash',
           id: '/docs/',

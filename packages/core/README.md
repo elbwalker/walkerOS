@@ -1,6 +1,6 @@
 <p align="left">
-  <a href="https://elbwalker.com">
-    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
+  <a href="https://www.walkeros.io">
+    <img title="elbwalker" src="https://www.walkeros.io/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
@@ -15,7 +15,35 @@ data manipulation, validation, mapping, and more.
 
 ## Installation
 
-Import the core utilities directly from the `@walkeros/core` package:
+```bash
+npm install @walkeros/core
+```
+
+## Quick Start
+
+The core package provides types and utilities used across walkerOS. In a Flow
+configuration:
+
+```json
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "url": "https://collect.example.com/events"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Import utilities directly:
 
 ```ts
 import { assign, anonymizeIP, getMappingValue } from '@walkeros/core';
@@ -119,7 +147,7 @@ getId(10); // Returns 10-character string
 
 `getMappingValue(event: WalkerOS.Event, mapping: Mapping.Data, options?: Mapping.Options): Promise<WalkerOS.Property | undefined>`
 extracts values from events using
-[mapping configurations](https://www.elbwalker.com/docs/destinations/event-mapping).
+[mapping configurations](https://www.walkeros.io/docs/destinations/event-mapping).
 
 ```ts
 // Simple path mapping
@@ -300,13 +328,22 @@ validates event structure and throws on invalid events.
 
 Validates that values conform to walkerOS property types.
 
----
+## Type Definitions
 
-For platform-specific utilities, see:
+See [src/types/](./src/types/) for TypeScript interfaces:
 
-- [Web Core](https://www.elbwalker.com/docs/core/web) - Browser-specific
+- [event.ts](./src/types/event.ts) - Event structure
+- [destination.ts](./src/types/destination.ts) - Destination interface
+- [source.ts](./src/types/source.ts) - Source interface
+- [mapping.ts](./src/types/mapping.ts) - Mapping configuration
+
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/)
+- [Collector Package](../collector/) - Event processing engine
+- [Web Core](https://www.walkeros.io/docs/sources/web/) - Browser-specific
   functions
-- [Server Core](https://www.elbwalker.com/docs/core/server) - Node.js server
+- [Server Core](https://www.walkeros.io/docs/sources/server/) - Node.js server
   functions
 
 ## Contribute

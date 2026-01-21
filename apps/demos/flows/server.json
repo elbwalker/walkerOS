@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "flows": {
+    "server": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-source-express": {},
+        "@walkeros/destination-demo": {},
+        "@walkeros/server-destination-gcp": {}
+      },
+      "sources": {
+        "express": {
+          "package": "@walkeros/server-source-express",
+          "code": "sourceExpress",
+          "config": {
+            "settings": {
+              "path": "/collect",
+              "port": 8080,
+              "status": true
+            }
+          }
+        }
+      },
+      "destinations": {
+        "demo": {
+          "package": "@walkeros/destination-demo",
+          "code": "destinationDemo",
+          "config": {
+            "settings": {
+              "name": "server",
+              "values": ["name", "data", "timestamp"]
+            }
+          }
+        },
+        "bigquery": {
+          "package": "@walkeros/server-destination-gcp",
+          "code": "destinationBigQuery",
+          "config": {
+            "settings": {
+              "projectId": "$PROJECT_ID",
+              "datasetId": "$DATASET_ID",
+              "tableId": "$TABLE_ID",
+              "location": "EU"
+            }
+          }
+        }
+      }
+    }
+  }
+}

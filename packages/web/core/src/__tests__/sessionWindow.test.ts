@@ -2,7 +2,7 @@ import { sessionWindow } from '..';
 
 describe('SessionStart', () => {
   const w = window;
-  const url = 'https://www.elbwalker.com/';
+  const url = 'https://www.walkeros.io/';
   const referrer = 'https://www.example.com/';
 
   beforeEach(() => {
@@ -67,27 +67,21 @@ describe('SessionStart', () => {
     // Custom domains
     expect(
       sessionWindow({
-        url: 'https://www.elbwalker.com',
-        referrer: 'https://another.elbwalker.com',
-        domains: ['another.elbwalker.com'],
+        url: 'https://www.walkeros.io',
+        referrer: 'https://another.walkeros.io',
+        domains: ['another.walkeros.io'],
       }),
     ).toStrictEqual({ isStart: false, storage: false });
     expect(
       sessionWindow({
-        url: 'https://www.elbwalker.com',
+        url: 'https://www.walkeros.io',
         referrer: '',
         domains: [''], // Hack to disable direct or hidden referrer
       }),
     ).toStrictEqual({ isStart: false, storage: false });
 
-    // Default url and referrer
-    Object.defineProperty(document, 'referrer', {
-      value: referrer,
-    });
-    Object.defineProperty(window, 'location', {
-      value: new URL(url),
-    });
-    expect(sessionWindow()).toStrictEqual(
+    // Default url and referrer (using params instead of mocking window.location for Jest 30 compat)
+    expect(sessionWindow({ url, referrer })).toStrictEqual(
       expect.objectContaining({ id: expect.any(String) }),
     );
   });

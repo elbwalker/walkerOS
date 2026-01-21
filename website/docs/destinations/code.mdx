@@ -1,0 +1,327 @@
+---
+title: Code
+description: Built-in destination for executing custom code strings
+sidebar_position: 0
+---
+
+# Code Destination
+
+The code destination is a built-in, platform-agnostic destination that executes
+custom JavaScript code strings. It provides a lightweight alternative to tag
+managers like GTM, allowing you to run arbitrary code in response to events
+without external dependencies.
+
+:::info Where This Fits
+Code is a **built-in destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Code', highlight: true } }}
+/>
+
+Executes custom JavaScript code strings on events, loads external scripts dynamically, and acts as a lightweight tag manager replacement.
+:::
+
+## Setup
+
+Use `code: true` to enable the built-in code destination:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+
+const { collector, elb } = await startFlow({
+  destinations: {
+    analytics: {
+      code: true,
+      config: {
+        settings: {
+          init: "context.logger.info('Analytics ready')",
+          push: "context.logger.debug('Event:', event.name)",
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+## Script Loading
+
+Load external scripts during initialization - useful for tag management:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+
+const { elb } = await startFlow({
+  destinations: {
+    gtm: {
+      code: true,
+      config: {
+        consent: { marketing: true }, // Scripts only load when consent granted
+        settings: {
+          scripts: [
+            'https://www.googletagmanager.com/gtag/js?id=G-XXXXX',
+            'https://connect.facebook.net/en_US/fbevents.js',
+          ],
+          init: "window.dataLayer = window.dataLayer || [];",
+          push: "dataLayer.push({ event: event.name, ...event.data });",
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+Scripts are injected in parallel with `async="true"`. The collector only handles
+injection - loading, errors, and execution are managed by the browser. For
+advanced loading patterns (sequential loading, onload callbacks), use custom
+`init` code.
+
+## Configuration reference
+
+### Settings
+
+| Property    | Type       | Description                                       |
+| ----------- | ---------- | ------------------------------------------------- |
+| `scripts`   | `string[]` | URLs of external scripts to inject on init        |
+| `init`      | `string`   | Code to run once when the destination initializes |
+| `on`        | `string`   | Code to run on lifecycle events (consent, etc.)   |
+| `push`      | `string`   | Default code to run for each event                |
+| `pushBatch` | `string`   | Default code to run for batched events            |
+
+### Mapping
+
+Event-specific code can override settings via mapping:
+
+| Property    | Type     | Description                           |
+| ----------- | -------- | ------------------------------------- |
+| `push`      | `string` | Code to run for this specific event   |
+| `pushBatch` | `string` | Code to run for batched events        |
+
+## Context variables
+
+Each code string has access to specific variables:
+
+### init
+
+- `context.collector` - The collector instance
+- `context.config` - Destination configuration
+- `context.env` - Environment variables
+- `context.logger` - Scoped logger instance
+
+### push
+
+- `event` - The WalkerOS event object
+- `context.collector` - The collector instance
+- `context.config` - Destination configuration
+- `context.data` - Transformed event data (from mapping)
+- `context.env` - Environment variables
+- `context.logger` - Scoped logger instance
+- `context.mapping` - The event mapping rule
+
+### pushBatch
+
+- `batch.key` - The batch key (event name)
+- `batch.events` - Array of events in the batch
+- `batch.data` - Array of transformed data
+- `context.collector` - The collector instance
+- `context.config` - Destination configuration
+- `context.env` - Environment variables
+- `context.logger` - Scoped logger instance
+- `context.mapping` - The event mapping rule
+
+### on
+
+- `type` - The event type (`'consent'`, `'ready'`, etc.)
+- `context.collector` - The collector instance
+- `context.config` - Destination configuration
+- `context.data` - Event-specific data
+- `context.env` - Environment variables
+- `context.logger` - Scoped logger instance
+
+## Examples
+
+### Basic logging
+
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+  destinations: {
+    logger: {
+      code: true,
+      config: {
+        settings: {
+          push: "console.log('Event:', event.name, event.data)",
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### API calls
+
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+  destinations: {
+    api: {
+      code: true,
+      config: {
+        settings: {
+          push: \`
+            fetch('https://api.example.com/track', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: event.name,
+                data: event.data,
+                timestamp: event.timestamp
+              })
+            })
+          \`,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Consent handling
+
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+  destinations: {
+    tracking: {
+      code: true,
+      config: {
+        settings: {
+          on: \`
+            if (type === 'consent' && context.data?.marketing) {
+              context.logger.info('Marketing consent granted');
+              // Initialize third-party scripts
+            }
+          \`,
+          push: "context.logger.debug(event.name)",
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Event-specific overrides
+
+Use mapping to override the default push code for specific events:
+
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+  destinations: {
+    analytics: {
+      code: true,
+      config: {
+        settings: {
+          // Default handler for all events
+          push: "context.logger.debug('Event:', event.name)",
+        },
+        mapping: {
+          product: {
+            view: {
+              // Custom handler for product view events
+              push: \`
+                fetch('/api/product-view', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    productId: event.data.id,
+                    name: event.data.name
+                  })
+                })
+              \`,
+            },
+          },
+          order: {
+            complete: {
+              // Custom handler for purchase events
+              push: \`
+                window.dataLayer?.push({
+                  event: 'purchase',
+                  value: event.data.total,
+                  transaction_id: event.data.id
+                })
+              \`,
+            },
+          },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Batched events
+
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+  destinations: {
+    batchApi: {
+      code: true,
+      config: {
+        settings: {
+          pushBatch: \`
+            fetch('/api/batch', {
+              method: 'POST',
+              body: JSON.stringify({
+                events: batch.events.map(e => ({
+                  name: e.name,
+                  data: e.data
+                }))
+              })
+            })
+          \`,
+        },
+        mapping: {
+          '*': {
+            '*': {
+              batch: 1000, // Batch events with 1 second debounce
+            },
+          },
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+## Error handling
+
+All code execution is wrapped in try-catch blocks. Errors are logged using the
+destination's scoped logger and don't affect other destinations or event
+processing.
+
+<CodeSnippet
+  code={`// Errors are caught and logged automatically
+settings: {
+  push: \`
+    // This error will be logged but won't crash the app
+    throw new Error('Something went wrong');
+  \`,
+}`}
+  language="typescript"
+/>
+
+## Security considerations
+
+The code destination uses `new Function()` to execute code strings. This is
+similar to `eval()` and should only be used with trusted code. Never execute
+user-provided code strings directly.
+
+For production environments, consider:
+
+- Only using code strings defined in your source code
+- Validating and sanitizing any dynamic configuration
+- Using Content Security Policy headers where appropriate

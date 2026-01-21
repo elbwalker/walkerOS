@@ -1,95 +1,154 @@
 ---
 title: Meta Conversions API
-description:
-  Server-side Meta advertising events for enhanced privacy and tracking accuracy
+description: "Server-side Meta advertising events for enhanced privacy and tracking accuracy"
 path: /docs/destinations/server/meta-capi
 sidebar_position: 3
 package: '@walkeros/server-destination-meta'
 ---
-
-import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { schemas } from '@walkeros/server-destination-meta/dev';
 
 # Meta Conversions API
 
-<PackageLink
-  env="server"
-  github="packages/server/destinations/meta"
-  npm="@walkeros/server-destination-meta"
+<PackageLink env="server" github="packages/server/destinations/meta" npm="@walkeros/server-destination-meta" />
+
+Server-side event delivery to Meta's Conversions API for enhanced tracking accuracy and privacy compliance.
+
+:::info Where This Fits
+Meta CAPI is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Meta CAPI', highlight: true } }}
 />
+
+Sends events server-side to Meta's Conversions API, bypassing browser limitations for improved data quality and privacy-compliant tracking.
+:::
 
 ## Installation
 
-```bash
-npm install @walkeros/server-destination-meta
-```
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-meta`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { elb } from '@walkeros/collector';
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/server-destination-meta';
 
-elb('walker destination', destinationMeta, {
-  settings: {
-    accessToken: 'YOUR_ACCESS_TOKEN',
-    pixelId: 'YOUR_PIXEL_ID',
+await startFlow({
+  destinations: {
+    meta: {
+      code: destinationMeta,
+      config: {
+        settings: {
+          accessToken: 'YOUR_ACCESS_TOKEN',
+          pixelId: 'YOUR_PIXEL_ID',
+        },
+      },
+    },
   },
-});
-```
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "meta": {
+    "package": "@walkeros/server-destination-meta",
+    "code": "destinationMeta",
+    "config": {
+      "settings": {
+        "accessToken": "YOUR_ACCESS_TOKEN",
+        "pixelId": "YOUR_PIXEL_ID"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'accessToken',
-      type: 'string',
-      description: 'Meta access token for Conversions API authentication',
-      required: true,
-      example: "'your_access_token'",
-    },
-    {
-      name: 'pixelId',
-      type: 'string',
-      description: 'Meta Pixel ID from your Facebook Business account',
-      required: true,
-      example: "'1234567890'",
-    },
-    {
-      name: 'action_source',
-      type: 'ActionSource',
-      description: 'Source of the event (website, app, phone_call, etc.)',
-      required: false,
-      example: "'website'",
-    },
-    {
-      name: 'doNotHash',
-      type: 'string[]',
-      description: 'Array of user_data fields that should not be hashed',
-      required: false,
-      example: "['client_ip_address', 'client_user_agent']",
-    },
-    {
-      name: 'test_event_code',
-      type: 'string',
-      description: 'Test event code for debugging Meta Conversions API events',
-      required: false,
-      example: "'TEST12345'",
-    },
-    {
-      name: 'url',
-      type: 'string',
-      description: 'Custom URL for Meta Conversions API endpoint',
-      required: false,
-      example: "'https://graph.facebook.com/v17.0'",
-    },
-    {
-      name: 'user_data',
-      type: 'WalkerOSMapping.Map',
-      description: 'Mapping configuration for user data fields',
-      required: false,
-      example: "{ email: 'user.email', phone: 'user.phone' }",
-    },
-  ]}
+<PropertyTable schema={schemas.settings} />
+
+## Docker Deployment
+
+### Step 1: Create Flow Configuration
+
+Use the `${VAR}` syntax in your flow configuration to reference environment variables at runtime:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "meta": {
+      "package": "@walkeros/server-destination-meta",
+      "config": {
+        "settings": {
+          "accessToken": "\${META_ACCESS_TOKEN}",
+          "pixelId": "\${META_PIXEL_ID}",
+          "test_event_code": "\${META_TEST_CODE:}"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+  title="flow.json"
 />
+
+### Step 2: Bundle the Flow
+
+Bundle your flow configuration before running in Docker:
+
+<CodeSnippet
+  code={`npx walkeros bundle flow.json -o dist/bundle.mjs`}
+  language="bash"
+/>
+
+### Step 3: Run with Docker
+
+<CodeSnippet
+  code={`docker run -d \\
+  -e META_ACCESS_TOKEN=your-access-token \\
+  -e META_PIXEL_ID=1234567890 \\
+  -v ./dist/bundle.mjs:/app/flow/bundle.mjs:ro \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+### Docker Compose Example
+
+<CodeSnippet
+  code={`services:
+  walkeros:
+    image: walkeros/flow:latest
+    environment:
+      - META_ACCESS_TOKEN=\${META_ACCESS_TOKEN}
+      - META_PIXEL_ID=\${META_PIXEL_ID}
+    volumes:
+      - ./dist/bundle.mjs:/app/flow/bundle.mjs:ro
+    ports:
+      - "8080:8080"`}
+  language="yaml"
+/>
+
+:::tip Security Best Practice
+Never commit access tokens to version control. Use environment variables or a secrets manager to inject credentials at runtime.
+:::

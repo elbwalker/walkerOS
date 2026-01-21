@@ -1,4 +1,6 @@
 import type { WalkerOS, Source as CoreSource } from '@walkeros/core';
+import type { SettingsSchema, CorsOptionsSchema } from './schemas';
+import { z } from '@walkeros/core/dev';
 
 // Minimal request/response interfaces
 export interface Request {
@@ -15,18 +17,12 @@ export interface Response {
   set(key: string, value: string): Response;
 }
 
-export interface Settings {
-  cors?: boolean | CorsOptions;
-  timeout?: number;
-}
+// Types inferred from Zod schemas
+export type Settings = z.infer<typeof SettingsSchema>;
+export type CorsOptions = z.infer<typeof CorsOptionsSchema>;
 
-export interface CorsOptions {
-  origin?: string | string[];
-  methods?: string[];
-  headers?: string[];
-  credentials?: boolean;
-  maxAge?: number;
-}
+// InitSettings: user input (all optional)
+export type InitSettings = Partial<Settings>;
 
 export interface Mapping {
   // Custom source event mapping properties
@@ -41,14 +37,21 @@ export interface Env extends CoreSource.Env {
 }
 
 // Type bundle (must be after Settings, Mapping, Push, Env are defined)
-export type Types = CoreSource.Types<Settings, Mapping, Push, Env>;
+export type Types = CoreSource.Types<
+  Settings,
+  Mapping,
+  Push,
+  Env,
+  InitSettings
+>;
 
 export interface CloudFunctionSource
   extends Omit<CoreSource.Instance<Types>, 'push'> {
   push: Push;
 }
 
-// Removed custom Config type - using Source.Config<Types> directly
+// Convenience Config type
+export type Config = CoreSource.Config<Types>;
 export type PartialConfig = CoreSource.PartialConfig<Types>;
 
 // Cloud function source doesn't follow standard Source.Init pattern due to HTTP handler interface

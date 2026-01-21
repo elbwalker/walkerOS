@@ -2,67 +2,75 @@
   "name": "@walkeros/monorepo",
   "private": true,
   "workspaces": [
+    "packages/cli",
     "packages/core",
     "packages/collector",
+    "packages/transformers/*",
     "packages/server/core",
     "packages/server/destinations/*",
     "packages/server/sources/*",
+    "packages/server/transformers/*",
     "packages/web/core",
     "packages/web/destinations/*",
     "packages/web/sources/*",
     "apps/quickstart",
     "apps/walkerjs",
+    "apps/cli",
     "apps/storybook-addon",
+    "apps/demos/destination",
+    "apps/demos/transformer",
+    "apps/demos/source",
     "apps/demos/react",
     "apps/demos/storybook",
     "website"
   ],
   "scripts": {
-    "build": "turbo run build --filter=!@walkeros/website --output-logs=errors-only",
-    "build:website": "turbo run build --filter=@walkeros/website  --output-logs=errors-only",
+    "build": "npm run build:packages && npm run build:apps && npm run build:website",
+    "build:packages": "turbo run build --filter='./packages/**'",
+    "build:apps": "turbo run build --filter='./apps/*'",
+    "build:website": "turbo run build --filter=@walkeros/website",
     "clean": "turbo run clean",
     "dev": "turbo run dev --output-logs=errors-only",
     "format": "prettier --write .",
     "lint": "turbo run lint --filter=!@walkeros/website --output-logs=errors-only",
-    "publish-packages": "npm run build lint test && changeset version && changeset publish",
+    "publish-packages": "npm run clean && npm run build && npm run lint && npm run test && changeset version && changeset publish",
+    "reset": "rm -rf .turbo && rm -rf node_modules && npm ci",
+    "publish-docker": "npm run -w @walkeros/cli docker:publish",
     "test": "turbo run test --filter=!@walkeros/website --output-logs=errors-only",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "validate:links": "npx tsx apps/scripts/validate-links.ts",
+    "validate:docs": "npx tsx apps/scripts/validate-docs.ts",
+    "validate": "npm run validate:links && npm run validate:docs"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.28.1",
-    "@walkeros/config": "^0.1.3",
+    "@changesets/cli": "^2.29.8",
+    "@walkeros/config": "^1.0.1",
     "husky": "^9.1.7",
-    "lint-staged": "^16.1.2",
-    "prettier": "^3.6.2",
-    "turbo": "^2.5.4",
-    "typescript": "^5.8.2"
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.7.4",
+    "turbo": "^2.6.3",
+    "typescript": "^5.9.3"
   },
   "lint-staged": {
     "*.{js,ts,tsx,json,css,md}": [
       "prettier --write"
     ]
   },
-  "packageManager": "npm@11.2.0",
+  "packageManager": "npm@11.7.0",
   "engines": {
     "node": ">=20.0"
   },
   "browserslist": [
     "> 0.2%",
-    "not dead",
-    "not ie < 11",
-    "not op_mini all"
+    "not dead"
   ],
   "overrides": {
-    "ajv": {
-      "uri-js": "^4.4.1"
+    "@types/node": "^20.0.0",
+    "@eslint/eslintrc": {
+      "ajv": "^6.12.6"
     },
-    "jsdom": {
-      "whatwg-url": "^14.2.0"
-    },
-    "tsup": {
-      "source-map": {
-        "whatwg-url": "^14.2.0"
-      }
+    "eslint": {
+      "ajv": "^6.12.6"
     }
   }
 }

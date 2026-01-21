@@ -1,11 +1,12 @@
 ---
-title: Consent Management
+title: Consent management
 description: Privacy-compliant consent handling and management with walkerOS
 path: /docs/guides/consent
 sidebar_position: 2
 ---
 
-# Consent Management
+
+# Consent management
 
 Managing user consent is critical for legal compliance and user privacy.
 WalkerOS follows a **privacy-by-design** approach and offers multiple ways to
@@ -29,12 +30,13 @@ To set/update the consent state, the CMP should actively push the
 (`true/false`). If only one condition applies, consent is granted. Updating only
 one value won't override existing states.
 
-```js
-elb('walker consent', { functional: true, marketing: false });
-```
+<CodeSnippet
+  code={`elb('walker consent', { functional: true, marketing: false });`}
+  language="javascript"
+/>
 
-Consent keys can be defined arbitrarily (typically known as _functional_,
-_analytics_, and _marketing_). However, you can also use individual names for
+Consent keys can be defined arbitrarily (typically known as *functional*,
+*analytics*, and *marketing*). However, you can also use individual names for
 each vendor.
 
 The walker handles the **race conditions**: Previously pushed events get
@@ -65,42 +67,45 @@ A destination only requires one granted consent state to process events.
 To revoke consent and stop sharing events with a destination, all matching rules
 have to be set to `false`:
 
-```js
-elb('walker consent', { marketing: false });
-```
+<CodeSnippet
+  code={`elb('walker consent', { marketing: false });`}
+  language="javascript"
+/>
 
-## on Consent
+## on consent
 
 To start walker.js only after a consent choice, use the `on consent` command:
 
-```js
-// Wait for functional consent to run
+<CodeSnippet
+  code={`// Wait for functional consent to run
 elb('walker on', 'consent', {
-  functional: () => {
-    elb('walker run');
-  },
+functional: () => {
+elb('walker run');
+},
 });
 
 // Later, a CMP has to update the consent state
-elb('walker consent', { functional: true });
-```
+elb('walker consent', { functional: true });`}
+  language="javascript"
+/>
 
 Another example of how to use the `on consent` command might be to update
 [Googles consent mode v2](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic):
 
-```js
-elb('walker on', 'consent', (instance, consent) => {
-  // Check if marketing consent is granted
-  if (consent.marketing) {
-    gtag('consent', 'update', {
-      ad_user_data: 'granted',
-      ad_personalization: 'granted',
-      ad_storage: 'granted',
-      analytics_storage: 'granted',
-    });
-  }
+<CodeSnippet
+  code={`elb('walker on', 'consent', (instance, consent) => {
+// Check if marketing consent is granted
+if (consent.marketing) {
+gtag('consent', 'update', {
+ad_user_data: 'granted',
+ad_personalization: 'granted',
+ad_storage: 'granted',
+analytics_storage: 'granted',
 });
-```
+}
+});`}
+  language="javascript"
+/>
 
 The consent mode will be updated via `gtag` as soon as marketing consent is
 granted.

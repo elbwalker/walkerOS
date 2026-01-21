@@ -1,3 +1,4 @@
+import type { Logger } from '@walkeros/core';
 import type { GTMSettings } from '../types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { getEnv } from '@walkeros/web-core';
@@ -9,6 +10,7 @@ export function initGTM(
   settings: GTMSettings,
   loadScript?: boolean,
   env?: DestinationWeb.Env,
+  _logger?: Logger.Instance,
 ): void {
   const { window, document } = getEnv(env);
   const { containerId, dataLayer, domain } = settings;

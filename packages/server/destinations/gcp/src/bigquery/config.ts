@@ -1,17 +1,18 @@
 import type { Config, Env, PartialConfig, Settings } from './types';
 import type { BigQueryOptions } from '@google-cloud/bigquery';
-import { throwError } from '@walkeros/core';
+import type { Logger } from '@walkeros/core';
 import { BigQuery } from '@google-cloud/bigquery';
 
 export function getConfig(
   partialConfig: PartialConfig = {},
-  env?: Env,
+  env: Env | undefined,
+  logger: Logger.Instance,
 ): Config {
   const settings = partialConfig.settings || ({} as Settings);
   const { projectId, bigquery } = settings;
   let { client, location, datasetId, tableId } = settings;
 
-  if (!projectId) throwError('Config settings projectId missing');
+  if (!projectId) logger.throw('Config settings projectId missing');
 
   location = location || 'EU';
   datasetId = datasetId || 'walkeros';

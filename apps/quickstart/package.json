@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/quickstart",
-  "version": "0.2.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Verified code examples for walkerOS documentation",
   "license": "MIT",
@@ -8,23 +8,17 @@
     "build": "tsup --silent",
     "test": "jest",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc && eslint \"**/*.ts*\"",
+    "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "0.2.1",
-    "@walkeros/collector": "0.2.1",
-    "@walkeros/web-core": "0.2.1",
-    "@walkeros/web-source-browser": "0.2.1",
-    "@walkeros/web-destination-gtag": "0.2.1",
-    "@walkeros/web-destination-api": "0.2.1"
-  },
-  "devDependencies": {
-    "@swc/jest": "^0.2.36",
-    "@types/jest": "^29.5.12",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0"
+    "@walkeros/core": "1.0.0",
+    "@walkeros/collector": "1.0.0",
+    "@walkeros/web-core": "1.0.0",
+    "@walkeros/web-source-browser": "1.0.0",
+    "@walkeros/web-destination-gtag": "1.0.0",
+    "@walkeros/web-destination-api": "1.1.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

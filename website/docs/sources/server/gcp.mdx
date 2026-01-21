@@ -1,0 +1,173 @@
+---
+title: GCP Cloud Functions
+description: Google Cloud Functions HTTP handler for event collection
+sidebar_position: 4
+package: '@walkeros/server-source-gcp'
+---
+
+<PackageLink env="server" github="packages/server/sources/gcp" npm="@walkeros/server-source-gcp" />
+
+# GCP Cloud Functions
+
+Google Cloud Functions source for walkerOS - lightweight runtime adapter for GCP services.
+
+:::info Where This Fits
+The GCP Cloud Functions Source is a **server source** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { label: 'Source', text: 'GCP', highlight: true } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
+/>
+
+It receives events via HTTP and forwards them to your destinations.
+:::
+
+## Features
+
+* **Plug-and-play**: Direct assignment to Cloud Functions handler
+* **Batch processing**: Handle multiple events in single request
+* **CORS support**: Configurable cross-origin resource sharing
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-source-gcp @google-cloud/functions-framework`}
+  language="bash"
+/>
+
+## Quick start
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { sourceCloudFunction } from '@walkeros/server-source-gcp';
+import { startFlow } from '@walkeros/collector';
+import { http } from '@google-cloud/functions-framework';
+
+const { sources } = await startFlow({
+  sources: {
+    gcp: {
+      code: sourceCloudFunction,
+      config: {
+        settings: { cors: true, batch: true },
+      },
+    },
+  },
+  destinations: {
+    // Your destinations
+  },
+});
+
+// Plug-and-play: source.push IS the Cloud Function handler
+http('walkerHandler', sources.gcp.push);`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` sources:
+
+<CodeSnippet
+  code={`"sources": {
+  "gcp": {
+    "package": "@walkeros/server-source-gcp",
+    "config": {
+      "settings": {
+        "cors": true,
+        "batch": true
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Server sources require platform-specific handlers. For containerized deployments, see [Docker →](/docs/apps/docker).
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `cors` | `boolean \| object` | `true` | CORS configuration |
+| `batch` | `boolean` | `true` | Enable batch processing |
+| `maxBatchSize` | `number` | `100` | Max events per batch |
+| `timeout` | `number` | `30000` | Request timeout (ms) |
+
+## Request format
+
+### Single event
+
+<CodeSnippet
+  code={`{
+  "event": "page view",
+  "data": {
+    "title": "Home Page",
+    "path": "/"
+  }
+}`}
+  language="json"
+/>
+
+### Batch events
+
+<CodeSnippet
+  code={`{
+  "events": [
+    { "event": "page view", "data": { "title": "Page 1" } },
+    { "event": "button click", "data": { "id": "btn1" } }
+  ]
+}`}
+  language="json"
+/>
+
+## Ingest Metadata
+
+Extract request metadata and forward it through the pipeline.
+
+<CodeSnippet
+  code={`const { sources } = await startFlow({
+  sources: {
+    gcp: {
+      code: sourceCloudFunction,
+      config: {
+        settings: { cors: true },
+        ingest: {
+          ip: 'ip',
+          ua: 'headers.user-agent',
+          origin: 'headers.origin',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Available Ingest Paths
+
+| Path | Description |
+|------|-------------|
+| `ip` | Client IP address |
+| `headers.*` | HTTP headers (user-agent, origin, etc.) |
+| `method` | HTTP method |
+| `hostname` | Request hostname |
+
+## Deployment
+
+<CodeSnippet
+  code={`gcloud functions deploy walker-collector \\
+  --runtime nodejs20 \\
+  --trigger-http \\
+  --allow-unauthenticated \\
+  --entry-point walkerHandler`}
+  language="bash"
+/>
+

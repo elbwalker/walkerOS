@@ -1,5 +1,8 @@
 /* eslint-disable no-console */
 import chalk from 'chalk';
+import type { GlobalOptions } from '../types/global.js';
+
+const BRAND_COLOR = '#01b5e2';
 
 export interface LoggerOptions {
   verbose?: boolean;
@@ -8,12 +11,16 @@ export interface LoggerOptions {
 }
 
 export interface Logger {
-  log: (color: string, ...args: unknown[]) => void;
+  log: (...args: unknown[]) => void;
+  brand: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+  debug: (...args: unknown[]) => void;
+  json: (data: unknown) => void;
+  // Backward-compatible methods (map to default terminal color per design)
   info: (...args: unknown[]) => void;
   success: (...args: unknown[]) => void;
   warning: (...args: unknown[]) => void;
-  error: (...args: unknown[]) => void;
-  debug: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
   gray: (...args: unknown[]) => void;
 }
 
@@ -24,46 +31,17 @@ export function createLogger(options: LoggerOptions = {}): Logger {
   const shouldDebug = verbose && !silent && !json;
 
   return {
-    log: (color: string, ...args: unknown[]) => {
+    log: (...args: unknown[]) => {
       if (shouldLog) {
         const message = args.map((arg) => String(arg)).join(' ');
-        // Map color names to chalk functions
-        const colorMap: Record<string, (text: string) => string> = {
-          red: chalk.red,
-          green: chalk.green,
-          blue: chalk.blue,
-          yellow: chalk.yellow,
-          gray: chalk.gray,
-          grey: chalk.gray,
-          cyan: chalk.cyan,
-          magenta: chalk.magenta,
-          white: chalk.white,
-          black: chalk.black,
-        };
-        const colorFn = colorMap[color];
-        const coloredMessage = colorFn ? colorFn(message) : message;
-        console.log(coloredMessage);
+        console.log(message);
       }
     },
 
-    info: (...args: unknown[]) => {
+    brand: (...args: unknown[]) => {
       if (shouldLog) {
         const message = args.map((arg) => String(arg)).join(' ');
-        console.log(chalk.blue(message));
-      }
-    },
-
-    success: (...args: unknown[]) => {
-      if (shouldLog) {
-        const message = args.map((arg) => String(arg)).join(' ');
-        console.log(chalk.green(message));
-      }
-    },
-
-    warning: (...args: unknown[]) => {
-      if (shouldLog) {
-        const message = args.map((arg) => String(arg)).join(' ');
-        console.log(chalk.yellow(message));
+        console.log(chalk.hex(BRAND_COLOR)(message));
       }
     },
 
@@ -77,15 +55,67 @@ export function createLogger(options: LoggerOptions = {}): Logger {
     debug: (...args: unknown[]) => {
       if (shouldDebug) {
         const message = args.map((arg) => String(arg)).join(' ');
-        console.log(chalk.gray(message));
+        console.log(`  ${message}`);
+      }
+    },
+
+    json: (data: unknown) => {
+      if (!silent) {
+        console.log(JSON.stringify(data, null, 2));
+      }
+    },
+
+    // Backward-compatible methods (all use default terminal color per design)
+    info: (...args: unknown[]) => {
+      if (shouldLog) {
+        const message = args.map((arg) => String(arg)).join(' ');
+        console.log(message);
+      }
+    },
+
+    success: (...args: unknown[]) => {
+      if (shouldLog) {
+        const message = args.map((arg) => String(arg)).join(' ');
+        console.log(message);
+      }
+    },
+
+    warning: (...args: unknown[]) => {
+      if (shouldLog) {
+        const message = args.map((arg) => String(arg)).join(' ');
+        console.log(message);
+      }
+    },
+
+    warn: (...args: unknown[]) => {
+      if (shouldLog) {
+        const message = args.map((arg) => String(arg)).join(' ');
+        console.log(message);
       }
     },
 
     gray: (...args: unknown[]) => {
       if (shouldLog) {
         const message = args.map((arg) => String(arg)).join(' ');
-        console.log(chalk.gray(message));
+        console.log(message);
       }
     },
   };
+}
+
+/**
+ * Create logger from command options
+ * Factory function that standardizes logger creation across commands
+ *
+ * @param options - Command options containing verbose, silent, and json flags
+ * @returns Configured logger instance
+ */
+export function createCommandLogger(
+  options: GlobalOptions & { json?: boolean },
+): Logger {
+  return createLogger({
+    verbose: options.verbose,
+    silent: options.silent ?? false,
+    json: options.json,
+  });
 }

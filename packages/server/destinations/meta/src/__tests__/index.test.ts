@@ -1,8 +1,8 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
-import { clone, getEvent } from '@walkeros/core';
+import { clone, getEvent, createMockLogger } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
-import { examples } from '../';
+import { examples } from '../dev';
 import { hashEvent } from '../hash';
 
 const { env, events, mapping } = examples;
@@ -45,6 +45,8 @@ describe('Server Destination Meta', () => {
       config: { settings: settings as Settings },
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
+      id: 'test-meta',
     })) as Config;
   }
 
@@ -55,6 +57,8 @@ describe('Server Destination Meta', () => {
         config: {},
         collector: mockCollector,
         env: testEnv,
+        logger: createMockLogger(),
+        id: 'test-meta',
       }),
     ).rejects.toThrow('Config settings accessToken missing');
     await expect(
@@ -62,6 +66,8 @@ describe('Server Destination Meta', () => {
         config: { settings: { accessToken, pixelId: '' } },
         collector: mockCollector,
         env: testEnv,
+        logger: createMockLogger(),
+        id: 'test-meta',
       }),
     ).rejects.toThrow('Config settings pixelId missing');
 
@@ -85,6 +91,8 @@ describe('Server Destination Meta', () => {
       config,
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
+      id: 'test-meta',
     });
 
     expect(mockSendServer).toHaveBeenCalled();
@@ -106,6 +114,8 @@ describe('Server Destination Meta', () => {
       config,
       collector: {} as Collector.Instance,
       env: customEnv,
+      logger: createMockLogger(),
+      id: 'test-meta',
     });
 
     expect(customSendServer).toHaveBeenCalled();
@@ -137,6 +147,8 @@ describe('Server Destination Meta', () => {
         config,
         collector: mockCollector,
         env: testEnv,
+        logger: createMockLogger(),
+        id: 'test-meta',
       }),
     ).rejects.toThrow();
   });
@@ -157,6 +169,8 @@ describe('Server Destination Meta', () => {
       config,
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
+      id: 'test-meta',
     });
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
     expect(requestBody.data[0].user_data.fbc).toContain('.abc');
@@ -248,7 +262,8 @@ describe('Server Destination Meta', () => {
     await elb('walker destination', destinationWithEnv, config);
     const result = await elb(event);
 
-    expect(result.successful).toHaveLength(1);
+    expect(result.done).toBeDefined();
+    expect(Object.keys(result.done!)).toHaveLength(1);
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
     expect(requestBody).toEqual(events.Purchase());
   });

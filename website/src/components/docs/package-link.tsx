@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from '@docusaurus/Link';
 import clsx from 'clsx';
-import { Icon } from '@iconify/react';
+import { Icon } from '@walkeros/explorer';
 
 type PackageLinkProps = {
   env?: 'web' | 'server' | 'both';

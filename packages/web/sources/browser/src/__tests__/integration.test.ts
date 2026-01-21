@@ -19,9 +19,6 @@ describe('Browser Source Integration Tests', () => {
       collectedEvents.push(args[0] as WalkerOS.Event);
       return Promise.resolve({
         ok: true,
-        successful: [],
-        queued: [],
-        failed: [],
       });
     }) as jest.MockedFunction<Collector.Instance['push']>;
 
@@ -67,11 +64,8 @@ describe('Browser Source Integration Tests', () => {
     });
 
     test('processes pageview events correctly', async () => {
-      // Mock window.location for pageview
-      Object.defineProperty(window, 'location', {
-        value: { pathname: '/test-page' },
-        writable: true,
-      });
+      // Set URL path
+      window.history.replaceState({}, '', '/test-page');
 
       // Initialize source with pageview enabled - should automatically send pageview
       const source = await createBrowserSource(collector, { pageview: true });
@@ -174,9 +168,6 @@ describe('Browser Source Integration Tests', () => {
       // Mock collector.command to verify routing
       const mockCommand = jest.fn().mockResolvedValue({
         ok: true,
-        successful: [],
-        queued: [],
-        failed: [],
       });
       collector.command = mockCommand;
 

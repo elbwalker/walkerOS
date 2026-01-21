@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: walkerOS AWS Lambda Collector
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: nodejs20.x
+    MemorySize: 256
+    Architectures:
+      - arm64
+    Environment:
+      Variables:
+        NODE_ENV: production
+
+Resources:
+  WalkerOSFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./dist
+      Handler: index.handler
+      Events:
+        # POST endpoint for event collection
+        CollectPost:
+          Type: Api
+          Properties:
+            Path: /collect
+            Method: POST
+
+        # GET endpoint for pixel tracking
+        CollectGet:
+          Type: Api
+          Properties:
+            Path: /collect
+            Method: GET
+
+        # Health check endpoint
+        Health:
+          Type: Api
+          Properties:
+            Path: /health
+            Method: GET
+
+  # CloudWatch Log Group with retention
+  WalkerOSLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${WalkerOSFunction}
+      RetentionInDays: 7
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/collect'
+
+  HealthEndpoint:
+    Description: Health check endpoint URL
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/health'

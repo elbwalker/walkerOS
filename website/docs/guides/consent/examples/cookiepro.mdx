@@ -3,8 +3,6 @@ title: CookiePro by OneTrust
 description: How to use walkerOS consent mode with CookiePro by OneTrust
 ---
 
-import Link from '@docusaurus/Link';
-
 CookiePro registers cookies and assigns them to categories. Those categories can
 be mapped to match the walker.js consent groups.
 
@@ -18,44 +16,45 @@ The code won't override an eventually existing `OptanonWrapper`. The `mapping`
 translated the CookiePro categories to the walker.js consent groups and is an
 example of how to map the CookiePro categories to the walker.js
 
-```js
-(function (wrapper) {
-  // Renaming of the categories
-  const mapping = {
-    C0001: 'functional', // necessary
-    C0002: 'analytics', // performance
-    C0003: 'analytics', // functional
-    C0004: 'marketing', // targeting
-    C0005: 'marketing', // social
-  };
+<CodeSnippet
+  code={`(function (wrapper) {
+// Renaming of the categories
+const mapping = {
+C0001: 'functional', // necessary
+C0002: 'analytics', // performance
+C0003: 'analytics', // functional
+C0004: 'marketing', // targeting
+C0005: 'marketing', // social
+};
 
-  function handleConsent() {
-    // if (!OneTrust.IsAlertBoxClosed()) return; // Process only explicit consent
+function handleConsent() {
+// if (!OneTrust.IsAlertBoxClosed()) return; // Process only explicit consent
 
-    const consent = {};
-    window.OptanonActiveGroups.split(',').forEach((category) => {
-      const name = mapping[category];
-      if (name) consent[name] = true;
-    });
+const consent = {};
+window.OptanonActiveGroups.split(',').forEach((category) => {
+const name = mapping[category];
+if (name) consent[name] = true;
+});
 
-    elb('walker consent', consent);
-  }
+elb('walker consent', consent);
+}
 
-  if (window.Optanon && window.OptanonActiveGroups) {
-    handleConsent(); // CMP already loaded
-  } else {
-    window.OptanonWrapper = function (e) {
-      if (wrapper) wrapper(); // Call the original OptanonWrapper
-      handleConsent();
-    };
-  }
+if (window.Optanon && window.OptanonActiveGroups) {
+handleConsent(); // CMP already loaded
+} else {
+window.OptanonWrapper = function (e) {
+if (wrapper) wrapper(); // Call the original OptanonWrapper
+handleConsent();
+};
+}
 
-  // Listen for consent updates
-  window.addEventListener('OneTrustGroupsUpdated', function (event) {
-    handleConsent();
-  });
-})(window.OptanonWrapper);
-```
+// Listen for consent updates
+window.addEventListener('OneTrustGroupsUpdated', function (event) {
+handleConsent();
+});
+})(window.OptanonWrapper);`}
+  language="javascript"
+/>
 
 Adjust the mapping according to the CookiePro categories and the associated
 tools.

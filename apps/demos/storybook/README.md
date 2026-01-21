@@ -127,6 +127,6 @@ npm run build           # Build demo components
 
 ## Learn More
 
-- [walkerOS Documentation](https://docs.elbwalker.com)
+- [walkerOS Documentation](https://www.walkeros.io/docs)
 - [Storybook Addon Source](../../../storybook-addon/)
 - [walkerOS GitHub](https://github.com/elbwalker/walkerOS)

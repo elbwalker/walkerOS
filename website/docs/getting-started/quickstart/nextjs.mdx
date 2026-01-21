@@ -14,9 +14,10 @@ for more details.
 
 Install the required packages:
 
-```bash
-npm install @walkeros/collector @walkeros/web-source-browser
-```
+<CodeSnippet
+  code={`npm install @walkeros/collector @walkeros/web-source-browser`}
+  language="bash"
+/>
 
 ## Setup
 
@@ -24,7 +25,8 @@ npm install @walkeros/collector @walkeros/web-source-browser
 
 Create the walker initialization file:
 
-```tsx title="walker/index.ts"
+<CodeSnippet
+  code={`// walker/index.ts
 import type { Collector, WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { createTagger, sourceBrowser } from '@walkeros/web-source-browser';
@@ -80,14 +82,16 @@ const taggerInstance = createTagger();
 
 export function tagger(entity?: string) {
   return taggerInstance(entity);
-}
-```
+}`}
+  language="tsx"
+/>
 
 ### 2. App integration
 
 For Next.js applications, use the Next.js router events:
 
-```tsx title="pages/_app.tsx"
+<CodeSnippet
+  code={`// pages/_app.tsx
 import { useRouter } from 'next/router';
 import { useEffect, useRef } from 'react';
 import { initializeWalker } from '../walker';
@@ -126,12 +130,14 @@ export default function App({ Component, pageProps }) {
   }, [router.events]);
 
   return <Component {...pageProps} />;
-}
-```
+}`}
+  language="tsx"
+/>
 
 For Next.js 13+ with App Router:
 
-```tsx title="app/layout.tsx"
+<CodeSnippet
+  code={`// app/layout.tsx
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -165,15 +171,16 @@ export default function RootLayout({ children }) {
       <body>{children}</body>
     </html>
   );
-}
-```
+}`}
+  language="tsx"
+/>
 
 ## Component usage
 
 Component usage is identical to React. Use the tagger helper and manual events:
 
-```tsx
-import { tagger } from '../walker';
+<CodeSnippet
+  code={`import { tagger } from '../walker';
 
 function ProductPage({ product }) {
   // Manual event tracking
@@ -202,8 +209,9 @@ function ProductPage({ product }) {
       </button>
     </div>
   );
-}
-```
+}`}
+  language="tsx"
+/>
 
 :::info
 
@@ -222,7 +230,7 @@ tracked events:
 Event: "product view", { id: 123, name: "Premium Chocolate", price: 12.99 }
 ```
 
-## Best Practices
+## Best practices
 
 1. **Use tagger**: Clean component tagging with the tagger helper
 2. **Minimal Next.js code**: Keep Next.js integration as simple as possible
@@ -246,12 +254,12 @@ Event: "product view", { id: 123, name: "Premium Chocolate", price: 12.99 }
 2. Ensure firstRun logic is preventing double execution on initial load
 3. Verify router event listeners are working correctly
 
-### TypeScript Errors
+### TypeScript errors
 
 Make sure you've added the global type declarations in your walker
 initialization file.
 
-## Next Steps
+## Next steps
 
 - Configure [destinations](/docs/destinations) for your analytics tools
 - Set up [consent management](/docs/guides/consent)

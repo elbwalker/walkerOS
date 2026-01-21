@@ -44,3 +44,5 @@ export const push: Env = {
       MockPutRecordBatchCommand as unknown as Env['AWS']['PutRecordBatchCommand'],
   },
 };
+
+export const simulation = ['AWS.FirehoseClient'];

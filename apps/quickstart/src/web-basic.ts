@@ -42,7 +42,7 @@ export async function setupWebBasic(): Promise<{
           type: 'console',
           config: {},
           push(event: WalkerOS.Event) {
-            console.log('📊 Event captured:', {
+            console.log('Console:', {
               name: event.name,
               data: event.data,
               timing: event.timing,
@@ -67,7 +67,7 @@ export async function setupWebBasic(): Promise<{
         env: {
           // Mock sendWeb function
           sendWeb: (url: unknown, body: unknown, options: unknown) => {
-            console.log('📡 API Call:', { url, body, options });
+            console.log('API:', { url, body, options });
           },
         },
       },
@@ -126,7 +126,7 @@ export async function setupWebBasic(): Promise<{
         env: {
           window: {
             gtag: (...args: unknown[]) => {
-              console.log('🎯 Gtag Call:', args);
+              console.log('Gtag:', args);
             },
           },
         },

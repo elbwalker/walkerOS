@@ -9,6 +9,25 @@ runtime adapters for GCP services.
 npm install @walkeros/server-source-gcp @google-cloud/functions-framework
 ```
 
+## Usage
+
+```typescript
+import {
+  sourceCloudFunction,
+  type SourceCloudFunction,
+} from '@walkeros/server-source-gcp';
+import { startFlow } from '@walkeros/collector';
+import { http } from '@google-cloud/functions-framework';
+
+const { elb } = await startFlow<SourceCloudFunction.Push>({
+  sources: { api: { code: sourceCloudFunction } },
+});
+
+http('walkerHandler', elb);
+```
+
+---
+
 ## Cloud Functions Source
 
 The Cloud Functions source provides an HTTP handler that receives walker events
@@ -17,17 +36,39 @@ and forwards them to the walkerOS collector.
 ### Basic Usage
 
 ```typescript
-import { sourceCloudFunction } from '@walkeros/server-source-gcp';
+import {
+  sourceCloudFunction,
+  type SourceCloudFunction,
+} from '@walkeros/server-source-gcp';
+import { startFlow } from '@walkeros/collector';
 import { http } from '@google-cloud/functions-framework';
 
-// Create source with collector
-const source = await sourceCloudFunction(
-  { settings: { cors: true, batch: true } },
-  { elb: collector.push },
-);
+// Handler singleton - reused across warm invocations
+let handler: SourceCloudFunction.Push;
 
-// Plug-and-play: source.push IS the Cloud Function handler
-http('walkerHandler', source.push);
+async function setup() {
+  if (handler) return handler;
+
+  const { elb } = await startFlow<SourceCloudFunction.Push>({
+    sources: {
+      api: {
+        code: sourceCloudFunction,
+        config: {
+          settings: { cors: true },
+        },
+      },
+    },
+    destinations: {
+      // Your destinations
+    },
+  });
+
+  handler = elb;
+  return handler;
+}
+
+// Register with Cloud Functions framework
+setup().then((h) => http('walkerHandler', h));
 ```
 
 ## Bundler Integration
@@ -62,6 +103,37 @@ interface CorsOptions {
   maxAge?: number; // Preflight cache time
 }
 ```
+
+### Ingest Metadata
+
+Extract request metadata and forward it to processors and destinations:
+
+```typescript
+await startFlow({
+  sources: {
+    api: {
+      code: sourceCloudFunction,
+      config: {
+        settings: { cors: true },
+        ingest: {
+          ip: 'ip',
+          ua: 'headers.user-agent',
+          origin: 'headers.origin',
+        },
+      },
+    },
+  },
+});
+```
+
+**Available ingest paths:**
+
+| Path        | Description                       |
+| ----------- | --------------------------------- |
+| `ip`        | Client IP address                 |
+| `headers.*` | HTTP headers (user-agent, origin) |
+| `method`    | HTTP method                       |
+| `hostname`  | Request hostname                  |
 
 ### Request Format
 

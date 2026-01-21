@@ -1,4 +1,4 @@
-import type { WalkerOS, On, Collector } from '@walkeros/core';
+import type { WalkerOS, On, Collector, Logger } from '@walkeros/core';
 import type { Settings, Destination, ConsentMapping } from './types';
 import { initGA4, pushGA4Event } from './ga4';
 import { initAds, pushAdsEvent } from './ads';
@@ -9,9 +9,6 @@ import { getEnv } from '@walkeros/web-core';
 
 // Types
 export * as DestinationGtag from './types';
-
-// Examples
-export * as examples from './examples';
 
 // Track whether default consent has been set
 let defaultConsentSet = false;
@@ -32,37 +29,39 @@ export const destinationGtag: Destination = {
 
   config: { settings: {} },
 
-  init({ config, env }) {
+  init({ config, env, logger }) {
     const { settings = {} as Partial<Settings>, loadScript } = config;
     const { ga4, ads, gtm } = settings;
 
+    // Fail if no tools are configured
+    if (!ga4?.measurementId && !ads?.conversionId && !gtm?.containerId) {
+      logger.throw(
+        'Config settings missing. Set ga4.measurementId, ads.conversionId, or gtm.containerId',
+      );
+    }
+
     // Initialize GA4 if configured
     if (ga4?.measurementId) {
-      initGA4(ga4, loadScript, env);
+      initGA4(ga4, loadScript, env, logger);
     }
 
     // Initialize Google Ads if configured
     if (ads?.conversionId) {
-      initAds(ads, loadScript, env);
+      initAds(ads, loadScript, env, logger);
     }
 
     // Initialize GTM if configured
     if (gtm?.containerId) {
-      initGTM(gtm, loadScript, env);
-    }
-
-    // Fail if no tools are configured
-    if (!ga4?.measurementId && !ads?.conversionId && !gtm?.containerId) {
-      return false;
+      initGTM(gtm, loadScript, env, logger);
     }
 
     return config;
   },
 
-  async push(event, { config, mapping = {}, data, env, collector }) {
+  async push(event, { config, rule = {}, data, env, collector, logger }) {
     const { settings = {} } = config;
     const { ga4, ads, gtm } = settings;
-    const eventMapping = mapping.settings || {};
+    const eventMapping = rule.settings || {};
 
     // Resolve data for each tool with proper priority
     const ga4Data = await getData(
@@ -89,36 +88,42 @@ export const destinationGtag: Destination = {
 
     // Push to GA4 if configured
     if (ga4?.measurementId) {
-      pushGA4Event(event, ga4, eventMapping.ga4, ga4Data, env);
+      pushGA4Event(event, ga4, eventMapping.ga4, ga4Data, env, logger);
     }
 
-    // @TODO: Fix condition - should check for mapping.settings?.ads?.label || mapping.name
-    // Currently requires mapping.name even when label is provided via settings.ads.label
-    if (ads?.conversionId && mapping.name) {
-      pushAdsEvent(event, ads, eventMapping.ads, adsData, mapping.name, env);
+    // @TODO: Fix condition - should check for rule.settings?.ads?.label || rule.name
+    // Currently requires rule.name even when label is provided via settings.ads.label
+    if (ads?.conversionId && rule.name) {
+      pushAdsEvent(
+        event,
+        ads,
+        eventMapping.ads,
+        adsData,
+        rule.name,
+        env,
+        logger,
+      );
     }
 
     // Push to GTM if configured
     if (gtm?.containerId) {
-      pushGTMEvent(event, gtm, eventMapping.gtm, gtmData, env);
+      pushGTMEvent(event, gtm, eventMapping.gtm, gtmData, env, logger);
     }
   },
 
   on(type, context) {
     // Only handle consent events
-    if (type !== 'consent' || !context) return;
+    if (type !== 'consent' || !context.data) return;
 
-    const consent = context;
-
-    // Access config directly from this destination instance
-    const settings = this.config?.settings || {};
+    const consent = context.data as WalkerOS.Consent;
+    const settings = (context.config?.settings || {}) as Partial<Settings>;
     const { como = true } = settings;
 
     // Skip if consent mode is disabled
     if (!como) return;
 
     // Ensure gtag is available
-    const { window } = getEnv(this.env);
+    const { window } = getEnv(context.env);
     const gtag = initializeGtag(window as Window);
     if (!gtag) return;
 
@@ -153,19 +158,17 @@ export const destinationGtag: Destination = {
     const gtagConsent: Record<string, 'granted' | 'denied'> = {};
 
     // Map walkerOS consent to gtag consent parameters for update
-    Object.entries(consent as WalkerOS.Consent).forEach(
-      ([walkerOSGroup, granted]) => {
-        const gtagParams = consentMapping[walkerOSGroup];
-        if (!gtagParams) return;
+    Object.entries(consent).forEach(([walkerOSGroup, granted]) => {
+      const gtagParams = consentMapping[walkerOSGroup];
+      if (!gtagParams) return;
 
-        const params = Array.isArray(gtagParams) ? gtagParams : [gtagParams];
-        const consentValue = granted ? 'granted' : 'denied';
+      const params = Array.isArray(gtagParams) ? gtagParams : [gtagParams];
+      const consentValue = granted ? 'granted' : 'denied';
 
-        params.forEach((param) => {
-          gtagConsent[param] = consentValue;
-        });
-      },
-    );
+      params.forEach((param) => {
+        gtagConsent[param] = consentValue;
+      });
+    });
 
     // Only proceed if we have consent parameters to update
     if (Object.keys(gtagConsent).length === 0) return;

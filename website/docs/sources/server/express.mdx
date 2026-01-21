@@ -1,0 +1,219 @@
+---
+title: Express
+description: Turn-key HTTP event collection server with Express.js
+sidebar_position: 1
+package: '@walkeros/server-source-express'
+---
+
+<PackageLink env="server" github="packages/server/sources/express" npm="@walkeros/server-source-express" />
+
+# Express
+
+Turn-key HTTP event collection server with Express.js. Handles JSON POST events, pixel tracking (GET), CORS, and health checks.
+
+## Features
+
+* **Standalone or embedded**: Start server automatically or integrate with existing Express app
+* **CORS support**: Configurable cross-origin resource sharing
+* **Pixel tracking**: 1x1 transparent GIF for GET requests
+* **Health checks**: Built-in `/health` and `/ready` endpoints
+
+:::info Where This Fits
+The Express Source is a **server source** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { label: 'Source', text: 'Express', highlight: true } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
+/>
+
+It receives events via HTTP (POST/GET) and forwards them to configured destinations.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-source-express`}
+  language="bash"
+/>
+
+## Quick start
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+### Standalone server
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceExpress } from '@walkeros/server-source-express';
+
+const { collector } = await startFlow({
+  sources: {
+    express: {
+      code: sourceExpress,
+      config: {
+        settings: {
+          port: 8080,
+          cors: true,
+        },
+      },
+    },
+  },
+  destinations: {
+    // Your destinations
+  },
+});
+
+// Server running at http://localhost:8080
+// POST /collect - JSON event ingestion
+// GET  /collect - Pixel tracking
+// GET  /health  - Health check`}
+  language="typescript"
+/>
+
+### App-Only Mode
+
+<CodeSnippet
+  code={`const { collector } = await startFlow({
+  sources: {
+    express: {
+      code: sourceExpress,
+      config: {
+        settings: {
+          // No port = app only mode
+          path: '/events',
+        },
+      },
+    },
+  },
+});
+
+// Access Express app for custom integration
+const app = collector.sources.express.app;
+app.use(yourAuthMiddleware);
+app.listen(3000);`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` sources:
+
+<CodeSnippet
+  code={`"sources": {
+  "express": {
+    "package": "@walkeros/server-source-express",
+    "config": {
+      "settings": {
+        "port": 8080,
+        "cors": true
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Server sources require platform-specific handlers. For containerized deployments, see [Docker →](/docs/apps/docker).
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `port` | `number` | - | Port to listen on. If not set, runs in app-only mode |
+| `path` | `string` | `/collect` | Event collection endpoint path |
+| `cors` | `boolean \| object` | `true` | CORS configuration |
+| `status` | `boolean` | `true` | Enable health check endpoints |
+
+## HTTP methods
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/collect` | JSON event ingestion |
+| GET | `/collect` | Pixel tracking (returns 1x1 GIF) |
+| OPTIONS | `/collect` | CORS preflight |
+| GET | `/health` | Liveness check |
+| GET | `/ready` | Readiness check |
+
+## Ingest Metadata
+
+Extract request metadata (IP, user agent, headers) and forward it through the pipeline to transformers and destinations.
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceExpress } from '@walkeros/server-source-express';
+
+const { collector } = await startFlow({
+  sources: {
+    express: {
+      code: sourceExpress,
+      config: {
+        settings: { port: 8080 },
+        ingest: {
+          ip: 'ip',
+          ua: 'headers.user-agent',
+          origin: 'headers.origin',
+          referer: 'headers.referer',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+### Available Ingest Paths
+
+| Path | Description |
+|------|-------------|
+| `ip` | Client IP address |
+| `headers.*` | HTTP headers (user-agent, origin, referer, etc.) |
+| `protocol` | Request protocol (http/https) |
+| `method` | HTTP method (GET, POST, etc.) |
+| `hostname` | Request hostname |
+| `url` | Full request URL |
+
+### Advanced Mapping
+
+Use walkerOS mapping features for complex extraction:
+
+<CodeSnippet
+  code={`ingest: {
+  // Simple path
+  ip: 'ip',
+
+  // Custom function
+  country: { fn: (req) => geoip.lookup(req.ip)?.country },
+
+  // Conditional extraction
+  devMode: {
+    key: 'headers.x-debug',
+    condition: (req) => req.hostname === 'localhost',
+  },
+
+  // Nested structure
+  request: {
+    map: {
+      ua: 'headers.user-agent',
+      origin: 'headers.origin',
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+## Example request
+
+<CodeSnippet
+  code={`curl -X POST http://localhost:8080/collect \\
+  -H "Content-Type: application/json" \\
+  -d '{"event":"page view","data":{"title":"Home"}}'`}
+  language="bash"
+/>

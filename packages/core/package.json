@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/core",
   "description": "Core types and platform-agnostic utilities for walkerOS",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -9,17 +9,28 @@
   "files": [
     "dist/**"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
+    }
+  },
   "scripts": {
     "build": "tsup --silent",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc && eslint \"**/*.ts*\"",
+    "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "zod": "^3.25.76",
-    "zod-to-json-schema": "^3.24.6"
+    "zod": "^4.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

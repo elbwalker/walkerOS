@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-piwikpro",
   "description": "Piwik PRO destination for walkerOS",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -16,6 +16,11 @@
       "types": "./dist/examples/index.d.ts",
       "import": "./dist/examples/index.mjs",
       "require": "./dist/examples/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
     }
   },
   "files": [
@@ -30,8 +35,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "0.2.1",
-    "@walkeros/web-core": "0.2.1"
+    "@walkeros/core": "1.0.0",
+    "@walkeros/web-core": "1.0.0"
   },
   "devDependencies": {},
   "repository": {

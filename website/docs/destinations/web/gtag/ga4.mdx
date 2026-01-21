@@ -1,26 +1,15 @@
 ---
 title: Google Analytics 4 (GA4)
-description:
-  Google Analytics 4 configuration within the unified gtag destination
+description: "Google Analytics 4 configuration within the unified gtag destination"
 sidebar_position: 2
 package: '@walkeros/web-destination-gtag'
 ---
 
-import Link from '@docusaurus/Link';
-import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationGtag from '@walkeros/web-destination-gtag';
-import { examples } from '@walkeros/web-destination-gtag';
+import { examples, schemas } from '@walkeros/web-destination-gtag/dev';
 
-export const documentationGtag = {
-  ...destinationGtag,
-  examples,
-};
+export const destination = { ...destinationGtag, examples };
 
 # Google Analytics 4 (GA4)
 
@@ -39,113 +28,60 @@ function calls.
 
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-gtag
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-gtag`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationGtag, {
-  settings: {
-    ga4: {
-      measurementId: 'G-XXXXXXXXXX',
+await startFlow({
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        settings: {
+          ga4: {
+            measurementId: 'G-XXXXXXXXXX',
+          },
+        },
+      },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'measurementId',
-      type: 'string',
-      description: 'GA4 Measurement ID from Google Analytics',
-      required: true,
-      example: "'G-XXXXXXXXXX'",
-    },
-    {
-      name: 'debug',
-      type: 'boolean',
-      description: 'Enable debug mode for GA4',
-      required: false,
-      example: 'true',
-    },
-    {
-      name: 'include',
-      type: 'Include[]',
-      description: 'Array of properties to include in events',
-      required: false,
-      example: "['data', 'context', 'user']",
-    },
-    {
-      name: 'pageview',
-      type: 'boolean',
-      description: 'Enable automatic pageview tracking',
-      required: false,
-      example: 'true',
-    },
-    {
-      name: 'server_container_url',
-      type: 'string',
-      description: 'Server-side GTM container URL',
-      required: false,
-      example: "'https://server-container.com'",
-    },
-    {
-      name: 'snakeCase',
-      type: 'boolean',
-      description: 'Convert parameter names to snake_case',
-      required: false,
-      example: 'true',
-    },
-    {
-      name: 'transport_url',
-      type: 'string',
-      description: 'Custom transport URL for GA4',
-      required: false,
-      example: "'https://analytics.example.com/mp/collect'",
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.ga4} />
 
 #### Example
 
-<DestinationInit
-  destination={documentationGtag}
-  custom={`{
-    measurementId: 'G-XXXXXXXXXX', // Required
-    debug: false,
-    include: ['globals'],
-    pageview: false,
-    server_container_url: 'https://server.example.com',
-    snakeCase: true,
-    transport_url: 'https://www.google-analytics.com/g/collect',
-  }`}
+<DestinationInitDemo
+  destination={destination}
+  settings={{
+    ga4: {
+      measurementId: 'G-XXXXXXXXXX',
+      debug: false,
+      include: ['globals'],
+      pageview: false,
+      server_container_url: 'https://server.example.com',
+      snakeCase: true,
+      transport_url: 'https://www.google-analytics.com/g/collect',
+    },
+  }}
 />
 
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings.ga4`):
 
-<SettingsTable
-  properties={[
-    {
-      name: 'include',
-      type: 'Include[]',
-      description: 'Array of properties to include in this specific event',
-      required: false,
-      example: "['data', 'context']",
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.ga4} />
 
 You are able to map your walkerOS events to match the respective requirements of
 each vendor. The `mapping` examples are using a
@@ -170,8 +106,8 @@ Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/ga4/reference/events?sjid=10736118709897970414-EU&client_type=gtag#add_to_cart">add_to_cart</Link>
 gtag.js event.
 
-<DestinationPush
-  destination={documentationGtag}
+<DestinationDemo
+  destination={destination}
   settings={{
     ga4: {
       measurementId: 'G-XXXXXXXXXX',
@@ -190,8 +126,8 @@ Map your walkerOS event to get
 a&nbsp;<Link to="https://developers.google.com/analytics/devguides/collection/ga4/reference/events?sjid=10736118709897970414-EU&client_type=gtag#purchase">purchase</Link>
 gtag.js event.
 
-<DestinationPush
-  destination={documentationGtag}
+<DestinationDemo
+  destination={destination}
   settings={{
     ga4: {
       measurementId: 'G-XXXXXXXXXX',

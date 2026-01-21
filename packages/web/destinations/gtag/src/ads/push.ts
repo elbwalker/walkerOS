@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { WalkerOS, Logger } from '@walkeros/core';
 import type { AdsSettings, AdsMapping } from '../types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { isObject } from '@walkeros/core';
@@ -9,15 +9,16 @@ export function pushAdsEvent(
   settings: AdsSettings,
   mapping: AdsMapping = {},
   data: WalkerOS.AnyObject,
-  mappingName?: string,
-  env?: DestinationWeb.Env,
+  mappingName: string | undefined,
+  env: DestinationWeb.Env | undefined,
+  logger: Logger.Instance,
 ): void {
   const { conversionId, currency } = settings;
   const eventData = isObject(data) ? data : {};
 
   // Use label from mapping settings, fallback to mappingName for backward compatibility
   const conversionLabel = mapping.label || mappingName;
-  if (!conversionLabel) return;
+  if (!conversionLabel) logger.throw('Config mapping ads.label missing');
 
   const params: Gtag.CustomParams = {
     send_to: `${conversionId}/${conversionLabel}`,

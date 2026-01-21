@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "packages": {
+        "@walkeros/collector": {
+          "version": "latest",
+          "imports": ["startFlow"]
+        },
+        "@walkeros/destination-demo": {
+          "version": "latest"
+        }
+      },
+      "destinations": {
+        "demo": {
+          "code": "destinationDemo",
+          "config": {
+            "settings": {
+              "name": "Simple Demo",
+              "values": ["name", "data", "user", "consent"]
+            }
+          }
+        }
+      }
+    }
+  }
+}

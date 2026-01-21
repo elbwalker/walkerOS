@@ -1,6 +1,6 @@
 <p align="left">
-  <a href="https://elbwalker.com">
-    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
+  <a href="https://www.walkeros.io">
+    <img title="elbwalker" src="https://www.walkeros.io/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
@@ -21,20 +21,52 @@ Google Cloud's powerful data processing and machine learning capabilities.
 npm install @walkeros/server-destination-gcp
 ```
 
-## Usage
+## Quick Start
 
-Here's a basic example of how to use the GCP BigQuery destination:
+Configure in your Flow JSON:
+
+```json
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "destinations": {
+        "bigquery": {
+          "package": "@walkeros/server-destination-gcp",
+          "config": {
+            "settings": {
+              "projectId": "YOUR_PROJECT_ID",
+              "datasetId": "YOUR_DATASET_ID",
+              "tableId": "YOUR_TABLE_ID"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Or programmatically:
 
 ```typescript
-import { elb } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { destinationBigQuery } from '@walkeros/server-destination-gcp';
 
-elb('walker destination', destinationBigQuery, {
-  settings: {
-    projectId: 'YOUR_PROJECT_ID',
-    datasetId: 'YOUR_DATASET_ID',
-    tableId: 'YOUR_TABLE_ID',
-  },
+const { elb } = await startFlow({
+  destinations: [
+    {
+      destination: destinationBigQuery,
+      config: {
+        settings: {
+          projectId: 'YOUR_PROJECT_ID',
+          datasetId: 'YOUR_DATASET_ID',
+          tableId: 'YOUR_TABLE_ID',
+        },
+      },
+    },
+  ],
 });
 ```
 
@@ -48,6 +80,48 @@ elb('walker destination', destinationBigQuery, {
 | `tableId`   | `string`          | BigQuery table ID for event storage              | Yes      | `'events'`                                 |
 | `location`  | `string`          | Geographic location for the BigQuery dataset     | No       | `'US'`                                     |
 | `bigquery`  | `BigQueryOptions` | Additional BigQuery client configuration options | No       | `{ keyFilename: "path/to/key.json" }`      |
+
+## Table Schema
+
+By default, the destination sends the full walkerOS event. Create the table
+with:
+
+```sql
+CREATE TABLE IF NOT EXISTS `YOUR_PROJECT.walkeros.events` (
+  timestamp TIMESTAMP,
+  createdAt TIMESTAMP,
+  name STRING,
+  id STRING,
+  entity STRING,
+  action STRING,
+  trigger STRING,
+  `group` STRING,
+  timing FLOAT64,
+  count INT64,
+  data STRING,
+  context STRING,
+  globals STRING,
+  custom STRING,
+  user STRING,
+  nested STRING,
+  consent STRING,
+  version STRING,
+  source STRING
+);
+```
+
+Object and array fields (`data`, `context`, `globals`, etc.) are JSON
+stringified. For custom schemas using the `data` mapping config, see the
+[full documentation](https://www.walkeros.io/docs/destinations/server/gcp).
+
+## Type Definitions
+
+See [src/types/](./src/types/) for TypeScript interfaces.
+
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/destinations/server/gcp/)
+- [Destination Interface](../../../core/src/types/destination.ts)
 
 ## Contribute
 

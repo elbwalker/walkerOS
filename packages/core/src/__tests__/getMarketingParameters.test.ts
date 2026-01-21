@@ -2,7 +2,7 @@ import { getMarketingParameters } from '..';
 
 describe('getMarketingParameters', () => {
   test('marketing parameters', () => {
-    const url = 'https://www.elbwalker.com/?';
+    const url = 'https://www.walkeros.io/?';
     expect(getMarketingParameters(new URL(url))).toStrictEqual({});
 
     expect(

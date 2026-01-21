@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, toJsonSchema } from './validation';
 
 /**
  * Zod Schemas for walkerOS Mapping ValueConfig
@@ -13,7 +12,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
  * These Zod schemas are for VALIDATION and JSON SCHEMA GENERATION only.
  *
  * The circular/recursive nature of Value → ValueConfig → Value makes
- * full type inference complex, so we use z.any() with lazy evaluation
+ * full type inference complex, so we use z.unknown() with lazy evaluation
  * and keep existing TypeScript types separate.
  *
  * @example
@@ -21,7 +20,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
  * const result = ValueConfigSchema.safeParse(userInput);
  *
  * // Generate JSON Schema for Explorer
- * const jsonSchema = zodToJsonSchema(ValueConfigSchema);
+ * const jsonSchema = toJsonSchema(ValueConfigSchema, 'ValueConfig');
  */
 
 /**
@@ -33,7 +32,7 @@ export const ConsentSchema = z
   .describe('Consent requirement mapping');
 
 /**
- * Recursive schemas - use z.any() to avoid circular type issues
+ * Recursive schemas - use z.unknown() to avoid circular type issues
  * These work for validation and JSON Schema generation
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -128,26 +127,13 @@ export const MapSchema = MapSchemaLazy;
 export const ValueConfigSchema = ValueConfigSchemaLazy;
 
 // JSON Schema generation for RJSF/Explorer
-export const valueConfigJsonSchema = zodToJsonSchema(ValueConfigSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'ValueConfig',
-});
+export const valueConfigJsonSchema = toJsonSchema(
+  ValueConfigSchema,
+  'ValueConfig',
+);
 
-export const loopJsonSchema = zodToJsonSchema(LoopSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Loop',
-});
+export const loopJsonSchema = toJsonSchema(LoopSchema, 'Loop');
 
-export const setJsonSchema = zodToJsonSchema(SetSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Set',
-});
+export const setJsonSchema = toJsonSchema(SetSchema, 'Set');
 
-export const mapJsonSchema = zodToJsonSchema(MapSchema, {
-  target: 'jsonSchema7',
-  $refStrategy: 'relative',
-  name: 'Map',
-});
+export const mapJsonSchema = toJsonSchema(MapSchema, 'Map');

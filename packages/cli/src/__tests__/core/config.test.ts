@@ -1,10 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
-import {
-  loadJsonConfig,
-  substituteEnvVariables,
-  getTempDir,
-} from '../../core/config';
+import { loadJsonConfig, substituteEnvVariables } from '../../config/index.js';
+import { getTmpPath, getDefaultTmpRoot } from '../../core/tmp.js';
 import { getId } from '@walkeros/core';
 
 describe('Config utilities', () => {
@@ -86,21 +83,30 @@ describe('Config utilities', () => {
     });
   });
 
-  describe('getTempDir', () => {
-    it('should generate unique temp directory', () => {
-      const dir1 = getTempDir();
-      const dir2 = getTempDir();
+  describe('getTmpPath', () => {
+    it('should return absolute tmp root when no arguments', () => {
+      const tmpPath = getTmpPath();
 
-      expect(dir1).not.toBe(dir2);
-      expect(dir1).toContain('cli-');
-      expect(dir2).toContain('cli-');
+      expect(tmpPath).toBe(path.resolve('.tmp'));
+      expect(path.isAbsolute(tmpPath)).toBe(true);
     });
 
-    it('should use custom temp directory name', () => {
-      const customDir = getTempDir('custom-temp');
+    it('should join path segments', () => {
+      const tmpPath = getTmpPath(undefined, 'cache', 'builds');
 
-      expect(customDir).toContain('custom-temp');
-      expect(customDir).toContain('cli-');
+      expect(tmpPath).toBe(path.resolve('.tmp', 'cache', 'builds'));
+      expect(path.isAbsolute(tmpPath)).toBe(true);
+    });
+
+    it('should use custom tmp directory', () => {
+      const tmpPath = getTmpPath('/custom', 'cache');
+
+      expect(tmpPath).toBe(path.join('/custom', 'cache'));
+      expect(path.isAbsolute(tmpPath)).toBe(true);
+    });
+
+    it('should return default tmp root from getDefaultTmpRoot', () => {
+      expect(getDefaultTmpRoot()).toBe('.tmp');
     });
   });
 });

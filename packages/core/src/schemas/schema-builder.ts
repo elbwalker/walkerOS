@@ -18,7 +18,7 @@ export type JSONSchema = Record<string, unknown>;
  *
  * @example
  * // In destination package (NO Zod needed!)
- * import { createObjectSchema, createArraySchema } from '@walkeros/core/schemas';
+ * import { createObjectSchema, createArraySchema } from '@walkeros/core/dev';
  *
  * export const settingsSchema = createObjectSchema({
  *   pixelId: {

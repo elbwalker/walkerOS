@@ -12,11 +12,27 @@ const config: Config = {
   tagline: 'Open-source event data collection platform',
   favicon: 'img/favicon.png',
 
+  // Build optimizations - reduces memory usage and build time significantly
+  // See: https://docusaurus.io/blog/releases/3.8
+  future: {
+    v4: {
+      removeLegacyPostBuildHeadAttribute: true,
+    },
+    experimental_faster: {
+      swcJsLoader: true, // Use SWC instead of Babel
+      swcJsMinimizer: true, // Use SWC instead of Terser (less memory)
+      swcHtmlMinimizer: true, // Use SWC for HTML minification
+      lightningCssMinimizer: true, // Use Lightning CSS instead of cssnano
+      rspackBundler: false, // Disabled: Rspack has issues with npm workspace symlinks in dev mode
+      mdxCrossCompilerCache: true, // Compile MDX only once
+    },
+  },
+
   // Set the production url of your site here
-  url: 'https://www.elbwalker.com',
+  url: 'https://www.walkeros.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/',
+  baseUrl: process.env.DOCUSAURUS_BASEURL || '/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -24,7 +40,6 @@ const config: Config = {
   projectName: 'walkerOS', // Usually your repo name.
 
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -36,6 +51,9 @@ const config: Config = {
 
   markdown: {
     mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
   },
 
   themes: ['@docusaurus/theme-live-codeblock', '@docusaurus/theme-mermaid'],
@@ -50,16 +68,15 @@ const config: Config = {
           // Remove this to remove the "edit this page" links.
           editUrl: `${vars.github}edit/main/website/`,
         },
-        blog: {
-          blogSidebarTitle: 'All posts',
-          blogSidebarCount: 'ALL',
-          showReadingTime: true,
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl: `${vars.github}edit/main/website/`,
-        },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
+        },
+        sitemap: {
+          changefreq: 'weekly',
+          priority: 0.5,
+          ignorePatterns: ['/tags/**'],
+          filename: 'sitemap.xml',
         },
       } satisfies Preset.Options,
     ],
@@ -81,7 +98,7 @@ const config: Config = {
     navbar: {
       logo: {
         alt: 'elbwalker logo',
-        src: 'img/elbwalker_logo.png',
+        src: 'img/walkerOS_logo_new.svg',
       },
       items: [
         {
@@ -91,7 +108,6 @@ const config: Config = {
           label: 'Documentation',
         },
         { to: '/playground/', label: 'Playground', position: 'left' },
-        { to: '/services', label: 'Services', position: 'left' },
         {
           href: vars.github,
           label: 'GitHub',
@@ -117,10 +133,6 @@ const config: Config = {
               label: 'Comparisons',
               to: '/docs/comparisons/',
             },
-            {
-              label: 'Blog',
-              to: '/blog/',
-            },
           ],
         },
         {
@@ -141,19 +153,23 @@ const config: Config = {
           items: [
             {
               label: 'About us',
-              to: '/company',
+              href: 'https://www.elbwalker.com/company',
+            },
+            {
+              label: 'Services',
+              href: 'https://www.elbwalker.com/services',
             },
             {
               label: 'Privacy Policy',
-              to: '/legal/privacy',
+              href: 'https://www.elbwalker.com/legal/privacy',
             },
             {
               label: 'Terms of Services',
-              to: '/legal/terms',
+              href: 'https://www.elbwalker.com/legal/terms',
             },
             {
               label: 'Imprint',
-              to: '/legal/imprint',
+              href: 'https://www.elbwalker.com/legal/imprint',
             },
           ],
         },

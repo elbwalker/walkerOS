@@ -12,7 +12,7 @@ import { hashEvent } from './hash';
 
 export const push: PushFn = async function (
   event,
-  { config, mapping, data, collector, env },
+  { config, rule, data, collector, env, logger },
 ) {
   const {
     accessToken,
@@ -69,14 +69,27 @@ export const push: PushFn = async function (
   // Test event code
   if (test_event_code) body.test_event_code = test_event_code;
 
+  const endpoint = `${url}${pixelId}/events`;
+  logger.debug('Calling Meta API', {
+    endpoint,
+    method: 'POST',
+    eventName: serverEvent.event_name,
+    eventId: serverEvent.event_id,
+  });
+
   const sendServerFn = env?.sendServer || sendServer;
   const result = await sendServerFn(
-    `${url}${pixelId}/events?access_token=${accessToken}`,
+    `${endpoint}?access_token=${accessToken}`,
     JSON.stringify(body),
   );
 
-  if (isObject(result) && result.ok === false)
-    throw new Error(JSON.stringify(result));
+  logger.debug('Meta API response', {
+    ok: isObject(result) ? result.ok : true,
+  });
+
+  if (isObject(result) && result.ok === false) {
+    logger.throw(`Meta API error: ${JSON.stringify(result)}`);
+  }
 };
 
 function formatClickId(clickId: unknown, time?: number): string | undefined {

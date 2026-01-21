@@ -5,21 +5,18 @@ import { push } from './push';
 // Types
 export * as DestinationMeta from './types';
 
-// Examples
-export * as examples from './examples';
-
 export const destinationMeta: Destination = {
   type: 'meta',
 
   config: {},
 
-  async init({ config: partialConfig }) {
-    const config = getConfig(partialConfig);
+  async init({ config: partialConfig, logger }) {
+    const config = getConfig(partialConfig, logger);
     return config;
   },
 
-  async push(event, { config, mapping, data, collector, env }) {
-    return await push(event, { config, mapping, data, collector, env });
+  async push(event, context) {
+    return await push(event, context);
   },
 };
 

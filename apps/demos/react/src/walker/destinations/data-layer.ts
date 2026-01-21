@@ -1,8 +1,9 @@
-import type { Destination } from '@walkeros/core';
+import type { Destination, WalkerOS } from '@walkeros/core';
 
-export const destinationDataLayer: Destination.InitDestination = {
+export const destinationDataLayer: Destination.Instance = {
+  config: {},
   type: 'data-layer',
-  push: async (event) => {
+  push: async (event: WalkerOS.Event) => {
     // Access dataLayer as unknown and cast it
     const w = window as { dataLayer?: unknown };
 
@@ -13,7 +14,7 @@ export const destinationDataLayer: Destination.InitDestination = {
 
     // Push event to dataLayer
     (w.dataLayer as Array<Record<string, unknown>>).push({
-      event: event.event,
+      event: event.name,
       ...event.data,
       walker: {
         entity: event.entity,

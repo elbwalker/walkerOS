@@ -6,25 +6,11 @@ sidebar_position: 4
 package: '@walkeros/web-destination-plausible'
 ---
 
-import Link from '@docusaurus/Link';
-import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationPlausible from '@walkeros/web-destination-plausible';
-import { examples } from '@walkeros/web-destination-plausible';
+import { examples, schemas } from '@walkeros/web-destination-plausible/dev';
 
-export const documentationPlausible = {
-  ...destinationPlausible,
-  env: {
-    window: {
-      plausible: () => {},
-    },
-  },
-};
+export const destination = { ...destinationPlausible, examples };
 
 # Plausible Analytics
 
@@ -40,46 +26,82 @@ Plausible via the `plausible` function. All you need to do is install the
 destination, and optionally map events to Plausible's format. walkerOS takes
 care of loading the script and the function calls.
 
+:::info Where This Fits
+Plausible is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Plausible', highlight: true } }}
+/>
+
+Loads Plausible script, initializes the plausible function, and tracks page views and custom events with privacy-first analytics.
+:::
+
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-plausible
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-plausible`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationPlausible } from '@walkeros/web-destination-plausible';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationPlausible, {
-  settings: {
-    domain: 'elbwalker.com', // Optional, domain of your site as registered
+await startFlow({
+  destinations: {
+    plausible: {
+      code: destinationPlausible,
+      config: {
+        settings: {
+          domain: 'walkeros.io', // Optional, domain of your site as registered
+        },
+      },
+    },
   },
-});
-```
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "plausible": {
+    "package": "@walkeros/web-destination-plausible",
+    "config": {
+      "settings": {
+        "domain": "walkeros.io"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'domain',
-      type: 'string',
-      description: 'The domain of your site as registered in Plausible',
-      required: false,
-      example: "'elbwalker.com'",
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.settings} />
 
-<DestinationInit
-  destination={documentationPlausible}
-  custom={`{
-    domain: 'elbwalker.com', // Optional, domain of your site as registered
-  }`}
+<DestinationInitDemo
+  destination={destination}
+  settings={{
+    domain: 'walkeros.io',
+  }}
 />
 
 ## Mapping examples
@@ -96,16 +118,14 @@ events</Link> manually using the JavaScript function
 
 ### CustomEvent
 
-<DestinationPush
-  destination={documentationPlausible}
+<DestinationDemo
+  destination={destination}
   settings={{
-    domain: 'elbwalker.com',
+    domain: 'walkeros.io',
   }}
   event={getEvent()}
   mapping={examples.mapping.customEvent}
   generic={true}
-  smallText={true}
-  height={'256px'}
 />
 
 ### Purchase
@@ -114,13 +134,11 @@ Checkout&nbsp;<Link to="https://plausible.io/docs/ecommerce-revenue-tracking">Pl
 E-commerce revenue tracking</Link> guide to learn more about the setup within
 Plausible.
 
-<DestinationPush
-  destination={documentationPlausible}
+<DestinationDemo
+  destination={destination}
   settings={{
-    domain: 'elbwalker.com',
+    domain: 'walkeros.io',
   }}
-  smallText={true}
-  height={'512px'}
   event={getEvent('order complete')}
   mapping={examples.mapping.purchase}
   generic={true}

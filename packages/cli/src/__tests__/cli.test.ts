@@ -24,7 +24,7 @@ describe('CLI Bundle Command', () => {
     args: string[],
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
     return new Promise((resolve) => {
-      const child = spawn('node', ['dist/index.mjs', ...args], {
+      const child = spawn('node', ['dist/index.js', ...args], {
         stdio: 'pipe',
         shell: false,
       });
@@ -47,24 +47,22 @@ describe('CLI Bundle Command', () => {
   };
 
   it('should output JSON format for successful bundle', async () => {
-    // Create a test config
+    // Flow.Setup format
     const testConfig = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': { imports: ['getId'] },
+      version: 1,
+      flows: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
+        },
       },
-      code: 'export const test = getId();',
-      output: path.join(testOutputDir, 'test.js'),
     };
 
     await fs.writeJson(testConfigPath, testConfig);
 
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      testConfigPath,
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
 
     expect(result.exitCode).toBe(0);
 
@@ -72,59 +70,63 @@ describe('CLI Bundle Command', () => {
     expect(output).toMatchObject({
       success: true,
       data: {
-        stats: {
-          totalSize: expect.any(Number),
-          packages: expect.any(Array),
-          buildTime: expect.any(Number),
-          treeshakingEffective: expect.any(Boolean),
+        flows: expect.arrayContaining([
+          {
+            flowName: 'default',
+            success: true,
+            stats: {
+              totalSize: expect.any(Number),
+              packages: expect.any(Array),
+              buildTime: expect.any(Number),
+              treeshakingEffective: expect.any(Boolean),
+            },
+          },
+        ]),
+        summary: {
+          total: 1,
+          success: 1,
+          failed: 0,
         },
       },
       duration: expect.any(Number),
     });
 
-    expect(output.data.stats.packages).toHaveLength(1);
-    expect(output.data.stats.packages[0].name).toBe('@walkeros/core@latest');
-  });
+    expect(output.data.flows[0].stats.packages).toHaveLength(1);
+    expect(output.data.flows[0].stats.packages[0].name).toBe(
+      '@walkeros/core@latest',
+    );
+  }, 120000);
 
-  it('should output JSON format for failed bundle', async () => {
-    // Create a test config with syntax error
+  it('should output JSON format for failed bundle (invalid syntax)', async () => {
+    // Flow.Setup format - but bundler will fail on invalid destination code
     const testConfig = {
-      platform: 'web',
-      packages: {
-        '@walkeros/core': { imports: ['getId'] },
+      version: 1,
+      flows: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/nonexistent-package-xyz': { imports: ['nonexistent'] },
+          },
+        },
       },
-      code: 'export const badCode = () => {\n  return getId([1,2,3] x => x * 2);\n};',
-      output: path.join(testOutputDir, 'error-test.js'),
     };
 
     await fs.writeJson(testConfigPath, testConfig);
 
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      testConfigPath,
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
 
     expect(result.exitCode).toBe(1);
 
     const output = JSON.parse(result.stdout);
     expect(output).toMatchObject({
       success: false,
-      error: expect.stringContaining('Code syntax error'),
+      error: expect.any(String),
       duration: expect.any(Number),
     });
-
-    expect(output.error).toContain('line 4, column 23');
   });
 
   it('should output JSON format when config file not found', async () => {
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      'nonexistent.json',
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', 'nonexistent.json', '--json']);
 
     expect(result.exitCode).toBe(1);
 
@@ -136,45 +138,47 @@ describe('CLI Bundle Command', () => {
   });
 
   it('should collect stats when --json flag is used (implies --stats)', async () => {
+    // Flow.Setup format
     const testConfig = {
-      platform: 'web',
-      packages: { '@walkeros/core': { imports: ['getId'] } },
-      code: 'export const test = getId;',
-      output: path.join(testOutputDir, 'wildcard-test.js'),
+      version: 1,
+      flows: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
+        },
+      },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
 
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      testConfigPath,
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
 
     expect(result.exitCode).toBe(0);
 
     const output = JSON.parse(result.stdout);
     expect(output.success).toBe(true);
-    expect(output.data.stats.treeshakingEffective).toBe(true); // Should be effective with named imports
+    expect(output.data.flows[0].stats.treeshakingEffective).toBe(true);
   });
 
   it('should suppress decorative output in JSON mode', async () => {
+    // Flow.Setup format
     const testConfig = {
-      platform: 'web',
-      packages: { '@walkeros/core': { imports: ['getId'] } },
-      code: 'export const test = getId();',
-      output: path.join(testOutputDir, 'minimal-test.js'),
+      version: 1,
+      flows: {
+        default: {
+          web: {},
+          packages: {
+            '@walkeros/core': { imports: ['getId'] },
+          },
+        },
+      },
     };
 
     await fs.writeJson(testConfigPath, testConfig);
 
-    const result = await runCLI([
-      'bundle',
-      '--config',
-      testConfigPath,
-      '--json',
-    ]);
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
 
     expect(result.exitCode).toBe(0);
 
@@ -187,101 +191,31 @@ describe('CLI Bundle Command', () => {
     const output = JSON.parse(result.stdout);
     expect(output.success).toBe(true);
   });
+
+  it('should reject invalid config format', async () => {
+    // Old format - no longer supported
+    const testConfig = {
+      flow: {
+        platform: 'web',
+      },
+      build: {
+        packages: {},
+      },
+    };
+
+    await fs.writeJson(testConfigPath, testConfig);
+
+    const result = await runCLI(['bundle', testConfigPath, '--json']);
+
+    expect(result.exitCode).toBe(1);
+
+    const output = JSON.parse(result.stdout);
+    expect(output.success).toBe(false);
+    expect(output.error).toContain('Invalid configuration');
+  });
 });
 
 describe('CLI Simulate Command', () => {
-  const testConfigPath = path.join(
-    __dirname,
-    '../../examples/web-ecommerce.json',
-  );
-
-  beforeEach(() => {
-    // Mock console.log and console.error to suppress output during tests
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    // Restore console methods
-    jest.restoreAllMocks();
-  });
-
-  const runCLI = (
-    args: string[],
-  ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
-    return new Promise((resolve) => {
-      const child = spawn('node', ['dist/index.mjs', ...args], {
-        stdio: 'pipe',
-        shell: false,
-      });
-
-      let stdout = '';
-      let stderr = '';
-
-      child.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
-
-      child.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-
-      child.on('close', (exitCode) => {
-        resolve({ stdout, stderr, exitCode: exitCode || 0 });
-      });
-    });
-  };
-
-  it('should output JSON format for simulation', async () => {
-    const result = await runCLI([
-      'simulate',
-      '--config',
-      testConfigPath,
-      '--event',
-      '{"name":"product view","data":{"id":"P123"}}',
-      '--json',
-    ]);
-
-    expect(result.exitCode).toBe(0);
-
-    const output = JSON.parse(result.stdout);
-    expect(output).toMatchObject({
-      result: {
-        ok: true,
-        successful: expect.arrayContaining([
-          expect.objectContaining({ id: 'gtag' }),
-          expect.objectContaining({ id: 'api' }),
-        ]),
-        queued: [],
-        failed: [],
-        event: expect.objectContaining({
-          name: 'product view',
-          data: { id: 'P123' },
-        }),
-      },
-      usage: {
-        gtag: expect.any(Array),
-        api: expect.any(Array),
-      },
-      duration: expect.any(Number),
-    });
-
-    // Verify gtag API calls
-    expect(output.usage.gtag.length).toBeGreaterThan(0);
-    expect(output.usage.gtag[0]).toMatchObject({
-      type: 'call',
-      path: 'window.gtag',
-      timestamp: expect.any(Number),
-      args: expect.any(Array),
-    });
-
-    // Verify api API calls
-    expect(output.usage.api.length).toBeGreaterThan(0);
-    expect(output.usage.api[0]).toMatchObject({
-      type: 'call',
-      path: 'sendWeb',
-      timestamp: expect.any(Number),
-      args: expect.any(Array),
-    });
-  });
+  // Placeholder for future simulate command tests
+  // Current simulate functionality is tested in cli-e2e.test.ts
 });

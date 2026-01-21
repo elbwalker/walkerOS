@@ -1,0 +1,37 @@
+---
+title: Server sources
+description: HTTP event collection sources for server environments
+sidebar_position: 2
+---
+
+# Server sources
+
+Server sources accept HTTP requests containing walkerOS events and forward them to the collector. Choose based on your deployment environment.
+
+## Available sources
+
+| Source | Platform | Use Case |
+|--------|----------|----------|
+| [Express](./express) | Node.js | Standalone server or existing Express app |
+| [Fetch](./fetch) | Edge/Serverless | Cloudflare Workers, Vercel Edge, Deno, Bun |
+| [AWS Lambda](./aws) | AWS | API Gateway, Lambda Function URLs |
+| [GCP Cloud Functions](./gcp) | Google Cloud | Cloud Functions HTTP triggers |
+
+## Choosing a source
+
+**Express** - Best for traditional Node.js deployments, Docker containers, or when you need full control over the HTTP server.
+
+**Fetch** - Best for edge computing and serverless platforms that support the Web Standard Fetch API.
+
+**AWS Lambda** - Best for AWS-native deployments with API Gateway or Lambda Function URLs.
+
+**GCP Cloud Functions** - Best for Google Cloud deployments using Cloud Functions.
+
+## Common features
+
+All server sources provide:
+
+- **JSON event ingestion** (POST)
+- **Pixel tracking** (GET with 1x1 GIF response)
+- **CORS support** (configurable)
+- **Health checks** (liveness/readiness endpoints)

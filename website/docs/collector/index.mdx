@@ -6,8 +6,9 @@ package: '@walkeros/collector'
 sidebar_position: 2
 ---
 
-import Link from '@docusaurus/Link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { schemas } from '@walkeros/core/dev';
+
+export const collectorSchema = schemas.CollectorSchemas.initConfigJsonSchema;
 
 # Collector
 
@@ -20,26 +21,33 @@ middleware** between event capture and event delivery.
 
 The Collector transforms raw events into enriched, compliant data streams by:
 
-- **Event processing** - Validates, normalizes, and enriches incoming events
-- **Consent management** - Applies privacy rules and user consent preferences
-- **Data enrichment** - Adds session data, user context, and custom properties
-- **Destination routing** - Sends processed events to configured analytics
+* **Event processing** - Validates, normalizes, and enriches incoming events
+* **Consent management** - Applies privacy rules and user consent preferences
+* **Data enrichment** - Adds session data, user context, and custom properties
+* **Destination routing** - Sends processed events to configured analytics
   platforms
 
 #### Key features
 
-- **Compatibility** - Works in both web browsers and server environments
-- **Privacy-first** - Built-in consent management and data protection
-- **Event validation** - Ensures data quality and consistency
-- **Flexible routing** - Send events to multiple destinations simultaneously
+* **Compatibility** - Works in both web browsers and server environments
+* **Privacy-first** - Built-in consent management and data protection
+* **Event validation** - Ensures data quality and consistency
+* **Flexible routing** - Send events to multiple destinations simultaneously
 
 #### Role in architecture
 
 In the walkerOS data flow, the collector sits between sources and destinations:
 
-```
-Sources → Collector → Destinations
-```
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: true }}
+  destinations={{ default: { highlight: false } }}
+  markers={[
+    { position: 'source-collector', id: '1', text: 'Receive: Incoming mapped events from sources' },
+    { position: 'collector', id: '2', text: 'Process: State management, consent handling, enrichment' },
+    { position: 'collector-destination', id: '3', text: 'Route: Map events to destination-specific requirements' },
+  ]}
+/>
 
 Sources capture events and send them to the collector, which processes and
 routes them to your chosen destinations like Google Analytics, custom APIs, or
@@ -47,137 +55,129 @@ data warehouses.
 
 ## Installation
 
-```bash
-npm install @walkeros/collector
-```
+<CodeSnippet
+  code={`npm install @walkeros/collector`}
+  language="bash"
+/>
 
 ## Basic setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector, elb } = await startFlow({
-  run: true,
-  consent: { functional: true },
-  sources: {
-    browser: {
-      code: sourceBrowser,
-      config: {
-        settings: {
-          pageview: true,
-          session: true,
-        },
-      },
+consent: { functional: true },
+sources: {
+browser: {
+  code: sourceBrowser,
+  config: {
+    settings: {
+      pageview: true,
+      session: true,
     },
   },
-  destinations: {
-    console: {
-      code: {
-        type: 'console',
-        push: (event) => console.log('Event:', event),
-      },
+},
+},
+destinations: {
+console: {
+  code: true, // Built-in code destination
+  config: {
+    settings: {
+      push: "console.log('Event:', event)",
     },
   },
-});
-```
+},
+},
+});`}
+  language="typescript"
+/>
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'run',
-      type: 'boolean',
-      description:
-        'Automatically start the collector pipeline on initialization',
-      required: false,
-      example: 'true',
-    },
-    {
-      name: 'sources',
-      type: 'object',
-      description:
-        'Configurations for sources providing events to the collector',
-      required: false,
-      example: '{ browser: { code: sourceBrowser, config: {...} } }',
-    },
-    {
-      name: 'destinations',
-      type: 'object',
-      description: 'Configurations for destinations receiving processed events',
-      required: false,
-      example: '{ gtag: { code: destinationGtag, config: {...} } }',
-    },
-    {
-      name: 'consent',
-      type: 'object',
-      description: 'Initial consent state to control routing of events',
-      required: false,
-      example: '{ analytics: true, marketing: false }',
-    },
-    {
-      name: 'verbose',
-      type: 'boolean',
-      description: 'Enable verbose logging for debugging',
-      required: false,
-      example: 'false',
-    },
-    {
-      name: 'onError',
-      type: 'function',
-      description:
-        'Error handler triggered when the collector encounters failures',
-      required: false,
-      example: '(error) => console.error(error)',
-    },
-    {
-      name: 'onLog',
-      type: 'function',
-      description: 'Custom log handler for collector messages',
-      required: false,
-      example: '(message, level) => console.log(message)',
-    },
-  ]}
-/>
+<PropertyTable schema={collectorSchema} />
 
 ## Advanced setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 import { destinationAPI } from '@walkeros/web-destination-api';
 
 const { collector, elb } = await startFlow({
-  run: true,
-  consent: { functional: true },
-  sources: {
-    browser: {
-      code: sourceBrowser,
-      config: {
-        settings: {
-          pageview: true,
-          session: true,
-        },
-      },
+consent: { functional: true },
+sources: {
+browser: {
+  code: sourceBrowser,
+  config: {
+    settings: {
+      pageview: true,
+      session: true,
     },
   },
-  destinations: {
-    api: {
-      code: destinationAPI,
-      config: {
-        settings: {
-          url: 'https://analytics.example.com/events',
-        },
-      },
+},
+},
+destinations: {
+api: {
+  code: destinationAPI,
+  config: {
+    settings: {
+      url: 'https://analytics.example.com/events',
     },
   },
-  verbose: true,
-  onError: (error: unknown) => {
-    console.error('Collector error:', error);
-  },
-  onLog: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => {
-    console.log(`[${level}] ${message}`);
-  },
-});
-```
+},
+},
+logger: {
+level: 'DEBUG', // Show all logs (ERROR, INFO, DEBUG)
+},
+});`}
+  language="typescript"
+/>
+
+## Event transformation
+
+The collector works with **mapping** to transform events as they flow through the system. Mapping is configured at the destination level and controls how walkerOS events are converted to vendor-specific formats.
+
+<FlowMap
+  sources={{ default: { label: 'walkerOS', text: 'Event' } }}
+  collector={{ label: 'Dest', text: 'Mapping' }}
+  destinations={{ default: { label: 'Vendor', text: 'Format' } }}
+/>
+
+For example, transforming a `product add` event into GA4's `add_to_cart`:
+
+<CodeSnippet
+  code={`destinations: {
+  ga4: {
+    code: destinationGtag,
+    config: {
+      mapping: {
+        product: {
+          add: {
+            name: 'add_to_cart',
+            data: {
+              map: {
+                currency: { value: 'USD' },
+                value: 'data.price',
+                items: { loop: ['nested', { map: { item_id: 'data.id' } }] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="typescript"
+/>
+
+[**Learn more about mapping →**](/docs/mapping)
+
+---
+
+## See also
+
+- [**Operating modes**](/docs/getting-started/modes): integrated vs bundled approaches
+- [**CLI documentation**](/docs/apps/cli): configure with JSON and build with CLI
+- [**Sources**](/docs/sources): available event capture sources
+- [**Destinations**](/docs/destinations): available event delivery destinations

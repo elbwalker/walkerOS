@@ -1,4 +1,4 @@
-import type { Source, Elb } from '@walkeros/core';
+import type { Source, Elb, Logger } from '@walkeros/core';
 
 /**
  * Example environment configurations for dataLayer source
@@ -15,11 +15,19 @@ const createMockElbFn = (): Elb.Fn => {
   const fn = (() =>
     Promise.resolve({
       ok: true,
-      successful: [],
-      queued: [],
-      failed: [],
     })) as Elb.Fn;
   return fn;
+};
+
+// Simple no-op logger for demo purposes
+const noopLogger: Logger.Instance = {
+  error: noop,
+  info: noop,
+  debug: noop,
+  throw: (message: string | Error) => {
+    throw typeof message === 'string' ? new Error(message) : message;
+  },
+  scope: () => noopLogger,
 };
 
 /**
@@ -57,4 +65,5 @@ export const push: DataLayerEnv = {
   get window() {
     return createMockWindow() as unknown as typeof window;
   },
+  logger: noopLogger,
 };

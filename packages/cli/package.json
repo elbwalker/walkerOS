@@ -1,15 +1,23 @@
 {
   "name": "@walkeros/cli",
-  "version": "0.2.0",
+  "version": "1.0.1",
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "bin": {
-    "walkeros": "./dist/index.mjs"
+    "walkeros": "./dist/index.js"
   },
   "files": [
     "dist/**",
-    "templates/**",
+    "examples/**",
     "README.md",
     "CHANGELOG.md"
   ],
@@ -18,26 +26,32 @@
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "jest --colors",
-    "lint": "tsc && eslint \"**/*.ts*\"",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage && rm -rf .temp"
+    "lint": "tsc --noEmit && eslint \"src/**/*.ts*\"",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage && rm -rf .temp && rm -rf .tmp",
+    "docker:build": "bash scripts/build-docker.sh",
+    "docker:test": "bash scripts/test-docker.sh",
+    "docker:publish": "bash scripts/publish-docker.sh"
   },
   "dependencies": {
-    "@walkeros/core": "^0.2.0",
-    "chalk": "^5.3.0",
-    "commander": "^11.0.0",
-    "esbuild": "^0.19.0",
-    "fs-extra": "^11.0.0",
-    "handlebars": "^4.7.8",
-    "jsdom": "^22.1.0",
-    "pacote": "^17.0.0",
-    "zod": "^3.23.8"
+    "@walkeros/core": "1.0.0",
+    "@walkeros/server-core": "1.0.0",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.2",
+    "cors": "^2.8.5",
+    "esbuild": "^0.27.1",
+    "express": "^4.21.2",
+    "fs-extra": "^11.3.2",
+    "jsdom": "^26.1.0",
+    "pacote": "^21.0.4"
   },
   "devDependencies": {
-    "@types/fs-extra": "^11.0.0",
-    "@types/jsdom": "^21.1.0",
-    "@types/pacote": "^11.1.5",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/fs-extra": "^11.0.4",
+    "@types/jsdom": "^21.1.7",
+    "@types/pacote": "^11.1.8",
     "@walkeros/config": "*",
-    "tsx": "^4.0.0"
+    "tsx": "^4.21.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type {
-  WalkerOS,
   Elb,
   On,
-  Handler,
+  Logger,
   Mapping as WalkerOSMapping,
   Collector,
+  Context as BaseContext,
 } from './index';
 
 /**
@@ -20,19 +20,28 @@ export interface BaseEnv {
   command: Collector.CommandFn;
   sources?: Collector.Sources;
   elb: Elb.Fn;
+  logger: Logger.Instance;
 }
 
 /**
  * Type bundle for source generics.
- * Groups Settings, Mapping, Push, and Env into a single type parameter.
+ * Groups Settings, Mapping, Push, Env, and InitSettings into a single type parameter.
  *
  * @template S - Settings configuration type
  * @template M - Mapping configuration type
  * @template P - Push function signature (flexible to support HTTP handlers, etc.)
  * @template E - Environment dependencies type
+ * @template I - InitSettings configuration type (user input)
  */
-export interface Types<S = unknown, M = unknown, P = Elb.Fn, E = BaseEnv> {
+export interface Types<
+  S = unknown,
+  M = unknown,
+  P = Elb.Fn,
+  E = BaseEnv,
+  I = S,
+> {
   settings: S;
+  initSettings: I;
   mapping: M;
   push: P;
   env: E;
@@ -41,12 +50,19 @@ export interface Types<S = unknown, M = unknown, P = Elb.Fn, E = BaseEnv> {
 /**
  * Generic constraint for Types - ensures T has required properties for indexed access
  */
-export type TypesGeneric = { settings: any; mapping: any; push: any; env: any };
+export type TypesGeneric = {
+  settings: any;
+  initSettings: any;
+  mapping: any;
+  push: any;
+  env: any;
+};
 
 /**
  * Type extractors for consistent usage with Types bundle
  */
 export type Settings<T extends TypesGeneric = Types> = T['settings'];
+export type InitSettings<T extends TypesGeneric = Types> = T['initSettings'];
 export type Mapping<T extends TypesGeneric = Types> = T['mapping'];
 export type Push<T extends TypesGeneric = Types> = T['push'];
 export type Env<T extends TypesGeneric = Types> = T['env'];
@@ -56,14 +72,28 @@ export type Env<T extends TypesGeneric = Types> = T['env'];
  */
 export type TypesOf<I> = I extends Instance<infer T> ? T : never;
 
-export interface Config<T extends TypesGeneric = Types>
-  extends WalkerOSMapping.Config<Mapping<T>> {
-  settings?: Settings<T>;
+export interface Config<
+  T extends TypesGeneric = Types,
+> extends WalkerOSMapping.Config<Mapping<T>> {
+  settings?: InitSettings<T>;
   env?: Env<T>;
   id?: string;
-  onError?: Handler.Error;
+  logger?: Logger.Config;
   disabled?: boolean;
   primary?: boolean;
+  /**
+   * Ingest metadata extraction mapping.
+   * Extracts values from raw request objects (Express req, Lambda event, etc.)
+   * using walkerOS mapping syntax. Extracted data flows to transformers/destinations.
+   *
+   * @example
+   * ingest: {
+   *   ip: 'req.ip',
+   *   ua: 'req.headers.user-agent',
+   *   origin: 'req.headers.origin'
+   * }
+   */
+  ingest?: WalkerOSMapping.Data;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
@@ -83,9 +113,26 @@ export interface Instance<T extends TypesGeneric = Types> {
   on?(event: On.Types, context?: unknown): void | Promise<void>;
 }
 
+/**
+ * Context provided to source init function.
+ * Extends base context with source-specific properties.
+ */
+export interface Context<
+  T extends TypesGeneric = Types,
+> extends BaseContext.Base<Partial<Config<T>>, Env<T>> {
+  id: string;
+  /**
+   * Sets ingest metadata for the current request.
+   * Extracts values from the raw request using config.ingest mapping.
+   * The extracted data is passed through to transformers and destinations.
+   *
+   * @param value - Raw request object (Express req, Lambda event, etc.)
+   */
+  setIngest: (value: unknown) => Promise<void>;
+}
+
 export type Init<T extends TypesGeneric = Types> = (
-  config: Partial<Config<T>>,
-  env: Env<T>,
+  context: Context<T>,
 ) => Instance<T> | Promise<Instance<T>>;
 
 export type InitSource<T extends TypesGeneric = Types> = {
@@ -93,6 +140,7 @@ export type InitSource<T extends TypesGeneric = Types> = {
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
   primary?: boolean;
+  next?: string;
 };
 
 /**
@@ -100,6 +148,5 @@ export type InitSource<T extends TypesGeneric = Types> = {
  * Maps source IDs to their initialization configurations.
  */
 export interface InitSources {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [sourceId: string]: InitSource<any>;
 }

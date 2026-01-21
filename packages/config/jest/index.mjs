@@ -90,17 +90,17 @@ const config = {
   },
   transformIgnorePatterns: ['/node_modules/(?!(@walkeros)/)'],
   testMatch: ['<rootDir>/**/*.test.(ts|tsx|js|jsx)'],
-  moduleFileExtensions: ['js', 'ts', 'tsx', 'mjs'],
+  moduleFileExtensions: ['js', 'ts', 'tsx', 'mjs', 'json'],
   rootDir: '.',
-  moduleDirectories: ['node_modules', 'src'],
+  moduleDirectories: ['node_modules', 'src', path.join(packagesDir, 'node_modules')],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   moduleNameMapper: getModuleMapper(),
   globals: getGlobals(),
   
-  // Performance settings - fixed values for consistent behavior
-  maxWorkers: 4,
+  // Performance settings - reduced for devcontainer memory constraints
+  maxWorkers: 2,
   testTimeout: 30000,
-  forceExit: true,
+  // forceExit disabled to allow proper cleanup and detect handle leaks
   clearMocks: true,
   restoreMocks: true,
   detectOpenHandles: true,
@@ -110,7 +110,8 @@ const config = {
     '/node_modules/',
     '/dist/',
     '/build/',
-    '/coverage/'
+    '/coverage/',
+    '.tmp'
   ],
 };
 

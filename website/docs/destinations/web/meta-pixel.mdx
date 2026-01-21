@@ -6,24 +6,11 @@ sidebar_position: 2
 package: '@walkeros/web-destination-meta'
 ---
 
-import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationMetaPixel from '@walkeros/web-destination-meta';
-import { examples } from '@walkeros/web-destination-meta';
+import { examples, schemas } from '@walkeros/web-destination-meta/dev';
 
-export const documentationMetaPixel = {
-  ...destinationMetaPixel,
-  env: {
-    window: {
-      fbq: () => {},
-    },
-  },
-};
+export const destination = { ...destinationMetaPixel, examples };
 
 # Meta Pixel
 
@@ -40,16 +27,32 @@ function. All you need to do is install the destination, and optionally map
 events to Meta's format. walkerOS takes care of loading the script and the
 function calls.
 
+:::info Where This Fits
+Meta Pixel is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Meta Pixel', highlight: true } }}
+/>
+
+Loads Meta Pixel script dynamically, initializes the fbq function with your pixel ID, and tracks page views and custom conversions for Facebook and Instagram ads.
+:::
+
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-meta
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-meta`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationMeta } from '@walkeros/web-destination-meta';
 
 const { collector, elb } = await startFlow({
@@ -64,36 +67,44 @@ const { collector, elb } = await startFlow({
       },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "meta": {
+    "package": "@walkeros/web-destination-meta",
+    "config": {
+      "settings": {
+        "pixelId": "1234567890"
+      },
+      "loadScript": true
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'pixelId',
-      type: 'string',
-      description: 'Your Meta Pixel ID from Facebook Business Manager',
-      required: true,
-      example: "'1234567890'",
-    },
-    {
-      name: 'loadScript',
-      type: 'boolean',
-      description:
-        'Whether to automatically load the Meta Pixel script (fbevents.js)',
-      required: false,
-      example: 'true',
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.settings} />
 
 #### Example
 
-<DestinationInit
-  destination={destinationMetaPixel}
-  custom={{
+<DestinationInitDemo
+  destination={destination}
+  settings={{
     pixelId: '1234567890',
   }}
 />
@@ -112,8 +123,8 @@ Learn more aboot
 
 ### ViewContent
 
-<DestinationPush
-  destination={documentationMetaPixel}
+<DestinationDemo
+  destination={destination}
   settings={{
     pixelId: '1234567890',
   }}
@@ -126,8 +137,8 @@ Learn more aboot
 
 ### AddToCart
 
-<DestinationPush
-  destination={documentationMetaPixel}
+<DestinationDemo
+  destination={destination}
   settings={{
     pixelId: '1234567890',
   }}
@@ -140,8 +151,8 @@ Learn more aboot
 
 ### InitiateCheckout
 
-<DestinationPush
-  destination={documentationMetaPixel}
+<DestinationDemo
+  destination={destination}
   settings={{
     pixelId: '1234567890',
   }}
@@ -154,8 +165,8 @@ Learn more aboot
 
 ### Purchase
 
-<DestinationPush
-  destination={documentationMetaPixel}
+<DestinationDemo
+  destination={destination}
   settings={{
     pixelId: '1234567890',
   }}

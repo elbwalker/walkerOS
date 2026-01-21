@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>walkerOS Web Bundle Test</title>
+</head>
+<body>
+    <h1>walkerOS Web Bundle Test</h1>
+    <div id="status">Loading...</div>
+
+    <!-- Load the bundle -->
+    <script src="web-serve.js"></script>
+
+    <!-- Test that collector and elb are available -->
+    <script>
+        setTimeout(() => {
+            const statusEl = document.getElementById('status');
+
+            if (typeof window.collector !== 'undefined' && typeof window.elb !== 'undefined') {
+                statusEl.innerHTML = `
+                    <div style="color: green; font-weight: bold;">✅ SUCCESS!</div>
+                    <ul>
+                        <li>window.collector: ${typeof window.collector}</li>
+                        <li>window.elb: ${typeof window.elb}</li>
+                    </ul>
+                    <p>Check console for details</p>
+                `;
+
+                console.log('✅ Bundle loaded successfully!');
+                console.log('window.collector:', window.collector);
+                console.log('window.elb:', window.elb);
+            } else {
+                statusEl.innerHTML = `
+                    <div style="color: red; font-weight: bold;">❌ FAILED</div>
+                    <p>collector or elb not found on window</p>
+                `;
+                console.error('Bundle did not assign to window correctly');
+            }
+        }, 100);
+    </script>
+</body>
+</html>

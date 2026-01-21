@@ -27,11 +27,11 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
       },
     },
     browser: {
-      run: true,
       session: true,
     },
     dataLayer: false,
     elb: 'elb',
+    run: true,
   };
 
   const fullConfig = assign(defaultConfig, config);

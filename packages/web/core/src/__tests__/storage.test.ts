@@ -33,8 +33,8 @@ describe('Storage', () => {
     storageDelete(key, Const.Utils.Storage.Cookie);
     expect(storageRead(key, Const.Utils.Storage.Cookie)).toBe('');
     expect(storageRead('foo', Const.Utils.Storage.Cookie)).toBe('');
-    storageWrite(key, value, 1, Const.Utils.Storage.Cookie, 'elbwalker.com');
-    expect(document.cookie).toContain('domain=elbwalker.com');
+    storageWrite(key, value, 1, Const.Utils.Storage.Cookie, 'walkeros.io');
+    expect(document.cookie).toContain('domain=walkeros.io');
 
     // Expiration Session
     expect(storageWrite(key, value, 5)).toBe(value);

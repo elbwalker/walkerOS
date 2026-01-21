@@ -1,4 +1,4 @@
-import type { Collector, WalkerOS } from './';
+import type { Collector, Destination, WalkerOS } from './';
 
 // collector state for the on actions
 export type Config = {
@@ -72,13 +72,13 @@ export interface OnConfig {
 }
 
 // Destination on function type with automatic type inference
-export type OnFn = <T extends Types>(
-  event: T,
-  context: EventContextMap[T],
+export type OnFn<T extends Destination.TypesGeneric = Destination.Types> = (
+  type: Types,
+  context: Destination.Context<T>,
 ) => WalkerOS.PromiseOrValue<void>;
 
 // Runtime-compatible version for internal usage
 export type OnFnRuntime = (
-  event: Types,
-  context: AnyEventContext,
+  type: Types,
+  context: Destination.Context,
 ) => WalkerOS.PromiseOrValue<void>;

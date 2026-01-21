@@ -13,4 +13,8 @@ export default defineConfig([
   buildExamples(),
   buildBrowser({ globalName }),
   buildES5({ globalName }),
+  buildModules({
+    entry: ['src/dev.ts'],
+    outDir: 'dist',
+  }),
 ]);

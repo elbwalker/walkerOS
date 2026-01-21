@@ -1,14 +1,11 @@
 ---
 title: Google Gtag
-description:
-  Unified Google destination supporting GA4, Google Ads, and GTM through a
-  single gtag implementation
+description: "Unified Google destination supporting GA4, Google Ads, and GTM through a single gtag implementation"
 sidebar_position: 1
 package: '@walkeros/web-destination-gtag'
 ---
 
-import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
+import { schemas } from '@walkeros/web-destination-gtag/dev';
 
 # Google Gtag
 
@@ -22,16 +19,34 @@ The Google Gtag destination provides a unified interface for sending events to
 Google Analytics 4 (GA4), Google Ads, and Google Tag Manager (GTM) through a
 single destination configuration.
 
-## Installation
+:::info Where This Fits
+Gtag is a **destination** in the walkerOS flow:
 
-```bash
-npm install @walkeros/web-destination-gtag
-```
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Gtag', highlight: true } }}
+/>
+
+Loads gtag script dynamically, initializes the gtag function with your config, handles Consent Mode v2 commands automatically, and pushes mapped events to Google services.
+:::
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the package:
+
+<CodeSnippet
+  code={`npm install @walkeros/collector @walkeros/web-destination-gtag`}
+  language="bash"
+/>
+
+Configure in your code:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
 const { collector, elb } = await startFlow({
@@ -41,75 +56,55 @@ const { collector, elb } = await startFlow({
       config: {
         settings: {
           ga4: {
-            measurementId: 'G-XXXXXXXXXX', // Required for GA4
-          },
-          ads: {
-            conversionId: 'AW-XXXXXXXXX', // Required for Google Ads
-          },
-          gtm: {
-            containerId: 'GTM-XXXXXXX', // Required for GTM
+            measurementId: 'G-XXXXXXXXXX',
           },
         },
       },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "gtag": {
+    "package": "@walkeros/web-destination-gtag",
+    "config": {
+      "settings": {
+        "ga4": {
+          "measurementId": "G-XXXXXXXXXX"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'ga4',
-      type: 'GA4Settings',
-      description: 'GA4-specific configuration settings',
-      required: false,
-      example: "{ measurementId: 'G-XXXXXXXXXX' }",
-    },
-    {
-      name: 'ads',
-      type: 'AdsSettings',
-      description: 'Google Ads specific configuration settings',
-      required: false,
-      example: "{ conversionId: 'AW-XXXXXXXXX' }",
-    },
-    {
-      name: 'gtm',
-      type: 'GTMSettings',
-      description: 'Google Tag Manager specific configuration settings',
-      required: false,
-      example: "{ containerId: 'GTM-XXXXXXX' }",
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.settings} />
 
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings`):
 
-<SettingsTable
-  properties={[
-    {
-      name: 'ga4',
-      type: 'GA4Mapping',
-      description: 'GA4-specific event mapping configuration',
-      required: false,
-      example: "{ include: ['data', 'context'] }",
-    },
-    {
-      name: 'ads',
-      type: 'AdsMapping',
-      description: 'Google Ads specific event mapping configuration',
-      required: false,
-      example: "{ label: 'conversion_label' }",
-    },
-    {
-      name: 'gtm',
-      type: 'GTMMapping',
-      description: 'GTM specific event mapping configuration',
-      required: false,
-      example: '{}',
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.mapping} />
+
+## Next Steps
+
+- [**Mapping**](/docs/mapping): Transform events for Google's expected format
+- [**GA4 Configuration**](/docs/destinations/web/gtag/ga4): Detailed GA4 setup
+- [**Google Ads**](/docs/destinations/web/gtag/ads): Conversion tracking
+- [**Consent Management**](/docs/guides/consent): Control when events are sent

@@ -1,4 +1,5 @@
 import type { WalkerOS, Elb, Collector, Source } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import { sourceDataLayer } from '../index';
 import type { Types } from '../types';
 
@@ -50,9 +51,6 @@ export function createMockPush(collectedEvents: WalkerOS.Event[]) {
     return Promise.resolve({
       ok: true,
       event: fullEvent,
-      successful: [],
-      queued: [],
-      failed: [],
     });
   });
 
@@ -69,10 +67,18 @@ export async function createDataLayerSource(
   collector: Collector.Instance,
   config?: Partial<Source.Config<Types>>,
 ): Promise<Source.Instance<Types>> {
-  return await sourceDataLayer(config || {}, {
-    push: collector.push.bind(collector),
-    command: collector.command.bind(collector),
-    elb: collector.sources.elb.push,
-    window,
+  return await sourceDataLayer({
+    collector,
+    config: config || {},
+    env: {
+      push: collector.push.bind(collector),
+      command: collector.command.bind(collector),
+      elb: collector.sources.elb.push,
+      window,
+      logger: createMockLogger(),
+    },
+    id: 'test-datalayer',
+    logger: createMockLogger(),
+    setIngest: async () => {},
   });
 }

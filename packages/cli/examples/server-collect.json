@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": {
+          "version": "latest",
+          "imports": ["startFlow"]
+        },
+        "@walkeros/server-source-express": {
+          "version": "latest"
+        },
+        "@walkeros/destination-demo": {
+          "version": "latest"
+        }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "code": "sourceExpress",
+          "config": {
+            "settings": {
+              "path": "/collect",
+              "port": 8080,
+              "cors": true,
+              "healthCheck": true
+            }
+          }
+        }
+      },
+      "destinations": {
+        "demo": {
+          "package": "@walkeros/destination-demo",
+          "code": "destinationDemo",
+          "config": {
+            "settings": {
+              "name": "Server Collection Demo",
+              "values": [
+                "name",
+                "data",
+                "context",
+                "user",
+                "nested",
+                "timestamp"
+              ]
+            }
+          }
+        }
+      },
+      "collector": {
+        "run": true,
+        "globals": {
+          "environment": "test",
+          "version": "1.0.0"
+        }
+      }
+    }
+  }
+}

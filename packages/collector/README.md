@@ -1,6 +1,6 @@
 <p align="left">
-  <a href="https://elbwalker.com">
-    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
+  <a href="https://www.walkeros.io">
+    <img title="elbwalker" src="https://www.walkeros.io/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
@@ -43,6 +43,18 @@ Sources capture events and send them to the collector, which processes and
 routes them to your chosen destinations like Google Analytics, custom APIs, or
 data warehouses.
 
+### Operating Modes
+
+The collector can be used in two ways:
+
+| Mode           | Usage                              | Config                     |
+| -------------- | ---------------------------------- | -------------------------- |
+| **Integrated** | Import directly in your app        | `code: sourceBrowser`      |
+| **Bundled**    | Bundle with CLI, deploy separately | `package: "@walkeros/..."` |
+
+This README shows **Integrated mode**. For Bundled mode, see the
+[CLI documentation](../cli/).
+
 ## Event Naming Convention
 
 walkerOS enforces a **"entity action"** naming convention for all events. It
@@ -75,7 +87,7 @@ action by space the collector won't process it.
 npm install @walkeros/collector
 ```
 
-## Setup
+## Quick Start (Integrated Mode)
 
 ### Basic setup
 
@@ -83,7 +95,6 @@ npm install @walkeros/collector
 import { startFlow } from '@walkeros/collector';
 
 const config = {
-  run: true,
   consent: { functional: true },
   sources: [
     // add your event sources
@@ -100,7 +111,6 @@ const { collector, elb } = await startFlow(config);
 import { startFlow } from '@walkeros/collector';
 
 const { collector, elb } = await startFlow({
-  run: true,
   consent: { functional: true },
   sources: [
     // add your event sources
@@ -108,27 +118,52 @@ const { collector, elb } = await startFlow({
   destinations: [
     // add your event destinations
   ],
-  verbose: true,
-  onError: (error: unknown) => {
-    console.error('Collector error:', error);
-  },
-  onLog: (message: string, level: 'debug' | 'info' | 'warn' | 'error') => {
-    console.log(`[${level}] ${message}`);
+  logger: {
+    level: 'debug', // 'debug' | 'info' | 'warn' | 'error'
+    handler: (message, level) => {
+      console.log(`[${level}] ${message}`);
+    },
   },
 });
 ```
 
 ## Configuration
 
-| Name           | Type       | Description                                                    | Required | Example                                    |
-| -------------- | ---------- | -------------------------------------------------------------- | -------- | ------------------------------------------ |
-| `run`          | `boolean`  | Automatically start the collector pipeline on initialization   | No       | `true`                                     |
-| `sources`      | `array`    | Configurations for sources providing events to the collector   | No       | `[{ source, config }]`                     |
-| `destinations` | `array`    | Configurations for destinations receiving processed events     | No       | `[{ destination, config }]`                |
-| `consent`      | `object`   | Initial consent state to control routing of events             | No       | `{ analytics: true, marketing: false }`    |
-| `verbose`      | `boolean`  | Enable verbose logging for debugging                           | No       | `false`                                    |
-| `onError`      | `function` | Error handler triggered when the collector encounters failures | No       | `(error) => console.error(error)`          |
-| `onLog`        | `function` | Custom log handler for collector messages                      | No       | `(message, level) => console.log(message)` |
+| Name           | Type      | Description                                                  | Required | Example                                 |
+| -------------- | --------- | ------------------------------------------------------------ | -------- | --------------------------------------- |
+| `run`          | `boolean` | Automatically start the collector pipeline on initialization | No       | `true`                                  |
+| `sources`      | `array`   | Configurations for sources providing events to the collector | No       | `[{ source, config }]`                  |
+| `destinations` | `array`   | Configurations for destinations receiving processed events   | No       | `[{ destination, config }]`             |
+| `consent`      | `object`  | Initial consent state to control routing of events           | No       | `{ analytics: true, marketing: false }` |
+| `logger`       | `object`  | Logger configuration with level and custom handler           | No       | `{ level: 'info', handler: fn }`        |
+
+### Using with CLI (Bundled Mode)
+
+For Bundled mode, the collector is configured via JSON:
+
+```json
+{
+  "collector": {
+    "consent": { "functional": true }
+  }
+}
+```
+
+See [CLI documentation](../cli/) for complete flow configuration.
+
+## Type Definitions
+
+See [src/types/](./src/types/) for TypeScript interfaces:
+
+- [flow.ts](./src/types/flow.ts) - Flow configuration
+- [collector.ts](./src/types/collector.ts) - Collector interface
+
+## Related
+
+- [Website Documentation](https://www.walkeros.io/docs/getting-started/flow/)
+- [Core Package](../core/) - Types and utilities
+- [Web Sources](../web/sources/) - Browser event sources
+- [Server Sources](../server/sources/) - Node.js event sources
 
 ## Contribute
 

@@ -5,6 +5,7 @@
  */
 
 @import 'tailwindcss';
+@import '@walkeros/explorer/styles.css';
 
 /* DaisyUI plugin configuration */
 @plugin "daisyui" {
@@ -69,6 +70,13 @@
   --ifm-link-hover-decoration: none;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+
+  /* Code editor theme (light mode) */
+  --code-editor-bg: #ffffff;
+  --code-editor-header-bg: rgba(243, 244, 246, 0.4);
+  --code-editor-tab-active-bg: rgba(243, 244, 246, 0.5);
+  --code-editor-text: var(--color-gray-700);
+  --code-editor-text-muted: var(--color-gray-400);
 }
 
 html[data-theme='dark'] {
@@ -82,6 +90,13 @@ html[data-theme='dark'] {
   --color-base-content: var(--color-gray-50);
   --ifm-background-color: var(--color-base-100);
   --ifm-background-surface-color: var(--color-base-100);
+
+  /* Code editor theme (dark mode) */
+  --code-editor-bg: #111827;
+  --code-editor-header-bg: rgba(55, 65, 81, 0.4);
+  --code-editor-tab-active-bg: rgba(255, 255, 255, 0.05);
+  --code-editor-text: #d1d5db;
+  --code-editor-text-muted: #9ca3af;
 }
 
 /* Explorer Component Theme Integration */

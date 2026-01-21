@@ -1,7 +1,7 @@
 import type { Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
-import { clone, createEvent } from '@walkeros/core';
-import { examples } from '../';
+import { clone, createEvent, createMockLogger } from '@walkeros/core';
+import * as examples from '../examples';
 
 const { env } = examples;
 
@@ -24,6 +24,8 @@ describe('Server Destination BigQuery', () => {
       config: { settings: settings as Settings },
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
+      id: 'test-bq',
     })) as Config;
   }
 
@@ -40,10 +42,8 @@ describe('Server Destination BigQuery', () => {
 
     // Override BigQuery with a mock class that has jest.fn() tracking
     testEnv.BigQuery = class MockBigQuery {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       options: any;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       constructor(options?: any) {
         this.options = options;
       }
@@ -60,7 +60,6 @@ describe('Server Destination BigQuery', () => {
         mockInsert('insert', rows);
         return Promise.resolve();
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
   });
 
@@ -73,6 +72,8 @@ describe('Server Destination BigQuery', () => {
         config: { settings: { datasetId, tableId } as Settings },
         collector: mockCollector,
         env: testEnv,
+        logger: createMockLogger(),
+        id: 'test-bq',
       }),
     ).rejects.toThrow('Config settings projectId missing');
 
@@ -93,10 +94,12 @@ describe('Server Destination BigQuery', () => {
 
     await destination.push(event, {
       config,
-      mapping: undefined,
+      rule: undefined,
       data: undefined,
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
+      id: 'test-bq',
     });
     expect(mockInsert).toHaveBeenCalledWith('insert', [
       {
@@ -131,10 +134,12 @@ describe('Server Destination BigQuery', () => {
 
     await destination.push(event, {
       config,
-      mapping: {},
+      rule: {},
       data,
       collector: mockCollector,
       env: testEnv,
+      logger: createMockLogger(),
+      id: 'test-bq',
     });
     expect(mockInsert).toHaveBeenCalledWith('insert', [{ foo: 'bar' }]);
   });

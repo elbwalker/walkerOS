@@ -1,0 +1,109 @@
+---
+title: Docker
+description: Get walkerOS running with Docker in 5 minutes
+---
+
+# Docker
+
+## Try the demo
+
+```bash
+docker run -p 8080:8080 -e MODE=collect -e FLOW=/app/demos/demo-collect.mjs walkeros/flow:latest
+```
+
+Output:
+
+```
+INFO Mode: COLLECT
+INFO [runner] Loading flow from /app/demos/demo-collect.mjs
+INFO [runner] Flow running
+INFO [runner] Port: 8080
+```
+
+Test it:
+
+```bash
+curl -X POST http://localhost:8080/collect \
+  -H "Content-Type: application/json" \
+  -d '{"name":"page view","data":{"title":"Test Page"}}'
+```
+
+## HTTP event collection
+
+```bash
+docker run -d -p 8080:8080 \
+  -e MODE=collect \
+  -e FLOW=/app/demos/demo-collect.mjs \
+  walkeros/flow
+
+# Send event
+curl -X POST http://localhost:8080/collect \
+  -H "Content-Type: application/json" \
+  -d '{"name":"page view","data":{"title":"Home"}}'
+```
+
+## Built-in demos
+
+The Docker image includes demo bundles at `/app/demos/`:
+
+- `demo-collect.mjs` - Server collector demo
+- `demo-serve.js` - Web bundle demo
+
+## Custom flow
+
+### Build your flow
+
+Docker runtime requires **pre-built bundles**, not JSON configs.
+
+**Workflow:**
+
+1. Create JSON config: `flow.json`
+2. Bundle with CLI: `walkeros bundle flow.json --output flow.mjs`
+3. Run in Docker: `docker run -e MODE=collect -e FLOW=/app/flow.mjs`
+
+### Build custom image
+
+```dockerfile
+FROM walkeros/flow:latest
+COPY flow.mjs /app/flow.mjs
+ENV MODE=collect
+ENV BUNDLE=/app/flow.mjs
+```
+
+```bash
+docker build -t my-walker .
+docker run -p 8080:8080 my-walker
+```
+
+## Docker compose
+
+```yaml
+version: '3.8'
+
+services:
+  walkeros:
+    image: walkeros/flow:latest
+    environment:
+      MODE: collect
+      FLOW: /app/demos/demo-collect.mjs
+    ports:
+      - '8080:8080'
+    restart: unless-stopped
+```
+
+## Environment variables
+
+| Variable     | Description                                         | Default           |
+| ------------ | --------------------------------------------------- | ----------------- |
+| `MODE`       | Operational mode: `collect` or `serve`              | Required          |
+| `BUNDLE`     | Path to pre-bundled flow file                       | Required          |
+| `PORT`       | Server port                                         | 8080              |
+| `HOST`       | Server host                                         | 0.0.0.0           |
+| `SERVE_NAME` | Filename in URL (serve mode)                        | walker.js         |
+| `SERVE_PATH` | URL directory (serve mode)                          | (empty = root)    |
+
+## Next steps
+
+- [Available sources](../../sources/)
+- [Available destinations](../../destinations/)
+- [Docker Package README](https://github.com/elbwalker/walkerOS/tree/main/packages/docker)

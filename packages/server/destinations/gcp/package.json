@@ -1,11 +1,20 @@
 {
   "name": "@walkeros/server-destination-gcp",
   "description": "Google Cloud Platform server destination for walkerOS (BigQuery)",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "license": "MIT",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
+    }
+  },
   "files": [
     "dist/**"
   ],
@@ -18,8 +27,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@google-cloud/bigquery": "^7.8.0",
-    "@walkeros/server-core": "0.2.1"
+    "@google-cloud/bigquery": "^8.1.1",
+    "@walkeros/server-core": "1.0.0"
   },
   "devDependencies": {},
   "repository": {

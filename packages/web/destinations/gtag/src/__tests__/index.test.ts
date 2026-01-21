@@ -1,7 +1,8 @@
-import { destinationGtag, examples, resetConsentState } from '../index';
+import { destinationGtag, resetConsentState } from '../index';
+import { examples } from '../dev';
 import type { Settings, Rule, Include } from '../types';
 import { type WalkerOS, type Collector } from '@walkeros/core';
-import { clone } from '@walkeros/core';
+import { clone, createMockLogger } from '@walkeros/core';
 
 // Mock all tool implementations
 jest.mock('../ga4', () => ({
@@ -27,6 +28,16 @@ describe('Unified Gtag Destination', () => {
   const mockEnv = examples.env.push;
   const mockCollector = {} as Collector.Instance;
 
+  // Create a mock logger that actually throws
+  const createThrowingLogger = () => {
+    const logger = createMockLogger();
+    logger.throw = (message: string) => {
+      throw new Error(message);
+    };
+    return logger;
+  };
+  const mockLogger = createThrowingLogger();
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -46,16 +57,17 @@ describe('Unified Gtag Destination', () => {
   });
 
   describe('init', () => {
-    it('should return false when no tools are configured', () => {
+    it('should throw when no tools are configured', () => {
       const config = { settings: {} };
 
-      const result = destinationGtag.init!({
-        config,
-        env: mockEnv,
-        collector: mockCollector,
-      });
-
-      expect(result).toBe(false);
+      expect(() =>
+        destinationGtag.init!({
+          config,
+          env: mockEnv,
+          collector: mockCollector,
+          logger: mockLogger,
+        }),
+      ).toThrow('Config settings missing');
     });
 
     it('should initialize GA4 only', () => {
@@ -68,10 +80,16 @@ describe('Unified Gtag Destination', () => {
         config,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(result).toBe(config);
-      expect(initGA4).toHaveBeenCalledWith(settings.ga4, true, mockEnv);
+      expect(initGA4).toHaveBeenCalledWith(
+        settings.ga4,
+        true,
+        mockEnv,
+        mockLogger,
+      );
       expect(initAds).not.toHaveBeenCalled();
       expect(initGTM).not.toHaveBeenCalled();
     });
@@ -86,10 +104,16 @@ describe('Unified Gtag Destination', () => {
         config,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(result).toBe(config);
-      expect(initAds).toHaveBeenCalledWith(settings.ads, true, mockEnv);
+      expect(initAds).toHaveBeenCalledWith(
+        settings.ads,
+        true,
+        mockEnv,
+        mockLogger,
+      );
       expect(initGA4).not.toHaveBeenCalled();
       expect(initGTM).not.toHaveBeenCalled();
     });
@@ -104,10 +128,16 @@ describe('Unified Gtag Destination', () => {
         config,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(result).toBe(config);
-      expect(initGTM).toHaveBeenCalledWith(settings.gtm, true, mockEnv);
+      expect(initGTM).toHaveBeenCalledWith(
+        settings.gtm,
+        true,
+        mockEnv,
+        mockLogger,
+      );
       expect(initGA4).not.toHaveBeenCalled();
       expect(initAds).not.toHaveBeenCalled();
     });
@@ -124,12 +154,28 @@ describe('Unified Gtag Destination', () => {
         config,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
       });
 
       expect(result).toBe(config);
-      expect(initGA4).toHaveBeenCalledWith(settings.ga4, true, mockEnv);
-      expect(initAds).toHaveBeenCalledWith(settings.ads, true, mockEnv);
-      expect(initGTM).toHaveBeenCalledWith(settings.gtm, true, mockEnv);
+      expect(initGA4).toHaveBeenCalledWith(
+        settings.ga4,
+        true,
+        mockEnv,
+        mockLogger,
+      );
+      expect(initAds).toHaveBeenCalledWith(
+        settings.ads,
+        true,
+        mockEnv,
+        mockLogger,
+      );
+      expect(initGTM).toHaveBeenCalledWith(
+        settings.gtm,
+        true,
+        mockEnv,
+        mockLogger,
+      );
     });
 
     it('should pass loadScript parameter correctly', () => {
@@ -138,9 +184,19 @@ describe('Unified Gtag Destination', () => {
       };
       const config = { settings, loadScript: false };
 
-      destinationGtag.init!({ config, env: mockEnv, collector: mockCollector });
+      destinationGtag.init!({
+        config,
+        env: mockEnv,
+        collector: mockCollector,
+        logger: mockLogger,
+      });
 
-      expect(initGA4).toHaveBeenCalledWith(settings.ga4, false, mockEnv);
+      expect(initGA4).toHaveBeenCalledWith(
+        settings.ga4,
+        false,
+        mockEnv,
+        mockLogger,
+      );
     });
   });
 
@@ -161,10 +217,12 @@ describe('Unified Gtag Destination', () => {
 
       await destinationGtag.push(mockEvent, {
         config,
-        mapping,
+        rule: mapping,
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
+        id: 'test',
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
@@ -173,6 +231,7 @@ describe('Unified Gtag Destination', () => {
         mapping.settings?.ga4,
         mockData,
         mockEnv,
+        mockLogger,
       );
     });
 
@@ -188,10 +247,12 @@ describe('Unified Gtag Destination', () => {
 
       await destinationGtag.push(mockEvent, {
         config,
-        mapping,
+        rule: mapping,
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
+        id: 'test',
       });
 
       expect(pushAdsEvent).toHaveBeenCalledWith(
@@ -201,6 +262,7 @@ describe('Unified Gtag Destination', () => {
         mockData,
         'PURCHASE_CONVERSION',
         mockEnv,
+        mockLogger,
       );
     });
 
@@ -213,10 +275,12 @@ describe('Unified Gtag Destination', () => {
 
       await destinationGtag.push(mockEvent, {
         config,
-        mapping,
+        rule: mapping,
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
+        id: 'test',
       });
 
       expect(pushAdsEvent).not.toHaveBeenCalled();
@@ -231,10 +295,12 @@ describe('Unified Gtag Destination', () => {
 
       await destinationGtag.push(mockEvent, {
         config,
-        mapping,
+        rule: mapping,
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
+        id: 'test',
       });
 
       expect(pushGTMEvent).toHaveBeenCalledWith(
@@ -243,6 +309,7 @@ describe('Unified Gtag Destination', () => {
         mapping.settings.gtm,
         mockData,
         mockEnv,
+        mockLogger,
       );
     });
 
@@ -264,10 +331,12 @@ describe('Unified Gtag Destination', () => {
 
       await destinationGtag.push(mockEvent, {
         config,
-        mapping,
+        rule: mapping,
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
+        id: 'test',
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
@@ -276,6 +345,7 @@ describe('Unified Gtag Destination', () => {
         mapping.settings?.ga4,
         mockData,
         mockEnv,
+        mockLogger,
       );
       expect(pushAdsEvent).toHaveBeenCalledWith(
         mockEvent,
@@ -284,6 +354,7 @@ describe('Unified Gtag Destination', () => {
         mockData,
         'PURCHASE_CONVERSION',
         mockEnv,
+        mockLogger,
       );
       expect(pushGTMEvent).toHaveBeenCalledWith(
         mockEvent,
@@ -291,6 +362,7 @@ describe('Unified Gtag Destination', () => {
         mapping.settings.gtm,
         mockData,
         mockEnv,
+        mockLogger,
       );
     });
 
@@ -307,6 +379,7 @@ describe('Unified Gtag Destination', () => {
           data: mockData,
           env: mockEnv,
           collector: mockCollector,
+          logger: mockLogger,
         }),
       ).resolves.not.toThrow();
     });
@@ -320,10 +393,12 @@ describe('Unified Gtag Destination', () => {
 
       await destinationGtag.push(mockEvent, {
         config,
-        mapping,
+        rule: mapping,
         data: mockData,
         env: mockEnv,
         collector: mockCollector,
+        logger: mockLogger,
+        id: 'test',
       });
 
       expect(pushGA4Event).toHaveBeenCalledWith(
@@ -332,6 +407,7 @@ describe('Unified Gtag Destination', () => {
         undefined,
         mockData,
         mockEnv,
+        mockLogger,
       );
     });
   });
@@ -356,7 +432,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command
-        destination.on?.('consent', { marketing: true, functional: false });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: true, functional: false },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Call a regular event
         const event = { name: 'button click', data: { id: 'test-btn' } };
@@ -365,6 +447,7 @@ describe('Unified Gtag Destination', () => {
           data: {},
           env: mockEnvWithGtag,
           collector: mockCollector,
+          logger: mockLogger,
         });
 
         // Verify no gtag consent calls were made
@@ -386,7 +469,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command with denied consent
-        destination.on?.('consent', { marketing: false, functional: false });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: false, functional: false },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Verify gtag consent default was called with all denied values first
         expect(mockGtag).toHaveBeenCalledWith('consent', 'default', {
@@ -411,6 +500,7 @@ describe('Unified Gtag Destination', () => {
           data: {},
           env: mockEnvWithGtag,
           collector: mockCollector,
+          logger: mockLogger,
         });
 
         // Verify regular event processing still works
@@ -426,7 +516,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // First consent call (should use 'default' then 'update')
-        destination.on?.('consent', { marketing: false, functional: false });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: false, functional: false },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         expect(mockGtag).toHaveBeenCalledWith('consent', 'default', {
           ad_storage: 'denied',
@@ -446,7 +542,13 @@ describe('Unified Gtag Destination', () => {
         mockGtag.mockClear();
 
         // Second consent call (should only use 'update')
-        destination.on?.('consent', { marketing: false, functional: true });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: false, functional: true },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Should NOT call default again
         expect(mockGtag).not.toHaveBeenCalledWith(
@@ -475,7 +577,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command with granted consent
-        destination.on?.('consent', { marketing: true, functional: true });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: true, functional: true },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Verify gtag consent default was called with all denied values first
         expect(mockGtag).toHaveBeenCalledWith('consent', 'default', {
@@ -500,6 +608,7 @@ describe('Unified Gtag Destination', () => {
           data: {},
           env: mockEnvWithGtag,
           collector: mockCollector,
+          logger: mockLogger,
         });
 
         // Verify regular event processing still works
@@ -521,7 +630,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command
-        destination.on?.('consent', { marketing: true, analytics: false });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: true, analytics: false },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Verify default consent was called with all denied values first
         expect(mockGtag).toHaveBeenCalledWith('consent', 'default', {
@@ -547,7 +662,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command with only marketing consent
-        destination.on?.('consent', { marketing: true });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: true },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Verify default consent was called with all denied values first
         expect(mockGtag).toHaveBeenCalledWith('consent', 'default', {
@@ -574,7 +695,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command with unknown consent group
-        destination.on?.('consent', { unknown_group: true });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { unknown_group: true },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Verify default consent was called (because mapping has known parameters)
         expect(mockGtag).toHaveBeenCalledWith('consent', 'default', {
@@ -604,7 +731,13 @@ describe('Unified Gtag Destination', () => {
         destination.env = mockEnvWithGtag;
 
         // Call walker consent command
-        destination.on?.('consent', { marketing: true });
+        destination.on?.('consent', {
+          collector: mockCollector,
+          config: destination.config,
+          data: { marketing: true },
+          env: mockEnvWithGtag,
+          logger: mockLogger,
+        });
 
         // Verify no gtag consent calls were made (empty mapping = no parameters)
         expect(mockGtag).not.toHaveBeenCalledWith(

@@ -1,0 +1,104 @@
+---
+title: walkerOS vs. RudderStack
+sidebar_position: 8
+description: Compare walkerOS and RudderStack to understand which solution fits your needs.
+---
+
+[RudderStack](https://www.rudderstack.com/) is a warehouse-first customer data
+platform with both open-source and cloud offerings. It's often positioned as an
+open-source alternative to Segment. Here's how it compares to walkerOS.
+
+## Quick comparison
+
+| Feature              | RudderStack                      | walkerOS                          |
+| -------------------- | -------------------------------- | --------------------------------- |
+| Open-source          | Yes (with limitations)           | Yes (MIT, no limitations)         |
+| Pricing              | From $750/month (cloud)          | Free (paid support available)     |
+| Free tier            | 1M events/month                  | Unlimited (self-hosted)           |
+| Self-hosted option   | Yes                              | Yes                               |
+| Complexity           | Medium to high                   | Low to medium                     |
+| Pre-built integrations | 200+                           | Build your own or use existing    |
+| Warehouse-first      | Yes (core focus)                 | Warehouse is one destination      |
+| Transformations      | JavaScript/Python                | JavaScript (mapping)              |
+| Composable tagging   | No                               | Yes (tag once, use everywhere)    |
+
+## Who should use what?
+
+### Choose RudderStack if
+
+- You need a warehouse-first CDP architecture
+- You want 200+ pre-built integrations
+- Your data team needs JavaScript/Python transformations
+- You prefer event-based pricing over MTU-based
+- You need advanced features like identity resolution
+
+### Choose walkerOS if
+
+- You want something lightweight and quick to set up
+- You prefer truly open-source (MIT) without feature restrictions
+- You want composable, component-level tagging for web
+- When cost matters, walkerOS is free with no event limits
+- You need focused event collection without full CDP complexity
+
+## Key differences
+
+### Open-source approach
+
+**RudderStack:** Open-source core, but advanced features (Transformations, Live
+Events) require the cloud version or aren't available in Control Plane Lite.
+The open-source version has limitations.
+
+**walkerOS:** Fully open-source under MIT license. All features available, no
+restrictions. Use it however you want.
+
+### Complexity and setup
+
+**RudderStack:** Requires Docker or Kubernetes for self-hosting. Separate data
+plane and control plane concepts. More infrastructure to manage for the full
+feature set.
+
+**walkerOS:** Simpler architecture. Get started quickly without complex
+infrastructure requirements. Designed for developers who want control without
+overhead.
+
+### Cost
+
+**RudderStack:** Free cloud tier with 1M events/month. Paid plans start at
+$750/month with usage-based pricing (events, not MTUs). Self-hosted is "free"
+but requires infrastructure investment.
+
+**walkerOS:** The software is free and open-source with no event limits. You pay
+for your own infrastructure costs. Optional paid services include implementation
+support (setup fees) and SLAs for teams that want help getting started or need
+guaranteed support.
+
+### Focus
+
+**RudderStack:** Warehouse-first CDP. Built around the idea that your data
+warehouse is the source of truth. Strong focus on data teams and analytics
+infrastructure.
+
+**walkerOS:** Event collection and routing. Focused on capturing events well and
+sending them where they need to go: warehouses, analytics tools, marketing
+platforms, or your own APIs.
+
+### Integrations
+
+**RudderStack:** 200+ pre-built integrations. Great if you need broad coverage
+out of the box.
+
+**walkerOS:** Fewer pre-built destinations, but full flexibility to build custom
+ones. Better for teams with specific requirements or who prefer owning their
+integration code.
+
+## Can they work together?
+
+Yes! You can use walkerOS for event collection and send data to RudderStack as a
+destination. This gives you walkerOS's composable tagging and consent handling
+on the frontend, while leveraging RudderStack's warehouse integrations and
+transformations on the backend.
+
+## Getting started
+
+Ready to try walkerOS? Check out the [quickstart guide](/docs/) to set up
+lightweight event collection without CDP complexity.

@@ -3,12 +3,9 @@ title: Commands
 description: Browser source API methods and commands
 path: /docs/sources/web/browser/commands
 sidebar_position: 3
-package: '@walkeros/web-source-browser'
 ---
 
-import Link from '@docusaurus/Link';
-
-# Browser Source Commands
+# Browser source commands
 
 The browser source provides an enhanced `elb` function that supports
 browser-specific features like DOM interaction, elbLayer communication, and
@@ -32,50 +29,53 @@ browserSource --> collector
 The browser source provides an enhanced `elb` function that supports flexible
 argument patterns and browser-specific features.
 
-```js
-// Import from browser source
+<CodeSnippet
+  code={`// Import from browser source
 import { elb } from '@walkeros/web-source-browser';
 window.elb = elb;
 
 // Or define the elb function manually in the browser
 function elb() {
-  (window.elbLayer = window.elbLayer || []).push(arguments);
-}
-```
+(window.elbLayer = window.elbLayer || []).push(arguments);
+}`}
+  language="javascript"
+/>
 
 Usage options:
 
-```js
-elb("entity action", data, ...);
-elb({event: "entity action", data: { foo: "bar"}});
-```
+<CodeSnippet
+  code={`elb("entity action", data, ...);
+elb({event: "entity action", data: { foo: "bar"}});`}
+  language="javascript"
+/>
 
 ## config
 
 Configure the browser source during initialization through `startFlow`. These
 settings control browser-specific behavior:
 
-```js
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector } = await startFlow({
-  sources: {
-    browser: {
-      code: sourceBrowser,
-      config: {
-        settings: {
-          elb: 'elb', // Name to assign the elb function to the window
-          elbLayer: true, // Enable elbLayer for async command queuing
-          pageview: true, // Trigger a page view event by default
-          prefix: 'data-elb', // Attributes prefix used by the walker for DOM scanning
-          session: true, // Enable session tracking
-        },
-      },
-    },
+sources: {
+browser: {
+code: sourceBrowser,
+config: {
+  settings: {
+    elb: 'elb', // Name to assign the elb function to the window
+    elbLayer: true, // Enable elbLayer for async command queuing
+    pageview: true, // Trigger a page view event by default
+    prefix: 'data-elb', // Attributes prefix used by the walker for DOM scanning
+    session: true, // Enable session tracking
   },
-});
-```
+},
+},
+},
+});`}
+  language="javascript"
+/>
 
 :::note
 
@@ -90,30 +90,33 @@ created.
 A `run` initializes the browser source and triggers automatic DOM scanning and
 event setup. It will:
 
-- Initialize DOM event listeners
-- Scan for `data-elb` attributes
-- Trigger a `page view` event by default
-- Process the `elbLayer` stack
+* Initialize DOM event listeners
+* Scan for `data-elb` attributes
+* Trigger a `page view` event by default
+* Process the `elbLayer` stack
 
-```js
-elb('walker run');
-```
+<CodeSnippet
+  code={`elb('walker run');`}
+  language="javascript"
+/>
 
 A run accepts a partial state parameter:
 
-```js
-elb('walker run', { group: 'group1d' });
-```
+<CodeSnippet
+  code={`elb('walker run', { group: 'group1d' });`}
+  language="javascript"
+/>
 
 ## init
 
 Re-initializes event listeners on one or multiple target elements. Useful for
 dynamically loaded content like newly added products or wizard steps.
 
-```js
-elb('walker init', element); // Single element
-elb('walker init', [element1, element2]); // Multiple elements
-```
+<CodeSnippet
+  code={`elb('walker init', element); // Single element
+elb('walker init', [element1, element2]); // Multiple elements`}
+  language="javascript"
+/>
 
 This command is essential for Single Page Applications (SPAs) where content is
 added dynamically after the initial page load.
@@ -125,10 +128,10 @@ ensure they are tracked properly.
 
 :::
 
-## Integration with Collector
+## Integration with collector
 
 Browser source commands work in conjunction
-with&nbsp;<Link to="/docs/collector/commands">collector commands</Link>. The
+with <Link to="/docs/collector/commands">collector commands</Link>. The
 browser source handles DOM-specific functionality while the collector manages
 destinations, consent, and user data.
 

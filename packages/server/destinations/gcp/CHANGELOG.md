@@ -1,55 +1,15 @@
 # @walkeros/server-destination-gcp
 
-## 0.2.1
+## 1.0.0
+
+### Major Changes
+
+- 67c9e1d: Hello World! walkerOS v1.0.0
+
+  Open-source event data collection. Collect event data for digital analytics in
+  a unified and privacy-centric way.
 
 ### Patch Changes
 
-- Schema builder, event-level mapping policies, config package, fixed jest mocks
-- Updated dependencies
-  - @walkeros/server-core@0.2.1
-
-## 0.2.0
-
-### Minor Changes
-
-- env
-
-### Patch Changes
-
-- Updated dependencies
-  - @walkeros/server-core@0.2.0
-
-## 0.1.2
-
-### Patch Changes
-
-- a0ced16: env
-- Updated dependencies [a0ced16]
-  - @walkeros/server-core@0.1.2
-
-## 0.1.1
-
-### Patch Changes
-
-- flow
-- Updated dependencies
-  - @walkeros/server-core@0.1.1
-
-## 0.1.0
-
-### Minor Changes
-
-- fixes
-
-### Patch Changes
-
-- Updated dependencies
-  - @walkeros/server-core@0.1.0
-
-## 0.0.8
-
-### Patch Changes
-
-- af0ea64: init fixes
-- Updated dependencies [af0ea64]
-  - @walkeros/server-core@0.0.8
+- Updated dependencies [67c9e1d]
+  - @walkeros/server-core@1.0.0

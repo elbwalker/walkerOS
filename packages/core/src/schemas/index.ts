@@ -1,13 +1,136 @@
 /**
  * walkerOS Core Schemas
  *
- * Zod schemas for runtime validation and TypeScript type inference.
- * These schemas serve as the single source of truth for walkerOS types.
+ * Zod schemas for runtime validation and JSON Schema generation.
+ * These schemas mirror TypeScript types in packages/core/src/types/
+ * and are used for:
+ * - Runtime validation at system boundaries (MCP tools, APIs, CLI)
+ * - JSON Schema generation for Explorer UI (RJSF)
+ * - Documentation and type metadata
  *
- * Export both Zod schemas (for validation) and JSON Schemas (for RJSF/Explorer).
+ * Note: TypeScript types remain the source of truth for development.
+ * Schemas are for runtime validation and tooling support.
+ *
+ * Organization: Schema files mirror type files
+ * - types/walkeros.ts → schemas/walkeros.ts
+ * - types/mapping.ts → schemas/mapping.ts
+ * - types/destination.ts → schemas/destination.ts
+ * - types/collector.ts → schemas/collector.ts
+ * - types/source.ts → schemas/source.ts
+ * - types/flow.ts → schemas/flow.ts
+ * - types/storage.ts + types/handler.ts → schemas/utilities.ts
+ *
+ * Import strategy:
+ * Due to overlapping schema names across domains (ConfigSchema, InstanceSchema, etc.),
+ * schemas are organized into namespaces. Import either:
+ * 1. From namespaces: import { WalkerOSSchemas, MappingSchemas } from '@walkeros/core/dev'
+ * 2. Direct from files: import { EventSchema } from '@walkeros/core/schemas/walkeros'
  */
 
-export * from './value-config';
+// ========================================
+// Primitives & Patterns (DRY building blocks)
+// ========================================
+
+export * from './primitives';
+export * from './patterns';
+
+// ========================================
+// Namespace Exports (prevents name collisions)
+// ========================================
+
+import * as WalkerOSSchemas from './walkeros';
+import * as MappingSchemas from './mapping';
+import * as DestinationSchemas from './destination';
+import * as CollectorSchemas from './collector';
+import * as SourceSchemas from './source';
+import * as FlowSchemas from './flow';
+import * as UtilitySchemas from './utilities';
+
+export {
+  WalkerOSSchemas,
+  MappingSchemas,
+  DestinationSchemas,
+  CollectorSchemas,
+  SourceSchemas,
+  FlowSchemas,
+  UtilitySchemas,
+};
+
+// ========================================
+// Direct Exports (commonly used schemas)
+// ========================================
+
+// Export commonly used schemas from WalkerOS namespace directly
+export {
+  EventSchema,
+  PartialEventSchema,
+  DeepPartialEventSchema,
+  PropertiesSchema,
+  OrderedPropertiesSchema,
+  UserSchema,
+  EntitySchema,
+  EntitiesSchema,
+  ConsentSchema,
+  SourceTypeSchema,
+  VersionSchema,
+  SourceSchema,
+  PropertySchema,
+  PropertyTypeSchema,
+  // JSON Schemas
+  eventJsonSchema,
+  partialEventJsonSchema,
+  userJsonSchema,
+  propertiesJsonSchema,
+  orderedPropertiesJsonSchema,
+  entityJsonSchema,
+  sourceTypeJsonSchema,
+  consentJsonSchema,
+} from './walkeros';
+
+// Export commonly used schemas from Mapping namespace directly
+export {
+  ValueSchema,
+  ValuesSchema,
+  ValueConfigSchema,
+  LoopSchema,
+  SetSchema,
+  MapSchema,
+  PolicySchema,
+  RuleSchema,
+  RulesSchema,
+  ResultSchema as MappingResultSchema, // Alias to avoid conflict with Destination.ResultSchema
+  // JSON Schemas
+  valueJsonSchema,
+  valueConfigJsonSchema,
+  loopJsonSchema,
+  setJsonSchema,
+  mapJsonSchema,
+  policyJsonSchema,
+  ruleJsonSchema,
+  rulesJsonSchema,
+} from './mapping';
+
+// Export commonly used schemas from Flow namespace directly
+export {
+  SetupSchema,
+  ConfigSchema as FlowConfigSchema, // Alias to avoid conflict with other ConfigSchema exports
+  SourceReferenceSchema,
+  DestinationReferenceSchema,
+  PrimitiveSchema,
+  parseSetup,
+  safeParseSetup,
+  parseConfig,
+  safeParseConfig,
+  // JSON Schemas
+  setupJsonSchema,
+  configJsonSchema,
+  sourceReferenceJsonSchema,
+  destinationReferenceJsonSchema,
+} from './flow';
+
+// ========================================
+// Schema Builder - DRY utility for destinations
+// ========================================
 
 /**
  * Schema Builder - DRY utility for destinations
@@ -18,3 +141,65 @@ export * from './value-config';
  * This follows the DRY principle - write once in core, use everywhere.
  */
 export * from './schema-builder';
+
+// ========================================
+// Deprecated: value-config.ts
+// ========================================
+
+/**
+ * @deprecated Import from MappingSchemas or directly from './mapping' instead
+ *
+ * The value-config.ts file has been migrated to mapping.ts for better organization.
+ * This export is kept for backward compatibility but will be removed in a future version.
+ *
+ * Migration:
+ * - Old: import { ValueSchema, ValueConfigSchema } from '@walkeros/core'
+ * - New: import { ValueSchema, ValueConfigSchema } from '@walkeros/core'
+ *        (imports now come from mapping.ts but the API is identical)
+ *
+ * Breaking change: The value-config.ts file will be removed in the next major version.
+ * All schemas are now organized by domain (mapping, destination, collector, etc.)
+ */
+// Note: Schemas are already exported above from mapping.ts
+
+/**
+ * Re-export Zod and zod-to-json-schema for destinations
+ *
+ * Destinations can import Zod from @walkeros/core instead of adding
+ * their own dependency. This ensures version consistency and reduces
+ * duplicate dependencies in the monorepo.
+ *
+ * Usage in destinations:
+ * import { z, zodToSchema } from '@walkeros/core/dev';
+ */
+export { z } from './validation';
+
+import type { zod } from './validation';
+import { z } from './validation';
+
+/**
+ * JSONSchema type for JSON Schema Draft 7 objects
+ *
+ * Represents a JSON Schema object as returned by Zod's toJSONSchema().
+ * Uses Record<string, unknown> as JSON Schema structure is dynamic.
+ */
+export type JSONSchema = Record<string, unknown>;
+
+/**
+ * Utility to convert Zod schema to JSON Schema with consistent defaults
+ *
+ * This wrapper ensures all destinations use the same JSON Schema configuration:
+ * - target: 'draft-7' (JSON Schema Draft 7 format)
+ *
+ * Usage in destinations:
+ * import { zodToSchema } from '@walkeros/core/dev';
+ * export const settings = zodToSchema(SettingsSchema);
+ *
+ * @param schema - Zod schema to convert
+ * @returns JSON Schema Draft 7 object
+ */
+export function zodToSchema(schema: zod.ZodTypeAny): JSONSchema {
+  return z.toJSONSchema(schema, {
+    target: 'draft-7',
+  }) as JSONSchema;
+}

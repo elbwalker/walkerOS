@@ -1,0 +1,10 @@
+# walkerOS Collect Mode - Server-side event processing
+FROM walkeros/flow:latest
+
+ENV MODE=collect
+ENV BUNDLE=/app/flow/bundle.mjs
+ENV PORT=8080
+
+COPY bundle.mjs /app/flow/bundle.mjs
+
+EXPOSE 8080

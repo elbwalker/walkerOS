@@ -4,6 +4,7 @@ description: Event data sources for walkerOS collector
 sidebar_position: 4
 ---
 
+
 # Sources
 
 Sources are the **entry points** for event data in walkerOS. They capture events
@@ -14,115 +15,171 @@ events that the collector can process.
 
 Sources capture events in their native format and send them to the collector:
 
-1. **Capture**: Listen for events (DOM clicks, API calls, player actions)
-2. **Transform**: Convert to walkerOS event format (`entity action`, data)
-3. **Send**: Forward to collector for processing and routing to destinations
+<FlowMap
+  sources={{ default: { label: 'Source', highlight: true } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
+  markers={[
+    { position: 'incoming', id: '1', text: 'Capture: Listen for events (DOM clicks, API calls, player actions)' },
+    { position: 'source', id: '2', text: 'Transform: Convert to walkerOS event format (entity action, data)' },
+    { position: 'source-collector', id: '3', text: 'Send: Forward to collector for processing and routing' },
+  ]}
+/>
 
-## Available Sources
+## Available sources
 
-### Browser
+### Web
+
+#### Browser
 
 Captures events from web pages using DOM attributes:
 
-- DOM interactions (clicks, form submissions, visibility)
-- Automatic session and pageview tracking
-- Custom data attributes (`data-elb-*`)
+* DOM interactions (clicks, form submissions, visibility)
+* Automatic session and pageview tracking
+* Custom data attributes (`data-elb-*`)
 
 [Learn more →](./web/browser/)
 
-### dataLayer
+#### dataLayer
 
 Integrates with existing analytics implementations:
 
-- Works with GA4 and GTM dataLayer
-- Event transformation and filtering
-- Gradual migration support
+* Works with GA4 and GTM dataLayer
+* Event transformation and filtering
+* Gradual migration support
 
 [Learn more →](./web/dataLayer/)
 
-## Basic Setup
+### Server
+
+Server sources accept HTTP requests containing walkerOS events and forward them to the collector.
+
+#### Express
+
+Turn-key HTTP event collection server with Express.js:
+
+* Standalone or embedded: Start server automatically or integrate with existing Express app
+* CORS support and health checks
+* Pixel tracking with 1x1 transparent GIF
+
+[Learn more →](./server/express)
+
+#### Fetch
+
+Web Standard Fetch API source for edge and serverless platforms:
+
+* Platform agnostic: Cloudflare Workers, Vercel Edge, Deno, Bun, Node.js 18+
+* Web Standard `(Request) => Response` signature
+* Batch processing and CORS support
+
+[Learn more →](./server/fetch)
+
+#### AWS Lambda
+
+AWS Lambda HTTP handler for event collection:
+
+* Multi-platform: API Gateway REST (v1), HTTP API (v2), Function URLs
+* Auto-detection of API Gateway version
+* Pixel tracking and health checks
+
+[Learn more →](./server/aws)
+
+#### GCP Cloud Functions
+
+Google Cloud Functions HTTP handler for event collection:
+
+* Plug-and-play: Direct assignment to Cloud Functions handler
+* Batch processing support
+* Configurable CORS
+
+[Learn more →](./server/gcp)
+
+## Basic setup
 
 Sources are configured in `startFlow`:
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const { collector, elb } = await startFlow({
-  sources: {
-    browser: {
-      code: sourceBrowser,
-      config: {
-        settings: {
-          pageview: true,
-          session: true,
-          prefix: 'data-elb',
-        },
-      },
-    },
+sources: {
+browser: {
+code: sourceBrowser,
+config: {
+  settings: {
+    pageview: true,
+    session: true,
+    prefix: 'data-elb',
   },
-  destinations: {
-    /* your destinations */
-  },
+},
+},
+},
+destinations: {
+/* your destinations */
+},
 });
 
 // elb is now browser.push (enhanced with DOM commands)
 // Use elb for manual event tracking
-await elb('product view', { id: 'P123', name: 'Laptop' });
-```
+await elb('product view', { id: 'P123', name: 'Laptop' });`}
+  language="typescript"
+/>
 
-## Primary Source
+## Primary source
 
 `startFlow` returns an `elb` function based on your sources:
 
-- **With sources**: Returns first source's `push` method (enhanced features)
-- **Multiple sources**: First source is primary by default
-- **No sources**: Returns `collector.push` (basic functionality)
+* **With sources**: Returns first source's `push` method (enhanced features)
+* **Multiple sources**: First source is primary by default
+* **No sources**: Returns `collector.push` (basic functionality)
 
-### Override Primary Source
+### Override primary source
 
-```typescript
-const { elb } = await startFlow({
-  sources: {
-    browser: { code: sourceBrowser },
-    dataLayer: { code: sourceDataLayer, primary: true }, // Override
-  },
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+sources: {
+browser: { code: sourceBrowser },
+dataLayer: { code: sourceDataLayer, primary: true }, // Override
+},
 });
 
-// elb is now dataLayer.push instead of browser.push
-```
+// elb is now dataLayer.push instead of browser.push`}
+  language="typescript"
+/>
 
-## Reactive Event Handling
+## Reactive event handling
 
 Sources can react to collector events via the optional `on` method:
 
-```typescript
-const mySource: Source.Init = async (config, env) => {
-  return {
-    type: 'custom',
-    config,
-    on: async (event, context) => {
-      if (event === 'consent') {
-        // React to consent changes
-      }
-    },
-  };
+<CodeSnippet
+  code={`const mySource: Source.Init = async (config, env) => {
+return {
+type: 'custom',
+config,
+on: async (event, context) => {
+if (event === 'consent') {
+  // React to consent changes
+}
+},
 };
-```
+};`}
+  language="typescript"
+/>
 
 **Available Events:**
 
-- `consent` - Consent state changes
-- `session` - Session lifecycle events
-- `ready` - Collector ready state
-- `run` - Collector run events
+* `consent` - Consent state changes
+* `session` - Session lifecycle events
+* `ready` - Collector ready state
+* `run` - Collector run events
 
-## Creating Custom Sources
+## Creating custom sources
 
 See [Create Your Own Source](./create-your-own) for a complete guide to building custom sources.
 
-## Next Steps
+## Next steps
 
-- **[Browser Source](./web/browser/)** - DOM-based tracking
-- **[DataLayer Source](./web/dataLayer/)** - Legacy integration
-- **[Create Your Own](./create-your-own)** - Custom source guide
+* **[Browser source](./web/browser/)** - DOM-based tracking
+* **[DataLayer source](./web/dataLayer/)** - Legacy integration
+* **[Create your own](./create-your-own)** - Custom source guide

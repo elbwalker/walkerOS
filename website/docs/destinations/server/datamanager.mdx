@@ -1,0 +1,110 @@
+---
+title: Google Data Manager
+description: "Server-side event ingestion to Google Ads, Display & Video 360, and Google Analytics 4"
+path: /docs/destinations/server/datamanager
+sidebar_position: 4
+package: '@walkeros/server-destination-datamanager'
+---
+import { schemas } from '@walkeros/server-destination-datamanager/dev';
+
+# Google Data Manager
+
+<PackageLink env="server" github="packages/server/destinations/datamanager" npm="@walkeros/server-destination-datamanager" />
+
+The Google Data Manager destination package provides server-side integration for
+sending conversion events and audience data to Google's advertising ecosystem
+through a single unified API endpoint.
+
+:::info Where This Fits
+Google Data Manager is a **server destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Data Manager', highlight: true } }}
+/>
+
+Sends conversion events server-side to Google Ads, Display & Video 360, and GA4 through a single unified API.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/server-destination-datamanager`}
+  language="bash"
+/>
+
+## Setup
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationDataManager } from '@walkeros/server-destination-datamanager';
+
+await startFlow({
+  destinations: {
+    datamanager: {
+      code: destinationDataManager,
+      config: {
+        settings: {
+          // Service account credentials
+          credentials: {
+            client_email: process.env.GOOGLE_CLIENT_EMAIL,
+            private_key: process.env.GOOGLE_PRIVATE_KEY,
+          },
+          destinations: [
+            {
+              operatingAccount: {
+                accountId: '123-456-7890',
+                accountType: 'GOOGLE_ADS',
+              },
+              productDestinationId: 'AW-CONVERSION-123',
+            },
+          ],
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+## Guided Mapping Helpers
+
+Define common fields once in Settings instead of repeating them in every event
+mapping:
+
+<CodeSnippet
+  code={`await startFlow({
+  destinations: {
+    datamanager: {
+      code: destinationDataManager,
+      config: {
+        settings: {
+          credentials: { /* ... */ },
+          destinations: [...],
+
+          // Guided helpers (apply to all events)
+          userData: {
+            email: 'user.mail',
+            phone: 'data.phone',
+          },
+          userId: 'user.id',
+          clientId: 'user.device',
+          sessionAttributes: 'context.sessionAttributes',
+
+          // Consent mapping
+          consentAdUserData: 'marketing',
+          consentAdPersonalization: 'personalization',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+**Consent mapping**: Map your consent field names (string) or use static values (boolean). Event mappings always override Settings helpers.
+
+## Configuration reference
+
+<PropertyTable schema={schemas.settings} />

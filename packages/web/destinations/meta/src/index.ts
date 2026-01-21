@@ -6,52 +6,36 @@ import { getEnv } from '@walkeros/web-core';
 // Types
 export * as DestinationMeta from './types';
 
-// Examples
-export * as examples from './examples';
-
-// Schemas - hand-written (legacy)
-export * as schema from './schema';
-
-// Schemas - generated with schema builder (DRY approach)
-export {
-  settingsSchemaGenerated,
-  mappingSchemaGenerated,
-  settingsUiSchemaGenerated,
-  mappingUiSchemaGenerated,
-} from './schema-builder';
-
 export const destinationMeta: Destination = {
   type: 'meta-pixel',
 
   config: {},
 
-  init({ config, env }) {
-    const { settings = {} as Partial<Settings>, loadScript } = config;
-    const { pixelId } = settings;
+  init({ config, env, logger }) {
+    const { settings, loadScript } = config;
+    const { pixelId } = settings || {};
 
     // Load Meta Pixel script if required (fbevents.js)
     if (loadScript) addScript(env);
 
     // Required pixel id
-    if (!pixelId) return false;
+    if (!pixelId) logger.throw('Config settings pixelId missing');
 
     // fbq function setup
     setup(env);
 
     const { window } = getEnv(env);
     const fbq = window.fbq as facebook.Pixel.Event;
-    fbq('init', pixelId);
-
-    return config;
+    fbq('init', pixelId!);
   },
 
-  push(event, { config, mapping = {}, data, env }) {
-    const { track, trackCustom } = mapping.settings || {};
+  push(event, { config, rule = {}, data, env }) {
+    const { track, trackCustom } = rule.settings || {};
     const { window } = getEnv(env);
     const fbq = window.fbq as facebook.Pixel.Event;
 
     // page view
-    if (event.name === 'page view' && !mapping.settings) {
+    if (event.name === 'page view' && !rule.settings) {
       // Define a custom mapping
       event.name = 'PageView';
     }

@@ -23,7 +23,7 @@ async function testMapping() {
             console.log('\n📦 Destination received event:');
             console.log('  Name:', event.name);
             console.log('  Data:', JSON.stringify(event.data, null, 2));
-            console.log('  Mapping applied:', context.mapping?.name || 'none');
+            console.log('  Mapping applied:', context.rule?.name || 'none');
           },
         },
         config: {
@@ -114,11 +114,11 @@ async function testMapping() {
   const { elb: sourceElb } = await startFlow({
     sources: {
       custom: {
-        code: (config, env) => ({
+        code: async (context) => ({
           type: 'custom',
-          config,
+          config: context.config,
           push: (event: WalkerOS.Event, _data?: WalkerOS.Properties) =>
-            env.elb(event),
+            context.env.elb(event),
         }),
         config: {
           // Source-level mapping

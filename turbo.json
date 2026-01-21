@@ -1,11 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
-  "concurrency": "4",
+  "globalDependencies": ["**/.env.*local", "website/.env"],
+  "concurrency": "2",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**"]
+      "outputs": ["dist/**", "build/**"],
+      "env": ["CI", "RSPACK_PROGRESS", "DOCUSAURUS_BASEURL"]
     },
     "build:website": {
       "dependsOn": ["^build"],

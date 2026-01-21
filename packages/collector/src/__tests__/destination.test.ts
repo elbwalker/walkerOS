@@ -1,6 +1,6 @@
 import type { Collector } from '@walkeros/core';
 import type { Destination, WalkerOS } from '@walkeros/core';
-import { clone, createEvent } from '@walkeros/core';
+import { clone, createEvent, createMockLogger } from '@walkeros/core';
 import { pushToDestinations, startFlow } from '..';
 
 describe('Destination', () => {
@@ -26,7 +26,6 @@ describe('Destination', () => {
   ): Collector.Config {
     return {
       tagging: 1,
-      verbose: false,
       globalsStatic: {},
       sessionStatic: {},
       ...overrides,
@@ -42,11 +41,17 @@ describe('Destination', () => {
   ): Collector.Instance {
     const defaultConfig = createTestConfig();
 
+    // Create mock logger with proper scope chaining
+    const mockLogger = createMockLogger();
+    const scopedMockLogger = createMockLogger();
+    mockLogger.scope = jest.fn().mockReturnValue(scopedMockLogger);
+
     return {
       allowed: true,
       destinations: { foo: destination },
       globals: {},
       hooks: {},
+      logger: mockLogger,
       user: {},
       consent: {},
       queue: [],
@@ -91,10 +96,15 @@ describe('Destination', () => {
       config: {},
     };
 
-    await pushToDestinations(createWalkerjs(), event, {
-      destinationUpdate,
-      destination,
-    });
+    await pushToDestinations(
+      createWalkerjs(),
+      event,
+      {},
+      {
+        destinationUpdate,
+        destination,
+      },
+    );
     expect(mockPushUpdate).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith(
@@ -115,6 +125,48 @@ describe('Destination', () => {
     expect(destination.config.init).toBeFalsy();
   });
 
+  test('logs init lifecycle', async () => {
+    const collector = createWalkerjs();
+
+    await pushToDestinations(collector, event);
+
+    expect(mockInit).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    // Verify logger.scope was called with destination type
+    expect(collector.logger.scope).toHaveBeenCalledWith('unknown');
+
+    // Get the scoped logger instance
+    const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
+      .value;
+
+    // Verify init lifecycle logs
+    expect(scopedLogger.debug).toHaveBeenCalledWith('init');
+    expect(scopedLogger.debug).toHaveBeenCalledWith('init done');
+  });
+
+  test('logs push lifecycle', async () => {
+    const collector = createWalkerjs();
+    destination.config.init = true; // Skip init for this test
+
+    await pushToDestinations(collector, event);
+
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    // Verify logger.scope was called with destination type
+    expect(collector.logger.scope).toHaveBeenCalledWith('unknown');
+
+    // Get the scoped logger instance
+    const scopedLogger = (collector.logger.scope as jest.Mock).mock.results[0]
+      .value;
+
+    // Verify push lifecycle logs
+    expect(scopedLogger.debug).toHaveBeenCalledWith('push', {
+      event: event.name,
+    });
+    expect(scopedLogger.debug).toHaveBeenCalledWith('push done');
+  });
+
   test('DLQ', async () => {
     const event = createEvent();
     // Simulate a failing push
@@ -123,10 +175,16 @@ describe('Destination', () => {
     });
 
     const destination = createDestination();
-    const result = await pushToDestinations(createWalkerjs(), event, {
-      destination,
-    });
-    expect(result.failed).toHaveLength(1);
+    const result = await pushToDestinations(
+      createWalkerjs(),
+      event,
+      {},
+      {
+        destination,
+      },
+    );
+    expect(result.failed).toBeDefined();
+    expect(Object.keys(result.failed!)).toHaveLength(1);
     expect(result.ok).toBeFalsy();
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(destination.dlq).toContainEqual([event, new Error('kaputt')]);
@@ -155,7 +213,16 @@ describe('Destination', () => {
       await elb('walker consent', { marketing: true });
 
       // Verify the destination's on method was called with consent context
-      expect(mockOnMethod).toHaveBeenCalledWith('consent', { marketing: true });
+      expect(mockOnMethod).toHaveBeenCalledWith(
+        'consent',
+        expect.objectContaining({
+          data: { marketing: true },
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
 
     it('should call destination on method when session event is triggered', async () => {
@@ -178,7 +245,16 @@ describe('Destination', () => {
       await elb('walker session');
 
       // Verify the destination's on method was called with session context
-      expect(mockOnMethod).toHaveBeenCalledWith('session', collector.session);
+      expect(mockOnMethod).toHaveBeenCalledWith(
+        'session',
+        expect.objectContaining({
+          data: collector.session,
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
 
     it('should call destination on method when ready event is triggered', async () => {
@@ -195,7 +271,16 @@ describe('Destination', () => {
       await elb('walker ready');
 
       // Verify the destination's on method was called
-      expect(mockOnMethod).toHaveBeenCalledWith('ready', undefined);
+      expect(mockOnMethod).toHaveBeenCalledWith(
+        'ready',
+        expect.objectContaining({
+          data: undefined,
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
 
     it('should call destination on method when run event is triggered', async () => {
@@ -212,7 +297,16 @@ describe('Destination', () => {
       await elb('walker run');
 
       // Verify the destination's on method was called
-      expect(mockOnMethod).toHaveBeenCalledWith('run', undefined);
+      expect(mockOnMethod).toHaveBeenCalledWith(
+        'run',
+        expect.objectContaining({
+          data: undefined,
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
 
     it('should not fail if destination does not have on method', async () => {
@@ -248,9 +342,16 @@ describe('Destination', () => {
       await elb('walker consent', { marketing: true });
 
       // Verify the async destination's on method was called
-      expect(asyncOnMethod).toHaveBeenCalledWith('consent', {
-        marketing: true,
-      });
+      expect(asyncOnMethod).toHaveBeenCalledWith(
+        'consent',
+        expect.objectContaining({
+          data: { marketing: true },
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
 
     it('should call on method for multiple destinations', async () => {
@@ -278,8 +379,26 @@ describe('Destination', () => {
       await elb('walker consent', { marketing: true });
 
       // Both destinations should receive the event
-      expect(mockOn1).toHaveBeenCalledWith('consent', { marketing: true });
-      expect(mockOn2).toHaveBeenCalledWith('consent', { marketing: true });
+      expect(mockOn1).toHaveBeenCalledWith(
+        'consent',
+        expect.objectContaining({
+          data: { marketing: true },
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
+      expect(mockOn2).toHaveBeenCalledWith(
+        'consent',
+        expect.objectContaining({
+          data: { marketing: true },
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
     });
 
     it('should handle on method errors gracefully', async () => {
@@ -302,9 +421,199 @@ describe('Destination', () => {
       }).not.toThrow();
 
       // On method should still have been called
-      expect(errorOnMethod).toHaveBeenCalledWith('consent', {
-        marketing: true,
+      expect(errorOnMethod).toHaveBeenCalledWith(
+        'consent',
+        expect.objectContaining({
+          data: { marketing: true },
+          collector: expect.any(Object),
+          config: expect.any(Object),
+          env: expect.any(Object),
+          logger: expect.any(Object),
+        }),
+      );
+    });
+  });
+
+  describe('batch with wildcard mapping', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should not duplicate events when using wildcard batch config', async () => {
+      // Capture events at call time (since batched.events gets cleared after pushBatch)
+      const capturedBatches: { events: WalkerOS.Events; key: string }[] = [];
+      const mockPushBatch = jest.fn((batch) => {
+        // Clone the events array to capture at call time
+        capturedBatches.push({
+          events: [...batch.events],
+          key: batch.key,
+        });
       });
+      const mockPush = jest.fn();
+
+      const destinationWithBatch: Destination.Instance = {
+        push: mockPush,
+        pushBatch: mockPushBatch,
+        config: {
+          init: true,
+          mapping: {
+            '*': {
+              '*': { batch: 50 }, // 50ms debounce
+            },
+          },
+        },
+      };
+
+      const { elb } = await startFlow({
+        destinations: { batchDest: { code: destinationWithBatch } },
+      });
+
+      // Send different event types (all should match wildcard)
+      await elb('page view');
+      await elb('product click');
+      await elb('button press');
+
+      // Advance timers to trigger debounce
+      jest.advanceTimersByTime(100);
+
+      // pushBatch should be called exactly once with all 3 events
+      expect(mockPushBatch).toHaveBeenCalledTimes(1);
+      expect(capturedBatches[0].events).toHaveLength(3);
+
+      // Verify all events are present (not duplicated)
+      const eventNames = capturedBatches[0].events.map((e) => e.name);
+      expect(eventNames).toContain('page view');
+      expect(eventNames).toContain('product click');
+      expect(eventNames).toContain('button press');
+
+      // Individual push should NOT be called (batch handles it)
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('should batch events separately per mapping key', async () => {
+      // Capture events at call time
+      const capturedBatches: { events: WalkerOS.Events; key: string }[] = [];
+      const mockPushBatch = jest.fn((batch) => {
+        capturedBatches.push({
+          events: [...batch.events],
+          key: batch.key,
+        });
+      });
+      const mockPush = jest.fn();
+
+      const destinationWithBatch: Destination.Instance = {
+        push: mockPush,
+        pushBatch: mockPushBatch,
+        config: {
+          init: true,
+          mapping: {
+            page: {
+              '*': { batch: 50 }, // page events batch together
+            },
+            product: {
+              '*': { batch: 50 }, // product events batch together
+            },
+          },
+        },
+      };
+
+      const { elb } = await startFlow({
+        destinations: { batchDest: { code: destinationWithBatch } },
+      });
+
+      // Send events that match different mapping keys
+      await elb('page view');
+      await elb('page scroll');
+      await elb('product click');
+      await elb('product view');
+
+      // Advance timers to trigger debounce
+      jest.advanceTimersByTime(100);
+
+      // pushBatch should be called twice (once per mapping key)
+      expect(mockPushBatch).toHaveBeenCalledTimes(2);
+
+      // Each batch should have 2 events
+      expect(capturedBatches[0].events).toHaveLength(2);
+      expect(capturedBatches[1].events).toHaveLength(2);
+    });
+
+    it('should isolate batch state when multiple destinations share same mapping config', async () => {
+      // This test reproduces the bug where shared mapping config causes duplicate events
+      // Two destinations with the SAME mapping config object (shared reference)
+      const sharedMapping = {
+        '*': {
+          '*': { batch: 50 },
+        },
+      };
+
+      const capturedBatches: {
+        destination: string;
+        events: WalkerOS.Events;
+        key: string;
+      }[] = [];
+
+      const mockPushBatch1 = jest.fn((batch) => {
+        capturedBatches.push({
+          destination: 'dest1',
+          events: [...batch.events],
+          key: batch.key,
+        });
+      });
+      const mockPushBatch2 = jest.fn((batch) => {
+        capturedBatches.push({
+          destination: 'dest2',
+          events: [...batch.events],
+          key: batch.key,
+        });
+      });
+
+      const destination1: Destination.Instance = {
+        push: jest.fn(),
+        pushBatch: mockPushBatch1,
+        config: {
+          init: true,
+          mapping: sharedMapping, // Shared reference!
+        },
+      };
+
+      const destination2: Destination.Instance = {
+        push: jest.fn(),
+        pushBatch: mockPushBatch2,
+        config: {
+          init: true,
+          mapping: sharedMapping, // Same shared reference!
+        },
+      };
+
+      const { elb } = await startFlow({
+        destinations: {
+          dest1: { code: destination1 },
+          dest2: { code: destination2 },
+        },
+      });
+
+      // Send events
+      await elb('page view');
+      await elb('product click');
+
+      // Advance timers to trigger debounce
+      jest.advanceTimersByTime(100);
+
+      // Each destination should receive its own batch
+      // BUG: Currently shared mapping causes only last destination to receive events
+      // or events get duplicated across destinations
+      const totalPushBatchCalls =
+        mockPushBatch1.mock.calls.length + mockPushBatch2.mock.calls.length;
+      expect(totalPushBatchCalls).toBe(2); // Should be 2 (one per destination)
+
+      // Each destination should receive exactly 2 events
+      expect(mockPushBatch1).toHaveBeenCalledTimes(1);
+      expect(mockPushBatch2).toHaveBeenCalledTimes(1);
     });
   });
 });

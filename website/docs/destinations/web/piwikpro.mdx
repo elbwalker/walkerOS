@@ -6,27 +6,11 @@ sidebar_position: 3
 package: '@walkeros/web-destination-piwikpro'
 ---
 
-import Link from '@docusaurus/Link';
-import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationPiwikPro from '@walkeros/web-destination-piwikpro';
-import { examples } from '@walkeros/web-destination-piwikpro';
+import { examples, schemas } from '@walkeros/web-destination-piwikpro/dev';
 
-export const documentationPiwikPro = {
-  ...destinationPiwikPro,
-  env: {
-    window: {
-      _paq: {
-        push: () => {},
-      },
-    },
-  },
-};
+export const destination = { ...destinationPiwikPro, examples };
 
 # Piwik PRO
 
@@ -43,87 +27,92 @@ function. All you need to do is install the destination, and optionally map
 events to Piwik Pro's format. walkerOS takes care of loading the script and the
 function calls.
 
+:::info Where This Fits
+Piwik PRO is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Piwik PRO', highlight: true } }}
+/>
+
+Loads Piwik PRO script, initializes the tracking container, and sends page views and custom events with GDPR-compliant analytics.
+:::
+
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-piwikpro
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-piwikpro`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationPiwikPro } from '@walkeros/web-destination-piwikpro';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationPiwikPro, {
-  settings: {
-    appId: 'XXX-XXX-XXX-XXX-XXX', // Required
-    url: 'https://your_account_name.piwik.pro/', // Required
+await startFlow({
+  destinations: {
+    piwikpro: {
+      code: destinationPiwikPro,
+      config: {
+        settings: {
+          appId: 'XXX-XXX-XXX-XXX-XXX', // Required
+          url: 'https://your_account_name.piwik.pro/', // Required
+        },
+      },
+    },
   },
-});
-```
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` destinations:
+
+<CodeSnippet
+  code={`"destinations": {
+  "piwikpro": {
+    "package": "@walkeros/web-destination-piwikpro",
+    "config": {
+      "settings": {
+        "appId": "XXX-XXX-XXX-XXX-XXX",
+        "url": "https://your_account_name.piwik.pro/"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'appId',
-      type: 'string',
-      description: 'ID of the Piwik PRO site',
-      required: true,
-      example: "'XXX-XXX-XXX-XXX-XXX'",
-    },
-    {
-      name: 'url',
-      type: 'string',
-      description: 'URL of your Piwik PRO account',
-      required: true,
-      example: "'https://your_account_name.piwik.pro/'",
-    },
-    {
-      name: 'linkTracking',
-      type: 'boolean',
-      description: 'Enables/Disables download and outlink tracking',
-      required: false,
-      example: 'false',
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.settings} />
 
-<DestinationInit
-  destination={destinationPiwikPro}
-  custom={`{
-    appId: 'XXX-XXX-XXX-XXX-XXX', // Id of the site
-    // linkTracking: false, // Disable download and outlink tracking
-    url: 'https://your_account_name.piwik.pro/', // Same address as the login
-  }`}
+<DestinationInitDemo
+  destination={destination}
+  settings={{
+    appId: 'XXX-XXX-XXX-XXX-XXX',
+    url: 'https://your_account_name.piwik.pro/',
+  }}
 />
 
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings`):
 
-<SettingsTable
-  properties={[
-    {
-      name: 'goalId',
-      type: 'string',
-      description: 'ID to count the event as a goal',
-      required: false,
-      example: "'1'",
-    },
-    {
-      name: 'goalValue',
-      type: 'string',
-      description: 'Property to be used as the goal value',
-      required: false,
-      example: "'data.value'",
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.mapping} />
 
 ## Mapping examples
 
@@ -140,8 +129,8 @@ Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceproductdetailview#examples">ecommerceProductDetailView</Link>
 event.
 
-<DestinationPush
-  destination={documentationPiwikPro}
+<DestinationDemo
+  destination={destination}
   settings={{
     appId: 'XXX-XXX-XXX-XXX-XXX',
     url: 'https://your_account_name.piwik.pro/',
@@ -159,8 +148,8 @@ Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceaddtocart#examples">ecommerceAddToCart</Link>
 event.
 
-<DestinationPush
-  destination={documentationPiwikPro}
+<DestinationDemo
+  destination={destination}
   settings={{
     appId: 'XXX-XXX-XXX-XXX-XXX',
     url: 'https://your_account_name.piwik.pro/',
@@ -178,8 +167,8 @@ Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommercecartupdate#examples">ecommerceCartUpdate</Link>
 event.
 
-<DestinationPush
-  destination={documentationPiwikPro}
+<DestinationDemo
+  destination={destination}
   settings={{
     appId: 'XXX-XXX-XXX-XXX-XXX',
     url: 'https://your_account_name.piwik.pro/',
@@ -197,8 +186,8 @@ Map your walkerOS event to get
 an&nbsp;<Link to="https://developers.piwik.pro/docs/ecommerceorder#examples">ecommerceOrder</Link>
 event.
 
-<DestinationPush
-  destination={documentationPiwikPro}
+<DestinationDemo
+  destination={destination}
   settings={{
     appId: 'XXX-XXX-XXX-XXX-XXX',
     url: 'https://your_account_name.piwik.pro/',

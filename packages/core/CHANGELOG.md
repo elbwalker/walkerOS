@@ -1,37 +1,10 @@
 # @walkeros/core
 
-## 0.2.1
+## 1.0.0
 
-### Patch Changes
+### Major Changes
 
-- Schema builder, event-level mapping policies, config package, fixed jest mocks
+- 67c9e1d: Hello World! walkerOS v1.0.0
 
-## 0.2.0
-
-### Minor Changes
-
-- env
-
-## 0.1.2
-
-### Patch Changes
-
-- a0ced16: env
-
-## 0.1.1
-
-### Patch Changes
-
-- flow
-
-## 0.1.0
-
-### Minor Changes
-
-- fixes
-
-## 0.0.8
-
-### Patch Changes
-
-- af0ea64: init fixes
+  Open-source event data collection. Collect event data for digital analytics in
+  a unified and privacy-centric way.

@@ -1,13 +1,19 @@
 {
   "name": "walkerOS dev container",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:latest",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22-bookworm",
   // Features to add to the dev container. More info: https://containers.dev/features.
-  "features": {},
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+
+  // Persist Claude Code data across container rebuilds (uses existing .claude folder in repo)
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/workspaces/walkerOS/.claude/data"
+  },
   "customizations": {
     "vscode": {
       "extensions": [
-        "unifiedjs.vscode-mdx",
         "esbenp.prettier-vscode",
         "streetsidesoftware.code-spell-checker",
         "chakrounanas.turbo-console-log",
@@ -25,7 +31,24 @@
         "[jsonc]": {
           "editor.defaultFormatter": "esbenp.prettier-vscode",
           "editor.formatOnSave": true
-        }
+        },
+        "typescript.tsserver.maxTsServerMemory": 4096,
+        "typescript.disableAutomaticTypeAcquisition": true,
+        "typescript.preferences.includePackageJsonAutoImports": "off",
+        "typescript.workspaceSymbols.scope": "currentProject",
+        "files.watcherExclude": {
+          "**/node_modules/**": true,
+          "**/.git/**": true,
+          "**/dist/**": true,
+          "**/.turbo/**": true
+        },
+        "search.exclude": {
+          "**/node_modules": true,
+          "**/dist": true,
+          "**/.turbo": true
+        },
+        "workbench.editor.limit.enabled": true,
+        "workbench.editor.limit.value": 10
       }
     }
   },
@@ -33,8 +56,11 @@
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
 
+  // Resource limits for the container
+  "runArgs": ["--memory=8g", "--memory-swap=10g", "--cpus=4"],
+
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "npm install && npm install -g @anthropic-ai/claude-code @openai/codex && npm run build"
+  "postCreateCommand": "corepack enable && npm install && npm install -g @anthropic-ai/claude-code && npm run build"
 
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
   // "remoteUser": "root"

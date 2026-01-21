@@ -4,84 +4,103 @@ description: A guide to building custom destinations for walkerOS.
 sidebar_position: 99
 ---
 
-import Link from '@docusaurus/Link';
-
 # Create Your Own Destination
 
 This guide provides the essentials for building a custom walkerOS destination.
 
-## What is a Destination?
+## What is a destination?
 
 A destination is a function that receives events from walkerOS and sends them to
 an external service, such as an analytics platform, an API, or a database.
 
-## The Destination Interface
+## The destination interface
 
 A destination is an object that implements the `Destination` interface. The most
 important property is the `push` function, which is called for every event.
 
-```typescript
-interface Destination<Settings = unknown> {
-  config: {};
-  push: PushFn<Settings>;
-  type?: string;
-  init?: InitFn<Settings>;
-  on?(
-    event: 'consent' | 'session' | 'ready' | 'run',
-    context?: unknown,
-  ): void | Promise<void>;
-}
-```
+<CodeSnippet
+  code={`interface Destination<Settings = unknown> {
+config: {};
+push: PushFn<Settings>;
+type?: string;
+init?: InitFn<Settings>;
+on?(
+event: 'consent' | 'session' | 'ready' | 'run',
+context?: unknown,
+): void | Promise<void>;
+}`}
+  language="typescript"
+/>
 
 ## The `push` function
 
 The `push` function is where you'll implement the logic to send the event to
-your desired service. It receives the `event` and a `context` object containing
-the destination's configuration.
+your desired service. It receives the `event` and a `context` object.
 
-```typescript
-type PushFn<Settings> = (
+<CodeSnippet
+  code={`type PushFn<Settings> = (
   event: WalkerOS.Event,
-  context: {
-    config: {
-      settings?: Settings;
-    };
-  },
-) => void;
-```
+  context: Destination.PushContext<Settings>,
+) => void;`}
+  language="typescript"
+/>
 
-## Example: A Simple Webhook Destination
+The push context contains:
+
+* **`config`**: Destination configuration with settings
+* **`env`**: Environment with window, document, etc.
+* **`logger`**: Logger instance
+* **`id`**: Unique destination identifier
+* **`data`**: Pre-computed data from mapping
+* **`rule`**: The matching mapping rule for this event
+* **`ingest`**: Optional request metadata from source
+
+## Example: A simple webhook destination
 
 Here is an example of a simple destination that sends events to a webhook URL.
 
-```typescript
-import type { Destination } from '@walkeros/core';
+<CodeSnippet
+  code={`import type { Destination } from '@walkeros/core';
 
 // 1. Define your settings interface
 interface WebhookSettings {
-  url: string;
+url: string;
 }
 
 // 2. Create the destination object
 export const destinationWebhook: Destination<WebhookSettings> = {
-  type: 'webhook',
-  config: {},
+type: 'webhook',
+config: {},
 
-  push(event, { config }) {
-    const { settings } = config;
+push(event, { config }) {
+const { settings } = config;
 
-    // 3. Access your settings
-    if (!settings?.url) return;
+// 3. Access your settings
+if (!settings?.url) return;
 
-    // 4. Send the event
-    fetch(settings.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(event),
-    }).catch(console.error);
-  },
-};
-```
+// 4. Send the event
+fetch(settings.url, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(event),
+}).catch(console.error);
+},
+};`}
+  language="typescript"
+/>
+
+## Schema validation (optional)
+
+Destinations can export Zod schemas to provide runtime validation and TypeScript
+IDE support for configuration options. Export a `schemas` namespace containing
+`SettingsSchema` and `MappingSchema` to enable validation, autocomplete, and
+JSON Schema generation for tools like MCP and Explorer.
+
+See the
+[Destination Schemas Guide](https://github.com/elbwalker/walkerOS/blob/main/DESTINATION_SCHEMAS.md)
+for implementation details, or reference existing destinations like
+[Meta Pixel](https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/meta)
+for complete examples.
 
 ## The `on` method (Optional)
 
@@ -91,148 +110,155 @@ management, or cleanup tasks.
 
 ### Available Events
 
-- **`consent`** - Called when user consent changes, with consent state as
+* **`consent`** - Called when user consent changes, with consent state as
   context
-- **`session`** - Called when a new session starts, with session data as context
-- **`ready`** - Called when the collector is ready to process events
-- **`run`** - Called when the collector starts or resumes processing
+* **`session`** - Called when a new session starts, with session data as context
+* **`ready`** - Called when the collector is ready to process events
+* **`run`** - Called when the collector starts or resumes processing
 
 ### Example: Consent-Aware Destination
 
-```typescript
-export const destinationWithConsent: Destination<WebhookSettings> = {
-  type: 'webhook-consent',
-  config: {},
+<CodeSnippet
+  code={`export const destinationWithConsent: Destination<WebhookSettings> = {
+type: 'webhook-consent',
+config: {},
 
-  on(event, context) {
-    if (event === 'consent') {
-      console.log('Consent updated:', context);
-      // React to consent changes - maybe clear cookies if consent withdrawn
-    }
-  },
+on(event, context) {
+if (event === 'consent') {
+console.log('Consent updated:', context);
+// React to consent changes - maybe clear cookies if consent withdrawn
+}
+},
 
-  push(event, { config }) {
-    console.log('Event:', event);
-  },
-};
-```
+push(event, { config }) {
+console.log('Event:', event);
+},
+};`}
+  language="typescript"
+/>
 
 ## Using your destination
 
 To use your custom destination, add it to the `destinations` object in your
 collector configuration.
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationWebhook } from './destinationWebhook';
 
 const { elb } = await startFlow({
-  destinations: {
-    myWebhook: {
-      destination: destinationWebhook,
-      config: {
-        settings: {
-          url: 'https://api.example.com/events',
-        },
-      },
-    },
+destinations: {
+myWebhook: {
+destination: destinationWebhook,
+config: {
+  settings: {
+    url: 'https://api.example.com/events',
   },
-});
-```
+},
+},
+},
+});`}
+  language="typescript"
+/>
 
-## Advanced Example: Session Management
+## Advanced example: Session management
 
 Here's a more advanced example that demonstrates session handling and cleanup:
 
-```typescript
-export const destinationWithSession: Destination<WebhookSettings> = {
-  type: 'webhook-session',
-  config: {},
+<CodeSnippet
+  code={`export const destinationWithSession: Destination<WebhookSettings> = {
+type: 'webhook-session',
+config: {},
 
-  on(event, context) {
-    switch (event) {
-      case 'session':
-        // New session started
-        console.log('New session:', context);
-        // Could initialize session-specific tracking
-        break;
+on(event, context) {
+switch (event) {
+case 'session':
+  // New session started
+  console.log('New session:', context);
+  // Could initialize session-specific tracking
+  break;
 
-      case 'consent':
-        // Handle consent changes
-        const consent = context as { marketing?: boolean; analytics?: boolean };
-        if (!consent?.marketing) {
-          // Clear marketing-related data if consent withdrawn
-          console.log('Marketing consent withdrawn, clearing data');
-        }
-        break;
+case 'consent':
+  // Handle consent changes
+  const consent = context as { marketing?: boolean; analytics?: boolean };
+  if (!consent?.marketing) {
+    // Clear marketing-related data if consent withdrawn
+    console.log('Marketing consent withdrawn, clearing data');
+  }
+  break;
 
-      case 'ready':
-        // Collector is ready
-        console.log('Starting destination services');
-        break;
+case 'ready':
+  // Collector is ready
+  console.log('Starting destination services');
+  break;
 
-      case 'run':
-        // Collector resumed processing
-        console.log('Collector resumed, processing queued events');
-        break;
-    }
-  },
+case 'run':
+  // Collector resumed processing
+  console.log('Collector resumed, processing queued events');
+  break;
+}
+},
 
-  push(event, { config }) {
-    // Regular event processing
-    const { settings } = config;
-    if (!settings?.url) return;
+push(event, { config }) {
+// Regular event processing
+const { settings } = config;
+if (!settings?.url) return;
 
-    fetch(settings.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(event),
-    }).catch(console.error);
-  },
-};
-```
+fetch(settings.url, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(event),
+}).catch(console.error);
+},
+};`}
+  language="typescript"
+/>
 
-## TypeScript Integration
+## TypeScript integration
 
 To get full TypeScript support for your destination's configuration, you can
 extend the `WalkerOS.Destinations` interface.
 
-```typescript
-// types.ts
+<CodeSnippet
+  code={`// types.ts
 import type { Destination } from '@walkeros/core';
 import type { WebhookSettings } from './destinationWebhook';
 
 declare global {
-  namespace WalkerOS {
-    interface Destinations {
-      webhook: Destination.Config<WebhookSettings>;
-    }
-  }
+namespace WalkerOS {
+interface Destinations {
+webhook: Destination.Config<WebhookSettings>;
 }
-```
+}
+}`}
+  language="typescript"
+/>
 
-## Environment Dependencies (Testing)
+## Environment dependencies (testing)
 
-The `env` parameter enables dependency injection for external APIs and SDKs. This allows you to test your destination logic without making actual API calls or requiring real browser globals.
+The `env` parameter enables dependency injection for external APIs and SDKs.
+This allows you to test your destination logic without making actual API calls
+or requiring real browser globals.
 
 **Use Cases:**
-- Mock external SDKs (Google Analytics, Facebook Pixel, AWS SDK)
-- Test without network requests
-- Simulate different API responses
-- Run tests in any environment (Node.js, browser, CI)
+
+* Mock external SDKs (Google Analytics, Facebook Pixel, AWS SDK)
+* Test without network requests
+* Simulate different API responses
+* Run tests in any environment (Node.js, browser, CI)
 
 ### Defining an Environment
 
 Define the external dependencies your destination needs:
 
-```typescript
-// types.ts - Web destination
+<CodeSnippet
+  code={`// types.ts - Web destination
 import type { DestinationWeb } from '@walkeros/web-core';
 
 export interface Env extends DestinationWeb.Env {
-  window: {
-    gtag: (command: string, ...args: unknown[]) => void;
-  };
+window: {
+gtag: (command: string, ...args: unknown[]) => void;
+};
 }
 
 // types.ts - Server destination
@@ -240,86 +266,117 @@ import type { DestinationServer } from '@walkeros/server-core';
 import type { BigQuery } from '@google-cloud/bigquery';
 
 export interface Env extends DestinationServer.Env {
-  BigQuery?: typeof BigQuery;
-}
-```
+BigQuery?: typeof BigQuery;
+}`}
+  language="typescript"
+/>
 
 ### Using Environment in Your Destination
 
-Use the 3rd generic parameter for type safety, then access env in `init` or `push`:
+Use the 3rd generic parameter for type safety, then access env in `init` or
+`push`:
 
-```typescript
-import type { DestinationWeb } from '@walkeros/web-core';
+<CodeSnippet
+  code={`import type { DestinationWeb } from '@walkeros/web-core';
 import { getEnv } from '@walkeros/web-core';
 
-interface Settings { /* ... */ }
-interface Mapping { /* ... */ }
+interface Settings {
+/* ... */
+}
+interface Mapping {
+/* ... */
+}
 interface Env extends DestinationWeb.Env {
-  window: { customAPI: (event: string) => void };
+window: { customAPI: (event: string) => void };
 }
 
 // Add Env as 3rd generic parameter for proper typing
 export const destination: DestinationWeb.Destination<Settings, Mapping, Env> = {
-  type: 'custom',
-  config: {},
+type: 'custom',
+config: {},
 
-  async init({ config, env }) {
-    // Initialize SDK using env, falls back to real APIs
-    const { window } = getEnv(env);
-    window.customAPI('init');
-    return config;
-  },
+async init({ config, env }) {
+// Initialize SDK using env, falls back to real APIs
+const { window } = getEnv(env);
+window.customAPI('init');
+return config;
+},
 
-  push(event, { config, env }) {
-    const { window } = getEnv(env);
-    window.customAPI(event.name);
-  },
-};
-```
+push(event, { config, env }) {
+const { window } = getEnv(env);
+window.customAPI(event.name);
+},
+};`}
+  language="typescript"
+/>
 
 ### Creating Test Environments
 
 Create reusable mock environments in an `examples/env.ts` file:
 
-```typescript
-// examples/env.ts
+<CodeSnippet
+  code={`// examples/env.ts
 import type { Env } from '../types';
 
 export const push: Env = {
-  window: {
-    customAPI: jest.fn(),
-  },
-};
-```
+window: {
+customAPI: jest.fn(),
+},
+};`}
+  language="typescript"
+/>
 
 Export from your examples index:
 
-```typescript
-// examples/index.ts
-export * as env from './env';
-```
+<CodeSnippet
+  code={`// examples/index.ts
+export * as env from './env';`}
+  language="typescript"
+/>
 
 ### Using in Tests
 
-```typescript
-import { clone } from '@walkeros/core';
+<CodeSnippet
+  code={`import { clone } from '@walkeros/core';
+import type { Destination, Collector } from '@walkeros/core';
+import { createMockLogger } from '@walkeros/core';
 import { examples } from './index';
+
+// Helper to create push context for testing
+function createPushContext(
+  overrides: Partial<Destination.PushContext<Settings>> = {},
+): Destination.PushContext<Settings> {
+  return {
+    config: {},
+    env: examples.env.push,
+    logger: createMockLogger(),
+    id: 'test-destination',
+    collector: {} as Collector.Instance,
+    data: {},
+    rule: undefined,
+    ...overrides,
+  };
+}
 
 describe('My Destination', () => {
   it('calls custom API', async () => {
     // Clone the example env to avoid mutations
     const testEnv = clone(examples.env.push);
 
-    await destination.push(event, { config, env: testEnv });
+    const context = createPushContext({ env: testEnv });
+    await destination.push(event, context);
 
     expect(testEnv.window.customAPI).toHaveBeenCalledWith('page view');
   });
-});
-```
+});`}
+  language="typescript"
+/>
 
 **Key Points:**
-- **Production**: No `env` needed, uses real APIs (window, fetch, SDKs)
-- **Testing**: Provide `env` with mocks for isolated testing
-- **Type Safety**: 3rd generic parameter gives full autocomplete
-- **Fallback**: `getEnv(env)` automatically uses real APIs if env not provided
-- **Reusable**: Store mock environments in `examples/env.ts` for consistency
+
+* **Production**: No `env` needed, uses real APIs (window, fetch, SDKs)
+* **Testing**: Provide `env` with mocks for isolated testing
+* **Type Safety**: 3rd generic parameter gives full autocomplete
+* **Fallback**: `getEnv(env)` automatically uses real APIs if env not provided
+* **Reusable**: Store mock environments in `examples/env.ts` for consistency
+* **Context helper**: Use `createPushContext()` to standardize test context with `id` and `rule`

@@ -1,25 +1,15 @@
 ---
 title: Google Tag Manager (GTM)
-description:
-  Google Tag Manager configuration within the unified gtag destination
+description: "Google Tag Manager configuration within the unified gtag destination"
 sidebar_position: 4
 package: '@walkeros/web-destination-gtag'
 ---
 
-import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
 import { getEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationGtag from '@walkeros/web-destination-gtag';
-import { examples } from '@walkeros/web-destination-gtag';
+import { examples, schemas } from '@walkeros/web-destination-gtag/dev';
 
-export const documentationGtag = {
-  ...destinationGtag,
-  examples,
-};
+export const destination = { ...destinationGtag, examples };
 
 # Google Tag Manager (GTM)
 
@@ -34,55 +24,38 @@ and add third-party integrations to your website.
 
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-gtag
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-gtag`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationGtag, {
-  settings: {
-    gtm: {
-      containerId: 'GTM-XXXXXXX', // Required
-      dataLayer: 'dataLayer', // Optional custom dataLayer name
+await startFlow({
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
+        settings: {
+          gtm: {
+            containerId: 'GTM-XXXXXXX', // Required
+            dataLayer: 'dataLayer', // Optional custom dataLayer name
+          },
+        },
+      },
     },
   },
-});
-```
+});`}
+  language="typescript"
+/>
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'containerId',
-      type: 'string',
-      description: 'GTM Container ID from Google Tag Manager',
-      required: true,
-      example: "'GTM-XXXXXXX'",
-    },
-    {
-      name: 'dataLayer',
-      type: 'string',
-      description: 'Custom dataLayer variable name',
-      required: false,
-      example: "'customDataLayer'",
-    },
-    {
-      name: 'domain',
-      type: 'string',
-      description: 'Domain for GTM script loading',
-      required: false,
-      example: "'googletagmanager.com'",
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.gtm} />
 
 ### Event Mapping
 

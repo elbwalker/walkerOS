@@ -1,6 +1,6 @@
 <p align="left">
-  <a href="https://elbwalker.com">
-    <img title="elbwalker" src="https://www.elbwalker.com/img/elbwalker_logo.png" width="256px"/>
+  <a href="https://www.walkeros.io">
+    <img title="elbwalker" src="https://www.walkeros.io/img/elbwalker_logo.png" width="256px"/>
   </a>
 </p>
 
@@ -315,7 +315,7 @@ type StorageType = 'localStorage' | 'sessionStorage' | 'cookie';
 ---
 
 For platform-agnostic utilities, see
-[Core Utilities](https://www.elbwalker.com/docs/core).
+[Core Utilities](https://www.walkeros.io/docs/core).
 
 ## Contribute
 

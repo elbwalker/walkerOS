@@ -5,20 +5,11 @@ sidebar_position: 3
 package: '@walkeros/web-destination-gtag'
 ---
 
-import PackageLink from '@site/src/components/docs/package-link';
-import SettingsTable from '@site/src/components/molecules/SettingsTable';
 import { createEvent } from '@walkeros/core';
-import {
-  DestinationInit,
-  DestinationPush,
-} from '@site/src/components/organisms/liveDestination';
 import destinationGtag from '@walkeros/web-destination-gtag';
-import { examples } from '@walkeros/web-destination-gtag';
+import { examples, schemas } from '@walkeros/web-destination-gtag/dev';
 
-export const documentationGtag = {
-  ...destinationGtag,
-  examples,
-};
+export const destination = { ...destinationGtag, examples };
 
 # Google Ads
 
@@ -37,31 +28,37 @@ function calls.
 
 ## Installation
 
-```bash
-npm install @walkeros/web-destination-gtag
-```
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-gtag`}
+  language="bash"
+/>
 
 ## Setup
 
-```typescript
-import { startFlow } from '@walkeros/collector';
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
 import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const { elb } = await startFlow();
-
-elb('walker destination', destinationGtag, {
-  settings: {
-    ads: {
-      conversionId: 'AW-XXXXXXXXX', // Required
-      currency: 'EUR', // Default currency for conversions
-    },
-  },
-  mapping: {
-    order: {
-      complete: {
+const { elb } = await startFlow({
+  destinations: {
+    gtag: {
+      code: destinationGtag,
+      config: {
         settings: {
           ads: {
-            label: 'purchase_conversion', // Conversion label for order complete
+            conversionId: 'AW-XXXXXXXXX', // Required
+            currency: 'EUR', // Default currency for conversions
+          },
+        },
+        mapping: {
+          order: {
+            complete: {
+              settings: {
+                ads: {
+                  label: 'purchase_conversion', // Conversion label for order complete
+                },
+              },
+            },
           },
         },
       },
@@ -75,45 +72,19 @@ elb('order complete', {
   value: 49.99,
   currency: 'EUR',
   items: 2,
-});
-```
+});`}
+  language="typescript"
+/>
 
 ## Configuration reference
 
-<SettingsTable
-  properties={[
-    {
-      name: 'conversionId',
-      type: 'string',
-      description: 'Google Ads conversion ID from your Google Ads account',
-      required: true,
-      example: "'AW-XXXXXXXXX'",
-    },
-    {
-      name: 'currency',
-      type: 'string',
-      description: 'Default currency code for conversion values',
-      required: false,
-      example: "'EUR'",
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.ads} />
 
 ### Event Mapping
 
 For custom event mapping (`mapping.entity.action.settings.ads`):
 
-<SettingsTable
-  properties={[
-    {
-      name: 'label',
-      type: 'string',
-      description: 'Conversion label for this specific event',
-      required: false,
-      example: "'conversion_label'",
-    },
-  ]}
-/>
+<PropertyTable schema={schemas.ads} />
 
 ## Live Demo
 
@@ -121,8 +92,8 @@ Try the Google Ads destination with real events:
 
 ### Initialize Google Ads
 
-<DestinationInit
-  destination={documentationGtag}
+<DestinationInitDemo
+  destination={destination}
   custom={{
     ads: {
       conversionId: 'AW-123456789',
@@ -133,8 +104,8 @@ Try the Google Ads destination with real events:
 
 ### Track a Conversion Event
 
-<DestinationPush
-  destination={documentationGtag}
+<DestinationDemo
+  destination={destination}
   settings={{
     ads: {
       conversionId: 'AW-123456789',
