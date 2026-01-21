@@ -1,3 +1,4 @@
+import type { WalkerOS } from '@walkeros/core';
 import { getEvent } from '@walkeros/core';
 
 /**
@@ -14,7 +15,7 @@ import { getEvent } from '@walkeros/core';
  * walkerOS: elb('page view', { id: '/products', title: 'Product Listing' })
  * Generated when a user views a page
  */
-export function pageView() {
+export function pageView(): WalkerOS.Event {
   return getEvent('page view', {
     data: {
       id: '/products',
@@ -30,7 +31,7 @@ export function pageView() {
  * walkerOS: elb('product view', { id: 'P123', name: 'Laptop', category: 'Electronics', price: 999 })
  * Generated when viewing a product detail page
  */
-export function productView() {
+export function productView(): WalkerOS.Event {
   return getEvent('product view', {
     data: {
       id: 'P123',
@@ -53,7 +54,7 @@ export function productView() {
  * })
  * Generated when adding a product to cart
  */
-export function addToCart() {
+export function addToCart(): WalkerOS.Event {
   return getEvent('product add', {
     data: {
       id: 'P123',
@@ -79,7 +80,7 @@ export function addToCart() {
  * })
  * Generated when removing a product from cart
  */
-export function removeFromCart() {
+export function removeFromCart(): WalkerOS.Event {
   return getEvent('product remove', {
     data: {
       id: 'P123',
@@ -114,7 +115,7 @@ export function removeFromCart() {
  * })
  * Generated when order is completed
  */
-export function transaction() {
+export function transaction(): WalkerOS.Event {
   return getEvent('order complete', {
     data: {
       id: 'ORD-123',
@@ -161,7 +162,7 @@ export function transaction() {
  * })
  * Generated when order with multiple products is completed
  */
-export function transactionMultipleProducts() {
+export function transactionMultipleProducts(): WalkerOS.Event {
   return getEvent('order complete', {
     data: {
       id: 'ORD-456',
@@ -213,7 +214,7 @@ export function transactionMultipleProducts() {
  * })
  * Generated when processing a refund
  */
-export function refund() {
+export function refund(): WalkerOS.Event {
   return getEvent('order refund', {
     data: {
       transaction_id: 'ORD-123',
@@ -231,7 +232,7 @@ export function refund() {
  * walkerOS: elb('checkout step', { step: 1, delivery_provider: 'express' })
  * Generated when progressing through checkout
  */
-export function checkoutStep() {
+export function checkoutStep(): WalkerOS.Event {
   return getEvent('checkout step', {
     data: {
       step: 1,
@@ -253,7 +254,7 @@ export function checkoutStep() {
  * })
  * Generated when viewing a product listing page (search, category, etc.)
  */
-export function listView() {
+export function listView(): WalkerOS.Event {
   return getEvent('product list', {
     data: {
       category: 'Electronics',
@@ -301,7 +302,7 @@ export function listView() {
  * })
  * Generated when a promotion is displayed to the user
  */
-export function promoView() {
+export function promoView(): WalkerOS.Event {
   return getEvent('promo view', {
     data: {
       id: 'SUMMER2024',
@@ -320,7 +321,7 @@ export function promoView() {
  * walkerOS: elb('custom action', { action_type: 'button_click', button_id: 'cta_signup' })
  * Example of a custom event that doesn't use ecommerce schema
  */
-export function customEvent() {
+export function customEvent(): WalkerOS.Event {
   return getEvent('custom action', {
     data: {
       action_type: 'button_click',

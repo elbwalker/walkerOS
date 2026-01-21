@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { WalkerOS, Logger } from '@walkeros/core';
 import type {
   Settings,
   SnowplowFunction,
@@ -22,12 +22,13 @@ export function pushSnowplowEvent(
   data: WalkerOS.AnyObject,
   settings?: Settings,
   env?: DestinationWeb.Env,
+  logger?: Logger.Instance,
 ): void {
   const { window } = getEnv(env);
   const snowplow = window.snowplow as SnowplowFunction;
 
   if (!snowplow) {
-    console.warn('[Snowplow] Tracker not initialized');
+    logger?.throw('Tracker not initialized');
     return;
   }
 
@@ -36,44 +37,35 @@ export function pushSnowplowEvent(
     return;
   }
 
-  try {
-    // Handle page view events
-    if (event.name === 'page view') {
-      snowplow('trackPageView');
-      return;
-    }
-
-    // Handle ecommerce events with action type
-    if (mapping.action) {
-      const actionSchema =
-        mapping.snowplow?.actionSchema ||
-        settings?.snowplow?.actionSchema ||
-        DEFAULT_SCHEMAS.ACTION;
-
-      // The data already contains the mapped fields
-      // We just need to wrap it with the appropriate Snowplow structure
-      const selfDescribingEvent: SelfDescribingEvent = {
-        event: {
-          schema: actionSchema,
-          data: {
-            type: mapping.action,
-          },
-        },
-        context: createContexts(data, settings),
-      };
-
-      snowplow('trackSelfDescribingEvent', selfDescribingEvent);
-      return;
-    }
-
-    // If no action specified, warn
-    console.warn(
-      '[Snowplow] No action type specified in mapping for event:',
-      event.name,
-    );
-  } catch (error) {
-    console.error('[Snowplow] Event tracking failed:', error);
+  // Handle page view events
+  if (event.name === 'page view') {
+    snowplow('trackPageView');
+    return;
   }
+
+  // Handle ecommerce events with action type
+  if (mapping.action) {
+    const actionSchema =
+      mapping.snowplow?.actionSchema ||
+      settings?.snowplow?.actionSchema ||
+      DEFAULT_SCHEMAS.ACTION;
+
+    // The data already contains the mapped fields
+    // We just need to wrap it with the appropriate Snowplow structure
+    const selfDescribingEvent: SelfDescribingEvent = {
+      event: {
+        schema: actionSchema,
+        data: {
+          type: mapping.action,
+        },
+      },
+      context: createContexts(data, settings),
+    };
+
+    snowplow('trackSelfDescribingEvent', selfDescribingEvent);
+  }
+
+  // Events without action mapping are silently skipped
 }
 
 /**

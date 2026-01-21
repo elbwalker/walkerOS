@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { WalkerOS, Logger } from '@walkeros/core';
 import type { Settings, Destination, Mapping } from './types';
 import { addScript, setup } from './setup';
 import { pushSnowplowEvent } from './push';
@@ -6,7 +6,7 @@ import { pushSnowplowEvent } from './push';
 // Types
 export * as DestinationSnowplow from './types';
 
-// Examples
+// Examples (for testing)
 export * as examples from './examples';
 
 /**
@@ -52,20 +52,17 @@ export const destinationSnowplow: Destination = {
    * @param context - Initialization context
    * @returns Updated configuration
    */
-  init({ config, env }) {
+  init({ config, env, logger }) {
     const { settings = {} as Partial<Settings>, loadScript } = config;
+
     const { collectorUrl } = settings;
 
-    // Load Snowplow script if required
-    if (loadScript && collectorUrl) {
-      addScript(collectorUrl, env);
-    }
-
     // Required collector URL
-    if (!collectorUrl) {
-      // eslint-disable-next-line no-console
-      console.warn('[Snowplow] Collector URL is required');
-      return false;
+    if (!collectorUrl) logger.throw('Config settings collectorUrl missing');
+
+    // Load Snowplow script if required
+    if (loadScript) {
+      addScript(collectorUrl!, env);
     }
 
     // Setup snowplow function
@@ -73,7 +70,7 @@ export const destinationSnowplow: Destination = {
     if (!snowplow) return false;
 
     // Initialize tracker
-    snowplow('newTracker', settings.trackerName || 'sp', collectorUrl, {
+    snowplow('newTracker', settings.trackerName || 'sp', collectorUrl!, {
       appId: settings.appId || 'walkerOS',
       platform: settings.platform || 'web',
     });
@@ -90,7 +87,7 @@ export const destinationSnowplow: Destination = {
    * @param event - The walkerOS event to process
    * @param context - Push context with config, data, rule, and env
    */
-  push(event, { config, data = {}, rule = {}, env }) {
+  push(event, { config, data = {}, rule = {}, env, logger }) {
     const eventMapping = rule.settings || {};
     pushSnowplowEvent(
       event,
@@ -98,6 +95,7 @@ export const destinationSnowplow: Destination = {
       data as WalkerOS.AnyObject,
       config.settings,
       env,
+      logger,
     );
   },
 };

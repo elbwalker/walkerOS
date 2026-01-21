@@ -56,7 +56,7 @@ describe('destination snowplow', () => {
   });
 
   test('init handles missing collector URL', async () => {
-    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
     const destinationWithEnv = {
       ...destination,
@@ -68,10 +68,12 @@ describe('destination snowplow', () => {
 
     await elb(getEvent());
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      '[Snowplow] Collector URL is required',
+    // logger.throw logs error and throws, collector catches and logs
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[snowplow]'),
+      'Config settings collectorUrl missing',
     );
-    consoleWarnSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 
   test('event transaction (default)', async () => {
@@ -188,8 +190,7 @@ describe('destination snowplow', () => {
   });
 
   test('handles event without action mapping', async () => {
-    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
+    // Events with mapping but no action type are silently skipped
     const destinationWithEnv = {
       ...destination,
       env: testEnv as DestinationSnowplow.Env,
@@ -211,11 +212,8 @@ describe('destination snowplow', () => {
     // Send event that has mapping but no action
     await elb('custom event', { id: '123' });
 
-    // Should warn about missing action type
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      '[Snowplow] No action type specified in mapping for event:',
-      'custom event',
-    );
-    consoleWarnSpy.mockRestore();
+    // Should only have newTracker call, event without action is skipped
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args[0]).toBe('newTracker');
   });
 });
