@@ -7,9 +7,23 @@ import type {
   Mapping,
 } from './types';
 import type { DestinationWeb } from '@walkeros/web-core';
-import { isObject, isArray, getMappingValue } from '@walkeros/core';
+import { isObject, isArray, getMappingValue, isString } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 import { SCHEMAS } from './types';
+
+// State object for multiple global contexts
+interface GlobalContextState {
+  page?: string; // JSON stringified for object comparison
+}
+
+let state: GlobalContextState = {};
+
+/**
+ * Reset all global context state (for testing)
+ */
+export function resetState(): void {
+  state = {};
+}
 
 /**
  * Push event to Snowplow
@@ -34,6 +48,32 @@ export async function pushSnowplowEvent(
   if (!snowplow) {
     logger?.throw('Tracker not initialized');
     return;
+  }
+
+  // Handle setPageType if configured
+  if (settings?.page) {
+    // Resolve each field via getMappingValue
+    const type = await getMappingValue(event, settings.page.type);
+    const language = settings.page.language
+      ? await getMappingValue(event, settings.page.language)
+      : undefined;
+    const locale = settings.page.locale
+      ? await getMappingValue(event, settings.page.locale)
+      : undefined;
+
+    if (type && isString(type)) {
+      const pageObj = {
+        type,
+        ...(language && isString(language) && { language }),
+        ...(locale && isString(locale) && { locale }),
+      };
+      const pageKey = JSON.stringify(pageObj);
+
+      if (pageKey !== state.page) {
+        state.page = pageKey;
+        snowplow('setPageType', pageObj);
+      }
+    }
   }
 
   // Handle page view events

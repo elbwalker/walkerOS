@@ -2,6 +2,7 @@ import type {
   Mapping as WalkerOSMapping,
   WalkerOS,
   Destination as CoreDestination,
+  Mapping as CoreMapping,
 } from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
 
@@ -61,6 +62,36 @@ export type SelfDescribingEvent<T = WalkerOS.Properties> = {
 } & CommonEventProperties<T>;
 
 /**
+ * Page context settings for setPageType
+ *
+ * Each field is resolved via getMappingValue, allowing dynamic values
+ * from event data or static values.
+ *
+ * @example
+ * // Dynamic values from globals
+ * page: {
+ *   type: 'globals.page_type',
+ *   language: 'globals.language',
+ *   locale: 'globals.locale'
+ * }
+ *
+ * // Mixed static and dynamic
+ * page: {
+ *   type: 'globals.page_type',
+ *   language: { value: 'en' },
+ *   locale: { value: 'en-US' }
+ * }
+ */
+export interface PageSettings {
+  /** Page type (required) */
+  type: CoreMapping.Value;
+  /** Page language (optional) */
+  language?: CoreMapping.Value;
+  /** Page locale (optional) */
+  locale?: CoreMapping.Value;
+}
+
+/**
  * Configuration settings for Snowplow destination
  */
 export interface Settings {
@@ -113,6 +144,28 @@ export interface Settings {
    * Snowplow-specific ecommerce configuration
    */
   snowplow?: SnowplowSettings;
+
+  /**
+   * Global page context (calls setPageType)
+   *
+   * Each field is resolved via getMappingValue. When the resolved page object
+   * changes, setPageType is called to update the global Page context.
+   *
+   * @example
+   * // Dynamic from globals
+   * page: {
+   *   type: 'globals.page_type',
+   *   language: 'globals.language'
+   * }
+   *
+   * // Static values
+   * page: {
+   *   type: { value: 'product' },
+   *   language: { value: 'en' },
+   *   locale: { value: 'en-US' }
+   * }
+   */
+  page?: PageSettings;
 }
 
 /**

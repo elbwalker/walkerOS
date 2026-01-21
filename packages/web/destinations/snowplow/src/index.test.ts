@@ -4,6 +4,7 @@ import type { DestinationWeb } from '@walkeros/web-core';
 import { startFlow } from '@walkeros/collector';
 import { getEvent, mockEnv } from '@walkeros/core';
 import { examples } from '.';
+import { resetState } from './push';
 
 const { events, mapping, walkerosEvents } = examples;
 
@@ -19,6 +20,9 @@ describe('destination snowplow', () => {
 
     jest.clearAllMocks();
     calls = [];
+
+    // Reset global context state between tests
+    resetState();
 
     // Create test environment with call interceptor
     testEnv = mockEnv(examples.env.push, (path, args) => {
@@ -235,5 +239,201 @@ describe('destination snowplow', () => {
     // Should only have newTracker call, event without action is skipped
     expect(calls).toHaveLength(1);
     expect(calls[0].args[0]).toBe('newTracker');
+  });
+
+  describe('setPageType', () => {
+    test('called when page setting is configured', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          page: { type: 'globals.page_type' },
+        },
+        mapping: mapping.config,
+      });
+
+      await elb(
+        getEvent('page view', {
+          globals: { page_type: 'product' },
+        }),
+      );
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: ['setPageType', { type: 'product' }],
+      });
+    });
+
+    test('only called once for same value', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          page: { type: 'globals.page_type' },
+        },
+        mapping: mapping.config,
+      });
+
+      // First event with page_type
+      await elb(
+        getEvent('page view', {
+          globals: { page_type: 'product' },
+        }),
+      );
+
+      // Second event with same page_type
+      await elb(
+        getEvent('product view', {
+          globals: { page_type: 'product' },
+        }),
+      );
+
+      // Count setPageType calls
+      const setPageTypeCalls = calls.filter((c) => c.args[0] === 'setPageType');
+      expect(setPageTypeCalls).toHaveLength(1);
+    });
+
+    test('called again when value changes', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          page: { type: 'globals.page_type' },
+        },
+        mapping: mapping.config,
+      });
+
+      // First event with page_type 'product'
+      await elb(
+        getEvent('page view', {
+          globals: { page_type: 'product' },
+        }),
+      );
+
+      // Second event with different page_type 'checkout'
+      await elb(
+        getEvent('page view', {
+          globals: { page_type: 'checkout' },
+        }),
+      );
+
+      // Should have two setPageType calls with different values
+      const setPageTypeCalls = calls.filter((c) => c.args[0] === 'setPageType');
+      expect(setPageTypeCalls).toHaveLength(2);
+      expect(setPageTypeCalls[0].args[1]).toEqual({ type: 'product' });
+      expect(setPageTypeCalls[1].args[1]).toEqual({ type: 'checkout' });
+    });
+
+    test('not called when type resolves to undefined', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          page: { type: 'globals.page_type' }, // Will be undefined if not in globals
+        },
+        mapping: mapping.config,
+      });
+
+      // Event without globals.page_type
+      await elb(getEvent('page view'));
+
+      const setPageTypeCalls = calls.filter((c) => c.args[0] === 'setPageType');
+      expect(setPageTypeCalls).toHaveLength(0);
+    });
+
+    test('works with static value', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          page: { type: { value: 'homepage' } },
+        },
+        mapping: mapping.config,
+      });
+
+      await elb(getEvent('page view'));
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: ['setPageType', { type: 'homepage' }],
+      });
+    });
+
+    test('includes language and locale when configured', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          page: {
+            type: 'globals.page_type',
+            language: 'globals.language',
+            locale: { value: 'en-US' },
+          },
+        },
+        mapping: mapping.config,
+      });
+
+      await elb(
+        getEvent('page view', {
+          globals: { page_type: 'product', language: 'en' },
+        }),
+      );
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: [
+          'setPageType',
+          { type: 'product', language: 'en', locale: 'en-US' },
+        ],
+      });
+    });
+
+    test('only includes language and locale when resolved to string', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          page: {
+            type: 'globals.page_type',
+            language: 'globals.language', // Will be undefined
+            locale: 'globals.locale', // Will be undefined
+          },
+        },
+        mapping: mapping.config,
+      });
+
+      await elb(
+        getEvent('page view', {
+          globals: { page_type: 'product' },
+        }),
+      );
+
+      // Should only have type, not language or locale
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: ['setPageType', { type: 'product' }],
+      });
+    });
   });
 });
