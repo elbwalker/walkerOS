@@ -1,5 +1,6 @@
 import type { WalkerOS, Logger } from '@walkeros/core';
 import type { Settings, Destination, Mapping } from './types';
+import { isUrlBasedPlugin, deriveEnableMethod } from './types';
 import { addScript, setup } from './setup';
 import { pushSnowplowEvent } from './push';
 
@@ -69,11 +70,45 @@ export const destinationSnowplow: Destination = {
     const snowplow = setup(env);
     if (!snowplow) return false;
 
-    // Initialize tracker
+    // Initialize tracker with full configuration
     snowplow('newTracker', settings.trackerName || 'sp', collectorUrl!, {
       appId: settings.appId || 'walkerOS',
       platform: settings.platform || 'web',
+      discoverRootDomain: settings.discoverRootDomain,
+      cookieSameSite: settings.cookieSameSite,
+      appVersion: settings.appVersion,
+      contexts: settings.contexts,
     });
+
+    // Enable activity tracking if configured
+    if (settings.activityTracking) {
+      snowplow('enableActivityTracking', settings.activityTracking);
+    }
+
+    // Load plugins
+    if (settings.plugins) {
+      for (const plugin of settings.plugins) {
+        if (isUrlBasedPlugin(plugin)) {
+          // URL-based plugin (sp.js approach)
+          snowplow('addPlugin', plugin.url, plugin.name);
+          const enableMethod =
+            plugin.enableMethod ?? deriveEnableMethod(plugin.name[1]);
+          if (plugin.options) {
+            snowplow(enableMethod, plugin.options);
+          } else {
+            snowplow(enableMethod);
+          }
+        } else {
+          // BrowserPlugin instance (npm approach)
+          snowplow('addPlugin', { plugin });
+        }
+      }
+    }
+
+    // Register global contexts
+    if (settings.globalContexts && settings.globalContexts.length > 0) {
+      snowplow('addGlobalContexts', settings.globalContexts);
+    }
 
     return config;
   },

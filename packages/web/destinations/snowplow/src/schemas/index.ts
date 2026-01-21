@@ -4,8 +4,14 @@ import { MappingSchema } from './mapping';
 
 export {
   SettingsSchema,
+  TrackerContextsSchema,
+  UrlBasedPluginSchema,
+  ActivityTrackingSchema,
   type Settings,
   type SnowplowSettings,
+  type TrackerContexts,
+  type UrlBasedPlugin,
+  type ActivityTracking,
 } from './settings';
 export {
   MappingSchema,

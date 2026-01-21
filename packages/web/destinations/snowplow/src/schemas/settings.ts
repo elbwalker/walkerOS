@@ -29,6 +29,59 @@ export const SnowplowSettingsSchema = z.object({
 });
 
 /**
+ * Tracker contexts schema
+ */
+export const TrackerContextsSchema = z.object({
+  webPage: z.boolean().optional().describe('Web page context'),
+  session: z.boolean().optional().describe('Client session context'),
+  performanceTiming: z
+    .boolean()
+    .optional()
+    .describe('Performance timing context'),
+  geolocation: z.boolean().optional().describe('Geolocation context'),
+});
+
+/**
+ * URL-based plugin schema
+ */
+export const UrlBasedPluginSchema = z.object({
+  url: z.string().describe('Plugin script URL'),
+  name: z
+    .tuple([z.string(), z.string()])
+    .describe('[globalName, constructorName]'),
+  enableMethod: z.string().optional().describe('Override enable method name'),
+  options: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe('Options for enable method'),
+});
+
+/**
+ * Activity tracking configuration schema
+ */
+export const ActivityTrackingSchema = z.object({
+  minimumVisitLength: z.number().describe('Seconds before first ping'),
+  heartbeatDelay: z.number().describe('Seconds between pings'),
+});
+
+/**
+ * Static global context schema
+ */
+export const StaticGlobalContextSchema = z.object({
+  schema: z.string().describe('Iglu schema URI'),
+  data: z.record(z.string(), z.unknown()).describe('Context data'),
+});
+
+/**
+ * Mapped global context schema
+ */
+export const MappedGlobalContextSchema = z.object({
+  schema: z.string().describe('Iglu schema URI'),
+  data: z.record(z.string(), z.unknown()).describe('walkerOS mapping'),
+  __mapped: z.literal(true),
+});
+
+/**
  * Configuration settings schema for Snowplow destination
  */
 export const SettingsSchema = z.object({
@@ -46,7 +99,37 @@ export const SettingsSchema = z.object({
   snowplow: SnowplowSettingsSchema.optional().describe(
     'Snowplow-specific ecommerce configuration',
   ),
+  // New tracker configuration options
+  discoverRootDomain: z
+    .boolean()
+    .optional()
+    .describe('Discover root domain for cookies'),
+  cookieSameSite: z
+    .enum(['Strict', 'Lax', 'None'])
+    .optional()
+    .describe('Cookie SameSite attribute'),
+  appVersion: z.string().optional().describe('Application version'),
+  contexts: TrackerContextsSchema.optional().describe(
+    'Built-in context entities',
+  ),
+  // Plugins - validated loosely since BrowserPlugin is complex
+  plugins: z
+    .array(z.union([UrlBasedPluginSchema, z.any()]))
+    .optional()
+    .describe('Snowplow plugins'),
+  // Activity tracking
+  activityTracking: ActivityTrackingSchema.optional().describe(
+    'Page ping configuration',
+  ),
+  // Global contexts - validated loosely to allow functions
+  globalContexts: z
+    .array(z.any())
+    .optional()
+    .describe('Global context entities'),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;
 export type SnowplowSettings = z.infer<typeof SnowplowSettingsSchema>;
+export type TrackerContexts = z.infer<typeof TrackerContextsSchema>;
+export type UrlBasedPlugin = z.infer<typeof UrlBasedPluginSchema>;
+export type ActivityTracking = z.infer<typeof ActivityTrackingSchema>;

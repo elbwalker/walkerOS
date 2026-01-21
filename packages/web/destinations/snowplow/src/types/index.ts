@@ -12,6 +12,10 @@ import type {
   CommonEventProperties,
 } from '@snowplow/tracker-core';
 import type {
+  BrowserPlugin,
+  ActivityTrackingConfiguration,
+} from '@snowplow/browser-tracker-core';
+import type {
   Action,
   Product,
   Cart,
@@ -39,6 +43,9 @@ export type {
   User,
   Page,
 };
+
+// Re-export Snowplow tracker core types
+export type { BrowserPlugin, ActivityTrackingConfiguration };
 
 declare global {
   interface Window {
@@ -90,6 +97,72 @@ export interface PageSettings {
   /** Page locale (optional) */
   locale?: CoreMapping.Value;
 }
+
+/**
+ * URL-based plugin configuration (for sp.js JavaScript tracker)
+ */
+export interface UrlBasedPlugin {
+  /** CDN or self-hosted URL to the plugin script */
+  url: string;
+  /** [globalName, constructorName] for the plugin */
+  name: [string, string];
+  /** Optional override for enable method (derived by convention if omitted) */
+  enableMethod?: string;
+  /** Options passed to the enable method */
+  options?: Record<string, unknown>;
+}
+
+/**
+ * Union type for all supported plugin forms
+ */
+export type SnowplowPlugin = BrowserPlugin | UrlBasedPlugin;
+
+/**
+ * Built-in context entity types for tracker initialization
+ */
+export interface TrackerContexts {
+  /** Web page context (default: true) */
+  webPage?: boolean;
+  /** Client session context */
+  session?: boolean;
+  /** Performance timing context */
+  performanceTiming?: boolean;
+  /** Geolocation context */
+  geolocation?: boolean;
+}
+
+/**
+ * walkerOS mapping-based global context
+ */
+export interface MappedGlobalContext {
+  /** Iglu schema URI */
+  schema: string;
+  /** Data mapping using walkerOS syntax */
+  data: WalkerOSMapping.Map;
+  /** Discriminator flag */
+  __mapped: true;
+}
+
+/**
+ * Static global context (same for all events)
+ */
+export interface StaticGlobalContext {
+  schema: string;
+  data: Record<string, unknown>;
+}
+
+/**
+ * Dynamic global context generator function
+ */
+export type GlobalContextGenerator = () => StaticGlobalContext | null;
+
+/**
+ * Union type for all global context forms
+ */
+export type GlobalContext =
+  | StaticGlobalContext
+  | GlobalContextGenerator
+  | MappedGlobalContext;
 
 /**
  * Configuration settings for Snowplow destination
@@ -166,6 +239,43 @@ export interface Settings {
    * }
    */
   page?: PageSettings;
+
+  /**
+   * Discover and set the root domain for cookies
+   * @default true
+   */
+  discoverRootDomain?: boolean;
+
+  /**
+   * SameSite attribute for cookies
+   * @default undefined (browser default)
+   */
+  cookieSameSite?: 'Strict' | 'Lax' | 'None';
+
+  /**
+   * Application version string
+   */
+  appVersion?: string;
+
+  /**
+   * Built-in context entities to attach to events
+   */
+  contexts?: TrackerContexts;
+
+  /**
+   * Snowplow plugins to load (BrowserPlugin or URL-based)
+   */
+  plugins?: SnowplowPlugin[];
+
+  /**
+   * Activity tracking configuration (page pings)
+   */
+  activityTracking?: ActivityTrackingConfiguration;
+
+  /**
+   * Global context entities attached to all events
+   */
+  globalContexts?: GlobalContext[];
 }
 
 /**
@@ -375,3 +485,29 @@ export const ACTIONS: Record<string, Action['type']> = {
   PROMO_CLICK: 'promo_click',
   TRANSACTION_ERROR: 'trns_error',
 } as const;
+
+/**
+ * Type guard for URL-based plugins
+ */
+export function isUrlBasedPlugin(
+  plugin: SnowplowPlugin,
+): plugin is UrlBasedPlugin {
+  return typeof plugin === 'object' && 'url' in plugin && 'name' in plugin;
+}
+
+/**
+ * Type guard for mapped global contexts
+ */
+export function isMappedGlobalContext(
+  ctx: GlobalContext,
+): ctx is MappedGlobalContext {
+  return typeof ctx === 'object' && ctx !== null && '__mapped' in ctx;
+}
+
+/**
+ * Derive enable method from plugin constructor name
+ * 'LinkClickTrackingPlugin' -> 'enableLinkClickTracking'
+ */
+export function deriveEnableMethod(constructorName: string): string {
+  return 'enable' + constructorName.replace('Plugin', '');
+}

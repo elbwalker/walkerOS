@@ -59,6 +59,44 @@ describe('destination snowplow', () => {
     expect(initCall?.args[2]).toBe('https://collector.example.com'); // collectorUrl
   });
 
+  test('init passes tracker configuration options', async () => {
+    const destinationWithEnv = {
+      ...destination,
+      env: testEnv as DestinationSnowplow.Env,
+    };
+    elb('walker destination', destinationWithEnv, {
+      settings: {
+        collectorUrl: 'https://collector.example.com',
+        appId: 'test-app',
+        discoverRootDomain: true,
+        cookieSameSite: 'Lax',
+        appVersion: '1.0.0',
+        contexts: {
+          webPage: true,
+          session: true,
+        },
+      },
+    });
+
+    await elb(getEvent());
+
+    const initCall = calls.find(
+      (c) =>
+        c.path.join('.') === 'window.snowplow' && c.args[0] === 'newTracker',
+    );
+    expect(initCall).toBeDefined();
+    expect(initCall?.args[3]).toMatchObject({
+      appId: 'test-app',
+      discoverRootDomain: true,
+      cookieSameSite: 'Lax',
+      appVersion: '1.0.0',
+      contexts: {
+        webPage: true,
+        session: true,
+      },
+    });
+  });
+
   test('init handles missing collector URL', async () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
@@ -434,6 +472,247 @@ describe('destination snowplow', () => {
         path: ['window', 'snowplow'],
         args: ['setPageType', { type: 'product' }],
       });
+    });
+  });
+
+  describe('activityTracking', () => {
+    test('enables activity tracking when configured', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          activityTracking: {
+            minimumVisitLength: 10,
+            heartbeatDelay: 30,
+          },
+        },
+        mapping: mapping.config,
+      });
+
+      await elb(getEvent('page view'));
+
+      const activityCall = calls.find(
+        (c) => c.args[0] === 'enableActivityTracking',
+      );
+      expect(activityCall).toBeDefined();
+      expect(activityCall?.args[1]).toEqual({
+        minimumVisitLength: 10,
+        heartbeatDelay: 30,
+      });
+    });
+
+    test('activity tracking called before page view', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          activityTracking: {
+            minimumVisitLength: 10,
+            heartbeatDelay: 30,
+          },
+        },
+        mapping: mapping.config,
+      });
+
+      await elb(getEvent('page view'));
+
+      const activityIndex = calls.findIndex(
+        (c) => c.args[0] === 'enableActivityTracking',
+      );
+      const pageViewIndex = calls.findIndex(
+        (c) => c.args[0] === 'trackPageView',
+      );
+
+      expect(activityIndex).toBeLessThan(pageViewIndex);
+    });
+
+    test('no activity tracking when not configured', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: mapping.config,
+      });
+
+      await elb(getEvent('page view'));
+
+      const activityCall = calls.find(
+        (c) => c.args[0] === 'enableActivityTracking',
+      );
+      expect(activityCall).toBeUndefined();
+    });
+  });
+
+  describe('plugins', () => {
+    test('loads URL-based plugin', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          plugins: [
+            {
+              url: 'https://cdn.example.com/link-click.js',
+              name: ['snowplowLinkClickTracking', 'LinkClickTrackingPlugin'],
+            },
+          ],
+        },
+      });
+
+      await elb(getEvent());
+
+      const addPluginCall = calls.find((c) => c.args[0] === 'addPlugin');
+      expect(addPluginCall).toBeDefined();
+      expect(addPluginCall?.args[1]).toBe(
+        'https://cdn.example.com/link-click.js',
+      );
+      expect(addPluginCall?.args[2]).toEqual([
+        'snowplowLinkClickTracking',
+        'LinkClickTrackingPlugin',
+      ]);
+    });
+
+    test('derives enable method from plugin name', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          plugins: [
+            {
+              url: 'https://cdn.example.com/link-click.js',
+              name: ['snowplowLinkClickTracking', 'LinkClickTrackingPlugin'],
+              options: { trackContent: true },
+            },
+          ],
+        },
+      });
+
+      await elb(getEvent());
+
+      const enableCall = calls.find(
+        (c) => c.args[0] === 'enableLinkClickTracking',
+      );
+      expect(enableCall).toBeDefined();
+      expect(enableCall?.args[1]).toEqual({ trackContent: true });
+    });
+
+    test('uses custom enable method when provided', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          plugins: [
+            {
+              url: 'https://cdn.example.com/custom.js',
+              name: ['customPlugin', 'CustomPlugin'],
+              enableMethod: 'activateCustomPlugin',
+              options: { enabled: true },
+            },
+          ],
+        },
+      });
+
+      await elb(getEvent());
+
+      const enableCall = calls.find(
+        (c) => c.args[0] === 'activateCustomPlugin',
+      );
+      expect(enableCall).toBeDefined();
+    });
+  });
+
+  describe('globalContexts', () => {
+    test('adds static global context', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          globalContexts: [
+            {
+              schema: 'iglu:com.example/app_info/jsonschema/1-0-0',
+              data: { version: '1.0.0', environment: 'production' },
+            },
+          ],
+        },
+      });
+
+      await elb(getEvent());
+
+      const addContextsCall = calls.find(
+        (c) => c.args[0] === 'addGlobalContexts',
+      );
+      expect(addContextsCall).toBeDefined();
+      expect(addContextsCall?.args[1]).toContainEqual({
+        schema: 'iglu:com.example/app_info/jsonschema/1-0-0',
+        data: { version: '1.0.0', environment: 'production' },
+      });
+    });
+
+    test('adds function-based global context', async () => {
+      const contextGenerator = jest.fn(() => ({
+        schema: 'iglu:com.example/consent/jsonschema/1-0-0',
+        data: { advertising: true },
+      }));
+
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          globalContexts: [contextGenerator],
+        },
+      });
+
+      await elb(getEvent());
+
+      const addContextsCall = calls.find(
+        (c) => c.args[0] === 'addGlobalContexts',
+      );
+      expect(addContextsCall).toBeDefined();
+      // The function itself should be passed to Snowplow
+      expect(addContextsCall?.args[1]).toContainEqual(contextGenerator);
+    });
+
+    test('no global contexts call when not configured', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+      });
+
+      await elb(getEvent());
+
+      const addContextsCall = calls.find(
+        (c) => c.args[0] === 'addGlobalContexts',
+      );
+      expect(addContextsCall).toBeUndefined();
     });
   });
 });
