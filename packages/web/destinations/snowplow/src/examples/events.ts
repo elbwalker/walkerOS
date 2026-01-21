@@ -54,7 +54,7 @@ export function productView(): unknown[] {
 /**
  * Add to Cart Event
  * walkerOS: elb('product add', { id: 'P123', name: 'Laptop', price: 999, quantity: 1 })
- * Snowplow: add_to_cart action with product and cart context entities
+ * Snowplow: add_to_cart action with product, cart, page, and user context entities
  */
 export function addToCart(): unknown[] {
   return [
@@ -86,6 +86,23 @@ export function addToCart(): unknown[] {
           data: {
             total_value: 999,
             currency: 'USD',
+          },
+        },
+        {
+          schema:
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/page/jsonschema/1-0-0',
+          data: {
+            type: 'product',
+            language: 'en',
+          },
+        },
+        {
+          schema:
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/user/jsonschema/1-0-0',
+          data: {
+            id: 'U123',
+            email: 'user@example.com',
+            is_guest: true,
           },
         },
       ],

@@ -50,7 +50,8 @@ export function productView(): WalkerOS.Event {
 /**
  * Add to Cart Event
  * walkerOS: elb('product add', { id: 'P123', name: 'Laptop', price: 999, quantity: 1 }, {
- *   globals: { cart_total: 999, cart_currency: 'USD' }
+ *   globals: { cart_value: 999, cart_currency: 'USD', page_type: 'product', language: 'en' },
+ *   user: { id: 'U123', email: 'user@example.com' }
  * })
  * Generated when adding a product to cart
  */
@@ -65,9 +66,15 @@ export function addToCart(): WalkerOS.Event {
       quantity: 1,
     },
     globals: {
-      cart_total: 999,
+      cart_value: 999,
       cart_currency: 'USD',
+      page_type: 'product',
+      language: 'en',
       pagegroup: 'shop',
+    },
+    user: {
+      id: 'U123',
+      email: 'user@example.com',
     },
     context: { shopping: ['cart', 0] },
   });

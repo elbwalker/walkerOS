@@ -301,7 +301,8 @@ export const SCHEMAS = {
     'iglu:com.snowplowanalytics.snowplow.ecommerce/checkout_step/jsonschema/1-0-0',
   PROMOTION:
     'iglu:com.snowplowanalytics.snowplow.ecommerce/promotion/jsonschema/1-0-0',
-  USER: 'iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-0',
+  PAGE: 'iglu:com.snowplowanalytics.snowplow.ecommerce/page/jsonschema/1-0-0',
+  USER: 'iglu:com.snowplowanalytics.snowplow.ecommerce/user/jsonschema/1-0-0',
 } as const;
 
 /**

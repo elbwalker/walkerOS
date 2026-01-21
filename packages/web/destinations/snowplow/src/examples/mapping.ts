@@ -51,12 +51,18 @@ export const productView: DestinationSnowplow.Rule = {
  * Add to Cart Mapping
  *
  * walkerOS: elb('product add', { id: 'P123', name: 'Laptop', price: 999, quantity: 1 })
- * Snowplow: add_to_cart action with product context entity
+ * Snowplow: add_to_cart action with product, cart, page, and user context entities
+ *
+ * Expects:
+ * - data: product properties (id, name, category, price, currency, quantity)
+ * - globals: cart_value, cart_currency, page_type, language
+ * - user: id, email
  */
 export const addToCart: DestinationSnowplow.Rule = {
   name: ACTIONS.ADD_TO_CART,
   settings: {
     context: [
+      // Product entity
       {
         schema: SCHEMAS.PRODUCT,
         data: {
@@ -66,6 +72,34 @@ export const addToCart: DestinationSnowplow.Rule = {
           price: 'data.price',
           currency: { key: 'data.currency', value: 'USD' },
           quantity: { key: 'data.quantity', value: 1 },
+        },
+      },
+      // Cart entity
+      {
+        schema: SCHEMAS.CART,
+        data: {
+          total_value: 'globals.cart_value',
+          currency: { key: 'globals.cart_currency', value: 'USD' },
+        },
+      },
+      // Page entity
+      {
+        schema: SCHEMAS.PAGE,
+        data: {
+          type: 'globals.page_type',
+          language: 'globals.language',
+        },
+      },
+      // User entity - is_guest: true when user.id exists
+      {
+        schema: SCHEMAS.USER,
+        data: {
+          id: 'user.id',
+          email: 'user.email',
+          is_guest: {
+            fn: (event) =>
+              (event as { user?: { id?: string } }).user?.id ? true : undefined,
+          },
         },
       },
     ],

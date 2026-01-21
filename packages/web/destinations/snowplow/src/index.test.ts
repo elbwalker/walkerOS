@@ -5,7 +5,7 @@ import { startFlow } from '@walkeros/collector';
 import { getEvent, mockEnv } from '@walkeros/core';
 import { examples } from '.';
 
-const { events, mapping } = examples;
+const { events, mapping, walkerosEvents } = examples;
 
 describe('destination snowplow', () => {
   let elb: WalkerOS.Elb;
@@ -142,6 +142,26 @@ describe('destination snowplow', () => {
     expect(calls).toContainEqual({
       path: ['window', 'snowplow'],
       args: events.productView(),
+    });
+  });
+
+  test('event add to cart with cart, page, and user entities', async () => {
+    const destinationWithEnv = {
+      ...destination,
+      env: testEnv as DestinationSnowplow.Env,
+    };
+    elb('walker destination', destinationWithEnv, {
+      settings: {
+        collectorUrl: 'https://collector.example.com',
+      },
+      mapping: mapping.config,
+    });
+
+    await elb(walkerosEvents.addToCart());
+
+    expect(calls).toContainEqual({
+      path: ['window', 'snowplow'],
+      args: events.addToCart(),
     });
   });
 
