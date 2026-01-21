@@ -1,6 +1,18 @@
 import { z } from '@walkeros/core/dev';
 
 /**
+ * Context entity schema
+ *
+ * Each context entity has a schema URI and data mapping.
+ */
+export const ContextEntitySchema = z.object({
+  schema: z.string().describe('Iglu schema URI for this context entity'),
+  data: z
+    .record(z.string(), z.unknown())
+    .describe('Data mapping for this context entity'),
+});
+
+/**
  * Per-event Snowplow settings override schema
  */
 export const SnowplowMappingSettingsSchema = z.object({
@@ -8,52 +20,25 @@ export const SnowplowMappingSettingsSchema = z.object({
     .string()
     .optional()
     .describe('Override action schema for this specific event'),
-  schemas: z
-    .object({
-      product: z.string().optional(),
-      cart: z.string().optional(),
-      transaction: z.string().optional(),
-      refund: z.string().optional(),
-      checkout_step: z.string().optional(),
-      promotion: z.string().optional(),
-      user: z.string().optional(),
-    })
-    .catchall(z.string())
-    .optional()
-    .describe('Override entity schemas for this specific event'),
 });
-
-/**
- * Context entity type enum
- * Maps to Snowplow blessed ecommerce schemas
- */
-export const ContextTypeSchema = z.enum([
-  'product',
-  'cart',
-  'transaction',
-  'refund',
-  'checkout_step',
-  'promotion',
-  'user',
-]);
 
 /**
  * Custom mapping parameters schema for Snowplow events
  *
- * Note: Use the standard `name` field from mapping rules for the action type
- * (like GA4 pattern). The `name` maps to Snowplow's event.data.type.
+ * Use the standard `name` field from mapping rules for the action type.
+ * The `name` maps to Snowplow's event.data.type.
  */
 export const MappingSchema = z.object({
-  contextType: ContextTypeSchema.optional().describe(
-    'Explicit context entity type for flat mapped data (required, no auto-detection)',
-  ),
+  context: z
+    .array(ContextEntitySchema)
+    .optional()
+    .describe('Context entities to attach to this event'),
   snowplow: SnowplowMappingSettingsSchema.optional().describe(
     'Snowplow-specific settings override',
   ),
 });
 
-export type ContextType = z.infer<typeof ContextTypeSchema>;
-
+export type ContextEntity = z.infer<typeof ContextEntitySchema>;
 export type Mapping = z.infer<typeof MappingSchema>;
 export type SnowplowMappingSettings = z.infer<
   typeof SnowplowMappingSettingsSchema

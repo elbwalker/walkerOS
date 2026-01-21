@@ -207,39 +207,50 @@ export interface SnowplowSettings {
 }
 
 /**
- * Context entity type for explicit schema mapping
- * Maps to Snowplow blessed ecommerce schemas
+ * Context entity definition for Snowplow
+ *
+ * Each context entity has a schema URI and data mapping.
  */
-export type ContextType =
-  | 'product'
-  | 'cart'
-  | 'transaction'
-  | 'refund'
-  | 'checkout_step'
-  | 'promotion'
-  | 'user';
+export interface ContextEntity {
+  /**
+   * Iglu schema URI for this context entity
+   *
+   * @example SCHEMAS.PRODUCT, SCHEMAS.TRANSACTION
+   */
+  schema: string;
+
+  /**
+   * Data mapping for this context entity
+   *
+   * Uses standard walkerOS mapping syntax.
+   *
+   * @example { id: 'data.id', name: 'data.name', price: 'data.price' }
+   */
+  data: WalkerOSMapping.Map;
+}
 
 /**
  * Custom mapping parameters for Snowplow events
  *
- * Similar to GA4/Meta pattern - uses standard `name` field for action type.
+ * Uses standard `name` field for action type.
  * The `name` from the mapping rule becomes Snowplow's event.data.type.
  */
 export interface Mapping {
   /**
-   * Explicit context entity type for flat mapped data
+   * Context entities to attach to this event
    *
-   * Required when mapping flat data to a Snowplow context entity.
-   * No auto-detection - you must explicitly specify which schema to use.
+   * Each entry defines a schema and data mapping.
+   * Explicit - no auto-detection.
    *
-   * @example "product", "transaction", "cart", "refund"
+   * @example
+   * context: [
+   *   { schema: SCHEMAS.PRODUCT, data: { id: 'data.id', name: 'data.name' } }
+   * ]
    */
-  contextType?: ContextType;
+  context?: ContextEntity[];
 
   /**
    * Snowplow-specific settings override
-   *
-   * Allows per-event schema and configuration overrides.
    */
   snowplow?: SnowplowMappingSettings;
 }
@@ -252,25 +263,6 @@ export interface SnowplowMappingSettings {
    * Override action schema for this specific event
    */
   actionSchema?: string;
-
-  /**
-   * Override entity schemas for this specific event
-   */
-  schemas?: {
-    product?: string;
-    cart?: string;
-    transaction?: string;
-    refund?: string;
-    checkout_step?: string;
-    promotion?: string;
-    user?: string;
-    [entityType: string]: string | undefined;
-  };
-
-  /**
-   * Data mapping at event level
-   */
-  data?: WalkerOSMapping.Value | WalkerOSMapping.Values;
 }
 
 /**

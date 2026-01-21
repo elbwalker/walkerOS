@@ -9,9 +9,7 @@ export {
 } from './settings';
 export {
   MappingSchema,
-  ContextTypeSchema,
   type Mapping,
-  type ContextType,
   type SnowplowMappingSettings,
 } from './mapping';
 

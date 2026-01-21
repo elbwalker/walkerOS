@@ -139,8 +139,10 @@ export function removeFromCart(): unknown[] {
  * Transaction/Purchase Event
  * walkerOS: elb('order complete') - uses default getEvent data
  * Default: { id: '0rd3r1d', currency: 'EUR', shipping: 5.22, taxes: 73.76, total: 555 }
- *          + nested: [product ers, product cc]
- * Snowplow: transaction action with transaction and product context entities
+ * Snowplow: transaction action with transaction context entity
+ *
+ * Note: This is explicit mapping without auto-looping nested products.
+ * For product contexts from nested array, use loop in mapping configuration.
  */
 export function transaction(): unknown[] {
   return [
@@ -162,31 +164,8 @@ export function transaction(): unknown[] {
             revenue: 555,
             currency: 'EUR', // From default getEvent data
             payment_method: 'credit_card', // Static value
-            total_quantity: 2, // Calculated from nested products
             tax: 73.76,
             shipping: 5.22,
-          },
-        },
-        {
-          schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
-          data: {
-            id: 'ers',
-            name: 'Everyday Ruck Snack',
-            price: 420,
-            currency: 'USD',
-            quantity: 1,
-          },
-        },
-        {
-          schema:
-            'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
-          data: {
-            id: 'cc',
-            name: 'Cool Cap',
-            price: 42,
-            currency: 'USD',
-            quantity: 1,
           },
         },
       ],

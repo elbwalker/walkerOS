@@ -5,55 +5,21 @@ import type {
   SelfDescribingEvent,
   SelfDescribingJson,
   Mapping,
-  ContextType,
 } from './types';
 import type { DestinationWeb } from '@walkeros/web-core';
-import { isObject, isArray } from '@walkeros/core';
+import { isObject, isArray, getMappingValue } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 import { SCHEMAS } from './types';
 
 /**
- * Map context type to Snowplow schema URI
- */
-const CONTEXT_TYPE_TO_SCHEMA: Record<ContextType, keyof typeof SCHEMAS> = {
-  product: 'PRODUCT',
-  cart: 'CART',
-  transaction: 'TRANSACTION',
-  refund: 'REFUND',
-  checkout_step: 'CHECKOUT_STEP',
-  promotion: 'PROMOTION',
-  user: 'USER',
-};
-
-/**
- * Get schema URI for a context type
- */
-function getSchemaForContextType(
-  contextType: ContextType,
-  settings?: Settings,
-): string {
-  const schemaKey = CONTEXT_TYPE_TO_SCHEMA[contextType];
-  const settingsKey = `${contextType}Schema` as keyof NonNullable<
-    Settings['snowplow']
-  >;
-
-  // Check for override in settings
-  const override = settings?.snowplow?.[settingsKey] as string | undefined;
-  if (override) return override;
-
-  // Use default schema
-  return SCHEMAS[schemaKey];
-}
-
-/**
- * Push event to Snowplow (simple approach like GA4/Meta)
+ * Push event to Snowplow
  *
- * The data parameter already contains mapped data from the mapping rules.
- * We just wrap it with Snowplow schemas and send it.
+ * Processes mapping.context to build Snowplow context entities.
+ * Each context entry has a schema and data mapping that is applied to the event.
  *
  * @param actionName - Action type from rule.name (e.g., ACTIONS.ADD_TO_CART)
  */
-export function pushSnowplowEvent(
+export async function pushSnowplowEvent(
   event: WalkerOS.Event,
   mapping: Mapping,
   data: WalkerOS.AnyObject,
@@ -61,17 +27,12 @@ export function pushSnowplowEvent(
   settings?: Settings,
   env?: DestinationWeb.Env,
   logger?: Logger.Instance,
-): void {
+): Promise<void> {
   const { window } = getEnv(env);
   const snowplow = window.snowplow as SnowplowFunction;
 
   if (!snowplow) {
     logger?.throw('Tracker not initialized');
-    return;
-  }
-
-  // If no mapping is configured, data might be undefined/empty - skip silently
-  if (!isObject(data) || Object.keys(data).length === 0) {
     return;
   }
 
@@ -88,8 +49,9 @@ export function pushSnowplowEvent(
       settings?.snowplow?.actionSchema ||
       SCHEMAS.ACTION;
 
-    // The data already contains the mapped fields
-    // We just need to wrap it with the appropriate Snowplow structure
+    // Build context from mapping.context definitions
+    const context = await buildContext(event, mapping);
+
     const selfDescribingEvent: SelfDescribingEvent = {
       event: {
         schema: actionSchema,
@@ -97,7 +59,7 @@ export function pushSnowplowEvent(
           type: actionName,
         },
       },
-      context: createContexts(data, mapping, settings),
+      context: context.length > 0 ? context : undefined,
     };
 
     snowplow('trackSelfDescribingEvent', selfDescribingEvent);
@@ -107,48 +69,35 @@ export function pushSnowplowEvent(
 }
 
 /**
- * Create Snowplow context array from mapped data
+ * Build Snowplow context array from mapping.context definitions
  *
- * Uses explicit contextType from mapping - no auto-detection.
- * The mapping specifies which context entity type to use.
+ * Applies data mappings to each context entity.
  */
-function createContexts(
-  data: WalkerOS.AnyObject,
+async function buildContext(
+  event: WalkerOS.Event,
   mapping: Mapping,
-  settings?: Settings,
-): SelfDescribingJson<WalkerOS.Properties>[] | undefined {
+): Promise<SelfDescribingJson<WalkerOS.Properties>[]> {
   const contexts: SelfDescribingJson<WalkerOS.Properties>[] = [];
 
-  // Copy data to avoid mutation
-  const dataCopy = { ...data };
-
-  // Extract products array (always uses product schema)
-  const productsArray = dataCopy.products;
-  delete dataCopy.products;
-
-  // Create main context entity if contextType is specified
-  if (mapping.contextType && Object.keys(dataCopy).length > 0) {
-    const schema = getSchemaForContextType(mapping.contextType, settings);
-    contexts.push({
-      schema,
-      data: dataCopy as WalkerOS.Properties,
-    });
+  if (!isArray(mapping.context)) {
+    return contexts;
   }
 
-  // Handle "products" array (from loop mapping like GA4 items)
-  // Products always use the product schema
-  if (isArray(productsArray)) {
-    const productSchema = settings?.snowplow?.productSchema || SCHEMAS.PRODUCT;
+  for (const contextDef of mapping.context) {
+    if (!isObject(contextDef) || !contextDef.schema) {
+      continue;
+    }
 
-    for (const product of productsArray) {
-      if (isObject(product)) {
-        contexts.push({
-          schema: productSchema,
-          data: product as WalkerOS.Properties,
-        });
-      }
+    // Apply data mapping to get context entity data
+    const mappedData = await getMappingValue(event, { map: contextDef.data });
+
+    if (isObject(mappedData)) {
+      contexts.push({
+        schema: contextDef.schema,
+        data: mappedData as WalkerOS.Properties,
+      });
     }
   }
 
-  return contexts.length > 0 ? contexts : undefined;
+  return contexts;
 }
