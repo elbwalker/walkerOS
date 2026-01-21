@@ -39,7 +39,9 @@
   },
   "devDependencies": {
     "@walkeros/collector": "latest",
-    "@walkeros/config": "latest"
+    "@walkeros/config": "latest",
+    "@snowplow/browser-tracker-core": "^4.6.8",
+    "@snowplow/browser-plugin-snowplow-ecommerce": "^4.6.8"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

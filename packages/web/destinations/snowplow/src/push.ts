@@ -3,23 +3,61 @@ import type {
   Settings,
   SnowplowFunction,
   SelfDescribingEvent,
+  SelfDescribingJson,
   Mapping,
+  ContextType,
 } from './types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { isObject, isArray } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
-import { DEFAULT_SCHEMAS } from './types';
+import { SCHEMAS } from './types';
+
+/**
+ * Map context type to Snowplow schema URI
+ */
+const CONTEXT_TYPE_TO_SCHEMA: Record<ContextType, keyof typeof SCHEMAS> = {
+  product: 'PRODUCT',
+  cart: 'CART',
+  transaction: 'TRANSACTION',
+  refund: 'REFUND',
+  checkout_step: 'CHECKOUT_STEP',
+  promotion: 'PROMOTION',
+  user: 'USER',
+};
+
+/**
+ * Get schema URI for a context type
+ */
+function getSchemaForContextType(
+  contextType: ContextType,
+  settings?: Settings,
+): string {
+  const schemaKey = CONTEXT_TYPE_TO_SCHEMA[contextType];
+  const settingsKey = `${contextType}Schema` as keyof NonNullable<
+    Settings['snowplow']
+  >;
+
+  // Check for override in settings
+  const override = settings?.snowplow?.[settingsKey] as string | undefined;
+  if (override) return override;
+
+  // Use default schema
+  return SCHEMAS[schemaKey];
+}
 
 /**
  * Push event to Snowplow (simple approach like GA4/Meta)
  *
  * The data parameter already contains mapped data from the mapping rules.
  * We just wrap it with Snowplow schemas and send it.
+ *
+ * @param actionName - Action type from rule.name (e.g., ACTIONS.ADD_TO_CART)
  */
 export function pushSnowplowEvent(
   event: WalkerOS.Event,
   mapping: Mapping,
   data: WalkerOS.AnyObject,
+  actionName?: string,
   settings?: Settings,
   env?: DestinationWeb.Env,
   logger?: Logger.Instance,
@@ -43,12 +81,12 @@ export function pushSnowplowEvent(
     return;
   }
 
-  // Handle ecommerce events with action type
-  if (mapping.action) {
+  // Handle ecommerce events with action type (from rule.name)
+  if (actionName) {
     const actionSchema =
       mapping.snowplow?.actionSchema ||
       settings?.snowplow?.actionSchema ||
-      DEFAULT_SCHEMAS.ACTION;
+      SCHEMAS.ACTION;
 
     // The data already contains the mapped fields
     // We just need to wrap it with the appropriate Snowplow structure
@@ -56,50 +94,51 @@ export function pushSnowplowEvent(
       event: {
         schema: actionSchema,
         data: {
-          type: mapping.action,
+          type: actionName,
         },
       },
-      context: createContexts(data, settings),
+      context: createContexts(data, mapping, settings),
     };
 
     snowplow('trackSelfDescribingEvent', selfDescribingEvent);
   }
 
-  // Events without action mapping are silently skipped
+  // Events without action name are silently skipped
 }
 
 /**
  * Create Snowplow context array from mapped data
- * The mapping already did the work - we just wrap with schemas
+ *
+ * Uses explicit contextType from mapping - no auto-detection.
+ * The mapping specifies which context entity type to use.
  */
 function createContexts(
   data: WalkerOS.AnyObject,
+  mapping: Mapping,
   settings?: Settings,
-): SelfDescribingEvent['context'] {
-  const contexts: NonNullable<SelfDescribingEvent['context']> = [];
+): SelfDescribingJson<WalkerOS.Properties>[] | undefined {
+  const contexts: SelfDescribingJson<WalkerOS.Properties>[] = [];
 
   // Copy data to avoid mutation
   const dataCopy = { ...data };
 
-  // If there's main entity data (not in products array), process it first
-  // This ensures transaction/cart/etc appears before products in context array
+  // Extract products array (always uses product schema)
   const productsArray = dataCopy.products;
-  delete dataCopy.products; // Remove temporarily
+  delete dataCopy.products;
 
-  if (Object.keys(dataCopy).length > 0) {
-    const schema = detectSchema(dataCopy, settings);
-    if (schema) {
-      contexts.push({
-        schema,
-        data: dataCopy as WalkerOS.Properties,
-      });
-    }
+  // Create main context entity if contextType is specified
+  if (mapping.contextType && Object.keys(dataCopy).length > 0) {
+    const schema = getSchemaForContextType(mapping.contextType, settings);
+    contexts.push({
+      schema,
+      data: dataCopy as WalkerOS.Properties,
+    });
   }
 
   // Handle "products" array (from loop mapping like GA4 items)
+  // Products always use the product schema
   if (isArray(productsArray)) {
-    const productSchema =
-      settings?.snowplow?.productSchema || DEFAULT_SCHEMAS.PRODUCT;
+    const productSchema = settings?.snowplow?.productSchema || SCHEMAS.PRODUCT;
 
     for (const product of productsArray) {
       if (isObject(product)) {
@@ -112,57 +151,4 @@ function createContexts(
   }
 
   return contexts.length > 0 ? contexts : undefined;
-}
-
-/**
- * Detect which Snowplow schema to use based on field names
- * Simple heuristic based on key fields
- */
-function detectSchema(
-  data: WalkerOS.AnyObject,
-  settings?: Settings,
-): string | undefined {
-  const fields = Object.keys(data);
-
-  // Transaction: has transaction_id and revenue
-  if (fields.includes('transaction_id') && fields.includes('revenue')) {
-    return settings?.snowplow?.transactionSchema || DEFAULT_SCHEMAS.TRANSACTION;
-  }
-
-  // Refund: has refund_amount
-  if (fields.includes('refund_amount')) {
-    return settings?.snowplow?.refundSchema || DEFAULT_SCHEMAS.REFUND;
-  }
-
-  // Checkout step: has step
-  if (fields.includes('step')) {
-    return (
-      settings?.snowplow?.checkoutStepSchema || DEFAULT_SCHEMAS.CHECKOUT_STEP
-    );
-  }
-
-  // Cart: has total_value or cart_currency
-  if (fields.includes('total_value') || fields.includes('cart_currency')) {
-    return settings?.snowplow?.cartSchema || DEFAULT_SCHEMAS.CART;
-  }
-
-  // Promotion: has creative_id or slot
-  if (fields.includes('creative_id') || fields.includes('slot')) {
-    return settings?.snowplow?.promotionSchema || DEFAULT_SCHEMAS.PROMOTION;
-  }
-
-  // Product: has id, name, price, category (most common case)
-  if (
-    fields.includes('id') &&
-    (fields.includes('price') || fields.includes('category'))
-  ) {
-    return settings?.snowplow?.productSchema || DEFAULT_SCHEMAS.PRODUCT;
-  }
-
-  // Default to product if we have an id
-  if (fields.includes('id')) {
-    return settings?.snowplow?.productSchema || DEFAULT_SCHEMAS.PRODUCT;
-  }
-
-  return undefined;
 }

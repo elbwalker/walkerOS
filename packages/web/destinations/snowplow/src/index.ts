@@ -93,6 +93,7 @@ export const destinationSnowplow: Destination = {
       event,
       eventMapping,
       data as WalkerOS.AnyObject,
+      rule.name, // Action type from mapping rule (e.g., ACTIONS.ADD_TO_CART)
       config.settings,
       env,
       logger,

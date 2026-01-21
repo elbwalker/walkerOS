@@ -1,14 +1,17 @@
 import type { WalkerOS } from '@walkeros/core';
 import type { DestinationSnowplow } from '..';
 import { isObject } from '@walkeros/core';
+import { ACTIONS } from '../types';
 
 /**
  * Snowplow Ecommerce Mapping Examples
  *
- * These examples follow the same flat mapping pattern as GA4 and Meta destinations.
- * The destination automatically wraps fields with appropriate Snowplow schemas.
+ * These examples follow the GA4-aligned pattern:
+ * - `name` at rule level specifies the Snowplow action type
+ * - `settings.contextType` determines which context schema to use
+ * - `data.map` generates the context entity data
  *
- * Pattern: Similar to GA4, use flat data.map with action type
+ * Pattern: name = action type, settings.contextType = schema, data.map = fields
  */
 
 /**
@@ -35,17 +38,18 @@ export const pageView: DestinationSnowplow.Rule = {
  * Snowplow: product_view action with product context entity
  */
 export const productView: DestinationSnowplow.Rule = {
+  name: ACTIONS.PRODUCT_VIEW, // Action type → event.data.type
   settings: {
-    action: 'product_view',
+    contextType: 'product', // Explicit: flat data creates product context
   },
   data: {
     map: {
-      // Product context fields (destination wraps with product schema)
+      // Product context fields
       id: 'data.id',
       name: 'data.name',
       category: 'data.category',
       price: 'data.price',
-      currency: { key: 'data.currency', value: 'USD' }, // Fallback to USD
+      currency: { key: 'data.currency', value: 'USD' },
       brand: 'data.brand',
       variant: 'data.variant',
     },
@@ -56,11 +60,14 @@ export const productView: DestinationSnowplow.Rule = {
  * Add to Cart Mapping
  *
  * walkerOS: elb('product add', { id: 'P123', name: 'Laptop', price: 999, quantity: 1 })
- * Snowplow: add_to_cart action with product + cart context entities
+ * Snowplow: add_to_cart action with product context entity
+ *
+ * Note: For cart context, use a separate mapping or extend with multiple contexts
  */
 export const addToCart: DestinationSnowplow.Rule = {
+  name: ACTIONS.ADD_TO_CART, // Action type → event.data.type
   settings: {
-    action: 'add_to_cart',
+    contextType: 'product', // Explicit: flat data creates product context
   },
   data: {
     map: {
@@ -71,10 +78,6 @@ export const addToCart: DestinationSnowplow.Rule = {
       price: 'data.price',
       currency: { key: 'data.currency', value: 'USD' },
       quantity: { key: 'data.quantity', value: 1 },
-
-      // Cart context fields (from globals)
-      total_value: 'globals.cart_total',
-      cart_currency: { key: 'globals.cart_currency', value: 'USD' },
     },
   },
 };
@@ -83,11 +86,14 @@ export const addToCart: DestinationSnowplow.Rule = {
  * Remove from Cart Mapping
  *
  * walkerOS: elb('product remove', { id: 'P123', name: 'Laptop', price: 999, quantity: 1 })
- * Snowplow: remove_from_cart action with product + cart context entities
+ * Snowplow: remove_from_cart action with product context entity
+ *
+ * Note: For cart context, use a separate mapping or extend with multiple contexts
  */
 export const removeFromCart: DestinationSnowplow.Rule = {
+  name: ACTIONS.REMOVE_FROM_CART, // Action type → event.data.type
   settings: {
-    action: 'remove_from_cart',
+    contextType: 'product', // Explicit: flat data creates product context
   },
   data: {
     map: {
@@ -98,10 +104,6 @@ export const removeFromCart: DestinationSnowplow.Rule = {
       price: 'data.price',
       currency: { key: 'data.currency', value: 'USD' },
       quantity: { key: 'data.quantity', value: 1 },
-
-      // Cart context fields
-      total_value: 'globals.cart_total',
-      cart_currency: { key: 'globals.cart_currency', value: 'USD' },
     },
   },
 };
@@ -114,8 +116,9 @@ export const removeFromCart: DestinationSnowplow.Rule = {
  * Snowplow: transaction action with transaction + product context entities
  */
 export const transaction: DestinationSnowplow.Rule = {
+  name: ACTIONS.TRANSACTION, // Action type → event.data.type
   settings: {
-    action: 'transaction',
+    contextType: 'transaction', // Explicit: flat data creates transaction context
   },
   data: {
     map: {
@@ -170,8 +173,9 @@ export const transaction: DestinationSnowplow.Rule = {
  * Snowplow: refund action with refund context entity
  */
 export const refund: DestinationSnowplow.Rule = {
+  name: ACTIONS.REFUND, // Action type → event.data.type
   settings: {
-    action: 'refund',
+    contextType: 'refund', // Explicit: flat data creates refund context
   },
   data: {
     map: {
@@ -192,8 +196,9 @@ export const refund: DestinationSnowplow.Rule = {
  * Snowplow: checkout_step action with checkout_step context entity
  */
 export const checkoutStep: DestinationSnowplow.Rule = {
+  name: ACTIONS.CHECKOUT_STEP, // Action type → event.data.type
   settings: {
-    action: 'checkout_step',
+    contextType: 'checkout_step', // Explicit: flat data creates checkout_step context
   },
   data: {
     map: {
@@ -221,9 +226,8 @@ export const checkoutStep: DestinationSnowplow.Rule = {
  * Snowplow: list_view action with multiple product context entities
  */
 export const listView: DestinationSnowplow.Rule = {
-  settings: {
-    action: 'list_view',
-  },
+  name: ACTIONS.LIST_VIEW, // Action type → event.data.type
+  // No contextType needed - products are created from loop
   data: {
     map: {
       // Product contexts (loop through nested)
@@ -256,8 +260,9 @@ export const listView: DestinationSnowplow.Rule = {
  * Snowplow: promo_view action with promotion context entity
  */
 export const promoView: DestinationSnowplow.Rule = {
+  name: ACTIONS.PROMO_VIEW, // Action type → event.data.type
   settings: {
-    action: 'promo_view',
+    contextType: 'promotion', // Explicit: flat data creates promotion context
   },
   data: {
     map: {
@@ -279,8 +284,9 @@ export const promoView: DestinationSnowplow.Rule = {
  * Snowplow: promo_click action with promotion context entity
  */
 export const promoClick: DestinationSnowplow.Rule = {
+  name: ACTIONS.PROMO_CLICK, // Action type → event.data.type
   settings: {
-    action: 'promo_click',
+    contextType: 'promotion', // Explicit: flat data creates promotion context
   },
   data: {
     map: {

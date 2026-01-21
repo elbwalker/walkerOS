@@ -5,6 +5,40 @@ import type {
 } from '@walkeros/core';
 import type { DestinationWeb } from '@walkeros/web-core';
 
+// Official Snowplow types
+import type {
+  SelfDescribingJson,
+  CommonEventProperties,
+} from '@snowplow/tracker-core';
+import type {
+  Action,
+  Product,
+  Cart,
+  SPTransaction,
+  SPPromotion,
+  CheckoutStep,
+  Refund,
+  TransactionError,
+  User,
+  Page,
+} from '@snowplow/browser-plugin-snowplow-ecommerce';
+
+// Re-export official Snowplow entity types
+export type {
+  SelfDescribingJson,
+  CommonEventProperties,
+  Action,
+  Product,
+  Cart,
+  SPTransaction,
+  SPPromotion,
+  CheckoutStep,
+  Refund,
+  TransactionError,
+  User,
+  Page,
+};
+
 declare global {
   interface Window {
     snowplow?: SnowplowFunction;
@@ -18,20 +52,13 @@ export interface SnowplowFunction {
   q?: unknown[];
 }
 
-// Snowplow self-describing event structure
-export interface SelfDescribingEvent {
-  event: {
-    schema: string;
-    data: WalkerOS.Properties;
-  };
-  context?: ContextEntity[];
-}
-
-// Snowplow context entity (wrapped with schema)
-export interface ContextEntity {
-  schema: string;
-  data: WalkerOS.Properties;
-}
+/**
+ * Complete self-describing event structure
+ * This is the full parameter passed to window.snowplow('trackSelfDescribingEvent', ...)
+ */
+export type SelfDescribingEvent<T = WalkerOS.Properties> = {
+  event: SelfDescribingJson<T>;
+} & CommonEventProperties<T>;
 
 /**
  * Configuration settings for Snowplow destination
@@ -180,19 +207,34 @@ export interface SnowplowSettings {
 }
 
 /**
+ * Context entity type for explicit schema mapping
+ * Maps to Snowplow blessed ecommerce schemas
+ */
+export type ContextType =
+  | 'product'
+  | 'cart'
+  | 'transaction'
+  | 'refund'
+  | 'checkout_step'
+  | 'promotion'
+  | 'user';
+
+/**
  * Custom mapping parameters for Snowplow events
  *
- * Similar to GA4/Meta pattern - keeps mapping flat and simple.
+ * Similar to GA4/Meta pattern - uses standard `name` field for action type.
+ * The `name` from the mapping rule becomes Snowplow's event.data.type.
  */
 export interface Mapping {
   /**
-   * Snowplow ecommerce action type
+   * Explicit context entity type for flat mapped data
    *
-   * Determines which Snowplow ecommerce action this event maps to.
+   * Required when mapping flat data to a Snowplow context entity.
+   * No auto-detection - you must explicitly specify which schema to use.
    *
-   * @example "product_view", "add_to_cart", "transaction", "refund"
+   * @example "product", "transaction", "cart", "refund"
    */
-  action?: string;
+  contextType?: ContextType;
 
   /**
    * Snowplow-specific settings override
@@ -250,10 +292,10 @@ export type Rules = WalkerOSMapping.Rules<Rule>;
 export type Param = WalkerOSMapping.Value;
 
 /**
- * Default Snowplow Ecommerce Schema URIs
+ * Snowplow Ecommerce Schema URIs
  * Based on Snowplow Analytics official ecommerce schema
  */
-export const DEFAULT_SCHEMAS = {
+export const SCHEMAS = {
   ACTION:
     'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
   PRODUCT:
@@ -272,8 +314,9 @@ export const DEFAULT_SCHEMAS = {
 
 /**
  * Snowplow ecommerce action types
+ * Type-safe values matching official Action['type']
  */
-export const ACTION_TYPES = {
+export const ACTIONS: Record<string, Action['type']> = {
   PRODUCT_VIEW: 'product_view',
   LIST_VIEW: 'list_view',
   LIST_CLICK: 'list_click',
@@ -285,73 +328,4 @@ export const ACTION_TYPES = {
   PROMO_VIEW: 'promo_view',
   PROMO_CLICK: 'promo_click',
   TRANSACTION_ERROR: 'trns_error',
-} as const;
-
-/**
- * Field name mappings for context entity detection
- * Maps field names to their respective entity types
- */
-export const ENTITY_FIELD_MAPPING = {
-  product: [
-    'id',
-    'name',
-    'category',
-    'price',
-    'currency',
-    'quantity',
-    'variant',
-    'brand',
-    'size',
-    'list_price',
-    'inventory_status',
-    'position',
-    'creative_id',
-  ],
-  transaction: [
-    'transaction_id',
-    'revenue',
-    'payment_method',
-    'total_quantity',
-    'tax',
-    'shipping',
-    'discount_code',
-    'discount_amount',
-    'credit_order',
-  ],
-  cart: ['cart_id', 'total_value'],
-  refund: ['transaction_id', 'refund_amount', 'refund_reason', 'refund_method'],
-  checkout_step: [
-    'step',
-    'shipping_postcode',
-    'billing_postcode',
-    'shipping_full_address',
-    'billing_full_address',
-    'delivery_provider',
-    'delivery_method',
-    'coupon_code',
-    'account_type',
-    'payment_method',
-    'proof_of_payment',
-    'marketing_opt_in',
-  ],
-  promotion: ['id', 'name', 'creative_id', 'type', 'position', 'slot'],
-} as const;
-
-/**
- * Required fields per entity type
- * Based on Snowplow ecommerce schema requirements
- */
-export const REQUIRED_FIELDS = {
-  product: ['id', 'category', 'price', 'currency'],
-  transaction: [
-    'transaction_id',
-    'revenue',
-    'payment_method',
-    'currency',
-    'total_quantity',
-  ],
-  cart: ['total_value', 'currency'],
-  refund: ['transaction_id', 'refund_amount', 'currency'],
-  checkout_step: ['step'],
-  promotion: ['id'],
 } as const;
