@@ -204,6 +204,9 @@ export async function bundleCore(
         buildError as EsbuildError,
         buildOptions.code || '',
       );
+    } finally {
+      // Clean up esbuild worker threads to allow process to exit
+      await esbuild.stop();
     }
 
     // Get file size and calculate build time
