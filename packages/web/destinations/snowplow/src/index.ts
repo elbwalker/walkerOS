@@ -7,6 +7,9 @@ import { pushSnowplowEvent } from './push';
 // Types
 export * as DestinationSnowplow from './types';
 
+// Schema constants for user convenience
+export { SCHEMAS, ACTIONS, WEB_SCHEMAS } from './types';
+
 /**
  * Get the Snowplow function from the environment
  *

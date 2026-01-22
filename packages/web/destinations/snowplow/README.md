@@ -338,6 +338,38 @@ enableAnonymousTracking({ withServerAnonymisation: true });
 disableAnonymousTracking();
 ```
 
+## Schema Constants
+
+The package exports pre-defined Snowplow schema URIs for convenience:
+
+```typescript
+import {
+  SCHEMAS,
+  ACTIONS,
+  WEB_SCHEMAS,
+} from '@walkeros/web-destination-snowplow';
+
+// Ecommerce schemas
+SCHEMAS.PRODUCT; // 'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0'
+SCHEMAS.TRANSACTION; // 'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0'
+
+// Ecommerce actions
+ACTIONS.ADD_TO_CART; // 'add_to_cart'
+ACTIONS.TRANSACTION; // 'transaction'
+
+// Web event schemas
+WEB_SCHEMAS.LINK_CLICK; // 'iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1'
+WEB_SCHEMAS.SUBMIT_FORM; // 'iglu:com.snowplowanalytics.snowplow/submit_form/jsonschema/1-0-0'
+WEB_SCHEMAS.SITE_SEARCH; // 'iglu:com.snowplowanalytics.snowplow/site_search/jsonschema/1-0-0'
+
+// Web context schemas
+WEB_SCHEMAS.WEB_PAGE; // 'iglu:com.snowplowanalytics.snowplow/web_page/jsonschema/1-0-0'
+WEB_SCHEMAS.BROWSER; // 'iglu:com.snowplowanalytics.snowplow/browser_context/jsonschema/2-0-0'
+WEB_SCHEMAS.CLIENT_SESSION; // 'iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-2'
+```
+
+Use these constants in your mapping configuration to ensure correct schema URIs.
+
 ## Advanced Usage
 
 ### Multiple Trackers

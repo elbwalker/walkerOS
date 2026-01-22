@@ -545,6 +545,34 @@ export const ACTIONS: Record<string, Action['type']> = {
 } as const;
 
 /**
+ * Snowplow Web Schema URIs
+ * Events and contexts for web analytics tracking
+ */
+export const WEB_SCHEMAS = {
+  // Events
+  LINK_CLICK: 'iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1',
+  CHANGE_FORM:
+    'iglu:com.snowplowanalytics.snowplow/change_form/jsonschema/1-0-0',
+  FOCUS_FORM: 'iglu:com.snowplowanalytics.snowplow/focus_form/jsonschema/1-0-0',
+  SUBMIT_FORM:
+    'iglu:com.snowplowanalytics.snowplow/submit_form/jsonschema/1-0-0',
+  SITE_SEARCH:
+    'iglu:com.snowplowanalytics.snowplow/site_search/jsonschema/1-0-0',
+  SOCIAL:
+    'iglu:com.snowplowanalytics.snowplow/social_interaction/jsonschema/1-0-0',
+  TIMING: 'iglu:com.snowplowanalytics.snowplow/timing/jsonschema/1-0-0',
+  WEB_VITALS: 'iglu:com.snowplowanalytics.snowplow/web_vitals/jsonschema/1-0-0',
+  // Contexts
+  WEB_PAGE: 'iglu:com.snowplowanalytics.snowplow/web_page/jsonschema/1-0-0',
+  BROWSER:
+    'iglu:com.snowplowanalytics.snowplow/browser_context/jsonschema/2-0-0',
+  CLIENT_SESSION:
+    'iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-2',
+  GEOLOCATION:
+    'iglu:com.snowplowanalytics.snowplow/geolocation_context/jsonschema/1-1-0',
+} as const;
+
+/**
  * Type guard for URL-based plugins
  */
 export function isUrlBasedPlugin(

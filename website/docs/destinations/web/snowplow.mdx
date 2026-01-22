@@ -173,6 +173,36 @@ disableAnonymousTracking();`}
   language="typescript"
 />
 
+## Schema Constants
+
+The package exports pre-defined Snowplow schema URIs for use in custom mappings:
+
+<CodeSnippet
+  code={`import { SCHEMAS, ACTIONS, WEB_SCHEMAS } from '@walkeros/web-destination-snowplow';
+
+// Ecommerce schemas
+SCHEMAS.PRODUCT;     // product/jsonschema/1-0-0
+SCHEMAS.TRANSACTION; // transaction/jsonschema/1-0-0
+
+// Ecommerce actions
+ACTIONS.ADD_TO_CART; // 'add_to_cart'
+ACTIONS.TRANSACTION; // 'transaction'
+
+// Web event schemas
+WEB_SCHEMAS.LINK_CLICK;  // link_click/jsonschema/1-0-1
+WEB_SCHEMAS.SUBMIT_FORM; // submit_form/jsonschema/1-0-0
+WEB_SCHEMAS.SITE_SEARCH; // site_search/jsonschema/1-0-0
+WEB_SCHEMAS.TIMING;      // timing/jsonschema/1-0-0
+WEB_SCHEMAS.WEB_VITALS;  // web_vitals/jsonschema/1-0-0
+
+// Web context schemas
+WEB_SCHEMAS.WEB_PAGE;       // web_page/jsonschema/1-0-0
+WEB_SCHEMAS.BROWSER;        // browser_context/jsonschema/2-0-0
+WEB_SCHEMAS.CLIENT_SESSION; // client_session/jsonschema/1-0-2
+WEB_SCHEMAS.GEOLOCATION;    // geolocation_context/jsonschema/1-1-0`}
+  language="typescript"
+/>
+
 ## Advanced Configuration
 
 ### Tracker Settings

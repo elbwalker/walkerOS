@@ -8,6 +8,7 @@ import {
   clearUserData,
   enableAnonymousTracking,
   disableAnonymousTracking,
+  WEB_SCHEMAS,
 } from '.';
 import { resetState } from './push';
 
@@ -1055,6 +1056,41 @@ describe('destination snowplow', () => {
           { stateStorageStrategy: 'cookieAndLocalStorage' },
         ],
       });
+    });
+  });
+
+  describe('WEB_SCHEMAS', () => {
+    test('exports web event schemas', () => {
+      expect(WEB_SCHEMAS.LINK_CLICK).toBe(
+        'iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1',
+      );
+      expect(WEB_SCHEMAS.SUBMIT_FORM).toBe(
+        'iglu:com.snowplowanalytics.snowplow/submit_form/jsonschema/1-0-0',
+      );
+      expect(WEB_SCHEMAS.SITE_SEARCH).toBe(
+        'iglu:com.snowplowanalytics.snowplow/site_search/jsonschema/1-0-0',
+      );
+      expect(WEB_SCHEMAS.TIMING).toBe(
+        'iglu:com.snowplowanalytics.snowplow/timing/jsonschema/1-0-0',
+      );
+      expect(WEB_SCHEMAS.WEB_VITALS).toBe(
+        'iglu:com.snowplowanalytics.snowplow/web_vitals/jsonschema/1-0-0',
+      );
+    });
+
+    test('exports web context schemas', () => {
+      expect(WEB_SCHEMAS.WEB_PAGE).toBe(
+        'iglu:com.snowplowanalytics.snowplow/web_page/jsonschema/1-0-0',
+      );
+      expect(WEB_SCHEMAS.BROWSER).toBe(
+        'iglu:com.snowplowanalytics.snowplow/browser_context/jsonschema/2-0-0',
+      );
+      expect(WEB_SCHEMAS.CLIENT_SESSION).toBe(
+        'iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-2',
+      );
+      expect(WEB_SCHEMAS.GEOLOCATION).toBe(
+        'iglu:com.snowplowanalytics.snowplow/geolocation_context/jsonschema/1-1-0',
+      );
     });
   });
 });
