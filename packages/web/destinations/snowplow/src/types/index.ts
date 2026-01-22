@@ -123,12 +123,35 @@ export type SnowplowPlugin = BrowserPlugin | UrlBasedPlugin;
 export interface TrackerContexts {
   /** Web page context (default: true) */
   webPage?: boolean;
-  /** Client session context */
+  /** Client session context - enables client_session schema */
   session?: boolean;
   /** Performance timing context */
   performanceTiming?: boolean;
   /** Geolocation context */
   geolocation?: boolean;
+}
+
+/**
+ * Anonymous tracking configuration
+ *
+ * When enabled, the tracker will not set any user identifiers (domain_userid, network_userid).
+ * This is useful for privacy-focused tracking or when user consent has not been given.
+ */
+export interface AnonymousTrackingConfig {
+  /**
+   * Request server-side anonymisation
+   *
+   * When true, the collector will anonymise the user's IP address
+   * and not set the network_userid cookie.
+   */
+  withServerAnonymisation?: boolean;
+  /**
+   * Continue session tracking in anonymous mode
+   *
+   * When true, session context will still be attached to events
+   * even when anonymous tracking is enabled.
+   */
+  withSessionTracking?: boolean;
 }
 
 /**
@@ -261,6 +284,26 @@ export interface Settings {
    * Built-in context entities to attach to events
    */
   contexts?: TrackerContexts;
+
+  /**
+   * Enable anonymous tracking
+   *
+   * When enabled, the tracker will not set user identifiers.
+   * Can be a boolean (true enables basic anonymous tracking) or
+   * a configuration object for fine-grained control.
+   *
+   * @example
+   * // Basic anonymous tracking
+   * anonymousTracking: true
+   *
+   * @example
+   * // With server-side anonymisation
+   * anonymousTracking: {
+   *   withServerAnonymisation: true,
+   *   withSessionTracking: true
+   * }
+   */
+  anonymousTracking?: boolean | AnonymousTrackingConfig;
 
   /**
    * Snowplow plugins to load (BrowserPlugin or URL-based)

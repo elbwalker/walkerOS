@@ -1,11 +1,116 @@
 import type { WalkerOS, Logger } from '@walkeros/core';
-import type { Settings, Destination, Mapping } from './types';
+import type { Settings, Destination, Mapping, Env } from './types';
 import { isUrlBasedPlugin, deriveEnableMethod } from './types';
 import { addScript, setup } from './setup';
 import { pushSnowplowEvent } from './push';
 
 // Types
 export * as DestinationSnowplow from './types';
+
+/**
+ * Get the Snowplow function from the environment
+ *
+ * @param env - Optional environment override
+ * @returns The Snowplow function or undefined if not available
+ */
+function getSnowplow(env?: Env) {
+  return (
+    env?.window?.snowplow ??
+    (typeof window !== 'undefined' ? window.snowplow : undefined)
+  );
+}
+
+/**
+ * Clear all user data (cookies and local storage)
+ *
+ * Call this when a user withdraws consent or logs out to remove
+ * all Snowplow identifiers (domain_userid, session cookies, etc.).
+ *
+ * @param env - Optional environment override for testing
+ *
+ * @example
+ * ```typescript
+ * import { clearUserData } from '@walkeros/web-destination-snowplow';
+ *
+ * // When user withdraws consent
+ * clearUserData();
+ * ```
+ */
+export function clearUserData(env?: Env): void {
+  const snowplow = getSnowplow(env);
+  if (snowplow) {
+    snowplow('clearUserData');
+  }
+}
+
+/**
+ * Enable anonymous tracking mode
+ *
+ * Call this to start anonymous tracking after initialization.
+ * Useful when consent state changes during the session.
+ *
+ * @param options - Optional configuration for anonymous tracking
+ * @param env - Optional environment override for testing
+ *
+ * @example
+ * ```typescript
+ * import { enableAnonymousTracking } from '@walkeros/web-destination-snowplow';
+ *
+ * // Enable with server anonymisation
+ * enableAnonymousTracking({ withServerAnonymisation: true });
+ * ```
+ */
+export function enableAnonymousTracking(
+  options?: {
+    withServerAnonymisation?: boolean;
+    withSessionTracking?: boolean;
+  },
+  env?: Env,
+): void {
+  const snowplow = getSnowplow(env);
+  if (snowplow) {
+    if (options) {
+      snowplow('enableAnonymousTracking', options);
+    } else {
+      snowplow('enableAnonymousTracking');
+    }
+  }
+}
+
+/**
+ * Disable anonymous tracking mode
+ *
+ * Call this to resume normal tracking after anonymous mode.
+ * Useful when a user grants consent during the session.
+ *
+ * @param stateStorageStrategy - Optional storage strategy for state
+ * @param env - Optional environment override for testing
+ *
+ * @example
+ * ```typescript
+ * import { disableAnonymousTracking } from '@walkeros/web-destination-snowplow';
+ *
+ * // Resume normal tracking
+ * disableAnonymousTracking();
+ * ```
+ */
+export function disableAnonymousTracking(
+  stateStorageStrategy?:
+    | 'cookieAndLocalStorage'
+    | 'cookie'
+    | 'localStorage'
+    | 'none',
+  env?: Env,
+): void {
+  const snowplow = getSnowplow(env);
+  if (snowplow) {
+    if (stateStorageStrategy) {
+      snowplow('disableAnonymousTracking', { stateStorageStrategy });
+    } else {
+      snowplow('disableAnonymousTracking');
+    }
+  }
+}
 
 // Examples (for testing)
 export * as examples from './examples';
@@ -78,6 +183,7 @@ export const destinationSnowplow: Destination = {
       cookieSameSite: settings.cookieSameSite,
       appVersion: settings.appVersion,
       contexts: settings.contexts,
+      anonymousTracking: settings.anonymousTracking,
     });
 
     // Enable activity tracking if configured

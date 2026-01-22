@@ -3,7 +3,12 @@ import type { DestinationSnowplow } from '.';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { startFlow } from '@walkeros/collector';
 import { getEvent, mockEnv } from '@walkeros/core';
-import { examples } from '.';
+import {
+  examples,
+  clearUserData,
+  enableAnonymousTracking,
+  disableAnonymousTracking,
+} from '.';
 import { resetState } from './push';
 
 const { events, mapping, walkerosEvents } = examples;
@@ -639,6 +644,144 @@ describe('destination snowplow', () => {
     });
   });
 
+  describe('anonymousTracking', () => {
+    test('enables anonymous tracking with boolean true', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          anonymousTracking: true,
+        },
+      });
+
+      await elb(getEvent());
+
+      const initCall = calls.find(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' && c.args[0] === 'newTracker',
+      );
+      expect(initCall).toBeDefined();
+      expect(initCall?.args[3]).toMatchObject({
+        anonymousTracking: true,
+      });
+    });
+
+    test('enables anonymous tracking with server anonymisation', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          anonymousTracking: {
+            withServerAnonymisation: true,
+          },
+        },
+      });
+
+      await elb(getEvent());
+
+      const initCall = calls.find(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' && c.args[0] === 'newTracker',
+      );
+      expect(initCall).toBeDefined();
+      expect(initCall?.args[3]).toMatchObject({
+        anonymousTracking: {
+          withServerAnonymisation: true,
+        },
+      });
+    });
+
+    test('enables anonymous tracking with session tracking', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          anonymousTracking: {
+            withServerAnonymisation: true,
+            withSessionTracking: true,
+          },
+        },
+      });
+
+      await elb(getEvent());
+
+      const initCall = calls.find(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' && c.args[0] === 'newTracker',
+      );
+      expect(initCall).toBeDefined();
+      expect(initCall?.args[3]).toMatchObject({
+        anonymousTracking: {
+          withServerAnonymisation: true,
+          withSessionTracking: true,
+        },
+      });
+    });
+
+    test('no anonymous tracking when not configured', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+      });
+
+      await elb(getEvent());
+
+      const initCall = calls.find(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' && c.args[0] === 'newTracker',
+      );
+      expect(initCall).toBeDefined();
+      // When not configured, anonymousTracking should be undefined/falsy
+      expect(
+        (initCall?.args[3] as Record<string, unknown>)?.anonymousTracking,
+      ).toBeFalsy();
+    });
+  });
+
+  describe('session context', () => {
+    test('enables client_session context when session is true', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          contexts: {
+            session: true,
+          },
+        },
+      });
+
+      await elb(getEvent());
+
+      const initCall = calls.find(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' && c.args[0] === 'newTracker',
+      );
+      expect(initCall).toBeDefined();
+      expect(initCall?.args[3]).toMatchObject({
+        contexts: {
+          session: true,
+        },
+      });
+    });
+  });
+
   describe('globalContexts', () => {
     test('adds static global context', async () => {
       const destinationWithEnv = {
@@ -713,6 +856,65 @@ describe('destination snowplow', () => {
         (c) => c.args[0] === 'addGlobalContexts',
       );
       expect(addContextsCall).toBeUndefined();
+    });
+  });
+
+  describe('utility functions', () => {
+    test('clearUserData calls snowplow clearUserData', () => {
+      clearUserData(testEnv as DestinationSnowplow.Env);
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: ['clearUserData'],
+      });
+    });
+
+    test('enableAnonymousTracking calls snowplow enableAnonymousTracking', () => {
+      enableAnonymousTracking(undefined, testEnv as DestinationSnowplow.Env);
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: ['enableAnonymousTracking'],
+      });
+    });
+
+    test('enableAnonymousTracking with options', () => {
+      enableAnonymousTracking(
+        { withServerAnonymisation: true, withSessionTracking: true },
+        testEnv as DestinationSnowplow.Env,
+      );
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: [
+          'enableAnonymousTracking',
+          { withServerAnonymisation: true, withSessionTracking: true },
+        ],
+      });
+    });
+
+    test('disableAnonymousTracking calls snowplow disableAnonymousTracking', () => {
+      disableAnonymousTracking(undefined, testEnv as DestinationSnowplow.Env);
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: ['disableAnonymousTracking'],
+      });
+    });
+
+    test('disableAnonymousTracking with storage strategy', () => {
+      disableAnonymousTracking(
+        'cookieAndLocalStorage',
+        testEnv as DestinationSnowplow.Env,
+      );
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: [
+          'disableAnonymousTracking',
+          { stateStorageStrategy: 'cookieAndLocalStorage' },
+        ],
+      });
     });
   });
 });

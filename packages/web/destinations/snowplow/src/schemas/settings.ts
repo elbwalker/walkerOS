@@ -33,13 +33,38 @@ export const SnowplowSettingsSchema = z.object({
  */
 export const TrackerContextsSchema = z.object({
   webPage: z.boolean().optional().describe('Web page context'),
-  session: z.boolean().optional().describe('Client session context'),
+  session: z
+    .boolean()
+    .optional()
+    .describe('Client session context - enables client_session schema'),
   performanceTiming: z
     .boolean()
     .optional()
     .describe('Performance timing context'),
   geolocation: z.boolean().optional().describe('Geolocation context'),
 });
+
+/**
+ * Anonymous tracking configuration schema
+ */
+export const AnonymousTrackingConfigSchema = z.object({
+  withServerAnonymisation: z
+    .boolean()
+    .optional()
+    .describe('Request server-side anonymisation'),
+  withSessionTracking: z
+    .boolean()
+    .optional()
+    .describe('Continue session tracking in anonymous mode'),
+});
+
+/**
+ * Anonymous tracking schema - can be boolean or config object
+ */
+export const AnonymousTrackingSchema = z.union([
+  z.boolean(),
+  AnonymousTrackingConfigSchema,
+]);
 
 /**
  * URL-based plugin schema
@@ -111,6 +136,10 @@ export const SettingsSchema = z.object({
   appVersion: z.string().optional().describe('Application version'),
   contexts: TrackerContextsSchema.optional().describe(
     'Built-in context entities',
+  ),
+  // Anonymous tracking
+  anonymousTracking: AnonymousTrackingSchema.optional().describe(
+    'Enable anonymous tracking (no user identifiers)',
   ),
   // Plugins - validated loosely since BrowserPlugin is complex
   plugins: z
