@@ -237,6 +237,206 @@ await elb('order complete', {
 });
 ```
 
+### Media Tracking
+
+Track video and audio playback events using Snowplow's media tracking schemas:
+
+```typescript
+import {
+  MEDIA_SCHEMAS,
+  MEDIA_ACTIONS,
+} from '@walkeros/web-destination-snowplow';
+
+// Track video play
+await elb('video play', {
+  id: 'video-123',
+  title: 'Product Demo',
+  currentTime: 0,
+  duration: 120,
+});
+
+// Track video progress (25%, 50%, 75% milestones)
+await elb('video progress', {
+  id: 'video-123',
+  percentProgress: 25,
+});
+
+// Track video pause
+await elb('video pause', {
+  id: 'video-123',
+  currentTime: 45,
+});
+
+// Track video complete
+await elb('video end', {
+  id: 'video-123',
+  duration: 120,
+});
+```
+
+#### Media Mapping Configuration
+
+Configure media event mappings with the `MEDIA_SCHEMAS` constants:
+
+```typescript
+import { MEDIA_SCHEMAS } from '@walkeros/web-destination-snowplow';
+
+config: {
+  mapping: {
+    video: {
+      play: {
+        settings: {
+          schema: MEDIA_SCHEMAS.PLAY,
+        },
+        data: {
+          map: {
+            label: 'data.title',
+          },
+        },
+      },
+      pause: {
+        settings: {
+          schema: MEDIA_SCHEMAS.PAUSE,
+        },
+        data: {
+          map: {
+            currentTime: 'data.currentTime',
+          },
+        },
+      },
+      progress: {
+        settings: {
+          schema: MEDIA_SCHEMAS.PERCENT_PROGRESS,
+        },
+        data: {
+          map: {
+            percentProgress: 'data.percentProgress',
+          },
+        },
+      },
+      end: {
+        settings: {
+          schema: MEDIA_SCHEMAS.END,
+        },
+      },
+    },
+  },
+}
+```
+
+#### Ad Tracking
+
+Track video advertisements with pre-roll, mid-roll, and post-roll ad events:
+
+```typescript
+import { MEDIA_SCHEMAS } from '@walkeros/web-destination-snowplow';
+
+config: {
+  mapping: {
+    ad: {
+      break_start: {
+        settings: {
+          schema: MEDIA_SCHEMAS.AD_BREAK_START,
+        },
+        data: {
+          map: {
+            breakId: 'data.breakId',
+            breakType: 'data.breakType', // 'preroll', 'midroll', 'postroll'
+          },
+        },
+      },
+      start: {
+        settings: {
+          schema: MEDIA_SCHEMAS.AD_START,
+        },
+        data: {
+          map: {
+            adId: 'data.adId',
+            name: 'data.name',
+            duration: 'data.duration',
+          },
+        },
+      },
+      complete: {
+        settings: {
+          schema: MEDIA_SCHEMAS.AD_COMPLETE,
+        },
+        data: {
+          map: {
+            adId: 'data.adId',
+          },
+        },
+      },
+      skip: {
+        settings: {
+          schema: MEDIA_SCHEMAS.AD_SKIP,
+        },
+        data: {
+          map: {
+            adId: 'data.adId',
+            percentProgress: 'data.percentProgress',
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+#### Media Player Context
+
+Attach media player state as context to your events:
+
+```typescript
+config: {
+  mapping: {
+    video: {
+      play: {
+        settings: {
+          schema: MEDIA_SCHEMAS.PLAY,
+          context: [
+            {
+              schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+              data: {
+                map: {
+                  currentTime: 'data.currentTime',
+                  duration: 'data.duration',
+                  muted: 'data.muted',
+                  volume: 'data.volume',
+                  playbackRate: 'data.playbackRate',
+                  paused: { value: false },
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+  },
+}
+```
+
+#### Available Media Schemas
+
+| Schema              | Description                | Use Case              |
+| ------------------- | -------------------------- | --------------------- |
+| `PLAY`              | Playback started           | Video/audio play      |
+| `PAUSE`             | Playback paused            | User pauses content   |
+| `END`               | Playback ended             | Video/audio completed |
+| `SEEK_START`        | User started seeking       | Scrubbing timeline    |
+| `SEEK_END`          | User ended seeking         | Scrubbing complete    |
+| `BUFFER_START`      | Buffering started          | Loading content       |
+| `BUFFER_END`        | Buffering ended            | Content ready         |
+| `QUALITY_CHANGE`    | Video quality changed      | Adaptive streaming    |
+| `FULLSCREEN_CHANGE` | Fullscreen mode toggled    | User interaction      |
+| `VOLUME_CHANGE`     | Volume level changed       | User adjustment       |
+| `PERCENT_PROGRESS`  | Progress milestone reached | 25%, 50%, 75% markers |
+| `ERROR`             | Playback error occurred    | Error tracking        |
+| `AD_BREAK_START`    | Ad break started           | Pre/mid/post-roll     |
+| `AD_START`          | Individual ad started      | Ad impression         |
+| `AD_COMPLETE`       | Individual ad completed    | Ad view completion    |
+| `AD_SKIP`           | User skipped ad            | Ad engagement         |
+
 ## Snowplow Event Types
 
 ### Structured Events
@@ -497,6 +697,8 @@ import {
   ACTIONS,
   WEB_SCHEMAS,
   CONSENT_SCHEMAS,
+  MEDIA_SCHEMAS,
+  MEDIA_ACTIONS,
 } from '@walkeros/web-destination-snowplow';
 
 // Ecommerce schemas
@@ -511,11 +713,41 @@ ACTIONS.TRANSACTION; // 'transaction'
 WEB_SCHEMAS.LINK_CLICK; // 'iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1'
 WEB_SCHEMAS.SUBMIT_FORM; // 'iglu:com.snowplowanalytics.snowplow/submit_form/jsonschema/1-0-0'
 WEB_SCHEMAS.SITE_SEARCH; // 'iglu:com.snowplowanalytics.snowplow/site_search/jsonschema/1-0-0'
+WEB_SCHEMAS.TIMING; // 'iglu:com.snowplowanalytics.snowplow/timing/jsonschema/1-0-0'
+WEB_SCHEMAS.WEB_VITALS; // 'iglu:com.snowplowanalytics.snowplow/web_vitals/jsonschema/1-0-0'
 
 // Web context schemas
 WEB_SCHEMAS.WEB_PAGE; // 'iglu:com.snowplowanalytics.snowplow/web_page/jsonschema/1-0-0'
 WEB_SCHEMAS.BROWSER; // 'iglu:com.snowplowanalytics.snowplow/browser_context/jsonschema/2-0-0'
 WEB_SCHEMAS.CLIENT_SESSION; // 'iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-2'
+
+// Media event schemas
+MEDIA_SCHEMAS.PLAY; // 'iglu:com.snowplowanalytics.snowplow.media/play_event/jsonschema/1-0-0'
+MEDIA_SCHEMAS.PAUSE; // 'iglu:com.snowplowanalytics.snowplow.media/pause_event/jsonschema/1-0-0'
+MEDIA_SCHEMAS.END; // 'iglu:com.snowplowanalytics.snowplow.media/end_event/jsonschema/1-0-0'
+MEDIA_SCHEMAS.SEEK_START; // 'iglu:com.snowplowanalytics.snowplow.media/seek_start_event/jsonschema/1-0-0'
+MEDIA_SCHEMAS.BUFFER_START; // 'iglu:com.snowplowanalytics.snowplow.media/buffer_start_event/jsonschema/1-0-0'
+MEDIA_SCHEMAS.QUALITY_CHANGE; // 'iglu:com.snowplowanalytics.snowplow.media/quality_change_event/jsonschema/1-0-0'
+MEDIA_SCHEMAS.FULLSCREEN_CHANGE; // 'iglu:com.snowplowanalytics.snowplow.media/fullscreen_change_event/jsonschema/1-0-0'
+MEDIA_SCHEMAS.PERCENT_PROGRESS; // 'iglu:com.snowplowanalytics.snowplow.media/percent_progress_event/jsonschema/1-0-0'
+MEDIA_SCHEMAS.ERROR; // 'iglu:com.snowplowanalytics.snowplow.media/error_event/jsonschema/1-0-0'
+
+// Media ad schemas
+MEDIA_SCHEMAS.AD_BREAK_START; // 'iglu:com.snowplowanalytics.snowplow.media/ad_break_start_event/jsonschema/1-0-0'
+MEDIA_SCHEMAS.AD_START; // 'iglu:com.snowplowanalytics.snowplow.media/ad_start_event/jsonschema/1-0-0'
+MEDIA_SCHEMAS.AD_COMPLETE; // 'iglu:com.snowplowanalytics.snowplow.media/ad_complete_event/jsonschema/1-0-0'
+MEDIA_SCHEMAS.AD_SKIP; // 'iglu:com.snowplowanalytics.snowplow.media/ad_skip_event/jsonschema/1-0-0'
+
+// Media context schemas
+MEDIA_SCHEMAS.MEDIA_PLAYER; // 'iglu:com.snowplowanalytics.snowplow/media_player/jsonschema/1-0-0'
+MEDIA_SCHEMAS.SESSION; // 'iglu:com.snowplowanalytics.snowplow.media/session/jsonschema/1-0-0'
+MEDIA_SCHEMAS.AD; // 'iglu:com.snowplowanalytics.snowplow.media/ad/jsonschema/1-0-0'
+MEDIA_SCHEMAS.AD_BREAK; // 'iglu:com.snowplowanalytics.snowplow.media/ad_break/jsonschema/1-0-0'
+
+// Media action types (for use with mapping.name)
+MEDIA_ACTIONS.PLAY; // 'play'
+MEDIA_ACTIONS.PAUSE; // 'pause'
+MEDIA_ACTIONS.AD_START; // 'ad_start'
 ```
 
 Use these constants in your mapping configuration to ensure correct schema URIs.

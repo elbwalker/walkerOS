@@ -226,12 +226,142 @@ await elb('walker consent', { analytics: false, marketing: false });
   language="typescript"
 />
 
+## Media Tracking
+
+Track video and audio playback events using Snowplow's [media tracking schemas](https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/javascript-trackers/web-tracker/tracking-events/media/). The destination supports all media events and contexts.
+
+### Basic Usage
+
+<CodeSnippet
+  code={`// Track video play
+await elb('video play', {
+  id: 'video-123',
+  title: 'Product Demo',
+  currentTime: 0,
+  duration: 120,
+});
+
+// Track video progress (25%, 50%, 75% milestones)
+await elb('video progress', {
+  id: 'video-123',
+  percentProgress: 25,
+});
+
+// Track video pause
+await elb('video pause', {
+  id: 'video-123',
+  currentTime: 45,
+});
+
+// Track video complete
+await elb('video end', {
+  id: 'video-123',
+  duration: 120,
+});`}
+  language="typescript"
+/>
+
+### Media Mapping Configuration
+
+Configure media event mappings with the `MEDIA_SCHEMAS` constants:
+
+<CodeSnippet
+  code={`import { MEDIA_SCHEMAS } from '@walkeros/web-destination-snowplow';
+
+// In your destination config mapping:
+{
+  video: {
+    play: {
+      settings: {
+        snowplow: { actionSchema: MEDIA_SCHEMAS.PLAY },
+        context: [{
+          schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+          data: {
+            currentTime: 'data.currentTime',
+            duration: 'data.duration',
+            paused: { value: false },
+            muted: 'data.muted',
+            volume: 'data.volume',
+          },
+        }],
+      },
+    },
+    progress: {
+      settings: {
+        snowplow: { actionSchema: MEDIA_SCHEMAS.PERCENT_PROGRESS },
+      },
+      data: { map: { percentProgress: 'data.percent' } },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+### Ad Tracking
+
+Track video advertisements with pre-roll, mid-roll, and post-roll events:
+
+<CodeSnippet
+  code={`import { MEDIA_SCHEMAS } from '@walkeros/web-destination-snowplow';
+
+{
+  ad: {
+    break_start: {
+      settings: {
+        snowplow: { actionSchema: MEDIA_SCHEMAS.AD_BREAK_START },
+        context: [{
+          schema: MEDIA_SCHEMAS.AD_BREAK,
+          data: {
+            breakId: 'data.breakId',
+            breakType: 'data.breakType', // 'preroll', 'midroll', 'postroll'
+          },
+        }],
+      },
+    },
+    start: {
+      settings: {
+        snowplow: { actionSchema: MEDIA_SCHEMAS.AD_START },
+        context: [{
+          schema: MEDIA_SCHEMAS.AD,
+          data: {
+            adId: 'data.adId',
+            name: 'data.name',
+            duration: 'data.duration',
+          },
+        }],
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+### Available Media Schemas
+
+| Schema | Description | Use Case |
+|--------|-------------|----------|
+| `PLAY` | Playback started | Video/audio play |
+| `PAUSE` | Playback paused | User pauses content |
+| `END` | Playback ended | Video/audio completed |
+| `SEEK_START` / `SEEK_END` | User seeking | Scrubbing timeline |
+| `BUFFER_START` / `BUFFER_END` | Buffering state | Loading content |
+| `QUALITY_CHANGE` | Video quality changed | Adaptive streaming |
+| `FULLSCREEN_CHANGE` | Fullscreen toggled | User interaction |
+| `VOLUME_CHANGE` | Volume changed | User adjustment |
+| `PERCENT_PROGRESS` | Progress milestone | 25%, 50%, 75% markers |
+| `ERROR` | Playback error | Error tracking |
+| `AD_BREAK_START` / `AD_BREAK_END` | Ad break | Pre/mid/post-roll |
+| `AD_START` / `AD_COMPLETE` / `AD_SKIP` | Individual ad | Ad impressions |
+
 ## Schema Constants
 
 The package exports pre-defined Snowplow schema URIs for use in custom mappings:
 
 <CodeSnippet
-  code={`import { SCHEMAS, ACTIONS, WEB_SCHEMAS, CONSENT_SCHEMAS } from '@walkeros/web-destination-snowplow';
+  code={`import {
+  SCHEMAS, ACTIONS, WEB_SCHEMAS, CONSENT_SCHEMAS,
+  MEDIA_SCHEMAS, MEDIA_ACTIONS
+} from '@walkeros/web-destination-snowplow';
 
 // Ecommerce schemas
 SCHEMAS.PRODUCT;     // product/jsonschema/1-0-0
@@ -253,6 +383,28 @@ WEB_SCHEMAS.WEB_PAGE;       // web_page/jsonschema/1-0-0
 WEB_SCHEMAS.BROWSER;        // browser_context/jsonschema/2-0-0
 WEB_SCHEMAS.CLIENT_SESSION; // client_session/jsonschema/1-0-2
 WEB_SCHEMAS.GEOLOCATION;    // geolocation_context/jsonschema/1-1-0
+
+// Media event schemas
+MEDIA_SCHEMAS.PLAY;             // play_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.PAUSE;            // pause_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.END;              // end_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.SEEK_START;       // seek_start_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.BUFFER_START;     // buffer_start_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.QUALITY_CHANGE;   // quality_change_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.PERCENT_PROGRESS; // percent_progress_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.ERROR;            // error_event/jsonschema/1-0-0
+
+// Media context schemas
+MEDIA_SCHEMAS.MEDIA_PLAYER; // media_player/jsonschema/1-0-0
+MEDIA_SCHEMAS.SESSION;      // session/jsonschema/1-0-0
+MEDIA_SCHEMAS.AD;           // ad/jsonschema/1-0-0
+MEDIA_SCHEMAS.AD_BREAK;     // ad_break/jsonschema/1-0-0
+
+// Media ad schemas
+MEDIA_SCHEMAS.AD_BREAK_START; // ad_break_start_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.AD_START;       // ad_start_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.AD_COMPLETE;    // ad_complete_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.AD_SKIP;        // ad_skip_event/jsonschema/1-0-0
 
 // Consent schemas (Enhanced Consent plugin)
 CONSENT_SCHEMAS.PREFERENCES; // consent_preferences/jsonschema/1-0-0

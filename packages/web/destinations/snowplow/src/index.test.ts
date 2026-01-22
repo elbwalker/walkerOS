@@ -9,6 +9,8 @@ import {
   enableAnonymousTracking,
   disableAnonymousTracking,
   WEB_SCHEMAS,
+  MEDIA_SCHEMAS,
+  MEDIA_ACTIONS,
 } from '.';
 import { resetState } from './push';
 
@@ -1361,6 +1363,137 @@ describe('destination snowplow', () => {
       expect(WEB_SCHEMAS.GEOLOCATION).toBe(
         'iglu:com.snowplowanalytics.snowplow/geolocation_context/jsonschema/1-1-0',
       );
+    });
+  });
+
+  describe('MEDIA_SCHEMAS', () => {
+    test('exports media event schemas', () => {
+      expect(MEDIA_SCHEMAS.PLAY).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/play_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.PAUSE).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/pause_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.END).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/end_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.READY).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ready_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.SEEK_START).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/seek_start_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.SEEK_END).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/seek_end_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.BUFFER_START).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/buffer_start_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.BUFFER_END).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/buffer_end_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.QUALITY_CHANGE).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/quality_change_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.FULLSCREEN_CHANGE).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/fullscreen_change_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.VOLUME_CHANGE).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/volume_change_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.PLAYBACK_RATE_CHANGE).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/playback_rate_change_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.PIP_CHANGE).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/picture_in_picture_change_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.PING).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ping_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.PERCENT_PROGRESS).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/percent_progress_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.ERROR).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/error_event/jsonschema/1-0-0',
+      );
+    });
+
+    test('exports ad event schemas', () => {
+      expect(MEDIA_SCHEMAS.AD_BREAK_START).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ad_break_start_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.AD_BREAK_END).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ad_break_end_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.AD_START).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ad_start_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.AD_COMPLETE).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ad_complete_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.AD_SKIP).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ad_skip_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.AD_CLICK).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ad_click_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.AD_PAUSE).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ad_pause_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.AD_RESUME).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ad_resume_event/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.AD_QUARTILE).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ad_quartile_event/jsonschema/1-0-0',
+      );
+    });
+
+    test('exports media context schemas', () => {
+      expect(MEDIA_SCHEMAS.MEDIA_PLAYER).toBe(
+        'iglu:com.snowplowanalytics.snowplow/media_player/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.SESSION).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/session/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.AD).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ad/jsonschema/1-0-0',
+      );
+      expect(MEDIA_SCHEMAS.AD_BREAK).toBe(
+        'iglu:com.snowplowanalytics.snowplow.media/ad_break/jsonschema/1-0-0',
+      );
+    });
+  });
+
+  describe('MEDIA_ACTIONS', () => {
+    test('exports media action types', () => {
+      expect(MEDIA_ACTIONS.PLAY).toBe('play');
+      expect(MEDIA_ACTIONS.PAUSE).toBe('pause');
+      expect(MEDIA_ACTIONS.END).toBe('end');
+      expect(MEDIA_ACTIONS.READY).toBe('ready');
+      expect(MEDIA_ACTIONS.SEEK_START).toBe('seek_start');
+      expect(MEDIA_ACTIONS.SEEK_END).toBe('seek_end');
+      expect(MEDIA_ACTIONS.BUFFER_START).toBe('buffer_start');
+      expect(MEDIA_ACTIONS.BUFFER_END).toBe('buffer_end');
+      expect(MEDIA_ACTIONS.QUALITY_CHANGE).toBe('quality_change');
+      expect(MEDIA_ACTIONS.FULLSCREEN_CHANGE).toBe('fullscreen_change');
+      expect(MEDIA_ACTIONS.VOLUME_CHANGE).toBe('volume_change');
+      expect(MEDIA_ACTIONS.PLAYBACK_RATE_CHANGE).toBe('playback_rate_change');
+      expect(MEDIA_ACTIONS.PIP_CHANGE).toBe('pip_change');
+      expect(MEDIA_ACTIONS.PING).toBe('ping');
+      expect(MEDIA_ACTIONS.PERCENT_PROGRESS).toBe('percent_progress');
+      expect(MEDIA_ACTIONS.ERROR).toBe('error');
+    });
+
+    test('exports ad action types', () => {
+      expect(MEDIA_ACTIONS.AD_BREAK_START).toBe('ad_break_start');
+      expect(MEDIA_ACTIONS.AD_BREAK_END).toBe('ad_break_end');
+      expect(MEDIA_ACTIONS.AD_START).toBe('ad_start');
+      expect(MEDIA_ACTIONS.AD_COMPLETE).toBe('ad_complete');
+      expect(MEDIA_ACTIONS.AD_SKIP).toBe('ad_skip');
+      expect(MEDIA_ACTIONS.AD_CLICK).toBe('ad_click');
+      expect(MEDIA_ACTIONS.AD_PAUSE).toBe('ad_pause');
+      expect(MEDIA_ACTIONS.AD_RESUME).toBe('ad_resume');
+      expect(MEDIA_ACTIONS.AD_QUARTILE).toBe('ad_quartile');
     });
   });
 

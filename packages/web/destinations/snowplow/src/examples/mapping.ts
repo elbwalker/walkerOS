@@ -1,5 +1,5 @@
 import type { DestinationSnowplow } from '..';
-import { ACTIONS, SCHEMAS, WEB_SCHEMAS } from '../types';
+import { ACTIONS, SCHEMAS, WEB_SCHEMAS, MEDIA_SCHEMAS } from '../types';
 
 /**
  * Snowplow Ecommerce Mapping Examples
@@ -477,6 +477,502 @@ export const genericInteraction: DestinationSnowplow.Rule = {
   },
 };
 
+// ============================================================================
+// MEDIA TRACKING MAPPINGS
+// ============================================================================
+
+/**
+ * Media Play Event Mapping
+ *
+ * walkerOS: elb('video play', {
+ *   current_time: 0, duration: 300, paused: false,
+ *   volume: 80, muted: false, video_id: 'intro-video', title: 'Welcome'
+ * })
+ * Snowplow: play_event with media_player and session contexts
+ *
+ * Use for HTML5 video/audio or custom media players.
+ * The media_player context contains current playback state.
+ */
+export const mediaPlay: DestinationSnowplow.Rule = {
+  name: 'media_play',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.PLAY,
+    },
+    context: [
+      // Media player state context (required for all media events)
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: false },
+          paused: 'data.paused',
+          muted: 'data.muted',
+          volume: 'data.volume',
+          playbackRate: { key: 'data.playback_rate', value: 1 },
+          loop: { key: 'data.loop', value: false },
+        },
+      },
+      // Media session context (optional - for session-level analytics)
+      {
+        schema: MEDIA_SCHEMAS.SESSION,
+        data: {
+          mediaSessionId: 'data.session_id',
+          startedAt: 'data.session_started',
+          pingInterval: { value: 30 },
+        },
+      },
+    ],
+  },
+};
+
+/**
+ * Media Pause Event Mapping
+ *
+ * walkerOS: elb('video pause', {
+ *   current_time: 45.2, duration: 300, paused: true, volume: 80
+ * })
+ * Snowplow: pause_event with media_player context
+ */
+export const mediaPause: DestinationSnowplow.Rule = {
+  name: 'media_pause',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.PAUSE,
+    },
+    context: [
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: false },
+          paused: { value: true },
+          muted: 'data.muted',
+          volume: 'data.volume',
+          playbackRate: { key: 'data.playback_rate', value: 1 },
+        },
+      },
+    ],
+  },
+};
+
+/**
+ * Media End Event Mapping
+ *
+ * walkerOS: elb('video end', {
+ *   current_time: 300, duration: 300, video_id: 'intro-video'
+ * })
+ * Snowplow: end_event with media_player context
+ */
+export const mediaEnd: DestinationSnowplow.Rule = {
+  name: 'media_end',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.END,
+    },
+    context: [
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: true },
+          paused: { value: true },
+          muted: 'data.muted',
+          volume: 'data.volume',
+        },
+      },
+    ],
+  },
+};
+
+/**
+ * Media Seek Event Mapping
+ *
+ * walkerOS: elb('video seek', {
+ *   current_time: 120, duration: 300, seek_from: 45, seek_to: 120
+ * })
+ * Snowplow: seek_end_event with media_player context
+ *
+ * Track when user seeks (jumps) to a different position in the media.
+ */
+export const mediaSeek: DestinationSnowplow.Rule = {
+  name: 'media_seek',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.SEEK_END,
+    },
+    context: [
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: false },
+          paused: 'data.paused',
+          muted: 'data.muted',
+          volume: 'data.volume',
+        },
+      },
+    ],
+  },
+  // Additional data for the seek event itself
+  data: {
+    map: {
+      previousTime: 'data.seek_from',
+    },
+  },
+};
+
+/**
+ * Media Progress Event Mapping (Percent Progress)
+ *
+ * walkerOS: elb('video progress', {
+ *   current_time: 75, duration: 300, percent: 25
+ * })
+ * Snowplow: percent_progress_event with media_player context
+ *
+ * Fires at progress milestones (e.g., 25%, 50%, 75%, 100%).
+ */
+export const mediaProgress: DestinationSnowplow.Rule = {
+  name: 'media_progress',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.PERCENT_PROGRESS,
+    },
+    context: [
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: false },
+          paused: 'data.paused',
+          muted: 'data.muted',
+          volume: 'data.volume',
+        },
+      },
+    ],
+  },
+  // The percent progress milestone
+  data: {
+    map: {
+      percentProgress: 'data.percent',
+    },
+  },
+};
+
+/**
+ * Media Buffer Event Mapping
+ *
+ * walkerOS: elb('video buffer', {
+ *   current_time: 45.2, duration: 300, buffering: true
+ * })
+ * Snowplow: buffer_start_event with media_player context
+ *
+ * Track buffering events for quality of experience analysis.
+ */
+export const mediaBuffer: DestinationSnowplow.Rule = {
+  name: 'media_buffer',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.BUFFER_START,
+    },
+    context: [
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: false },
+          paused: 'data.paused',
+          muted: 'data.muted',
+          volume: 'data.volume',
+        },
+      },
+    ],
+  },
+};
+
+/**
+ * Media Quality Change Event Mapping
+ *
+ * walkerOS: elb('video quality', {
+ *   current_time: 45.2, previous_quality: '720p', new_quality: '1080p', auto: false
+ * })
+ * Snowplow: quality_change_event with media_player context
+ */
+export const mediaQualityChange: DestinationSnowplow.Rule = {
+  name: 'media_quality_change',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.QUALITY_CHANGE,
+    },
+    context: [
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: false },
+          paused: 'data.paused',
+          muted: 'data.muted',
+          volume: 'data.volume',
+        },
+      },
+    ],
+  },
+  data: {
+    map: {
+      previousQuality: 'data.previous_quality',
+      newQuality: 'data.new_quality',
+      bitrate: 'data.bitrate',
+      framesPerSecond: 'data.fps',
+      automatic: 'data.auto',
+    },
+  },
+};
+
+/**
+ * Media Fullscreen Change Event Mapping
+ *
+ * walkerOS: elb('video fullscreen', {
+ *   current_time: 45.2, fullscreen: true
+ * })
+ * Snowplow: fullscreen_change_event with media_player context
+ */
+export const mediaFullscreen: DestinationSnowplow.Rule = {
+  name: 'media_fullscreen',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.FULLSCREEN_CHANGE,
+    },
+    context: [
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: false },
+          paused: 'data.paused',
+          muted: 'data.muted',
+          volume: 'data.volume',
+        },
+      },
+    ],
+  },
+  data: {
+    map: {
+      fullscreen: 'data.fullscreen',
+    },
+  },
+};
+
+/**
+ * Media Error Event Mapping
+ *
+ * walkerOS: elb('video error', {
+ *   current_time: 45.2, error_code: 'MEDIA_ERR_NETWORK', error_message: 'Network error'
+ * })
+ * Snowplow: error_event with media_player context
+ */
+export const mediaError: DestinationSnowplow.Rule = {
+  name: 'media_error',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.ERROR,
+    },
+    context: [
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: false },
+          paused: { value: true },
+          muted: 'data.muted',
+          volume: 'data.volume',
+        },
+      },
+    ],
+  },
+  data: {
+    map: {
+      errorCode: 'data.error_code',
+      errorName: 'data.error_name',
+      errorDescription: 'data.error_message',
+    },
+  },
+};
+
+// ============================================================================
+// AD TRACKING MAPPINGS (for video ads)
+// ============================================================================
+
+/**
+ * Ad Break Start Event Mapping
+ *
+ * walkerOS: elb('ad break_start', {
+ *   current_time: 0, ad_break_type: 'preroll', ad_break_id: 'preroll-1'
+ * })
+ * Snowplow: ad_break_start_event with media_player and ad_break contexts
+ */
+export const adBreakStart: DestinationSnowplow.Rule = {
+  name: 'ad_break_start',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.AD_BREAK_START,
+    },
+    context: [
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: false },
+          paused: 'data.paused',
+          muted: 'data.muted',
+          volume: 'data.volume',
+        },
+      },
+      {
+        schema: MEDIA_SCHEMAS.AD_BREAK,
+        data: {
+          breakId: 'data.ad_break_id',
+          name: 'data.ad_break_name',
+          breakType: 'data.ad_break_type', // 'preroll', 'midroll', 'postroll'
+          podSize: 'data.pod_size',
+        },
+      },
+    ],
+  },
+};
+
+/**
+ * Ad Start Event Mapping
+ *
+ * walkerOS: elb('ad start', {
+ *   current_time: 0, ad_id: 'ad-123', creative_id: 'creative-456',
+ *   advertiser: 'Acme Corp', duration: 30, skippable: true
+ * })
+ * Snowplow: ad_start_event with media_player and ad contexts
+ */
+export const adStart: DestinationSnowplow.Rule = {
+  name: 'ad_start',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.AD_START,
+    },
+    context: [
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: false },
+          paused: { value: false },
+          muted: 'data.muted',
+          volume: 'data.volume',
+        },
+      },
+      {
+        schema: MEDIA_SCHEMAS.AD,
+        data: {
+          adId: 'data.ad_id',
+          name: 'data.ad_name',
+          creativeId: 'data.creative_id',
+          duration: 'data.ad_duration',
+          skippable: 'data.skippable',
+          podPosition: 'data.pod_position',
+        },
+      },
+    ],
+  },
+};
+
+/**
+ * Ad Complete Event Mapping
+ *
+ * walkerOS: elb('ad complete', {
+ *   current_time: 30, ad_id: 'ad-123'
+ * })
+ * Snowplow: ad_complete_event with media_player and ad contexts
+ */
+export const adComplete: DestinationSnowplow.Rule = {
+  name: 'ad_complete',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.AD_COMPLETE,
+    },
+    context: [
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: false },
+          paused: { value: false },
+          muted: 'data.muted',
+          volume: 'data.volume',
+        },
+      },
+      {
+        schema: MEDIA_SCHEMAS.AD,
+        data: {
+          adId: 'data.ad_id',
+          name: 'data.ad_name',
+          creativeId: 'data.creative_id',
+        },
+      },
+    ],
+  },
+};
+
+/**
+ * Ad Skip Event Mapping
+ *
+ * walkerOS: elb('ad skip', {
+ *   current_time: 5, ad_id: 'ad-123', time_skipped_at: 5
+ * })
+ * Snowplow: ad_skip_event with media_player and ad contexts
+ */
+export const adSkip: DestinationSnowplow.Rule = {
+  name: 'ad_skip',
+  settings: {
+    snowplow: {
+      actionSchema: MEDIA_SCHEMAS.AD_SKIP,
+    },
+    context: [
+      {
+        schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+        data: {
+          currentTime: 'data.current_time',
+          duration: 'data.duration',
+          ended: { value: false },
+          paused: { value: false },
+          muted: 'data.muted',
+          volume: 'data.volume',
+        },
+      },
+      {
+        schema: MEDIA_SCHEMAS.AD,
+        data: {
+          adId: 'data.ad_id',
+          name: 'data.ad_name',
+          creativeId: 'data.creative_id',
+        },
+      },
+    ],
+  },
+  data: {
+    map: {
+      percentProgress: 'data.percent_at_skip',
+    },
+  },
+};
+
 /**
  * Complete Mapping Configuration
  *
@@ -520,4 +1016,33 @@ export const webConfig = {
   video: { play: videoPlay },
   cta: { click: ctaClick },
   interaction: { track: genericInteraction },
+} satisfies DestinationSnowplow.Rules;
+
+/**
+ * Media Tracking Mapping Configuration
+ *
+ * Maps walkerOS event names to Snowplow media tracking events.
+ * Includes video playback, progress, and ad tracking.
+ *
+ * For automatic media tracking, consider using Snowplow's
+ * @snowplow/browser-plugin-media-tracking plugin instead.
+ */
+export const mediaConfig = {
+  video: {
+    play: mediaPlay,
+    pause: mediaPause,
+    end: mediaEnd,
+    seek: mediaSeek,
+    progress: mediaProgress,
+    buffer: mediaBuffer,
+    quality: mediaQualityChange,
+    fullscreen: mediaFullscreen,
+    error: mediaError,
+  },
+  ad: {
+    break_start: adBreakStart,
+    start: adStart,
+    complete: adComplete,
+    skip: adSkip,
+  },
 } satisfies DestinationSnowplow.Rules;

@@ -721,6 +721,118 @@ export const CONSENT_SCHEMAS = {
 } as const;
 
 /**
+ * Snowplow Media Schema URIs
+ * Events and contexts for media (video/audio) tracking
+ *
+ * Requires @snowplow/browser-plugin-media-tracking for automatic tracking
+ * or can be used manually with trackSelfDescribingEvent
+ *
+ * @see https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/javascript-trackers/web-tracker/tracking-events/media/
+ */
+export const MEDIA_SCHEMAS = {
+  // Core playback events
+  PLAY: 'iglu:com.snowplowanalytics.snowplow.media/play_event/jsonschema/1-0-0',
+  PAUSE:
+    'iglu:com.snowplowanalytics.snowplow.media/pause_event/jsonschema/1-0-0',
+  END: 'iglu:com.snowplowanalytics.snowplow.media/end_event/jsonschema/1-0-0',
+  READY:
+    'iglu:com.snowplowanalytics.snowplow.media/ready_event/jsonschema/1-0-0',
+
+  // Seek events
+  SEEK_START:
+    'iglu:com.snowplowanalytics.snowplow.media/seek_start_event/jsonschema/1-0-0',
+  SEEK_END:
+    'iglu:com.snowplowanalytics.snowplow.media/seek_end_event/jsonschema/1-0-0',
+
+  // Buffer events
+  BUFFER_START:
+    'iglu:com.snowplowanalytics.snowplow.media/buffer_start_event/jsonschema/1-0-0',
+  BUFFER_END:
+    'iglu:com.snowplowanalytics.snowplow.media/buffer_end_event/jsonschema/1-0-0',
+
+  // Player state change events
+  QUALITY_CHANGE:
+    'iglu:com.snowplowanalytics.snowplow.media/quality_change_event/jsonschema/1-0-0',
+  FULLSCREEN_CHANGE:
+    'iglu:com.snowplowanalytics.snowplow.media/fullscreen_change_event/jsonschema/1-0-0',
+  VOLUME_CHANGE:
+    'iglu:com.snowplowanalytics.snowplow.media/volume_change_event/jsonschema/1-0-0',
+  PLAYBACK_RATE_CHANGE:
+    'iglu:com.snowplowanalytics.snowplow.media/playback_rate_change_event/jsonschema/1-0-0',
+  PIP_CHANGE:
+    'iglu:com.snowplowanalytics.snowplow.media/picture_in_picture_change_event/jsonschema/1-0-0',
+
+  // Progress events
+  PING: 'iglu:com.snowplowanalytics.snowplow.media/ping_event/jsonschema/1-0-0',
+  PERCENT_PROGRESS:
+    'iglu:com.snowplowanalytics.snowplow.media/percent_progress_event/jsonschema/1-0-0',
+
+  // Error event
+  ERROR:
+    'iglu:com.snowplowanalytics.snowplow.media/error_event/jsonschema/1-0-0',
+
+  // Ad events
+  AD_BREAK_START:
+    'iglu:com.snowplowanalytics.snowplow.media/ad_break_start_event/jsonschema/1-0-0',
+  AD_BREAK_END:
+    'iglu:com.snowplowanalytics.snowplow.media/ad_break_end_event/jsonschema/1-0-0',
+  AD_START:
+    'iglu:com.snowplowanalytics.snowplow.media/ad_start_event/jsonschema/1-0-0',
+  AD_COMPLETE:
+    'iglu:com.snowplowanalytics.snowplow.media/ad_complete_event/jsonschema/1-0-0',
+  AD_SKIP:
+    'iglu:com.snowplowanalytics.snowplow.media/ad_skip_event/jsonschema/1-0-0',
+  AD_CLICK:
+    'iglu:com.snowplowanalytics.snowplow.media/ad_click_event/jsonschema/1-0-0',
+  AD_PAUSE:
+    'iglu:com.snowplowanalytics.snowplow.media/ad_pause_event/jsonschema/1-0-0',
+  AD_RESUME:
+    'iglu:com.snowplowanalytics.snowplow.media/ad_resume_event/jsonschema/1-0-0',
+  AD_QUARTILE:
+    'iglu:com.snowplowanalytics.snowplow.media/ad_quartile_event/jsonschema/1-0-0',
+
+  // Contexts (attached to media events)
+  MEDIA_PLAYER:
+    'iglu:com.snowplowanalytics.snowplow/media_player/jsonschema/1-0-0',
+  SESSION: 'iglu:com.snowplowanalytics.snowplow.media/session/jsonschema/1-0-0',
+  AD: 'iglu:com.snowplowanalytics.snowplow.media/ad/jsonschema/1-0-0',
+  AD_BREAK:
+    'iglu:com.snowplowanalytics.snowplow.media/ad_break/jsonschema/1-0-0',
+} as const;
+
+/**
+ * Media action types for event mapping
+ * Use with mapping.name to specify the action type
+ */
+export const MEDIA_ACTIONS = {
+  PLAY: 'play',
+  PAUSE: 'pause',
+  END: 'end',
+  READY: 'ready',
+  SEEK_START: 'seek_start',
+  SEEK_END: 'seek_end',
+  BUFFER_START: 'buffer_start',
+  BUFFER_END: 'buffer_end',
+  QUALITY_CHANGE: 'quality_change',
+  FULLSCREEN_CHANGE: 'fullscreen_change',
+  VOLUME_CHANGE: 'volume_change',
+  PLAYBACK_RATE_CHANGE: 'playback_rate_change',
+  PIP_CHANGE: 'pip_change',
+  PING: 'ping',
+  PERCENT_PROGRESS: 'percent_progress',
+  ERROR: 'error',
+  AD_BREAK_START: 'ad_break_start',
+  AD_BREAK_END: 'ad_break_end',
+  AD_START: 'ad_start',
+  AD_COMPLETE: 'ad_complete',
+  AD_SKIP: 'ad_skip',
+  AD_CLICK: 'ad_click',
+  AD_PAUSE: 'ad_pause',
+  AD_RESUME: 'ad_resume',
+  AD_QUARTILE: 'ad_quartile',
+} as const;
+
+/**
  * Type guard for URL-based plugins
  */
 export function isUrlBasedPlugin(
