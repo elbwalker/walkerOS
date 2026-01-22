@@ -1,4 +1,4 @@
-import type { WalkerOS, Logger } from '@walkeros/core';
+import type { WalkerOS, Logger, Mapping as MappingTypes } from '@walkeros/core';
 import type {
   Settings,
   SnowplowFunction,
@@ -17,6 +17,22 @@ import {
 } from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 import { SCHEMAS } from './types';
+
+/**
+ * Check if context data definition contains a loop
+ *
+ * Loop format: { loop: [scope, itemMapping] }
+ */
+function isLoopContextData(
+  data: unknown,
+): data is { loop: [unknown, unknown] } {
+  return (
+    isObject(data) &&
+    'loop' in data &&
+    isArray((data as Record<string, unknown>).loop) &&
+    ((data as Record<string, unknown>).loop as unknown[]).length === 2
+  );
+}
 
 // State object for multiple global contexts
 interface GlobalContextState {
@@ -135,6 +151,8 @@ export async function pushSnowplowEvent(
  * Build Snowplow context array from mapping.context definitions
  *
  * Applies data mappings to each context entity.
+ * Supports loop expansion: when contextDef.data contains a loop definition,
+ * creates multiple context entities (one per array item).
  */
 async function buildContext(
   event: WalkerOS.Event,
@@ -151,14 +169,39 @@ async function buildContext(
       continue;
     }
 
-    // Apply data mapping to get context entity data
-    const mappedData = await getMappingValue(event, { map: contextDef.data });
+    // Check if this is a loop expansion
+    if (isLoopContextData(contextDef.data)) {
+      const [scope, itemMapping] = contextDef.data.loop;
 
-    if (isObject(mappedData)) {
-      contexts.push({
-        schema: contextDef.schema,
-        data: mappedData as WalkerOS.Properties,
-      });
+      // Get the source array using getMappingValue with the scope
+      const sourceArray = await getMappingValue(event, scope as string);
+
+      if (isArray(sourceArray)) {
+        // Apply the item mapping to each element and create a context entity for each
+        for (const item of sourceArray) {
+          const mappedData = await getMappingValue(
+            item,
+            itemMapping as MappingTypes.Data,
+          );
+
+          if (isObject(mappedData)) {
+            contexts.push({
+              schema: contextDef.schema,
+              data: mappedData as WalkerOS.Properties,
+            });
+          }
+        }
+      }
+    } else {
+      // Original behavior: single context entity
+      const mappedData = await getMappingValue(event, { map: contextDef.data });
+
+      if (isObject(mappedData)) {
+        contexts.push({
+          schema: contextDef.schema,
+          data: mappedData as WalkerOS.Properties,
+        });
+      }
     }
   }
 

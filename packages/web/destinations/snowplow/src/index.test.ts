@@ -1062,6 +1062,214 @@ describe('destination snowplow', () => {
     });
   });
 
+  describe('context loop expansion', () => {
+    test('context with loop creates multiple entities', async () => {
+      const event = {
+        ...getEvent('order complete'),
+        nested: [
+          { type: 'product', data: { id: 'P1', name: 'Laptop', price: 999 } },
+          { type: 'product', data: { id: 'P2', name: 'Mouse', price: 49 } },
+        ],
+      };
+
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          order: {
+            complete: {
+              name: 'transaction',
+              settings: {
+                context: [
+                  {
+                    schema:
+                      'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+                    data: {
+                      loop: [
+                        'nested',
+                        {
+                          map: {
+                            id: 'data.id',
+                            name: 'data.name',
+                            price: 'data.price',
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      await elb(event);
+
+      const trackCall = calls.find(
+        (c) => c.args[0] === 'trackSelfDescribingEvent',
+      );
+      expect(trackCall).toBeDefined();
+
+      const selfDescribingEvent = trackCall?.args[1] as { context?: unknown[] };
+      expect(selfDescribingEvent.context).toHaveLength(2);
+      expect(selfDescribingEvent.context).toContainEqual({
+        schema:
+          'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+        data: { id: 'P1', name: 'Laptop', price: 999 },
+      });
+      expect(selfDescribingEvent.context).toContainEqual({
+        schema:
+          'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+        data: { id: 'P2', name: 'Mouse', price: 49 },
+      });
+    });
+
+    test('context with mixed loop and non-loop entities', async () => {
+      const event = {
+        ...getEvent('order complete'),
+        data: {
+          id: 'ORD-123',
+          total: 1048,
+          currency: 'USD',
+        },
+        nested: [
+          { type: 'product', data: { id: 'P1', name: 'Laptop', price: 999 } },
+          { type: 'product', data: { id: 'P2', name: 'Mouse', price: 49 } },
+        ],
+      };
+
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          order: {
+            complete: {
+              name: 'transaction',
+              settings: {
+                context: [
+                  // Non-loop: single transaction entity
+                  {
+                    schema:
+                      'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
+                    data: {
+                      transaction_id: 'data.id',
+                      revenue: 'data.total',
+                      currency: 'data.currency',
+                    },
+                  },
+                  // Loop: multiple product entities
+                  {
+                    schema:
+                      'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+                    data: {
+                      loop: [
+                        'nested',
+                        {
+                          map: {
+                            id: 'data.id',
+                            name: 'data.name',
+                            price: 'data.price',
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      await elb(event);
+
+      const trackCall = calls.find(
+        (c) => c.args[0] === 'trackSelfDescribingEvent',
+      );
+      expect(trackCall).toBeDefined();
+
+      const selfDescribingEvent = trackCall?.args[1] as { context?: unknown[] };
+      // 1 transaction + 2 products = 3 context entities
+      expect(selfDescribingEvent.context).toHaveLength(3);
+
+      // Verify transaction entity
+      expect(selfDescribingEvent.context).toContainEqual({
+        schema:
+          'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
+        data: { transaction_id: 'ORD-123', revenue: 1048, currency: 'USD' },
+      });
+
+      // Verify product entities
+      expect(selfDescribingEvent.context).toContainEqual({
+        schema:
+          'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+        data: { id: 'P1', name: 'Laptop', price: 999 },
+      });
+      expect(selfDescribingEvent.context).toContainEqual({
+        schema:
+          'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+        data: { id: 'P2', name: 'Mouse', price: 49 },
+      });
+    });
+
+    test('context loop with empty source array creates no entities', async () => {
+      const event = {
+        ...getEvent('order complete'),
+        nested: [], // Empty array
+      };
+
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          order: {
+            complete: {
+              name: 'transaction',
+              settings: {
+                context: [
+                  {
+                    schema:
+                      'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+                    data: {
+                      loop: ['nested', { map: { id: 'data.id' } }],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      await elb(event);
+
+      const trackCall = calls.find(
+        (c) => c.args[0] === 'trackSelfDescribingEvent',
+      );
+      expect(trackCall).toBeDefined();
+
+      const selfDescribingEvent = trackCall?.args[1] as { context?: unknown[] };
+      // No context when source array is empty
+      expect(selfDescribingEvent.context).toBeUndefined();
+    });
+  });
+
   describe('utility functions', () => {
     test('clearUserData calls snowplow clearUserData', () => {
       clearUserData(testEnv as DestinationSnowplow.Env);
