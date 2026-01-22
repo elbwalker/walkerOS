@@ -242,13 +242,40 @@ await elb('order complete', {
 ### Structured Events
 
 Structured events follow Snowplow's category/action/label/property/value
-pattern:
+pattern. Use the `struct` mapping property to send structured events:
 
-- **category**: Event category (e.g., 'product', 'order', 'user')
-- **action**: Action performed (e.g., 'view', 'click', 'purchase')
-- **label**: Optional label for additional context
-- **property**: Optional property name
-- **value**: Optional numeric value
+```typescript
+mapping: {
+  button: {
+    click: {
+      settings: {
+        struct: {
+          category: { value: 'ui' },
+          action: { value: 'click' },
+          label: 'data.button_name',
+          property: 'data.section',
+          value: 'data.position',
+        },
+      },
+    },
+  },
+}
+```
+
+When `struct` is configured, the destination calls `trackStructEvent` directly,
+bypassing self-describing events entirely. This is ideal for:
+
+- Simple interactions that don't need schema validation
+- Lightweight event tracking
+- Google Analytics-style category/action tracking
+
+**Available fields:**
+
+- **category** (required): Event category (e.g., 'ui', 'video', 'cta')
+- **action** (required): Action performed (e.g., 'click', 'play', 'submit')
+- **label** (optional): Additional context string
+- **property** (optional): Property name string
+- **value** (optional): Numeric value (automatically converted from string)
 
 ### Self-Describing Events
 
@@ -262,6 +289,31 @@ Self-describing events use Iglu schemas for structured data:
   }
 }
 ```
+
+## Built-in Contexts
+
+Enable automatic context entities to enrich your events:
+
+```typescript
+config: {
+  settings: {
+    collectorUrl: 'https://collector.example.com',
+    contexts: {
+      webPage: true,    // Page view ID (links events to page views)
+      session: true,    // Session tracking (client_session schema)
+      browser: true,    // Browser info (viewport, language, device)
+      geolocation: true // User location (requires permission)
+    },
+  },
+}
+```
+
+| Context       | Schema                      | Description                     |
+| ------------- | --------------------------- | ------------------------------- |
+| `webPage`     | `web_page/1-0-0`            | Unique page view ID             |
+| `session`     | `client_session/1-0-2`      | Session ID, index, timestamps   |
+| `browser`     | `browser_context/2-0-0`     | Viewport, language, device info |
+| `geolocation` | `geolocation_context/1-1-0` | Latitude, longitude             |
 
 ## User Identity & Privacy
 

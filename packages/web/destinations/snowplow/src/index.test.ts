@@ -783,6 +783,68 @@ describe('destination snowplow', () => {
     });
   });
 
+  describe('browser context', () => {
+    test('enables browser context when configured', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          contexts: {
+            browser: true,
+          },
+        },
+      });
+
+      await elb(getEvent());
+
+      const initCall = calls.find(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' && c.args[0] === 'newTracker',
+      );
+      expect(initCall).toBeDefined();
+      expect(initCall?.args[3]).toMatchObject({
+        contexts: {
+          browser: true,
+        },
+      });
+    });
+
+    test('combines multiple context options', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          contexts: {
+            webPage: true,
+            session: true,
+            browser: true,
+          },
+        },
+      });
+
+      await elb(getEvent());
+
+      const initCall = calls.find(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' && c.args[0] === 'newTracker',
+      );
+      expect(initCall).toBeDefined();
+      expect(initCall?.args[3]).toMatchObject({
+        contexts: {
+          webPage: true,
+          session: true,
+          browser: true,
+        },
+      });
+    });
+  });
+
   describe('setUserId', () => {
     test('calls setUserId when user.id is available', async () => {
       const destinationWithEnv = {
@@ -1091,6 +1153,271 @@ describe('destination snowplow', () => {
       expect(WEB_SCHEMAS.GEOLOCATION).toBe(
         'iglu:com.snowplowanalytics.snowplow/geolocation_context/jsonschema/1-1-0',
       );
+    });
+  });
+
+  describe('trackStructEvent', () => {
+    test('calls trackStructEvent when struct mapping is present', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          button: {
+            click: {
+              settings: {
+                struct: {
+                  category: { value: 'ui' },
+                  action: { value: 'click' },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await elb('button click', { button_name: 'submit' });
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: [
+          'trackStructEvent',
+          {
+            category: 'ui',
+            action: 'click',
+          },
+        ],
+      });
+    });
+
+    test('includes optional label, property, and value', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          button: {
+            click: {
+              settings: {
+                struct: {
+                  category: { value: 'ui' },
+                  action: { value: 'click' },
+                  label: 'data.button_name',
+                  property: 'data.section',
+                  value: 'data.position',
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await elb('button click', {
+        button_name: 'submit',
+        section: 'header',
+        position: 3,
+      });
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: [
+          'trackStructEvent',
+          {
+            category: 'ui',
+            action: 'click',
+            label: 'submit',
+            property: 'header',
+            value: 3,
+          },
+        ],
+      });
+    });
+
+    test('converts string value to number', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          button: {
+            click: {
+              settings: {
+                struct: {
+                  category: { value: 'ui' },
+                  action: { value: 'click' },
+                  value: 'data.count',
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await elb('button click', { count: '42' });
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: [
+          'trackStructEvent',
+          {
+            category: 'ui',
+            action: 'click',
+            value: 42,
+          },
+        ],
+      });
+    });
+
+    test('skips event when category is missing', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          button: {
+            click: {
+              settings: {
+                struct: {
+                  category: 'data.category', // Will be undefined
+                  action: { value: 'click' },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await elb('button click', { button_name: 'submit' });
+
+      // Should only have newTracker call, no trackStructEvent
+      const structEventCalls = calls.filter(
+        (c) => c.args[0] === 'trackStructEvent',
+      );
+      expect(structEventCalls).toHaveLength(0);
+    });
+
+    test('skips event when action is missing', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          button: {
+            click: {
+              settings: {
+                struct: {
+                  category: { value: 'ui' },
+                  action: 'data.action', // Will be undefined
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await elb('button click', { button_name: 'submit' });
+
+      // Should only have newTracker call, no trackStructEvent
+      const structEventCalls = calls.filter(
+        (c) => c.args[0] === 'trackStructEvent',
+      );
+      expect(structEventCalls).toHaveLength(0);
+    });
+
+    test('does not call trackSelfDescribingEvent when struct is used', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          button: {
+            click: {
+              name: 'product_view', // Would trigger self-describing if struct wasn't present
+              settings: {
+                struct: {
+                  category: { value: 'ui' },
+                  action: { value: 'click' },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await elb('button click', { button_name: 'submit' });
+
+      // Should have trackStructEvent, NOT trackSelfDescribingEvent
+      const selfDescCalls = calls.filter(
+        (c) => c.args[0] === 'trackSelfDescribingEvent',
+      );
+      const structCalls = calls.filter((c) => c.args[0] === 'trackStructEvent');
+
+      expect(selfDescCalls).toHaveLength(0);
+      expect(structCalls).toHaveLength(1);
+    });
+
+    test('uses dynamic category and action from event data', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          interaction: {
+            track: {
+              settings: {
+                struct: {
+                  category: 'data.event_category',
+                  action: 'data.event_action',
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await elb('interaction track', {
+        event_category: 'navigation',
+        event_action: 'menu_open',
+      });
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: [
+          'trackStructEvent',
+          {
+            category: 'navigation',
+            action: 'menu_open',
+          },
+        ],
+      });
     });
   });
 });

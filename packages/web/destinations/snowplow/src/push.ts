@@ -5,9 +5,16 @@ import type {
   SelfDescribingEvent,
   SelfDescribingJson,
   Mapping,
+  StructuredEventMapping,
 } from './types';
 import type { DestinationWeb } from '@walkeros/web-core';
-import { isObject, isArray, getMappingValue, isString } from '@walkeros/core';
+import {
+  isObject,
+  isArray,
+  getMappingValue,
+  isString,
+  isNumber,
+} from '@walkeros/core';
 import { getEnv } from '@walkeros/web-core';
 import { SCHEMAS } from './types';
 
@@ -86,6 +93,12 @@ export async function pushSnowplowEvent(
     }
   }
 
+  // Handle structured events (bypasses self-describing events)
+  if (mapping.struct) {
+    await handleStructuredEvent(event, mapping.struct, snowplow);
+    return;
+  }
+
   // Handle page view events
   if (event.name === 'page view') {
     snowplow('trackPageView');
@@ -150,4 +163,51 @@ async function buildContext(
   }
 
   return contexts;
+}
+
+/**
+ * Handle structured events via trackStructEvent
+ *
+ * Bypasses self-describing events entirely. Resolves mapping values
+ * and calls Snowplow's trackStructEvent with category, action, label,
+ * property, and value.
+ */
+async function handleStructuredEvent(
+  event: WalkerOS.Event,
+  struct: StructuredEventMapping,
+  snowplow: SnowplowFunction,
+): Promise<void> {
+  // Resolve required fields
+  const category = await getMappingValue(event, struct.category);
+  const action = await getMappingValue(event, struct.action);
+
+  // Category and action are required - silently skip if not present
+  if (!category || !isString(category)) {
+    return;
+  }
+  if (!action || !isString(action)) {
+    return;
+  }
+
+  // Resolve optional fields
+  const label = struct.label
+    ? await getMappingValue(event, struct.label)
+    : undefined;
+  const property = struct.property
+    ? await getMappingValue(event, struct.property)
+    : undefined;
+  const rawValue = struct.value
+    ? await getMappingValue(event, struct.value)
+    : undefined;
+
+  // Convert value to number if present
+  const value = rawValue !== undefined ? Number(rawValue) : undefined;
+
+  snowplow('trackStructEvent', {
+    category,
+    action,
+    ...(label && isString(label) && { label }),
+    ...(property && isString(property) && { property }),
+    ...(value !== undefined && isNumber(value) && !isNaN(value) && { value }),
+  });
 }

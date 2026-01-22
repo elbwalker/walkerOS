@@ -125,6 +125,8 @@ export interface TrackerContexts {
   webPage?: boolean;
   /** Client session context - enables client_session schema */
   session?: boolean;
+  /** Browser context - device info, viewport, language, etc. */
+  browser?: boolean;
   /** Performance timing context */
   performanceTiming?: boolean;
   /** Geolocation context */
@@ -451,6 +453,34 @@ export interface ContextEntity {
 }
 
 /**
+ * Structured event mapping for Snowplow's trackStructEvent
+ *
+ * When configured, bypasses self-describing events entirely
+ * and calls trackStructEvent with the resolved values.
+ *
+ * @example
+ * struct: {
+ *   category: { value: 'ui' },
+ *   action: { value: 'click' },
+ *   label: 'data.button_name',
+ *   property: 'data.section',
+ *   value: 'data.position',
+ * }
+ */
+export interface StructuredEventMapping {
+  /** Event category (required) */
+  category: CoreMapping.Value;
+  /** Event action (required) */
+  action: CoreMapping.Value;
+  /** Event label (optional) */
+  label?: CoreMapping.Value;
+  /** Event property (optional) */
+  property?: CoreMapping.Value;
+  /** Event value - must resolve to a number (optional) */
+  value?: CoreMapping.Value;
+}
+
+/**
  * Custom mapping parameters for Snowplow events
  *
  * Uses standard `name` field for action type.
@@ -474,6 +504,21 @@ export interface Mapping {
    * Snowplow-specific settings override
    */
   snowplow?: SnowplowMappingSettings;
+
+  /**
+   * Structured event mapping (bypasses self-describing events)
+   *
+   * When configured, calls trackStructEvent instead of trackSelfDescribingEvent.
+   * No schema is used - this completely bypasses the self-describing event path.
+   *
+   * @example
+   * struct: {
+   *   category: { value: 'ui' },
+   *   action: { value: 'click' },
+   *   label: 'data.button_name',
+   * }
+   */
+  struct?: StructuredEventMapping;
 }
 
 /**

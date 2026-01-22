@@ -1,5 +1,5 @@
 import type { DestinationSnowplow } from '..';
-import { ACTIONS, SCHEMAS } from '../types';
+import { ACTIONS, SCHEMAS, WEB_SCHEMAS } from '../types';
 
 /**
  * Snowplow Ecommerce Mapping Examples
@@ -275,6 +275,208 @@ export const promoClick: DestinationSnowplow.Rule = {
   },
 };
 
+// ============================================================================
+// WEB EVENT MAPPINGS
+// ============================================================================
+
+/**
+ * Link Click Mapping (Self-Describing Event)
+ *
+ * walkerOS: elb('link click', { url: 'https://example.com', text: 'Learn more', id: 'cta-main' })
+ * Snowplow: link_click self-describing event
+ *
+ * Note: Uses self-describing event with custom schema, not ecommerce action
+ */
+export const linkClick: DestinationSnowplow.Rule = {
+  name: 'link_click', // Custom action name (not ecommerce)
+  settings: {
+    snowplow: {
+      actionSchema: WEB_SCHEMAS.LINK_CLICK,
+    },
+    context: [], // No additional contexts needed
+  },
+  // For link_click, data is passed directly to the schema
+  data: {
+    map: {
+      targetUrl: 'data.url',
+      elementId: 'data.id',
+      elementClasses: 'data.classes',
+      elementContent: 'data.text',
+      elementTarget: 'data.target',
+    },
+  },
+};
+
+/**
+ * Form Submit Mapping (Self-Describing Event)
+ *
+ * walkerOS: elb('form submit', { form_id: 'contact-form', form_classes: ['main-form'] })
+ * Snowplow: submit_form self-describing event
+ */
+export const formSubmit: DestinationSnowplow.Rule = {
+  name: 'submit_form',
+  settings: {
+    snowplow: {
+      actionSchema: WEB_SCHEMAS.SUBMIT_FORM,
+    },
+    context: [],
+  },
+  data: {
+    map: {
+      formId: 'data.form_id',
+      formClasses: 'data.form_classes',
+      elements: 'data.elements',
+    },
+  },
+};
+
+/**
+ * Site Search Mapping (Self-Describing Event)
+ *
+ * walkerOS: elb('search submit', { terms: 'laptop', filters: { category: 'Electronics' }, total_results: 42 })
+ * Snowplow: site_search self-describing event
+ */
+export const siteSearch: DestinationSnowplow.Rule = {
+  name: 'site_search',
+  settings: {
+    snowplow: {
+      actionSchema: WEB_SCHEMAS.SITE_SEARCH,
+    },
+    context: [],
+  },
+  data: {
+    map: {
+      terms: 'data.terms',
+      filters: 'data.filters',
+      totalResults: 'data.total_results',
+      pageResults: 'data.page_results',
+    },
+  },
+};
+
+/**
+ * Social Share Mapping (Self-Describing Event)
+ *
+ * walkerOS: elb('social share', { network: 'twitter', action: 'share', target: 'https://example.com/article' })
+ * Snowplow: social_interaction self-describing event
+ */
+export const socialShare: DestinationSnowplow.Rule = {
+  name: 'social_interaction',
+  settings: {
+    snowplow: {
+      actionSchema: WEB_SCHEMAS.SOCIAL,
+    },
+    context: [],
+  },
+  data: {
+    map: {
+      network: 'data.network',
+      action: 'data.action',
+      target: 'data.target',
+    },
+  },
+};
+
+// ============================================================================
+// STRUCTURED EVENT MAPPINGS
+// ============================================================================
+
+/**
+ * Button Click (Structured Event)
+ *
+ * walkerOS: elb('button click', { button_name: 'submit', section: 'header', position: 1 })
+ * Snowplow: trackStructEvent (category='ui', action='click', label, property, value)
+ *
+ * Use structured events for simple interactions that don't need full schemas.
+ * No schema validation - just category, action, label, property, value.
+ */
+export const buttonClick: DestinationSnowplow.Rule = {
+  settings: {
+    struct: {
+      category: { value: 'ui' },
+      action: { value: 'click' },
+      label: 'data.button_name',
+      property: 'data.section',
+      value: 'data.position',
+    },
+  },
+};
+
+/**
+ * Navigation Event (Structured Event)
+ *
+ * walkerOS: elb('navigation click', { menu: 'main', item: 'products', depth: 2 })
+ * Snowplow: trackStructEvent (category='navigation', action='click')
+ */
+export const navigationClick: DestinationSnowplow.Rule = {
+  settings: {
+    struct: {
+      category: { value: 'navigation' },
+      action: { value: 'click' },
+      label: 'data.menu',
+      property: 'data.item',
+      value: 'data.depth',
+    },
+  },
+};
+
+/**
+ * Video Interaction (Structured Event)
+ *
+ * walkerOS: elb('video play', { video_id: 'intro-video', video_title: 'Welcome', progress: 25 })
+ * Snowplow: trackStructEvent (category='video', action='play')
+ *
+ * For simple video tracking. Use media schemas for full video analytics.
+ */
+export const videoPlay: DestinationSnowplow.Rule = {
+  settings: {
+    struct: {
+      category: { value: 'video' },
+      action: { value: 'play' },
+      label: 'data.video_title',
+      property: 'data.video_id',
+      value: 'data.progress',
+    },
+  },
+};
+
+/**
+ * CTA Interaction (Structured Event)
+ *
+ * walkerOS: elb('cta click', { cta_id: 'hero-signup', cta_text: 'Get Started', variant: 'A' })
+ * Snowplow: trackStructEvent (category='cta', action='click')
+ */
+export const ctaClick: DestinationSnowplow.Rule = {
+  settings: {
+    struct: {
+      category: { value: 'cta' },
+      action: { value: 'click' },
+      label: 'data.cta_text',
+      property: 'data.cta_id',
+    },
+  },
+};
+
+/**
+ * Generic Interaction (Structured Event with Dynamic Category/Action)
+ *
+ * walkerOS: elb('interaction track', { event_category: 'engagement', event_action: 'scroll', depth: 50 })
+ * Snowplow: trackStructEvent with dynamic category/action from event data
+ *
+ * Useful for flexible event tracking where category/action come from the event itself.
+ */
+export const genericInteraction: DestinationSnowplow.Rule = {
+  settings: {
+    struct: {
+      category: 'data.event_category',
+      action: 'data.event_action',
+      label: 'data.event_label',
+      property: 'data.event_property',
+      value: 'data.event_value',
+    },
+  },
+};
+
 /**
  * Complete Mapping Configuration
  *
@@ -300,4 +502,22 @@ export const config = {
     view: promoView,
     click: promoClick,
   },
+} satisfies DestinationSnowplow.Rules;
+
+/**
+ * Web Analytics Mapping Configuration
+ *
+ * Maps walkerOS event names to Snowplow web analytics events.
+ * Includes both self-describing events and structured events.
+ */
+export const webConfig = {
+  link: { click: linkClick },
+  form: { submit: formSubmit },
+  search: { submit: siteSearch },
+  social: { share: socialShare },
+  button: { click: buttonClick },
+  navigation: { click: navigationClick },
+  video: { play: videoPlay },
+  cta: { click: ctaClick },
+  interaction: { track: genericInteraction },
 } satisfies DestinationSnowplow.Rules;
