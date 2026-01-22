@@ -1,6 +1,15 @@
 import type { DestinationWeb } from '@walkeros/web-core';
 import { getEnv } from '@walkeros/web-core';
 
+/**
+ * Default Snowplow tracker script URL
+ *
+ * WARNING: Using @latest in production is not recommended.
+ * Always pin to a specific version for production deployments.
+ */
+export const DEFAULT_SCRIPT_URL =
+  'https://cdn.jsdelivr.net/npm/@snowplow/javascript-tracker@latest/dist/sp.js';
+
 const loadedScripts = new Set<string>();
 
 // For testing: allow resetting loaded scripts
@@ -11,7 +20,7 @@ export function resetLoadedScripts(): void {
 export function addScript(
   collectorUrl: string,
   env?: DestinationWeb.Env,
-  src = 'https://cdn.jsdelivr.net/npm/@snowplow/javascript-tracker@latest/dist/sp.js',
+  src = DEFAULT_SCRIPT_URL,
 ): void {
   // Prevent loading the same script multiple times
   if (loadedScripts.has(collectorUrl)) return;

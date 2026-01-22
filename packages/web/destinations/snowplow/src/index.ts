@@ -178,7 +178,7 @@ export const destinationSnowplow: Destination = {
 
     // Load Snowplow script if required
     if (loadScript) {
-      addScript(collectorUrl!, env);
+      addScript(collectorUrl!, env, settings.scriptUrl);
     }
 
     // Setup snowplow function

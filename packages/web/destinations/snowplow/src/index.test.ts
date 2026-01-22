@@ -2,7 +2,7 @@ import type { WalkerOS } from '@walkeros/core';
 import type { DestinationSnowplow } from '.';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { startFlow } from '@walkeros/collector';
-import { getEvent, mockEnv } from '@walkeros/core';
+import { getEvent, mockEnv, createMockLogger } from '@walkeros/core';
 import {
   examples,
   clearUserData,
@@ -12,7 +12,8 @@ import {
   MEDIA_SCHEMAS,
   MEDIA_ACTIONS,
 } from '.';
-import { resetState } from './push';
+import { resetState, pushSnowplowEvent } from './push';
+import { resetLoadedScripts, DEFAULT_SCRIPT_URL } from './setup';
 
 const { events, mapping, walkerosEvents } = examples;
 
@@ -124,6 +125,89 @@ describe('destination snowplow', () => {
       'Config settings collectorUrl missing',
     );
     consoleErrorSpy.mockRestore();
+  });
+
+  describe('loadScript with scriptUrl', () => {
+    let createdScripts: Array<{ src: string }>;
+
+    beforeEach(() => {
+      createdScripts = [];
+      resetLoadedScripts();
+    });
+
+    test('uses custom scriptUrl when provided', async () => {
+      const customScriptUrl =
+        'https://cdn.jsdelivr.net/npm/@snowplow/javascript-tracker@3.24.0/dist/sp.js';
+
+      // Create env that captures created scripts
+      const scriptEnv = {
+        window: {
+          snowplow: Object.assign(() => {}, { q: [] }),
+        },
+        document: {
+          createElement: () => {
+            const element = { src: '', async: false };
+            createdScripts.push(element);
+            return element;
+          },
+          head: {
+            appendChild: () => {},
+          },
+        },
+      };
+
+      const destinationWithEnv = {
+        ...destination,
+        env: scriptEnv as unknown as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        loadScript: true,
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          scriptUrl: customScriptUrl,
+        },
+      });
+
+      await elb(getEvent());
+
+      expect(createdScripts.length).toBeGreaterThan(0);
+      expect(createdScripts[0].src).toBe(customScriptUrl);
+    });
+
+    test('uses default CDN URL when scriptUrl not provided', async () => {
+      // Create env that captures created scripts
+      const scriptEnv = {
+        window: {
+          snowplow: Object.assign(() => {}, { q: [] }),
+        },
+        document: {
+          createElement: () => {
+            const element = { src: '', async: false };
+            createdScripts.push(element);
+            return element;
+          },
+          head: {
+            appendChild: () => {},
+          },
+        },
+      };
+
+      const destinationWithEnv = {
+        ...destination,
+        env: scriptEnv as unknown as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        loadScript: true,
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+      });
+
+      await elb(getEvent());
+
+      expect(createdScripts.length).toBeGreaterThan(0);
+      expect(createdScripts[0].src).toBe(DEFAULT_SCRIPT_URL);
+    });
   });
 
   test('event transaction (default)', async () => {
@@ -1758,6 +1842,311 @@ describe('destination snowplow', () => {
             action: 'menu_open',
           },
         ],
+      });
+    });
+  });
+
+  describe('logging warnings', () => {
+    test('logs warning when struct category is missing', async () => {
+      const mockLogger = createMockLogger();
+      const snowplowCalls: unknown[][] = [];
+      const mockSnowplow = (...args: unknown[]) => {
+        snowplowCalls.push(args);
+      };
+
+      const structEnv = {
+        window: { snowplow: mockSnowplow },
+        document: {},
+      };
+
+      await pushSnowplowEvent(
+        getEvent('button click'),
+        {
+          struct: {
+            category: 'data.category', // Will be undefined
+            action: { value: 'click' },
+          },
+        },
+        {},
+        undefined,
+        {},
+        structEnv as DestinationSnowplow.Env,
+        mockLogger,
+      );
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Struct event skipped: invalid category',
+        expect.objectContaining({
+          event: 'button click',
+          reason: 'missing',
+        }),
+      );
+      expect(snowplowCalls).toHaveLength(0);
+    });
+
+    test('logs warning when struct category is not a string', async () => {
+      const mockLogger = createMockLogger();
+      const snowplowCalls: unknown[][] = [];
+      const mockSnowplow = (...args: unknown[]) => {
+        snowplowCalls.push(args);
+      };
+
+      const structEnv = {
+        window: { snowplow: mockSnowplow },
+        document: {},
+      };
+
+      await pushSnowplowEvent(
+        getEvent('button click', { data: { category: 123 } }),
+        {
+          struct: {
+            category: 'data.category', // Will be a number
+            action: { value: 'click' },
+          },
+        },
+        {},
+        undefined,
+        {},
+        structEnv as DestinationSnowplow.Env,
+        mockLogger,
+      );
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Struct event skipped: invalid category',
+        expect.objectContaining({
+          event: 'button click',
+          reason: 'not a string',
+        }),
+      );
+      expect(snowplowCalls).toHaveLength(0);
+    });
+
+    test('logs warning when struct action is missing', async () => {
+      const mockLogger = createMockLogger();
+      const snowplowCalls: unknown[][] = [];
+      const mockSnowplow = (...args: unknown[]) => {
+        snowplowCalls.push(args);
+      };
+
+      const structEnv = {
+        window: { snowplow: mockSnowplow },
+        document: {},
+      };
+
+      await pushSnowplowEvent(
+        getEvent('button click'),
+        {
+          struct: {
+            category: { value: 'ui' },
+            action: 'data.action', // Will be undefined
+          },
+        },
+        {},
+        undefined,
+        {},
+        structEnv as DestinationSnowplow.Env,
+        mockLogger,
+      );
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Struct event skipped: invalid action',
+        expect.objectContaining({
+          event: 'button click',
+          reason: 'missing',
+        }),
+      );
+      expect(snowplowCalls).toHaveLength(0);
+    });
+
+    test('logs warning when struct action is not a string', async () => {
+      const mockLogger = createMockLogger();
+      const snowplowCalls: unknown[][] = [];
+      const mockSnowplow = (...args: unknown[]) => {
+        snowplowCalls.push(args);
+      };
+
+      const structEnv = {
+        window: { snowplow: mockSnowplow },
+        document: {},
+      };
+
+      await pushSnowplowEvent(
+        getEvent('button click', { data: { action: { nested: true } } }),
+        {
+          struct: {
+            category: { value: 'ui' },
+            action: 'data.action', // Will be an object
+          },
+        },
+        {},
+        undefined,
+        {},
+        structEnv as DestinationSnowplow.Env,
+        mockLogger,
+      );
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Struct event skipped: invalid action',
+        expect.objectContaining({
+          event: 'button click',
+          reason: 'not a string',
+        }),
+      );
+      expect(snowplowCalls).toHaveLength(0);
+    });
+
+    test('logs warning when event has mapping but no action name', async () => {
+      const mockLogger = createMockLogger();
+      const snowplowCalls: unknown[][] = [];
+      const mockSnowplow = (...args: unknown[]) => {
+        snowplowCalls.push(args);
+      };
+
+      const structEnv = {
+        window: { snowplow: mockSnowplow },
+        document: {},
+      };
+
+      // Event has mapping with context but no actionName
+      await pushSnowplowEvent(
+        getEvent('custom event'),
+        {
+          context: [
+            {
+              schema: 'iglu:com.example/context/jsonschema/1-0-0',
+              data: { id: 'data.id' },
+            },
+          ],
+        },
+        {},
+        undefined, // No actionName
+        {},
+        structEnv as DestinationSnowplow.Env,
+        mockLogger,
+      );
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Event skipped: no action name in mapping',
+        expect.objectContaining({
+          event: 'custom event',
+          hasContext: true,
+        }),
+      );
+    });
+
+    test('throws when tracker not initialized during push', async () => {
+      const mockLogger = createMockLogger();
+
+      const noTrackerEnv = {
+        window: { snowplow: undefined },
+        document: {},
+      };
+
+      await expect(
+        pushSnowplowEvent(
+          getEvent('page view'),
+          {},
+          {},
+          undefined,
+          {},
+          noTrackerEnv as DestinationSnowplow.Env,
+          mockLogger,
+        ),
+      ).rejects.toThrow('Tracker not initialized');
+
+      expect(mockLogger.throw).toHaveBeenCalledWith('Tracker not initialized');
+    });
+  });
+
+  describe('context building edge cases', () => {
+    test('skips context entries without schema', async () => {
+      const snowplowCalls: unknown[][] = [];
+      const mockSnowplow = (...args: unknown[]) => {
+        snowplowCalls.push(args);
+      };
+
+      const testEnvLocal = {
+        window: { snowplow: mockSnowplow },
+        document: {},
+      };
+
+      await pushSnowplowEvent(
+        getEvent('product view'),
+        {
+          context: [
+            // Entry without schema - should be skipped
+            { data: { id: 'data.id' } } as unknown as {
+              schema: string;
+              data: unknown;
+            },
+            // Valid entry - should be included
+            {
+              schema: 'iglu:com.example/product/jsonschema/1-0-0',
+              data: { name: { value: 'Test Product' } },
+            },
+          ],
+        },
+        {},
+        'product_view', // actionName
+        {},
+        testEnvLocal as DestinationSnowplow.Env,
+      );
+
+      const trackCall = snowplowCalls.find(
+        (c) => c[0] === 'trackSelfDescribingEvent',
+      );
+      expect(trackCall).toBeDefined();
+
+      const selfDescribingEvent = trackCall?.[1] as { context?: unknown[] };
+      // Only valid context should be included
+      expect(selfDescribingEvent.context).toHaveLength(1);
+      expect(selfDescribingEvent.context?.[0]).toMatchObject({
+        schema: 'iglu:com.example/product/jsonschema/1-0-0',
+      });
+    });
+
+    test('skips non-object context entries', async () => {
+      const snowplowCalls: unknown[][] = [];
+      const mockSnowplow = (...args: unknown[]) => {
+        snowplowCalls.push(args);
+      };
+
+      const testEnvLocal = {
+        window: { snowplow: mockSnowplow },
+        document: {},
+      };
+
+      await pushSnowplowEvent(
+        getEvent('product view'),
+        {
+          context: [
+            // Non-object entries - should be skipped
+            null as unknown as { schema: string; data: unknown },
+            'string entry' as unknown as { schema: string; data: unknown },
+            123 as unknown as { schema: string; data: unknown },
+            // Valid entry - should be included
+            {
+              schema: 'iglu:com.example/product/jsonschema/1-0-0',
+              data: { name: { value: 'Test Product' } },
+            },
+          ],
+        },
+        {},
+        'product_view', // actionName
+        {},
+        testEnvLocal as DestinationSnowplow.Env,
+      );
+
+      const trackCall = snowplowCalls.find(
+        (c) => c[0] === 'trackSelfDescribingEvent',
+      );
+      expect(trackCall).toBeDefined();
+
+      const selfDescribingEvent = trackCall?.[1] as { context?: unknown[] };
+      // Only valid context should be included
+      expect(selfDescribingEvent.context).toHaveLength(1);
+      expect(selfDescribingEvent.context?.[0]).toMatchObject({
+        schema: 'iglu:com.example/product/jsonschema/1-0-0',
       });
     });
   });

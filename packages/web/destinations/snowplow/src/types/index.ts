@@ -274,6 +274,19 @@ export interface Settings {
   collectorUrl?: string;
 
   /**
+   * URL to the Snowplow JavaScript tracker script
+   *
+   * Used when `loadScript: true`. If not provided, defaults to the jsdelivr CDN
+   * with `@latest` version tag.
+   *
+   * **Security Recommendation:** Always pin to a specific version in production.
+   *
+   * @example 'https://cdn.jsdelivr.net/npm/@snowplow/javascript-tracker@3.24.0/dist/sp.js'
+   * @default 'https://cdn.jsdelivr.net/npm/@snowplow/javascript-tracker@latest/dist/sp.js'
+   */
+  scriptUrl?: string;
+
+  /**
    * Application ID
    *
    * Identifier for your application in Snowplow.
@@ -662,7 +675,7 @@ export const SCHEMAS = {
  * Snowplow ecommerce action types
  * Type-safe values matching official Action['type']
  */
-export const ACTIONS: Record<string, Action['type']> = {
+export const ACTIONS = {
   PRODUCT_VIEW: 'product_view',
   LIST_VIEW: 'list_view',
   LIST_CLICK: 'list_click',
@@ -674,7 +687,7 @@ export const ACTIONS: Record<string, Action['type']> = {
   PROMO_VIEW: 'promo_view',
   PROMO_CLICK: 'promo_click',
   TRANSACTION_ERROR: 'trns_error',
-} as const;
+} as const satisfies Record<string, Action['type']>;
 
 /**
  * Snowplow Web Schema URIs

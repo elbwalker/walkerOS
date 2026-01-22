@@ -47,6 +47,8 @@ await elb('product view', { id: 'P123', name: 'Laptop', price: 999 });
 - **appId** (string): Application identifier. Default: `'walkerOS'`
 - **trackerName** (string): Tracker instance name. Default: `'sp'`
 - **platform** (string): Platform identifier. Default: `'web'`
+- **scriptUrl** (string): Custom URL for the Snowplow tracker script. Used when
+  `loadScript: true`. Always pin to a specific version in production.
 - **eventMethod** ('struct' | 'self'): Event tracking method. Default:
   `'struct'`
   - `'struct'`: Use structured events (category/action/label/property/value)
@@ -166,6 +168,25 @@ Or manually:
 ```html
 <script src="https://cdn.jsdelivr.net/npm/@snowplow/javascript-tracker@latest/dist/sp.js"></script>
 ```
+
+#### Custom Script URL
+
+By default, the tracker loads from the jsdelivr CDN with `@latest`. For
+production, always pin to a specific version using the `scriptUrl` setting:
+
+```typescript
+config: {
+  settings: {
+    collectorUrl: 'https://collector.example.com',
+    scriptUrl: 'https://cdn.jsdelivr.net/npm/@snowplow/javascript-tracker@3.24.0/dist/sp.js',
+  },
+  loadScript: true,
+}
+```
+
+**Security Warning:** Using `@latest` in production is not recommended as it can
+introduce breaking changes or security vulnerabilities without notice. Always
+pin to a specific version.
 
 ## Examples
 

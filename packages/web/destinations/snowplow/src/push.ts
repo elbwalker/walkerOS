@@ -111,7 +111,7 @@ export async function pushSnowplowEvent(
 
   // Handle structured events (bypasses self-describing events)
   if (mapping.struct) {
-    await handleStructuredEvent(event, mapping.struct, snowplow);
+    await handleStructuredEvent(event, mapping.struct, snowplow, logger);
     return;
   }
 
@@ -142,9 +142,13 @@ export async function pushSnowplowEvent(
     };
 
     snowplow('trackSelfDescribingEvent', selfDescribingEvent);
+  } else {
+    // Events without action name are skipped
+    logger?.info('Event skipped: no action name in mapping', {
+      event: event.name,
+      hasContext: !!mapping.context?.length,
+    });
   }
-
-  // Events without action name are silently skipped
 }
 
 /**
@@ -219,16 +223,27 @@ async function handleStructuredEvent(
   event: WalkerOS.Event,
   struct: StructuredEventMapping,
   snowplow: SnowplowFunction,
+  logger?: Logger.Instance,
 ): Promise<void> {
   // Resolve required fields
   const category = await getMappingValue(event, struct.category);
   const action = await getMappingValue(event, struct.action);
 
-  // Category and action are required - silently skip if not present
+  // Category and action are required - skip with warning if not present
   if (!category || !isString(category)) {
+    logger?.info('Struct event skipped: invalid category', {
+      event: event.name,
+      category,
+      reason: !category ? 'missing' : 'not a string',
+    });
     return;
   }
   if (!action || !isString(action)) {
+    logger?.info('Struct event skipped: invalid action', {
+      event: event.name,
+      action,
+      reason: !action ? 'missing' : 'not a string',
+    });
     return;
   }
 
