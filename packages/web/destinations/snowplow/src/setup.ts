@@ -34,7 +34,7 @@ export function setup(env?: DestinationWeb.Env): SnowplowFunction | undefined {
   const { window } = getEnv(env);
   const w = window as unknown as {
     snowplow?: SnowplowFunction;
-    GlobalSnowplowNamespace?: string;
+    GlobalSnowplowNamespace?: string[];
   };
 
   // Setup snowplow function if not exists
@@ -45,7 +45,7 @@ export function setup(env?: DestinationWeb.Env): SnowplowFunction | undefined {
 
     sp.q = [];
     w.snowplow = sp;
-    w.GlobalSnowplowNamespace = 'snowplow';
+    w.GlobalSnowplowNamespace = ['snowplow'];
   }
 
   return w.snowplow;
