@@ -344,6 +344,165 @@ describe('Bundler', () => {
     });
   });
 
+  describe('$code: prefix support', () => {
+    it('outputs raw JavaScript for $code: prefixed values', () => {
+      const flowConfig: Flow.Config = {
+        server: {},
+        sources: {
+          http: {
+            package: '@walkeros/server-source-express',
+            code: 'sourceExpress',
+            config: {
+              settings: {
+                transform: '$code:(value) => value.toUpperCase()',
+              },
+            },
+          },
+        },
+        destinations: {},
+      };
+
+      const explicitCodeImports = new Map([
+        ['@walkeros/server-source-express', new Set(['sourceExpress'])],
+      ]);
+
+      const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+      // Should contain raw JS, not quoted string
+      expect(result).toContain('"transform": (value) => value.toUpperCase()');
+      // Should NOT contain the $code: prefix
+      expect(result).not.toContain('$code:');
+    });
+
+    it('handles nested $code: values in objects', () => {
+      const flowConfig: Flow.Config = {
+        server: {},
+        sources: {},
+        destinations: {
+          api: {
+            package: '@walkeros/destination-demo',
+            code: 'destinationDemo',
+            config: {
+              mapping: {
+                product: {
+                  view: {
+                    data: {
+                      map: {
+                        price: {
+                          key: 'data.price',
+                          fn: '$code:(v) => Math.round(v * 100)',
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const explicitCodeImports = new Map([
+        ['@walkeros/destination-demo', new Set(['destinationDemo'])],
+      ]);
+
+      const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+      // Should contain raw JS function
+      expect(result).toContain('"fn": (v) => Math.round(v * 100)');
+      expect(result).not.toContain('$code:');
+    });
+
+    it('handles $code: values in arrays', () => {
+      const flowConfig: Flow.Config = {
+        server: {},
+        sources: {},
+        destinations: {
+          api: {
+            package: '@walkeros/destination-demo',
+            code: 'destinationDemo',
+            config: {
+              settings: {
+                transforms: ['$code:(x) => x * 2', '$code:(x) => x.trim()'],
+              },
+            },
+          },
+        },
+      };
+
+      const explicitCodeImports = new Map([
+        ['@walkeros/destination-demo', new Set(['destinationDemo'])],
+      ]);
+
+      const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+      expect(result).toContain('(x) => x * 2');
+      expect(result).toContain('(x) => x.trim()');
+      expect(result).not.toContain('$code:');
+    });
+
+    it('preserves normal strings without $code: prefix', () => {
+      const flowConfig: Flow.Config = {
+        server: {},
+        sources: {},
+        destinations: {
+          api: {
+            package: '@walkeros/destination-demo',
+            code: 'destinationDemo',
+            config: {
+              settings: {
+                url: 'https://api.example.com',
+                name: 'Test API',
+              },
+            },
+          },
+        },
+      };
+
+      const explicitCodeImports = new Map([
+        ['@walkeros/destination-demo', new Set(['destinationDemo'])],
+      ]);
+
+      const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+      // Normal strings should be quoted
+      expect(result).toContain('"url": "https://api.example.com"');
+      expect(result).toContain('"name": "Test API"');
+    });
+
+    it('handles mixed $code: and regular values', () => {
+      const flowConfig: Flow.Config = {
+        server: {},
+        sources: {},
+        destinations: {
+          api: {
+            package: '@walkeros/destination-demo',
+            code: 'destinationDemo',
+            config: {
+              settings: {
+                name: 'Test',
+                port: 8080,
+                enabled: true,
+                transform: '$code:(x) => x',
+              },
+            },
+          },
+        },
+      };
+
+      const explicitCodeImports = new Map([
+        ['@walkeros/destination-demo', new Set(['destinationDemo'])],
+      ]);
+
+      const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+      expect(result).toContain('"name": "Test"');
+      expect(result).toContain('"port": 8080');
+      expect(result).toContain('"enabled": true');
+      expect(result).toContain('"transform": (x) => x');
+    });
+  });
+
   describe('generatePlatformWrapper', () => {
     it('generates web IIFE wrapper', () => {
       const config = '{ sources: {}, destinations: {} }';

@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-snowplow",
   "description": "Snowplow web destination for walkerOS",
-  "version": "1.0.0",
+  "version": "0.0.7",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

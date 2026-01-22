@@ -93,7 +93,7 @@ describe('on() event queuing', () => {
     });
 
     // Manually trigger session event before consent
-    collector.session = { isStart: true };
+    collector.session = { isStart: true, storage: false };
 
     // These should be queued since destination isn't initialized
     await elb('walker run');
