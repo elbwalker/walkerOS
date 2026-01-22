@@ -539,37 +539,42 @@ function generateImportStatements(
     const isUsedByDestOrSource = usedPackages.has(packageName);
     const hasExplicitCode = explicitCodeImports.has(packageName);
 
+    // Track what named imports we'll generate to avoid duplicates
+    const namedImportsToGenerate: string[] = [];
+
+    // 1. Generate default import for packages used by sources/destinations
+    //    UNLESS explicit code is specified (allows packages without default export)
+    if (isUsedByDestOrSource && !hasExplicitCode) {
+      const varName = packageNameToVariable(packageName);
+      importStatements.push(`import ${varName} from '${packageName}';`);
+    }
+
+    // 2. Generate named import for explicit code (packages without default export)
+    if (hasExplicitCode) {
+      const codes = Array.from(explicitCodeImports.get(packageName)!);
+      namedImportsToGenerate.push(...codes);
+    }
+
+    // 3. Process imports list (utilities and special syntax)
     if (packageConfig.imports && packageConfig.imports.length > 0) {
-      // Explicit imports (utilities) - existing logic
-      // Remove duplicates within the same package
       const uniqueImports = [...new Set(packageConfig.imports)];
 
       // Handle special "default as X" syntax
-      const defaultImports: string[] = [];
-      const namedImports: string[] = [];
-
       for (const imp of uniqueImports) {
         if (imp.startsWith('default as ')) {
-          defaultImports.push(imp.replace('default as ', ''));
+          // Only generate default import if not already generated above
+          if (!isUsedByDestOrSource || hasExplicitCode) {
+            const defaultImportName = imp.replace('default as ', '');
+            importStatements.push(
+              `import ${defaultImportName} from '${packageName}';`,
+            );
+          }
         } else {
-          namedImports.push(imp);
+          // Add to named imports if not already in explicit code
+          if (!namedImportsToGenerate.includes(imp)) {
+            namedImportsToGenerate.push(imp);
+          }
         }
-      }
-
-      // Generate import statements
-      if (defaultImports.length > 0) {
-        for (const defaultImport of defaultImports) {
-          importStatements.push(
-            `import ${defaultImport} from '${packageName}';`,
-          );
-        }
-      }
-
-      if (namedImports.length > 0) {
-        const importList = namedImports.join(', ');
-        importStatements.push(
-          `import { ${importList} } from '${packageName}';`,
-        );
       }
 
       // Check if this package imports examples and create mappings
@@ -577,10 +582,7 @@ function generateImportStatements(
         imp.includes('examples as '),
       );
       if (examplesImport) {
-        // Extract destination name and examples variable name
-        // Format: "examples as gtagExamples" -> gtagExamples
         const examplesVarName = examplesImport.split(' as ')[1];
-        // Get destination name from package (assumes @walkeros/web-destination-xxx format)
         const destinationMatch = packageName.match(
           /@walkeros\/web-destination-(.+)$/,
         );
@@ -591,20 +593,13 @@ function generateImportStatements(
           );
         }
       }
-    } else if (hasExplicitCode) {
-      // Package with explicit code specified in destinations/sources
-      // → Generate named imports
-      const codes = Array.from(explicitCodeImports.get(packageName)!);
-      importStatements.push(
-        `import { ${codes.join(', ')} } from '${packageName}';`,
-      );
-    } else if (isUsedByDestOrSource) {
-      // Package used by destination/source but no explicit imports or code
-      // → Generate default import
-      const varName = packageNameToVariable(packageName);
-      importStatements.push(`import ${varName} from '${packageName}';`);
     }
-    // If package declared but not used by any dest/source, skip import
+
+    // 4. Generate combined named imports statement
+    if (namedImportsToGenerate.length > 0) {
+      const importList = namedImportsToGenerate.join(', ');
+      importStatements.push(`import { ${importList} } from '${packageName}';`);
+    }
 
     // Examples are no longer auto-imported - simulator loads them dynamically
   }

@@ -58,6 +58,52 @@ The CLI uses types from `@walkeros/core`:
 
 The CLI transforms `Flow.Setup` → `Flow.Config` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
 
+## Package imports
+
+### Default exports (sources & destinations)
+
+Sources and destinations automatically use their **default export** - no `imports` needed:
+
+<CodeSnippet
+  code={`"packages": {
+  "@walkeros/web-source-browser": {},        // Uses default export
+  "@walkeros/destination-demo": {}           // Uses default export
+}`}
+  language="json"
+/>
+
+### Utility imports
+
+Use `imports` when you need specific utility functions from a package:
+
+<CodeSnippet
+  code={`"packages": {
+  "@walkeros/collector": { "imports": ["startFlow"] },     // Required utility
+  "@walkeros/core": { "imports": ["getId", "clone"] },     // Optional utilities
+  "@walkeros/web-source-browser": {
+    "imports": ["createTagger"]                            // Additional utility
+  }
+}`}
+  language="json"
+/>
+
+### Explicit code (advanced)
+
+For packages without a default export, specify both `imports` and `code`:
+
+<CodeSnippet
+  code={`"packages": {
+  "@my/custom-package": { "imports": ["namedExport"] }
+},
+"sources": {
+  "custom": {
+    "package": "@my/custom-package",
+    "code": "namedExport"     // Explicitly use the named export
+  }
+}`}
+  language="json"
+/>
+
 ## Local packages
 
 By default, the CLI downloads packages from npm. For development or testing unpublished packages, you can use local packages instead by specifying a `path` property.
@@ -74,8 +120,7 @@ Add a `path` property to any package to use a local directory instead of npm:
       "imports": ["startFlow"]
     },
     "@my/custom-destination": {
-      "path": "./my-custom-destination",
-      "imports": ["myDestination"]
+      "path": "./my-custom-destination"
     }
   }
 }`}
@@ -118,8 +163,7 @@ In this example, even though `@walkeros/collector` depends on `@walkeros/core`, 
   code={`{
   "packages": {
     "@my-org/destination-custom": {
-      "path": "../my-destination",
-      "imports": ["destinationCustom"]
+      "path": "../my-destination"
     }
   }
 }`}
@@ -154,8 +198,8 @@ Before using the CLI, you need a [flow configuration file](/docs/getting-started
       "server": {},
       "packages": {
         "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
-        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+        "@walkeros/server-source-express": {},
+        "@walkeros/destination-demo": {}
       },
       "sources": {
         "http": {
@@ -179,6 +223,10 @@ Before using the CLI, you need a [flow configuration file](/docs/getting-started
 }`}
   language="json"
 />
+
+:::tip Simplified package imports
+Sources and destinations use their **default export** automatically - no `imports` needed. The `imports` field is only required for utility functions like `startFlow` from `@walkeros/collector`.
+:::
 
 Save this as `flow.json`.
 
@@ -218,8 +266,8 @@ Create `server-collect.json`:
       "server": {},
       "packages": {
         "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
-        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+        "@walkeros/server-source-express": {},
+        "@walkeros/destination-demo": {}
       },
       "sources": {
         "http": {
@@ -358,7 +406,7 @@ Create `test-flow.json`:
       "server": {},
       "packages": {
         "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+        "@walkeros/destination-demo": {}
       },
       "destinations": {
         "demo": {
@@ -522,7 +570,7 @@ Create `api-flow.json` with a destination that makes real HTTP calls:
       "server": {},
       "packages": {
         "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
+        "@walkeros/web-destination-api": {}
       },
       "destinations": {
         "api": {
@@ -727,8 +775,8 @@ Create `collect.json`:
       "server": {},
       "packages": {
         "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
-        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+        "@walkeros/server-source-express": {},
+        "@walkeros/destination-demo": {}
       },
       "sources": {
         "http": {
@@ -891,8 +939,8 @@ Create `web-track.json`:
       },
       "packages": {
         "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
-        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
+        "@walkeros/web-source-browser": {},
+        "@walkeros/web-destination-api": {}
       },
       "sources": {
         "browser": {
@@ -999,8 +1047,8 @@ Create `server-collect.json`:
       "server": {},
       "packages": {
         "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
-        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+        "@walkeros/server-source-express": {},
+        "@walkeros/destination-demo": {}
       },
       "sources": {
         "http": {
@@ -1039,8 +1087,8 @@ Create `web-track.json`:
       },
       "packages": {
         "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
-        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
+        "@walkeros/web-source-browser": {},
+        "@walkeros/web-destination-api": {}
       },
       "sources": {
         "browser": {

@@ -383,6 +383,92 @@ describe('Bundler', () => {
   });
 
   describe('createEntryPoint integration', () => {
+    it('generates default import even when imports are specified', async () => {
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: {
+          '@walkeros/web-source-browser': {
+            imports: ['createTagger'],
+          },
+        },
+        sources: {
+          browser: {
+            package: '@walkeros/web-source-browser',
+            // No code - should use default import
+          },
+        },
+        destinations: {},
+      };
+
+      const buildOptions = {
+        platform: 'browser',
+        format: 'esm',
+        packages: {
+          '@walkeros/web-source-browser': { imports: ['createTagger'] },
+        },
+        output: './dist/bundle.js',
+        code: '',
+      };
+
+      const result = await createEntryPoint(
+        flowConfig,
+        buildOptions as BuildOptions,
+        new Map([['@walkeros/web-source-browser', '/tmp/pkg']]),
+      );
+
+      // Should have BOTH default AND named imports
+      expect(result).toContain(
+        "import _walkerosWebSourceBrowser from '@walkeros/web-source-browser'",
+      );
+      expect(result).toContain(
+        "import { createTagger } from '@walkeros/web-source-browser'",
+      );
+      // Config should use the default import variable
+      expect(result).toContain('code: _walkerosWebSourceBrowser');
+    });
+
+    it('uses named import only when explicit code is specified', async () => {
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: {
+          '@some/no-default-pkg': {
+            imports: ['namedSource'],
+          },
+        },
+        sources: {
+          custom: {
+            package: '@some/no-default-pkg',
+            code: 'namedSource', // Explicit code
+          },
+        },
+        destinations: {},
+      };
+
+      const buildOptions = {
+        platform: 'browser',
+        format: 'esm',
+        packages: {
+          '@some/no-default-pkg': { imports: ['namedSource'] },
+        },
+        output: './dist/bundle.js',
+        code: '',
+      };
+
+      const result = await createEntryPoint(
+        flowConfig,
+        buildOptions as BuildOptions,
+        new Map([['@some/no-default-pkg', '/tmp/pkg']]),
+      );
+
+      // Should have named import only, NO default import
+      expect(result).toContain(
+        "import { namedSource } from '@some/no-default-pkg'",
+      );
+      expect(result).not.toContain('import _someNoDefaultPkg from');
+      // Config should use the named import
+      expect(result).toContain('code: namedSource');
+    });
+
     it('generates complete entry point with explicit code', async () => {
       const flowConfig: Flow.Config = {
         server: {},
