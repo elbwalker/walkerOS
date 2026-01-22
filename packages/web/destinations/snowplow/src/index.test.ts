@@ -12,7 +12,7 @@ import {
   MEDIA_SCHEMAS,
   MEDIA_ACTIONS,
 } from '.';
-import { resetState, pushSnowplowEvent } from './push';
+import { pushSnowplowEvent } from './push';
 import { resetLoadedScripts, DEFAULT_SCRIPT_URL } from './setup';
 
 const { events, mapping, walkerosEvents } = examples;
@@ -29,9 +29,6 @@ describe('destination snowplow', () => {
 
     jest.clearAllMocks();
     calls = [];
-
-    // Reset global context state between tests
-    resetState();
 
     // Create test environment with call interceptor
     testEnv = mockEnv(examples.env.push, (path, args) => {
@@ -1131,6 +1128,57 @@ describe('destination snowplow', () => {
     });
   });
 
+  describe('instance-scoped state (SSR-safe)', () => {
+    test('separate destination instances have independent userIdSet state', async () => {
+      const destination1 = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      const destination2 = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+
+      const { elb: elb1 } = await startFlow({
+        destinations: {
+          sp1: {
+            code: destination1,
+            config: {
+              settings: {
+                collectorUrl: 'https://collector.example.com',
+                userId: 'user.id',
+              },
+              mapping: mapping.config,
+            },
+          },
+        },
+      });
+
+      const { elb: elb2 } = await startFlow({
+        destinations: {
+          sp2: {
+            code: destination2,
+            config: {
+              settings: {
+                collectorUrl: 'https://collector.example.com',
+                userId: 'user.id',
+              },
+              mapping: mapping.config,
+            },
+          },
+        },
+      });
+
+      await elb1(getEvent('page view', { user: { id: 'user-A' } }));
+      await elb2(getEvent('page view', { user: { id: 'user-B' } }));
+
+      const setUserIdCalls = calls.filter((c) => c.args[0] === 'setUserId');
+      expect(setUserIdCalls).toHaveLength(2);
+      expect(setUserIdCalls[0].args[1]).toBe('user-A');
+      expect(setUserIdCalls[1].args[1]).toBe('user-B');
+    });
+  });
+
   describe('globalContexts', () => {
     test('adds static global context', async () => {
       const destinationWithEnv = {
@@ -1929,7 +1977,7 @@ describe('destination snowplow', () => {
         },
         {},
         undefined,
-        {},
+        undefined,
         structEnv as DestinationSnowplow.Env,
         mockLogger,
       );
@@ -1966,7 +2014,7 @@ describe('destination snowplow', () => {
         },
         {},
         undefined,
-        {},
+        undefined,
         structEnv as DestinationSnowplow.Env,
         mockLogger,
       );
@@ -2003,7 +2051,7 @@ describe('destination snowplow', () => {
         },
         {},
         undefined,
-        {},
+        undefined,
         structEnv as DestinationSnowplow.Env,
         mockLogger,
       );
@@ -2040,7 +2088,7 @@ describe('destination snowplow', () => {
         },
         {},
         undefined,
-        {},
+        undefined,
         structEnv as DestinationSnowplow.Env,
         mockLogger,
       );
@@ -2080,7 +2128,7 @@ describe('destination snowplow', () => {
         },
         {},
         undefined, // No actionName
-        {},
+        undefined,
         structEnv as DestinationSnowplow.Env,
         mockLogger,
       );
@@ -2108,7 +2156,7 @@ describe('destination snowplow', () => {
           {},
           {},
           undefined,
-          {},
+          undefined,
           noTrackerEnv as DestinationSnowplow.Env,
           mockLogger,
         ),
@@ -2148,7 +2196,7 @@ describe('destination snowplow', () => {
         },
         {},
         'product_view', // actionName
-        {},
+        undefined,
         testEnvLocal as DestinationSnowplow.Env,
       );
 
@@ -2193,7 +2241,7 @@ describe('destination snowplow', () => {
         },
         {},
         'product_view', // actionName
-        {},
+        undefined,
         testEnvLocal as DestinationSnowplow.Env,
       );
 
@@ -2286,7 +2334,7 @@ describe('destination snowplow', () => {
       expect(consentCall).toBeDefined();
       expect(consentCall?.args[1]).toMatchObject({
         basisForProcessing: 'consent',
-        consentScopes: [],
+        consentScopes: ['analytics', 'marketing'], // Deny includes the scopes being denied
       });
     });
 

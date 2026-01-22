@@ -261,6 +261,19 @@ export type GlobalContext =
   | MappedGlobalContext;
 
 /**
+ * Internal runtime state for the destination
+ *
+ * This state is instance-scoped and managed by the destination,
+ * not configured by users. It solves SSR/serverless state leakage.
+ */
+export interface RuntimeState {
+  /** JSON stringified page object for setPageType change detection */
+  page?: string;
+  /** Whether setUserId has been called for this instance */
+  userIdSet?: boolean;
+}
+
+/**
  * Configuration settings for Snowplow destination
  */
 export interface Settings {
@@ -458,6 +471,12 @@ export interface Settings {
    * }
    */
   consent?: ConsentConfig;
+
+  /**
+   * Internal runtime state (managed by destination, not user-configured)
+   * @internal
+   */
+  _state?: RuntimeState;
 }
 
 /**

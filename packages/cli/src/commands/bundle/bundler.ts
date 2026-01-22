@@ -797,10 +797,50 @@ ${destinationsEntries.join(',\n')}
 
 /**
  * Process config value for serialization.
- * Uses existing serializer utilities.
+ * Handles $code: prefix to output raw JavaScript instead of quoted strings.
  */
 function processConfigValue(value: unknown): string {
-  return JSON.stringify(value, null, 2);
+  return serializeWithCode(value, 0);
+}
+
+/**
+ * Serialize a value, handling $code: prefix for inline JavaScript.
+ * Values starting with "$code:" are output as raw JS (no quotes).
+ */
+function serializeWithCode(value: unknown, indent: number): string {
+  const spaces = '  '.repeat(indent);
+  const nextSpaces = '  '.repeat(indent + 1);
+
+  // Handle $code: prefix - output raw JavaScript
+  if (typeof value === 'string') {
+    if (value.startsWith('$code:')) {
+      return value.slice(6); // Strip prefix, output raw JS
+    }
+    return JSON.stringify(value);
+  }
+
+  // Handle arrays
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    const items = value.map(
+      (v) => nextSpaces + serializeWithCode(v, indent + 1),
+    );
+    return `[\n${items.join(',\n')}\n${spaces}]`;
+  }
+
+  // Handle objects
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value);
+    if (entries.length === 0) return '{}';
+    const props = entries.map(
+      ([k, v]) =>
+        `${nextSpaces}${JSON.stringify(k)}: ${serializeWithCode(v, indent + 1)}`,
+    );
+    return `{\n${props.join(',\n')}\n${spaces}}`;
+  }
+
+  // Handle primitives (numbers, booleans, null)
+  return JSON.stringify(value);
 }
 
 /**

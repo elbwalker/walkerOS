@@ -1,11 +1,11 @@
 import type { WalkerOS, Logger, Mapping as MappingTypes } from '@walkeros/core';
 import type {
-  Settings,
   SnowplowFunction,
   SelfDescribingEvent,
   SelfDescribingJson,
   Mapping,
   StructuredEventMapping,
+  Config,
 } from './types';
 import type { DestinationWeb } from '@walkeros/web-core';
 import {
@@ -34,21 +34,6 @@ function isLoopContextData(
   );
 }
 
-// State object for multiple global contexts
-interface GlobalContextState {
-  page?: string; // JSON stringified for object comparison
-  userIdSet?: boolean; // Track if setUserId has been called
-}
-
-let state: GlobalContextState = {};
-
-/**
- * Reset all global context state (for testing)
- */
-export function resetState(): void {
-  state = {};
-}
-
 /**
  * Push event to Snowplow
  *
@@ -62,7 +47,7 @@ export async function pushSnowplowEvent(
   mapping: Mapping,
   data: WalkerOS.AnyObject,
   actionName?: string,
-  settings?: Settings,
+  config?: Config,
   env?: DestinationWeb.Env,
   logger?: Logger.Instance,
 ): Promise<void> {
@@ -74,12 +59,15 @@ export async function pushSnowplowEvent(
     return;
   }
 
+  const settings = config?.settings;
+  const runtimeState = settings?._state;
+
   // Set userId once on first event where value is available
-  if (settings?.userId && !state.userIdSet) {
+  if (settings?.userId && !runtimeState?.userIdSet) {
     const userId = await getMappingValue(event, settings.userId);
     if (userId && isString(userId)) {
       snowplow('setUserId', userId);
-      state.userIdSet = true;
+      if (runtimeState) runtimeState.userIdSet = true;
     }
   }
 
@@ -102,8 +90,8 @@ export async function pushSnowplowEvent(
       };
       const pageKey = JSON.stringify(pageObj);
 
-      if (pageKey !== state.page) {
-        state.page = pageKey;
+      if (pageKey !== runtimeState?.page) {
+        if (runtimeState) runtimeState.page = pageKey;
         snowplow('setPageType', pageObj);
       }
     }
