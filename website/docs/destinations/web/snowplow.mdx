@@ -117,6 +117,62 @@ For custom event mapping (`mapping.entity.action.settings`):
 
 <PropertyTable schema={schemas.mapping} />
 
+## User Identity & Privacy
+
+### Cross-Session User Stitching
+
+Use `userId` to link events across sessions when users log in. The ID is set once via Snowplow's `setUserId()` on the first event where the value resolves:
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  userId: 'user.id', // From walkerOS user object
+}`}
+  language="typescript"
+/>
+
+The `userId` setting supports walkerOS mapping syntax:
+
+- `'user.id'` - From walkerOS user object (recommended)
+- `'globals.user_id'` - From globals
+
+### Anonymous Tracking
+
+Enable anonymous tracking for privacy-focused collection or before consent:
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  anonymousTracking: {
+    withServerAnonymisation: true, // Anonymize IP on server
+    withSessionTracking: true,     // Keep session context
+  },
+}`}
+  language="typescript"
+/>
+
+### Runtime Privacy Controls
+
+Control tracking modes at runtime using exported utility functions:
+
+<CodeSnippet
+  code={`import {
+  clearUserData,
+  enableAnonymousTracking,
+  disableAnonymousTracking,
+} from '@walkeros/web-destination-snowplow';
+
+// User withdraws consent - clear all identifiers
+clearUserData();
+
+// Switch to anonymous mode mid-session
+enableAnonymousTracking({ withServerAnonymisation: true });
+
+// User grants consent - resume normal tracking
+disableAnonymousTracking();`}
+  language="typescript"
+/>
+
 ## Advanced Configuration
 
 ### Tracker Settings
@@ -222,6 +278,7 @@ await startFlow({
           collectorUrl: 'https://collector.example.com',
           appId: 'my-app',
           appVersion: '1.0.0',
+          userId: 'user.id',
           discoverRootDomain: true,
           cookieSameSite: 'Lax',
           contexts: {

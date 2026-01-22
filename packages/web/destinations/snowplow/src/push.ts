@@ -14,6 +14,7 @@ import { SCHEMAS } from './types';
 // State object for multiple global contexts
 interface GlobalContextState {
   page?: string; // JSON stringified for object comparison
+  userIdSet?: boolean; // Track if setUserId has been called
 }
 
 let state: GlobalContextState = {};
@@ -48,6 +49,15 @@ export async function pushSnowplowEvent(
   if (!snowplow) {
     logger?.throw('Tracker not initialized');
     return;
+  }
+
+  // Set userId once on first event where value is available
+  if (settings?.userId && !state.userIdSet) {
+    const userId = await getMappingValue(event, settings.userId);
+    if (userId && isString(userId)) {
+      snowplow('setUserId', userId);
+      state.userIdSet = true;
+    }
   }
 
   // Handle setPageType if configured

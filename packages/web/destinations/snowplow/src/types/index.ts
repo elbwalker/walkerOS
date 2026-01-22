@@ -264,6 +264,21 @@ export interface Settings {
   page?: PageSettings;
 
   /**
+   * User ID for Snowplow's cross-session user stitching
+   *
+   * Called once via setUserId() on the first event where the value resolves.
+   * Subsequent events automatically include this user_id.
+   *
+   * @example
+   * // From walkerOS user object (recommended)
+   * userId: 'user.id'
+   *
+   * // From globals
+   * userId: 'globals.user_id'
+   */
+  userId?: CoreMapping.Value;
+
+  /**
    * Discover and set the root domain for cookies
    * @default true
    */

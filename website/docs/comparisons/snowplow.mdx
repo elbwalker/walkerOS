@@ -101,6 +101,43 @@ Yes! You can use walkerOS for event collection and send data to Snowplow as a
 destination. This gives you walkerOS's composable tagging and consent handling
 on the frontend, with Snowplow's data infrastructure on the backend.
 
+### Using the Snowplow Destination
+
+The `@walkeros/web-destination-snowplow` package provides full integration:
+
+```typescript
+import { startFlow } from '@walkeros/collector';
+import { destinationSnowplow } from '@walkeros/web-destination-snowplow';
+
+const { elb } = await startFlow({
+  destinations: {
+    snowplow: {
+      destination: destinationSnowplow,
+      config: {
+        settings: {
+          collectorUrl: 'https://collector.yourdomain.com',
+          appId: 'my-app',
+          userId: 'user.id', // Cross-session user stitching
+        },
+      },
+    },
+  },
+});
+```
+
+**Features include:**
+
+- Full ecommerce tracking (product views, cart actions, transactions)
+- Cross-session user identity via `setUserId`
+- Anonymous tracking mode for privacy compliance
+- Page context with `setPageType`
+- Global contexts and custom schemas
+- Activity tracking (page pings)
+- Plugin support (NPM and URL-based)
+
+See the [Snowplow destination documentation](/docs/destinations/web/snowplow) for
+full configuration options.
+
 ## Getting started
 
 Ready to try walkerOS? Check out the [quickstart guide](/docs/) to set up

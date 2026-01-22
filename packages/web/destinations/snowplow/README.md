@@ -54,6 +54,12 @@ await elb('product view', { id: 'P123', name: 'Laptop', price: 999 });
 - **schema** (string): Iglu schema URI for self-describing events
 - **pageViewTracking** (boolean): Enable automatic page view tracking. Default:
   `false`
+- **userId** (string | Mapping.Value): User ID for cross-session user stitching.
+  Called once via `setUserId()` on the first event where the value resolves.
+- **anonymousTracking** (boolean | object): Enable anonymous tracking mode.
+  - `true`: Basic anonymous tracking (no user identifiers)
+  - `{ withServerAnonymisation: true }`: Also anonymize IP on server
+  - `{ withSessionTracking: true }`: Keep session tracking in anonymous mode
 
 ### Event Mapping
 
@@ -255,6 +261,81 @@ Self-describing events use Iglu schemas for structured data:
     // Your event data
   }
 }
+```
+
+## User Identity & Privacy
+
+### Cross-Session User Stitching
+
+Use `userId` to link events across sessions when users log in:
+
+```typescript
+config: {
+  settings: {
+    collectorUrl: 'https://collector.example.com',
+    userId: 'user.id', // From walkerOS user object
+  },
+}
+
+// Anonymous browsing - events tracked without user_id
+await elb('page view');
+
+// User logs in - set walkerOS user
+elb('walker user', { id: 'user-abc123' });
+
+// Next event triggers setUserId, all subsequent events include user_id
+await elb('product view', { id: 'P123' });
+```
+
+The `userId` setting supports walkerOS mapping syntax:
+
+- `'user.id'` - From walkerOS user object (recommended)
+- `'globals.user_id'` - From globals
+- `{ value: 'static-id' }` - Static value (rare)
+
+### Anonymous Tracking
+
+Enable anonymous tracking for privacy-focused collection or before consent:
+
+```typescript
+config: {
+  settings: {
+    collectorUrl: 'https://collector.example.com',
+    anonymousTracking: true, // Basic anonymous tracking
+  },
+}
+
+// Or with fine-grained control:
+config: {
+  settings: {
+    collectorUrl: 'https://collector.example.com',
+    anonymousTracking: {
+      withServerAnonymisation: true, // Anonymize IP on server
+      withSessionTracking: true,     // Keep session context
+    },
+  },
+}
+```
+
+### Runtime Privacy Controls
+
+Control tracking modes at runtime using exported utility functions:
+
+```typescript
+import {
+  clearUserData,
+  enableAnonymousTracking,
+  disableAnonymousTracking,
+} from '@walkeros/web-destination-snowplow';
+
+// User withdraws consent - clear all identifiers
+clearUserData();
+
+// Switch to anonymous mode mid-session
+enableAnonymousTracking({ withServerAnonymisation: true });
+
+// User grants consent - resume normal tracking
+disableAnonymousTracking();
 ```
 
 ## Advanced Usage

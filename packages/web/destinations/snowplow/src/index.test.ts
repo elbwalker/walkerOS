@@ -782,6 +782,146 @@ describe('destination snowplow', () => {
     });
   });
 
+  describe('setUserId', () => {
+    test('calls setUserId when user.id is available', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          userId: 'user.id',
+        },
+        mapping: mapping.config,
+      });
+
+      await elb(
+        getEvent('page view', {
+          user: { id: 'user-123' },
+        }),
+      );
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: ['setUserId', 'user-123'],
+      });
+    });
+
+    test('only calls setUserId once per session', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          userId: 'user.id',
+        },
+        mapping: mapping.config,
+      });
+
+      // First event with user
+      await elb(
+        getEvent('page view', {
+          user: { id: 'user-123' },
+        }),
+      );
+
+      // Second event with different user
+      await elb(
+        getEvent('page view', {
+          user: { id: 'user-456' },
+        }),
+      );
+
+      // Should only have one setUserId call
+      const setUserIdCalls = calls.filter((c) => c.args[0] === 'setUserId');
+      expect(setUserIdCalls).toHaveLength(1);
+      expect(setUserIdCalls[0].args[1]).toBe('user-123');
+    });
+
+    test('does not call setUserId when value is not available', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          userId: 'user.id',
+        },
+        mapping: mapping.config,
+      });
+
+      // Event without user.id (explicitly set user to empty object)
+      await elb(
+        getEvent('page view', {
+          user: {} as WalkerOS.User,
+        }),
+      );
+
+      const setUserIdCalls = calls.filter((c) => c.args[0] === 'setUserId');
+      expect(setUserIdCalls).toHaveLength(0);
+    });
+
+    test('sets userId on first event where value becomes available', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          userId: 'user.id',
+        },
+        mapping: mapping.config,
+      });
+
+      // First event - no user.id
+      await elb(
+        getEvent('page view', {
+          user: {} as WalkerOS.User,
+        }),
+      );
+
+      // Second event - user available
+      await elb(
+        getEvent('page view', {
+          user: { id: 'user-123' },
+        }),
+      );
+
+      expect(calls).toContainEqual({
+        path: ['window', 'snowplow'],
+        args: ['setUserId', 'user-123'],
+      });
+    });
+
+    test('does not call setUserId when not configured', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          // No userId setting
+        },
+        mapping: mapping.config,
+      });
+
+      await elb(
+        getEvent('page view', {
+          user: { id: 'user-123' },
+        }),
+      );
+
+      const setUserIdCalls = calls.filter((c) => c.args[0] === 'setUserId');
+      expect(setUserIdCalls).toHaveLength(0);
+    });
+  });
+
   describe('globalContexts', () => {
     test('adds static global context', async () => {
       const destinationWithEnv = {
