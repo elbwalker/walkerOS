@@ -32,13 +32,13 @@ export async function simulateCommand(
       duration: (Date.now() - startTime) / 1000,
     };
 
-    // Output results
+    // Output results using consistent formatter
+    const output = formatSimulationResult(resultWithDuration, {
+      json: options.json,
+    });
     if (options.json) {
-      logger.json(resultWithDuration);
+      console.log(output);
     } else {
-      const output = formatSimulationResult(resultWithDuration, {
-        json: false,
-      });
       logger.log(output);
     }
 
