@@ -452,6 +452,49 @@ Enable activity tracking to measure user engagement through page pings:
   language="typescript"
 />
 
+### Page View Tracking
+
+Configure how Snowplow's native `trackPageView()` is triggered:
+
+**Option 1: Auto-track on init**
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  trackPageView: true, // Calls trackPageView() immediately after init
+}`}
+  language="typescript"
+/>
+
+**Option 2: Track via walkerOS event**
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  pageViewEvent: 'page view', // Explicit - triggers trackPageView()
+}
+
+// Then in your app:
+await elb('page view', { title: document.title });`}
+  language="typescript"
+/>
+
+**Option 3: Custom event name**
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  pageViewEvent: 'screen view', // Custom event name for SPAs/mobile
+}
+
+await elb('screen view', { screenName: 'Home' });`}
+  language="typescript"
+/>
+
+:::note
+Both settings require explicit configuration - there is no implicit default. If neither `trackPageView` nor `pageViewEvent` is set, no automatic page view tracking occurs.
+:::
+
 ### Plugins
 
 Load Snowplow plugins for automatic tracking of links, buttons, and forms. Supports both URL-based plugins (sp.js) and npm BrowserPlugin instances:

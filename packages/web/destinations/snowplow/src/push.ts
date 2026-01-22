@@ -115,8 +115,8 @@ export async function pushSnowplowEvent(
     return;
   }
 
-  // Handle page view events
-  if (event.name === 'page view') {
+  // Handle page view events (only when explicitly configured)
+  if (settings?.pageViewEvent && event.name === settings.pageViewEvent) {
     snowplow('trackPageView');
     return;
   }

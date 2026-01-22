@@ -323,6 +323,28 @@ export interface Settings {
   pageViewTracking?: boolean;
 
   /**
+   * Track page view on tracker initialization
+   *
+   * When true, calls `trackPageView()` immediately after tracker init.
+   * This uses Snowplow's built-in page view tracking.
+   *
+   * @default false
+   */
+  trackPageView?: boolean;
+
+  /**
+   * Event name that triggers trackPageView
+   *
+   * When a walkerOS event matches this name, `trackPageView()` is called
+   * instead of `trackSelfDescribingEvent()`.
+   *
+   * @example 'page view'
+   * @example 'pageview'
+   * @example 'screen view'
+   */
+  pageViewEvent?: string;
+
+  /**
    * Snowplow-specific ecommerce configuration
    */
   snowplow?: SnowplowSettings;

@@ -226,6 +226,11 @@ export const destinationSnowplow: Destination = {
       snowplow('addGlobalContexts', settings.globalContexts);
     }
 
+    // Track page view on init if configured
+    if (settings.trackPageView) {
+      snowplow('trackPageView');
+    }
+
     return config;
   },
 

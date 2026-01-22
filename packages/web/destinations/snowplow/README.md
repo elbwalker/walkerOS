@@ -56,6 +56,11 @@ await elb('product view', { id: 'P123', name: 'Laptop', price: 999 });
 - **schema** (string): Iglu schema URI for self-describing events
 - **pageViewTracking** (boolean): Enable automatic page view tracking. Default:
   `false`
+- **trackPageView** (boolean): Track page view on tracker initialization. When
+  `true`, calls `trackPageView()` immediately after init. Default: `false`
+- **pageViewEvent** (string): Event name that triggers `trackPageView()`. When a
+  walkerOS event matches this name, Snowplow's native page view tracking is
+  used. Must be explicitly set (no default).
 - **userId** (string | Mapping.Value): User ID for cross-session user stitching.
   Called once via `setUserId()` on the first event where the value resolves.
 - **anonymousTracking** (boolean | object): Enable anonymous tracking mode.
@@ -225,11 +230,42 @@ await elb('product view', { id: 'P123', price: 999 });
 
 ### Page View Tracking
 
+**Option 1: Auto-track on init**
+
 ```typescript
-await elb('page view', {
-  title: 'Product Page',
-  path: '/products/laptop',
-});
+config: {
+  settings: {
+    collectorUrl: 'https://collector.example.com',
+    trackPageView: true, // Calls trackPageView() immediately after init
+  },
+}
+```
+
+**Option 2: Track via walkerOS event**
+
+```typescript
+config: {
+  settings: {
+    collectorUrl: 'https://collector.example.com',
+    pageViewEvent: 'page view', // Explicit - triggers trackPageView()
+  },
+}
+
+// Then in your app:
+await elb('page view', { title: document.title });
+```
+
+**Option 3: Custom event name**
+
+```typescript
+config: {
+  settings: {
+    collectorUrl: 'https://collector.example.com',
+    pageViewEvent: 'screen view', // Custom event name for SPAs/mobile
+  },
+}
+
+await elb('screen view', { screenName: 'Home' });
 ```
 
 ### E-commerce Tracking

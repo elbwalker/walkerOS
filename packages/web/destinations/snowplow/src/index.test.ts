@@ -245,6 +245,7 @@ describe('destination snowplow', () => {
     elb('walker destination', destinationWithEnv, {
       settings: {
         collectorUrl: 'https://collector.example.com',
+        pageViewEvent: 'page view',
       },
       mapping: mapping.config,
     });
@@ -608,6 +609,7 @@ describe('destination snowplow', () => {
             minimumVisitLength: 10,
             heartbeatDelay: 30,
           },
+          pageViewEvent: 'page view',
         },
         mapping: mapping.config,
       });
@@ -642,6 +644,64 @@ describe('destination snowplow', () => {
         (c) => c.args[0] === 'enableActivityTracking',
       );
       expect(activityCall).toBeUndefined();
+    });
+  });
+
+  describe('page view configuration', () => {
+    test('trackPageView calls trackPageView on init', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          trackPageView: true,
+        },
+      });
+
+      // Wait for init to complete
+      await elb(getEvent('product view', { id: '123' }));
+
+      // Verify trackPageView was called during init
+      const pageViewCall = calls.find((c) => c.args[0] === 'trackPageView');
+      expect(pageViewCall).toBeDefined();
+    });
+
+    test('custom pageViewEvent triggers trackPageView', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          pageViewEvent: 'screen view',
+        },
+      });
+
+      await elb('screen view', {});
+
+      const pageViewCall = calls.find((c) => c.args[0] === 'trackPageView');
+      expect(pageViewCall).toBeDefined();
+    });
+
+    test('no trackPageView without explicit pageViewEvent', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          // No pageViewEvent specified - should NOT call trackPageView
+        },
+      });
+
+      await elb('page view', {});
+
+      const pageViewCall = calls.find((c) => c.args[0] === 'trackPageView');
+      expect(pageViewCall).toBeUndefined();
     });
   });
 
