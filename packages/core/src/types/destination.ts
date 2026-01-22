@@ -59,7 +59,8 @@ export type TypesOf<I> = I extends Instance<infer T> ? T : never;
 
 export interface Instance<T extends TypesGeneric = Types> {
   config: Config<T>;
-  queue?: WalkerOS.Events;
+  queuePush?: WalkerOS.Events;
+  queueOn?: Array<{ type: On.Types; data?: unknown }>;
   dlq?: DLQ;
   batches?: BatchRegistry<Mapping<T>>;
   type?: string;
@@ -183,7 +184,7 @@ export interface Ref {
 }
 
 export type Push = {
-  queue?: WalkerOS.Events;
+  queuePush?: WalkerOS.Events;
   error?: unknown;
 };
 

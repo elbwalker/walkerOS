@@ -4,7 +4,6 @@ import { initGA4, pushGA4Event } from './ga4';
 import { initAds, pushAdsEvent } from './ads';
 import { initGTM, pushGTMEvent } from './gtm';
 import { getData } from './shared/mapping';
-import { initializeGtag } from './shared/gtag';
 import { getEnv } from '@walkeros/web-core';
 
 // Types
@@ -122,9 +121,9 @@ export const destinationGtag: Destination = {
     // Skip if consent mode is disabled
     if (!como) return;
 
-    // Ensure gtag is available
+    // gtag is available after init() - on() is only called after init completes
     const { window } = getEnv(context.env);
-    const gtag = initializeGtag(window as Window);
+    const gtag = window.gtag as Gtag.Gtag;
     if (!gtag) return;
 
     // Determine consent mapping to use

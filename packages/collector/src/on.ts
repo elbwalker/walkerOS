@@ -32,6 +32,34 @@ export function on(
 }
 
 /**
+ * Calls a destination's on() handler with proper context.
+ * Used by both onApply() for immediate calls and destinationInit() for flushing queued events.
+ */
+export function callDestinationOn(
+  collector: Collector.Instance,
+  destination: Destination.Instance,
+  destId: string,
+  type: On.Types,
+  data: unknown,
+) {
+  if (!destination.on) return;
+
+  const destType = destination.type || 'unknown';
+  const destLogger = collector.logger.scope(destType).scope('on').scope(type);
+
+  const context: Destination.Context = {
+    collector,
+    logger: destLogger,
+    id: destId,
+    config: destination.config,
+    data: data as Destination.Data,
+    env: mergeEnvironments(destination.env, destination.config.env),
+  };
+
+  tryCatch(destination.on)(type, context);
+}
+
+/**
  * Applies all registered callbacks for a specific event type.
  *
  * @param collector The walkerOS collector instance.
@@ -78,22 +106,15 @@ export function onApply(
 
   Object.entries(collector.destinations).forEach(([destId, destination]) => {
     if (destination.on) {
-      const destType = destination.type || 'unknown';
-      const destLogger = collector.logger
-        .scope(destType)
-        .scope('on')
-        .scope(type);
+      // Queue if destination not yet initialized
+      if (!destination.config.init) {
+        destination.queueOn = destination.queueOn || [];
+        destination.queueOn.push({ type, data: contextData });
+        return;
+      }
 
-      const context: Destination.Context = {
-        collector,
-        logger: destLogger,
-        id: destId,
-        config: destination.config,
-        data: contextData as Destination.Data,
-        env: mergeEnvironments(destination.env, destination.config.env),
-      };
-
-      tryCatch(destination.on)(type, context);
+      // Call immediately using shared helper
+      callDestinationOn(collector, destination, destId, type, contextData);
     }
   });
 

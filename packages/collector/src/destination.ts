@@ -12,6 +12,7 @@ import {
   useHooks,
 } from '@walkeros/core';
 import { destinationCode } from './destination-code';
+import { callDestinationOn } from './on';
 import { runTransformerChain } from './transformer';
 
 function resolveCode(code: Destination.Instance | true): Destination.Instance {
@@ -54,7 +55,7 @@ export async function addDestination(
 
   // Process previous events if not disabled
   if (destination.config.queue !== false)
-    destination.queue = [...collector.queue];
+    destination.queuePush = [...collector.queue];
 
   return pushToDestinations(collector, undefined, {}, { [id]: destination });
 }
@@ -89,13 +90,13 @@ export async function pushToDestinations(
     // Process all destinations in parallel
     Object.entries(destinations || {}).map(async ([id, destination]) => {
       // Create a queue of events to be processed
-      let currentQueue = (destination.queue || []).map((event) => ({
+      let currentQueue = (destination.queuePush || []).map((event) => ({
         ...event,
         consent,
       }));
 
       // Reset original queue while processing to enable async processing
-      destination.queue = [];
+      destination.queuePush = [];
 
       // Add event to queue stack
       if (event) {
@@ -108,8 +109,20 @@ export async function pushToDestinations(
         currentQueue.push(currentEvent);
       }
 
-      // Nothing to do here if the queue is empty
-      if (!currentQueue.length) return { id, destination, skipped: true };
+      // If no events and no queued on events, skip this destination
+      if (!currentQueue.length && !destination.queueOn?.length) {
+        return { id, destination, skipped: true };
+      }
+
+      // If only on events queued (no push events), still init to flush queueOn
+      if (!currentQueue.length && destination.queueOn?.length) {
+        const isInitialized = await tryCatchAsync(destinationInit)(
+          collector,
+          destination,
+          id,
+        );
+        return { id, destination, skipped: !isInitialized };
+      }
 
       const allowedEvents: WalkerOS.Events = [];
       const skippedEvents = currentQueue.filter((queuedEvent) => {
@@ -130,7 +143,7 @@ export async function pushToDestinations(
       });
 
       // Add skipped events back to the queue
-      destination.queue.concat(skippedEvents);
+      destination.queuePush.concat(skippedEvents);
 
       // Execution shall not pass if no events are allowed
       if (!allowedEvents.length) {
@@ -229,7 +242,9 @@ export async function pushToDestinations(
       ref.error = result.error;
       failed[result.id] = ref;
     } else if (result.queue && result.queue.length) {
-      destination.queue = (destination.queue || []).concat(result.queue);
+      destination.queuePush = (destination.queuePush || []).concat(
+        result.queue,
+      );
       queued[result.id] = ref;
     } else {
       done[result.id] = ref;
@@ -288,6 +303,16 @@ export async function destinationInit<Destination extends Destination.Instance>(
       ...(configResult || destination.config),
       init: true, // Remember that the destination was initialized
     };
+
+    // Flush queued on() events now that destination is initialized
+    if (destination.queueOn?.length) {
+      const queueOn = destination.queueOn;
+      destination.queueOn = [];
+
+      for (const { type, data } of queueOn) {
+        callDestinationOn(collector, destination, destId, type, data);
+      }
+    }
 
     destLogger.debug('init done');
   }

@@ -218,7 +218,7 @@ export async function runCollector(
 
   // Reset destination queues
   Object.values(collector.destinations).forEach((destination) => {
-    destination.queue = [];
+    destination.queuePush = [];
   });
 
   // Reset collector queue for this run
