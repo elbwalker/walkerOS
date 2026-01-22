@@ -40,7 +40,7 @@ and trust.
 
 ## How it works
 
-![walkerOS Architecture](https://raw.githubusercontent.com/elbwalker/walkerOS/main/website/static/diagrams/walkeros-architecture.png)
+![walkerOS Architecture](https://raw.githubusercontent.com/elbwalker/walkerOS/main/website/static/diagrams/walkeros_readme.png)
 
 - **Sources:** Where events come from (browser, dataLayer, Express, AWS Lambda,
   GCP Functions, and more)
@@ -57,8 +57,7 @@ Choose one based on your workflow and integration possibilities:
 | **Integrated** | Import directly into your TypeScript application             | React/Next.js apps, TypeScript projects |
 | **Bundled**    | Build a standalone script from JSON config with npx walkeros | Static sites, Docker deployments, CI/CD |
 
-<details>
-<summary><strong>Quick comparison</strong></summary>
+<strong>Quick comparison</strong>
 
 **Integrated** (import into your app):
 
@@ -112,16 +111,16 @@ await startFlow({
 
 Then: `npx walkeros bundle flow.json`
 
-</details>
-
-**[Operating Modes](https://www.walkeros.io/docs/getting-started/modes/)**
-**[Quickstart guide for React](https://www.walkeros.io/docs/getting-started/quickstart/react)**
-**[Full Documentation](https://www.walkeros.io/docs/)** - Complete guides and
-API reference **[Destinations](https://www.walkeros.io/docs/destinations/)** -
-GA4, Meta, BigQuery, and more
-**[React Demo](https://github.com/elbwalker/walkerOS/tree/main/apps/demos/react)** -
-Example implementation [Storybook](https://storybook.walkeros.io/)\*\* -
-Interactive component examples
+- **[Operating Modes](https://www.walkeros.io/docs/getting-started/modes/)**
+- **[Quickstart guide for React](https://www.walkeros.io/docs/getting-started/quickstart/react)**
+- **[Full Documentation](https://www.walkeros.io/docs/)** - Complete guides and
+  API reference
+- **[Destinations](https://www.walkeros.io/docs/destinations/)** - GA4, Meta,
+  BigQuery, and more
+- **[React Demo](https://github.com/elbwalker/walkerOS/tree/main/apps/demos/react)** -
+  Example implementation
+- **[Storybook](https://storybook.walkeros.io/)** - Interactive component
+  examples
 
 ## Contributing
 
