@@ -157,6 +157,77 @@ export interface AnonymousTrackingConfig {
 }
 
 /**
+ * Basis for processing under GDPR
+ */
+export type BasisForProcessing =
+  | 'consent'
+  | 'contract'
+  | 'legal_obligation'
+  | 'vital_interests'
+  | 'public_task'
+  | 'legitimate_interests';
+
+/**
+ * Consent tracking configuration
+ *
+ * Enables consent event tracking via the Snowplow Enhanced Consent plugin.
+ * When configured, walkerOS consent events are translated to Snowplow
+ * trackConsentAllow/Deny/Selected calls via the `on('consent')` handler.
+ *
+ * Requires @snowplow/browser-plugin-enhanced-consent to be loaded.
+ *
+ * @example
+ * consent: {
+ *   required: ['analytics', 'marketing'],
+ *   basisForProcessing: 'consent',
+ *   consentUrl: 'https://example.com/privacy',
+ *   consentVersion: '2.0',
+ *   domainsApplied: ['example.com'],
+ *   gdprApplies: true,
+ * }
+ */
+export interface ConsentConfig {
+  /**
+   * walkerOS consent groups to check
+   *
+   * If not specified, all consent groups from the event are used.
+   * Use this to filter which consent groups are relevant for Snowplow.
+   *
+   * @example ['analytics', 'marketing']
+   */
+  required?: string[];
+
+  /**
+   * Legal basis for processing under GDPR
+   *
+   * @default 'consent'
+   */
+  basisForProcessing?: BasisForProcessing;
+
+  /**
+   * URL to the privacy policy or consent document
+   */
+  consentUrl?: string;
+
+  /**
+   * Version of the consent document/policy
+   */
+  consentVersion?: string;
+
+  /**
+   * Domains where this consent applies
+   *
+   * @example ['example.com', 'shop.example.com']
+   */
+  domainsApplied?: string[];
+
+  /**
+   * Whether GDPR applies to this user/region
+   */
+  gdprApplies?: boolean;
+}
+
+/**
  * walkerOS mapping-based global context
  */
 export interface MappedGlobalContext {
@@ -336,6 +407,22 @@ export interface Settings {
    * Global context entities attached to all events
    */
   globalContexts?: GlobalContext[];
+
+  /**
+   * Consent tracking configuration
+   *
+   * When configured, enables consent event tracking via the `on('consent')` handler.
+   * Requires @snowplow/browser-plugin-enhanced-consent to be loaded.
+   *
+   * @example
+   * consent: {
+   *   required: ['analytics', 'marketing'],
+   *   basisForProcessing: 'consent',
+   *   consentUrl: 'https://example.com/privacy',
+   *   consentVersion: '2.0',
+   * }
+   */
+  consent?: ConsentConfig;
 }
 
 /**
@@ -615,6 +702,22 @@ export const WEB_SCHEMAS = {
     'iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-2',
   GEOLOCATION:
     'iglu:com.snowplowanalytics.snowplow/geolocation_context/jsonschema/1-1-0',
+} as const;
+
+/**
+ * Snowplow Consent Schema URIs
+ * For Enhanced Consent plugin events and contexts
+ */
+export const CONSENT_SCHEMAS = {
+  // Events (fired by Enhanced Consent plugin)
+  PREFERENCES:
+    'iglu:com.snowplowanalytics.snowplow/consent_preferences/jsonschema/1-0-0',
+  CMP_VISIBLE:
+    'iglu:com.snowplowanalytics.snowplow/cmp_visible/jsonschema/1-0-0',
+  // Contexts
+  DOCUMENT:
+    'iglu:com.snowplowanalytics.snowplow/consent_document/jsonschema/1-0-0',
+  GDPR: 'iglu:com.snowplowanalytics.snowplow/gdpr/jsonschema/1-0-0',
 } as const;
 
 /**

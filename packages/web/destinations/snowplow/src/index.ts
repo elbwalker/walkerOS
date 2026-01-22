@@ -8,7 +8,7 @@ import { pushSnowplowEvent } from './push';
 export * as DestinationSnowplow from './types';
 
 // Schema constants for user convenience
-export { SCHEMAS, ACTIONS, WEB_SCHEMAS } from './types';
+export { SCHEMAS, ACTIONS, WEB_SCHEMAS, CONSENT_SCHEMAS } from './types';
 
 /**
  * Get the Snowplow function from the environment
@@ -242,6 +242,63 @@ export const destinationSnowplow: Destination = {
       env,
       logger,
     );
+  },
+
+  /**
+   * Handle lifecycle events (consent, session, ready, run)
+   *
+   * Primarily used for consent tracking via the Enhanced Consent plugin.
+   * Reacts to walkerOS consent events and calls Snowplow's trackConsentAllow,
+   * trackConsentDeny, or trackConsentSelected methods.
+   *
+   * @param type - The event type ('consent', 'session', 'ready', 'run')
+   * @param context - The destination context with config, data, env, logger
+   */
+  on(type, context) {
+    // Only handle consent events
+    if (type !== 'consent' || !context.data) return;
+
+    const consent = context.data as WalkerOS.Consent;
+    const settings = (context.config?.settings || {}) as Partial<Settings>;
+    const consentConfig = settings.consent;
+
+    // Skip if consent tracking is not configured
+    if (!consentConfig) return;
+
+    const snowplow = getSnowplow(context.env as Env);
+    if (!snowplow) return;
+
+    // Determine which consent scopes to check
+    const required = consentConfig.required || Object.keys(consent);
+
+    // Calculate consent state based on configured required scopes
+    const allGranted = required.every((scope) => consent[scope] === true);
+    const allDenied = required.every((scope) => !consent[scope]);
+    const grantedScopes = required.filter((scope) => consent[scope] === true);
+
+    // Build Enhanced Consent plugin parameters
+    const params: Record<string, unknown> = {
+      basisForProcessing: consentConfig.basisForProcessing || 'consent',
+      consentScopes: grantedScopes,
+    };
+
+    // Add optional parameters if configured
+    if (consentConfig.consentUrl) params.consentUrl = consentConfig.consentUrl;
+    if (consentConfig.consentVersion)
+      params.consentVersion = consentConfig.consentVersion;
+    if (consentConfig.domainsApplied)
+      params.domainsApplied = consentConfig.domainsApplied;
+    if (consentConfig.gdprApplies !== undefined)
+      params.gdprApplies = consentConfig.gdprApplies;
+
+    // Call the appropriate Enhanced Consent plugin method
+    if (allDenied) {
+      snowplow('trackConsentDeny', params);
+    } else if (allGranted) {
+      snowplow('trackConsentAllow', params);
+    } else {
+      snowplow('trackConsentSelected', params);
+    }
   },
 };
 

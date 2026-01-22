@@ -390,6 +390,103 @@ enableAnonymousTracking({ withServerAnonymisation: true });
 disableAnonymousTracking();
 ```
 
+## Consent Tracking
+
+Track GDPR/CCPA consent events using Snowplow's Enhanced Consent plugin. The
+destination automatically reacts to walkerOS consent events and sends the
+appropriate consent tracking calls.
+
+### Prerequisites
+
+Load the Enhanced Consent plugin:
+
+```typescript
+import { EnhancedConsentPlugin } from '@snowplow/browser-plugin-enhanced-consent';
+
+config: {
+  settings: {
+    collectorUrl: 'https://collector.example.com',
+    plugins: [EnhancedConsentPlugin()],
+    consent: {
+      required: ['analytics', 'marketing'],
+      basisForProcessing: 'consent',
+      consentUrl: 'https://example.com/privacy',
+      consentVersion: '2.0',
+    },
+  },
+}
+```
+
+### Configuration
+
+| Option               | Type       | Description                          |
+| -------------------- | ---------- | ------------------------------------ |
+| `required`           | `string[]` | walkerOS consent groups to check     |
+| `basisForProcessing` | `string`   | GDPR basis (consent, contract, etc.) |
+| `consentUrl`         | `string`   | Privacy policy URL                   |
+| `consentVersion`     | `string`   | Policy version                       |
+| `domainsApplied`     | `string[]` | Domains where consent applies        |
+| `gdprApplies`        | `boolean`  | Whether GDPR applies                 |
+
+### How It Works
+
+The destination listens for walkerOS consent events and maps them to Snowplow:
+
+| walkerOS Consent State      | Snowplow Method        |
+| --------------------------- | ---------------------- |
+| All required scopes granted | `trackConsentAllow`    |
+| All required scopes denied  | `trackConsentDeny`     |
+| Partial consent (mixed)     | `trackConsentSelected` |
+
+### Example
+
+```typescript
+// Configure consent tracking
+const { elb } = await startFlow({
+  destinations: {
+    snowplow: {
+      code: destinationSnowplow,
+      config: {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          consent: {
+            required: ['analytics', 'marketing'],
+            basisForProcessing: 'consent',
+            consentUrl: 'https://example.com/privacy',
+            consentVersion: '2.0',
+            domainsApplied: ['example.com'],
+            gdprApplies: true,
+          },
+        },
+      },
+    },
+  },
+});
+
+// User accepts all
+await elb('walker consent', { analytics: true, marketing: true });
+// → trackConsentAllow called
+
+// User accepts some
+await elb('walker consent', { analytics: true, marketing: false });
+// → trackConsentSelected called
+
+// User rejects all
+await elb('walker consent', { analytics: false, marketing: false });
+// → trackConsentDeny called
+```
+
+### Consent Schema Constants
+
+```typescript
+import { CONSENT_SCHEMAS } from '@walkeros/web-destination-snowplow';
+
+CONSENT_SCHEMAS.PREFERENCES; // consent_preferences/1-0-0
+CONSENT_SCHEMAS.CMP_VISIBLE; // cmp_visible/1-0-0
+CONSENT_SCHEMAS.DOCUMENT; // consent_document/1-0-0
+CONSENT_SCHEMAS.GDPR; // gdpr/1-0-0
+```
+
 ## Schema Constants
 
 The package exports pre-defined Snowplow schema URIs for convenience:
@@ -399,6 +496,7 @@ import {
   SCHEMAS,
   ACTIONS,
   WEB_SCHEMAS,
+  CONSENT_SCHEMAS,
 } from '@walkeros/web-destination-snowplow';
 
 // Ecommerce schemas

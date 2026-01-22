@@ -1628,4 +1628,243 @@ describe('destination snowplow', () => {
       });
     });
   });
+
+  describe('consent tracking (on handler)', () => {
+    test('calls trackConsentAllow when all required scopes granted', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+
+      const { elb: flowElb } = await startFlow({
+        destinations: {
+          snowplow: {
+            code: destinationWithEnv,
+            config: {
+              settings: {
+                collectorUrl: 'https://collector.example.com',
+                consent: {
+                  required: ['analytics', 'marketing'],
+                  basisForProcessing: 'consent',
+                  consentUrl: 'https://example.com/privacy',
+                  consentVersion: '2.0',
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Initialize destination first (triggers init)
+      await flowElb('page view');
+
+      // Grant all required consent
+      await flowElb('walker consent', { analytics: true, marketing: true });
+
+      const consentCall = calls.find((c) => c.args[0] === 'trackConsentAllow');
+      expect(consentCall).toBeDefined();
+      expect(consentCall?.args[1]).toMatchObject({
+        basisForProcessing: 'consent',
+        consentScopes: ['analytics', 'marketing'],
+        consentUrl: 'https://example.com/privacy',
+        consentVersion: '2.0',
+      });
+    });
+
+    test('calls trackConsentDeny when all required scopes denied', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+
+      const { elb: flowElb } = await startFlow({
+        destinations: {
+          snowplow: {
+            code: destinationWithEnv,
+            config: {
+              settings: {
+                collectorUrl: 'https://collector.example.com',
+                consent: {
+                  required: ['analytics', 'marketing'],
+                  basisForProcessing: 'consent',
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Initialize destination first
+      await flowElb('page view');
+
+      // Deny all consent
+      await flowElb('walker consent', { analytics: false, marketing: false });
+
+      const consentCall = calls.find((c) => c.args[0] === 'trackConsentDeny');
+      expect(consentCall).toBeDefined();
+      expect(consentCall?.args[1]).toMatchObject({
+        basisForProcessing: 'consent',
+        consentScopes: [],
+      });
+    });
+
+    test('calls trackConsentSelected when partial consent granted', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+
+      const { elb: flowElb } = await startFlow({
+        destinations: {
+          snowplow: {
+            code: destinationWithEnv,
+            config: {
+              settings: {
+                collectorUrl: 'https://collector.example.com',
+                consent: {
+                  required: ['analytics', 'marketing'],
+                  basisForProcessing: 'consent',
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Initialize destination first
+      await flowElb('page view');
+
+      // Partial consent
+      await flowElb('walker consent', { analytics: true, marketing: false });
+
+      const consentCall = calls.find(
+        (c) => c.args[0] === 'trackConsentSelected',
+      );
+      expect(consentCall).toBeDefined();
+      expect(consentCall?.args[1]).toMatchObject({
+        basisForProcessing: 'consent',
+        consentScopes: ['analytics'],
+      });
+    });
+
+    test('skips consent tracking when consent config not set', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+
+      const { elb: flowElb } = await startFlow({
+        destinations: {
+          snowplow: {
+            code: destinationWithEnv,
+            config: {
+              settings: {
+                collectorUrl: 'https://collector.example.com',
+                // No consent config
+              },
+            },
+          },
+        },
+      });
+
+      // Initialize destination first
+      await flowElb('page view');
+
+      // Grant consent
+      await flowElb('walker consent', { analytics: true });
+
+      // Should not have any consent tracking calls
+      const consentCalls = calls.filter(
+        (c) =>
+          c.args[0] === 'trackConsentAllow' ||
+          c.args[0] === 'trackConsentDeny' ||
+          c.args[0] === 'trackConsentSelected',
+      );
+      expect(consentCalls).toHaveLength(0);
+    });
+
+    test('uses all consent keys when required not specified', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+
+      const { elb: flowElb } = await startFlow({
+        destinations: {
+          snowplow: {
+            code: destinationWithEnv,
+            config: {
+              settings: {
+                collectorUrl: 'https://collector.example.com',
+                consent: {
+                  // No required specified - should use all consent keys from event
+                  basisForProcessing: 'legitimate_interests',
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Initialize destination first
+      await flowElb('page view');
+
+      // Grant some consent
+      await flowElb('walker consent', {
+        necessary: true,
+        analytics: true,
+        marketing: false,
+      });
+
+      const consentCall = calls.find(
+        (c) => c.args[0] === 'trackConsentSelected',
+      );
+      expect(consentCall).toBeDefined();
+      expect(consentCall?.args[1]).toMatchObject({
+        basisForProcessing: 'legitimate_interests',
+        consentScopes: expect.arrayContaining(['necessary', 'analytics']),
+      });
+      // marketing should not be in scopes since it's false
+      expect(consentCall?.args[1].consentScopes).not.toContain('marketing');
+    });
+
+    test('includes optional gdprApplies and domainsApplied', async () => {
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+
+      const { elb: flowElb } = await startFlow({
+        destinations: {
+          snowplow: {
+            code: destinationWithEnv,
+            config: {
+              settings: {
+                collectorUrl: 'https://collector.example.com',
+                consent: {
+                  required: ['analytics'],
+                  basisForProcessing: 'consent',
+                  gdprApplies: true,
+                  domainsApplied: ['example.com', 'shop.example.com'],
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Initialize destination first
+      await flowElb('page view');
+
+      // Grant consent
+      await flowElb('walker consent', { analytics: true });
+
+      const consentCall = calls.find((c) => c.args[0] === 'trackConsentAllow');
+      expect(consentCall).toBeDefined();
+      expect(consentCall?.args[1]).toMatchObject({
+        gdprApplies: true,
+        domainsApplied: ['example.com', 'shop.example.com'],
+      });
+    });
+  });
 });

@@ -16,7 +16,7 @@ describe('Destination', () => {
     config: {},
     init: mockInit,
     push: mockPush,
-    queue: [],
+    queuePush: [],
     dlq: [],
   };
   let result: Elb.PushResult;
@@ -316,7 +316,7 @@ describe('Destination', () => {
       push: jest.fn().mockImplementation(() => {
         throw new Error('init kaputt');
       }),
-      queue: [],
+      queuePush: [],
       dlq: [],
     };
 
@@ -325,7 +325,7 @@ describe('Destination', () => {
       push: jest.fn().mockImplementation(() => {
         throw new Error('push kaputt');
       }),
-      queue: [],
+      queuePush: [],
       dlq: [],
     };
 

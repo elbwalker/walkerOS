@@ -173,12 +173,65 @@ disableAnonymousTracking();`}
   language="typescript"
 />
 
+### Consent Tracking
+
+Track GDPR/CCPA consent events using Snowplow's [Enhanced Consent plugin](https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/javascript-trackers/web-tracker/tracking-events/consent-gdpr/). The destination automatically reacts to walkerOS consent events and calls the appropriate Snowplow consent methods.
+
+**Prerequisites:** Load the Enhanced Consent plugin via the `plugins` setting or include it in your Snowplow script bundle.
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  consent: {
+    required: ['analytics', 'marketing'],
+    basisForProcessing: 'consent',
+    consentUrl: 'https://example.com/privacy',
+    consentVersion: '2.0',
+    domainsApplied: ['example.com'],
+    gdprApplies: true,
+  },
+}`}
+  language="typescript"
+/>
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `required` | `string[]` | walkerOS consent groups to check |
+| `basisForProcessing` | `string` | GDPR basis: `consent`, `contract`, `legal_obligation`, `vital_interests`, `public_task`, `legitimate_interests` |
+| `consentUrl` | `string` | Privacy policy URL |
+| `consentVersion` | `string` | Policy version |
+| `domainsApplied` | `string[]` | Domains where consent applies |
+| `gdprApplies` | `boolean` | Whether GDPR applies |
+
+The destination maps walkerOS consent state to Snowplow methods:
+
+| walkerOS Consent State | Snowplow Method |
+|------------------------|-----------------|
+| All required scopes granted | `trackConsentAllow` |
+| All required scopes denied | `trackConsentDeny` |
+| Partial consent (mixed) | `trackConsentSelected` |
+
+<CodeSnippet
+  code={`// User accepts all required scopes
+await elb('walker consent', { analytics: true, marketing: true });
+// → trackConsentAllow called
+
+// User accepts some scopes
+await elb('walker consent', { analytics: true, marketing: false });
+// → trackConsentSelected called
+
+// User rejects all scopes
+await elb('walker consent', { analytics: false, marketing: false });
+// → trackConsentDeny called`}
+  language="typescript"
+/>
+
 ## Schema Constants
 
 The package exports pre-defined Snowplow schema URIs for use in custom mappings:
 
 <CodeSnippet
-  code={`import { SCHEMAS, ACTIONS, WEB_SCHEMAS } from '@walkeros/web-destination-snowplow';
+  code={`import { SCHEMAS, ACTIONS, WEB_SCHEMAS, CONSENT_SCHEMAS } from '@walkeros/web-destination-snowplow';
 
 // Ecommerce schemas
 SCHEMAS.PRODUCT;     // product/jsonschema/1-0-0
@@ -199,7 +252,13 @@ WEB_SCHEMAS.WEB_VITALS;  // web_vitals/jsonschema/1-0-0
 WEB_SCHEMAS.WEB_PAGE;       // web_page/jsonschema/1-0-0
 WEB_SCHEMAS.BROWSER;        // browser_context/jsonschema/2-0-0
 WEB_SCHEMAS.CLIENT_SESSION; // client_session/jsonschema/1-0-2
-WEB_SCHEMAS.GEOLOCATION;    // geolocation_context/jsonschema/1-1-0`}
+WEB_SCHEMAS.GEOLOCATION;    // geolocation_context/jsonschema/1-1-0
+
+// Consent schemas (Enhanced Consent plugin)
+CONSENT_SCHEMAS.PREFERENCES; // consent_preferences/jsonschema/1-0-0
+CONSENT_SCHEMAS.CMP_VISIBLE; // cmp_visible/jsonschema/1-0-0
+CONSENT_SCHEMAS.DOCUMENT;    // consent_document/jsonschema/1-0-0
+CONSENT_SCHEMAS.GDPR;        // gdpr/jsonschema/1-0-0`}
   language="typescript"
 />
 
