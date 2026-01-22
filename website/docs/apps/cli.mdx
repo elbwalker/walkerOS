@@ -60,6 +60,19 @@ The CLI transforms `Flow.Setup` → `Flow.Config` (per flow) → bundled code th
 
 ## Package imports
 
+### Implicit collector
+
+The collector is added automatically. To pin a specific version (recommended for production), add the collector explicitly:
+
+<CodeSnippet
+  code={`"packages": {
+  "@walkeros/collector": { "version": "1.0.0" },
+  "@walkeros/web-source-browser": {},
+  "@walkeros/destination-demo": {}
+}`}
+  language="json"
+/>
+
 ### Default exports (sources & destinations)
 
 Sources and destinations automatically use their **default export** - no `imports` needed:
@@ -78,7 +91,6 @@ Use `imports` when you need specific utility functions from a package:
 
 <CodeSnippet
   code={`"packages": {
-  "@walkeros/collector": { "imports": ["startFlow"] },     // Required utility
   "@walkeros/core": { "imports": ["getId", "clone"] },     // Optional utilities
   "@walkeros/web-source-browser": {
     "imports": ["createTagger"]                            // Additional utility
@@ -115,10 +127,6 @@ Add a `path` property to any package to use a local directory instead of npm:
 <CodeSnippet
   code={`{
   "packages": {
-    "@walkeros/collector": {
-      "version": "latest",
-      "imports": ["startFlow"]
-    },
     "@my/custom-destination": {
       "path": "./my-custom-destination"
     }
@@ -142,12 +150,10 @@ When a local package has dependencies on other packages that are also specified 
   code={`{
   "packages": {
     "@walkeros/core": {
-      "path": "../packages/core",
-      "imports": []
+      "path": "../packages/core"
     },
     "@walkeros/collector": {
-      "path": "../packages/collector",
-      "imports": ["startFlow"]
+      "path": "../packages/collector"
     }
   }
 }`}
@@ -175,9 +181,7 @@ In this example, even though `@walkeros/collector` depends on `@walkeros/core`, 
   code={`{
   "packages": {
     "@walkeros/collector": {
-      "version": "latest",
-      "path": "../../packages/collector",
-      "imports": ["startFlow"]
+      "path": "../../packages/collector"
     }
   }
 }`}
@@ -197,7 +201,6 @@ Before using the CLI, you need a [flow configuration file](/docs/getting-started
     "default": {
       "server": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/server-source-express": {},
         "@walkeros/destination-demo": {}
       },
@@ -224,8 +227,8 @@ Before using the CLI, you need a [flow configuration file](/docs/getting-started
   language="json"
 />
 
-:::tip Simplified package imports
-Sources and destinations use their **default export** automatically - no `imports` needed. The `imports` field is only required for utility functions like `startFlow` from `@walkeros/collector`.
+:::tip Implicit collector
+The `@walkeros/collector` package is automatically added when your flow has sources or destinations.
 :::
 
 Save this as `flow.json`.
@@ -265,7 +268,6 @@ Create `server-collect.json`:
     "default": {
       "server": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/server-source-express": {},
         "@walkeros/destination-demo": {}
       },
@@ -405,7 +407,6 @@ Create `test-flow.json`:
     "default": {
       "server": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/destination-demo": {}
       },
       "destinations": {
@@ -569,7 +570,6 @@ Create `api-flow.json` with a destination that makes real HTTP calls:
     "default": {
       "server": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/web-destination-api": {}
       },
       "destinations": {
@@ -774,7 +774,6 @@ Create `collect.json`:
     "default": {
       "server": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/server-source-express": {},
         "@walkeros/destination-demo": {}
       },
@@ -938,7 +937,6 @@ Create `web-track.json`:
         "windowElb": "track"
       },
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/web-source-browser": {},
         "@walkeros/web-destination-api": {}
       },
@@ -1046,7 +1044,6 @@ Create `server-collect.json`:
     "default": {
       "server": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/server-source-express": {},
         "@walkeros/destination-demo": {}
       },
@@ -1086,7 +1083,6 @@ Create `web-track.json`:
         "windowElb": "track"
       },
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
         "@walkeros/web-source-browser": {},
         "@walkeros/web-destination-api": {}
       },

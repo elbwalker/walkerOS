@@ -530,4 +530,128 @@ describe('Bundler', () => {
       expect(result).toContain('export default async function');
     });
   });
+
+  describe('Implicit Collector', () => {
+    it('auto-imports startFlow when collector is in packages without imports specified', async () => {
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: {
+          '@walkeros/collector': {}, // No imports specified
+          '@walkeros/web-source-browser': {},
+        },
+        sources: {
+          browser: {
+            package: '@walkeros/web-source-browser',
+          },
+        },
+        destinations: {},
+      };
+
+      const buildOptions = {
+        platform: 'browser',
+        format: 'esm',
+        packages: {
+          '@walkeros/collector': {}, // No imports specified
+          '@walkeros/web-source-browser': {},
+        },
+        output: './dist/bundle.js',
+        code: '',
+      };
+
+      const result = await createEntryPoint(
+        flowConfig,
+        buildOptions as BuildOptions,
+        new Map([
+          ['@walkeros/collector', '/tmp/collector'],
+          ['@walkeros/web-source-browser', '/tmp/browser'],
+        ]),
+      );
+
+      // Should auto-import startFlow from collector
+      expect(result).toContain(
+        "import { startFlow } from '@walkeros/collector'",
+      );
+    });
+
+    it('auto-imports startFlow when collector has version but no imports', async () => {
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: {
+          '@walkeros/collector': { version: '0.5.0' }, // Version only, no imports
+          '@walkeros/web-source-browser': {},
+        },
+        sources: {
+          browser: {
+            package: '@walkeros/web-source-browser',
+          },
+        },
+        destinations: {},
+      };
+
+      const buildOptions = {
+        platform: 'browser',
+        format: 'esm',
+        packages: {
+          '@walkeros/collector': { version: '0.5.0' },
+          '@walkeros/web-source-browser': {},
+        },
+        output: './dist/bundle.js',
+        code: '',
+      };
+
+      const result = await createEntryPoint(
+        flowConfig,
+        buildOptions as BuildOptions,
+        new Map([
+          ['@walkeros/collector', '/tmp/collector'],
+          ['@walkeros/web-source-browser', '/tmp/browser'],
+        ]),
+      );
+
+      // Should auto-import startFlow from collector
+      expect(result).toContain(
+        "import { startFlow } from '@walkeros/collector'",
+      );
+    });
+
+    it('preserves explicit collector imports while adding startFlow', async () => {
+      const flowConfig: Flow.Config = {
+        web: {},
+        packages: {
+          '@walkeros/collector': { imports: ['createCollector'] }, // Explicit import, no startFlow
+          '@walkeros/web-source-browser': {},
+        },
+        sources: {
+          browser: {
+            package: '@walkeros/web-source-browser',
+          },
+        },
+        destinations: {},
+      };
+
+      const buildOptions = {
+        platform: 'browser',
+        format: 'esm',
+        packages: {
+          '@walkeros/collector': { imports: ['createCollector'] },
+          '@walkeros/web-source-browser': {},
+        },
+        output: './dist/bundle.js',
+        code: '',
+      };
+
+      const result = await createEntryPoint(
+        flowConfig,
+        buildOptions as BuildOptions,
+        new Map([
+          ['@walkeros/collector', '/tmp/collector'],
+          ['@walkeros/web-source-browser', '/tmp/browser'],
+        ]),
+      );
+
+      // Should have both createCollector and startFlow
+      expect(result).toContain('startFlow');
+      expect(result).toContain('createCollector');
+    });
+  });
 });

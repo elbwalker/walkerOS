@@ -121,6 +121,21 @@ export async function bundleCore(
     // Step 1: Ensure temporary directory exists
     await fs.ensureDir(TEMP_DIR);
 
+    // Step 1.5: Auto-add collector if sources/destinations exist but collector not specified
+    const hasSourcesOrDests =
+      Object.keys(
+        (flowConfig as unknown as { sources?: Record<string, unknown> })
+          .sources || {},
+      ).length > 0 ||
+      Object.keys(
+        (flowConfig as unknown as { destinations?: Record<string, unknown> })
+          .destinations || {},
+      ).length > 0;
+
+    if (hasSourcesOrDests && !buildOptions.packages['@walkeros/collector']) {
+      buildOptions.packages['@walkeros/collector'] = {};
+    }
+
     // Step 2: Download packages
     logger.debug('Downloading packages');
     // Convert packages object to array format expected by downloadPackages
@@ -595,7 +610,15 @@ function generateImportStatements(
       }
     }
 
-    // 4. Generate combined named imports statement
+    // 4. Auto-import startFlow from collector (always required for flows)
+    if (
+      packageName === '@walkeros/collector' &&
+      !namedImportsToGenerate.includes('startFlow')
+    ) {
+      namedImportsToGenerate.push('startFlow');
+    }
+
+    // 5. Generate combined named imports statement
     if (namedImportsToGenerate.length > 0) {
       const importList = namedImportsToGenerate.join(', ');
       importStatements.push(`import { ${importList} } from '${packageName}';`);
