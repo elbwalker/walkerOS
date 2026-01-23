@@ -1,5 +1,5 @@
 ---
-'@walkeros/core': patch
+'@walkeros/core': minor
 ---
 
 Breaking change: Unified dynamic pattern syntax in Flow configuration, sorry!

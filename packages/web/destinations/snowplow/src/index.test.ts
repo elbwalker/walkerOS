@@ -8,6 +8,7 @@ import {
   clearUserData,
   enableAnonymousTracking,
   disableAnonymousTracking,
+  SCHEMAS,
   WEB_SCHEMAS,
   MEDIA_SCHEMAS,
   MEDIA_ACTIONS,
@@ -2495,6 +2496,167 @@ describe('destination snowplow', () => {
         gdprApplies: true,
         domainsApplied: ['example.com', 'shop.example.com'],
       });
+    });
+  });
+
+  describe('self-describing event data patterns', () => {
+    test('media marker events send empty data {}', async () => {
+      // Media events like play/pause use schemas that expect empty data
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          video: {
+            play: {
+              name: 'play', // actionName
+              settings: {
+                snowplow: {
+                  actionSchema: MEDIA_SCHEMAS.PLAY,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await elb('video play', { videoId: 'abc123' });
+
+      const trackCall = calls.find(
+        (c) => c.args[0] === 'trackSelfDescribingEvent',
+      );
+      expect(trackCall).toBeDefined();
+
+      const selfDescribingEvent = trackCall?.args[1] as {
+        event: { schema: string; data: unknown };
+      };
+      expect(selfDescribingEvent.event.schema).toBe(MEDIA_SCHEMAS.PLAY);
+      // Marker events should have empty data object
+      expect(selfDescribingEvent.event.data).toEqual({});
+    });
+
+    test('ecommerce events send {type: actionName}', async () => {
+      // Ecommerce pattern uses SCHEMAS.ACTION with type field
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          product: {
+            view: {
+              name: 'product_view', // actionName becomes type
+              settings: {
+                snowplow: {
+                  actionSchema: SCHEMAS.ACTION, // Explicit ecommerce schema
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await elb('product view', { id: 'prod-123' });
+
+      const trackCall = calls.find(
+        (c) => c.args[0] === 'trackSelfDescribingEvent',
+      );
+      expect(trackCall).toBeDefined();
+
+      const selfDescribingEvent = trackCall?.args[1] as {
+        event: { schema: string; data: unknown };
+      };
+      expect(selfDescribingEvent.event.schema).toBe(SCHEMAS.ACTION);
+      // Ecommerce events should have type field
+      expect(selfDescribingEvent.event.data).toEqual({ type: 'product_view' });
+    });
+
+    test('events with mapping.data.map use mapped data', async () => {
+      // Events with data.map use the mapped values instead
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          video: {
+            progress: {
+              name: 'percent_progress',
+              settings: {
+                // data.map is checked by push.ts to build event data
+                data: {
+                  map: {
+                    percentProgress: 'data.progress',
+                  },
+                },
+                snowplow: {
+                  actionSchema: MEDIA_SCHEMAS.PERCENT_PROGRESS,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await elb('video progress', { progress: 25 });
+
+      const trackCall = calls.find(
+        (c) => c.args[0] === 'trackSelfDescribingEvent',
+      );
+      expect(trackCall).toBeDefined();
+
+      const selfDescribingEvent = trackCall?.args[1] as {
+        event: { schema: string; data: unknown };
+      };
+      expect(selfDescribingEvent.event.schema).toBe(
+        MEDIA_SCHEMAS.PERCENT_PROGRESS,
+      );
+      // Mapped data should be used
+      expect(selfDescribingEvent.event.data).toEqual({ percentProgress: 25 });
+    });
+
+    test('default actionSchema uses ecommerce pattern', async () => {
+      // When no actionSchema specified, default SCHEMAS.ACTION is used
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          product: {
+            click: {
+              name: 'list_click', // actionName
+              // No actionSchema - should default to SCHEMAS.ACTION
+            },
+          },
+        },
+      });
+
+      await elb('product click', { id: 'prod-456' });
+
+      const trackCall = calls.find(
+        (c) => c.args[0] === 'trackSelfDescribingEvent',
+      );
+      expect(trackCall).toBeDefined();
+
+      const selfDescribingEvent = trackCall?.args[1] as {
+        event: { schema: string; data: unknown };
+      };
+      expect(selfDescribingEvent.event.schema).toBe(SCHEMAS.ACTION);
+      expect(selfDescribingEvent.event.data).toEqual({ type: 'list_click' });
     });
   });
 });

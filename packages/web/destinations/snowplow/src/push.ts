@@ -109,29 +109,33 @@ export async function pushSnowplowEvent(
     return;
   }
 
-  // Handle ecommerce events with action type (from rule.name)
+  // Handle self-describing events
   if (actionName) {
     const actionSchema =
       mapping.snowplow?.actionSchema ||
       settings?.snowplow?.actionSchema ||
       SCHEMAS.ACTION;
 
-    // Build context from mapping.context definitions
     const context = await buildContext(event, mapping);
 
-    const selfDescribingEvent: SelfDescribingEvent = {
-      event: {
-        schema: actionSchema,
-        data: {
-          type: actionName,
-        },
-      },
-      context: context.length > 0 ? context : undefined,
-    };
+    // Build event data based on schema type
+    let eventData: WalkerOS.AnyObject = {};
 
-    snowplow('trackSelfDescribingEvent', selfDescribingEvent);
+    if (mapping.data?.map) {
+      // Use mapped data for self-describing events (e.g., percent_progress)
+      const mapped = await getMappingValue(event, mapping.data);
+      if (isObject(mapped)) eventData = mapped as WalkerOS.AnyObject;
+    } else if (actionSchema === SCHEMAS.ACTION) {
+      // Ecommerce pattern: include type field
+      eventData = { type: actionName };
+    }
+    // else: empty data {} for marker events (media play/pause/etc.)
+
+    snowplow('trackSelfDescribingEvent', {
+      event: { schema: actionSchema, data: eventData },
+      context: context.length > 0 ? context : undefined,
+    });
   } else {
-    // Events without action name are skipped
     logger?.info('Event skipped: no action name in mapping', {
       event: event.name,
       hasContext: !!mapping.context?.length,
