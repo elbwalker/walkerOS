@@ -49,6 +49,85 @@ Import utilities directly:
 import { assign, anonymizeIP, getMappingValue } from '@walkeros/core';
 ```
 
+## Flow Configuration Syntax
+
+Flow configurations support three dynamic patterns for reusable,
+environment-aware configs:
+
+### `$def.name` - Definition References
+
+Reference reusable configuration blocks defined in `definitions`:
+
+```json
+{
+  "definitions": {
+    "itemsLoop": {
+      "loop": ["nested", { "map": { "item_id": "data.id" } }]
+    }
+  },
+  "destinations": {
+    "ga4": {
+      "config": {
+        "mapping": {
+          "order": {
+            "complete": {
+              "data": { "map": { "items": "$def.itemsLoop" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### `$var.name` - Variable References
+
+Reference variables defined in `variables` for config-level values:
+
+```json
+{
+  "variables": {
+    "currency": "EUR",
+    "apiVersion": "v2"
+  },
+  "destinations": {
+    "api": {
+      "config": {
+        "endpoint": "https://api.example.com/$var.apiVersion/collect",
+        "defaultCurrency": "$var.currency"
+      }
+    }
+  }
+}
+```
+
+Variables can be defined at setup, flow, or source/destination level (higher
+specificity wins).
+
+### `$env.NAME` - Environment Variables
+
+Reference environment variables with optional defaults:
+
+```json
+{
+  "destinations": {
+    "ga4": {
+      "config": {
+        "measurementId": "$env.GA4_ID:G-DEMO123456"
+      }
+    }
+  }
+}
+```
+
+- `$env.GA4_ID` - Throws if not set
+- `$env.GA4_ID:default` - Uses "default" if not set
+
+Only `$env` supports defaults because environment variables are external and may
+not be set. Variables (`$var`) are explicitly defined in config, so missing ones
+indicate a configuration error.
+
 ## Core Utilities
 
 ### Data Manipulation

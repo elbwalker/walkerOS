@@ -111,7 +111,7 @@ Configuration options for the `settings.firehose` property:
 
 ### Step 1: Create Flow Configuration
 
-The AWS SDK automatically reads credentials from environment variables. Configure the stream name using the `${VAR}` syntax:
+The AWS SDK automatically reads credentials from environment variables. Configure the stream name using the `$env.NAME` syntax:
 
 <CodeSnippet
   code={`{
@@ -121,8 +121,8 @@ The AWS SDK automatically reads credentials from environment variables. Configur
       "config": {
         "settings": {
           "firehose": {
-            "streamName": "\${AWS_FIREHOSE_STREAM}",
-            "region": "\${AWS_REGION:eu-central-1}"
+            "streamName": "$env.AWS_FIREHOSE_STREAM",
+            "region": "$env.AWS_REGION:eu-central-1"
           }
         }
       }

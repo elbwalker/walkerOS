@@ -129,14 +129,14 @@ export interface Setup {
 
   /**
    * Shared variables for interpolation.
-   * Resolution: process.env > Config.variables > Setup.variables > inline default
-   * Syntax: ${VAR_NAME} or ${VAR_NAME:default}
+   * Resolution: destination/source > Config > Setup level
+   * Syntax: $var.name
    */
   variables?: Variables;
 
   /**
    * Reusable configuration definitions.
-   * Referenced via JSON Schema $ref syntax: { "$ref": "#/definitions/name" }
+   * Syntax: $def.name
    */
   definitions?: Definitions;
 

@@ -351,7 +351,7 @@ For Docker deployments outside of GCP infrastructure, use mounted credentials.
 
 ### Step 1: Create Flow Configuration
 
-Use the `${VAR}` syntax for environment variables:
+Use the `$env.NAME` syntax for environment variables:
 
 <CodeSnippet
   code={`{
@@ -360,9 +360,9 @@ Use the `${VAR}` syntax for environment variables:
       "package": "@walkeros/server-destination-gcp",
       "config": {
         "settings": {
-          "projectId": "\${GCP_PROJECT_ID}",
-          "datasetId": "\${BQ_DATASET:walkeros}",
-          "tableId": "\${BQ_TABLE:events}"
+          "projectId": "$env.GCP_PROJECT_ID",
+          "datasetId": "$env.BQ_DATASET:walkeros",
+          "tableId": "$env.BQ_TABLE:events"
         }
       }
     }

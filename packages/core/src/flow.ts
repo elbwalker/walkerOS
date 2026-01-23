@@ -7,6 +7,7 @@
  */
 
 import type { Flow } from './types';
+import { throwError } from './throwError';
 
 /**
  * Merge variables with cascade priority.
@@ -41,46 +42,71 @@ function mergeDefinitions(
 }
 
 /**
- * Interpolate variables in a value.
- * Syntax: ${VAR_NAME} or ${VAR_NAME:default}
+ * Resolve all dynamic patterns in a value.
+ *
+ * Patterns:
+ * - $def.name → Look up definitions[name], replace entire value with definition content
+ * - $var.name → Look up variables[name]
+ * - $env.NAME or $env.NAME:default → Look up process.env[NAME]
  */
-function interpolateVariables(
+function resolvePatterns(
   value: unknown,
   variables: Flow.Variables,
+  definitions: Flow.Definitions,
 ): unknown {
   if (typeof value === 'string') {
-    return value.replace(
-      /\$\{([^}:]+)(?::([^}]*))?\}/g,
+    // Check if entire string is a $def.name reference (replaces whole value)
+    const defMatch = value.match(/^\$def\.([a-zA-Z_][a-zA-Z0-9_]*)$/);
+    if (defMatch) {
+      const defName = defMatch[1];
+      if (definitions[defName] === undefined) {
+        throwError(`Definition "${defName}" not found`);
+      }
+      // Return the definition content (recursively resolved)
+      return resolvePatterns(definitions[defName], variables, definitions);
+    }
+
+    // Replace $var.name patterns (inline substitution)
+    let result = value.replace(
+      /\$var\.([a-zA-Z_][a-zA-Z0-9_]*)/g,
+      (match, name) => {
+        if (variables[name] !== undefined) {
+          return String(variables[name]);
+        }
+        throwError(`Variable "${name}" not found`);
+      },
+    );
+
+    // Replace $env.NAME or $env.NAME:default patterns
+    result = result.replace(
+      /\$env\.([a-zA-Z_][a-zA-Z0-9_]*)(?::([^"}\s]*))?/g,
       (match, name, defaultValue) => {
-        // Check process.env first
         if (
           typeof process !== 'undefined' &&
           process.env?.[name] !== undefined
         ) {
           return process.env[name]!;
         }
-        // Then check variables
-        if (variables[name] !== undefined) {
-          return String(variables[name]);
-        }
-        // Use default if provided
         if (defaultValue !== undefined) {
           return defaultValue;
         }
-        // Throw for required variable
-        throw new Error(`Variable "${name}" not found and no default provided`);
+        throwError(
+          `Environment variable "${name}" not found and no default provided`,
+        );
       },
     );
+
+    return result;
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => interpolateVariables(item, variables));
+    return value.map((item) => resolvePatterns(item, variables, definitions));
   }
 
   if (value !== null && typeof value === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(value)) {
-      result[key] = interpolateVariables(val, variables);
+      result[key] = resolvePatterns(val, variables, definitions);
     }
     return result;
   }
@@ -132,48 +158,11 @@ function resolveCodeFromPackage(
 }
 
 /**
- * Resolve $ref references in a value.
- */
-function resolveRefs(value: unknown, definitions: Flow.Definitions): unknown {
-  if (value !== null && typeof value === 'object') {
-    // Check if this is a $ref object
-    if (
-      '$ref' in value &&
-      typeof (value as Record<string, unknown>).$ref === 'string'
-    ) {
-      const ref = (value as Record<string, unknown>).$ref as string;
-      const match = ref.match(/^#\/definitions\/(.+)$/);
-      if (match) {
-        const defName = match[1];
-        if (definitions[defName] === undefined) {
-          throw new Error(`Definition "${defName}" not found`);
-        }
-        return resolveRefs(definitions[defName], definitions);
-      }
-      throw new Error(`Invalid $ref format: ${ref}`);
-    }
-
-    // Recursively process object
-    if (Array.isArray(value)) {
-      return value.map((item) => resolveRefs(item, definitions));
-    }
-
-    const result: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(value)) {
-      result[key] = resolveRefs(val, definitions);
-    }
-    return result;
-  }
-
-  return value;
-}
-
-/**
  * Get resolved flow configuration for a named flow.
  *
  * @param setup - The complete setup configuration
  * @param flowName - Flow name (auto-selected if only one exists)
- * @returns Resolved Config with variables/definitions interpolated and $refs resolved
+ * @returns Resolved Config with $var, $env, and $def patterns resolved
  * @throws Error if flow selection is required but not specified, or flow not found
  *
  * @example
@@ -200,7 +189,7 @@ export function getFlowConfig(
     if (flowNames.length === 1) {
       flowName = flowNames[0];
     } else {
-      throw new Error(
+      throwError(
         `Multiple flows found (${flowNames.join(', ')}). Please specify a flow.`,
       );
     }
@@ -209,7 +198,7 @@ export function getFlowConfig(
   // Check flow exists
   const config = setup.flows[flowName];
   if (!config) {
-    throw new Error(
+    throwError(
       `Flow "${flowName}" not found. Available: ${flowNames.join(', ')}`,
     );
   }
@@ -231,8 +220,7 @@ export function getFlowConfig(
         source.definitions,
       );
 
-      let processedConfig = resolveRefs(source.config, defs);
-      processedConfig = interpolateVariables(processedConfig, vars);
+      const processedConfig = resolvePatterns(source.config, vars, defs);
 
       // Resolve code from package reference
       const resolvedCode = resolveCodeFromPackage(
@@ -263,8 +251,7 @@ export function getFlowConfig(
         dest.definitions,
       );
 
-      let processedConfig = resolveRefs(dest.config, defs);
-      processedConfig = interpolateVariables(processedConfig, vars);
+      const processedConfig = resolvePatterns(dest.config, vars, defs);
 
       // Resolve code from package reference
       const resolvedCode = resolveCodeFromPackage(
@@ -286,8 +273,7 @@ export function getFlowConfig(
     const vars = mergeVariables(setup.variables, config.variables);
     const defs = mergeDefinitions(setup.definitions, config.definitions);
 
-    let processedCollector = resolveRefs(result.collector, defs);
-    processedCollector = interpolateVariables(processedCollector, vars);
+    const processedCollector = resolvePatterns(result.collector, vars, defs);
     result.collector = processedCollector as typeof result.collector;
   }
 
@@ -312,5 +298,5 @@ export function getFlowConfig(
 export function getPlatform(config: Flow.Config): 'web' | 'server' {
   if (config.web !== undefined) return 'web';
   if (config.server !== undefined) return 'server';
-  throw new Error('Config must have web or server key');
+  throwError('Config must have web or server key');
 }

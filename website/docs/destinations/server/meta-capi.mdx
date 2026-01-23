@@ -91,7 +91,7 @@ Add to your `flow.json` destinations:
 
 ### Step 1: Create Flow Configuration
 
-Use the `${VAR}` syntax in your flow configuration to reference environment variables at runtime:
+Use the `$env.NAME` syntax in your flow configuration to reference environment variables at runtime:
 
 <CodeSnippet
   code={`{
@@ -100,9 +100,9 @@ Use the `${VAR}` syntax in your flow configuration to reference environment vari
       "package": "@walkeros/server-destination-meta",
       "config": {
         "settings": {
-          "accessToken": "\${META_ACCESS_TOKEN}",
-          "pixelId": "\${META_PIXEL_ID}",
-          "test_event_code": "\${META_TEST_CODE:}"
+          "accessToken": "$env.META_ACCESS_TOKEN",
+          "pixelId": "$env.META_PIXEL_ID",
+          "test_event_code": "$env.META_TEST_CODE:"
         }
       }
     }

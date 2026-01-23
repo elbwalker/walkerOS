@@ -333,10 +333,10 @@ export const SetupSchema = z
         'JSON Schema reference for IDE validation (e.g., "https://walkeros.io/schema/flow/v1.json")',
       ),
     variables: VariablesSchema.optional().describe(
-      'Shared variables for interpolation across all flows (use ${VAR_NAME} or ${VAR_NAME:default} syntax)',
+      'Shared variables for interpolation across all flows (use $var.name syntax)',
     ),
     definitions: DefinitionsSchema.optional().describe(
-      'Reusable configuration definitions (reference with JSON Schema $ref syntax: { "$ref": "#/definitions/name" })',
+      'Reusable configuration definitions (use $def.name syntax)',
     ),
     flows: z
       .record(z.string(), ConfigSchema)
