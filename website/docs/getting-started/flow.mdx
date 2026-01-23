@@ -394,7 +394,7 @@ walkeros bundle config.json --all`}
 
 ## Dynamic patterns
 
-Flow configurations support three dynamic patterns for reusable, environment-aware configs:
+Flow configurations support four dynamic patterns for reusable, environment-aware configs:
 
 ### `$var.name` - Config Variables
 
@@ -513,6 +513,60 @@ Reference reusable configuration blocks defined in `definitions`:
 />
 
 Definitions cascade like variables - defined at setup, flow, or source/destination level.
+
+### `$code:` - Inline JavaScript
+
+Embed JavaScript code directly in JSON config values:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "api": {
+      "package": "@walkeros/web-destination-api",
+      "config": {
+        "mapping": {
+          "product": {
+            "view": {
+              "data": {
+                "map": {
+                  "item_id": {
+                    "key": "data.id",
+                    "fn": "$code:(value) => value.toUpperCase()"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+The `$code:` prefix is stripped during bundling, outputting raw JavaScript:
+
+<CodeSnippet
+  code={`// Bundler output
+{
+  item_id: {
+    key: "data.id",
+    fn: (value) => value.toUpperCase()
+  }
+}`}
+  language="typescript"
+/>
+
+**Use cases:**
+- **`fn:` callbacks** - Transform values in mapping
+- **`condition:` predicates** - Conditional event processing
+- **Custom logic** - Any inline function or expression
+
+**Syntax notes:**
+- Multi-line code: Use JSON escapes (`\n`, `\"`)
+- Scope: Same as bundled code (access to imports and variables)
+- Errors: Caught at build time by TypeScript/esbuild
 
 ## Type hierarchy
 
