@@ -61,6 +61,116 @@ export interface SnowplowFunction {
 }
 
 /**
+ * Tracker factory function type (from @snowplow/browser-tracker)
+ *
+ * This is the `newTracker` function signature. When provided via `settings.code`,
+ * the destination uses this directly instead of loading sp.js.
+ */
+export type TrackerFactory = (
+  trackerId: string,
+  endpoint: string,
+  configuration?: Record<string, unknown>,
+) => void;
+
+/**
+ * Browser-tracker module functions passed via $code: for npm mode
+ *
+ * These are the individual tracking functions imported from @snowplow/browser-tracker
+ * that replace the sp.js command queue approach.
+ */
+export interface TrackerFunctions {
+  /** Initialize tracker - always required */
+  newTracker: TrackerFactory;
+  /** Track self-describing events - required for event tracking */
+  trackSelfDescribingEvent: (
+    event: SelfDescribingEvent,
+    trackers?: string[],
+  ) => void;
+  /** Track page views */
+  trackPageView?: (
+    event?: Record<string, unknown>,
+    trackers?: string[],
+  ) => void;
+  /** Track structured events */
+  trackStructEvent?: (
+    event: Record<string, unknown>,
+    trackers?: string[],
+  ) => void;
+  /** Set user ID */
+  setUserId?: (userId?: string | null, trackers?: string[]) => void;
+  /** Enable activity tracking */
+  enableActivityTracking?: (
+    config: ActivityTrackingConfiguration,
+    trackers?: string[],
+  ) => void;
+  /** Add plugin */
+  addPlugin?: (config: { plugin: BrowserPlugin }, trackers?: string[]) => void;
+  /** Add global contexts */
+  addGlobalContexts?: (contexts: unknown[], trackers?: string[]) => void;
+  /** Clear user data */
+  clearUserData?: (
+    config?: Record<string, unknown>,
+    trackers?: string[],
+  ) => void;
+  /** Enable anonymous tracking */
+  enableAnonymousTracking?: (
+    config?: Record<string, unknown>,
+    trackers?: string[],
+  ) => void;
+  /** Disable anonymous tracking */
+  disableAnonymousTracking?: (
+    config?: Record<string, unknown>,
+    trackers?: string[],
+  ) => void;
+  /** Consent tracking - from Enhanced Consent plugin */
+  trackConsentAllow?: (
+    params: Record<string, unknown>,
+    trackers?: string[],
+  ) => void;
+  trackConsentDeny?: (
+    params: Record<string, unknown>,
+    trackers?: string[],
+  ) => void;
+  trackConsentSelected?: (
+    params: Record<string, unknown>,
+    trackers?: string[],
+  ) => void;
+  /** Set page context - from Snowplow Ecommerce plugin */
+  setPageType?: (
+    page: { type: string; language?: string; locale?: string },
+    trackers?: string[],
+  ) => void;
+}
+
+/**
+ * Unified adapter interface for Snowplow tracking
+ *
+ * Provides a consistent API regardless of whether using sp.js command queue
+ * or @snowplow/browser-tracker module functions.
+ */
+export interface SnowplowAdapter {
+  trackPageView(event?: Record<string, unknown>): void;
+  trackSelfDescribingEvent(event: SelfDescribingEvent): void;
+  trackStructEvent(event: Record<string, unknown>): void;
+  setUserId(userId?: string | null): void;
+  enableActivityTracking(config: ActivityTrackingConfiguration): void;
+  addPlugin(
+    config: { plugin: BrowserPlugin } | [string, [string, string]],
+  ): void;
+  addGlobalContexts(contexts: unknown[]): void;
+  clearUserData(config?: Record<string, unknown>): void;
+  enableAnonymousTracking(config?: Record<string, unknown>): void;
+  disableAnonymousTracking(config?: Record<string, unknown>): void;
+  trackConsentAllow(params: Record<string, unknown>): void;
+  trackConsentDeny(params: Record<string, unknown>): void;
+  trackConsentSelected(params: Record<string, unknown>): void;
+  /** Set page context - from Snowplow Ecommerce plugin */
+  setPageType(page: { type: string; language?: string; locale?: string }): void;
+  /** For URL-based plugins that need enable methods */
+  call(method: string, ...args: unknown[]): void;
+}
+
+/**
  * Complete self-describing event structure
  * This is the full parameter passed to window.snowplow('trackSelfDescribingEvent', ...)
  */
@@ -113,9 +223,21 @@ export interface UrlBasedPlugin {
 }
 
 /**
+ * Code-based plugin configuration (for @snowplow/browser-tracker npm approach)
+ *
+ * Use when the plugin is imported via packages.imports and passed via $code:
+ */
+export interface CodeBasedPlugin {
+  /** The plugin factory function passed via $code: */
+  code: BrowserPlugin | ((...args: unknown[]) => BrowserPlugin);
+  /** Configuration options passed to the plugin factory */
+  config?: Record<string, unknown>;
+}
+
+/**
  * Union type for all supported plugin forms
  */
-export type SnowplowPlugin = BrowserPlugin | UrlBasedPlugin;
+export type SnowplowPlugin = BrowserPlugin | UrlBasedPlugin | CodeBasedPlugin;
 
 /**
  * Built-in context entity types for tracker initialization
@@ -271,6 +393,8 @@ export interface RuntimeState {
   page?: string;
   /** Whether setUserId has been called for this instance */
   userIdSet?: boolean;
+  /** The initialized adapter instance */
+  adapter?: SnowplowAdapter;
 }
 
 /**
@@ -298,6 +422,33 @@ export interface Settings {
    * @default 'https://cdn.jsdelivr.net/npm/@snowplow/javascript-tracker@latest/dist/sp.js'
    */
   scriptUrl?: string;
+
+  /**
+   * Tracker functions for bundled browser-tracker mode
+   *
+   * When provided, the destination uses these functions directly instead of
+   * loading sp.js via script tag. Use with flow.json `$code:` syntax:
+   *
+   * @example
+   * ```json
+   * {
+   *   "packages": {
+   *     "@snowplow/browser-tracker": {
+   *       "imports": ["newTracker", "trackSelfDescribingEvent", "trackPageView"]
+   *     }
+   *   },
+   *   "settings": {
+   *     "tracker": {
+   *       "newTracker": "$code:newTracker",
+   *       "trackSelfDescribingEvent": "$code:trackSelfDescribingEvent",
+   *       "trackPageView": "$code:trackPageView"
+   *     },
+   *     "collectorUrl": "https://collector.example.com"
+   *   }
+   * }
+   * ```
+   */
+  tracker?: TrackerFunctions;
 
   /**
    * Application ID
@@ -647,6 +798,18 @@ export interface Mapping {
   snowplow?: SnowplowMappingSettings;
 
   /**
+   * Custom data mapping for self-describing event payload
+   *
+   * When specified with a `map` property, the mapped values are used
+   * as the event data instead of the default ecommerce pattern.
+   * Useful for media events (percent_progress) and custom schemas.
+   *
+   * @example
+   * data: { map: { percentProgress: 'data.progress' } }
+   */
+  data?: WalkerOSMapping.Value;
+
+  /**
    * Structured event mapping (bypasses self-describing events)
    *
    * When configured, calls trackStructEvent instead of trackSelfDescribingEvent.
@@ -893,6 +1056,15 @@ export function isUrlBasedPlugin(
   plugin: SnowplowPlugin,
 ): plugin is UrlBasedPlugin {
   return typeof plugin === 'object' && 'url' in plugin && 'name' in plugin;
+}
+
+/**
+ * Type guard for code-based plugins
+ */
+export function isCodeBasedPlugin(
+  plugin: SnowplowPlugin,
+): plugin is CodeBasedPlugin {
+  return typeof plugin === 'object' && 'code' in plugin && !('url' in plugin);
 }
 
 /**

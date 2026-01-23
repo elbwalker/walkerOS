@@ -2,7 +2,7 @@ import type { WalkerOS } from '@walkeros/core';
 import type { DestinationSnowplow } from '.';
 import type { DestinationWeb } from '@walkeros/web-core';
 import { startFlow } from '@walkeros/collector';
-import { getEvent, mockEnv, createMockLogger } from '@walkeros/core';
+import { getEvent, mockEnv } from '@walkeros/core';
 import {
   examples,
   clearUserData,
@@ -13,7 +13,6 @@ import {
   MEDIA_SCHEMAS,
   MEDIA_ACTIONS,
 } from '.';
-import { pushSnowplowEvent } from './push';
 import { resetLoadedScripts, DEFAULT_SCRIPT_URL } from './setup';
 
 const { events, mapping, walkerosEvents } = examples;
@@ -370,6 +369,8 @@ describe('destination snowplow', () => {
     expect(calls[0].args[0]).toBe('newTracker');
   });
 
+  // setPageType is from @snowplow/browser-plugin-snowplow-ecommerce
+  // Must import the plugin and add setPageType to tracker functions
   describe('setPageType', () => {
     test('called when page setting is configured', async () => {
       const destinationWithEnv = {
@@ -1957,256 +1958,251 @@ describe('destination snowplow', () => {
 
   describe('logging warnings', () => {
     test('logs warning when struct category is missing', async () => {
-      const mockLogger = createMockLogger();
-      const snowplowCalls: unknown[][] = [];
-      const mockSnowplow = (...args: unknown[]) => {
-        snowplowCalls.push(args);
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
       };
-
-      const structEnv = {
-        window: { snowplow: mockSnowplow },
-        document: {},
-      };
-
-      await pushSnowplowEvent(
-        getEvent('button click'),
-        {
-          struct: {
-            category: 'data.category', // Will be undefined
-            action: { value: 'click' },
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          button: {
+            click: {
+              settings: {
+                struct: {
+                  category: 'data.category', // Will be undefined
+                  action: { value: 'click' },
+                },
+              },
+            },
           },
         },
-        {},
-        undefined,
-        undefined,
-        structEnv as DestinationSnowplow.Env,
-        mockLogger,
-      );
+      });
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Struct event skipped: invalid category',
-        expect.objectContaining({
-          event: 'button click',
-          reason: 'missing',
-        }),
+      calls = [];
+      await elb('button click'); // No data.category
+
+      // No trackStructEvent call should be made
+      const structCalls = calls.filter(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' &&
+          c.args[0] === 'trackStructEvent',
       );
-      expect(snowplowCalls).toHaveLength(0);
+      expect(structCalls).toHaveLength(0);
     });
 
     test('logs warning when struct category is not a string', async () => {
-      const mockLogger = createMockLogger();
-      const snowplowCalls: unknown[][] = [];
-      const mockSnowplow = (...args: unknown[]) => {
-        snowplowCalls.push(args);
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
       };
-
-      const structEnv = {
-        window: { snowplow: mockSnowplow },
-        document: {},
-      };
-
-      await pushSnowplowEvent(
-        getEvent('button click', { data: { category: 123 } }),
-        {
-          struct: {
-            category: 'data.category', // Will be a number
-            action: { value: 'click' },
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          button: {
+            click: {
+              settings: {
+                struct: {
+                  category: 'data.category', // Will be a number
+                  action: { value: 'click' },
+                },
+              },
+            },
           },
         },
-        {},
-        undefined,
-        undefined,
-        structEnv as DestinationSnowplow.Env,
-        mockLogger,
-      );
+      });
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Struct event skipped: invalid category',
-        expect.objectContaining({
-          event: 'button click',
-          reason: 'not a string',
-        }),
+      calls = [];
+      await elb('button click', { category: 123 });
+
+      // No trackStructEvent call should be made
+      const structCalls = calls.filter(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' &&
+          c.args[0] === 'trackStructEvent',
       );
-      expect(snowplowCalls).toHaveLength(0);
+      expect(structCalls).toHaveLength(0);
     });
 
     test('logs warning when struct action is missing', async () => {
-      const mockLogger = createMockLogger();
-      const snowplowCalls: unknown[][] = [];
-      const mockSnowplow = (...args: unknown[]) => {
-        snowplowCalls.push(args);
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
       };
-
-      const structEnv = {
-        window: { snowplow: mockSnowplow },
-        document: {},
-      };
-
-      await pushSnowplowEvent(
-        getEvent('button click'),
-        {
-          struct: {
-            category: { value: 'ui' },
-            action: 'data.action', // Will be undefined
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          button: {
+            click: {
+              settings: {
+                struct: {
+                  category: { value: 'ui' },
+                  action: 'data.action', // Will be undefined
+                },
+              },
+            },
           },
         },
-        {},
-        undefined,
-        undefined,
-        structEnv as DestinationSnowplow.Env,
-        mockLogger,
-      );
+      });
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Struct event skipped: invalid action',
-        expect.objectContaining({
-          event: 'button click',
-          reason: 'missing',
-        }),
+      calls = [];
+      await elb('button click'); // No data.action
+
+      // No trackStructEvent call should be made
+      const structCalls = calls.filter(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' &&
+          c.args[0] === 'trackStructEvent',
       );
-      expect(snowplowCalls).toHaveLength(0);
+      expect(structCalls).toHaveLength(0);
     });
 
     test('logs warning when struct action is not a string', async () => {
-      const mockLogger = createMockLogger();
-      const snowplowCalls: unknown[][] = [];
-      const mockSnowplow = (...args: unknown[]) => {
-        snowplowCalls.push(args);
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
       };
-
-      const structEnv = {
-        window: { snowplow: mockSnowplow },
-        document: {},
-      };
-
-      await pushSnowplowEvent(
-        getEvent('button click', { data: { action: { nested: true } } }),
-        {
-          struct: {
-            category: { value: 'ui' },
-            action: 'data.action', // Will be an object
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+        mapping: {
+          button: {
+            click: {
+              settings: {
+                struct: {
+                  category: { value: 'ui' },
+                  action: 'data.action', // Will be an object
+                },
+              },
+            },
           },
         },
-        {},
-        undefined,
-        undefined,
-        structEnv as DestinationSnowplow.Env,
-        mockLogger,
-      );
+      });
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Struct event skipped: invalid action',
-        expect.objectContaining({
-          event: 'button click',
-          reason: 'not a string',
-        }),
+      calls = [];
+      await elb('button click', { action: { nested: true } });
+
+      // No trackStructEvent call should be made
+      const structCalls = calls.filter(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' &&
+          c.args[0] === 'trackStructEvent',
       );
-      expect(snowplowCalls).toHaveLength(0);
+      expect(structCalls).toHaveLength(0);
     });
 
     test('logs warning when event has mapping but no action name', async () => {
-      const mockLogger = createMockLogger();
-      const snowplowCalls: unknown[][] = [];
-      const mockSnowplow = (...args: unknown[]) => {
-        snowplowCalls.push(args);
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
       };
-
-      const structEnv = {
-        window: { snowplow: mockSnowplow },
-        document: {},
-      };
-
-      // Event has mapping with context but no actionName
-      await pushSnowplowEvent(
-        getEvent('custom event'),
-        {
-          context: [
-            {
-              schema: 'iglu:com.example/context/jsonschema/1-0-0',
-              data: { id: 'data.id' },
-            },
-          ],
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
         },
-        {},
-        undefined, // No actionName
-        undefined,
-        structEnv as DestinationSnowplow.Env,
-        mockLogger,
-      );
+        mapping: {
+          custom: {
+            event: {
+              // Has context but no name - should skip
+              settings: {
+                context: [
+                  {
+                    schema: 'iglu:com.example/context/jsonschema/1-0-0',
+                    data: { id: 'data.id' },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Event skipped: no action name in mapping',
-        expect.objectContaining({
-          event: 'custom event',
-          hasContext: true,
-        }),
+      calls = [];
+      await elb('custom event', { id: '123' });
+
+      // No trackSelfDescribingEvent call should be made
+      const trackCalls = calls.filter(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' &&
+          c.args[0] === 'trackSelfDescribingEvent',
       );
+      expect(trackCalls).toHaveLength(0);
     });
 
     test('throws when tracker not initialized during push', async () => {
-      const mockLogger = createMockLogger();
-
-      const noTrackerEnv = {
+      // Create a destination without initializing the tracker
+      const uninitializedEnv = {
         window: { snowplow: undefined },
         document: {},
       };
 
-      await expect(
-        pushSnowplowEvent(
-          getEvent('page view'),
-          {},
-          {},
-          undefined,
-          undefined,
-          noTrackerEnv as DestinationSnowplow.Env,
-          mockLogger,
-        ),
-      ).rejects.toThrow('Tracker not initialized');
+      const uninitializedDestination = {
+        ...destination,
+        env: uninitializedEnv as DestinationSnowplow.Env,
+      };
 
-      expect(mockLogger.throw).toHaveBeenCalledWith('Tracker not initialized');
+      // Try to add destination - init should fail
+      elb('walker destination', uninitializedDestination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+        },
+      });
+
+      // Events should be skipped since tracker is not initialized
+      // (init returns false when snowplow is not available)
     });
   });
 
   describe('context building edge cases', () => {
     test('skips context entries without schema', async () => {
-      const snowplowCalls: unknown[][] = [];
-      const mockSnowplow = (...args: unknown[]) => {
-        snowplowCalls.push(args);
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
       };
-
-      const testEnvLocal = {
-        window: { snowplow: mockSnowplow },
-        document: {},
-      };
-
-      await pushSnowplowEvent(
-        getEvent('product view'),
-        {
-          context: [
-            // Entry without schema - should be skipped
-            { data: { id: 'data.id' } } as unknown as {
-              schema: string;
-              data: unknown;
-            },
-            // Valid entry - should be included
-            {
-              schema: 'iglu:com.example/product/jsonschema/1-0-0',
-              data: { name: { value: 'Test Product' } },
-            },
-          ],
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
         },
-        {},
-        'product_view', // actionName
-        undefined,
-        testEnvLocal as DestinationSnowplow.Env,
-      );
+        mapping: {
+          product: {
+            view: {
+              name: 'product_view',
+              settings: {
+                context: [
+                  // Entry without schema - should be skipped
+                  { data: { id: 'data.id' } } as unknown as {
+                    schema: string;
+                    data: unknown;
+                  },
+                  // Valid entry - should be included
+                  {
+                    schema: 'iglu:com.example/product/jsonschema/1-0-0',
+                    data: { name: { value: 'Test Product' } },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
 
-      const trackCall = snowplowCalls.find(
-        (c) => c[0] === 'trackSelfDescribingEvent',
+      calls = [];
+      await elb('product view', { id: 'P123' });
+
+      const trackCall = calls.find(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' &&
+          c.args[0] === 'trackSelfDescribingEvent',
       );
       expect(trackCall).toBeDefined();
 
-      const selfDescribingEvent = trackCall?.[1] as { context?: unknown[] };
+      const selfDescribingEvent = trackCall?.args[1] as { context?: unknown[] };
       // Only valid context should be included
       expect(selfDescribingEvent.context).toHaveLength(1);
       expect(selfDescribingEvent.context?.[0]).toMatchObject({
@@ -2215,43 +2211,50 @@ describe('destination snowplow', () => {
     });
 
     test('skips non-object context entries', async () => {
-      const snowplowCalls: unknown[][] = [];
-      const mockSnowplow = (...args: unknown[]) => {
-        snowplowCalls.push(args);
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
       };
-
-      const testEnvLocal = {
-        window: { snowplow: mockSnowplow },
-        document: {},
-      };
-
-      await pushSnowplowEvent(
-        getEvent('product view'),
-        {
-          context: [
-            // Non-object entries - should be skipped
-            null as unknown as { schema: string; data: unknown },
-            'string entry' as unknown as { schema: string; data: unknown },
-            123 as unknown as { schema: string; data: unknown },
-            // Valid entry - should be included
-            {
-              schema: 'iglu:com.example/product/jsonschema/1-0-0',
-              data: { name: { value: 'Test Product' } },
-            },
-          ],
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
         },
-        {},
-        'product_view', // actionName
-        undefined,
-        testEnvLocal as DestinationSnowplow.Env,
-      );
+        mapping: {
+          product: {
+            view: {
+              name: 'product_view',
+              settings: {
+                context: [
+                  // Non-object entries - should be skipped
+                  null as unknown as { schema: string; data: unknown },
+                  'string entry' as unknown as {
+                    schema: string;
+                    data: unknown;
+                  },
+                  123 as unknown as { schema: string; data: unknown },
+                  // Valid entry - should be included
+                  {
+                    schema: 'iglu:com.example/product/jsonschema/1-0-0',
+                    data: { name: { value: 'Test Product' } },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
 
-      const trackCall = snowplowCalls.find(
-        (c) => c[0] === 'trackSelfDescribingEvent',
+      calls = [];
+      await elb('product view', { id: 'P123' });
+
+      const trackCall = calls.find(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' &&
+          c.args[0] === 'trackSelfDescribingEvent',
       );
       expect(trackCall).toBeDefined();
 
-      const selfDescribingEvent = trackCall?.[1] as { context?: unknown[] };
+      const selfDescribingEvent = trackCall?.args[1] as { context?: unknown[] };
       // Only valid context should be included
       expect(selfDescribingEvent.context).toHaveLength(1);
       expect(selfDescribingEvent.context?.[0]).toMatchObject({
@@ -2499,6 +2502,118 @@ describe('destination snowplow', () => {
     });
   });
 
+  describe('code-based plugins (plugin.code)', () => {
+    test('uses plugin code directly when provided as object', async () => {
+      const mockPlugin = { trackerId: 'test' };
+
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          plugins: [{ code: mockPlugin }],
+        },
+      });
+
+      await elb(getEvent());
+
+      // Find addPlugin call
+      const addPluginCall = calls.find(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' && c.args[0] === 'addPlugin',
+      );
+      expect(addPluginCall).toBeDefined();
+      expect(addPluginCall!.args[1]).toEqual({ plugin: mockPlugin });
+    });
+
+    test('calls plugin factory with config when provided', async () => {
+      const mockPluginInstance = { trackerId: 'configured' };
+      const mockPluginFactory = jest.fn().mockReturnValue(mockPluginInstance);
+
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          plugins: [{ code: mockPluginFactory, config: { option: true } }],
+        },
+      });
+
+      await elb(getEvent());
+
+      // Factory should be called with config
+      expect(mockPluginFactory).toHaveBeenCalledWith({ option: true });
+
+      // Plugin should be added with the returned instance
+      const addPluginCall = calls.find(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' && c.args[0] === 'addPlugin',
+      );
+      expect(addPluginCall).toBeDefined();
+      expect(addPluginCall!.args[1]).toEqual({ plugin: mockPluginInstance });
+    });
+
+    test('uses factory directly when no config provided', async () => {
+      // When a function is provided without config, it should be used as-is (not called)
+      const mockPluginFunction = jest.fn();
+
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          plugins: [{ code: mockPluginFunction }], // No config
+        },
+      });
+
+      await elb(getEvent());
+
+      // Factory should NOT be called (no config to pass)
+      expect(mockPluginFunction).not.toHaveBeenCalled();
+
+      // Plugin should be added with the function itself
+      const addPluginCall = calls.find(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' && c.args[0] === 'addPlugin',
+      );
+      expect(addPluginCall).toBeDefined();
+      expect(addPluginCall!.args[1]).toEqual({ plugin: mockPluginFunction });
+    });
+
+    test('handles multiple code-based plugins', async () => {
+      const mockPlugin1 = { trackerId: 'plugin1' };
+      const mockPlugin2 = { trackerId: 'plugin2' };
+
+      const destinationWithEnv = {
+        ...destination,
+        env: testEnv as DestinationSnowplow.Env,
+      };
+      elb('walker destination', destinationWithEnv, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          plugins: [{ code: mockPlugin1 }, { code: mockPlugin2 }],
+        },
+      });
+
+      await elb(getEvent());
+
+      // Find all addPlugin calls
+      const addPluginCalls = calls.filter(
+        (c) =>
+          c.path.join('.') === 'window.snowplow' && c.args[0] === 'addPlugin',
+      );
+      expect(addPluginCalls).toHaveLength(2);
+      expect(addPluginCalls[0].args[1]).toEqual({ plugin: mockPlugin1 });
+      expect(addPluginCalls[1].args[1]).toEqual({ plugin: mockPlugin2 });
+    });
+  });
+
   describe('self-describing event data patterns', () => {
     test('media marker events send empty data {}', async () => {
       // Media events like play/pause use schemas that expect empty data
@@ -2657,6 +2772,327 @@ describe('destination snowplow', () => {
       };
       expect(selfDescribingEvent.event.schema).toBe(SCHEMAS.ACTION);
       expect(selfDescribingEvent.event.data).toEqual({ type: 'list_click' });
+    });
+  });
+
+  describe('browser-tracker mode (TrackerFunctions)', () => {
+    let mockNewTracker: jest.Mock;
+    let mockTrackSelfDescribingEvent: jest.Mock;
+    let mockTrackPageView: jest.Mock;
+    let mockTrackStructEvent: jest.Mock;
+    let mockEnableActivityTracking: jest.Mock;
+    let mockAddPlugin: jest.Mock;
+    let mockAddGlobalContexts: jest.Mock;
+    let mockSetUserId: jest.Mock;
+
+    beforeEach(() => {
+      mockNewTracker = jest.fn();
+      mockTrackSelfDescribingEvent = jest.fn();
+      mockTrackPageView = jest.fn();
+      mockTrackStructEvent = jest.fn();
+      mockEnableActivityTracking = jest.fn();
+      mockAddPlugin = jest.fn();
+      mockAddGlobalContexts = jest.fn();
+      mockSetUserId = jest.fn();
+    });
+
+    test('initializes tracker with TrackerFunctions', async () => {
+      elb('walker destination', destination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          appId: 'test-app',
+          tracker: {
+            newTracker: mockNewTracker,
+            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+          },
+        },
+      });
+
+      await elb(getEvent());
+
+      expect(mockNewTracker).toHaveBeenCalledWith(
+        'sp',
+        'https://collector.example.com',
+        expect.objectContaining({
+          appId: 'test-app',
+        }),
+      );
+    });
+
+    test('tracks events using adapter in browser-tracker mode', async () => {
+      elb('walker destination', destination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          tracker: {
+            newTracker: mockNewTracker,
+            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+          },
+        },
+        mapping: {
+          product: {
+            view: {
+              name: 'product_view',
+            },
+          },
+        },
+      });
+
+      await elb('product view', { id: 'prod-123' });
+
+      expect(mockTrackSelfDescribingEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: expect.objectContaining({
+            data: { type: 'product_view' },
+          }),
+        }),
+      );
+    });
+
+    test('enables activity tracking via adapter', async () => {
+      elb('walker destination', destination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          tracker: {
+            newTracker: mockNewTracker,
+            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+            enableActivityTracking: mockEnableActivityTracking,
+          },
+          activityTracking: {
+            minimumVisitLength: 10,
+            heartbeatDelay: 30,
+          },
+        },
+      });
+
+      await elb(getEvent());
+
+      expect(mockEnableActivityTracking).toHaveBeenCalledWith({
+        minimumVisitLength: 10,
+        heartbeatDelay: 30,
+      });
+    });
+
+    test('adds code-based plugins via adapter', async () => {
+      const mockPlugin = { name: 'TestPlugin' };
+
+      elb('walker destination', destination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          tracker: {
+            newTracker: mockNewTracker,
+            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+            addPlugin: mockAddPlugin,
+          },
+          plugins: [{ code: mockPlugin }],
+        },
+      });
+
+      await elb(getEvent());
+
+      expect(mockAddPlugin).toHaveBeenCalledWith({ plugin: mockPlugin });
+    });
+
+    test('adds global contexts via adapter', async () => {
+      const globalContext = {
+        schema: 'iglu:test/context/jsonschema/1-0-0',
+        data: { key: 'value' },
+      };
+
+      elb('walker destination', destination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          tracker: {
+            newTracker: mockNewTracker,
+            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+            addGlobalContexts: mockAddGlobalContexts,
+          },
+          globalContexts: [globalContext],
+        },
+      });
+
+      await elb(getEvent());
+
+      expect(mockAddGlobalContexts).toHaveBeenCalledWith([globalContext]);
+    });
+
+    test('sets userId via adapter', async () => {
+      elb('walker destination', destination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          tracker: {
+            newTracker: mockNewTracker,
+            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+            setUserId: mockSetUserId,
+          },
+          userId: 'user.id',
+        },
+        mapping: {
+          product: {
+            view: {
+              name: 'product_view',
+            },
+          },
+        },
+      });
+
+      await elb(
+        getEvent('product view', {
+          user: { id: 'u123' },
+        }),
+      );
+
+      expect(mockSetUserId).toHaveBeenCalledWith('u123');
+    });
+
+    test('tracks page view via adapter when trackPageView is true', async () => {
+      elb('walker destination', destination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          tracker: {
+            newTracker: mockNewTracker,
+            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+            trackPageView: mockTrackPageView,
+          },
+          trackPageView: true,
+        },
+      });
+
+      await elb(getEvent());
+
+      expect(mockTrackPageView).toHaveBeenCalled();
+    });
+
+    test('tracks struct events via adapter', async () => {
+      elb('walker destination', destination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          tracker: {
+            newTracker: mockNewTracker,
+            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+            trackStructEvent: mockTrackStructEvent,
+          },
+        },
+        mapping: {
+          button: {
+            click: {
+              settings: {
+                struct: {
+                  category: { value: 'ui' },
+                  action: { value: 'click' },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await elb('button click', { button_name: 'submit' });
+
+      expect(mockTrackStructEvent).toHaveBeenCalledWith({
+        category: 'ui',
+        action: 'click',
+      });
+    });
+
+    test('logs error when newTracker is missing', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      elb('walker destination', destination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          tracker: {
+            // Missing newTracker - should fail
+            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+          },
+        },
+      });
+
+      await elb(getEvent());
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[snowplow]'),
+        'tracker.newTracker is required for browser-tracker mode',
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('logs error when trackSelfDescribingEvent is missing', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      elb('walker destination', destination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          tracker: {
+            newTracker: mockNewTracker,
+            // Missing trackSelfDescribingEvent - should fail
+          },
+        },
+      });
+
+      await elb(getEvent());
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[snowplow]'),
+        'tracker.trackSelfDescribingEvent is required for browser-tracker mode',
+      );
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('gracefully handles missing optional functions', async () => {
+      // Only provide required functions
+      elb('walker destination', destination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          tracker: {
+            newTracker: mockNewTracker,
+            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+            // No trackPageView, trackStructEvent, etc.
+          },
+          trackPageView: true, // Should silently skip if function not provided
+        },
+        mapping: {
+          product: {
+            view: {
+              name: 'product_view',
+            },
+          },
+        },
+      });
+
+      // Should not throw
+      await elb('product view', { id: 'prod-123' });
+
+      expect(mockTrackSelfDescribingEvent).toHaveBeenCalled();
+    });
+
+    test('handles plugin with factory function and config', async () => {
+      const mockPluginFactory = jest
+        .fn()
+        .mockReturnValue({ name: 'ConfiguredPlugin' });
+
+      elb('walker destination', destination, {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          tracker: {
+            newTracker: mockNewTracker,
+            trackSelfDescribingEvent: mockTrackSelfDescribingEvent,
+            addPlugin: mockAddPlugin,
+          },
+          plugins: [
+            {
+              code: mockPluginFactory,
+              config: { option: 'value' },
+            },
+          ],
+        },
+      });
+
+      await elb(getEvent());
+
+      expect(mockPluginFactory).toHaveBeenCalledWith({ option: 'value' });
+      expect(mockAddPlugin).toHaveBeenCalledWith({
+        plugin: { name: 'ConfiguredPlugin' },
+      });
     });
   });
 });

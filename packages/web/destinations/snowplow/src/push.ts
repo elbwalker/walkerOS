@@ -1,13 +1,11 @@
 import type { WalkerOS, Logger, Mapping as MappingTypes } from '@walkeros/core';
 import type {
-  SnowplowFunction,
-  SelfDescribingEvent,
+  SnowplowAdapter,
   SelfDescribingJson,
   Mapping,
   StructuredEventMapping,
   Config,
 } from './types';
-import type { DestinationWeb } from '@walkeros/web-core';
 import {
   isObject,
   isArray,
@@ -15,7 +13,6 @@ import {
   isString,
   isNumber,
 } from '@walkeros/core';
-import { getEnv } from '@walkeros/web-core';
 import { SCHEMAS } from './types';
 
 /**
@@ -48,64 +45,68 @@ export async function pushSnowplowEvent(
   data: WalkerOS.AnyObject,
   actionName?: string,
   config?: Config,
-  env?: DestinationWeb.Env,
   logger?: Logger.Instance,
 ): Promise<void> {
-  const { window } = getEnv(env);
-  const snowplow = window.snowplow as SnowplowFunction;
+  const settings = config?.settings;
+  const adapter = settings?._state?.adapter;
 
-  if (!snowplow) {
+  if (!adapter) {
     logger?.throw('Tracker not initialized');
     return;
   }
-
-  const settings = config?.settings;
   const runtimeState = settings?._state;
 
   // Set userId once on first event where value is available
   if (settings?.userId && !runtimeState?.userIdSet) {
     const userId = await getMappingValue(event, settings.userId);
     if (userId && isString(userId)) {
-      snowplow('setUserId', userId);
+      adapter.setUserId(userId);
       if (runtimeState) runtimeState.userIdSet = true;
     }
   }
 
-  // Handle setPageType if configured
+  // Set page context when configured (calls setPageType from ecommerce plugin)
   if (settings?.page) {
-    // Resolve each field via getMappingValue
-    const type = await getMappingValue(event, settings.page.type);
-    const language = settings.page.language
-      ? await getMappingValue(event, settings.page.language)
-      : undefined;
-    const locale = settings.page.locale
-      ? await getMappingValue(event, settings.page.locale)
-      : undefined;
-
-    if (type && isString(type)) {
-      const pageObj = {
-        type,
-        ...(language && isString(language) && { language }),
-        ...(locale && isString(locale) && { locale }),
+    const pageType = await getMappingValue(event, settings.page.type);
+    if (pageType && isString(pageType)) {
+      const page: { type: string; language?: string; locale?: string } = {
+        type: pageType,
       };
-      const pageKey = JSON.stringify(pageObj);
 
-      if (pageKey !== runtimeState?.page) {
-        if (runtimeState) runtimeState.page = pageKey;
-        snowplow('setPageType', pageObj);
+      // Add optional language if configured and resolves to string
+      if (settings.page.language) {
+        const language = await getMappingValue(event, settings.page.language);
+        if (language && isString(language)) {
+          page.language = language;
+        }
+      }
+
+      // Add optional locale if configured and resolves to string
+      if (settings.page.locale) {
+        const locale = await getMappingValue(event, settings.page.locale);
+        if (locale && isString(locale)) {
+          page.locale = locale;
+        }
+      }
+
+      // Only call setPageType if page changed (dedupe based on JSON string)
+      const pageJson = JSON.stringify(page);
+      if (runtimeState?.page !== pageJson) {
+        adapter.setPageType(page);
+        if (runtimeState) runtimeState.page = pageJson;
       }
     }
   }
 
   // Handle structured events (bypasses self-describing events)
   if (mapping.struct) {
-    await handleStructuredEvent(event, mapping.struct, snowplow, logger);
+    await handleStructuredEvent(event, mapping.struct, adapter, logger);
     return;
   }
 
   // Handle page view events (only when explicitly configured)
   if (settings?.pageViewEvent && event.name === settings.pageViewEvent) {
-    snowplow('trackPageView');
+    adapter.trackPageView();
     return;
   }
 
@@ -121,7 +122,7 @@ export async function pushSnowplowEvent(
     // Build event data based on schema type
     let eventData: WalkerOS.AnyObject = {};
 
-    if (mapping.data?.map) {
+    if (isObject(mapping.data) && 'map' in mapping.data) {
       // Use mapped data for self-describing events (e.g., percent_progress)
       const mapped = await getMappingValue(event, mapping.data);
       if (isObject(mapped)) eventData = mapped as WalkerOS.AnyObject;
@@ -131,8 +132,8 @@ export async function pushSnowplowEvent(
     }
     // else: empty data {} for marker events (media play/pause/etc.)
 
-    snowplow('trackSelfDescribingEvent', {
-      event: { schema: actionSchema, data: eventData },
+    adapter.trackSelfDescribingEvent({
+      event: { schema: actionSchema, data: eventData as WalkerOS.Properties },
       context: context.length > 0 ? context : undefined,
     });
   } else {
@@ -214,7 +215,7 @@ async function buildContext(
 async function handleStructuredEvent(
   event: WalkerOS.Event,
   struct: StructuredEventMapping,
-  snowplow: SnowplowFunction,
+  adapter: SnowplowAdapter,
   logger?: Logger.Instance,
 ): Promise<void> {
   // Resolve required fields
@@ -253,7 +254,7 @@ async function handleStructuredEvent(
   // Convert value to number if present
   const value = rawValue !== undefined ? Number(rawValue) : undefined;
 
-  snowplow('trackStructEvent', {
+  adapter.trackStructEvent({
     category,
     action,
     ...(label && isString(label) && { label }),

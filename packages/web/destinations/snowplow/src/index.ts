@@ -5,10 +5,17 @@ import type {
   Mapping,
   Env,
   RuntimeState,
+  SnowplowAdapter,
 } from './types';
-import { isUrlBasedPlugin, deriveEnableMethod } from './types';
+import type { BrowserPlugin } from '@snowplow/browser-tracker-core';
+import {
+  isUrlBasedPlugin,
+  isCodeBasedPlugin,
+  deriveEnableMethod,
+} from './types';
 import { addScript, setup } from './setup';
 import { pushSnowplowEvent } from './push';
+import { createQueueAdapter, createBrowserTrackerAdapter } from './adapter';
 
 // Types
 export * as DestinationSnowplow from './types';
@@ -170,77 +177,121 @@ export const destinationSnowplow: Destination = {
    * Initialize the Snowplow tracker
    *
    * Creates a new tracker instance with the provided configuration.
+   * Supports two modes:
+   * - `tracker`: Browser-tracker mode with imported functions (npm packages)
+   * - Script-based: Load sp.js script and use command queue (JavaScript tag)
    *
    * @param context - Initialization context
    * @returns Updated configuration
    */
   init({ config, env, logger }) {
     const { settings = {} as Partial<Settings>, loadScript } = config;
-
-    const { collectorUrl } = settings;
+    const { collectorUrl, tracker: trackerFunctions } = settings;
 
     // Required collector URL
     if (!collectorUrl) logger.throw('Config settings collectorUrl missing');
 
-    // Load Snowplow script if required
-    if (loadScript) {
-      addScript(collectorUrl!, env, settings.scriptUrl);
+    let adapter: SnowplowAdapter | undefined;
+
+    if (trackerFunctions) {
+      // Browser-tracker mode: use imported functions directly
+      if (!trackerFunctions.newTracker) {
+        logger.throw('tracker.newTracker is required for browser-tracker mode');
+        return false;
+      }
+      if (!trackerFunctions.trackSelfDescribingEvent) {
+        logger.throw(
+          'tracker.trackSelfDescribingEvent is required for browser-tracker mode',
+        );
+        return false;
+      }
+
+      // Initialize tracker
+      trackerFunctions.newTracker(settings.trackerName || 'sp', collectorUrl!, {
+        appId: settings.appId || 'walkerOS',
+        platform: settings.platform || 'web',
+        discoverRootDomain: settings.discoverRootDomain,
+        cookieSameSite: settings.cookieSameSite,
+        appVersion: settings.appVersion,
+        contexts: settings.contexts,
+        anonymousTracking: settings.anonymousTracking,
+      });
+
+      // Create adapter from functions
+      adapter = createBrowserTrackerAdapter(trackerFunctions);
+    } else {
+      // URL-based mode: load sp.js script
+      if (loadScript) {
+        addScript(collectorUrl!, env, settings.scriptUrl);
+      }
+
+      const snowplow = setup(env);
+      if (!snowplow) return false;
+
+      // Initialize tracker via queue
+      snowplow('newTracker', settings.trackerName || 'sp', collectorUrl!, {
+        appId: settings.appId || 'walkerOS',
+        platform: settings.platform || 'web',
+        discoverRootDomain: settings.discoverRootDomain,
+        cookieSameSite: settings.cookieSameSite,
+        appVersion: settings.appVersion,
+        contexts: settings.contexts,
+        anonymousTracking: settings.anonymousTracking,
+      });
+
+      adapter = createQueueAdapter(snowplow);
     }
 
-    // Setup snowplow function
-    const snowplow = setup(env);
-    if (!snowplow) return false;
-
-    // Initialize tracker with full configuration
-    snowplow('newTracker', settings.trackerName || 'sp', collectorUrl!, {
-      appId: settings.appId || 'walkerOS',
-      platform: settings.platform || 'web',
-      discoverRootDomain: settings.discoverRootDomain,
-      cookieSameSite: settings.cookieSameSite,
-      appVersion: settings.appVersion,
-      contexts: settings.contexts,
-      anonymousTracking: settings.anonymousTracking,
-    });
+    if (!adapter) return false;
 
     // Enable activity tracking if configured
     if (settings.activityTracking) {
-      snowplow('enableActivityTracking', settings.activityTracking);
+      adapter.enableActivityTracking(settings.activityTracking);
     }
 
     // Load plugins
     if (settings.plugins) {
       for (const plugin of settings.plugins) {
-        if (isUrlBasedPlugin(plugin)) {
-          // URL-based plugin (sp.js approach)
-          snowplow('addPlugin', plugin.url, plugin.name);
+        if (isCodeBasedPlugin(plugin)) {
+          // Code-based plugin: use directly or call factory with config
+          const pluginInstance =
+            typeof plugin.code === 'function' && plugin.config
+              ? (plugin.code as (...args: unknown[]) => BrowserPlugin)(
+                  plugin.config,
+                )
+              : plugin.code;
+          adapter.addPlugin({ plugin: pluginInstance as BrowserPlugin });
+        } else if (isUrlBasedPlugin(plugin)) {
+          // URL-based plugin (sp.js approach only)
+          adapter.addPlugin([plugin.url, plugin.name]);
           const enableMethod =
             plugin.enableMethod ?? deriveEnableMethod(plugin.name[1]);
           if (plugin.options) {
-            snowplow(enableMethod, plugin.options);
+            adapter.call(enableMethod, plugin.options);
           } else {
-            snowplow(enableMethod);
+            adapter.call(enableMethod);
           }
         } else {
-          // BrowserPlugin instance (npm approach)
-          snowplow('addPlugin', { plugin });
+          // BrowserPlugin instance
+          adapter.addPlugin({ plugin: plugin as BrowserPlugin });
         }
       }
     }
 
     // Register global contexts
     if (settings.globalContexts && settings.globalContexts.length > 0) {
-      snowplow('addGlobalContexts', settings.globalContexts);
+      adapter.addGlobalContexts(settings.globalContexts);
     }
 
     // Track page view on init if configured
     if (settings.trackPageView) {
-      snowplow('trackPageView');
+      adapter.trackPageView();
     }
 
-    // Initialize runtime state for this instance
+    // Store adapter in runtime state
     const updatedSettings = {
       ...settings,
-      _state: {} as RuntimeState,
+      _state: { adapter } as RuntimeState,
     };
 
     return { ...config, settings: updatedSettings };
@@ -255,7 +306,7 @@ export const destinationSnowplow: Destination = {
    * @param event - The walkerOS event to process
    * @param context - Push context with config, data, rule, and env
    */
-  async push(event, { config, data = {}, rule = {}, env, logger }) {
+  async push(event, { config, data = {}, rule = {}, logger }) {
     const eventMapping = rule.settings || {};
     await pushSnowplowEvent(
       event,
@@ -263,7 +314,6 @@ export const destinationSnowplow: Destination = {
       data as WalkerOS.AnyObject,
       rule.name,
       config,
-      env,
       logger,
     );
   },

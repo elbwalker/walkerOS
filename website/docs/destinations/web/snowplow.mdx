@@ -47,6 +47,16 @@ Initializes the Snowplow tracker, loads plugins, enables activity tracking (page
 
 ## Setup
 
+The destination supports two tracking approaches:
+
+- **JavaScript Tag (sp.js)**: Loads the Snowplow tracker script from CDN
+- **NPM Packages**: Uses `@snowplow/browser-tracker` for smaller bundles and tree-shaking
+
+<Tabs groupId="tracker-mode">
+  <TabItem value="spjs" label="JavaScript Tag (sp.js)" default>
+
+Loads the Snowplow tracker script automatically. Simple setup, works everywhere.
+
 <Tabs groupId="mode">
   <TabItem value="integrated" label="Integrated" default>
 
@@ -54,7 +64,7 @@ Initializes the Snowplow tracker, loads plugins, enables activity tracking (page
   code={`import { startFlow } from '@walkeros/collector';
 import { destinationSnowplow } from '@walkeros/web-destination-snowplow';
 
-const { collector, elb } = await startFlow({
+const { elb } = await startFlow({
   destinations: {
     snowplow: {
       code: destinationSnowplow,
@@ -74,28 +84,147 @@ const { collector, elb } = await startFlow({
   </TabItem>
   <TabItem value="bundled" label="Bundled">
 
-Add to your `flow.json` destinations:
-
 <CodeSnippet
-  code={`"destinations": {
-  "snowplow": {
-    "package": "@walkeros/web-destination-snowplow",
-    "config": {
-      "settings": {
-        "collectorUrl": "https://collector.example.com",
-        "appId": "my-app"
-      },
-      "loadScript": true
+  code={`{
+  "destinations": {
+    "snowplow": {
+      "package": "@walkeros/web-destination-snowplow",
+      "config": {
+        "settings": {
+          "collectorUrl": "https://collector.example.com",
+          "appId": "my-app"
+        },
+        "loadScript": true
+      }
     }
   }
 }`}
   language="json"
 />
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+  </TabItem>
+</Tabs>
+
+  </TabItem>
+  <TabItem value="npm" label="NPM Packages (browser-tracker)">
+
+Uses imported functions directly. Smaller bundles, tree-shaking, type-safe.
+
+**Available packages and functions:**
+
+| Package | Functions | Purpose |
+|---------|-----------|---------|
+| `@snowplow/browser-tracker` | `newTracker`, `trackSelfDescribingEvent` | Core tracking (required) |
+| `@snowplow/browser-tracker` | `trackPageView`, `trackStructEvent`, `setUserId`, `enableActivityTracking`, `addPlugin`, `addGlobalContexts`, `clearUserData`, `enableAnonymousTracking`, `disableAnonymousTracking` | Optional features |
+| `@snowplow/browser-plugin-snowplow-ecommerce` | `SnowplowEcommercePlugin`, `setPageType` | Ecommerce tracking |
+| `@snowplow/browser-plugin-link-click-tracking` | `LinkClickTrackingPlugin` | Auto link tracking |
+| `@snowplow/browser-plugin-button-click-tracking` | `ButtonClickTrackingPlugin` | Auto button tracking |
+| `@snowplow/browser-plugin-enhanced-consent` | `trackConsentAllow`, `trackConsentDeny`, `trackConsentSelected` | Consent tracking |
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationSnowplow } from '@walkeros/web-destination-snowplow';
+import {
+  newTracker,
+  trackSelfDescribingEvent,
+  trackPageView,
+  enableActivityTracking,
+  addPlugin,
+  addGlobalContexts,
+} from '@snowplow/browser-tracker';
+import { SnowplowEcommercePlugin, setPageType } from '@snowplow/browser-plugin-snowplow-ecommerce';
+import { LinkClickTrackingPlugin } from '@snowplow/browser-plugin-link-click-tracking';
+
+const { elb } = await startFlow({
+  destinations: {
+    snowplow: {
+      code: destinationSnowplow,
+      config: {
+        settings: {
+          tracker: {
+            newTracker,
+            trackSelfDescribingEvent,
+            trackPageView,
+            enableActivityTracking,
+            addPlugin,
+            addGlobalContexts,
+            setPageType,
+          },
+          collectorUrl: 'https://collector.example.com',
+          appId: 'my-app',
+          plugins: [
+            { code: SnowplowEcommercePlugin },
+            { code: LinkClickTrackingPlugin, config: { trackContent: true } },
+          ],
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+<CodeSnippet
+  code={`{
+  "packages": {
+    "@snowplow/browser-tracker": {
+      "imports": [
+        "newTracker",
+        "trackSelfDescribingEvent",
+        "trackPageView",
+        "enableActivityTracking",
+        "addPlugin",
+        "addGlobalContexts"
+      ]
+    },
+    "@snowplow/browser-plugin-snowplow-ecommerce": {
+      "imports": ["SnowplowEcommercePlugin", "setPageType"]
+    },
+    "@snowplow/browser-plugin-link-click-tracking": {
+      "imports": ["LinkClickTrackingPlugin"]
+    }
+  },
+  "destinations": {
+    "snowplow": {
+      "package": "@walkeros/web-destination-snowplow",
+      "config": {
+        "settings": {
+          "tracker": {
+            "newTracker": "$code:newTracker",
+            "trackSelfDescribingEvent": "$code:trackSelfDescribingEvent",
+            "trackPageView": "$code:trackPageView",
+            "enableActivityTracking": "$code:enableActivityTracking",
+            "addPlugin": "$code:addPlugin",
+            "addGlobalContexts": "$code:addGlobalContexts",
+            "setPageType": "$code:setPageType"
+          },
+          "collectorUrl": "https://collector.example.com",
+          "appId": "my-app",
+          "plugins": [
+            { "code": "$code:SnowplowEcommercePlugin" },
+            { "code": "$code:LinkClickTrackingPlugin", "config": { "trackContent": true } }
+          ]
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
 
   </TabItem>
 </Tabs>
+
+  </TabItem>
+</Tabs>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
 
 ## Configuration reference
 

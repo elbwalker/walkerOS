@@ -67,6 +67,8 @@ await elb('product view', { id: 'P123', name: 'Laptop', price: 999 });
   - `true`: Basic anonymous tracking (no user identifiers)
   - `{ withServerAnonymisation: true }`: Also anonymize IP on server
   - `{ withSessionTracking: true }`: Keep session tracking in anonymous mode
+- **code** (TrackerFactory): Tracker factory function for bundled mode. When
+  provided, bypasses sp.js script loading and uses the factory directly.
 
 ### Event Mapping
 
@@ -192,6 +194,140 @@ config: {
 **Security Warning:** Using `@latest` in production is not recommended as it can
 introduce breaking changes or security vulnerabilities without notice. Always
 pin to a specific version.
+
+### NPM Packages Mode (Browser-Tracker)
+
+Instead of loading sp.js via script tag, you can use `@snowplow/browser-tracker`
+npm packages directly. This provides smaller bundles, tree-shaking, and type
+safety.
+
+**Available tracker functions:**
+
+| Function                   | Package                                       | Required |
+| -------------------------- | --------------------------------------------- | -------- |
+| `newTracker`               | `@snowplow/browser-tracker`                   | ✅ Yes   |
+| `trackSelfDescribingEvent` | `@snowplow/browser-tracker`                   | ✅ Yes   |
+| `trackPageView`            | `@snowplow/browser-tracker`                   | Optional |
+| `trackStructEvent`         | `@snowplow/browser-tracker`                   | Optional |
+| `setUserId`                | `@snowplow/browser-tracker`                   | Optional |
+| `enableActivityTracking`   | `@snowplow/browser-tracker`                   | Optional |
+| `addPlugin`                | `@snowplow/browser-tracker`                   | Optional |
+| `addGlobalContexts`        | `@snowplow/browser-tracker`                   | Optional |
+| `clearUserData`            | `@snowplow/browser-tracker`                   | Optional |
+| `enableAnonymousTracking`  | `@snowplow/browser-tracker`                   | Optional |
+| `disableAnonymousTracking` | `@snowplow/browser-tracker`                   | Optional |
+| `setPageType`              | `@snowplow/browser-plugin-snowplow-ecommerce` | Optional |
+| `trackConsentAllow`        | `@snowplow/browser-plugin-enhanced-consent`   | Optional |
+| `trackConsentDeny`         | `@snowplow/browser-plugin-enhanced-consent`   | Optional |
+| `trackConsentSelected`     | `@snowplow/browser-plugin-enhanced-consent`   | Optional |
+
+**flow.json configuration:**
+
+```json
+{
+  "packages": {
+    "@snowplow/browser-tracker": {
+      "imports": [
+        "newTracker",
+        "trackSelfDescribingEvent",
+        "trackPageView",
+        "enableActivityTracking",
+        "addPlugin",
+        "addGlobalContexts"
+      ]
+    },
+    "@snowplow/browser-plugin-snowplow-ecommerce": {
+      "imports": ["SnowplowEcommercePlugin", "setPageType"]
+    },
+    "@snowplow/browser-plugin-link-click-tracking": {
+      "imports": ["LinkClickTrackingPlugin"]
+    }
+  },
+  "destinations": {
+    "snowplow": {
+      "package": "@walkeros/web-destination-snowplow",
+      "config": {
+        "settings": {
+          "tracker": {
+            "newTracker": "$code:newTracker",
+            "trackSelfDescribingEvent": "$code:trackSelfDescribingEvent",
+            "trackPageView": "$code:trackPageView",
+            "enableActivityTracking": "$code:enableActivityTracking",
+            "addPlugin": "$code:addPlugin",
+            "addGlobalContexts": "$code:addGlobalContexts",
+            "setPageType": "$code:setPageType"
+          },
+          "collectorUrl": "https://collector.example.com",
+          "appId": "my-app",
+          "plugins": [
+            { "code": "$code:SnowplowEcommercePlugin" },
+            {
+              "code": "$code:LinkClickTrackingPlugin",
+              "config": { "trackContent": true }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+When `settings.tracker` is provided:
+
+- Tracker functions are called directly (no sp.js script loaded)
+- No `loadScript` or `scriptUrl` settings needed
+- Smaller bundle size (only imports what you use)
+- Full TypeScript support
+
+### Code-Based Plugins
+
+Plugins can be loaded via imports instead of URLs:
+
+```json
+{
+  "packages": {
+    "@snowplow/browser-tracker": {
+      "imports": ["newTracker", "trackSelfDescribingEvent", "addPlugin"]
+    },
+    "@snowplow/browser-plugin-link-click-tracking": {
+      "imports": ["LinkClickTrackingPlugin"]
+    },
+    "@snowplow/browser-plugin-button-click-tracking": {
+      "imports": ["ButtonClickTrackingPlugin"]
+    }
+  },
+  "destinations": {
+    "snowplow": {
+      "config": {
+        "settings": {
+          "tracker": {
+            "newTracker": "$code:newTracker",
+            "trackSelfDescribingEvent": "$code:trackSelfDescribingEvent",
+            "addPlugin": "$code:addPlugin"
+          },
+          "collectorUrl": "https://collector.example.com",
+          "plugins": [
+            {
+              "code": "$code:LinkClickTrackingPlugin",
+              "config": { "trackContent": true }
+            },
+            {
+              "code": "$code:ButtonClickTrackingPlugin",
+              "config": { "filter": { "allowlist": ["tracked"] } }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+**Plugin configuration:**
+
+- `code`: The plugin factory (via `$code:` prefix)
+- `config`: Options passed to the plugin factory
 
 ## Examples
 
