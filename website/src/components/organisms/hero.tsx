@@ -113,7 +113,7 @@ export default function Hero({
                       className="inline-flex items-center space-x-2 text-sm/6 font-medium"
                       style={{ color: 'var(--color-base-content)' }}
                     >
-                      <span>Just shipped v1.0</span>
+                      <span>Just shipped v1.1</span>
                       <ChevronRightIcon
                         aria-hidden="true"
                         className="size-5"
@@ -152,7 +152,7 @@ export default function Hero({
                       to={primaryButton.link}
                       className="rounded-md bg-[#01b5e2] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#01b5e2]/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#01b5e2]"
                       {...tagger
-                        .action(primaryButton.elbAction || 'click')
+                        .action('click', primaryButton.elbAction || 'click')
                         .get()}
                     >
                       {primaryButton.children}
@@ -164,7 +164,7 @@ export default function Hero({
                       className="text-sm/6 font-semibold"
                       style={{ color: 'var(--color-base-content)' }}
                       {...tagger
-                        .action(secondaryButton.elbAction || 'click')
+                        .action('click', secondaryButton.elbAction || 'click')
                         .get()}
                     >
                       {secondaryButton.children}{' '}
