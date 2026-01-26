@@ -121,6 +121,21 @@ export async function bundleCore(
     // Step 1: Ensure temporary directory exists
     await fs.ensureDir(TEMP_DIR);
 
+    // Step 1.5: Auto-add collector if sources/destinations exist but collector not specified
+    const hasSourcesOrDests =
+      Object.keys(
+        (flowConfig as unknown as { sources?: Record<string, unknown> })
+          .sources || {},
+      ).length > 0 ||
+      Object.keys(
+        (flowConfig as unknown as { destinations?: Record<string, unknown> })
+          .destinations || {},
+      ).length > 0;
+
+    if (hasSourcesOrDests && !buildOptions.packages['@walkeros/collector']) {
+      buildOptions.packages['@walkeros/collector'] = {};
+    }
+
     // Step 2: Download packages
     logger.debug('Downloading packages');
     // Convert packages object to array format expected by downloadPackages
@@ -204,6 +219,9 @@ export async function bundleCore(
         buildError as EsbuildError,
         buildOptions.code || '',
       );
+    } finally {
+      // Clean up esbuild worker threads to allow process to exit
+      await esbuild.stop();
     }
 
     // Get file size and calculate build time
@@ -536,37 +554,42 @@ function generateImportStatements(
     const isUsedByDestOrSource = usedPackages.has(packageName);
     const hasExplicitCode = explicitCodeImports.has(packageName);
 
+    // Track what named imports we'll generate to avoid duplicates
+    const namedImportsToGenerate: string[] = [];
+
+    // 1. Generate default import for packages used by sources/destinations
+    //    UNLESS explicit code is specified (allows packages without default export)
+    if (isUsedByDestOrSource && !hasExplicitCode) {
+      const varName = packageNameToVariable(packageName);
+      importStatements.push(`import ${varName} from '${packageName}';`);
+    }
+
+    // 2. Generate named import for explicit code (packages without default export)
+    if (hasExplicitCode) {
+      const codes = Array.from(explicitCodeImports.get(packageName)!);
+      namedImportsToGenerate.push(...codes);
+    }
+
+    // 3. Process imports list (utilities and special syntax)
     if (packageConfig.imports && packageConfig.imports.length > 0) {
-      // Explicit imports (utilities) - existing logic
-      // Remove duplicates within the same package
       const uniqueImports = [...new Set(packageConfig.imports)];
 
       // Handle special "default as X" syntax
-      const defaultImports: string[] = [];
-      const namedImports: string[] = [];
-
       for (const imp of uniqueImports) {
         if (imp.startsWith('default as ')) {
-          defaultImports.push(imp.replace('default as ', ''));
+          // Only generate default import if not already generated above
+          if (!isUsedByDestOrSource || hasExplicitCode) {
+            const defaultImportName = imp.replace('default as ', '');
+            importStatements.push(
+              `import ${defaultImportName} from '${packageName}';`,
+            );
+          }
         } else {
-          namedImports.push(imp);
+          // Add to named imports if not already in explicit code
+          if (!namedImportsToGenerate.includes(imp)) {
+            namedImportsToGenerate.push(imp);
+          }
         }
-      }
-
-      // Generate import statements
-      if (defaultImports.length > 0) {
-        for (const defaultImport of defaultImports) {
-          importStatements.push(
-            `import ${defaultImport} from '${packageName}';`,
-          );
-        }
-      }
-
-      if (namedImports.length > 0) {
-        const importList = namedImports.join(', ');
-        importStatements.push(
-          `import { ${importList} } from '${packageName}';`,
-        );
       }
 
       // Check if this package imports examples and create mappings
@@ -574,10 +597,7 @@ function generateImportStatements(
         imp.includes('examples as '),
       );
       if (examplesImport) {
-        // Extract destination name and examples variable name
-        // Format: "examples as gtagExamples" -> gtagExamples
         const examplesVarName = examplesImport.split(' as ')[1];
-        // Get destination name from package (assumes @walkeros/web-destination-xxx format)
         const destinationMatch = packageName.match(
           /@walkeros\/web-destination-(.+)$/,
         );
@@ -588,20 +608,21 @@ function generateImportStatements(
           );
         }
       }
-    } else if (hasExplicitCode) {
-      // Package with explicit code specified in destinations/sources
-      // → Generate named imports
-      const codes = Array.from(explicitCodeImports.get(packageName)!);
-      importStatements.push(
-        `import { ${codes.join(', ')} } from '${packageName}';`,
-      );
-    } else if (isUsedByDestOrSource) {
-      // Package used by destination/source but no explicit imports or code
-      // → Generate default import
-      const varName = packageNameToVariable(packageName);
-      importStatements.push(`import ${varName} from '${packageName}';`);
     }
-    // If package declared but not used by any dest/source, skip import
+
+    // 4. Auto-import startFlow from collector (always required for flows)
+    if (
+      packageName === '@walkeros/collector' &&
+      !namedImportsToGenerate.includes('startFlow')
+    ) {
+      namedImportsToGenerate.push('startFlow');
+    }
+
+    // 5. Generate combined named imports statement
+    if (namedImportsToGenerate.length > 0) {
+      const importList = namedImportsToGenerate.join(', ');
+      importStatements.push(`import { ${importList} } from '${packageName}';`);
+    }
 
     // Examples are no longer auto-imported - simulator loads them dynamically
   }
@@ -776,10 +797,50 @@ ${destinationsEntries.join(',\n')}
 
 /**
  * Process config value for serialization.
- * Uses existing serializer utilities.
+ * Handles $code: prefix to output raw JavaScript instead of quoted strings.
  */
 function processConfigValue(value: unknown): string {
-  return JSON.stringify(value, null, 2);
+  return serializeWithCode(value, 0);
+}
+
+/**
+ * Serialize a value, handling $code: prefix for inline JavaScript.
+ * Values starting with "$code:" are output as raw JS (no quotes).
+ */
+function serializeWithCode(value: unknown, indent: number): string {
+  const spaces = '  '.repeat(indent);
+  const nextSpaces = '  '.repeat(indent + 1);
+
+  // Handle $code: prefix - output raw JavaScript
+  if (typeof value === 'string') {
+    if (value.startsWith('$code:')) {
+      return value.slice(6); // Strip prefix, output raw JS
+    }
+    return JSON.stringify(value);
+  }
+
+  // Handle arrays
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    const items = value.map(
+      (v) => nextSpaces + serializeWithCode(v, indent + 1),
+    );
+    return `[\n${items.join(',\n')}\n${spaces}]`;
+  }
+
+  // Handle objects
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value);
+    if (entries.length === 0) return '{}';
+    const props = entries.map(
+      ([k, v]) =>
+        `${nextSpaces}${JSON.stringify(k)}: ${serializeWithCode(v, indent + 1)}`,
+    );
+    return `{\n${props.join(',\n')}\n${spaces}}`;
+  }
+
+  // Handle primitives (numbers, booleans, null)
+  return JSON.stringify(value);
 }
 
 /**

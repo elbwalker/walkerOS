@@ -8,7 +8,7 @@ describe('Server Collector', () => {
   const mockDestination: DestinationServer.Destination = {
     config: {},
     push: mockDestinationPush,
-    queue: [],
+    queuePush: [],
     dlq: [],
   };
   let mockEvent: WalkerOS.Event;
@@ -59,7 +59,7 @@ describe('Server Collector', () => {
     expect(instance.destinations).toEqual({
       mock: {
         config: { id: 'mock' },
-        queue: [],
+        queuePush: [],
         dlq: [],
         push: mockDestinationPush,
         env: {},

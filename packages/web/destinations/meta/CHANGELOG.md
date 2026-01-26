@@ -1,5 +1,11 @@
 # @walkeros/web-destination-meta
 
+## 1.0.1
+
+### Patch Changes
+
+- @walkeros/web-core@1.0.1
+
 ## 1.0.0
 
 ### Major Changes

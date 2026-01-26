@@ -1,0 +1,816 @@
+---
+title: Snowplow
+description: Behavioral data platform destination with ecommerce tracking
+path: /docs/destinations/web/snowplow
+sidebar_position: 4
+package: '@walkeros/web-destination-snowplow'
+---
+
+import { getEvent } from '@walkeros/core';
+import destinationSnowplow from '@walkeros/web-destination-snowplow';
+import { examples, schemas } from '@walkeros/web-destination-snowplow/dev';
+
+export const destination = { ...destinationSnowplow, examples };
+
+# Snowplow
+
+<PackageLink
+  env="web"
+  github="packages/web/destinations/snowplow"
+  npm="@walkeros/web-destination-snowplow"
+/>
+
+[Snowplow](https://snowplow.io/) is a behavioral data platform for collecting
+and routing event data. The destination sends events via the browser tracker,
+supporting both the npm `@snowplow/browser-tracker` and the JavaScript tracker
+(`sp.js`). walkerOS handles tracker initialization, plugin loading, activity
+tracking, and event mapping.
+
+:::info Where This Fits
+Snowplow is a **web destination** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { highlight: false } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { label: 'Destination', text: 'Snowplow', highlight: true } }}
+/>
+
+Initializes the Snowplow tracker, loads plugins, enables activity tracking (page pings), and sends self-describing events with ecommerce context entities.
+:::
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/web-destination-snowplow`}
+  language="bash"
+/>
+
+## Setup
+
+The destination supports two tracking approaches:
+
+- **JavaScript Tag (sp.js)**: Loads the Snowplow tracker script from CDN
+- **NPM Packages**: Uses `@snowplow/browser-tracker` for smaller bundles and tree-shaking
+
+<Tabs groupId="tracker-mode">
+  <TabItem value="spjs" label="JavaScript Tag (sp.js)" default>
+
+Loads the Snowplow tracker script automatically. Simple setup, works everywhere.
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationSnowplow } from '@walkeros/web-destination-snowplow';
+
+const { elb } = await startFlow({
+  destinations: {
+    snowplow: {
+      code: destinationSnowplow,
+      config: {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          appId: 'my-app',
+        },
+        loadScript: true,
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "snowplow": {
+      "package": "@walkeros/web-destination-snowplow",
+      "config": {
+        "settings": {
+          "collectorUrl": "https://collector.example.com",
+          "appId": "my-app"
+        },
+        "loadScript": true
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+  </TabItem>
+  <TabItem value="npm" label="NPM Packages (browser-tracker)">
+
+Uses imported functions directly. Smaller bundles, tree-shaking, type-safe.
+
+**Available packages and functions:**
+
+| Package | Functions | Purpose |
+|---------|-----------|---------|
+| `@snowplow/browser-tracker` | `newTracker`, `trackSelfDescribingEvent` | Core tracking (required) |
+| `@snowplow/browser-tracker` | `trackPageView`, `trackStructEvent`, `setUserId`, `enableActivityTracking`, `addPlugin`, `addGlobalContexts`, `clearUserData`, `enableAnonymousTracking`, `disableAnonymousTracking` | Optional features |
+| `@snowplow/browser-plugin-snowplow-ecommerce` | `SnowplowEcommercePlugin`, `setPageType` | Ecommerce tracking |
+| `@snowplow/browser-plugin-link-click-tracking` | `LinkClickTrackingPlugin` | Auto link tracking |
+| `@snowplow/browser-plugin-button-click-tracking` | `ButtonClickTrackingPlugin` | Auto button tracking |
+| `@snowplow/browser-plugin-enhanced-consent` | `trackConsentAllow`, `trackConsentDeny`, `trackConsentSelected` | Consent tracking |
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationSnowplow } from '@walkeros/web-destination-snowplow';
+import {
+  newTracker,
+  trackSelfDescribingEvent,
+  trackPageView,
+  enableActivityTracking,
+  addPlugin,
+  addGlobalContexts,
+} from '@snowplow/browser-tracker';
+import { SnowplowEcommercePlugin, setPageType } from '@snowplow/browser-plugin-snowplow-ecommerce';
+import { LinkClickTrackingPlugin } from '@snowplow/browser-plugin-link-click-tracking';
+
+const { elb } = await startFlow({
+  destinations: {
+    snowplow: {
+      code: destinationSnowplow,
+      config: {
+        settings: {
+          tracker: {
+            newTracker,
+            trackSelfDescribingEvent,
+            trackPageView,
+            enableActivityTracking,
+            addPlugin,
+            addGlobalContexts,
+            setPageType,
+          },
+          collectorUrl: 'https://collector.example.com',
+          appId: 'my-app',
+          plugins: [
+            { code: SnowplowEcommercePlugin },
+            { code: LinkClickTrackingPlugin, config: { trackContent: true } },
+          ],
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+<CodeSnippet
+  code={`{
+  "packages": {
+    "@snowplow/browser-tracker": {
+      "imports": [
+        "newTracker",
+        "trackSelfDescribingEvent",
+        "trackPageView",
+        "enableActivityTracking",
+        "addPlugin",
+        "addGlobalContexts"
+      ]
+    },
+    "@snowplow/browser-plugin-snowplow-ecommerce": {
+      "imports": ["SnowplowEcommercePlugin", "setPageType"]
+    },
+    "@snowplow/browser-plugin-link-click-tracking": {
+      "imports": ["LinkClickTrackingPlugin"]
+    }
+  },
+  "destinations": {
+    "snowplow": {
+      "package": "@walkeros/web-destination-snowplow",
+      "config": {
+        "settings": {
+          "tracker": {
+            "newTracker": "$code:newTracker",
+            "trackSelfDescribingEvent": "$code:trackSelfDescribingEvent",
+            "trackPageView": "$code:trackPageView",
+            "enableActivityTracking": "$code:enableActivityTracking",
+            "addPlugin": "$code:addPlugin",
+            "addGlobalContexts": "$code:addGlobalContexts",
+            "setPageType": "$code:setPageType"
+          },
+          "collectorUrl": "https://collector.example.com",
+          "appId": "my-app",
+          "plugins": [
+            { "code": "$code:SnowplowEcommercePlugin" },
+            { "code": "$code:LinkClickTrackingPlugin", "config": { "trackContent": true } }
+          ]
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+  </TabItem>
+</Tabs>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+## Configuration reference
+
+<PropertyTable schema={schemas.settings} />
+
+#### Example
+
+<DestinationInitDemo
+  destination={destination}
+  settings={{
+    collectorUrl: 'https://collector.example.com',
+    appId: 'my-app',
+  }}
+/>
+
+### Event Mapping
+
+For custom event mapping (`mapping.entity.action.settings`):
+
+<PropertyTable schema={schemas.mapping} />
+
+## User Identity & Privacy
+
+### Cross-Session User Stitching
+
+Use `userId` to link events across sessions when users log in. The ID is set once via Snowplow's `setUserId()` on the first event where the value resolves:
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  userId: 'user.id', // From walkerOS user object
+}`}
+  language="typescript"
+/>
+
+The `userId` setting supports walkerOS mapping syntax:
+
+- `'user.id'` - From walkerOS user object (recommended)
+- `'globals.user_id'` - From globals
+
+### Anonymous Tracking
+
+Enable anonymous tracking for privacy-focused collection or before consent:
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  anonymousTracking: {
+    withServerAnonymisation: true, // Anonymize IP on server
+    withSessionTracking: true,     // Keep session context
+  },
+}`}
+  language="typescript"
+/>
+
+### Runtime Privacy Controls
+
+Control tracking modes at runtime using exported utility functions:
+
+<CodeSnippet
+  code={`import {
+  clearUserData,
+  enableAnonymousTracking,
+  disableAnonymousTracking,
+} from '@walkeros/web-destination-snowplow';
+
+// User withdraws consent - clear all identifiers
+clearUserData();
+
+// Switch to anonymous mode mid-session
+enableAnonymousTracking({ withServerAnonymisation: true });
+
+// User grants consent - resume normal tracking
+disableAnonymousTracking();`}
+  language="typescript"
+/>
+
+### Consent Tracking
+
+Track GDPR/CCPA consent events using Snowplow's [Enhanced Consent plugin](https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/javascript-trackers/web-tracker/tracking-events/consent-gdpr/). The destination automatically reacts to walkerOS consent events and calls the appropriate Snowplow consent methods.
+
+**Prerequisites:** Load the Enhanced Consent plugin via the `plugins` setting or include it in your Snowplow script bundle.
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  consent: {
+    required: ['analytics', 'marketing'],
+    basisForProcessing: 'consent',
+    consentUrl: 'https://example.com/privacy',
+    consentVersion: '2.0',
+    domainsApplied: ['example.com'],
+    gdprApplies: true,
+  },
+}`}
+  language="typescript"
+/>
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `required` | `string[]` | walkerOS consent groups to check |
+| `basisForProcessing` | `string` | GDPR basis: `consent`, `contract`, `legal_obligation`, `vital_interests`, `public_task`, `legitimate_interests` |
+| `consentUrl` | `string` | Privacy policy URL |
+| `consentVersion` | `string` | Policy version |
+| `domainsApplied` | `string[]` | Domains where consent applies |
+| `gdprApplies` | `boolean` | Whether GDPR applies |
+
+The destination maps walkerOS consent state to Snowplow methods:
+
+| walkerOS Consent State | Snowplow Method |
+|------------------------|-----------------|
+| All required scopes granted | `trackConsentAllow` |
+| All required scopes denied | `trackConsentDeny` |
+| Partial consent (mixed) | `trackConsentSelected` |
+
+<CodeSnippet
+  code={`// User accepts all required scopes
+await elb('walker consent', { analytics: true, marketing: true });
+// → trackConsentAllow called
+
+// User accepts some scopes
+await elb('walker consent', { analytics: true, marketing: false });
+// → trackConsentSelected called
+
+// User rejects all scopes
+await elb('walker consent', { analytics: false, marketing: false });
+// → trackConsentDeny called`}
+  language="typescript"
+/>
+
+## Media Tracking
+
+Track video and audio playback events using Snowplow's [media tracking schemas](https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/javascript-trackers/web-tracker/tracking-events/media/). The destination supports all media events and contexts.
+
+### Basic Usage
+
+<CodeSnippet
+  code={`// Track video play
+await elb('video play', {
+  id: 'video-123',
+  title: 'Product Demo',
+  currentTime: 0,
+  duration: 120,
+});
+
+// Track video progress (25%, 50%, 75% milestones)
+await elb('video progress', {
+  id: 'video-123',
+  percentProgress: 25,
+});
+
+// Track video pause
+await elb('video pause', {
+  id: 'video-123',
+  currentTime: 45,
+});
+
+// Track video complete
+await elb('video end', {
+  id: 'video-123',
+  duration: 120,
+});`}
+  language="typescript"
+/>
+
+### Media Mapping Configuration
+
+Configure media event mappings with the `MEDIA_SCHEMAS` constants:
+
+<CodeSnippet
+  code={`import { MEDIA_SCHEMAS } from '@walkeros/web-destination-snowplow';
+
+// In your destination config mapping:
+{
+  video: {
+    play: {
+      settings: {
+        snowplow: { actionSchema: MEDIA_SCHEMAS.PLAY },
+        context: [{
+          schema: MEDIA_SCHEMAS.MEDIA_PLAYER,
+          data: {
+            currentTime: 'data.currentTime',
+            duration: 'data.duration',
+            paused: { value: false },
+            muted: 'data.muted',
+            volume: 'data.volume',
+          },
+        }],
+      },
+    },
+    progress: {
+      settings: {
+        snowplow: { actionSchema: MEDIA_SCHEMAS.PERCENT_PROGRESS },
+      },
+      data: { map: { percentProgress: 'data.percent' } },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+### Ad Tracking
+
+Track video advertisements with pre-roll, mid-roll, and post-roll events:
+
+<CodeSnippet
+  code={`import { MEDIA_SCHEMAS } from '@walkeros/web-destination-snowplow';
+
+{
+  ad: {
+    break_start: {
+      settings: {
+        snowplow: { actionSchema: MEDIA_SCHEMAS.AD_BREAK_START },
+        context: [{
+          schema: MEDIA_SCHEMAS.AD_BREAK,
+          data: {
+            breakId: 'data.breakId',
+            breakType: 'data.breakType', // 'preroll', 'midroll', 'postroll'
+          },
+        }],
+      },
+    },
+    start: {
+      settings: {
+        snowplow: { actionSchema: MEDIA_SCHEMAS.AD_START },
+        context: [{
+          schema: MEDIA_SCHEMAS.AD,
+          data: {
+            adId: 'data.adId',
+            name: 'data.name',
+            duration: 'data.duration',
+          },
+        }],
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+### Available Media Schemas
+
+| Schema | Description | Use Case |
+|--------|-------------|----------|
+| `PLAY` | Playback started | Video/audio play |
+| `PAUSE` | Playback paused | User pauses content |
+| `END` | Playback ended | Video/audio completed |
+| `SEEK_START` / `SEEK_END` | User seeking | Scrubbing timeline |
+| `BUFFER_START` / `BUFFER_END` | Buffering state | Loading content |
+| `QUALITY_CHANGE` | Video quality changed | Adaptive streaming |
+| `FULLSCREEN_CHANGE` | Fullscreen toggled | User interaction |
+| `VOLUME_CHANGE` | Volume changed | User adjustment |
+| `PERCENT_PROGRESS` | Progress milestone | 25%, 50%, 75% markers |
+| `ERROR` | Playback error | Error tracking |
+| `AD_BREAK_START` / `AD_BREAK_END` | Ad break | Pre/mid/post-roll |
+| `AD_START` / `AD_COMPLETE` / `AD_SKIP` | Individual ad | Ad impressions |
+
+## Schema Constants
+
+The package exports pre-defined Snowplow schema URIs for use in custom mappings:
+
+<CodeSnippet
+  code={`import {
+  SCHEMAS, ACTIONS, WEB_SCHEMAS, CONSENT_SCHEMAS,
+  MEDIA_SCHEMAS, MEDIA_ACTIONS
+} from '@walkeros/web-destination-snowplow';
+
+// Ecommerce schemas
+SCHEMAS.PRODUCT;     // product/jsonschema/1-0-0
+SCHEMAS.TRANSACTION; // transaction/jsonschema/1-0-0
+
+// Ecommerce actions
+ACTIONS.ADD_TO_CART; // 'add_to_cart'
+ACTIONS.TRANSACTION; // 'transaction'
+
+// Web event schemas
+WEB_SCHEMAS.LINK_CLICK;  // link_click/jsonschema/1-0-1
+WEB_SCHEMAS.SUBMIT_FORM; // submit_form/jsonschema/1-0-0
+WEB_SCHEMAS.SITE_SEARCH; // site_search/jsonschema/1-0-0
+WEB_SCHEMAS.TIMING;      // timing/jsonschema/1-0-0
+WEB_SCHEMAS.WEB_VITALS;  // web_vitals/jsonschema/1-0-0
+
+// Web context schemas
+WEB_SCHEMAS.WEB_PAGE;       // web_page/jsonschema/1-0-0
+WEB_SCHEMAS.BROWSER;        // browser_context/jsonschema/2-0-0
+WEB_SCHEMAS.CLIENT_SESSION; // client_session/jsonschema/1-0-2
+WEB_SCHEMAS.GEOLOCATION;    // geolocation_context/jsonschema/1-1-0
+
+// Media event schemas
+MEDIA_SCHEMAS.PLAY;             // play_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.PAUSE;            // pause_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.END;              // end_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.SEEK_START;       // seek_start_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.BUFFER_START;     // buffer_start_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.QUALITY_CHANGE;   // quality_change_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.PERCENT_PROGRESS; // percent_progress_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.ERROR;            // error_event/jsonschema/1-0-0
+
+// Media context schemas
+MEDIA_SCHEMAS.MEDIA_PLAYER; // media_player/jsonschema/1-0-0
+MEDIA_SCHEMAS.SESSION;      // session/jsonschema/1-0-0
+MEDIA_SCHEMAS.AD;           // ad/jsonschema/1-0-0
+MEDIA_SCHEMAS.AD_BREAK;     // ad_break/jsonschema/1-0-0
+
+// Media ad schemas
+MEDIA_SCHEMAS.AD_BREAK_START; // ad_break_start_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.AD_START;       // ad_start_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.AD_COMPLETE;    // ad_complete_event/jsonschema/1-0-0
+MEDIA_SCHEMAS.AD_SKIP;        // ad_skip_event/jsonschema/1-0-0
+
+// Consent schemas (Enhanced Consent plugin)
+CONSENT_SCHEMAS.PREFERENCES; // consent_preferences/jsonschema/1-0-0
+CONSENT_SCHEMAS.CMP_VISIBLE; // cmp_visible/jsonschema/1-0-0
+CONSENT_SCHEMAS.DOCUMENT;    // consent_document/jsonschema/1-0-0
+CONSENT_SCHEMAS.GDPR;        // gdpr/jsonschema/1-0-0`}
+  language="typescript"
+/>
+
+## Advanced Configuration
+
+### Tracker Settings
+
+Configure Snowplow tracker behavior including cookie settings and built-in contexts:
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  appId: 'my-app',
+  appVersion: '1.0.0',
+  discoverRootDomain: true,
+  cookieSameSite: 'Lax',
+  contexts: {
+    webPage: true,
+    session: true,
+    performanceTiming: true,
+    geolocation: false,
+  },
+}`}
+  language="typescript"
+/>
+
+### Activity Tracking (Page Pings)
+
+Enable activity tracking to measure user engagement through page pings:
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  activityTracking: {
+    minimumVisitLength: 10, // seconds before first ping
+    heartbeatDelay: 30,     // seconds between pings
+  },
+}`}
+  language="typescript"
+/>
+
+### Page View Tracking
+
+Configure how Snowplow's native `trackPageView()` is triggered:
+
+**Option 1: Auto-track on init**
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  trackPageView: true, // Calls trackPageView() immediately after init
+}`}
+  language="typescript"
+/>
+
+**Option 2: Track via walkerOS event**
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  pageViewEvent: 'page view', // Explicit - triggers trackPageView()
+}
+
+// Then in your app:
+await elb('page view', { title: document.title });`}
+  language="typescript"
+/>
+
+**Option 3: Custom event name**
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  pageViewEvent: 'screen view', // Custom event name for SPAs/mobile
+}
+
+await elb('screen view', { screenName: 'Home' });`}
+  language="typescript"
+/>
+
+:::note
+Both settings require explicit configuration - there is no implicit default. If neither `trackPageView` nor `pageViewEvent` is set, no automatic page view tracking occurs.
+:::
+
+### Plugins
+
+Load Snowplow plugins for automatic tracking of links, buttons, and forms. Supports both URL-based plugins (sp.js) and npm BrowserPlugin instances:
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  plugins: [
+    // URL-based plugin (sp.js approach)
+    {
+      url: 'https://cdn.jsdelivr.net/npm/@snowplow/browser-plugin-link-click-tracking@latest/dist/index.umd.min.js',
+      name: ['snowplowLinkClickTracking', 'LinkClickTrackingPlugin'],
+      options: { trackContent: true },
+    },
+    {
+      url: 'https://cdn.jsdelivr.net/npm/@snowplow/browser-plugin-form-tracking@latest/dist/index.umd.min.js',
+      name: ['snowplowFormTracking', 'FormTrackingPlugin'],
+    },
+  ],
+}`}
+  language="typescript"
+/>
+
+The enable method is derived automatically from the plugin name (`LinkClickTrackingPlugin` → `enableLinkClickTracking`). Override with `enableMethod` if needed.
+
+### Global Contexts
+
+Attach context entities to all events. Supports static objects and dynamic generator functions:
+
+<CodeSnippet
+  code={`{
+  collectorUrl: 'https://collector.example.com',
+  globalContexts: [
+    // Static context
+    {
+      schema: 'iglu:com.example/app_info/jsonschema/1-0-0',
+      data: { version: '1.0.0', environment: 'production' },
+    },
+    // Dynamic context (e.g., consent state)
+    () => ({
+      schema: 'iglu:com.example/consent/jsonschema/1-0-0',
+      data: {
+        advertising: document.cookie.includes('ads_consent=1'),
+      },
+    }),
+  ],
+}`}
+  language="typescript"
+/>
+
+## Full Replacement Example
+
+Replace native Snowplow tracker calls with a single walkerOS configuration:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { destinationSnowplow } from '@walkeros/web-destination-snowplow';
+
+await startFlow({
+  destinations: {
+    snowplow: {
+      code: destinationSnowplow,
+      config: {
+        settings: {
+          collectorUrl: 'https://collector.example.com',
+          appId: 'my-app',
+          appVersion: '1.0.0',
+          userId: 'user.id',
+          discoverRootDomain: true,
+          cookieSameSite: 'Lax',
+          contexts: {
+            session: true,
+            performanceTiming: true,
+          },
+          activityTracking: {
+            minimumVisitLength: 10,
+            heartbeatDelay: 30,
+          },
+          plugins: [
+            {
+              url: 'https://cdn.jsdelivr.net/npm/@snowplow/browser-plugin-link-click-tracking@latest/dist/index.umd.min.js',
+              name: ['snowplowLinkClickTracking', 'LinkClickTrackingPlugin'],
+              options: { trackContent: true },
+            },
+            {
+              url: 'https://cdn.jsdelivr.net/npm/@snowplow/browser-plugin-form-tracking@latest/dist/index.umd.min.js',
+              name: ['snowplowFormTracking', 'FormTrackingPlugin'],
+            },
+          ],
+          globalContexts: [
+            () => ({
+              schema: 'iglu:com.example/consent/jsonschema/1-0-0',
+              data: { advertising: document.cookie.includes('ads=1') },
+            }),
+          ],
+        },
+        loadScript: true,
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+## Mapping examples
+
+:::tip
+
+The code examples are interactive. You can edit the code to generate your
+individual event mapping.
+
+:::
+
+Learn more about
+[Snowplow Ecommerce tracking](https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/javascript-trackers/web-tracker/tracking-events/ecommerce/).
+
+### Product View
+
+Map your walkerOS event to get a Snowplow `product_view` ecommerce event with product context.
+
+<DestinationDemo
+  destination={destination}
+  settings={{
+    collectorUrl: 'https://collector.example.com',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product view')}
+  mapping={examples.mapping.productView}
+  generic={true}
+/>
+
+### Add to Cart
+
+Map your walkerOS event to get a Snowplow `add_to_cart` ecommerce event with product, cart, page, and user context entities.
+
+<DestinationDemo
+  destination={destination}
+  settings={{
+    collectorUrl: 'https://collector.example.com',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('product add')}
+  mapping={examples.mapping.addToCart}
+  generic={true}
+/>
+
+### Transaction
+
+Map your walkerOS event to get a Snowplow `transaction` ecommerce event with transaction context.
+
+<DestinationDemo
+  destination={destination}
+  settings={{
+    collectorUrl: 'https://collector.example.com',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('order complete')}
+  mapping={examples.mapping.transaction}
+  generic={true}
+/>
+
+### Promotion Visible
+
+Map your walkerOS event to get a Snowplow `promo_view` ecommerce event with promotion context.
+
+<DestinationDemo
+  destination={destination}
+  settings={{
+    collectorUrl: 'https://collector.example.com',
+  }}
+  smallText={true}
+  height={'512px'}
+  event={getEvent('promotion visible')}
+  mapping={examples.mapping.promoView}
+  generic={true}
+/>
+
+## Testing with Snowplow Micro
+
+Use [Snowplow Micro](https://docs.snowplow.io/docs/testing-debugging/snowplow-micro/basic-usage/) for local development:
+
+<CodeSnippet
+  code={`docker run -p 9090:9090 snowplow/snowplow-micro`}
+  language="bash"
+/>
+
+Configure the destination with `collectorUrl: 'http://localhost:9090'` and view events at `http://localhost:9090/micro/ui`.

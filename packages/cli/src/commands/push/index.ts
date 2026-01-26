@@ -132,6 +132,10 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
         process.exit(1);
       }
     }
+
+    // Explicit exit on success to avoid hanging from open handles
+    // (JSDOM instances, esbuild workers, HTTP connections, etc.)
+    process.exit(0);
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = getErrorMessage(error);

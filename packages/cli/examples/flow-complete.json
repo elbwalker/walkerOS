@@ -4,8 +4,8 @@
   "variables": {
     "currency": "EUR",
     "flowVersion": "1.0.0",
-    "ga4MeasurementId": "${GA4_MEASUREMENT_ID:G-DEMO123456}",
-    "apiUrl": "${API_URL:http://localhost:8080/collect}"
+    "ga4MeasurementId": "$env.GA4_MEASUREMENT_ID:G-DEMO123456",
+    "apiUrl": "$env.API_URL:http://localhost:8080/collect"
   },
   "definitions": {
     "ga4ItemsLoop": {
@@ -212,7 +212,7 @@
           "config": {
             "consent": { "marketing": true },
             "settings": {
-              "ga4": { "measurementId": "$variables.ga4MeasurementId" }
+              "ga4": { "measurementId": "$var.ga4MeasurementId" }
             },
             "mapping": {
               "page": {
@@ -233,7 +233,7 @@
                     "map": {
                       "currency": {
                         "key": "data.currency",
-                        "value": "$variables.currency"
+                        "value": "$var.currency"
                       },
                       "value": "data.price",
                       "items": {
@@ -258,7 +258,7 @@
                     "map": {
                       "currency": {
                         "key": "data.currency",
-                        "value": "$variables.currency"
+                        "value": "$var.currency"
                       },
                       "value": "data.price",
                       "items": {
@@ -286,11 +286,11 @@
                       "value": "data.total",
                       "currency": {
                         "key": "data.currency",
-                        "value": "$variables.currency"
+                        "value": "$var.currency"
                       },
                       "tax": "data.tax",
                       "shipping": "data.shipping",
-                      "items": { "$ref": "#/definitions/ga4ItemsLoop" }
+                      "items": "$def.ga4ItemsLoop"
                     }
                   }
                 }
@@ -307,7 +307,7 @@
           "package": "@walkeros/web-destination-api",
           "config": {
             "settings": {
-              "url": "$variables.apiUrl",
+              "url": "$var.apiUrl",
               "batch": 5
             },
             "mapping": {
@@ -322,7 +322,7 @@
                         "key": "user.email",
                         "consent": { "marketing": true }
                       },
-                      "items": { "$ref": "#/definitions/ga4ItemsLoop" }
+                      "items": "$def.ga4ItemsLoop"
                     }
                   }
                 }
@@ -347,7 +347,7 @@
         },
         "globals": {
           "environment": "demo",
-          "version": "$variables.flowVersion"
+          "version": "$var.flowVersion"
         },
         "custom": {
           "campaign": "flow-demo"
@@ -357,8 +357,8 @@
     "server": {
       "server": {},
       "variables": {
-        "metaPixelId": "${META_PIXEL_ID:123456789012345}",
-        "metaAccessToken": "${META_ACCESS_TOKEN:demo_token}"
+        "metaPixelId": "$env.META_PIXEL_ID:123456789012345",
+        "metaAccessToken": "$env.META_ACCESS_TOKEN:demo_token"
       },
       "packages": {
         "@walkeros/collector": {},
@@ -444,8 +444,8 @@
           "before": "fingerprint",
           "config": {
             "settings": {
-              "pixelId": "$variables.metaPixelId",
-              "accessToken": "$variables.metaAccessToken",
+              "pixelId": "$var.metaPixelId",
+              "accessToken": "$var.metaAccessToken",
               "user_data": {
                 "external_id": {
                   "set": ["user.device", "user.session"]
@@ -481,7 +481,7 @@
                       "value": "data.price",
                       "currency": {
                         "key": "data.currency",
-                        "value": "$variables.currency"
+                        "value": "$var.currency"
                       },
                       "content_type": { "value": "product" },
                       "content_ids": {
@@ -497,7 +497,7 @@
                       "value": "data.price",
                       "currency": {
                         "key": "data.currency",
-                        "value": "$variables.currency"
+                        "value": "$var.currency"
                       },
                       "content_type": { "value": "product" },
                       "contents": {
@@ -523,10 +523,10 @@
                       "value": "data.total",
                       "currency": {
                         "key": "data.currency",
-                        "value": "$variables.currency"
+                        "value": "$var.currency"
                       },
                       "order_id": "data.id",
-                      "contents": { "$ref": "#/definitions/metaContentsLoop" }
+                      "contents": "$def.metaContentsLoop"
                     }
                   }
                 }
@@ -562,7 +562,7 @@
         },
         "globals": {
           "environment": "demo",
-          "version": "$variables.flowVersion",
+          "version": "$var.flowVersion",
           "platform": "server"
         }
       }

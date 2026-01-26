@@ -180,6 +180,10 @@ export async function bundleCommand(
         throw new Error(`${failureCount} flow(s) failed to build`);
       }
     }
+
+    // Explicitly exit on success to avoid hanging from open handles
+    // (pacote HTTP connections, esbuild workers, etc.)
+    process.exit(0);
   } catch (error) {
     const duration = timer.getElapsed() / 1000;
     const errorMessage = getErrorMessage(error);

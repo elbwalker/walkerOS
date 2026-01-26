@@ -105,13 +105,16 @@ const config = {
   restoreMocks: true,
   detectOpenHandles: true,
   
+  // Exclude from module resolution (prevents Haste collisions with cached packages)
+  modulePathIgnorePatterns: ['<rootDir>/.tmp', '/dist/'],
+
   // Enhanced ignore patterns
   testPathIgnorePatterns: [
     '/node_modules/',
     '/dist/',
     '/build/',
     '/coverage/',
-    '.tmp'
+    '.tmp',
   ],
 };
 

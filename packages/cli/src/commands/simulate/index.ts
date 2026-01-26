@@ -32,20 +32,19 @@ export async function simulateCommand(
       duration: (Date.now() - startTime) / 1000,
     };
 
-    // Output results
+    // Output results using consistent formatter
+    const output = formatSimulationResult(resultWithDuration, {
+      json: options.json,
+    });
     if (options.json) {
-      logger.json(resultWithDuration);
+      console.log(output);
     } else {
-      const output = formatSimulationResult(resultWithDuration, {
-        json: false,
-      });
       logger.log(output);
     }
 
-    // Exit with error code if simulation failed
-    if (!result.success) {
-      process.exit(1);
-    }
+    // Exit with appropriate code
+    // Explicit exit avoids hanging from open handles (JSDOM, HTTP connections, etc.)
+    process.exit(result.success ? 0 : 1);
   } catch (error) {
     const errorMessage = getErrorMessage(error);
 

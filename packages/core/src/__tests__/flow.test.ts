@@ -741,7 +741,7 @@ describe('Flow Schemas', () => {
           prod: {
             web: {},
             variables: {
-              GA4_ID: 'G-PROD123', // Would be interpolated from ${GA4_PROD}
+              GA4_ID: 'G-PROD123', // Would be interpolated from $var.GA4_PROD
             },
           },
         },
@@ -750,7 +750,7 @@ describe('Flow Schemas', () => {
       expect(() => parseSetup(setupWithVars)).not.toThrow();
     });
 
-    test('setup with JSON reference structure', () => {
+    test('setup with definition reference structure', () => {
       const setupWithRefs = {
         version: 1,
         definitions: {
@@ -765,7 +765,7 @@ describe('Flow Schemas', () => {
               gtag: {
                 package: '@walkeros/web-destination-gtag',
                 config: {
-                  mapping: { $ref: '#/definitions/common_mapping' },
+                  mapping: '$def.common_mapping',
                 },
               },
             },
@@ -1237,6 +1237,534 @@ describe('getFlowConfig', () => {
       };
       const config = getFlowConfig(setup as any, 'stage');
       expect(config.server).toBeDefined();
+    });
+  });
+});
+
+// ========================================
+// Pattern Resolution Tests ($def, $var, $env)
+// ========================================
+
+describe('Pattern Resolution', () => {
+  describe('$def.name - Definition References', () => {
+    test('resolves $def.name to definition content', () => {
+      const setup = {
+        version: 1 as const,
+        definitions: {
+          commonMapping: {
+            page: { view: { name: 'page_view' } },
+          },
+        },
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              gtag: {
+                package: '@walkeros/web-destination-gtag',
+                config: {
+                  mapping: '$def.commonMapping',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.gtag.config).toEqual({
+        mapping: { page: { view: { name: 'page_view' } } },
+      });
+    });
+
+    test('resolves nested $def references', () => {
+      const setup = {
+        version: 1 as const,
+        definitions: {
+          inner: { key: 'value' },
+          outer: { nested: '$def.inner' },
+        },
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                config: {
+                  data: '$def.outer',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.test.config).toEqual({
+        data: { nested: { key: 'value' } },
+      });
+    });
+
+    test('throws for missing definition', () => {
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                config: {
+                  data: '$def.nonExistent',
+                },
+              },
+            },
+          },
+        },
+      };
+      expect(() => getFlowConfig(setup as any)).toThrow(
+        'Definition "nonExistent" not found',
+      );
+    });
+
+    test('definition cascade: destination level overrides setup level', () => {
+      const setup = {
+        version: 1 as const,
+        definitions: {
+          mapping: { setup: true },
+        },
+        flows: {
+          default: {
+            web: {},
+            definitions: {
+              mapping: { config: true },
+            },
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                definitions: {
+                  mapping: { destination: true },
+                },
+                config: {
+                  data: '$def.mapping',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.test.config).toEqual({
+        data: { destination: true },
+      });
+    });
+  });
+
+  describe('$var.name - Variable References', () => {
+    test('resolves $var.name to variable value', () => {
+      const setup = {
+        version: 1 as const,
+        variables: {
+          measurementId: 'G-TEST123',
+        },
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              gtag: {
+                package: '@walkeros/web-destination-gtag',
+                config: {
+                  id: '$var.measurementId',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.gtag.config).toEqual({
+        id: 'G-TEST123',
+      });
+    });
+
+    test('resolves multiple $var references in same string', () => {
+      const setup = {
+        version: 1 as const,
+        variables: {
+          host: 'api.example.com',
+          version: 'v2',
+        },
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              api: {
+                package: '@walkeros/api',
+                config: {
+                  endpoint: 'https://$var.host/$var.version/collect',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.api.config).toEqual({
+        endpoint: 'https://api.example.com/v2/collect',
+      });
+    });
+
+    test('throws for missing variable', () => {
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                config: {
+                  value: '$var.nonExistent',
+                },
+              },
+            },
+          },
+        },
+      };
+      expect(() => getFlowConfig(setup as any)).toThrow(
+        'Variable "nonExistent" not found',
+      );
+    });
+
+    test('variable cascade: destination level overrides setup level', () => {
+      const setup = {
+        version: 1 as const,
+        variables: {
+          id: 'setup-id',
+        },
+        flows: {
+          default: {
+            web: {},
+            variables: {
+              id: 'config-id',
+            },
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                variables: {
+                  id: 'destination-id',
+                },
+                config: {
+                  value: '$var.id',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.test.config).toEqual({
+        value: 'destination-id',
+      });
+    });
+
+    test('converts number variables to strings', () => {
+      const setup = {
+        version: 1 as const,
+        variables: {
+          port: 8080,
+        },
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                config: {
+                  url: 'http://localhost:$var.port',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.test.config).toEqual({
+        url: 'http://localhost:8080',
+      });
+    });
+  });
+
+  describe('$env.NAME - Environment Variable References', () => {
+    const originalEnv = process.env;
+
+    beforeEach(() => {
+      process.env = { ...originalEnv };
+    });
+
+    afterEach(() => {
+      process.env = originalEnv;
+    });
+
+    test('resolves $env.NAME from process.env', () => {
+      process.env.GA4_ID = 'G-ENV123';
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              gtag: {
+                package: '@walkeros/web-destination-gtag',
+                config: {
+                  id: '$env.GA4_ID',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.gtag.config).toEqual({
+        id: 'G-ENV123',
+      });
+    });
+
+    test('uses default value when env var not set', () => {
+      delete process.env.MISSING_VAR;
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                config: {
+                  value: '$env.MISSING_VAR:default-value',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.test.config).toEqual({
+        value: 'default-value',
+      });
+    });
+
+    test('throws when env var missing and no default', () => {
+      delete process.env.REQUIRED_VAR;
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                config: {
+                  value: '$env.REQUIRED_VAR',
+                },
+              },
+            },
+          },
+        },
+      };
+      expect(() => getFlowConfig(setup as any)).toThrow(
+        'Environment variable "REQUIRED_VAR" not found and no default provided',
+      );
+    });
+
+    test('env var takes precedence over default when set', () => {
+      process.env.MY_VAR = 'from-env';
+      const setup = {
+        version: 1 as const,
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                config: {
+                  value: '$env.MY_VAR:default-value',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.test.config).toEqual({
+        value: 'from-env',
+      });
+    });
+  });
+
+  describe('Combined Patterns', () => {
+    const originalEnv = process.env;
+
+    beforeEach(() => {
+      process.env = { ...originalEnv };
+    });
+
+    afterEach(() => {
+      process.env = originalEnv;
+    });
+
+    test('resolves $var inside $def content', () => {
+      const setup = {
+        version: 1 as const,
+        variables: {
+          currency: 'USD',
+        },
+        definitions: {
+          mapping: {
+            currency: '$var.currency',
+          },
+        },
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                config: {
+                  data: '$def.mapping',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.test.config).toEqual({
+        data: { currency: 'USD' },
+      });
+    });
+
+    test('resolves $env inside $def content', () => {
+      process.env.API_KEY = 'secret-key';
+      const setup = {
+        version: 1 as const,
+        definitions: {
+          apiConfig: {
+            key: '$env.API_KEY',
+          },
+        },
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                config: {
+                  api: '$def.apiConfig',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.test.config).toEqual({
+        api: { key: 'secret-key' },
+      });
+    });
+
+    test('handles complex nested structure with all pattern types', () => {
+      process.env.ENV_VALUE = 'from-env';
+      const setup = {
+        version: 1 as const,
+        variables: {
+          varValue: 'from-var',
+        },
+        definitions: {
+          inner: {
+            env: '$env.ENV_VALUE',
+            var: '$var.varValue',
+          },
+          outer: {
+            nested: '$def.inner',
+            static: 'unchanged',
+          },
+        },
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              test: {
+                package: '@walkeros/test',
+                config: {
+                  data: '$def.outer',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.test.config).toEqual({
+        data: {
+          nested: {
+            env: 'from-env',
+            var: 'from-var',
+          },
+          static: 'unchanged',
+        },
+      });
+    });
+
+    test('uses $var as default value for $env when env not set', () => {
+      delete process.env.GA4_ID;
+      const setup = {
+        version: 1 as const,
+        variables: {
+          ga4Default: 'G-FALLBACK123',
+        },
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              gtag: {
+                package: '@walkeros/web-destination-gtag',
+                config: {
+                  measurementId: '$env.GA4_ID:$var.ga4Default',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.gtag.config).toEqual({
+        measurementId: 'G-FALLBACK123',
+      });
+    });
+
+    test('env value takes precedence over $var default', () => {
+      process.env.GA4_ID = 'G-FROM-ENV';
+      const setup = {
+        version: 1 as const,
+        variables: {
+          ga4Default: 'G-FALLBACK123',
+        },
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              gtag: {
+                package: '@walkeros/web-destination-gtag',
+                config: {
+                  measurementId: '$env.GA4_ID:$var.ga4Default',
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowConfig(setup as any);
+      expect(config.destinations?.gtag.config).toEqual({
+        measurementId: 'G-FROM-ENV',
+      });
     });
   });
 });

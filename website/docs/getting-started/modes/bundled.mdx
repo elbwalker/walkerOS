@@ -244,15 +244,15 @@ Use variables for environment-specific values:
   code={`{
   "version": 1,
   "variables": {
-    "GA_ID": "\${GA_MEASUREMENT_ID:G-DEFAULT}",
-    "API_URL": "\${API_ENDPOINT:https://api.example.com}"
+    "GA_ID": "$env.GA_MEASUREMENT_ID:G-DEFAULT",
+    "API_URL": "$env.API_ENDPOINT:https://api.example.com"
   },
   "flows": {
     "default": {
       "destinations": {
         "ga4": {
           "config": {
-            "settings": { "ga4": { "measurementId": "\${GA_ID}" } }
+            "settings": { "ga4": { "measurementId": "$var.GA_ID" } }
           }
         }
       }
@@ -262,7 +262,7 @@ Use variables for environment-specific values:
   language="json"
 />
 
-Variables are resolved from environment variables at build time.
+Environment variables (`$env.NAME:default`) are resolved at build time. Config variables (`$var.name`) reference values from the `variables` section.
 
 ### Multiple flows
 

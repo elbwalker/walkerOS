@@ -336,7 +336,7 @@ For managing dev/staging/production flows in one file:
   code={`{
   "version": 1,
   "variables": {
-    "GA_ID": "G-XXXXXXXXXX"
+    "defaultCurrency": "USD"
   },
   "flows": {
     "development": {
@@ -392,28 +392,31 @@ walkeros bundle config.json --all`}
   language="bash"
 />
 
-## Variables and definitions
+## Dynamic patterns
 
-### Variables
+Flow configurations support four dynamic patterns for reusable, environment-aware configs:
 
-Variables allow dynamic values with environment variable support:
+### `$var.name` - Config Variables
+
+Reference variables defined in `variables` for shared values across your config:
 
 <CodeSnippet
   code={`{
   "version": 1,
   "variables": {
-    "GA_ID": "\${GA_MEASUREMENT_ID:G-DEFAULT}",
-    "API_ENDPOINT": "/collect"
+    "currency": "EUR",
+    "apiVersion": "v2"
   },
   "flows": {
     "default": {
       "web": {},
       "destinations": {
-        "gtag": {
-          "package": "@walkeros/web-destination-gtag",
+        "api": {
+          "package": "@walkeros/web-destination-api",
           "config": {
             "settings": {
-              "ga4": { "measurementId": "\${GA_ID}" }
+              "endpoint": "https://api.example.com/$var.apiVersion/collect",
+              "currency": "$var.currency"
             }
           }
         }
@@ -424,30 +427,18 @@ Variables allow dynamic values with environment variable support:
   language="json"
 />
 
-**Variable syntax:**
-- `${VAR_NAME}` - Required variable
-- `${VAR_NAME:default}` - Variable with default value
+Variables can be defined at three levels (higher specificity wins):
+1. **Source/Destination level** - Highest priority
+2. **Flow (Config) level** - Middle priority
+3. **Setup level** - Lowest priority
 
-**Resolution order:**
-1. `process.env` (environment variables)
-2. Config-level `variables`
-3. Setup-level `variables`
-4. Inline default value
+### `$env.NAME` - Environment Variables
 
-### Definitions
-
-Definitions allow reusable configuration blocks:
+Reference environment variables with optional defaults:
 
 <CodeSnippet
   code={`{
   "version": 1,
-  "definitions": {
-    "commonMapping": {
-      "page": {
-        "view": { "name": "page_view" }
-      }
-    }
-  },
   "flows": {
     "default": {
       "web": {},
@@ -455,7 +446,9 @@ Definitions allow reusable configuration blocks:
         "gtag": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
-            "mapping": { "$ref": "#/definitions/commonMapping" }
+            "settings": {
+              "ga4": { "measurementId": "$env.GA4_ID:G-DEMO123456" }
+            }
           }
         }
       }
@@ -465,6 +458,116 @@ Definitions allow reusable configuration blocks:
   language="json"
 />
 
+**Syntax:**
+- `$env.GA4_ID` - Required, throws if not set
+- `$env.GA4_ID:default` - Uses "default" if not set
+
+:::note Why only `$env` supports defaults
+Environment variables are external and unpredictable - they might not be set in all environments. Config variables (`$var`) are explicitly defined, so a missing one indicates a configuration error.
+:::
+
+### `$def.name` - Definition References
+
+Reference reusable configuration blocks defined in `definitions`:
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "definitions": {
+    "commonMapping": {
+      "page": {
+        "view": { "name": "page_view" }
+      }
+    },
+    "itemsLoop": {
+      "loop": ["nested", { "map": { "item_id": "data.id", "item_name": "data.name" } }]
+    }
+  },
+  "flows": {
+    "default": {
+      "web": {},
+      "destinations": {
+        "gtag": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "mapping": "$def.commonMapping"
+          }
+        },
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "mapping": {
+              "order": {
+                "complete": {
+                  "data": { "map": { "items": "$def.itemsLoop" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Definitions cascade like variables - defined at setup, flow, or source/destination level.
+
+### `$code:` - Inline JavaScript
+
+Embed JavaScript code directly in JSON config values:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "api": {
+      "package": "@walkeros/web-destination-api",
+      "config": {
+        "mapping": {
+          "product": {
+            "view": {
+              "data": {
+                "map": {
+                  "item_id": {
+                    "key": "data.id",
+                    "fn": "$code:(value) => value.toUpperCase()"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+The `$code:` prefix is stripped during bundling, outputting raw JavaScript:
+
+<CodeSnippet
+  code={`// Bundler output
+{
+  item_id: {
+    key: "data.id",
+    fn: (value) => value.toUpperCase()
+  }
+}`}
+  language="typescript"
+/>
+
+**Use cases:**
+- **`fn:` callbacks** - Transform values in mapping
+- **`condition:` predicates** - Conditional event processing
+- **Custom logic** - Any inline function or expression
+
+**Syntax notes:**
+- Multi-line code: Use JSON escapes (`\n`, `\"`)
+- Scope: Same as bundled code (access to imports and variables)
+- Errors: Caught at build time by TypeScript/esbuild
+
 ## Type hierarchy
 
 walkerOS uses a clear type hierarchy:
@@ -473,13 +576,13 @@ walkerOS uses a clear type hierarchy:
 ┌─────────────────────────────────────────────────────────────────┐
 │  Flow.Setup (config file)                                       │
 │  ├── version: 1                                                 │
-│  ├── variables?: { GA_ID: "G-XXX" }                            │
+│  ├── variables?: { currency: "EUR" }                            │
 │  ├── definitions?: { commonMapping: {...} }                     │
 │  └── flows:                                                     │
 │       └── default: Flow.Config                                  │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              │ CLI resolves variables, $refs
+                              │ CLI resolves $var, $env, $def
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  Flow.Config (resolved flow)                                    │
