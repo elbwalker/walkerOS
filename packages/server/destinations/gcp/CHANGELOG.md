@@ -1,5 +1,11 @@
 # @walkeros/server-destination-gcp
 
+## 1.0.1
+
+### Patch Changes
+
+- @walkeros/server-core@1.0.1
+
 ## 1.0.0
 
 ### Major Changes

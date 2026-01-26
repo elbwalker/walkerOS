@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-snowplow",
   "description": "Snowplow web destination for walkerOS",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -35,7 +35,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/web-core": "1.0.0"
+    "@walkeros/web-core": "1.0.1"
   },
   "devDependencies": {
     "@walkeros/collector": "latest",

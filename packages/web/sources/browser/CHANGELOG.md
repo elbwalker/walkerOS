@@ -1,5 +1,13 @@
 # @walkeros/web-source-browser
 
+## 1.0.1
+
+### Patch Changes
+
+- Updated dependencies [b65b773]
+  - @walkeros/collector@1.0.1
+  - @walkeros/web-core@1.0.1
+
 ## 1.0.0
 
 ### Major Changes

@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-source-aws",
   "description": "AWS server sources for walkerOS (Lambda, API Gateway, Function URLs)",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -20,7 +20,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "1.0.0"
+    "@walkeros/core": "1.1.0"
   },
   "peerDependencies": {
     "@types/aws-lambda": "^8.10.0"

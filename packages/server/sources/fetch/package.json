@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-source-fetch",
   "description": "Web Standard Fetch API source for walkerOS (Cloudflare Workers, Vercel Edge, Deno, Bun)",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -18,7 +18,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "1.0.0"
+    "@walkeros/core": "1.1.0"
   },
   "devDependencies": {},
   "repository": {

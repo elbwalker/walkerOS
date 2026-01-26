@@ -1,5 +1,11 @@
 # @walkeros/storybook-demo
 
+## 1.0.1
+
+### Patch Changes
+
+- @walkeros/web-source-browser@1.0.1
+
 ## 1.0.0
 
 ### Major Changes
