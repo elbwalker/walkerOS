@@ -285,6 +285,86 @@ For custom logic without external packages, use `code: true`:
 
 See [Destinations documentation](/docs/destinations/) for all available options.
 
+### Transformers
+
+Transformers process events between sources and destinations. They validate, enrich, or redact events in the pipeline.
+
+<CodeSnippet
+  code={`{
+  "transformers": {
+    "validate": {
+      "package": "@walkeros/transformer-validator",
+      "config": {
+        "settings": { "format": true }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Configuration options:**
+- **`package`** - The npm package (required)
+- **`code`** - Explicit import variable name (optional, auto-resolved)
+- **`config`** - Transformer-specific configuration
+- **`env`** - Environment-specific settings
+- **`next`** - Next transformer in chain (omit to end chain)
+- **`variables`** - Transformer-level variable overrides
+- **`definitions`** - Transformer-level definitions
+
+**Chaining transformers:**
+
+Link transformers together using `next`:
+
+<CodeSnippet
+  code={`{
+  "transformers": {
+    "enrich": {
+      "package": "@walkeros/transformer-enricher",
+      "config": { "apiUrl": "https://api.example.com" },
+      "next": "validate"
+    },
+    "validate": {
+      "package": "@walkeros/transformer-validator"
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Connecting to sources and destinations:**
+
+- **Pre-collector chain**: Use `next` on a source to route events through transformers before the collector
+- **Post-collector chain**: Use `before` on a destination to route events through transformers after the collector
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "next": "validate"
+    }
+  },
+  "transformers": {
+    "validate": {
+      "package": "@walkeros/transformer-validator"
+    },
+    "redact": {
+      "package": "@walkeros/transformer-redact"
+    }
+  },
+  "destinations": {
+    "analytics": {
+      "package": "@walkeros/server-destination-gcp",
+      "before": "redact"
+    }
+  }
+}`}
+  language="json"
+/>
+
+See [Transformers documentation](/docs/transformers/) for available transformers and custom transformer guide.
+
 ### Collector
 
 The collector processes events from sources and routes them to destinations:
@@ -589,6 +669,7 @@ walkerOS uses a clear type hierarchy:
 │  ├── web: {} or server: {}                                      │
 │  ├── packages: { ... }                                          │
 │  ├── sources: { ... }                                           │
+│  ├── transformers: { ... }                                      │
 │  ├── destinations: { ... }                                      │
 │  └── collector: { ... }                                         │
 └─────────────────────────────────────────────────────────────────┘

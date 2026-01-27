@@ -47,8 +47,9 @@ the canonical interface.
 // Conceptual structure (see source for full type)
 interface Flow {
   sources?: Record<string, Source>;
-  collector: Collector;
+  transformers?: Record<string, Transformer>;
   destinations?: Record<string, Destination>;
+  collector?: Collector.InitConfig;
 }
 ```
 
@@ -77,6 +78,9 @@ const { collector, elb } = await startFlow({
   sources: {
     /* ... */
   },
+  transformers: {
+    /* ... */
+  },
   destinations: {
     /* ... */
   },
@@ -102,40 +106,85 @@ Transformers run at two points in the pipeline, configured via `next` and
 
 Runs after source captures event, before collector processing:
 
+**Bundled mode (flow.json):**
+
+```json
+{
+  "sources": {
+    "browser": {
+      "package": "@walkeros/web-source-browser",
+      "next": "validate"
+    }
+  },
+  "transformers": {
+    "validate": {
+      "package": "@walkeros/transformer-validator",
+      "next": "enrich"
+    },
+    "enrich": {
+      "package": "@walkeros/transformer-enricher"
+    }
+  }
+}
+```
+
+**Integrated mode (TypeScript):**
+
 ```typescript
 sources: {
   browser: {
     code: sourceBrowser,
-    next: 'validate'  // First transformer in pre-chain
+    next: 'validate'
   }
 },
 transformers: {
   validate: {
     code: transformerValidator,
-    config: { next: 'enrich' }  // Chain continues
+    config: { next: 'enrich' }
   },
   enrich: {
     code: transformerEnrich
-    // No next = chain ends, event goes to collector
   }
 }
 ```
+
+Note: In flow.json, `next` is at the reference level. The CLI bundler moves it
+into `config.next` for runtime.
 
 ### Post-Collector Chain
 
 Runs after collector enrichment, before destination receives event:
 
+**Bundled mode (flow.json):**
+
+```json
+{
+  "destinations": {
+    "gtag": {
+      "package": "@walkeros/web-destination-gtag",
+      "before": "redact"
+    }
+  },
+  "transformers": {
+    "redact": {
+      "package": "@walkeros/transformer-redact"
+    }
+  }
+}
+```
+
+**Integrated mode (TypeScript):**
+
 ```typescript
 destinations: {
   gtag: {
     code: destinationGtag,
-    before: 'redact'  // First transformer in post-chain
+    before: 'redact'
   }
 },
 transformers: {
   redact: {
     code: transformerRedact
-    // Event then goes to destination
   }
 }
 ```
@@ -143,7 +192,8 @@ transformers: {
 ### Chain Resolution
 
 - `source.next` → starts pre-collector chain
-- `transformer.config.next` → links transformers together
+- `transformer.next` (flow.json) or `transformer.config.next` (runtime) → links
+  transformers
 - `destination.before` → starts post-collector chain per destination
 
 ## Related

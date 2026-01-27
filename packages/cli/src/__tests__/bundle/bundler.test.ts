@@ -5,6 +5,8 @@ import {
   buildConfigObject,
   generatePlatformWrapper,
   createEntryPoint,
+  detectTransformerPackages,
+  detectExplicitCodeImports,
 } from '../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../config/index.js';
 import { createLogger, type Logger } from '../../core/index.js';
@@ -811,6 +813,236 @@ describe('Bundler', () => {
       // Should have both createCollector and startFlow
       expect(result).toContain('startFlow');
       expect(result).toContain('createCollector');
+    });
+  });
+
+  describe('detectTransformerPackages', () => {
+    it('detects transformer packages from flow config', () => {
+      const flowConfig: Flow.Config = {
+        server: {},
+        sources: {},
+        destinations: {},
+        transformers: {
+          fingerprint: {
+            package: '@walkeros/server-transformer-fingerprint',
+            code: 'transformerFingerprint',
+            config: { settings: { output: 'user.hash' } },
+          },
+          validate: {
+            package: '@walkeros/transformer-validator',
+          },
+        },
+      };
+
+      const result = detectTransformerPackages(flowConfig);
+
+      expect(result).toEqual(
+        new Set([
+          '@walkeros/server-transformer-fingerprint',
+          '@walkeros/transformer-validator',
+        ]),
+      );
+    });
+
+    it('returns empty set when no transformers', () => {
+      const flowConfig: Flow.Config = {
+        server: {},
+        sources: {},
+        destinations: {},
+      };
+
+      const result = detectTransformerPackages(flowConfig);
+
+      expect(result).toEqual(new Set());
+    });
+  });
+
+  describe('detectExplicitCodeImports', () => {
+    it('detects explicit code imports from transformers', () => {
+      const flowConfig: Flow.Config = {
+        server: {},
+        sources: {},
+        destinations: {},
+        transformers: {
+          fingerprint: {
+            package: '@walkeros/server-transformer-fingerprint',
+            code: 'transformerFingerprint',
+            config: {},
+          },
+        },
+      };
+
+      const result = detectExplicitCodeImports(flowConfig);
+
+      expect(result.get('@walkeros/server-transformer-fingerprint')).toEqual(
+        new Set(['transformerFingerprint']),
+      );
+    });
+  });
+
+  describe('transformer support', () => {
+    it('includes transformers in config object', () => {
+      const flowConfig: Flow.Config = {
+        server: {},
+        sources: {},
+        destinations: {},
+        transformers: {
+          fingerprint: {
+            package: '@walkeros/server-transformer-fingerprint',
+            code: 'transformerFingerprint',
+            config: {
+              settings: {
+                fields: ['ingest.ip', 'ingest.userAgent'],
+                output: 'user.hash',
+              },
+            },
+          },
+        },
+      };
+
+      const explicitCodeImports = new Map([
+        [
+          '@walkeros/server-transformer-fingerprint',
+          new Set(['transformerFingerprint']),
+        ],
+      ]);
+
+      const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+      expect(result).toContain('transformers:');
+      expect(result).toContain('fingerprint:');
+      expect(result).toContain('code: transformerFingerprint');
+      expect(result).toContain('"output": "user.hash"');
+    });
+
+    it('handles transformer next field in config', () => {
+      const flowConfig: Flow.Config = {
+        server: {},
+        sources: {},
+        destinations: {},
+        transformers: {
+          enrich: {
+            package: '@walkeros/transformer-enricher',
+            code: 'transformerEnrich',
+            config: { apiUrl: 'https://api.example.com' },
+            next: 'validate',
+          },
+          validate: {
+            package: '@walkeros/transformer-validator',
+            code: 'transformerValidator',
+            config: {},
+          },
+        },
+      };
+
+      const explicitCodeImports = new Map([
+        ['@walkeros/transformer-enricher', new Set(['transformerEnrich'])],
+        ['@walkeros/transformer-validator', new Set(['transformerValidator'])],
+      ]);
+
+      const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+      // next should be inside config for runtime
+      expect(result).toContain('"next": "validate"');
+    });
+
+    it('handles $code: prefix in transformer config', () => {
+      const flowConfig: Flow.Config = {
+        server: {},
+        sources: {},
+        destinations: {},
+        transformers: {
+          fingerprint: {
+            package: '@walkeros/server-transformer-fingerprint',
+            code: 'transformerFingerprint',
+            config: {
+              settings: {
+                fields: [
+                  { fn: '$code:() => new Date().getDate()' },
+                  'ingest.ip',
+                ],
+              },
+            },
+          },
+        },
+      };
+
+      const explicitCodeImports = new Map([
+        [
+          '@walkeros/server-transformer-fingerprint',
+          new Set(['transformerFingerprint']),
+        ],
+      ]);
+
+      const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+      expect(result).toContain('"fn": () => new Date().getDate()');
+      expect(result).not.toContain('$code:');
+    });
+  });
+
+  describe('full flow with transformers', () => {
+    it('generates complete config with source -> transformer -> destination chain', () => {
+      const flowConfig: Flow.Config = {
+        server: {},
+        sources: {
+          express: {
+            package: '@walkeros/server-source-express',
+            code: 'sourceExpress',
+            config: { settings: { port: 8080 } },
+            next: 'fingerprint',
+          },
+        },
+        transformers: {
+          fingerprint: {
+            package: '@walkeros/server-transformer-fingerprint',
+            code: 'transformerFingerprint',
+            config: {
+              settings: {
+                fields: [
+                  { fn: '$code:() => new Date().getDate()' },
+                  'ingest.ip',
+                ],
+                output: 'user.hash',
+              },
+            },
+          },
+        },
+        destinations: {
+          bigquery: {
+            package: '@walkeros/server-destination-bigquery',
+            code: 'destinationBigQuery',
+            config: { settings: { projectId: 'my-project' } },
+          },
+        },
+      };
+
+      const explicitCodeImports = new Map([
+        ['@walkeros/server-source-express', new Set(['sourceExpress'])],
+        [
+          '@walkeros/server-transformer-fingerprint',
+          new Set(['transformerFingerprint']),
+        ],
+        [
+          '@walkeros/server-destination-bigquery',
+          new Set(['destinationBigQuery']),
+        ],
+      ]);
+
+      const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+      // Sources
+      expect(result).toContain('sources:');
+      expect(result).toContain('code: sourceExpress');
+
+      // Transformers
+      expect(result).toContain('transformers:');
+      expect(result).toContain('code: transformerFingerprint');
+      expect(result).toContain('"fn": () => new Date().getDate()');
+
+      // Destinations
+      expect(result).toContain('destinations:');
+      expect(result).toContain('code: destinationBigQuery');
     });
   });
 });
