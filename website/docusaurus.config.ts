@@ -133,6 +133,10 @@ const config: Config = {
               label: 'Comparisons',
               to: '/docs/comparisons/',
             },
+            {
+              label: 'Storybook demo',
+              href: 'https://storybook.walkeros.io/',
+            },
           ],
         },
         {

@@ -162,6 +162,7 @@ export * as examples from './examples';
 - [ ] Uses standard table formats
 - [ ] Follows package/skill/website templates
 - [ ] Terminology matches: walkerOS, collector, destination, source
+- [ ] Headings use sentence case (e.g., "Next steps" not "Next Steps")
 
 ---
 
