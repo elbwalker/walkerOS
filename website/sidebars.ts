@@ -157,7 +157,7 @@ const sidebars: SidebarsConfig = {
         type: 'doc',
         id: 'apps/index',
       },
-      items: ['apps/walkerjs', 'apps/cli', 'apps/docker'],
+      items: ['apps/walkerjs', 'apps/cli', 'apps/docker', 'apps/storybook'],
     },
     {
       type: 'category',
