@@ -142,10 +142,10 @@ export function packageNameToVariable(packageName: string): string {
  */
 function resolveCodeFromPackage(
   packageName: string | undefined,
-  existingCode: string | undefined,
+  existingCode: string | true | undefined,
   packages: Flow.Packages | undefined,
-): string | undefined {
-  // Preserve explicit code first
+): string | true | undefined {
+  // Preserve explicit code first (including code: true for built-in)
   if (existingCode) return existingCode;
 
   // Auto-generate code from package name if package exists

@@ -1,6 +1,14 @@
 import type { Collector, Source, WalkerOS } from '@walkeros/core';
 import { getMappingValue, tryCatchAsync } from '@walkeros/core';
+import { sourceCode } from './source-code';
 import { walkChain } from './transformer';
+
+/**
+ * Resolves source code - maps `true` to the built-in code source.
+ */
+function resolveSourceCode(code: Source.Init | true): Source.Init {
+  return code === true ? sourceCode : code;
+}
 
 /**
  * Extracts a simple {id: {next}} map from transformer instances.
@@ -31,6 +39,9 @@ export async function initSources(
 
   for (const [sourceId, sourceDefinition] of Object.entries(sources)) {
     const { code, config = {}, env = {}, primary, next } = sourceDefinition;
+
+    // Resolve code: true to built-in source
+    const resolvedCode = resolveSourceCode(code);
 
     // Track current ingest metadata (set per-request by setIngest)
     let currentIngest: unknown = undefined;
@@ -95,7 +106,7 @@ export async function initSources(
     };
 
     // Call source function with context
-    const sourceInstance = await tryCatchAsync(code)(sourceContext);
+    const sourceInstance = await tryCatchAsync(resolvedCode)(sourceContext);
 
     if (!sourceInstance) continue; // Skip failed source initialization
 

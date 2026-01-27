@@ -218,6 +218,27 @@ Sources capture events from various inputs. Each source needs:
   language="json"
 />
 
+**Built-in Code Source:**
+
+For custom source logic without external packages, use `code: true`:
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "manual": {
+      "code": true,
+      "config": {
+        "settings": {
+          "init": "context.logger.info('Manual source initialized')",
+          "push": "env.push({ name: 'manual event', data: input })"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
 See [Sources documentation](/docs/sources/) for all available options.
 
 ### Destinations
@@ -312,6 +333,29 @@ Transformers process events between sources and destinations. They validate, enr
 - **`variables`** - Transformer-level variable overrides
 - **`definitions`** - Transformer-level definitions
 
+**Built-in Code Transformer:**
+
+For custom transformation logic without external packages, use `code: true`:
+
+<CodeSnippet
+  code={`{
+  "transformers": {
+    "enrich": {
+      "code": true,
+      "config": {
+        "settings": {
+          "push": "event.data.enrichedAt = Date.now(); return event;"
+        }
+      },
+      "next": "validate"
+    }
+  }
+}`}
+  language="json"
+/>
+
+The push code has access to `event` and `context`. Return the modified event to continue, or `false` to drop the event from the chain.
+
 **Chaining transformers:**
 
 Link transformers together using `next`:
@@ -357,6 +401,36 @@ Link transformers together using `next`:
     "analytics": {
       "package": "@walkeros/server-destination-gcp",
       "before": "redact"
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Mixing inline and package transformers:**
+
+You can chain inline code transformers with package-based transformers:
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "next": "addTimestamp"
+    }
+  },
+  "transformers": {
+    "addTimestamp": {
+      "code": true,
+      "config": {
+        "settings": {
+          "push": "event.data.processedAt = new Date().toISOString(); return event;"
+        }
+      },
+      "next": "validate"
+    },
+    "validate": {
+      "package": "@walkeros/transformer-validator"
     }
   }
 }`}

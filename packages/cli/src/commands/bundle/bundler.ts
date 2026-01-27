@@ -420,6 +420,15 @@ function detectDestinationPackages(flowConfig: Flow.Config): Set<string> {
 
   if (destinations) {
     for (const [destKey, destConfig] of Object.entries(destinations)) {
+      // Skip if code: true (uses built-in inline code destination)
+      if (
+        typeof destConfig === 'object' &&
+        destConfig !== null &&
+        'code' in destConfig &&
+        destConfig.code === true
+      ) {
+        continue;
+      }
       // Require explicit package field - no inference for any packages
       if (
         typeof destConfig === 'object' &&
@@ -448,6 +457,15 @@ function detectSourcePackages(flowConfig: Flow.Config): Set<string> {
 
   if (sources) {
     for (const [sourceKey, sourceConfig] of Object.entries(sources)) {
+      // Skip if code: true (uses built-in inline code source)
+      if (
+        typeof sourceConfig === 'object' &&
+        sourceConfig !== null &&
+        'code' in sourceConfig &&
+        sourceConfig.code === true
+      ) {
+        continue;
+      }
       // Require explicit package field - no inference for any packages
       if (
         typeof sourceConfig === 'object' &&
@@ -479,6 +497,15 @@ export function detectTransformerPackages(
     for (const [transformerKey, transformerConfig] of Object.entries(
       transformers,
     )) {
+      // Skip if code: true (uses built-in inline code transformer)
+      if (
+        typeof transformerConfig === 'object' &&
+        transformerConfig !== null &&
+        'code' in transformerConfig &&
+        transformerConfig.code === true
+      ) {
+        continue;
+      }
       // Require explicit package field
       if (
         typeof transformerConfig === 'object' &&
@@ -510,6 +537,15 @@ export function detectExplicitCodeImports(
 
   if (destinations) {
     for (const [destKey, destConfig] of Object.entries(destinations)) {
+      // Skip code: true (built-in inline code)
+      if (
+        typeof destConfig === 'object' &&
+        destConfig !== null &&
+        'code' in destConfig &&
+        destConfig.code === true
+      ) {
+        continue;
+      }
       if (
         typeof destConfig === 'object' &&
         destConfig !== null &&
@@ -538,6 +574,15 @@ export function detectExplicitCodeImports(
 
   if (sources) {
     for (const [sourceKey, sourceConfig] of Object.entries(sources)) {
+      // Skip code: true (built-in inline code)
+      if (
+        typeof sourceConfig === 'object' &&
+        sourceConfig !== null &&
+        'code' in sourceConfig &&
+        sourceConfig.code === true
+      ) {
+        continue;
+      }
       if (
         typeof sourceConfig === 'object' &&
         sourceConfig !== null &&
@@ -568,6 +613,15 @@ export function detectExplicitCodeImports(
     for (const [transformerKey, transformerConfig] of Object.entries(
       transformers,
     )) {
+      // Skip code: true (built-in inline code)
+      if (
+        typeof transformerConfig === 'object' &&
+        transformerConfig !== null &&
+        'code' in transformerConfig &&
+        transformerConfig.code === true
+      ) {
+        continue;
+      }
       if (
         typeof transformerConfig === 'object' &&
         transformerConfig !== null &&
@@ -803,17 +857,27 @@ export function buildConfigObject(
   const flowWithProps = flowConfig as unknown as {
     sources?: Record<
       string,
-      { package: string; code?: string; config?: unknown; env?: unknown }
+      {
+        package?: string;
+        code?: string | true;
+        config?: unknown;
+        env?: unknown;
+      }
     >;
     destinations?: Record<
       string,
-      { package: string; code?: string; config?: unknown; env?: unknown }
+      {
+        package?: string;
+        code?: string | true;
+        config?: unknown;
+        env?: unknown;
+      }
     >;
     transformers?: Record<
       string,
       {
-        package: string;
-        code?: string;
+        package?: string;
+        code?: string | true;
         config?: unknown;
         env?: unknown;
         next?: string;
@@ -828,11 +892,17 @@ export function buildConfigObject(
 
   // Build sources
   const sourcesEntries = Object.entries(sources).map(([key, source]) => {
-    const hasExplicitCode =
-      source.code && explicitCodeImports.has(source.package);
-    const codeVar = hasExplicitCode
-      ? source.code
-      : packageNameToVariable(source.package);
+    // Handle code: true (built-in inline code source)
+    let codeVar: string;
+    if (source.code === true) {
+      codeVar = 'true';
+    } else if (source.code && explicitCodeImports.has(source.package!)) {
+      codeVar = source.code;
+    } else if (source.package) {
+      codeVar = packageNameToVariable(source.package);
+    } else {
+      codeVar = 'true'; // Fallback to built-in if no package
+    }
 
     const configStr = source.config ? processConfigValue(source.config) : '{}';
     const envStr = source.env
@@ -845,11 +915,17 @@ export function buildConfigObject(
   // Build destinations
   const destinationsEntries = Object.entries(destinations).map(
     ([key, dest]) => {
-      const hasExplicitCode =
-        dest.code && explicitCodeImports.has(dest.package);
-      const codeVar = hasExplicitCode
-        ? dest.code
-        : packageNameToVariable(dest.package);
+      // Handle code: true (built-in inline code destination)
+      let codeVar: string;
+      if (dest.code === true) {
+        codeVar = 'true';
+      } else if (dest.code && explicitCodeImports.has(dest.package!)) {
+        codeVar = dest.code;
+      } else if (dest.package) {
+        codeVar = packageNameToVariable(dest.package);
+      } else {
+        codeVar = 'true'; // Fallback to built-in if no package
+      }
 
       const configStr = dest.config ? processConfigValue(dest.config) : '{}';
       const envStr = dest.env
@@ -863,11 +939,20 @@ export function buildConfigObject(
   // Build transformers
   const transformersEntries = Object.entries(transformers).map(
     ([key, transformer]) => {
-      const hasExplicitCode =
-        transformer.code && explicitCodeImports.has(transformer.package);
-      const codeVar = hasExplicitCode
-        ? transformer.code
-        : packageNameToVariable(transformer.package);
+      // Handle code: true (built-in inline code transformer)
+      let codeVar: string;
+      if (transformer.code === true) {
+        codeVar = 'true';
+      } else if (
+        transformer.code &&
+        explicitCodeImports.has(transformer.package!)
+      ) {
+        codeVar = transformer.code;
+      } else if (transformer.package) {
+        codeVar = packageNameToVariable(transformer.package);
+      } else {
+        codeVar = 'true'; // Fallback to built-in if no package
+      }
 
       // Merge next into config for runtime (transformer.config.next)
       const configWithNext = transformer.next

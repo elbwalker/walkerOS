@@ -321,6 +321,7 @@ export interface Config {
  * @remarks
  * References a source package and provides configuration.
  * The package is automatically downloaded and imported during build.
+ * Alternatively, use `code: true` for inline code execution.
  */
 export interface SourceReference {
   /**
@@ -338,19 +339,35 @@ export interface SourceReference {
    * 3. Auto-detect default or named export
    * 4. Generate import statement
    *
+   * Optional when `code: true` is used for inline code execution.
+   *
    * @example
    * "package": "@walkeros/web-source-browser@latest"
    */
-  package: string;
+  package?: string;
 
   /**
-   * Resolved import variable name.
+   * Resolved import variable name or built-in code source.
    *
    * @remarks
-   * Auto-resolved from packages[package].imports[0] during getFlowConfig().
-   * Can also be provided explicitly for advanced use cases.
+   * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
+   *   or provided explicitly for advanced use cases.
+   * - `true`: Use built-in inline code source. Configure via `config.settings.init`
+   *   and `config.settings.push` with JavaScript code strings.
+   *
+   * @example
+   * // Using built-in code source
+   * {
+   *   "code": true,
+   *   "config": {
+   *     "settings": {
+   *       "init": "console.log('Source initialized')",
+   *       "push": "env.push({ name: 'event', data: input })"
+   *     }
+   *   }
+   * }
    */
-  code?: string;
+  code?: string | true;
 
   /**
    * Source-specific configuration.
@@ -423,6 +440,7 @@ export interface SourceReference {
  * @remarks
  * References a transformer package and provides configuration.
  * Transformers transform events in the pipeline between sources and destinations.
+ * Alternatively, use `code: true` for inline code execution.
  */
 export interface TransformerReference {
   /**
@@ -430,20 +448,34 @@ export interface TransformerReference {
    *
    * @remarks
    * Same format as SourceReference.package
+   * Optional when `code: true` is used for inline code execution.
    *
    * @example
    * "package": "@walkeros/transformer-enricher@1.0.0"
    */
-  package: string;
+  package?: string;
 
   /**
-   * Resolved import variable name.
+   * Resolved import variable name or built-in code transformer.
    *
    * @remarks
-   * Auto-resolved from packages[package].imports[0] during getFlowConfig().
-   * Can also be provided explicitly for advanced use cases.
+   * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
+   *   or provided explicitly for advanced use cases.
+   * - `true`: Use built-in inline code transformer. Configure via `config.settings.init`
+   *   and `config.settings.push` with JavaScript code strings.
+   *
+   * @example
+   * // Using built-in code transformer
+   * {
+   *   "code": true,
+   *   "config": {
+   *     "settings": {
+   *       "push": "event.data.enrichedAt = Date.now(); return event;"
+   *     }
+   *   }
+   * }
    */
-  code?: string;
+  code?: string | true;
 
   /**
    * Transformer-specific configuration.
@@ -500,20 +532,34 @@ export interface DestinationReference {
    *
    * @remarks
    * Same format as SourceReference.package
+   * Optional when `code: true` is used for inline code execution.
    *
    * @example
    * "package": "@walkeros/web-destination-gtag@2.0.0"
    */
-  package: string;
+  package?: string;
 
   /**
-   * Resolved import variable name.
+   * Resolved import variable name or built-in code destination.
    *
    * @remarks
-   * Auto-resolved from packages[package].imports[0] during getFlowConfig().
-   * Can also be provided explicitly for advanced use cases.
+   * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
+   *   or provided explicitly for advanced use cases.
+   * - `true`: Use built-in inline code destination. Configure via `config.settings.init`,
+   *   `config.settings.push`, and `config.settings.pushBatch` with JavaScript code strings.
+   *
+   * @example
+   * // Using built-in code destination
+   * {
+   *   "code": true,
+   *   "config": {
+   *     "settings": {
+   *       "push": "console.log('Event:', event.name, event.data)"
+   *     }
+   *   }
+   * }
    */
-  code?: string;
+  code?: string | true;
 
   /**
    * Destination-specific configuration.
