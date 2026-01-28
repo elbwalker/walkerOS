@@ -1,15 +1,5 @@
 import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { isObject, tryCatchAsync, useHooks } from '@walkeros/core';
-import { transformerCode } from './transformer-code';
-
-/**
- * Resolves transformer code - maps `true` to the built-in code transformer.
- */
-function resolveTransformerCode(
-  code: Transformer.Init | true,
-): Transformer.Init {
-  return code === true ? transformerCode : code;
-}
 
 /**
  * Resolved transformer chains for a flow.
@@ -107,9 +97,6 @@ export async function initTransformers(
   )) {
     const { code, config = {}, env = {} } = transformerDef;
 
-    // Resolve code: true to built-in transformer
-    const resolvedCode = resolveTransformerCode(code);
-
     // Build transformer context for init
     const transformerLogger = collector.logger
       .scope('transformer')
@@ -124,7 +111,7 @@ export async function initTransformers(
     };
 
     // Initialize the transformer instance with context
-    const instance = await resolvedCode(context);
+    const instance = await code(context);
 
     result[transformerId] = instance;
   }

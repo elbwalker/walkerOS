@@ -229,11 +229,20 @@ export function getFlowConfig(
         result.packages,
       );
 
+      // Exclude deprecated code: true, only keep valid string code
+      const validCode =
+        typeof source.code === 'string' ? source.code : undefined;
+      const finalCode = resolvedCode || validCode;
       result.sources[name] = {
-        ...source,
+        package: source.package,
         config: processedConfig,
-        ...(resolvedCode && { code: resolvedCode }),
-      };
+        env: source.env,
+        primary: source.primary,
+        variables: source.variables,
+        definitions: source.definitions,
+        next: source.next,
+        code: finalCode,
+      } as Flow.SourceReference;
     }
   }
 
@@ -260,11 +269,18 @@ export function getFlowConfig(
         result.packages,
       );
 
+      // Exclude deprecated code: true, only keep valid string code
+      const validCode = typeof dest.code === 'string' ? dest.code : undefined;
+      const finalCode = resolvedCode || validCode;
       result.destinations[name] = {
-        ...dest,
+        package: dest.package,
         config: processedConfig,
-        ...(resolvedCode && { code: resolvedCode }),
-      };
+        env: dest.env,
+        variables: dest.variables,
+        definitions: dest.definitions,
+        before: dest.before,
+        code: finalCode,
+      } as Flow.DestinationReference;
     }
   }
 

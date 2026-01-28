@@ -11,13 +11,8 @@ import {
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
-import { destinationCode } from './destination-code';
 import { callDestinationOn } from './on';
 import { runTransformerChain } from './transformer';
-
-function resolveCode(code: Destination.Instance | true): Destination.Instance {
-  return code === true ? destinationCode : code;
-}
 
 /**
  * Adds a new destination to the collector.
@@ -35,11 +30,10 @@ export async function addDestination(
   const { code, config: dataConfig = {}, env = {} } = data;
   const config = options || dataConfig || { init: false };
 
-  const resolved = resolveCode(code);
   const destination: Destination.Instance = {
-    ...resolved,
+    ...code,
     config,
-    env: mergeEnvironments(resolved.env, env),
+    env: mergeEnvironments(code.env, env),
   };
 
   let id = destination.config.id; // Use given id
@@ -468,17 +462,16 @@ export async function initDestinations(
 
   for (const [name, destinationDef] of Object.entries(destinations)) {
     const { code, config = {}, env = {} } = destinationDef;
-    const resolved = resolveCode(code);
 
     const mergedConfig = {
-      ...resolved.config,
+      ...code.config,
       ...config,
     };
 
-    const mergedEnv = mergeEnvironments(resolved.env, env);
+    const mergedEnv = mergeEnvironments(code.env, env);
 
     result[name] = {
-      ...resolved,
+      ...code,
       config: mergedConfig,
       env: mergedEnv,
     };

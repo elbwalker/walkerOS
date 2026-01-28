@@ -367,7 +367,7 @@ export interface SourceReference {
    *   }
    * }
    */
-  code?: string | true;
+  code?: string;
 
   /**
    * Source-specific configuration.
@@ -475,7 +475,7 @@ export interface TransformerReference {
    *   }
    * }
    */
-  code?: string | true;
+  code?: string;
 
   /**
    * Transformer-specific configuration.
@@ -559,7 +559,7 @@ export interface DestinationReference {
    *   }
    * }
    */
-  code?: string | true;
+  code?: string;
 
   /**
    * Destination-specific configuration.

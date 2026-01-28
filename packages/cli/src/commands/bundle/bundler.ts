@@ -66,6 +66,69 @@ function generateCacheKeyContent(
   return JSON.stringify(configForCache);
 }
 
+/**
+ * Validates flow config and warns about deprecated features.
+ * Returns true if there are any issues that should stop the build.
+ *
+ * Note: We use (code as unknown) === true to check for deprecated code: true
+ * because the type no longer includes true, but runtime values may still have it.
+ */
+function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
+  let hasDeprecatedCodeTrue = false;
+
+  // Check sources for code: true (deprecated, removed from types)
+  const sources = flowConfig.sources || {};
+  for (const [sourceId, source] of Object.entries(sources)) {
+    if (
+      source &&
+      typeof source === 'object' &&
+      (source.code as unknown) === true
+    ) {
+      logger.warning(
+        `DEPRECATED: Source "${sourceId}" uses code: true which is no longer supported. ` +
+          `Use $code: prefix in config values or create a source package instead.`,
+      );
+      hasDeprecatedCodeTrue = true;
+    }
+  }
+
+  // Check destinations for code: true (deprecated, removed from types)
+  const destinations = flowConfig.destinations || {};
+  for (const [destId, dest] of Object.entries(destinations)) {
+    if (dest && typeof dest === 'object' && (dest.code as unknown) === true) {
+      logger.warning(
+        `DEPRECATED: Destination "${destId}" uses code: true which is no longer supported. ` +
+          `Use $code: prefix in config values or create a destination package instead.`,
+      );
+      hasDeprecatedCodeTrue = true;
+    }
+  }
+
+  // Check transformers for code: true (deprecated, removed from types)
+  const transformers = flowConfig.transformers || {};
+  for (const [transformerId, transformer] of Object.entries(transformers)) {
+    if (
+      transformer &&
+      typeof transformer === 'object' &&
+      (transformer.code as unknown) === true
+    ) {
+      logger.warning(
+        `DEPRECATED: Transformer "${transformerId}" uses code: true which is no longer supported. ` +
+          `Use $code: prefix in config values or create a transformer package instead.`,
+      );
+      hasDeprecatedCodeTrue = true;
+    }
+  }
+
+  if (hasDeprecatedCodeTrue) {
+    logger.warning(
+      `See https://www.elbwalker.com/docs/walkeros/getting-started/flow for migration guide.`,
+    );
+  }
+
+  return hasDeprecatedCodeTrue;
+}
+
 export async function bundleCore(
   flowConfig: Flow.Config,
   buildOptions: BuildOptions,
@@ -73,6 +136,13 @@ export async function bundleCore(
   showStats = false,
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
+
+  // Validate flow config and warn about deprecated features
+  const hasDeprecatedFeatures = validateFlowConfig(flowConfig, logger);
+  if (hasDeprecatedFeatures) {
+    logger.warning('Skipping deprecated code: true entries from bundle.');
+  }
+
   // Use provided temp dir or default .tmp/
   const TEMP_DIR = buildOptions.tempDir || getTmpPath();
 
@@ -890,41 +960,44 @@ export function buildConfigObject(
   const destinations = flowWithProps.destinations || {};
   const transformers = flowWithProps.transformers || {};
 
-  // Build sources
-  const sourcesEntries = Object.entries(sources).map(([key, source]) => {
-    // Handle code: true (built-in inline code source)
-    let codeVar: string;
-    if (source.code === true) {
-      codeVar = 'true';
-    } else if (source.code && explicitCodeImports.has(source.package!)) {
-      codeVar = source.code;
-    } else if (source.package) {
-      codeVar = packageNameToVariable(source.package);
-    } else {
-      codeVar = 'true'; // Fallback to built-in if no package
-    }
-
-    const configStr = source.config ? processConfigValue(source.config) : '{}';
-    const envStr = source.env
-      ? `,\n      env: ${processConfigValue(source.env)}`
-      : '';
-
-    return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
-  });
-
-  // Build destinations
-  const destinationsEntries = Object.entries(destinations).map(
-    ([key, dest]) => {
-      // Handle code: true (built-in inline code destination)
+  // Build sources (skip deprecated code: true entries)
+  const sourcesEntries = Object.entries(sources)
+    .filter(([, source]) => (source.code as unknown) !== true && source.package)
+    .map(([key, source]) => {
       let codeVar: string;
-      if (dest.code === true) {
-        codeVar = 'true';
-      } else if (dest.code && explicitCodeImports.has(dest.package!)) {
-        codeVar = dest.code;
-      } else if (dest.package) {
-        codeVar = packageNameToVariable(dest.package);
+      if (
+        source.code &&
+        typeof source.code === 'string' &&
+        explicitCodeImports.has(source.package!)
+      ) {
+        codeVar = source.code;
       } else {
-        codeVar = 'true'; // Fallback to built-in if no package
+        codeVar = packageNameToVariable(source.package!);
+      }
+
+      const configStr = source.config
+        ? processConfigValue(source.config)
+        : '{}';
+      const envStr = source.env
+        ? `,\n      env: ${processConfigValue(source.env)}`
+        : '';
+
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
+    });
+
+  // Build destinations (skip deprecated code: true entries)
+  const destinationsEntries = Object.entries(destinations)
+    .filter(([, dest]) => (dest.code as unknown) !== true && dest.package)
+    .map(([key, dest]) => {
+      let codeVar: string;
+      if (
+        dest.code &&
+        typeof dest.code === 'string' &&
+        explicitCodeImports.has(dest.package!)
+      ) {
+        codeVar = dest.code;
+      } else {
+        codeVar = packageNameToVariable(dest.package!);
       }
 
       const configStr = dest.config ? processConfigValue(dest.config) : '{}';
@@ -933,25 +1006,24 @@ export function buildConfigObject(
         : '';
 
       return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
-    },
-  );
+    });
 
-  // Build transformers
-  const transformersEntries = Object.entries(transformers).map(
-    ([key, transformer]) => {
-      // Handle code: true (built-in inline code transformer)
+  // Build transformers (skip deprecated code: true entries)
+  const transformersEntries = Object.entries(transformers)
+    .filter(
+      ([, transformer]) =>
+        (transformer.code as unknown) !== true && transformer.package,
+    )
+    .map(([key, transformer]) => {
       let codeVar: string;
-      if (transformer.code === true) {
-        codeVar = 'true';
-      } else if (
+      if (
         transformer.code &&
+        typeof transformer.code === 'string' &&
         explicitCodeImports.has(transformer.package!)
       ) {
         codeVar = transformer.code;
-      } else if (transformer.package) {
-        codeVar = packageNameToVariable(transformer.package);
       } else {
-        codeVar = 'true'; // Fallback to built-in if no package
+        codeVar = packageNameToVariable(transformer.package!);
       }
 
       // Merge next into config for runtime (transformer.config.next)
@@ -967,8 +1039,7 @@ export function buildConfigObject(
         : '';
 
       return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
-    },
-  );
+    });
 
   // Build collector
   const collectorStr = flowWithProps.collector
