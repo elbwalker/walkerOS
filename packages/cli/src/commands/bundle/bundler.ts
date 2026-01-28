@@ -3,6 +3,81 @@ import path from 'path';
 import fs from 'fs-extra';
 import type { Flow } from '@walkeros/core';
 import { packageNameToVariable } from '@walkeros/core';
+
+/**
+ * Type guard to check if a code value is an InlineCode object.
+ * InlineCode has { push: string, type?: string, init?: string }
+ */
+function isInlineCode(code: unknown): code is Flow.InlineCode {
+  return code !== null && typeof code === 'object' && 'push' in code;
+}
+
+/**
+ * Validates that a reference has either package XOR code, not both or neither.
+ * Throws descriptive error for invalid configurations.
+ */
+function validateReference(
+  type: string,
+  name: string,
+  ref: { package?: string; code?: unknown },
+): void {
+  const hasPackage = !!ref.package;
+  const hasCode = isInlineCode(ref.code);
+
+  if (hasPackage && hasCode) {
+    throw new Error(
+      `${type} "${name}": Cannot specify both package and code. Use one or the other.`,
+    );
+  }
+  if (!hasPackage && !hasCode) {
+    throw new Error(`${type} "${name}": Must specify either package or code.`);
+  }
+}
+
+/**
+ * Generate inline code for sources and transformers.
+ * Creates a factory function that returns the instance at runtime.
+ */
+function generateInlineCode(inline: Flow.InlineCode, config: object): string {
+  const pushFn = inline.push.replace('$code:', '');
+  const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
+  const typeLine = inline.type ? `type: '${inline.type}',` : '';
+
+  return `{
+      code: async (context) => ({
+        ${typeLine}
+        config: context.config,
+        ${initFn ? `init: ${initFn},` : ''}
+        push: ${pushFn}
+      }),
+      config: ${JSON.stringify(config || {})},
+      env: {}
+    }`;
+}
+
+/**
+ * Generate inline code for destinations.
+ * Destinations have a different structure - code is the instance directly.
+ */
+function generateInlineDestinationCode(
+  inline: Flow.InlineCode,
+  config: object,
+): string {
+  const pushFn = inline.push.replace('$code:', '');
+  const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
+  const typeLine = inline.type ? `type: '${inline.type}',` : '';
+
+  return `{
+      code: {
+        ${typeLine}
+        config: ${JSON.stringify(config || {})},
+        ${initFn ? `init: ${initFn},` : ''}
+        push: ${pushFn}
+      },
+      config: ${JSON.stringify(config || {})},
+      env: {}
+    }`;
+}
 import type { BuildOptions } from '../../types/bundle.js';
 import { downloadPackages } from './package-manager.js';
 import type { Logger } from '../../core/index.js';
@@ -960,10 +1035,39 @@ export function buildConfigObject(
   const destinations = flowWithProps.destinations || {};
   const transformers = flowWithProps.transformers || {};
 
+  // Validate references before processing (skip deprecated code: true entries)
+  Object.entries(sources).forEach(([name, source]) => {
+    if ((source.code as unknown) !== true) {
+      validateReference('Source', name, source);
+    }
+  });
+
+  Object.entries(destinations).forEach(([name, dest]) => {
+    if ((dest.code as unknown) !== true) {
+      validateReference('Destination', name, dest);
+    }
+  });
+
+  Object.entries(transformers).forEach(([name, transformer]) => {
+    if ((transformer.code as unknown) !== true) {
+      validateReference('Transformer', name, transformer);
+    }
+  });
+
   // Build sources (skip deprecated code: true entries)
   const sourcesEntries = Object.entries(sources)
-    .filter(([, source]) => (source.code as unknown) !== true && source.package)
+    .filter(
+      ([, source]) =>
+        (source.code as unknown) !== true &&
+        (source.package || isInlineCode(source.code)),
+    )
     .map(([key, source]) => {
+      // Handle inline code object
+      if (isInlineCode(source.code)) {
+        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {})}`;
+      }
+
+      // Handle package-based source
       let codeVar: string;
       if (
         source.code &&
@@ -987,8 +1091,18 @@ export function buildConfigObject(
 
   // Build destinations (skip deprecated code: true entries)
   const destinationsEntries = Object.entries(destinations)
-    .filter(([, dest]) => (dest.code as unknown) !== true && dest.package)
+    .filter(
+      ([, dest]) =>
+        (dest.code as unknown) !== true &&
+        (dest.package || isInlineCode(dest.code)),
+    )
     .map(([key, dest]) => {
+      // Handle inline code object
+      if (isInlineCode(dest.code)) {
+        return `    ${key}: ${generateInlineDestinationCode(dest.code, (dest.config as object) || {})}`;
+      }
+
+      // Handle package-based destination
       let codeVar: string;
       if (
         dest.code &&
@@ -1012,9 +1126,23 @@ export function buildConfigObject(
   const transformersEntries = Object.entries(transformers)
     .filter(
       ([, transformer]) =>
-        (transformer.code as unknown) !== true && transformer.package,
+        (transformer.code as unknown) !== true &&
+        (transformer.package || isInlineCode(transformer.code)),
     )
     .map(([key, transformer]) => {
+      // Handle inline code object
+      if (isInlineCode(transformer.code)) {
+        // Merge next into config for runtime if present
+        const configWithNext = transformer.next
+          ? {
+              ...((transformer.config as object) || {}),
+              next: transformer.next,
+            }
+          : (transformer.config as object) || {};
+        return `    ${key}: ${generateInlineCode(transformer.code, configWithNext)}`;
+      }
+
+      // Handle package-based transformer
       let codeVar: string;
       if (
         transformer.code &&

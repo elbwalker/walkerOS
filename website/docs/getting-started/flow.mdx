@@ -218,27 +218,6 @@ Sources capture events from various inputs. Each source needs:
   language="json"
 />
 
-**Built-in Code Source:**
-
-For custom source logic without external packages, use `code: true`:
-
-<CodeSnippet
-  code={`{
-  "sources": {
-    "manual": {
-      "code": true,
-      "config": {
-        "settings": {
-          "init": "context.logger.info('Manual source initialized')",
-          "push": "env.push({ name: 'manual event', data: input })"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
 See [Sources documentation](/docs/sources/) for all available options.
 
 ### Destinations
@@ -284,26 +263,6 @@ Destinations receive processed events and send them to analytics tools, database
 - **`consent`** - Required consent states
 - **`policy`** - Processing rules
 
-**Built-in Code Destination:**
-
-For custom logic without external packages, use `code: true`:
-
-<CodeSnippet
-  code={`{
-  "destinations": {
-    "custom": {
-      "code": true,
-      "config": {
-        "settings": {
-          "push": "console.log('Event:', event.name, event.data)"
-        }
-      }
-    }
-  }
-}`}
-  language="json"
-/>
-
 See [Destinations documentation](/docs/destinations/) for all available options.
 
 ### Transformers
@@ -332,29 +291,6 @@ Transformers process events between sources and destinations. They validate, enr
 - **`next`** - Next transformer in chain (omit to end chain)
 - **`variables`** - Transformer-level variable overrides
 - **`definitions`** - Transformer-level definitions
-
-**Built-in Code Transformer:**
-
-For custom transformation logic without external packages, use `code: true`:
-
-<CodeSnippet
-  code={`{
-  "transformers": {
-    "enrich": {
-      "code": true,
-      "config": {
-        "settings": {
-          "push": "event.data.enrichedAt = Date.now(); return event;"
-        }
-      },
-      "next": "validate"
-    }
-  }
-}`}
-  language="json"
-/>
-
-The push code has access to `event` and `context`. Return the modified event to continue, or `false` to drop the event from the chain.
 
 **Chaining transformers:**
 
@@ -407,37 +343,57 @@ Link transformers together using `next`:
   language="json"
 />
 
-**Mixing inline and package transformers:**
+See [Transformers documentation](/docs/transformers/) for available transformers and custom transformer guide.
 
-You can chain inline code transformers with package-based transformers:
+### Inline Code (without packages)
+
+For simple one-liner logic, define sources, transformers, or destinations inline without creating a package.
+
+Use `code` object instead of `package`:
+
+**Inline Transformer:**
 
 <CodeSnippet
   code={`{
-  "sources": {
-    "http": {
-      "package": "@walkeros/server-source-express",
-      "next": "addTimestamp"
-    }
-  },
   "transformers": {
-    "addTimestamp": {
-      "code": true,
-      "config": {
-        "settings": {
-          "push": "event.data.processedAt = new Date().toISOString(); return event;"
-        }
+    "enrich": {
+      "code": {
+        "type": "enricher",
+        "push": "$code:(event) => ({ ...event, data: { ...event.data, timestamp: Date.now() } })"
       },
-      "next": "validate"
-    },
-    "validate": {
-      "package": "@walkeros/transformer-validator"
+      "config": {}
     }
   }
 }`}
   language="json"
 />
 
-See [Transformers documentation](/docs/transformers/) for available transformers and custom transformer guide.
+**Inline Destination:**
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "logger": {
+      "code": {
+        "type": "console-logger",
+        "push": "$code:(event, context) => { context.logger.info(event.name, event.data); }"
+      },
+      "config": {}
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Code object properties:**
+- **`push`** - The push function with `$code:` prefix (required)
+- **`type`** - Optional instance type identifier
+- **`init`** - Optional init function with `$code:` prefix
+
+**Rules:**
+- Use `package` OR `code`, never both
+- `config` stays separate (same as package-based)
+- `$code:` prefix outputs raw JavaScript at bundle time
 
 ### Collector
 

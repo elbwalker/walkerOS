@@ -142,10 +142,10 @@ export function packageNameToVariable(packageName: string): string {
  */
 function resolveCodeFromPackage(
   packageName: string | undefined,
-  existingCode: string | true | undefined,
+  existingCode: string | Flow.InlineCode | undefined,
   packages: Flow.Packages | undefined,
-): string | true | undefined {
-  // Preserve explicit code first (including code: true for built-in)
+): string | Flow.InlineCode | undefined {
+  // Preserve explicit code first (including InlineCode objects)
   if (existingCode) return existingCode;
 
   // Auto-generate code from package name if package exists
@@ -229,9 +229,11 @@ export function getFlowConfig(
         result.packages,
       );
 
-      // Exclude deprecated code: true, only keep valid string code
+      // Exclude deprecated code: true, only keep valid string or InlineCode
       const validCode =
-        typeof source.code === 'string' ? source.code : undefined;
+        typeof source.code === 'string' || typeof source.code === 'object'
+          ? source.code
+          : undefined;
       const finalCode = resolvedCode || validCode;
       result.sources[name] = {
         package: source.package,
@@ -269,8 +271,11 @@ export function getFlowConfig(
         result.packages,
       );
 
-      // Exclude deprecated code: true, only keep valid string code
-      const validCode = typeof dest.code === 'string' ? dest.code : undefined;
+      // Exclude deprecated code: true, only keep valid string or InlineCode
+      const validCode =
+        typeof dest.code === 'string' || typeof dest.code === 'object'
+          ? dest.code
+          : undefined;
       const finalCode = resolvedCode || validCode;
       result.destinations[name] = {
         package: dest.package,

@@ -4,23 +4,35 @@
 '@walkeros/cli': minor
 ---
 
-Add `code: true` support for transformers and sources
+Add inline code syntax for sources, transformers, and destinations
 
-Enables inline code execution for transformers and sources, matching the
-existing destination capability. Users can now define custom logic directly in
-flow configuration without creating external packages.
+Enables defining custom logic directly in flow.json using `code` objects instead
+of requiring external packages. This is ideal for simple one-liner
+transformations.
+
+**Example:**
 
 ```json
 {
   "transformers": {
     "enrich": {
-      "code": true,
-      "config": {
-        "settings": {
-          "push": "event.data.enrichedAt = Date.now(); return event;"
-        }
-      }
+      "code": {
+        "push": "$code:(event) => ({ ...event, data: { ...event.data, enriched: true } })"
+      },
+      "config": {}
     }
   }
 }
 ```
+
+**Code object properties:**
+
+- `push` - The push function with `$code:` prefix (required)
+- `type` - Optional instance type identifier
+- `init` - Optional init function with `$code:` prefix
+
+**Rules:**
+
+- Use `package` OR `code`, never both (CLI validates this)
+- `config` stays separate from `code`
+- `$code:` prefix outputs raw JavaScript at bundle time

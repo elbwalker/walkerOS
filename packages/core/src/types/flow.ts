@@ -32,6 +32,16 @@ export type Variables = Record<string, Primitive>;
 export type Definitions = Record<string, unknown>;
 
 /**
+ * Inline code definition for sources/destinations/transformers.
+ * Used instead of package when defining inline functions.
+ */
+export interface InlineCode {
+  push: string; // "$code:..." function (required)
+  type?: string; // Optional instance type identifier
+  init?: string; // Optional "$code:..." init function
+}
+
+/**
  * Packages configuration for build.
  */
 export type Packages = Record<
@@ -352,22 +362,18 @@ export interface SourceReference {
    * @remarks
    * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
    *   or provided explicitly for advanced use cases.
-   * - `true`: Use built-in inline code source. Configure via `config.settings.init`
-   *   and `config.settings.push` with JavaScript code strings.
+   * - InlineCode: Object with type, push, and optional init for inline code definition.
    *
    * @example
-   * // Using built-in code source
+   * // Using inline code object
    * {
-   *   "code": true,
-   *   "config": {
-   *     "settings": {
-   *       "init": "console.log('Source initialized')",
-   *       "push": "env.push({ name: 'event', data: input })"
-   *     }
+   *   "code": {
+   *     "type": "logger",
+   *     "push": "$code:(event) => console.log(event)"
    *   }
    * }
    */
-  code?: string;
+  code?: string | InlineCode; // string for package import, InlineCode for inline
 
   /**
    * Source-specific configuration.
@@ -461,21 +467,18 @@ export interface TransformerReference {
    * @remarks
    * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
    *   or provided explicitly for advanced use cases.
-   * - `true`: Use built-in inline code transformer. Configure via `config.settings.init`
-   *   and `config.settings.push` with JavaScript code strings.
+   * - InlineCode: Object with type, push, and optional init for inline code definition.
    *
    * @example
-   * // Using built-in code transformer
+   * // Using inline code object
    * {
-   *   "code": true,
-   *   "config": {
-   *     "settings": {
-   *       "push": "event.data.enrichedAt = Date.now(); return event;"
-   *     }
+   *   "code": {
+   *     "type": "enricher",
+   *     "push": "$code:(event) => ({ ...event, data: { enriched: true } })"
    *   }
    * }
    */
-  code?: string;
+  code?: string | InlineCode; // string for package import, InlineCode for inline
 
   /**
    * Transformer-specific configuration.
@@ -545,21 +548,18 @@ export interface DestinationReference {
    * @remarks
    * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
    *   or provided explicitly for advanced use cases.
-   * - `true`: Use built-in inline code destination. Configure via `config.settings.init`,
-   *   `config.settings.push`, and `config.settings.pushBatch` with JavaScript code strings.
+   * - InlineCode: Object with type, push, and optional init for inline code definition.
    *
    * @example
-   * // Using built-in code destination
+   * // Using inline code object
    * {
-   *   "code": true,
-   *   "config": {
-   *     "settings": {
-   *       "push": "console.log('Event:', event.name, event.data)"
-   *     }
+   *   "code": {
+   *     "type": "logger",
+   *     "push": "$code:(event) => console.log('Event:', event.name)"
    *   }
    * }
    */
-  code?: string;
+  code?: string | InlineCode; // string for package import, InlineCode for inline
 
   /**
    * Destination-specific configuration.
