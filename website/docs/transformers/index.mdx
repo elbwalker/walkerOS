@@ -30,13 +30,17 @@ Transformers are middleware for **validating**, **enriching**, and **redacting**
 
 ## Configuration
 
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
+import { transformerValidator } from '@walkeros/transformer-validator';
 
 await startFlow({
   transformers: {
     validate: {
-      package: '@walkeros/transformer-validator',
+      code: transformerValidator,
       config: {
         settings: { format: true }
       }
@@ -45,6 +49,26 @@ await startFlow({
 });`}
   language="typescript"
 />
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json`:
+
+<CodeSnippet
+  code={`"transformers": {
+  "validate": {
+    "package": "@walkeros/transformer-validator",
+    "config": {
+      "settings": { "format": true }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
 
 ## Available transformers
 

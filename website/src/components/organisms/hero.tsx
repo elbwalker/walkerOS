@@ -1,8 +1,9 @@
 import React, { ReactNode } from 'react';
 import { ChevronRightIcon } from '@heroicons/react/20/solid';
 import Link from '@docusaurus/Link';
-import { ArchitectureFlow, Icon } from '@walkeros/explorer';
+import { FlowMap } from '@walkeros/explorer';
 import type { FlowColumn } from '@walkeros/explorer';
+import { Icon } from '@iconify/react';
 import { Check } from '@site/src/components/atoms/icons';
 import { tagger } from '@site/src/components/walkerjs';
 
@@ -183,17 +184,10 @@ export default function Hero({
             </div>
           </div>
           <div className="mt-20 sm:mt-24 md:mx-auto md:max-w-2xl xl:mx-0 xl:mt-0 xl:flex xl:items-center px-6 xl:px-0">
-            <ArchitectureFlow
-              sources={walkerOSSources}
-              centerTitle="Collector"
-              center={
-                <img
-                  src="/img/walkerOS_logo_new.svg"
-                  alt="walkerOS"
-                  className="w-24 h-24 xl:w-32 xl:h-32"
-                />
-              }
-              destinations={walkerOSDestinations}
+            <FlowMap
+              sources={{ default: { label: 'Sources', highlight: false } }}
+              collector={{ label: 'Collector', highlight: true }}
+              destinations={{ default: { label: 'Destinations', highlight: false } }}
             />
           </div>
         </div>
