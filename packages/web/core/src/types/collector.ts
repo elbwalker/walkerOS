@@ -6,10 +6,6 @@ import type {
   Destination as WalkerOSDestination,
   On,
 } from '@walkeros/core';
-import type {
-  SessionConfig,
-  SessionCallback,
-} from '@walkeros/web-source-session';
 import type { Destination, Config as DestConfig } from './destination';
 import type { Layer } from './elb';
 import type { Events, Trigger } from './walker';
@@ -31,9 +27,6 @@ export interface Collector extends Omit<CoreCollector.Instance, 'config'> {
   getAllEvents: (scope: Element, prefix: string) => Events;
   getEvents: (target: Element, trigger: Trigger, prefix: string) => Events;
   getGlobals: () => WalkerOS.Properties;
-  sessionStart: (
-    options?: SessionStartOptions,
-  ) => void | CoreCollector.SessionData;
   _visibilityState?: {
     observer: IntersectionObserver | undefined;
     timers: WeakMap<HTMLElement, number>;
@@ -59,7 +52,6 @@ export interface Config {
   prefix: string;
   run: boolean;
   scope: Scope;
-  session: false | SessionConfig;
   elb?: string;
   name?: string;
 }
@@ -72,11 +64,6 @@ export interface InitConfig extends Partial<Config> {
   on?: On.OnConfig;
   tagging?: number;
   user?: WalkerOS.User;
-}
-
-export interface SessionStartOptions {
-  config?: SessionConfig;
-  data?: Partial<CoreCollector.SessionData>;
 }
 
 export interface Destinations {
