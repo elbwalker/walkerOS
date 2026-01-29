@@ -1,9 +1,8 @@
 import React, { ReactNode } from 'react';
 import { ChevronRightIcon } from '@heroicons/react/20/solid';
 import Link from '@docusaurus/Link';
-import { FlowMap } from '@walkeros/explorer';
+import { FlowMap, Icon } from '@walkeros/explorer';
 import type { FlowColumn } from '@walkeros/explorer';
-import { Icon } from '@iconify/react';
 import { Check } from '@site/src/components/atoms/icons';
 import { tagger } from '@site/src/components/walkerjs';
 
@@ -187,7 +186,9 @@ export default function Hero({
             <FlowMap
               sources={{ default: { label: 'Sources', highlight: false } }}
               collector={{ label: 'Collector', highlight: true }}
-              destinations={{ default: { label: 'Destinations', highlight: false } }}
+              destinations={{
+                default: { label: 'Destinations', highlight: false },
+              }}
             />
           </div>
         </div>
