@@ -5,3 +5,5 @@ export type {
   ContractRule,
   JsonSchema,
 } from './types';
+
+export { transformerValidator as default } from './transformer';

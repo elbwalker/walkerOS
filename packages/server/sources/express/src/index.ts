@@ -191,3 +191,5 @@ export type {
 
 // Export utils
 export { setCorsHeaders, TRANSPARENT_GIF } from './utils';
+
+export default sourceExpress;
