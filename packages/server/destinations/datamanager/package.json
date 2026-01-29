@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-datamanager",
   "description": "Google Data Manager server destination for walkerOS",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "license": "MIT",
   "exports": {
     ".": {
@@ -32,8 +32,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "1.1.0",
-    "@walkeros/server-core": "1.0.1",
+    "@walkeros/core": "1.2.0",
+    "@walkeros/server-core": "1.0.2",
     "google-auth-library": "^10.5.0"
   },
   "devDependencies": {},

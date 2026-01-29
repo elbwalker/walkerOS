@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/transformer-validator",
   "description": "Event validation transformer for walkerOS using AJV and JSON Schema",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -33,10 +33,10 @@
     "ajv": "^8.17.1"
   },
   "peerDependencies": {
-    "@walkeros/core": "^1.1.0"
+    "@walkeros/core": "^1.2.0"
   },
   "devDependencies": {
-    "@walkeros/core": "1.1.0"
+    "@walkeros/core": "1.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
