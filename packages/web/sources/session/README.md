@@ -172,6 +172,35 @@ const { elb } = await startFlow({
 });
 ```
 
+## Exported Functions
+
+The session source exports session functions for direct usage:
+
+```typescript
+import {
+  // Session functions
+  sessionStart,
+  sessionWindow,
+  sessionStorage,
+} from '@walkeros/web-source-session';
+
+// Use sessionStart directly (advanced usage)
+const session = sessionStart({
+  storage: true,
+  collector: collectorInstance,
+});
+```
+
+Storage utilities are available from `@walkeros/web-core`:
+
+```typescript
+import { storageRead, storageWrite, storageDelete } from '@walkeros/web-core';
+
+storageWrite('key', 'value', 30); // 30-minute expiration
+const value = storageRead('key');
+storageDelete('key');
+```
+
 ## Type Definitions
 
 See [src/types/index.ts](./src/types/index.ts) for TypeScript interfaces.

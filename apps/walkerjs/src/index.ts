@@ -9,6 +9,7 @@ import {
   getGlobals,
   SourceBrowser,
 } from '@walkeros/web-source-browser';
+import { sourceSession } from '@walkeros/web-source-session';
 import { sourceDataLayer } from '@walkeros/web-source-datalayer';
 import { dataLayerDestination } from './destination';
 
@@ -26,9 +27,8 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
         dataLayer: { code: dataLayerDestination() },
       },
     },
-    browser: {
-      session: true,
-    },
+    browser: {},
+    session: true,
     dataLayer: false,
     elb: 'elb',
     run: true,
@@ -52,6 +52,22 @@ export async function createWalkerjs(config: Config = {}): Promise<Instance> {
       },
     },
   };
+
+  // Add session source if configured
+  if (fullConfig.session !== false) {
+    const sessionSettings = isObject(fullConfig.session)
+      ? fullConfig.session
+      : {};
+
+    if (collectorConfig.sources) {
+      collectorConfig.sources.session = {
+        code: sourceSession,
+        config: {
+          settings: sessionSettings,
+        },
+      };
+    }
+  }
 
   // Add dataLayer source if configured
   if (fullConfig.dataLayer) {

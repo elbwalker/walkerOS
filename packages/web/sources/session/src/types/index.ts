@@ -1,5 +1,5 @@
 import type { Source, Elb } from '@walkeros/core';
-import type { SessionConfig } from '@walkeros/web-core';
+import type { SessionConfig, SessionCallback } from '../lib';
 
 // Settings: configuration for session source
 export interface Settings extends SessionConfig {
@@ -28,5 +28,11 @@ export type Types = Source.Types<Settings, Mapping, Push, Env, InitSettings>;
 
 export type Config = Source.Config<Types>;
 
-// Re-export session types from web-core
-export type { SessionConfig, SessionCallback } from '@walkeros/web-core';
+// Re-export session types from lib
+export type {
+  SessionConfig,
+  SessionCallback,
+  SessionFunction,
+  SessionStorageConfig,
+  SessionWindowConfig,
+} from '../lib';

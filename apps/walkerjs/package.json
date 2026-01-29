@@ -42,7 +42,8 @@
     "@walkeros/collector": "1.0.1",
     "@walkeros/web-core": "1.0.1",
     "@walkeros/web-source-browser": "1.0.1",
-    "@walkeros/web-source-datalayer": "1.0.1"
+    "@walkeros/web-source-datalayer": "1.0.1",
+    "@walkeros/web-source-session": "1.0.0"
   },
   "devDependencies": {
     "@swc/jest": "^0.2.39",

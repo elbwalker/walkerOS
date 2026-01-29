@@ -4,12 +4,15 @@ import type {
   Hooks,
   WalkerOS,
   Destination as WalkerOSDestination,
+  On,
 } from '@walkeros/core';
-import type { SessionConfig } from '../session';
+import type {
+  SessionConfig,
+  SessionCallback,
+} from '@walkeros/web-source-session';
 import type { Destination, Config as DestConfig } from './destination';
 import type { Layer } from './elb';
 import type { Events, Trigger } from './walker';
-import type { On } from '@walkeros/core';
 
 declare global {
   interface Window {

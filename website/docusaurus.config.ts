@@ -185,7 +185,20 @@ const config: Config = {
     },
   } satisfies Preset.ThemeConfig,
 
-  plugins: [tailwindPlugin],
+  plugins: [
+    tailwindPlugin,
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        redirects: [
+          {
+            from: '/docs/sources/web/session',
+            to: '/docs/sources/web/session/detection',
+          },
+        ],
+      },
+    ],
+  ],
 };
 
 async function tailwindPlugin() {

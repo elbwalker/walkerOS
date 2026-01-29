@@ -1,7 +1,7 @@
 import type { Collector, WalkerOS, On } from '@walkeros/core';
-import type { SessionStorageConfig } from './';
-import { sessionStorage, sessionWindow } from './';
-import { elb as elbOrg } from '../elb';
+import type { SessionStorageConfig } from './sessionStorage';
+import { sessionStorage } from './sessionStorage';
+import { sessionWindow } from './sessionWindow';
 import { getGrantedConsent, isArray, isDefined } from '@walkeros/core';
 
 export interface SessionConfig extends SessionStorageConfig {
@@ -37,10 +37,8 @@ export function sessionStart(
     // Register consent handlers with the collector
     if (collector) {
       collector.command('on', 'consent', consentConfig);
-    } else {
-      // Fallback to elbLayer
-      elbOrg('walker on', 'consent', consentConfig);
     }
+    // No fallback - session source always provides collector
   } else {
     // just do it
     return callFuncAndCb(sessionFn(config), collector, cb);
@@ -105,10 +103,8 @@ const defaultCb: SessionCallback = (
   // Set user IDs
   if (collector) {
     collector.command('user', user);
-  } else {
-    // Fallback to elbLayer
-    elbOrg('walker user', user);
   }
+  // No fallback - session source always provides collector
 
   if (session.isStart) {
     // Convert session start to an event object
@@ -117,13 +113,8 @@ const defaultCb: SessionCallback = (
         name: 'session start',
         data: session,
       });
-    } else {
-      // Fallback to elbLayer
-      elbOrg({
-        name: 'session start',
-        data: session,
-      });
     }
+    // No fallback - session source always provides collector
   }
 
   return session;

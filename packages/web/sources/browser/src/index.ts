@@ -35,7 +35,7 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
 /**
  * Browser source implementation using environment injection.
  *
- * This source captures DOM events, manages sessions, handles pageviews,
+ * This source captures DOM events, handles pageviews,
  * and processes the elbLayer for browser environments.
  */
 export const sourceBrowser: Source.Init<Types> = async (context) => {
@@ -102,7 +102,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
       }
     };
 
-    // Trigger initial run if this is a new session/page load
+    // Trigger initial run on page load
     handleRun();
 
     // Set up automatic window.elb assignment if configured
@@ -124,19 +124,9 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     }
   }
 
-  // Handle events pushed from collector (consent, session, ready, run)
-  const handleEvent = async (event: On.Types, context?: unknown) => {
+  // Handle events pushed from collector (consent, ready, run)
+  const handleEvent = async (event: On.Types) => {
     switch (event) {
-      case 'consent':
-        // React to consent changes - browser source no longer handles session
-        // Use sourceSession for session management
-        break;
-
-      case 'session':
-        // React to session events if needed
-        // Browser source typically handles session creation, not reaction
-        break;
-
       case 'ready':
         // React to collector ready state
         // Browser source initialization already handles this

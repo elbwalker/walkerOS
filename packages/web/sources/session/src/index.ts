@@ -1,15 +1,24 @@
 import type { Source, On, Collector } from '@walkeros/core';
 import type { Types, Settings } from './types';
-import { sessionStart as sessionStartOrg } from '@walkeros/web-core';
+import { sessionStart } from './lib';
 
 // Export types for external usage
 export * as SourceSession from './types';
+
+// Export lib functions for direct usage
+export { sessionStart, sessionStorage, sessionWindow } from './lib';
+export type {
+  SessionConfig,
+  SessionCallback,
+  SessionFunction,
+  SessionStorageConfig,
+  SessionWindowConfig,
+} from './lib';
 
 /**
  * Session source implementation.
  *
  * This source handles session detection and management.
- * It wraps the sessionStart function from @walkeros/web-core.
  */
 export const sourceSession: Source.Init<Types> = async (context) => {
   const { config, env } = context;
@@ -30,8 +39,8 @@ export const sourceSession: Source.Init<Types> = async (context) => {
     command,
   };
 
-  // Initialize session using existing web-core logic
-  sessionStartOrg({
+  // Initialize session using local lib
+  sessionStart({
     ...settings,
     collector: collectorInterface as Collector.Instance,
   });
@@ -40,7 +49,7 @@ export const sourceSession: Source.Init<Types> = async (context) => {
   const handleEvent = async (event: On.Types) => {
     if (event === 'consent') {
       // Re-initialize session on consent changes
-      sessionStartOrg({
+      sessionStart({
         ...settings,
         collector: collectorInterface as Collector.Instance,
       });
