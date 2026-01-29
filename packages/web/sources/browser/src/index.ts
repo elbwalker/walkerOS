@@ -11,7 +11,6 @@ import { initTriggers, processLoadTriggers, ready } from './trigger';
 import { destroyVisibilityTracking } from './triggerVisible';
 import { initElbLayer } from './elbLayer';
 import { translateToCoreCollector } from './translation';
-import { sessionStart } from './session';
 import { getPageViewData } from './walker';
 import { getConfig } from './config';
 
@@ -80,13 +79,6 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
       });
     }
 
-    // Initialize session if enabled
-    if (settings.session && elb) {
-      const sessionConfig =
-        typeof settings.session === 'boolean' ? {} : settings.session;
-      sessionStart(elb, sessionConfig, command);
-    }
-
     // Setup global triggers (click, submit) when DOM is ready
     await ready(initTriggers, translationContext, settings);
 
@@ -136,13 +128,8 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
   const handleEvent = async (event: On.Types, context?: unknown) => {
     switch (event) {
       case 'consent':
-        // React to consent changes - sources can implement specific consent handling
-        // For browser source, we might want to re-evaluate session settings
-        if (settings.session && context && elb) {
-          const sessionConfig =
-            typeof settings.session === 'boolean' ? {} : settings.session;
-          sessionStart(elb, sessionConfig, command);
-        }
+        // React to consent changes - browser source no longer handles session
+        // Use sourceSession for session management
         break;
 
       case 'session':

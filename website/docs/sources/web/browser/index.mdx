@@ -15,9 +15,9 @@ Captures user interactions directly from the DOM using data attributes.
 ## Features
 
 * **Data attribute reading**: Extracts tracking data from `data-elb-*` attributes
-* **Session management**: Automatic session detection and handling
 * **Pageview tracking**: Automatic or manual page view events
 * **DOM commands**: Enhanced `elb` function with `walker init` support
+* **Trigger system**: Click, submit, load, hover, scroll, visible triggers
 
 :::info Where This Fits
 The Browser Source is a **source** in the walkerOS flow:
@@ -48,18 +48,12 @@ Configure in your code:
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
 import { sourceBrowser } from '@walkeros/web-source-browser';
+import { sourceSession } from '@walkeros/web-source-session';
 
 const { collector, elb } = await startFlow({
   sources: {
-    browser: {
-      code: sourceBrowser,
-      config: {
-        settings: {
-          pageview: true,
-          session: true,
-        },
-      },
-    },
+    browser: sourceBrowser,
+    session: sourceSession, // Add for session tracking
   },
 });`}
   language="typescript"
@@ -73,11 +67,13 @@ Add to your `flow.json` sources:
 <CodeSnippet
   code={`"sources": {
   "browser": {
-    "package": "@walkeros/web-source-browser",
+    "package": "@walkeros/web-source-browser"
+  },
+  "session": {
+    "package": "@walkeros/web-source-session",
     "config": {
       "settings": {
-        "pageview": true,
-        "session": true
+        "storage": true
       }
     }
   }
@@ -119,6 +115,7 @@ See [Commands](/docs/sources/web/browser/commands) for complete API documentatio
 
 ## Next steps
 
+* [Session Source](/docs/sources/web/session) - Session and device tracking
 * [Tagging Guide](/docs/sources/web/browser/tagging/html-attributes) - Learn about data attributes
 * [Commands Reference](/docs/sources/web/browser/commands) - Full API documentation
 * [Tagger Tool](/docs/sources/web/browser/tagger) - Visual tagging tool

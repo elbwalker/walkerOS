@@ -1,0 +1,234 @@
+---
+title: Session source
+description: Standalone session detection and management for walkerOS
+sidebar_position: 3
+package: '@walkeros/web-source-session'
+---
+import { schemas } from '@walkeros/web-source-session/dev';
+
+<PackageLink github="packages/web/sources/session" npm="@walkeros/web-source-session" />
+
+# Session source
+
+Standalone session detection and management that can be composed with any walkerOS source.
+
+## Features
+
+* **Session detection**: Automatic detection based on navigation, referrer, and marketing parameters
+* **Device tracking**: Persistent device ID across sessions (with consent)
+* **Consent-aware**: Switches between window-only and storage-based sessions
+* **Composable**: Works alongside browser, dataLayer, or custom sources
+
+:::info Where This Fits
+The Session Source is a **utility source** in the walkerOS flow:
+
+<FlowMap
+  sources={{ default: { label: 'Source', text: 'Session', highlight: true } }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
+/>
+
+It provides session and device identity to all events, working alongside other sources like Browser or DataLayer.
+:::
+
+## Installation
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the packages:
+
+<CodeSnippet
+  code={`npm install @walkeros/collector @walkeros/web-source-session`}
+  language="bash"
+/>
+
+Configure in your code:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import { sourceSession } from '@walkeros/web-source-session';
+
+const { collector, elb } = await startFlow({
+  sources: {
+    browser: sourceBrowser,
+    session: {
+      code: sourceSession,
+      config: {
+        settings: {
+          storage: true,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` sources:
+
+<CodeSnippet
+  code={`"sources": {
+  "browser": {
+    "package": "@walkeros/web-source-browser"
+  },
+  "session": {
+    "package": "@walkeros/web-source-session",
+    "config": {
+      "settings": {
+        "storage": true
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration
+
+<PropertyTable schema={schemas.settings} />
+
+## Session Modes
+
+### Window-only (default)
+
+Session is detected per page load without persistent storage:
+
+<CodeSnippet
+  code={`sources: {
+  session: sourceSession, // Defaults to window-only mode
+}`}
+  language="typescript"
+/>
+
+**Characteristics:**
+- No cookies or localStorage
+- New session ID on each page load
+- Session start detected via navigation type and referrer
+
+### Storage-based
+
+Persistent session and device IDs stored in localStorage:
+
+<CodeSnippet
+  code={`sources: {
+  session: {
+    code: sourceSession,
+    config: {
+      settings: {
+        storage: true,
+        length: 30, // 30-minute session timeout
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+**Characteristics:**
+- Session ID persists across page loads
+- Device ID persists across sessions (30 days default)
+- Session expires after inactivity timeout
+
+## Consent Integration
+
+Switch to storage mode only when user grants consent:
+
+<CodeSnippet
+  code={`const { elb } = await startFlow({
+  sources: {
+    browser: sourceBrowser,
+    session: {
+      code: sourceSession,
+      config: {
+        settings: {
+          consent: 'analytics', // Wait for analytics consent
+          storage: true,
+        },
+      },
+    },
+  },
+});
+
+// Before consent: window-only session
+// User grants consent:
+elb('walker consent', { analytics: true });
+// After consent: storage-based session with device ID`}
+  language="typescript"
+/>
+
+## Session Start Event
+
+When a new session is detected, the source pushes a `session start` event:
+
+<CodeSnippet
+  code={`{
+  name: 'session start',
+  data: {
+    isStart: true,
+    id: 'abc123',      // Session ID
+    device: 'xyz789',  // Device ID (if storage enabled)
+    storage: true,     // Whether storage mode is active
+    count: 5,          // Total session count (storage mode)
+    runs: 1,           // Page views in current session
+    start: 1704067200, // Session start timestamp
+    referrer: 'https://google.com',
+    marketing: { ... } // UTM parameters if present
+  }
+}`}
+  language="typescript"
+/>
+
+## Migration from Browser Source
+
+The browser source previously included session management by default. To migrate:
+
+<CodeSnippet
+  code={`// Before (browser source v1.0.x with built-in session)
+const { elb } = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: { settings: { session: true } },
+    },
+  },
+});
+
+// After (browser source v1.1.x + separate session source)
+const { elb } = await startFlow({
+  sources: {
+    browser: sourceBrowser, // session: false is now default
+    session: {
+      code: sourceSession,
+      config: { settings: { storage: true } },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+## Why Separate Session?
+
+The session source was extracted from the browser source to enable:
+
+| Benefit | Description |
+|---------|-------------|
+| **Composability** | Use session detection with any source, not just browser |
+| **Single responsibility** | Browser source focuses on DOM events, session on identity |
+| **Flexibility** | Configure session independently from event capture |
+| **Server-side ready** | Session logic can work with server sources too |
+
+## Next Steps
+
+* [Browser Source](/docs/sources/web/browser) - DOM-based event tracking
+* [DataLayer Source](/docs/sources/web/dataLayer) - GTM/GA4 integration
+* [Consent Guide](/docs/guides/consent) - Consent management patterns
