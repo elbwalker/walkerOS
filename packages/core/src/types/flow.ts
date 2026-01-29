@@ -436,8 +436,9 @@ export interface SourceReference {
    * @remarks
    * Name of the transformer to execute after this source captures an event.
    * If omitted, events route directly to the collector.
+   * Can be an array for explicit chain control (bypasses transformer.next resolution).
    */
-  next?: string;
+  next?: string | string[];
 }
 
 /**
@@ -506,8 +507,9 @@ export interface TransformerReference {
    * If omitted:
    * - Pre-collector: routes to collector
    * - Post-collector: routes to destination
+   * Can be an array for explicit chain control (terminates chain walking).
    */
-  next?: string;
+  next?: string | string[];
 
   /**
    * Transformer-level variables (highest priority in cascade).
@@ -622,6 +624,7 @@ export interface DestinationReference {
    * @remarks
    * Name of the transformer to execute before sending events to this destination.
    * If omitted, events are sent directly from the collector.
+   * Can be an array for explicit chain control (bypasses transformer.next resolution).
    */
-  before?: string;
+  before?: string | string[];
 }

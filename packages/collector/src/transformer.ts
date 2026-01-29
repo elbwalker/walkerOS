@@ -23,16 +23,22 @@ export interface CollectorWithTransformers extends Collector.Instance {
  * Walks a transformer chain starting from a given transformer ID.
  * Returns ordered array of transformer IDs in the chain.
  *
- * @param startId - First transformer in chain
+ * @param startId - First transformer in chain, or explicit array of transformer IDs
  * @param transformers - Available transformer configs with optional `next` field
  * @returns Ordered array of transformer IDs
  */
 export function walkChain(
-  startId: string | undefined,
-  transformers: Record<string, { next?: string }> = {},
+  startId: string | string[] | undefined,
+  transformers: Record<string, { next?: string | string[] }> = {},
 ): string[] {
   if (!startId) return [];
 
+  // If array provided, use it directly (explicit chain)
+  if (Array.isArray(startId)) {
+    return startId;
+  }
+
+  // Walk the chain via transformer.next links
   const chain: string[] = [];
   const visited = new Set<string>();
   let current: string | undefined = startId;
@@ -44,7 +50,16 @@ export function walkChain(
     }
     visited.add(current);
     chain.push(current);
-    current = transformers[current].next;
+
+    const next: string | string[] | undefined = transformers[current].next;
+
+    // If transformer has array next, append it and stop walking
+    if (Array.isArray(next)) {
+      chain.push(...next);
+      break;
+    }
+
+    current = next;
   }
 
   return chain;
@@ -61,9 +76,9 @@ export function walkChain(
  * @returns Resolved transformer chains
  */
 export function resolveTransformerGraph(
-  _sources: Record<string, { next?: string }> = {},
-  destinations: Record<string, { before?: string }> = {},
-  transformers: Record<string, { next?: string }> = {},
+  _sources: Record<string, { next?: string | string[] }> = {},
+  destinations: Record<string, { before?: string | string[] }> = {},
+  transformers: Record<string, { next?: string | string[] }> = {},
 ): TransformerChain {
   const post: Record<string, string[]> = {};
 

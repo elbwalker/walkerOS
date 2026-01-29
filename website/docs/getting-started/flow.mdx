@@ -312,6 +312,32 @@ Link transformers together using `next`:
   language="json"
 />
 
+**Explicit chain control with arrays:**
+
+For explicit control over the transformer chain order, use an array instead of a string. This bypasses the automatic chain resolution:
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "next": ["validate", "enrich", "redact"]
+    }
+  },
+  "transformers": {
+    "validate": { "package": "@walkeros/transformer-validator" },
+    "enrich": { "package": "@walkeros/transformer-enricher" },
+    "redact": { "package": "@walkeros/transformer-redact" }
+  }
+}`}
+  language="json"
+/>
+
+| Syntax | Behavior |
+|--------|----------|
+| `"next": "validate"` | Walks chain via each transformer's `next` property |
+| `"next": ["validate", "enrich"]` | Uses exact order specified, ignores transformer `next` properties |
+
 **Connecting to sources and destinations:**
 
 - **Pre-collector chain**: Use `next` on a source to route events through transformers before the collector
@@ -342,6 +368,8 @@ Link transformers together using `next`:
 }`}
   language="json"
 />
+
+Both `next` and `before` accept arrays for explicit chain control (see "Explicit chain control with arrays" above).
 
 See [Transformers documentation](/docs/transformers/) for available transformers and custom transformer guide.
 
