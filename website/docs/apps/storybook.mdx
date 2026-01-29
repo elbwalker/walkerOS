@@ -1,0 +1,132 @@
+---
+title: Storybook Addon
+description: Visualize and debug walkerOS events in Storybook
+sidebar_position: 4
+package: '@walkeros/storybook-addon'
+---
+
+# Storybook addon
+
+The walkerOS Storybook addon integrates event tracking visualization into
+Storybook. It enables developers to inspect walker attributes, monitor real-time
+events, and visually highlight tagged elements while building components.
+
+## Installation
+
+<CodeSnippet
+  code={`npm install --save-dev @walkeros/storybook-addon`}
+  language="bash"
+/>
+
+## Setup
+
+Register the addon in your Storybook configuration:
+
+<CodeSnippet
+  code={`// .storybook/main.ts
+const config: StorybookConfig = {
+  addons: ['@walkeros/storybook-addon'],
+};
+
+export default config;`}
+  language="typescript"
+/>
+
+## Configuration
+
+Optionally customize the addon behavior in your preview file:
+
+<CodeSnippet
+  code={`// .storybook/preview.ts
+const preview: Preview = {
+  parameters: {
+    walkerOS: {
+      prefix: 'data-elb',      // Custom data attribute prefix
+      autoRefresh: true,       // Auto-refresh on story changes
+    },
+  },
+};
+
+export default preview;`}
+  language="typescript"
+/>
+
+| Option        | Type      | Default      | Description                                              |
+| ------------- | --------- | ------------ | -------------------------------------------------------- |
+| `prefix`      | `string`  | `'data-elb'` | Data attribute prefix for walker attributes              |
+| `autoRefresh` | `boolean` | `true`       | Automatically refresh events when story or controls change |
+
+## Features
+
+The addon panel provides three tabs for inspecting walkerOS data:
+
+### Events tab
+
+Displays all detected walkerOS events in the current story's DOM. Click "Update
+events" to manually refresh the event list.
+
+### Live events tab
+
+Captures events in real-time as you interact with components. Shows timestamps
+for each event and stores up to 50 events. Use the "Clear" button to reset.
+
+### Attributes tab
+
+Shows a hierarchical tree view of all walker attributes found in the DOM:
+
+- Element paths and HTML tags
+- Expandable/collapsible structure
+- Click to view element markup
+- Attribute counts by type
+
+### Visual highlighting
+
+Toggle buttons highlight elements with different attribute types:
+
+| Attribute | Color  | Data Attribute    |
+| --------- | ------ | ----------------- |
+| Globals   | Cyan   | `data-elbglobals` |
+| Context   | Yellow | `data-elbcontext` |
+| Entity    | Green  | `data-elb`        |
+| Property  | Red    | `data-elb-*`      |
+| Action    | Purple | `data-elbaction`  |
+
+Multiple highlights can be active simultaneously, displaying layered outlines.
+
+## Usage in stories
+
+Import `dataElbArgTypes` to add walkerOS controls to your stories:
+
+<CodeSnippet
+  code={`import { dataElbArgTypes } from '@walkeros/storybook-addon';
+
+export default {
+  title: 'Components/Button',
+  argTypes: {
+    ...dataElbArgTypes,
+  },
+};`}
+  language="typescript"
+/>
+
+## Troubleshooting
+
+**No events detected:**
+
+- Verify components have `data-elb` attributes
+- Check the prefix matches your configuration
+- Click "Update events" to manually refresh
+
+**Highlights not showing:**
+
+- Ensure the story iframe has loaded
+- Toggle highlights off and on again
+- Check browser console for errors
+
+## Next steps
+
+- **[Storybook Demo](https://storybook.walkeros.io/)** — See the addon in action
+- **[HTML Attributes](/docs/sources/web/browser/tagging/html-attributes)** —
+  Learn walker attribute syntax
+- **[Browser Source](/docs/sources/web/browser/)** — Understand DOM event
+  capture
