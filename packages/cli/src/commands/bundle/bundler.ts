@@ -9,7 +9,12 @@ import { packageNameToVariable } from '@walkeros/core';
  * InlineCode has { push: string, type?: string, init?: string }
  */
 function isInlineCode(code: unknown): code is Flow.InlineCode {
-  return code !== null && typeof code === 'object' && 'push' in code;
+  return (
+    code !== null &&
+    typeof code === 'object' &&
+    !Array.isArray(code) &&
+    'push' in code
+  );
 }
 
 /**
@@ -38,7 +43,11 @@ function validateReference(
  * Generate inline code for sources and transformers.
  * Creates a factory function that returns the instance at runtime.
  */
-function generateInlineCode(inline: Flow.InlineCode, config: object): string {
+function generateInlineCode(
+  inline: Flow.InlineCode,
+  config: object,
+  env?: object,
+): string {
   const pushFn = inline.push.replace('$code:', '');
   const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
   const typeLine = inline.type ? `type: '${inline.type}',` : '';
@@ -51,7 +60,7 @@ function generateInlineCode(inline: Flow.InlineCode, config: object): string {
         push: ${pushFn}
       }),
       config: ${JSON.stringify(config || {})},
-      env: {}
+      env: ${JSON.stringify(env || {})}
     }`;
 }
 
@@ -62,6 +71,7 @@ function generateInlineCode(inline: Flow.InlineCode, config: object): string {
 function generateInlineDestinationCode(
   inline: Flow.InlineCode,
   config: object,
+  env?: object,
 ): string {
   const pushFn = inline.push.replace('$code:', '');
   const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
@@ -75,7 +85,7 @@ function generateInlineDestinationCode(
         push: ${pushFn}
       },
       config: ${JSON.stringify(config || {})},
-      env: {}
+      env: ${JSON.stringify(env || {})}
     }`;
 }
 import type { BuildOptions } from '../../types/bundle.js';
@@ -921,7 +931,13 @@ export async function createEntryPoint(
   );
 
   const importsCode = importStatements.join('\n');
-  const hasFlow = destinationPackages.size > 0 || sourcePackages.size > 0;
+  const hasFlow =
+    Object.values(flowConfig.sources || {}).some(
+      (s) => s.package || isInlineCode(s.code),
+    ) ||
+    Object.values(flowConfig.destinations || {}).some(
+      (d) => d.package || isInlineCode(d.code),
+    );
 
   // If no sources/destinations, just return user code with imports (no flow wrapper)
   if (!hasFlow) {
@@ -1064,7 +1080,7 @@ export function buildConfigObject(
     .map(([key, source]) => {
       // Handle inline code object
       if (isInlineCode(source.code)) {
-        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {})}`;
+        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object)}`;
       }
 
       // Handle package-based source
@@ -1099,7 +1115,7 @@ export function buildConfigObject(
     .map(([key, dest]) => {
       // Handle inline code object
       if (isInlineCode(dest.code)) {
-        return `    ${key}: ${generateInlineDestinationCode(dest.code, (dest.config as object) || {})}`;
+        return `    ${key}: ${generateInlineDestinationCode(dest.code, (dest.config as object) || {}, dest.env as object)}`;
       }
 
       // Handle package-based destination
@@ -1139,7 +1155,7 @@ export function buildConfigObject(
               next: transformer.next,
             }
           : (transformer.config as object) || {};
-        return `    ${key}: ${generateInlineCode(transformer.code, configWithNext)}`;
+        return `    ${key}: ${generateInlineCode(transformer.code, configWithNext, transformer.env as object)}`;
       }
 
       // Handle package-based transformer

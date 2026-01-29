@@ -57,6 +57,8 @@ export const SettingsSchema = z.object({
     .describe('Device ID age in days')
     .optional(),
 
+  // Note: Using z.any() because z.custom() cannot be converted to JSON Schema
+  // TypeScript types provide compile-time safety; runtime accepts function or false
   cb: z
     .any()
     .describe('Custom session callback function or false to disable')

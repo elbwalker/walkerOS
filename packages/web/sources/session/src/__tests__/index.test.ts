@@ -95,7 +95,7 @@ describe('Session Source', () => {
       await source.on?.('run');
 
       // Session should NOT be re-initialized for these events
-      // (command might be called for other reasons, but not for session)
+      expect(mockCommand).not.toHaveBeenCalled();
     });
   });
 });

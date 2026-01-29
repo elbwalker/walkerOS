@@ -94,17 +94,15 @@ push(event, context) {
 
 ## Inline Code Transformers
 
-For simple transformations without external packages, use `code: true`:
+For simple transformations without external packages, use inline code with the
+`$code:` prefix:
 
 ```json
 {
   "transformers": {
     "enrich": {
-      "code": true,
-      "config": {
-        "settings": {
-          "push": "event.data.enrichedAt = Date.now(); return event;"
-        }
+      "code": {
+        "push": "$code:(event) => { event.data.enrichedAt = Date.now(); return event; }"
       },
       "next": "validate"
     }
@@ -112,12 +110,12 @@ For simple transformations without external packages, use `code: true`:
 }
 ```
 
-**Settings for inline code:**
+**Inline code structure:**
 
-| Setting | Purpose                             |
-| ------- | ----------------------------------- |
-| `init`  | Code run once during initialization |
-| `push`  | Code run for each event             |
+| Property    | Purpose                             |
+| ----------- | ----------------------------------- |
+| `code.init` | Code run once during initialization |
+| `code.push` | Code run for each event             |
 
 **Push code has access to:**
 
@@ -136,11 +134,8 @@ For simple transformations without external packages, use `code: true`:
 {
   "transformers": {
     "filter": {
-      "code": true,
-      "config": {
-        "settings": {
-          "push": "if (event.name.startsWith('internal_')) return false; return event;"
-        }
+      "code": {
+        "push": "$code:(event) => { if (event.name.startsWith('internal_')) return false; return event; }"
       }
     }
   }
@@ -153,11 +148,8 @@ For simple transformations without external packages, use `code: true`:
 {
   "transformers": {
     "addTimestamp": {
-      "code": true,
-      "config": {
-        "settings": {
-          "push": "event.data.processedAt = new Date().toISOString(); return event;"
-        }
+      "code": {
+        "push": "$code:(event) => { event.data.processedAt = new Date().toISOString(); return event; }"
       },
       "next": "validate"
     },

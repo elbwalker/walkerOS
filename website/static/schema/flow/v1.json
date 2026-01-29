@@ -129,6 +129,16 @@
         }
       },
       "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": ["package"],
+          "properties": { "code": false }
+        },
+        {
+          "required": ["code"],
+          "properties": { "package": false }
+        }
+      ],
       "description": "Source reference - use either 'package' or 'code' object, not both"
     },
     "DestinationReference": {
@@ -172,6 +182,16 @@
         }
       },
       "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": ["package"],
+          "properties": { "code": false }
+        },
+        {
+          "required": ["code"],
+          "properties": { "package": false }
+        }
+      ],
       "description": "Destination reference - use either 'package' or 'code' object, not both"
     },
     "TransformerReference": {
@@ -215,6 +235,16 @@
         }
       },
       "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": ["package"],
+          "properties": { "code": false }
+        },
+        {
+          "required": ["code"],
+          "properties": { "package": false }
+        }
+      ],
       "description": "Transformer reference - use either 'package' or 'code' object, not both"
     },
     "FlowConfig": {

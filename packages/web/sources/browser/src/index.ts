@@ -66,6 +66,23 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     settings,
   };
 
+  // Helper to send pageview event if enabled
+  const sendPageview = (settings: Source.Settings<Types>) => {
+    if (settings.pageview) {
+      const [data, contextData] = getPageViewData(
+        settings.prefix || 'data-elb',
+        settings.scope as Scope,
+      );
+      translateToCoreCollector(
+        translationContext,
+        'page view',
+        data,
+        'load',
+        contextData,
+      );
+    }
+  };
+
   // Initialize features if environment is available
   // Skip all DOM-related functionality when not in browser environment
 
@@ -85,21 +102,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     // Setup load triggers and pageview on each run
     const handleRun = () => {
       processLoadTriggers(translationContext, settings);
-
-      // Send pageview if enabled
-      if (settings.pageview) {
-        const [data, context] = getPageViewData(
-          settings.prefix || 'data-elb',
-          settings.scope as Scope,
-        );
-        translateToCoreCollector(
-          translationContext,
-          'page view',
-          data,
-          'load',
-          context,
-        );
-      }
+      sendPageview(settings);
     };
 
     // Trigger initial run on page load
@@ -124,7 +127,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     }
   }
 
-  // Handle events pushed from collector (consent, ready, run)
+  // Handle events pushed from collector (ready, run)
   const handleEvent = async (event: On.Types) => {
     switch (event) {
       case 'ready':
@@ -136,21 +139,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
         // React to collector run events - re-process load triggers
         if (actualDocument && actualWindow) {
           processLoadTriggers(translationContext, settings);
-
-          // Send pageview if enabled
-          if (settings.pageview) {
-            const [data, contextData] = getPageViewData(
-              settings.prefix || 'data-elb',
-              settings.scope as Scope,
-            );
-            translateToCoreCollector(
-              translationContext,
-              'page view',
-              data,
-              'load',
-              contextData,
-            );
-          }
+          sendPageview(settings);
         }
         break;
 
