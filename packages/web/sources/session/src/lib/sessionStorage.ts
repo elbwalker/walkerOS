@@ -1,9 +1,9 @@
-import type { Collector, WalkerOS } from '@walkeros/core';
-import type { SessionWindowConfig } from '.';
+import type { Collector } from '@walkeros/core';
+import type { SessionWindowConfig } from './sessionWindow';
 import type { StorageType } from '@walkeros/core';
 import { getId, tryCatch } from '@walkeros/core';
-import { storageRead, storageWrite } from '../storage';
-import { sessionWindow } from '.';
+import { storageRead, storageWrite } from '@walkeros/web-core';
+import { sessionWindow } from './sessionWindow';
 
 export interface SessionStorageConfig extends SessionWindowConfig {
   deviceKey?: string;

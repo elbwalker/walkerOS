@@ -9,7 +9,6 @@ const createTestSettings = (prefix = 'data-elb'): Settings => ({
   prefix,
   scope: document,
   pageview: false,
-  session: false,
   elb: '',
   elbLayer: false,
 });

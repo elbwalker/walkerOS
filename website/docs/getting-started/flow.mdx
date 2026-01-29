@@ -263,19 +263,19 @@ Destinations receive processed events and send them to analytics tools, database
 - **`consent`** - Required consent states
 - **`policy`** - Processing rules
 
-**Built-in Code Destination:**
+See [Destinations documentation](/docs/destinations/) for all available options.
 
-For custom logic without external packages, use `code: true`:
+### Transformers
+
+Transformers process events between sources and destinations. They validate, enrich, or redact events in the pipeline.
 
 <CodeSnippet
   code={`{
-  "destinations": {
-    "custom": {
-      "code": true,
+  "transformers": {
+    "validate": {
+      "package": "@walkeros/transformer-validator",
       "config": {
-        "settings": {
-          "push": "console.log('Event:', event.name, event.data)"
-        }
+        "settings": { "format": true }
       }
     }
   }
@@ -283,7 +283,145 @@ For custom logic without external packages, use `code: true`:
   language="json"
 />
 
-See [Destinations documentation](/docs/destinations/) for all available options.
+**Configuration options:**
+- **`package`** - The npm package (required)
+- **`code`** - Explicit import variable name (optional, auto-resolved)
+- **`config`** - Transformer-specific configuration
+- **`env`** - Environment-specific settings
+- **`next`** - Next transformer in chain (omit to end chain)
+- **`variables`** - Transformer-level variable overrides
+- **`definitions`** - Transformer-level definitions
+
+**Chaining transformers:**
+
+Link transformers together using `next`:
+
+<CodeSnippet
+  code={`{
+  "transformers": {
+    "enrich": {
+      "package": "@walkeros/transformer-enricher",
+      "config": { "apiUrl": "https://api.example.com" },
+      "next": "validate"
+    },
+    "validate": {
+      "package": "@walkeros/transformer-validator"
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Explicit chain control with arrays:**
+
+For explicit control over the transformer chain order, use an array instead of a string. This bypasses the automatic chain resolution:
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "next": ["validate", "enrich", "redact"]
+    }
+  },
+  "transformers": {
+    "validate": { "package": "@walkeros/transformer-validator" },
+    "enrich": { "package": "@walkeros/transformer-enricher" },
+    "redact": { "package": "@walkeros/transformer-redact" }
+  }
+}`}
+  language="json"
+/>
+
+| Syntax | Behavior |
+|--------|----------|
+| `"next": "validate"` | Walks chain via each transformer's `next` property |
+| `"next": ["validate", "enrich"]` | Uses exact order specified, ignores transformer `next` properties |
+
+**Connecting to sources and destinations:**
+
+- **Pre-collector chain**: Use `next` on a source to route events through transformers before the collector
+- **Post-collector chain**: Use `before` on a destination to route events through transformers after the collector
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "next": "validate"
+    }
+  },
+  "transformers": {
+    "validate": {
+      "package": "@walkeros/transformer-validator"
+    },
+    "redact": {
+      "package": "@walkeros/transformer-redact"
+    }
+  },
+  "destinations": {
+    "analytics": {
+      "package": "@walkeros/server-destination-gcp",
+      "before": "redact"
+    }
+  }
+}`}
+  language="json"
+/>
+
+Both `next` and `before` accept arrays for explicit chain control (see "Explicit chain control with arrays" above).
+
+See [Transformers documentation](/docs/transformers/) for available transformers and custom transformer guide.
+
+### Inline Code (without packages)
+
+For simple one-liner logic, define sources, transformers, or destinations inline without creating a package.
+
+Use `code` object instead of `package`:
+
+**Inline Transformer:**
+
+<CodeSnippet
+  code={`{
+  "transformers": {
+    "enrich": {
+      "code": {
+        "type": "enricher",
+        "push": "$code:(event) => ({ ...event, data: { ...event.data, timestamp: Date.now() } })"
+      },
+      "config": {}
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Inline Destination:**
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "logger": {
+      "code": {
+        "type": "console-logger",
+        "push": "$code:(event, context) => { context.logger.info(event.name, event.data); }"
+      },
+      "config": {}
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Code object properties:**
+- **`push`** - The push function with `$code:` prefix (required)
+- **`type`** - Optional instance type identifier
+- **`init`** - Optional init function with `$code:` prefix
+
+**Rules:**
+- Use `package` OR `code`, never both
+- `config` stays separate (same as package-based)
+- `$code:` prefix outputs raw JavaScript at bundle time
 
 ### Collector
 
@@ -589,6 +727,7 @@ walkerOS uses a clear type hierarchy:
 │  ├── web: {} or server: {}                                      │
 │  ├── packages: { ... }                                          │
 │  ├── sources: { ... }                                           │
+│  ├── transformers: { ... }                                      │
 │  ├── destinations: { ... }                                      │
 │  └── collector: { ... }                                         │
 └─────────────────────────────────────────────────────────────────┘

@@ -97,6 +97,37 @@ describe('Transformer', () => {
       const result = walkChain('a', transformers);
       expect(result).toEqual(['a']);
     });
+
+    test('returns array directly when provided', () => {
+      const chain = walkChain(['a', 'b', 'c'], {});
+      expect(chain).toEqual(['a', 'b', 'c']);
+    });
+
+    test('ignores transformer.next when array provided at start', () => {
+      const chain = walkChain(['a'], { a: { next: 'b' }, b: {} });
+      expect(chain).toEqual(['a']);
+    });
+
+    test('still walks chain for string input', () => {
+      const chain = walkChain('a', { a: { next: 'b' }, b: {} });
+      expect(chain).toEqual(['a', 'b']);
+    });
+
+    test('appends array next and stops when encountered during walk', () => {
+      const chain = walkChain('a', {
+        a: { next: 'b' },
+        b: { next: ['c', 'd'] },
+        c: { next: 'e' },
+        d: {},
+        e: {},
+      });
+      expect(chain).toEqual(['a', 'b', 'c', 'd']);
+    });
+
+    test('handles empty array at start', () => {
+      const chain = walkChain([], { a: { next: 'b' } });
+      expect(chain).toEqual([]);
+    });
   });
 
   describe('resolveTransformerGraph', () => {

@@ -1,8 +1,9 @@
-import { sessionStorage, storageRead, storageWrite } from '..';
+import { sessionStorage } from '../lib';
+import { storageRead, storageWrite } from '@walkeros/web-core';
 
-// Automatically mock the storage module
-jest.mock('../storage', () => ({
-  ...jest.requireActual('../storage'),
+// Automatically mock the storage module from web-core
+jest.mock('@walkeros/web-core', () => ({
+  ...jest.requireActual('@walkeros/web-core'),
   storageRead: jest.fn(),
   storageWrite: jest.fn(),
 }));

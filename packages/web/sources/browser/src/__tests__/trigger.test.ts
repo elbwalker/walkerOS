@@ -15,7 +15,6 @@ const createTestSettings = (prefix = 'data-elb'): Settings => ({
   prefix,
   scope: document,
   pageview: false,
-  session: false,
   elb: '',
   elbLayer: false,
 });
@@ -118,7 +117,6 @@ describe('Trigger System', () => {
       prefix: 'data-elb',
       scope: document,
       pageview: true,
-      session: true,
       elb: 'elb',
       elbLayer: 'elbLayer',
     });
@@ -206,7 +204,6 @@ describe('Trigger System', () => {
       prefix: 'data-elb',
       scope: document,
       pageview: false,
-      session: false,
       elb: '',
       elbLayer: false,
     } as Settings;

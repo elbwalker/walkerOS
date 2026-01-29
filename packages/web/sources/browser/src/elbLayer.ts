@@ -173,7 +173,6 @@ function pushCommand(
               prefix,
               scope: document,
               pageview: false,
-              session: false,
               elb: '',
               elbLayer: false,
             },

@@ -11,7 +11,6 @@ import { initTriggers, processLoadTriggers, ready } from './trigger';
 import { destroyVisibilityTracking } from './triggerVisible';
 import { initElbLayer } from './elbLayer';
 import { translateToCoreCollector } from './translation';
-import { sessionStart } from './session';
 import { getPageViewData } from './walker';
 import { getConfig } from './config';
 
@@ -36,7 +35,7 @@ export type { TaggerConfig, TaggerInstance } from './tagger';
 /**
  * Browser source implementation using environment injection.
  *
- * This source captures DOM events, manages sessions, handles pageviews,
+ * This source captures DOM events, handles pageviews,
  * and processes the elbLayer for browser environments.
  */
 export const sourceBrowser: Source.Init<Types> = async (context) => {
@@ -67,6 +66,23 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     settings,
   };
 
+  // Helper to send pageview event if enabled
+  const sendPageview = (settings: Source.Settings<Types>) => {
+    if (settings.pageview) {
+      const [data, contextData] = getPageViewData(
+        settings.prefix || 'data-elb',
+        settings.scope as Scope,
+      );
+      translateToCoreCollector(
+        translationContext,
+        'page view',
+        data,
+        'load',
+        contextData,
+      );
+    }
+  };
+
   // Initialize features if environment is available
   // Skip all DOM-related functionality when not in browser environment
 
@@ -80,37 +96,16 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
       });
     }
 
-    // Initialize session if enabled
-    if (settings.session && elb) {
-      const sessionConfig =
-        typeof settings.session === 'boolean' ? {} : settings.session;
-      sessionStart(elb, sessionConfig, command);
-    }
-
     // Setup global triggers (click, submit) when DOM is ready
     await ready(initTriggers, translationContext, settings);
 
     // Setup load triggers and pageview on each run
     const handleRun = () => {
       processLoadTriggers(translationContext, settings);
-
-      // Send pageview if enabled
-      if (settings.pageview) {
-        const [data, context] = getPageViewData(
-          settings.prefix || 'data-elb',
-          settings.scope as Scope,
-        );
-        translateToCoreCollector(
-          translationContext,
-          'page view',
-          data,
-          'load',
-          context,
-        );
-      }
+      sendPageview(settings);
     };
 
-    // Trigger initial run if this is a new session/page load
+    // Trigger initial run on page load
     handleRun();
 
     // Set up automatic window.elb assignment if configured
@@ -132,24 +127,9 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
     }
   }
 
-  // Handle events pushed from collector (consent, session, ready, run)
-  const handleEvent = async (event: On.Types, context?: unknown) => {
+  // Handle events pushed from collector (ready, run)
+  const handleEvent = async (event: On.Types) => {
     switch (event) {
-      case 'consent':
-        // React to consent changes - sources can implement specific consent handling
-        // For browser source, we might want to re-evaluate session settings
-        if (settings.session && context && elb) {
-          const sessionConfig =
-            typeof settings.session === 'boolean' ? {} : settings.session;
-          sessionStart(elb, sessionConfig, command);
-        }
-        break;
-
-      case 'session':
-        // React to session events if needed
-        // Browser source typically handles session creation, not reaction
-        break;
-
       case 'ready':
         // React to collector ready state
         // Browser source initialization already handles this
@@ -159,21 +139,7 @@ export const sourceBrowser: Source.Init<Types> = async (context) => {
         // React to collector run events - re-process load triggers
         if (actualDocument && actualWindow) {
           processLoadTriggers(translationContext, settings);
-
-          // Send pageview if enabled
-          if (settings.pageview) {
-            const [data, contextData] = getPageViewData(
-              settings.prefix || 'data-elb',
-              settings.scope as Scope,
-            );
-            translateToCoreCollector(
-              translationContext,
-              'page view',
-              data,
-              'load',
-              contextData,
-            );
-          }
+          sendPageview(settings);
         }
         break;
 

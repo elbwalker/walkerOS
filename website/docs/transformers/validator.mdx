@@ -13,22 +13,28 @@ import { schemas } from '@walkeros/transformer-validator/dev';
 
 Validates events using JSON Schema with two modes: **format** (structure) and **contract** (business rules).
 
-## Installation
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the package:
 
 <CodeSnippet
   code={`npm install @walkeros/transformer-validator`}
   language="bash"
 />
 
-## Setup
+Configure in your code:
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
+import { transformerValidator } from '@walkeros/transformer-validator';
 
 await startFlow({
   transformers: {
     validate: {
-      package: '@walkeros/transformer-validator',
+      code: transformerValidator,
       config: {
         logger: { level: 'DEBUG' },
         settings: {
@@ -52,6 +58,42 @@ await startFlow({
   language="typescript"
 />
 
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json`:
+
+<CodeSnippet
+  code={`"transformers": {
+  "validate": {
+    "package": "@walkeros/transformer-validator",
+    "config": {
+      "logger": { "level": "DEBUG" },
+      "settings": {
+        "format": true,
+        "contract": {
+          "product": {
+            "add": {
+              "schema": {
+                "properties": {
+                  "data": { "required": ["id", "name"] }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
 ## Validation modes
 
 | Mode | Purpose |
@@ -70,10 +112,44 @@ await startFlow({
 
 <PropertyTable schema={schemas.settings} />
 
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `format` | `boolean` | `true` | Validate full WalkerOS.Event structure |
+| `contract` | `Contract` | - | Entity/action keyed validation rules |
+
 ## Behavior
 
-* **Invalid events**: Stop chain, log error
-* **Unmatched events**: Pass through (validation is opt-in)
+### When validation fails
+
+Invalid events are **dropped from the pipeline** and do not reach destinations. The validator logs detailed error information:
+
+| Validation | Log message | Includes |
+|------------|-------------|----------|
+| Format | `Event format invalid` | Field-level errors from AJV |
+| Contract | `Contract validation failed` | Rule name + field-level errors |
+
+**Example log output:**
+
+```
+[ERROR] Event format invalid { errors: "data/name must match pattern \"^\\w+ \\w+$\"" }
+[ERROR] Contract validation failed { rule: "product add", errors: "data must have required property 'id'" }
+```
+
+### When validation passes
+
+- **Format valid**: Event continues to contract validation (if configured)
+- **Contract valid**: Logs debug message, event continues to next transformer or destinations
+- **No matching contract**: Event passes through unchanged (validation is opt-in per entity/action)
+
+### Pipeline flow
+
+```
+Event → Format check → Contract check → Next transformer/Destination
+             ↓                ↓
+          Invalid?         Invalid?
+             ↓                ↓
+        Drop + Log       Drop + Log
+```
 
 <details>
 <summary>Conditional rules</summary>

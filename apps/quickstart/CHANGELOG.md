@@ -1,5 +1,19 @@
 # @walkeros/quickstart
 
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [f39d9fb]
+- Updated dependencies [888bbdf]
+- Updated dependencies [a38d791]
+  - @walkeros/collector@1.1.0
+  - @walkeros/core@1.2.0
+  - @walkeros/web-source-browser@1.1.0
+  - @walkeros/web-core@1.0.2
+  - @walkeros/web-destination-api@1.1.2
+  - @walkeros/web-destination-gtag@1.0.2
+
 ## 1.0.2
 
 ### Patch Changes

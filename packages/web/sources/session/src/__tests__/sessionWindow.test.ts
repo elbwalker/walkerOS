@@ -1,4 +1,4 @@
-import { sessionWindow } from '..';
+import { sessionWindow } from '../lib';
 
 describe('SessionStart', () => {
   const w = window;

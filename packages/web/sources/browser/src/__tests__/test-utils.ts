@@ -16,7 +16,6 @@ export async function createBrowserSource(
       prefix: 'data-elb',
       scope: document,
       pageview: false,
-      session: false,
       elb: 'elb',
       elbLayer: 'elbLayer',
       ...settings,

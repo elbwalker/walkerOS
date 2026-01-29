@@ -3,6 +3,91 @@ import path from 'path';
 import fs from 'fs-extra';
 import type { Flow } from '@walkeros/core';
 import { packageNameToVariable } from '@walkeros/core';
+
+/**
+ * Type guard to check if a code value is an InlineCode object.
+ * InlineCode has { push: string, type?: string, init?: string }
+ */
+function isInlineCode(code: unknown): code is Flow.InlineCode {
+  return (
+    code !== null &&
+    typeof code === 'object' &&
+    !Array.isArray(code) &&
+    'push' in code
+  );
+}
+
+/**
+ * Validates that a reference has either package XOR code, not both or neither.
+ * Throws descriptive error for invalid configurations.
+ */
+function validateReference(
+  type: string,
+  name: string,
+  ref: { package?: string; code?: unknown },
+): void {
+  const hasPackage = !!ref.package;
+  const hasCode = isInlineCode(ref.code);
+
+  if (hasPackage && hasCode) {
+    throw new Error(
+      `${type} "${name}": Cannot specify both package and code. Use one or the other.`,
+    );
+  }
+  if (!hasPackage && !hasCode) {
+    throw new Error(`${type} "${name}": Must specify either package or code.`);
+  }
+}
+
+/**
+ * Generate inline code for sources and transformers.
+ * Creates a factory function that returns the instance at runtime.
+ */
+function generateInlineCode(
+  inline: Flow.InlineCode,
+  config: object,
+  env?: object,
+): string {
+  const pushFn = inline.push.replace('$code:', '');
+  const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
+  const typeLine = inline.type ? `type: '${inline.type}',` : '';
+
+  return `{
+      code: async (context) => ({
+        ${typeLine}
+        config: context.config,
+        ${initFn ? `init: ${initFn},` : ''}
+        push: ${pushFn}
+      }),
+      config: ${JSON.stringify(config || {})},
+      env: ${JSON.stringify(env || {})}
+    }`;
+}
+
+/**
+ * Generate inline code for destinations.
+ * Destinations have a different structure - code is the instance directly.
+ */
+function generateInlineDestinationCode(
+  inline: Flow.InlineCode,
+  config: object,
+  env?: object,
+): string {
+  const pushFn = inline.push.replace('$code:', '');
+  const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
+  const typeLine = inline.type ? `type: '${inline.type}',` : '';
+
+  return `{
+      code: {
+        ${typeLine}
+        config: ${JSON.stringify(config || {})},
+        ${initFn ? `init: ${initFn},` : ''}
+        push: ${pushFn}
+      },
+      config: ${JSON.stringify(config || {})},
+      env: ${JSON.stringify(env || {})}
+    }`;
+}
 import type { BuildOptions } from '../../types/bundle.js';
 import { downloadPackages } from './package-manager.js';
 import type { Logger } from '../../core/index.js';
@@ -66,6 +151,69 @@ function generateCacheKeyContent(
   return JSON.stringify(configForCache);
 }
 
+/**
+ * Validates flow config and warns about deprecated features.
+ * Returns true if there are any issues that should stop the build.
+ *
+ * Note: We use (code as unknown) === true to check for deprecated code: true
+ * because the type no longer includes true, but runtime values may still have it.
+ */
+function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
+  let hasDeprecatedCodeTrue = false;
+
+  // Check sources for code: true (deprecated, removed from types)
+  const sources = flowConfig.sources || {};
+  for (const [sourceId, source] of Object.entries(sources)) {
+    if (
+      source &&
+      typeof source === 'object' &&
+      (source.code as unknown) === true
+    ) {
+      logger.warning(
+        `DEPRECATED: Source "${sourceId}" uses code: true which is no longer supported. ` +
+          `Use $code: prefix in config values or create a source package instead.`,
+      );
+      hasDeprecatedCodeTrue = true;
+    }
+  }
+
+  // Check destinations for code: true (deprecated, removed from types)
+  const destinations = flowConfig.destinations || {};
+  for (const [destId, dest] of Object.entries(destinations)) {
+    if (dest && typeof dest === 'object' && (dest.code as unknown) === true) {
+      logger.warning(
+        `DEPRECATED: Destination "${destId}" uses code: true which is no longer supported. ` +
+          `Use $code: prefix in config values or create a destination package instead.`,
+      );
+      hasDeprecatedCodeTrue = true;
+    }
+  }
+
+  // Check transformers for code: true (deprecated, removed from types)
+  const transformers = flowConfig.transformers || {};
+  for (const [transformerId, transformer] of Object.entries(transformers)) {
+    if (
+      transformer &&
+      typeof transformer === 'object' &&
+      (transformer.code as unknown) === true
+    ) {
+      logger.warning(
+        `DEPRECATED: Transformer "${transformerId}" uses code: true which is no longer supported. ` +
+          `Use $code: prefix in config values or create a transformer package instead.`,
+      );
+      hasDeprecatedCodeTrue = true;
+    }
+  }
+
+  if (hasDeprecatedCodeTrue) {
+    logger.warning(
+      `See https://www.elbwalker.com/docs/walkeros/getting-started/flow for migration guide.`,
+    );
+  }
+
+  return hasDeprecatedCodeTrue;
+}
+
 export async function bundleCore(
   flowConfig: Flow.Config,
   buildOptions: BuildOptions,
@@ -73,6 +221,13 @@ export async function bundleCore(
   showStats = false,
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
+
+  // Validate flow config and warn about deprecated features
+  const hasDeprecatedFeatures = validateFlowConfig(flowConfig, logger);
+  if (hasDeprecatedFeatures) {
+    logger.warning('Skipping deprecated code: true entries from bundle.');
+  }
+
   // Use provided temp dir or default .tmp/
   const TEMP_DIR = buildOptions.tempDir || getTmpPath();
 
@@ -420,6 +575,15 @@ function detectDestinationPackages(flowConfig: Flow.Config): Set<string> {
 
   if (destinations) {
     for (const [destKey, destConfig] of Object.entries(destinations)) {
+      // Skip if code: true (uses built-in inline code destination)
+      if (
+        typeof destConfig === 'object' &&
+        destConfig !== null &&
+        'code' in destConfig &&
+        destConfig.code === true
+      ) {
+        continue;
+      }
       // Require explicit package field - no inference for any packages
       if (
         typeof destConfig === 'object' &&
@@ -448,6 +612,15 @@ function detectSourcePackages(flowConfig: Flow.Config): Set<string> {
 
   if (sources) {
     for (const [sourceKey, sourceConfig] of Object.entries(sources)) {
+      // Skip if code: true (uses built-in inline code source)
+      if (
+        typeof sourceConfig === 'object' &&
+        sourceConfig !== null &&
+        'code' in sourceConfig &&
+        sourceConfig.code === true
+      ) {
+        continue;
+      }
       // Require explicit package field - no inference for any packages
       if (
         typeof sourceConfig === 'object' &&
@@ -464,10 +637,50 @@ function detectSourcePackages(flowConfig: Flow.Config): Set<string> {
 }
 
 /**
- * Detects explicit code imports from destinations and sources.
+ * Detects transformer packages from flow configuration.
+ * Extracts package names from transformers that have explicit 'package' field.
+ */
+export function detectTransformerPackages(
+  flowConfig: Flow.Config,
+): Set<string> {
+  const transformerPackages = new Set<string>();
+  const transformers = (
+    flowConfig as unknown as { transformers?: Record<string, unknown> }
+  ).transformers;
+
+  if (transformers) {
+    for (const [transformerKey, transformerConfig] of Object.entries(
+      transformers,
+    )) {
+      // Skip if code: true (uses built-in inline code transformer)
+      if (
+        typeof transformerConfig === 'object' &&
+        transformerConfig !== null &&
+        'code' in transformerConfig &&
+        transformerConfig.code === true
+      ) {
+        continue;
+      }
+      // Require explicit package field
+      if (
+        typeof transformerConfig === 'object' &&
+        transformerConfig !== null &&
+        'package' in transformerConfig &&
+        typeof transformerConfig.package === 'string'
+      ) {
+        transformerPackages.add(transformerConfig.package);
+      }
+    }
+  }
+
+  return transformerPackages;
+}
+
+/**
+ * Detects explicit code imports from destinations, sources, and transformers.
  * Returns a map of package names to sets of export names.
  */
-function detectExplicitCodeImports(
+export function detectExplicitCodeImports(
   flowConfig: Flow.Config,
 ): Map<string, Set<string>> {
   const explicitCodeImports = new Map<string, Set<string>>();
@@ -479,6 +692,15 @@ function detectExplicitCodeImports(
 
   if (destinations) {
     for (const [destKey, destConfig] of Object.entries(destinations)) {
+      // Skip code: true (built-in inline code)
+      if (
+        typeof destConfig === 'object' &&
+        destConfig !== null &&
+        'code' in destConfig &&
+        destConfig.code === true
+      ) {
+        continue;
+      }
       if (
         typeof destConfig === 'object' &&
         destConfig !== null &&
@@ -507,6 +729,15 @@ function detectExplicitCodeImports(
 
   if (sources) {
     for (const [sourceKey, sourceConfig] of Object.entries(sources)) {
+      // Skip code: true (built-in inline code)
+      if (
+        typeof sourceConfig === 'object' &&
+        sourceConfig !== null &&
+        'code' in sourceConfig &&
+        sourceConfig.code === true
+      ) {
+        continue;
+      }
       if (
         typeof sourceConfig === 'object' &&
         sourceConfig !== null &&
@@ -528,6 +759,46 @@ function detectExplicitCodeImports(
     }
   }
 
+  // Check transformers
+  const transformers = (
+    flowConfig as unknown as { transformers?: Record<string, unknown> }
+  ).transformers;
+
+  if (transformers) {
+    for (const [transformerKey, transformerConfig] of Object.entries(
+      transformers,
+    )) {
+      // Skip code: true (built-in inline code)
+      if (
+        typeof transformerConfig === 'object' &&
+        transformerConfig !== null &&
+        'code' in transformerConfig &&
+        transformerConfig.code === true
+      ) {
+        continue;
+      }
+      if (
+        typeof transformerConfig === 'object' &&
+        transformerConfig !== null &&
+        'package' in transformerConfig &&
+        typeof transformerConfig.package === 'string' &&
+        'code' in transformerConfig &&
+        typeof transformerConfig.code === 'string'
+      ) {
+        // Only treat as explicit if code doesn't match auto-generated pattern
+        const isAutoGenerated = transformerConfig.code.startsWith('_');
+        if (!isAutoGenerated) {
+          if (!explicitCodeImports.has(transformerConfig.package)) {
+            explicitCodeImports.set(transformerConfig.package, new Set());
+          }
+          explicitCodeImports
+            .get(transformerConfig.package)!
+            .add(transformerConfig.code);
+        }
+      }
+    }
+  }
+
   return explicitCodeImports;
 }
 
@@ -544,11 +815,16 @@ function generateImportStatements(
   packages: BuildOptions['packages'],
   destinationPackages: Set<string>,
   sourcePackages: Set<string>,
+  transformerPackages: Set<string>,
   explicitCodeImports: Map<string, Set<string>>,
 ): ImportGenerationResult {
   const importStatements: string[] = [];
   const examplesMappings: string[] = [];
-  const usedPackages = new Set([...destinationPackages, ...sourcePackages]);
+  const usedPackages = new Set([
+    ...destinationPackages,
+    ...sourcePackages,
+    ...transformerPackages,
+  ]);
 
   for (const [packageName, packageConfig] of Object.entries(packages)) {
     const isUsedByDestOrSource = usedPackages.has(packageName);
@@ -639,9 +915,10 @@ export async function createEntryPoint(
   buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
 ): Promise<string> {
-  // Detect packages used by destinations and sources
+  // Detect packages used by destinations, sources, and transformers
   const destinationPackages = detectDestinationPackages(flowConfig);
   const sourcePackages = detectSourcePackages(flowConfig);
+  const transformerPackages = detectTransformerPackages(flowConfig);
   const explicitCodeImports = detectExplicitCodeImports(flowConfig);
 
   // Generate import statements
@@ -649,11 +926,18 @@ export async function createEntryPoint(
     buildOptions.packages,
     destinationPackages,
     sourcePackages,
+    transformerPackages,
     explicitCodeImports,
   );
 
   const importsCode = importStatements.join('\n');
-  const hasFlow = destinationPackages.size > 0 || sourcePackages.size > 0;
+  const hasFlow =
+    Object.values(flowConfig.sources || {}).some(
+      (s) => s.package || isInlineCode(s.code),
+    ) ||
+    Object.values(flowConfig.destinations || {}).some(
+      (d) => d.package || isInlineCode(d.code),
+    );
 
   // If no sources/destinations, just return user code with imports (no flow wrapper)
   if (!hasFlow) {
@@ -734,42 +1018,117 @@ export function buildConfigObject(
   const flowWithProps = flowConfig as unknown as {
     sources?: Record<
       string,
-      { package: string; code?: string; config?: unknown; env?: unknown }
+      {
+        package?: string;
+        code?: string | true;
+        config?: unknown;
+        env?: unknown;
+      }
     >;
     destinations?: Record<
       string,
-      { package: string; code?: string; config?: unknown; env?: unknown }
+      {
+        package?: string;
+        code?: string | true;
+        config?: unknown;
+        env?: unknown;
+      }
+    >;
+    transformers?: Record<
+      string,
+      {
+        package?: string;
+        code?: string | true;
+        config?: unknown;
+        env?: unknown;
+        next?: string;
+      }
     >;
     collector?: unknown;
   };
 
   const sources = flowWithProps.sources || {};
   const destinations = flowWithProps.destinations || {};
+  const transformers = flowWithProps.transformers || {};
 
-  // Build sources
-  const sourcesEntries = Object.entries(sources).map(([key, source]) => {
-    const hasExplicitCode =
-      source.code && explicitCodeImports.has(source.package);
-    const codeVar = hasExplicitCode
-      ? source.code
-      : packageNameToVariable(source.package);
-
-    const configStr = source.config ? processConfigValue(source.config) : '{}';
-    const envStr = source.env
-      ? `,\n      env: ${processConfigValue(source.env)}`
-      : '';
-
-    return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
+  // Validate references before processing (skip deprecated code: true entries)
+  Object.entries(sources).forEach(([name, source]) => {
+    if ((source.code as unknown) !== true) {
+      validateReference('Source', name, source);
+    }
   });
 
-  // Build destinations
-  const destinationsEntries = Object.entries(destinations).map(
-    ([key, dest]) => {
-      const hasExplicitCode =
-        dest.code && explicitCodeImports.has(dest.package);
-      const codeVar = hasExplicitCode
-        ? dest.code
-        : packageNameToVariable(dest.package);
+  Object.entries(destinations).forEach(([name, dest]) => {
+    if ((dest.code as unknown) !== true) {
+      validateReference('Destination', name, dest);
+    }
+  });
+
+  Object.entries(transformers).forEach(([name, transformer]) => {
+    if ((transformer.code as unknown) !== true) {
+      validateReference('Transformer', name, transformer);
+    }
+  });
+
+  // Build sources (skip deprecated code: true entries)
+  const sourcesEntries = Object.entries(sources)
+    .filter(
+      ([, source]) =>
+        (source.code as unknown) !== true &&
+        (source.package || isInlineCode(source.code)),
+    )
+    .map(([key, source]) => {
+      // Handle inline code object
+      if (isInlineCode(source.code)) {
+        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object)}`;
+      }
+
+      // Handle package-based source
+      let codeVar: string;
+      if (
+        source.code &&
+        typeof source.code === 'string' &&
+        explicitCodeImports.has(source.package!)
+      ) {
+        codeVar = source.code;
+      } else {
+        codeVar = packageNameToVariable(source.package!);
+      }
+
+      const configStr = source.config
+        ? processConfigValue(source.config)
+        : '{}';
+      const envStr = source.env
+        ? `,\n      env: ${processConfigValue(source.env)}`
+        : '';
+
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
+    });
+
+  // Build destinations (skip deprecated code: true entries)
+  const destinationsEntries = Object.entries(destinations)
+    .filter(
+      ([, dest]) =>
+        (dest.code as unknown) !== true &&
+        (dest.package || isInlineCode(dest.code)),
+    )
+    .map(([key, dest]) => {
+      // Handle inline code object
+      if (isInlineCode(dest.code)) {
+        return `    ${key}: ${generateInlineDestinationCode(dest.code, (dest.config as object) || {}, dest.env as object)}`;
+      }
+
+      // Handle package-based destination
+      let codeVar: string;
+      if (
+        dest.code &&
+        typeof dest.code === 'string' &&
+        explicitCodeImports.has(dest.package!)
+      ) {
+        codeVar = dest.code;
+      } else {
+        codeVar = packageNameToVariable(dest.package!);
+      }
 
       const configStr = dest.config ? processConfigValue(dest.config) : '{}';
       const envStr = dest.env
@@ -777,13 +1136,65 @@ export function buildConfigObject(
         : '';
 
       return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
-    },
-  );
+    });
+
+  // Build transformers (skip deprecated code: true entries)
+  const transformersEntries = Object.entries(transformers)
+    .filter(
+      ([, transformer]) =>
+        (transformer.code as unknown) !== true &&
+        (transformer.package || isInlineCode(transformer.code)),
+    )
+    .map(([key, transformer]) => {
+      // Handle inline code object
+      if (isInlineCode(transformer.code)) {
+        // Merge next into config for runtime if present
+        const configWithNext = transformer.next
+          ? {
+              ...((transformer.config as object) || {}),
+              next: transformer.next,
+            }
+          : (transformer.config as object) || {};
+        return `    ${key}: ${generateInlineCode(transformer.code, configWithNext, transformer.env as object)}`;
+      }
+
+      // Handle package-based transformer
+      let codeVar: string;
+      if (
+        transformer.code &&
+        typeof transformer.code === 'string' &&
+        explicitCodeImports.has(transformer.package!)
+      ) {
+        codeVar = transformer.code;
+      } else {
+        codeVar = packageNameToVariable(transformer.package!);
+      }
+
+      // Merge next into config for runtime (transformer.config.next)
+      const configWithNext = transformer.next
+        ? { ...((transformer.config as object) || {}), next: transformer.next }
+        : transformer.config;
+
+      const configStr = configWithNext
+        ? processConfigValue(configWithNext)
+        : '{}';
+      const envStr = transformer.env
+        ? `,\n      env: ${processConfigValue(transformer.env)}`
+        : '';
+
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
+    });
 
   // Build collector
   const collectorStr = flowWithProps.collector
     ? `,\n  ...${processConfigValue(flowWithProps.collector)}`
     : '';
+
+  // Build transformers section (only if transformers exist)
+  const transformersStr =
+    transformersEntries.length > 0
+      ? `,\n  transformers: {\n${transformersEntries.join(',\n')}\n  }`
+      : '';
 
   return `{
   sources: {
@@ -791,7 +1202,7 @@ ${sourcesEntries.join(',\n')}
   },
   destinations: {
 ${destinationsEntries.join(',\n')}
-  }${collectorStr}
+  }${transformersStr}${collectorStr}
 }`;
 }
 

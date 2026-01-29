@@ -1,6 +1,7 @@
 import type { Collector, Source, WalkerOS } from '@walkeros/core';
 import type { SourceBrowser } from '@walkeros/web-source-browser';
 import type { SourceDataLayer } from '@walkeros/web-source-datalayer';
+import type { SourceSession } from '@walkeros/web-source-session';
 
 declare global {
   interface Window {
@@ -21,6 +22,9 @@ export interface Config {
 
   // Browser source configuration
   browser?: Partial<SourceBrowser.Settings>;
+
+  // Session source configuration
+  session?: boolean | Partial<SourceSession.Settings>;
 
   // DataLayer configuration
   dataLayer?: boolean | Partial<SourceDataLayer.Settings>;

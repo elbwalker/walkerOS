@@ -92,6 +92,74 @@ push(event, context) {
 }
 ```
 
+## Inline Code Transformers
+
+For simple transformations without external packages, use inline code with the
+`$code:` prefix:
+
+```json
+{
+  "transformers": {
+    "enrich": {
+      "code": {
+        "push": "$code:(event) => { event.data.enrichedAt = Date.now(); return event; }"
+      },
+      "next": "validate"
+    }
+  }
+}
+```
+
+**Inline code structure:**
+
+| Property    | Purpose                             |
+| ----------- | ----------------------------------- |
+| `code.init` | Code run once during initialization |
+| `code.push` | Code run for each event             |
+
+**Push code has access to:**
+
+- `event` - The event being processed
+- `context` - Push context with logger, config, etc.
+
+**Return values in push code:**
+
+- Return modified event to continue chain
+- Return `undefined` to pass event unchanged
+- Return `false` to drop event from chain
+
+**Example: Filtering internal events**
+
+```json
+{
+  "transformers": {
+    "filter": {
+      "code": {
+        "push": "$code:(event) => { if (event.name.startsWith('internal_')) return false; return event; }"
+      }
+    }
+  }
+}
+```
+
+**Mixing inline and package transformers:**
+
+```json
+{
+  "transformers": {
+    "addTimestamp": {
+      "code": {
+        "push": "$code:(event) => { event.data.processedAt = new Date().toISOString(); return event; }"
+      },
+      "next": "validate"
+    },
+    "validate": {
+      "package": "@walkeros/transformer-validator"
+    }
+  }
+}
+```
+
 ## Pipeline Integration
 
 Transformers run at two points in the pipeline:
