@@ -33,10 +33,10 @@
     "ajv": "^8.17.1"
   },
   "peerDependencies": {
-    "@walkeros/core": "^1.2.0"
+    "@walkeros/core": "^1.2.1"
   },
   "devDependencies": {
-    "@walkeros/core": "1.2.0"
+    "@walkeros/core": "1.2.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
