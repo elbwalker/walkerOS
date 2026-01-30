@@ -103,8 +103,20 @@ describe('Flow Schemas', () => {
       );
     });
 
-    test('rejects missing package field', () => {
-      expect(() => SourceReferenceSchema.parse({})).toThrow();
+    test('accepts empty object (runtime validation requires package or code)', () => {
+      // Schema allows empty object; bundler validates that package or code is present
+      expect(() => SourceReferenceSchema.parse({})).not.toThrow();
+    });
+
+    test('accepts inline code object', () => {
+      const validSource = {
+        code: {
+          type: 'logger',
+          push: '$code:(event) => console.log(event)',
+        },
+        config: {},
+      };
+      expect(() => SourceReferenceSchema.parse(validSource)).not.toThrow();
     });
 
     test('allows unknown config structure', () => {
@@ -161,8 +173,20 @@ describe('Flow Schemas', () => {
       );
     });
 
-    test('rejects missing package field', () => {
-      expect(() => DestinationReferenceSchema.parse({})).toThrow();
+    test('accepts empty object (runtime validation requires package or code)', () => {
+      // Schema allows empty object; bundler validates that package or code is present
+      expect(() => DestinationReferenceSchema.parse({})).not.toThrow();
+    });
+
+    test('accepts inline code object', () => {
+      const validDest = {
+        code: {
+          type: 'logger',
+          push: '$code:(event) => console.log(event)',
+        },
+        config: {},
+      };
+      expect(() => DestinationReferenceSchema.parse(validDest)).not.toThrow();
     });
   });
 

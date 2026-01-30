@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/collector",
   "description": "Unified platform-agnostic collector for walkerOS",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -30,7 +30,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "1.2.0"
+    "@walkeros/core": "1.2.1"
   },
   "devDependencies": {},
   "repository": {

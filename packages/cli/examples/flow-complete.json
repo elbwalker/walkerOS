@@ -12,6 +12,7 @@
       "loop": [
         "nested",
         {
+          "condition": "$code:(entity) => entity.entity === 'product'",
           "map": {
             "item_id": "data.id",
             "item_name": "data.name",
@@ -67,7 +68,7 @@
         },
         "dataLayer": {
           "package": "@walkeros/web-source-datalayer",
-          "next": "dataLayerValidator",
+          "next": "enricher",
           "config": {
             "settings": {
               "name": "dataLayer",
@@ -185,6 +186,14 @@
         }
       },
       "transformers": {
+        "enricher": {
+          "code": {
+            "type": "enricher",
+            "push": "$code:(event) => ({ ...event, context: { ...event.context, enrichedAt: Date.now() } })"
+          },
+          "next": "dataLayerValidator",
+          "config": {}
+        },
         "dataLayerValidator": {
           "package": "@walkeros/transformer-validator",
           "config": {
@@ -283,7 +292,10 @@
                   "data": {
                     "map": {
                       "transaction_id": "data.id",
-                      "value": "data.total",
+                      "value": {
+                        "key": "data.total",
+                        "fn": "$code:(v) => Math.round(v * 100)"
+                      },
                       "currency": {
                         "key": "data.currency",
                         "value": "$var.currency"
@@ -333,6 +345,15 @@
                 }
               }
             }
+          }
+        },
+        "debug": {
+          "code": {
+            "type": "debug-logger",
+            "push": "$code:(event, ctx) => { ctx.logger.info('[DEBUG]', event.name, event.data); }"
+          },
+          "config": {
+            "consent": { "functional": true }
           }
         }
       },
@@ -389,6 +410,14 @@
         }
       },
       "transformers": {
+        "filter": {
+          "code": {
+            "type": "filter",
+            "push": "$code:(event) => event.name.startsWith('internal_') || event.name.startsWith('debug_') ? false : event"
+          },
+          "next": "fingerprint",
+          "config": {}
+        },
         "fingerprint": {
           "package": "@walkeros/server-transformer-fingerprint",
           "next": "serverValidator",
@@ -398,7 +427,7 @@
                 "context.ip",
                 "context.userAgent",
                 "context.language",
-                { "value": "2026-01-16" }
+                { "fn": "$code:() => new Date().toISOString().slice(0, 10)" }
               ],
               "output": "user.hash",
               "length": 16
@@ -412,6 +441,33 @@
               "format": true,
               "contract": {
                 "product": {
+                  "add": [
+                    {
+                      "condition": "$code:(event) => Number(event.data?.quantity ?? 0) > 10",
+                      "schema": {
+                        "properties": {
+                          "data": {
+                            "required": [
+                              "id",
+                              "name",
+                              "price",
+                              "quantity",
+                              "warehouse"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "schema": {
+                        "properties": {
+                          "data": {
+                            "required": ["id", "name", "price"]
+                          }
+                        }
+                      }
+                    }
+                  ],
                   "*": {
                     "schema": {
                       "properties": {
@@ -441,7 +497,7 @@
       "destinations": {
         "meta": {
           "package": "@walkeros/server-destination-meta",
-          "before": "fingerprint",
+          "before": "filter",
           "config": {
             "settings": {
               "pixelId": "$var.metaPixelId",

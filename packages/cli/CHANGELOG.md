@@ -1,5 +1,21 @@
 # @walkeros/cli
 
+## 1.1.1
+
+### Patch Changes
+
+- 6256c12: Add inline code support for sources, transformers, and destinations
+  - Add `InlineCodeSchema` with `push`, `type`, and `init` fields for embedding
+    JavaScript in flow configs
+  - Make `package` field optional in reference schemas (either `package` or
+    `code` required at runtime)
+  - Update `flow-complete.json` example with inline code demonstrations
+    including enricher transformer, debug destination, and conditional mappings
+
+- Updated dependencies [6256c12]
+  - @walkeros/core@1.2.1
+  - @walkeros/server-core@1.0.3
+
 ## 1.1.0
 
 ### Minor Changes

@@ -1,5 +1,13 @@
 # @walkeros/server-destination-api
 
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [6256c12]
+  - @walkeros/core@1.2.1
+  - @walkeros/server-core@1.0.3
+
 ## 1.0.2
 
 ### Patch Changes
