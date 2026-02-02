@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "build": "tsup --silent",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "clean": "rm -rf .turbo && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "lint": "tsc && eslint \"**/*.ts*\"",
     "test": "jest",

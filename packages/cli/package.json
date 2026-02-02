@@ -27,7 +27,7 @@
     "start": "node dist/index.js",
     "test": "jest --colors",
     "lint": "tsc --noEmit && eslint \"src/**/*.ts*\"",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage && rm -rf .temp && rm -rf .tmp",
+    "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage && rm -rf .temp && rm -rf .tmp",
     "docker:build": "bash scripts/build-docker.sh",
     "docker:test": "bash scripts/test-docker.sh",
     "docker:publish": "bash scripts/publish-docker.sh"
