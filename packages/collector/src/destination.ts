@@ -1,4 +1,10 @@
-import type { Collector, WalkerOS, Elb, Destination } from '@walkeros/core';
+import type {
+  Collector,
+  WalkerOS,
+  Elb,
+  Destination,
+  Transformer,
+} from '@walkeros/core';
 import {
   assign,
   clone,
@@ -12,7 +18,38 @@ import {
   useHooks,
 } from '@walkeros/core';
 import { callDestinationOn } from './on';
-import { runTransformerChain } from './transformer';
+import { runTransformerChain, walkChain } from './transformer';
+
+/**
+ * Extracts transformer next configuration for chain walking.
+ * Maps transformer instances to their config.next values.
+ */
+function extractTransformerNextMap(
+  transformers: Transformer.Transformers,
+): Record<string, { next?: string | string[] }> {
+  const result: Record<string, { next?: string | string[] }> = {};
+  for (const [id, transformer] of Object.entries(transformers)) {
+    if (transformer.config?.next) {
+      result[id] = { next: transformer.config.next as string | string[] };
+    } else {
+      result[id] = {};
+    }
+  }
+  return result;
+}
+
+/**
+ * Computes transformer chain for a destination on-demand.
+ * Returns empty array if destination has no 'before' configured.
+ */
+function getDestinationChain(
+  destination: Destination.Instance,
+  transformers: Transformer.Transformers,
+): string[] {
+  const before = destination.config.before as string | string[] | undefined;
+  if (!before) return [];
+  return walkChain(before, extractTransformerNextMap(transformers));
+}
 
 /**
  * Adds a new destination to the collector.
@@ -27,8 +64,10 @@ export async function addDestination(
   data: Destination.Init,
   options?: Destination.Config,
 ): Promise<Elb.PushResult> {
-  const { code, config: dataConfig = {}, env = {} } = data;
-  const config = options || dataConfig || { init: false };
+  const { code, config: dataConfig = {}, env = {}, before } = data;
+  const baseConfig = options || dataConfig || { init: false };
+  // Merge before into config if provided at root level
+  const config = before ? { ...baseConfig, before } : baseConfig;
 
   const destination: Destination.Instance = {
     ...code,
@@ -158,8 +197,11 @@ export async function pushToDestinations(
       let response: unknown;
       if (!destination.dlq) destination.dlq = [];
 
-      // Get post-collector transformer chain for this destination
-      const postChain = collector.transformerChain?.post?.[id] || [];
+      // Compute transformer chain on-demand from destination.before
+      const postChain = getDestinationChain(
+        destination,
+        collector.transformers,
+      );
 
       // Process allowed events and store failed ones in the dead letter queue (DLQ)
       await Promise.all(
@@ -461,11 +503,13 @@ export async function initDestinations(
   const result: Collector.Destinations = {};
 
   for (const [name, destinationDef] of Object.entries(destinations)) {
-    const { code, config = {}, env = {} } = destinationDef;
+    const { code, config = {}, env = {}, before } = destinationDef;
 
     const mergedConfig = {
       ...code.config,
       ...config,
+      // Store before in config so it's accessible during push
+      ...(before && { before }),
     };
 
     const mergedEnv = mergeEnvironments(code.env, env);

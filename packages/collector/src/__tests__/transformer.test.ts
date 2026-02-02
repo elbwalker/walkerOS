@@ -2,7 +2,6 @@ import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import {
   walkChain,
-  resolveTransformerGraph,
   runTransformerChain,
   transformerInit,
   transformerPush,
@@ -23,7 +22,6 @@ describe('Transformer', () => {
       custom: {},
       destinations: {},
       transformers: {},
-      transformerChain: { pre: [], post: {} },
       globals: {},
       group: '',
       hooks: {},
@@ -127,69 +125,6 @@ describe('Transformer', () => {
     test('handles empty array at start', () => {
       const chain = walkChain([], { a: { next: 'b' } });
       expect(chain).toEqual([]);
-    });
-  });
-
-  describe('resolveTransformerGraph', () => {
-    test('returns empty chains when no sources or destinations', () => {
-      const result = resolveTransformerGraph({}, {}, {});
-      expect(result).toEqual({ pre: [], post: {} });
-    });
-
-    test('builds post-chain from destination.before', () => {
-      const destinations = {
-        ga4: { before: 'redact' },
-      };
-      const transformers = {
-        redact: { next: 'anonymize' },
-        anonymize: {},
-      };
-      const result = resolveTransformerGraph({}, destinations, transformers);
-      expect(result.post).toEqual({
-        ga4: ['redact', 'anonymize'],
-      });
-    });
-
-    test('builds multiple post-chains for different destinations', () => {
-      const destinations = {
-        ga4: { before: 'redact' },
-        warehouse: { before: 'validate' },
-      };
-      const transformers = {
-        redact: {},
-        validate: {},
-      };
-      const result = resolveTransformerGraph({}, destinations, transformers);
-      expect(result.post).toEqual({
-        ga4: ['redact'],
-        warehouse: ['validate'],
-      });
-    });
-
-    test('ignores destinations without before', () => {
-      const destinations = {
-        ga4: { before: 'redact' },
-        warehouse: {}, // No before
-      };
-      const transformers = {
-        redact: {},
-      };
-      const result = resolveTransformerGraph({}, destinations, transformers);
-      expect(result.post).toEqual({
-        ga4: ['redact'],
-      });
-      expect(result.post.warehouse).toBeUndefined();
-    });
-
-    test('pre-chain is always empty (resolved per-source now)', () => {
-      const sources = {
-        browser: { next: 'enrich' },
-      };
-      const transformers = {
-        enrich: {},
-      };
-      const result = resolveTransformerGraph(sources, {}, transformers);
-      expect(result.pre).toEqual([]);
     });
   });
 

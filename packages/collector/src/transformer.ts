@@ -2,30 +2,28 @@ import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { isObject, tryCatchAsync, useHooks } from '@walkeros/core';
 
 /**
- * Resolved transformer chains for a flow.
- */
-export interface TransformerChain {
-  /** Ordered transformer IDs to run before collector (from source.next) */
-  pre: string[];
-  /** Per-destination transformer chains (from destination.before) */
-  post: Record<string, string[]>;
-}
-
-/**
- * Extended collector with transformer support.
- */
-export interface CollectorWithTransformers extends Collector.Instance {
-  transformers: Transformer.Transformers;
-  transformerChain: TransformerChain;
-}
-
-/**
  * Walks a transformer chain starting from a given transformer ID.
  * Returns ordered array of transformer IDs in the chain.
  *
+ * Used for on-demand chain resolution:
+ * - Called from destination.ts with destination.config.before
+ * - Called from source.ts with source.config.next
+ *
  * @param startId - First transformer in chain, or explicit array of transformer IDs
  * @param transformers - Available transformer configs with optional `next` field
- * @returns Ordered array of transformer IDs
+ * @returns Ordered array of transformer IDs to execute
+ *
+ * @example
+ * // Single transformer
+ * walkChain('redact', { redact: {} }) // ['redact']
+ *
+ * @example
+ * // Chain via next
+ * walkChain('a', { a: { next: 'b' }, b: { next: 'c' }, c: {} }) // ['a', 'b', 'c']
+ *
+ * @example
+ * // Explicit array
+ * walkChain(['x', 'y'], {}) // ['x', 'y']
  */
 export function walkChain(
   startId: string | string[] | undefined,
@@ -63,34 +61,6 @@ export function walkChain(
   }
 
   return chain;
-}
-
-/**
- * Resolves transformer chains from flow configuration.
- * Builds per-destination post-collector chains.
- * Note: Pre-chains are now resolved per-source in source.ts
- *
- * @param sources - Source configurations (unused, kept for API compatibility)
- * @param destinations - Destination configurations with optional before property
- * @param transformers - Transformer configurations with optional next property
- * @returns Resolved transformer chains
- */
-export function resolveTransformerGraph(
-  _sources: Record<string, { next?: string | string[] }> = {},
-  destinations: Record<string, { before?: string | string[] }> = {},
-  transformers: Record<string, { next?: string | string[] }> = {},
-): TransformerChain {
-  const post: Record<string, string[]> = {};
-
-  // Build post-collector chains from destinations
-  for (const [destName, dest] of Object.entries(destinations)) {
-    if (dest.before) {
-      post[destName] = walkChain(dest.before, transformers);
-    }
-  }
-
-  // Note: pre-chains are now resolved per-source in source.ts
-  return { pre: [], post };
 }
 
 /**
