@@ -1,5 +1,11 @@
 # @walkeros/web-destination-snowplow
 
+## 0.0.11
+
+### Patch Changes
+
+- @walkeros/web-core@1.0.4
+
 ## 0.0.10
 
 ### Patch Changes

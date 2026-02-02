@@ -1,5 +1,11 @@
 # walkeros
 
+## 1.0.5
+
+### Patch Changes
+
+- @walkeros/cli@1.1.2
+
 ## 1.0.4
 
 ### Patch Changes

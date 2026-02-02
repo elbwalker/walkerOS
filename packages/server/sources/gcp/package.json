@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-source-gcp",
   "description": "Google Cloud Platform server sources for walkerOS (Cloud Functions)",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -18,7 +18,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "1.2.1"
+    "@walkeros/core": "1.2.2"
   },
   "peerDependencies": {
     "@google-cloud/functions-framework": "^3.0.0"
