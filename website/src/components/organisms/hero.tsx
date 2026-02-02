@@ -188,7 +188,7 @@ export default function Hero({
               centerTitle="Collector"
               center={
                 <img
-                  src="/img/walkerOS_logo_new.svg"
+                  src="/img/walkerOS_logo.svg"
                   alt="walkerOS"
                   className="w-24 h-24 xl:w-32 xl:h-32"
                 />
