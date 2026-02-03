@@ -140,7 +140,7 @@ export type InitSource<T extends TypesGeneric = Types> = {
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
   primary?: boolean;
-  next?: string;
+  next?: string | string[];
 };
 
 /**

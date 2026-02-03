@@ -7,6 +7,7 @@ import {
   transformerPush,
   initTransformers as initTransformersFunc,
   extractTransformerNextMap,
+  extractChainProperty,
 } from '../transformer';
 
 describe('Transformer', () => {
@@ -442,6 +443,74 @@ describe('Transformer', () => {
       const result = extractTransformerNextMap(transformers);
 
       expect(result).toEqual({ a: {} });
+    });
+  });
+
+  describe('extractChainProperty', () => {
+    test('extracts and merges chain property into config', () => {
+      const definition = {
+        code: jest.fn(),
+        config: { settings: { foo: 'bar' } },
+        next: 'enrich',
+      };
+
+      const result = extractChainProperty(definition, 'next');
+
+      expect(result.config).toEqual({
+        settings: { foo: 'bar' },
+        next: 'enrich',
+      });
+      expect(result.chainValue).toBe('enrich');
+    });
+
+    test('handles before property for destinations', () => {
+      const definition = {
+        code: { type: 'test', config: {}, push: jest.fn() },
+        config: {},
+        before: 'redact',
+      };
+
+      const result = extractChainProperty(definition, 'before');
+
+      expect(result.config).toEqual({ before: 'redact' });
+      expect(result.chainValue).toBe('redact');
+    });
+
+    test('handles array chain values', () => {
+      const definition = {
+        code: jest.fn(),
+        config: {},
+        next: ['a', 'b', 'c'],
+      };
+
+      const result = extractChainProperty(definition, 'next');
+
+      expect(result.config.next).toEqual(['a', 'b', 'c']);
+      expect(result.chainValue).toEqual(['a', 'b', 'c']);
+    });
+
+    test('returns unchanged config when no chain property', () => {
+      const definition = {
+        code: jest.fn(),
+        config: { settings: { foo: 'bar' } },
+      };
+
+      const result = extractChainProperty(definition, 'next');
+
+      expect(result.config).toEqual({ settings: { foo: 'bar' } });
+      expect(result.chainValue).toBeUndefined();
+    });
+
+    test('definition-level takes precedence over config-level', () => {
+      const definition = {
+        code: jest.fn(),
+        config: { next: 'existing' },
+        next: 'override',
+      };
+
+      const result = extractChainProperty(definition, 'next');
+
+      expect(result.config.next).toBe('override');
     });
   });
 

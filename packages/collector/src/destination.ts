@@ -22,6 +22,7 @@ import {
   runTransformerChain,
   walkChain,
   extractTransformerNextMap,
+  extractChainProperty,
 } from './transformer';
 
 /**
@@ -489,13 +490,18 @@ export async function initDestinations(
   const result: Collector.Destinations = {};
 
   for (const [name, destinationDef] of Object.entries(destinations)) {
-    const { code, config = {}, env = {}, before } = destinationDef;
+    const { code, config = {}, env = {} } = destinationDef;
+
+    // Use unified chain property extractor
+    const { config: configWithChain } = extractChainProperty(
+      destinationDef,
+      'before',
+    );
 
     const mergedConfig = {
       ...code.config,
       ...config,
-      // Store before in config so it's accessible during push
-      ...(before && { before }),
+      ...configWithChain,
     };
 
     const mergedEnv = mergeEnvironments(code.env, env);

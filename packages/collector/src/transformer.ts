@@ -1,3 +1,36 @@
+/**
+ * @module transformer
+ *
+ * Transformer Chain Utilities
+ * ==========================
+ *
+ * This module provides the unified implementation for transformer chains in walkerOS.
+ * Chains are used at two points in the data flow:
+ *
+ * 1. Pre-collector chains (source.next):
+ *    Source → [Transformer Chain] → Collector
+ *    Events are processed before the collector sees them.
+ *
+ * 2. Post-collector chains (destination.before):
+ *    Collector → [Transformer Chain] → Destination
+ *    Events are processed before reaching specific destinations.
+ *
+ * Key Functions:
+ * - extractTransformerNextMap(): Extracts next links from transformer instances
+ * - extractChainProperty(): Unified extraction of chain properties from definitions
+ * - walkChain(): Resolves chain IDs from starting point
+ * - runTransformerChain(): Executes a chain of transformers on an event
+ *
+ * Chain Resolution:
+ * - String start: Walk transformer.next links until chain ends
+ * - Array start: Use array directly (explicit chain, ignores transformer.next)
+ *
+ * Chain Termination:
+ * - Transformer returns false → chain stops, event is dropped
+ * - Transformer throws error → chain stops, event is dropped
+ * - Transformer returns void → continue with unchanged event
+ * - Transformer returns event → continue with modified event
+ */
 import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { isObject, tryCatchAsync, useHooks } from '@walkeros/core';
 
@@ -23,6 +56,36 @@ export function extractTransformerNextMap(
     }
   }
   return result;
+}
+
+/**
+ * Extracts chain property from definition and merges into config.
+ * Provides unified handling for source.next, destination.before, and transformer.next.
+ *
+ * @param definition - Component definition with optional chain property
+ * @param propertyName - Name of chain property ('next' or 'before')
+ * @returns Object with merged config and extracted chain value
+ */
+export function extractChainProperty<
+  T extends { config?: Record<string, unknown>; [key: string]: unknown },
+>(
+  definition: T,
+  propertyName: 'next' | 'before',
+): {
+  config: Record<string, unknown>;
+  chainValue: string | string[] | undefined;
+} {
+  const config = (definition.config || {}) as Record<string, unknown>;
+  const chainValue = definition[propertyName] as string | string[] | undefined;
+
+  if (chainValue !== undefined) {
+    return {
+      config: { ...config, [propertyName]: chainValue },
+      chainValue,
+    };
+  }
+
+  return { config, chainValue: undefined };
 }
 
 /**
@@ -104,10 +167,13 @@ export async function initTransformers(
   for (const [transformerId, transformerDef] of Object.entries(
     initTransformers,
   )) {
-    const { code, config = {}, env = {}, next } = transformerDef;
+    const { code, env = {} } = transformerDef;
 
-    // Merge next into config before passing to factory
-    const configWithNext = next !== undefined ? { ...config, next } : config;
+    // Use unified chain property extractor
+    const { config: configWithChain } = extractChainProperty(
+      transformerDef,
+      'next',
+    );
 
     // Build transformer context for init
     const transformerLogger = collector.logger
@@ -118,7 +184,7 @@ export async function initTransformers(
       collector,
       logger: transformerLogger,
       id: transformerId,
-      config: configWithNext,
+      config: configWithChain,
       env: env as Transformer.Env,
     };
 
