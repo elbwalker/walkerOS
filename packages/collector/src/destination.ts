@@ -18,25 +18,11 @@ import {
   useHooks,
 } from '@walkeros/core';
 import { callDestinationOn } from './on';
-import { runTransformerChain, walkChain } from './transformer';
-
-/**
- * Extracts transformer next configuration for chain walking.
- * Maps transformer instances to their config.next values.
- */
-function extractTransformerNextMap(
-  transformers: Transformer.Transformers,
-): Record<string, { next?: string | string[] }> {
-  const result: Record<string, { next?: string | string[] }> = {};
-  for (const [id, transformer] of Object.entries(transformers)) {
-    if (transformer.config?.next) {
-      result[id] = { next: transformer.config.next as string | string[] };
-    } else {
-      result[id] = {};
-    }
-  }
-  return result;
-}
+import {
+  runTransformerChain,
+  walkChain,
+  extractTransformerNextMap,
+} from './transformer';
 
 /**
  * Computes transformer chain for a destination on-demand.

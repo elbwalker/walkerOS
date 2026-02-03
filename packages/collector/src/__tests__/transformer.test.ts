@@ -6,6 +6,7 @@ import {
   transformerInit,
   transformerPush,
   initTransformers as initTransformersFunc,
+  extractTransformerNextMap,
 } from '../transformer';
 
 describe('Transformer', () => {
@@ -396,6 +397,51 @@ describe('Transformer', () => {
       );
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('extractTransformerNextMap', () => {
+    test('extracts next from transformer instances', () => {
+      const transformers: Transformer.Transformers = {
+        a: createMockTransformer({ config: { next: 'b' } }),
+        b: createMockTransformer({ config: { next: 'c' } }),
+        c: createMockTransformer({ config: {} }),
+      };
+
+      const result = extractTransformerNextMap(transformers);
+
+      expect(result).toEqual({
+        a: { next: 'b' },
+        b: { next: 'c' },
+        c: {},
+      });
+    });
+
+    test('handles array next values', () => {
+      const transformers: Transformer.Transformers = {
+        a: createMockTransformer({ config: { next: ['b', 'c'] } }),
+      };
+
+      const result = extractTransformerNextMap(transformers);
+
+      expect(result).toEqual({
+        a: { next: ['b', 'c'] },
+      });
+    });
+
+    test('handles empty transformers', () => {
+      const result = extractTransformerNextMap({});
+      expect(result).toEqual({});
+    });
+
+    test('handles transformers without next', () => {
+      const transformers: Transformer.Transformers = {
+        a: createMockTransformer({ config: {} }),
+      };
+
+      const result = extractTransformerNextMap(transformers);
+
+      expect(result).toEqual({ a: {} });
     });
   });
 

@@ -2,6 +2,30 @@ import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { isObject, tryCatchAsync, useHooks } from '@walkeros/core';
 
 /**
+ * Extracts transformer next configuration for chain walking.
+ * Maps transformer instances to their config.next values.
+ *
+ * This is the single source of truth for extracting chain links.
+ * Used by both source.ts (pre-collector chains) and destination.ts (post-collector chains).
+ *
+ * @param transformers - Map of transformer instances
+ * @returns Map of transformer IDs to their next configuration
+ */
+export function extractTransformerNextMap(
+  transformers: Transformer.Transformers,
+): Record<string, { next?: string | string[] }> {
+  const result: Record<string, { next?: string | string[] }> = {};
+  for (const [id, transformer] of Object.entries(transformers)) {
+    if (transformer.config?.next) {
+      result[id] = { next: transformer.config.next as string | string[] };
+    } else {
+      result[id] = {};
+    }
+  }
+  return result;
+}
+
+/**
  * Walks a transformer chain starting from a given transformer ID.
  * Returns ordered array of transformer IDs in the chain.
  *
