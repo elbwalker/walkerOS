@@ -5,6 +5,7 @@ import {
   runTransformerChain,
   transformerInit,
   transformerPush,
+  initTransformers as initTransformersFunc,
 } from '../transformer';
 
 describe('Transformer', () => {
@@ -395,6 +396,66 @@ describe('Transformer', () => {
       );
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('initTransformers', () => {
+    test('merges next from definition into instance config', async () => {
+      const collector = createMockCollector();
+
+      const initTransformers: Transformer.InitTransformers = {
+        validate: {
+          code: async (context) => ({
+            type: 'validator',
+            config: context.config,
+            push: jest.fn(),
+          }),
+          config: { settings: { strict: true } },
+          next: 'enrich',
+        },
+      };
+
+      const result = await initTransformersFunc(collector, initTransformers);
+
+      expect(result.validate.config.next).toBe('enrich');
+      expect(result.validate.config.settings).toEqual({ strict: true });
+    });
+
+    test('handles array next property', async () => {
+      const collector = createMockCollector();
+
+      const initTransformers: Transformer.InitTransformers = {
+        validate: {
+          code: async (context) => ({
+            type: 'validator',
+            config: context.config,
+            push: jest.fn(),
+          }),
+          next: ['enrich', 'redact'],
+        },
+      };
+
+      const result = await initTransformersFunc(collector, initTransformers);
+
+      expect(result.validate.config.next).toEqual(['enrich', 'redact']);
+    });
+
+    test('does not add next when not specified', async () => {
+      const collector = createMockCollector();
+
+      const initTransformers: Transformer.InitTransformers = {
+        validate: {
+          code: async (context) => ({
+            type: 'validator',
+            config: context.config,
+            push: jest.fn(),
+          }),
+        },
+      };
+
+      const result = await initTransformersFunc(collector, initTransformers);
+
+      expect(result.validate.config.next).toBeUndefined();
     });
   });
 });

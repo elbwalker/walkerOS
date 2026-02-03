@@ -55,7 +55,7 @@ export interface Config<T extends TypesGeneric = Types> {
   env?: Env<T>;
   id?: string;
   logger?: Logger.Config;
-  next?: string; // Graph wiring to next transformer
+  next?: string | string[]; // Graph wiring to next transformer
   init?: boolean; // Track init state (like Destination)
 }
 
@@ -125,6 +125,7 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
   code: Init<T>;
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
+  next?: string | string[];
 };
 
 /**

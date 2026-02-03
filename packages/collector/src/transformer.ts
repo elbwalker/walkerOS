@@ -80,7 +80,10 @@ export async function initTransformers(
   for (const [transformerId, transformerDef] of Object.entries(
     initTransformers,
   )) {
-    const { code, config = {}, env = {} } = transformerDef;
+    const { code, config = {}, env = {}, next } = transformerDef;
+
+    // Merge next into config before passing to factory
+    const configWithNext = next !== undefined ? { ...config, next } : config;
 
     // Build transformer context for init
     const transformerLogger = collector.logger
@@ -91,7 +94,7 @@ export async function initTransformers(
       collector,
       logger: transformerLogger,
       id: transformerId,
-      config,
+      config: configWithNext,
       env: env as Transformer.Env,
     };
 
