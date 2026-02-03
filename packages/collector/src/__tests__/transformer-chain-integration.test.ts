@@ -252,4 +252,115 @@ describe('Destination Transformer Chains (destination.before)', () => {
       expect(transformerCalls).toContain('tracker');
     });
   });
+
+  describe('Bundler-style transformer chains (next at definition level)', () => {
+    it('resolves transformer.next from definition level', async () => {
+      const order: string[] = [];
+
+      const { elb } = await startFlow({
+        transformers: {
+          first: {
+            code: async (context): Promise<Transformer.Instance> => ({
+              type: 'first',
+              config: context.config,
+              push: async (event) => {
+                order.push('first');
+                return event;
+              },
+            }),
+            next: 'second',
+          },
+          second: {
+            code: async (context): Promise<Transformer.Instance> => ({
+              type: 'second',
+              config: context.config,
+              push: async (event) => {
+                order.push('second');
+                return event;
+              },
+            }),
+            next: 'third',
+          },
+          third: {
+            code: async (context): Promise<Transformer.Instance> => ({
+              type: 'third',
+              config: context.config,
+              push: async (event) => {
+                order.push('third');
+                return event;
+              },
+            }),
+          },
+        },
+        destinations: {
+          testDest: {
+            before: 'first',
+            code: {
+              type: 'test',
+              config: {},
+              push: async () => {},
+            },
+          },
+        },
+      });
+
+      await elb({ name: 'page view', data: {} });
+
+      expect(order).toEqual(['first', 'second', 'third']);
+    });
+
+    it('handles mixed definition and instance-level next', async () => {
+      const order: string[] = [];
+
+      const { elb } = await startFlow({
+        transformers: {
+          first: {
+            code: async (context): Promise<Transformer.Instance> => ({
+              type: 'first',
+              config: context.config,
+              push: async (event) => {
+                order.push('first');
+                return event;
+              },
+            }),
+            next: 'second',
+          },
+          second: {
+            code: async (): Promise<Transformer.Instance> => ({
+              type: 'second',
+              config: { next: 'third' },
+              push: async (event) => {
+                order.push('second');
+                return event;
+              },
+            }),
+          },
+          third: {
+            code: async (context): Promise<Transformer.Instance> => ({
+              type: 'third',
+              config: context.config,
+              push: async (event) => {
+                order.push('third');
+                return event;
+              },
+            }),
+          },
+        },
+        destinations: {
+          testDest: {
+            before: 'first',
+            code: {
+              type: 'test',
+              config: {},
+              push: async () => {},
+            },
+          },
+        },
+      });
+
+      await elb({ name: 'page view', data: {} });
+
+      expect(order).toEqual(['first', 'second', 'third']);
+    });
+  });
 });
