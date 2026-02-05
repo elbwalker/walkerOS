@@ -250,7 +250,10 @@
                           "this",
                           {
                             "map": {
-                              "item_id": "data.id",
+                              "item_id": [
+                                { "key": "data.sku" },
+                                { "key": "data.id" }
+                              ],
                               "item_name": "data.name",
                               "item_category": "data.category",
                               "price": "data.price"
@@ -321,6 +324,12 @@
             "settings": {
               "url": "$var.apiUrl",
               "batch": 5
+            },
+            "data": {
+              "map": {
+                "sent_at": { "fn": "$code:() => Date.now()" },
+                "flow_version": "$var.flowVersion"
+              }
             },
             "mapping": {
               "order": {

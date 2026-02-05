@@ -1,9 +1,6 @@
 ---
 name: understanding-mapping
-description:
-  Use when transforming events at any point in the flow (source→collector or
-  collector→destination), configuring data/map/loop/condition, or understanding
-  value extraction. Covers all mapping strategies.
+description: Use when transforming events in the flow (source→collector or collector→destination), configuring data/map/loop/set/condition/policy, or using $code: syntax in JSON configs.
 ---
 
 # Understanding walkerOS Mapping
@@ -25,38 +22,99 @@ strategies work everywhere in the flow.
 See [packages/core/src/mapping.ts](../../packages/core/src/mapping.ts) for
 implementation.
 
-| Function                         | Purpose                                |
-| -------------------------------- | -------------------------------------- |
-| `getMappingEvent(event, rules)`  | Find mapping config for an event       |
-| `getMappingValue(value, config)` | Transform a value using mapping config |
+| Function                                        | Purpose                                     |
+| ----------------------------------------------- | ------------------------------------------- |
+| `getMappingEvent(event, rules)`                 | Find mapping rule for an event              |
+| `getMappingValue(value, data, options)`         | Transform a value using mapping config      |
+| `processEventMapping(event, config, collector)` | Unified processing for sources/destinations |
 
-## Event Mapping
+### processEventMapping Flow
+
+```
+1. Apply config.policy (modifies event)
+2. Find matching rule via getMappingEvent()
+3. Apply rule.policy (modifies event)
+4. Transform config.data (global)
+5. Check rule.ignore
+6. Override event.name if rule.name
+7. Transform rule.data (event-specific)
+```
+
+---
+
+## Configuration Hierarchy
+
+### Mapping.Config (Top Level)
+
+```typescript
+interface Config {
+  consent?: Consent; // Required consent for ALL events
+  data?: Value; // Global data transformation
+  policy?: Policy; // Pre-processing for ALL events
+  mapping?: Rules; // Event-specific rules
+}
+```
+
+### Mapping.Rule (Per Event)
+
+```typescript
+interface Rule {
+  name?: string; // Override event name
+  data?: Value; // Event-specific data transformation
+  ignore?: boolean; // Skip this event entirely
+  policy?: Policy; // Event-specific pre-processing
+  condition?: Function; // Match condition (for arrays)
+  consent?: Consent; // Required consent for this rule
+  settings?: unknown; // Custom event configuration
+  batch?: number; // Batch size for grouping
+}
+```
+
+### Mapping.ValueConfig (Value Extraction)
+
+```typescript
+interface ValueConfig {
+  key?: string; // Extract from path
+  value?: Primitive; // Static fallback value
+  fn?: Function; // Custom transformation
+  map?: Record; // Object transformation
+  loop?: [path, config]; // Array transformation
+  set?: Value[]; // Create array from values
+  condition?: Function; // Conditional extraction
+  consent?: Consent; // Consent-gated extraction
+  validate?: Function; // Value validation
+}
+```
+
+---
+
+## Event Matching
 
 Match events to transformation rules by entity and action.
 
 ```typescript
 const mapping = {
-  // Exact match
+  // Exact match: "product view" → view_item
   product: {
     view: { name: 'view_item' },
     add: { name: 'add_to_cart' },
   },
 
-  // Wildcard: any action
+  // Wildcard action: "foo *" → foo_interaction
   foo: {
     '*': { name: 'foo_interaction' },
   },
 
-  // Wildcard: any entity
+  // Wildcard entity: "* click" → generic_click
   '*': {
-    bar: { name: 'generic_bar' },
+    click: { name: 'generic_click' },
   },
 };
 ```
 
-### Conditional Mapping
+### Conditional Mapping (Array)
 
-Array of conditions, first match wins:
+Array of rules - first matching condition wins:
 
 ```typescript
 order: {
@@ -65,214 +123,285 @@ order: {
       condition: (event) => event.data?.value > 100,
       name: 'high_value_purchase',
     },
-    { name: 'purchase' }, // Fallback
+    { name: 'purchase' }, // Fallback (no condition)
   ],
 }
 ```
 
-## Value Mapping Strategies
+**JSON with $code:**
 
-### Key Extraction (string)
-
-Extract nested property from event:
-
-```typescript
-'user.id'; // → event.user.id
-'data.price'; // → event.data.price
-'context.stage.0'; // → first element of stage array
-```
-
-### Static Value
-
-Fixed value regardless of event:
-
-```typescript
+```json
 {
-  value: 'USD';
-}
-{
-  value: 99.99;
-}
-{
-  value: true;
-}
-```
-
-### Function Transform
-
-Custom transformation logic:
-
-```typescript
-{
-  fn: (event) => event.data.price * 100;
-} // cents
-{
-  fn: (event) => event.user.email?.split('@')[1];
-} // domain
-```
-
-### Object Map
-
-Transform to new structure:
-
-```typescript
-{
-  map: {
-    item_id: 'data.id',
-    item_name: 'data.name',
-    price: 'data.price',
-    currency: { value: 'USD' },
-    category: { fn: (e) => e.nested?.[0]?.data?.name }
+  "order": {
+    "complete": [
+      {
+        "condition": "$code:(event) => event.data?.value > 100",
+        "name": "high_value_purchase"
+      },
+      { "name": "purchase" }
+    ]
   }
 }
 ```
 
-### Array Loop
+---
 
-Process arrays (e.g., nested entities):
+## Value Mapping Strategies
+
+Common patterns shown below. For detailed examples of all 12 strategies, see
+[value-strategies.md](value-strategies.md).
+
+### Essential Patterns
 
 ```typescript
-{
-  loop: [
-    'nested', // Source array path
-    {
-      map: {
-        item_id: 'data.id',
-        quantity: 'data.quantity',
-      },
-    },
-  ];
+// Key extraction (string shorthand)
+'data.price'                              // → event.data.price
+
+// Key with fallback
+{ key: 'data.currency', value: 'USD' }    // Use USD if missing
+
+// Static value
+{ value: 'USD' }
+
+// Function transform
+{ fn: (event) => event.data.price * 100 } // Convert to cents
+
+// Object map
+{ map: { item_id: 'data.id', item_name: 'data.name' } }
+
+// Array loop
+{ loop: ['nested', { map: { item_id: 'data.id' } }] }
+
+// Loop with "this" (single item as array)
+{ loop: ['this', { map: { item_id: 'data.id' } }] }
+
+// Set (create array)
+{ set: ['data.id'] }                      // → ["SKU-123"]
+
+// Fallback array (first success wins)
+[{ key: 'data.sku' }, { key: 'data.id' }, { value: 'unknown' }]
+
+// Consent-gated
+{ key: 'user.email', consent: { marketing: true } }
+
+// Validate
+{ key: 'data.email', validate: (v) => v.includes('@') }
+```
+
+---
+
+## Policy (Pre-Processing)
+
+Policy modifies the event BEFORE mapping rules are applied. Use for:
+
+- Adding computed fields
+- Normalizing data structure
+- Consent-gated field injection
+
+### Config-Level Policy
+
+Applied to ALL events:
+
+```typescript
+config: {
+  policy: {
+    'user_data.external_id': 'user.id',
+    'custom_data.server_processed': { value: true },
+  },
+  mapping: { /* ... */ }
 }
 ```
 
-### Consent-Gated
+### Event-Level Policy
 
-Only return value if consent granted:
+Applied after config policy, only for specific event:
 
 ```typescript
-{
-  key: 'user.email',
-  consent: { marketing: true }
+mapping: {
+  order: {
+    complete: {
+      policy: {
+        'enriched.total_cents': {
+          fn: (event) => Math.round(event.data.total * 100)
+        }
+      },
+      name: 'purchase',
+      data: { /* ... */ }
+    }
+  }
 }
 ```
 
-## Complete Example
+### Policy with Consent
 
-```typescript
-const destinationConfig = {
-  mapping: {
-    product: {
-      view: {
-        name: 'view_item',
-        data: {
-          map: {
-            currency: { value: 'USD' },
-            value: 'data.price',
-            items: {
-              loop: [
-                'nested',
-                {
-                  map: {
-                    item_id: 'data.id',
-                    item_name: 'data.name',
-                  },
-                },
-              ],
-            },
-          },
-        },
-      },
-    },
-  },
-};
+```json
+{
+  "policy": {
+    "user_data.em": {
+      "key": "user.email",
+      "consent": { "marketing": true }
+    }
+  }
+}
 ```
 
-## Example-Driven Development
+---
 
-When creating sources or destinations, define mapping examples BEFORE
-implementation:
+## Rule Features
 
-### 1. Create Input/Output Examples First
-
-```typescript
-// src/examples/inputs.ts - What we receive
-export const pageViewInput = {
-  event: 'page_view',
-  properties: { page_title: 'Home', page_path: '/home' },
-};
-
-// src/examples/outputs.ts - What we must produce
-export const pageViewOutput = {
-  method: 'track',
-  args: ['pageview', { url: '/home', title: 'Home' }],
-};
-```
-
-### 2. Define Mapping to Connect Them
+### Ignore Events
 
 ```typescript
-// src/examples/mapping.ts
-export const defaultMapping = {
-  page: {
-    view: {
-      name: 'pageview',
-      data: {
-        map: {
-          url: 'data.path',
-          title: 'data.title',
-        },
-      },
-    },
-  },
-};
+mapping: {
+  test: { '*': { ignore: true } },  // Ignore all test events
+}
 ```
 
-### 3. Test Against Examples
+### Batch Processing
 
 ```typescript
-test('produces expected output', () => {
-  const result = transform(examples.inputs.pageViewInput);
-  expect(result).toMatchObject(examples.outputs.pageViewOutput);
-});
+mapping: {
+  '*': {
+    '*': {
+      batch: 5,  // Send after 5 events
+    }
+  }
+}
 ```
 
-**See:**
+### Custom Settings
 
-- [create-destination skill](../create-destination/SKILL.md) - Full workflow
-- [create-source skill](../create-source/SKILL.md) - Full workflow
+```typescript
+mapping: {
+  order: {
+    complete: {
+      name: 'purchase',
+      settings: { priority: 'high', retryCount: 3 }
+    }
+  }
+}
+```
+
+---
+
+## $code: Prefix (JSON Configs)
+
+The `$code:` prefix enables JavaScript functions in JSON configurations:
+
+```json
+{
+  "fn": "$code:(event) => event.data.price * 100",
+  "condition": "$code:(event) => event.data?.value > 100",
+  "validate": "$code:(value) => value > 0"
+}
+```
+
+**Important:** The `$code:` prefix is processed by the CLI bundler. It converts
+JSON strings to actual JavaScript functions during build.
+
+### Function Signatures
+
+| Context             | Signature                                |
+| ------------------- | ---------------------------------------- |
+| `fn`                | `(value, mapping, options) => result`    |
+| `condition` (value) | `(value, mapping, collector) => boolean` |
+| `condition` (rule)  | `(event) => boolean`                     |
+| `validate`          | `(value) => boolean`                     |
+| `loop` condition    | `(item) => boolean`                      |
+
+---
+
+## Quick Reference
+
+### Value Extraction Cheatsheet
+
+| Pattern                       | Result                         |
+| ----------------------------- | ------------------------------ |
+| `"data.id"`                   | Extract `event.data.id`        |
+| `{ value: "USD" }`            | Static `"USD"`                 |
+| `{ key: "x", value: "y" }`    | Extract `x`, fallback to `"y"` |
+| `{ fn: (e) => ... }`          | Custom function                |
+| `{ map: {...} }`              | Object transformation          |
+| `{ loop: ["nested", {...}] }` | Array transformation           |
+| `{ loop: ["this", {...}] }`   | Single-item as array           |
+| `{ set: ["a", "b"] }`         | Create array `[valA, valB]`    |
+| `[m1, m2, m3]`                | Fallback chain                 |
+| `{ consent: {...} }`          | Consent-gated                  |
+| `{ condition: fn }`           | Conditional                    |
+| `{ validate: fn }`            | Validated                      |
+
+### Rule Features Cheatsheet
+
+| Feature     | Purpose                  |
+| ----------- | ------------------------ |
+| `name`      | Override event name      |
+| `data`      | Transform event data     |
+| `ignore`    | Skip event entirely      |
+| `policy`    | Pre-process event        |
+| `condition` | Match condition (arrays) |
+| `consent`   | Required consent         |
+| `settings`  | Custom configuration     |
+| `batch`     | Batch size               |
+
+### Config Features Cheatsheet
+
+| Feature   | Purpose                       |
+| --------- | ----------------------------- |
+| `consent` | Required consent (all events) |
+| `data`    | Global data transformation    |
+| `policy`  | Global pre-processing         |
+| `mapping` | Event-specific rules          |
+
+---
+
+## Complete Examples
+
+For full destination configuration examples (TypeScript + JSON), see
+[complete-examples.md](complete-examples.md).
+
+---
 
 ## Where Mapping Lives
 
-| Location                       | Purpose                                   |
-| ------------------------------ | ----------------------------------------- |
-| Source config                  | Transform raw input → walkerOS events     |
-| Destination config             | Transform walkerOS events → vendor format |
-| `src/examples/mapping.ts`      | Default mapping examples (example-driven) |
-| `packages/core/src/mapping.ts` | Core mapping functions                    |
-| `apps/quickstart/src/`         | Validated examples                        |
+| Location                                   | Purpose                                   |
+| ------------------------------------------ | ----------------------------------------- |
+| Source config                              | Transform raw input → walkerOS events     |
+| Destination config                         | Transform walkerOS events → vendor format |
+| `packages/core/src/mapping.ts`             | Core mapping functions                    |
+| `packages/core/src/types/mapping.ts`       | Type definitions                          |
+| `packages/cli/examples/flow-complete.json` | Comprehensive example (53 features)       |
+
+---
 
 ## Related
 
 **Skills:**
 
-- [understanding-events skill](../understanding-events/SKILL.md) - Event
-  structure to map from/to
-- [understanding-sources skill](../understanding-sources/SKILL.md) - Source-side
+- [understanding-events](../understanding-events/SKILL.md) - Event structure
+- [understanding-sources](../understanding-sources/SKILL.md) - Source-side
   mapping
-- [understanding-destinations skill](../understanding-destinations/SKILL.md) -
+- [understanding-destinations](../understanding-destinations/SKILL.md) -
   Destination-side mapping
+- [mapping-configuration](../mapping-configuration/SKILL.md) - Recipes and
+  patterns
 
 **Source Files:**
 
 - [packages/core/src/mapping.ts](../../packages/core/src/mapping.ts) -
   Implementation
+- [packages/core/src/types/mapping.ts](../../packages/core/src/types/mapping.ts) -
+  Types
+
+**Detailed References:**
+
+- [value-strategies.md](value-strategies.md) - All 12 value extraction
+  strategies with examples
+- [complete-examples.md](complete-examples.md) - Full destination config
+  examples
 
 **Examples:**
 
-- [apps/quickstart/src/](../../apps/quickstart/src/) - Validated examples
-
-**Documentation:**
-
-- [Website: Mapping](../../website/docs/mapping.mdx) - User-facing docs
-- [walkeros.io/docs/destinations/event-mapping](https://www.walkeros.io/docs/destinations/event-mapping) -
-  Public documentation
+- [packages/cli/examples/flow-complete.json](../../packages/cli/examples/flow-complete.json) -
+  Comprehensive example
+- [packages/cli/examples/flow-complete.md](../../packages/cli/examples/flow-complete.md) -
+  Feature inventory
