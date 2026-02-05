@@ -144,19 +144,19 @@ sources: {
 ```
 
 The transformer chain runs before events reach the collector. See
-[understanding-transformers](../understanding-transformers/SKILL.md) for chain
-details.
+[understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
+for chain details.
 
 ## Related
 
 **Skills:**
 
-- [understanding-flow skill](../understanding-flow/SKILL.md) - How sources fit
-  in architecture
-- [understanding-transformers skill](../understanding-transformers/SKILL.md) -
+- [understanding-flow skill](../walkeros-understanding-flow/SKILL.md) - How
+  sources fit in architecture
+- [understanding-transformers skill](../walkeros-understanding-transformers/SKILL.md) -
   Transformer chaining from sources
-- [understanding-events skill](../understanding-events/SKILL.md) - Events that
-  sources emit
+- [understanding-events skill](../walkeros-understanding-events/SKILL.md) -
+  Events that sources emit
 
 **Source Files:**
 

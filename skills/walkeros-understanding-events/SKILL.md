@@ -161,8 +161,8 @@ await elb(
 
 **Skills:**
 
-- [understanding-mapping skill](../understanding-mapping/SKILL.md) - Transform
-  events for destinations
+- [understanding-mapping skill](../walkeros-understanding-mapping/SKILL.md) -
+  Transform events for destinations
 
 **Source Files:**
 

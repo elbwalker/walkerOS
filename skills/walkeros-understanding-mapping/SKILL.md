@@ -377,13 +377,14 @@ For full destination configuration examples (TypeScript + JSON), see
 
 **Skills:**
 
-- [understanding-events](../understanding-events/SKILL.md) - Event structure
-- [understanding-sources](../understanding-sources/SKILL.md) - Source-side
-  mapping
-- [understanding-destinations](../understanding-destinations/SKILL.md) -
+- [understanding-events](../walkeros-understanding-events/SKILL.md) - Event
+  structure
+- [understanding-sources](../walkeros-understanding-sources/SKILL.md) -
+  Source-side mapping
+- [understanding-destinations](../walkeros-understanding-destinations/SKILL.md) -
   Destination-side mapping
-- [mapping-configuration](../mapping-configuration/SKILL.md) - Recipes and
-  patterns
+- [mapping-configuration](../walkeros-mapping-configuration/SKILL.md) - Recipes
+  and patterns
 
 **Source Files:**
 

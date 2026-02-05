@@ -17,8 +17,10 @@ description:
 
 ## Prerequisites
 
-- [understanding-flow](../understanding-flow/SKILL.md) - Architecture context
-- [understanding-events](../understanding-events/SKILL.md) - Event naming rules
+- [understanding-flow](../walkeros-understanding-flow/SKILL.md) - Architecture
+  context
+- [understanding-events](../walkeros-understanding-events/SKILL.md) - Event
+  naming rules
 
 ---
 

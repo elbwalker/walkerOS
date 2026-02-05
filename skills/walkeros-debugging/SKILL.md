@@ -265,12 +265,12 @@ console.log(calls);
 
 ## Related
 
-- [understanding-flow skill](../understanding-flow/SKILL.md) - Event flow
-  architecture
-- [understanding-destinations skill](../understanding-destinations/SKILL.md) -
+- [understanding-flow skill](../walkeros-understanding-flow/SKILL.md) - Event
+  flow architecture
+- [understanding-destinations skill](../walkeros-understanding-destinations/SKILL.md) -
   Destination interface
-- [mapping-configuration skill](../mapping-configuration/SKILL.md) - Mapping
-  recipes
-- [testing-strategy skill](../testing-strategy/SKILL.md) - Testing with env
-  pattern
+- [mapping-configuration skill](../walkeros-mapping-configuration/SKILL.md) -
+  Mapping recipes
+- [testing-strategy skill](../walkeros-testing-strategy/SKILL.md) - Testing with
+  env pattern
 - [← Back to Hub](../../AGENT.md)

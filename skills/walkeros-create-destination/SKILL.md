@@ -11,18 +11,18 @@ description:
 
 Before starting, read these skills:
 
-- [understanding-flow](../understanding-flow/SKILL.md) - How destinations fit in
-  architecture
-- [understanding-destinations](../understanding-destinations/SKILL.md) -
+- [understanding-flow](../walkeros-understanding-flow/SKILL.md) - How
+  destinations fit in architecture
+- [understanding-destinations](../walkeros-understanding-destinations/SKILL.md) -
   Destination interface
-- [understanding-transformers](../understanding-transformers/SKILL.md) -
+- [understanding-transformers](../walkeros-understanding-transformers/SKILL.md) -
   Transformer chaining to destinations
-- [understanding-mapping](../understanding-mapping/SKILL.md) - Event
+- [understanding-mapping](../walkeros-understanding-mapping/SKILL.md) - Event
   transformation
-- [testing-strategy](../testing-strategy/SKILL.md) - How to test with env
-  pattern
-- [writing-documentation](../writing-documentation/SKILL.md) - Documentation
-  standards (for Phase 7)
+- [testing-strategy](../walkeros-testing-strategy/SKILL.md) - How to test with
+  env pattern
+- [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
+  Documentation standards (for Phase 7)
 
 ## Choose Your Template
 
@@ -575,7 +575,8 @@ describe('destinationVendor', () => {
 
 ## Phase 7: Document
 
-Follow the [writing-documentation](../writing-documentation/SKILL.md) skill for:
+Follow the [writing-documentation](../walkeros-writing-documentation/SKILL.md)
+skill for:
 
 - README structure and templates
 - Example validation against `apps/quickstart/`
@@ -592,7 +593,8 @@ Key requirements for destination documentation:
 
 ## Destination-Specific Validation
 
-Beyond [understanding-development](../understanding-development/SKILL.md)
+Beyond
+[understanding-development](../walkeros-understanding-development/SKILL.md)
 requirements (build, test, lint, no `any`):
 
 - [ ] Uses `getEnv(env)` pattern (never direct `window`/`document` access)
@@ -612,6 +614,6 @@ requirements (build, test, lint, no `any`):
 
 ## Related
 
-- [understanding-destinations skill](../understanding-destinations/SKILL.md)
-- [testing-strategy skill](../testing-strategy/SKILL.md)
+- [understanding-destinations skill](../walkeros-understanding-destinations/SKILL.md)
+- [testing-strategy skill](../walkeros-testing-strategy/SKILL.md)
 - [← Back to Hub](../../AGENT.md)

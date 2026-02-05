@@ -112,20 +112,21 @@ destinations: {
 
 The transformer chain runs after collector enrichment, before the destination
 receives events. Each destination can have its own chain. See
-[understanding-transformers](../understanding-transformers/SKILL.md) for chain
-details.
+[understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
+for chain details.
 
 ## Related
 
 **Skills:**
 
-- [understanding-mapping skill](../understanding-mapping/SKILL.md) - Configure
-  transformations
-- [understanding-transformers skill](../understanding-transformers/SKILL.md) -
+- [understanding-mapping skill](../walkeros-understanding-mapping/SKILL.md) -
+  Configure transformations
+- [understanding-transformers skill](../walkeros-understanding-transformers/SKILL.md) -
   Transformer chaining to destinations
-- [testing-strategy skill](../testing-strategy/SKILL.md) - Test with env pattern
-- [create-destination skill](../create-destination/SKILL.md) - Create new
-  destination
+- [testing-strategy skill](../walkeros-testing-strategy/SKILL.md) - Test with
+  env pattern
+- [create-destination skill](../walkeros-create-destination/SKILL.md) - Create
+  new destination
 
 **Source Files:**
 

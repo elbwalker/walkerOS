@@ -255,12 +255,12 @@ push(event, context) {
 
 **Skills:**
 
-- [understanding-flow skill](../understanding-flow/SKILL.md) - How transformers
-  fit in architecture
-- [understanding-events skill](../understanding-events/SKILL.md) - Event
-  structure transformers work with
-- [create-transformer skill](../create-transformer/SKILL.md) - Create new
-  transformer
+- [understanding-flow skill](../walkeros-understanding-flow/SKILL.md) - How
+  transformers fit in architecture
+- [understanding-events skill](../walkeros-understanding-events/SKILL.md) -
+  Event structure transformers work with
+- [create-transformer skill](../walkeros-create-transformer/SKILL.md) - Create
+  new transformer
 
 **Source Files:**
 

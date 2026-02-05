@@ -11,18 +11,19 @@ description:
 
 Before starting, read these skills:
 
-- [understanding-flow](../understanding-flow/SKILL.md) - How sources fit in
-  architecture
-- [understanding-sources](../understanding-sources/SKILL.md) - Source interface
-- [understanding-transformers](../understanding-transformers/SKILL.md) -
+- [understanding-flow](../walkeros-understanding-flow/SKILL.md) - How sources
+  fit in architecture
+- [understanding-sources](../walkeros-understanding-sources/SKILL.md) - Source
+  interface
+- [understanding-transformers](../walkeros-understanding-transformers/SKILL.md) -
   Transformer chaining from sources
-- [understanding-events](../understanding-events/SKILL.md) - Event structure
-  sources emit
-- [understanding-mapping](../understanding-mapping/SKILL.md) - Transform raw
-  input to events
-- [testing-strategy](../testing-strategy/SKILL.md) - How to test
-- [writing-documentation](../writing-documentation/SKILL.md) - Documentation
-  standards (for Phase 7)
+- [understanding-events](../walkeros-understanding-events/SKILL.md) - Event
+  structure sources emit
+- [understanding-mapping](../walkeros-understanding-mapping/SKILL.md) -
+  Transform raw input to events
+- [testing-strategy](../walkeros-testing-strategy/SKILL.md) - How to test
+- [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
+  Documentation standards (for Phase 7)
 
 ## Source Types
 
@@ -724,7 +725,8 @@ describe('sourceMySource', () => {
 
 ## Phase 7: Document
 
-Follow the [writing-documentation](../writing-documentation/SKILL.md) skill for:
+Follow the [writing-documentation](../walkeros-writing-documentation/SKILL.md)
+skill for:
 
 - README structure and templates
 - Example validation against `apps/quickstart/`
@@ -742,7 +744,8 @@ Key requirements for source documentation:
 
 ## Source-Specific Validation
 
-Beyond [understanding-development](../understanding-development/SKILL.md)
+Beyond
+[understanding-development](../walkeros-understanding-development/SKILL.md)
 requirements (build, test, lint, no `any`):
 
 - [ ] `dev.ts` exports `schemas` and `examples`
@@ -763,7 +766,7 @@ requirements (build, test, lint, no `any`):
 
 ## Related
 
-- [understanding-sources skill](../understanding-sources/SKILL.md)
-- [understanding-events skill](../understanding-events/SKILL.md)
-- [testing-strategy skill](../testing-strategy/SKILL.md)
+- [understanding-sources skill](../walkeros-understanding-sources/SKILL.md)
+- [understanding-events skill](../walkeros-understanding-events/SKILL.md)
+- [testing-strategy skill](../walkeros-testing-strategy/SKILL.md)
 - [← Back to Hub](../../AGENT.md)

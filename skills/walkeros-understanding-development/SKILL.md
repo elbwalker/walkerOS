@@ -105,7 +105,7 @@ Quick reference:
 
 ## Related
 
-- [testing-strategy skill](../testing-strategy/SKILL.md)
+- [testing-strategy skill](../walkeros-testing-strategy/SKILL.md)
 - [packages/core/](../../packages/core/) - Core utilities
 - [packages/config/](../../packages/config/) - Shared configuration
 - [apps/quickstart/](../../apps/quickstart/) - Validated examples

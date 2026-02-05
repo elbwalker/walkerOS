@@ -200,13 +200,14 @@ transformers: {
 
 **Skills:**
 
-- [understanding-events skill](../understanding-events/SKILL.md) - Event model
-- [understanding-transformers skill](../understanding-transformers/SKILL.md) -
+- [understanding-events skill](../walkeros-understanding-events/SKILL.md) -
+  Event model
+- [understanding-transformers skill](../walkeros-understanding-transformers/SKILL.md) -
   Transformer interface and chaining
-- [understanding-destinations skill](../understanding-destinations/SKILL.md) -
+- [understanding-destinations skill](../walkeros-understanding-destinations/SKILL.md) -
   Destination interface
-- [understanding-sources skill](../understanding-sources/SKILL.md) - Source
-  interface
+- [understanding-sources skill](../walkeros-understanding-sources/SKILL.md) -
+  Source interface
 
 **Package READMEs:**
 

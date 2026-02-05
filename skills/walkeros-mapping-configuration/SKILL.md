@@ -9,8 +9,8 @@ description:
 
 ## Prerequisites
 
-Read [understanding-mapping](../understanding-mapping/SKILL.md) first for core
-concepts.
+Read [understanding-mapping](../walkeros-understanding-mapping/SKILL.md) first
+for core concepts.
 
 ## Quick Reference
 
@@ -267,8 +267,8 @@ product: {
 
 ## Reference
 
-- [understanding-mapping skill](../understanding-mapping/SKILL.md) - Core
-  concepts
+- [understanding-mapping skill](../walkeros-understanding-mapping/SKILL.md) -
+  Core concepts
 - [packages/core/src/mapping.ts](../../packages/core/src/mapping.ts) -
   Implementation
 - [apps/quickstart/src/](../../apps/quickstart/src/) - Validated examples

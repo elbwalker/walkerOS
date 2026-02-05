@@ -152,7 +152,7 @@ Embed JavaScript functions in JSON configs:
 functions during build. This is essential for mappings in JSON configs.
 
 For mapping patterns, see
-[understanding-mapping](../understanding-mapping/SKILL.md).
+[understanding-mapping](../walkeros-understanding-mapping/SKILL.md).
 
 ---
 
@@ -276,12 +276,14 @@ Use absolute or relative paths:
 
 ## Related Skills
 
-- [understanding-mapping](../understanding-mapping/SKILL.md) - Mapping
+- [understanding-mapping](../walkeros-understanding-mapping/SKILL.md) - Mapping
   configuration
-- [understanding-flow](../understanding-flow/SKILL.md) - Data flow architecture
-- [create-destination](../create-destination/SKILL.md) - Creating destinations
-- [create-source](../create-source/SKILL.md) - Creating sources
-- [debugging](../debugging/SKILL.md) - Troubleshooting event flow
+- [understanding-flow](../walkeros-understanding-flow/SKILL.md) - Data flow
+  architecture
+- [create-destination](../walkeros-create-destination/SKILL.md) - Creating
+  destinations
+- [create-source](../walkeros-create-source/SKILL.md) - Creating sources
+- [debugging](../walkeros-debugging/SKILL.md) - Troubleshooting event flow
 
 **Detailed References:**
 

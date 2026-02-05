@@ -11,14 +11,15 @@ description:
 
 Before starting, read these skills:
 
-- [understanding-flow](../understanding-flow/SKILL.md) - How transformers fit in
-  architecture
-- [understanding-transformers](../understanding-transformers/SKILL.md) -
+- [understanding-flow](../walkeros-understanding-flow/SKILL.md) - How
+  transformers fit in architecture
+- [understanding-transformers](../walkeros-understanding-transformers/SKILL.md) -
   Transformer interface
-- [understanding-events](../understanding-events/SKILL.md) - Event structure
-- [testing-strategy](../testing-strategy/SKILL.md) - How to test
-- [writing-documentation](../writing-documentation/SKILL.md) - Documentation
-  standards (for Phase 6)
+- [understanding-events](../walkeros-understanding-events/SKILL.md) - Event
+  structure
+- [testing-strategy](../walkeros-testing-strategy/SKILL.md) - How to test
+- [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
+  Documentation standards (for Phase 6)
 
 ## Transformer Categories
 
@@ -430,7 +431,8 @@ describe('Redact Transformer', () => {
 
 ## Phase 6: Document
 
-Follow the [writing-documentation](../writing-documentation/SKILL.md) skill for:
+Follow the [writing-documentation](../walkeros-writing-documentation/SKILL.md)
+skill for:
 
 - README structure and templates
 - Quality checklist before publishing
@@ -447,7 +449,8 @@ Key requirements for transformer documentation:
 
 ## Transformer-Specific Validation
 
-Beyond [understanding-development](../understanding-development/SKILL.md)
+Beyond
+[understanding-development](../walkeros-understanding-development/SKILL.md)
 requirements (build, test, lint, no `any`):
 
 - [ ] `dev.ts` exports `schemas` and `examples`
@@ -467,7 +470,7 @@ requirements (build, test, lint, no `any`):
 
 ## Related
 
-- [understanding-transformers skill](../understanding-transformers/SKILL.md)
-- [understanding-flow skill](../understanding-flow/SKILL.md)
-- [testing-strategy skill](../testing-strategy/SKILL.md)
+- [understanding-transformers skill](../walkeros-understanding-transformers/SKILL.md)
+- [understanding-flow skill](../walkeros-understanding-flow/SKILL.md)
+- [testing-strategy skill](../walkeros-testing-strategy/SKILL.md)
 - [← Back to Hub](../../AGENT.md)

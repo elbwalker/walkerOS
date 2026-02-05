@@ -328,7 +328,9 @@ const { elb } = await startFlow({
 
 **Skills:**
 
-- [understanding-destinations](../understanding-destinations/SKILL.md) -
+- [understanding-destinations](../walkeros-understanding-destinations/SKILL.md) -
   Destination interface
-- [understanding-sources](../understanding-sources/SKILL.md) - Source interface
-- [testing-strategy](../testing-strategy/SKILL.md) - Testing with mockLogger
+- [understanding-sources](../walkeros-understanding-sources/SKILL.md) - Source
+  interface
+- [testing-strategy](../walkeros-testing-strategy/SKILL.md) - Testing with
+  mockLogger
