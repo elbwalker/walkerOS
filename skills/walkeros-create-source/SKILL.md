@@ -34,22 +34,10 @@ Before starting, read these skills:
 
 ## Source Categories
 
-Sources fall into two categories based on their primary function:
-
 | Category           | Purpose                                   | Examples                | Key Concern          |
 | ------------------ | ----------------------------------------- | ----------------------- | -------------------- |
 | **Transformation** | Convert external format → walkerOS events | `dataLayer`, `fetch`    | Mapping accuracy     |
 | **Transport**      | Receive events from specific platform     | `gcp`, `aws`, `express` | Platform integration |
-
-**Transformation sources** focus on data conversion - they take input in one
-format and produce walkerOS events. The `fetch` source is the purest example.
-
-**Transport sources** focus on platform integration - they handle
-platform-specific concerns (authentication, request parsing, response format)
-while delegating transformation. The `gcp` and `aws` sources wrap HTTP handlers
-for their respective cloud platforms.
-
-Many sources are both - they handle platform transport AND transform data.
 
 ## Choose Your Template
 
@@ -97,8 +85,6 @@ npm search [platform]-sdk
 
 ### 1.3 Document Input Schema
 
-Capture real examples of incoming data:
-
 | Field        | Type   | Required | Description            |
 | ------------ | ------ | -------- | ---------------------- |
 | `event`      | string | Yes      | Event type from source |
@@ -106,17 +92,7 @@ Capture real examples of incoming data:
 | `userId`     | string | No       | User identifier        |
 | `timestamp`  | number | No       | Event time             |
 
-### 1.4 Map to walkerOS Events
-
-Plan how input fields become walkerOS events:
-
-| Source Field      | walkerOS Field | Notes                               |
-| ----------------- | -------------- | ----------------------------------- |
-| `event`           | `name`         | May need "entity action" conversion |
-| `properties.page` | `data`         | Direct mapping                      |
-| `userId`          | `user.id`      | User identification                 |
-
-### 1.5 Check Existing Patterns
+### 1.4 Check Existing Patterns
 
 ```bash
 # List existing sources
@@ -132,21 +108,9 @@ ls packages/server/sources/
 
 ### Gate: Research Complete
 
-Before proceeding, confirm:
-
 - [ ] Input trigger identified (HTTP, webhook, DOM, dataLayer)
 - [ ] Input schema documented (required/optional fields)
 - [ ] Fields mapped to walkerOS event structure
-
-### Checkpoint: Research Review (Optional)
-
-If working with human oversight, pause here to confirm:
-
-- Input format and trigger mechanism correct?
-- Event name mapping makes sense?
-- Any platform quirks or auth requirements?
-
-Continue only after approval.
 
 ---
 
@@ -160,145 +124,16 @@ Continue only after approval.
 mkdir -p packages/server/sources/[name]/src/{examples,schemas,types}
 ```
 
-### 2.2 Create Input Examples
+### 2.2 Create Example Files
 
-**Real examples of what the source will receive:**
+| File                   | Purpose                        | Template                              |
+| ---------------------- | ------------------------------ | ------------------------------------- |
+| `examples/inputs.ts`   | Incoming data examples         | [inputs.ts](./examples/inputs.ts)     |
+| `examples/outputs.ts`  | Expected walkerOS events       | [outputs.ts](./examples/outputs.ts)   |
+| `examples/requests.ts` | HTTP request examples (server) | [requests.ts](./examples/requests.ts) |
+| `examples/mapping.ts`  | Event name/data transformation | [mapping.ts](./examples/mapping.ts)   |
 
-`src/examples/inputs.ts`:
-
-```typescript
-/**
- * Examples of incoming data this source will receive.
- * These define the CONTRACT - implementation must handle these inputs.
- */
-
-// Page view from external system
-export const pageViewInput = {
-  event: 'page_view',
-  properties: {
-    page_title: 'Home Page',
-    page_path: '/home',
-    referrer: 'https://google.com',
-  },
-  userId: 'user-123',
-  timestamp: 1700000000000,
-};
-
-// E-commerce event
-export const purchaseInput = {
-  event: 'purchase',
-  properties: {
-    transaction_id: 'T-123',
-    value: 99.99,
-    currency: 'USD',
-    items: [{ item_id: 'P-1', item_name: 'Widget', price: 99.99 }],
-  },
-  userId: 'user-123',
-  timestamp: 1700000001000,
-};
-
-// Custom event
-export const customEventInput = {
-  event: 'button_click',
-  properties: {
-    button_id: 'cta',
-    button_text: 'Sign Up',
-  },
-  timestamp: 1700000002000,
-};
-
-// Edge cases
-export const minimalInput = {
-  event: 'ping',
-};
-
-export const invalidInput = {
-  // Missing event field
-  properties: { foo: 'bar' },
-};
-```
-
-### 2.3 Create Expected Output Examples
-
-**walkerOS events that should result from inputs:**
-
-`src/examples/outputs.ts`:
-
-```typescript
-import type { WalkerOS } from '@walkeros/core';
-
-/**
- * Expected walkerOS events from inputs.
- * Tests verify implementation produces these outputs.
- */
-
-// From pageViewInput → walkerOS event
-export const pageViewEvent: Partial<WalkerOS.Event> = {
-  event: 'page view',
-  data: {
-    title: 'Home Page',
-    path: '/home',
-    referrer: 'https://google.com',
-  },
-  user: { id: 'user-123' },
-};
-
-// From purchaseInput → walkerOS event
-export const purchaseEvent: Partial<WalkerOS.Event> = {
-  event: 'order complete',
-  data: {
-    id: 'T-123',
-    total: 99.99,
-    currency: 'USD',
-  },
-};
-
-// From customEventInput → walkerOS event
-export const buttonClickEvent: Partial<WalkerOS.Event> = {
-  event: 'button click',
-  data: {
-    id: 'cta',
-    text: 'Sign Up',
-  },
-};
-```
-
-### 2.4 Create HTTP Request Examples (Server Sources)
-
-`src/examples/requests.ts`:
-
-```typescript
-/**
- * HTTP request examples for testing handlers.
- */
-
-export const validPostRequest = {
-  method: 'POST',
-  headers: {
-    'content-type': 'application/json',
-    'x-api-key': 'test-key',
-  },
-  body: JSON.stringify(inputs.pageViewInput),
-};
-
-export const batchRequest = {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({
-    batch: [inputs.pageViewInput, inputs.purchaseInput],
-  }),
-};
-
-export const invalidRequest = {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  body: 'invalid json{',
-};
-```
-
-### 2.5 Export via dev.ts
-
-`src/dev.ts`:
+### 2.3 Export via dev.ts
 
 ```typescript
 export * as schemas from './schemas';
@@ -317,55 +152,9 @@ export * as examples from './examples';
 
 **Goal:** Document transformation from input format to walkerOS events.
 
-### 3.1 Create Mapping Configuration
+Use [mapping.ts](./examples/mapping.ts) as your template.
 
-`src/examples/mapping.ts`:
-
-```typescript
-import type { Mapping } from '@walkeros/core';
-
-/**
- * Default mapping: input format → walkerOS events.
- */
-
-// Event name transformation
-export const eventNameMap: Record<string, string> = {
-  page_view: 'page view',
-  purchase: 'order complete',
-  button_click: 'button click',
-  add_to_cart: 'product add',
-};
-
-// Data field mapping
-export const defaultMapping: Mapping.Rules = {
-  page: {
-    view: {
-      data: {
-        map: {
-          title: 'properties.page_title',
-          path: 'properties.page_path',
-          referrer: 'properties.referrer',
-        },
-      },
-    },
-  },
-  order: {
-    complete: {
-      data: {
-        map: {
-          id: 'properties.transaction_id',
-          total: 'properties.value',
-          currency: 'properties.currency',
-        },
-      },
-    },
-  },
-};
-```
-
-### 3.2 Verify Mapping Logic
-
-Create a trace:
+### Verify Mapping Logic
 
 ```
 Input: inputs.pageViewInput
@@ -407,15 +196,8 @@ packages/server/sources/[name]/
 │   ├── index.test.ts      # Tests against examples
 │   ├── dev.ts             # Exports schemas and examples
 │   ├── examples/
-│   │   ├── index.ts       # Re-exports
-│   │   ├── inputs.ts      # Incoming data examples
-│   │   ├── outputs.ts     # Expected walkerOS events
-│   │   ├── requests.ts    # HTTP request examples
-│   │   └── mapping.ts     # Transformation config
 │   ├── schemas/
-│   │   └── index.ts       # Zod schemas for input validation
 │   └── types/
-│       └── index.ts       # Config, Input interfaces
 ├── package.json
 ├── tsconfig.json
 ├── tsup.config.ts
@@ -426,18 +208,6 @@ packages/server/sources/[name]/
 ### Transformer Chain Integration
 
 Sources can wire to transformer chains via `next` in the init config:
-
-```typescript
-export type InitSource<T> = {
-  code: Init<T>;
-  config?: Partial<Config<T>>;
-  env?: Partial<Env<T>>;
-  primary?: boolean;
-  next?: string; // First transformer in pre-collector chain
-};
-```
-
-Example usage:
 
 ```typescript
 sources: {
@@ -455,119 +225,15 @@ sources: {
 
 **Now write code to transform inputs to expected outputs.**
 
-### 5.1 Define Types
+### Template Files
 
-`src/types/index.ts`:
+| File               | Purpose                | Template                                    |
+| ------------------ | ---------------------- | ------------------------------------------- |
+| `types/index.ts`   | Type definitions       | [types.ts](./templates/server/types.ts)     |
+| `schemas/index.ts` | Zod validation schemas | [schemas.ts](./templates/server/schemas.ts) |
+| `index.ts`         | Main source            | [index.ts](./templates/server/index.ts)     |
 
-```typescript
-import type { WalkerOS } from '@walkeros/core';
-
-export interface Config {
-  mapping?: WalkerOS.Mapping;
-  eventNameMap?: Record<string, string>;
-}
-
-export interface Input {
-  event: string;
-  properties?: Record<string, unknown>;
-  userId?: string;
-  timestamp?: number;
-}
-
-export interface BatchInput {
-  batch: Input[];
-}
-```
-
-### 5.2 Implement Source (Context Pattern)
-
-Sources use the **context pattern** - they receive a single `context` object
-containing `config`, `env`, `logger`, `id`, and `collector`.
-
-`src/index.ts`:
-
-```typescript
-import type { Source } from '@walkeros/core';
-import type { Types, Input } from './types';
-import { SettingsSchema } from './schemas';
-
-export * as SourceName from './types';
-export * as schemas from './schemas';
-export * as examples from './examples';
-
-/**
- * Source initialization using context pattern.
- *
- * @param context - Source context containing:
- *   - config: Source configuration (settings, mapping)
- *   - env: Environment with push, command, elb, logger
- *   - logger: Logger instance
- *   - id: Unique source identifier
- *   - collector: Collector instance reference
- */
-export const sourceMySource: Source.Init<Types> = async (context) => {
-  // Destructure what you need from context
-  const { config = {}, env } = context;
-  const { push: envPush, logger } = env;
-
-  // Validate and apply default settings using Zod schema
-  const settings = SettingsSchema.parse(config.settings || {});
-
-  const fullConfig: Source.Config<Types> = {
-    ...config,
-    settings,
-  };
-
-  /**
-   * Push handler - receives incoming data and forwards to collector.
-   * The signature varies by source type (HTTP handler, DOM handler, etc.)
-   */
-  const push: Types['push'] = async (request) => {
-    try {
-      const body = await parseRequestBody(request);
-
-      if (!isValidInput(body)) {
-        return createErrorResponse(400, 'Invalid input format');
-      }
-
-      // Transform to walkerOS event format
-      const eventData = transformInput(body, settings);
-
-      // Forward to collector via env.push
-      await envPush(eventData);
-
-      return createSuccessResponse();
-    } catch (error) {
-      // Log errors per using-logger skill (only errors, not routine ops)
-      logger?.error('Source processing error', { error });
-      return createErrorResponse(500, 'Processing failed');
-    }
-  };
-
-  return {
-    type: 'my-source',
-    config: fullConfig,
-    push,
-  };
-};
-
-/**
- * Transform incoming input to walkerOS event format.
- */
-function transformInput(input: Input, settings: Types['settings']) {
-  const eventName = settings.eventNameMap?.[input.event] ?? input.event;
-
-  return {
-    name: eventName,
-    data: input.properties ?? {},
-    user: input.userId ? { id: input.userId } : undefined,
-  };
-}
-
-export default sourceMySource;
-```
-
-**Key patterns:**
+### Key Patterns
 
 1. **Context destructuring**: Extract `config`, `env`, `logger`, `id` from
    context
@@ -589,126 +255,11 @@ export default sourceMySource;
 
 **Verify implementation produces expected outputs.**
 
-### 6.1 Test Helper Pattern
+### Test Template
 
-Create a helper to build source context for tests:
+Use the test template: [index.test.ts](./templates/server/index.test.ts)
 
-`src/__tests__/index.test.ts`:
-
-```typescript
-import { sourceMySource } from '../index';
-import type { Source, Collector } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
-import type { Types } from '../types';
-import { examples } from '../dev';
-
-// Helper to create source context for testing
-function createSourceContext(
-  config: Partial<Source.Config<Types>> = {},
-  env: Partial<Types['env']> = {},
-): Source.Context<Types> {
-  return {
-    config,
-    env: env as Types['env'],
-    logger: env.logger || createMockLogger(),
-    id: 'test-my-source',
-    collector: {} as Collector.Instance,
-  };
-}
-
-describe('sourceMySource', () => {
-  let mockPush: jest.MockedFunction<(...args: unknown[]) => unknown>;
-  let mockLogger: ReturnType<typeof createMockLogger>;
-
-  beforeEach(() => {
-    mockPush = jest.fn().mockResolvedValue({
-      event: { id: 'test-id' },
-      ok: true,
-    });
-    mockLogger = createMockLogger();
-  });
-
-  describe('initialization', () => {
-    it('should initialize with default settings', async () => {
-      const source = await sourceMySource(
-        createSourceContext(
-          {},
-          {
-            push: mockPush as never,
-            command: jest.fn() as never,
-            elb: jest.fn() as never,
-            logger: mockLogger,
-          },
-        ),
-      );
-
-      expect(source.type).toBe('my-source');
-      expect(typeof source.push).toBe('function');
-    });
-
-    it('should merge custom settings with defaults', async () => {
-      const source = await sourceMySource(
-        createSourceContext(
-          { settings: { customOption: true } },
-          {
-            push: mockPush as never,
-            command: jest.fn() as never,
-            elb: jest.fn() as never,
-            logger: mockLogger,
-          },
-        ),
-      );
-
-      expect(source.config.settings?.customOption).toBe(true);
-    });
-  });
-
-  describe('event processing', () => {
-    it('should process valid input and call env.push', async () => {
-      const source = await sourceMySource(
-        createSourceContext(
-          {},
-          {
-            push: mockPush as never,
-            command: jest.fn() as never,
-            elb: jest.fn() as never,
-            logger: mockLogger,
-          },
-        ),
-      );
-
-      // Use examples for test input
-      const request = createMockRequest(examples.inputs.pageViewInput);
-      await source.push(request);
-
-      expect(mockPush).toHaveBeenCalled();
-    });
-
-    it('should handle errors gracefully', async () => {
-      const errorPush = jest.fn().mockRejectedValue(new Error('Failed'));
-      const source = await sourceMySource(
-        createSourceContext(
-          {},
-          {
-            push: errorPush as never,
-            command: jest.fn() as never,
-            elb: jest.fn() as never,
-            logger: mockLogger,
-          },
-        ),
-      );
-
-      const request = createMockRequest(examples.inputs.pageViewInput);
-      const response = await source.push(request);
-
-      expect(response.status).toBe(500);
-      expect(mockLogger.error).toHaveBeenCalled();
-    });
-  });
-});
-```
-
-### 6.2 Key Test Patterns
+### Key Test Patterns
 
 1. **Use `createSourceContext()` helper** - Standardizes context creation
 2. **Mock `env.push`** - Verify events are forwarded to collector
@@ -742,7 +293,7 @@ Key requirements for source documentation:
 
 ---
 
-## Source-Specific Validation
+## Validation Checklist
 
 Beyond
 [understanding-development](../walkeros-understanding-development/SKILL.md)
@@ -764,9 +315,13 @@ requirements (build, test, lint, no `any`):
 | Source types    | `packages/core/src/types/source.ts` |
 | Event creation  | `packages/core/src/lib/event.ts`    |
 
-## Related
+## Related Skills
 
-- [understanding-sources skill](../walkeros-understanding-sources/SKILL.md)
-- [understanding-events skill](../walkeros-understanding-events/SKILL.md)
-- [testing-strategy skill](../walkeros-testing-strategy/SKILL.md)
-- [← Back to Hub](../../AGENT.md)
+- [understanding-sources](../walkeros-understanding-sources/SKILL.md) - Source
+  interface and push pattern
+- [understanding-events](../walkeros-understanding-events/SKILL.md) - Event
+  structure
+- [testing-strategy](../walkeros-testing-strategy/SKILL.md) - Testing with env
+  mocking
+- [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
+  Documentation standards
