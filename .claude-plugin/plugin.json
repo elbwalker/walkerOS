@@ -1,6 +1,6 @@
 {
   "name": "walkeros",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Development skills for walkerOS - the open-source event data collection platform. Learn architecture, create sources/destinations/transformers, and build privacy-centric analytics pipelines.",
   "author": "elbwalker",
   "repository": "https://github.com/elbwalker/walkerOS",
@@ -30,6 +30,7 @@
     "skills/understanding-transformers",
     "skills/understanding-development",
     "skills/using-logger",
+    "skills/using-walkeros-cli",
     "skills/create-destination",
     "skills/create-source",
     "skills/create-transformer",
