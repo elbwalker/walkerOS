@@ -1,6 +1,6 @@
 {
   "name": "walkeros",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Development skills for walkerOS - the open-source event data collection platform. Learn architecture, create sources/destinations/transformers, and build privacy-centric analytics pipelines.",
   "author": "elbwalker",
   "repository": "https://github.com/elbwalker/walkerOS",
@@ -22,21 +22,21 @@
     "data-collection"
   ],
   "skills": [
-    "skills/understanding-events",
-    "skills/understanding-mapping",
-    "skills/understanding-flow",
-    "skills/understanding-destinations",
-    "skills/understanding-sources",
-    "skills/understanding-transformers",
-    "skills/understanding-development",
-    "skills/using-logger",
-    "skills/using-walkeros-cli",
-    "skills/create-destination",
-    "skills/create-source",
-    "skills/create-transformer",
-    "skills/mapping-configuration",
-    "skills/testing-strategy",
-    "skills/debugging",
-    "skills/writing-documentation"
+    "skills/walkeros-understanding-events",
+    "skills/walkeros-understanding-mapping",
+    "skills/walkeros-understanding-flow",
+    "skills/walkeros-understanding-destinations",
+    "skills/walkeros-understanding-sources",
+    "skills/walkeros-understanding-transformers",
+    "skills/walkeros-understanding-development",
+    "skills/walkeros-using-logger",
+    "skills/walkeros-using-cli",
+    "skills/walkeros-create-destination",
+    "skills/walkeros-create-source",
+    "skills/walkeros-create-transformer",
+    "skills/walkeros-mapping-configuration",
+    "skills/walkeros-testing-strategy",
+    "skills/walkeros-debugging",
+    "skills/walkeros-writing-documentation"
   ]
 }
