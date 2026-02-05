@@ -1,4 +1,4 @@
-import type { WalkerOS } from '@walkeros/core';
+import type { Mapping } from '@walkeros/core';
 
 /**
  * Type definitions for a server source.
@@ -6,8 +6,7 @@ import type { WalkerOS } from '@walkeros/core';
  */
 
 export interface Config {
-  mapping?: WalkerOS.Mapping;
-  eventNameMap?: Record<string, string>;
+  mapping?: Mapping.Config;
 }
 
 export interface Input {
@@ -22,7 +21,6 @@ export interface BatchInput {
 }
 
 export interface Settings {
-  // Add source-specific settings
   validateSignature?: boolean;
   apiKeyHeader?: string;
 }

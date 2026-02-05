@@ -127,7 +127,7 @@ Or:
 | `consent` | Required consent levels            |
 
 For mapping syntax, see
-[understanding-mapping](../walkeros-understanding-mapping/SKILL.md).
+[walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md).
 
 ---
 

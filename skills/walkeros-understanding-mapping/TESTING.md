@@ -1,7 +1,7 @@
 # Skill Testing Documentation
 
-**Skill:** understanding-mapping **Test Date:** 2026-02-05 **Skill Type:**
-Technique/Reference (how-to guide)
+**Skill:** walkeros-understanding-mapping **Test Date:** 2026-02-05 **Skill
+Type:** Technique/Reference (how-to guide)
 
 ---
 

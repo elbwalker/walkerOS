@@ -156,11 +156,11 @@ Use [mapping.ts](./examples/mapping.ts) as your template.
 
 ### Verify Mapping Logic
 
-```
-Input: inputs.pageViewInput
-  ↓ eventNameMap: 'page_view' → 'page view'
-  ↓ Entity: 'page', Action: 'view'
-  ↓ Apply mapping: page.view rule
+```text
+Input: inputs.pageViewInput (event: 'page_view')
+  ↓ Match mapping rule: page_view.*
+  ↓ Apply rule.name: 'page_view' → 'page view'
+  ↓ Apply rule.data.map transformations
   ↓ properties.page_title → title
   ↓ properties.page_path → path
 Output: Should match outputs.pageViewEvent
@@ -168,7 +168,8 @@ Output: Should match outputs.pageViewEvent
 
 ### Gate: Mapping Verified
 
-- [ ] Event name map covers main input types
+- [ ] Mapping rules cover main input event types
+- [ ] Each rule.name transforms to correct walkerOS event name
 - [ ] Each mapping rule traces correctly to expected output
 
 ---

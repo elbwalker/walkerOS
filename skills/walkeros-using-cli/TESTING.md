@@ -1,6 +1,6 @@
 # Skill Testing Documentation
 
-**Skill:** using-walkeros-cli **Test Date:** 2026-02-05 **Skill Type:**
+**Skill:** walkeros-using-cli **Test Date:** 2026-02-05 **Skill Type:**
 Technique/Reference (how-to guide)
 
 ---
@@ -145,7 +145,7 @@ Per writing-skills guidelines, technique skills require:
 
 ## Conclusion
 
-The using-walkeros-cli skill is **PRODUCTION READY** with:
+The walkeros-using-cli skill is **PRODUCTION READY** with:
 
 1. ✅ Description has triggers only (no summary)
 2. ✅ SKILL.md under 500 lines

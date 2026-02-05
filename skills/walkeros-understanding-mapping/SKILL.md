@@ -30,7 +30,7 @@ implementation.
 
 ### processEventMapping Flow
 
-```
+```text
 1. Apply config.policy (modifies event)
 2. Find matching rule via getMappingEvent()
 3. Apply rule.policy (modifies event)

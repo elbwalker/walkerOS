@@ -8,7 +8,6 @@ import { z } from 'zod';
 export const SettingsSchema = z.object({
   validateSignature: z.boolean().optional().default(false),
   apiKeyHeader: z.string().optional().default('x-api-key'),
-  eventNameMap: z.record(z.string()).optional(),
 });
 
 export const InputSchema = z.object({

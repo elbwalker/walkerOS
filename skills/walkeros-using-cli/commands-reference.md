@@ -190,18 +190,20 @@ Validate events, flows, or mapping configurations.
 ### Usage
 
 ```bash
-walkeros validate <input> [options]
+walkeros validate <type> [input] [options]
 ```
+
+Where `<type>` is one of: `event`, `flow`, or `mapping`.
 
 ### Options
 
-| Option          | Description                           |
-| --------------- | ------------------------------------- |
-| `--flow`        | Validate as flow config               |
-| `--config`      | Validate as destination/source config |
-| `--strict`      | Treat warnings as errors              |
-| `--json`        | JSON output                           |
-| `-v, --verbose` | Verbose logging                       |
+| Option          | Description                      |
+| --------------- | -------------------------------- |
+| `--flow <name>` | Flow name for multi-flow configs |
+| `--strict`      | Treat warnings as errors         |
+| `--json`        | JSON output                      |
+| `-v, --verbose` | Verbose output                   |
+| `-s, --silent`  | Suppress output                  |
 
 ### Exit Codes
 
@@ -216,16 +218,22 @@ walkeros validate <input> [options]
 
 ```bash
 # Validate flow config
-walkeros validate flow.json --flow
+walkeros validate flow flow.json
 
 # Validate event structure
-walkeros validate event.json
+walkeros validate event event.json
+
+# Validate mapping configuration
+walkeros validate mapping mapping.json
+
+# Validate specific flow in multi-flow config
+walkeros validate flow flow.json --flow analytics
 
 # Strict validation (warnings = errors)
-walkeros validate flow.json --flow --strict
+walkeros validate flow flow.json --strict
 
 # CI/CD integration
-walkeros validate flow.json --flow --json || exit 1
+walkeros validate flow flow.json --json || exit 1
 ```
 
 ---

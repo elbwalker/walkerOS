@@ -50,7 +50,7 @@
 
 ### Scenario 3: Intermittent Failures
 
-**Task:** "Events work sometimes but not always"
+**Task:** "Events sometimes work but not always"
 
 **Skill Coverage:**
 

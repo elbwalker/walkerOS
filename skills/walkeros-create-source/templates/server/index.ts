@@ -46,7 +46,7 @@ export const sourceMySource: Source.Init<{
       }
 
       // Transform to walkerOS event format
-      const eventData = transformInput(body, settings);
+      const eventData = transformInput(body);
 
       // Forward to collector via env.push
       await envPush(eventData);
@@ -88,13 +88,11 @@ function isValidInput(body: unknown): body is Input {
 
 /**
  * Transform incoming input to walkerOS event format.
+ * Event renaming is handled by the mapping system, not here.
  */
-function transformInput(input: Input, settings: Settings) {
-  const eventNameMap = settings.eventNameMap || {};
-  const eventName = eventNameMap[input.event] ?? input.event;
-
+function transformInput(input: Input) {
   return {
-    name: eventName,
+    name: input.event,
     data: input.properties ?? {},
     user: input.userId ? { id: input.userId } : undefined,
   };
