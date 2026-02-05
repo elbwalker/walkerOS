@@ -20,5 +20,22 @@
     "tag-management",
     "first-party-data",
     "data-collection"
+  ],
+  "skills": [
+    "skills/understanding-events",
+    "skills/understanding-mapping",
+    "skills/understanding-flow",
+    "skills/understanding-destinations",
+    "skills/understanding-sources",
+    "skills/understanding-transformers",
+    "skills/understanding-development",
+    "skills/using-logger",
+    "skills/create-destination",
+    "skills/create-source",
+    "skills/create-transformer",
+    "skills/mapping-configuration",
+    "skills/testing-strategy",
+    "skills/debugging",
+    "skills/writing-documentation"
   ]
 }
