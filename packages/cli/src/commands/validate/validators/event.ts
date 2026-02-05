@@ -48,7 +48,8 @@ export function validateEvent(input: unknown): ValidateResult {
       details.action = null;
     } else {
       // Extract entity and action (last word is action, rest is entity)
-      const parts = name.split(' ');
+      // Normalize whitespace: trim and split on one-or-more whitespace
+      const parts = name.trim().split(/\s+/);
       const action = parts.pop()!;
       const entity = parts.join(' ');
       details.entity = entity;

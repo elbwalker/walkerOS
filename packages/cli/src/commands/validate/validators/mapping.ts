@@ -50,12 +50,16 @@ export function validateMapping(input: unknown): ValidateResult {
       });
     }
 
-    // Validate rule structure (basic check)
+    // Validate rule structure (accepts single rule object or array of rules)
     const rule = mapping[pattern];
-    if (typeof rule !== 'object' || rule === null) {
+    const isValidRule = Array.isArray(rule)
+      ? rule.every((r) => typeof r === 'object' && r !== null)
+      : typeof rule === 'object' && rule !== null;
+
+    if (!isValidRule) {
       errors.push({
         path: pattern,
-        message: 'Mapping rule must be an object',
+        message: 'Mapping rule must be an object or array of objects',
         code: 'INVALID_RULE_TYPE',
       });
     }

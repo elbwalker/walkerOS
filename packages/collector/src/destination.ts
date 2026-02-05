@@ -12,6 +12,7 @@ import {
   getId,
   getGrantedConsent,
   isDefined,
+  isFunction,
   isObject,
   processEventMapping,
   tryCatchAsync,
@@ -52,6 +53,20 @@ export async function addDestination(
   options?: Destination.Config,
 ): Promise<Elb.PushResult> {
   const { code, config: dataConfig = {}, env = {}, before } = data;
+
+  // Validate that code has a push method
+  if (!isFunction(code.push)) {
+    return createPushResult({
+      ok: false,
+      failed: {
+        invalid: {
+          type: 'invalid',
+          error: 'Destination code must have a push method',
+        },
+      },
+    });
+  }
+
   const baseConfig = options || dataConfig || { init: false };
   // Merge before into config if provided at root level
   const config = before ? { ...baseConfig, before } : baseConfig;

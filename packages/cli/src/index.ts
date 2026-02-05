@@ -148,7 +148,6 @@ program
   .command('validate <type> [input]')
   .description('Validate event, flow, or mapping configuration')
   .option('--flow <name>', 'flow name for multi-flow configs')
-  .option('--config <path>', 'path to flow.json for mapping validation')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
@@ -158,7 +157,6 @@ program
       type,
       input,
       flow: options.flow,
-      config: options.config,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,

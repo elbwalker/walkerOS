@@ -6,7 +6,6 @@ export interface ValidateCommandOptions {
   type: ValidationType;
   input?: string;
   flow?: string; // Flow name for multi-flow configs
-  config?: string; // Path to flow.json for mapping validation
   json?: boolean;
   verbose?: boolean;
   strict?: boolean;

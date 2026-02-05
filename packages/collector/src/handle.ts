@@ -5,7 +5,7 @@ import {
   pushToDestinations,
   createPushResult,
 } from './destination';
-import { assign, getId, isFunction, isString } from '@walkeros/core';
+import { assign, getId, isString } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { setConsent } from './consent';
 import { on, onApply } from './on';
@@ -53,19 +53,10 @@ export async function commonHandleCommand(
 
     case Const.Commands.Destination:
       if (isObject(data)) {
-        // Support both { code, before } format and legacy { push } format
         if ('code' in data && isObject((data as Destination.Init).code)) {
-          // New format: { code, before?, config?, env? }
           result = await addDestination(
             collector,
             data as Destination.Init,
-            options as Destination.Config,
-          );
-        } else if (isFunction(data.push)) {
-          // Legacy format: direct destination instance
-          result = await addDestination(
-            collector,
-            { code: data as unknown as Destination.Instance },
             options as Destination.Config,
           );
         }
