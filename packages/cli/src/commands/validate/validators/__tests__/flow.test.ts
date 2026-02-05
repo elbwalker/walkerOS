@@ -1,6 +1,6 @@
 // walkerOS/packages/cli/src/commands/validate/validators/__tests__/flow.test.ts
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from '@jest/globals';
 import { validateFlow } from '../flow.js';
 
 describe('validateFlow', () => {
