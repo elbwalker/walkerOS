@@ -1,31 +1,116 @@
+/**
+ * @module transformer
+ *
+ * Transformer Chain Utilities
+ * ==========================
+ *
+ * This module provides the unified implementation for transformer chains in walkerOS.
+ * Chains are used at two points in the data flow:
+ *
+ * 1. Pre-collector chains (source.next):
+ *    Source → [Transformer Chain] → Collector
+ *    Events are processed before the collector sees them.
+ *
+ * 2. Post-collector chains (destination.before):
+ *    Collector → [Transformer Chain] → Destination
+ *    Events are processed before reaching specific destinations.
+ *
+ * Key Functions:
+ * - extractTransformerNextMap(): Extracts next links from transformer instances
+ * - extractChainProperty(): Unified extraction of chain properties from definitions
+ * - walkChain(): Resolves chain IDs from starting point
+ * - runTransformerChain(): Executes a chain of transformers on an event
+ *
+ * Chain Resolution:
+ * - String start: Walk transformer.next links until chain ends
+ * - Array start: Use array directly (explicit chain, ignores transformer.next)
+ *
+ * Chain Termination:
+ * - Transformer returns false → chain stops, event is dropped
+ * - Transformer throws error → chain stops, event is dropped
+ * - Transformer returns void → continue with unchanged event
+ * - Transformer returns event → continue with modified event
+ */
 import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { isObject, tryCatchAsync, useHooks } from '@walkeros/core';
 
 /**
- * Resolved transformer chains for a flow.
+ * Extracts transformer next configuration for chain walking.
+ * Maps transformer instances to their config.next values.
+ *
+ * This is the single source of truth for extracting chain links.
+ * Used by both source.ts (pre-collector chains) and destination.ts (post-collector chains).
+ *
+ * @param transformers - Map of transformer instances
+ * @returns Map of transformer IDs to their next configuration
  */
-export interface TransformerChain {
-  /** Ordered transformer IDs to run before collector (from source.next) */
-  pre: string[];
-  /** Per-destination transformer chains (from destination.before) */
-  post: Record<string, string[]>;
+export function extractTransformerNextMap(
+  transformers: Transformer.Transformers,
+): Record<string, { next?: string | string[] }> {
+  const result: Record<string, { next?: string | string[] }> = {};
+  for (const [id, transformer] of Object.entries(transformers)) {
+    if (transformer.config?.next) {
+      result[id] = { next: transformer.config.next as string | string[] };
+    } else {
+      result[id] = {};
+    }
+  }
+  return result;
 }
 
 /**
- * Extended collector with transformer support.
+ * Extracts chain property from definition and merges into config.
+ * Provides unified handling for source.next, destination.before, and transformer.next.
+ *
+ * @param definition - Component definition with optional chain property
+ * @param propertyName - Name of chain property ('next' or 'before')
+ * @returns Object with merged config and extracted chain value
  */
-export interface CollectorWithTransformers extends Collector.Instance {
-  transformers: Transformer.Transformers;
-  transformerChain: TransformerChain;
+export function extractChainProperty<
+  T extends { config?: Record<string, unknown>; [key: string]: unknown },
+>(
+  definition: T,
+  propertyName: 'next' | 'before',
+): {
+  config: Record<string, unknown>;
+  chainValue: string | string[] | undefined;
+} {
+  const config = (definition.config || {}) as Record<string, unknown>;
+  const chainValue = definition[propertyName] as string | string[] | undefined;
+
+  if (chainValue !== undefined) {
+    return {
+      config: { ...config, [propertyName]: chainValue },
+      chainValue,
+    };
+  }
+
+  return { config, chainValue: undefined };
 }
 
 /**
  * Walks a transformer chain starting from a given transformer ID.
  * Returns ordered array of transformer IDs in the chain.
  *
+ * Used for on-demand chain resolution:
+ * - Called from destination.ts with destination.config.before
+ * - Called from source.ts with source.config.next
+ *
  * @param startId - First transformer in chain, or explicit array of transformer IDs
  * @param transformers - Available transformer configs with optional `next` field
- * @returns Ordered array of transformer IDs
+ * @returns Ordered array of transformer IDs to execute
+ *
+ * @example
+ * // Single transformer
+ * walkChain('redact', { redact: {} }) // ['redact']
+ *
+ * @example
+ * // Chain via next
+ * walkChain('a', { a: { next: 'b' }, b: { next: 'c' }, c: {} }) // ['a', 'b', 'c']
+ *
+ * @example
+ * // Explicit array
+ * walkChain(['x', 'y'], {}) // ['x', 'y']
  */
 export function walkChain(
   startId: string | string[] | undefined,
@@ -66,34 +151,6 @@ export function walkChain(
 }
 
 /**
- * Resolves transformer chains from flow configuration.
- * Builds per-destination post-collector chains.
- * Note: Pre-chains are now resolved per-source in source.ts
- *
- * @param sources - Source configurations (unused, kept for API compatibility)
- * @param destinations - Destination configurations with optional before property
- * @param transformers - Transformer configurations with optional next property
- * @returns Resolved transformer chains
- */
-export function resolveTransformerGraph(
-  _sources: Record<string, { next?: string | string[] }> = {},
-  destinations: Record<string, { before?: string | string[] }> = {},
-  transformers: Record<string, { next?: string | string[] }> = {},
-): TransformerChain {
-  const post: Record<string, string[]> = {};
-
-  // Build post-collector chains from destinations
-  for (const [destName, dest] of Object.entries(destinations)) {
-    if (dest.before) {
-      post[destName] = walkChain(dest.before, transformers);
-    }
-  }
-
-  // Note: pre-chains are now resolved per-source in source.ts
-  return { pre: [], post };
-}
-
-/**
  * Initializes transformer instances from configuration.
  * Does NOT call transformer.init() - that happens lazily before first push.
  *
@@ -110,7 +167,13 @@ export async function initTransformers(
   for (const [transformerId, transformerDef] of Object.entries(
     initTransformers,
   )) {
-    const { code, config = {}, env = {} } = transformerDef;
+    const { code, env = {} } = transformerDef;
+
+    // Use unified chain property extractor
+    const { config: configWithChain } = extractChainProperty(
+      transformerDef,
+      'next',
+    );
 
     // Build transformer context for init
     const transformerLogger = collector.logger
@@ -121,7 +184,7 @@ export async function initTransformers(
       collector,
       logger: transformerLogger,
       id: transformerId,
-      config,
+      config: configWithChain,
       env: env as Transformer.Env,
     };
 

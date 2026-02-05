@@ -78,30 +78,25 @@ apps/
 
 ## Creating/Maintaining Skills
 
-Skills live in two locations that must stay in sync:
+Skills are packaged as a **Claude Code plugin** via `.claude-plugin/`:
 
-| Location                         | Purpose                                   |
-| -------------------------------- | ----------------------------------------- |
-| `skills/[name]/SKILL.md`         | Primary content (tool-agnostic)           |
-| `.claude/skills/[name]/SKILL.md` | Claude Code reference (points to primary) |
+| Location                     | Purpose                               |
+| ---------------------------- | ------------------------------------- |
+| `skills/[name]/SKILL.md`     | Primary content (source of truth)     |
+| `.claude-plugin/plugin.json` | Plugin manifest listing all skills    |
+| `.claude/skills/`            | Symlink to `../skills/` for local dev |
 
 **To create a new skill:**
 
-1. Create primary content: `skills/[name]/SKILL.md`
-2. Create Claude reference: `.claude/skills/[name]/SKILL.md` with:
-
-```markdown
----
-name: [name]
-description: [When to use - shown in Claude Code skill list]
----
-
-# [Title]
-
-The actual content is maintained in:
-
-Read @skills/[name]/SKILL.md
-```
-
+1. Create skill: `skills/[name]/SKILL.md` with frontmatter:
+   ```markdown
+   ---
+   name: [name]
+   description: [When to use - shown in Claude Code skill list]
+   ---
+   ```
+2. Add to `.claude-plugin/plugin.json` skills array
 3. Add to AGENT.md tables above (Understanding or Creating section)
 4. Add to [skills/README.md](skills/README.md) index
+
+**External users** install via: `/plugin marketplace add elbwalker/walkerOS`

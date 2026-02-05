@@ -1,5 +1,23 @@
 # @walkeros/cli
 
+## 1.1.3
+
+### Patch Changes
+
+- 6fcfaf5: Fix chain property handling for all component types in bundler.
+  Sources now correctly output `next` property for pre-collector transformer
+  chains. Unified inline code generation for sources, destinations, and
+  transformers. Standardized transformer `next` as top-level property
+  (consistent with destination `before`).
+
+## 1.1.2
+
+### Patch Changes
+
+- Updated dependencies [7ad6cfb]
+  - @walkeros/core@1.2.2
+  - @walkeros/server-core@1.0.4
+
 ## 1.1.1
 
 ### Patch Changes

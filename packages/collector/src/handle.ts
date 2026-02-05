@@ -52,12 +52,23 @@ export async function commonHandleCommand(
       break;
 
     case Const.Commands.Destination:
-      if (isObject(data) && isFunction(data.push)) {
-        result = await addDestination(
-          collector,
-          { code: data as unknown as Destination.Instance },
-          options as Destination.Config,
-        );
+      if (isObject(data)) {
+        // Support both { code, before } format and legacy { push } format
+        if ('code' in data && isObject((data as Destination.Init).code)) {
+          // New format: { code, before?, config?, env? }
+          result = await addDestination(
+            collector,
+            data as Destination.Init,
+            options as Destination.Config,
+          );
+        } else if (isFunction(data.push)) {
+          // Legacy format: direct destination instance
+          result = await addDestination(
+            collector,
+            { code: data as unknown as Destination.Instance },
+            options as Destination.Config,
+          );
+        }
       }
       break;
 

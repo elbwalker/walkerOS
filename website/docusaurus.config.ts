@@ -98,7 +98,7 @@ const config: Config = {
     navbar: {
       logo: {
         alt: 'elbwalker logo',
-        src: 'img/walkerOS_logo_new.svg',
+        src: 'img/walkerOS_logo.svg',
       },
       items: [
         {

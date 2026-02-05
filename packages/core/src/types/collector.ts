@@ -71,16 +71,6 @@ export interface Transformers {
   [id: string]: Transformer.Instance;
 }
 
-/**
- * Resolved transformer chains for a flow.
- */
-export interface TransformerChain {
-  /** Ordered transformer IDs to run before collector (from source.next) */
-  pre: string[];
-  /** Per-destination transformer chains (from destination.before) */
-  post: Record<string, string[]>;
-}
-
 export type CommandType =
   | 'action'
   | 'config'
@@ -168,7 +158,6 @@ export interface Instance {
   sources: Sources;
   destinations: Destinations;
   transformers: Transformers;
-  transformerChain: TransformerChain;
   globals: WalkerOS.Properties;
   group: string;
   hooks: Hooks.Functions;

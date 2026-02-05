@@ -2,10 +2,12 @@ import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import {
   walkChain,
-  resolveTransformerGraph,
   runTransformerChain,
   transformerInit,
   transformerPush,
+  initTransformers as initTransformersFunc,
+  extractTransformerNextMap,
+  extractChainProperty,
 } from '../transformer';
 
 describe('Transformer', () => {
@@ -23,7 +25,6 @@ describe('Transformer', () => {
       custom: {},
       destinations: {},
       transformers: {},
-      transformerChain: { pre: [], post: {} },
       globals: {},
       group: '',
       hooks: {},
@@ -127,69 +128,6 @@ describe('Transformer', () => {
     test('handles empty array at start', () => {
       const chain = walkChain([], { a: { next: 'b' } });
       expect(chain).toEqual([]);
-    });
-  });
-
-  describe('resolveTransformerGraph', () => {
-    test('returns empty chains when no sources or destinations', () => {
-      const result = resolveTransformerGraph({}, {}, {});
-      expect(result).toEqual({ pre: [], post: {} });
-    });
-
-    test('builds post-chain from destination.before', () => {
-      const destinations = {
-        ga4: { before: 'redact' },
-      };
-      const transformers = {
-        redact: { next: 'anonymize' },
-        anonymize: {},
-      };
-      const result = resolveTransformerGraph({}, destinations, transformers);
-      expect(result.post).toEqual({
-        ga4: ['redact', 'anonymize'],
-      });
-    });
-
-    test('builds multiple post-chains for different destinations', () => {
-      const destinations = {
-        ga4: { before: 'redact' },
-        warehouse: { before: 'validate' },
-      };
-      const transformers = {
-        redact: {},
-        validate: {},
-      };
-      const result = resolveTransformerGraph({}, destinations, transformers);
-      expect(result.post).toEqual({
-        ga4: ['redact'],
-        warehouse: ['validate'],
-      });
-    });
-
-    test('ignores destinations without before', () => {
-      const destinations = {
-        ga4: { before: 'redact' },
-        warehouse: {}, // No before
-      };
-      const transformers = {
-        redact: {},
-      };
-      const result = resolveTransformerGraph({}, destinations, transformers);
-      expect(result.post).toEqual({
-        ga4: ['redact'],
-      });
-      expect(result.post.warehouse).toBeUndefined();
-    });
-
-    test('pre-chain is always empty (resolved per-source now)', () => {
-      const sources = {
-        browser: { next: 'enrich' },
-      };
-      const transformers = {
-        enrich: {},
-      };
-      const result = resolveTransformerGraph(sources, {}, transformers);
-      expect(result.pre).toEqual([]);
     });
   });
 
@@ -460,6 +398,179 @@ describe('Transformer', () => {
       );
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('extractTransformerNextMap', () => {
+    test('extracts next from transformer instances', () => {
+      const transformers: Transformer.Transformers = {
+        a: createMockTransformer({ config: { next: 'b' } }),
+        b: createMockTransformer({ config: { next: 'c' } }),
+        c: createMockTransformer({ config: {} }),
+      };
+
+      const result = extractTransformerNextMap(transformers);
+
+      expect(result).toEqual({
+        a: { next: 'b' },
+        b: { next: 'c' },
+        c: {},
+      });
+    });
+
+    test('handles array next values', () => {
+      const transformers: Transformer.Transformers = {
+        a: createMockTransformer({ config: { next: ['b', 'c'] } }),
+      };
+
+      const result = extractTransformerNextMap(transformers);
+
+      expect(result).toEqual({
+        a: { next: ['b', 'c'] },
+      });
+    });
+
+    test('handles empty transformers', () => {
+      const result = extractTransformerNextMap({});
+      expect(result).toEqual({});
+    });
+
+    test('handles transformers without next', () => {
+      const transformers: Transformer.Transformers = {
+        a: createMockTransformer({ config: {} }),
+      };
+
+      const result = extractTransformerNextMap(transformers);
+
+      expect(result).toEqual({ a: {} });
+    });
+  });
+
+  describe('extractChainProperty', () => {
+    test('extracts and merges chain property into config', () => {
+      const definition = {
+        code: jest.fn(),
+        config: { settings: { foo: 'bar' } },
+        next: 'enrich',
+      };
+
+      const result = extractChainProperty(definition, 'next');
+
+      expect(result.config).toEqual({
+        settings: { foo: 'bar' },
+        next: 'enrich',
+      });
+      expect(result.chainValue).toBe('enrich');
+    });
+
+    test('handles before property for destinations', () => {
+      const definition = {
+        code: { type: 'test', config: {}, push: jest.fn() },
+        config: {},
+        before: 'redact',
+      };
+
+      const result = extractChainProperty(definition, 'before');
+
+      expect(result.config).toEqual({ before: 'redact' });
+      expect(result.chainValue).toBe('redact');
+    });
+
+    test('handles array chain values', () => {
+      const definition = {
+        code: jest.fn(),
+        config: {},
+        next: ['a', 'b', 'c'],
+      };
+
+      const result = extractChainProperty(definition, 'next');
+
+      expect(result.config.next).toEqual(['a', 'b', 'c']);
+      expect(result.chainValue).toEqual(['a', 'b', 'c']);
+    });
+
+    test('returns unchanged config when no chain property', () => {
+      const definition = {
+        code: jest.fn(),
+        config: { settings: { foo: 'bar' } },
+      };
+
+      const result = extractChainProperty(definition, 'next');
+
+      expect(result.config).toEqual({ settings: { foo: 'bar' } });
+      expect(result.chainValue).toBeUndefined();
+    });
+
+    test('definition-level takes precedence over config-level', () => {
+      const definition = {
+        code: jest.fn(),
+        config: { next: 'existing' },
+        next: 'override',
+      };
+
+      const result = extractChainProperty(definition, 'next');
+
+      expect(result.config.next).toBe('override');
+    });
+  });
+
+  describe('initTransformers', () => {
+    test('merges next from definition into instance config', async () => {
+      const collector = createMockCollector();
+
+      const initTransformers: Transformer.InitTransformers = {
+        validate: {
+          code: async (context) => ({
+            type: 'validator',
+            config: context.config,
+            push: jest.fn(),
+          }),
+          config: { settings: { strict: true } },
+          next: 'enrich',
+        },
+      };
+
+      const result = await initTransformersFunc(collector, initTransformers);
+
+      expect(result.validate.config.next).toBe('enrich');
+      expect(result.validate.config.settings).toEqual({ strict: true });
+    });
+
+    test('handles array next property', async () => {
+      const collector = createMockCollector();
+
+      const initTransformers: Transformer.InitTransformers = {
+        validate: {
+          code: async (context) => ({
+            type: 'validator',
+            config: context.config,
+            push: jest.fn(),
+          }),
+          next: ['enrich', 'redact'],
+        },
+      };
+
+      const result = await initTransformersFunc(collector, initTransformers);
+
+      expect(result.validate.config.next).toEqual(['enrich', 'redact']);
+    });
+
+    test('does not add next when not specified', async () => {
+      const collector = createMockCollector();
+
+      const initTransformers: Transformer.InitTransformers = {
+        validate: {
+          code: async (context) => ({
+            type: 'validator',
+            config: context.config,
+            push: jest.fn(),
+          }),
+        },
+      };
+
+      const result = await initTransformersFunc(collector, initTransformers);
+
+      expect(result.validate.config.next).toBeUndefined();
     });
   });
 });

@@ -7,28 +7,28 @@ Tool-agnostic and accessible to Claude, Cursor, Copilot, and other AI tools.
 
 ### Concept Skills (Understanding)
 
-| Skill                                                               | Description                                               |
-| ------------------------------------------------------------------- | --------------------------------------------------------- |
-| [understanding-development](./understanding-development/SKILL.md)   | Build, test, lint, XP principles, folder structure        |
-| [understanding-flow](./understanding-flow/SKILL.md)                 | Architecture, composability, Source→Collector→Destination |
-| [understanding-events](./understanding-events/SKILL.md)             | Event model, entity-action naming, properties             |
-| [understanding-mapping](./understanding-mapping/SKILL.md)           | Event transformation, data/map/loop/condition             |
-| [understanding-transformers](./understanding-transformers/SKILL.md) | Transformer interface, chaining, validate/enrich/redact   |
-| [understanding-destinations](./understanding-destinations/SKILL.md) | Destination interface, env pattern, configuration         |
-| [understanding-sources](./understanding-sources/SKILL.md)           | Source interface, capture patterns                        |
-| [using-logger](./using-logger/SKILL.md)                             | Logger access, DRY principles, API logging patterns       |
+| Skill                                                                        | Description                                               |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [understanding-development](./walkeros-understanding-development/SKILL.md)   | Build, test, lint, XP principles, folder structure        |
+| [understanding-flow](./walkeros-understanding-flow/SKILL.md)                 | Architecture, composability, Source→Collector→Destination |
+| [understanding-events](./walkeros-understanding-events/SKILL.md)             | Event model, entity-action naming, properties             |
+| [understanding-mapping](./walkeros-understanding-mapping/SKILL.md)           | Event transformation, data/map/loop/condition             |
+| [understanding-transformers](./walkeros-understanding-transformers/SKILL.md) | Transformer interface, chaining, validate/enrich/redact   |
+| [understanding-destinations](./walkeros-understanding-destinations/SKILL.md) | Destination interface, env pattern, configuration         |
+| [understanding-sources](./walkeros-understanding-sources/SKILL.md)           | Source interface, capture patterns                        |
+| [using-logger](./walkeros-using-logger/SKILL.md)                             | Logger access, DRY principles, API logging patterns       |
 
 ### Task Skills
 
-| Skill                                                     | Description                                    |
-| --------------------------------------------------------- | ---------------------------------------------- |
-| [testing-strategy](./testing-strategy/SKILL.md)           | Testing patterns, env mocking, dev examples    |
-| [create-transformer](./create-transformer/SKILL.md)       | Step-by-step transformer creation              |
-| [create-destination](./create-destination/SKILL.md)       | Step-by-step destination creation              |
-| [create-source](./create-source/SKILL.md)                 | Step-by-step source creation                   |
-| [mapping-configuration](./mapping-configuration/SKILL.md) | Mapping recipes for GA4, Meta, custom APIs     |
-| [debugging](./debugging/SKILL.md)                         | Troubleshooting event flow and mapping issues  |
-| [writing-documentation](./writing-documentation/SKILL.md) | Documentation standards, validation, templates |
+| Skill                                                              | Description                                    |
+| ------------------------------------------------------------------ | ---------------------------------------------- |
+| [testing-strategy](./walkeros-testing-strategy/SKILL.md)           | Testing patterns, env mocking, dev examples    |
+| [create-transformer](./walkeros-create-transformer/SKILL.md)       | Step-by-step transformer creation              |
+| [create-destination](./walkeros-create-destination/SKILL.md)       | Step-by-step destination creation              |
+| [create-source](./walkeros-create-source/SKILL.md)                 | Step-by-step source creation                   |
+| [mapping-configuration](./walkeros-mapping-configuration/SKILL.md) | Mapping recipes for GA4, Meta, custom APIs     |
+| [debugging](./walkeros-debugging/SKILL.md)                         | Troubleshooting event flow and mapping issues  |
+| [writing-documentation](./walkeros-writing-documentation/SKILL.md) | Documentation standards, validation, templates |
 
 ## Architecture
 

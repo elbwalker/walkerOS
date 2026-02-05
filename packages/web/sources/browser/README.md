@@ -1,6 +1,6 @@
 <p align="left">
   <a href="https://www.walkeros.io">
-    <img title="elbwalker" src='https://www.walkeros.io/img/elbwalker_logo.png' width="256px"/>
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
   </a>
 </p>
 

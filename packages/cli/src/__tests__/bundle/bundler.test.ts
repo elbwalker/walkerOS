@@ -915,7 +915,7 @@ describe('Bundler', () => {
       expect(result).toContain('"output": "user.hash"');
     });
 
-    it('handles transformer next field in config', () => {
+    it('handles transformer next field as top-level property', () => {
       const flowConfig: Flow.Config = {
         server: {},
         sources: {},
@@ -942,8 +942,8 @@ describe('Bundler', () => {
 
       const result = buildConfigObject(flowConfig, explicitCodeImports);
 
-      // next should be inside config for runtime
-      expect(result).toContain('"next": "validate"');
+      // next should be a top-level property (consistent with destination.before)
+      expect(result).toContain('next: "validate"');
     });
 
     it('handles $code: prefix in transformer config', () => {
@@ -978,6 +978,322 @@ describe('Bundler', () => {
 
       expect(result).toContain('"fn": () => new Date().getDate()');
       expect(result).not.toContain('$code:');
+    });
+  });
+
+  describe('chain property handling (unified)', () => {
+    describe('source.next', () => {
+      it('includes next property for package-based source', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {
+            http: {
+              package: '@walkeros/server-source-express',
+              code: 'sourceExpress',
+              next: 'validate',
+            },
+          },
+          destinations: {},
+        };
+
+        const explicitCodeImports = new Map([
+          ['@walkeros/server-source-express', new Set(['sourceExpress'])],
+        ]);
+
+        const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+        expect(result).toContain('next: "validate"');
+      });
+
+      it('includes next property for inline source', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {
+            custom: {
+              code: { type: 'test', push: '$code:(e) => e' },
+              next: 'validate',
+            },
+          },
+          destinations: {},
+        };
+
+        const result = buildConfigObject(flowConfig, new Map());
+
+        expect(result).toContain('next: "validate"');
+      });
+
+      it('handles array next property for source', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {
+            http: {
+              package: '@walkeros/server-source-express',
+              code: 'sourceExpress',
+              next: ['validate', 'enrich'],
+            },
+          },
+          destinations: {},
+        };
+
+        const explicitCodeImports = new Map([
+          ['@walkeros/server-source-express', new Set(['sourceExpress'])],
+        ]);
+
+        const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+        expect(result).toContain('next: ["validate","enrich"]');
+      });
+
+      it('omits next property when not specified for source', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {
+            http: {
+              package: '@walkeros/server-source-express',
+              code: 'sourceExpress',
+            },
+          },
+          destinations: {},
+        };
+
+        const explicitCodeImports = new Map([
+          ['@walkeros/server-source-express', new Set(['sourceExpress'])],
+        ]);
+
+        const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+        expect(result).not.toContain('next:');
+      });
+    });
+
+    describe('destination.before', () => {
+      it('includes before property for package-based destination', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {},
+          destinations: {
+            api: {
+              package: '@walkeros/destination-api',
+              code: 'destApi',
+              before: 'redact',
+            },
+          },
+        };
+
+        const explicitCodeImports = new Map([
+          ['@walkeros/destination-api', new Set(['destApi'])],
+        ]);
+
+        const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+        expect(result).toContain('before: "redact"');
+      });
+
+      it('includes before property for inline destination', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {},
+          destinations: {
+            custom: {
+              code: { type: 'test', push: '$code:(e) => e' },
+              before: 'redact',
+            },
+          },
+        };
+
+        const result = buildConfigObject(flowConfig, new Map());
+
+        expect(result).toContain('before: "redact"');
+      });
+
+      it('handles array before property for destination', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {},
+          destinations: {
+            api: {
+              package: '@walkeros/destination-api',
+              code: 'destApi',
+              before: ['redact', 'validate'],
+            },
+          },
+        };
+
+        const explicitCodeImports = new Map([
+          ['@walkeros/destination-api', new Set(['destApi'])],
+        ]);
+
+        const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+        expect(result).toContain('before: ["redact","validate"]');
+      });
+
+      it('omits before property when not specified for destination', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {},
+          destinations: {
+            api: {
+              package: '@walkeros/destination-api',
+              code: 'destApi',
+            },
+          },
+        };
+
+        const explicitCodeImports = new Map([
+          ['@walkeros/destination-api', new Set(['destApi'])],
+        ]);
+
+        const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+        expect(result).not.toContain('before:');
+      });
+    });
+
+    describe('transformer.next', () => {
+      it('includes next property for package-based transformer', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {},
+          destinations: {},
+          transformers: {
+            validate: {
+              package: '@walkeros/transformer-validator',
+              code: 'validator',
+              next: 'enrich',
+            },
+          },
+        };
+
+        const explicitCodeImports = new Map([
+          ['@walkeros/transformer-validator', new Set(['validator'])],
+        ]);
+
+        const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+        expect(result).toContain('next: "enrich"');
+      });
+
+      it('includes next property for inline transformer', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {},
+          destinations: {},
+          transformers: {
+            validate: {
+              code: { type: 'test', push: '$code:(e) => e' },
+              next: 'enrich',
+            },
+          },
+        };
+
+        const result = buildConfigObject(flowConfig, new Map());
+
+        expect(result).toContain('next: "enrich"');
+      });
+
+      it('handles array next property for transformer', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {},
+          destinations: {},
+          transformers: {
+            validate: {
+              package: '@walkeros/transformer-validator',
+              code: 'validator',
+              next: ['enrich', 'redact'],
+            },
+          },
+        };
+
+        const explicitCodeImports = new Map([
+          ['@walkeros/transformer-validator', new Set(['validator'])],
+        ]);
+
+        const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+        expect(result).toContain('next: ["enrich","redact"]');
+      });
+
+      it('omits next property when not specified for transformer', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {},
+          destinations: {},
+          transformers: {
+            validate: {
+              package: '@walkeros/transformer-validator',
+              code: 'validator',
+            },
+          },
+        };
+
+        const explicitCodeImports = new Map([
+          ['@walkeros/transformer-validator', new Set(['validator'])],
+        ]);
+
+        const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+        expect(result).not.toContain('next:');
+      });
+    });
+
+    describe('full chain integration', () => {
+      it('preserves all chain properties in complete flow', () => {
+        const flowConfig: Flow.Config = {
+          server: {},
+          sources: {
+            http: {
+              package: '@walkeros/server-source-express',
+              code: 'sourceExpress',
+              next: 'validate',
+            },
+          },
+          transformers: {
+            validate: {
+              package: '@walkeros/transformer-validator',
+              code: 'validator',
+              next: 'enrich',
+            },
+            enrich: {
+              package: '@walkeros/transformer-enricher',
+              code: 'enricher',
+            },
+            redact: {
+              package: '@walkeros/transformer-redact',
+              code: 'redactor',
+            },
+          },
+          destinations: {
+            api: {
+              package: '@walkeros/destination-api',
+              code: 'destApi',
+              before: 'redact',
+            },
+          },
+        };
+
+        const explicitCodeImports = new Map([
+          ['@walkeros/server-source-express', new Set(['sourceExpress'])],
+          ['@walkeros/transformer-validator', new Set(['validator'])],
+          ['@walkeros/transformer-enricher', new Set(['enricher'])],
+          ['@walkeros/transformer-redact', new Set(['redactor'])],
+          ['@walkeros/destination-api', new Set(['destApi'])],
+        ]);
+
+        const result = buildConfigObject(flowConfig, explicitCodeImports);
+
+        // Source has pre-collector chain
+        expect(result).toMatch(/sources:[\s\S]*next: "validate"/);
+
+        // Transformer has chain link
+        expect(result).toMatch(
+          /transformers:[\s\S]*validate:[\s\S]*next: "enrich"/,
+        );
+
+        // Destination has post-collector chain
+        expect(result).toMatch(/destinations:[\s\S]*before: "redact"/);
+      });
     });
   });
 
@@ -1031,9 +1347,10 @@ describe('Bundler', () => {
 
       const result = buildConfigObject(flowConfig, explicitCodeImports);
 
-      // Sources
+      // Sources with chain property
       expect(result).toContain('sources:');
       expect(result).toContain('code: sourceExpress');
+      expect(result).toContain('next: "fingerprint"');
 
       // Transformers
       expect(result).toContain('transformers:');

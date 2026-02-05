@@ -40,18 +40,52 @@ function validateReference(
 }
 
 /**
- * Generate inline code for sources and transformers.
- * Creates a factory function that returns the instance at runtime.
+ * Generates inline code for any component type (source, destination, transformer).
+ * Handles $code: prefix for push/init functions.
+ *
+ * @param inline - InlineCode object with push, optional init, optional type
+ * @param config - Component configuration
+ * @param env - Optional environment configuration
+ * @param chain - Optional chain value (next for sources/transformers, before for destinations)
+ * @param chainPropertyName - Name of chain property in output ('next' | 'before')
+ * @param isDestination - Whether this is a destination (uses different code structure)
  */
 function generateInlineCode(
   inline: Flow.InlineCode,
   config: object,
   env?: object,
+  chain?: string | string[],
+  chainPropertyName?: 'next' | 'before',
+  isDestination?: boolean,
 ): string {
   const pushFn = inline.push.replace('$code:', '');
   const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
   const typeLine = inline.type ? `type: '${inline.type}',` : '';
+  const chainLine =
+    chain && chainPropertyName
+      ? `${chainPropertyName}: ${JSON.stringify(chain)},`
+      : '';
 
+  // Destinations have a different structure - code is the instance directly
+  if (isDestination) {
+    return `{
+      code: {
+        ${typeLine}
+        config: ${JSON.stringify(config || {})},
+        ${initFn ? `init: ${initFn},` : ''}
+        push: ${pushFn}
+      },
+      config: ${JSON.stringify(config || {})},
+      env: ${JSON.stringify(env || {})}${
+        chain
+          ? `,
+      ${chainLine.slice(0, -1)}`
+          : ''
+      }
+    }`;
+  }
+
+  // Sources and transformers use factory pattern
   return `{
       code: async (context) => ({
         ${typeLine}
@@ -60,32 +94,12 @@ function generateInlineCode(
         push: ${pushFn}
       }),
       config: ${JSON.stringify(config || {})},
-      env: ${JSON.stringify(env || {})}
-    }`;
-}
-
-/**
- * Generate inline code for destinations.
- * Destinations have a different structure - code is the instance directly.
- */
-function generateInlineDestinationCode(
-  inline: Flow.InlineCode,
-  config: object,
-  env?: object,
-): string {
-  const pushFn = inline.push.replace('$code:', '');
-  const initFn = inline.init ? inline.init.replace('$code:', '') : undefined;
-  const typeLine = inline.type ? `type: '${inline.type}',` : '';
-
-  return `{
-      code: {
-        ${typeLine}
-        config: ${JSON.stringify(config || {})},
-        ${initFn ? `init: ${initFn},` : ''}
-        push: ${pushFn}
-      },
-      config: ${JSON.stringify(config || {})},
-      env: ${JSON.stringify(env || {})}
+      env: ${JSON.stringify(env || {})}${
+        chain
+          ? `,
+      ${chainLine.slice(0, -1)}`
+          : ''
+      }
     }`;
 }
 import type { BuildOptions } from '../../types/bundle.js';
@@ -1023,6 +1037,7 @@ export function buildConfigObject(
         code?: string | true;
         config?: unknown;
         env?: unknown;
+        next?: string | string[];
       }
     >;
     destinations?: Record<
@@ -1032,6 +1047,7 @@ export function buildConfigObject(
         code?: string | true;
         config?: unknown;
         env?: unknown;
+        before?: string | string[];
       }
     >;
     transformers?: Record<
@@ -1080,7 +1096,7 @@ export function buildConfigObject(
     .map(([key, source]) => {
       // Handle inline code object
       if (isInlineCode(source.code)) {
-        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object)}`;
+        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, source.next, 'next')}`;
       }
 
       // Handle package-based source
@@ -1101,8 +1117,12 @@ export function buildConfigObject(
       const envStr = source.env
         ? `,\n      env: ${processConfigValue(source.env)}`
         : '';
+      // Include 'next' for source transformer chains
+      const nextStr = source.next
+        ? `,\n      next: ${JSON.stringify(source.next)}`
+        : '';
 
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${nextStr}\n    }`;
     });
 
   // Build destinations (skip deprecated code: true entries)
@@ -1115,7 +1135,7 @@ export function buildConfigObject(
     .map(([key, dest]) => {
       // Handle inline code object
       if (isInlineCode(dest.code)) {
-        return `    ${key}: ${generateInlineDestinationCode(dest.code, (dest.config as object) || {}, dest.env as object)}`;
+        return `    ${key}: ${generateInlineCode(dest.code, (dest.config as object) || {}, dest.env as object, dest.before, 'before', true)}`;
       }
 
       // Handle package-based destination
@@ -1134,8 +1154,12 @@ export function buildConfigObject(
       const envStr = dest.env
         ? `,\n      env: ${processConfigValue(dest.env)}`
         : '';
+      // Include 'before' for destination transformer chains
+      const beforeStr = dest.before
+        ? `,\n      before: ${JSON.stringify(dest.before)}`
+        : '';
 
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${beforeStr}\n    }`;
     });
 
   // Build transformers (skip deprecated code: true entries)
@@ -1148,14 +1172,7 @@ export function buildConfigObject(
     .map(([key, transformer]) => {
       // Handle inline code object
       if (isInlineCode(transformer.code)) {
-        // Merge next into config for runtime if present
-        const configWithNext = transformer.next
-          ? {
-              ...((transformer.config as object) || {}),
-              next: transformer.next,
-            }
-          : (transformer.config as object) || {};
-        return `    ${key}: ${generateInlineCode(transformer.code, configWithNext, transformer.env as object)}`;
+        return `    ${key}: ${generateInlineCode(transformer.code, (transformer.config as object) || {}, transformer.env as object, transformer.next, 'next')}`;
       }
 
       // Handle package-based transformer
@@ -1170,19 +1187,18 @@ export function buildConfigObject(
         codeVar = packageNameToVariable(transformer.package!);
       }
 
-      // Merge next into config for runtime (transformer.config.next)
-      const configWithNext = transformer.next
-        ? { ...((transformer.config as object) || {}), next: transformer.next }
-        : transformer.config;
-
-      const configStr = configWithNext
-        ? processConfigValue(configWithNext)
+      const configStr = transformer.config
+        ? processConfigValue(transformer.config)
         : '{}';
       const envStr = transformer.env
         ? `,\n      env: ${processConfigValue(transformer.env)}`
         : '';
+      // Include 'next' for transformer chains (top-level, consistent with before)
+      const nextStr = transformer.next
+        ? `,\n      next: ${JSON.stringify(transformer.next)}`
+        : '';
 
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${nextStr}\n    }`;
     });
 
   // Build collector

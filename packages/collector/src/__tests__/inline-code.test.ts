@@ -37,7 +37,6 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
       custom: {},
       destinations: {},
       transformers: {},
-      transformerChain: { pre: [], post: {} },
       globals: {},
       group: '',
       hooks: {},

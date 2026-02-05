@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/collector",
   "description": "Unified platform-agnostic collector for walkerOS",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -23,14 +23,14 @@
   },
   "scripts": {
     "build": "tsup --silent",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "clean": "rm -rf .turbo && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "1.2.1"
+    "@walkeros/core": "1.2.2"
   },
   "devDependencies": {},
   "repository": {

@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "build": "tsup --silent",
-    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "clean": "rm -rf .turbo && rm -rf dist",
     "dev": "jest --watchAll --colors",
     "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
     "test": "jest",
@@ -33,10 +33,10 @@
     "ajv": "^8.17.1"
   },
   "peerDependencies": {
-    "@walkeros/core": "^1.2.1"
+    "@walkeros/core": "^1.2.2"
   },
   "devDependencies": {
-    "@walkeros/core": "1.2.1"
+    "@walkeros/core": "1.2.2"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
