@@ -299,7 +299,12 @@ const { elb } = await startFlow({
 - `'INFO'`: Errors + info
 - `'DEBUG'`: Everything (errors + info + debug)
 
-## Related
+## Related Skills
+
+- [walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md) -
+  Destination interface
+- [walkeros-understanding-sources](../walkeros-understanding-sources/SKILL.md) -
+  Source interface
 
 **Key Files:**
 
@@ -325,12 +330,3 @@ const { elb } = await startFlow({
   Missing push logging
 - [packages/server/destinations/aws/src/firehose/push.ts](../../packages/server/destinations/aws/src/firehose/push.ts) -
   Missing push logging
-
-**Skills:**
-
-- [understanding-destinations](../walkeros-understanding-destinations/SKILL.md) -
-  Destination interface
-- [understanding-sources](../walkeros-understanding-sources/SKILL.md) - Source
-  interface
-- [testing-strategy](../walkeros-testing-strategy/SKILL.md) - Testing with
-  mockLogger

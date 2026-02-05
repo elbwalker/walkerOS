@@ -115,18 +115,14 @@ receives events. Each destination can have its own chain. See
 [understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
 for chain details.
 
-## Related
+## Related Skills
 
-**Skills:**
-
-- [understanding-mapping skill](../walkeros-understanding-mapping/SKILL.md) -
+- [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) - How
+  destinations fit in architecture
+- [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md) -
   Configure transformations
-- [understanding-transformers skill](../walkeros-understanding-transformers/SKILL.md) -
-  Transformer chaining to destinations
-- [testing-strategy skill](../walkeros-testing-strategy/SKILL.md) - Test with
-  env pattern
-- [create-destination skill](../walkeros-create-destination/SKILL.md) - Create
-  new destination
+- [walkeros-create-destination](../walkeros-create-destination/SKILL.md) -
+  Create new destination
 
 **Source Files:**
 

@@ -263,14 +263,11 @@ await push(event, { config: testConfig, env: testEnv });
 console.log(calls);
 ```
 
-## Related
+## Related Skills
 
-- [understanding-flow skill](../walkeros-understanding-flow/SKILL.md) - Event
+- [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) - Event
   flow architecture
-- [understanding-destinations skill](../walkeros-understanding-destinations/SKILL.md) -
+- [walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md) -
   Destination interface
-- [mapping-configuration skill](../walkeros-mapping-configuration/SKILL.md) -
+- [walkeros-mapping-configuration](../walkeros-mapping-configuration/SKILL.md) -
   Mapping recipes
-- [testing-strategy skill](../walkeros-testing-strategy/SKILL.md) - Testing with
-  env pattern
-- [← Back to Hub](../../AGENT.md)

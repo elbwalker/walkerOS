@@ -241,8 +241,11 @@ npm run test -- path/to/file.test.ts
 npm run test -- --watch
 ```
 
-## Related
+## Related Skills
+
+- [walkeros-understanding-development](../walkeros-understanding-development/SKILL.md) -
+  Development conventions and workflow
+
+**Reference:**
 
 - [AGENT.md](../../AGENT.md) - Development guide
-- [.claude/skills/testing-strategy/](../../.claude/skills/testing-strategy/) -
-  Claude Code auto-discovery reference

@@ -468,9 +468,11 @@ requirements (build, test, lint, no `any`):
 | Types          | `packages/core/src/types/transformer.ts` |
 | Chaining logic | `packages/collector/src/transformer.ts`  |
 
-## Related
+## Related Skills
 
-- [understanding-transformers skill](../walkeros-understanding-transformers/SKILL.md)
-- [understanding-flow skill](../walkeros-understanding-flow/SKILL.md)
-- [testing-strategy skill](../walkeros-testing-strategy/SKILL.md)
-- [← Back to Hub](../../AGENT.md)
+- [walkeros-understanding-transformers](../walkeros-understanding-transformers/SKILL.md) -
+  Transformer interface and chaining
+- [walkeros-testing-strategy](../walkeros-testing-strategy/SKILL.md) - Testing
+  patterns and env mocking
+- [walkeros-writing-documentation](../walkeros-writing-documentation/SKILL.md) -
+  Documentation standards

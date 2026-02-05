@@ -265,11 +265,13 @@ product: {
 3. **Function errors?** Add null checks: `e.data?.price ?? 0`
 4. **Array empty?** Confirm `nested` array exists and has items
 
-## Reference
+## Related Skills
 
-- [understanding-mapping skill](../walkeros-understanding-mapping/SKILL.md) -
-  Core concepts
+- [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md) -
+  Core mapping concepts
+
+**Reference:**
+
 - [packages/core/src/mapping.ts](../../packages/core/src/mapping.ts) -
   Implementation
 - [apps/quickstart/src/](../../apps/quickstart/src/) - Validated examples
-- [← Back to Hub](../../AGENT.md)

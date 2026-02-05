@@ -251,16 +251,12 @@ push(event, context) {
 | `packages/transformers/`           | Transformer packages  |
 | `packages/transformers/validator/` | Validator transformer |
 
-## Related
+## Related Skills
 
-**Skills:**
-
-- [understanding-flow skill](../walkeros-understanding-flow/SKILL.md) - How
+- [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) - How
   transformers fit in architecture
-- [understanding-events skill](../walkeros-understanding-events/SKILL.md) -
-  Event structure transformers work with
-- [create-transformer skill](../walkeros-create-transformer/SKILL.md) - Create
-  new transformer
+- [walkeros-create-transformer](../walkeros-create-transformer/SKILL.md) -
+  Create new transformer
 
 **Source Files:**
 

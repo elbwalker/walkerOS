@@ -196,18 +196,14 @@ transformers: {
   transformers
 - `destination.before` → starts post-collector chain per destination
 
-## Related
+## Related Skills
 
-**Skills:**
-
-- [understanding-events skill](../walkeros-understanding-events/SKILL.md) -
+- [walkeros-understanding-events](../walkeros-understanding-events/SKILL.md) -
   Event model
-- [understanding-transformers skill](../walkeros-understanding-transformers/SKILL.md) -
-  Transformer interface and chaining
-- [understanding-destinations skill](../walkeros-understanding-destinations/SKILL.md) -
-  Destination interface
-- [understanding-sources skill](../walkeros-understanding-sources/SKILL.md) -
+- [walkeros-understanding-sources](../walkeros-understanding-sources/SKILL.md) -
   Source interface
+- [walkeros-understanding-destinations](../walkeros-understanding-destinations/SKILL.md) -
+  Destination interface
 
 **Package READMEs:**
 

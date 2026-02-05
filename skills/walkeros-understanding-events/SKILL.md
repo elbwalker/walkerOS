@@ -157,12 +157,12 @@ await elb(
 );
 ```
 
-## Related
+## Related Skills
 
-**Skills:**
-
-- [understanding-mapping skill](../walkeros-understanding-mapping/SKILL.md) -
+- [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md) -
   Transform events for destinations
+- [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) - Data
+  flow architecture
 
 **Source Files:**
 

@@ -103,9 +103,13 @@ Quick reference:
 - Test first, watch it fail
 - Verify before claiming complete
 
-## Related
+## Related Skills
 
-- [testing-strategy skill](../walkeros-testing-strategy/SKILL.md)
+- [walkeros-testing-strategy](../walkeros-testing-strategy/SKILL.md) - Testing
+  patterns and env mocking
+
+**Source Files:**
+
 - [packages/core/](../../packages/core/) - Core utilities
 - [packages/config/](../../packages/config/) - Shared configuration
 - [apps/quickstart/](../../apps/quickstart/) - Validated examples
