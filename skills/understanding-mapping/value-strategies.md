@@ -21,14 +21,14 @@ Extract nested property from event:
 Extract with static fallback if undefined:
 
 ```typescript
-{ key: 'data.currency', value: 'USD' }  // Use USD if missing
+{ key: 'data.currency', value: 'EUR' }  // Use EUR if missing
 { key: 'data.sku', value: 'unknown' }   // Fallback to "unknown"
 ```
 
 **JSON:**
 
 ```json
-{ "key": "data.currency", "value": "USD" }
+{ "key": "data.currency", "value": "EUR" }
 ```
 
 ## Static Value
@@ -37,7 +37,7 @@ Fixed value regardless of event:
 
 ```typescript
 {
-  value: 'USD';
+  value: 'EUR';
 }
 {
   value: 99.99;
@@ -77,7 +77,7 @@ Transform to new object structure:
     item_id: 'data.id',                              // Key extraction
     item_name: 'data.name',
     price: 'data.price',
-    currency: { value: 'USD' },                      // Static value
+    currency: { value: 'EUR' },                      // Static value
     category: { fn: (e) => e.nested?.[0]?.data?.name }, // Function
     discount: { key: 'data.discount', value: 0 },    // Key with fallback
   }
@@ -99,7 +99,7 @@ Process arrays (e.g., nested entities):
         quantity: 'data.quantity',
       },
     },
-  ];
+  ],
 }
 
 // Loop with "this" - wrap single item as array
@@ -112,7 +112,7 @@ Process arrays (e.g., nested entities):
         item_name: 'data.name',
       },
     },
-  ];
+  ],
 }
 ```
 
@@ -131,7 +131,7 @@ Filter items during loop:
         quantity: 'data.quantity',
       },
     },
-  ];
+  ],
 }
 ```
 

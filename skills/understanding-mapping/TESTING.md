@@ -30,13 +30,17 @@ events with nested product items"
 - Would need to search codebase for examples
 - May produce invalid mapping structure
 
-**Skill Coverage:** | Feature Needed | Covered in Skill | Location |
-|----------------|------------------|----------| | Event matching
-(entity.action) | ✅ | Event Matching section | | `name` override | ✅ | Rule
-Features Cheatsheet | | Object `map` transform | ✅ | Essential Patterns | |
-Array `loop` for nested | ✅ | Essential Patterns | | `this` for single item |
-✅ | Essential Patterns | | Key with fallback | ✅ | Essential Patterns | |
-Static value | ✅ | Essential Patterns |
+**Skill Coverage:**
+
+| Feature Needed                 | Covered in Skill | Location                 |
+| ------------------------------ | ---------------- | ------------------------ |
+| Event matching (entity.action) | ✅               | Event Matching section   |
+| `name` override                | ✅               | Rule Features Cheatsheet |
+| Object `map` transform         | ✅               | Essential Patterns       |
+| Array `loop` for nested        | ✅               | Essential Patterns       |
+| `this` for single item         | ✅               | Essential Patterns       |
+| Key with fallback              | ✅               | Essential Patterns       |
+| Static value                   | ✅               | Essential Patterns       |
 
 **Result:** ✅ PASS - Skill provides all necessary patterns
 
@@ -54,11 +58,14 @@ granted, with fallback values if not"
 - Would likely implement manual consent checking in `fn`
 - May not know about `key` + `value` fallback pattern combined with consent
 
-**Skill Coverage:** | Feature Needed | Covered in Skill | Location |
-|----------------|------------------|----------| | Consent-gated extraction | ✅
-| Essential Patterns | | Key with fallback | ✅ | Essential Patterns | |
-Combining consent + fallback | ✅ | ValueConfig interface shows both | | Policy
-with consent | ✅ | Policy with Consent section |
+**Skill Coverage:**
+
+| Feature Needed               | Covered in Skill | Location                         |
+| ---------------------------- | ---------------- | -------------------------------- |
+| Consent-gated extraction     | ✅               | Essential Patterns               |
+| Key with fallback            | ✅               | Essential Patterns               |
+| Combining consent + fallback | ✅               | ValueConfig interface shows both |
+| Policy with consent          | ✅               | Policy with Consent section      |
 
 **Result:** ✅ PASS - Skill shows consent pattern and fallback pattern;
 interface shows they can combine
@@ -77,11 +84,14 @@ different mappings for high-value orders (>$100) vs regular orders"
 - Would likely try to implement batching manually
 - May not know about condition functions in rule arrays
 
-**Skill Coverage:** | Feature Needed | Covered in Skill | Location |
-|----------------|------------------|----------| | `batch` property | ✅ | Rule
-Features Cheatsheet + section | | Conditional mapping (array) | ✅ | Event
-Matching > Conditional Mapping | | `condition` function syntax | ✅ | Code
-example with $code: | | JSON $code: prefix | ✅ | $code: Prefix section |
+**Skill Coverage:**
+
+| Feature Needed              | Covered in Skill | Location                             |
+| --------------------------- | ---------------- | ------------------------------------ |
+| `batch` property            | ✅               | Rule Features Cheatsheet + section   |
+| Conditional mapping (array) | ✅               | Event Matching > Conditional Mapping |
+| `condition` function syntax | ✅               | Code example with $code:             |
+| JSON $code: prefix          | ✅               | $code: Prefix section                |
 
 **Result:** ✅ PASS - All features documented
 
@@ -98,11 +108,15 @@ to cents and validates email format"
 - Would likely produce invalid JSON with raw functions
 - May not know CLI bundler processes these strings
 
-**Skill Coverage:** | Feature Needed | Covered in Skill | Location |
-|----------------|------------------|----------| | `$code:` prefix syntax | ✅ |
-$code: Prefix section | | Function in JSON | ✅ | Multiple examples throughout |
-| `fn` transform | ✅ | Essential Patterns | | `validate` function | ✅ |
-Essential Patterns | | Function signatures | ✅ | Function Signatures table |
+**Skill Coverage:**
+
+| Feature Needed         | Covered in Skill | Location                     |
+| ---------------------- | ---------------- | ---------------------------- |
+| `$code:` prefix syntax | ✅               | $code: Prefix section        |
+| Function in JSON       | ✅               | Multiple examples throughout |
+| `fn` transform         | ✅               | Essential Patterns           |
+| `validate` function    | ✅               | Essential Patterns           |
+| Function signatures    | ✅               | Function Signatures table    |
 
 **Result:** ✅ PASS - Critical $code: prefix is well documented
 
@@ -120,12 +134,15 @@ rules apply"
 - May not understand processing order (policy → mapping)
 - Would miss config-level vs event-level distinction
 
-**Skill Coverage:** | Feature Needed | Covered in Skill | Location |
-|----------------|------------------|----------| | Policy concept | ✅ | Policy
-section | | Config-level policy | ✅ | Config-Level Policy subsection | |
-Event-level policy | ✅ | Event-Level Policy subsection | | Processing order |
-✅ | processEventMapping Flow | | Policy with consent | ✅ | Policy with Consent
-subsection |
+**Skill Coverage:**
+
+| Feature Needed      | Covered in Skill | Location                       |
+| ------------------- | ---------------- | ------------------------------ |
+| Policy concept      | ✅               | Policy section                 |
+| Config-level policy | ✅               | Config-Level Policy subsection |
+| Event-level policy  | ✅               | Event-Level Policy subsection  |
+| Processing order    | ✅               | processEventMapping Flow       |
+| Policy with consent | ✅               | Policy with Consent subsection |
 
 **Result:** ✅ PASS - Policy is thoroughly documented
 
