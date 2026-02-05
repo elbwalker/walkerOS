@@ -5,6 +5,7 @@ import { bundleCommand } from './commands/bundle/index.js';
 import { simulateCommand } from './commands/simulate/index.js';
 import { pushCommand } from './commands/push/index.js';
 import { runCommand } from './commands/run/index.js';
+import { validateCommand } from './commands/validate/index.js';
 import {
   registerCacheCommand,
   registerCleanCommand,
@@ -19,6 +20,7 @@ export { bundleCommand, simulateCommand, pushCommand, runCommand };
 export { bundle } from './commands/bundle/index.js';
 export { simulate } from './commands/simulate/index.js';
 export { run } from './commands/run/index.js';
+export { validate } from './commands/validate/index.js';
 
 // === Types ===
 // Export types for programmatic usage
@@ -38,6 +40,12 @@ export type {
   RunResult,
 } from './commands/run/index.js';
 export type { GlobalOptions } from './types/global.js';
+export type {
+  ValidateResult,
+  ValidationType,
+  ValidationError,
+  ValidationWarning,
+} from './commands/validate/types.js';
 
 const program = new Command();
 
@@ -132,6 +140,29 @@ program
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,
+    });
+  });
+
+// Validate command
+program
+  .command('validate <type> [input]')
+  .description('Validate event, flow, or mapping configuration')
+  .option('--flow <name>', 'flow name for multi-flow configs')
+  .option('--config <path>', 'path to flow.json for mapping validation')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
+  .option('--strict', 'fail on warnings')
+  .action(async (type, input, options) => {
+    await validateCommand({
+      type,
+      input,
+      flow: options.flow,
+      config: options.config,
+      json: options.json,
+      verbose: options.verbose,
+      silent: options.silent,
+      strict: options.strict,
     });
   });
 
