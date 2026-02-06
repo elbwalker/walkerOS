@@ -1,0 +1,57 @@
+{
+  "name": "@walkeros/mcp",
+  "version": "0.1.0",
+  "description": "MCP server for walkerOS - CLI tools and package registry access",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "walkeros-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist/**",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "lint": "tsc --noEmit && eslint \"src/**/*.ts*\"",
+    "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "peerDependencies": {
+    "@walkeros/cli": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@walkeros/config": "*",
+    "vitest": "^1.0.0"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/mcp"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "walkeros",
+    "mcp",
+    "model-context-protocol",
+    "analytics",
+    "event-tracking"
+  ]
+}
