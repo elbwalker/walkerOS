@@ -148,8 +148,9 @@ transformers: {
 }
 ```
 
-Note: In flow.json, `next` is at the reference level. The CLI bundler moves it
-into `config.next` for runtime.
+Note: In flow.json, `next` is at the reference level. The CLI bundler
+automatically moves it into `config.next` for runtime - you don't need to handle
+this yourself.
 
 ### Post-Collector Chain
 

@@ -348,10 +348,9 @@ references
 
 ---
 
-## Related
+## Related Skills
 
-- [← Back to Hub](../../AGENT.md)
-
-```
-
-```
+- [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) - Data
+  flow architecture
+- [walkeros-understanding-events](../walkeros-understanding-events/SKILL.md) -
+  Event structure and naming

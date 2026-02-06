@@ -52,7 +52,9 @@ async function push(event, context) {
 
 ### Testing with env
 
-**REQUIRED SKILL:** See `testing-strategy` for full testing patterns.
+**REQUIRED SKILL:** See
+[testing-strategy](../walkeros-testing-strategy/SKILL.md) for full testing
+patterns.
 
 ```typescript
 import { mockEnv } from '@walkeros/core';
