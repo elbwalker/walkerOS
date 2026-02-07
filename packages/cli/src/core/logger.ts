@@ -2,7 +2,7 @@
 import chalk from 'chalk';
 import type { GlobalOptions } from '../types/global.js';
 
-const BRAND_COLOR = '#01b5e2';
+export const BRAND_COLOR = '#01b5e2';
 
 export interface LoggerOptions {
   verbose?: boolean;

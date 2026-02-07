@@ -2,6 +2,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { registerBundleTool } from './tools/bundle.js';
+import { registerSimulateTool } from './tools/simulate.js';
 import { registerValidateTool } from './tools/validate.js';
 
 const server = new McpServer({
@@ -11,6 +12,7 @@ const server = new McpServer({
 
 // Register tools
 registerBundleTool(server);
+registerSimulateTool(server);
 registerValidateTool(server);
 
 async function main() {

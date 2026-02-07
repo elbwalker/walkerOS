@@ -1,30 +1,21 @@
-import { z } from 'zod/v4';
+import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 export function registerBundleTool(server: McpServer) {
   server.registerTool(
     'bundle',
     {
+      title: 'Bundle',
       description:
-        'Bundle a walkerOS flow configuration into deployable JavaScript',
-      inputSchema: {
-        configPath: z
-          .string()
-          .min(1)
-          .describe('Path to flow configuration file (JSON or JavaScript)'),
-        flow: z
-          .string()
-          .optional()
-          .describe('Flow name for multi-flow configs'),
-        stats: z
-          .boolean()
-          .optional()
-          .default(true)
-          .describe('Return bundle statistics'),
-        output: z
-          .string()
-          .optional()
-          .describe('Output file path (defaults to config-defined)'),
+        'Bundle a walkerOS flow configuration into deployable JavaScript. ' +
+        'Resolves all destinations, sources, and transformers, then outputs ' +
+        'a tree-shaken production bundle. Returns bundle statistics.',
+      inputSchema: schemas.BundleInputShape,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
       },
     },
     async ({ configPath, flow, stats, output }) => {

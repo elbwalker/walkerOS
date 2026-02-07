@@ -34,16 +34,25 @@ export const SimulateOptionsSchema = z.object({
 export type SimulateOptions = z.infer<typeof SimulateOptionsSchema>;
 
 /**
+ * Raw shape for MCP SDK compatibility (ZodRawShapeCompat).
+ *
+ * @remarks
+ * MCP SDK's registerTool expects raw shapes (Record<string, ZodType>)
+ * rather than ZodObject instances. Define shape first, then wrap.
+ */
+export const SimulateInputShape = {
+  configPath: FilePathSchema.describe('Path to flow configuration file'),
+  event: z.string().min(1).describe('Event as JSON string, file path, or URL'),
+  flow: z.string().optional().describe('Flow name for multi-flow configs'),
+  platform: PlatformSchema.optional().describe('Override platform detection'),
+};
+
+/**
  * Simulate input schema for MCP tools.
  *
  * @remarks
  * Full input schema including config path, event, and options.
  */
-export const SimulateInputSchema = z.object({
-  configPath: FilePathSchema.describe('Path to flow configuration file'),
-  event: z.string().min(1).describe('Event as JSON string, file path, or URL'),
-  flow: z.string().optional().describe('Flow name for multi-flow configs'),
-  platform: PlatformSchema.optional().describe('Override platform detection'),
-});
+export const SimulateInputSchema = z.object(SimulateInputShape);
 
 export type SimulateInput = z.infer<typeof SimulateInputSchema>;

@@ -28,10 +28,11 @@
     "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.26.0"
   },
   "peerDependencies": {
-    "@walkeros/cli": "^1.2.0"
+    "@walkeros/cli": "^1.2.0",
+    "zod": "^4.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

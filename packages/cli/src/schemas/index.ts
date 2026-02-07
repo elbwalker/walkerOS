@@ -35,6 +35,7 @@ export {
 export {
   PlatformSchema,
   SimulateOptionsSchema,
+  SimulateInputShape,
   SimulateInputSchema,
   type Platform,
   type SimulateOptions,

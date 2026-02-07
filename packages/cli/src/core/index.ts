@@ -7,3 +7,4 @@ export * from './asset-resolver.js';
 export * from './utils.js';
 export * from './local-packages.js';
 export * from './input-detector.js';
+export { getToken, getAuthHeaders, authenticatedFetch } from './auth.js';

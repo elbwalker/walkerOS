@@ -1,16 +1,16 @@
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-export function registerValidateTool(server: McpServer) {
+export function registerSimulateTool(server: McpServer) {
   server.registerTool(
-    'validate',
+    'simulate',
     {
-      title: 'Validate',
+      title: 'Simulate',
       description:
-        'Validate walkerOS events, flow configurations, or mapping rules. ' +
-        'Accepts JSON strings, file paths, or URLs as input. ' +
-        'Returns validation results with errors, warnings, and details.',
-      inputSchema: schemas.ValidateInputShape,
+        'Simulate events through a walkerOS flow without making real API calls. ' +
+        'Processes events through the full pipeline including transformers and destinations, ' +
+        'returning detailed results with logs and usage statistics.',
+      inputSchema: schemas.SimulateInputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -18,22 +18,23 @@ export function registerValidateTool(server: McpServer) {
         openWorldHint: false,
       },
     },
-    async ({ type, input, flow }) => {
+    async ({ configPath, event, flow }) => {
       try {
-        // Dynamic import to handle peer dependency
-        const { validate } = await import('@walkeros/cli');
+        const { simulate } = await import('@walkeros/cli');
 
-        // Parse input if it looks like JSON
-        let parsedInput: unknown = input;
-        if (input.startsWith('{') || input.startsWith('[')) {
+        // Parse event if JSON string
+        let parsedEvent: unknown = event;
+        if (event.startsWith('{') || event.startsWith('[')) {
           try {
-            parsedInput = JSON.parse(input);
+            parsedEvent = JSON.parse(event);
           } catch {
             // Keep as string (file path or URL)
           }
         }
 
-        const result = await validate(type, parsedInput, { flow });
+        const result = await simulate(configPath, parsedEvent, {
+          json: true,
+        });
 
         return {
           content: [
@@ -49,7 +50,7 @@ export function registerValidateTool(server: McpServer) {
             {
               type: 'text' as const,
               text: JSON.stringify({
-                valid: false,
+                success: false,
                 error: error instanceof Error ? error.message : 'Unknown error',
               }),
             },

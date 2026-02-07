@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import chalk from 'chalk';
 import { VERSION } from './version.js';
+import { printBanner } from './core/banner.js';
 import { bundleCommand } from './commands/bundle/index.js';
 import { simulateCommand } from './commands/simulate/index.js';
 import { pushCommand } from './commands/push/index.js';
@@ -10,6 +10,7 @@ import {
   registerCacheCommand,
   registerCleanCommand,
 } from './commands/cache.js';
+import { configPullCommand } from './commands/config/index.js';
 
 // === CLI Commands ===
 // Export CLI command handlers
@@ -21,6 +22,8 @@ export { bundle } from './commands/bundle/index.js';
 export { simulate } from './commands/simulate/index.js';
 export { run } from './commands/run/index.js';
 export { validate } from './commands/validate/index.js';
+export { getToken, getAuthHeaders, authenticatedFetch } from './core/auth.js';
+export { configPull } from './commands/config/index.js';
 
 // === Types ===
 // Export types for programmatic usage
@@ -59,8 +62,7 @@ program.hook('preAction', (thisCommand, actionCommand) => {
   const options = actionCommand.opts();
   // Skip banner for --silent, --json, or --help flags
   if (!options.silent && !options.json) {
-    // eslint-disable-next-line no-console -- CLI banner is intentional
-    console.log(`${chalk.hex('#01b5e2')('walkerOS')} v${VERSION}`);
+    printBanner(VERSION);
   }
 });
 
@@ -211,6 +213,28 @@ runCmd
       host: options.host,
       serveName: options.name,
       servePath: options.path,
+      json: options.json,
+      verbose: options.verbose,
+      silent: options.silent,
+    });
+  });
+
+// Config command group
+const configCmd = program
+  .command('config')
+  .description('Manage walkerOS configurations');
+
+configCmd
+  .command('pull <config-id>')
+  .description('Pull a configuration from walkerOS app')
+  .option('-o, --output <path>', 'output file path')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
+  .action(async (configId, options) => {
+    await configPullCommand({
+      configId,
+      output: options.output,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,

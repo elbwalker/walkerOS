@@ -6,6 +6,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { getErrorMessage } from '../core/index.js';
 import { getTmpPath } from '../core/tmp.js';
+import { authenticatedFetch } from '../core/auth.js';
 
 /**
  * Check if a string is a valid URL
@@ -41,7 +42,7 @@ export async function downloadFromUrl(url: string): Promise<string> {
   }
 
   try {
-    const response = await fetch(url);
+    const response = await authenticatedFetch(url);
 
     if (!response.ok) {
       throw new Error(
