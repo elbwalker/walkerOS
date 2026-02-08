@@ -146,6 +146,37 @@ describe('DataLayer Source - Integration', () => {
     expect(collectedEvents[3].name).toBe('dataLayer new_event');
   });
 
+  test('replays historical events after run', async () => {
+    // Pre-populate dataLayer BEFORE source init
+    window.dataLayer = [];
+    getDataLayer().push({ event: 'early_event', value: 'before_init' });
+    getDataLayer().push(['consent', 'default', { ad_storage: 'denied' }]);
+
+    // Create a fresh collector that hasn't run yet
+    const { collector: freshCollector, elb } = await startFlow({ run: false });
+    const freshEvents: WalkerOS.Event[] = [];
+    freshCollector.push = createMockPush(freshEvents);
+
+    // Init source (should NOT process existing events yet)
+    const source = await createDataLayerSource(freshCollector);
+
+    // Register source on collector so on-run handler fires
+    freshCollector.sources['dataLayer'] = source;
+
+    // No events should have been collected yet (allowed=false)
+    expect(freshEvents).toHaveLength(0);
+
+    // Now run the collector
+    await elb('walker run');
+
+    // Historical events should now be processed
+    expect(freshEvents.length).toBeGreaterThanOrEqual(2);
+    expect(freshEvents.some((e) => e.name.includes('early_event'))).toBe(true);
+    expect(freshEvents.some((e) => e.name.includes('consent default'))).toBe(
+      true,
+    );
+  });
+
   test('error handling and robustness', async () => {
     await createDataLayerSource(collector, {
       settings: {

@@ -1,4 +1,4 @@
-import type { Source } from '@walkeros/core';
+import type { Source, On } from '@walkeros/core';
 import type { Types } from './types';
 import { interceptDataLayer, processExistingEvents } from './interceptor';
 
@@ -28,15 +28,37 @@ export const sourceDataLayer: Source.Init<Types> = async (context) => {
     settings,
   };
 
+  let pendingReplayCount = 0;
+
   if (envWindow) {
-    processExistingEvents(elb, fullConfig);
+    // Snapshot how many items exist before interception
+    const dataLayerName = settings.name || 'dataLayer';
+    const dl = (envWindow as Record<string, unknown>)[dataLayerName];
+    pendingReplayCount = Array.isArray(dl) ? dl.length : 0;
+
+    // Set up interceptor immediately so no new events are missed
     interceptDataLayer(elb, fullConfig);
+
+    if (context.collector.allowed && pendingReplayCount > 0) {
+      // Collector already ran — process existing events immediately
+      processExistingEvents(elb, fullConfig, pendingReplayCount);
+      pendingReplayCount = 0;
+    }
   }
+
+  // Handle on-run to replay existing events (when source inits before run)
+  const handleEvent = async (event: On.Types) => {
+    if (event === 'run' && envWindow && pendingReplayCount > 0) {
+      processExistingEvents(elb, fullConfig, pendingReplayCount);
+      pendingReplayCount = 0;
+    }
+  };
 
   return {
     type: 'dataLayer',
     config: fullConfig,
     push: elb,
+    on: handleEvent,
     destroy: async () => {
       // Cleanup: restore original dataLayer.push if possible
       const dataLayerName = settings.name || 'dataLayer';
