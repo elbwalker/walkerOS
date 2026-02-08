@@ -192,6 +192,42 @@ describe('Destination', () => {
 
   test('skip on denied consent', async () => {});
 
+  test('preserves denied events in queue when some events are allowed', async () => {
+    // Destination requires marketing consent
+    const destinationWithConsent = createDestination({
+      config: { consent: { marketing: true } },
+    });
+
+    // Collector does NOT have marketing consent
+    const collector = createWalkerjs({
+      consent: { analytics: true },
+      destinations: { dest: destinationWithConsent },
+    });
+
+    // Pre-queue an event (will be denied: collector lacks marketing,
+    // and queue events get consent overwritten with collector state)
+    const deniedEvent = clone(event);
+    deniedEvent.name = 'denied action';
+    deniedEvent.entity = 'denied';
+    deniedEvent.action = 'action';
+    destinationWithConsent.queuePush = [deniedEvent];
+
+    // Push a new event that carries individual marketing consent.
+    // New events are cloned (not consent-overwritten), so this one
+    // passes the consent check via individual consent.
+    const allowedEvent = clone(event);
+    allowedEvent.consent = { marketing: true };
+
+    await pushToDestinations(collector, allowedEvent);
+
+    // The allowed (new) event should have been pushed
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    // The denied (queued) event should still be in the queue
+    expect(destinationWithConsent.queuePush).toHaveLength(1);
+    expect(destinationWithConsent.queuePush[0].name).toBe('denied action');
+  });
+
   describe('destination on method', () => {
     let mockOnMethod: jest.Mock;
 

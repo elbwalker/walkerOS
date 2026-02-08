@@ -178,7 +178,7 @@ export async function pushToDestinations(
       });
 
       // Add skipped events back to the queue
-      destination.queuePush.concat(skippedEvents);
+      destination.queuePush.push(...skippedEvents);
 
       // Execution shall not pass if no events are allowed
       if (!allowedEvents.length) {
