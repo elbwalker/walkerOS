@@ -26,6 +26,7 @@
     "test": "jest",
     "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
     "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage",
+    "prepublishOnly": "npm run build",
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
@@ -45,6 +46,9 @@
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
   "engines": {
     "node": ">=18.0.0"
   },
@@ -54,5 +58,8 @@
     "model-context-protocol",
     "analytics",
     "event-tracking"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

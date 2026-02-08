@@ -110,7 +110,7 @@ export function registerFlowTools(server: McpServer) {
       inputSchema: {
         name: z.string().min(1).max(255).describe('Flow name'),
         content: z
-          .record(z.unknown())
+          .record(z.string(), z.unknown())
           .describe('Flow.Setup JSON content (must have version: 1)'),
         projectId: z
           .string()
@@ -149,7 +149,7 @@ export function registerFlowTools(server: McpServer) {
         flowId: z.string().describe('Flow ID (cfg_...)'),
         name: z.string().min(1).max(255).optional().describe('New flow name'),
         content: z
-          .record(z.unknown())
+          .record(z.string(), z.unknown())
           .optional()
           .describe('New Flow.Setup JSON content'),
         projectId: z

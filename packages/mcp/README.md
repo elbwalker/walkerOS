@@ -54,7 +54,7 @@ need `WALKEROS_PROJECT_ID`, or you can pass `projectId` as a parameter.
 }
 ```
 
-## Available Tools (19)
+## Available Tools (20)
 
 ### Local CLI Tools
 
@@ -82,6 +82,16 @@ Simulate events through a walkerOS flow without making real API calls.
 - `configPath` (required): Path to the flow configuration file
 - `event` (required): JSON string representing the event to simulate
 - `flow` (optional): Flow name to simulate through
+- `platform` (optional): `"web"` | `"server"` (default: `"web"`)
+
+#### `push`
+
+Push a real event through a walkerOS flow to actual destinations. WARNING: This
+makes real API calls to real endpoints.
+
+- `configPath` (required): Path to the flow configuration file
+- `event` (required): JSON string representing the event to push
+- `flow` (optional): Flow name for multi-flow configs
 - `platform` (optional): `"web"` | `"server"` (default: `"web"`)
 
 ### Auth

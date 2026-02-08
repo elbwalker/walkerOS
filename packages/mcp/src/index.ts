@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 // Local CLI tools
@@ -15,7 +14,7 @@ import { registerBundleRemoteTool } from './tools/bundle-remote.js';
 
 const server = new McpServer({
   name: 'walkeros',
-  version: '0.2.0',
+  version: '0.1.0',
 });
 
 // Local CLI tools

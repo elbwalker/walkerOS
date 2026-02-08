@@ -31,7 +31,7 @@ export function registerBundleTool(server: McpServer) {
           buildOverrides: output ? { output } : undefined,
         });
 
-        const output_ = (result as Record<string, unknown>) ?? {
+        const output_ = (result as unknown as Record<string, unknown>) ?? {
           success: true,
           message: 'Bundle created',
         };

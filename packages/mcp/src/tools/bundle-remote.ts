@@ -12,7 +12,7 @@ export function registerBundleRemoteTool(server: McpServer) {
         'Sends config JSON and receives a compiled .mjs bundle. No local build tools needed.',
       inputSchema: {
         content: z
-          .record(z.unknown())
+          .record(z.string(), z.unknown())
           .describe('Flow.Setup JSON content (must have version: 1)'),
       },
       annotations: {

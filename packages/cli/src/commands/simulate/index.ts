@@ -2,6 +2,7 @@ import { simulateCore, formatSimulationResult } from './simulator.js';
 import { createCommandLogger, getErrorMessage } from '../../core/index.js';
 import { loadJsonFromSource } from '../../config/index.js';
 import type { SimulateCommandOptions } from './types.js';
+import type { SimulateOptions, Platform } from '../../schemas/simulate.js';
 
 /**
  * CLI command handler for simulate command
@@ -99,13 +100,7 @@ export async function simulateCommand(
 export async function simulate(
   configOrPath: string | unknown,
   event: unknown,
-  options: {
-    silent?: boolean;
-    verbose?: boolean;
-    json?: boolean;
-    flow?: string;
-    platform?: string;
-  } = {},
+  options: SimulateOptions & { flow?: string; platform?: Platform } = {},
 ): Promise<import('./types').SimulationResult> {
   // simulateCore currently only accepts file paths, so we need to handle that
   // For now, if configOrPath is not a string, throw an error with guidance

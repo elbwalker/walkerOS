@@ -18,6 +18,7 @@ import {
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
 import type { PushCommandOptions, PushResult } from './types.js';
+import type { PushOptions } from '../../schemas/push.js';
 
 /**
  * Core push logic without CLI concerns (no process.exit, no output formatting)
@@ -221,13 +222,7 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
 export async function push(
   configOrPath: string | unknown,
   event: unknown,
-  options: {
-    silent?: boolean;
-    verbose?: boolean;
-    json?: boolean;
-    flow?: string;
-    platform?: string;
-  } = {},
+  options: PushOptions & { flow?: string; platform?: Platform } = {},
 ): Promise<PushResult> {
   if (typeof configOrPath !== 'string') {
     throw new Error(

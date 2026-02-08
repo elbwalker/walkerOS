@@ -47,7 +47,7 @@ export function registerPushTool(server: McpServer) {
               text: JSON.stringify(result, null, 2),
             },
           ],
-          structuredContent: result as Record<string, unknown>,
+          structuredContent: result as unknown as Record<string, unknown>,
         };
       } catch (error) {
         return {
