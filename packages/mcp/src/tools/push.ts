@@ -20,7 +20,7 @@ export function registerPushTool(server: McpServer) {
         openWorldHint: true,
       },
     },
-    async ({ configPath, event, flow }) => {
+    async ({ configPath, event, flow, platform }) => {
       try {
         const { push } = await import('@walkeros/cli');
 
@@ -34,7 +34,11 @@ export function registerPushTool(server: McpServer) {
           }
         }
 
-        const result = await push(configPath, parsedEvent, { json: true });
+        const result = await push(configPath, parsedEvent, {
+          json: true,
+          flow,
+          platform,
+        });
 
         return {
           content: [

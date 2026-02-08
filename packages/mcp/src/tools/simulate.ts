@@ -20,7 +20,7 @@ export function registerSimulateTool(server: McpServer) {
         openWorldHint: false,
       },
     },
-    async ({ configPath, event, flow }) => {
+    async ({ configPath, event, flow, platform }) => {
       try {
         const { simulate } = await import('@walkeros/cli');
 
@@ -36,6 +36,8 @@ export function registerSimulateTool(server: McpServer) {
 
         const result = await simulate(configPath, parsedEvent, {
           json: true,
+          flow,
+          platform,
         });
 
         return {

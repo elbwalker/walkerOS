@@ -72,7 +72,7 @@ describe('simulate tool', () => {
     expect(mockSimulate).toHaveBeenCalledWith(
       './flow.json',
       { name: 'page view', data: { title: 'Home' } },
-      { json: true },
+      { json: true, flow: undefined, platform: undefined },
     );
     expect(result.content[0].type).toBe('text');
     expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
@@ -92,7 +92,7 @@ describe('simulate tool', () => {
     expect(mockSimulate).toHaveBeenCalledWith(
       './flow.json',
       '/path/to/event.json',
-      { json: true },
+      { json: true, flow: undefined, platform: undefined },
     );
   });
 
@@ -109,7 +109,7 @@ describe('simulate tool', () => {
     expect(mockSimulate).toHaveBeenCalledWith(
       './flow.json',
       [{ name: 'page view' }, { name: 'click button' }],
-      { json: true },
+      { json: true, flow: undefined, platform: undefined },
     );
   });
 
@@ -160,7 +160,45 @@ describe('simulate tool', () => {
 
     expect(mockSimulate).toHaveBeenCalledWith('./flow.json', '{broken json', {
       json: true,
+      flow: undefined,
+      platform: undefined,
     });
+  });
+
+  it('passes flow parameter to CLI simulate', async () => {
+    mockSimulate.mockResolvedValue({ success: true });
+
+    const tool = server.getTool('simulate');
+    await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: 'production',
+      platform: undefined,
+    });
+
+    expect(mockSimulate).toHaveBeenCalledWith(
+      './flow.json',
+      { name: 'page view' },
+      { json: true, flow: 'production', platform: undefined },
+    );
+  });
+
+  it('passes platform parameter to CLI simulate', async () => {
+    mockSimulate.mockResolvedValue({ success: true });
+
+    const tool = server.getTool('simulate');
+    await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      platform: 'server',
+    });
+
+    expect(mockSimulate).toHaveBeenCalledWith(
+      './flow.json',
+      { name: 'page view' },
+      { json: true, flow: undefined, platform: 'server' },
+    );
   });
 
   it('handles non-Error exceptions', async () => {

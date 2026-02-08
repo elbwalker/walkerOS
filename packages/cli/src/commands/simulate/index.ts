@@ -103,6 +103,8 @@ export async function simulate(
     silent?: boolean;
     verbose?: boolean;
     json?: boolean;
+    flow?: string;
+    platform?: string;
   } = {},
 ): Promise<import('./types').SimulationResult> {
   // simulateCore currently only accepts file paths, so we need to handle that
@@ -119,6 +121,8 @@ export async function simulate(
   return await simulateCore(configOrPath, event, {
     json: options.json ?? false,
     verbose: options.verbose ?? false,
+    flow: options.flow,
+    platform: options.platform,
   });
 }
 

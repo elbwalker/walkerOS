@@ -225,6 +225,8 @@ export async function push(
     silent?: boolean;
     verbose?: boolean;
     json?: boolean;
+    flow?: string;
+    platform?: string;
   } = {},
 ): Promise<PushResult> {
   if (typeof configOrPath !== 'string') {
@@ -238,6 +240,8 @@ export async function push(
   return await pushCore(configOrPath, event, {
     json: options.json ?? false,
     verbose: options.verbose ?? false,
+    flow: options.flow,
+    platform: options.platform,
   });
 }
 
