@@ -1,13 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+const mockGetApiConfig = jest.fn().mockReturnValue({
+  token: 'sk-walkeros-test',
+  baseUrl: 'https://app.walkeros.io',
+});
 
-vi.mock('../../api/client.js', () => ({
-  getApiConfig: vi.fn().mockReturnValue({
-    token: 'sk-walkeros-test',
-    baseUrl: 'https://app.walkeros.io',
-  }),
+jest.mock('../../api/client.js', () => ({
+  getApiConfig: mockGetApiConfig,
 }));
-
-import { getApiConfig } from '../../api/client.js';
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -25,18 +23,18 @@ describe('bundle-remote tool', () => {
   let server: ReturnType<typeof createMockServer>;
 
   beforeEach(async () => {
-    vi.mocked(getApiConfig).mockReturnValue({
+    mockGetApiConfig.mockReturnValue({
       token: 'sk-walkeros-test',
       baseUrl: 'https://app.walkeros.io',
     });
-    vi.stubGlobal('fetch', vi.fn());
+    global.fetch = jest.fn() as any;
     server = createMockServer();
     const { registerBundleRemoteTool } =
       await import('../../tools/bundle-remote.js');
     registerBundleRemoteTool(server as any);
   });
 
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => jest.clearAllMocks());
 
   it('should register with correct metadata', () => {
     const tool = server.getTool('bundle-remote');
@@ -47,14 +45,11 @@ describe('bundle-remote tool', () => {
 
   it('should POST config and return JS bundle', async () => {
     const mockJs = '(()=>{console.log("bundle")})();';
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        text: () => Promise.resolve(mockJs),
-        headers: new Map(),
-      }),
-    );
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve(mockJs),
+      headers: new Map(),
+    }) as any;
 
     const tool = server.getTool('bundle-remote');
     const result = await tool.handler({ content: { version: 1 } });
@@ -70,14 +65,11 @@ describe('bundle-remote tool', () => {
     const headers = new Map([
       ['X-Bundle-Stats', JSON.stringify({ destinations: 2, sources: 1 })],
     ]);
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        text: () => Promise.resolve(mockJs),
-        headers: { get: (key: string) => headers.get(key) ?? null },
-      }),
-    );
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve(mockJs),
+      headers: { get: (key: string) => headers.get(key) ?? null },
+    }) as any;
 
     const tool = server.getTool('bundle-remote');
     const result = await tool.handler({ content: { version: 1 } });
@@ -87,17 +79,14 @@ describe('bundle-remote tool', () => {
   });
 
   it('should return error on API failure', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 400,
-        json: () =>
-          Promise.resolve({
-            error: { message: 'Invalid config' },
-          }),
-      }),
-    );
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: () =>
+        Promise.resolve({
+          error: { message: 'Invalid config' },
+        }),
+    }) as any;
 
     const tool = server.getTool('bundle-remote');
     const result = await tool.handler({ content: {} });
@@ -107,12 +96,12 @@ describe('bundle-remote tool', () => {
   });
 
   it('should send correct request to /api/bundle', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
+    const mockFetch = jest.fn().mockResolvedValue({
       ok: true,
       text: () => Promise.resolve('code'),
       headers: { get: () => null },
     });
-    vi.stubGlobal('fetch', mockFetch);
+    global.fetch = mockFetch as any;
 
     const content = { version: 1, sources: [] };
     const tool = server.getTool('bundle-remote');

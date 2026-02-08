@@ -20,12 +20,13 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "tsup --silent",
+    "dev": "jest --watchAll --colors",
     "start": "node dist/index.js",
-    "test": "vitest",
-    "lint": "tsc --noEmit && eslint \"src/**/*.ts*\"",
-    "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage"
+    "test": "jest",
+    "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
+    "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage",
+    "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0"
@@ -36,8 +37,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@walkeros/config": "*",
-    "vitest": "^1.0.0"
+    "@walkeros/config": "*"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

@@ -1,5 +1,6 @@
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { BundleOutputShape } from '../schemas/output.js';
 
 export function registerBundleTool(server: McpServer) {
   server.registerTool(
@@ -11,6 +12,7 @@ export function registerBundleTool(server: McpServer) {
         'Resolves all destinations, sources, and transformers, then outputs ' +
         'a tree-shaken production bundle. Returns bundle statistics.',
       inputSchema: schemas.BundleInputShape,
+      outputSchema: BundleOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -29,17 +31,19 @@ export function registerBundleTool(server: McpServer) {
           buildOverrides: output ? { output } : undefined,
         });
 
+        const output_ = (result as Record<string, unknown>) ?? {
+          success: true,
+          message: 'Bundle created',
+        };
+
         return {
           content: [
             {
               type: 'text' as const,
-              text: JSON.stringify(
-                result ?? { success: true, message: 'Bundle created' },
-                null,
-                2,
-              ),
+              text: JSON.stringify(output_, null, 2),
             },
           ],
+          structuredContent: output_,
         };
       } catch (error) {
         return {

@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerSimulateTool } from '../../tools/simulate.js';
+import { SimulateOutputShape } from '../../schemas/output.js';
 
 // Mock @walkeros/cli/dev schemas
-vi.mock('@walkeros/cli/dev', () => ({
+jest.mock('@walkeros/cli/dev', () => ({
   schemas: {
     SimulateInputShape: {
       configPath: { type: 'string' },
@@ -13,8 +13,8 @@ vi.mock('@walkeros/cli/dev', () => ({
 }));
 
 // Mock @walkeros/cli (dynamic import target)
-const mockSimulate = vi.fn();
-vi.mock('@walkeros/cli', () => ({
+const mockSimulate = jest.fn();
+jest.mock('@walkeros/cli', () => ({
   simulate: mockSimulate,
 }));
 
@@ -50,6 +50,12 @@ describe('simulate tool', () => {
       idempotentHint: true,
       openWorldHint: false,
     });
+  });
+
+  it('has outputSchema defined', () => {
+    const tool = server.getTool('simulate');
+    const config = tool.config as any;
+    expect(config.outputSchema).toBe(SimulateOutputShape);
   });
 
   it('calls CLI simulate with parsed JSON event', async () => {
@@ -121,6 +127,7 @@ describe('simulate tool', () => {
     expect(result.content).toHaveLength(1);
     expect(result.content[0].type).toBe('text');
     expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
+    expect(result.structuredContent).toEqual(mockResult);
     expect(result.isError).toBeUndefined();
   });
 
@@ -135,6 +142,7 @@ describe('simulate tool', () => {
     });
 
     expect(result.isError).toBe(true);
+    expect(result.structuredContent).toBeUndefined();
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.success).toBe(false);
     expect(parsed.error).toBe('Simulation failed');

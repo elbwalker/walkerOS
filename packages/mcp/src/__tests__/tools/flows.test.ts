@@ -1,11 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+const mockApiRequest = jest.fn();
+const mockRequireProjectId = jest.fn();
 
-vi.mock('../../api/client.js', () => ({
-  apiRequest: vi.fn(),
-  requireProjectId: vi.fn(),
+jest.mock('../../api/client.js', () => ({
+  apiRequest: mockApiRequest,
+  requireProjectId: mockRequireProjectId,
 }));
-
-import { apiRequest, requireProjectId } from '../../api/client.js';
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -28,7 +27,7 @@ describe('flow tools', () => {
     registerFlowTools(server as any);
   });
 
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => jest.clearAllMocks());
 
   it('should register all 6 flow tools', () => {
     expect(server.getTool('list-flows')).toBeDefined();
@@ -41,30 +40,30 @@ describe('flow tools', () => {
 
   describe('list-flows', () => {
     it('should call GET /api/projects/{projectId}/flows', async () => {
-      vi.mocked(apiRequest).mockResolvedValue({ flows: [] });
+      mockApiRequest.mockResolvedValue({ flows: [] });
       await server.getTool('list-flows').handler({ projectId: 'proj_1' });
-      expect(apiRequest).toHaveBeenCalledWith('/api/projects/proj_1/flows');
+      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects/proj_1/flows');
     });
 
     it('should fall back to requireProjectId()', async () => {
-      vi.mocked(requireProjectId).mockReturnValue('proj_default');
-      vi.mocked(apiRequest).mockResolvedValue({ flows: [] });
+      mockRequireProjectId.mockReturnValue('proj_default');
+      mockApiRequest.mockResolvedValue({ flows: [] });
       await server.getTool('list-flows').handler({});
-      expect(requireProjectId).toHaveBeenCalled();
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockRequireProjectId).toHaveBeenCalled();
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_default/flows',
       );
     });
 
     it('should pass query params', async () => {
-      vi.mocked(apiRequest).mockResolvedValue({ flows: [] });
+      mockApiRequest.mockResolvedValue({ flows: [] });
       await server.getTool('list-flows').handler({
         projectId: 'proj_1',
         sort: 'name',
         order: 'asc',
         includeDeleted: true,
       });
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_1/flows?sort=name&order=asc&include_deleted=true',
       );
     });
@@ -72,21 +71,21 @@ describe('flow tools', () => {
 
   describe('get-flow', () => {
     it('should call GET with flowId', async () => {
-      vi.mocked(apiRequest).mockResolvedValue({ id: 'cfg_abc' });
+      mockApiRequest.mockResolvedValue({ id: 'cfg_abc' });
       await server
         .getTool('get-flow')
         .handler({ flowId: 'cfg_abc', projectId: 'proj_1' });
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_1/flows/cfg_abc',
       );
     });
 
     it('should fall back to requireProjectId()', async () => {
-      vi.mocked(requireProjectId).mockReturnValue('proj_default');
-      vi.mocked(apiRequest).mockResolvedValue({ id: 'cfg_abc' });
+      mockRequireProjectId.mockReturnValue('proj_default');
+      mockApiRequest.mockResolvedValue({ id: 'cfg_abc' });
       await server.getTool('get-flow').handler({ flowId: 'cfg_abc' });
-      expect(requireProjectId).toHaveBeenCalled();
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockRequireProjectId).toHaveBeenCalled();
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_default/flows/cfg_abc',
       );
     });
@@ -94,21 +93,24 @@ describe('flow tools', () => {
 
   describe('create-flow', () => {
     it('should POST with name and content', async () => {
-      vi.mocked(apiRequest).mockResolvedValue({ id: 'cfg_new' });
+      mockApiRequest.mockResolvedValue({ id: 'cfg_new' });
       const content = { version: 1 };
       await server
         .getTool('create-flow')
         .handler({ name: 'My Flow', content, projectId: 'proj_1' });
-      expect(apiRequest).toHaveBeenCalledWith('/api/projects/proj_1/flows', {
-        method: 'POST',
-        body: JSON.stringify({ name: 'My Flow', content }),
-      });
+      expect(mockApiRequest).toHaveBeenCalledWith(
+        '/api/projects/proj_1/flows',
+        {
+          method: 'POST',
+          body: JSON.stringify({ name: 'My Flow', content }),
+        },
+      );
     });
   });
 
   describe('update-flow', () => {
     it('should PATCH with name and content', async () => {
-      vi.mocked(apiRequest).mockResolvedValue({ id: 'cfg_abc' });
+      mockApiRequest.mockResolvedValue({ id: 'cfg_abc' });
       const content = { version: 1, sources: [] };
       await server.getTool('update-flow').handler({
         flowId: 'cfg_abc',
@@ -116,7 +118,7 @@ describe('flow tools', () => {
         content,
         projectId: 'proj_1',
       });
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_1/flows/cfg_abc',
         {
           method: 'PATCH',
@@ -126,13 +128,13 @@ describe('flow tools', () => {
     });
 
     it('should only include provided fields in body', async () => {
-      vi.mocked(apiRequest).mockResolvedValue({ id: 'cfg_abc' });
+      mockApiRequest.mockResolvedValue({ id: 'cfg_abc' });
       await server.getTool('update-flow').handler({
         flowId: 'cfg_abc',
         name: 'Updated',
         projectId: 'proj_1',
       });
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_1/flows/cfg_abc',
         {
           method: 'PATCH',
@@ -144,11 +146,11 @@ describe('flow tools', () => {
 
   describe('delete-flow', () => {
     it('should send DELETE and mark as destructive', async () => {
-      vi.mocked(apiRequest).mockResolvedValue({ success: true });
+      mockApiRequest.mockResolvedValue({ success: true });
       const tool = server.getTool('delete-flow');
       expect((tool.config as any).annotations.destructiveHint).toBe(true);
       await tool.handler({ flowId: 'cfg_abc', projectId: 'proj_1' });
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_1/flows/cfg_abc',
         { method: 'DELETE' },
       );
@@ -157,13 +159,13 @@ describe('flow tools', () => {
 
   describe('duplicate-flow', () => {
     it('should POST to /duplicate with optional name', async () => {
-      vi.mocked(apiRequest).mockResolvedValue({ id: 'cfg_copy' });
+      mockApiRequest.mockResolvedValue({ id: 'cfg_copy' });
       await server.getTool('duplicate-flow').handler({
         flowId: 'cfg_abc',
         name: 'My Copy',
         projectId: 'proj_1',
       });
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_1/flows/cfg_abc/duplicate',
         {
           method: 'POST',
@@ -173,11 +175,11 @@ describe('flow tools', () => {
     });
 
     it('should POST without name when not provided', async () => {
-      vi.mocked(apiRequest).mockResolvedValue({ id: 'cfg_copy' });
+      mockApiRequest.mockResolvedValue({ id: 'cfg_copy' });
       await server
         .getTool('duplicate-flow')
         .handler({ flowId: 'cfg_abc', projectId: 'proj_1' });
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_1/flows/cfg_abc/duplicate',
         {
           method: 'POST',

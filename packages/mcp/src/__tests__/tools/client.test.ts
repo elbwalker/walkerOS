@@ -1,17 +1,15 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-
 describe('api/client', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
     process.env = { ...originalEnv };
-    vi.stubGlobal('fetch', vi.fn());
-    vi.resetModules();
+    global.fetch = jest.fn() as jest.Mock;
+    jest.resetModules();
   });
 
   afterEach(() => {
     process.env = originalEnv;
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
 
   describe('getApiConfig', () => {
@@ -58,12 +56,12 @@ describe('api/client', () => {
   describe('apiRequest', () => {
     it('should send authenticated request', async () => {
       process.env.WALKEROS_TOKEN = 'sk-walkeros-test';
-      const mockFetch = vi.fn().mockResolvedValue({
+      const mockFetch = jest.fn().mockResolvedValue({
         ok: true,
         status: 200,
         json: () => Promise.resolve({ data: 'test' }),
       });
-      vi.stubGlobal('fetch', mockFetch);
+      global.fetch = mockFetch as any;
 
       const { apiRequest } = await import('../../api/client.js');
       await apiRequest('/api/test');
@@ -80,14 +78,11 @@ describe('api/client', () => {
 
     it('should return parsed JSON on success', async () => {
       process.env.WALKEROS_TOKEN = 'sk-walkeros-test';
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ userId: 'user_1' }),
-        }),
-      );
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ userId: 'user_1' }),
+      }) as any;
       const { apiRequest } = await import('../../api/client.js');
       const result = await apiRequest('/api/test');
       expect(result).toEqual({ userId: 'user_1' });
@@ -95,13 +90,10 @@ describe('api/client', () => {
 
     it('should return success object on 204', async () => {
       process.env.WALKEROS_TOKEN = 'sk-walkeros-test';
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue({
-          ok: true,
-          status: 204,
-        }),
-      );
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 204,
+      }) as any;
       const { apiRequest } = await import('../../api/client.js');
       const result = await apiRequest('/api/test', { method: 'DELETE' });
       expect(result).toEqual({ success: true });
@@ -109,17 +101,14 @@ describe('api/client', () => {
 
     it('should throw on API error with message', async () => {
       process.env.WALKEROS_TOKEN = 'sk-walkeros-test';
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue({
-          ok: false,
-          status: 401,
-          json: () =>
-            Promise.resolve({
-              error: { code: 'UNAUTHORIZED', message: 'Invalid token' },
-            }),
-        }),
-      );
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: () =>
+          Promise.resolve({
+            error: { code: 'UNAUTHORIZED', message: 'Invalid token' },
+          }),
+      }) as any;
       const { apiRequest } = await import('../../api/client.js');
       await expect(apiRequest('/api/test')).rejects.toThrow('Invalid token');
     });

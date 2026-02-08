@@ -1,5 +1,6 @@
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { SimulateOutputShape } from '../schemas/output.js';
 
 export function registerSimulateTool(server: McpServer) {
   server.registerTool(
@@ -11,6 +12,7 @@ export function registerSimulateTool(server: McpServer) {
         'Processes events through the full pipeline including transformers and destinations, ' +
         'returning detailed results with logs and usage statistics.',
       inputSchema: schemas.SimulateInputShape,
+      outputSchema: SimulateOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -43,6 +45,7 @@ export function registerSimulateTool(server: McpServer) {
               text: JSON.stringify(result, null, 2),
             },
           ],
+          structuredContent: result as Record<string, unknown>,
         };
       } catch (error) {
         return {

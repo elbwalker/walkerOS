@@ -1,10 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+const mockApiRequest = jest.fn();
 
-vi.mock('../../api/client.js', () => ({
-  apiRequest: vi.fn(),
+jest.mock('../../api/client.js', () => ({
+  apiRequest: mockApiRequest,
 }));
-
-import { apiRequest } from '../../api/client.js';
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -27,7 +25,7 @@ describe('auth tools', () => {
     registerAuthTools(server as any);
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => jest.restoreAllMocks());
 
   describe('whoami', () => {
     it('should register with correct metadata', () => {
@@ -43,19 +41,17 @@ describe('auth tools', () => {
         email: 'dev@test.com',
         projectId: null,
       };
-      vi.mocked(apiRequest).mockResolvedValue(mockResponse);
+      mockApiRequest.mockResolvedValue(mockResponse);
 
       const tool = server.getTool('whoami');
       const result = await tool.handler({});
 
-      expect(apiRequest).toHaveBeenCalledWith('/api/auth/whoami');
+      expect(mockApiRequest).toHaveBeenCalledWith('/api/auth/whoami');
       expect(JSON.parse(result.content[0].text)).toEqual(mockResponse);
     });
 
     it('should return error when token is missing', async () => {
-      vi.mocked(apiRequest).mockRejectedValue(
-        new Error('WALKEROS_TOKEN not set'),
-      );
+      mockApiRequest.mockRejectedValue(new Error('WALKEROS_TOKEN not set'));
 
       const tool = server.getTool('whoami');
       const result = await tool.handler({});

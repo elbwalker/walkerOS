@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerBundleTool } from '../../tools/bundle.js';
+import { BundleOutputShape } from '../../schemas/output.js';
 
 // Mock @walkeros/cli/dev schemas
-vi.mock('@walkeros/cli/dev', () => ({
+jest.mock('@walkeros/cli/dev', () => ({
   schemas: {
     BundleInputShape: {
       configPath: { type: 'string' },
@@ -14,8 +14,8 @@ vi.mock('@walkeros/cli/dev', () => ({
 }));
 
 // Mock @walkeros/cli (dynamic import target)
-const mockBundle = vi.fn();
-vi.mock('@walkeros/cli', () => ({
+const mockBundle = jest.fn();
+jest.mock('@walkeros/cli', () => ({
   bundle: mockBundle,
 }));
 
@@ -53,6 +53,12 @@ describe('bundle tool', () => {
     });
   });
 
+  it('has outputSchema defined', () => {
+    const tool = server.getTool('bundle');
+    const config = tool.config as any;
+    expect(config.outputSchema).toBe(BundleOutputShape);
+  });
+
   it('calls CLI bundle with correct options', async () => {
     const mockResult = { size: 1024, modules: 3 };
     mockBundle.mockResolvedValue(mockResult);
@@ -71,6 +77,7 @@ describe('bundle tool', () => {
       buildOverrides: { output: './dist' },
     });
     expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
+    expect(result.structuredContent).toEqual(mockResult);
   });
 
   it('defaults stats to true when not provided', async () => {
@@ -102,8 +109,10 @@ describe('bundle tool', () => {
       output: undefined,
     });
 
+    const fallback = { success: true, message: 'Bundle created' };
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed).toEqual({ success: true, message: 'Bundle created' });
+    expect(parsed).toEqual(fallback);
+    expect(result.structuredContent).toEqual(fallback);
     expect(result.isError).toBeUndefined();
   });
 
@@ -118,8 +127,10 @@ describe('bundle tool', () => {
       output: undefined,
     });
 
+    const fallback = { success: true, message: 'Bundle created' };
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed).toEqual({ success: true, message: 'Bundle created' });
+    expect(parsed).toEqual(fallback);
+    expect(result.structuredContent).toEqual(fallback);
   });
 
   it('returns isError on CLI failure', async () => {
@@ -134,6 +145,7 @@ describe('bundle tool', () => {
     });
 
     expect(result.isError).toBe(true);
+    expect(result.structuredContent).toBeUndefined();
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.success).toBe(false);
     expect(parsed.error).toBe('Build failed');

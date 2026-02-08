@@ -1,11 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+const mockApiRequest = jest.fn();
+const mockRequireProjectId = jest.fn();
 
-vi.mock('../../api/client.js', () => ({
-  apiRequest: vi.fn(),
-  requireProjectId: vi.fn(),
+jest.mock('../../api/client.js', () => ({
+  apiRequest: mockApiRequest,
+  requireProjectId: mockRequireProjectId,
 }));
-
-import { apiRequest, requireProjectId } from '../../api/client.js';
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -28,7 +27,7 @@ describe('version tools', () => {
     registerVersionTools(server as any);
   });
 
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => jest.clearAllMocks());
 
   it('should register all 3 version tools', () => {
     expect(server.getTool('list-versions')).toBeDefined();
@@ -38,21 +37,21 @@ describe('version tools', () => {
 
   describe('list-versions', () => {
     it('should call GET with flowId and projectId', async () => {
-      vi.mocked(apiRequest).mockResolvedValue({ versions: [] });
+      mockApiRequest.mockResolvedValue({ versions: [] });
       await server
         .getTool('list-versions')
         .handler({ flowId: 'cfg_abc', projectId: 'proj_1' });
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_1/flows/cfg_abc/versions',
       );
     });
 
     it('should fall back to requireProjectId()', async () => {
-      vi.mocked(requireProjectId).mockReturnValue('proj_default');
-      vi.mocked(apiRequest).mockResolvedValue({ versions: [] });
+      mockRequireProjectId.mockReturnValue('proj_default');
+      mockApiRequest.mockResolvedValue({ versions: [] });
       await server.getTool('list-versions').handler({ flowId: 'cfg_abc' });
-      expect(requireProjectId).toHaveBeenCalled();
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockRequireProjectId).toHaveBeenCalled();
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_default/flows/cfg_abc/versions',
       );
     });
@@ -60,11 +59,11 @@ describe('version tools', () => {
 
   describe('get-version', () => {
     it('should call GET with version number', async () => {
-      vi.mocked(apiRequest).mockResolvedValue({ version: 3 });
+      mockApiRequest.mockResolvedValue({ version: 3 });
       await server
         .getTool('get-version')
         .handler({ flowId: 'cfg_abc', version: 3, projectId: 'proj_1' });
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_1/flows/cfg_abc/versions/3',
       );
     });
@@ -78,13 +77,13 @@ describe('version tools', () => {
 
   describe('restore-version', () => {
     it('should POST to /restore', async () => {
-      vi.mocked(apiRequest).mockResolvedValue({ success: true });
+      mockApiRequest.mockResolvedValue({ success: true });
       await server.getTool('restore-version').handler({
         flowId: 'cfg_abc',
         version: 2,
         projectId: 'proj_1',
       });
-      expect(apiRequest).toHaveBeenCalledWith(
+      expect(mockApiRequest).toHaveBeenCalledWith(
         '/api/projects/proj_1/flows/cfg_abc/versions/2/restore',
         { method: 'POST' },
       );

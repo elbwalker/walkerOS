@@ -1,5 +1,6 @@
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { ValidateOutputShape } from '../schemas/output.js';
 
 export function registerValidateTool(server: McpServer) {
   server.registerTool(
@@ -11,6 +12,7 @@ export function registerValidateTool(server: McpServer) {
         'Accepts JSON strings, file paths, or URLs as input. ' +
         'Returns validation results with errors, warnings, and details.',
       inputSchema: schemas.ValidateInputShape,
+      outputSchema: ValidateOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -42,6 +44,7 @@ export function registerValidateTool(server: McpServer) {
               text: JSON.stringify(result, null, 2),
             },
           ],
+          structuredContent: result as Record<string, unknown>,
         };
       } catch (error) {
         return {
