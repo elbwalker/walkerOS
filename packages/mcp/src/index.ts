@@ -4,6 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 // Local CLI tools
 import { registerBundleTool } from './tools/bundle.js';
 import { registerSimulateTool } from './tools/simulate.js';
+import { registerPushTool } from './tools/push.js';
 import { registerValidateTool } from './tools/validate.js';
 // API tools
 import { registerAuthTools } from './tools/auth.js';
@@ -20,6 +21,7 @@ const server = new McpServer({
 // Local CLI tools
 registerBundleTool(server);
 registerSimulateTool(server);
+registerPushTool(server);
 registerValidateTool(server);
 
 // API tools

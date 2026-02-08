@@ -6,6 +6,7 @@
     "packages/cli",
     "packages/core",
     "packages/collector",
+    "packages/mcp",
     "packages/transformers/*",
     "packages/server/core",
     "packages/server/destinations/*",

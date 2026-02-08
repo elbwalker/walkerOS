@@ -77,6 +77,13 @@ export const SimulateOutputShape = {
     .describe('Simulation duration in milliseconds'),
 };
 
+export const PushOutputShape = {
+  success: z.boolean().describe('Whether push succeeded'),
+  elbResult: z.unknown().optional().describe('Push result from the collector'),
+  duration: z.number().describe('Push duration in milliseconds'),
+  error: z.string().optional().describe('Error message if push failed'),
+};
+
 // Auth output shapes
 export const WhoamiOutputShape = {
   userId: z.string().describe('User ID'),
