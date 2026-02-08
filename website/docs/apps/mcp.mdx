@@ -1,0 +1,185 @@
+---
+title: MCP Server
+description: Use walkerOS tools from AI assistants via Model Context Protocol
+sidebar_position: 5
+package: '@walkeros/mcp'
+---
+
+# MCP server
+
+The walkerOS MCP server (`@walkeros/mcp`) exposes CLI tools and the walkerOS API
+as [Model Context Protocol](https://modelcontextprotocol.io/) tools. This lets
+AI assistants like Claude validate events, bundle flows, simulate pipelines, and
+manage projects without leaving the conversation.
+
+## Quick start
+
+Add the server to your Claude Desktop or Claude Code configuration:
+
+<CodeSnippet
+  code={`{
+  "mcpServers": {
+    "walkeros": {
+      "command": "npx",
+      "args": ["@walkeros/mcp"],
+      "env": {
+        "WALKEROS_TOKEN": "sk-walkeros-...",
+        "WALKEROS_PROJECT_ID": "proj_..."
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+The server starts on STDIO and registers all tools automatically.
+
+## Environment variables
+
+| Variable | Required | Default | Purpose |
+|----------|----------|---------|---------|
+| `WALKEROS_TOKEN` | Yes (API tools) | — | Bearer token (`sk-walkeros-...`) |
+| `WALKEROS_PROJECT_ID` | Yes (project-scoped tools) | — | Active project ID (`proj_...`) |
+| `WALKEROS_APP_URL` | No | `https://app.walkeros.io` | Base URL override |
+
+CLI tools (`validate`, `bundle`, `simulate`, `push`) work without any
+environment variables. API tools (`whoami`, flows, projects, versions) require
+`WALKEROS_TOKEN`.
+
+## Available tools (20)
+
+### Local CLI tools
+
+These wrap the [walkerOS CLI](/docs/apps/cli) for use by AI assistants.
+
+#### `validate`
+
+Validate walkerOS events, flow configurations, or mapping rules.
+
+- `type` (required): `"event"` | `"flow"` | `"mapping"`
+- `input` (required): JSON string or file path to validate
+- `flow` (optional): Flow name to validate against
+
+#### `bundle`
+
+Bundle a walkerOS flow configuration into deployable JavaScript.
+
+- `configPath` (required): Path to the flow configuration file
+- `flow` (optional): Specific flow name to bundle
+- `stats` (optional): Include bundle statistics in output
+- `output` (optional): Output file path for the bundle
+
+#### `simulate`
+
+Simulate events through a walkerOS flow without making real API calls. Processes
+events through the full pipeline including transformers and destinations.
+
+- `configPath` (required): Path to the flow configuration file
+- `event` (required): JSON string representing the event to simulate
+- `flow` (optional): Flow name for multi-flow configs
+- `platform` (optional): `"web"` | `"server"` (default: `"web"`)
+
+#### `push`
+
+Push a real event through a walkerOS flow to actual destinations. **This makes
+real API calls to real endpoints.**
+
+- `configPath` (required): Path to the flow configuration file
+- `event` (required): JSON string representing the event to push
+- `flow` (optional): Flow name for multi-flow configs
+- `platform` (optional): `"web"` | `"server"` (default: `"web"`)
+
+### API tools
+
+These require `WALKEROS_TOKEN` to authenticate with the walkerOS API.
+
+#### Auth
+
+| Tool | Purpose |
+|------|---------|
+| `whoami` | Verify your API token and see your identity |
+
+#### Projects
+
+| Tool | Purpose |
+|------|---------|
+| `list-projects` | List all projects you have access to |
+| `get-project` | Get details for a project |
+| `create-project` | Create a new project |
+| `update-project` | Update a project name |
+| `delete-project` | Soft-delete a project and all its flows |
+
+#### Flows
+
+| Tool | Purpose |
+|------|---------|
+| `list-flows` | List all flow configurations in a project |
+| `get-flow` | Get a flow with its full content (Flow.Setup JSON) |
+| `create-flow` | Create a new flow configuration |
+| `update-flow` | Update a flow name and/or content (creates version snapshot) |
+| `delete-flow` | Soft-delete a flow configuration |
+| `duplicate-flow` | Create a copy of an existing flow |
+
+#### Versions
+
+| Tool | Purpose |
+|------|---------|
+| `list-versions` | List version history for a flow |
+| `get-version` | Get a specific version of a flow |
+| `restore-version` | Restore a flow to a previous version |
+
+#### Remote bundling
+
+| Tool | Purpose |
+|------|---------|
+| `bundle-remote` | Bundle a flow using the walkerOS cloud service (no local build tools needed) |
+
+## Example workflows
+
+### Validate and simulate a flow
+
+Ask your AI assistant:
+
+> "Validate my flow config at `./walker.config.json`, then simulate a
+> `page view` event through it."
+
+The assistant will call `validate` first, then `simulate` with the event — all
+without leaving the conversation.
+
+### Manage flows via the API
+
+> "List all flows in my project and show me the content of the most recent one."
+
+The assistant calls `list-flows`, picks the latest, then calls `get-flow` to
+retrieve the full Flow.Setup JSON.
+
+### Bundle and deploy
+
+> "Bundle the default flow from `./walker.config.json` and show me the bundle
+> stats."
+
+The assistant calls `bundle` with `stats: true` and returns the output.
+
+## Installation
+
+<CodeSnippet
+  code={`npm install @walkeros/mcp`}
+  language="bash"
+/>
+
+### Peer dependencies
+
+The MCP server requires the walkerOS CLI as a peer dependency:
+
+<CodeSnippet
+  code={`npm install @walkeros/cli`}
+  language="bash"
+/>
+
+## Next steps
+
+- **[CLI](/docs/apps/cli)** — Learn about the underlying CLI commands
+- **[Flow configuration](/docs/getting-started/flow)** — Understand flow
+  structure
+- **[MCP specification](https://modelcontextprotocol.io/)** — Learn about the
+  Model Context Protocol
