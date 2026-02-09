@@ -1,7 +1,7 @@
 {
   "name": "walkeros",
-  "version": "1.2.1",
-  "description": "Development skills for walkerOS - the open-source event data collection platform. Learn architecture, create sources/destinations/transformers, and build privacy-centric analytics pipelines.",
+  "version": "2.0.0",
+  "description": "Skills and MCP tools for walkerOS - the open-source event data collection platform. Learn architecture, create sources/destinations/transformers, validate events, bundle flows, and manage projects via API.",
   "author": "elbwalker",
   "repository": "https://github.com/elbwalker/walkerOS",
   "license": "MIT",
@@ -19,7 +19,8 @@
     "transformers",
     "tag-management",
     "first-party-data",
-    "data-collection"
+    "data-collection",
+    "mcp"
   ],
   "skills": [
     "skills/walkeros-understanding-events",
@@ -38,5 +39,15 @@
     "skills/walkeros-testing-strategy",
     "skills/walkeros-debugging",
     "skills/walkeros-writing-documentation"
-  ]
+  ],
+  "mcpServers": {
+    "walkeros": {
+      "command": "npx",
+      "args": ["@walkeros/mcp"],
+      "env": {
+        "WALKEROS_TOKEN": "",
+        "WALKEROS_PROJECT_ID": ""
+      }
+    }
+  }
 }

@@ -10,7 +10,7 @@ const config = {
     // ESM: Map .js imports to .ts files for Jest
     // (TypeScript source files use .js extensions for Node.js ESM)
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    // Point to local CLI package (peer dep may not have all exports published)
+    // Point to local CLI source for monorepo development
     '^@walkeros/cli$': '<rootDir>/../cli/src/',
     '^@walkeros/cli/dev$': '<rootDir>/../cli/src/dev',
   },

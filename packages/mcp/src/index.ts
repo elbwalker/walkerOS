@@ -12,9 +12,11 @@ import { registerFlowTools } from './tools/flows.js';
 import { registerVersionTools } from './tools/versions.js';
 import { registerBundleRemoteTool } from './tools/bundle-remote.js';
 
+declare const __VERSION__: string;
+
 const server = new McpServer({
   name: 'walkeros',
-  version: '0.1.0',
+  version: __VERSION__,
 });
 
 // Local CLI tools

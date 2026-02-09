@@ -217,12 +217,13 @@ tools needed.
 
 - `content` (required): Flow.Setup JSON content
 
-## Peer Dependencies
+## Dependencies
 
-This package requires:
+This package depends on:
 
-- `@walkeros/cli` — walkerOS command-line interface
-- `zod` ^4.0 — schema validation
+- `@walkeros/cli` — walkerOS command-line interface (validate, bundle, simulate,
+  push)
+- `@modelcontextprotocol/sdk` — Model Context Protocol server framework
 
 ## License
 
