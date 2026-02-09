@@ -199,6 +199,10 @@ const config: Config = {
             from: '/docs/sources/web/session',
             to: '/docs/sources/web/session/detection',
           },
+          {
+            from: '/docs/sources/walkerjs/installation/package',
+            to: '/docs/sources/web/browser/commands#run',
+          },
         ],
       },
     ],
