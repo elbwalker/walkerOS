@@ -1,0 +1,224 @@
+---
+title: Session Source
+description: Standalone session detection and management for walkerOS
+sidebar_position: 1
+package: '@walkeros/web-source-session'
+---
+import { schemas } from '@walkeros/web-source-session/dev';
+
+<PackageLink github="packages/web/sources/session" npm="@walkeros/web-source-session" />
+
+# Session Source
+
+Standalone session detection and management that can be composed with any walkerOS source.
+
+## Installation
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the packages:
+
+<CodeSnippet
+  code={`npm install @walkeros/collector @walkeros/web-source-session`}
+  language="bash"
+/>
+
+Configure in your code:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import { sourceSession } from '@walkeros/web-source-session';
+
+const { collector, elb } = await startFlow({
+  sources: {
+    browser: sourceBrowser,
+    session: {
+      code: sourceSession,
+      config: {
+        settings: {
+          storage: true,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` sources:
+
+<CodeSnippet
+  code={`"sources": {
+  "browser": {
+    "package": "@walkeros/web-source-browser"
+  },
+  "session": {
+    "package": "@walkeros/web-source-session",
+    "config": {
+      "settings": {
+        "storage": true
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Configuration
+
+<PropertyTable schema={schemas.settings} />
+
+## Detection Methods
+
+The session source uses two complementary methods:
+
+| Method | Storage | Use Case |
+|--------|---------|----------|
+| **Window** | None | Privacy-first, per-page session |
+| **Storage** | localStorage | Cross-page session tracking |
+
+### Window-based Detection
+
+Without storage, session detection relies on browser signals:
+
+**Navigation Type:**
+<CodeSnippet
+  code={`// Session starts when navigation type indicates new visit
+const isNewSession =
+  performance.navigation.type === 0 || // Navigate (new page load)
+  document.referrer === '' ||          // No referrer (direct visit)
+  !isSameHost(document.referrer);      // External referrer`}
+  language="typescript"
+/>
+
+**Marketing Parameters:**
+
+UTM and other marketing parameters trigger session start:
+
+<CodeSnippet
+  code={`// These URL parameters indicate a new campaign session
+const marketingParams = [
+  'utm_source', 'utm_medium', 'utm_campaign',
+  'utm_term', 'utm_content', 'utm_id',
+  'gclid', 'fbclid', 'msclkid'
+];`}
+  language="typescript"
+/>
+
+### Storage-based Detection
+
+With `storage: true`, sessions persist across page loads:
+
+<CodeSnippet
+  code={`sources: {
+  session: {
+    code: sourceSession,
+    config: {
+      settings: {
+        storage: true,
+        length: 30, // Session timeout in minutes
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+**Session Lifecycle:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Session Timeline                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  User visits    Page 2       Page 3       30min idle       │
+│       │            │            │              │            │
+│       ▼            ▼            ▼              ▼            │
+│   [Session 1] ─────────────────────────────► [Expires]     │
+│   id: abc123                                                │
+│                                                             │
+│                                          User returns       │
+│                                               │             │
+│                                               ▼             │
+│                                         [Session 2]        │
+│                                         id: def456         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Storage Keys:**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `sessionKey` | `elbSessionId` | localStorage key for session ID |
+| `deviceKey` | `elbDeviceId` | localStorage key for device ID |
+
+## Session Start Event
+
+When a new session is detected, the source pushes:
+
+<CodeSnippet
+  code={`{
+  name: 'session start',
+  data: {
+    isStart: true,
+    id: 'abc123',            // Session ID
+    device: 'xyz789',        // Device ID (storage mode only)
+    storage: true,           // Whether storage is active
+    count: 5,                // Total session count
+    runs: 1,                 // Page views in session
+    start: 1704067200,       // Session start timestamp
+    referrer: 'https://google.com',
+    marketing: {
+      source: 'google',
+      medium: 'cpc',
+      campaign: 'winter-sale'
+    }
+  }
+}`}
+  language="typescript"
+/>
+
+## Consent Integration
+
+Session detection adapts to consent state:
+
+| Consent State | Behavior |
+|---------------|----------|
+| No consent | Window-only detection (no storage) |
+| Consent granted | Storage-based with device ID |
+| Consent revoked | Falls back to window-only |
+
+<CodeSnippet
+  code={`// Configure consent requirement
+sources: {
+  session: {
+    code: sourceSession,
+    config: {
+      settings: {
+        consent: 'analytics', // Wait for this consent key
+        storage: true,
+      },
+    },
+  },
+}
+
+// Grant consent to enable storage
+elb('walker consent', { analytics: true });`}
+  language="typescript"
+/>
+
+## Next Steps
+
+* [Browser Source](/docs/sources/web/browser) - DOM-based event tracking
+* [DataLayer Source](/docs/sources/web/dataLayer) - GTM/GA4 integration
+* [Consent Guide](/docs/guides/consent) - Consent management patterns

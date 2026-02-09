@@ -32,6 +32,16 @@ export type Variables = Record<string, Primitive>;
 export type Definitions = Record<string, unknown>;
 
 /**
+ * Inline code definition for sources/destinations/transformers.
+ * Used instead of package when defining inline functions.
+ */
+export interface InlineCode {
+  push: string; // "$code:..." function (required)
+  type?: string; // Optional instance type identifier
+  init?: string; // Optional "$code:..." init function
+}
+
+/**
  * Packages configuration for build.
  */
 export type Packages = Record<
@@ -321,6 +331,7 @@ export interface Config {
  * @remarks
  * References a source package and provides configuration.
  * The package is automatically downloaded and imported during build.
+ * Alternatively, use `code: true` for inline code execution.
  */
 export interface SourceReference {
   /**
@@ -338,19 +349,31 @@ export interface SourceReference {
    * 3. Auto-detect default or named export
    * 4. Generate import statement
    *
+   * Optional when `code: true` is used for inline code execution.
+   *
    * @example
    * "package": "@walkeros/web-source-browser@latest"
    */
-  package: string;
+  package?: string;
 
   /**
-   * Resolved import variable name.
+   * Resolved import variable name or built-in code source.
    *
    * @remarks
-   * Auto-resolved from packages[package].imports[0] during getFlowConfig().
-   * Can also be provided explicitly for advanced use cases.
+   * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
+   *   or provided explicitly for advanced use cases.
+   * - InlineCode: Object with type, push, and optional init for inline code definition.
+   *
+   * @example
+   * // Using inline code object
+   * {
+   *   "code": {
+   *     "type": "logger",
+   *     "push": "$code:(event) => console.log(event)"
+   *   }
+   * }
    */
-  code?: string;
+  code?: string | InlineCode; // string for package import, InlineCode for inline
 
   /**
    * Source-specific configuration.
@@ -413,8 +436,9 @@ export interface SourceReference {
    * @remarks
    * Name of the transformer to execute after this source captures an event.
    * If omitted, events route directly to the collector.
+   * Can be an array for explicit chain control (bypasses transformer.next resolution).
    */
-  next?: string;
+  next?: string | string[];
 }
 
 /**
@@ -423,6 +447,7 @@ export interface SourceReference {
  * @remarks
  * References a transformer package and provides configuration.
  * Transformers transform events in the pipeline between sources and destinations.
+ * Alternatively, use `code: true` for inline code execution.
  */
 export interface TransformerReference {
   /**
@@ -430,20 +455,31 @@ export interface TransformerReference {
    *
    * @remarks
    * Same format as SourceReference.package
+   * Optional when `code: true` is used for inline code execution.
    *
    * @example
    * "package": "@walkeros/transformer-enricher@1.0.0"
    */
-  package: string;
+  package?: string;
 
   /**
-   * Resolved import variable name.
+   * Resolved import variable name or built-in code transformer.
    *
    * @remarks
-   * Auto-resolved from packages[package].imports[0] during getFlowConfig().
-   * Can also be provided explicitly for advanced use cases.
+   * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
+   *   or provided explicitly for advanced use cases.
+   * - InlineCode: Object with type, push, and optional init for inline code definition.
+   *
+   * @example
+   * // Using inline code object
+   * {
+   *   "code": {
+   *     "type": "enricher",
+   *     "push": "$code:(event) => ({ ...event, data: { enriched: true } })"
+   *   }
+   * }
    */
-  code?: string;
+  code?: string | InlineCode; // string for package import, InlineCode for inline
 
   /**
    * Transformer-specific configuration.
@@ -471,8 +507,9 @@ export interface TransformerReference {
    * If omitted:
    * - Pre-collector: routes to collector
    * - Post-collector: routes to destination
+   * Can be an array for explicit chain control (terminates chain walking).
    */
-  next?: string;
+  next?: string | string[];
 
   /**
    * Transformer-level variables (highest priority in cascade).
@@ -500,20 +537,31 @@ export interface DestinationReference {
    *
    * @remarks
    * Same format as SourceReference.package
+   * Optional when `code: true` is used for inline code execution.
    *
    * @example
    * "package": "@walkeros/web-destination-gtag@2.0.0"
    */
-  package: string;
+  package?: string;
 
   /**
-   * Resolved import variable name.
+   * Resolved import variable name or built-in code destination.
    *
    * @remarks
-   * Auto-resolved from packages[package].imports[0] during getFlowConfig().
-   * Can also be provided explicitly for advanced use cases.
+   * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
+   *   or provided explicitly for advanced use cases.
+   * - InlineCode: Object with type, push, and optional init for inline code definition.
+   *
+   * @example
+   * // Using inline code object
+   * {
+   *   "code": {
+   *     "type": "logger",
+   *     "push": "$code:(event) => console.log('Event:', event.name)"
+   *   }
+   * }
    */
-  code?: string;
+  code?: string | InlineCode; // string for package import, InlineCode for inline
 
   /**
    * Destination-specific configuration.
@@ -576,6 +624,7 @@ export interface DestinationReference {
    * @remarks
    * Name of the transformer to execute before sending events to this destination.
    * If omitted, events are sent directly from the collector.
+   * Can be an array for explicit chain control (bypasses transformer.next resolution).
    */
-  before?: string;
+  before?: string | string[];
 }

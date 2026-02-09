@@ -1,5 +1,24 @@
 # @walkeros/server-destination-aws
 
+## 1.0.4
+
+### Patch Changes
+
+- @walkeros/server-core@1.0.4
+
+## 1.0.3
+
+### Patch Changes
+
+- @walkeros/server-core@1.0.3
+
+## 1.0.2
+
+### Patch Changes
+
+- 6778ab2: Add default exports for simpler CLI flow.json configuration
+  - @walkeros/server-core@1.0.2
+
 ## 1.0.1
 
 ### Patch Changes

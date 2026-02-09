@@ -83,6 +83,7 @@ export interface Config<T extends TypesGeneric = Types> {
   mapping?: WalkerOSMapping.Rules<WalkerOSMapping.Rule<Mapping<T>>>;
   policy?: Policy;
   queue?: boolean;
+  before?: string | string[];
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
@@ -97,12 +98,13 @@ export interface Policy {
   [key: string]: WalkerOSMapping.Value;
 }
 
-export type Code<T extends TypesGeneric = Types> = Instance<T> | true;
+export type Code<T extends TypesGeneric = Types> = Instance<T>;
 
 export type Init<T extends TypesGeneric = Types> = {
   code: Code<T>;
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
+  before?: string | string[];
 };
 
 export interface InitDestinations {

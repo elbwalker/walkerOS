@@ -98,7 +98,7 @@ const config: Config = {
     navbar: {
       logo: {
         alt: 'walkerOS logo',
-        src: 'img/walkerOS_logo_new.svg',
+        src: 'img/walkerOS_logo.svg',
       },
       items: [
         {
@@ -132,6 +132,10 @@ const config: Config = {
             {
               label: 'Comparisons',
               to: '/docs/comparisons/',
+            },
+            {
+              label: 'Storybook demo',
+              href: 'https://storybook.walkeros.io/',
             },
           ],
         },
@@ -185,7 +189,20 @@ const config: Config = {
     },
   } satisfies Preset.ThemeConfig,
 
-  plugins: [tailwindPlugin],
+  plugins: [
+    tailwindPlugin,
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        redirects: [
+          {
+            from: '/docs/sources/web/session',
+            to: '/docs/sources/web/session/detection',
+          },
+        ],
+      },
+    ],
+  ],
 };
 
 async function tailwindPlugin() {

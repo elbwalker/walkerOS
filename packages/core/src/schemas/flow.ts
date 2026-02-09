@@ -97,6 +97,48 @@ export const ServerSchema = z
   .describe('Server platform configuration (reserved for future options)');
 
 // ========================================
+// Inline Code Schema
+// ========================================
+
+/**
+ * Inline code schema for embedding JavaScript functions in JSON configs.
+ *
+ * @remarks
+ * Enables custom sources, transformers, and destinations without npm packages.
+ * The `push` function is required; `type` and `init` are optional.
+ *
+ * @example
+ * ```json
+ * {
+ *   "code": {
+ *     "type": "enricher",
+ *     "push": "$code:(event) => ({ ...event, data: { ...event.data, enriched: true } })"
+ *   }
+ * }
+ * ```
+ */
+export const InlineCodeSchema = z
+  .object({
+    push: z
+      .string()
+      .min(1, 'Push function cannot be empty')
+      .describe(
+        'Main function that processes events. Use $code: prefix for inline JavaScript.',
+      ),
+    type: z
+      .string()
+      .optional()
+      .describe('Optional type identifier for the inline instance'),
+    init: z
+      .string()
+      .optional()
+      .describe(
+        'Optional initialization function. Use $code: prefix for inline JavaScript.',
+      ),
+  })
+  .describe('Inline code for custom sources/transformers/destinations');
+
+// ========================================
 // Source Reference Schema
 // ========================================
 
@@ -106,20 +148,22 @@ export const ServerSchema = z
  * @remarks
  * Defines how to reference and configure a source package.
  * Sources capture events from various origins (browser, HTTP, etc.).
+ * Either `package` (npm package) or `code` (inline object) must be provided, but not both.
  */
 export const SourceReferenceSchema = z
   .object({
     package: z
       .string()
       .min(1, 'Package name cannot be empty')
+      .optional()
       .describe(
         'Package specifier with optional version (e.g., "@walkeros/web-source-browser@2.0.0")',
       ),
     code: z
-      .string()
+      .union([z.string(), InlineCodeSchema])
       .optional()
       .describe(
-        'Named export to use from the package (e.g., "sourceExpress"). If omitted, uses default export.',
+        'Either a named export string (e.g., "sourceExpress") or an inline code object with push function',
       ),
     config: z
       .unknown()
@@ -163,14 +207,15 @@ export const TransformerReferenceSchema = z
     package: z
       .string()
       .min(1, 'Package name cannot be empty')
+      .optional()
       .describe(
         'Package specifier with optional version (e.g., "@walkeros/transformer-enricher@1.0.0")',
       ),
     code: z
-      .string()
+      .union([z.string(), InlineCodeSchema])
       .optional()
       .describe(
-        'Named export to use from the package (e.g., "transformerEnricher"). If omitted, uses default export.',
+        'Either a named export string (e.g., "transformerEnricher") or an inline code object with push function',
       ),
     config: z
       .unknown()
@@ -211,14 +256,15 @@ export const DestinationReferenceSchema = z
     package: z
       .string()
       .min(1, 'Package name cannot be empty')
+      .optional()
       .describe(
         'Package specifier with optional version (e.g., "@walkeros/web-destination-gtag@2.0.0")',
       ),
     code: z
-      .string()
+      .union([z.string(), InlineCodeSchema])
       .optional()
       .describe(
-        'Named export to use from the package (e.g., "destinationAnalytics"). If omitted, uses default export.',
+        'Either a named export string (e.g., "destinationAnalytics") or an inline code object with push function',
       ),
     config: z
       .unknown()

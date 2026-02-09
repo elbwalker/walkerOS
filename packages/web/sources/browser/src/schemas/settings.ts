@@ -6,20 +6,6 @@ import {
 } from './primitives';
 
 /**
- * Session configuration schema
- * Note: Runtime type can be boolean | SessionConfig
- * SessionConfig is non-serializable, so we use z.any() for the complex form
- */
-const SessionConfigSchema = z.union([
-  z.boolean(),
-  z
-    .any()
-    .describe(
-      'SessionConfig object from @walkeros/web-core with tracking settings',
-    ),
-]);
-
-/**
  * ELB Layer configuration schema
  * Note: Runtime type can be boolean | string | Elb.Layer
  */
@@ -45,10 +31,6 @@ export const SettingsSchema = z.object({
     .boolean()
     .default(true)
     .describe('Enable automatic pageview tracking'),
-
-  session: SessionConfigSchema.default(true).describe(
-    'Enable session tracking (boolean or SessionConfig object)',
-  ),
 
   elb: JavaScriptVarName.default('elb').describe(
     'Name for global elb function',

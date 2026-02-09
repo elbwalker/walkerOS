@@ -1,5 +1,14 @@
 # @walkeros/transformer-validator
 
+## 3.0.0
+
+### Patch Changes
+
+- 6778ab2: Add default exports for simpler CLI flow.json configuration
+- Updated dependencies [f39d9fb]
+- Updated dependencies [888bbdf]
+  - @walkeros/core@1.2.0
+
 ## 2.0.0
 
 ### Patch Changes

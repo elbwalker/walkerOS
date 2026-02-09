@@ -1,5 +1,103 @@
 # @walkeros/core
 
+## 1.2.2
+
+### Patch Changes
+
+- 7ad6cfb: Fix transformer chains computed on-demand instead of pre-computed
+
+  Transformer chains configured via `destination.before` now work correctly.
+  Previously, chains were pre-computed at initialization but the resolution
+  function was never called, causing `before` configuration to be silently
+  ignored.
+
+  **What changed:**
+  - Chains now compute at push time from `destination.config.before`
+  - Removed unused `collector.transformerChain` state
+  - Removed dead `resolveTransformerGraph()` function
+  - Dynamic destinations now support `before` property
+
+## 1.2.1
+
+### Patch Changes
+
+- 6256c12: Add inline code support for sources, transformers, and destinations
+  - Add `InlineCodeSchema` with `push`, `type`, and `init` fields for embedding
+    JavaScript in flow configs
+  - Make `package` field optional in reference schemas (either `package` or
+    `code` required at runtime)
+  - Update `flow-complete.json` example with inline code demonstrations
+    including enricher transformer, debug destination, and conditional mappings
+
+## 1.2.0
+
+### Minor Changes
+
+- f39d9fb: Add array support for transformer chain configuration
+
+  Enables explicit control over transformer chain order by accepting arrays for
+  `next` and `before` properties, bypassing automatic chain resolution.
+
+  **Array chain behavior:**
+
+  | Syntax                           | Behavior                                               |
+  | -------------------------------- | ------------------------------------------------------ |
+  | `"next": "validate"`             | Walks chain via each transformer's `next` property     |
+  | `"next": ["validate", "enrich"]` | Uses exact order specified, ignores transformer `next` |
+
+  **Example:**
+
+  ```json
+  {
+    "sources": {
+      "http": {
+        "package": "@walkeros/server-source-express",
+        "next": ["validate", "enrich", "redact"]
+      }
+    },
+    "destinations": {
+      "analytics": {
+        "package": "@walkeros/server-destination-gcp",
+        "before": ["format", "anonymize"]
+      }
+    }
+  }
+  ```
+
+  When walking a chain encounters an array `next`, it appends all items and
+  stops (does not recursively resolve those transformers' `next` properties).
+
+- 888bbdf: Add inline code syntax for sources, transformers, and destinations
+
+  Enables defining custom logic directly in flow.json using `code` objects
+  instead of requiring external packages. This is ideal for simple one-liner
+  transformations.
+
+  **Example:**
+
+  ```json
+  {
+    "transformers": {
+      "enrich": {
+        "code": {
+          "push": "$code:(event) => ({ ...event, data: { ...event.data, enriched: true } })"
+        },
+        "config": {}
+      }
+    }
+  }
+  ```
+
+  **Code object properties:**
+  - `push` - The push function with `$code:` prefix (required)
+  - `type` - Optional instance type identifier
+  - `init` - Optional init function with `$code:` prefix
+
+  **Rules:**
+  - Use `package` OR `code`, never both (CLI validates this)
+  - `config` stays separate from `code`
+  - `$code:` prefix outputs raw JavaScript at bundle time
+
 ## 1.1.0
 
 ### Minor Changes

@@ -142,10 +142,10 @@ export function packageNameToVariable(packageName: string): string {
  */
 function resolveCodeFromPackage(
   packageName: string | undefined,
-  existingCode: string | undefined,
+  existingCode: string | Flow.InlineCode | undefined,
   packages: Flow.Packages | undefined,
-): string | undefined {
-  // Preserve explicit code first
+): string | Flow.InlineCode | undefined {
+  // Preserve explicit code first (including InlineCode objects)
   if (existingCode) return existingCode;
 
   // Auto-generate code from package name if package exists
@@ -229,11 +229,22 @@ export function getFlowConfig(
         result.packages,
       );
 
+      // Exclude deprecated code: true, only keep valid string or InlineCode
+      const validCode =
+        typeof source.code === 'string' || typeof source.code === 'object'
+          ? source.code
+          : undefined;
+      const finalCode = resolvedCode || validCode;
       result.sources[name] = {
-        ...source,
+        package: source.package,
         config: processedConfig,
-        ...(resolvedCode && { code: resolvedCode }),
-      };
+        env: source.env,
+        primary: source.primary,
+        variables: source.variables,
+        definitions: source.definitions,
+        next: source.next,
+        code: finalCode,
+      } as Flow.SourceReference;
     }
   }
 
@@ -260,11 +271,21 @@ export function getFlowConfig(
         result.packages,
       );
 
+      // Exclude deprecated code: true, only keep valid string or InlineCode
+      const validCode =
+        typeof dest.code === 'string' || typeof dest.code === 'object'
+          ? dest.code
+          : undefined;
+      const finalCode = resolvedCode || validCode;
       result.destinations[name] = {
-        ...dest,
+        package: dest.package,
         config: processedConfig,
-        ...(resolvedCode && { code: resolvedCode }),
-      };
+        env: dest.env,
+        variables: dest.variables,
+        definitions: dest.definitions,
+        before: dest.before,
+        code: finalCode,
+      } as Flow.DestinationReference;
     }
   }
 

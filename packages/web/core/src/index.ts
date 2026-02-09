@@ -5,7 +5,6 @@ export * from './environment';
 export * from './getHashWeb';
 export * from './isVisible';
 export * from './sendWeb';
-export * from './session/';
 export * from './storage';
 
 // Export web-specific types

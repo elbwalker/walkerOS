@@ -1,5 +1,88 @@
 # @walkeros/cli
 
+## 1.1.3
+
+### Patch Changes
+
+- 6fcfaf5: Fix chain property handling for all component types in bundler.
+  Sources now correctly output `next` property for pre-collector transformer
+  chains. Unified inline code generation for sources, destinations, and
+  transformers. Standardized transformer `next` as top-level property
+  (consistent with destination `before`).
+
+## 1.1.2
+
+### Patch Changes
+
+- Updated dependencies [7ad6cfb]
+  - @walkeros/core@1.2.2
+  - @walkeros/server-core@1.0.4
+
+## 1.1.1
+
+### Patch Changes
+
+- 6256c12: Add inline code support for sources, transformers, and destinations
+  - Add `InlineCodeSchema` with `push`, `type`, and `init` fields for embedding
+    JavaScript in flow configs
+  - Make `package` field optional in reference schemas (either `package` or
+    `code` required at runtime)
+  - Update `flow-complete.json` example with inline code demonstrations
+    including enricher transformer, debug destination, and conditional mappings
+
+- Updated dependencies [6256c12]
+  - @walkeros/core@1.2.1
+  - @walkeros/server-core@1.0.3
+
+## 1.1.0
+
+### Minor Changes
+
+- 888bbdf: Add inline code syntax for sources, transformers, and destinations
+
+  Enables defining custom logic directly in flow.json using `code` objects
+  instead of requiring external packages. This is ideal for simple one-liner
+  transformations.
+
+  **Example:**
+
+  ```json
+  {
+    "transformers": {
+      "enrich": {
+        "code": {
+          "push": "$code:(event) => ({ ...event, data: { ...event.data, enriched: true } })"
+        },
+        "config": {}
+      }
+    }
+  }
+  ```
+
+  **Code object properties:**
+  - `push` - The push function with `$code:` prefix (required)
+  - `type` - Optional instance type identifier
+  - `init` - Optional init function with `$code:` prefix
+
+  **Rules:**
+  - Use `package` OR `code`, never both (CLI validates this)
+  - `config` stays separate from `code`
+  - `$code:` prefix outputs raw JavaScript at bundle time
+
+### Patch Changes
+
+- fdf6e7b: Add transformer support to CLI bundler
+  - Detect and bundle transformer packages from flow.json configuration
+  - Support transformer chaining via `next` field
+  - Handle `$code:` prefix for inline JavaScript in transformer config
+  - Generate proper import statements and config objects for transformers
+  - Document transformer configuration in flow.json
+
+- Updated dependencies [f39d9fb]
+- Updated dependencies [888bbdf]
+  - @walkeros/core@1.2.0
+  - @walkeros/server-core@1.0.2
+
 ## 1.0.2
 
 ### Patch Changes

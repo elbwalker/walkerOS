@@ -1,4 +1,10 @@
-import type { Collector, WalkerOS, Elb, Destination } from '@walkeros/core';
+import type {
+  Collector,
+  WalkerOS,
+  Elb,
+  Destination,
+  Transformer,
+} from '@walkeros/core';
 import {
   assign,
   clone,
@@ -6,17 +12,31 @@ import {
   getId,
   getGrantedConsent,
   isDefined,
+  isFunction,
   isObject,
   processEventMapping,
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
-import { destinationCode } from './destination-code';
 import { callDestinationOn } from './on';
-import { runTransformerChain } from './transformer';
+import {
+  runTransformerChain,
+  walkChain,
+  extractTransformerNextMap,
+  extractChainProperty,
+} from './transformer';
 
-function resolveCode(code: Destination.Instance | true): Destination.Instance {
-  return code === true ? destinationCode : code;
+/**
+ * Computes transformer chain for a destination on-demand.
+ * Returns empty array if destination has no 'before' configured.
+ */
+function getDestinationChain(
+  destination: Destination.Instance,
+  transformers: Transformer.Transformers,
+): string[] {
+  const before = destination.config.before as string | string[] | undefined;
+  if (!before) return [];
+  return walkChain(before, extractTransformerNextMap(transformers));
 }
 
 /**
@@ -32,14 +52,29 @@ export async function addDestination(
   data: Destination.Init,
   options?: Destination.Config,
 ): Promise<Elb.PushResult> {
-  const { code, config: dataConfig = {}, env = {} } = data;
-  const config = options || dataConfig || { init: false };
+  const { code, config: dataConfig = {}, env = {}, before } = data;
 
-  const resolved = resolveCode(code);
+  // Validate that code has a push method
+  if (!isFunction(code.push)) {
+    return createPushResult({
+      ok: false,
+      failed: {
+        invalid: {
+          type: 'invalid',
+          error: 'Destination code must have a push method',
+        },
+      },
+    });
+  }
+
+  const baseConfig = options || dataConfig || { init: false };
+  // Merge before into config if provided at root level
+  const config = before ? { ...baseConfig, before } : baseConfig;
+
   const destination: Destination.Instance = {
-    ...resolved,
+    ...code,
     config,
-    env: mergeEnvironments(resolved.env, env),
+    env: mergeEnvironments(code.env, env),
   };
 
   let id = destination.config.id; // Use given id
@@ -164,8 +199,11 @@ export async function pushToDestinations(
       let response: unknown;
       if (!destination.dlq) destination.dlq = [];
 
-      // Get post-collector transformer chain for this destination
-      const postChain = collector.transformerChain?.post?.[id] || [];
+      // Compute transformer chain on-demand from destination.before
+      const postChain = getDestinationChain(
+        destination,
+        collector.transformers,
+      );
 
       // Process allowed events and store failed ones in the dead letter queue (DLQ)
       await Promise.all(
@@ -468,17 +506,23 @@ export async function initDestinations(
 
   for (const [name, destinationDef] of Object.entries(destinations)) {
     const { code, config = {}, env = {} } = destinationDef;
-    const resolved = resolveCode(code);
+
+    // Use unified chain property extractor
+    const { config: configWithChain } = extractChainProperty(
+      destinationDef,
+      'before',
+    );
 
     const mergedConfig = {
-      ...resolved.config,
+      ...code.config,
       ...config,
+      ...configWithChain,
     };
 
-    const mergedEnv = mergeEnvironments(resolved.env, env);
+    const mergedEnv = mergeEnvironments(code.env, env);
 
     result[name] = {
-      ...resolved,
+      ...code,
       config: mergedConfig,
       env: mergedEnv,
     };

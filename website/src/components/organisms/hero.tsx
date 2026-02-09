@@ -113,7 +113,7 @@ export default function Hero({
                       className="inline-flex items-center space-x-2 text-sm/6 font-medium"
                       style={{ color: 'var(--color-base-content)' }}
                     >
-                      <span>Just shipped v1.0</span>
+                      <span>Just shipped v1.1</span>
                       <ChevronRightIcon
                         aria-hidden="true"
                         className="size-5"
@@ -188,7 +188,7 @@ export default function Hero({
               centerTitle="Collector"
               center={
                 <img
-                  src="/img/walkerOS_logo_new.svg"
+                  src="/img/walkerOS_logo.svg"
                   alt="walkerOS"
                   className="w-24 h-24 xl:w-32 xl:h-32"
                 />

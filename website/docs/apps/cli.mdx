@@ -42,6 +42,7 @@ npx walkeros --version`}
 | `bundle` | Build production-ready bundle from flow config | Create deployable JavaScript from configuration |
 | `simulate` | Test flow with sample events (mocked) | Validate config or bundle before deployment |
 | `push` | Execute event with real API calls | Integration testing, production validation |
+| `validate` | Validate events, flows, or mappings | Check configuration before bundling |
 | `run collect` | Start HTTP event collection server | Accept incoming events via HTTP POST |
 | `run serve` | Serve web bundles as static files | Host browser tracking scripts |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
@@ -738,6 +739,218 @@ walkeros push flow.json --event event.json --flow staging
 
 # Push to production
 walkeros push flow.json --event event.json --flow production`}
+  language="bash"
+/>
+
+## Validate command
+
+The `validate` command checks the structure and correctness of events, flow configurations, or mapping configurations before bundling or deployment.
+
+### Use case
+
+Before bundling or deploying your flow, you want to:
+- Catch configuration errors early
+- Verify event structure follows walkerOS conventions
+- Check mapping patterns are valid
+- Integrate validation into CI/CD pipelines
+
+Validate gives you fast feedback without the overhead of bundling.
+
+### Basic usage
+
+<CodeSnippet
+  code={`# Validate a flow configuration
+walkeros validate flow flow.json
+
+# Validate an event structure
+walkeros validate event event.json
+
+# Validate a mapping configuration
+walkeros validate mapping mapping.json`}
+  language="bash"
+/>
+
+### Validation types
+
+The command accepts three validation types:
+
+| Type | What it validates |
+|------|-------------------|
+| `event` | Event structure: `name` field exists, follows "entity action" format with space, valid data types |
+| `flow` | Flow.Setup config: version, flows object, packages, sources, destinations structure |
+| `mapping` | Mapping rules: event patterns use "entity action" or wildcard format, rule structures are valid |
+
+### Step-by-step guide
+
+**1. Validate a flow configuration**
+
+<CodeSnippet
+  code={`walkeros validate flow flow.json`}
+  language="bash"
+/>
+
+Output (valid):
+```
+Validating flow...
+
+Validation Results:
+  ✓ All checks passed
+
+Summary: 0 error(s), 0 warning(s)
+```
+
+**2. Validate with errors**
+
+<CodeSnippet
+  code={`# Create an invalid event
+echo '{"name":"pageview"}' > bad-event.json
+
+walkeros validate event bad-event.json`}
+  language="bash"
+/>
+
+Output:
+```
+Validating event...
+
+Validation Results:
+  ✗ name: Event name must be "entity action" format with space (e.g., "page view")
+
+Summary: 1 error(s), 0 warning(s)
+```
+
+**3. Validate with warnings**
+
+<CodeSnippet
+  code={`# Event without consent object
+echo '{"name":"page view","data":{"title":"Home"}}' > event.json
+
+walkeros validate event event.json`}
+  language="bash"
+/>
+
+Output:
+```
+Validating event...
+
+Validation Results:
+  ✓ All checks passed
+  ⚠ consent: No consent object provided
+    → Consider adding a consent object for GDPR/privacy compliance
+
+Summary: 0 error(s), 1 warning(s)
+```
+
+### Options
+
+<CodeSnippet
+  code={`walkeros validate <type> [input] [options]`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--flow <name>` | Flow name to validate (for multi-flow configs) |
+| `--strict` | Treat warnings as errors (exit code 2) |
+| `--json` | Output results as JSON |
+| `-v, --verbose` | Show detailed validation information |
+| `-s, --silent` | Suppress banner output |
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Valid (no errors) |
+| 1 | Validation errors found |
+| 2 | Warnings found (with `--strict`) |
+| 3 | Input error (file not found, invalid JSON, etc.) |
+
+### CI/CD integration
+
+Use `--json` and exit codes for automated pipelines:
+
+<CodeSnippet
+  code={`# Fail on any error
+walkeros validate flow flow.json --json || exit 1
+
+# Fail on warnings too (strict mode)
+walkeros validate flow flow.json --strict --json || exit 1`}
+  language="bash"
+/>
+
+JSON output format:
+```json
+{
+  "valid": true,
+  "type": "flow",
+  "errors": [],
+  "warnings": [
+    {
+      "path": "packages.@walkeros/destination-demo",
+      "message": "Package \"@walkeros/destination-demo\" has no version specified",
+      "suggestion": "Consider specifying a version for reproducible builds"
+    }
+  ],
+  "details": {
+    "flowNames": ["default"],
+    "flowCount": 1,
+    "packageCount": 2
+  }
+}
+```
+
+### Multi-flow validation
+
+Validate a specific flow in a multi-flow configuration:
+
+<CodeSnippet
+  code={`# Validate only the "production" flow
+walkeros validate flow flow.json --flow production`}
+  language="bash"
+/>
+
+If the flow doesn't exist:
+```
+Validation Results:
+  ✗ flows: Flow "production" not found. Available: default, staging
+
+Summary: 1 error(s), 0 warning(s)
+```
+
+### Event validation details
+
+Event validation checks (see [event.ts](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/src/commands/validate/validators/event.ts)):
+
+1. **Name field exists** - Required field
+2. **Name is non-empty** - Cannot be empty string
+3. **Entity-action format** - Must contain space (e.g., `"page view"` not `"pageview"`)
+4. **Schema validation** - Data types match expected structure
+5. **Best practices** - Warns if consent object is missing
+
+<CodeSnippet
+  code={`# Valid event
+walkeros validate event '{"name":"product view","data":{"id":"P123"}}'
+
+# Invalid: missing space in name
+walkeros validate event '{"name":"productview"}'`}
+  language="bash"
+/>
+
+### Mapping validation details
+
+Mapping validation checks (see [mapping.ts](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/src/commands/validate/validators/mapping.ts)):
+
+1. **Object structure** - Must be an object with event patterns as keys
+2. **Event patterns** - Must be `"entity action"` format or contain wildcard (`*`)
+3. **Rule structure** - Each rule must be an object or array of objects
+4. **Catch-all position** - Warns if `*` is not the last pattern
+
+<CodeSnippet
+  code={`# Valid mapping
+walkeros validate mapping '{
+  "page view": {"name": "pageview"},
+  "*": {"name": "generic_event"}
+}'`}
   language="bash"
 />
 

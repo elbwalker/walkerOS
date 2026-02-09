@@ -1,20 +1,6 @@
 import type { Collector, Source, WalkerOS } from '@walkeros/core';
 import { getMappingValue, tryCatchAsync } from '@walkeros/core';
-import { walkChain } from './transformer';
-
-/**
- * Extracts a simple {id: {next}} map from transformer instances.
- * Used for chain resolution.
- */
-function extractTransformerNextMap(
-  transformers: Record<string, { config: { next?: string } }>,
-): Record<string, { next?: string }> {
-  const result: Record<string, { next?: string }> = {};
-  for (const [id, transformer] of Object.entries(transformers)) {
-    result[id] = { next: transformer.config.next };
-  }
-  return result;
-}
+import { walkChain, extractTransformerNextMap } from './transformer';
 
 /**
  * Initialize sources using the code/config/env pattern

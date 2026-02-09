@@ -28,8 +28,8 @@ describe('Handle Commands', () => {
       // Initially no destinations
       expect(Object.keys(collector.destinations)).toHaveLength(0);
 
-      // Add destination without config
-      await elb('walker destination', mockDestination);
+      // Add destination using new format: { code: destination }
+      await elb('walker destination', { code: mockDestination });
 
       // Destination should be added with some default config
       expect(Object.keys(collector.destinations)).toHaveLength(1);
@@ -54,8 +54,8 @@ describe('Handle Commands', () => {
         },
       };
 
-      // Add destination with config
-      await elb('walker destination', mockDestination, customConfig);
+      // Add destination using new format: { code: destination }
+      await elb('walker destination', { code: mockDestination }, customConfig);
 
       // Destination should be added with custom id and config
       expect(Object.keys(collector.destinations)).toEqual(['my-custom-id']);
@@ -73,8 +73,8 @@ describe('Handle Commands', () => {
         settings: { apiKey: 'test-key' },
       };
 
-      // Add destination with config
-      await elb('walker destination', mockDestination, customConfig);
+      // Add destination using new format: { code: destination }
+      await elb('walker destination', { code: mockDestination }, customConfig);
 
       // Destination should be added with custom config
       expect(collector.destinations['test-destination']).toBeDefined();
@@ -91,11 +91,11 @@ describe('Handle Commands', () => {
         settings: { foo: 'bar' },
       };
 
-      // Call commonHandleCommand directly
+      // Call commonHandleCommand directly using new format: { code: destination }
       await commonHandleCommand(
         collector,
         'destination',
-        mockDestination,
+        { code: mockDestination },
         customConfig,
       );
 

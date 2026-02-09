@@ -291,3 +291,5 @@ export * as SourceFetch from './types';
 export * from './utils';
 export * as schemas from './schemas';
 export * as examples from './examples';
+
+export default sourceFetch;

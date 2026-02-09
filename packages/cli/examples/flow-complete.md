@@ -71,7 +71,7 @@ npx walkeros serve packages/cli/examples/flow-complete.json --flow web
 
 ## Feature Inventory
 
-### Features Used (51)
+### Features Used (53)
 
 #### Mapping - Value Extraction
 
@@ -81,6 +81,7 @@ npx walkeros serve packages/cli/examples/flow-complete.json --flow web
 | Static value      | Meta ViewContent  | `"content_type": { "value": "product" }`                     |
 | Key with fallback | GA4 add_to_cart   | `{ "key": "data.currency", "value": "$variables.currency" }` |
 | Nested key (deep) | dataLayer mapping | `"items.0.item_id"`                                          |
+| Fallback array    | GA4 view_item     | `[{ "key": "data.sku" }, { "key": "data.id" }]`              |
 
 #### Mapping - Structure
 
@@ -92,6 +93,7 @@ npx walkeros serve packages/cli/examples/flow-complete.json --flow web
 | Set (single value)    | Meta ViewContent   | `"content_ids": { "set": ["data.id"] }`                     |
 | Set (multiple values) | Meta settings      | `"external_id": { "set": ["user.device", "user.session"] }` |
 | Direct passthrough    | Meta PageView      | `"data": "data"`                                            |
+| Config-level data     | API destination    | `"data": { "map": { "sent_at": {...} } }`                   |
 
 #### Mapping - Control
 
@@ -175,36 +177,33 @@ npx walkeros serve packages/cli/examples/flow-complete.json --flow web
 
 ---
 
-### Features NOT Used (15)
+### Features NOT Used (6)
 
-#### Requires JavaScript (7)
+#### Now Available via $code: Prefix ✅
 
-These features cannot be used in pure JSON configurations:
+These features are now fully supported in JSON via `$code:` prefix (and ARE used
+in this example):
 
-| Feature                     | Reason                        |
-| --------------------------- | ----------------------------- |
-| `fn:` function              | Requires JavaScript callback  |
-| `condition:`                | Requires JavaScript predicate |
-| Conditional mapping (array) | Requires condition functions  |
-| Custom transformer code     | Requires JavaScript           |
-| Custom source code          | Requires JavaScript           |
-| Custom destination code     | Requires JavaScript           |
-| Event handler callbacks     | Requires JavaScript           |
+| Feature                     | Status                              |
+| --------------------------- | ----------------------------------- |
+| `fn:` function              | ✅ Used via `$code:` in GA4 value   |
+| `condition:`                | ✅ Used via `$code:` in definitions |
+| Conditional mapping (array) | ✅ Used in serverValidator          |
+| Custom transformer code     | ✅ Used in enricher, filter         |
+| Custom destination code     | ✅ Used in debug logger             |
 
-#### Omitted for Clarity (8)
+#### Omitted for Clarity (6)
 
 These features could be added but were omitted to keep the example focused:
 
-| Feature                   | Why Omitted                   |
-| ------------------------- | ----------------------------- |
-| Multiple named flows (3+) | Two flows sufficient for demo |
-| Queue config              | Advanced batching scenario    |
-| Retry config              | Advanced error handling       |
-| Custom fetch options      | API destination advanced      |
-| Dynamic routing           | Requires condition logic      |
-| Transform before send     | Covered by policy             |
-| Custom headers in API     | Would add complexity          |
-| Multiple validators       | One per flow sufficient       |
+| Feature                   | Why Omitted                    |
+| ------------------------- | ------------------------------ |
+| Multiple named flows (3+) | Two flows sufficient for demo  |
+| Queue config              | Advanced batching scenario     |
+| Retry config              | Advanced error handling        |
+| Custom fetch options      | API destination advanced       |
+| Custom headers in API     | Would add complexity           |
+| `validate:` function      | Could add via $code: if needed |
 
 ---
 

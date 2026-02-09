@@ -1,6 +1,6 @@
 <p align="left">
   <a href="https://www.walkeros.io">
-    <img title="elbwalker" src="https://www.walkeros.io/img/elbwalker_logo.png" width="256px"/>
+    <img alt="walkerOS" title="walkerOS" src="https://www.walkeros.io/img/walkerOS_logo.svg" width="256px"/>
   </a>
 </p>
 
@@ -11,14 +11,18 @@
 
 Web core utilities are browser-specific functions designed for client-side
 walkerOS implementations. These utilities handle DOM interactions, browser
-information, storage, sessions, and web-based communication.
+information, storage, element visibility, and web-based communication.
+
+> **Note**: Session management has been moved to `@walkeros/web-source-session`.
+> See the [session source package](../sources/session/README.md) for session
+> tracking.
 
 ## Installation
 
 Import web utilities from the `@walkeros/web-core` package:
 
 ```ts
-import { getAttribute, sendWeb, sessionStart } from '@walkeros/web-core';
+import { getAttribute, sendWeb, isVisible } from '@walkeros/web-core';
 ```
 
 ## Utilities
@@ -124,11 +128,11 @@ This function considers:
 data from browser storage with automatic type conversion.
 
 ```js
-// Default uses localStorage
+// Default uses sessionStorage
 const userId = storageRead('walker_user_id');
 
-// Use sessionStorage
-const sessionData = storageRead('session_data', 'sessionStorage');
+// Use localStorage
+const data = storageRead('data', 'local');
 ```
 
 ##### storageWrite
@@ -140,8 +144,8 @@ writes data to storage with expiration and domain options.
 // Store with 30-minute expiration
 storageWrite('user_preference', 'dark-mode', 30);
 
-// Store in sessionStorage
-storageWrite('temp_data', { id: 123 }, undefined, 'sessionStorage');
+// Store in localStorage
+storageWrite('temp_data', { id: 123 }, undefined, 'local');
 
 // Store with custom domain for cookies
 storageWrite('tracking_id', 'abc123', 1440, 'cookie', '.example.com');
@@ -153,42 +157,8 @@ storageWrite('tracking_id', 'abc123', 1440, 'cookie', '.example.com');
 
 ```js
 storageDelete('expired_data');
-storageDelete('session_temp', 'sessionStorage');
+storageDelete('session_temp', 'local');
 ```
-
-### Session Management
-
-#### sessionStart
-
-`sessionStart(config?: SessionConfig): WalkerOS.SessionData | void` initializes
-and manages user sessions with automatic renewal and tracking.
-
-```js
-// Start session with default config
-const session = sessionStart();
-
-// Custom session configuration
-const session = sessionStart({
-  storage: true,
-  domain: '.example.com',
-  maxAge: 1440, // 24 hours
-  sampling: 1.0, // 100% sampling
-});
-```
-
-Session data includes:
-
-- `id` - Unique session identifier
-- `start` - Session start timestamp
-- `isNew` - Whether this is a new session
-- `count` - Number of events in session
-- `device` - Device identifier
-- `storage` - Whether storage is available
-
-#### Advanced Session Functions
-
-- `sessionStorage` - Session-specific storage operations
-- `sessionWindow` - Window/tab session management
 
 ### Web Communication
 
@@ -282,35 +252,20 @@ interface SendWebOptionsFetch extends SendWebOptions {
 }
 ```
 
-### SessionConfig
-
-```ts
-interface SessionConfig {
-  storage?: boolean; // Enable storage persistence
-  domain?: string; // Cookie domain
-  maxAge?: number; // Session duration in minutes
-  sampling?: number; // Sampling rate (0-1)
-}
-```
-
 ### StorageType
 
 ```ts
-type StorageType = 'localStorage' | 'sessionStorage' | 'cookie';
+type StorageType = 'local' | 'session' | 'cookie';
 ```
 
 ## Usage Notes
 
 - **Consent Required**: Browser information functions may require user consent
   depending on privacy regulations
-- **Storage Fallbacks**: Storage functions gracefully handle unavailable storage
-  with fallbacks
 - **Transport Selection**: Choose transport based on use case:
   - `fetch` - Modern, flexible, supports responses
   - `beacon` - Reliable during page unload, small payloads
   - `xhr` - Synchronous when needed, broader browser support
-- **Performance**: Session and storage operations are optimized for minimal
-  performance impact
 
 ---
 

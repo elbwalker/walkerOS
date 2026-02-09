@@ -119,7 +119,7 @@ jobs:
       - name: Publish to npm
         run: npx changeset publish
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Commit version changes (stable only)
         if: inputs.release_type == 'stable release'
@@ -137,15 +137,19 @@ jobs:
         run: |
           VERSION="v$(node -p "require('./packages/collector/package.json').version")"
 
-          gh release create "$VERSION" \
-            --title "walkerOS $VERSION" \
-            --notes "## Changes
+          cat > /tmp/release-notes.md << 'NOTES_EOF'
+          ## Changes
 
           ${{ steps.changesets.outputs.changes }}
 
           ## Published Packages
 
-          ${{ steps.changesets.outputs.packages }}"
+          ${{ steps.changesets.outputs.packages }}
+          NOTES_EOF
+
+          gh release create "$VERSION" \
+            --title "walkerOS $VERSION" \
+            --notes-file /tmp/release-notes.md
 
       # Docker image publishing
       - name: Get CLI version

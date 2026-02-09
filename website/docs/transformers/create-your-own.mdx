@@ -8,7 +8,7 @@ sidebar_position: 99
 
 Build custom transformers for validation, enrichment, or redaction.
 
-## The Transformer Interface
+## The transformer interface
 
 Transformers are functions that receive a context object and return a transformer instance:
 
@@ -44,7 +44,7 @@ The returned instance must implement:
   language="typescript"
 />
 
-## Return Values
+## Return values
 
 | Return | Behavior |
 |--------|----------|
@@ -52,7 +52,7 @@ The returned instance must implement:
 | `void` | Continue chain, event unchanged |
 | `false` | Stop chain, event dropped |
 
-## Minimal Example
+## Minimal example
 
 <CodeSnippet
   code={`import type { Transformer } from '@walkeros/core';
@@ -89,7 +89,7 @@ export const transformerRedact: Transformer.Init<Types> = (context) => {
   language="typescript"
 />
 
-## Push Context
+## Push context
 
 The `push` function receives an event and a push context:
 
@@ -118,7 +118,7 @@ The `push` function receives an event and a push context:
 
 ## Examples
 
-### Enrich: Add Server-Side Data
+### Enrich: add server-side data
 
 <CodeSnippet
   code={`push(event, context) {
@@ -133,7 +133,7 @@ The `push` function receives an event and a push context:
   language="typescript"
 />
 
-### Validate: Custom Check
+### Validate: custom check
 
 <CodeSnippet
   code={`push(event, context) {
@@ -147,7 +147,7 @@ The `push` function receives an event and a push context:
   language="typescript"
 />
 
-## Using Your Transformer
+## Using your transformer
 
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
@@ -219,7 +219,7 @@ describe('Redact Transformer', () => {
   language="typescript"
 />
 
-## Next Steps
+## Next steps
 
 * Review <Link to="/docs/transformers/validator">Validator</Link> source as reference
 * Learn about <Link to="/docs/sources/create-your-own">creating sources</Link>

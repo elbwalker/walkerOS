@@ -18,6 +18,26 @@
       "additionalProperties": {},
       "description": "Reusable configuration definitions"
     },
+    "InlineCode": {
+      "type": "object",
+      "properties": {
+        "push": {
+          "type": "string",
+          "description": "Push function with $code: prefix (required)"
+        },
+        "type": {
+          "type": "string",
+          "description": "Optional instance type identifier"
+        },
+        "init": {
+          "type": "string",
+          "description": "Optional init function with $code: prefix"
+        }
+      },
+      "required": ["push"],
+      "additionalProperties": false,
+      "description": "Inline code definition for sources/destinations/transformers"
+    },
     "PackageConfig": {
       "type": "object",
       "properties": {
@@ -73,8 +93,17 @@
           "description": "Package specifier with optional version (e.g., \"@walkeros/web-source-browser@2.0.0\")"
         },
         "code": {
-          "type": "string",
-          "description": "Named export to use from the package (e.g., \"sourceExpress\"). If omitted, uses default export."
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Named export to use from the package"
+            },
+            {
+              "$ref": "#/definitions/InlineCode",
+              "description": "Inline code definition (use instead of package)"
+            }
+          ],
+          "description": "Either a named export string (with package) or an InlineCode object (without package)"
         },
         "config": {
           "description": "Source-specific configuration object"
@@ -86,6 +115,10 @@
           "type": "boolean",
           "description": "Mark as primary source (provides main elb). Only one source should be primary."
         },
+        "next": {
+          "type": "string",
+          "description": "Next transformer in chain (pre-collector processing)"
+        },
         "variables": {
           "$ref": "#/definitions/Variables",
           "description": "Source-level variables (highest priority in cascade)"
@@ -95,9 +128,18 @@
           "description": "Source-level definitions (highest priority in cascade)"
         }
       },
-      "required": ["package"],
       "additionalProperties": false,
-      "description": "Source package reference with configuration"
+      "oneOf": [
+        {
+          "required": ["package"],
+          "properties": { "code": false }
+        },
+        {
+          "required": ["code"],
+          "properties": { "package": false }
+        }
+      ],
+      "description": "Source reference - use either 'package' or 'code' object, not both"
     },
     "DestinationReference": {
       "type": "object",
@@ -108,14 +150,27 @@
           "description": "Package specifier with optional version (e.g., \"@walkeros/web-destination-gtag@2.0.0\")"
         },
         "code": {
-          "type": "string",
-          "description": "Named export to use from the package (e.g., \"destinationAnalytics\"). If omitted, uses default export."
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Named export to use from the package"
+            },
+            {
+              "$ref": "#/definitions/InlineCode",
+              "description": "Inline code definition (use instead of package)"
+            }
+          ],
+          "description": "Either a named export string (with package) or an InlineCode object (without package)"
         },
         "config": {
           "description": "Destination-specific configuration object"
         },
         "env": {
           "description": "Destination environment configuration"
+        },
+        "before": {
+          "type": "string",
+          "description": "Transformer to run before this destination (post-collector processing)"
         },
         "variables": {
           "$ref": "#/definitions/Variables",
@@ -126,9 +181,71 @@
           "description": "Destination-level definitions (highest priority in cascade)"
         }
       },
-      "required": ["package"],
       "additionalProperties": false,
-      "description": "Destination package reference with configuration"
+      "oneOf": [
+        {
+          "required": ["package"],
+          "properties": { "code": false }
+        },
+        {
+          "required": ["code"],
+          "properties": { "package": false }
+        }
+      ],
+      "description": "Destination reference - use either 'package' or 'code' object, not both"
+    },
+    "TransformerReference": {
+      "type": "object",
+      "properties": {
+        "package": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Package specifier with optional version (e.g., \"@walkeros/transformer-validator@1.0.0\")"
+        },
+        "code": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Named export to use from the package"
+            },
+            {
+              "$ref": "#/definitions/InlineCode",
+              "description": "Inline code definition (use instead of package)"
+            }
+          ],
+          "description": "Either a named export string (with package) or an InlineCode object (without package)"
+        },
+        "config": {
+          "description": "Transformer-specific configuration object"
+        },
+        "env": {
+          "description": "Transformer environment configuration"
+        },
+        "next": {
+          "type": "string",
+          "description": "Next transformer in chain (omit to end chain)"
+        },
+        "variables": {
+          "$ref": "#/definitions/Variables",
+          "description": "Transformer-level variables (highest priority in cascade)"
+        },
+        "definitions": {
+          "$ref": "#/definitions/Definitions",
+          "description": "Transformer-level definitions (highest priority in cascade)"
+        }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": ["package"],
+          "properties": { "code": false }
+        },
+        {
+          "required": ["code"],
+          "properties": { "package": false }
+        }
+      ],
+      "description": "Transformer reference - use either 'package' or 'code' object, not both"
     },
     "FlowConfig": {
       "type": "object",
@@ -154,6 +271,13 @@
             "$ref": "#/definitions/DestinationReference"
           },
           "description": "Destination configurations (data output) keyed by unique identifier"
+        },
+        "transformers": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/TransformerReference"
+          },
+          "description": "Transformer configurations (event processing) keyed by unique identifier"
         },
         "collector": {
           "description": "Collector configuration for event processing (uses Collector.InitConfig)"

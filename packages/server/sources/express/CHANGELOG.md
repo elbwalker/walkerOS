@@ -1,5 +1,28 @@
 # @walkeros/server-source-express
 
+## 1.0.4
+
+### Patch Changes
+
+- Updated dependencies [7ad6cfb]
+  - @walkeros/core@1.2.2
+
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [6256c12]
+  - @walkeros/core@1.2.1
+
+## 1.0.2
+
+### Patch Changes
+
+- 6778ab2: Add default exports for simpler CLI flow.json configuration
+- Updated dependencies [f39d9fb]
+- Updated dependencies [888bbdf]
+  - @walkeros/core@1.2.0
+
 ## 1.0.1
 
 ### Patch Changes

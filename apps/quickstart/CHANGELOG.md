@@ -1,5 +1,43 @@
 # @walkeros/quickstart
 
+## 1.0.5
+
+### Patch Changes
+
+- Updated dependencies [7ad6cfb]
+  - @walkeros/collector@1.1.2
+  - @walkeros/core@1.2.2
+  - @walkeros/web-source-browser@1.1.2
+  - @walkeros/web-core@1.0.4
+  - @walkeros/web-destination-api@1.1.4
+  - @walkeros/web-destination-gtag@1.0.4
+
+## 1.0.4
+
+### Patch Changes
+
+- Updated dependencies [6256c12]
+  - @walkeros/core@1.2.1
+  - @walkeros/collector@1.1.1
+  - @walkeros/web-core@1.0.3
+  - @walkeros/web-source-browser@1.1.1
+  - @walkeros/web-destination-api@1.1.3
+  - @walkeros/web-destination-gtag@1.0.3
+
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [f39d9fb]
+- Updated dependencies [888bbdf]
+- Updated dependencies [a38d791]
+  - @walkeros/collector@1.1.0
+  - @walkeros/core@1.2.0
+  - @walkeros/web-source-browser@1.1.0
+  - @walkeros/web-core@1.0.2
+  - @walkeros/web-destination-api@1.1.2
+  - @walkeros/web-destination-gtag@1.0.2
+
 ## 1.0.2
 
 ### Patch Changes

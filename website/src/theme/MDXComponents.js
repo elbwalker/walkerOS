@@ -6,7 +6,6 @@ import TabItem from '@theme/TabItem';
 import { Icon } from '@iconify/react';
 // Import explorer components (made available in all MDX files)
 import {
-  ArchitectureFlow,
   CodeBox,
   CodeSnippet,
   DestinationDemo,
@@ -29,7 +28,6 @@ export default {
   Icon,
   PackageLink,
   // Explorer components (no import needed in MDX files)
-  ArchitectureFlow,
   CodeBox,
   CodeSnippet,
   DestinationDemo,
