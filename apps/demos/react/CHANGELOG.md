@@ -1,5 +1,13 @@
 # walkeros-demo-react
 
+## 1.0.6
+
+### Patch Changes
+
+- Updated dependencies [e9c9faa]
+  - @walkeros/collector@1.1.3
+  - @walkeros/web-source-browser@1.1.3
+
 ## 1.0.5
 
 ### Patch Changes

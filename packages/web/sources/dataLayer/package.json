@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-datalayer",
   "description": "DataLayer source for walkerOS",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@walkeros/core": "1.2.2",
-    "@walkeros/collector": "1.1.2"
+    "@walkeros/collector": "1.1.3"
   },
   "devDependencies": {
     "@types/gtag.js": "^0.0.20"

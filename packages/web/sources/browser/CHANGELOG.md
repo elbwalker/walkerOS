@@ -1,5 +1,12 @@
 # @walkeros/web-source-browser
 
+## 1.1.3
+
+### Patch Changes
+
+- Updated dependencies [e9c9faa]
+  - @walkeros/collector@1.1.3
+
 ## 1.1.2
 
 ### Patch Changes

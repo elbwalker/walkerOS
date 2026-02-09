@@ -1,5 +1,12 @@
 # walkeros
 
+## 1.0.7
+
+### Patch Changes
+
+- Updated dependencies [cc68f50]
+  - @walkeros/cli@1.2.0
+
 ## 1.0.6
 
 ### Patch Changes

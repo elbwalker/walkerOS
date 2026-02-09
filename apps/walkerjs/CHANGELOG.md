@@ -1,5 +1,14 @@
 # @walkeros/walker.js
 
+## 1.0.5
+
+### Patch Changes
+
+- Updated dependencies [e9c9faa]
+  - @walkeros/collector@1.1.3
+  - @walkeros/web-source-browser@1.1.3
+  - @walkeros/web-source-datalayer@1.0.5
+
 ## 1.0.4
 
 ### Patch Changes
