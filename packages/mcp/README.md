@@ -217,6 +217,29 @@ tools needed.
 
 - `content` (required): Flow.Setup JSON content
 
+## Local Development
+
+### Smoke Test
+
+A script exercises all 16 API endpoints against a running app instance:
+
+```bash
+WALKEROS_TOKEN='<your-token>' \
+WALKEROS_APP_URL=http://localhost:3000 \
+WALKEROS_PROJECT_ID='<your-project-id>' \
+npx tsx packages/mcp/scripts/smoke-test.ts
+```
+
+### Updating the OpenAPI Baseline
+
+The contract test (`npm test`) checks that all MCP endpoints exist in a snapshot
+of the app's OpenAPI spec. After API changes:
+
+```bash
+curl $WALKEROS_APP_URL/api/openapi.json | python3 -m json.tool \
+  > packages/mcp/src/__tests__/fixtures/openapi-baseline.json
+```
+
 ## Dependencies
 
 This package depends on:

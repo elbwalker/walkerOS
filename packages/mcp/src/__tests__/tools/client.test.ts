@@ -112,5 +112,34 @@ describe('api/client', () => {
       const { apiRequest } = await import('../../api/client.js');
       await expect(apiRequest('/api/test')).rejects.toThrow('Invalid token');
     });
+
+    it('should throw a clear message on timeout', async () => {
+      process.env.WALKEROS_TOKEN = 'sk-walkeros-test';
+      const timeoutError = new DOMException(
+        'The operation was aborted due to timeout',
+        'TimeoutError',
+      );
+      global.fetch = jest.fn().mockRejectedValue(timeoutError) as any;
+      const { apiRequest } = await import('../../api/client.js');
+      await expect(apiRequest('/api/test', undefined, 5000)).rejects.toThrow(
+        'Request timed out after 5s',
+      );
+    });
+
+    it('should pass signal to fetch', async () => {
+      process.env.WALKEROS_TOKEN = 'sk-walkeros-test';
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ data: 'test' }),
+      });
+      global.fetch = mockFetch as any;
+
+      const { apiRequest } = await import('../../api/client.js');
+      await apiRequest('/api/test');
+
+      const callArgs = mockFetch.mock.calls[0][1];
+      expect(callArgs.signal).toBeDefined();
+    });
   });
 });
