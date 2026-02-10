@@ -31,7 +31,7 @@ export function registerBundleRemoteTool(server: McpServer) {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(content),
+          body: JSON.stringify({ flow: content }),
         });
 
         if (!response.ok) {

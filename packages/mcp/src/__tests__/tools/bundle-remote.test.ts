@@ -111,7 +111,7 @@ describe('bundle-remote tool', () => {
       'https://app.walkeros.io/api/bundle',
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify(content),
+        body: JSON.stringify({ flow: content }),
         headers: expect.objectContaining({
           'Content-Type': 'application/json',
         }),
