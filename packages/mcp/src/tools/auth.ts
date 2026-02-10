@@ -1,5 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiRequest } from '../api/client.js';
+import { apiRequest } from '@walkeros/cli';
 
 export function registerAuthTools(server: McpServer) {
   server.registerTool(

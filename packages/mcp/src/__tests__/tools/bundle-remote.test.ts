@@ -1,10 +1,7 @@
-const mockGetApiConfig = jest.fn().mockReturnValue({
-  token: 'sk-walkeros-test',
-  baseUrl: 'https://app.walkeros.io',
-});
+const mockApiRequest = jest.fn();
 
-jest.mock('../../api/client.js', () => ({
-  getApiConfig: mockGetApiConfig,
+jest.mock('@walkeros/cli', () => ({
+  apiRequest: mockApiRequest,
 }));
 
 function createMockServer() {
@@ -19,15 +16,19 @@ function createMockServer() {
   };
 }
 
+function mockResponse(body: string, headers?: Record<string, string>) {
+  return {
+    text: () => Promise.resolve(body),
+    headers: {
+      get: (key: string) => headers?.[key] ?? null,
+    },
+  };
+}
+
 describe('bundle-remote tool', () => {
   let server: ReturnType<typeof createMockServer>;
 
   beforeEach(async () => {
-    mockGetApiConfig.mockReturnValue({
-      token: 'sk-walkeros-test',
-      baseUrl: 'https://app.walkeros.io',
-    });
-    global.fetch = jest.fn() as any;
     server = createMockServer();
     const { registerBundleRemoteTool } =
       await import('../../tools/bundle-remote.js');
@@ -45,11 +46,7 @@ describe('bundle-remote tool', () => {
 
   it('should POST config and return JS bundle', async () => {
     const mockJs = '(()=>{console.log("bundle")})();';
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(mockJs),
-      headers: new Map(),
-    }) as any;
+    mockApiRequest.mockResolvedValue(mockResponse(mockJs));
 
     const tool = server.getTool('bundle-remote');
     const result = await tool.handler({ content: { version: 1 } });
@@ -62,14 +59,11 @@ describe('bundle-remote tool', () => {
 
   it('should include stats from header when present', async () => {
     const mockJs = 'bundle();';
-    const headers = new Map([
-      ['X-Bundle-Stats', JSON.stringify({ destinations: 2, sources: 1 })],
-    ]);
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(mockJs),
-      headers: { get: (key: string) => headers.get(key) ?? null },
-    }) as any;
+    mockApiRequest.mockResolvedValue(
+      mockResponse(mockJs, {
+        'X-Bundle-Stats': JSON.stringify({ destinations: 2, sources: 1 }),
+      }),
+    );
 
     const tool = server.getTool('bundle-remote');
     const result = await tool.handler({ content: { version: 1 } });
@@ -79,14 +73,7 @@ describe('bundle-remote tool', () => {
   });
 
   it('should return error on API failure', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 400,
-      json: () =>
-        Promise.resolve({
-          error: { message: 'Invalid config' },
-        }),
-    }) as any;
+    mockApiRequest.mockRejectedValue(new Error('Invalid config'));
 
     const tool = server.getTool('bundle-remote');
     const result = await tool.handler({ content: {} });
@@ -95,27 +82,17 @@ describe('bundle-remote tool', () => {
     expect(JSON.parse(result.content[0].text).error).toBe('Invalid config');
   });
 
-  it('should send correct request to /api/bundle', async () => {
-    const mockFetch = jest.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve('code'),
-      headers: { get: () => null },
-    });
-    global.fetch = mockFetch as any;
+  it('should call apiRequest with correct path and options', async () => {
+    mockApiRequest.mockResolvedValue(mockResponse('code', {}));
 
     const content = { version: 1, sources: [] };
     const tool = server.getTool('bundle-remote');
     await tool.handler({ content });
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://app.walkeros.io/api/bundle',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ flow: content }),
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json',
-        }),
-      }),
-    );
+    expect(mockApiRequest).toHaveBeenCalledWith('/api/bundle', {
+      method: 'POST',
+      body: JSON.stringify({ flow: content }),
+      responseFormat: 'raw',
+    });
   });
 });

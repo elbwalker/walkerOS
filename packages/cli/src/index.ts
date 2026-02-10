@@ -23,7 +23,15 @@ export { simulate } from './commands/simulate/index.js';
 export { push } from './commands/push/index.js';
 export { run } from './commands/run/index.js';
 export { validate } from './commands/validate/index.js';
-export { getToken, getAuthHeaders, authenticatedFetch } from './core/auth.js';
+export {
+  getToken,
+  getAuthHeaders,
+  authenticatedFetch,
+  apiRequest,
+  requireProjectId,
+  resolveBaseUrl,
+} from './core/auth.js';
+export type { ApiRequestOptions } from './core/auth.js';
 export { configPull } from './commands/config/index.js';
 
 // === Types ===

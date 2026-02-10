@@ -1,7 +1,7 @@
 const mockApiRequest = jest.fn();
 const mockRequireProjectId = jest.fn().mockReturnValue('proj_default');
 
-jest.mock('../../api/client.js', () => ({
+jest.mock('@walkeros/cli', () => ({
   apiRequest: mockApiRequest,
   requireProjectId: mockRequireProjectId,
 }));

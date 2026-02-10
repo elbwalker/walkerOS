@@ -1,6 +1,6 @@
 const mockApiRequest = jest.fn();
 
-jest.mock('../../api/client.js', () => ({
+jest.mock('@walkeros/cli', () => ({
   apiRequest: mockApiRequest,
 }));
 

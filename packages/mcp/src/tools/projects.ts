@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiRequest, requireProjectId } from '../api/client.js';
+import { apiRequest, requireProjectId } from '@walkeros/cli';
 
 function apiResult(result: unknown) {
   return {
