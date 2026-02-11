@@ -1,5 +1,12 @@
 # @walkeros/core
 
+## 1.3.0
+
+### Minor Changes
+
+- a4cc1ea: Add collector.status for per-source and per-destination delivery
+  tracking
+
 ## 1.2.2
 
 ### Patch Changes

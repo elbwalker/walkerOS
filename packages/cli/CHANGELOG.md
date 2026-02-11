@@ -1,5 +1,20 @@
 # @walkeros/cli
 
+## 1.3.0
+
+### Minor Changes
+
+- 087eb2d: Restructure CLI with auth, projects, flows command groups; MCP wraps
+  CLI functions instead of reimplementing API logic
+- 087eb2d: Add Unix-standard stdio support: results to stdout, logs to stderr,
+  stdin auto-detection, -o for file output
+
+### Patch Changes
+
+- Updated dependencies [a4cc1ea]
+  - @walkeros/core@1.3.0
+  - @walkeros/server-core@1.0.5
+
 ## 1.2.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @walkeros/web-destination-plausible
 
+## 1.0.5
+
+### Patch Changes
+
+- @walkeros/web-core@1.0.5
+
 ## 1.0.4
 
 ### Patch Changes
