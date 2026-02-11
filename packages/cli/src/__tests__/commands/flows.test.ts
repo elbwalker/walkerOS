@@ -1,24 +1,32 @@
-const mockApiRequest = jest.fn();
-const mockRequireProjectId = jest.fn().mockReturnValue('proj_default');
+import { apiRequest, requireProjectId } from '../../core/auth.js';
+import {
+  listFlows,
+  getFlow,
+  createFlow,
+  updateFlow,
+  deleteFlow,
+  duplicateFlow,
+} from '../../commands/flows/index.js';
 
 jest.mock('../../core/auth.js', () => ({
-  apiRequest: mockApiRequest,
-  requireProjectId: mockRequireProjectId,
+  apiRequest: jest.fn(),
+  requireProjectId: jest.fn().mockReturnValue('proj_default'),
 }));
+
+const mockApiRequest = jest.mocked(apiRequest);
+const mockRequireProjectId = jest.mocked(requireProjectId);
 
 describe('flows', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('listFlows', () => {
     it('should call GET /api/projects/{projectId}/flows', async () => {
-      const { listFlows } = await import('../../commands/flows/index.js');
       mockApiRequest.mockResolvedValue({ flows: [], total: 0 });
       await listFlows({ projectId: 'proj_1' });
       expect(mockApiRequest).toHaveBeenCalledWith('/api/projects/proj_1/flows');
     });
 
     it('should fall back to requireProjectId()', async () => {
-      const { listFlows } = await import('../../commands/flows/index.js');
       mockApiRequest.mockResolvedValue({ flows: [] });
       await listFlows();
       expect(mockRequireProjectId).toHaveBeenCalled();
@@ -28,7 +36,6 @@ describe('flows', () => {
     });
 
     it('should pass query params', async () => {
-      const { listFlows } = await import('../../commands/flows/index.js');
       mockApiRequest.mockResolvedValue({ flows: [] });
       await listFlows({
         projectId: 'proj_1',
@@ -44,7 +51,6 @@ describe('flows', () => {
 
   describe('getFlow', () => {
     it('should call GET with flowId', async () => {
-      const { getFlow } = await import('../../commands/flows/index.js');
       mockApiRequest.mockResolvedValue({ id: 'cfg_abc' });
       await getFlow({ flowId: 'cfg_abc', projectId: 'proj_1' });
       expect(mockApiRequest).toHaveBeenCalledWith(
@@ -53,7 +59,6 @@ describe('flows', () => {
     });
 
     it('should fall back to requireProjectId()', async () => {
-      const { getFlow } = await import('../../commands/flows/index.js');
       mockApiRequest.mockResolvedValue({ id: 'cfg_abc' });
       await getFlow({ flowId: 'cfg_abc' });
       expect(mockApiRequest).toHaveBeenCalledWith(
@@ -64,7 +69,6 @@ describe('flows', () => {
 
   describe('createFlow', () => {
     it('should POST with name and content', async () => {
-      const { createFlow } = await import('../../commands/flows/index.js');
       const content = { version: 1 };
       mockApiRequest.mockResolvedValue({ id: 'cfg_new' });
       await createFlow({ name: 'My Flow', content, projectId: 'proj_1' });
@@ -80,7 +84,6 @@ describe('flows', () => {
 
   describe('updateFlow', () => {
     it('should PATCH with name and content', async () => {
-      const { updateFlow } = await import('../../commands/flows/index.js');
       const content = { version: 1, sources: [] };
       mockApiRequest.mockResolvedValue({ id: 'cfg_abc' });
       await updateFlow({
@@ -99,7 +102,6 @@ describe('flows', () => {
     });
 
     it('should only include provided fields in body', async () => {
-      const { updateFlow } = await import('../../commands/flows/index.js');
       mockApiRequest.mockResolvedValue({ id: 'cfg_abc' });
       await updateFlow({
         flowId: 'cfg_abc',
@@ -118,7 +120,6 @@ describe('flows', () => {
 
   describe('deleteFlow', () => {
     it('should send DELETE', async () => {
-      const { deleteFlow } = await import('../../commands/flows/index.js');
       mockApiRequest.mockResolvedValue({ success: true });
       await deleteFlow({ flowId: 'cfg_abc', projectId: 'proj_1' });
       expect(mockApiRequest).toHaveBeenCalledWith(
@@ -130,7 +131,6 @@ describe('flows', () => {
 
   describe('duplicateFlow', () => {
     it('should POST to /duplicate with optional name', async () => {
-      const { duplicateFlow } = await import('../../commands/flows/index.js');
       mockApiRequest.mockResolvedValue({ id: 'cfg_copy' });
       await duplicateFlow({
         flowId: 'cfg_abc',
@@ -147,7 +147,6 @@ describe('flows', () => {
     });
 
     it('should POST without name when not provided', async () => {
-      const { duplicateFlow } = await import('../../commands/flows/index.js');
       mockApiRequest.mockResolvedValue({ id: 'cfg_copy' });
       await duplicateFlow({ flowId: 'cfg_abc', projectId: 'proj_1' });
       expect(mockApiRequest).toHaveBeenCalledWith(

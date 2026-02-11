@@ -1,14 +1,16 @@
-const mockApiRequest = jest.fn();
+import { apiRequest } from '../../core/auth.js';
+import { whoami } from '../../commands/auth/index.js';
 
 jest.mock('../../core/auth.js', () => ({
-  apiRequest: mockApiRequest,
+  apiRequest: jest.fn(),
 }));
+
+const mockApiRequest = jest.mocked(apiRequest);
 
 describe('whoami', () => {
   afterEach(() => jest.clearAllMocks());
 
   it('should call GET /api/auth/whoami', async () => {
-    const { whoami } = await import('../../commands/auth/index.js');
     mockApiRequest.mockResolvedValue({
       userId: 'usr_1',
       email: 'test@example.com',
@@ -26,7 +28,6 @@ describe('whoami', () => {
   });
 
   it('should propagate auth errors', async () => {
-    const { whoami } = await import('../../commands/auth/index.js');
     mockApiRequest.mockRejectedValue(new Error('WALKEROS_TOKEN not set.'));
 
     await expect(whoami()).rejects.toThrow('WALKEROS_TOKEN not set.');
