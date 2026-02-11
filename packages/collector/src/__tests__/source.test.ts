@@ -220,6 +220,78 @@ describe('Source', () => {
     });
   });
 
+  describe('source before deferral', () => {
+    test('source with before is deferred, not initialized', async () => {
+      const mockInit = jest.fn().mockResolvedValue({
+        type: 'deferred',
+        config: {},
+        push: jest.fn(),
+      });
+
+      const { collector } = await startFlow({
+        sources: {
+          deferred: {
+            code: mockInit,
+            config: { before: ['consent'] },
+          },
+        },
+      });
+
+      expect(mockInit).not.toHaveBeenCalled();
+      expect(collector.sources['deferred']).toBeUndefined();
+      expect(collector.pendingSources).toHaveLength(1);
+      expect(collector.pendingSources[0].id).toBe('deferred');
+      expect(collector.pendingSources[0].conditions).toEqual([
+        { type: 'consent', test: undefined },
+      ]);
+    });
+
+    test('source with conditional before is deferred with test function', async () => {
+      const mockInit = jest.fn().mockResolvedValue({
+        type: 'conditional',
+        config: {},
+        push: jest.fn(),
+      });
+
+      const { collector } = await startFlow({
+        sources: {
+          conditional: {
+            code: mockInit,
+            config: {
+              before: [{ consent: (data: any) => !!data.marketing }],
+            },
+          },
+        },
+      });
+
+      expect(mockInit).not.toHaveBeenCalled();
+      expect(collector.pendingSources).toHaveLength(1);
+      expect(collector.pendingSources[0].conditions[0].type).toBe('consent');
+      expect(collector.pendingSources[0].conditions[0].test).toBeDefined();
+      expect(
+        collector.pendingSources[0].conditions[0].test!({ marketing: true }),
+      ).toBe(true);
+    });
+
+    test('source without before inits immediately (backward compat)', async () => {
+      const mockInit = jest.fn().mockResolvedValue({
+        type: 'immediate',
+        config: {},
+        push: jest.fn(),
+      });
+
+      const { collector } = await startFlow({
+        sources: {
+          immediate: { code: mockInit },
+        },
+      });
+
+      expect(mockInit).toHaveBeenCalledTimes(1);
+      expect(collector.sources['immediate']).toBeDefined();
+      expect(collector.pendingSources).toHaveLength(0);
+    });
+  });
+
   describe('source push mechanism', () => {
     it('should push events to sources with on method', async () => {
       const onMock = jest.fn();

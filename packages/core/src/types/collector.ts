@@ -168,6 +168,24 @@ export interface CommandFn {
   ): Promise<ElbTypes.PushResult>;
 }
 
+/**
+ * Normalized runtime condition for a pending source.
+ * All BeforeCondition forms are normalized to this shape.
+ */
+export interface PendingCondition {
+  type: string;
+  test: ((data: unknown) => boolean) | undefined;
+}
+
+/**
+ * A source waiting for its before conditions to be met.
+ */
+export interface PendingSource {
+  id: string;
+  definition: Source.InitSource;
+  conditions: PendingCondition[];
+}
+
 // Main Collector interface
 export interface Instance {
   push: PushFn;
@@ -192,4 +210,5 @@ export interface Instance {
   timing: number;
   user: WalkerOS.User;
   version: string;
+  pendingSources: PendingSource[];
 }

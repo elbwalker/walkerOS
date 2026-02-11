@@ -2,25 +2,33 @@ import type { Collector, Destination, WalkerOS } from './';
 
 // collector state for the on actions
 export type Config = {
+  config?: Array<GenericConfig>;
   consent?: Array<ConsentConfig>;
+  custom?: Array<GenericConfig>;
+  globals?: Array<GenericConfig>;
   ready?: Array<ReadyConfig>;
   run?: Array<RunConfig>;
   session?: Array<SessionConfig>;
+  user?: Array<UserConfig>;
 };
 
-// On types
-export type Types = keyof Config;
+// On types — allow arbitrary string events via `(string & {})`
+export type Types = keyof Config | (string & {});
 
 // Map each event type to its expected context type
 export interface EventContextMap {
+  config: Partial<Collector.Config>;
   consent: WalkerOS.Consent;
-  session: Collector.SessionData;
+  custom: WalkerOS.Properties;
+  globals: WalkerOS.Properties;
   ready: undefined;
   run: undefined;
+  session: Collector.SessionData;
+  user: WalkerOS.User;
 }
 
 // Extract the context type for a specific event
-export type EventContext<T extends Types> = EventContextMap[T];
+export type EventContext<T extends keyof EventContextMap> = EventContextMap[T];
 
 // Union of all possible context types
 export type AnyEventContext = EventContextMap[keyof EventContextMap];
@@ -32,7 +40,13 @@ export interface Context {
 }
 
 // Parameters for the onAction function calls
-export type Options = ConsentConfig | ReadyConfig | RunConfig | SessionConfig;
+export type Options =
+  | ConsentConfig
+  | GenericConfig
+  | ReadyConfig
+  | RunConfig
+  | SessionConfig
+  | UserConfig;
 
 // Consent
 export interface ConsentConfig {
@@ -42,6 +56,10 @@ export type ConsentFn = (
   collector: Collector.Instance,
   consent: WalkerOS.Consent,
 ) => void;
+
+// Generic (config, custom, globals)
+export type GenericConfig = GenericFn;
+export type GenericFn = (collector: Collector.Instance, data: unknown) => void;
 
 // Ready
 export type ReadyConfig = ReadyFn;
@@ -58,16 +76,29 @@ export type SessionFn = (
   session?: unknown,
 ) => void;
 
+// User
+export type UserConfig = UserFn;
+export type UserFn = (
+  collector: Collector.Instance,
+  user: WalkerOS.User,
+) => void;
+
 export interface OnConfig {
+  config?: GenericConfig[];
   consent?: ConsentConfig[];
+  custom?: GenericConfig[];
+  globals?: GenericConfig[];
   ready?: ReadyConfig[];
   run?: RunConfig[];
   session?: SessionConfig[];
+  user?: UserConfig[];
   [key: string]:
     | ConsentConfig[]
+    | GenericConfig[]
     | ReadyConfig[]
     | RunConfig[]
     | SessionConfig[]
+    | UserConfig[]
     | undefined;
 }
 
