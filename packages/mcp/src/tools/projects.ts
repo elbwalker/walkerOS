@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiRequest, requireProjectId } from '@walkeros/cli';
 
 function apiResult(result: unknown) {
   return {
@@ -39,7 +38,8 @@ export function registerProjectTools(server: McpServer) {
     },
     async () => {
       try {
-        return apiResult(await apiRequest('/api/projects'));
+        const { listProjects } = await import('@walkeros/cli');
+        return apiResult(await listProjects());
       } catch (error) {
         return apiError(error);
       }
@@ -67,8 +67,8 @@ export function registerProjectTools(server: McpServer) {
     },
     async ({ projectId }) => {
       try {
-        const id = projectId ?? requireProjectId();
-        return apiResult(await apiRequest(`/api/projects/${id}`));
+        const { getProject } = await import('@walkeros/cli');
+        return apiResult(await getProject({ projectId }));
       } catch (error) {
         return apiError(error);
       }
@@ -92,12 +92,8 @@ export function registerProjectTools(server: McpServer) {
     },
     async ({ name }) => {
       try {
-        return apiResult(
-          await apiRequest('/api/projects', {
-            method: 'POST',
-            body: JSON.stringify({ name }),
-          }),
-        );
+        const { createProject } = await import('@walkeros/cli');
+        return apiResult(await createProject({ name }));
       } catch (error) {
         return apiError(error);
       }
@@ -126,13 +122,8 @@ export function registerProjectTools(server: McpServer) {
     },
     async ({ projectId, name }) => {
       try {
-        const id = projectId ?? requireProjectId();
-        return apiResult(
-          await apiRequest(`/api/projects/${id}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ name }),
-          }),
-        );
+        const { updateProject } = await import('@walkeros/cli');
+        return apiResult(await updateProject({ projectId, name }));
       } catch (error) {
         return apiError(error);
       }
@@ -160,10 +151,8 @@ export function registerProjectTools(server: McpServer) {
     },
     async ({ projectId }) => {
       try {
-        const id = projectId ?? requireProjectId();
-        return apiResult(
-          await apiRequest(`/api/projects/${id}`, { method: 'DELETE' }),
-        );
+        const { deleteProject } = await import('@walkeros/cli');
+        return apiResult(await deleteProject({ projectId }));
       } catch (error) {
         return apiError(error);
       }

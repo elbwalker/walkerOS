@@ -9,8 +9,6 @@ import {
   ListProjectsOutputShape,
   FlowOutputShape,
   ListFlowsOutputShape,
-  ListVersionsOutputShape,
-  GetVersionOutputShape,
   DeleteOutputShape,
   BundleRemoteOutputShape,
 } from '../../schemas/output.js';
@@ -260,51 +258,6 @@ describe('output schemas', () => {
         total: 1,
       });
       expect(result.success).toBe(true);
-    });
-  });
-
-  describe('ListVersionsOutputShape', () => {
-    it('accepts valid version list', () => {
-      const result = parseShape(ListVersionsOutputShape, {
-        data: [
-          {
-            version: 1,
-            createdAt: '2026-01-01T00:00:00Z',
-            createdBy: 'user',
-          },
-          {
-            version: 2,
-            createdAt: '2026-01-02T00:00:00Z',
-            createdBy: 'auto_save',
-            contentHash: 'abc123',
-          },
-        ],
-        flowId: 'cfg_abc',
-        total: 2,
-      });
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe('GetVersionOutputShape', () => {
-    it('accepts valid version', () => {
-      const result = parseShape(GetVersionOutputShape, {
-        version: 3,
-        content: { version: 1, destinations: {} },
-        createdAt: '2026-01-01T00:00:00Z',
-        createdBy: 'restore',
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it('rejects invalid createdBy', () => {
-      const result = parseShape(GetVersionOutputShape, {
-        version: 1,
-        content: {},
-        createdAt: '2026-01-01T00:00:00Z',
-        createdBy: 'system',
-      });
-      expect(result.success).toBe(false);
     });
   });
 

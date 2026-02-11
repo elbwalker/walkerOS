@@ -37,6 +37,7 @@ describe('Transformer', () => {
       user: {},
       version: '1.0.0',
       sources: {},
+      pendingSources: [],
       push: jest.fn(),
       command: jest.fn(),
       status: {

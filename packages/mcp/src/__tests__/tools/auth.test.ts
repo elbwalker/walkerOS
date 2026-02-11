@@ -1,7 +1,7 @@
-const mockApiRequest = jest.fn();
+const mockWhoami = jest.fn();
 
 jest.mock('@walkeros/cli', () => ({
-  apiRequest: mockApiRequest,
+  whoami: mockWhoami,
 }));
 
 function createMockServer() {
@@ -41,17 +41,17 @@ describe('auth tools', () => {
         email: 'dev@test.com',
         projectId: null,
       };
-      mockApiRequest.mockResolvedValue(mockResponse);
+      mockWhoami.mockResolvedValue(mockResponse);
 
       const tool = server.getTool('whoami');
       const result = await tool.handler({});
 
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/auth/whoami');
+      expect(mockWhoami).toHaveBeenCalled();
       expect(JSON.parse(result.content[0].text)).toEqual(mockResponse);
     });
 
     it('should return error when token is missing', async () => {
-      mockApiRequest.mockRejectedValue(new Error('WALKEROS_TOKEN not set'));
+      mockWhoami.mockRejectedValue(new Error('WALKEROS_TOKEN not set'));
 
       const tool = server.getTool('whoami');
       const result = await tool.handler({});

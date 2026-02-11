@@ -57,7 +57,8 @@ describe('CLI E2E Tests', () => {
       const result = await runCLI(['bundle', configPath, '--stats']);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('Bundle Statistics');
+      // Stats go to stderr (logs are routed to stderr for pipe hygiene)
+      expect(result.stderr).toContain('Bundle Statistics');
     }, 120000);
   });
 
@@ -121,8 +122,8 @@ describe('CLI E2E Tests', () => {
       expect(result.stderr || result.stdout).toContain('unknown');
     }, 5000);
 
-    it('should show error for missing arguments', async () => {
-      const result = await runCLI(['bundle']);
+    it('should show error for missing config file', async () => {
+      const result = await runCLI(['bundle', 'nonexistent-config-file.json']);
 
       expect(result.code).not.toBe(0);
     }, 5000);

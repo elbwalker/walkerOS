@@ -55,6 +55,7 @@ describe('Destination', () => {
       user: {},
       consent: {},
       queue: [],
+      pendingSources: [],
       status: {
         startedAt: 0,
         in: 0,

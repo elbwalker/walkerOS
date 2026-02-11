@@ -144,36 +144,6 @@ export const ListFlowsOutputShape = {
   total: z.number().describe('Total number of flows'),
 };
 
-// Version output shapes
-const versionSummaryFields = {
-  version: z.number().describe('Version number'),
-  createdAt: timestamp,
-  createdBy: z
-    .enum(['user', 'auto_save', 'restore'])
-    .describe('Who created this version'),
-  contentHash: z
-    .string()
-    .optional()
-    .describe('SHA-256 hash of version content'),
-};
-
-export const ListVersionsOutputShape = {
-  data: z.array(z.object(versionSummaryFields)).describe('List of versions'),
-  flowId: flowId,
-  total: z.number().describe('Total number of versions'),
-};
-
-export const GetVersionOutputShape = {
-  version: z.number().describe('Version number'),
-  content: z
-    .record(z.string(), z.any())
-    .describe('Flow.Setup JSON content at this version'),
-  createdAt: timestamp,
-  createdBy: z
-    .enum(['user', 'auto_save', 'restore'])
-    .describe('Who created this version'),
-};
-
 // Delete output shape (shared)
 export const DeleteOutputShape = {
   success: z.literal(true).describe('Deletion succeeded'),

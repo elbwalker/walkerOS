@@ -3,6 +3,7 @@ import { isArray } from '@walkeros/core';
 import { Const } from './constants';
 import { tryCatch, tryCatchAsync } from '@walkeros/core';
 import { mergeEnvironments } from './destination';
+import { activatePendingSources } from './before';
 
 /**
  * Registers a callback for a specific event type.
@@ -131,6 +132,11 @@ export async function onApply(
       callDestinationOn(collector, destination, destId, type, contextData);
     }
   });
+
+  // Activate pending sources whose before conditions are now met
+  if (collector.pendingSources.length > 0) {
+    await activatePendingSources(collector, type, contextData);
+  }
 
   if (!onConfig.length) return !vetoed;
 

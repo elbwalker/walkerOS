@@ -2,7 +2,8 @@ import type { Elb } from '@walkeros/core';
 import type { ApiCall } from './tracker.js';
 
 export interface SimulateCommandOptions {
-  config: string;
+  config?: string;
+  output?: string;
   event?: string;
   flow?: string;
   json?: boolean;

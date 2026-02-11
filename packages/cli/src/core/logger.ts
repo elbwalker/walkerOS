@@ -8,6 +8,7 @@ export interface LoggerOptions {
   verbose?: boolean;
   silent?: boolean;
   json?: boolean;
+  stderr?: boolean;
 }
 
 export interface Logger {
@@ -25,23 +26,29 @@ export interface Logger {
 }
 
 export function createLogger(options: LoggerOptions = {}): Logger {
-  const { verbose = false, silent = false, json = false } = options;
+  const {
+    verbose = false,
+    silent = false,
+    json = false,
+    stderr = false,
+  } = options;
 
   const shouldLog = !silent && !json;
   const shouldDebug = verbose && !silent && !json;
+  const out = stderr ? console.error : console.log;
 
   return {
     log: (...args: unknown[]) => {
       if (shouldLog) {
         const message = args.map((arg) => String(arg)).join(' ');
-        console.log(message);
+        out(message);
       }
     },
 
     brand: (...args: unknown[]) => {
       if (shouldLog) {
         const message = args.map((arg) => String(arg)).join(' ');
-        console.log(chalk.hex(BRAND_COLOR)(message));
+        out(chalk.hex(BRAND_COLOR)(message));
       }
     },
 
@@ -55,13 +62,13 @@ export function createLogger(options: LoggerOptions = {}): Logger {
     debug: (...args: unknown[]) => {
       if (shouldDebug) {
         const message = args.map((arg) => String(arg)).join(' ');
-        console.log(`  ${message}`);
+        out(`  ${message}`);
       }
     },
 
     json: (data: unknown) => {
       if (!silent) {
-        console.log(JSON.stringify(data, null, 2));
+        out(JSON.stringify(data, null, 2));
       }
     },
 
@@ -69,35 +76,35 @@ export function createLogger(options: LoggerOptions = {}): Logger {
     info: (...args: unknown[]) => {
       if (shouldLog) {
         const message = args.map((arg) => String(arg)).join(' ');
-        console.log(message);
+        out(message);
       }
     },
 
     success: (...args: unknown[]) => {
       if (shouldLog) {
         const message = args.map((arg) => String(arg)).join(' ');
-        console.log(message);
+        out(message);
       }
     },
 
     warning: (...args: unknown[]) => {
       if (shouldLog) {
         const message = args.map((arg) => String(arg)).join(' ');
-        console.log(message);
+        out(message);
       }
     },
 
     warn: (...args: unknown[]) => {
       if (shouldLog) {
         const message = args.map((arg) => String(arg)).join(' ');
-        console.log(message);
+        out(message);
       }
     },
 
     gray: (...args: unknown[]) => {
       if (shouldLog) {
         const message = args.map((arg) => String(arg)).join(' ');
-        console.log(message);
+        out(message);
       }
     },
   };
@@ -111,11 +118,12 @@ export function createLogger(options: LoggerOptions = {}): Logger {
  * @returns Configured logger instance
  */
 export function createCommandLogger(
-  options: GlobalOptions & { json?: boolean },
+  options: GlobalOptions & { json?: boolean; stderr?: boolean },
 ): Logger {
   return createLogger({
     verbose: options.verbose,
     silent: options.silent ?? false,
     json: options.json,
+    stderr: options.stderr,
   });
 }

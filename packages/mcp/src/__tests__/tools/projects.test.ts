@@ -1,9 +1,15 @@
-const mockApiRequest = jest.fn();
-const mockRequireProjectId = jest.fn().mockReturnValue('proj_default');
+const mockListProjects = jest.fn();
+const mockGetProject = jest.fn();
+const mockCreateProject = jest.fn();
+const mockUpdateProject = jest.fn();
+const mockDeleteProject = jest.fn();
 
 jest.mock('@walkeros/cli', () => ({
-  apiRequest: mockApiRequest,
-  requireProjectId: mockRequireProjectId,
+  listProjects: mockListProjects,
+  getProject: mockGetProject,
+  createProject: mockCreateProject,
+  updateProject: mockUpdateProject,
+  deleteProject: mockDeleteProject,
 }));
 
 function createMockServer() {
@@ -38,66 +44,61 @@ describe('project tools', () => {
   });
 
   describe('list-projects', () => {
-    it('should call GET /api/projects', async () => {
+    it('should call listProjects()', async () => {
       const mockResponse = { projects: [], total: 0 };
-      mockApiRequest.mockResolvedValue(mockResponse);
+      mockListProjects.mockResolvedValue(mockResponse);
       const result = await server.getTool('list-projects').handler({});
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects');
+      expect(mockListProjects).toHaveBeenCalled();
       expect(result.isError).toBeUndefined();
     });
   });
 
   describe('get-project', () => {
-    it('should use provided projectId', async () => {
-      mockApiRequest.mockResolvedValue({ id: 'proj_123' });
+    it('should pass projectId to getProject()', async () => {
+      mockGetProject.mockResolvedValue({ id: 'proj_123' });
       await server.getTool('get-project').handler({ projectId: 'proj_123' });
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects/proj_123');
+      expect(mockGetProject).toHaveBeenCalledWith({ projectId: 'proj_123' });
     });
 
-    it('should fall back to requireProjectId()', async () => {
-      mockRequireProjectId.mockReturnValue('proj_default');
-      mockApiRequest.mockResolvedValue({ id: 'proj_default' });
+    it('should pass undefined projectId when omitted', async () => {
+      mockGetProject.mockResolvedValue({ id: 'proj_default' });
       await server.getTool('get-project').handler({});
-      expect(mockRequireProjectId).toHaveBeenCalled();
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects/proj_default');
+      expect(mockGetProject).toHaveBeenCalledWith({ projectId: undefined });
     });
   });
 
   describe('create-project', () => {
-    it('should POST with name', async () => {
-      mockApiRequest.mockResolvedValue({ id: 'proj_new', name: 'Test' });
+    it('should pass name to createProject()', async () => {
+      mockCreateProject.mockResolvedValue({ id: 'proj_new', name: 'Test' });
       await server.getTool('create-project').handler({ name: 'Test' });
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects', {
-        method: 'POST',
-        body: JSON.stringify({ name: 'Test' }),
-      });
+      expect(mockCreateProject).toHaveBeenCalledWith({ name: 'Test' });
     });
   });
 
   describe('update-project', () => {
-    it('should PATCH with name', async () => {
-      mockApiRequest.mockResolvedValue({
+    it('should pass projectId and name to updateProject()', async () => {
+      mockUpdateProject.mockResolvedValue({
         id: 'proj_123',
         name: 'Updated',
       });
       await server
         .getTool('update-project')
         .handler({ projectId: 'proj_123', name: 'Updated' });
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects/proj_123', {
-        method: 'PATCH',
-        body: JSON.stringify({ name: 'Updated' }),
+      expect(mockUpdateProject).toHaveBeenCalledWith({
+        projectId: 'proj_123',
+        name: 'Updated',
       });
     });
   });
 
   describe('delete-project', () => {
-    it('should send DELETE and mark as destructive', async () => {
-      mockApiRequest.mockResolvedValue({ success: true });
+    it('should pass projectId to deleteProject() and mark as destructive', async () => {
+      mockDeleteProject.mockResolvedValue({ success: true });
       const tool = server.getTool('delete-project');
       expect((tool.config as any).annotations.destructiveHint).toBe(true);
       await tool.handler({ projectId: 'proj_123' });
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects/proj_123', {
-        method: 'DELETE',
+      expect(mockDeleteProject).toHaveBeenCalledWith({
+        projectId: 'proj_123',
       });
     });
   });

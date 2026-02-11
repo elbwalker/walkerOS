@@ -1,5 +1,4 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiRequest } from '@walkeros/cli';
 
 export function registerAuthTools(server: McpServer) {
   server.registerTool(
@@ -20,7 +19,8 @@ export function registerAuthTools(server: McpServer) {
     },
     async () => {
       try {
-        const result = await apiRequest('/api/auth/whoami');
+        const { whoami } = await import('@walkeros/cli');
+        const result = await whoami();
         return {
           content: [
             { type: 'text' as const, text: JSON.stringify(result, null, 2) },

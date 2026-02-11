@@ -48,6 +48,7 @@ describe('Status', () => {
       consent: {},
       queue: [],
       transformers: {},
+      pendingSources: [],
       status: {
         startedAt: 0,
         in: 0,

@@ -12,6 +12,9 @@ import {
   createCollectorLoggerConfig,
   getErrorMessage,
   detectInput,
+  isStdinPiped,
+  readStdin,
+  writeResult,
   type Logger,
   type Platform,
 } from '../../core/index.js';
@@ -133,13 +136,26 @@ async function pushCore(
  * CLI command handler for push command
  */
 export async function pushCommand(options: PushCommandOptions): Promise<void> {
-  const logger = createCommandLogger(options);
+  const logger = createCommandLogger({ ...options, stderr: true });
   const startTime = Date.now();
 
   try {
+    // Resolve config: stdin > argument > default
+    let config: string;
+    if (isStdinPiped() && !options.config) {
+      const stdinContent = await readStdin();
+      // Write stdin to temp file for pushCore (expects file path)
+      const tmpPath = path.resolve('.tmp', 'stdin-push.json');
+      await fs.ensureDir(path.dirname(tmpPath));
+      await fs.writeFile(tmpPath, stdinContent, 'utf-8');
+      config = tmpPath;
+    } else {
+      config = options.config || 'bundle.config.json';
+    }
+
     const event = await loadJsonFromSource(options.event, { name: 'event' });
 
-    const result = await pushCore(options.config, event, {
+    const result = await pushCore(config, event, {
       flow: options.flow,
       json: options.json,
       verbose: options.verbose,
@@ -149,46 +165,56 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
 
     const duration = Date.now() - startTime;
 
+    // Format result
+    let output: string;
     if (options.json) {
-      logger.json({
-        success: result.success,
-        event: result.elbResult,
-        duration,
-      });
+      output = JSON.stringify(
+        {
+          success: result.success,
+          event: result.elbResult,
+          duration,
+        },
+        null,
+        2,
+      );
     } else {
+      const lines: string[] = [];
       if (result.success) {
-        logger.log('Event pushed successfully');
+        lines.push('Event pushed successfully');
         if (result.elbResult && typeof result.elbResult === 'object') {
           const pushResult = result.elbResult as unknown as Record<
             string,
             unknown
           >;
-          if ('id' in pushResult && pushResult.id) {
-            logger.log(`  Event ID: ${pushResult.id}`);
-          }
-          if ('entity' in pushResult && pushResult.entity) {
-            logger.log(`  Entity: ${pushResult.entity}`);
-          }
-          if ('action' in pushResult && pushResult.action) {
-            logger.log(`  Action: ${pushResult.action}`);
-          }
+          if ('id' in pushResult && pushResult.id)
+            lines.push(`  Event ID: ${pushResult.id}`);
+          if ('entity' in pushResult && pushResult.entity)
+            lines.push(`  Entity: ${pushResult.entity}`);
+          if ('action' in pushResult && pushResult.action)
+            lines.push(`  Action: ${pushResult.action}`);
         }
-        logger.log(`  Duration: ${duration}ms`);
+        lines.push(`  Duration: ${duration}ms`);
       } else {
-        logger.error(`Error: ${result.error}`);
-        process.exit(1);
+        lines.push(`Error: ${result.error}`);
       }
+      output = lines.join('\n');
     }
 
-    // Explicit exit on success to avoid hanging from open handles
-    // (JSDOM instances, esbuild workers, HTTP connections, etc.)
-    process.exit(0);
+    // Write to file or stdout
+    await writeResult(output + '\n', { output: options.output });
+
+    process.exit(result.success ? 0 : 1);
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = getErrorMessage(error);
 
     if (options.json) {
-      logger.json({ success: false, error: errorMessage, duration });
+      const errorOutput = JSON.stringify(
+        { success: false, error: errorMessage, duration },
+        null,
+        2,
+      );
+      await writeResult(errorOutput + '\n', { output: options.output });
     } else {
       logger.error(`Error: ${errorMessage}`);
     }
@@ -251,7 +277,7 @@ async function executeConfigPush(
 ): Promise<PushResult> {
   // Load config
   logger.debug('Loading flow configuration');
-  const { flowConfig, buildOptions } = await loadFlowConfig(options.config, {
+  const { flowConfig, buildOptions } = await loadFlowConfig(options.config!, {
     flowName: options.flow,
     logger,
   });

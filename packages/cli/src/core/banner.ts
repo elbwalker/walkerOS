@@ -7,29 +7,29 @@ export function printBanner(version: string): void {
   const g = chalk.gray;
 
   // === Option 1a: Single ╱ ===
-  console.log(g('--- 1a: Single ╱ ---'));
-  console.log(`${b('        ╱')}`);
-  console.log(`${b(' ╱     ╱')}   ${b('walkerOS')}`);
-  console.log(`${b('╱  ╱  ╱')}    v${version}`);
-  console.log('');
+  console.error(g('--- 1a: Single ╱ ---'));
+  console.error(`${b('        ╱')}`);
+  console.error(`${b(' ╱     ╱')}   ${b('walkerOS')}`);
+  console.error(`${b('╱  ╱  ╱')}    v${version}`);
+  console.error('');
 
   // === Option 1b: Double ╱╱ ===
-  console.log(g('--- 1b: Double ╱╱ ---'));
-  console.log(`${b('        ╱╱')}`);
-  console.log(`${b(' ╱╱    ╱╱')}   ${b('walkerOS')}`);
-  console.log(`${b('╱╱ ╱╱ ╱╱')}    v${version}`);
-  console.log('');
+  console.error(g('--- 1b: Double ╱╱ ---'));
+  console.error(`${b('        ╱╱')}`);
+  console.error(`${b(' ╱╱    ╱╱')}   ${b('walkerOS')}`);
+  console.error(`${b('╱╱ ╱╱ ╱╱')}    v${version}`);
+  console.error('');
 
   // === Option 4a: Braille thin ⡜ ===
-  console.log(g('--- 4a: Braille thin ⡜ ---'));
-  console.log(`${b('        ⡜')}`);
-  console.log(`${b(' ⡜     ⡜')}   ${b('walkerOS')}`);
-  console.log(`${b('⡜  ⡜  ⡜')}    v${version}`);
-  console.log('');
+  console.error(g('--- 4a: Braille thin ⡜ ---'));
+  console.error(`${b('        ⡜')}`);
+  console.error(`${b(' ⡜     ⡜')}   ${b('walkerOS')}`);
+  console.error(`${b('⡜  ⡜  ⡜')}    v${version}`);
+  console.error('');
 
   // === Option 4b: Braille thick ⡼ ===
-  console.log(g('--- 4b: Braille thick ⡼ ---'));
-  console.log(`${b('        ⡼')}`);
-  console.log(`${b(' ⡼     ⡼')}   ${b('walkerOS')}`);
-  console.log(`${b('⡼  ⡼  ⡼')}    v${version}`);
+  console.error(g('--- 4b: Braille thick ⡼ ---'));
+  console.error(`${b('        ⡼')}`);
+  console.error(`${b(' ⡼     ⡼')}   ${b('walkerOS')}`);
+  console.error(`${b('⡼  ⡼  ⡼')}    v${version}`);
 }

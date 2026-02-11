@@ -1,7 +1,13 @@
 // walkerOS/packages/cli/src/commands/validate/index.ts
 
 import chalk from 'chalk';
-import { createCommandLogger, getErrorMessage } from '../../core/index.js';
+import {
+  createCommandLogger,
+  getErrorMessage,
+  isStdinPiped,
+  readStdin,
+  writeResult,
+} from '../../core/index.js';
 import { loadJsonFromSource } from '../../config/index.js';
 import {
   validateEvent,
@@ -94,31 +100,37 @@ function formatResult(
 export async function validateCommand(
   options: ValidateCommandOptions,
 ): Promise<void> {
-  const logger = createCommandLogger(options);
+  // Result always goes to stdout; logs to stderr
+  const logger = createCommandLogger({ ...options, stderr: true });
 
   try {
-    // Load input from JSON string, file, or URL
-    const input = await loadJsonFromSource(options.input, {
-      name: options.type,
-      required: true,
-    });
+    // Load input: stdin > argument > error
+    let input: unknown;
+    if (isStdinPiped() && !options.input) {
+      const stdinContent = await readStdin();
+      try {
+        input = JSON.parse(stdinContent);
+      } catch {
+        throw new Error('Invalid JSON received on stdin');
+      }
+    } else {
+      input = await loadJsonFromSource(options.input, {
+        name: options.type,
+        required: true,
+      });
+    }
 
     // Run validation
     const result = await validate(options.type, input, {
       flow: options.flow,
     });
 
-    // Output result
-    const output = formatResult(result, {
+    // Format and write result
+    const formatted = formatResult(result, {
       json: options.json,
       verbose: options.verbose,
     });
-
-    if (options.json) {
-      console.log(output);
-    } else {
-      logger.log(output);
-    }
+    await writeResult(formatted + '\n', { output: options.output });
 
     // Exit code based on result
     if (!result.valid) {
@@ -132,13 +144,20 @@ export async function validateCommand(
     const errorMessage = getErrorMessage(error);
 
     if (options.json) {
-      logger.json({
-        valid: false,
-        type: options.type,
-        errors: [{ path: 'input', message: errorMessage, code: 'INPUT_ERROR' }],
-        warnings: [],
-        details: {},
-      });
+      const errorOutput = JSON.stringify(
+        {
+          valid: false,
+          type: options.type,
+          errors: [
+            { path: 'input', message: errorMessage, code: 'INPUT_ERROR' },
+          ],
+          warnings: [],
+          details: {},
+        },
+        null,
+        2,
+      );
+      await writeResult(errorOutput + '\n', { output: options.output });
     } else {
       logger.error(`Error: ${errorMessage}`);
     }

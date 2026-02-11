@@ -2,6 +2,26 @@
  * Output formatting utilities for CLI commands
  */
 
+import fs from 'fs-extra';
+import path from 'path';
+
+/**
+ * Write command result to stdout or file.
+ * Used by all commands to implement -o/--output flag.
+ */
+export async function writeResult(
+  content: string | Buffer,
+  options: { output?: string },
+): Promise<void> {
+  if (options.output) {
+    const outputPath = path.resolve(options.output);
+    await fs.ensureDir(path.dirname(outputPath));
+    await fs.writeFile(outputPath, content);
+  } else {
+    process.stdout.write(content);
+  }
+}
+
 export interface JsonOutput<T = Record<string, unknown>> {
   success: boolean;
   data?: T;

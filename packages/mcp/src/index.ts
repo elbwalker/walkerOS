@@ -9,7 +9,6 @@ import { registerValidateTool } from './tools/validate.js';
 import { registerAuthTools } from './tools/auth.js';
 import { registerProjectTools } from './tools/projects.js';
 import { registerFlowTools } from './tools/flows.js';
-import { registerVersionTools } from './tools/versions.js';
 import { registerBundleRemoteTool } from './tools/bundle-remote.js';
 
 declare const __VERSION__: string;
@@ -29,7 +28,6 @@ registerValidateTool(server);
 registerAuthTools(server);
 registerProjectTools(server);
 registerFlowTools(server);
-registerVersionTools(server);
 registerBundleRemoteTool(server);
 
 async function main() {

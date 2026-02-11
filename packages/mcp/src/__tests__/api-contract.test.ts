@@ -33,18 +33,6 @@ const MCP_ENDPOINTS = [
     method: 'post',
     path: '/api/projects/{projectId}/flows/{flowId}/duplicate',
   },
-  {
-    method: 'get',
-    path: '/api/projects/{projectId}/flows/{flowId}/versions',
-  },
-  {
-    method: 'get',
-    path: '/api/projects/{projectId}/flows/{flowId}/versions/{versionNumber}',
-  },
-  {
-    method: 'post',
-    path: '/api/projects/{projectId}/flows/{flowId}/versions/{versionNumber}/restore',
-  },
   { method: 'post', path: '/api/bundle' },
 ] as const;
 

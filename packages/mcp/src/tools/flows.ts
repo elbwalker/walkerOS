@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiRequest, requireProjectId } from '@walkeros/cli';
 
 function apiResult(result: unknown) {
   return {
@@ -55,14 +54,9 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ projectId, sort, order, includeDeleted }) => {
       try {
-        const id = projectId ?? requireProjectId();
-        const params = new URLSearchParams();
-        if (sort) params.set('sort', sort);
-        if (order) params.set('order', order);
-        if (includeDeleted) params.set('include_deleted', 'true');
-        const qs = params.toString();
+        const { listFlows } = await import('@walkeros/cli');
         return apiResult(
-          await apiRequest(`/api/projects/${id}/flows${qs ? `?${qs}` : ''}`),
+          await listFlows({ projectId, sort, order, includeDeleted }),
         );
       } catch (error) {
         return apiError(error);
@@ -92,10 +86,8 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, projectId }) => {
       try {
-        const id = projectId ?? requireProjectId();
-        return apiResult(
-          await apiRequest(`/api/projects/${id}/flows/${flowId}`),
-        );
+        const { getFlow } = await import('@walkeros/cli');
+        return apiResult(await getFlow({ flowId, projectId }));
       } catch (error) {
         return apiError(error);
       }
@@ -126,13 +118,8 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ name, content, projectId }) => {
       try {
-        const id = projectId ?? requireProjectId();
-        return apiResult(
-          await apiRequest(`/api/projects/${id}/flows`, {
-            method: 'POST',
-            body: JSON.stringify({ name, content }),
-          }),
-        );
+        const { createFlow } = await import('@walkeros/cli');
+        return apiResult(await createFlow({ name, content, projectId }));
       } catch (error) {
         return apiError(error);
       }
@@ -166,15 +153,9 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, name, content, projectId }) => {
       try {
-        const id = projectId ?? requireProjectId();
-        const body: Record<string, unknown> = {};
-        if (name !== undefined) body.name = name;
-        if (content !== undefined) body.content = content;
+        const { updateFlow } = await import('@walkeros/cli');
         return apiResult(
-          await apiRequest(`/api/projects/${id}/flows/${flowId}`, {
-            method: 'PATCH',
-            body: JSON.stringify(body),
-          }),
+          await updateFlow({ flowId, name, content, projectId }),
         );
       } catch (error) {
         return apiError(error);
@@ -203,12 +184,8 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, projectId }) => {
       try {
-        const id = projectId ?? requireProjectId();
-        return apiResult(
-          await apiRequest(`/api/projects/${id}/flows/${flowId}`, {
-            method: 'DELETE',
-          }),
-        );
+        const { deleteFlow } = await import('@walkeros/cli');
+        return apiResult(await deleteFlow({ flowId, projectId }));
       } catch (error) {
         return apiError(error);
       }
@@ -240,14 +217,8 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, name, projectId }) => {
       try {
-        const id = projectId ?? requireProjectId();
-        const body = name ? { name } : {};
-        return apiResult(
-          await apiRequest(`/api/projects/${id}/flows/${flowId}/duplicate`, {
-            method: 'POST',
-            body: JSON.stringify(body),
-          }),
-        );
+        const { duplicateFlow } = await import('@walkeros/cli');
+        return apiResult(await duplicateFlow({ flowId, name, projectId }));
       } catch (error) {
         return apiError(error);
       }
