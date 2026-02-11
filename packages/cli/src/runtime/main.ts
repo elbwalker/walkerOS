@@ -6,6 +6,7 @@
 import { runFlow } from './runner.js';
 import { runServeMode } from './serve.js';
 import { resolveBundle } from './resolve-bundle.js';
+import { registerRuntime } from './register.js';
 import { createLogger } from '../core/logger.js';
 import type { Logger } from '@walkeros/core';
 
@@ -42,13 +43,39 @@ function adaptLogger(
 
 async function main() {
   const mode = process.env.MODE || 'collect';
-  const bundleEnv = process.env.BUNDLE || '/app/flow/bundle.mjs';
+  let bundleEnv = process.env.BUNDLE || '/app/flow/bundle.mjs';
   const port = parseInt(process.env.PORT || '8080', 10);
 
   const cliLogger = createLogger({ silent: false, verbose: true });
   const logger = adaptLogger(cliLogger);
 
   cliLogger.log(`Starting walkeros/flow in ${mode} mode`);
+
+  // If registration env vars are set, register and get fresh bundle URL
+  const appUrl = process.env.APP_URL;
+  const deployToken = process.env.DEPLOY_TOKEN;
+  const projectId = process.env.PROJECT_ID;
+  const flowId = process.env.FLOW_ID;
+  const bundlePath = process.env.BUNDLE_PATH;
+
+  if (appUrl && deployToken && projectId && flowId && bundlePath) {
+    try {
+      cliLogger.log('Registering with app...');
+      const result = await registerRuntime({
+        appUrl,
+        deployToken,
+        projectId,
+        flowId,
+        bundlePath,
+      });
+      bundleEnv = result.bundleUrl;
+      cliLogger.log('Registered, bundle URL received');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      cliLogger.error(`Registration failed: ${message}`);
+      process.exit(1);
+    }
+  }
 
   // Resolve bundle from stdin, URL, or file path
   let file: string;

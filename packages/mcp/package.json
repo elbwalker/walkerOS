@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/mcp",
-  "version": "0.1.0",
-  "description": "MCP server for walkerOS - validate, bundle, and simulate analytics events locally, plus manage projects, flows, and versions via the walkerOS API",
+  "version": "0.2.0",
+  "description": "MCP server for walkerOS - validate, bundle, and simulate analytics events locally, plus manage projects and flows via the walkerOS API",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

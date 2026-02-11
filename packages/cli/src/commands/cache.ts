@@ -23,9 +23,9 @@ export function registerCacheCommand(program: Command): void {
         await fs.remove(getTmpPath(tmpDir, 'cache', 'builds'));
         logger.log('Build cache cleared');
       } else {
-        const tmpRoot = getTmpPath(tmpDir);
-        await fs.remove(tmpRoot);
-        logger.log(`Temp directory cleared: ${tmpRoot}`);
+        const cacheDir = getTmpPath(tmpDir, 'cache');
+        await fs.remove(cacheDir);
+        logger.log(`Cache cleared: ${cacheDir}`);
       }
     });
 

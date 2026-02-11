@@ -22,6 +22,15 @@ export interface LoginResult {
 
 const LOGIN_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export async function loginCommand(
   options: LoginCommandOptions,
 ): Promise<void> {
@@ -112,8 +121,11 @@ export async function login(
         if (!exchangeResponse.ok) {
           const error = await exchangeResponse.json();
           res.writeHead(200, { 'Content-Type': 'text/html' });
+          const safeMessage = escapeHtml(
+            error.error?.message || 'Unknown error',
+          );
           res.end(
-            `<html><body><h1>Authorization failed</h1><p>${error.error?.message || 'Unknown error'}</p></body></html>`,
+            `<html><body><h1>Authorization failed</h1><p>${safeMessage}</p></body></html>`,
           );
           cleanup();
           reject(new Error(error.error?.message || 'Token exchange failed'));

@@ -1,6 +1,7 @@
 import { apiRequest, requireProjectId } from '../../core/auth.js';
 import { createCommandLogger } from '../../core/logger.js';
 import { writeResult } from '../../core/output.js';
+import { isStdinPiped, readStdin } from '../../core/stdin.js';
 import type { GlobalOptions } from '../../types/global.js';
 
 // === Programmatic API ===
@@ -140,7 +141,7 @@ export async function createFlowCommand(
 ): Promise<void> {
   const content = options.content
     ? JSON.parse(options.content)
-    : JSON.parse(await readStdin());
+    : JSON.parse(await readFlowStdin());
   await handleResult(
     () => createFlow({ name, content, projectId: options.project }),
     options,
@@ -185,17 +186,9 @@ export async function duplicateFlowCommand(
   );
 }
 
-// Simple stdin reader for piped content
-function readStdin(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (process.stdin.isTTY) {
-      reject(new Error('Content required: use --content or pipe via stdin'));
-      return;
-    }
-    let data = '';
-    process.stdin.setEncoding('utf-8');
-    process.stdin.on('data', (chunk) => (data += chunk));
-    process.stdin.on('end', () => resolve(data));
-    process.stdin.on('error', reject);
-  });
+async function readFlowStdin(): Promise<string> {
+  if (!isStdinPiped()) {
+    throw new Error('Content required: use --content or pipe via stdin');
+  }
+  return readStdin();
 }

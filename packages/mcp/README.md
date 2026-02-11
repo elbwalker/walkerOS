@@ -1,7 +1,7 @@
 # @walkeros/mcp
 
 MCP server for walkerOS — validate, bundle, and simulate analytics events
-locally, plus manage projects, flows, and versions via the walkerOS API.
+locally, plus manage projects and flows via the walkerOS API.
 
 ## Installation
 
@@ -17,8 +17,8 @@ npm install @walkeros/mcp
 | `WALKEROS_PROJECT_ID` | Yes (project-scoped tools) | —                         | Active project ID (`proj_...`)   |
 | `WALKEROS_APP_URL`    | No                         | `https://app.walkeros.io` | Base URL override                |
 
-API tools require `WALKEROS_TOKEN`. Project-scoped tools (flows, versions) also
-need `WALKEROS_PROJECT_ID`, or you can pass `projectId` as a parameter.
+API tools require `WALKEROS_TOKEN`. Project-scoped tools (flows) also need
+`WALKEROS_PROJECT_ID`, or you can pass `projectId` as a parameter.
 
 ## Usage with Claude Desktop
 
@@ -54,7 +54,7 @@ need `WALKEROS_PROJECT_ID`, or you can pass `projectId` as a parameter.
 }
 ```
 
-## Available Tools (20)
+## Available Tools (17)
 
 ### Local CLI Tools
 
@@ -182,32 +182,6 @@ Create a copy of an existing flow configuration.
 - `name` (optional): Name for the copy
 - `projectId` (optional): Project ID
 
-### Versions
-
-#### `list-versions`
-
-List version history for a flow configuration.
-
-- `flowId` (required): Flow ID (`cfg_...`)
-- `projectId` (optional): Project ID
-
-#### `get-version`
-
-Get a specific version of a flow configuration.
-
-- `flowId` (required): Flow ID (`cfg_...`)
-- `version` (required): Version number
-- `projectId` (optional): Project ID
-
-#### `restore-version`
-
-Restore a flow to a previous version. Current content becomes a new version in
-history.
-
-- `flowId` (required): Flow ID (`cfg_...`)
-- `version` (required): Version number to restore
-- `projectId` (optional): Project ID
-
 ### Bundle (Remote)
 
 #### `bundle-remote`
@@ -221,7 +195,7 @@ tools needed.
 
 ### Smoke Test
 
-A script exercises all 16 API endpoints against a running app instance:
+A script exercises all API endpoints against a running app instance:
 
 ```bash
 WALKEROS_TOKEN='<your-token>' \

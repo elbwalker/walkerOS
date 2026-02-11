@@ -34,7 +34,7 @@ export const ValidateOutputShape = {
     )
     .describe('Validation warnings'),
   details: z
-    .record(z.string(), z.any())
+    .record(z.string(), z.unknown())
     .describe('Additional validation details'),
 };
 
@@ -68,7 +68,7 @@ export const SimulateOutputShape = {
   elbResult: z.unknown().optional().describe('Push result from the collector'),
   logs: z.array(z.unknown()).optional().describe('Log entries from simulation'),
   usage: z
-    .record(z.string(), z.array(z.any()))
+    .record(z.string(), z.array(z.unknown()))
     .optional()
     .describe('API call usage per destination'),
   duration: z
@@ -114,7 +114,9 @@ export const ListProjectsOutputShape = {
 const flowFields = {
   id: flowId,
   name: z.string().describe('Flow name'),
-  content: z.record(z.string(), z.any()).describe('Flow.Setup JSON content'),
+  content: z
+    .record(z.string(), z.unknown())
+    .describe('Flow.Setup JSON content'),
   createdAt: timestamp,
   updatedAt: timestamp,
   deletedAt: z
@@ -155,7 +157,7 @@ export const BundleRemoteOutputShape = {
   bundle: z.string().describe('Compiled JavaScript bundle'),
   size: z.number().describe('Bundle size in bytes'),
   stats: z
-    .record(z.string(), z.any())
+    .record(z.string(), z.unknown())
     .optional()
     .describe('Bundle statistics from server'),
 };

@@ -93,11 +93,14 @@ export async function updateProjectCommand(
   projectId: string | undefined,
   options: ProjectsCommandOptions,
 ): Promise<void> {
+  if (!options.name) {
+    throw new Error('Missing required option: --name <name>');
+  }
   await handleResult(
     () =>
       updateProject({
         projectId: projectId ?? options.project,
-        name: options.name!,
+        name: options.name,
       }),
     options,
   );
