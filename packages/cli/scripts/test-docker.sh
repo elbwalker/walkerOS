@@ -92,9 +92,9 @@ if docker run --rm \
   bundle server-collect.json \
   --stats > /dev/null 2>&1; then
 
-  # Check if output file was created (output resolves relative to config in workspace)
-  if [ -f "${TEST_DIR}/server-collect.mjs" ]; then
-    BUNDLE_SIZE=$(stat -f%z "${TEST_DIR}/server-collect.mjs" 2>/dev/null || stat -c%s "${TEST_DIR}/server-collect.mjs")
+  # Check if output file was created (CLI outputs to dist/bundle.mjs)
+  if [ -f "${TEST_DIR}/dist/bundle.mjs" ]; then
+    BUNDLE_SIZE=$(stat -f%z "${TEST_DIR}/dist/bundle.mjs" 2>/dev/null || stat -c%s "${TEST_DIR}/dist/bundle.mjs")
     echo -e "${GREEN}✓ Bundle created successfully (${BUNDLE_SIZE} bytes)${NC}\n"
   else
     echo -e "${RED}✗ Bundle file not created${NC}"
@@ -113,7 +113,7 @@ if docker run --rm \
   -v "${TEST_DIR}:/workspace" \
   -w /workspace \
   "${FULL_IMAGE}" \
-  simulate server-collect.mjs \
+  simulate dist/bundle.mjs \
   --event "${EVENT}" \
   --json > /dev/null 2>&1; then
   echo -e "${GREEN}✓ Simulate command works${NC}\n"
