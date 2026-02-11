@@ -59,6 +59,28 @@ export interface SessionData extends WalkerOS.Properties {
   runs?: number;
 }
 
+export interface Status {
+  startedAt: number;
+  in: number;
+  out: number;
+  failed: number;
+  sources: Record<string, SourceStatus>;
+  destinations: Record<string, DestinationStatus>;
+}
+
+export interface SourceStatus {
+  count: number;
+  lastAt?: number;
+  duration: number;
+}
+
+export interface DestinationStatus {
+  count: number;
+  failed: number;
+  lastAt?: number;
+  duration: number;
+}
+
 export interface Sources {
   [id: string]: Source.Instance;
 }
@@ -166,6 +188,7 @@ export interface Instance {
   queue: WalkerOS.Events;
   round: number;
   session: undefined | SessionData;
+  status: Status;
   timing: number;
   user: WalkerOS.User;
   version: string;

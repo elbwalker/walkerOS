@@ -55,6 +55,14 @@ describe('Destination', () => {
       user: {},
       consent: {},
       queue: [],
+      status: {
+        startedAt: 0,
+        in: 0,
+        out: 0,
+        failed: 0,
+        sources: {},
+        destinations: {},
+      },
       ...args,
       config: args?.config ? createTestConfig(args.config) : defaultConfig,
     } as unknown as Collector.Instance;

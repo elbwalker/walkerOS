@@ -33,6 +33,7 @@ The Collector transforms raw events into enriched, compliant data streams by:
 * **Privacy-first** - Built-in consent management and data protection
 * **Event validation** - Ensures data quality and consistency
 * **Flexible routing** - Send events to multiple destinations simultaneously
+* **Delivery status** - Built-in per-source and per-destination delivery tracking
 
 #### Role in architecture
 
@@ -172,6 +173,45 @@ For example, transforming a `product add` event into GA4's `add_to_cart`:
 />
 
 [**Learn more about mapping →**](/docs/mapping)
+
+## Status
+
+The collector tracks delivery metrics on `collector.status`, giving you real-time
+visibility into event flow without external monitoring:
+
+<CodeSnippet
+  code={`const { collector } = await startFlow({ /* ... */ });
+
+// After events have been processed
+console.log(collector.status);
+// {
+//   startedAt: 1707580800000,
+//   in: 100,       // Total events received
+//   out: 95,       // Total events delivered
+//   failed: 5,     // Total failures
+//   sources: {
+//     browser: { count: 100, lastAt: 1707580900000, duration: 1200 }
+//   },
+//   destinations: {
+//     ga4: { count: 95, failed: 0, lastAt: 1707580900000, duration: 800 },
+//     meta: { count: 0, failed: 5, lastAt: 1707580850000, duration: 400 }
+//   }
+// }
+
+// Compute average destination push time
+const ga4 = collector.status.destinations.ga4;
+const avgMs = ga4.duration / (ga4.count + ga4.failed);`}
+  language="typescript"
+/>
+
+Queue sizes and DLQ sizes can be read directly from destination instances:
+
+<CodeSnippet
+  code={`const dest = collector.destinations['meta'];
+const queueSize = dest.queuePush?.length || 0;
+const dlqSize = dest.dlq?.length || 0;`}
+  language="typescript"
+/>
 
 ---
 

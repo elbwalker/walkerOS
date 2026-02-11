@@ -51,6 +51,14 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
       sources: {},
       push: jest.fn(),
       command: jest.fn(),
+      status: {
+        startedAt: 0,
+        in: 0,
+        out: 0,
+        failed: 0,
+        sources: {},
+        destinations: {},
+      },
       ...overrides,
     } as unknown as Collector.Instance;
   }

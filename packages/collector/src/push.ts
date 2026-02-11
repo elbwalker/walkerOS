@@ -28,6 +28,7 @@ export function createPush<T extends Collector.Instance>(
     ): Promise<Elb.PushResult> => {
       return await tryCatchAsync(
         async (): Promise<Elb.PushResult> => {
+          const pushStart = Date.now();
           const { id, ingest, mapping, preChain } = options;
           let partialEvent = event;
 
@@ -92,10 +93,26 @@ export function createPush<T extends Collector.Instance>(
           const fullEvent = createEvent(collector, enrichedEvent);
 
           // Push to destinations with id and ingest
-          return await pushToDestinations(collector, fullEvent, {
+          const result = await pushToDestinations(collector, fullEvent, {
             id,
             ingest: frozenIngest,
           });
+
+          // Update source status
+          if (id) {
+            if (!collector.status.sources[id]) {
+              collector.status.sources[id] = {
+                count: 0,
+                duration: 0,
+              };
+            }
+            const sourceStatus = collector.status.sources[id];
+            sourceStatus.count++;
+            sourceStatus.lastAt = Date.now();
+            sourceStatus.duration += Date.now() - pushStart;
+          }
+
+          return result;
         },
         () => {
           return createPushResult({ ok: false });
