@@ -575,7 +575,8 @@ walkeros bundle flow.json --dockerfile Dockerfile.custom
 
 - `MODE` - `collect` or `serve` (default: `collect`)
 - `PORT` - Server port (default: `8080`)
-- `BUNDLE` - Bundle path (default: `/app/flow/bundle.mjs`)
+- `BUNDLE` - Bundle file path or URL (default: `/app/flow/bundle.mjs`). Also
+  accepts stdin pipe: `cat flow.mjs | docker run -i walkeros/flow`
 
 ### Using Node.js
 

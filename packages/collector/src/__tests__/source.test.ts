@@ -220,8 +220,8 @@ describe('Source', () => {
     });
   });
 
-  describe('source before deferral', () => {
-    test('source with before is deferred, not initialized', async () => {
+  describe('source require deferral', () => {
+    test('source with require is deferred, not initialized', async () => {
       const mockInit = jest.fn().mockResolvedValue({
         type: 'deferred',
         config: {},
@@ -232,48 +232,17 @@ describe('Source', () => {
         sources: {
           deferred: {
             code: mockInit,
-            config: { before: ['consent'] },
+            config: { require: ['consent'] },
           },
         },
       });
 
       expect(mockInit).not.toHaveBeenCalled();
       expect(collector.sources['deferred']).toBeUndefined();
-      expect(collector.pendingSources).toHaveLength(1);
-      expect(collector.pendingSources[0].id).toBe('deferred');
-      expect(collector.pendingSources[0].conditions).toEqual([
-        { type: 'consent', test: undefined },
-      ]);
+      expect(collector.pending.sources['deferred']).toBeDefined();
     });
 
-    test('source with conditional before is deferred with test function', async () => {
-      const mockInit = jest.fn().mockResolvedValue({
-        type: 'conditional',
-        config: {},
-        push: jest.fn(),
-      });
-
-      const { collector } = await startFlow({
-        sources: {
-          conditional: {
-            code: mockInit,
-            config: {
-              before: [{ consent: (data: any) => !!data.marketing }],
-            },
-          },
-        },
-      });
-
-      expect(mockInit).not.toHaveBeenCalled();
-      expect(collector.pendingSources).toHaveLength(1);
-      expect(collector.pendingSources[0].conditions[0].type).toBe('consent');
-      expect(collector.pendingSources[0].conditions[0].test).toBeDefined();
-      expect(
-        collector.pendingSources[0].conditions[0].test!({ marketing: true }),
-      ).toBe(true);
-    });
-
-    test('source without before inits immediately (backward compat)', async () => {
+    test('source without require inits immediately (backward compat)', async () => {
       const mockInit = jest.fn().mockResolvedValue({
         type: 'immediate',
         config: {},
@@ -288,7 +257,7 @@ describe('Source', () => {
 
       expect(mockInit).toHaveBeenCalledTimes(1);
       expect(collector.sources['immediate']).toBeDefined();
-      expect(collector.pendingSources).toHaveLength(0);
+      expect(Object.keys(collector.pending.sources)).toHaveLength(0);
     });
   });
 

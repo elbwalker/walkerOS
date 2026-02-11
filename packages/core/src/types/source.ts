@@ -72,22 +72,6 @@ export type Env<T extends TypesGeneric = Types> = T['env'];
  */
 export type TypesOf<I> = I extends Instance<infer T> ? T : never;
 
-/**
- * Object form of a before condition.
- * Each key is an On.Types event, value is a typed condition function.
- * The function receives the event's context data (from EventContextMap).
- */
-export type BeforeConditionObject = {
-  [K in keyof On.EventContextMap]?: (data: On.EventContextMap[K]) => boolean;
-};
-
-/**
- * A single before condition:
- * - string (On.Types): any event of this type removes the gate
- * - object: event fires AND condition function returns true
- */
-export type BeforeCondition = On.Types | BeforeConditionObject;
-
 export interface Config<
   T extends TypesGeneric = Types,
 > extends WalkerOSMapping.Config<Mapping<T>> {
@@ -97,7 +81,7 @@ export interface Config<
   logger?: Logger.Config;
   disabled?: boolean;
   primary?: boolean;
-  before?: BeforeCondition[];
+  require?: string[];
   /**
    * Ingest metadata extraction mapping.
    * Extracts values from raw request objects (Express req, Lambda event, etc.)

@@ -125,7 +125,7 @@ The Docker container is configured via environment variables:
 | Environment Variable | Required | Default | Description |
 |---------------------|----------|---------|-------------|
 | `MODE` | Yes | - | Must be `collect` |
-| `BUNDLE` | Yes | - | Path to pre-built `.mjs` bundle |
+| `BUNDLE` | Yes | - | Path, URL, or piped content of a pre-built `.mjs` bundle |
 | `PORT` | No | `8080` | Server port |
 | `HOST` | No | `0.0.0.0` | Bind address |
 
@@ -147,6 +147,39 @@ The Docker container is configured via environment variables:
 | `STATIC_DIR` | No | `/app/dist` | Directory to serve |
 | `PORT` | No | `3000` | Server port |
 | `HOST` | No | `0.0.0.0` | Bind address |
+
+### Bundle input methods
+
+The runtime accepts bundles from three sources (checked in priority order):
+
+**File path** (default) — mount or bake the bundle into the container:
+
+<CodeSnippet
+  code={`docker run -p 8080:8080 \\
+  -v $(pwd)/flow.mjs:/app/flow/bundle.mjs \\
+  walkeros/flow:latest`}
+  language="bash"
+/>
+
+**URL** — fetch the bundle from a remote location at startup:
+
+<CodeSnippet
+  code={`docker run -p 8080:8080 \\
+  -e BUNDLE=https://cdn.example.com/flow.mjs \\
+  walkeros/flow:latest`}
+  language="bash"
+/>
+
+Works with presigned S3/GCS URLs, CDNs, or any HTTP(S) endpoint.
+
+**Stdin pipe** — pipe the bundle directly into the container:
+
+<CodeSnippet
+  code={`cat flow.mjs | docker run -i -p 8080:8080 walkeros/flow:latest`}
+  language="bash"
+/>
+
+Stdin takes highest priority — if data is piped, the `BUNDLE` env var is ignored.
 
 ## Deployment workflows
 

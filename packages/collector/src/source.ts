@@ -1,7 +1,6 @@
 import type { Collector, Source, WalkerOS } from '@walkeros/core';
 import { getMappingValue, tryCatchAsync } from '@walkeros/core';
 import { walkChain, extractTransformerNextMap } from './transformer';
-import { normalizeBeforeConditions } from './before';
 
 /**
  * Initialize a single source. Extracted from the initSources loop body
@@ -88,7 +87,7 @@ export async function initSource(
 }
 
 /**
- * Initialize sources. Sources with `before` are deferred to pendingSources.
+ * Initialize sources. Sources with `require` are deferred to collector.pending.
  */
 export async function initSources(
   collector: Collector.Instance,
@@ -99,13 +98,8 @@ export async function initSources(
   for (const [sourceId, sourceDefinition] of Object.entries(sources)) {
     const { config = {} } = sourceDefinition;
 
-    // Defer sources that declare before conditions
-    if (config.before && config.before.length > 0) {
-      collector.pendingSources.push({
-        id: sourceId,
-        definition: sourceDefinition,
-        conditions: normalizeBeforeConditions(config.before),
-      });
+    if (config.require && config.require.length > 0) {
+      collector.pending.sources[sourceId] = sourceDefinition;
       continue;
     }
 

@@ -516,6 +516,21 @@ export function createPushResult(
 }
 
 /**
+ * Register a single destination from its init definition.
+ * Merges code config, user config, and chain config.
+ * Used by initDestinations and activatePending.
+ */
+export function registerDestination(
+  def: Destination.Init,
+): Destination.Instance {
+  const { code, config = {}, env = {} } = def;
+  const { config: configWithChain } = extractChainProperty(def, 'before');
+  const mergedConfig = { ...code.config, ...config, ...configWithChain };
+  const mergedEnv = mergeEnvironments(code.env, env);
+  return { ...code, config: mergedConfig, env: mergedEnv };
+}
+
+/**
  * Initializes a map of destinations using ONLY the unified code/config/env pattern.
  * Does NOT call destination.init() - that happens later during push with proper consent checks.
  *
@@ -524,33 +539,17 @@ export function createPushResult(
  * @returns The initialized destinations.
  */
 export async function initDestinations(
-  _collector: Collector.Instance,
+  collector: Collector.Instance,
   destinations: Destination.InitDestinations = {},
 ): Promise<Collector.Destinations> {
   const result: Collector.Destinations = {};
 
-  for (const [name, destinationDef] of Object.entries(destinations)) {
-    const { code, config = {}, env = {} } = destinationDef;
-
-    // Use unified chain property extractor
-    const { config: configWithChain } = extractChainProperty(
-      destinationDef,
-      'before',
-    );
-
-    const mergedConfig = {
-      ...code.config,
-      ...config,
-      ...configWithChain,
-    };
-
-    const mergedEnv = mergeEnvironments(code.env, env);
-
-    result[name] = {
-      ...code,
-      config: mergedConfig,
-      env: mergedEnv,
-    };
+  for (const [id, def] of Object.entries(destinations)) {
+    if (def.config?.require?.length) {
+      collector.pending.destinations[id] = def;
+      continue;
+    }
+    result[id] = registerDestination(def);
   }
 
   return result;

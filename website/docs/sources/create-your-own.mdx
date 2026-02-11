@@ -340,6 +340,42 @@ describe('Event API Source', () => {
   language="typescript"
 />
 
+## Conditional activation with `require`
+
+Sources can declare dependencies on collector events. A source with `require` won't initialize until all specified events have fired:
+
+<CodeSnippet
+  code={`await startFlow({
+  sources: {
+    session: {
+      code: sessionSource,
+      config: { require: ['consent'] },
+    },
+    dataLayer: {
+      code: dataLayerSource,
+      config: { require: ['user'] },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+**How it works:**
+
+- Sources with `require` are stored in `collector.pending` instead of initializing
+- After each collector event (`consent`, `user`, `session`, `run`, etc.), pending sources are checked
+- When all required events have fired, the source initializes
+- Chains work naturally: `consent` activates session source, which fires `user`, which activates dataLayer
+
+**Common patterns:**
+
+| Require | Use case |
+|---------|----------|
+| `['consent']` | Wait for CMP consent before tracking |
+| `['user']` | Wait for identity resolution |
+| `['session']` | Wait for session detection |
+| `['consent', 'run']` | Wait for both consent and collector run |
+
 ## Common patterns
 
 ### Polling for API Readiness

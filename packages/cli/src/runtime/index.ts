@@ -8,3 +8,8 @@
 
 export { runFlow, type RuntimeConfig } from './runner';
 export { runServeMode, type ServeConfig } from './serve';
+export {
+  resolveBundle,
+  type ResolvedBundle,
+  type BundleSource,
+} from './resolve-bundle';

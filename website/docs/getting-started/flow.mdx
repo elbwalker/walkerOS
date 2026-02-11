@@ -263,6 +263,31 @@ Destinations receive processed events and send them to analytics tools, database
 - **`consent`** - Required consent states
 - **`policy`** - Processing rules
 
+**Conditional activation:**
+
+Sources and destinations support `require` to delay initialization until specific collector events fire. Use `require: ["consent"]` to prevent loading until consent is granted:
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "session": {
+      "package": "@walkeros/web-source-session",
+      "config": { "require": ["consent"] }
+    }
+  },
+  "destinations": {
+    "ga4": {
+      "package": "@walkeros/web-destination-gtag-ga4",
+      "config": {
+        "require": ["consent"],
+        "consent": { "marketing": true }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
 See [Destinations documentation](/docs/destinations/) for all available options.
 
 ### Transformers

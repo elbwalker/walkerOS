@@ -137,6 +137,27 @@ console.log('Event:', event);
   language="typescript"
 />
 
+## Conditional activation with `require`
+
+Destinations can use `require` to delay registration until specific events fire. This prevents SDK loading and network requests before conditions are met:
+
+<CodeSnippet
+  code={`await startFlow({
+  destinations: {
+    ga4: {
+      code: ga4Destination,
+      config: {
+        require: ['session'],
+        consent: { marketing: true },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+`require` and `consent` compose: `require` gates initialization before session information is available, `consent` gates every push (filter events by consent state).
+
 ## Using your destination
 
 To use your custom destination, add it to the `destinations` object in your
