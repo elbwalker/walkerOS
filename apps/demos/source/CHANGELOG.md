@@ -1,5 +1,12 @@
 # @walkeros/source-demo
 
+## 1.0.5
+
+### Patch Changes
+
+- Updated dependencies [a4cc1ea]
+  - @walkeros/core@1.3.0
+
 ## 1.0.4
 
 ### Patch Changes

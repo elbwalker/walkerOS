@@ -1,5 +1,13 @@
 # @walkeros/server-destination-datamanager
 
+## 1.0.5
+
+### Patch Changes
+
+- Updated dependencies [a4cc1ea]
+  - @walkeros/core@1.3.0
+  - @walkeros/server-core@1.0.5
+
 ## 1.0.4
 
 ### Patch Changes
