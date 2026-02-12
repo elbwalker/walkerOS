@@ -1,5 +1,13 @@
 # @walkeros/web-destination-piwikpro
 
+## 1.0.5
+
+### Patch Changes
+
+- Updated dependencies [a4cc1ea]
+  - @walkeros/core@1.3.0
+  - @walkeros/web-core@1.0.5
+
 ## 1.0.4
 
 ### Patch Changes

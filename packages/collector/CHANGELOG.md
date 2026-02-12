@@ -1,5 +1,19 @@
 # @walkeros/collector
 
+## 1.2.0
+
+### Minor Changes
+
+- a4cc1ea: Add collector.status for per-source and per-destination delivery
+  tracking
+
+### Patch Changes
+
+- 9599e60: Fix silent event loss when destination processes queued events with
+  mixed consent states
+- Updated dependencies [a4cc1ea]
+  - @walkeros/core@1.3.0
+
 ## 1.1.3
 
 ### Patch Changes

@@ -116,7 +116,10 @@ export async function pushToDestinations(
   if (!allowed) return createPushResult({ ok: false });
 
   // Add event to the collector queue
-  if (event) collector.queue.push(event);
+  if (event) {
+    collector.queue.push(event);
+    collector.status.in++;
+  }
 
   // Use given destinations or use internal destinations
   if (!destinations) destinations = collector.destinations;
@@ -178,7 +181,7 @@ export async function pushToDestinations(
       });
 
       // Add skipped events back to the queue
-      destination.queuePush.concat(skippedEvents);
+      destination.queuePush.push(...skippedEvents);
 
       // Execution shall not pass if no events are allowed
       if (!allowedEvents.length) {
@@ -206,6 +209,7 @@ export async function pushToDestinations(
       );
 
       // Process allowed events and store failed ones in the dead letter queue (DLQ)
+      let totalDuration = 0;
       await Promise.all(
         allowedEvents.map(async (event) => {
           // Merge event with collector state, prioritizing event properties
@@ -236,6 +240,7 @@ export async function pushToDestinations(
             processedEvent = chainResult as WalkerOS.Event;
           }
 
+          const pushStart = Date.now();
           const result = await tryCatchAsync(destinationPush, (err) => {
             // Log the error with destination scope
             const destType = destination.type || 'unknown';
@@ -250,6 +255,7 @@ export async function pushToDestinations(
 
             return undefined;
           })(collector, destination, id, processedEvent!, meta.ingest);
+          totalDuration += Date.now() - pushStart;
 
           // Capture the last response (for single event pushes)
           if (result !== undefined) response = result;
@@ -258,7 +264,7 @@ export async function pushToDestinations(
         }),
       );
 
-      return { id, destination, error, response };
+      return { id, destination, error, response, totalDuration };
     }),
   );
 
@@ -276,9 +282,24 @@ export async function pushToDestinations(
       data: result.response, // Capture push() return value
     };
 
+    // Ensure destination status entry exists
+    if (!collector.status.destinations[result.id]) {
+      collector.status.destinations[result.id] = {
+        count: 0,
+        failed: 0,
+        duration: 0,
+      };
+    }
+    const destStatus = collector.status.destinations[result.id];
+    const now = Date.now();
+
     if (result.error) {
       ref.error = result.error;
       failed[result.id] = ref;
+      destStatus.failed++;
+      destStatus.lastAt = now;
+      destStatus.duration += result.totalDuration || 0;
+      collector.status.failed++;
     } else if (result.queue && result.queue.length) {
       destination.queuePush = (destination.queuePush || []).concat(
         result.queue,
@@ -286,6 +307,10 @@ export async function pushToDestinations(
       queued[result.id] = ref;
     } else {
       done[result.id] = ref;
+      destStatus.count++;
+      destStatus.lastAt = now;
+      destStatus.duration += result.totalDuration || 0;
+      collector.status.out++;
     }
   }
 
@@ -491,6 +516,21 @@ export function createPushResult(
 }
 
 /**
+ * Register a single destination from its init definition.
+ * Merges code config, user config, and chain config.
+ * Used by initDestinations and activatePending.
+ */
+export function registerDestination(
+  def: Destination.Init,
+): Destination.Instance {
+  const { code, config = {}, env = {} } = def;
+  const { config: configWithChain } = extractChainProperty(def, 'before');
+  const mergedConfig = { ...code.config, ...config, ...configWithChain };
+  const mergedEnv = mergeEnvironments(code.env, env);
+  return { ...code, config: mergedConfig, env: mergedEnv };
+}
+
+/**
  * Initializes a map of destinations using ONLY the unified code/config/env pattern.
  * Does NOT call destination.init() - that happens later during push with proper consent checks.
  *
@@ -499,33 +539,17 @@ export function createPushResult(
  * @returns The initialized destinations.
  */
 export async function initDestinations(
-  _collector: Collector.Instance,
+  collector: Collector.Instance,
   destinations: Destination.InitDestinations = {},
 ): Promise<Collector.Destinations> {
   const result: Collector.Destinations = {};
 
-  for (const [name, destinationDef] of Object.entries(destinations)) {
-    const { code, config = {}, env = {} } = destinationDef;
-
-    // Use unified chain property extractor
-    const { config: configWithChain } = extractChainProperty(
-      destinationDef,
-      'before',
-    );
-
-    const mergedConfig = {
-      ...code.config,
-      ...config,
-      ...configWithChain,
-    };
-
-    const mergedEnv = mergeEnvironments(code.env, env);
-
-    result[name] = {
-      ...code,
-      config: mergedConfig,
-      env: mergedEnv,
-    };
+  for (const [id, def] of Object.entries(destinations)) {
+    if (def.config?.require?.length) {
+      collector.pending.destinations[id] = def;
+      continue;
+    }
+    result[id] = registerDestination(def);
   }
 
   return result;

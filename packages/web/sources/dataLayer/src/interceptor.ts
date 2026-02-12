@@ -57,6 +57,7 @@ export function interceptDataLayer(
 export function processExistingEvents(
   push: Collector.PushFn,
   config: Source.Config,
+  limit?: number,
 ): void {
   const settings = config.settings as {
     name?: string;
@@ -73,9 +74,9 @@ export function processExistingEvents(
 
   isProcessing = true;
   try {
-    // Process all existing events
-    for (const event of dataLayer) {
-      processEvent(push, settings, event);
+    const count = limit ?? dataLayer.length;
+    for (let i = 0; i < count; i++) {
+      processEvent(push, settings, dataLayer[i]);
     }
   } finally {
     isProcessing = false;

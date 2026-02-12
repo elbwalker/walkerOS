@@ -52,10 +52,19 @@ export async function collector(
     queue: [],
     round: 0,
     session: undefined,
+    status: {
+      startedAt: Date.now(),
+      in: 0,
+      out: 0,
+      failed: 0,
+      sources: {},
+      destinations: {},
+    },
     timing: Date.now(),
     user: initConfig.user || {},
     version,
     sources: {},
+    pending: { sources: {}, destinations: {} },
     push: undefined as unknown as Collector.PushFn, // Placeholder, will be set below
     command: undefined as unknown as Collector.CommandFn, // Placeholder, will be set below
   };

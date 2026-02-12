@@ -83,6 +83,7 @@ export interface Config<T extends TypesGeneric = Types> {
   mapping?: WalkerOSMapping.Rules<WalkerOSMapping.Rule<Mapping<T>>>;
   policy?: Policy;
   queue?: boolean;
+  require?: string[];
   before?: string | string[];
 }
 

@@ -100,9 +100,10 @@ const defaultCb: SessionCallback = (
   // Set device ID only in storage mode
   if (session.storage && session.device) user.device = session.device;
 
-  // Set user IDs
+  // Set user IDs and broadcast session data
   if (collector) {
     collector.command('user', user);
+    collector.command('session', session);
   }
   // No fallback - session source always provides collector
 

@@ -1,0 +1,14 @@
+FROM node:22-alpine
+
+RUN apk add --no-cache curl
+
+ARG CLI_VERSION=latest
+RUN npm install -g @walkeros/cli@${CLI_VERSION}
+
+RUN addgroup -g 1001 walker && \
+    adduser -D -u 1001 -G walker walker
+
+USER walker
+
+ENTRYPOINT ["walkeros"]
+CMD ["--help"]

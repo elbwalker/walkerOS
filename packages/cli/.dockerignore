@@ -1,0 +1,14 @@
+node_modules
+dist
+!dist/runtime
+coverage
+.turbo
+.temp
+.tmp
+src
+*.md
+*.ts
+tsconfig.*
+jest.config.*
+tsup.config.*
+examples

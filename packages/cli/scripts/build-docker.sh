@@ -4,14 +4,9 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-echo "📦 Building WalkerOS CLI..."
-npm run build
+echo "Building walkeros/cli Docker image..."
+docker build -t walkeros/cli:latest -f Dockerfile.cli .
 
 echo ""
-echo "🐳 Building Docker image..."
-docker build -t walkeros/cli:latest -f docker/Dockerfile .
-
-echo ""
-echo "✅ Docker image built successfully!"
-echo ""
+echo "Done!"
 docker images walkeros/cli:latest

@@ -1,8 +1,9 @@
 import type { Collector, On, WalkerOS, Destination } from '@walkeros/core';
 import { isArray } from '@walkeros/core';
 import { Const } from './constants';
-import { tryCatch } from '@walkeros/core';
+import { tryCatch, tryCatchAsync } from '@walkeros/core';
 import { mergeEnvironments } from './destination';
+import { activatePending } from './pending';
 
 /**
  * Registers a callback for a specific event type.
@@ -11,7 +12,7 @@ import { mergeEnvironments } from './destination';
  * @param type The type of the event to listen for.
  * @param option The callback function or an array of callback functions.
  */
-export function on(
+export async function on(
   collector: Collector.Instance,
   type: On.Types,
   option: WalkerOS.SingleOrArray<On.Options>,
@@ -28,7 +29,7 @@ export function on(
   (on[type] as typeof onType) = onType;
 
   // Execute the on function directly
-  onApply(collector, type, options);
+  await onApply(collector, type, options);
 }
 
 /**
@@ -67,12 +68,12 @@ export function callDestinationOn(
  * @param options The options for the callbacks.
  * @param config The consent configuration.
  */
-export function onApply(
+export async function onApply(
   collector: Collector.Instance,
   type: On.Types,
   options?: Array<On.Options>,
-  config?: WalkerOS.Consent,
-) {
+  config?: unknown,
+): Promise<boolean> {
   // Use the optionally provided options
   let onConfig = options || [];
 
@@ -91,6 +92,18 @@ export function onApply(
     case Const.Commands.Session:
       contextData = collector.session;
       break;
+    case Const.Commands.User:
+      contextData = config || collector.user;
+      break;
+    case Const.Commands.Custom:
+      contextData = config || collector.custom;
+      break;
+    case Const.Commands.Globals:
+      contextData = config || collector.globals;
+      break;
+    case Const.Commands.Config:
+      contextData = config || collector.config;
+      break;
     case Const.Commands.Ready:
     case Const.Commands.Run:
     default:
@@ -98,11 +111,13 @@ export function onApply(
       break;
   }
 
-  Object.values(collector.sources).forEach((source) => {
+  let vetoed = false;
+  for (const source of Object.values(collector.sources)) {
     if (source.on) {
-      tryCatch(source.on)(type, contextData);
+      const result = await tryCatchAsync(source.on)(type, contextData);
+      if (result === false) vetoed = true;
     }
-  });
+  }
 
   Object.entries(collector.destinations).forEach(([destId, destination]) => {
     if (destination.on) {
@@ -118,11 +133,23 @@ export function onApply(
     }
   });
 
-  if (!onConfig.length) return; // No on-events registered, nothing to do
+  // Activate pending sources/destinations whose require conditions are met
+  if (
+    Object.keys(collector.pending.sources).length > 0 ||
+    Object.keys(collector.pending.destinations).length > 0
+  ) {
+    await activatePending(collector, type);
+  }
+
+  if (!onConfig.length) return !vetoed;
 
   switch (type) {
     case Const.Commands.Consent:
-      onConsent(collector, onConfig as Array<On.ConsentConfig>, config);
+      onConsent(
+        collector,
+        onConfig as Array<On.ConsentConfig>,
+        config as WalkerOS.Consent,
+      );
       break;
     case Const.Commands.Ready:
       onReady(collector, onConfig as Array<On.ReadyConfig>);
@@ -134,8 +161,16 @@ export function onApply(
       onSession(collector, onConfig as Array<On.SessionConfig>);
       break;
     default:
+      // Generic handler for user, custom, globals, config, and custom events
+      onConfig.forEach((func) => {
+        if (typeof func === 'function') {
+          tryCatch(func as On.GenericFn)(collector, contextData);
+        }
+      });
       break;
   }
+
+  return !vetoed;
 }
 
 function onConsent(

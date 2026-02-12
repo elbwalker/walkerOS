@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import { Command } from 'commander';
-import { getTmpPath, getDefaultTmpRoot } from '../core/tmp.js';
+import { getTmpPath } from '../core/tmp.js';
 import { createLogger } from '../core/logger.js';
 
 export function registerCacheCommand(program: Command): void {
@@ -23,8 +23,9 @@ export function registerCacheCommand(program: Command): void {
         await fs.remove(getTmpPath(tmpDir, 'cache', 'builds'));
         logger.log('Build cache cleared');
       } else {
-        await fs.remove(getTmpPath(tmpDir, 'cache'));
-        logger.log('All caches cleared');
+        const cacheDir = getTmpPath(tmpDir, 'cache');
+        await fs.remove(cacheDir);
+        logger.log(`Cache cleared: ${cacheDir}`);
       }
     });
 
@@ -45,23 +46,6 @@ export function registerCacheCommand(program: Command): void {
       logger.log(`Cache directory: ${getTmpPath(tmpDir, 'cache')}`);
       logger.log(`Cached packages: ${packageCount}`);
       logger.log(`Cached builds: ${buildCount}`);
-    });
-}
-
-/**
- * Register the clean command to clear entire temp directory
- */
-export function registerCleanCommand(program: Command): void {
-  program
-    .command('clean')
-    .description('Clear the entire temp directory (.tmp/)')
-    .option('--tmp-dir <dir>', 'Custom temp directory')
-    .option('--silent', 'Suppress output')
-    .action(async (options) => {
-      const logger = createLogger({ silent: options.silent });
-      const tmpDir = options.tmpDir || getDefaultTmpRoot();
-      await fs.remove(tmpDir);
-      logger.log(`Temp directory cleared: ${tmpDir}`);
     });
 }
 

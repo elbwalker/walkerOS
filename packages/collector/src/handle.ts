@@ -7,7 +7,7 @@ import {
 } from './destination';
 import { assign, getId, isFunction, isString } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
-import { setConsent } from './consent';
+import { processConsent } from './consent';
 import { on, onApply } from './on';
 import type { RunState } from './types/collector';
 
@@ -27,18 +27,30 @@ export async function commonHandleCommand(
   options?: unknown,
 ): Promise<Elb.PushResult> {
   let result: Elb.PushResult | undefined;
+  let onData: unknown;
+  let shouldNotify = false;
+  let consentRunQueue = false;
+
   switch (action) {
     case Const.Commands.Config:
       if (isObject(data)) {
         assign(collector.config, data as Partial<Collector.Config>, {
           shallow: false,
         });
+        onData = data;
+        shouldNotify = true;
       }
       break;
 
     case Const.Commands.Consent:
       if (isObject(data)) {
-        result = await setConsent(collector, data as WalkerOS.Consent);
+        const { update, runQueue } = processConsent(
+          collector,
+          data as WalkerOS.Consent,
+        );
+        onData = update;
+        shouldNotify = true;
+        consentRunQueue = runQueue;
       }
       break;
 
@@ -48,6 +60,8 @@ export async function commonHandleCommand(
           collector.custom,
           data as WalkerOS.Properties,
         );
+        onData = data;
+        shouldNotify = true;
       }
       break;
 
@@ -78,36 +92,52 @@ export async function commonHandleCommand(
           collector.globals,
           data as WalkerOS.Properties,
         );
+        onData = data;
+        shouldNotify = true;
       }
       break;
 
     case Const.Commands.On:
       if (isString(data)) {
-        on(
+        await on(
           collector,
           data as On.Types,
           options as WalkerOS.SingleOrArray<On.Options>,
         );
+        // on() handles its own onApply (fires only new callbacks)
       }
       break;
 
     case Const.Commands.Ready:
-      onApply(collector, 'ready');
+      shouldNotify = true;
       break;
 
     case Const.Commands.Run:
       result = await runCollector(collector, data as RunState);
+      shouldNotify = true;
       break;
 
     case Const.Commands.Session:
-      onApply(collector, 'session');
+      shouldNotify = true;
       break;
 
     case Const.Commands.User:
       if (isObject(data)) {
         assign(collector.user, data as WalkerOS.User, { shallow: false });
+        onData = data;
+        shouldNotify = true;
       }
       break;
+  }
+
+  // Single notification point for all state-mutation commands
+  if (shouldNotify) {
+    await onApply(collector, action as On.Types, undefined, onData);
+  }
+
+  // Post-notification side effects
+  if (consentRunQueue) {
+    result = await pushToDestinations(collector);
   }
 
   return result || createPushResult({ ok: true });
@@ -240,9 +270,6 @@ export async function runCollector(
 
   // Process any queued events now that the collector is allowed
   const result = await pushToDestinations(collector);
-
-  // Call the predefined run events
-  onApply(collector, 'run');
 
   return result;
 }

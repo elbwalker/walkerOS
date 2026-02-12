@@ -220,6 +220,47 @@ describe('Source', () => {
     });
   });
 
+  describe('source require deferral', () => {
+    test('source with require is deferred, not initialized', async () => {
+      const mockInit = jest.fn().mockResolvedValue({
+        type: 'deferred',
+        config: {},
+        push: jest.fn(),
+      });
+
+      const { collector } = await startFlow({
+        sources: {
+          deferred: {
+            code: mockInit,
+            config: { require: ['consent'] },
+          },
+        },
+      });
+
+      expect(mockInit).not.toHaveBeenCalled();
+      expect(collector.sources['deferred']).toBeUndefined();
+      expect(collector.pending.sources['deferred']).toBeDefined();
+    });
+
+    test('source without require inits immediately (backward compat)', async () => {
+      const mockInit = jest.fn().mockResolvedValue({
+        type: 'immediate',
+        config: {},
+        push: jest.fn(),
+      });
+
+      const { collector } = await startFlow({
+        sources: {
+          immediate: { code: mockInit },
+        },
+      });
+
+      expect(mockInit).toHaveBeenCalledTimes(1);
+      expect(collector.sources['immediate']).toBeDefined();
+      expect(Object.keys(collector.pending.sources)).toHaveLength(0);
+    });
+  });
+
   describe('source push mechanism', () => {
     it('should push events to sources with on method', async () => {
       const onMock = jest.fn();

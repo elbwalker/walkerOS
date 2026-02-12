@@ -12,30 +12,47 @@ import {
   createCollectorLoggerConfig,
   getErrorMessage,
   detectInput,
+  isStdinPiped,
+  readStdin,
+  writeResult,
   type Logger,
   type Platform,
 } from '../../core/index.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
 import type { PushCommandOptions, PushResult } from './types.js';
+import type { PushOptions } from '../../schemas/push.js';
 
 /**
- * CLI command handler for push command
+ * Core push logic without CLI concerns (no process.exit, no output formatting)
  */
-export async function pushCommand(options: PushCommandOptions): Promise<void> {
-  const logger = createCommandLogger(options);
+async function pushCore(
+  inputPath: string,
+  event: unknown,
+  options: {
+    flow?: string;
+    json?: boolean;
+    verbose?: boolean;
+    silent?: boolean;
+    platform?: string;
+  } = {},
+): Promise<PushResult> {
+  const logger = createCommandLogger({
+    silent: options.silent,
+    verbose: options.verbose,
+  });
   const startTime = Date.now();
   let tempDir: string | undefined;
 
   try {
-    // Step 1: Load event
-    logger.debug('Loading event');
-    const event = await loadJsonFromSource(options.event, {
-      name: 'event',
-    });
+    // Load event if string (file path or URL)
+    let loadedEvent = event;
+    if (typeof event === 'string') {
+      loadedEvent = await loadJsonFromSource(event, { name: 'event' });
+    }
 
     // Validate event format using Zod schema
-    const eventResult = schemas.PartialEventSchema.safeParse(event);
+    const eventResult = schemas.PartialEventSchema.safeParse(loadedEvent);
     if (!eventResult.success) {
       const errors = eventResult.error.issues
         .map((issue) => `${String(issue.path.join('.'))}: ${issue.message}`)
@@ -51,29 +68,33 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
       throw new Error('Invalid event: Missing required "name" property');
     }
 
-    // Create typed event object for execution
     const validatedEvent: { name: string; data: Record<string, unknown> } = {
       name: parsedEvent.name,
       data: (parsedEvent.data || {}) as Record<string, unknown>,
     };
 
-    // Warn about event naming format (walkerOS business logic)
     if (!validatedEvent.name.includes(' ')) {
       logger.log(
         `Warning: Event name "${validatedEvent.name}" should follow "ENTITY ACTION" format (e.g., "page view")`,
       );
     }
 
-    // Step 2: Detect input type (config or bundle)
+    // Detect input type
     logger.debug('Detecting input type');
-    const detected = await detectInput(options.config, options.platform);
+    const detected = await detectInput(
+      inputPath,
+      options.platform as Platform | undefined,
+    );
 
     let result: PushResult;
 
     if (detected.type === 'config') {
-      // Config flow: load config, bundle, execute
       result = await executeConfigPush(
-        options,
+        {
+          config: inputPath,
+          flow: options.flow,
+          verbose: options.verbose,
+        } as PushCommandOptions,
         validatedEvent,
         logger,
         (dir) => {
@@ -81,7 +102,6 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
         },
       );
     } else {
-      // Bundle flow: execute directly
       const collectorLoggerConfig = createCollectorLoggerConfig(
         logger,
         options.verbose,
@@ -98,67 +118,152 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
       );
     }
 
-    // Step 3: Output results
+    return result;
+  } catch (error) {
+    return {
+      success: false,
+      duration: Date.now() - startTime,
+      error: getErrorMessage(error),
+    };
+  } finally {
+    if (tempDir) {
+      await fs.remove(tempDir).catch(() => {});
+    }
+  }
+}
+
+/**
+ * CLI command handler for push command
+ */
+export async function pushCommand(options: PushCommandOptions): Promise<void> {
+  const logger = createCommandLogger({ ...options, stderr: true });
+  const startTime = Date.now();
+
+  try {
+    // Resolve config: stdin > argument > default
+    let config: string;
+    if (isStdinPiped() && !options.config) {
+      const stdinContent = await readStdin();
+      // Write stdin to temp file for pushCore (expects file path)
+      const tmpPath = path.resolve('.tmp', 'stdin-push.json');
+      await fs.ensureDir(path.dirname(tmpPath));
+      await fs.writeFile(tmpPath, stdinContent, 'utf-8');
+      config = tmpPath;
+    } else {
+      config = options.config || 'bundle.config.json';
+    }
+
+    const event = await loadJsonFromSource(options.event, { name: 'event' });
+
+    const result = await pushCore(config, event, {
+      flow: options.flow,
+      json: options.json,
+      verbose: options.verbose,
+      silent: options.silent,
+      platform: options.platform,
+    });
+
     const duration = Date.now() - startTime;
 
+    // Format result
+    let output: string;
     if (options.json) {
-      logger.json({
-        success: result.success,
-        event: result.elbResult,
-        duration,
-      });
+      output = JSON.stringify(
+        {
+          success: result.success,
+          event: result.elbResult,
+          duration,
+        },
+        null,
+        2,
+      );
     } else {
-      // Standard output
+      const lines: string[] = [];
       if (result.success) {
-        logger.log('Event pushed successfully');
+        lines.push('Event pushed successfully');
         if (result.elbResult && typeof result.elbResult === 'object') {
           const pushResult = result.elbResult as unknown as Record<
             string,
             unknown
           >;
-          if ('id' in pushResult && pushResult.id) {
-            logger.log(`  Event ID: ${pushResult.id}`);
-          }
-          if ('entity' in pushResult && pushResult.entity) {
-            logger.log(`  Entity: ${pushResult.entity}`);
-          }
-          if ('action' in pushResult && pushResult.action) {
-            logger.log(`  Action: ${pushResult.action}`);
-          }
+          if ('id' in pushResult && pushResult.id)
+            lines.push(`  Event ID: ${pushResult.id}`);
+          if ('entity' in pushResult && pushResult.entity)
+            lines.push(`  Entity: ${pushResult.entity}`);
+          if ('action' in pushResult && pushResult.action)
+            lines.push(`  Action: ${pushResult.action}`);
         }
-        logger.log(`  Duration: ${duration}ms`);
+        lines.push(`  Duration: ${duration}ms`);
       } else {
-        logger.error(`Error: ${result.error}`);
-        process.exit(1);
+        lines.push(`Error: ${result.error}`);
       }
+      output = lines.join('\n');
     }
 
-    // Explicit exit on success to avoid hanging from open handles
-    // (JSDOM instances, esbuild workers, HTTP connections, etc.)
-    process.exit(0);
+    // Write to file or stdout
+    await writeResult(output + '\n', { output: options.output });
+
+    process.exit(result.success ? 0 : 1);
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = getErrorMessage(error);
 
     if (options.json) {
-      logger.json({
-        success: false,
-        error: errorMessage,
-        duration,
-      });
+      const errorOutput = JSON.stringify(
+        { success: false, error: errorMessage, duration },
+        null,
+        2,
+      );
+      await writeResult(errorOutput + '\n', { output: options.output });
     } else {
       logger.error(`Error: ${errorMessage}`);
     }
 
     process.exit(1);
-  } finally {
-    // Cleanup temp directory
-    if (tempDir) {
-      await fs.remove(tempDir).catch(() => {
-        // Ignore cleanup errors
-      });
-    }
   }
+}
+
+/**
+ * High-level push function for programmatic usage.
+ *
+ * WARNING: This makes real API calls to real endpoints.
+ * Events will be sent to configured destinations (analytics, CRM, etc.).
+ *
+ * @param configOrPath - Path to flow configuration file or pre-built bundle
+ * @param event - Event object to push
+ * @param options - Push options
+ * @param options.silent - Suppress all output (default: false)
+ * @param options.verbose - Enable verbose logging (default: false)
+ * @param options.json - Format output as JSON (default: false)
+ * @returns Push result with success status, elb result, and duration
+ *
+ * @example
+ * ```typescript
+ * const result = await push('./walker.config.json', {
+ *   name: 'page view',
+ *   data: { title: 'Home Page', path: '/', url: 'https://example.com' }
+ * });
+ * ```
+ */
+export async function push(
+  configOrPath: string | unknown,
+  event: unknown,
+  options: PushOptions & { flow?: string; platform?: Platform } = {},
+): Promise<PushResult> {
+  if (typeof configOrPath !== 'string') {
+    throw new Error(
+      'push() currently only supports config file paths. ' +
+        'Config object support will be added in a future version. ' +
+        'Please provide a path to a configuration file.',
+    );
+  }
+
+  return await pushCore(configOrPath, event, {
+    json: options.json ?? false,
+    verbose: options.verbose ?? false,
+    flow: options.flow,
+    platform: options.platform,
+  });
 }
 
 /**
@@ -172,7 +277,7 @@ async function executeConfigPush(
 ): Promise<PushResult> {
   // Load config
   logger.debug('Loading flow configuration');
-  const { flowConfig, buildOptions } = await loadFlowConfig(options.config, {
+  const { flowConfig, buildOptions } = await loadFlowConfig(options.config!, {
     flowName: options.flow,
     logger,
   });

@@ -13,3 +13,39 @@ export {
 } from './primitives';
 
 export { RunOptionsSchema, type RunOptions } from './run';
+
+export {
+  ValidationTypeSchema,
+  ValidateOptionsSchema,
+  ValidateInputShape,
+  ValidateInputSchema,
+  type ValidationType,
+  type ValidateOptions,
+  type ValidateInput,
+} from './validate';
+
+export {
+  BundleOptionsSchema,
+  BundleInputShape,
+  BundleInputSchema,
+  type BundleOptions,
+  type BundleInput,
+} from './bundle';
+
+export {
+  PlatformSchema,
+  SimulateOptionsSchema,
+  SimulateInputShape,
+  SimulateInputSchema,
+  type Platform,
+  type SimulateOptions,
+  type SimulateInput,
+} from './simulate';
+
+export {
+  PushOptionsSchema,
+  PushInputShape,
+  PushInputSchema,
+  type PushOptions,
+  type PushInput,
+} from './push';

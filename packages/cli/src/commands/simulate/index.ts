@@ -1,7 +1,14 @@
 import { simulateCore, formatSimulationResult } from './simulator.js';
-import { createCommandLogger, getErrorMessage } from '../../core/index.js';
+import {
+  createCommandLogger,
+  getErrorMessage,
+  isStdinPiped,
+  readStdin,
+  writeResult,
+} from '../../core/index.js';
 import { loadJsonFromSource } from '../../config/index.js';
 import type { SimulateCommandOptions } from './types.js';
+import type { SimulateOptions, Platform } from '../../schemas/simulate.js';
 
 /**
  * CLI command handler for simulate command
@@ -9,17 +16,32 @@ import type { SimulateCommandOptions } from './types.js';
 export async function simulateCommand(
   options: SimulateCommandOptions,
 ): Promise<void> {
-  const logger = createCommandLogger(options);
+  const logger = createCommandLogger({ ...options, stderr: true });
   const startTime = Date.now();
 
   try {
+    // Resolve config: stdin > argument > default
+    let config: string;
+    if (isStdinPiped() && !options.config) {
+      const stdinContent = await readStdin();
+      // Write stdin to temp file for simulateCore (expects file path)
+      const fs = await import('fs-extra');
+      const path = await import('path');
+      const tmpPath = path.default.resolve('.tmp', 'stdin-simulate.json');
+      await fs.default.ensureDir(path.default.dirname(tmpPath));
+      await fs.default.writeFile(tmpPath, stdinContent, 'utf-8');
+      config = tmpPath;
+    } else {
+      config = options.config || 'bundle.config.json';
+    }
+
     // Load event from inline JSON, file path, or URL
     const event = await loadJsonFromSource(options.event, {
       name: 'event',
     });
 
     // Execute simulation
-    const result = await simulateCore(options.config, event, {
+    const result = await simulateCore(config, event, {
       flow: options.flow,
       json: options.json,
       verbose: options.verbose,
@@ -32,28 +54,27 @@ export async function simulateCommand(
       duration: (Date.now() - startTime) / 1000,
     };
 
-    // Output results using consistent formatter
-    const output = formatSimulationResult(resultWithDuration, {
+    // Format and write result
+    const formatted = formatSimulationResult(resultWithDuration, {
       json: options.json,
     });
-    if (options.json) {
-      console.log(output);
-    } else {
-      logger.log(output);
-    }
+    await writeResult(formatted + '\n', { output: options.output });
 
-    // Exit with appropriate code
-    // Explicit exit avoids hanging from open handles (JSDOM, HTTP connections, etc.)
     process.exit(result.success ? 0 : 1);
   } catch (error) {
     const errorMessage = getErrorMessage(error);
 
     if (options.json) {
-      logger.json({
-        success: false,
-        error: errorMessage,
-        duration: (Date.now() - startTime) / 1000,
-      });
+      const errorOutput = JSON.stringify(
+        {
+          success: false,
+          error: errorMessage,
+          duration: (Date.now() - startTime) / 1000,
+        },
+        null,
+        2,
+      );
+      await writeResult(errorOutput + '\n', { output: options.output });
     } else {
       logger.error(`Error: ${errorMessage}`);
     }
@@ -99,11 +120,7 @@ export async function simulateCommand(
 export async function simulate(
   configOrPath: string | unknown,
   event: unknown,
-  options: {
-    silent?: boolean;
-    verbose?: boolean;
-    json?: boolean;
-  } = {},
+  options: SimulateOptions & { flow?: string; platform?: Platform } = {},
 ): Promise<import('./types').SimulationResult> {
   // simulateCore currently only accepts file paths, so we need to handle that
   // For now, if configOrPath is not a string, throw an error with guidance
@@ -119,6 +136,8 @@ export async function simulate(
   return await simulateCore(configOrPath, event, {
     json: options.json ?? false,
     verbose: options.verbose ?? false,
+    flow: options.flow,
+    platform: options.platform,
   });
 }
 

@@ -77,4 +77,56 @@ describe('Logger', () => {
 
     expect(consoleLogSpy).toHaveBeenCalledTimes(2);
   });
+
+  describe('stderr mode', () => {
+    it('should send all log output to stderr when stderr mode is enabled', () => {
+      const logger = createLogger({ stderr: true });
+
+      logger.log('message');
+      logger.info('info');
+      logger.success('success');
+      logger.warning('warning');
+      logger.brand('brand');
+
+      expect(consoleLogSpy).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(5);
+    });
+
+    it('should send json output to stderr when stderr mode is enabled', () => {
+      const logger = createLogger({ stderr: true });
+
+      logger.json({ test: true });
+
+      expect(consoleLogSpy).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should send debug output to stderr when stderr mode is enabled', () => {
+      const logger = createLogger({ verbose: true, stderr: true });
+
+      logger.debug('debug msg');
+
+      expect(consoleLogSpy).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should still send error output to stderr regardless of stderr mode', () => {
+      const logger = createLogger({ stderr: true });
+
+      logger.error('error msg');
+
+      expect(consoleLogSpy).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should send gray and warn to stderr when stderr mode is enabled', () => {
+      const logger = createLogger({ stderr: true });
+
+      logger.gray('gray msg');
+      logger.warn('warn msg');
+
+      expect(consoleLogSpy).not.toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(2);
+    });
+  });
 });

@@ -4,8 +4,13 @@
 
 ### Patch Changes
 
+- 9599e60: Defer dataLayer historical event replay until after run to prevent
+  event loss
+- Updated dependencies [a4cc1ea]
+- Updated dependencies [9599e60]
 - Updated dependencies [e9c9faa]
-  - @walkeros/collector@1.1.3
+  - @walkeros/core@1.3.0
+  - @walkeros/collector@1.2.0
 
 ## 1.0.4
 

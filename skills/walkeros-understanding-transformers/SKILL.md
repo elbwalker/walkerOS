@@ -95,7 +95,8 @@ push(event, context) {
 ## Inline Code Transformers
 
 For simple transformations without external packages, use inline code with the
-`$code:` prefix:
+`$code:` string prefix in JSON configs. The `$code:` prefix tells the CLI
+bundler to parse the following string as executable JavaScript:
 
 ```json
 {

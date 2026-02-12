@@ -4,8 +4,9 @@ import type { Elb } from '@walkeros/core';
  * Push command options
  */
 export interface PushCommandOptions {
-  config: string;
+  config?: string;
   event: string;
+  output?: string;
   flow?: string;
   json?: boolean;
   verbose?: boolean;

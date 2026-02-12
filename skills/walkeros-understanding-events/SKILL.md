@@ -45,7 +45,7 @@ separation.
 
 See
 [packages/core/src/types/walkeros.ts](../../packages/core/src/types/walkeros.ts)
-for canonical types (Event interface).
+for canonical types (Event interface, plus event helpers in `event.ts`).
 
 | Property    | Type   | Purpose                    | Example                               |
 | ----------- | ------ | -------------------------- | ------------------------------------- |

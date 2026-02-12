@@ -81,6 +81,7 @@ export interface Config<
   logger?: Logger.Config;
   disabled?: boolean;
   primary?: boolean;
+  require?: string[];
   /**
    * Ingest metadata extraction mapping.
    * Extracts values from raw request objects (Express req, Lambda event, etc.)
@@ -110,7 +111,10 @@ export interface Instance<T extends TypesGeneric = Types> {
   config: Config<T>;
   push: Push<T>;
   destroy?(): void | Promise<void>;
-  on?(event: On.Types, context?: unknown): void | Promise<void>;
+  on?(
+    event: On.Types,
+    context?: unknown,
+  ): void | boolean | Promise<void | boolean>;
 }
 
 /**

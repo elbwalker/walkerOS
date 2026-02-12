@@ -5,6 +5,7 @@ export type ValidationType = 'event' | 'flow' | 'mapping';
 export interface ValidateCommandOptions {
   type: ValidationType;
   input?: string;
+  output?: string;
   flow?: string; // Flow name for multi-flow configs
   json?: boolean;
   verbose?: boolean;

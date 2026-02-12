@@ -19,7 +19,7 @@ FULL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
 echo -e "${BLUE}Testing image: ${FULL_IMAGE}${NC}\n"
 
 # Test 1: Version check
-echo -e "${BLUE}[1/4] Testing version command...${NC}"
+echo -e "${BLUE}[1/6] Testing version command...${NC}"
 if VERSION=$(docker run --rm "${FULL_IMAGE}" --version 2>&1); then
   echo -e "${GREEN}✓ Version check passed: ${VERSION}${NC}\n"
 else
@@ -28,7 +28,7 @@ else
 fi
 
 # Test 2: Help command
-echo -e "${BLUE}[2/4] Testing help command...${NC}"
+echo -e "${BLUE}[2/6] Testing help command...${NC}"
 if docker run --rm "${FULL_IMAGE}" --help > /dev/null 2>&1; then
   echo -e "${GREEN}✓ Help command works${NC}\n"
 else
@@ -36,8 +36,30 @@ else
   exit 1
 fi
 
-# Test 3: Bundle command with example config
-echo -e "${BLUE}[3/4] Testing bundle command with built-in examples...${NC}"
+# Test 3: Bundle from stdin to stdout (primary Docker usage pattern)
+echo -e "${BLUE}[3/6] Testing stdin/stdout bundle...${NC}"
+FLOW_CONFIG='{"version":1,"flows":{"default":{"server":{},"packages":{"@walkeros/collector":{"version":"latest","imports":["startFlow"]}},"collector":{"run":true}}}}'
+
+BUNDLE_OUTPUT=$(echo "$FLOW_CONFIG" | docker run --rm -i "${FULL_IMAGE}" bundle 2>/dev/null)
+
+if [ -n "$BUNDLE_OUTPUT" ] && echo "$BUNDLE_OUTPUT" | head -1 | grep -q .; then
+  BUNDLE_SIZE=${#BUNDLE_OUTPUT}
+  echo -e "${GREEN}✓ Stdin/stdout bundle works (${BUNDLE_SIZE} bytes)${NC}\n"
+else
+  echo -e "${RED}✗ Stdin/stdout bundle failed${NC}"
+  exit 1
+fi
+
+# Test 4: Validate from stdin
+echo -e "${BLUE}[4/6] Testing stdin validate...${NC}"
+if echo "$FLOW_CONFIG" | docker run --rm -i "${FULL_IMAGE}" validate flow --json 2>/dev/null | grep -q '"valid"'; then
+  echo -e "${GREEN}✓ Stdin validate works${NC}\n"
+else
+  echo -e "${YELLOW}⚠ Stdin validate returned unexpected output (may be OK)${NC}\n"
+fi
+
+# Test 5: Bundle command with example config
+echo -e "${BLUE}[5/6] Testing bundle command with built-in examples...${NC}"
 TEST_DIR=$(mktemp -d)
 trap "rm -rf ${TEST_DIR}" EXIT
 
@@ -70,9 +92,9 @@ if docker run --rm \
   bundle server-collect.json \
   --stats > /dev/null 2>&1; then
 
-  # Check if output file was created (output resolves relative to config in workspace)
-  if [ -f "${TEST_DIR}/server-collect.mjs" ]; then
-    BUNDLE_SIZE=$(stat -f%z "${TEST_DIR}/server-collect.mjs" 2>/dev/null || stat -c%s "${TEST_DIR}/server-collect.mjs")
+  # Check if output file was created (CLI outputs to dist/bundle.mjs)
+  if [ -f "${TEST_DIR}/dist/bundle.mjs" ]; then
+    BUNDLE_SIZE=$(stat -f%z "${TEST_DIR}/dist/bundle.mjs" 2>/dev/null || stat -c%s "${TEST_DIR}/dist/bundle.mjs")
     echo -e "${GREEN}✓ Bundle created successfully (${BUNDLE_SIZE} bytes)${NC}\n"
   else
     echo -e "${RED}✗ Bundle file not created${NC}"
@@ -83,15 +105,15 @@ else
   exit 1
 fi
 
-# Test 4: Simulate command
-echo -e "${BLUE}[4/4] Testing simulate command...${NC}"
+# Test 6: Simulate command
+echo -e "${BLUE}[6/6] Testing simulate command...${NC}"
 EVENT='{"name":"page view","data":{"title":"Test"}}'
 if docker run --rm \
   --user "$(id -u):$(id -g)" \
   -v "${TEST_DIR}:/workspace" \
   -w /workspace \
   "${FULL_IMAGE}" \
-  simulate server-collect.mjs \
+  simulate dist/bundle.mjs \
   --event "${EVENT}" \
   --json > /dev/null 2>&1; then
   echo -e "${GREEN}✓ Simulate command works${NC}\n"

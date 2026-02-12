@@ -40,6 +40,23 @@ Before starting, read these skills:
 6. Document     → Write README
 ```
 
+## Supporting Files
+
+This skill includes reference files you can copy:
+
+- **[examples/](examples/)** - Example events and configs to adapt for your
+  transformer
+  - [events.ts](examples/events.ts) - Before/after event examples
+  - [config.ts](examples/config.ts) - Configuration examples
+- **[templates/validation/](templates/validation/)** - Complete redact
+  transformer template
+  - [index.ts](templates/validation/index.ts) - Implementation with context
+    pattern
+  - [types.ts](templates/validation/types.ts) - Type definitions
+  - [schemas.ts](templates/validation/schemas.ts) - Zod validation schemas
+  - [index.test.ts](templates/validation/index.test.ts) - Test suite with
+    helpers
+
 ---
 
 ## Phase 1: Research
@@ -83,75 +100,18 @@ mkdir -p packages/transformers/[name]/src/{examples,schemas,types}
 
 ### 2.2 Create Event Examples
 
-**Events before and after processing:**
+Adapt [examples/events.ts](examples/events.ts) for your transformer's use case.
+Each example file should include:
 
-`src/examples/events.ts`:
-
-```typescript
-import type { WalkerOS } from '@walkeros/core';
-
-/**
- * Example events for testing transformer behavior.
- */
-
-// Event that should pass through modified
-export const validEvent: WalkerOS.DeepPartialEvent = {
-  event: 'product view',
-  data: {
-    id: 'P-123',
-    name: 'Widget',
-    email: 'user@example.com', // Sensitive - should be redacted
-  },
-};
-
-// Expected output after processing
-export const processedEvent: WalkerOS.DeepPartialEvent = {
-  event: 'product view',
-  data: {
-    id: 'P-123',
-    name: 'Widget',
-    // email removed by redaction
-  },
-};
-
-// Event that should be blocked
-export const invalidEvent: WalkerOS.DeepPartialEvent = {
-  event: 'product view',
-  data: {
-    // Missing required 'id' field
-    name: 'Widget',
-  },
-};
-```
+- Events that should pass through (modified)
+- Expected output after processing
+- Events that should be blocked (for validators)
 
 ### 2.3 Create Config Examples
 
-`src/examples/config.ts`:
-
-```typescript
-import type { Transformer } from '@walkeros/core';
-
-/**
- * Example configurations for testing.
- */
-
-export const defaultConfig: Transformer.Config = {
-  settings: {
-    fieldsToRedact: ['email', 'phone'],
-  },
-};
-
-export const strictConfig: Transformer.Config = {
-  settings: {
-    fieldsToRedact: ['email', 'phone', 'ip'],
-    logRedactions: true,
-  },
-};
-```
+Adapt [examples/config.ts](examples/config.ts) for your transformer's settings.
 
 ### 2.4 Export via dev.ts
-
-`src/dev.ts`:
 
 ```typescript
 export * as schemas from './schemas';
@@ -208,92 +168,23 @@ packages/transformers/[name]/
 
 ### 4.1 Define Types
 
-`src/types/index.ts`:
-
-```typescript
-import type { Transformer } from '@walkeros/core';
-
-export interface Settings {
-  fieldsToRedact?: string[];
-  logRedactions?: boolean;
-}
-
-export interface Types extends Transformer.Types<Settings> {}
-```
+See [templates/validation/types.ts](templates/validation/types.ts) for the
+pattern. Define `Settings` and `Types` interfaces.
 
 ### 4.2 Implement Transformer (Context Pattern)
 
 Transformers use the **context pattern** - they receive a single `context`
 object containing `config`, `env`, `logger`, `id`, and `collector`.
 
-`src/transformer.ts`:
-
-```typescript
-import type { Transformer } from '@walkeros/core';
-import type { Settings, Types } from './types';
-import { SettingsSchema } from './schemas';
-
-/**
- * Transformer initialization using context pattern.
- *
- * @param context - Transformer context containing:
- *   - config: Transformer configuration (settings)
- *   - env: Environment object
- *   - logger: Logger instance
- *   - id: Unique transformer identifier
- *   - collector: Collector instance reference
- *   - ingest: Optional request metadata from source
- */
-export const transformerRedact: Transformer.Init<Types> = (context) => {
-  // Destructure what you need from context
-  const { config = {} } = context;
-
-  // Validate and apply default settings using Zod schema
-  const settings = SettingsSchema.parse(config.settings || {});
-
-  const fullConfig: Transformer.Config<Types> = {
-    ...config,
-    settings,
-  };
-
-  return {
-    type: 'redact',
-    config: fullConfig,
-
-    /**
-     * Process event - receives event and push context.
-     *
-     * @param event - The event to process
-     * @param pushContext - Context for this specific push operation
-     * @returns event - continue with modified event
-     * @returns void - continue with current event unchanged
-     * @returns false - stop chain, cancel further processing
-     */
-    push(event, pushContext) {
-      const { logger } = pushContext;
-      const fields = settings.fieldsToRedact || [];
-
-      for (const field of fields) {
-        if (event.data?.[field] !== undefined) {
-          delete event.data[field];
-
-          if (settings.logRedactions) {
-            logger?.debug('Redacted field', { field });
-          }
-        }
-      }
-
-      return event;
-    },
-  };
-};
-```
+See [templates/validation/index.ts](templates/validation/index.ts) for a
+complete implementation example.
 
 **Key patterns:**
 
 1. **Context destructuring**: Extract `config`, `logger`, `id` from init context
 2. **Schema validation**: Use Zod schemas to validate settings and provide
-   defaults
+   defaults (see
+   [templates/validation/schemas.ts](templates/validation/schemas.ts))
 3. **Push receives pushContext**: The `push` function gets event + push context
 4. **Return values**: `event` (continue), `void` (passthrough), `false` (cancel)
 
@@ -317,110 +208,13 @@ export type { Settings, Types } from './types';
 
 **Verify implementation produces expected outputs.**
 
-### 5.1 Test Helper Pattern
+See [templates/validation/index.test.ts](templates/validation/index.test.ts) for
+a complete test suite showing:
 
-Create a helper to build transformer context for tests:
-
-`src/__tests__/index.test.ts`:
-
-```typescript
-import { transformerRedact } from '../transformer';
-import type { Transformer, Collector } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
-import type { Types } from '../types';
-import { examples } from '../dev';
-
-// Helper to create transformer context for testing
-function createTransformerContext(
-  config: Partial<Transformer.Config<Types>> = {},
-): Transformer.Context<Types> {
-  return {
-    config,
-    env: {} as Types['env'],
-    logger: createMockLogger(),
-    id: 'test-redact',
-    collector: {} as Collector.Instance,
-  };
-}
-
-// Helper to create push context for testing
-function createPushContext(): Transformer.Context<Types> {
-  return {
-    config: {},
-    env: {} as Types['env'],
-    logger: createMockLogger(),
-    id: 'test-redact',
-    collector: {} as Collector.Instance,
-  };
-}
-
-describe('Redact Transformer', () => {
-  let mockLogger: ReturnType<typeof createMockLogger>;
-
-  beforeEach(() => {
-    mockLogger = createMockLogger();
-  });
-
-  test('redacts specified fields from valid event', () => {
-    const transformer = transformerRedact(
-      createTransformerContext({
-        settings: { fieldsToRedact: ['email'] },
-      }),
-    );
-
-    const event = structuredClone(examples.events.validEvent);
-    const pushContext = createPushContext();
-    const result = transformer.push(event, pushContext);
-
-    expect(result).toMatchObject(examples.events.processedEvent);
-    expect((result as any).data.email).toBeUndefined();
-  });
-
-  test('passes through event when no fields match', () => {
-    const transformer = transformerRedact(
-      createTransformerContext({
-        settings: { fieldsToRedact: ['ssn'] },
-      }),
-    );
-
-    const event = structuredClone(examples.events.validEvent);
-    const pushContext = createPushContext();
-    const result = transformer.push(event, pushContext);
-
-    expect((result as any).data.email).toBe('user@example.com');
-  });
-
-  test('logs redactions when enabled', () => {
-    const transformer = transformerRedact(
-      createTransformerContext({
-        settings: {
-          fieldsToRedact: ['email'],
-          logRedactions: true,
-        },
-      }),
-    );
-
-    const event = structuredClone(examples.events.validEvent);
-    const pushContext = {
-      ...createPushContext(),
-      logger: mockLogger,
-    };
-    transformer.push(event, pushContext);
-
-    expect(mockLogger.debug).toHaveBeenCalledWith('Redacted field', {
-      field: 'email',
-    });
-  });
-});
-```
-
-### 5.2 Key Test Patterns
-
-1. **Use `createTransformerContext()` helper** - Standardizes init context
-   creation
-2. **Use `createPushContext()` helper** - Standardizes push context creation
-3. **Use examples for test data** - Don't hardcode test values
-4. **Test return values** - Verify `event`, `void`, or `false` returns
+1. **`createTransformerContext()` helper** - Standardizes init context creation
+2. **`createPushContext()` helper** - Standardizes push context creation
+3. **Examples for test data** - Don't hardcode test values
+4. **Return value testing** - Verify `event`, `void`, or `false` returns
 
 ### Gate: Tests Pass
 

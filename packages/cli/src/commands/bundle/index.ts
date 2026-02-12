@@ -14,6 +14,10 @@ import {
   createErrorOutput,
   getErrorMessage,
   resolveAsset,
+  getTmpPath,
+  isStdinPiped,
+  readStdin,
+  writeResult,
 } from '../../core/index.js';
 import {
   loadJsonConfig,
@@ -26,7 +30,8 @@ import { bundleCore } from './bundler.js';
 import { displayStats, createStatsSummary } from './stats.js';
 
 export interface BundleCommandOptions {
-  config: string;
+  config?: string;
+  output?: string;
   flow?: string;
   all?: boolean;
   stats?: boolean;
@@ -37,24 +42,61 @@ export interface BundleCommandOptions {
   dockerfile?: boolean | string;
 }
 
+/**
+ * Resolve -o path: if directory, use platform-default filename.
+ */
+function resolveOutputPath(output: string, buildOptions: BuildOptions): string {
+  const resolved = path.resolve(output);
+  const ext = path.extname(resolved);
+  if (output.endsWith('/') || output.endsWith(path.sep) || !ext) {
+    const filename =
+      buildOptions.platform === 'browser' ? 'walker.js' : 'bundle.mjs';
+    return path.join(resolved, filename);
+  }
+  return resolved;
+}
+
 export async function bundleCommand(
   options: BundleCommandOptions,
 ): Promise<void> {
   const timer = createTimer();
   timer.start();
 
-  const logger = createCommandLogger(options);
+  // When writing to stdout, redirect all logs to stderr
+  const writingToStdout = !options.output;
+  const logger = createCommandLogger({
+    ...options,
+    stderr: writingToStdout,
+  });
 
   try {
-    // Validate flag combination
+    // Validate flag combinations
     if (options.flow && options.all) {
       throw new Error('Cannot use both --flow and --all flags together');
     }
+    if (options.all && writingToStdout) {
+      throw new Error(
+        'Cannot use --all without --output (multiple bundles need file output)',
+      );
+    }
 
-    // Step 1: Read configuration file
-    // Resolve bare names to examples directory, keep paths/URLs as-is
-    const configPath = resolveAsset(options.config, 'config');
-    const rawConfig = await loadJsonConfig(configPath);
+    // Step 1: Load config — from stdin or file
+    let rawConfig: unknown;
+    let configPath: string;
+
+    if (isStdinPiped() && !options.config) {
+      const stdinContent = await readStdin();
+      try {
+        rawConfig = JSON.parse(stdinContent);
+      } catch {
+        throw new Error('Invalid JSON received on stdin');
+      }
+      configPath = path.resolve(process.cwd(), 'stdin.config.json');
+    } else {
+      const file = options.config || 'bundle.config.json';
+      configPath = resolveAsset(file, 'config');
+      rawConfig = await loadJsonConfig(configPath);
+    }
 
     // Step 2: Load configuration(s) based on flags
     const configsToBundle: LoadConfigResult[] = options.all
@@ -87,12 +129,20 @@ export async function bundleCommand(
           buildOptions.cache = options.cache;
         }
 
-        // Log flow being built
-        const configBasename = path.basename(configPath);
-        if (isMultiFlow || options.all) {
-          logger.log(`Bundling ${configBasename} (flow: ${flowName})...`);
+        // Resolve output path
+        if (options.output) {
+          buildOptions.output = resolveOutputPath(options.output, buildOptions);
         } else {
-          logger.log(`Bundling ${configBasename}...`);
+          // Stdout mode: bundle to temp file, then write to stdout
+          const ext = buildOptions.platform === 'browser' ? '.js' : '.mjs';
+          buildOptions.output = getTmpPath(undefined, 'stdout-bundle' + ext);
+        }
+
+        // Log flow being built
+        if (isMultiFlow || options.all) {
+          logger.log(`Bundling flow: ${flowName}...`);
+        } else {
+          logger.log('Bundling...');
         }
 
         // Run bundler
@@ -104,19 +154,22 @@ export async function bundleCommand(
           shouldCollectStats,
         );
 
-        results.push({
-          flowName,
-          success: true,
-          stats,
-        });
+        results.push({ flowName, success: true, stats });
 
         // Show stats if requested (for non-JSON, non-multi builds)
         if (!options.json && !options.all && options.stats && stats) {
           displayStats(stats, logger);
         }
 
-        // Generate Dockerfile if requested
-        if (options.dockerfile && !options.all) {
+        // Write bundle content to stdout if no -o and not --json
+        // (--json writes JSON metadata to stdout instead)
+        if (writingToStdout && !options.json) {
+          const bundleContent = await fs.readFile(buildOptions.output);
+          await writeResult(bundleContent, {});
+        }
+
+        // Dockerfile only with -o
+        if (options.dockerfile && options.output) {
           const platform = getPlatform(flowConfig);
           if (platform) {
             const outputDir = path.dirname(buildOptions.output);
@@ -129,14 +182,10 @@ export async function bundleCommand(
         }
       } catch (error) {
         const errorMessage = getErrorMessage(error);
-        results.push({
-          flowName,
-          success: false,
-          error: errorMessage,
-        });
+        results.push({ flowName, success: false, error: errorMessage });
 
         if (!options.all) {
-          throw error; // Re-throw for single flow builds
+          throw error;
         }
       }
     }
@@ -147,8 +196,7 @@ export async function bundleCommand(
     const failureCount = results.filter((r) => !r.success).length;
 
     if (options.json) {
-      // JSON output for CI/CD
-      const output =
+      const jsonResult =
         failureCount === 0
           ? createSuccessOutput(
               {
@@ -165,7 +213,10 @@ export async function bundleCommand(
               `${failureCount} flow(s) failed to build`,
               duration,
             );
-      logger.json(output);
+      // JSON metadata is the result — write to stdout directly
+      await writeResult(JSON.stringify(jsonResult, null, 2) + '\n', {
+        output: options.output,
+      });
     } else {
       if (options.all) {
         logger.log(
@@ -181,17 +232,16 @@ export async function bundleCommand(
       }
     }
 
-    // Explicitly exit on success to avoid hanging from open handles
-    // (pacote HTTP connections, esbuild workers, etc.)
     process.exit(0);
   } catch (error) {
     const duration = timer.getElapsed() / 1000;
     const errorMessage = getErrorMessage(error);
 
     if (options.json) {
-      // JSON error output for CI/CD
-      const output = createErrorOutput(errorMessage, duration);
-      logger.json(output);
+      const jsonError = createErrorOutput(errorMessage, duration);
+      await writeResult(JSON.stringify(jsonError, null, 2) + '\n', {
+        output: options.output,
+      });
     } else {
       logger.error(`Error: ${errorMessage}`);
     }

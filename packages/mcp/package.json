@@ -1,0 +1,62 @@
+{
+  "name": "@walkeros/mcp",
+  "version": "0.3.0",
+  "description": "MCP server for walkerOS - validate, bundle, and simulate analytics events locally, plus manage projects and flows via the walkerOS API",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "walkeros-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist/**",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "dev": "jest --watchAll --colors",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
+    "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage",
+    "prepublishOnly": "npm run build",
+    "update": "npx npm-check-updates -u && npm update"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@walkeros/cli": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@walkeros/config": "*"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/mcp"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "walkeros",
+    "mcp",
+    "model-context-protocol",
+    "analytics",
+    "event-tracking"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

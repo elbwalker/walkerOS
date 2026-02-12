@@ -140,13 +140,21 @@ describe('sessionStart', () => {
 
     // No push calls if no session is started
     sessionStart({ collector });
-    expect(collector.command).toHaveBeenCalledTimes(1);
+    expect(collector.command).toHaveBeenCalledTimes(2);
     expect(collector.command).toHaveBeenCalledWith('user', expect.any(Object));
+    expect(collector.command).toHaveBeenCalledWith(
+      'session',
+      expect.any(Object),
+    );
 
     jest.clearAllMocks();
     sessionStart({ data: { isStart: true }, collector });
-    expect(collector.command).toHaveBeenCalledTimes(1);
+    expect(collector.command).toHaveBeenCalledTimes(2);
     expect(collector.command).toHaveBeenCalledWith('user', expect.any(Object));
+    expect(collector.command).toHaveBeenCalledWith(
+      'session',
+      expect.any(Object),
+    );
     expect(collector.push).toHaveBeenCalledTimes(1);
     expect(collector.push).toHaveBeenCalledWith({
       name: 'session start',
@@ -164,6 +172,10 @@ describe('sessionStart', () => {
       device: 'd3v1c3',
       session: 's3ss10n',
     });
+    expect(collector.command).toHaveBeenCalledWith(
+      'session',
+      expect.any(Object),
+    );
   });
 
   test('Callback disabled', () => {

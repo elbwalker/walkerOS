@@ -7,6 +7,7 @@
 
 import fs from 'fs-extra';
 import { isUrl } from '../config/utils.js';
+import { authenticatedFetch } from './auth.js';
 
 export type Platform = 'web' | 'server';
 
@@ -62,7 +63,7 @@ export function detectPlatformFromPath(inputPath: string): Platform {
  */
 async function loadContent(inputPath: string): Promise<string> {
   if (isUrl(inputPath)) {
-    const response = await fetch(inputPath);
+    const response = await authenticatedFetch(inputPath);
     if (!response.ok) {
       throw new Error(`Failed to fetch ${inputPath}: ${response.status}`);
     }
