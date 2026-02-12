@@ -97,7 +97,7 @@ const config: Config = {
     image: 'img/elbwalker_socialcard.png',
     navbar: {
       logo: {
-        alt: 'elbwalker logo',
+        alt: 'walkerOS logo',
         src: 'img/walkerOS_logo.svg',
       },
       items: [
@@ -198,6 +198,10 @@ const config: Config = {
           {
             from: '/docs/sources/web/session',
             to: '/docs/sources/web/session/detection',
+          },
+          {
+            from: '/docs/sources/walkerjs/installation/package',
+            to: '/docs/sources/web/browser/commands#run',
           },
         ],
       },

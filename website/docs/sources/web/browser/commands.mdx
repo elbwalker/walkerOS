@@ -107,10 +107,37 @@ A run accepts a partial state parameter:
   language="javascript"
 />
 
+### Virtual pageviews in SPAs
+
+Use `walker run` to trigger virtual pageviews when navigating between routes in
+Single Page Applications. Call it on each route change to fire a new `page view`
+event and re-scan the DOM:
+
+<CodeSnippet
+  code={`// React Router example
+useEffect(() => {
+  window.elb('walker run');
+}, [location]);
+
+// Next.js App Router example
+useEffect(() => {
+  window.elb('walker run');
+}, [pathname]);`}
+  language="javascript"
+/>
+
+:::tip
+
+For SPAs, use `walker run` for route changes (triggers pageview), and
+`walker init` for dynamically loaded content within the same page (no pageview).
+
+:::
+
 ## init
 
-Re-initializes event listeners on one or multiple target elements. Useful for
-dynamically loaded content like newly added products or wizard steps.
+Re-initializes event listeners on one or multiple target elements without
+triggering a page view. Useful for dynamically loaded content like product
+lists, infinite scroll, or wizard steps.
 
 <CodeSnippet
   code={`elb('walker init', element); // Single element
@@ -121,12 +148,29 @@ elb('walker init', [element1, element2]); // Multiple elements`}
 This command is essential for Single Page Applications (SPAs) where content is
 added dynamically after the initial page load.
 
+<CodeSnippet
+  code={`// After loading new products via AJAX
+const productList = document.getElementById('product-list');
+fetchProducts().then(() => {
+  elb('walker init', productList);
+});`}
+  language="javascript"
+/>
+
 :::tip
 
-Use `walker init` after adding new DOM elements with `data-elb` attributes to
-ensure they are tracked properly.
+Use `walker init` after adding new DOM elements with `data-elb` attributes.
+Unlike `walker run`, this does not trigger a page view event - it only enables
+tracking on the specified elements.
 
 :::
+
+## run vs init comparison
+
+| Command | Triggers pageview | Re-scans DOM | Use case |
+|---------|------------------|--------------|----------|
+| `walker run` | Yes | Full page | SPA route changes, virtual pageviews |
+| `walker init` | No | Target elements only | Dynamically loaded content (product lists, infinite scroll) |
 
 ## Integration with collector
 
