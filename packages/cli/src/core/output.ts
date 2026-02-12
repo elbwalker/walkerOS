@@ -19,6 +19,7 @@ export async function writeResult(
     await fs.writeFile(outputPath, content);
   } else {
     process.stdout.write(content);
+    process.stdout.write('\n');
   }
 }
 
