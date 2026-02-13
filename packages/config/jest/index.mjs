@@ -15,14 +15,6 @@ function getModuleMapper() {
   const mapper = {};
   const scanDir = path.join(packagesDir, 'packages');
 
-  // Temporary CI debug — remove after verifying
-  if (process.env.CI) {
-    console.warn('[jest-config] import.meta.url:', import.meta.url);
-    console.warn('[jest-config] configDir:', configDir);
-    console.warn('[jest-config] packagesDir:', packagesDir);
-    console.warn('[jest-config] scanDir exists:', existsSync(scanDir));
-  }
-
   function scanForPackages(dir) {
     if (!existsSync(dir)) return;
     const entries = readdirSync(dir, { withFileTypes: true });
@@ -66,12 +58,15 @@ function getModuleMapper() {
 
   scanForPackages(path.join(packagesDir, 'packages'));
 
-  // Temporary CI debug — remove after verifying
-  if (process.env.CI) {
-    const keys = Object.keys(mapper);
-    console.warn('[jest-config] mappings:', keys.length);
-    console.warn('[jest-config] has collector:', keys.some(k => k.includes('collector')));
-    if (keys.length === 0) console.warn('[jest-config] WARNING: empty mapper!');
+  if (Object.keys(mapper).length === 0) {
+    throw new Error(
+      `[jest-config] moduleNameMapper is empty — no @walkeros/* packages found.\n` +
+      `  packagesDir: ${packagesDir}\n` +
+      `  scanDir: ${scanDir}\n` +
+      `  scanDir exists: ${existsSync(scanDir)}\n` +
+      `This usually means a stale @walkeros/config copy was loaded from node_modules ` +
+      `instead of the workspace version. Run: npm dedupe @walkeros/config`,
+    );
   }
 
   return mapper;
