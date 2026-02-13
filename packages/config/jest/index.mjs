@@ -13,6 +13,15 @@ function escapeRegex(str) {
 
 function getModuleMapper() {
   const mapper = {};
+  const scanDir = path.join(packagesDir, 'packages');
+
+  // Temporary CI debug — remove after verifying
+  if (process.env.CI) {
+    console.warn('[jest-config] import.meta.url:', import.meta.url);
+    console.warn('[jest-config] configDir:', configDir);
+    console.warn('[jest-config] packagesDir:', packagesDir);
+    console.warn('[jest-config] scanDir exists:', existsSync(scanDir));
+  }
 
   function scanForPackages(dir) {
     if (!existsSync(dir)) return;
@@ -56,6 +65,15 @@ function getModuleMapper() {
   }
 
   scanForPackages(path.join(packagesDir, 'packages'));
+
+  // Temporary CI debug — remove after verifying
+  if (process.env.CI) {
+    const keys = Object.keys(mapper);
+    console.warn('[jest-config] mappings:', keys.length);
+    console.warn('[jest-config] has collector:', keys.some(k => k.includes('collector')));
+    if (keys.length === 0) console.warn('[jest-config] WARNING: empty mapper!');
+  }
+
   return mapper;
 }
 
