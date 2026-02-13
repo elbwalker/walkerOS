@@ -1,14 +1,11 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync, readdirSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'fs';
 
-const packagesDir = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  '..',
-  '/',
-);
+// Resolve symlinks so import.meta.url always points to the real file path,
+// even when Jest resolves through node_modules symlinks.
+const configDir = realpathSync(path.dirname(fileURLToPath(import.meta.url)));
+const packagesDir = path.join(configDir, '..', '..', '..', '/');
 
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
