@@ -45,11 +45,11 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Lint
-        run: npm run lint
-
       - name: Test
         run: npm run test
+
+      - name: Lint
+        run: npm run lint
 
       - name: Integration tests
         run: npm run test:integration
