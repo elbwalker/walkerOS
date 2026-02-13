@@ -1,8 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync } from 'fs';
 
-const isWatchMode = process.argv.includes('--watchAll');
 const packagesDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
@@ -11,47 +10,56 @@ const packagesDir = path.join(
   '/',
 );
 
-function getDirectory(dir) {
-  return path.join(packagesDir, dir);
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function getModuleMapper() {
-  if (!isWatchMode) return {};
+  const mapper = {};
 
-  return {
-    '^@walkeros/core$': getDirectory('core/src/'),
-    '^@walkeros/collector$': getDirectory('collector/src/'),
-    '^@walkeros/web-core$': getDirectory('web/core/src/'),
-    '^@walkeros/web-destination-gtag$': getDirectory(
-      'web/destinations/gtag/src/',
-    ),
-    '^@walkeros/web-destination-api$': getDirectory(
-      'web/destinations/api/src/',
-    ),
-    '^@walkeros/web-destination-meta$': getDirectory(
-      'web/destinations/meta/src/',
-    ),
-    '^@walkeros/web-destination-piwikpro$': getDirectory(
-      'web/destinations/piwikpro/src/',
-    ),
-    '^@walkeros/web-destination-plausible$': getDirectory(
-      'web/destinations/plausible/src/',
-    ),
-    '^@walkeros/web-source-browser$': getDirectory('web/sources/browser/src/'),
-    '^@walkeros/web-source-datalayer$': getDirectory(
-      'web/sources/dataLayer/src/',
-    ),
-    '^@walkeros/server-core$': getDirectory('server/core/src/'),
-    '^@walkeros/server-destination-aws$': getDirectory(
-      'server/destinations/aws/src/',
-    ),
-    '^@walkeros/server-destination-gcp$': getDirectory(
-      'server/destinations/gcp/src/',
-    ),
-    '^@walkeros/server-destination-meta$': getDirectory(
-      'server/destinations/meta/src/',
-    ),
-  };
+  function scanForPackages(dir) {
+    if (!existsSync(dir)) return;
+    const entries = readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name === 'node_modules' || entry.name === 'dist') continue;
+
+      const fullPath = path.join(dir, entry.name);
+      const pkgJsonPath = path.join(fullPath, 'package.json');
+
+      if (existsSync(pkgJsonPath)) {
+        const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
+
+        if (pkg.name?.startsWith('@walkeros/') && existsSync(path.join(fullPath, 'src'))) {
+          // Map root export: @walkeros/core → packages/core/src/
+          mapper[`^${escapeRegex(pkg.name)}$`] = path.join(fullPath, 'src/');
+
+          // Map subpath exports: @walkeros/core/dev → packages/core/src/dev
+          if (pkg.exports) {
+            for (const subpath of Object.keys(pkg.exports)) {
+              if (subpath === '.' || !subpath.startsWith('./')) continue;
+              const subName = subpath.slice(2);
+              const srcFile = path.join(fullPath, 'src', subName);
+              if (
+                existsSync(srcFile + '.ts') ||
+                existsSync(srcFile + '.tsx') ||
+                existsSync(path.join(srcFile, 'index.ts'))
+              ) {
+                mapper[`^${escapeRegex(pkg.name)}/${escapeRegex(subName)}$`] = srcFile;
+              }
+            }
+          }
+        }
+      }
+
+      // Recurse into subdirectories (handles packages/web/core/, packages/server/destinations/api/, etc.)
+      scanForPackages(fullPath);
+    }
+  }
+
+  scanForPackages(path.join(packagesDir, 'packages'));
+  return mapper;
 }
 
 function getGlobals() {

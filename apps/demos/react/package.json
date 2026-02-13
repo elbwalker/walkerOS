@@ -10,7 +10,7 @@
     "test:watch": "jest --watchAll --colors",
     "preview": "vite preview",
     "start": "vite --host",
-    "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
+    "lint": "eslint \"**/*.ts*\"",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist && rm -rf node_modules && rm -rf .turbo"
   },

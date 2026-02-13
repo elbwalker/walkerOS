@@ -8,7 +8,8 @@
     "build": "tsup --silent",
     "test": "jest",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "update": "npx npm-check-updates -u && npm update"
   },

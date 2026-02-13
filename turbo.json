@@ -1,7 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local", "website/.env"],
-  "concurrency": "2",
+  "concurrency": "3",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -19,11 +19,15 @@
       "cache": false,
       "persistent": true
     },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
     "lint": {
+      "dependsOn": ["^build"],
       "outputs": []
     },
     "test": {
-      "dependsOn": ["build"],
       "outputs": []
     },
     "update": {}

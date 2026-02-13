@@ -27,13 +27,14 @@
     "website"
   ],
   "scripts": {
-    "build": "npm run build:packages && npm run build:apps && npm run build:website",
+    "build": "turbo run build",
     "build:packages": "turbo run build --filter='./packages/**'",
     "build:apps": "turbo run build --filter='./apps/*'",
     "build:website": "turbo run build --filter=@walkeros/website",
     "clean": "turbo run clean",
     "dev": "turbo run dev --output-logs=errors-only",
     "format": "prettier --write .",
+    "typecheck": "turbo run typecheck --filter=!@walkeros/website --output-logs=errors-only",
     "lint": "turbo run lint --filter=!@walkeros/website --output-logs=errors-only",
     "publish-packages": "npm run clean && npm run build && npm run lint && npm run test && changeset version && changeset publish",
     "reset": "rm -rf .turbo && rm -rf node_modules && npm ci",

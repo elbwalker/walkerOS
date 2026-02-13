@@ -5,6 +5,7 @@ const config = {
   displayName: '@walkeros/storybook-addon',
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
   moduleNameMapper: {
+    ...baseConfig.moduleNameMapper,
     '^src/(.*)$': '<rootDir>/src/$1',
   },
 };
