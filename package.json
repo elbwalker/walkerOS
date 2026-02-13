@@ -40,6 +40,7 @@
     "reset": "rm -rf .turbo && rm -rf node_modules && npm ci",
     "publish-docker": "npm run -w @walkeros/cli docker:publish",
     "test": "turbo run test --filter=!@walkeros/website --output-logs=errors-only",
+    "test:integration": "turbo run test:integration --output-logs=errors-only",
     "prepare": "husky || true",
     "validate:links": "npx tsx apps/scripts/validate-links.ts",
     "validate:docs": "npx tsx apps/scripts/validate-docs.ts",

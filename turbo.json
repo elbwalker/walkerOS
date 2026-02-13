@@ -30,6 +30,10 @@
     "test": {
       "outputs": []
     },
+    "test:integration": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
     "update": {}
   }
 }
