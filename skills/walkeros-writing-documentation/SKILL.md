@@ -165,6 +165,8 @@ export * as examples from './examples';
 - [ ] Follows package/skill/website templates
 - [ ] Terminology matches: walkerOS, collector, destination, source
 - [ ] Headings use sentence case (e.g., "Next steps" not "Next Steps")
+- [ ] `walkerOS.json` convention followed (walkerOS field in package.json,
+      buildDev in tsup)
 
 ---
 
@@ -237,6 +239,23 @@ See [src/types.ts](./src/types.ts) for TypeScript interfaces.
 - [Documentation](website/docs/...)
 
 ````
+
+### walkerOS.json
+
+Every package should document its `walkerOS.json` convention in the README:
+
+```json
+{
+  "walkerOS": {
+    "type": "destination",
+    "platform": "web",
+    "schema": "./dist/dev/walkerOS.json"
+  }
+}
+```
+
+Adjust `type` (`destination`, `source`, `transformer`) and `platform` (`web`,
+`server`) to match the package.
 
 ### Website Doc Template (MDX)
 

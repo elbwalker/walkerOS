@@ -237,7 +237,7 @@ discovery.
     "platform": "web",
     "schema": "./dist/dev/walkerOS.json"
   },
-  "keywords": ["walkeros", "walkeros-source", ...]
+  "keywords": ["walkerOS", "walkerOS-source", ...]
 }
 ```
 
@@ -261,7 +261,7 @@ time.
 - [ ] `walkerOS` field in package.json with `type: "source"` and `platform`
 - [ ] `buildDev()` in tsup.config.ts
 - [ ] Build generates `dist/dev/walkerOS.json`
-- [ ] Keywords include `walkeros` and `walkeros-source`
+- [ ] Keywords include `walkerOS` and `walkerOS-source`
 
 ---
 

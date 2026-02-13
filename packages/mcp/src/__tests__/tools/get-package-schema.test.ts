@@ -1,8 +1,13 @@
 import { registerGetPackageSchemaTool } from '../../tools/get-package-schema.js';
+import { fetchPackageSchema } from '@walkeros/core';
 
-// Mock fetch globally
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
+jest.mock('@walkeros/core', () => ({
+  fetchPackageSchema: jest.fn(),
+}));
+
+const mockFetchPackageSchema = fetchPackageSchema as jest.MockedFunction<
+  typeof fetchPackageSchema
+>;
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -30,41 +35,23 @@ describe('get-package-schema tool', () => {
   });
 
   it('should fetch package.json then walkerOS.json from jsdelivr', async () => {
-    const mockPkgJson = {
-      name: '@walkeros/web-destination-snowplow',
+    mockFetchPackageSchema.mockResolvedValue({
+      packageName: '@walkeros/web-destination-snowplow',
       version: '0.0.12',
-      walkerOS: {
-        type: 'destination',
-        platform: 'web',
-        schema: './dist/dev/walkerOS.json',
-      },
-    };
-    const mockWalkerOSJson = {
+      type: 'destination',
+      platform: 'web',
       schemas: { settings: { type: 'object', properties: {} } },
       examples: { mapping: {} },
-    };
-
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockPkgJson),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockWalkerOSJson),
-      });
+    });
 
     const tool = mockServer.getTool('get-package-schema');
     const result = await tool.handler({
       package: '@walkeros/web-destination-snowplow',
     });
 
-    expect(mockFetch).toHaveBeenCalledTimes(2);
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'cdn.jsdelivr.net/npm/@walkeros/web-destination-snowplow',
-      ),
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    expect(mockFetchPackageSchema).toHaveBeenCalledWith(
+      '@walkeros/web-destination-snowplow',
+      { version: undefined },
     );
 
     const content = JSON.parse(result.content[0].text);
@@ -74,28 +61,29 @@ describe('get-package-schema tool', () => {
   });
 
   it('should use default schema path when walkerOS field is missing', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ name: 'some-pkg', version: '1.0.0' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ schemas: { settings: {} } }),
-      });
+    mockFetchPackageSchema.mockResolvedValue({
+      packageName: 'some-pkg',
+      version: '1.0.0',
+      type: undefined,
+      platform: undefined,
+      schemas: { settings: {} },
+      examples: {},
+    });
 
     const tool = mockServer.getTool('get-package-schema');
-    await tool.handler({ package: 'some-pkg' });
+    const result = await tool.handler({ package: 'some-pkg' });
 
-    expect(mockFetch).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining('dist/dev/walkerOS.json'),
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
-    );
+    expect(mockFetchPackageSchema).toHaveBeenCalledWith('some-pkg', {
+      version: undefined,
+    });
+    const content = JSON.parse(result.content[0].text);
+    expect(content.package).toBe('some-pkg');
   });
 
   it('should return error when package not found', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+    mockFetchPackageSchema.mockRejectedValue(
+      new Error('Package "nonexistent" not found on npm (HTTP 404)'),
+    );
 
     const tool = mockServer.getTool('get-package-schema');
     const result = await tool.handler({ package: 'nonexistent' });
@@ -103,12 +91,9 @@ describe('get-package-schema tool', () => {
   });
 
   it('should return error when walkerOS.json not found', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ name: 'pkg', version: '1.0.0' }),
-      })
-      .mockResolvedValueOnce({ ok: false, status: 404 });
+    mockFetchPackageSchema.mockRejectedValue(
+      new Error('walkerOS.json not found at dist/dev/walkerOS.json (HTTP 404)'),
+    );
 
     const tool = mockServer.getTool('get-package-schema');
     const result = await tool.handler({ package: 'pkg' });
@@ -116,22 +101,20 @@ describe('get-package-schema tool', () => {
   });
 
   it('should support version parameter', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ name: 'pkg', version: '2.0.0' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ schemas: {} }),
-      });
+    mockFetchPackageSchema.mockResolvedValue({
+      packageName: 'pkg',
+      version: '2.0.0',
+      type: undefined,
+      platform: undefined,
+      schemas: {},
+      examples: {},
+    });
 
     const tool = mockServer.getTool('get-package-schema');
     await tool.handler({ package: 'pkg', version: '2.0.0' });
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining('pkg@2.0.0'),
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
-    );
+    expect(mockFetchPackageSchema).toHaveBeenCalledWith('pkg', {
+      version: '2.0.0',
+    });
   });
 });
