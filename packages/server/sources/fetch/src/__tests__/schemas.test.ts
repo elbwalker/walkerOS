@@ -25,9 +25,9 @@ describe('SettingsSchema', () => {
       expect(result.paths).toHaveLength(3);
     });
 
-    it('should default to ["/collect"]', () => {
+    it('should accept omitted paths', () => {
       const result = SettingsSchema.parse({});
-      expect(result.paths).toEqual(['/collect']);
+      expect(result.paths).toBeUndefined();
     });
 
     it('should reject empty paths array', () => {
@@ -50,19 +50,19 @@ describe('SettingsSchema', () => {
     });
   });
 
-  describe('deprecated path → paths migration', () => {
-    it('should convert deprecated path string to paths array', () => {
+  describe('deprecated path field', () => {
+    it('should accept deprecated path string', () => {
       const result = SettingsSchema.parse({ path: '/events' });
-      expect(result.paths).toEqual(['/events']);
-      expect(result).not.toHaveProperty('path');
+      expect(result.path).toBe('/events');
     });
 
-    it('should prefer paths over deprecated path when both provided', () => {
+    it('should accept both path and paths', () => {
       const result = SettingsSchema.parse({
         path: '/old',
         paths: ['/new'],
       });
       expect(result.paths).toEqual(['/new']);
+      expect(result.path).toBe('/old');
     });
   });
 

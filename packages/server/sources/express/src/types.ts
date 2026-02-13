@@ -12,8 +12,6 @@ export type Settings = z.infer<typeof SettingsSchema>;
 export type CorsOptions = z.infer<typeof CorsOptionsSchema>;
 export type RouteConfig = z.infer<typeof RouteConfigSchema>;
 export type RouteMethod = 'GET' | 'POST';
-
-// InitSettings: user input (all optional)
 export type InitSettings = Partial<Settings>;
 
 export interface Mapping {

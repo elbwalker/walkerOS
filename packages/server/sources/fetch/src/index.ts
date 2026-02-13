@@ -11,7 +11,11 @@ import {
 
 export const sourceFetch: Source.Init<Types> = async (context) => {
   const { config = {}, env, setIngest } = context;
-  const settings = SettingsSchema.parse(config.settings || {});
+  const parsed = SettingsSchema.parse(config.settings || {});
+  const settings = {
+    ...parsed,
+    paths: parsed.paths ?? (parsed.path ? [parsed.path] : ['/collect']),
+  };
   const { logger } = env;
 
   const push = async (request: Request): Promise<Response> => {

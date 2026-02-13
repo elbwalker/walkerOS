@@ -78,6 +78,7 @@ describe('sourceFetch', () => {
       );
 
       expect(source.config.settings).toEqual({
+        path: '/events',
         paths: ['/events'],
         cors: false,
         healthPath: '/status',

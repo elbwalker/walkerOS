@@ -2,10 +2,9 @@ import { z } from '@walkeros/core/dev';
 import { CorsOptionsSchema, RouteConfigSchema } from './primitives';
 
 /**
- * Fetch source settings input schema (without transform).
- * Used for JSON Schema generation / PropertyTable docs.
+ * Fetch source settings schema.
  */
-export const SettingsInputSchema = z.object({
+export const SettingsSchema = z.object({
   /** @deprecated Use `paths` instead */
   path: z.string().describe('Deprecated: use paths instead').optional(),
 
@@ -42,18 +41,6 @@ export const SettingsInputSchema = z.object({
     .positive()
     .describe('Maximum events per batch request')
     .default(100),
-});
-
-/**
- * Fetch source settings schema.
- * Accepts deprecated `path` (string) and transforms it to `paths` array.
- */
-export const SettingsSchema = SettingsInputSchema.transform((s) => {
-  const { path, ...rest } = s;
-  return {
-    ...rest,
-    paths: rest.paths ?? (path ? [path] : ['/collect']),
-  };
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

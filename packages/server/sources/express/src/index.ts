@@ -25,7 +25,11 @@ export const sourceExpress = async (
   const { config = {}, env } = context;
 
   // Validate and apply default settings
-  const settings = SettingsSchema.parse(config.settings || {});
+  const parsed = SettingsSchema.parse(config.settings || {});
+  const settings = {
+    ...parsed,
+    paths: parsed.paths ?? (parsed.path ? [parsed.path] : ['/collect']),
+  };
 
   const app = express();
 

@@ -2,10 +2,9 @@ import { z } from '@walkeros/core/dev';
 import { CorsOptionsSchema, RouteConfigSchema } from './primitives';
 
 /**
- * Express source settings input schema (without transform).
- * Used for JSON Schema generation / PropertyTable docs.
+ * Express source settings schema.
  */
-export const SettingsInputSchema = z.object({
+export const SettingsSchema = z.object({
   port: z
     .number()
     .int()
@@ -38,18 +37,6 @@ export const SettingsInputSchema = z.object({
     .boolean()
     .describe('Enable health check endpoints (/health, /ready)')
     .default(true),
-});
-
-/**
- * Express source settings schema.
- * Accepts deprecated `path` (string) and transforms it to `paths` array.
- */
-export const SettingsSchema = SettingsInputSchema.transform((s) => {
-  const { path, ...rest } = s;
-  return {
-    ...rest,
-    paths: rest.paths ?? (path ? [path] : ['/collect']),
-  };
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;
