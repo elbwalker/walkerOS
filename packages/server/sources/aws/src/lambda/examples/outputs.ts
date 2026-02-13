@@ -6,32 +6,62 @@ import type { APIGatewayProxyResult } from 'aws-lambda';
  */
 
 // Successful event processing
-export const successResponse: Partial<APIGatewayProxyResult> = {
+// Shape from: createResponse(200, { success: true, ... }, corsHeaders, requestId)
+export const successResponse: APIGatewayProxyResult = {
   statusCode: 200,
   headers: {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '3600',
   },
-  body: expect.stringContaining('"success":true'),
+  body: JSON.stringify({ success: true }),
+  isBase64Encoded: false,
 };
 
 // Health check response
-export const healthResponse: Partial<APIGatewayProxyResult> = {
+// Shape from: createResponse(200, { status: 'ok', ... }, corsHeaders, requestId)
+export const healthResponse: APIGatewayProxyResult = {
   statusCode: 200,
-  body: expect.stringContaining('"status":"ok"'),
+  headers: {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '3600',
+  },
+  body: JSON.stringify({ status: 'ok' }),
+  isBase64Encoded: false,
 };
 
 // Pixel tracking response
-export const pixelResponse: Partial<APIGatewayProxyResult> = {
+// Shape from: createPixelResponse(corsHeaders, requestId)
+export const pixelResponse: APIGatewayProxyResult = {
   statusCode: 200,
-  headers: expect.objectContaining({
+  headers: {
     'Content-Type': 'image/gif',
-  }),
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '3600',
+  },
+  body: 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
   isBase64Encoded: true,
 };
 
 // Error responses
-export const invalidBodyResponse: Partial<APIGatewayProxyResult> = {
+// Shape from: createResponse(400, { success: false, error: '...' }, corsHeaders, requestId)
+export const invalidBodyResponse: APIGatewayProxyResult = {
   statusCode: 400,
-  body: expect.stringContaining('"success":false'),
+  headers: {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '3600',
+  },
+  body: JSON.stringify({ success: false, error: 'Invalid request' }),
+  isBase64Encoded: false,
 };
