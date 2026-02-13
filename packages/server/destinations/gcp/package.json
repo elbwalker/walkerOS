@@ -40,13 +40,19 @@
   "bugs": {
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
+  "walkerOS": {
+    "type": "destination",
+    "platform": "server",
+    "schema": "./dist/dev/walkerOS.json"
+  },
   "keywords": [
-    "walker",
     "walkerOS",
+    "walkerOS-destination",
     "destination",
     "server",
     "gcp",
-    "bigquery"
+    "bigquery",
+    "analytics"
   ],
   "funding": [
     {

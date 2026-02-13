@@ -58,10 +58,8 @@
     "schema": "./dist/dev/walkerOS.json"
   },
   "keywords": [
-    "walkeros",
-    "walkeros-destination",
-    "walker",
     "walkerOS",
+    "walkerOS-destination",
     "destination",
     "web",
     "snowplow",

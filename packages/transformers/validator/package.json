@@ -47,13 +47,18 @@
   "bugs": {
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
+  "walkerOS": {
+    "type": "transformer",
+    "schema": "./dist/dev/walkerOS.json"
+  },
   "keywords": [
-    "walker",
     "walkerOS",
+    "walkerOS-transformer",
     "transformer",
     "validator",
     "ajv",
-    "json-schema"
+    "json-schema",
+    "analytics"
   ],
   "funding": [
     {

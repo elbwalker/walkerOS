@@ -46,16 +46,22 @@
   "bugs": {
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
+  "walkerOS": {
+    "type": "destination",
+    "platform": "web",
+    "schema": "./dist/dev/walkerOS.json"
+  },
   "keywords": [
-    "walker",
     "walkerOS",
+    "walkerOS-destination",
     "destination",
     "web",
     "google",
     "gtag",
     "ga4",
     "google-ads",
-    "gtm"
+    "gtm",
+    "analytics"
   ],
   "funding": [
     {
