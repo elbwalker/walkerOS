@@ -35,6 +35,23 @@ import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { isObject, tryCatchAsync, useHooks } from '@walkeros/core';
 
 /**
+ * Type guard for BranchResult.
+ * Uses the __branch discriminant set by the branch() factory function.
+ * This is unambiguous — a DeepPartialEvent can never have __branch: true.
+ */
+function isBranchResult(
+  result: WalkerOS.DeepPartialEvent | false | void | Transformer.BranchResult,
+): result is Transformer.BranchResult {
+  return (
+    result !== null &&
+    result !== undefined &&
+    result !== false &&
+    typeof result === 'object' &&
+    (result as Transformer.BranchResult).__branch === true
+  );
+}
+
+/**
  * Extracts transformer next configuration for chain walking.
  * Maps transformer instances to their config.next values.
  *
@@ -265,7 +282,9 @@ export async function transformerPush(
   transformerId: string,
   event: WalkerOS.DeepPartialEvent,
   ingest?: unknown,
-): Promise<WalkerOS.DeepPartialEvent | false | void> {
+): Promise<
+  WalkerOS.DeepPartialEvent | false | void | Transformer.BranchResult
+> {
   const transformerType = transformer.type || 'unknown';
   const transformerLogger = collector.logger.scope(
     `transformer:${transformerType}`,
@@ -332,19 +351,40 @@ export async function runTransformerChain(
     }
 
     // Run the transformer
-    const result = (await tryCatchAsync(transformerPush, (err) => {
+    const result = await tryCatchAsync(transformerPush, (err) => {
       collector.logger
         .scope(`transformer:${transformer.type || 'unknown'}`)
         .error('Push failed', { error: err });
-      return false; // Stop chain on error
-    })(collector, transformer, transformerName, processedEvent, ingest)) as
-      | WalkerOS.DeepPartialEvent
-      | false
-      | void;
+      return false as const; // Stop chain on error
+    })(collector, transformer, transformerName, processedEvent, ingest);
 
     // Handle result
     if (result === false) {
       // Transformer explicitly stopped the chain
+      return null;
+    }
+
+    // Handle chain branching
+    if (isBranchResult(result)) {
+      const branchedChain = walkChain(
+        result.next,
+        extractTransformerNextMap(transformers),
+      );
+
+      if (branchedChain.length > 0) {
+        return runTransformerChain(
+          collector,
+          transformers,
+          branchedChain,
+          result.event,
+          ingest,
+        );
+      }
+
+      // Branch target not found — drop event (fail-safe).
+      collector.logger.info(
+        `Branch target not found: ${JSON.stringify(result.next)}`,
+      );
       return null;
     }
 

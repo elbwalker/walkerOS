@@ -49,7 +49,7 @@ const { collector } = await startFlow({
       config: {
         settings: {
           // No port = app only, no server started
-          path: '/events',
+          paths: ['/events'],
           cors: false, // Handle CORS with your own middleware
         },
       },
@@ -85,9 +85,15 @@ interface Settings {
   port?: number;
 
   /**
-   * Event collection endpoint path
-   * All HTTP methods (POST, GET, OPTIONS) registered on this path
-   * @default '/collect'
+   * Route paths to register
+   * String shorthand registers GET+POST. RouteConfig allows per-route method control.
+   * @default ['/collect']
+   */
+  paths?: Array<string | RouteConfig>;
+
+  /**
+   * @deprecated Use `paths` instead. Will be removed in next major.
+   * Converted to `paths: [path]` internally.
    */
   path?: string;
 
@@ -107,6 +113,13 @@ interface Settings {
    * @default true
    */
   status?: boolean;
+}
+
+interface RouteConfig {
+  /** Express route path (supports wildcards like /api/*) */
+  path: string;
+  /** HTTP methods to register. OPTIONS always included for CORS. */
+  methods?: ('GET' | 'POST')[];
 }
 ```
 
@@ -283,7 +296,7 @@ await startFlow({
 });
 ```
 
-### Custom Endpoint Path
+### Custom Endpoint Paths
 
 ```typescript
 await startFlow({
@@ -293,17 +306,35 @@ await startFlow({
       config: {
         settings: {
           port: 8080,
-          path: '/api/v1/events', // Custom path
+          paths: ['/api/v1/events'], // Custom path (GET + POST)
         },
       },
     },
   },
 });
+```
 
-// All methods now work on /api/v1/events
-// POST /api/v1/events
-// GET /api/v1/events
-// OPTIONS /api/v1/events
+### Multi-Path with Method Control
+
+```typescript
+await startFlow({
+  sources: {
+    express: {
+      code: sourceExpress,
+      config: {
+        settings: {
+          port: 8080,
+          paths: [
+            '/collect', // GET + POST (default)
+            { path: '/pixel', methods: ['GET'] }, // GET only (pixel tracking)
+            { path: '/ingest', methods: ['POST'] }, // POST only (JSON ingestion)
+            { path: '/webhooks/*', methods: ['POST'] }, // POST wildcard
+          ],
+        },
+      },
+    },
+  },
+});
 ```
 
 ### Ingest Metadata

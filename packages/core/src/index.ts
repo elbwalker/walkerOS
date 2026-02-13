@@ -1,5 +1,6 @@
 export * from './types';
 
+export * from './branch';
 export * from './anonymizeIP';
 export * from './flow';
 export * from './assign';

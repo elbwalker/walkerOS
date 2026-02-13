@@ -7,6 +7,7 @@ import type {
   Collector,
   Context as BaseContext,
 } from './index';
+import type { Next } from './transformer';
 
 /**
  * Base Env interface for dependency injection into sources.
@@ -144,7 +145,7 @@ export type InitSource<T extends TypesGeneric = Types> = {
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
   primary?: boolean;
-  next?: string | string[];
+  next?: Next;
 };
 
 /**

@@ -106,7 +106,7 @@ describe('sourceExpress', () => {
 
       expect(source.type).toBe('express');
       expect(source.config.settings).toEqual({
-        path: '/collect',
+        paths: ['/collect'],
         cors: true,
         status: true,
       });
@@ -120,7 +120,7 @@ describe('sourceExpress', () => {
         createSourceContext(
           {
             settings: {
-              path: '/events',
+              paths: ['/events'],
               cors: false,
               status: false,
             },
@@ -135,7 +135,7 @@ describe('sourceExpress', () => {
       );
 
       expect(source.config.settings).toEqual({
-        path: '/events',
+        paths: ['/events'],
         cors: false,
         status: false,
       });
@@ -510,14 +510,14 @@ describe('sourceExpress', () => {
         ),
       );
 
-      expect(source.config.settings?.path).toBe('/collect');
+      expect(source.config.settings?.paths).toEqual(['/collect']);
     });
 
     it('should accept custom path', async () => {
       const source = await sourceExpress(
         createSourceContext(
           {
-            settings: { path: '/events' },
+            settings: { paths: ['/events'] },
           },
           {
             push: mockPush as never,
@@ -528,7 +528,93 @@ describe('sourceExpress', () => {
         ),
       );
 
-      expect(source.config.settings?.path).toBe('/events');
+      expect(source.config.settings?.paths).toEqual(['/events']);
+    });
+  });
+
+  describe('multi-path support', () => {
+    it('should register multiple string paths', async () => {
+      const source = await sourceExpress(
+        createSourceContext(
+          { settings: { paths: ['/collect', '/events'] } },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      // Both paths should work for POST
+      for (const url of ['/collect', '/events']) {
+        const req = createMockRequest({
+          method: 'POST',
+          url,
+          body: { event: 'page view' },
+        });
+        const res = createMockResponse();
+        await source.push(req, res);
+        expect(res.responseBody).toMatchObject({ success: true });
+      }
+    });
+
+    it('should respect per-route method restrictions', async () => {
+      const source = await sourceExpress(
+        createSourceContext(
+          {
+            settings: {
+              paths: [
+                { path: '/pixel', methods: ['GET'] },
+                { path: '/ingest', methods: ['POST'] },
+              ],
+            },
+          },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      expect(source.config.settings?.paths).toEqual([
+        { path: '/pixel', methods: ['GET'] },
+        { path: '/ingest', methods: ['POST'] },
+      ]);
+    });
+
+    it('should default to ["/collect"] when no paths configured', async () => {
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      expect(source.config.settings?.paths).toEqual(['/collect']);
+    });
+
+    it('should accept deprecated path setting', async () => {
+      const source = await sourceExpress(
+        createSourceContext(
+          { settings: { path: '/events' } as never },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      expect(source.config.settings?.paths).toEqual(['/events']);
     });
   });
 });

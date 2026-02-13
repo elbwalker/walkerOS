@@ -49,7 +49,7 @@ describe('sourceFetch', () => {
 
       expect(source.type).toBe('fetch');
       expect(source.config.settings).toEqual({
-        path: '/collect',
+        paths: ['/collect'],
         cors: true,
         healthPath: '/health',
         maxRequestSize: 102400,
@@ -78,7 +78,7 @@ describe('sourceFetch', () => {
       );
 
       expect(source.config.settings).toEqual({
-        path: '/events',
+        paths: ['/events'],
         cors: false,
         healthPath: '/status',
         maxRequestSize: 102400,
@@ -304,7 +304,7 @@ describe('sourceFetch', () => {
       );
 
       const request = new Request(
-        'https://example.com/collect.gif?event=page%20view',
+        'https://example.com/collect?event=page%20view',
         { method: 'GET' },
       );
 
@@ -480,7 +480,7 @@ describe('sourceFetch', () => {
         ),
       );
 
-      expect(source.config.settings?.path).toBe('/collect');
+      expect(source.config.settings?.paths).toEqual(['/collect']);
     });
 
     it('should accept custom path', async () => {
@@ -498,7 +498,7 @@ describe('sourceFetch', () => {
         ),
       );
 
-      expect(source.config.settings?.path).toBe('/events');
+      expect(source.config.settings?.paths).toEqual(['/events']);
     });
   });
 
@@ -529,6 +529,225 @@ describe('sourceFetch', () => {
       await source.push(request);
 
       expect(mockPush).toHaveBeenCalledWith(examples.inputs.pageView);
+    });
+  });
+
+  describe('multi-path support', () => {
+    it('should register multiple string paths', async () => {
+      const source = await sourceFetch(
+        createSourceContext(
+          { settings: { paths: ['/collect', '/events'] } },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      for (const url of [
+        'https://example.com/collect',
+        'https://example.com/events',
+      ]) {
+        const request = new Request(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'page view' }),
+        });
+        const response = await source.push(request);
+        expect(response.status).toBe(200);
+      }
+    });
+
+    it('should respect per-route method restrictions (GET only)', async () => {
+      const source = await sourceFetch(
+        createSourceContext(
+          {
+            settings: {
+              paths: [{ path: '/pixel', methods: ['GET'] }],
+            },
+          },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      // GET should work
+      const getReq = new Request(
+        'https://example.com/pixel?event=page%20view',
+        { method: 'GET' },
+      );
+      const getRes = await source.push(getReq);
+      expect(getRes.status).toBe(200);
+
+      // POST should be rejected (405)
+      const postReq = new Request('https://example.com/pixel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'page view' }),
+      });
+      const postRes = await source.push(postReq);
+      expect(postRes.status).toBe(405);
+    });
+
+    it('should respect per-route method restrictions (POST only)', async () => {
+      const source = await sourceFetch(
+        createSourceContext(
+          {
+            settings: {
+              paths: [{ path: '/ingest', methods: ['POST'] }],
+            },
+          },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      // POST should work
+      const postReq = new Request('https://example.com/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'page view' }),
+      });
+      const postRes = await source.push(postReq);
+      expect(postRes.status).toBe(200);
+
+      // GET should be rejected (405)
+      const getReq = new Request('https://example.com/ingest?event=test', {
+        method: 'GET',
+      });
+      const getRes = await source.push(getReq);
+      expect(getRes.status).toBe(405);
+    });
+
+    it('should return 404 for unmatched paths', async () => {
+      const source = await sourceFetch(
+        createSourceContext(
+          { settings: { paths: ['/collect'] } },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      const request = new Request('https://example.com/unknown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'page view' }),
+      });
+      const response = await source.push(request);
+      expect(response.status).toBe(404);
+    });
+
+    it('should match wildcard paths', async () => {
+      const source = await sourceFetch(
+        createSourceContext(
+          {
+            settings: {
+              paths: [{ path: '/webhooks/*', methods: ['POST'] }],
+            },
+          },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      const request = new Request('https://example.com/webhooks/stripe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'webhook receive' }),
+      });
+      const response = await source.push(request);
+      expect(response.status).toBe(200);
+    });
+
+    it('should default to ["/collect"] when no paths configured', async () => {
+      const source = await sourceFetch(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      expect(source.config.settings?.paths).toEqual(['/collect']);
+    });
+
+    it('should accept deprecated path setting', async () => {
+      const source = await sourceFetch(
+        createSourceContext(
+          { settings: { path: '/events' } },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      expect(source.config.settings?.paths).toEqual(['/events']);
+    });
+
+    it('should allow OPTIONS for matched paths (CORS preflight)', async () => {
+      const source = await sourceFetch(
+        createSourceContext(
+          { settings: { paths: [{ path: '/ingest', methods: ['POST'] }] } },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      const request = new Request('https://example.com/ingest', {
+        method: 'OPTIONS',
+        headers: { Origin: 'https://example.com' },
+      });
+      const response = await source.push(request);
+      expect(response.status).toBe(204);
+    });
+
+    it('should return 404 for OPTIONS on unmatched paths', async () => {
+      const source = await sourceFetch(
+        createSourceContext(
+          { settings: { paths: ['/collect'] } },
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      const request = new Request('https://example.com/unknown', {
+        method: 'OPTIONS',
+      });
+      const response = await source.push(request);
+      expect(response.status).toBe(404);
     });
   });
 });

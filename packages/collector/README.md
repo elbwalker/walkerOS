@@ -30,6 +30,9 @@ The Collector transforms raw events into enriched, compliant data streams by:
 - **Privacy-first** - Built-in consent management and data protection
 - **Event validation** - Ensures data quality and consistency
 - **Flexible routing** - Send events to multiple destinations simultaneously
+- **Chain branching** - Transformers can dynamically redirect the chain at
+  runtime using `branch()`, enabling router-style pattern matching on ingest
+  metadata
 
 ### Role in architecture
 

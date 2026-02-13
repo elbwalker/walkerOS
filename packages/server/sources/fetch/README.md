@@ -42,6 +42,28 @@ const { elb } = await startFlow<SourceFetch.Push>({
 export default { fetch: elb };
 ```
 
+## Multi-Path with Method Control
+
+```typescript
+const { sources } = await startFlow({
+  sources: {
+    api: {
+      code: sourceFetch,
+      config: {
+        settings: {
+          paths: [
+            '/collect', // GET + POST (default)
+            { path: '/pixel', methods: ['GET'] }, // GET only (pixel tracking)
+            { path: '/ingest', methods: ['POST'] }, // POST only (JSON ingestion)
+            { path: '/webhooks/*', methods: ['POST'] }, // POST wildcard
+          ],
+        },
+      },
+    },
+  },
+});
+```
+
 ## Platform Deployment
 
 ### Cloudflare Workers
@@ -54,7 +76,7 @@ const { elb } = await startFlow<SourceFetch.Push>({
   sources: {
     api: {
       code: sourceFetch,
-      config: { settings: { cors: true } },
+      config: { settings: { paths: ['/collect'], cors: true } },
     },
   },
   destinations: {
@@ -163,11 +185,29 @@ curl https://your-endpoint.com/health
 
 ```typescript
 interface Settings {
-  path: string; // Collection path (default: '/collect')
+  /**
+   * Route paths to handle.
+   * String shorthand accepts GET+POST. RouteConfig allows per-route method control.
+   * @default ['/collect']
+   */
+  paths?: Array<string | RouteConfig>;
+
+  /**
+   * @deprecated Use `paths` instead. Converted to `paths: [path]` internally.
+   */
+  path?: string;
+
   cors: boolean | CorsOptions; // CORS config (default: true)
   healthPath: string; // Health check path (default: '/health')
   maxRequestSize: number; // Max bytes (default: 102400 = 100KB)
   maxBatchSize: number; // Max events per batch (default: 100)
+}
+
+interface RouteConfig {
+  /** URL path pattern (supports wildcards like /api/*) */
+  path: string;
+  /** HTTP methods to accept. OPTIONS always included for CORS. */
+  methods?: ('GET' | 'POST')[];
 }
 
 interface CorsOptions {

@@ -38,6 +38,18 @@ It receives events via the Fetch API and forwards them to your destinations. Wor
   language="bash"
 />
 
+:::caution path setting renamed to paths
+The `path` setting has been renamed to `paths` (array). The old `path` still works but is deprecated and will be removed in the next major version.
+
+```typescript
+// Before (deprecated)
+settings: { path: '/events' }
+
+// After
+settings: { paths: ['/events'] }
+```
+:::
+
 ## Quick start
 
 <Tabs groupId="mode">
@@ -54,7 +66,7 @@ const { sources } = await startFlow({
     fetch: {
       code: sourceFetch,
       config: {
-        settings: { path: '/collect', cors: true },
+        settings: { paths: ['/collect'], cors: true },
       },
     },
   },
@@ -75,7 +87,7 @@ Add to your `flow.json` sources:
     "package": "@walkeros/server-source-fetch",
     "config": {
       "settings": {
-        "path": "/collect",
+        "paths": ["/collect"],
         "cors": true
       }
     }
@@ -150,7 +162,8 @@ Bun.serve({ fetch: sources.fetch.push, port: 3000 });`}
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `path` | `string` | `/collect` | Collection endpoint path |
+| `paths` | `Array<string \| RouteConfig>` | `['/collect']` | Route paths to handle. String = GET+POST, RouteConfig = per-route methods |
+| ~~`path`~~ | `string` | `/collect` | **Deprecated.** Use `paths` instead. Converted to `paths: [path]` internally |
 | `cors` | `boolean \| object` | `true` | CORS configuration |
 | `healthPath` | `string` | `/health` | Health check endpoint |
 | `maxRequestSize` | `number` | `102400` | Max request size in bytes (100KB) |

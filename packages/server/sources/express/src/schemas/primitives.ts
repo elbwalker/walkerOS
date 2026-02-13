@@ -14,6 +14,26 @@ export const HttpMethod = z.enum([
 ]);
 
 /**
+ * HTTP methods supported for route configuration.
+ * OPTIONS is always registered for CORS (not user-configurable per route).
+ */
+export const RouteMethod = z.enum(['GET', 'POST']);
+
+/**
+ * Route configuration for multi-path support.
+ */
+export const RouteConfigSchema = z.object({
+  path: z
+    .string()
+    .describe('Express route path (supports wildcards like /api/*)'),
+  methods: z
+    .array(RouteMethod)
+    .min(1)
+    .describe('HTTP methods to register. OPTIONS always included for CORS.')
+    .optional(),
+});
+
+/**
  * CORS origin configuration
  * Accepts:
  * - '*' for all origins

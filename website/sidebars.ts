@@ -97,7 +97,11 @@ const sidebars: SidebarsConfig = {
         type: 'doc',
         id: 'transformers/index',
       },
-      items: ['transformers/validator', 'transformers/create-your-own'],
+      items: [
+        'transformers/validator',
+        'transformers/router',
+        'transformers/create-your-own',
+      ],
     },
     'mapping',
     {

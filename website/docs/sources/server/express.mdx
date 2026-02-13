@@ -37,6 +37,18 @@ It receives events via HTTP (POST/GET) and forwards them to configured destinati
   language="bash"
 />
 
+:::caution path setting renamed to paths
+The `path` setting has been renamed to `paths` (array). The old `path` still works but is deprecated and will be removed in the next major version.
+
+```typescript
+// Before (deprecated)
+settings: { path: '/events' }
+
+// After
+settings: { paths: ['/events'] }
+```
+:::
+
 ## Quick start
 
 <Tabs groupId="mode">
@@ -82,7 +94,7 @@ const { collector } = await startFlow({
       config: {
         settings: {
           // No port = app only mode
-          path: '/events',
+          paths: ['/events'],
         },
       },
     },
@@ -128,7 +140,8 @@ Server sources require platform-specific handlers. For containerized deployments
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `port` | `number` | - | Port to listen on. If not set, runs in app-only mode |
-| `path` | `string` | `/collect` | Event collection endpoint path |
+| `paths` | `Array<string \| RouteConfig>` | `['/collect']` | Route paths to register. String = GET+POST, RouteConfig = per-route methods |
+| ~~`path`~~ | `string` | `/collect` | **Deprecated.** Use `paths` instead. Converted to `paths: [path]` internally |
 | `cors` | `boolean \| object` | `true` | CORS configuration |
 | `status` | `boolean` | `true` | Enable health check endpoints |
 
