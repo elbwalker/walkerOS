@@ -27,3 +27,4 @@ export * from './useHooks';
 export * from './userAgent';
 export * from './validate';
 export * from './wrapInlineCode';
+export * from './cdn';

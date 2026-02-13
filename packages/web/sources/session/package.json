@@ -43,11 +43,17 @@
   "bugs": {
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
+  "walkerOS": {
+    "type": "source",
+    "platform": "web",
+    "schema": "./dist/dev/walkerOS.json"
+  },
   "keywords": [
-    "walker",
     "walkerOS",
+    "walkerOS-source",
     "source",
     "web",
-    "session"
+    "session",
+    "analytics"
   ]
 }

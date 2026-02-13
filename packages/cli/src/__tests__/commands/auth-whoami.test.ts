@@ -1,25 +1,29 @@
-import { apiRequest } from '../../core/auth.js';
+import { createApiClient } from '../../core/api-client.js';
 import { whoami } from '../../commands/auth/index.js';
 
-jest.mock('../../core/auth.js', () => ({
-  apiRequest: jest.fn(),
-}));
+jest.mock('../../core/api-client.js');
 
-const mockApiRequest = jest.mocked(apiRequest);
+const mockGet = jest.fn();
+
+(createApiClient as jest.Mock).mockReturnValue({
+  GET: mockGet,
+});
 
 describe('whoami', () => {
   afterEach(() => jest.clearAllMocks());
 
-  it('should call GET /api/auth/whoami', async () => {
-    mockApiRequest.mockResolvedValue({
-      userId: 'usr_1',
-      email: 'test@example.com',
-      projectId: null,
+  it('calls GET /api/auth/whoami', async () => {
+    mockGet.mockResolvedValue({
+      data: {
+        userId: 'usr_1',
+        email: 'test@example.com',
+        projectId: null,
+      },
     });
 
     const result = await whoami();
 
-    expect(mockApiRequest).toHaveBeenCalledWith('/api/auth/whoami');
+    expect(mockGet).toHaveBeenCalledWith('/api/auth/whoami');
     expect(result).toEqual({
       userId: 'usr_1',
       email: 'test@example.com',
@@ -27,9 +31,11 @@ describe('whoami', () => {
     });
   });
 
-  it('should propagate auth errors', async () => {
-    mockApiRequest.mockRejectedValue(new Error('WALKEROS_TOKEN not set.'));
+  it('throws on error response', async () => {
+    mockGet.mockResolvedValue({
+      error: { error: { message: 'Not authenticated' } },
+    });
 
-    await expect(whoami()).rejects.toThrow('WALKEROS_TOKEN not set.');
+    await expect(whoami()).rejects.toThrow('Not authenticated');
   });
 });

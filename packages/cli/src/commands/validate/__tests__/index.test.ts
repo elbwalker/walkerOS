@@ -46,11 +46,12 @@ describe('validate programmatic API', () => {
     });
   });
 
-  describe('invalid type', () => {
-    it('throws for unknown validation type', async () => {
-      await expect(validate('unknown' as any, {})).rejects.toThrow(
-        'Unknown validation type',
-      );
+  describe('dot-notation type', () => {
+    it('routes unknown types to entry validation', async () => {
+      const result = await validate('unknown' as any, {});
+      // Unknown type treated as dot-notation entry — returns validation error, not throw
+      expect(result.valid).toBe(false);
+      expect(result.errors[0].code).toBe('ENTRY_VALIDATION');
     });
   });
 });

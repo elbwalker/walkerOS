@@ -40,11 +40,10 @@ export { validate } from './commands/validate/index.js';
 export {
   getToken,
   getAuthHeaders,
-  authenticatedFetch,
-  apiRequest,
   requireProjectId,
   resolveBaseUrl,
 } from './core/auth.js';
+export { createApiClient } from './core/api-client.js';
 export {
   listProjects,
   getProject,
@@ -62,7 +61,7 @@ export {
   duplicateFlow,
 } from './commands/flows/index.js';
 export type { ListFlowsOptions } from './commands/flows/index.js';
-export type { ApiRequestOptions } from './core/auth.js';
+export { bundleRemote } from './commands/bundle/index.js';
 
 // === Types ===
 // Export types for programmatic usage

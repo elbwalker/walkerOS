@@ -41,19 +41,25 @@ describe('toSerializable', () => {
     expect(result.$code).toContain('myFunc');
   });
 
-  // Zod-like instances (objects with .parse method)
-  it('filters out Zod-like instances (objects with .parse)', () => {
-    const zodLike = {
+  // Zod schema instances (objects with _def.typeName starting with 'Zod')
+  it('should filter out Zod schema instances', () => {
+    const zodSchema = {
       parse: (val) => val,
       safeParse: (val) => ({ success: true, data: val }),
-      _def: {},
+      _def: { typeName: 'ZodObject' },
     };
-    expect(toSerializable(zodLike)).toBeUndefined();
+    expect(toSerializable(zodSchema)).toBeUndefined();
   });
 
-  it('filters out minimal Zod-like objects', () => {
-    const zodLike = { parse: () => {} };
-    expect(toSerializable(zodLike)).toBeUndefined();
+  it('filters out other Zod types', () => {
+    const zodString = { parse: () => {}, _def: { typeName: 'ZodString' } };
+    expect(toSerializable(zodString)).toBeUndefined();
+  });
+
+  it('should NOT filter out non-Zod objects that have a .parse method', () => {
+    const csvParser = { parse: (str) => str.split(','), data: [1, 2, 3] };
+    const result = toSerializable(csvParser);
+    expect(result).toEqual({ data: [1, 2, 3], parse: { $code: csvParser.parse.toString() } });
   });
 
   // Plain objects
@@ -70,7 +76,7 @@ describe('toSerializable', () => {
   it('strips Zod instances from nested objects', () => {
     const obj = {
       settings: { type: 'object', properties: {} },
-      SettingsSchema: { parse: () => {}, _def: {} },
+      SettingsSchema: { parse: () => {}, _def: { typeName: 'ZodObject' } },
     };
     const result = toSerializable(obj);
     expect(result).toEqual({
@@ -100,7 +106,7 @@ describe('toSerializable', () => {
   it('replaces Zod instances in arrays with undefined (preserves indices)', () => {
     const arr = [
       { name: 'keep' },
-      { parse: () => {} },
+      { parse: () => {}, _def: { typeName: 'ZodString' } },
       { name: 'also keep' },
     ];
     const result = toSerializable(arr);
@@ -152,7 +158,7 @@ describe('toSerializable', () => {
     const input = {
       name: 'test',
       handler: fn,
-      zodSchema: { parse: () => {} },
+      zodSchema: { parse: () => {}, _def: { typeName: 'ZodObject' } },
       data: [1, 'two', { nested: true }],
     };
 

@@ -1,4 +1,5 @@
-import { apiRequest, requireProjectId } from '../../core/auth.js';
+import { createApiClient } from '../../core/api-client.js';
+import { requireProjectId } from '../../core/auth.js';
 import { createCommandLogger } from '../../core/logger.js';
 import { writeResult } from '../../core/output.js';
 import { isStdinPiped, readStdin } from '../../core/stdin.js';
@@ -13,36 +14,50 @@ export interface ListFlowsOptions {
   includeDeleted?: boolean;
 }
 
-export async function listFlows(
-  options: ListFlowsOptions = {},
-): Promise<unknown> {
+export async function listFlows(options: ListFlowsOptions = {}) {
   const id = options.projectId ?? requireProjectId();
-  const params = new URLSearchParams();
-  if (options.sort) params.set('sort', options.sort);
-  if (options.order) params.set('order', options.order);
-  if (options.includeDeleted) params.set('include_deleted', 'true');
-  const qs = params.toString();
-  return apiRequest(`/api/projects/${id}/flows${qs ? `?${qs}` : ''}`);
+  const client = createApiClient();
+  const { data, error } = await client.GET('/api/projects/{projectId}/flows', {
+    params: {
+      path: { projectId: id },
+      query: {
+        sort: options.sort,
+        order: options.order,
+        include_deleted: options.includeDeleted ? 'true' : undefined,
+      },
+    },
+  });
+  if (error) throw new Error(error.error?.message || 'Failed to list flows');
+  return data;
 }
 
-export async function getFlow(options: {
-  flowId: string;
-  projectId?: string;
-}): Promise<unknown> {
+export async function getFlow(options: { flowId: string; projectId?: string }) {
   const id = options.projectId ?? requireProjectId();
-  return apiRequest(`/api/projects/${id}/flows/${options.flowId}`);
+  const client = createApiClient();
+  const { data, error } = await client.GET(
+    '/api/projects/{projectId}/flows/{flowId}',
+    {
+      params: { path: { projectId: id, flowId: options.flowId } },
+    },
+  );
+  if (error) throw new Error(error.error?.message || 'Failed to get flow');
+  return data;
 }
 
 export async function createFlow(options: {
   name: string;
   content: Record<string, unknown>;
   projectId?: string;
-}): Promise<unknown> {
+}) {
   const id = options.projectId ?? requireProjectId();
-  return apiRequest(`/api/projects/${id}/flows`, {
-    method: 'POST',
-    body: JSON.stringify({ name: options.name, content: options.content }),
+  const client = createApiClient();
+  const { data, error } = await client.POST('/api/projects/{projectId}/flows', {
+    params: { path: { projectId: id } },
+    // Content is user-provided JSON; server validates the full schema
+    body: { name: options.name, content: options.content } as never,
   });
+  if (error) throw new Error(error.error?.message || 'Failed to create flow');
+  return data;
 }
 
 export async function updateFlow(options: {
@@ -50,38 +65,57 @@ export async function updateFlow(options: {
   name?: string;
   content?: Record<string, unknown>;
   projectId?: string;
-}): Promise<unknown> {
+}) {
   const id = options.projectId ?? requireProjectId();
+  const client = createApiClient();
   const body: Record<string, unknown> = {};
   if (options.name !== undefined) body.name = options.name;
   if (options.content !== undefined) body.content = options.content;
-  return apiRequest(`/api/projects/${id}/flows/${options.flowId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(body),
-  });
+  const { data, error } = await client.PATCH(
+    '/api/projects/{projectId}/flows/{flowId}',
+    {
+      params: { path: { projectId: id, flowId: options.flowId } },
+      // Dynamically constructed body; server validates the full schema
+      body: body as never,
+    },
+  );
+  if (error) throw new Error(error.error?.message || 'Failed to update flow');
+  return data;
 }
 
 export async function deleteFlow(options: {
   flowId: string;
   projectId?: string;
-}): Promise<unknown> {
+}) {
   const id = options.projectId ?? requireProjectId();
-  return apiRequest(`/api/projects/${id}/flows/${options.flowId}`, {
-    method: 'DELETE',
-  });
+  const client = createApiClient();
+  const { data, error } = await client.DELETE(
+    '/api/projects/{projectId}/flows/{flowId}',
+    {
+      params: { path: { projectId: id, flowId: options.flowId } },
+    },
+  );
+  if (error) throw new Error(error.error?.message || 'Failed to delete flow');
+  return data ?? { success: true };
 }
 
 export async function duplicateFlow(options: {
   flowId: string;
   name?: string;
   projectId?: string;
-}): Promise<unknown> {
+}) {
   const id = options.projectId ?? requireProjectId();
-  const body = options.name ? { name: options.name } : {};
-  return apiRequest(`/api/projects/${id}/flows/${options.flowId}/duplicate`, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
+  const client = createApiClient();
+  const { data, error } = await client.POST(
+    '/api/projects/{projectId}/flows/{flowId}/duplicate',
+    {
+      params: { path: { projectId: id, flowId: options.flowId } },
+      body: { name: options.name },
+    },
+  );
+  if (error)
+    throw new Error(error.error?.message || 'Failed to duplicate flow');
+  return data;
 }
 
 // === CLI Command Handlers ===

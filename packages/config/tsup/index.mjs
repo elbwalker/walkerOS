@@ -74,14 +74,18 @@ const buildES5 = (customConfig = {}) => ({
   ...customConfig,
 });
 
-// Deep-clone a value for JSON serialization
-// Functions → { $code: fn.toString() }
-// Zod instances (have .parse method) → filtered out (returns undefined)
-// Everything else → passed through
+/**
+ * Deep-clone a value for JSON serialization.
+ *
+ * Conventions:
+ * - Functions → { $code: fn.toString() } — serialized source for documentation, not executable
+ * - Zod instances (have _def.typeName starting with 'Zod') → filtered out (returns undefined)
+ * - Everything else → recursively passed through
+ */
 const toSerializable = (value) => {
   if (value === null || value === undefined) return value;
   if (typeof value === 'function') return { $code: value.toString() };
-  if (typeof value === 'object' && typeof value.parse === 'function')
+  if (typeof value === 'object' && value._def?.typeName?.startsWith?.('Zod'))
     return undefined;
   if (Array.isArray(value)) {
     return value.map((item) => toSerializable(item));
@@ -127,7 +131,15 @@ const buildDev = (customConfig = {}) => {
 
       // Import the built module (cache-bust for watch mode rebuilds)
       const devModulePath = pathToFileURL(devMjsPath).href;
-      const devModule = await import(`${devModulePath}?t=${Date.now()}`);
+      let devModule;
+      try {
+        devModule = await import(`${devModulePath}?t=${Date.now()}`);
+      } catch (error) {
+        console.warn(
+          `[buildDev] Could not import dist/dev.mjs: ${error.message}. Skipping walkerOS.json generation`,
+        );
+        return;
+      }
 
       // Extract schemas (Zod instances filtered by toSerializable)
       const schemas = toSerializable(devModule.schemas || {}) || {};
@@ -142,6 +154,9 @@ const buildDev = (customConfig = {}) => {
           package: pkg.name,
           version: pkg.version,
           generatedAt: new Date().toISOString(),
+          conventions: {
+            $code: 'Serialized function source code. Not executable — for documentation and MCP context only.',
+          },
         },
         schemas,
         examples,

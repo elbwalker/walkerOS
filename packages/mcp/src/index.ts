@@ -10,6 +10,8 @@ import { registerAuthTools } from './tools/auth.js';
 import { registerProjectTools } from './tools/projects.js';
 import { registerFlowTools } from './tools/flows.js';
 import { registerBundleRemoteTool } from './tools/bundle-remote.js';
+// CDN tools
+import { registerGetPackageSchemaTool } from './tools/get-package-schema.js';
 
 declare const __VERSION__: string;
 
@@ -29,6 +31,9 @@ registerAuthTools(server);
 registerProjectTools(server);
 registerFlowTools(server);
 registerBundleRemoteTool(server);
+
+// CDN tools
+registerGetPackageSchemaTool(server);
 
 async function main() {
   const transport = new StdioServerTransport();

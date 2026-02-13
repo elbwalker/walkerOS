@@ -1,12 +1,15 @@
-import { apiRequest } from '../../core/auth.js';
+import { createApiClient } from '../../core/api-client.js';
 import { createCommandLogger } from '../../core/logger.js';
 import { writeResult } from '../../core/output.js';
 import type { GlobalOptions } from '../../types/global.js';
 
 // === Programmatic API ===
 
-export async function whoami(): Promise<unknown> {
-  return apiRequest('/api/auth/whoami');
+export async function whoami() {
+  const client = createApiClient();
+  const { data, error } = await client.GET('/api/auth/whoami');
+  if (error) throw new Error(error.error?.message || 'Not authenticated');
+  return data;
 }
 
 // === CLI Command Handler ===

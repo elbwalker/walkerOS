@@ -50,7 +50,7 @@
     "node": ">=18.0.0"
   },
   "keywords": [
-    "walkeros",
+    "walkerOS",
     "mcp",
     "model-context-protocol",
     "analytics",

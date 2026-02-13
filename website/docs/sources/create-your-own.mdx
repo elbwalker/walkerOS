@@ -443,6 +443,50 @@ The `Push` type parameter defines what your source exposes externally. Internall
 * **Cleanup**: Implement `destroy()` to remove listeners
 * **Stateless**: Let collector manage state
 
+## Package convention
+
+Every walkerOS package includes machine-readable metadata for tooling and discovery.
+
+### `walkerOS` field in package.json
+
+<CodeSnippet
+  code={`{
+  "walkerOS": {
+    "type": "source",
+    "platform": "web",
+    "schema": "./dist/dev/walkerOS.json"
+  },
+  "keywords": ["walkeros", "walkeros-source"]
+}`}
+  language="json"
+/>
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `type` | Yes | `destination`, `source`, or `transformer` |
+| `platform` | No | `web` or `server` (omit for platform-agnostic) |
+| `schema` | No | Path to walkerOS.json (default: `./dist/dev/walkerOS.json`) |
+
+### Build-time generation
+
+Use `buildDev()` from the shared tsup config to auto-generate `walkerOS.json`:
+
+<CodeSnippet
+  code={`import { buildDev } from '@walkeros/config/tsup';`}
+  language="typescript"
+/>
+
+This file contains your package's JSON Schemas and examples, enabling MCP tools and the CLI to validate configurations without installing your package.
+
+## Publishing checklist
+
+- [ ] `walkerOS` field in package.json
+- [ ] Keywords include `walkeros` and `walkeros-source`
+- [ ] `buildDev()` in tsup.config.ts
+- [ ] `dist/dev/walkerOS.json` generated on build
+- [ ] `npm run test` passes
+- [ ] `npm run lint` passes
+
 ## Next steps
 
 * Review <Link to="/docs/sources/web/browser">Browser Source</Link> for DOM patterns

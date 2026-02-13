@@ -22,7 +22,7 @@ Before starting, read these skills:
 - [testing-strategy](../walkeros-testing-strategy/SKILL.md) - How to test with
   env pattern
 - [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
-  Documentation standards (for Phase 7)
+  Documentation standards (for Phase 8)
 
 ## Choose Your Template
 
@@ -39,9 +39,10 @@ Before starting, read these skills:
 2. Examples     → Create dev entry with real usage patterns
 3. Mapping      → Define walkerOS → vendor transformation
 4. Scaffold     → Copy template and configure
-5. Implement    → Build using examples as test fixtures
-6. Test         → Verify against example variations
-7. Document     → Write README
+5. Convention   → Add walkerOS.json metadata and buildDev
+6. Implement    → Build using examples as test fixtures
+7. Test         → Verify against example variations
+8. Document     → Write README
 ```
 
 ---
@@ -212,7 +213,47 @@ destinations: {
 
 ---
 
-## Phase 5: Implement
+## Phase 5: walkerOS.json Convention
+
+Every walkerOS package ships a `walkerOS.json` file for CDN-based schema
+discovery.
+
+### Add `walkerOS` field to package.json
+
+```json
+{
+  "walkerOS": {
+    "type": "destination",
+    "platform": "web",
+    "schema": "./dist/dev/walkerOS.json"
+  },
+  "keywords": ["walkeros", "walkeros-destination", ...]
+}
+```
+
+### Use `buildDev()` in tsup.config.ts
+
+Replace `buildModules({ entry: ['src/dev.ts'] })` with `buildDev()`:
+
+```typescript
+import { buildDev } from '@walkeros/config/tsup';
+// In defineConfig array:
+buildDev(),
+```
+
+This auto-generates `dist/dev/walkerOS.json` from your Zod schemas at build
+time.
+
+### Gate: Convention Met
+
+- [ ] `walkerOS` field in package.json with `type: "destination"` and `platform`
+- [ ] `buildDev()` in tsup.config.ts
+- [ ] Build generates `dist/dev/walkerOS.json`
+- [ ] Keywords include `walkeros` and `walkeros-destination`
+
+---
+
+## Phase 6: Implement
 
 **Now write code to produce the outputs defined in Phase 2.**
 
@@ -241,7 +282,7 @@ Use these templates as your starting point:
 
 ---
 
-## Phase 6: Test Against Examples
+## Phase 7: Test Against Examples
 
 **Verify implementation produces expected outputs.**
 
@@ -263,7 +304,7 @@ Use the test template: [index.test.ts](./templates/simple/index.test.ts)
 
 ---
 
-## Phase 7: Document
+## Phase 8: Document
 
 Follow the [writing-documentation](../walkeros-writing-documentation/SKILL.md)
 skill for:
@@ -291,6 +332,8 @@ requirements (build, test, lint, no `any`):
 - [ ] `dev.ts` exports `schemas` and `examples`
 - [ ] Examples match type signatures
 - [ ] Tests use examples for assertions (not hardcoded values)
+- [ ] `walkerOS.json` generated at build time
+- [ ] `walkerOS` field in package.json
 
 ---
 

@@ -16,8 +16,14 @@ import { z } from '@walkeros/core/dev';
  * - `mapping`: Validate mapping rules
  */
 export const ValidationTypeSchema = z
-  .enum(['event', 'flow', 'mapping'])
-  .describe('Type of validation to perform');
+  .union([
+    z.enum(['event', 'flow', 'mapping']),
+    z.string().regex(/^(destinations|sources|transformers)\.\w+$|^\w+$/),
+  ])
+  .describe(
+    'Validation type: "event", "flow", "mapping", or dot-notation path ' +
+      '(e.g., "destinations.snowplow") to validate a specific entry against its package schema',
+  );
 
 export type ValidationType = z.infer<typeof ValidationTypeSchema>;
 

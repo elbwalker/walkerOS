@@ -23,7 +23,7 @@ Before starting, read these skills:
   Transform raw input to events
 - [testing-strategy](../walkeros-testing-strategy/SKILL.md) - How to test
 - [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
-  Documentation standards (for Phase 7)
+  Documentation standards (for Phase 8)
 
 ## Source Types
 
@@ -54,9 +54,10 @@ Before starting, read these skills:
 2. Examples     → Create input examples in dev entry FIRST
 3. Mapping      → Define input → walkerOS event transformation
 4. Scaffold     → Copy template and configure
-5. Implement    → Build using examples as test fixtures
-6. Test         → Verify against example variations
-7. Document     → Write README
+5. Convention   → Add walkerOS.json metadata and buildDev
+6. Implement    → Build using examples as test fixtures
+7. Test         → Verify against example variations
+8. Document     → Write README
 ```
 
 ---
@@ -222,7 +223,49 @@ sources: {
 
 ---
 
-## Phase 5: Implement
+## Phase 5: walkerOS.json Convention
+
+Every walkerOS package ships a `walkerOS.json` file for CDN-based schema
+discovery.
+
+### Add `walkerOS` field to package.json
+
+```json
+{
+  "walkerOS": {
+    "type": "source",
+    "platform": "web",
+    "schema": "./dist/dev/walkerOS.json"
+  },
+  "keywords": ["walkeros", "walkeros-source", ...]
+}
+```
+
+Set `platform` to `"web"` or `"server"` depending on the source type.
+
+### Use `buildDev()` in tsup.config.ts
+
+Replace `buildModules({ entry: ['src/dev.ts'] })` with `buildDev()`:
+
+```typescript
+import { buildDev } from '@walkeros/config/tsup';
+// In defineConfig array:
+buildDev(),
+```
+
+This auto-generates `dist/dev/walkerOS.json` from your Zod schemas at build
+time.
+
+### Gate: Convention Met
+
+- [ ] `walkerOS` field in package.json with `type: "source"` and `platform`
+- [ ] `buildDev()` in tsup.config.ts
+- [ ] Build generates `dist/dev/walkerOS.json`
+- [ ] Keywords include `walkeros` and `walkeros-source`
+
+---
+
+## Phase 6: Implement
 
 **Now write code to transform inputs to expected outputs.**
 
@@ -252,7 +295,7 @@ sources: {
 
 ---
 
-## Phase 6: Test Against Examples
+## Phase 7: Test Against Examples
 
 **Verify implementation produces expected outputs.**
 
@@ -275,7 +318,7 @@ Use the test template: [index.test.ts](./templates/server/index.test.ts)
 
 ---
 
-## Phase 7: Document
+## Phase 8: Document
 
 Follow the [writing-documentation](../walkeros-writing-documentation/SKILL.md)
 skill for:
@@ -304,6 +347,8 @@ requirements (build, test, lint, no `any`):
 - [ ] Examples include edge cases (minimal, invalid input)
 - [ ] Invalid input returns gracefully (no crashes, clear error)
 - [ ] Tests use examples for assertions (not hardcoded values)
+- [ ] `walkerOS.json` generated at build time
+- [ ] `walkerOS` field in package.json
 
 ---
 
