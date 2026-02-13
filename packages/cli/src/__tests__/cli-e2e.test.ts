@@ -6,22 +6,25 @@
  */
 
 import { spawn } from 'child_process';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { existsSync } from 'fs';
 import fs from 'fs-extra';
 
-const projectRoot = process.cwd();
+// Resolve paths relative to the cli package root (two levels up from __tests__)
+// so the test works regardless of Jest's cwd.
+const projectRoot = resolve(__dirname, '..', '..');
+const cliPath = join(projectRoot, 'dist/index.js');
 
-describe('CLI E2E Tests', () => {
-  const cliPath = join(projectRoot, 'dist/index.js');
+// Skip when dist/ doesn't exist (turbo runs test without build).
+// These tests run via `npm run test:integration` which builds first.
+// If you add a new test file that spawns dist/index.js, add its pattern
+// to the test:integration script in package.json.
+const describeIfBuilt = existsSync(cliPath) ? describe : describe.skip;
+
+describeIfBuilt('CLI E2E Tests', () => {
   const tmpDir = join(projectRoot, '.tmp/e2e-tests');
 
   beforeAll(async () => {
-    // Ensure CLI is built
-    if (!existsSync(cliPath)) {
-      throw new Error('CLI not built. Run `npm run build` first');
-    }
-
     // Create temp directory for test outputs
     await fs.ensureDir(tmpDir);
   });

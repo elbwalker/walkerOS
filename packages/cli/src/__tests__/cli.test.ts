@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import { existsSync } from 'fs';
 import fs from 'fs-extra';
 import path from 'path';
 import { getId } from '@walkeros/core';
@@ -6,8 +7,15 @@ import { getId } from '@walkeros/core';
 // Resolve paths relative to the cli package root (two levels up from __tests__)
 // so the test works regardless of Jest's cwd.
 const pkgRoot = path.resolve(__dirname, '..', '..');
+const cliPath = path.join(pkgRoot, 'dist/index.js');
 
-describe('CLI Bundle Command', () => {
+// Skip when dist/ doesn't exist (turbo runs test without build).
+// These tests run via `npm run test:integration` which builds first.
+// If you add a new test file that spawns dist/index.js, add its pattern
+// to the test:integration script in package.json.
+const describeIfBuilt = existsSync(cliPath) ? describe : describe.skip;
+
+describeIfBuilt('CLI Bundle Command', () => {
   const testOutputDir = path.join(
     pkgRoot,
     '.tmp',
