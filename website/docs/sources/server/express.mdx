@@ -5,6 +5,8 @@ sidebar_position: 1
 package: '@walkeros/server-source-express'
 ---
 
+import { schemas } from '@walkeros/server-source-express/dev';
+
 <PackageLink env="server" github="packages/server/sources/express" npm="@walkeros/server-source-express" />
 
 # Express
@@ -137,13 +139,7 @@ Server sources require platform-specific handlers. For containerized deployments
 
 ## Configuration
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `port` | `number` | - | Port to listen on. If not set, runs in app-only mode |
-| `paths` | `Array<string \| RouteConfig>` | `['/collect']` | Route paths to register. String = GET+POST, RouteConfig = per-route methods |
-| ~~`path`~~ | `string` | `/collect` | **Deprecated.** Use `paths` instead. Converted to `paths: [path]` internally |
-| `cors` | `boolean \| object` | `true` | CORS configuration |
-| `status` | `boolean` | `true` | Enable health check endpoints |
+<PropertyTable schema={schemas.settings} />
 
 ## HTTP methods
 

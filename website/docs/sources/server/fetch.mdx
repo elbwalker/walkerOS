@@ -5,6 +5,8 @@ sidebar_position: 2
 package: '@walkeros/server-source-fetch'
 ---
 
+import { schemas } from '@walkeros/server-source-fetch/dev';
+
 <PackageLink env="server" github="packages/server/sources/fetch" npm="@walkeros/server-source-fetch" />
 
 # Fetch
@@ -160,14 +162,7 @@ Bun.serve({ fetch: sources.fetch.push, port: 3000 });`}
 
 ## Configuration
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `paths` | `Array<string \| RouteConfig>` | `['/collect']` | Route paths to handle. String = GET+POST, RouteConfig = per-route methods |
-| ~~`path`~~ | `string` | `/collect` | **Deprecated.** Use `paths` instead. Converted to `paths: [path]` internally |
-| `cors` | `boolean \| object` | `true` | CORS configuration |
-| `healthPath` | `string` | `/health` | Health check endpoint |
-| `maxRequestSize` | `number` | `102400` | Max request size in bytes (100KB) |
-| `maxBatchSize` | `number` | `100` | Max events per batch request |
+<PropertyTable schema={schemas.settings} />
 
 ## Ingest Metadata
 
