@@ -3,8 +3,16 @@ import fs from 'fs-extra';
 import path from 'path';
 import { getId } from '@walkeros/core';
 
+// Resolve paths relative to the cli package root (two levels up from __tests__)
+// so the test works regardless of Jest's cwd.
+const pkgRoot = path.resolve(__dirname, '..', '..');
+
 describe('CLI Bundle Command', () => {
-  const testOutputDir = path.join('.tmp', `cli-${Date.now()}-${getId()}`);
+  const testOutputDir = path.join(
+    pkgRoot,
+    '.tmp',
+    `cli-${Date.now()}-${getId()}`,
+  );
   const testConfigPath = path.join(testOutputDir, 'test.config.json');
 
   beforeEach(async () => {
@@ -24,10 +32,15 @@ describe('CLI Bundle Command', () => {
     args: string[],
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
     return new Promise((resolve) => {
-      const child = spawn('node', ['dist/index.js', ...args], {
-        stdio: 'pipe',
-        shell: false,
-      });
+      const child = spawn(
+        'node',
+        [path.join(pkgRoot, 'dist/index.js'), ...args],
+        {
+          stdio: 'pipe',
+          shell: false,
+          cwd: pkgRoot,
+        },
+      );
 
       let stdout = '';
       let stderr = '';
