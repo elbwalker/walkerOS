@@ -38,7 +38,9 @@
   "dependencies": {
     "@walkeros/web-core": "1.0.5"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@walkeros/collector": "1.2.0"
+  },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/web/destinations/api"

@@ -27,7 +27,8 @@
     "@types/aws-lambda": "^8.10.0"
   },
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.159"
+    "@types/aws-lambda": "^8.10.159",
+    "@walkeros/collector": "1.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
