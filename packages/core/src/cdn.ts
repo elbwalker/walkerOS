@@ -1,5 +1,5 @@
 const JSDELIVR_BASE = 'https://cdn.jsdelivr.net/npm';
-const DEFAULT_SCHEMA_PATH = 'dist/dev/walkerOS.json';
+const DEFAULT_SCHEMA_PATH = 'dist/walkerOS.json';
 
 export interface WalkerOSPackageInfo {
   packageName: string;

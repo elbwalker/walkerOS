@@ -13,7 +13,7 @@ describe('fetchPackageSchema', () => {
       walkerOS: {
         type: 'destination',
         platform: 'web',
-        schema: './dist/dev/walkerOS.json',
+        schema: './dist/walkerOS.json',
       },
     };
     const mockWalkerOSJson = {
@@ -45,7 +45,7 @@ describe('fetchPackageSchema', () => {
     );
     expect(mockFetch).toHaveBeenNthCalledWith(
       2,
-      expect.stringContaining('dist/dev/walkerOS.json'),
+      expect.stringContaining('dist/walkerOS.json'),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
 
@@ -72,7 +72,7 @@ describe('fetchPackageSchema', () => {
 
     expect(mockFetch).toHaveBeenNthCalledWith(
       2,
-      expect.stringContaining('dist/dev/walkerOS.json'),
+      expect.stringContaining('dist/walkerOS.json'),
       expect.any(Object),
     );
   });

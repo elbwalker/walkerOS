@@ -44,7 +44,7 @@
   "walkerOS": {
     "type": "destination",
     "platform": "server",
-    "schema": "./dist/dev/walkerOS.json"
+    "schema": "./dist/walkerOS.json"
   },
   "keywords": [
     "walkerOS",

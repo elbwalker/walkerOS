@@ -189,14 +189,13 @@ import { buildDev } from '@walkeros/config/tsup';
 buildDev(),
 ```
 
-This auto-generates `dist/dev/walkerOS.json` from your Zod schemas at build
-time.
+This auto-generates `dist/walkerOS.json` from your Zod schemas at build time.
 
 ### Gate: Convention Met
 
 - [ ] `walkerOS` field in package.json with `type: "transformer"`
 - [ ] `buildDev()` in tsup.config.ts
-- [ ] Build generates `dist/dev/walkerOS.json`
+- [ ] Build generates `dist/walkerOS.json`
 - [ ] Keywords include `walkerOS` and `walkerOS-transformer`
 
 ---

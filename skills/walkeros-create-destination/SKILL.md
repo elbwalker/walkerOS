@@ -225,7 +225,7 @@ discovery.
   "walkerOS": {
     "type": "destination",
     "platform": "web",
-    "schema": "./dist/dev/walkerOS.json"
+    "schema": "./dist/walkerOS.json"
   },
   "keywords": ["walkerOS", "walkerOS-destination", ...]
 }
@@ -241,14 +241,13 @@ import { buildDev } from '@walkeros/config/tsup';
 buildDev(),
 ```
 
-This auto-generates `dist/dev/walkerOS.json` from your Zod schemas at build
-time.
+This auto-generates `dist/walkerOS.json` from your Zod schemas at build time.
 
 ### Gate: Convention Met
 
 - [ ] `walkerOS` field in package.json with `type: "destination"` and `platform`
 - [ ] `buildDev()` in tsup.config.ts
-- [ ] Build generates `dist/dev/walkerOS.json`
+- [ ] Build generates `dist/walkerOS.json`
 - [ ] Keywords include `walkerOS` and `walkerOS-destination`
 
 ---

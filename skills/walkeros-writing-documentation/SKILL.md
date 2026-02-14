@@ -249,7 +249,7 @@ Every package should document its `walkerOS.json` convention in the README:
   "walkerOS": {
     "type": "destination",
     "platform": "web",
-    "schema": "./dist/dev/walkerOS.json"
+    "schema": "./dist/walkerOS.json"
   }
 }
 ```

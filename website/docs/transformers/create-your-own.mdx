@@ -229,7 +229,7 @@ Every walkerOS package includes machine-readable metadata for tooling and discov
   code={`{
   "walkerOS": {
     "type": "transformer",
-    "schema": "./dist/dev/walkerOS.json"
+    "schema": "./dist/walkerOS.json"
   },
   "keywords": ["walkeros", "walkeros-transformer"]
 }`}
@@ -240,7 +240,7 @@ Every walkerOS package includes machine-readable metadata for tooling and discov
 |-------|----------|-------------|
 | `type` | Yes | `destination`, `source`, or `transformer` |
 | `platform` | No | `web` or `server` (omit for platform-agnostic) |
-| `schema` | No | Path to walkerOS.json (default: `./dist/dev/walkerOS.json`) |
+| `schema` | No | Path to walkerOS.json (default: `./dist/walkerOS.json`) |
 
 ### Build-time generation
 
@@ -258,7 +258,7 @@ This file contains your package's JSON Schemas and examples, enabling MCP tools 
 - [ ] `walkerOS` field in package.json
 - [ ] Keywords include `walkeros` and `walkeros-transformer`
 - [ ] `buildDev()` in tsup.config.ts
-- [ ] `dist/dev/walkerOS.json` generated on build
+- [ ] `dist/walkerOS.json` generated on build
 - [ ] `npm run test` passes
 - [ ] `npm run lint` passes
 

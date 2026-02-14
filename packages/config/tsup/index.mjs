@@ -184,12 +184,12 @@ const buildDev = (customConfig = {}) => {
         return;
       }
 
-      // Write to dist/dev/walkerOS.json
-      const outDir = resolve(cwd, 'dist/dev');
+      // Write to dist/walkerOS.json
+      const outDir = resolve(cwd, 'dist');
       mkdirSync(outDir, { recursive: true });
       writeFileSync(join(outDir, 'walkerOS.json'), jsonString);
       console.log(
-        `[buildDev] Generated dist/dev/walkerOS.json for ${pkg.name}@${pkg.version}`,
+        `[buildDev] Generated dist/walkerOS.json for ${pkg.name}@${pkg.version}`,
       );
 
       // Run custom onSuccess if provided

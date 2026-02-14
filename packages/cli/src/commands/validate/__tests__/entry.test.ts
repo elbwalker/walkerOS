@@ -44,7 +44,7 @@ describe('validateEntry (dot-notation)', () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            walkerOS: { schema: './dist/dev/walkerOS.json' },
+            walkerOS: { schema: './dist/walkerOS.json' },
             version: '0.0.12',
           }),
       })

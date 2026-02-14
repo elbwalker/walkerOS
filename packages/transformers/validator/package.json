@@ -50,7 +50,7 @@
   },
   "walkerOS": {
     "type": "transformer",
-    "schema": "./dist/dev/walkerOS.json"
+    "schema": "./dist/walkerOS.json"
   },
   "keywords": [
     "walkerOS",

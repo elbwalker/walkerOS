@@ -92,7 +92,7 @@ describe('get-package-schema tool', () => {
 
   it('should return error when walkerOS.json not found', async () => {
     mockFetchPackageSchema.mockRejectedValue(
-      new Error('walkerOS.json not found at dist/dev/walkerOS.json (HTTP 404)'),
+      new Error('walkerOS.json not found at dist/walkerOS.json (HTTP 404)'),
     );
 
     const tool = mockServer.getTool('get-package-schema');
