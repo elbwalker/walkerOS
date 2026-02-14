@@ -81,6 +81,7 @@ export interface Config<
   logger?: Logger.Config;
   disabled?: boolean;
   primary?: boolean;
+  /** Defer source initialization until these collector events fire (e.g., `['consent']`). */
   require?: string[];
   /**
    * Ingest metadata extraction mapping.

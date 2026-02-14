@@ -56,6 +56,38 @@ describe('toSerializable', () => {
     expect(toSerializable(zodString)).toBeUndefined();
   });
 
+  it('filters out Zod 4 instances (have _zod property)', () => {
+    // Zod 4 instances have _zod but no _def.typeName
+    const zod4Schema = {
+      parse: () => {},
+      safeParse: () => {},
+      _def: { type: 'object', shape: {} },
+      _zod: { def: {}, constr: {}, traits: new Set(), bag: {} },
+    };
+    expect(toSerializable(zod4Schema)).toBeUndefined();
+  });
+
+  it('filters out Zod 4 instances from nested objects', () => {
+    const obj = {
+      settings: { type: 'object', properties: { url: { type: 'string' } } },
+      SettingsSchema: {
+        parse: () => {},
+        _zod: { def: {}, constr: {} },
+      },
+      MappingSchema: {
+        parse: () => {},
+        _def: { type: 'object' },
+        _zod: { def: {} },
+      },
+    };
+    const result = toSerializable(obj);
+    expect(result).toEqual({
+      settings: { type: 'object', properties: { url: { type: 'string' } } },
+    });
+    expect(result).not.toHaveProperty('SettingsSchema');
+    expect(result).not.toHaveProperty('MappingSchema');
+  });
+
   it('should NOT filter out non-Zod objects that have a .parse method', () => {
     const csvParser = { parse: (str) => str.split(','), data: [1, 2, 3] };
     const result = toSerializable(csvParser);

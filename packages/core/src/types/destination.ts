@@ -83,6 +83,7 @@ export interface Config<T extends TypesGeneric = Types> {
   mapping?: WalkerOSMapping.Rules<WalkerOSMapping.Rule<Mapping<T>>>;
   policy?: Policy;
   queue?: boolean;
+  /** Defer destination initialization until these collector events fire (e.g., `['consent']`). */
   require?: string[];
   before?: string | string[];
 }

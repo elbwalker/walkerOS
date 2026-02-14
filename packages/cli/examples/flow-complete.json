@@ -70,6 +70,7 @@
           "package": "@walkeros/web-source-datalayer",
           "next": "enricher",
           "config": {
+            "require": ["session"],
             "settings": {
               "name": "dataLayer",
               "prefix": "gtag"
@@ -219,6 +220,7 @@
         "ga4": {
           "package": "@walkeros/web-destination-gtag",
           "config": {
+            "require": ["consent", "user"],
             "consent": { "marketing": true },
             "settings": {
               "ga4": { "measurementId": "$var.ga4MeasurementId" }

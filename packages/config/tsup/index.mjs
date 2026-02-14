@@ -79,13 +79,18 @@ const buildES5 = (customConfig = {}) => ({
  *
  * Conventions:
  * - Functions → { $code: fn.toString() } — serialized source for documentation, not executable
- * - Zod instances (have _def.typeName starting with 'Zod') → filtered out (returns undefined)
+ * - Zod instances → filtered out (returns undefined)
+ *   Zod 3: detected via _def.typeName starting with 'Zod'
+ *   Zod 4: detected via _zod property
  * - Everything else → recursively passed through
  */
 const toSerializable = (value) => {
   if (value === null || value === undefined) return value;
   if (typeof value === 'function') return { $code: value.toString() };
-  if (typeof value === 'object' && value._def?.typeName?.startsWith?.('Zod'))
+  if (
+    typeof value === 'object' &&
+    (value._def?.typeName?.startsWith?.('Zod') || '_zod' in value)
+  )
     return undefined;
   if (Array.isArray(value)) {
     return value.map((item) => toSerializable(item));
