@@ -1,9 +1,8 @@
-# @walkeros/web-source-cmp-cookiefirst
-
-CookieFirst consent management source for walkerOS.
-
-This source listens to [CookieFirst](https://cookiefirst.com/) CMP events and
-translates consent states to walkerOS consent commands.
+---
+title: CookieFirst
+description: Integrate CookieFirst consent management with walkerOS
+sidebar_position: 1
+---
 
 ## Installation
 
@@ -23,20 +22,10 @@ await startFlow({
       code: sourceCookieFirst,
     },
   },
-  destinations: {
-    gtag: {
-      code: destinationGtag,
-      config: {
-        consent: { analytics: true }, // Requires analytics consent
-      },
-    },
-  },
 });
 ```
 
-## Configuration
-
-### Settings
+## Settings
 
 | Setting        | Type                     | Default         | Description                                            |
 | -------------- | ------------------------ | --------------- | ------------------------------------------------------ |
@@ -44,7 +33,7 @@ await startFlow({
 | `explicitOnly` | `boolean`                | `true`          | Only process explicit consent (user made a choice)     |
 | `globalName`   | `string`                 | `'CookieFirst'` | Custom name for `window.CookieFirst` object            |
 
-### Default Category Mapping
+### Default category mapping
 
 ```typescript
 {
@@ -56,10 +45,10 @@ await startFlow({
 ```
 
 When multiple CookieFirst categories map to the same walkerOS group (e.g., both
-`necessary` and `functional` → `functional`), the source uses OR logic: if ANY
+`necessary` and `functional` to `functional`), the source uses OR logic: if ANY
 source category is `true`, the target group is `true`.
 
-### Custom Mapping Example
+### Custom mapping example
 
 ```typescript
 await startFlow({
@@ -79,29 +68,21 @@ await startFlow({
 });
 ```
 
-## How It Works
+## How it works
 
-1. **Initialization**: When the source loads, it checks if CookieFirst is
-   already initialized and processes any existing consent state.
+1. **Initialization**: Checks if CookieFirst is already loaded and processes
+   existing consent state from `window.CookieFirst.consent`.
 
-2. **cf_init Event**: Listens for the `cf_init` event fired when CookieFirst
+2. **cf_init event**: Listens for the `cf_init` event fired when CookieFirst
    banner initializes.
 
-3. **cf_consent Event**: Listens for the `cf_consent` event fired when user
-   changes their consent preferences.
+3. **cf_consent event**: Listens for the `cf_consent` event fired when user
+   changes consent preferences.
 
-4. **Consent Mapping**: Translates CookieFirst categories to walkerOS consent
+4. **Consent mapping**: Translates CookieFirst categories to walkerOS consent
    groups and calls `elb('walker consent', state)`.
 
-## CookieFirst API Reference
+## Reference
 
 - [CookieFirst Public API Documentation](https://support.cookiefirst.com/hc/en-us/articles/360011568738-Cookie-Banner-Public-API-documentation)
-
-## Related
-
-- [Consent management guide](https://www.walkeros.io/docs/guides/consent)
-- [CookieFirst documentation](https://www.walkeros.io/docs/sources/web/cmps/cookiefirst)
-
-## License
-
-MIT
+- [Source code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/sources/cmps/cookiefirst)

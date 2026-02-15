@@ -1,0 +1,33 @@
+---
+title: Consent management
+description: Automate consent handling with walkerOS CMP source packages
+---
+
+# CMP sources
+
+walkerOS provides ready-made source packages for popular Consent Management
+Platforms. Each source listens for CMP events and automatically calls
+`elb('walker consent', state)` — no manual event listener code needed.
+
+| CMP | Package |
+| --- | ------- |
+| [CookieFirst](/docs/sources/web/cmps/cookiefirst) | `@walkeros/web-source-cmp-cookiefirst` |
+| [CookiePro / OneTrust](/docs/sources/web/cmps/cookiepro) | `@walkeros/web-source-cmp-cookiepro` |
+| [Usercentrics](/docs/sources/web/cmps/usercentrics) | `@walkeros/web-source-cmp-usercentrics` |
+
+## How it works
+
+Typically, a Consent Management Platform (CMP) handles user consent. This is an
+asynchronous process: the CMP has to load, the user makes a choice, and the
+consent state is updated. CMP sources handle this automatically by:
+
+1. Detecting if the CMP is already loaded and reading existing consent
+2. Listening for CMP-specific events on consent changes
+3. Mapping CMP categories to walkerOS consent groups via `categoryMap`
+4. Calling `elb('walker consent', state)` with the mapped state
+
+All CMP sources support `explicitOnly` (default: `true`) to filter out
+implicit/default consent and only process active user choices.
+
+For more details on how consent works in walkerOS, see the
+[consent management guide](/docs/guides/consent).

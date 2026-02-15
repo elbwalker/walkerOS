@@ -2,10 +2,6 @@
 
 Usercentrics consent management source for walkerOS.
 
-[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/sources/cmps/usercentrics)
-|
-[Documentation](https://www.elbwalker.com/docs/guides/consent/examples/usercentrics)
-
 This source listens to [Usercentrics](https://usercentrics.com/) CMP events and
 translates consent states to walkerOS consent commands.
 
@@ -18,11 +14,11 @@ npm install @walkeros/web-source-cmp-usercentrics
 ## Usage
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { sourceUsercentrics } from '@walkeros/web-source-cmp-usercentrics';
 // import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const collector = createCollector({
+await startFlow({
   sources: {
     consent: {
       code: sourceUsercentrics,
@@ -60,7 +56,7 @@ event (no admin configuration required).
 ### Custom mapping example
 
 ```typescript
-const collector = createCollector({
+await startFlow({
   sources: {
     consent: {
       code: sourceUsercentrics,
@@ -138,8 +134,8 @@ See [src/types/index.ts](./src/types/index.ts) for TypeScript interfaces.
 
 ## Related
 
-- [Consent management guide](https://www.elbwalker.com/docs/guides/consent)
-- [Usercentrics integration guide](https://www.elbwalker.com/docs/guides/consent/examples/usercentrics)
+- [Consent management guide](https://www.walkeros.io/docs/guides/consent)
+- [Usercentrics Documentation](https://www.walkeros.io/docs/sources/web/cmps/usercentrics)
 
 ## License
 

@@ -20,7 +20,7 @@ const RESERVED_KEYS = ['action', 'event', 'type', 'ucCategory'];
  * ```typescript
  * import { sourceUsercentrics } from '@walkeros/web-source-cmp-usercentrics';
  *
- * const collector = createCollector({
+ * await startFlow({
  *   sources: {
  *     consent: {
  *       code: sourceUsercentrics,

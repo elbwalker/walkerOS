@@ -2,10 +2,6 @@
 
 CookiePro/OneTrust consent management source for walkerOS.
 
-[Source Code](https://github.com/elbwalker/walkerOS/tree/main/packages/web/sources/cmps/cookiepro)
-|
-[Documentation](https://www.elbwalker.com/docs/guides/consent/examples/cookiepro)
-
 This source listens to
 [CookiePro/OneTrust](https://www.onetrust.com/products/cookie-consent/) CMP
 events and translates consent states to walkerOS consent commands.
@@ -19,11 +15,11 @@ npm install @walkeros/web-source-cmp-cookiepro
 ## Usage
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { sourceCookiePro } from '@walkeros/web-source-cmp-cookiepro';
 // import { destinationGtag } from '@walkeros/web-destination-gtag';
 
-const collector = createCollector({
+await startFlow({
   sources: {
     consent: {
       code: sourceCookiePro,
@@ -70,10 +66,10 @@ absent groups are set to `false` so destinations know which consent is denied.
 ### Custom mapping example
 
 ```typescript
-import { createCollector } from '@walkeros/collector';
+import { startFlow } from '@walkeros/collector';
 import { sourceCookiePro } from '@walkeros/web-source-cmp-cookiepro';
 
-const collector = createCollector({
+await startFlow({
   sources: {
     consent: {
       code: sourceCookiePro,
@@ -155,8 +151,8 @@ See [src/types/index.ts](./src/types/index.ts) for TypeScript interfaces.
 
 ## Related
 
-- [Consent management guide](https://www.elbwalker.com/docs/guides/consent)
-- [CookiePro integration guide](https://www.elbwalker.com/docs/guides/consent/examples/cookiepro)
+- [Consent management guide](https://www.walkeros.io/docs/guides/consent)
+- [CookiePro documentation](https://www.walkeros.io/docs/sources/web/cmps/cookiepro)
 
 ## License
 

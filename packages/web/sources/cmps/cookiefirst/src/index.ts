@@ -37,7 +37,7 @@ export const DEFAULT_CATEGORY_MAP: Record<string, string> = {
  * ```typescript
  * import { sourceCookieFirst } from '@walkeros/web-source-cmp-cookiefirst';
  *
- * const collector = createCollector({
+ * await startFlow({
  *   sources: {
  *     consent: {
  *       code: sourceCookieFirst,
