@@ -1,14 +1,57 @@
 ---
 title: CookiePro by OneTrust
-description: How to use walkerOS consent mode with CookiePro by OneTrust
+description: Integrate CookiePro/OneTrust consent management with walkerOS using the source package or manual event listener
+sidebar_position: 2
 ---
 
-CookiePro registers cookies and assigns them to categories. Those categories can
-be mapped to match the walker.js consent groups.
+## Using the source package (recommended)
+
+The easiest way to integrate CookiePro/OneTrust with walkerOS is using the
+`@walkeros/web-source-cmp-cookiepro` package:
+
+```bash
+npm install @walkeros/web-source-cmp-cookiepro
+```
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+import { sourceCookiePro } from '@walkeros/web-source-cmp-cookiepro';
+
+const collector = createCollector({
+  sources: {
+    consent: {
+      code: sourceCookiePro,
+      config: {
+        settings: {
+          // Default mapping covers standard OneTrust categories:
+          // C0001 -> functional, C0002 -> analytics,
+          // C0003 -> functional, C0004 -> marketing, C0005 -> marketing
+          categoryMap: {
+            C0002: 'statistics', // Override if needed
+          },
+        },
+      },
+    },
+  },
+});
+```
+
+The source automatically:
+- Detects if the OneTrust SDK is already loaded and reads existing consent
+- Wraps `OptanonWrapper` to capture SDK initialization (preserves existing wrapper)
+- Listens for `OneTrustGroupsUpdated` events on consent changes
+- Maps category IDs through `categoryMap` to walkerOS consent groups
+- Sets explicit `true`/`false` for all mapped groups
+- Calls `elb('walker consent', state)` with the mapped state
+- Filters implicit consent by default (`explicitOnly: true`)
+
+## Manual event listener
+
+If you prefer a manual approach without the source package, CookiePro registers
+cookies and assigns them to categories. Those categories can be mapped to match
+the walker.js consent groups.
 
 ![CookiePro categorizations](./cookiepro-categorizations.png)
-
-## Event listener
 
 The following code works asynchronously with CookiePro's
 [OptanonActiveGroups](https://my.onetrust.com/s/article/UUID-66bcaaf1-c7ca-5f32-6760-c75a1337c226).
