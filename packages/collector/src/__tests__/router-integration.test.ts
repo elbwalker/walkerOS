@@ -1,7 +1,28 @@
 import { startFlow } from '..';
 import { branch } from '@walkeros/core';
-import { transformerRouter } from '@walkeros/transformer-router';
 import type { Source, Transformer, WalkerOS, Elb } from '@walkeros/core';
+
+// Inline mock router: matches ingest.path prefix and branches
+const mockRouter: Transformer.Init = (context) => {
+  const routes = (context.config.settings as any)?.routes || [];
+  return {
+    type: 'mock-router',
+    config: context.config,
+    push(event, ctx) {
+      const ingest = (ctx.ingest || {}) as Record<string, unknown>;
+      for (const route of routes) {
+        if (route.match === '*') return branch({}, route.next);
+        const val = String(ingest[route.match.key] || '');
+        if (
+          route.match.operator === 'prefix' &&
+          val.startsWith(route.match.value)
+        )
+          return branch({}, route.next);
+      }
+      return; // passthrough
+    },
+  };
+};
 
 describe('router transformer integration', () => {
   it('should route events through branched chain to destination', async () => {
@@ -50,7 +71,7 @@ describe('router transformer integration', () => {
       },
       transformers: {
         router: {
-          code: transformerRouter as any,
+          code: mockRouter,
           config: {
             settings: {
               routes: [
@@ -118,7 +139,7 @@ describe('router transformer integration', () => {
       },
       transformers: {
         router: {
-          code: transformerRouter as any,
+          code: mockRouter,
           config: {
             settings: {
               routes: [
