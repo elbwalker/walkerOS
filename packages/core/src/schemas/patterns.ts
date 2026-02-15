@@ -85,16 +85,6 @@ export const InitConfig = z
   .partial();
 
 /**
- * DisabledConfig - Disabled flag configuration
- * Used in: Source.Config
- */
-export const DisabledConfig = z
-  .object({
-    disabled: z.boolean().describe('Set to true to disable').optional(),
-  })
-  .partial();
-
-/**
  * PrimaryConfig - Primary flag configuration
  * Used in: Source.Config, Source.InitSource
  */

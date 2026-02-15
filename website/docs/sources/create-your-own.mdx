@@ -451,11 +451,7 @@ Every walkerOS package includes machine-readable metadata for tooling and discov
 
 <CodeSnippet
   code={`{
-  "walkerOS": {
-    "type": "source",
-    "platform": "web",
-    "schema": "./dist/walkerOS.json"
-  },
+  "walkerOS": { "type": "source", "platform": "web" },
   "keywords": ["walkeros", "walkeros-source"]
 }`}
   language="json"
@@ -463,9 +459,7 @@ Every walkerOS package includes machine-readable metadata for tooling and discov
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `type` | Yes | `destination`, `source`, or `transformer` |
-| `platform` | No | `web` or `server` (omit for platform-agnostic) |
-| `schema` | No | Path to walkerOS.json (default: `./dist/walkerOS.json`) |
+| `walkerOS` | Yes | Object with `type` and `platform` metadata |
 
 ### Build-time generation
 

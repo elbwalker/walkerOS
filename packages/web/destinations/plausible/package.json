@@ -52,8 +52,7 @@
   },
   "walkerOS": {
     "type": "destination",
-    "platform": "web",
-    "schema": "./dist/walkerOS.json"
+    "platform": "web"
   },
   "keywords": [
     "walkerOS",

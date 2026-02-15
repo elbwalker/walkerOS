@@ -10,13 +10,15 @@ describe('fetchPackageSchema', () => {
     const mockPkgJson = {
       name: '@walkeros/web-destination-snowplow',
       version: '0.0.12',
-      walkerOS: {
-        type: 'destination',
-        platform: 'web',
-        schema: './dist/walkerOS.json',
-      },
+      walkerOS: { type: 'destination', platform: 'web' },
     };
     const mockWalkerOSJson = {
+      $meta: {
+        package: '@walkeros/web-destination-snowplow',
+        version: '0.0.12',
+        type: 'destination',
+        platform: 'web',
+      },
       schemas: { settings: { type: 'object', properties: {} } },
       examples: { mapping: {} },
     };
@@ -57,7 +59,7 @@ describe('fetchPackageSchema', () => {
     expect(result.examples).toEqual(mockWalkerOSJson.examples);
   });
 
-  it('should use default schema path when walkerOS field is missing', async () => {
+  it('should always use convention path dist/walkerOS.json', async () => {
     mockFetch
       .mockResolvedValueOnce({
         ok: true,

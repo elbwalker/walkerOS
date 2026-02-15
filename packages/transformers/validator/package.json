@@ -49,8 +49,7 @@
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "walkerOS": {
-    "type": "transformer",
-    "schema": "./dist/walkerOS.json"
+    "type": "transformer"
   },
   "keywords": [
     "walkerOS",

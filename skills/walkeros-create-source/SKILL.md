@@ -232,16 +232,10 @@ discovery.
 
 ```json
 {
-  "walkerOS": {
-    "type": "source",
-    "platform": "web",
-    "schema": "./dist/walkerOS.json"
-  },
+  "walkerOS": { "type": "source", "platform": "web" },
   "keywords": ["walkerOS", "walkerOS-source", ...]
 }
 ```
-
-Set `platform` to `"web"` or `"server"` depending on the source type.
 
 ### Use `buildDev()` in tsup.config.ts
 
@@ -257,7 +251,7 @@ This auto-generates `dist/walkerOS.json` from your Zod schemas at build time.
 
 ### Gate: Convention Met
 
-- [ ] `walkerOS` field in package.json with `type: "source"` and `platform`
+- [ ] `walkerOS` field in package.json with type and platform
 - [ ] `buildDev()` in tsup.config.ts
 - [ ] Build generates `dist/walkerOS.json`
 - [ ] Keywords include `walkerOS` and `walkerOS-source`

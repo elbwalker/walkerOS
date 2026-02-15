@@ -32,34 +32,24 @@ export async function fetchPackageSchema(
     }
     const pkg = (await pkgRes.json()) as Record<string, unknown>;
 
-    // Read walkerOS metadata
-    const walkerOS = pkg.walkerOS as
-      | { type?: string; platform?: string; schema?: string }
-      | undefined;
-
-    // Resolve schema path
-    const schemaPath = (walkerOS?.schema || `./${DEFAULT_SCHEMA_PATH}`).replace(
-      /^\.\//,
-      '',
-    );
-
-    // Fetch walkerOS.json
-    const schemaRes = await fetch(`${base}/${schemaPath}`, {
+    // Fetch walkerOS.json (convention: always at dist/walkerOS.json)
+    const schemaRes = await fetch(`${base}/${DEFAULT_SCHEMA_PATH}`, {
       signal: controller.signal,
     });
     if (!schemaRes.ok) {
       throw new Error(
-        `walkerOS.json not found at ${schemaPath} (HTTP ${schemaRes.status}). ` +
+        `walkerOS.json not found at ${DEFAULT_SCHEMA_PATH} (HTTP ${schemaRes.status}). ` +
           `This package may not support the walkerOS.json convention yet.`,
       );
     }
     const walkerOSJson = (await schemaRes.json()) as Record<string, unknown>;
+    const meta = (walkerOSJson.$meta as Record<string, unknown>) || {};
 
     return {
       packageName,
       version: (pkg.version as string) || ver,
-      type: walkerOS?.type,
-      platform: walkerOS?.platform,
+      type: meta.type as string | undefined,
+      platform: meta.platform as string | undefined,
       schemas: (walkerOSJson.schemas as Record<string, unknown>) || {},
       examples: (walkerOSJson.examples as Record<string, unknown>) || {},
     };

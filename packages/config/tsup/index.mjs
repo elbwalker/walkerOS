@@ -153,19 +153,13 @@ const buildDev = (customConfig = {}) => {
       const rawExamples = devModule.examples || {};
       const examples = toSerializable(rawExamples) || {};
 
-      // Build output
-      const output = {
-        $meta: {
-          package: pkg.name,
-          version: pkg.version,
-          generatedAt: new Date().toISOString(),
-          conventions: {
-            $code: 'Serialized function source code. Not executable — for documentation and MCP context only.',
-          },
-        },
-        schemas,
-        examples,
-      };
+      // Read type and platform from package.json walkerOS field
+      const walkerOS = pkg.walkerOS || {};
+      const meta = { package: pkg.name, version: pkg.version };
+      if (walkerOS.type) meta.type = walkerOS.type;
+      if (walkerOS.platform) meta.platform = walkerOS.platform;
+
+      const output = { $meta: meta, schemas, examples };
 
       // Validate
       if (Object.keys(schemas).length === 0) {

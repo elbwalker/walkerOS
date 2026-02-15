@@ -246,16 +246,12 @@ Every package should document its `walkerOS.json` convention in the README:
 
 ```json
 {
-  "walkerOS": {
-    "type": "destination",
-    "platform": "web",
-    "schema": "./dist/walkerOS.json"
-  }
+  "walkerOS": { "type": "destination", "platform": "web" }
 }
 ```
 
-Adjust `type` (`destination`, `source`, `transformer`) and `platform` (`web`,
-`server`) to match the package.
+The `walkerOS` field is an object with `type` and `platform` metadata describing
+the package's role in the walkerOS ecosystem.
 
 ### Website Doc Template (MDX)
 
