@@ -23,7 +23,9 @@ to your business.
 
 Typically, a Consent Management Platform (CMP) handles the consent. This is an
 asynchronous process. The CMP has to be loaded, a user has to make a choice,
-and/or the state has to be updated.
+and/or the state has to be updated. walkerOS provides
+[CMP source packages](/docs/guides/consent/examples/usercentrics) that automate
+this. They listen for CMP events and call the consent command for you.
 
 To set/update the consent state, the CMP should actively push the
 `consent command` with a group or an individual tool's permission state

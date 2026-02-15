@@ -1,17 +1,61 @@
 ---
 title: Usercentrics
-description: How to use walkerOS consent mode with Usercentrics
+description: Integrate Usercentrics consent management with walkerOS using the source package or manual event listener
 sidebar_position: 1
+tags:
+  - consent
+  - cmp
+  - usercentrics
 ---
 
-Usercentrics supports an
+## Using the source package (recommended)
+
+The easiest way to integrate Usercentrics with walkerOS is using the
+`@walkeros/web-source-cmp-usercentrics` package:
+
+```bash
+npm install @walkeros/web-source-cmp-usercentrics
+```
+
+```typescript
+import { createCollector } from '@walkeros/collector';
+import { sourceUsercentrics } from '@walkeros/web-source-cmp-usercentrics';
+
+const collector = createCollector({
+  sources: {
+    consent: {
+      code: sourceUsercentrics,
+      config: {
+        settings: {
+          eventName: 'ucEvent', // Must match your Usercentrics admin config
+          categoryMap: {
+            essential: 'functional',
+            functional: 'functional',
+            marketing: 'marketing',
+          },
+        },
+      },
+    },
+  },
+});
+```
+
+The source automatically:
+- Listens for the configured window event
+- Detects group-level vs. service-level consent
+- Maps categories to walkerOS consent groups
+- Calls `elb('walker consent', state)` on consent changes
+- Filters implicit consent by default (`explicitOnly: true`)
+
+## Manual event listener
+
+If you prefer a manual approach without the source package, Usercentrics
+supports an
 [implementation via DataLayer & Events](https://docs.usercentrics.com/#/v2-events?id=usage-as-window-event).
-Adding a **Window Event Name** (like `ucEvent`) to will dispatch a users consent
+Adding a **Window Event Name** (like `ucEvent`) will dispatch a user's consent
 choice:
 
 ![Usercentrics window event implementation](./usercentrics-implementation-window_event.png)
-
-## Event listener
 
 The following code will listen for the `ucEvent`, parse the consent state and
 eventually call the `walker consent` command:
@@ -51,7 +95,7 @@ if (state) elb('walker consent', state); // Update walker.js consent state
 />
 
 Optionally uncomment the `e.type !== 'explicit'` check to process only
-explicitly given content. This will prevent walker.js from starting
-unintentionally or running eventually running twice.
+explicitly given consent. This will prevent walker.js from starting
+unintentionally or eventually running twice.
 
 Ensure the [elb](/docs/sources/web/browser/commands#elb) function is available.

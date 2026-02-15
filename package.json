@@ -15,6 +15,7 @@
     "packages/web/core",
     "packages/web/destinations/*",
     "packages/web/sources/*",
+    "packages/web/sources/cmps/*",
     "apps/quickstart",
     "apps/walkerjs",
     "apps/cli",
