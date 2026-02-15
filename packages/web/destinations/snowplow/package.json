@@ -30,7 +30,8 @@
     "build": "tsup --silent",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc && eslint \"**/*.ts*\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
@@ -38,8 +39,8 @@
     "@walkeros/web-core": "1.0.5"
   },
   "devDependencies": {
-    "@walkeros/collector": "latest",
-    "@walkeros/config": "latest",
+    "@walkeros/collector": "1.2.0",
+    "@walkeros/config": "*",
     "@snowplow/browser-tracker-core": "^4.6.8",
     "@snowplow/browser-plugin-snowplow-ecommerce": "^4.6.8"
   },
@@ -52,9 +53,13 @@
   "bugs": {
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
+  "walkerOS": {
+    "type": "destination",
+    "platform": "web"
+  },
   "keywords": [
-    "walker",
     "walkerOS",
+    "walkerOS-destination",
     "destination",
     "web",
     "snowplow",

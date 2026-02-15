@@ -18,6 +18,8 @@
     "target": "es2022",
     "allowJs": true,
     "resolveJsonModule": true,
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
     "sourceMap": true,
     "outDir": "dist",
     "baseUrl": "."

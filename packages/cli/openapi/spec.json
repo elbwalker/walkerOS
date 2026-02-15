@@ -93,7 +93,8 @@
                       "required": ["path", "message"]
                     }
                   }
-                }
+                },
+                "additionalProperties": {}
               }
             },
             "required": ["code", "message"]
@@ -756,20 +757,22 @@
             "schema": {
               "type": "string",
               "minLength": 1,
-              "description": "Magic link token",
-              "example": "abc123..."
+              "example": "abc123...",
+              "description": "Magic link token"
             },
             "required": true,
+            "description": "Magic link token",
             "name": "token",
             "in": "query"
           },
           {
             "schema": {
               "type": "string",
-              "description": "Redirect URL after verification",
-              "example": "/dashboard"
+              "example": "/dashboard",
+              "description": "Redirect URL after verification"
             },
             "required": false,
+            "description": "Redirect URL after verification",
             "name": "redirect_to",
             "in": "query"
           }
@@ -2190,7 +2193,8 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {}
+                "properties": {},
+                "additionalProperties": {}
               }
             }
           }
@@ -2381,7 +2385,8 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "properties": {}
+                  "properties": {},
+                  "additionalProperties": {}
                 }
               }
             }
@@ -2426,6 +2431,7 @@
               "description": "One-time ticket from /api/projects/{projectId}/observe/ticket"
             },
             "required": true,
+            "description": "One-time ticket from /api/projects/{projectId}/observe/ticket",
             "name": "ticket",
             "in": "query"
           },
@@ -2436,6 +2442,7 @@
               "description": "Project ID for scoped validation"
             },
             "required": true,
+            "description": "Project ID for scoped validation",
             "name": "project",
             "in": "query"
           }

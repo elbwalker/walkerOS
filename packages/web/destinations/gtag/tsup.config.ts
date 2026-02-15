@@ -4,6 +4,7 @@ import {
   buildExamples,
   buildBrowser,
   buildES5,
+  buildDev,
 } from '@walkeros/config/tsup';
 
 const globalName = 'Destination';
@@ -13,8 +14,5 @@ export default defineConfig([
   buildExamples(),
   buildBrowser({ globalName }),
   buildES5({ globalName }),
-  buildModules({
-    entry: ['src/dev.ts'],
-    outDir: 'dist',
-  }),
+  buildDev(),
 ]);

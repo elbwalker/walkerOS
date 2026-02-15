@@ -14,6 +14,7 @@ import {
   validateFlow,
   validateMapping,
 } from './validators/index.js';
+import { validateEntry } from './validators/entry.js';
 import type {
   ValidateCommandOptions,
   ValidateResult,
@@ -25,10 +26,15 @@ import type {
  * Can be called directly from code or MCP server.
  */
 export async function validate(
-  type: ValidationType,
+  type: ValidationType | string,
   input: unknown,
   options: { flow?: string } = {},
 ): Promise<ValidateResult> {
+  // Dot-notation entry validation (e.g., "destinations.snowplow")
+  if (type.includes('.') || !['event', 'flow', 'mapping'].includes(type)) {
+    return validateEntry(type, input as Record<string, unknown>);
+  }
+
   switch (type) {
     case 'event':
       return validateEvent(input);
@@ -173,3 +179,4 @@ export {
   validateFlow,
   validateMapping,
 } from './validators/index.js';
+export { validateEntry } from './validators/entry.js';

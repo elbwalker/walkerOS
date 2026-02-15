@@ -33,7 +33,8 @@
     "build": "tsup",
     "test": "jest --colors --coverage",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage",
     "preview": "npm run build && npx serve -l 3333 examples"
   },
@@ -61,7 +62,6 @@
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "keywords": [
-    "walker",
     "walkerOS",
     "analytics",
     "tracking",

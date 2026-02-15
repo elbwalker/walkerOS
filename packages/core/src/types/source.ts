@@ -76,12 +76,17 @@ export type TypesOf<I> = I extends Instance<infer T> ? T : never;
 export interface Config<
   T extends TypesGeneric = Types,
 > extends WalkerOSMapping.Config<Mapping<T>> {
+  /** Implementation-specific configuration passed to the init function. */
   settings?: InitSettings<T>;
+  /** Runtime dependencies injected by the collector (push, command, logger, etc.). */
   env?: Env<T>;
+  /** Source identifier; defaults to the InitSources object key. */
   id?: string;
+  /** Logger configuration (level, handler) to override the collector's defaults. */
   logger?: Logger.Config;
-  disabled?: boolean;
+  /** Mark as primary source; its push function becomes the exported `elb` from startFlow. */
   primary?: boolean;
+  /** Defer source initialization until these collector events fire (e.g., `['consent']`). */
   require?: string[];
   /**
    * Ingest metadata extraction mapping.

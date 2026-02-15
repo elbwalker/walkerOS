@@ -1,7 +1,7 @@
-const mockApiRequest = jest.fn();
+const mockBundleRemote = jest.fn();
 
 jest.mock('@walkeros/cli', () => ({
-  apiRequest: mockApiRequest,
+  bundleRemote: mockBundleRemote,
 }));
 
 function createMockServer() {
@@ -12,15 +12,6 @@ function createMockServer() {
     },
     getTool(name: string) {
       return tools[name];
-    },
-  };
-}
-
-function mockResponse(body: string, headers?: Record<string, string>) {
-  return {
-    text: () => Promise.resolve(body),
-    headers: {
-      get: (key: string) => headers?.[key] ?? null,
     },
   };
 }
@@ -46,7 +37,10 @@ describe('bundle-remote tool', () => {
 
   it('should POST config and return JS bundle', async () => {
     const mockJs = '(()=>{console.log("bundle")})();';
-    mockApiRequest.mockResolvedValue(mockResponse(mockJs));
+    mockBundleRemote.mockResolvedValue({
+      bundle: mockJs,
+      size: mockJs.length,
+    });
 
     const tool = server.getTool('bundle-remote');
     const result = await tool.handler({ content: { version: 1 } });
@@ -57,13 +51,13 @@ describe('bundle-remote tool', () => {
     expect(parsed.size).toBe(mockJs.length);
   });
 
-  it('should include stats from header when present', async () => {
+  it('should include stats when present', async () => {
     const mockJs = 'bundle();';
-    mockApiRequest.mockResolvedValue(
-      mockResponse(mockJs, {
-        'X-Bundle-Stats': JSON.stringify({ destinations: 2, sources: 1 }),
-      }),
-    );
+    mockBundleRemote.mockResolvedValue({
+      bundle: mockJs,
+      size: mockJs.length,
+      stats: { destinations: 2, sources: 1 },
+    });
 
     const tool = server.getTool('bundle-remote');
     const result = await tool.handler({ content: { version: 1 } });
@@ -73,7 +67,7 @@ describe('bundle-remote tool', () => {
   });
 
   it('should return error on API failure', async () => {
-    mockApiRequest.mockRejectedValue(new Error('Invalid config'));
+    mockBundleRemote.mockRejectedValue(new Error('Invalid config'));
 
     const tool = server.getTool('bundle-remote');
     const result = await tool.handler({ content: {} });
@@ -82,17 +76,16 @@ describe('bundle-remote tool', () => {
     expect(JSON.parse(result.content[0].text).error).toBe('Invalid config');
   });
 
-  it('should call apiRequest with correct path and options', async () => {
-    mockApiRequest.mockResolvedValue(mockResponse('code', {}));
+  it('should call bundleRemote with content', async () => {
+    mockBundleRemote.mockResolvedValue({
+      bundle: 'code',
+      size: 4,
+    });
 
     const content = { version: 1, sources: [] };
     const tool = server.getTool('bundle-remote');
     await tool.handler({ content });
 
-    expect(mockApiRequest).toHaveBeenCalledWith('/api/bundle', {
-      method: 'POST',
-      body: JSON.stringify({ flow: content }),
-      responseFormat: 'raw',
-    });
+    expect(mockBundleRemote).toHaveBeenCalledWith({ content });
   });
 });

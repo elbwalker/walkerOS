@@ -27,7 +27,8 @@
     "build": "tsup --silent",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc && eslint \"**/*.ts*\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
@@ -36,7 +37,9 @@
     "@walkeros/server-core": "1.0.5",
     "google-auth-library": "^10.5.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@walkeros/collector": "1.2.0"
+  },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/server/destinations/datamanager"
@@ -46,16 +49,22 @@
   "bugs": {
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
+  "walkerOS": {
+    "type": "destination",
+    "platform": "server"
+  },
   "keywords": [
-    "walker",
     "walkerOS",
+    "walkerOS-destination",
     "destination",
     "server",
     "google",
     "data-manager",
+    "datamanager",
     "google-ads",
     "dv360",
-    "ga4"
+    "ga4",
+    "analytics"
   ],
   "funding": [
     {

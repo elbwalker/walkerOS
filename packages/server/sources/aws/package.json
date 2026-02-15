@@ -15,7 +15,8 @@
     "build": "tsup --silent",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc && eslint \"**/*.ts*\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
@@ -26,7 +27,8 @@
     "@types/aws-lambda": "^8.10.0"
   },
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.159"
+    "@types/aws-lambda": "^8.10.159",
+    "@walkeros/collector": "1.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
@@ -37,14 +39,19 @@
   "bugs": {
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
+  "walkerOS": {
+    "type": "source",
+    "platform": "server"
+  },
   "keywords": [
-    "walker",
     "walkerOS",
+    "walkerOS-source",
     "source",
     "server",
     "aws",
     "lambda",
-    "api gateway"
+    "api gateway",
+    "analytics"
   ],
   "funding": [
     {

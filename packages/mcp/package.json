@@ -24,7 +24,8 @@
     "dev": "jest --watchAll --colors",
     "start": "node dist/index.js",
     "test": "jest",
-    "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
     "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage",
     "prepublishOnly": "npm run build",
     "update": "npx npm-check-updates -u && npm update"
@@ -50,7 +51,7 @@
     "node": ">=18.0.0"
   },
   "keywords": [
-    "walkeros",
+    "walkerOS",
     "mcp",
     "model-context-protocol",
     "analytics",

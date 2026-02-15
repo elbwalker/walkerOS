@@ -4,7 +4,7 @@ const config = {
   testTimeout: 30000,
   // Transform ESM packages: jsdom 27+ and its dependencies are pure ESM
   transformIgnorePatterns: [
-    'node_modules/(?!(@walkeros|chalk|jsdom|parse5|nwsapi|entities)/)',
+    'node_modules/(?!(@walkeros|chalk|jsdom|parse5|nwsapi|entities|msw|until-async|@bundled-es-modules|@mswjs|@open-draft)/)',
   ],
   testPathIgnorePatterns: [
     ...(baseConfig.testPathIgnorePatterns || []),

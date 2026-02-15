@@ -45,11 +45,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Test
+        run: npm run test
+
       - name: Lint
         run: npm run lint
 
-      - name: Test
-        run: npm run test
+      - name: Integration tests
+        run: npm run test:integration
 
       - name: Capture changeset info
         id: changesets

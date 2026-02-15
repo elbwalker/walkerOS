@@ -28,6 +28,7 @@ import {
 import type { BuildOptions } from '../../types/bundle.js';
 import { bundleCore } from './bundler.js';
 import { displayStats, createStatsSummary } from './stats.js';
+import { createApiClient } from '../../core/api-client.js';
 
 export interface BundleCommandOptions {
   config?: string;
@@ -373,4 +374,26 @@ EXPOSE 8080
 
   await fs.writeFile(destPath, dockerfile);
   logger.log(`Dockerfile: ${destPath}`);
+}
+
+/**
+ * Bundle a flow remotely using the walkerOS cloud service.
+ */
+export async function bundleRemote(options: {
+  content: Record<string, unknown>;
+}) {
+  const client = createApiClient();
+  const { data, error, response } = await client.POST('/api/bundle', {
+    body: { flow: options.content } as unknown as Record<string, never>,
+    parseAs: 'text',
+  });
+  if (error)
+    throw new Error(typeof error === 'string' ? error : 'Bundle failed');
+  const js = data as unknown as string;
+  const statsHeader = response.headers.get('X-Bundle-Stats');
+  return {
+    bundle: js,
+    size: js.length,
+    stats: statsHeader ? JSON.parse(statsHeader) : undefined,
+  };
 }

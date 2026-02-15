@@ -4,6 +4,17 @@ import {
   authenticatedFetch,
 } from '../../core/auth.js';
 
+// Isolate from real ~/.config/walkeros/config.json
+jest.mock('../../lib/config-file.js', () => ({
+  resolveToken: () => {
+    const token = process.env.WALKEROS_TOKEN;
+    if (!token) return null;
+    return { token, source: 'env' as const };
+  },
+  resolveAppUrl: () =>
+    process.env.WALKEROS_APP_URL || 'https://app.walkeros.io',
+}));
+
 describe('auth', () => {
   const originalEnv = process.env;
 

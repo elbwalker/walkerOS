@@ -74,7 +74,6 @@ export const BaseEnvSchema = z
  * - env: Environment dependencies
  * - id: Source identifier
  * - onError: Error handler
- * - disabled: Disable source
  * - primary: Primary source flag (only one can be primary)
  *
  * Generic note: settings, env, and mapping can have source-specific types
@@ -91,7 +90,6 @@ export const ConfigSchema = MappingConfigSchema.extend({
     'Source identifier (defaults to source key)',
   ).optional(),
   onError: ErrorHandlerSchema.optional(),
-  disabled: z.boolean().describe('Set to true to disable').optional(),
   primary: z
     .boolean()
     .describe('Mark as primary (only one can be primary)')

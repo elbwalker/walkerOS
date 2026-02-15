@@ -25,7 +25,8 @@
     "build": "tsup --silent",
     "clean": "rm -rf .turbo && rm -rf dist",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
@@ -47,13 +48,17 @@
   "bugs": {
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
+  "walkerOS": {
+    "type": "transformer"
+  },
   "keywords": [
-    "walker",
     "walkerOS",
+    "walkerOS-transformer",
     "transformer",
     "validator",
     "ajv",
-    "json-schema"
+    "json-schema",
+    "analytics"
   ],
   "funding": [
     {

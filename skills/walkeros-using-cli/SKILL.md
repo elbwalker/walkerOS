@@ -217,6 +217,20 @@ Exit codes:
   3 = Input error
 ```
 
+### Validate a specific entry
+
+Validate a destination, source, or transformer's settings against its package
+schema:
+
+```bash
+walkeros validate destinations.snowplow
+walkeros validate sources.browser
+walkeros validate transformers.validator
+```
+
+Uses dot-notation: `{section}.{key}`. Fetches the package's `walkerOS.json` from
+CDN and validates `config.settings` against the published schema.
+
 ### Run Command
 
 ```bash

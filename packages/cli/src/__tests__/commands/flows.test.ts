@@ -1,4 +1,5 @@
-import { apiRequest, requireProjectId } from '../../core/auth.js';
+import { createApiClient } from '../../core/api-client.js';
+import { requireProjectId } from '../../core/auth.js';
 import {
   listFlows,
   getFlow,
@@ -8,152 +9,192 @@ import {
   duplicateFlow,
 } from '../../commands/flows/index.js';
 
+jest.mock('../../core/api-client.js');
 jest.mock('../../core/auth.js', () => ({
-  apiRequest: jest.fn(),
+  ...jest.requireActual('../../core/auth.js'),
   requireProjectId: jest.fn().mockReturnValue('proj_default'),
 }));
 
-const mockApiRequest = jest.mocked(apiRequest);
+const mockGet = jest.fn();
+const mockPost = jest.fn();
+const mockPatch = jest.fn();
+const mockDelete = jest.fn();
+
+(createApiClient as jest.Mock).mockReturnValue({
+  GET: mockGet,
+  POST: mockPost,
+  PATCH: mockPatch,
+  DELETE: mockDelete,
+});
+
 const mockRequireProjectId = jest.mocked(requireProjectId);
 
 describe('flows', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('listFlows', () => {
-    it('should call GET /api/projects/{projectId}/flows', async () => {
-      mockApiRequest.mockResolvedValue({ flows: [], total: 0 });
+    it('calls GET /api/projects/{projectId}/flows', async () => {
+      mockGet.mockResolvedValue({ data: { flows: [], total: 0 } });
       await listFlows({ projectId: 'proj_1' });
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects/proj_1/flows');
+      expect(mockGet).toHaveBeenCalledWith('/api/projects/{projectId}/flows', {
+        params: {
+          path: { projectId: 'proj_1' },
+          query: {
+            sort: undefined,
+            order: undefined,
+            include_deleted: undefined,
+          },
+        },
+      });
     });
 
-    it('should fall back to requireProjectId()', async () => {
-      mockApiRequest.mockResolvedValue({ flows: [] });
+    it('falls back to requireProjectId()', async () => {
+      mockGet.mockResolvedValue({ data: { flows: [] } });
       await listFlows();
       expect(mockRequireProjectId).toHaveBeenCalled();
-      expect(mockApiRequest).toHaveBeenCalledWith(
-        '/api/projects/proj_default/flows',
-      );
     });
 
-    it('should pass query params', async () => {
-      mockApiRequest.mockResolvedValue({ flows: [] });
+    it('passes query params', async () => {
+      mockGet.mockResolvedValue({ data: { flows: [] } });
       await listFlows({
         projectId: 'proj_1',
         sort: 'name',
         order: 'asc',
         includeDeleted: true,
       });
-      expect(mockApiRequest).toHaveBeenCalledWith(
-        '/api/projects/proj_1/flows?sort=name&order=asc&include_deleted=true',
-      );
+      expect(mockGet).toHaveBeenCalledWith('/api/projects/{projectId}/flows', {
+        params: {
+          path: { projectId: 'proj_1' },
+          query: {
+            sort: 'name',
+            order: 'asc',
+            include_deleted: 'true',
+          },
+        },
+      });
     });
   });
 
   describe('getFlow', () => {
-    it('should call GET with flowId', async () => {
-      mockApiRequest.mockResolvedValue({ id: 'cfg_abc' });
+    it('calls GET with flowId', async () => {
+      mockGet.mockResolvedValue({ data: { id: 'cfg_abc' } });
       await getFlow({ flowId: 'cfg_abc', projectId: 'proj_1' });
-      expect(mockApiRequest).toHaveBeenCalledWith(
-        '/api/projects/proj_1/flows/cfg_abc',
-      );
-    });
-
-    it('should fall back to requireProjectId()', async () => {
-      mockApiRequest.mockResolvedValue({ id: 'cfg_abc' });
-      await getFlow({ flowId: 'cfg_abc' });
-      expect(mockApiRequest).toHaveBeenCalledWith(
-        '/api/projects/proj_default/flows/cfg_abc',
-      );
-    });
-  });
-
-  describe('createFlow', () => {
-    it('should POST with name and content', async () => {
-      const content = { version: 1 };
-      mockApiRequest.mockResolvedValue({ id: 'cfg_new' });
-      await createFlow({ name: 'My Flow', content, projectId: 'proj_1' });
-      expect(mockApiRequest).toHaveBeenCalledWith(
-        '/api/projects/proj_1/flows',
+      expect(mockGet).toHaveBeenCalledWith(
+        '/api/projects/{projectId}/flows/{flowId}',
         {
-          method: 'POST',
-          body: JSON.stringify({ name: 'My Flow', content }),
+          params: { path: { projectId: 'proj_1', flowId: 'cfg_abc' } },
+        },
+      );
+    });
+
+    it('falls back to requireProjectId()', async () => {
+      mockGet.mockResolvedValue({ data: { id: 'cfg_abc' } });
+      await getFlow({ flowId: 'cfg_abc' });
+      expect(mockGet).toHaveBeenCalledWith(
+        '/api/projects/{projectId}/flows/{flowId}',
+        {
+          params: {
+            path: { projectId: 'proj_default', flowId: 'cfg_abc' },
+          },
         },
       );
     });
   });
 
+  describe('createFlow', () => {
+    it('POSTs with name and content', async () => {
+      const content = { version: 1 };
+      mockPost.mockResolvedValue({ data: { id: 'cfg_new' } });
+      await createFlow({ name: 'My Flow', content, projectId: 'proj_1' });
+      expect(mockPost).toHaveBeenCalledWith('/api/projects/{projectId}/flows', {
+        params: { path: { projectId: 'proj_1' } },
+        body: { name: 'My Flow', content },
+      });
+    });
+  });
+
   describe('updateFlow', () => {
-    it('should PATCH with name and content', async () => {
+    it('PATCHes with name and content', async () => {
       const content = { version: 1, sources: [] };
-      mockApiRequest.mockResolvedValue({ id: 'cfg_abc' });
+      mockPatch.mockResolvedValue({ data: { id: 'cfg_abc' } });
       await updateFlow({
         flowId: 'cfg_abc',
         name: 'Updated',
         content,
         projectId: 'proj_1',
       });
-      expect(mockApiRequest).toHaveBeenCalledWith(
-        '/api/projects/proj_1/flows/cfg_abc',
+      expect(mockPatch).toHaveBeenCalledWith(
+        '/api/projects/{projectId}/flows/{flowId}',
         {
-          method: 'PATCH',
-          body: JSON.stringify({ name: 'Updated', content }),
+          params: {
+            path: { projectId: 'proj_1', flowId: 'cfg_abc' },
+          },
+          body: { name: 'Updated', content },
         },
       );
     });
 
-    it('should only include provided fields in body', async () => {
-      mockApiRequest.mockResolvedValue({ id: 'cfg_abc' });
+    it('only includes provided fields in body', async () => {
+      mockPatch.mockResolvedValue({ data: { id: 'cfg_abc' } });
       await updateFlow({
         flowId: 'cfg_abc',
         name: 'Updated',
         projectId: 'proj_1',
       });
-      expect(mockApiRequest).toHaveBeenCalledWith(
-        '/api/projects/proj_1/flows/cfg_abc',
+      expect(mockPatch).toHaveBeenCalledWith(
+        '/api/projects/{projectId}/flows/{flowId}',
         {
-          method: 'PATCH',
-          body: JSON.stringify({ name: 'Updated' }),
+          params: {
+            path: { projectId: 'proj_1', flowId: 'cfg_abc' },
+          },
+          body: { name: 'Updated' },
         },
       );
     });
   });
 
   describe('deleteFlow', () => {
-    it('should send DELETE', async () => {
-      mockApiRequest.mockResolvedValue({ success: true });
-      await deleteFlow({ flowId: 'cfg_abc', projectId: 'proj_1' });
-      expect(mockApiRequest).toHaveBeenCalledWith(
-        '/api/projects/proj_1/flows/cfg_abc',
-        { method: 'DELETE' },
+    it('sends DELETE and returns success', async () => {
+      mockDelete.mockResolvedValue({ data: undefined });
+      const result = await deleteFlow({
+        flowId: 'cfg_abc',
+        projectId: 'proj_1',
+      });
+      expect(mockDelete).toHaveBeenCalledWith(
+        '/api/projects/{projectId}/flows/{flowId}',
+        {
+          params: { path: { projectId: 'proj_1', flowId: 'cfg_abc' } },
+        },
       );
+      expect(result).toEqual({ success: true });
     });
   });
 
   describe('duplicateFlow', () => {
-    it('should POST to /duplicate with optional name', async () => {
-      mockApiRequest.mockResolvedValue({ id: 'cfg_copy' });
+    it('POSTs to /duplicate with optional name', async () => {
+      mockPost.mockResolvedValue({ data: { id: 'cfg_copy' } });
       await duplicateFlow({
         flowId: 'cfg_abc',
         name: 'My Copy',
         projectId: 'proj_1',
       });
-      expect(mockApiRequest).toHaveBeenCalledWith(
-        '/api/projects/proj_1/flows/cfg_abc/duplicate',
+      expect(mockPost).toHaveBeenCalledWith(
+        '/api/projects/{projectId}/flows/{flowId}/duplicate',
         {
-          method: 'POST',
-          body: JSON.stringify({ name: 'My Copy' }),
+          params: { path: { projectId: 'proj_1', flowId: 'cfg_abc' } },
+          body: { name: 'My Copy' },
         },
       );
     });
 
-    it('should POST without name when not provided', async () => {
-      mockApiRequest.mockResolvedValue({ id: 'cfg_copy' });
+    it('POSTs without name when not provided', async () => {
+      mockPost.mockResolvedValue({ data: { id: 'cfg_copy' } });
       await duplicateFlow({ flowId: 'cfg_abc', projectId: 'proj_1' });
-      expect(mockApiRequest).toHaveBeenCalledWith(
-        '/api/projects/proj_1/flows/cfg_abc/duplicate',
+      expect(mockPost).toHaveBeenCalledWith(
+        '/api/projects/{projectId}/flows/{flowId}/duplicate',
         {
-          method: 'POST',
-          body: JSON.stringify({}),
+          params: { path: { projectId: 'proj_1', flowId: 'cfg_abc' } },
+          body: { name: undefined },
         },
       );
     });

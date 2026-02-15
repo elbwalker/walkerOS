@@ -72,18 +72,31 @@ export interface Instance<T extends TypesGeneric = Types> {
 }
 
 export interface Config<T extends TypesGeneric = Types> {
+  /** Required consent states to push events; queues events when not granted. */
   consent?: WalkerOS.Consent;
+  /** Implementation-specific configuration passed to the init function. */
   settings?: InitSettings<T>;
+  /** Global data transformation applied to all events; result passed as context.data to push. */
   data?: WalkerOSMapping.Value | WalkerOSMapping.Values;
+  /** Runtime dependencies merged from code and config env; extensible per destination. */
   env?: Env<T>;
+  /** Destination identifier; auto-generated if not provided. */
   id?: string;
+  /** Whether the destination has been initialized; prevents re-initialization. */
   init?: boolean;
+  /** Whether to load external scripts (e.g., gtag.js); destination-specific behavior. */
   loadScript?: boolean;
+  /** Logger configuration (level, handler) to override the collector's defaults. */
   logger?: Logger.Config;
+  /** Entity-action rules to filter, rename, transform, and batch events for this destination. */
   mapping?: WalkerOSMapping.Rules<WalkerOSMapping.Rule<Mapping<T>>>;
+  /** Pre-processing rules applied to all events before mapping; modifies events in-place. */
   policy?: Policy;
+  /** Whether to queue events when consent is not granted; defaults to true. */
   queue?: boolean;
+  /** Defer destination initialization until these collector events fire (e.g., `['consent']`). */
   require?: string[];
+  /** Transformer chain to run after collector processing but before this destination. */
   before?: string | string[];
 }
 

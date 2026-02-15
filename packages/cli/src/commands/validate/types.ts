@@ -1,6 +1,6 @@
 // walkerOS/packages/cli/src/commands/validate/types.ts
 
-export type ValidationType = 'event' | 'flow' | 'mapping';
+export type ValidationType = 'event' | 'flow' | 'mapping' | 'entry';
 
 export interface ValidateCommandOptions {
   type: ValidationType;

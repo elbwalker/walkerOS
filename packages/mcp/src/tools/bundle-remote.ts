@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiRequest } from '@walkeros/cli';
+import { bundleRemote } from '@walkeros/cli';
 
 export function registerBundleRemoteTool(server: McpServer) {
   server.registerTool(
@@ -24,28 +24,16 @@ export function registerBundleRemoteTool(server: McpServer) {
     },
     async ({ content }) => {
       try {
-        const response = (await apiRequest('/api/bundle', {
-          method: 'POST',
-          body: JSON.stringify({ flow: content }),
-          responseFormat: 'raw',
-        })) as Response;
-
-        const js = await response.text();
-        const statsHeader = response.headers.get('X-Bundle-Stats');
-        const result: Record<string, unknown> = {
-          success: true,
-          bundle: js,
-          size: js.length,
-        };
-        if (statsHeader) {
-          try {
-            result.stats = JSON.parse(statsHeader);
-          } catch {}
-        }
+        const result = await bundleRemote({
+          content: content as Record<string, unknown>,
+        });
 
         return {
           content: [
-            { type: 'text' as const, text: JSON.stringify(result, null, 2) },
+            {
+              type: 'text' as const,
+              text: JSON.stringify({ success: true, ...result }, null, 2),
+            },
           ],
         };
       } catch (error) {

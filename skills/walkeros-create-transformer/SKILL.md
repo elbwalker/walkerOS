@@ -19,7 +19,7 @@ Before starting, read these skills:
   structure
 - [testing-strategy](../walkeros-testing-strategy/SKILL.md) - How to test
 - [writing-documentation](../walkeros-writing-documentation/SKILL.md) -
-  Documentation standards (for Phase 6)
+  Documentation standards (for Phase 7)
 
 ## Transformer Categories
 
@@ -35,9 +35,10 @@ Before starting, read these skills:
 1. Research     → Understand use case (validate/enrich/redact)
 2. Examples     → Create event before/after examples FIRST
 3. Scaffold     → Copy template, configure package.json
-4. Implement    → Build transformer with TDD
-5. Test         → Verify against example transformations
-6. Document     → Write README
+4. Convention   → Add walkerOS.json metadata and buildDev
+5. Implement    → Build transformer with TDD
+6. Test         → Verify against example transformations
+7. Document     → Write README
 ```
 
 ## Supporting Files
@@ -162,16 +163,53 @@ packages/transformers/[name]/
 
 ---
 
-## Phase 4: Implement
+## Phase 4: walkerOS.json Convention
+
+Every walkerOS package ships a `walkerOS.json` file for CDN-based schema
+discovery.
+
+### Add `walkerOS` field to package.json
+
+```json
+{
+  "walkerOS": {
+    "type": "transformer"
+  },
+  "keywords": ["walkerOS", "walkerOS-transformer", ...]
+}
+```
+
+### Use `buildDev()` in tsup.config.ts
+
+Replace `buildModules({ entry: ['src/dev.ts'] })` with `buildDev()`:
+
+```typescript
+import { buildDev } from '@walkeros/config/tsup';
+// In defineConfig array:
+buildDev(),
+```
+
+This auto-generates `dist/walkerOS.json` from your Zod schemas at build time.
+
+### Gate: Convention Met
+
+- [ ] `walkerOS` field in package.json with `type: "transformer"`
+- [ ] `buildDev()` in tsup.config.ts
+- [ ] Build generates `dist/walkerOS.json`
+- [ ] Keywords include `walkerOS` and `walkerOS-transformer`
+
+---
+
+## Phase 5: Implement
 
 **Now write code to transform examples as expected.**
 
-### 4.1 Define Types
+### 5.1 Define Types
 
 See [templates/validation/types.ts](templates/validation/types.ts) for the
 pattern. Define `Settings` and `Types` interfaces.
 
-### 4.2 Implement Transformer (Context Pattern)
+### 5.2 Implement Transformer (Context Pattern)
 
 Transformers use the **context pattern** - they receive a single `context`
 object containing `config`, `env`, `logger`, `id`, and `collector`.
@@ -188,7 +226,7 @@ complete implementation example.
 3. **Push receives pushContext**: The `push` function gets event + push context
 4. **Return values**: `event` (continue), `void` (passthrough), `false` (cancel)
 
-### 4.3 Export
+### 5.3 Export
 
 `src/index.ts`:
 
@@ -204,7 +242,7 @@ export type { Settings, Types } from './types';
 
 ---
 
-## Phase 5: Test Against Examples
+## Phase 6: Test Against Examples
 
 **Verify implementation produces expected outputs.**
 
@@ -223,7 +261,7 @@ a complete test suite showing:
 
 ---
 
-## Phase 6: Document
+## Phase 7: Document
 
 Follow the [writing-documentation](../walkeros-writing-documentation/SKILL.md)
 skill for:
@@ -251,6 +289,8 @@ requirements (build, test, lint, no `any`):
 - [ ] Examples include before/after event pairs
 - [ ] Return values handle all cases (event, void, false)
 - [ ] Tests use examples for assertions (not hardcoded values)
+- [ ] `walkerOS.json` generated at build time
+- [ ] `walkerOS` field in package.json
 
 ---
 

@@ -2,6 +2,7 @@ import {
   defineConfig,
   buildModules,
   buildExamples,
+  buildDev,
 } from '@walkeros/config/tsup';
 
 export default defineConfig([
@@ -9,8 +10,5 @@ export default defineConfig([
     terserOptions: { mangle: false }, // Don't mangle identifiers
   }),
   buildExamples(),
-  buildModules({
-    entry: ['src/dev.ts'],
-    outDir: 'dist',
-  }),
+  buildDev(),
 ]);
