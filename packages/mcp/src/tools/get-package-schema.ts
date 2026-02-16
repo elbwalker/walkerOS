@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetchPackageSchema } from '@walkeros/core';
+import { PackageSchemaOutputShape } from '../schemas/output.js';
 
 export function registerGetPackageSchemaTool(server: McpServer) {
   server.registerTool(
@@ -24,6 +25,7 @@ export function registerGetPackageSchemaTool(server: McpServer) {
           .optional()
           .describe('Package version (default: latest)'),
       },
+      outputSchema: PackageSchemaOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,

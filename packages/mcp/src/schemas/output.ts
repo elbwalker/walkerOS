@@ -151,6 +151,21 @@ export const DeleteOutputShape = {
   success: z.literal(true).describe('Deletion succeeded'),
 };
 
+// Package Schema output shape
+export const PackageSchemaOutputShape = {
+  package: z.string().describe('Package name'),
+  version: z.string().describe('Package version'),
+  type: z.string().describe('Package type (destination, source, transformer)'),
+  platform: z.string().describe('Target platform (web, server)'),
+  schemas: z
+    .record(z.string(), z.unknown())
+    .describe('JSON Schemas for settings and mapping'),
+  examples: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe('Configuration examples'),
+};
+
 // Bundle Remote output shape
 export const BundleRemoteOutputShape = {
   success: z.boolean().describe('Whether bundling succeeded'),

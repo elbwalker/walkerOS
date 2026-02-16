@@ -1,4 +1,5 @@
 import { registerGetPackageSchemaTool } from '../../tools/get-package-schema.js';
+import { PackageSchemaOutputShape } from '../../schemas/output.js';
 import { fetchPackageSchema } from '@walkeros/core';
 
 jest.mock('@walkeros/core', () => ({
@@ -30,8 +31,10 @@ describe('get-package-schema tool', () => {
     registerGetPackageSchemaTool(mockServer as any);
   });
 
-  it('should register with correct name', () => {
-    expect(mockServer.getTool('get-package-schema')).toBeDefined();
+  it('should register with correct name and outputSchema', () => {
+    const tool = mockServer.getTool('get-package-schema');
+    expect(tool).toBeDefined();
+    expect((tool.config as any).outputSchema).toBe(PackageSchemaOutputShape);
   });
 
   it('should fetch package.json then walkerOS.json from jsdelivr', async () => {

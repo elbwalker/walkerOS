@@ -1,4 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { apiResult, apiError } from './helpers.js';
+import { WhoamiOutputShape } from '../schemas/output.js';
 
 export function registerAuthTools(server: McpServer) {
   server.registerTool(
@@ -10,6 +12,7 @@ export function registerAuthTools(server: McpServer) {
         'Returns user ID, email, and project ID (if token is project-scoped). ' +
         'Use this to confirm your token works and discover your project ID.',
       inputSchema: {},
+      outputSchema: WhoamiOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -20,24 +23,9 @@ export function registerAuthTools(server: McpServer) {
     async () => {
       try {
         const { whoami } = await import('@walkeros/cli');
-        const result = await whoami();
-        return {
-          content: [
-            { type: 'text' as const, text: JSON.stringify(result, null, 2) },
-          ],
-        };
+        return apiResult(await whoami());
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({
-                error: error instanceof Error ? error.message : 'Unknown error',
-              }),
-            },
-          ],
-          isError: true,
-        };
+        return apiError(error);
       }
     },
   );

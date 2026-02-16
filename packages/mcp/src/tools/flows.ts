@@ -1,25 +1,11 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-
-function apiResult(result: unknown) {
-  return {
-    content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-  };
-}
-
-function apiError(error: unknown) {
-  return {
-    content: [
-      {
-        type: 'text' as const,
-        text: JSON.stringify({
-          error: error instanceof Error ? error.message : 'Unknown error',
-        }),
-      },
-    ],
-    isError: true as const,
-  };
-}
+import { apiResult, apiError } from './helpers.js';
+import {
+  ListFlowsOutputShape,
+  FlowOutputShape,
+  DeleteOutputShape,
+} from '../schemas/output.js';
 
 export function registerFlowTools(server: McpServer) {
   server.registerTool(
@@ -45,6 +31,7 @@ export function registerFlowTools(server: McpServer) {
           .optional()
           .describe('Include soft-deleted flows (default: false)'),
       },
+      outputSchema: ListFlowsOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -77,6 +64,7 @@ export function registerFlowTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: FlowOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -109,6 +97,7 @@ export function registerFlowTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: FlowOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -130,8 +119,7 @@ export function registerFlowTools(server: McpServer) {
     'update-flow',
     {
       title: 'Update Flow',
-      description:
-        'Update a flow configuration name and/or content. Creates a version snapshot automatically.',
+      description: 'Update a flow configuration name and/or content.',
       inputSchema: {
         flowId: z.string().describe('Flow ID (cfg_...)'),
         name: z.string().min(1).max(255).optional().describe('New flow name'),
@@ -144,6 +132,7 @@ export function registerFlowTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: FlowOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -167,7 +156,10 @@ export function registerFlowTools(server: McpServer) {
     'delete-flow',
     {
       title: 'Delete Flow',
-      description: 'Soft-delete a flow configuration. Can be restored later.',
+      description:
+        'Soft-delete a flow configuration. ' +
+        'WARNING: This removes the flow configuration. Can be restored later. ' +
+        'Requires flowId.',
       inputSchema: {
         flowId: z.string().describe('Flow ID (cfg_...)'),
         projectId: z
@@ -175,6 +167,7 @@ export function registerFlowTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: DeleteOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -208,6 +201,7 @@ export function registerFlowTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: FlowOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,

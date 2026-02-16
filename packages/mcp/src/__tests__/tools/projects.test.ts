@@ -1,3 +1,9 @@
+import {
+  ListProjectsOutputShape,
+  ProjectOutputShape,
+  DeleteOutputShape,
+} from '../../schemas/output.js';
+
 const mockListProjects = jest.fn();
 const mockGetProject = jest.fn();
 const mockCreateProject = jest.fn();
@@ -43,6 +49,17 @@ describe('project tools', () => {
     expect(server.getTool('delete-project')).toBeDefined();
   });
 
+  it('has outputSchema on all tools', () => {
+    const keys = (name: string) =>
+      Object.keys((server.getTool(name).config as any).outputSchema ?? {});
+
+    expect(keys('list-projects')).toEqual(Object.keys(ListProjectsOutputShape));
+    expect(keys('get-project')).toEqual(Object.keys(ProjectOutputShape));
+    expect(keys('create-project')).toEqual(Object.keys(ProjectOutputShape));
+    expect(keys('update-project')).toEqual(Object.keys(ProjectOutputShape));
+    expect(keys('delete-project')).toEqual(Object.keys(DeleteOutputShape));
+  });
+
   describe('list-projects', () => {
     it('should call listProjects()', async () => {
       const mockResponse = { projects: [], total: 0 };
@@ -50,6 +67,7 @@ describe('project tools', () => {
       const result = await server.getTool('list-projects').handler({});
       expect(mockListProjects).toHaveBeenCalled();
       expect(result.isError).toBeUndefined();
+      expect(result.structuredContent).toEqual(mockResponse);
     });
   });
 

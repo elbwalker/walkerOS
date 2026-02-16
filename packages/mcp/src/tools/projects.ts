@@ -1,25 +1,11 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-
-function apiResult(result: unknown) {
-  return {
-    content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-  };
-}
-
-function apiError(error: unknown) {
-  return {
-    content: [
-      {
-        type: 'text' as const,
-        text: JSON.stringify({
-          error: error instanceof Error ? error.message : 'Unknown error',
-        }),
-      },
-    ],
-    isError: true as const,
-  };
-}
+import { apiResult, apiError } from './helpers.js';
+import {
+  ListProjectsOutputShape,
+  ProjectOutputShape,
+  DeleteOutputShape,
+} from '../schemas/output.js';
 
 export function registerProjectTools(server: McpServer) {
   server.registerTool(
@@ -29,6 +15,7 @@ export function registerProjectTools(server: McpServer) {
       description:
         'List all projects you have access to. Returns project IDs, names, and your role.',
       inputSchema: {},
+      outputSchema: ListProjectsOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -58,6 +45,7 @@ export function registerProjectTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: ProjectOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -83,6 +71,7 @@ export function registerProjectTools(server: McpServer) {
       inputSchema: {
         name: z.string().min(1).max(255).describe('Project name'),
       },
+      outputSchema: ProjectOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -113,6 +102,7 @@ export function registerProjectTools(server: McpServer) {
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
         name: z.string().min(1).max(255).describe('New project name'),
       },
+      outputSchema: ProjectOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -135,13 +125,16 @@ export function registerProjectTools(server: McpServer) {
     {
       title: 'Delete Project',
       description:
-        'Soft-delete a project and all its flows. Uses WALKEROS_PROJECT_ID if projectId is omitted.',
+        'Soft-delete a project and all its flows. ' +
+        'WARNING: This deletes the project and ALL associated flows and data. ' +
+        'Uses WALKEROS_PROJECT_ID if projectId is omitted.',
       inputSchema: {
         projectId: z
           .string()
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: DeleteOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
