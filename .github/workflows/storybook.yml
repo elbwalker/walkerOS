@@ -1,0 +1,45 @@
+name: Deploy Storybook
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/demos/storybook/**'
+      - 'apps/storybook-addon/**'
+      - '.github/workflows/storybook.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: corepack enable
+      - run: npm ci
+      - run: npm run build
+
+      - name: Build Storybook
+        working-directory: apps/demos/storybook
+        run: npm run build-storybook
+
+      - name: Deploy to Bunny
+        working-directory: apps/demos/storybook
+        run: node scripts/deploy-bunny.mjs
+        env:
+          BUNNY_STORAGE_ZONE: ${{ secrets.BUNNY_STORYBOOK_STORAGE_ZONE }}
+          BUNNY_STORAGE_PASSWORD: ${{ secrets.BUNNY_STORYBOOK_STORAGE_PASSWORD }}
+          BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+          BUNNY_PULLZONE_URL: ${{ secrets.BUNNY_STORYBOOK_PULLZONE_URL }}

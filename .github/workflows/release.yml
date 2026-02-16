@@ -120,7 +120,12 @@ jobs:
         run: npm install --package-lock-only
 
       - name: Publish to npm
-        run: npx changeset publish
+        run: |
+          if [ "${{ inputs.release_type }}" = "pre-release (next)" ]; then
+            npx changeset publish --tag next
+          else
+            npx changeset publish
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -160,6 +165,20 @@ jobs:
         run: |
           CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
           echo "cli=$CLI_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify CLI published to npm
+        run: |
+          CLI_VERSION=${{ steps.versions.outputs.cli }}
+          for i in 1 2 3 4 5; do
+            if npm view "@walkeros/cli@$CLI_VERSION" version 2>/dev/null; then
+              echo "Verified: @walkeros/cli@$CLI_VERSION exists on npm"
+              exit 0
+            fi
+            echo "Attempt $i: waiting for npm propagation..."
+            sleep 10
+          done
+          echo "ERROR: @walkeros/cli@$CLI_VERSION not found on npm after publish"
+          exit 1
 
       - name: Check if Flow image exists
         id: check-flow
