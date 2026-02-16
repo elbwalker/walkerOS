@@ -17,7 +17,7 @@
     }
   },
   "bin": {
-    "walkeros": "./dist/index.js"
+    "walkeros": "./dist/cli.js"
   },
   "files": [
     "dist/**",

@@ -13,11 +13,11 @@ import fs from 'fs-extra';
 // Resolve paths relative to the cli package root (two levels up from __tests__)
 // so the test works regardless of Jest's cwd.
 const projectRoot = resolve(__dirname, '..', '..');
-const cliPath = join(projectRoot, 'dist/index.js');
+const cliPath = join(projectRoot, 'dist/cli.js');
 
 // Skip when dist/ doesn't exist (turbo runs test without build).
 // These tests run via `npm run test:integration` which builds first.
-// If you add a new test file that spawns dist/index.js, add its pattern
+// If you add a new test file that spawns dist/cli.js, add its pattern
 // to the test:integration script in package.json.
 const describeIfBuilt = existsSync(cliPath) ? describe : describe.skip;
 
@@ -141,7 +141,7 @@ function runCLI(
   timeoutMs = 120000,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    const child = spawn('node', [join(projectRoot, 'dist/index.js'), ...args], {
+    const child = spawn('node', [join(projectRoot, 'dist/cli.js'), ...args], {
       cwd: projectRoot,
       env: { ...process.env, FORCE_COLOR: '0' },
     });

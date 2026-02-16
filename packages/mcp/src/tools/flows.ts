@@ -1,4 +1,12 @@
 import { z } from 'zod';
+import {
+  listFlows,
+  getFlow,
+  createFlow,
+  updateFlow,
+  deleteFlow,
+  duplicateFlow,
+} from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { apiResult, apiError } from './helpers.js';
 import {
@@ -41,7 +49,6 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ projectId, sort, order, includeDeleted }) => {
       try {
-        const { listFlows } = await import('@walkeros/cli');
         return apiResult(
           await listFlows({ projectId, sort, order, includeDeleted }),
         );
@@ -74,7 +81,6 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, projectId }) => {
       try {
-        const { getFlow } = await import('@walkeros/cli');
         return apiResult(await getFlow({ flowId, projectId }));
       } catch (error) {
         return apiError(error);
@@ -107,7 +113,6 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ name, content, projectId }) => {
       try {
-        const { createFlow } = await import('@walkeros/cli');
         return apiResult(await createFlow({ name, content, projectId }));
       } catch (error) {
         return apiError(error);
@@ -142,7 +147,6 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, name, content, projectId }) => {
       try {
-        const { updateFlow } = await import('@walkeros/cli');
         return apiResult(
           await updateFlow({ flowId, name, content, projectId }),
         );
@@ -177,7 +181,6 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, projectId }) => {
       try {
-        const { deleteFlow } = await import('@walkeros/cli');
         return apiResult(await deleteFlow({ flowId, projectId }));
       } catch (error) {
         return apiError(error);
@@ -211,7 +214,6 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, name, projectId }) => {
       try {
-        const { duplicateFlow } = await import('@walkeros/cli');
         return apiResult(await duplicateFlow({ flowId, name, projectId }));
       } catch (error) {
         return apiError(error);

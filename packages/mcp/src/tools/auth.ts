@@ -1,3 +1,4 @@
+import { whoami } from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { apiResult, apiError } from './helpers.js';
 import { WhoamiOutputShape } from '../schemas/output.js';
@@ -22,7 +23,6 @@ export function registerAuthTools(server: McpServer) {
     },
     async () => {
       try {
-        const { whoami } = await import('@walkeros/cli');
         return apiResult(await whoami());
       } catch (error) {
         return apiError(error);

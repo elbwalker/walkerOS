@@ -14,12 +14,14 @@ jest.mock('@walkeros/cli/dev', () => ({
 }));
 
 // Mock @walkeros/cli (dynamic import target)
-const mockBundle = jest.fn();
-const mockBundleRemote = jest.fn();
 jest.mock('@walkeros/cli', () => ({
-  bundle: mockBundle,
-  bundleRemote: mockBundleRemote,
+  bundle: jest.fn(),
+  bundleRemote: jest.fn(),
 }));
+
+import { bundle, bundleRemote } from '@walkeros/cli';
+const mockBundle = jest.mocked(bundle);
+const mockBundleRemote = jest.mocked(bundleRemote);
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};

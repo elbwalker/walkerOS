@@ -1,4 +1,11 @@
 import { z } from 'zod';
+import {
+  listProjects,
+  getProject,
+  createProject,
+  updateProject,
+  deleteProject,
+} from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { apiResult, apiError } from './helpers.js';
 import {
@@ -25,7 +32,6 @@ export function registerProjectTools(server: McpServer) {
     },
     async () => {
       try {
-        const { listProjects } = await import('@walkeros/cli');
         return apiResult(await listProjects());
       } catch (error) {
         return apiError(error);
@@ -55,7 +61,6 @@ export function registerProjectTools(server: McpServer) {
     },
     async ({ projectId }) => {
       try {
-        const { getProject } = await import('@walkeros/cli');
         return apiResult(await getProject({ projectId }));
       } catch (error) {
         return apiError(error);
@@ -81,7 +86,6 @@ export function registerProjectTools(server: McpServer) {
     },
     async ({ name }) => {
       try {
-        const { createProject } = await import('@walkeros/cli');
         return apiResult(await createProject({ name }));
       } catch (error) {
         return apiError(error);
@@ -112,7 +116,6 @@ export function registerProjectTools(server: McpServer) {
     },
     async ({ projectId, name }) => {
       try {
-        const { updateProject } = await import('@walkeros/cli');
         return apiResult(await updateProject({ projectId, name }));
       } catch (error) {
         return apiError(error);
@@ -144,7 +147,6 @@ export function registerProjectTools(server: McpServer) {
     },
     async ({ projectId }) => {
       try {
-        const { deleteProject } = await import('@walkeros/cli');
         return apiResult(await deleteProject({ projectId }));
       } catch (error) {
         return apiError(error);

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { bundle, bundleRemote } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { BundleOutputShape } from '../schemas/output.js';
@@ -40,7 +41,6 @@ export function registerBundleTool(server: McpServer) {
         if (remote) {
           if (!content)
             throw new Error('content is required when remote: true');
-          const { bundleRemote } = await import('@walkeros/cli');
           const result = await bundleRemote({
             content: content as Record<string, unknown>,
           });
@@ -48,8 +48,6 @@ export function registerBundleTool(server: McpServer) {
         }
 
         // Local bundle path
-        const { bundle } = await import('@walkeros/cli');
-
         const result = await bundle(configPath, {
           flowName: flow,
           stats: stats ?? true,
