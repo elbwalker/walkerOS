@@ -82,9 +82,9 @@ const sidebars: SidebarsConfig = {
             id: 'sources/web/cmps/index',
           },
           items: [
-            'sources/web/cmps/cookiefirst',
-            'sources/web/cmps/cookiepro',
-            'sources/web/cmps/usercentrics',
+            'sources/web/cmps/cookiefirst/index',
+            'sources/web/cmps/cookiepro/index',
+            'sources/web/cmps/usercentrics/index',
           ],
         },
         'sources/server/express',

@@ -5,21 +5,89 @@ description: Automate consent handling with walkerOS CMP source packages
 
 # CMP sources
 
+<FlowMap
+  sources={{
+    cmp: { icon: 'mdi:shield-check', label: 'Source', text: 'CMP', highlight: true },
+    others: { icon: 'mdi:dots-horizontal', label: 'Source', text: 'Others', highlight: false },
+  }}
+  collector={{ highlight: false }}
+  destinations={{ default: { highlight: false } }}
+/>
+
 walkerOS provides ready-made source packages for popular Consent Management
 Platforms. Each source listens for CMP events and automatically calls
 `elb('walker consent', state)` — no manual event listener code needed.
 
 | CMP | Package |
 | --- | ------- |
-| [CookieFirst](/docs/sources/web/cmps/cookiefirst) | `@walkeros/web-source-cmp-cookiefirst` |
-| [CookiePro / OneTrust](/docs/sources/web/cmps/cookiepro) | `@walkeros/web-source-cmp-cookiepro` |
-| [Usercentrics](/docs/sources/web/cmps/usercentrics) | `@walkeros/web-source-cmp-usercentrics` |
+| [CookieFirst](/docs/sources/web/cmps/cookiefirst/) | `@walkeros/web-source-cmp-cookiefirst` |
+| [CookiePro / OneTrust](/docs/sources/web/cmps/cookiepro/) | `@walkeros/web-source-cmp-cookiepro` |
+| [Usercentrics](/docs/sources/web/cmps/usercentrics/) | `@walkeros/web-source-cmp-usercentrics` |
 
-## How it works
+## Conditional activation with `require`
 
-Typically, a Consent Management Platform (CMP) handles user consent. This is an
-asynchronous process: the CMP has to load, the user makes a choice, and the
-consent state is updated. CMP sources handle this automatically by:
+Some sources and destinations shouldn't initialize right away — they may depend
+on consent status being resolved first, or need information provided by other
+sources (like session IDs). The `require` option solves this by deferring
+initialization until specific collector events have fired.
+
+Add `require` to any source or destination `config` to hold it as **pending**
+until the listed events occur:
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "consent": {
+      "package": "@walkeros/web-source-cmp-cookiefirst"
+    },
+    "session": {
+      "package": "@walkeros/web-source-session",
+      "config": { "require": ["consent"] }
+    },
+    "dataLayer": {
+      "package": "@walkeros/web-source-dataLayer",
+      "config": { "require": ["consent"] }
+    }
+  },
+  "destinations": {
+    "ga4": {
+      "package": "@walkeros/web-destination-gtag-ga4",
+      "config": {
+        "require": ["consent"],
+        "consent": { "marketing": true }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+In this example the CMP source initializes immediately and fires
+`elb('walker consent', state)` once the user makes a choice. That `consent`
+event unblocks the session source, the dataLayer source, and the GA4
+destination — all at once.
+
+### How `require` works
+
+1. Sources and destinations with `require` are held as **pending** during
+   initialization
+2. Each time a collector event fires (e.g., `consent`, `session`, `user`), the
+   collector checks all pending items
+3. When all listed conditions are met, the source or destination initializes
+4. Destinations receive all previously queued events on activation — no data is
+   lost
+
+### Key points
+
+- **CMP sources must not have `require`** — they need to initialize immediately
+  to detect consent
+- **Accepted values**: any collector event type — `"consent"`, `"session"`,
+  `"user"`, `"run"`, `"config"`, `"globals"`, etc.
+- **AND logic**: `require: ["consent", "session"]` waits for **both** events
+- **Cascading**: a CMP source fires `consent` → session source activates and
+  fires `session` → a dataLayer source waiting for `["session"]` activates next
+
+## How CMP sources work
 
 1. Detecting if the CMP is already loaded and reading existing consent
 2. Listening for CMP-specific events on consent changes

@@ -520,7 +520,7 @@ Follow this structure (sentence case headings, imports in code examples):
 
 [CMP Name] consent management source for walkerOS.
 
-[Source Code](github-link) | [NPM](npm-link) | [Documentation](docs-link)
+Source Code | NPM | Documentation
 
 ## Installation
 
