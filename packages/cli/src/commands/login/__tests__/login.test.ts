@@ -71,6 +71,8 @@ describe('login (device code flow)', () => {
           deviceCode: 'a'.repeat(64),
           userCode: 'BCDF-GHJK',
           verificationUri: 'https://app.test/auth/device',
+          verificationUriComplete:
+            'https://app.test/auth/device?user_code=BCDF-GHJK',
           expiresIn: 900,
           interval: 0,
         });
@@ -112,6 +114,8 @@ describe('login (device code flow)', () => {
           deviceCode: 'a'.repeat(64),
           userCode: 'BCDF-GHJK',
           verificationUri: 'https://app.test/auth/device',
+          verificationUriComplete:
+            'https://app.test/auth/device?user_code=BCDF-GHJK',
           expiresIn: 0,
           interval: 0,
         });
@@ -142,6 +146,8 @@ describe('login (device code flow)', () => {
           deviceCode: 'a'.repeat(64),
           userCode: 'BCDF-GHJK',
           verificationUri: 'https://app.test/auth/device',
+          verificationUriComplete:
+            'https://app.test/auth/device?user_code=BCDF-GHJK',
           expiresIn: 900,
           interval: 0,
         });
@@ -178,6 +184,8 @@ describe('login (device code flow)', () => {
           deviceCode: 'a'.repeat(64),
           userCode: 'BCDF-GHJK',
           verificationUri: 'https://app.test/auth/device',
+          verificationUriComplete:
+            'https://app.test/auth/device?user_code=BCDF-GHJK',
           expiresIn: 900,
           interval: 0,
         });
@@ -206,5 +214,73 @@ describe('login (device code flow)', () => {
     });
     expect(result.success).toBe(false);
     expect(result.error).toContain('Failed to request device code');
+  });
+
+  it('opens verificationUriComplete in browser when available', async () => {
+    let openedUrl = '';
+    const captureOpen = async (url: string) => {
+      openedUrl = url;
+    };
+
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/code')) {
+        return fakeResponse({
+          deviceCode: 'a'.repeat(64),
+          userCode: 'BCDF-GHJK',
+          verificationUri: 'https://app.test/auth/device',
+          verificationUriComplete:
+            'https://app.test/auth/device?user_code=BCDF-GHJK',
+          expiresIn: 900,
+          interval: 0,
+        });
+      }
+
+      return fakeResponse({
+        token: 'sk-walkeros-' + 'd'.repeat(64),
+        email: 'url@example.com',
+        userId: 'user_789',
+      });
+    });
+
+    await login({
+      openUrl: captureOpen,
+      fetch: mockFetch,
+      maxPollAttempts: 10,
+    });
+
+    expect(openedUrl).toBe('https://app.test/auth/device?user_code=BCDF-GHJK');
+  });
+
+  it('falls back to verificationUri when verificationUriComplete is missing', async () => {
+    let openedUrl = '';
+    const captureOpen = async (url: string) => {
+      openedUrl = url;
+    };
+
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/code')) {
+        return fakeResponse({
+          deviceCode: 'a'.repeat(64),
+          userCode: 'BCDF-GHJK',
+          verificationUri: 'https://app.test/auth/device',
+          expiresIn: 900,
+          interval: 0,
+        });
+      }
+
+      return fakeResponse({
+        token: 'sk-walkeros-' + 'e'.repeat(64),
+        email: 'fallback@example.com',
+        userId: 'user_101',
+      });
+    });
+
+    await login({
+      openUrl: captureOpen,
+      fetch: mockFetch,
+      maxPollAttempts: 10,
+    });
+
+    expect(openedUrl).toBe('https://app.test/auth/device');
   });
 });
