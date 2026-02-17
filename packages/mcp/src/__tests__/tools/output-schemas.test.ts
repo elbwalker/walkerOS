@@ -68,10 +68,43 @@ describe('output schemas', () => {
       expect(result.success).toBe(true);
     });
 
-    it('rejects invalid type enum', () => {
+    it('accepts dot-notation destination type', () => {
       const result = parseShape(ValidateOutputShape, {
         valid: true,
-        type: 'invalid',
+        type: 'destinations.snowplow',
+        errors: [],
+        warnings: [],
+        details: {},
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts dot-notation source type', () => {
+      const result = parseShape(ValidateOutputShape, {
+        valid: true,
+        type: 'sources.datalayer',
+        errors: [],
+        warnings: [],
+        details: {},
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts dot-notation transformer type', () => {
+      const result = parseShape(ValidateOutputShape, {
+        valid: true,
+        type: 'transformers.router',
+        errors: [],
+        warnings: [],
+        details: {},
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects invalid type', () => {
+      const result = parseShape(ValidateOutputShape, {
+        valid: true,
+        type: 'invalid.foo.bar',
         errors: [],
         warnings: [],
         details: {},

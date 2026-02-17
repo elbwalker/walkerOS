@@ -13,7 +13,12 @@ export const ErrorOutputShape = {
 // CLI tool output shapes
 export const ValidateOutputShape = {
   valid: z.boolean().describe('Whether validation passed'),
-  type: z.enum(['event', 'flow', 'mapping']).describe('What was validated'),
+  type: z
+    .union([
+      z.enum(['event', 'flow', 'mapping']),
+      z.string().regex(/^(destinations|sources|transformers)\.\w+$/),
+    ])
+    .describe('What was validated'),
   errors: z
     .array(
       z.object({
