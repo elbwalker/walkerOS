@@ -9,6 +9,7 @@ import { registerValidateTool } from './tools/validate.js';
 import { registerAuthTools } from './tools/auth.js';
 import { registerProjectTools } from './tools/projects.js';
 import { registerFlowTools } from './tools/flows.js';
+import { registerDeployTools } from './tools/deploy.js';
 // CDN tools
 import { registerGetPackageSchemaTool } from './tools/get-package-schema.js';
 // Resources
@@ -32,6 +33,7 @@ registerValidateTool(server);
 registerAuthTools(server);
 registerProjectTools(server);
 registerFlowTools(server);
+registerDeployTools(server);
 
 // CDN tools
 registerGetPackageSchemaTool(server);

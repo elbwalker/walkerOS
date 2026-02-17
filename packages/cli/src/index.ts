@@ -23,6 +23,10 @@ export {
   deleteFlowCommand,
   duplicateFlowCommand,
 } from './commands/flows/index.js';
+export {
+  deployCommand,
+  getDeploymentCommand,
+} from './commands/deploy/index.js';
 
 // === Programmatic API ===
 // High-level functions for library usage
@@ -54,7 +58,9 @@ export {
   deleteFlow,
   duplicateFlow,
 } from './commands/flows/index.js';
+export { deploy, getDeployment } from './commands/deploy/index.js';
 export type { ListFlowsOptions } from './commands/flows/index.js';
+export type { DeployOptions } from './commands/deploy/index.js';
 
 // === Types ===
 // Export types for programmatic usage

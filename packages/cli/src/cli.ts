@@ -25,6 +25,10 @@ import {
   deleteFlowCommand,
   duplicateFlowCommand,
 } from './commands/flows/index.js';
+import {
+  deployCommand,
+  getDeploymentCommand,
+} from './commands/deploy/index.js';
 
 const program = new Command();
 
@@ -342,6 +346,36 @@ flowsCmd
   .option('-s, --silent', 'suppress output')
   .action(async (flowId, options) => {
     await duplicateFlowCommand(flowId, options);
+  });
+
+// Deploy command group
+const deployCmd = program
+  .command('deploy')
+  .description('Deploy flows to walkerOS cloud');
+
+deployCmd
+  .command('start <flowId>')
+  .description('Deploy a flow (auto-detects web or server)')
+  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
+  .option('--no-wait', 'do not wait for deployment to complete')
+  .option('-o, --output <path>', 'output file path')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
+  .action(async (flowId, options) => {
+    await deployCommand(flowId, options);
+  });
+
+deployCmd
+  .command('status <flowId>')
+  .description('Get the latest deployment status for a flow')
+  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
+  .option('-o, --output <path>', 'output file path')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
+  .action(async (flowId, options) => {
+    await getDeploymentCommand(flowId, options);
   });
 
 // Run command with subcommands
