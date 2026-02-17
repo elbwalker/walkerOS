@@ -32,6 +32,30 @@ export function getTmpPath(tmpDir?: string, ...segments: string[]): string {
 }
 
 /**
+ * Create a temp path resolver with the root directory baked in.
+ *
+ * Use this at entry points to capture the temp root once, then pass
+ * the resolver to downstream functions. This prevents the class of bugs
+ * where callers forget to pass tmpDir.
+ *
+ * @param tmpDir - Custom temp directory (optional, defaults to '.tmp')
+ * @returns A function that resolves paths within the temp directory
+ *
+ * @example
+ * ```typescript
+ * const tmp = createTmpResolver(buildOptions.tempDir);
+ * const cacheDir = tmp('cache', 'packages');  // root is baked in
+ * ```
+ */
+export type TmpResolver = (...segments: string[]) => string;
+
+export function createTmpResolver(tmpDir?: string): TmpResolver {
+  const root = tmpDir || DEFAULT_TMP_ROOT;
+  const absoluteRoot = path.isAbsolute(root) ? root : path.resolve(root);
+  return (...segments: string[]) => path.join(absoluteRoot, ...segments);
+}
+
+/**
  * Get the default temp root directory.
  */
 export function getDefaultTmpRoot(): string {

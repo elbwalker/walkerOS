@@ -1,7 +1,11 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { loadJsonConfig, substituteEnvVariables } from '../../config/index.js';
-import { getTmpPath, getDefaultTmpRoot } from '../../core/tmp.js';
+import {
+  getTmpPath,
+  getDefaultTmpRoot,
+  createTmpResolver,
+} from '../../core/tmp.js';
 import { getId } from '@walkeros/core';
 
 describe('Config utilities', () => {
@@ -107,6 +111,29 @@ describe('Config utilities', () => {
 
     it('should return default tmp root from getDefaultTmpRoot', () => {
       expect(getDefaultTmpRoot()).toBe('.tmp');
+    });
+  });
+
+  describe('createTmpResolver', () => {
+    it('should return a function that resolves paths with default root', () => {
+      const tmp = createTmpResolver();
+      expect(tmp()).toBe(path.resolve('.tmp'));
+      expect(tmp('cache', 'builds')).toBe(
+        path.resolve('.tmp', 'cache', 'builds'),
+      );
+    });
+
+    it('should bake in a custom root directory', () => {
+      const tmp = createTmpResolver('/custom/root');
+      expect(tmp()).toBe('/custom/root');
+      expect(tmp('cache')).toBe('/custom/root/cache');
+      expect(tmp('cache', 'packages')).toBe('/custom/root/cache/packages');
+    });
+
+    it('should resolve relative custom root to absolute path', () => {
+      const tmp = createTmpResolver('my-tmp');
+      expect(tmp()).toBe(path.resolve('my-tmp'));
+      expect(tmp('sub')).toBe(path.resolve('my-tmp', 'sub'));
     });
   });
 });
