@@ -147,6 +147,7 @@ export async function downloadPackages(
   logger: Logger,
   useCache = true,
   configDir?: string, // For resolving relative local paths
+  tmpDir?: string,
 ): Promise<Map<string, string>> {
   const packagePaths = new Map<string, string>();
   const downloadQueue: Package[] = [...packages];
@@ -208,10 +209,9 @@ export async function downloadPackages(
     const packageSpec = `${pkg.name}@${pkg.version}`;
     // Use proper node_modules structure: node_modules/@scope/package
     const packageDir = getPackageDirectory(targetDir, pkg.name, pkg.version);
-    // Cache always uses the default .tmp/cache/packages location
-    const cachedPath = await getCachedPackagePath(pkg);
+    const cachedPath = await getCachedPackagePath(pkg, tmpDir);
 
-    if (useCache && (await isPackageCached(pkg))) {
+    if (useCache && (await isPackageCached(pkg, tmpDir))) {
       // Only log user-specified packages per design
       if (userSpecifiedPackages.has(pkg.name)) {
         logger.debug(`Downloading ${packageSpec} (cached)`);
@@ -245,7 +245,7 @@ export async function downloadPackages(
       // Extract package to proper node_modules structure
       // Use environment variable for cache location (Docker-friendly)
       const cacheDir =
-        process.env.NPM_CACHE_DIR || getTmpPath(undefined, 'cache', 'npm');
+        process.env.NPM_CACHE_DIR || getTmpPath(tmpDir, 'cache', 'npm');
       await withTimeout(
         pacote.extract(packageSpec, packageDir, {
           // Force npm registry download, prevent workspace resolution
