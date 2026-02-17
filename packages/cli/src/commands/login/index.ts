@@ -84,8 +84,14 @@ export async function login(options: LoginOptions = {}): Promise<LoginResult> {
     return { success: false, error: 'Failed to request device code' };
   }
 
-  const { deviceCode, userCode, verificationUri, expiresIn, interval } =
-    await codeResponse.json();
+  const {
+    deviceCode,
+    userCode,
+    verificationUri,
+    verificationUriComplete,
+    expiresIn,
+    interval,
+  } = await codeResponse.json();
 
   // 2. Display code and open browser
   console.error(`\n! Your one-time code: ${userCode}`);
@@ -93,7 +99,7 @@ export async function login(options: LoginOptions = {}): Promise<LoginResult> {
 
   const opener = options.openUrl ?? openInBrowser;
   try {
-    await opener(verificationUri);
+    await opener(verificationUriComplete || verificationUri);
     console.error('  Opening browser...');
   } catch {
     console.error('  Could not open browser. Visit the URL manually.');
