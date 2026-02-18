@@ -1,3 +1,4 @@
+import type { Logger } from '@walkeros/core';
 import { createPoller } from '../../runtime/poller.js';
 
 // Mock config-fetcher
@@ -14,12 +15,14 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-const mockLogger = {
+const mockLogger: Logger.Instance = {
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
-  throw: jest.fn(),
-  scope: jest.fn(),
+  throw: jest.fn((msg: string | Error) => {
+    throw msg instanceof Error ? msg : new Error(String(msg));
+  }),
+  scope: jest.fn(() => mockLogger),
 };
 
 const baseFetchOptions = {

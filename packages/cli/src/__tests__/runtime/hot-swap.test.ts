@@ -1,3 +1,4 @@
+import type { Logger } from '@walkeros/core';
 import { loadFlow, swapFlow } from '../../runtime/runner.js';
 import { writeFileSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
@@ -9,14 +10,14 @@ const BUNDLE_INVALID = join(TEST_DIR, 'invalid.mjs');
 
 let originalCwd: string;
 
-const mockLogger = {
+const mockLogger: Logger.Instance = {
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
   throw: jest.fn((msg: string | Error) => {
     throw msg instanceof Error ? msg : new Error(String(msg));
   }),
-  scope: jest.fn(),
+  scope: jest.fn(() => mockLogger),
 };
 
 beforeAll(() => {
