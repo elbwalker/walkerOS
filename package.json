@@ -24,7 +24,8 @@
     "apps/demos/transformer",
     "apps/demos/source",
     "apps/demos/react",
-    "apps/demos/storybook"
+    "apps/demos/storybook",
+    "website"
   ],
   "scripts": {
     "build": "turbo run build",
