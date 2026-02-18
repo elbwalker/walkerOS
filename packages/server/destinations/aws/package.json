@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-aws",
   "description": "AWS server destination for walkerOS",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "license": "MIT",
   "exports": {
     ".": {

@@ -25,9 +25,6 @@
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
-  "peerDependencies": {
-    "@walkeros/core": ">=1.4.0"
-  },
   "devDependencies": {
     "@walkeros/collector": "^2.0.0",
     "@walkeros/core": "*"
@@ -52,5 +49,8 @@
       "type": "GitHub Sponsors",
       "url": "https://github.com/sponsors/elbwalker"
     }
-  ]
+  ],
+  "dependencies": {
+    "@walkeros/core": "^2.0.0"
+  }
 }

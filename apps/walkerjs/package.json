@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/walker.js",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "description": "Ready-to-use walkerOS bundle with browser source, collector, and dataLayer support",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -39,12 +39,12 @@
     "preview": "npm run build && npx serve -l 3333 examples"
   },
   "dependencies": {
-    "@walkeros/core": "^1.4.0",
+    "@walkeros/core": "^2.0.0",
     "@walkeros/collector": "^2.0.0",
     "@walkeros/web-core": "^2.0.0",
-    "@walkeros/web-source-browser": "^1.1.4",
-    "@walkeros/web-source-datalayer": "^1.0.6",
-    "@walkeros/web-source-session": "^1.1.4"
+    "@walkeros/web-source-browser": "^2.0.0",
+    "@walkeros/web-source-datalayer": "^2.0.0",
+    "@walkeros/web-source-session": "^2.0.0"
   },
   "devDependencies": {
     "@swc/jest": "^0.2.39",

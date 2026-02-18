@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/transformer-router",
   "description": "Router transformer for walkerOS — dynamic chain branching based on ingest metadata",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -24,11 +24,8 @@
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
-  "peerDependencies": {
-    "@walkeros/core": "^1.4.0"
-  },
   "devDependencies": {
-    "@walkeros/core": "1.4.0"
+    "@walkeros/core": "^2.0.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
@@ -52,5 +49,8 @@
       "type": "GitHub Sponsors",
       "url": "https://github.com/sponsors/elbwalker"
     }
-  ]
+  ],
+  "dependencies": {
+    "@walkeros/core": "^2.0.0"
+  }
 }

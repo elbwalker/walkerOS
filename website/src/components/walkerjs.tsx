@@ -28,7 +28,6 @@ export const DataCollection = () => {
               config: {
                 settings: {
                   pageview: false,
-                  session: false,
                   prefix: 'data-elb',
                   elb: 'elb',
                 },
@@ -59,7 +58,6 @@ export const DataCollection = () => {
               config: {
                 settings: {
                   pageview: true,
-                  session: true,
                   prefix: 'data-alst',
                   elb: 'alst',
                 },

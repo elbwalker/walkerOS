@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/storybook-addon",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "description": "Visualize, debug, and validate walkerOS event tracking in your Storybook stories. Real-time event capture with visual DOM highlighting for data-attribute based tagging.",
   "keywords": [
     "storybook-addons",
@@ -61,9 +61,9 @@
   "dependencies": {
     "@storybook/icons": "^2.0.1",
     "@walkeros/collector": "^2.0.0",
-    "@walkeros/core": "^1.4.0",
+    "@walkeros/core": "^2.0.0",
     "@walkeros/web-core": "^2.0.0",
-    "@walkeros/web-source-browser": "^1.1.4"
+    "@walkeros/web-source-browser": "^2.0.0"
   },
   "devDependencies": {
     "@storybook/addon-docs": "^10.1.9",

@@ -41,9 +41,6 @@
     "docker:test": "bash scripts/test-docker.sh",
     "docker:publish": "bash scripts/publish-docker.sh"
   },
-  "peerDependencies": {
-    "@walkeros/core": ">=1.4.0"
-  },
   "dependencies": {
     "@walkeros/server-core": "^2.0.0",
     "ajv": "^8.17.1",
@@ -56,7 +53,8 @@
     "jsdom": "^26.1.0",
     "open": "^11.0.0",
     "openapi-fetch": "^0.17.0",
-    "pacote": "^21.0.4"
+    "pacote": "^21.0.4",
+    "@walkeros/core": "^2.0.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

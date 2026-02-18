@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/source-demo",
   "description": "Demo source for walkerOS - generates events from config",
-  "version": "1.0.5",
+  "version": "2.0.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -25,7 +25,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@walkeros/core": "^1.4.0"
+    "@walkeros/core": "^2.0.0"
   },
   "devDependencies": {
     "@walkeros/collector": "^2.0.0"
