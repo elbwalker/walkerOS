@@ -257,6 +257,40 @@ walkeros run serve flow.json --port 8080 --static-dir ./dist
 3. Runs in current Node.js process
 4. Press Ctrl+C for graceful shutdown
 
+### deploy
+
+Deploy flows to walkerOS cloud.
+
+```bash
+walkeros deploy start <flowId> [options]
+walkeros deploy status <flowId> [options]
+```
+
+**Options:**
+
+- `--project <id>` - Project ID (defaults to WALKEROS_PROJECT_ID)
+- `--flow <name>` - Flow name for multi-config flows
+- `--no-wait` - Do not wait for deployment to complete (start only)
+- `--json` - Output as JSON
+- `-v, --verbose` - Verbose output
+- `-s, --silent` - Suppress output
+
+**Examples:**
+
+```bash
+# Deploy a single-config flow
+walkeros deploy start cfg_abc123
+
+# Deploy a specific config from a multi-config flow
+walkeros deploy start cfg_abc123 --flow web
+
+# Check deployment status
+walkeros deploy status cfg_abc123 --flow server
+```
+
+When a flow has multiple configs, the CLI requires `--flow <name>` to specify
+which one to deploy. If omitted, the error message lists available names.
+
 ## Caching
 
 The CLI implements intelligent caching for faster builds:

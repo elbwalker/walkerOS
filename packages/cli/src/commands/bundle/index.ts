@@ -381,10 +381,13 @@ EXPOSE 8080
  */
 export async function bundleRemote(options: {
   content: Record<string, unknown>;
+  flowName?: string;
 }) {
   const client = createApiClient();
+  const body: Record<string, unknown> = { flow: options.content };
+  if (options.flowName) body.flowName = options.flowName;
   const { data, error, response } = await client.POST('/api/bundle', {
-    body: { flow: options.content } as unknown as Record<string, never>,
+    body: body as unknown as Record<string, never>,
     parseAs: 'text',
   });
   if (error)

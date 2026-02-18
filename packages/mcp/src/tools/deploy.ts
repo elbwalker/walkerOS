@@ -23,6 +23,12 @@ export function registerDeployTools(server: McpServer) {
           .describe(
             'Wait for deployment to complete (default: true). Set to false to return immediately after triggering.',
           ),
+        flowName: z
+          .string()
+          .optional()
+          .describe(
+            'Flow name for multi-config flows. Required when a flow has multiple configs.',
+          ),
       },
       annotations: {
         readOnlyHint: false,
@@ -31,9 +37,9 @@ export function registerDeployTools(server: McpServer) {
         openWorldHint: true,
       },
     },
-    async ({ flowId, projectId, wait }) => {
+    async ({ flowId, projectId, wait, flowName }) => {
       try {
-        return apiResult(await deploy({ flowId, projectId, wait }));
+        return apiResult(await deploy({ flowId, projectId, wait, flowName }));
       } catch (error) {
         return apiError(error);
       }
@@ -52,6 +58,12 @@ export function registerDeployTools(server: McpServer) {
           .string()
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
+        flowName: z
+          .string()
+          .optional()
+          .describe(
+            'Flow name for multi-config flows. Required when a flow has multiple configs.',
+          ),
       },
       annotations: {
         readOnlyHint: true,
@@ -60,9 +72,9 @@ export function registerDeployTools(server: McpServer) {
         openWorldHint: true,
       },
     },
-    async ({ flowId, projectId }) => {
+    async ({ flowId, projectId, flowName }) => {
       try {
-        return apiResult(await getDeployment({ flowId, projectId }));
+        return apiResult(await getDeployment({ flowId, projectId, flowName }));
       } catch (error) {
         return apiError(error);
       }

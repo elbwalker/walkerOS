@@ -43,6 +43,7 @@ export function registerBundleTool(server: McpServer) {
             throw new Error('content is required when remote: true');
           const result = await bundleRemote({
             content: content as Record<string, unknown>,
+            flowName: flow,
           });
           return apiResult({ success: true, ...result });
         }
