@@ -1,5 +1,12 @@
 # @walkeros/transformer-validator
 
+## 5.0.0
+
+### Patch Changes
+
+- Updated dependencies [7b2d750]
+  - @walkeros/core@1.4.0
+
 ## 4.0.0
 
 ### Patch Changes

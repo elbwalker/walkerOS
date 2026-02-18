@@ -1,5 +1,17 @@
 # @walkeros/server-source-fetch
 
+## 1.1.0
+
+### Minor Changes
+
+- bb0ab04: Add multi-path support with per-route method control and path
+  matching. The `path` setting is deprecated in favor of `paths` array.
+
+### Patch Changes
+
+- Updated dependencies [7b2d750]
+  - @walkeros/core@1.4.0
+
 ## 1.0.5
 
 ### Patch Changes

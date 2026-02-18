@@ -1,5 +1,11 @@
 # @walkeros/core
 
+## 1.4.0
+
+### Minor Changes
+
+- 7b2d750: Add walkerOS.json package convention for CDN-based schema discovery
+
 ## 1.3.0
 
 ### Minor Changes

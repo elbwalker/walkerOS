@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-api",
   "description": "Web API destination for walkerOS",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -36,10 +36,10 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/web-core": "^1.0.5"
+    "@walkeros/web-core": "^2.0.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "^1.2.0"
+    "@walkeros/collector": "^2.0.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

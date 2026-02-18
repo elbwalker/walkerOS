@@ -1,6 +1,6 @@
 {
   "name": "walkeros-demo-react",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,12 +16,12 @@
   },
   "dependencies": {
     "@remix-run/router": "^1.23.0",
-    "@walkeros/collector": "^1.2.0",
-    "@walkeros/core": "^1.3.0",
-    "@walkeros/web-core": "^1.0.5",
-    "@walkeros/web-destination-api": "^1.1.5",
-    "@walkeros/web-destination-gtag": "^1.0.5",
-    "@walkeros/web-source-browser": "^1.1.3",
+    "@walkeros/collector": "^2.0.0",
+    "@walkeros/core": "^1.4.0",
+    "@walkeros/web-core": "^2.0.0",
+    "@walkeros/web-destination-api": "^1.1.6",
+    "@walkeros/web-destination-gtag": "^1.0.6",
+    "@walkeros/web-source-browser": "^1.1.4",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-router-dom": "^7.10.1"

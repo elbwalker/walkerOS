@@ -1,5 +1,11 @@
 # @walkeros/config
 
+## 1.1.0
+
+### Minor Changes
+
+- 7b2d750: Add walkerOS.json package convention for CDN-based schema discovery
+
 ## 1.0.2
 
 ### Patch Changes

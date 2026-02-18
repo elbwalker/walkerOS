@@ -1,5 +1,14 @@
 # @walkeros/web-source-browser
 
+## 1.1.4
+
+### Patch Changes
+
+- e7914fb: Update internal dependencies to use >= ranges
+- Updated dependencies [32bfc92]
+  - @walkeros/collector@2.0.0
+  - @walkeros/web-core@2.0.0
+
 ## 1.1.3
 
 ### Patch Changes

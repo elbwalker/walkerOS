@@ -1,5 +1,19 @@
 # @walkeros/cli
 
+## 2.0.0
+
+### Minor Changes
+
+- a2f27d4: Add deploy command for web and server deployments
+- 7b2d750: Add walkerOS.json package convention for CDN-based schema discovery
+
+### Patch Changes
+
+- 1ae6972: Fix missing trailing newline in JSON output
+- Updated dependencies [7b2d750]
+  - @walkeros/core@1.4.0
+  - @walkeros/server-core@2.0.0
+
 ## 1.3.0
 
 ### Minor Changes

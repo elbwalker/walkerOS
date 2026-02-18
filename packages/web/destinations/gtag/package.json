@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-destination-gtag",
   "description": "Unified Google destination for walkerOS (GA4, Ads, GTM)",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -36,7 +36,7 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/web-core": "^1.0.5"
+    "@walkeros/web-core": "^2.0.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
