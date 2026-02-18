@@ -49,9 +49,9 @@ export default function Benefits() {
     <div
       style={{ backgroundColor: 'var(--ifm-background-color)' }}
       className="py-24 sm:py-32"
-      {...tagger.entity('benefits').get()}
-      {...tagger.action('visible', 'impression').get()}
-      {...tagger.context('component', 'benefits').get()}
+      {...tagger.entity('benefits')}
+      {...tagger.action('visible:impression')}
+      {...tagger.context('component', 'benefits')}
     >
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 sm:gap-y-20 lg:mx-0 lg:max-w-none lg:grid-cols-5">

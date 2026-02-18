@@ -109,26 +109,21 @@ export const DataCollection = () => {
   return null;
 };
 
-// Simple tagger implementation for compatibility
-// Create a tagger instance with data-alst prefix
+// Simple tagger that returns spread-friendly attribute objects
 export const tagger = (() => {
   const prefix = 'data-alst';
 
   return {
-    entity: (name: string) => ({
-      get: () => ({ [prefix]: name }),
-    }),
-    action: (trigger: string, action: string) => ({
-      get: () => ({ [`${prefix}action`]: `${trigger}:${action}` }),
-    }),
-    property: (entity: string, property: string, value: string) => ({
-      get: () => ({ [`${prefix}-${entity}`]: `${property}:${value}` }),
+    entity: (name: string) => ({ [prefix]: name }),
+    action: (value: string) => ({ [`${prefix}-action`]: value }),
+    property: (key: string, value: string) => ({
+      [`${prefix}-property`]: `${key}:${value}`,
     }),
     context: (key: string, value: string) => ({
-      get: () => ({ [`${prefix}context`]: `${key}:${value}` }),
+      [`${prefix}-context`]: `${key}:${value}`,
     }),
     globals: (key: string, value: string) => ({
-      get: () => ({ [`${prefix}globals`]: `${key}:${value}` }),
+      [`${prefix}-globals`]: `${key}:${value}`,
     }),
   };
 })();

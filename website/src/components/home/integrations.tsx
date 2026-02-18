@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Box, FlowMap } from '@walkeros/explorer';
+import { Box, FlowMap, FlowMapProps } from '@walkeros/explorer';
 
 type Mode = 'client' | 'server';
 
 // FlowMap configurations for each mode
-const configs = {
+const configs: Record<Mode, FlowMapProps> = {
   client: {
     stageBefore: {
       icon: 'mdi:code-tags',

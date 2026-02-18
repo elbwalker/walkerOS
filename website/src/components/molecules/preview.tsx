@@ -34,7 +34,7 @@ export const Preview: FC<PreviewProps> = ({
       (elem: HTMLElement) => {
         // The new API uses 'walker init' with a scope property
         if (window.elb) {
-          window.elb('walker init', { scope: elem });
+          (window.elb as Function)('walker init', elem);
         }
       },
       1000,

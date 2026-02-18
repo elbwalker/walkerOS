@@ -92,9 +92,9 @@ export default function Hero({
       style={{
         backgroundColor: 'var(--ifm-background-color)',
       }}
-      {...tagger.entity('hero').get()}
-      {...tagger.action('visible', 'impression').get()}
-      {...tagger.context('component', 'hero').get()}
+      {...tagger.entity('hero')}
+      {...tagger.action('visible:impression')}
+      {...tagger.context('component', 'hero')}
     >
       <div className="relative isolate overflow-hidden bg-gradient-to-b from-[#01b5e2]/10">
         <div className="mx-auto max-w-7xl pb-24 pt-10 sm:pb-32 xl:grid xl:grid-cols-2 xl:gap-x-8 xl:px-8 xl:py-40">
@@ -140,8 +140,7 @@ export default function Hero({
                   <p
                     className="mt-8 text-pretty text-lg font-medium sm:text-xl/8"
                     style={{ color: 'var(--color-gray-500)' }}
-                    {...(elbTitle &&
-                      tagger.property('hero', 'title', elbTitle).get())}
+                    {...(elbTitle && tagger.property('title', elbTitle))}
                   >
                     {text}
                   </p>
@@ -151,9 +150,9 @@ export default function Hero({
                     <Link
                       to={primaryButton.link}
                       className="rounded-md bg-[#01b5e2] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#01b5e2]/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#01b5e2]"
-                      {...tagger
-                        .action('click', primaryButton.elbAction || 'click')
-                        .get()}
+                      {...tagger.action(
+                        `click:${primaryButton.elbAction || 'click'}`,
+                      )}
                     >
                       {primaryButton.children}
                     </Link>
@@ -163,9 +162,9 @@ export default function Hero({
                       to={secondaryButton.link}
                       className="text-sm/6 font-semibold"
                       style={{ color: 'var(--color-base-content)' }}
-                      {...tagger
-                        .action('click', secondaryButton.elbAction || 'click')
-                        .get()}
+                      {...tagger.action(
+                        `click:${secondaryButton.elbAction || 'click'}`,
+                      )}
                     >
                       {secondaryButton.children}{' '}
                       <span aria-hidden="true">→</span>
