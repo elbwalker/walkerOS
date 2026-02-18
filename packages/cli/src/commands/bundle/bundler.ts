@@ -249,9 +249,9 @@ export async function bundleCore(
   if (buildOptions.cache !== false) {
     const configContent = generateCacheKeyContent(flowConfig, buildOptions);
 
-    const cached = await isBuildCached(configContent);
+    const cached = await isBuildCached(configContent, TEMP_DIR);
     if (cached) {
-      const cachedBuild = await getCachedBuild(configContent);
+      const cachedBuild = await getCachedBuild(configContent, TEMP_DIR);
       if (cachedBuild) {
         logger.debug('Using cached build');
 
@@ -322,6 +322,7 @@ export async function bundleCore(
       logger,
       buildOptions.cache,
       buildOptions.configDir, // For resolving relative local paths
+      TEMP_DIR,
     );
 
     // Fix @walkeros packages to have proper ESM exports
@@ -403,7 +404,7 @@ export async function bundleCore(
     if (buildOptions.cache !== false) {
       const configContent = generateCacheKeyContent(flowConfig, buildOptions);
       const buildOutput = await fs.readFile(outputPath, 'utf-8');
-      await cacheBuild(configContent, buildOutput);
+      await cacheBuild(configContent, buildOutput, TEMP_DIR);
       logger.debug('Build cached for future use');
     }
 

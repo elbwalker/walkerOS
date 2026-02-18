@@ -1,5 +1,19 @@
 # walkeros-demo-react
 
+## 1.0.7
+
+### Patch Changes
+
+- Updated dependencies [e7914fb]
+- Updated dependencies [32bfc92]
+- Updated dependencies [7b2d750]
+  - @walkeros/web-source-browser@1.1.4
+  - @walkeros/collector@2.0.0
+  - @walkeros/core@1.4.0
+  - @walkeros/web-core@2.0.0
+  - @walkeros/web-destination-api@1.1.6
+  - @walkeros/web-destination-gtag@1.0.6
+
 ## 1.0.6
 
 ### Patch Changes

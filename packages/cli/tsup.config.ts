@@ -9,13 +9,13 @@ const packageJson = JSON.parse(
 const version = packageJson.version || '0.0.0';
 
 export default defineConfig([
-  // CLI entry points (with shebang)
+  // CLI binary (with shebang)
   {
     ...baseConfig,
-    entry: ['src/index.ts', 'src/runtime/main.ts'],
+    entry: ['src/cli.ts', 'src/runtime/main.ts'],
     format: ['esm'],
-    dts: true,
-    sourcemap: true,
+    dts: false,
+    sourcemap: false,
     minify: false,
     banner: {
       js: '#!/usr/bin/env node',
@@ -37,6 +37,19 @@ export default defineConfig([
           recursive: true,
         });
       }
+    },
+  },
+
+  // Library entry (no shebang)
+  {
+    ...baseConfig,
+    entry: ['src/index.ts'],
+    format: ['esm'],
+    dts: true,
+    sourcemap: true,
+    minify: false,
+    define: {
+      __VERSION__: JSON.stringify(version),
     },
   },
 

@@ -1,5 +1,18 @@
 # @walkeros/collector
 
+## 2.0.1
+
+## 2.0.0
+
+### Minor Changes
+
+- 32bfc92: Add transformer chain branching support
+
+### Patch Changes
+
+- Updated dependencies [7b2d750]
+  - @walkeros/core@1.4.0
+
 ## 1.2.0
 
 ### Minor Changes

@@ -1,3 +1,9 @@
+import { zodToSchema } from '@walkeros/core/dev';
+import { SettingsSchema } from './settings';
+
 export * from './primitives';
-export * from './settings';
+export { SettingsSchema, type Settings } from './settings';
 export * from './event';
+
+// JSON Schema
+export const settings = zodToSchema(SettingsSchema);

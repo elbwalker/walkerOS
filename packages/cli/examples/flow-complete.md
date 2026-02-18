@@ -71,7 +71,7 @@ npx walkeros serve packages/cli/examples/flow-complete.json --flow web
 
 ## Feature Inventory
 
-### Features Used (53)
+### Features Used (55)
 
 #### Mapping - Value Extraction
 
@@ -118,13 +118,14 @@ npx walkeros serve packages/cli/examples/flow-complete.json --flow web
 
 #### Sources
 
-| Feature              | Location  | Example                               |
-| -------------------- | --------- | ------------------------------------- |
-| Primary source       | browser   | `"primary": true`                     |
-| Multiple sources     | web flow  | browser + dataLayer + demo            |
-| Source-level mapping | dataLayer | `"mapping": { "add_to_cart": {...} }` |
-| Pre-collector chain  | dataLayer | `"next": "dataLayerValidator"`        |
-| Demo source events   | demo      | Pre-configured test events            |
+| Feature                 | Location  | Example                               |
+| ----------------------- | --------- | ------------------------------------- |
+| Primary source          | browser   | `"primary": true`                     |
+| Multiple sources        | web flow  | browser + dataLayer + demo            |
+| Source-level mapping    | dataLayer | `"mapping": { "add_to_cart": {...} }` |
+| Pre-collector chain     | dataLayer | `"next": "dataLayerValidator"`        |
+| Require (deferred init) | dataLayer | `"require": ["session"]`              |
+| Demo source events      | demo      | Pre-configured test events            |
 
 #### Transformers
 
@@ -139,12 +140,13 @@ npx walkeros serve packages/cli/examples/flow-complete.json --flow web
 
 #### Destinations
 
-| Feature               | Location         | Example                            |
-| --------------------- | ---------------- | ---------------------------------- |
-| Destination consent   | GA4              | `"consent": { "marketing": true }` |
-| Destination mapping   | All destinations | Entity/action to vendor events     |
-| Multiple destinations | Both flows       | GA4 + API, Meta + Demo             |
-| Batch option          | API              | `"batch": 5`                       |
+| Feature                 | Location         | Example                            |
+| ----------------------- | ---------------- | ---------------------------------- |
+| Require (deferred init) | GA4              | `"require": ["consent", "user"]`   |
+| Destination consent     | GA4              | `"consent": { "marketing": true }` |
+| Destination mapping     | All destinations | Entity/action to vendor events     |
+| Multiple destinations   | Both flows       | GA4 + API, Meta + Demo             |
+| Batch option            | API              | `"batch": 5`                       |
 
 #### Collector
 

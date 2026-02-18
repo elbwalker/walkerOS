@@ -9,7 +9,12 @@ import { registerValidateTool } from './tools/validate.js';
 import { registerAuthTools } from './tools/auth.js';
 import { registerProjectTools } from './tools/projects.js';
 import { registerFlowTools } from './tools/flows.js';
-import { registerBundleRemoteTool } from './tools/bundle-remote.js';
+import { registerDeployTools } from './tools/deploy.js';
+// CDN tools
+import { registerGetPackageSchemaTool } from './tools/get-package-schema.js';
+// Resources
+import { registerPackageSchemaResources } from './resources/package-schemas.js';
+import { registerFlowResources } from './resources/flows.js';
 
 declare const __VERSION__: string;
 
@@ -28,7 +33,14 @@ registerValidateTool(server);
 registerAuthTools(server);
 registerProjectTools(server);
 registerFlowTools(server);
-registerBundleRemoteTool(server);
+registerDeployTools(server);
+
+// CDN tools
+registerGetPackageSchemaTool(server);
+
+// Resources
+registerPackageSchemaResources(server);
+registerFlowResources(server);
 
 async function main() {
   const transport = new StdioServerTransport();

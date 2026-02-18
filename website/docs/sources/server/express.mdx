@@ -5,6 +5,8 @@ sidebar_position: 1
 package: '@walkeros/server-source-express'
 ---
 
+import { schemas } from '@walkeros/server-source-express/dev';
+
 <PackageLink env="server" github="packages/server/sources/express" npm="@walkeros/server-source-express" />
 
 # Express
@@ -36,6 +38,18 @@ It receives events via HTTP (POST/GET) and forwards them to configured destinati
   code={`npm install @walkeros/server-source-express`}
   language="bash"
 />
+
+:::caution path setting renamed to paths
+The `path` setting has been renamed to `paths` (array). The old `path` still works but is deprecated and will be removed in the next major version.
+
+```typescript
+// Before (deprecated)
+settings: { path: '/events' }
+
+// After
+settings: { paths: ['/events'] }
+```
+:::
 
 ## Quick start
 
@@ -82,7 +96,7 @@ const { collector } = await startFlow({
       config: {
         settings: {
           // No port = app only mode
-          path: '/events',
+          paths: ['/events'],
         },
       },
     },
@@ -125,12 +139,7 @@ Server sources require platform-specific handlers. For containerized deployments
 
 ## Configuration
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `port` | `number` | - | Port to listen on. If not set, runs in app-only mode |
-| `path` | `string` | `/collect` | Event collection endpoint path |
-| `cors` | `boolean \| object` | `true` | CORS configuration |
-| `status` | `boolean` | `true` | Enable health check endpoints |
+<PropertyTable schema={schemas.settings} />
 
 ## HTTP methods
 

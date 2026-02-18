@@ -1,0 +1,32 @@
+name: Deploy Tagging Demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/demos/tagging/**'
+      - '.github/workflows/tagging.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Deploy to Bunny
+        working-directory: apps/demos/tagging
+        run: node scripts/deploy-bunny.mjs
+        env:
+          BUNNY_STORAGE_ZONE: ${{ secrets.BUNNY_TAGGING_STORAGE_ZONE }}
+          BUNNY_STORAGE_PASSWORD: ${{ secrets.BUNNY_TAGGING_STORAGE_PASSWORD }}
+          BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+          BUNNY_PULLZONE_URL: ${{ secrets.BUNNY_TAGGING_PULLZONE_URL }}

@@ -79,3 +79,15 @@ export function createJsonResponse(
 
   return new Response(JSON.stringify(body), { status, headers });
 }
+
+/**
+ * Match a request pathname against a route pattern.
+ * Supports exact matches and wildcard patterns (e.g., /api/*).
+ */
+export function matchPath(requestPath: string, pattern: string): boolean {
+  if (pattern.endsWith('/*')) {
+    const prefix = pattern.slice(0, -2);
+    return requestPath === prefix || requestPath.startsWith(prefix + '/');
+  }
+  return requestPath === pattern;
+}

@@ -1,13 +1,17 @@
 import type { WalkerOS, Source as CoreSource } from '@walkeros/core';
 import type { Request, Response, Application } from 'express';
-import type { SettingsSchema, CorsOptionsSchema } from './schemas';
+import type {
+  SettingsSchema,
+  CorsOptionsSchema,
+  RouteConfigSchema,
+} from './schemas';
 import { z } from '@walkeros/core/dev';
 
 // Types inferred from Zod schemas
 export type Settings = z.infer<typeof SettingsSchema>;
 export type CorsOptions = z.infer<typeof CorsOptionsSchema>;
-
-// InitSettings: user input (all optional)
+export type RouteConfig = z.infer<typeof RouteConfigSchema>;
+export type RouteMethod = 'GET' | 'POST';
 export type InitSettings = Partial<Settings>;
 
 export interface Mapping {
@@ -35,8 +39,10 @@ export type Types = CoreSource.Types<
 export type Config = CoreSource.Config<Types>;
 export type PartialConfig = CoreSource.PartialConfig<Types>;
 
-export interface ExpressSource
-  extends Omit<CoreSource.Instance<Types>, 'push'> {
+export interface ExpressSource extends Omit<
+  CoreSource.Instance<Types>,
+  'push'
+> {
   push: Push;
   app: Application; // Expose Express app for advanced usage
   server?: ReturnType<Application['listen']>; // HTTP server (if port configured)

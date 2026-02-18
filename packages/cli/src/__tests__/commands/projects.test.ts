@@ -1,4 +1,5 @@
-import { apiRequest, requireProjectId } from '../../core/auth.js';
+import { createApiClient } from '../../core/api-client.js';
+import { requireProjectId } from '../../core/auth.js';
 import {
   listProjects,
   getProject,
@@ -7,70 +8,97 @@ import {
   deleteProject,
 } from '../../commands/projects/index.js';
 
+jest.mock('../../core/api-client.js');
 jest.mock('../../core/auth.js', () => ({
-  apiRequest: jest.fn(),
+  ...jest.requireActual('../../core/auth.js'),
   requireProjectId: jest.fn().mockReturnValue('proj_default'),
 }));
 
-const mockApiRequest = jest.mocked(apiRequest);
+const mockGet = jest.fn();
+const mockPost = jest.fn();
+const mockPatch = jest.fn();
+const mockDelete = jest.fn();
+
+(createApiClient as jest.Mock).mockReturnValue({
+  GET: mockGet,
+  POST: mockPost,
+  PATCH: mockPatch,
+  DELETE: mockDelete,
+});
+
 const mockRequireProjectId = jest.mocked(requireProjectId);
 
 describe('projects', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('listProjects', () => {
-    it('should call GET /api/projects', async () => {
-      mockApiRequest.mockResolvedValue({ projects: [], total: 0 });
+    it('calls GET /api/projects', async () => {
+      mockGet.mockResolvedValue({ data: { projects: [], total: 0 } });
       const result = await listProjects();
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects');
+      expect(mockGet).toHaveBeenCalledWith('/api/projects');
       expect(result).toEqual({ projects: [], total: 0 });
+    });
+
+    it('throws on error response', async () => {
+      mockGet.mockResolvedValue({
+        error: { error: { message: 'Unauthorized' } },
+      });
+      await expect(listProjects()).rejects.toThrow('Unauthorized');
     });
   });
 
   describe('getProject', () => {
-    it('should use provided projectId', async () => {
-      mockApiRequest.mockResolvedValue({ id: 'proj_123' });
+    it('uses provided projectId', async () => {
+      mockGet.mockResolvedValue({ data: { id: 'proj_123' } });
       await getProject({ projectId: 'proj_123' });
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects/proj_123');
+      expect(mockGet).toHaveBeenCalledWith('/api/projects/{projectId}', {
+        params: { path: { projectId: 'proj_123' } },
+      });
     });
 
-    it('should fall back to requireProjectId()', async () => {
-      mockApiRequest.mockResolvedValue({ id: 'proj_default' });
+    it('falls back to requireProjectId()', async () => {
+      mockGet.mockResolvedValue({ data: { id: 'proj_default' } });
       await getProject();
       expect(mockRequireProjectId).toHaveBeenCalled();
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects/proj_default');
+      expect(mockGet).toHaveBeenCalledWith('/api/projects/{projectId}', {
+        params: { path: { projectId: 'proj_default' } },
+      });
     });
   });
 
   describe('createProject', () => {
-    it('should POST with name', async () => {
-      mockApiRequest.mockResolvedValue({ id: 'proj_new', name: 'Test' });
+    it('POSTs with name', async () => {
+      mockPost.mockResolvedValue({
+        data: { id: 'proj_new', name: 'Test' },
+      });
       await createProject({ name: 'Test' });
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects', {
-        method: 'POST',
-        body: JSON.stringify({ name: 'Test' }),
+      expect(mockPost).toHaveBeenCalledWith('/api/projects', {
+        body: { name: 'Test' },
       });
     });
   });
 
   describe('updateProject', () => {
-    it('should PATCH with name', async () => {
-      mockApiRequest.mockResolvedValue({ id: 'proj_123', name: 'Updated' });
+    it('PATCHes with name', async () => {
+      mockPatch.mockResolvedValue({
+        data: { id: 'proj_123', name: 'Updated' },
+      });
       await updateProject({ projectId: 'proj_123', name: 'Updated' });
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects/proj_123', {
-        method: 'PATCH',
-        body: JSON.stringify({ name: 'Updated' }),
+      expect(mockPatch).toHaveBeenCalledWith('/api/projects/{projectId}', {
+        params: { path: { projectId: 'proj_123' } },
+        body: { name: 'Updated' },
       });
     });
   });
 
   describe('deleteProject', () => {
-    it('should send DELETE', async () => {
-      mockApiRequest.mockResolvedValue({ success: true });
-      await deleteProject({ projectId: 'proj_123' });
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/projects/proj_123', {
-        method: 'DELETE',
+    it('sends DELETE and returns success', async () => {
+      mockDelete.mockResolvedValue({ data: undefined });
+      const result = await deleteProject({ projectId: 'proj_123' });
+      expect(mockDelete).toHaveBeenCalledWith('/api/projects/{projectId}', {
+        params: { path: { projectId: 'proj_123' } },
       });
+      expect(result).toEqual({ success: true });
     });
   });
 });

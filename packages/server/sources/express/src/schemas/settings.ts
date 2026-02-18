@@ -1,24 +1,30 @@
 import { z } from '@walkeros/core/dev';
-import { CorsOptionsSchema } from './primitives';
+import { CorsOptionsSchema, RouteConfigSchema } from './primitives';
 
 /**
- * Express source settings schema
+ * Express source settings schema.
  */
 export const SettingsSchema = z.object({
   port: z
     .number()
     .int()
-    .min(0) // 0 = random available port
+    .min(0)
     .max(65535)
     .describe(
       'HTTP server port to listen on. Use 0 for random available port. If not provided, server will not start (app only mode)',
     )
     .optional(),
 
-  path: z
-    .string()
-    .describe('Event collection endpoint path')
-    .default('/collect'),
+  /** @deprecated Use `paths` instead */
+  path: z.string().describe('Deprecated: use paths instead').optional(),
+
+  paths: z
+    .array(z.union([z.string(), RouteConfigSchema]))
+    .min(1)
+    .describe(
+      'Route paths to register. String shorthand registers GET+POST. RouteConfig allows per-route method control.',
+    )
+    .optional(),
 
   cors: z
     .union([z.boolean(), CorsOptionsSchema])

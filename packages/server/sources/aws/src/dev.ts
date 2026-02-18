@@ -1,1 +1,1 @@
-export * as lambda from './lambda';
+export { schemas, examples } from './lambda';

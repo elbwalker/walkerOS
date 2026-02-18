@@ -1,46 +1,62 @@
-import { apiRequest, requireProjectId } from '../../core/auth.js';
+import { createApiClient } from '../../core/api-client.js';
+import { requireProjectId } from '../../core/auth.js';
 import { createCommandLogger } from '../../core/logger.js';
 import { writeResult } from '../../core/output.js';
 import type { GlobalOptions } from '../../types/global.js';
 
 // === Programmatic API ===
 
-export async function listProjects(): Promise<unknown> {
-  return apiRequest('/api/projects');
+export async function listProjects() {
+  const client = createApiClient();
+  const { data, error } = await client.GET('/api/projects');
+  if (error) throw new Error(error.error?.message || 'Failed to list projects');
+  return data;
 }
 
-export async function getProject(
-  options: { projectId?: string } = {},
-): Promise<unknown> {
+export async function getProject(options: { projectId?: string } = {}) {
   const id = options.projectId ?? requireProjectId();
-  return apiRequest(`/api/projects/${id}`);
+  const client = createApiClient();
+  const { data, error } = await client.GET('/api/projects/{projectId}', {
+    params: { path: { projectId: id } },
+  });
+  if (error) throw new Error(error.error?.message || 'Failed to get project');
+  return data;
 }
 
-export async function createProject(options: {
-  name: string;
-}): Promise<unknown> {
-  return apiRequest('/api/projects', {
-    method: 'POST',
-    body: JSON.stringify({ name: options.name }),
+export async function createProject(options: { name: string }) {
+  const client = createApiClient();
+  const { data, error } = await client.POST('/api/projects', {
+    body: { name: options.name },
   });
+  if (error)
+    throw new Error(error.error?.message || 'Failed to create project');
+  return data;
 }
 
 export async function updateProject(options: {
   projectId?: string;
   name: string;
-}): Promise<unknown> {
+}) {
   const id = options.projectId ?? requireProjectId();
-  return apiRequest(`/api/projects/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ name: options.name }),
+  const client = createApiClient();
+  const { data, error } = await client.PATCH('/api/projects/{projectId}', {
+    params: { path: { projectId: id } },
+    body: { name: options.name },
   });
+  if (error)
+    throw new Error(error.error?.message || 'Failed to update project');
+  return data;
 }
 
-export async function deleteProject(
-  options: { projectId?: string } = {},
-): Promise<unknown> {
+export async function deleteProject(options: { projectId?: string } = {}) {
   const id = options.projectId ?? requireProjectId();
-  return apiRequest(`/api/projects/${id}`, { method: 'DELETE' });
+  const client = createApiClient();
+  const { data, error } = await client.DELETE('/api/projects/{projectId}', {
+    params: { path: { projectId: id } },
+  });
+  if (error)
+    throw new Error(error.error?.message || 'Failed to delete project');
+  return data ?? { success: true };
 }
 
 // === CLI Command Handlers ===

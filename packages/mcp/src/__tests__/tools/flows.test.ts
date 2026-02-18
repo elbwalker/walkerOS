@@ -1,3 +1,9 @@
+import {
+  ListFlowsOutputShape,
+  FlowOutputShape,
+  DeleteOutputShape,
+} from '../../schemas/output.js';
+
 const mockListFlows = jest.fn();
 const mockGetFlow = jest.fn();
 const mockCreateFlow = jest.fn();
@@ -46,16 +52,32 @@ describe('flow tools', () => {
     expect(server.getTool('duplicate-flow')).toBeDefined();
   });
 
+  it('has outputSchema on all tools', () => {
+    const keys = (name: string) =>
+      Object.keys((server.getTool(name).config as any).outputSchema ?? {});
+
+    expect(keys('list-flows')).toEqual(Object.keys(ListFlowsOutputShape));
+    expect(keys('get-flow')).toEqual(Object.keys(FlowOutputShape));
+    expect(keys('create-flow')).toEqual(Object.keys(FlowOutputShape));
+    expect(keys('update-flow')).toEqual(Object.keys(FlowOutputShape));
+    expect(keys('delete-flow')).toEqual(Object.keys(DeleteOutputShape));
+    expect(keys('duplicate-flow')).toEqual(Object.keys(FlowOutputShape));
+  });
+
   describe('list-flows', () => {
-    it('should pass options to listFlows()', async () => {
-      mockListFlows.mockResolvedValue({ flows: [] });
-      await server.getTool('list-flows').handler({ projectId: 'proj_1' });
+    it('should pass options to listFlows() and return structuredContent', async () => {
+      const mockResponse = { flows: [] };
+      mockListFlows.mockResolvedValue(mockResponse);
+      const result = await server
+        .getTool('list-flows')
+        .handler({ projectId: 'proj_1' });
       expect(mockListFlows).toHaveBeenCalledWith({
         projectId: 'proj_1',
         sort: undefined,
         order: undefined,
         includeDeleted: undefined,
       });
+      expect(result.structuredContent).toEqual(mockResponse);
     });
 
     it('should pass query params', async () => {

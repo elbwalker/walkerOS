@@ -1,6 +1,9 @@
+import { z } from 'zod';
+import { bundle, bundleRemote } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { BundleOutputShape } from '../schemas/output.js';
+import { apiResult } from './helpers.js';
 
 export function registerBundleTool(server: McpServer) {
   server.registerTool(
@@ -10,8 +13,21 @@ export function registerBundleTool(server: McpServer) {
       description:
         'Bundle a walkerOS flow configuration into deployable JavaScript. ' +
         'Resolves all destinations, sources, and transformers, then outputs ' +
-        'a tree-shaken production bundle. Returns bundle statistics.',
-      inputSchema: schemas.BundleInputShape,
+        'a tree-shaken production bundle. Returns bundle statistics. ' +
+        'Set remote: true to use the walkerOS cloud service instead of local build tools.',
+      inputSchema: {
+        ...schemas.BundleInputShape,
+        remote: z
+          .boolean()
+          .optional()
+          .describe(
+            'Use remote cloud bundling (requires WALKEROS_TOKEN). Default: false (local)',
+          ),
+        content: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe('Flow.Setup JSON content (required when remote: true)'),
+      },
       outputSchema: BundleOutputShape,
       annotations: {
         readOnlyHint: false,
@@ -20,11 +36,19 @@ export function registerBundleTool(server: McpServer) {
         openWorldHint: false,
       },
     },
-    async ({ configPath, flow, stats, output }) => {
+    async ({ configPath, flow, stats, output, remote, content }) => {
       try {
-        // Dynamic import to handle peer dependency
-        const { bundle } = await import('@walkeros/cli');
+        if (remote) {
+          if (!content)
+            throw new Error('content is required when remote: true');
+          const result = await bundleRemote({
+            content: content as Record<string, unknown>,
+            flowName: flow,
+          });
+          return apiResult({ success: true, ...result });
+        }
 
+        // Local bundle path
         const result = await bundle(configPath, {
           flowName: flow,
           stats: stats ?? true,

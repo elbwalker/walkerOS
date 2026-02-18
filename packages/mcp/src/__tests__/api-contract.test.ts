@@ -2,13 +2,11 @@
  * Contract test: verifies that all API endpoints called by MCP tools
  * exist in the app's OpenAPI spec with the expected HTTP methods.
  *
- * Runs offline against a snapshot of /api/openapi.json.
- * To update the baseline:
- *   curl http://localhost:3000/api/openapi.json | python3 -m json.tool \
- *     > src/__tests__/fixtures/openapi-baseline.json
+ * Runs offline against the shared spec committed in the CLI package.
+ * To update: copy app/dist/openapi.json → cli/openapi/spec.json
  */
 
-import baseline from './fixtures/openapi-baseline.json';
+import baseline from '../../../cli/openapi/spec.json';
 
 interface OpenApiSpec {
   paths: Record<string, Record<string, unknown>>;

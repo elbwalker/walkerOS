@@ -1,0 +1,263 @@
+---
+title: Runner
+description: Self-hosted walkerOS runner with config polling, hot-swap, and dashboard visibility
+sidebar_position: 4
+package: '@walkeros/cli'
+---
+
+# walkerOS Runner
+
+The walkerOS runner is the `walkeros/flow` Docker image in **self-bundling mode**. Point it at a flow config — local file or API — and it bundles, runs, and keeps itself up to date.
+
+<CodeSnippet
+  code={`docker run -v ./flow.json:/app/flow.json -e BUNDLE=/app/flow.json -p 8080:8080 walkeros/flow`}
+  language="bash"
+/>
+
+## Runner vs Docker runtime
+
+| | [Runner](/docs/apps/runner) (this page) | [Docker runtime](/docs/apps/docker) |
+|---|---|---|
+| **Input** | Flow config (JSON) | Pre-built bundle (.mjs) |
+| **Bundling** | Self-bundles internally | None — expects pre-built |
+| **API integration** | Heartbeat, config polling, hot-swap | None |
+| **Use case** | Self-hosted production, managed deploy | Simple deploy, CI/CD pipelines |
+
+Use the **runner** when you want API visibility, remote config, or hot-swap. Use the **Docker runtime** when you pre-build bundles in CI and want minimal images.
+
+## Deployment modes
+
+Same image, same config format. Each mode adds one env var:
+
+| Mode | What you set | What happens |
+|------|-------------|--------------|
+| **A. Local** | `BUNDLE` only | Bundles config, runs. No API. |
+| **B. Registered** | + `WALKEROS_TOKEN` + `PROJECT_ID` | Same as A, plus heartbeat. Visible in dashboard. |
+| **C. Remote config** | + `FLOW_ID` | Fetches config from API. Polls for updates. Hot-swaps on change. |
+| **D. Managed** | (set by walkerOS) | Same as C, on walkerOS infrastructure. |
+
+### Mode A: fully local
+
+No signup, no token, no API:
+
+<CodeSnippet
+  code={`docker run -v ./flow.json:/app/flow.json \\
+  -e BUNDLE=/app/flow.json \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+### Mode B: local config + dashboard
+
+Adds heartbeat registration. The runner appears in your project dashboard:
+
+<CodeSnippet
+  code={`docker run -v ./flow.json:/app/flow.json \\
+  -e BUNDLE=/app/flow.json \\
+  -e WALKEROS_TOKEN=sk-walkeros-xxx \\
+  -e PROJECT_ID=proj_xxx \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+### Mode C: remote config with hot-swap
+
+Config is fetched from the API. Polls for updates, hot-swaps on new versions:
+
+<CodeSnippet
+  code={`docker run \\
+  -e WALKEROS_TOKEN=sk-walkeros-xxx \\
+  -e PROJECT_ID=proj_xxx \\
+  -e FLOW_ID=flow_xxx \\
+  -v runner-cache:/app/cache \\
+  -p 8080:8080 \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+## Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MODE` | `collect` | `collect` (HTTP event server) or `serve` (static file server) |
+| `PORT` | `8080` | Server port |
+| `BUNDLE` | `/app/flow/bundle.mjs` | Local config/bundle path or URL |
+| `WALKEROS_TOKEN` | — | API token for registration and config fetch |
+| `PROJECT_ID` | — | Project ID (required with `WALKEROS_TOKEN`) |
+| `FLOW_ID` | — | Flow ID for remote config (requires token + project) |
+| `CACHE_DIR` | `/app/cache` | Directory for last-known-good bundle cache |
+| `POLL_INTERVAL` | `30` | Seconds between config polls (mode C/D) |
+| `HEARTBEAT_INTERVAL` | `60` | Seconds between heartbeats (mode B/C/D) |
+| `APP_URL` | `https://app.walkeros.io` | API base URL (alias: `WALKEROS_APP_URL`) |
+
+### Validation rules
+
+Invalid combinations fail fast with actionable error messages:
+
+| Vars set | Result |
+|----------|--------|
+| Nothing or `BUNDLE` only | Mode A — local bundle, no API |
+| `WALKEROS_TOKEN` + `PROJECT_ID` | Mode B — local config + heartbeat |
+| `WALKEROS_TOKEN` + `PROJECT_ID` + `FLOW_ID` | Mode C/D — remote config + polling |
+| `FLOW_ID` without token | Error: `FLOW_ID requires WALKEROS_TOKEN and PROJECT_ID` |
+| `WALKEROS_TOKEN` without `PROJECT_ID` | Error: `WALKEROS_TOKEN requires PROJECT_ID` |
+| `BUNDLE` + `FLOW_ID` | Starts with local bundle, polls for remote. Hot-swaps when remote version is newer. |
+
+## Pipeline
+
+After config is resolved, all modes converge into the same pipeline:
+
+```
+1. Validate env ─────────── all modes ──────────
+2. Resolve config           local | API fetch
+                               ↓
+                    ┌──────────────────┐
+                    │ config (Flow.Setup) │
+                    └──────────────────┘
+                               ↓
+3. Bundle ───────────────── esbuild ────────────
+4. Cache ────────────── write last-known-good ──
+5. Run ──────────────────── all modes ──────────
+6. Heartbeat ────────────── if token set ───────
+7. Poll + hot-swap ──────── if flow_id set ─────
+```
+
+## Polling and hot-swap
+
+When `FLOW_ID` is set, the runner polls for config changes using ETags:
+
+1. Every `POLL_INTERVAL` seconds, checks for a new config version
+2. `304 Not Modified` — no action
+3. New version detected — downloads config, bundles locally, atomically swaps the running flow, updates cache, reports version via heartbeat
+
+If the new bundle fails to load, the current flow stays active (safe swap).
+
+## Caching and resilience
+
+The runner writes the last working bundle to `CACHE_DIR` (`/app/cache`). This provides cold-start resilience:
+
+- API unreachable at startup — falls back to cached bundle
+- Bundling fails — uses cached bundle instead
+- Mount as a Docker volume to persist across restarts
+
+<CodeSnippet
+  code={`# Volume mount for cache persistence
+docker run \\
+  -e WALKEROS_TOKEN=sk-walkeros-xxx \\
+  -e PROJECT_ID=proj_xxx \\
+  -e FLOW_ID=flow_xxx \\
+  -v runner-cache:/app/cache \\
+  walkeros/flow`}
+  language="bash"
+/>
+
+## Health checks
+
+The `/health` endpoint is available on the configured `PORT`:
+
+<CodeSnippet
+  code={`curl http://localhost:8080/health`}
+  language="bash"
+/>
+
+<CodeSnippet
+  code={`{ "status": "ok", "version": "1.3.0", "timestamp": 1701234567890, "mode": "collect" }`}
+  language="json"
+/>
+
+In serve mode, `/status` returns detailed runner state (instance ID, config version, config source, uptime, API status).
+
+The Docker image includes a built-in `HEALTHCHECK` that polls `/health` every 30 seconds with a 30-second start period.
+
+<details>
+<summary>Docker Compose examples</summary>
+
+### Mode A: local config
+
+<CodeSnippet
+  code={`services:
+  runner:
+    image: walkeros/flow:latest
+    volumes:
+      - ./flow.json:/app/flow.json
+    environment:
+      BUNDLE: /app/flow.json
+      PORT: "8080"
+    ports:
+      - "8080:8080"`}
+  language="yaml"
+/>
+
+### Mode C: remote config with cache
+
+<CodeSnippet
+  code={`services:
+  runner:
+    image: walkeros/flow:latest
+    volumes:
+      - runner-cache:/app/cache
+    environment:
+      WALKEROS_TOKEN: \${WALKEROS_TOKEN}
+      PROJECT_ID: \${PROJECT_ID}
+      FLOW_ID: \${FLOW_ID}
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  runner-cache:`}
+  language="yaml"
+/>
+
+</details>
+
+<details>
+<summary>Heartbeat details</summary>
+
+When `WALKEROS_TOKEN` and `PROJECT_ID` are set, the runner sends periodic heartbeats:
+
+- **Endpoint**: `POST /api/projects/:projectId/runners/heartbeat`
+- **Interval**: Every `HEARTBEAT_INTERVAL` seconds (default 60)
+- **Payload**: instance ID, flow ID, config version, CLI version, uptime, mode
+- **Fire-and-forget**: Failures are logged, never crash the runner
+
+Runners appear in the project dashboard after their first heartbeat.
+
+</details>
+
+<details>
+<summary>Building a custom image</summary>
+
+<CodeSnippet
+  code={`cd packages/cli
+npm run docker:build:flow`}
+  language="bash"
+/>
+
+Pin a specific CLI version:
+
+<CodeSnippet
+  code={`docker build --build-arg CLI_VERSION=1.3.0 -t walkeros/flow:1.3.0 -f Dockerfile .`}
+  language="bash"
+/>
+
+</details>
+
+## Troubleshooting
+
+**Runner won't start** — Check the error message. Invalid env var combinations produce specific errors like `FLOW_ID requires WALKEROS_TOKEN and PROJECT_ID`.
+
+**API fetch fails at startup** — The runner falls back to the cached bundle. If no cache exists, it exits. Mount `CACHE_DIR` as a volume for resilience.
+
+**Hot-swap not working** — Verify `FLOW_ID` is set (polling only runs in mode C/D). Check logs for `Config unchanged` or `Poll error`. Confirm the flow was updated in the walkerOS UI.
+
+**Bundle fails after config fetch** — The runner continues with the current flow and logs the error. The cached bundle is not overwritten.
+
+## Next steps
+
+- **[Docker runtime](/docs/apps/docker)** — Pre-built bundle deployment
+- **[CLI](/docs/apps/cli)** — Build and test flows locally
+- **[Flow configuration](/docs/getting-started/flow)** — Flow.Setup format reference

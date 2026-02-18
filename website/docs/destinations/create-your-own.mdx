@@ -401,3 +401,41 @@ describe('My Destination', () => {
 * **Fallback**: `getEnv(env)` automatically uses real APIs if env not provided
 * **Reusable**: Store mock environments in `examples/env.ts` for consistency
 * **Context helper**: Use `createPushContext()` to standardize test context with `id` and `rule`
+
+## Package convention
+
+Every walkerOS package includes machine-readable metadata for tooling and discovery.
+
+### `walkerOS` field in package.json
+
+<CodeSnippet
+  code={`{
+  "walkerOS": { "type": "destination", "platform": "web" },
+  "keywords": ["walkeros", "walkeros-destination"]
+}`}
+  language="json"
+/>
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `walkerOS` | Yes | Object with `type` and `platform` metadata |
+
+### Build-time generation
+
+Use `buildDev()` from the shared tsup config to auto-generate `walkerOS.json`:
+
+<CodeSnippet
+  code={`import { buildDev } from '@walkeros/config/tsup';`}
+  language="typescript"
+/>
+
+This file contains your package's JSON Schemas and examples, enabling MCP tools and the CLI to validate configurations without installing your package.
+
+## Publishing checklist
+
+- [ ] `walkerOS` field in package.json
+- [ ] Keywords include `walkeros` and `walkeros-destination`
+- [ ] `buildDev()` in tsup.config.ts
+- [ ] `dist/walkerOS.json` generated on build
+- [ ] `npm run test` passes
+- [ ] `npm run lint` passes

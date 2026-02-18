@@ -257,6 +257,40 @@ walkeros run serve flow.json --port 8080 --static-dir ./dist
 3. Runs in current Node.js process
 4. Press Ctrl+C for graceful shutdown
 
+### deploy
+
+Deploy flows to walkerOS cloud.
+
+```bash
+walkeros deploy start <flowId> [options]
+walkeros deploy status <flowId> [options]
+```
+
+**Options:**
+
+- `--project <id>` - Project ID (defaults to WALKEROS_PROJECT_ID)
+- `--flow <name>` - Flow name for multi-config flows
+- `--no-wait` - Do not wait for deployment to complete (start only)
+- `--json` - Output as JSON
+- `-v, --verbose` - Verbose output
+- `-s, --silent` - Suppress output
+
+**Examples:**
+
+```bash
+# Deploy a single-config flow
+walkeros deploy start cfg_abc123
+
+# Deploy a specific config from a multi-config flow
+walkeros deploy start cfg_abc123 --flow web
+
+# Check deployment status
+walkeros deploy status cfg_abc123 --flow server
+```
+
+When a flow has multiple configs, the CLI requires `--flow <name>` to specify
+which one to deploy. If omitted, the error message lists available names.
+
 ## Caching
 
 The CLI implements intelligent caching for faster builds:
@@ -542,41 +576,36 @@ CLI (downloads packages + bundles with esbuild)
 
 **Key principle**: CLI handles both build-time and runtime operations.
 
-## Production Deployment
+## Runner (Docker)
 
-Deploy your flows using Docker or Node.js.
-
-### Using Docker
-
-The `walkeros/flow` image runs pre-built bundles in production:
+The `walkeros/flow` Docker image is a self-bundling runner for production
+deployment. It supports four deployment modes — from fully local to fully
+managed — all using the same image and config format.
 
 ```bash
-# Build your flow with Dockerfile
-walkeros bundle flow.json --dockerfile
+# Mode A: Local only — no signup, no API
+docker run -v ./flow.json:/app/flow.json -e BUNDLE=/app/flow.json walkeros/flow
 
-# Deploy (e.g., to Cloud Run)
-gcloud run deploy my-service --source ./dist
+# Mode B: Local config + dashboard visibility
+docker run -v ./flow.json:/app/flow.json \
+  -e BUNDLE=/app/flow.json \
+  -e WALKEROS_TOKEN=sk-walkeros-xxx \
+  -e PROJECT_ID=proj_xxx \
+  walkeros/flow
+
+# Mode C: Remote config with hot-swap
+docker run \
+  -e WALKEROS_TOKEN=sk-walkeros-xxx \
+  -e PROJECT_ID=proj_xxx \
+  -e FLOW_ID=flow_xxx \
+  walkeros/flow
 ```
 
-Or run locally:
+Each step adds one env var. Same runner, same config, same bundle pipeline.
 
-```bash
-docker run -v ./dist:/flow -p 8080:8080 walkeros/flow
-```
-
-**Custom Dockerfile:**
-
-```bash
-# Use a custom Dockerfile with extra packages or configuration
-walkeros bundle flow.json --dockerfile Dockerfile.custom
-```
-
-**Environment variables:**
-
-- `MODE` - `collect` or `serve` (default: `collect`)
-- `PORT` - Server port (default: `8080`)
-- `BUNDLE` - Bundle file path or URL (default: `/app/flow/bundle.mjs`). Also
-  accepts stdin pipe: `cat flow.mjs | docker run -i walkeros/flow`
+See the [Runner documentation](https://www.walkeros.io/docs/apps/runner/) for
+the full reference (env vars, pipeline, caching, hot-swap, health checks,
+troubleshooting).
 
 ### Using Node.js
 
@@ -605,6 +634,10 @@ See [src/types.ts](./src/types.ts) for TypeScript interfaces.
 ## Related
 
 - [Website Documentation](https://www.walkeros.io/docs/apps/cli/)
+- [Runner Documentation](https://www.walkeros.io/docs/apps/runner/) -
+  Self-hosted runner with config polling and hot-swap
+- [Docker Runtime](https://www.walkeros.io/docs/apps/docker/) - Pre-built bundle
+  deployment
 - [Flow Configuration](https://www.walkeros.io/docs/getting-started/flow/)
 - [Collector Package](../collector/) - For Integrated mode (direct imports)
 - [Operating Modes](https://www.walkeros.io/docs/getting-started/modes/) -

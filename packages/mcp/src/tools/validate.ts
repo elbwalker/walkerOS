@@ -1,3 +1,4 @@
+import { validate } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ValidateOutputShape } from '../schemas/output.js';
@@ -22,9 +23,6 @@ export function registerValidateTool(server: McpServer) {
     },
     async ({ type, input, flow }) => {
       try {
-        // Dynamic import to handle peer dependency
-        const { validate } = await import('@walkeros/cli');
-
         // Parse input if it looks like JSON
         let parsedInput: unknown = input;
         if (input.startsWith('{') || input.startsWith('[')) {

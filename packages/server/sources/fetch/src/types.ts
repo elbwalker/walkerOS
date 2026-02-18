@@ -1,9 +1,15 @@
 import type { WalkerOS, Source as CoreSource } from '@walkeros/core';
-import type { SettingsSchema, CorsOptionsSchema } from './schemas';
+import type {
+  SettingsSchema,
+  CorsOptionsSchema,
+  RouteConfigSchema,
+} from './schemas';
 import { z } from '@walkeros/core/dev';
 
 export type Settings = z.infer<typeof SettingsSchema>;
 export type CorsOptions = z.infer<typeof CorsOptionsSchema>;
+export type RouteConfig = z.infer<typeof RouteConfigSchema>;
+export type RouteMethod = 'GET' | 'POST';
 export type InitSettings = Partial<Settings>;
 
 export interface Mapping {}

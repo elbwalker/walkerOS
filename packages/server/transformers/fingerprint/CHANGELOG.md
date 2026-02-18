@@ -1,5 +1,15 @@
 # @walkeros/server-transformer-fingerprint
 
+## 2.0.1
+
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [7b2d750]
+  - @walkeros/core@1.4.0
+  - @walkeros/server-core@2.0.0
+
 ## 7.0.0
 
 ### Patch Changes

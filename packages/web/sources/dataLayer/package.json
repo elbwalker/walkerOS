@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-datalayer",
   "description": "DataLayer source for walkerOS",
-  "version": "1.0.5",
+  "version": "2.0.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -30,13 +30,14 @@
     "build": "tsup --silent",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc && eslint \"**/*.ts*\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "1.3.0",
-    "@walkeros/collector": "1.2.0"
+    "@walkeros/core": "^2.0.0",
+    "@walkeros/collector": "^2.0.0"
   },
   "devDependencies": {
     "@types/gtag.js": "^0.0.20"
@@ -50,12 +51,17 @@
   "bugs": {
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
+  "walkerOS": {
+    "type": "source",
+    "platform": "web"
+  },
   "keywords": [
-    "walker",
     "walkerOS",
+    "walkerOS-source",
     "source",
     "web",
-    "dataLayer"
+    "dataLayer",
+    "analytics"
   ],
   "funding": [
     {

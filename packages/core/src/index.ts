@@ -1,5 +1,6 @@
 export * from './types';
 
+export * from './branch';
 export * from './anonymizeIP';
 export * from './flow';
 export * from './assign';
@@ -27,3 +28,4 @@ export * from './useHooks';
 export * from './userAgent';
 export * from './validate';
 export * from './wrapInlineCode';
+export * from './cdn';

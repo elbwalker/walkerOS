@@ -1,3 +1,4 @@
+import { simulate } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SimulateOutputShape } from '../schemas/output.js';
@@ -22,8 +23,6 @@ export function registerSimulateTool(server: McpServer) {
     },
     async ({ configPath, event, flow, platform }) => {
       try {
-        const { simulate } = await import('@walkeros/cli');
-
         // Parse event if JSON string
         let parsedEvent: unknown = event;
         if (event.startsWith('{') || event.startsWith('[')) {

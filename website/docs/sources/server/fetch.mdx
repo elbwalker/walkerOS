@@ -5,6 +5,8 @@ sidebar_position: 2
 package: '@walkeros/server-source-fetch'
 ---
 
+import { schemas } from '@walkeros/server-source-fetch/dev';
+
 <PackageLink env="server" github="packages/server/sources/fetch" npm="@walkeros/server-source-fetch" />
 
 # Fetch
@@ -38,6 +40,18 @@ It receives events via the Fetch API and forwards them to your destinations. Wor
   language="bash"
 />
 
+:::caution path setting renamed to paths
+The `path` setting has been renamed to `paths` (array). The old `path` still works but is deprecated and will be removed in the next major version.
+
+```typescript
+// Before (deprecated)
+settings: { path: '/events' }
+
+// After
+settings: { paths: ['/events'] }
+```
+:::
+
 ## Quick start
 
 <Tabs groupId="mode">
@@ -54,7 +68,7 @@ const { sources } = await startFlow({
     fetch: {
       code: sourceFetch,
       config: {
-        settings: { path: '/collect', cors: true },
+        settings: { paths: ['/collect'], cors: true },
       },
     },
   },
@@ -75,7 +89,7 @@ Add to your `flow.json` sources:
     "package": "@walkeros/server-source-fetch",
     "config": {
       "settings": {
-        "path": "/collect",
+        "paths": ["/collect"],
         "cors": true
       }
     }
@@ -148,13 +162,7 @@ Bun.serve({ fetch: sources.fetch.push, port: 3000 });`}
 
 ## Configuration
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `path` | `string` | `/collect` | Collection endpoint path |
-| `cors` | `boolean \| object` | `true` | CORS configuration |
-| `healthPath` | `string` | `/health` | Health check endpoint |
-| `maxRequestSize` | `number` | `102400` | Max request size in bytes (100KB) |
-| `maxBatchSize` | `number` | `100` | Max events per batch request |
+<PropertyTable schema={schemas.settings} />
 
 ## Ingest Metadata
 

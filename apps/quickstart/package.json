@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/quickstart",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "private": true,
   "description": "Verified code examples for walkerOS documentation",
   "license": "MIT",
@@ -8,17 +8,18 @@
     "build": "tsup --silent",
     "test": "jest",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "1.3.0",
-    "@walkeros/collector": "1.2.0",
-    "@walkeros/web-core": "1.0.5",
-    "@walkeros/web-source-browser": "1.1.3",
-    "@walkeros/web-destination-gtag": "1.0.5",
-    "@walkeros/web-destination-api": "1.1.5"
+    "@walkeros/core": "^2.0.0",
+    "@walkeros/collector": "^2.0.0",
+    "@walkeros/web-core": "^2.0.0",
+    "@walkeros/web-source-browser": "^2.0.0",
+    "@walkeros/web-destination-gtag": "^2.0.0",
+    "@walkeros/web-destination-api": "^2.0.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

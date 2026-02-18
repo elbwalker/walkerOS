@@ -7,6 +7,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { bundle } from '../bundle/index.js';
+import { getTmpPath } from '../../core/index.js';
 
 /**
  * Prepares a JSON config file for execution by bundling it to a temporary location.
@@ -27,11 +28,9 @@ export async function prepareBundleForRun(
     silent?: boolean;
   },
 ): Promise<string> {
-  // Create temp directory relative to config (ensures node_modules is findable)
-  const configDir = path.dirname(path.resolve(configPath));
-  const tempDir = path.join(
-    configDir,
-    '.tmp',
+  // Create temp directory relative to cwd (ensures node_modules is findable)
+  const tempDir = getTmpPath(
+    undefined,
     `run-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   );
   await fs.ensureDir(tempDir);

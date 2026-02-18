@@ -1,5 +1,16 @@
 # @walkeros/server-source-aws
 
+## 2.0.1
+
+## 1.0.6
+
+### Patch Changes
+
+- 95f51bc: Replace Jest matchers with plain values in examples for walkerOS.json
+  generation
+- Updated dependencies [7b2d750]
+  - @walkeros/core@1.4.0
+
 ## 1.0.5
 
 ### Patch Changes

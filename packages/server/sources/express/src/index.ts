@@ -25,7 +25,11 @@ export const sourceExpress = async (
   const { config = {}, env } = context;
 
   // Validate and apply default settings
-  const settings = SettingsSchema.parse(config.settings || {});
+  const parsed = SettingsSchema.parse(config.settings || {});
+  const settings = {
+    ...parsed,
+    paths: parsed.paths ?? (parsed.path ? [parsed.path] : ['/collect']),
+  };
 
   const app = express();
 
@@ -106,10 +110,21 @@ export const sourceExpress = async (
     }
   };
 
-  // Register event collection endpoint (handles POST, GET, OPTIONS)
-  app.post(settings.path, push);
-  app.get(settings.path, push);
-  app.options(settings.path, push);
+  // Register handlers per route config
+  const resolvedPaths = settings.paths.map((entry) =>
+    typeof entry === 'string'
+      ? { path: entry, methods: ['GET', 'POST'] as const }
+      : {
+          path: entry.path,
+          methods: entry.methods || (['GET', 'POST'] as const),
+        },
+  );
+
+  for (const route of resolvedPaths) {
+    if (route.methods.includes('POST')) app.post(route.path, push);
+    if (route.methods.includes('GET')) app.get(route.path, push);
+    app.options(route.path, push); // Always register OPTIONS for CORS
+  }
 
   // Health check endpoints (if enabled)
   if (settings.status) {
@@ -138,11 +153,15 @@ export const sourceExpress = async (
       const statusRoutes = settings.status
         ? `\n   GET /health - Health check\n   GET /ready - Readiness check`
         : '';
+      const routeLines = resolvedPaths
+        .map((r) => {
+          const methods = [...r.methods, 'OPTIONS'].join(', ');
+          return `   ${methods} ${r.path}`;
+        })
+        .join('\n');
       env.logger.info(
         `Express source listening on port ${settings.port}\n` +
-          `   POST ${settings.path} - Event collection (JSON body)\n` +
-          `   GET ${settings.path} - Pixel tracking (query params)\n` +
-          `   OPTIONS ${settings.path} - CORS preflight` +
+          routeLines +
           statusRoutes,
       );
     });
@@ -187,6 +206,8 @@ export type {
   Mapping,
   InitSettings,
   Settings,
+  RouteConfig,
+  RouteMethod,
 } from './types';
 
 // Export utils

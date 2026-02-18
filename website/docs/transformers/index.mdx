@@ -6,7 +6,7 @@ sidebar_position: 5
 
 # Transformers
 
-Transformers are middleware for **validating**, **enriching**, and **redacting** events in the walkerOS pipeline.
+Transformers are middleware for **validating**, **enriching**, **routing**, and **redacting** events in the walkerOS pipeline.
 
 <FlowMap
   sources={{ default: { label: 'Source', next: 'pre', highlight: false } }}
@@ -25,6 +25,7 @@ Transformers are middleware for **validating**, **enriching**, and **redacting**
 | Use Case | Example |
 |----------|---------|
 | **Validate** | Ensure events match JSON Schema contracts |
+| **Route** | Branch to different chains based on request path |
 | **Enrich** | Add server-side data (user segments, geo) |
 | **Redact** | Remove PII before sending to destinations |
 
@@ -82,7 +83,18 @@ Validates events using JSON Schema:
 
 [Learn more →](./validator)
 
+### Router
+
+Routes events to different transformer chains based on ingest metadata:
+
+* Match on path, method, headers, or any ingest field
+* 8 match operators with boolean logic (AND/OR, nestable)
+* First match wins, wildcard fallback
+
+[Learn more →](./router)
+
 ## Next steps
 
 * **[Validator](./validator)** - JSON Schema validation
+* **[Router](./router)** - Dynamic chain branching
 * **[Create your own](./create-your-own)** - Custom transformer guide

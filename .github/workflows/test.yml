@@ -65,6 +65,11 @@ jobs:
             packages/*/coverage/
             packages/*/.tmp/
           retention-days: 7
+      - run: npm run typecheck
       - run: npm run lint
       - name: Validate documentation
         run: npm run validate:links
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          CI: true

@@ -68,12 +68,15 @@ Validate walkerOS events, flow configurations, or mapping rules.
 
 #### `bundle`
 
-Bundle a walkerOS flow configuration into deployable JavaScript.
+Bundle a walkerOS flow configuration into deployable JavaScript. Supports both
+local bundling (via CLI) and remote cloud bundling (via API).
 
-- `configPath` (required): Path to the flow configuration file
+- `configPath` (optional): Path to the flow configuration file (local mode)
 - `flow` (optional): Specific flow name to bundle
 - `stats` (optional): Include bundle statistics in output
 - `output` (optional): Output file path for the bundle
+- `remote` (optional): Use remote cloud bundling (requires `WALKEROS_TOKEN`)
+- `content` (optional): Flow.Setup JSON content (required when `remote: true`)
 
 #### `simulate`
 
@@ -160,7 +163,7 @@ Create a new flow configuration.
 
 #### `update-flow`
 
-Update a flow name and/or content. Creates a version snapshot automatically.
+Update a flow name and/or content.
 
 - `flowId` (required): Flow ID (`cfg_...`)
 - `name` (optional): New flow name
@@ -181,15 +184,6 @@ Create a copy of an existing flow configuration.
 - `flowId` (required): Flow ID to duplicate (`cfg_...`)
 - `name` (optional): Name for the copy
 - `projectId` (optional): Project ID
-
-### Bundle (Remote)
-
-#### `bundle-remote`
-
-Bundle a flow configuration using the walkerOS cloud service. No local build
-tools needed.
-
-- `content` (required): Flow.Setup JSON content
 
 ## Local Development
 

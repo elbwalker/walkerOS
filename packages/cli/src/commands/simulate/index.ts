@@ -2,6 +2,7 @@ import { simulateCore, formatSimulationResult } from './simulator.js';
 import {
   createCommandLogger,
   getErrorMessage,
+  getTmpPath,
   isStdinPiped,
   readStdin,
   writeResult,
@@ -27,7 +28,7 @@ export async function simulateCommand(
       // Write stdin to temp file for simulateCore (expects file path)
       const fs = await import('fs-extra');
       const path = await import('path');
-      const tmpPath = path.default.resolve('.tmp', 'stdin-simulate.json');
+      const tmpPath = getTmpPath(undefined, 'stdin-simulate.json');
       await fs.default.ensureDir(path.default.dirname(tmpPath));
       await fs.default.writeFile(tmpPath, stdinContent, 'utf-8');
       config = tmpPath;

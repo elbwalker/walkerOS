@@ -18,6 +18,7 @@ import {
   type Logger,
   type Platform,
 } from '../../core/index.js';
+import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
 import type { PushCommandOptions, PushResult } from './types.js';
@@ -145,7 +146,7 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
     if (isStdinPiped() && !options.config) {
       const stdinContent = await readStdin();
       // Write stdin to temp file for pushCore (expects file path)
-      const tmpPath = path.resolve('.tmp', 'stdin-push.json');
+      const tmpPath = getTmpPath(undefined, 'stdin-push.json');
       await fs.ensureDir(path.dirname(tmpPath));
       await fs.writeFile(tmpPath, stdinContent, 'utf-8');
       config = tmpPath;
@@ -287,9 +288,8 @@ async function executeConfigPush(
   // Bundle to temp file in config directory (so Node.js can find node_modules)
   logger.debug('Bundling flow configuration');
   const configDir = buildOptions.configDir || process.cwd();
-  const tempDir = path.join(
-    configDir,
-    '.tmp',
+  const tempDir = getTmpPath(
+    undefined,
     `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   );
   setTempDir(tempDir);
@@ -344,9 +344,8 @@ async function executeBundlePush(
   context: { logger?: CoreLogger.Config } = {},
 ): Promise<PushResult> {
   // Write bundle to temp file
-  const tempDir = path.join(
-    process.cwd(),
-    '.tmp',
+  const tempDir = getTmpPath(
+    undefined,
     `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   );
   setTempDir(tempDir);

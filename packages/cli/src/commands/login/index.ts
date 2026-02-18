@@ -1,5 +1,4 @@
-import { createServer } from 'http';
-import { randomBytes } from 'crypto';
+import { hostname } from 'os';
 import { createLogger } from '../../core/logger.js';
 import {
   writeConfig,
@@ -20,15 +19,21 @@ export interface LoginResult {
   error?: string;
 }
 
-const LOGIN_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
+export interface LoginOptions {
+  url?: string;
+  /** Override browser opener for testing */
+  openUrl?: (url: string) => Promise<void>;
+  /** Override fetch for testing */
+  fetch?: typeof globalThis.fetch;
+  /** Max poll attempts before giving up (for testing) */
+  maxPollAttempts?: number;
+}
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+const POLL_TIMEOUT_BUFFER_MS = 5000;
+
+async function openInBrowser(url: string): Promise<void> {
+  const { default: open } = await import('open');
+  await open(url);
 }
 
 export async function loginCommand(
@@ -44,7 +49,7 @@ export async function loginCommand(
     const result = await login({ url: options.url });
 
     if (options.json) {
-      console.log(JSON.stringify(result, null, 2));
+      logger.json(result);
     } else if (result.success) {
       logger.success(`Logged in as ${result.email}`);
       logger.log(`Token stored in ${result.configPath}`);
@@ -55,7 +60,7 @@ export async function loginCommand(
     const message = error instanceof Error ? error.message : String(error);
 
     if (options.json) {
-      console.log(JSON.stringify({ success: false, error: message }, null, 2));
+      logger.json({ success: false, error: message });
     } else {
       logger.error(message);
     }
@@ -64,133 +69,82 @@ export async function loginCommand(
   }
 }
 
-export async function login(
-  options: { url?: string } = {},
-): Promise<LoginResult> {
+export async function login(options: LoginOptions = {}): Promise<LoginResult> {
   const appUrl = options.url || resolveAppUrl();
-  const state = randomBytes(32).toString('hex');
+  const f = options.fetch ?? globalThis.fetch;
 
-  // Dynamic import for ESM-only `open` package
-  const { default: open } = await import('open');
+  // 1. Request device code
+  const codeResponse = await f(`${appUrl}/api/auth/device/code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
 
-  return new Promise<LoginResult>((resolve, reject) => {
-    const server = createServer(async (req, res) => {
-      const url = new URL(req.url || '', `http://localhost`);
+  if (!codeResponse.ok) {
+    return { success: false, error: 'Failed to request device code' };
+  }
 
-      if (url.pathname !== '/callback') {
-        res.writeHead(404);
-        res.end('Not found');
-        return;
-      }
+  const {
+    deviceCode,
+    userCode,
+    verificationUri,
+    verificationUriComplete,
+    expiresIn,
+    interval,
+  } = await codeResponse.json();
 
-      const code = url.searchParams.get('code');
-      const returnedState = url.searchParams.get('state');
+  // 2. Display code and open browser
+  const prompt = (msg: string) => process.stderr.write(msg + '\n');
+  prompt(`\n! Your one-time code: ${userCode}`);
+  prompt(`  Authorize here: ${verificationUri}\n`);
 
-      // Verify state (CSRF protection)
-      if (returnedState !== state) {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(
-          '<html><body><h1>Authorization failed</h1><p>State mismatch. Please try again.</p></body></html>',
-        );
-        cleanup();
-        reject(new Error('Authorization failed: state mismatch'));
-        return;
-      }
+  const opener = options.openUrl ?? openInBrowser;
+  try {
+    await opener(verificationUriComplete || verificationUri);
+    prompt('  Opening browser...');
+  } catch {
+    prompt('  Could not open browser. Visit the URL manually.');
+  }
 
-      if (!code) {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(
-          '<html><body><h1>Authorization failed</h1><p>No authorization code received.</p></body></html>',
-        );
-        cleanup();
-        reject(new Error('Authorization failed: no code received'));
-        return;
-      }
+  prompt('  Waiting for authorization... (press Ctrl+C to cancel)\n');
 
-      // Exchange code for token
-      try {
-        const exchangeResponse = await fetch(
-          `${appUrl}/api/auth/cli/exchange`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code }),
-          },
-        );
+  // 3. Poll for token
+  const deadline = Date.now() + expiresIn * 1000 + POLL_TIMEOUT_BUFFER_MS;
+  let pollInterval = (interval ?? 5) * 1000;
+  const maxAttempts = options.maxPollAttempts ?? Infinity;
+  let attempts = 0;
 
-        if (!exchangeResponse.ok) {
-          const error = await exchangeResponse.json();
-          res.writeHead(200, { 'Content-Type': 'text/html' });
-          const safeMessage = escapeHtml(
-            error.error?.message || 'Unknown error',
-          );
-          res.end(
-            `<html><body><h1>Authorization failed</h1><p>${safeMessage}</p></body></html>`,
-          );
-          cleanup();
-          reject(new Error(error.error?.message || 'Token exchange failed'));
-          return;
-        }
+  while (Date.now() < deadline && attempts < maxAttempts) {
+    attempts++;
+    await new Promise((r) => setTimeout(r, pollInterval));
 
-        const data = await exchangeResponse.json();
-
-        // Store config
-        writeConfig({
-          token: data.token,
-          email: data.email,
-          appUrl,
-        });
-
-        const configPath = getConfigPath();
-
-        // Success page
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(
-          '<html><body><h1>Authorized!</h1><p>You can close this tab and return to the terminal.</p></body></html>',
-        );
-        cleanup();
-        resolve({ success: true, email: data.email, configPath });
-      } catch {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(
-          '<html><body><h1>Authorization failed</h1><p>Could not exchange authorization code.</p></body></html>',
-        );
-        cleanup();
-        reject(new Error('Token exchange failed'));
-      }
+    const tokenResponse = await f(`${appUrl}/api/auth/device/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceCode, hostname: hostname() }),
     });
 
-    // Timeout
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error('Authorization timed out. Please try again.'));
-    }, LOGIN_TIMEOUT_MS);
+    const data = await tokenResponse.json();
 
-    function cleanup() {
-      clearTimeout(timeout);
-      server.close();
+    if (tokenResponse.ok && data.token) {
+      // 4. Store config
+      writeConfig({ token: data.token, email: data.email, appUrl });
+      const configPath = getConfigPath();
+      return { success: true, email: data.email, configPath };
     }
 
-    // Start server on random port
-    server.listen(0, () => {
-      const address = server.address();
-      if (!address || typeof address === 'string') {
-        cleanup();
-        reject(new Error('Failed to start callback server'));
-        return;
-      }
+    if (data.error === 'authorization_pending') continue;
+    if (data.error === 'slow_down') {
+      pollInterval += 5000;
+      continue;
+    }
 
-      const port = address.port;
-      const authUrl = `${appUrl}/auth/cli?port=${port}&state=${state}`;
+    // Any other error: expired, denied, etc.
+    return { success: false, error: data.error || 'Authorization failed' };
+  }
 
-      // Open browser
-      open(authUrl).catch(() => {
-        // Browser failed to open — print URL for manual copy
-        // eslint-disable-next-line no-console
-        console.error(
-          `Could not open browser. Visit this URL manually:\n\n  ${authUrl}\n`,
-        );
-      });
-    });
-  });
+  return {
+    success: false,
+    error: 'Authorization timed out. Please try again.',
+  };
 }

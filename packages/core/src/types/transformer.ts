@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Collector, Logger, WalkerOS, Context as BaseContext } from '.';
 
+export type Next = string | string[];
+
 /**
  * Base environment interface for walkerOS transformers.
  *
@@ -55,7 +57,7 @@ export interface Config<T extends TypesGeneric = Types> {
   env?: Env<T>;
   id?: string;
   logger?: Logger.Config;
-  next?: string | string[]; // Graph wiring to next transformer
+  next?: Next; // Graph wiring to next transformer
   init?: boolean; // Track init state (like Destination)
 }
 
@@ -71,6 +73,21 @@ export interface Context<
 }
 
 /**
+ * Branch result for dynamic chain routing.
+ * Returned by transformers (e.g., router) to redirect the chain.
+ * The chain runner resolves `next` via walkChain() — same semantics
+ * as source.next or transformer.config.next.
+ *
+ * IMPORTANT: Always use the `branch()` factory function to create BranchResult.
+ * The `__branch` discriminant is required for reliable type detection.
+ */
+export interface BranchResult {
+  readonly __branch: true;
+  event: WalkerOS.DeepPartialEvent;
+  next: Next;
+}
+
+/**
  * The main transformer function.
  * Uses DeepPartialEvent for consistency across pre/post collector.
  *
@@ -83,7 +100,9 @@ export interface Context<
 export type Fn<T extends TypesGeneric = Types> = (
   event: WalkerOS.DeepPartialEvent,
   context: Context<T>,
-) => WalkerOS.PromiseOrValue<WalkerOS.DeepPartialEvent | false | void>;
+) => WalkerOS.PromiseOrValue<
+  WalkerOS.DeepPartialEvent | false | void | BranchResult
+>;
 
 /**
  * Optional initialization function.
@@ -125,7 +144,7 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
   code: Init<T>;
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
-  next?: string | string[];
+  next?: Next;
 };
 
 /**

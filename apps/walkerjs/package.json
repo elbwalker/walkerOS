@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/walker.js",
-  "version": "1.0.5",
+  "version": "2.0.1",
   "description": "Ready-to-use walkerOS bundle with browser source, collector, and dataLayer support",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -33,17 +33,18 @@
     "build": "tsup",
     "test": "jest --colors --coverage",
     "dev": "jest --watchAll --colors",
-    "lint": "tsc --noEmit && eslint \"**/*.ts*\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf coverage",
     "preview": "npm run build && npx serve -l 3333 examples"
   },
   "dependencies": {
-    "@walkeros/core": "1.3.0",
-    "@walkeros/collector": "1.2.0",
-    "@walkeros/web-core": "1.0.5",
-    "@walkeros/web-source-browser": "1.1.3",
-    "@walkeros/web-source-datalayer": "1.0.5",
-    "@walkeros/web-source-session": "1.1.3"
+    "@walkeros/core": "^2.0.0",
+    "@walkeros/collector": "^2.0.0",
+    "@walkeros/web-core": "^2.0.0",
+    "@walkeros/web-source-browser": "^2.0.0",
+    "@walkeros/web-source-datalayer": "^2.0.0",
+    "@walkeros/web-source-session": "^2.0.0"
   },
   "devDependencies": {
     "@swc/jest": "^0.2.39",
@@ -61,7 +62,6 @@
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "keywords": [
-    "walker",
     "walkerOS",
     "analytics",
     "tracking",

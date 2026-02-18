@@ -1,117 +1,341 @@
 /**
  * Entry point for walkeros/flow Docker container
- * Reads environment variables and starts the appropriate mode
+ * DRY pipeline: env validation → resolve config → bundle → cache → run → heartbeat → poll
  */
 
-import { runFlow } from './runner.js';
-import { runServeMode } from './serve.js';
+import { validateEnv, type RunnerEnv } from './env.js';
 import { resolveBundle } from './resolve-bundle.js';
-import { registerRuntime } from './register.js';
+import { loadFlow, swapFlow, type FlowHandle } from './runner.js';
+import { runServeMode } from './serve.js';
+import { fetchConfig } from './config-fetcher.js';
+import { writeCache, readCache } from './cache.js';
+import {
+  createHeartbeat,
+  getInstanceId,
+  type HeartbeatHandle,
+} from './heartbeat.js';
+import { createPoller, type PollerHandle } from './poller.js';
 import { createLogger } from '../core/logger.js';
 import type { Logger } from '@walkeros/core';
+import { VERSION } from '../version.js';
+import {
+  prepareBundleForRun,
+  isPreBuiltConfig,
+} from '../commands/run/utils.js';
+import { writeFileSync, readFileSync } from 'fs';
+import {
+  initStatus,
+  setRunning,
+  updateLastPoll,
+  updateLastHeartbeat,
+  updateConfigVersion as updateStatusVersion,
+} from './status.js';
 
 /**
- * Adapt CLI logger to core Logger.Instance interface
+ * Adapt CLI logger to @walkeros/core Logger.Instance interface
  */
 function adaptLogger(
   cliLogger: ReturnType<typeof createLogger>,
 ): Logger.Instance {
   return {
     error: (message: string | Error) => {
-      const msg = message instanceof Error ? message.message : message;
-      cliLogger.error(msg);
+      cliLogger.error(message instanceof Error ? message.message : message);
     },
     info: (message: string | Error) => {
-      const msg = message instanceof Error ? message.message : message;
-      cliLogger.info(msg);
+      cliLogger.info(message instanceof Error ? message.message : message);
     },
     debug: (message: string | Error) => {
-      const msg = message instanceof Error ? message.message : message;
-      cliLogger.debug(msg);
+      cliLogger.debug(message instanceof Error ? message.message : message);
     },
     throw: (message: string | Error): never => {
       const msg = message instanceof Error ? message.message : message;
       cliLogger.error(msg);
       throw message instanceof Error ? message : new Error(msg);
     },
-    scope: (name: string) => {
-      // Simple pass-through for scoped loggers - CLI logger doesn't use scopes
-      return adaptLogger(cliLogger);
-    },
+    scope: (_name: string) => adaptLogger(cliLogger),
   };
 }
 
-async function main() {
-  const mode = process.env.MODE || 'collect';
-  let bundleEnv = process.env.BUNDLE || '/app/flow/bundle.mjs';
-  const port = parseInt(process.env.PORT || '8080', 10);
+function resolveAppUrl(): string {
+  return (
+    process.env.APP_URL ||
+    process.env.WALKEROS_APP_URL ||
+    'https://app.walkeros.io'
+  );
+}
 
+async function main() {
   const cliLogger = createLogger({ silent: false, verbose: true });
   const logger = adaptLogger(cliLogger);
 
-  cliLogger.log(`Starting walkeros/flow in ${mode} mode`);
+  // Step 1: Validate env vars
+  let env: RunnerEnv;
+  try {
+    env = validateEnv(process.env);
+  } catch (error) {
+    cliLogger.error(
+      `Configuration error: ${error instanceof Error ? error.message : error}`,
+    );
+    process.exit(1);
+  }
 
-  // If registration env vars are set, register and get fresh bundle URL
-  const appUrl = process.env.APP_URL;
-  const deployToken = process.env.DEPLOY_TOKEN;
-  const projectId = process.env.PROJECT_ID;
-  const flowId = process.env.FLOW_ID;
-  const bundlePath = process.env.BUNDLE_PATH;
+  cliLogger.log(`walkeros/flow v${VERSION} — ${env.mode} mode`);
+  cliLogger.log(`Instance: ${getInstanceId()}`);
 
-  if (appUrl && deployToken && projectId && flowId && bundlePath) {
+  // Initialize status tracking
+  initStatus({
+    mode: env.mode,
+    port: env.port,
+    configSource: env.remoteConfig ? 'api' : 'local',
+    apiEnabled: env.apiEnabled,
+  });
+
+  // Step 2: Serve mode is simple — no bundling, no polling
+  if (env.mode === 'serve') {
+    setRunning();
+    await runServeMode({ port: env.port, file: env.bundlePath }, logger);
+    return;
+  }
+
+  // Step 3: Resolve config (local file or API fetch)
+  let configPath: string | null = null;
+  let configVersion: string | undefined;
+
+  if (env.remoteConfig) {
+    // Mode C/D: Fetch from API
+    cliLogger.log('Fetching config from API...');
     try {
-      cliLogger.log('Registering with app...');
-      const result = await registerRuntime({
-        appUrl,
-        deployToken,
-        projectId,
-        flowId,
-        bundlePath,
+      const result = await fetchConfig({
+        appUrl: resolveAppUrl(),
+        token: env.token!,
+        projectId: env.projectId!,
+        flowId: env.flowId!,
       });
-      bundleEnv = result.bundleUrl;
-      cliLogger.log('Registered, bundle URL received');
+      if (result.changed) {
+        const tmpConfigPath = `/tmp/walkeros-flow-${Date.now()}.json`;
+        writeFileSync(
+          tmpConfigPath,
+          JSON.stringify(result.content, null, 2),
+          'utf-8',
+        );
+        configPath = tmpConfigPath;
+        configVersion = result.version;
+        cliLogger.log(`Config version: ${result.version}`);
+      }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      cliLogger.error(`Registration failed: ${message}`);
+      cliLogger.error(
+        `API fetch failed: ${error instanceof Error ? error.message : error}`,
+      );
+
+      // Fallback to cache
+      const cached = readCache(env.cacheDir);
+      if (cached) {
+        cliLogger.log(`Using cached bundle (version: ${cached.version})`);
+        await runWithBundle(
+          cached.bundlePath,
+          env,
+          logger,
+          cliLogger,
+          cached.version,
+        );
+        return;
+      }
+
+      cliLogger.error('No cached bundle available. Cannot start.');
       process.exit(1);
     }
-  }
-
-  // Resolve bundle from stdin, URL, or file path
-  let file: string;
-  try {
-    const resolved = await resolveBundle(bundleEnv);
-    file = resolved.path;
-
-    // Log which input method was used
+  } else {
+    // Mode A/B: Use local bundle
+    const resolved = await resolveBundle(env.bundlePath);
     if (resolved.source === 'stdin') {
-      cliLogger.log('Bundle: received via stdin pipe');
+      cliLogger.log('Bundle: received via stdin');
     } else if (resolved.source === 'url') {
-      cliLogger.log(`Bundle: fetched from ${bundleEnv}`);
+      cliLogger.log('Bundle: fetched from URL');
     } else {
-      cliLogger.log(`Bundle: ${file}`);
+      cliLogger.log(`Bundle: ${resolved.path}`);
     }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    cliLogger.error(`Failed to resolve bundle: ${message}`);
+
+    // Pre-built bundles skip bundling step
+    if (isPreBuiltConfig(resolved.path)) {
+      await runWithBundle(resolved.path, env, logger, cliLogger, undefined);
+      return;
+    }
+    configPath = resolved.path;
+  }
+
+  // Step 4: Bundle the config
+  if (!configPath) {
+    cliLogger.error('No config resolved');
     process.exit(1);
   }
 
-  cliLogger.log(`Port: ${port}`);
-
+  cliLogger.log('Building flow...');
+  let bundlePath: string;
   try {
-    if (mode === 'collect') {
-      await runFlow(file, { port }, logger);
-    } else if (mode === 'serve') {
-      await runServeMode({ file, port }, logger);
-    } else {
-      cliLogger.error(`Unknown mode: ${mode}. Use 'collect' or 'serve'.`);
-      process.exit(1);
-    }
+    bundlePath = await prepareBundleForRun(configPath, {
+      verbose: false,
+      silent: true,
+    });
   } catch (error) {
-    cliLogger.error(`Failed to start: ${error}`);
+    cliLogger.error(
+      `Bundle failed: ${error instanceof Error ? error.message : error}`,
+    );
+
+    // Fallback to cache for remote config
+    if (env.remoteConfig) {
+      const cached = readCache(env.cacheDir);
+      if (cached) {
+        cliLogger.log(`Using cached bundle (version: ${cached.version})`);
+        await runWithBundle(
+          cached.bundlePath,
+          env,
+          logger,
+          cliLogger,
+          cached.version,
+        );
+        return;
+      }
+    }
+
     process.exit(1);
   }
+
+  cliLogger.log('Bundle ready');
+
+  // Step 5: Cache the working bundle
+  try {
+    const configContent = readFileSync(configPath, 'utf-8');
+    writeCache(
+      env.cacheDir,
+      bundlePath,
+      configContent,
+      configVersion || 'local',
+    );
+  } catch {
+    cliLogger.debug('Cache write failed (non-critical)');
+  }
+
+  // Step 6: Run
+  await runWithBundle(bundlePath, env, logger, cliLogger, configVersion);
+}
+
+async function runWithBundle(
+  bundlePath: string,
+  env: RunnerEnv,
+  logger: Logger.Instance,
+  cliLogger: ReturnType<typeof createLogger>,
+  configVersion: string | undefined,
+) {
+  // Load and start the flow
+  let handle: FlowHandle;
+  try {
+    handle = await loadFlow(bundlePath, { port: env.port }, logger);
+  } catch (error) {
+    cliLogger.error(
+      `Failed to load flow: ${error instanceof Error ? error.message : error}`,
+    );
+    process.exit(1);
+  }
+
+  setRunning();
+  cliLogger.log('Flow running');
+  cliLogger.log(`Port: ${env.port}`);
+
+  // Track handles for shutdown
+  let heartbeat: HeartbeatHandle | null = null;
+  let poller: PollerHandle | null = null;
+
+  // Step 7: Start heartbeat (if API enabled, uses HEARTBEAT_INTERVAL)
+  if (env.apiEnabled) {
+    heartbeat = createHeartbeat(
+      {
+        appUrl: resolveAppUrl(),
+        token: env.token!,
+        projectId: env.projectId!,
+        flowId: env.flowId,
+        configVersion,
+        mode: env.mode,
+        intervalMs: env.heartbeatInterval * 1000,
+      },
+      logger,
+    );
+    heartbeat.start();
+    cliLogger.log(`Heartbeat: active (every ${env.heartbeatInterval}s)`);
+  }
+
+  // Step 8: Start poller (if remote config, uses POLL_INTERVAL)
+  if (env.remoteConfig) {
+    poller = createPoller(
+      {
+        fetchOptions: {
+          appUrl: resolveAppUrl(),
+          token: env.token!,
+          projectId: env.projectId!,
+          flowId: env.flowId!,
+        },
+        intervalMs: env.pollInterval * 1000,
+        onUpdate: async (content, version) => {
+          // Unique temp path per update — prevents race conditions
+          const tmpConfigPath = `/tmp/walkeros-flow-${Date.now()}.json`;
+          writeFileSync(
+            tmpConfigPath,
+            JSON.stringify(content, null, 2),
+            'utf-8',
+          );
+
+          const newBundle = await prepareBundleForRun(tmpConfigPath, {
+            verbose: false,
+            silent: true,
+          });
+
+          handle = await swapFlow(
+            handle,
+            newBundle,
+            { port: env.port },
+            logger,
+          );
+
+          // Update cache
+          writeCache(env.cacheDir, newBundle, JSON.stringify(content), version);
+          configVersion = version;
+
+          // Update heartbeat config version
+          if (heartbeat) heartbeat.updateConfigVersion(version);
+
+          // Update status tracking
+          updateStatusVersion(version);
+          updateLastPoll();
+
+          cliLogger.log(`Hot-swapped to version ${version}`);
+        },
+      },
+      logger,
+    );
+    poller.start();
+    cliLogger.log(`Polling: active (every ${env.pollInterval}s)`);
+  }
+
+  // Graceful shutdown
+  const shutdown = async (signal: string) => {
+    cliLogger.log(`Received ${signal}, shutting down...`);
+    if (poller) poller.stop();
+    if (heartbeat) heartbeat.stop();
+    try {
+      if (handle.collector.command) {
+        await handle.collector.command('shutdown');
+      }
+    } catch {
+      /* best-effort */
+    }
+    cliLogger.log('Shutdown complete');
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+
+  // Keep alive
+  await new Promise(() => {});
 }
 
 main();

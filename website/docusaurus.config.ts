@@ -203,6 +203,18 @@ const config: Config = {
             from: '/docs/sources/walkerjs/installation/package',
             to: '/docs/sources/web/browser/commands#run',
           },
+          {
+            from: '/docs/guides/consent/examples/cookiefirst',
+            to: '/docs/sources/web/cmps/cookiefirst',
+          },
+          {
+            from: '/docs/guides/consent/examples/cookiepro',
+            to: '/docs/sources/web/cmps/cookiepro',
+          },
+          {
+            from: '/docs/guides/consent/examples/usercentrics',
+            to: '/docs/sources/web/cmps/usercentrics',
+          },
         ],
       },
     ],

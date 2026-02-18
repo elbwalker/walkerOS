@@ -1,3 +1,5 @@
+import { WhoamiOutputShape } from '../../schemas/output.js';
+
 const mockWhoami = jest.fn();
 
 jest.mock('@walkeros/cli', () => ({
@@ -33,6 +35,9 @@ describe('auth tools', () => {
       expect(tool).toBeDefined();
       expect((tool.config as any).title).toBe('Who Am I');
       expect((tool.config as any).annotations.readOnlyHint).toBe(true);
+      expect(Object.keys((tool.config as any).outputSchema)).toEqual(
+        Object.keys(WhoamiOutputShape),
+      );
     });
 
     it('should return user identity on success', async () => {
@@ -48,6 +53,7 @@ describe('auth tools', () => {
 
       expect(mockWhoami).toHaveBeenCalled();
       expect(JSON.parse(result.content[0].text)).toEqual(mockResponse);
+      expect(result.structuredContent).toEqual(mockResponse);
     });
 
     it('should return error when token is missing', async () => {

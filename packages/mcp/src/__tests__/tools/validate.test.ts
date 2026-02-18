@@ -13,10 +13,12 @@ jest.mock('@walkeros/cli/dev', () => ({
 }));
 
 // Mock @walkeros/cli (dynamic import target)
-const mockValidate = jest.fn();
 jest.mock('@walkeros/cli', () => ({
-  validate: mockValidate,
+  validate: jest.fn(),
 }));
+
+import { validate } from '@walkeros/cli';
+const mockValidate = jest.mocked(validate);
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};

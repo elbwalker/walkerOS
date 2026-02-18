@@ -1,5 +1,13 @@
 # @walkeros/web-destination-api
 
+## 2.0.1
+
+## 1.1.6
+
+### Patch Changes
+
+- @walkeros/web-core@2.0.0
+
 ## 1.1.5
 
 ### Patch Changes

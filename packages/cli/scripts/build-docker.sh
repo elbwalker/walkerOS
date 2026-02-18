@@ -1,12 +1,16 @@
 #!/bin/bash
-# Build WalkerOS CLI Docker image
+# Build walkeros/cli Docker image
 set -e
 
 cd "$(dirname "$0")/.."
 
-echo "Building walkeros/cli Docker image..."
-docker build -t walkeros/cli:latest -f Dockerfile.cli .
+CLI_VERSION=$(node -p "require('./package.json').version")
+
+echo "Building walkeros/cli:${CLI_VERSION} Docker image..."
+docker build -t "walkeros/cli:${CLI_VERSION}" \
+  --build-arg "CLI_VERSION=${CLI_VERSION}" \
+  -f Dockerfile.cli .
 
 echo ""
 echo "Done!"
-docker images walkeros/cli:latest
+docker images "walkeros/cli:${CLI_VERSION}"

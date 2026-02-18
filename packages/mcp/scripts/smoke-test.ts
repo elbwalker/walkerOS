@@ -1,8 +1,9 @@
 /**
  * Smoke test for MCP API tools against a running walkerOS app.
  *
- * Tests every API endpoint the MCP package calls, using the same
- * HTTP methods and paths. Self-cleaning: creates and deletes its own data.
+ * Tests the API endpoints the MCP package calls (auth, projects, flows,
+ * bundle), using the same HTTP methods and paths. Self-cleaning: creates
+ * and deletes its own data.
  *
  * Prerequisites:
  *   - App running locally: cd app && npm run dev:app
@@ -162,66 +163,18 @@ await test('get-flow', async () => {
   assert(typeof data.content === 'object', 'Missing content');
 });
 
-// 9. Update flow twice (each update creates a version snapshot)
-// Two updates needed so restore-version can target version 1 (not the latest)
+// 9. Update flow
 await test('update-flow', async () => {
   assert(!!smokeFlowId, 'No flow');
-  // First update → creates version 1
-  let res = await api(
+  const res = await api(
     'PATCH',
     `/api/projects/${smokeProjectId}/flows/${smokeFlowId}`,
-    { content: { ...flowContent, variables: { env: 'v1' } } },
-  );
-  assert(res.ok, `Expected 200 on first update, got ${res.status}`);
-  // Second update → creates version 2
-  res = await api(
-    'PATCH',
-    `/api/projects/${smokeProjectId}/flows/${smokeFlowId}`,
-    { content: { ...flowContent, variables: { env: 'v2' } } },
-  );
-  assert(res.ok, `Expected 200 on second update, got ${res.status}`);
-});
-
-// 10. List versions
-let versionCount = 0;
-await test('list-versions', async () => {
-  assert(!!smokeFlowId, 'No flow');
-  const res = await api(
-    'GET',
-    `/api/projects/${smokeProjectId}/flows/${smokeFlowId}/versions`,
-  );
-  assert(res.ok, `Expected 200, got ${res.status}`);
-  const data = (await res.json()) as { versions: unknown[]; total: number };
-  assert(Array.isArray(data.versions), 'Missing versions array');
-  assert(data.total >= 1, 'Expected at least 1 version');
-  versionCount = data.total;
-});
-
-// 11. Get version
-await test('get-version', async () => {
-  assert(!!smokeFlowId, 'No flow');
-  assert(versionCount >= 1, 'No versions to get');
-  const res = await api(
-    'GET',
-    `/api/projects/${smokeProjectId}/flows/${smokeFlowId}/versions/1`,
-  );
-  assert(res.ok, `Expected 200, got ${res.status}`);
-  const data = (await res.json()) as { version: number; content: unknown };
-  assert(data.version === 1, 'Wrong version number');
-  assert(typeof data.content === 'object', 'Missing content');
-});
-
-// 12. Restore version
-await test('restore-version', async () => {
-  assert(!!smokeFlowId, 'No flow');
-  const res = await api(
-    'POST',
-    `/api/projects/${smokeProjectId}/flows/${smokeFlowId}/versions/1/restore`,
+    { content: { ...flowContent, variables: { env: 'updated' } } },
   );
   assert(res.ok, `Expected 200, got ${res.status}`);
 });
 
-// 13. Duplicate flow
+// 10. Duplicate flow
 let dupFlowId = '';
 await test('duplicate-flow', async () => {
   assert(!!smokeFlowId, 'No flow');
@@ -236,7 +189,7 @@ await test('duplicate-flow', async () => {
   dupFlowId = data.id;
 });
 
-// 14. Delete duplicate flow
+// 11. Delete duplicate flow
 await test('delete-flow', async () => {
   assert(!!dupFlowId, 'No duplicate flow');
   const res = await api(
@@ -246,14 +199,14 @@ await test('delete-flow', async () => {
   assert(res.status === 204, `Expected 204, got ${res.status}`);
 });
 
-// 15. Delete smoke project (cleans up all associated data)
+// 12. Delete smoke project (cleans up all associated data)
 await test('delete-project', async () => {
   assert(!!smokeProjectId, 'No project');
   const res = await api('DELETE', `/api/projects/${smokeProjectId}`);
   assert(res.status === 204, `Expected 204, got ${res.status}`);
 });
 
-// 16. Bundle remote
+// 13. Bundle remote
 await test('bundle-remote', async () => {
   const res = await api('POST', '/api/bundle', {
     flow: {

@@ -14,10 +14,14 @@ jest.mock('@walkeros/cli/dev', () => ({
 }));
 
 // Mock @walkeros/cli (dynamic import target)
-const mockBundle = jest.fn();
 jest.mock('@walkeros/cli', () => ({
-  bundle: mockBundle,
+  bundle: jest.fn(),
+  bundleRemote: jest.fn(),
 }));
+
+import { bundle, bundleRemote } from '@walkeros/cli';
+const mockBundle = jest.mocked(bundle);
+const mockBundleRemote = jest.mocked(bundleRemote);
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -165,5 +169,60 @@ describe('bundle tool', () => {
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toBe('Unknown error');
+  });
+
+  describe('remote bundling', () => {
+    it('calls bundleRemote when remote is true', async () => {
+      const content = { version: 1, flows: {} };
+      mockBundleRemote.mockResolvedValue({ bundle: 'code', size: 512 });
+
+      const tool = server.getTool('bundle');
+      const result = await tool.handler({ remote: true, content });
+
+      expect(mockBundleRemote).toHaveBeenCalledWith({ content });
+      expect(mockBundle).not.toHaveBeenCalled();
+      expect(result.structuredContent.success).toBe(true);
+      expect(result.structuredContent.bundle).toBe('code');
+    });
+
+    it('calls local bundle when remote is false', async () => {
+      mockBundle.mockResolvedValue({ success: true });
+
+      const tool = server.getTool('bundle');
+      await tool.handler({ configPath: './flow.json', remote: false });
+
+      expect(mockBundle).toHaveBeenCalled();
+      expect(mockBundleRemote).not.toHaveBeenCalled();
+    });
+
+    it('defaults to local bundle when remote is omitted', async () => {
+      mockBundle.mockResolvedValue({ success: true });
+
+      const tool = server.getTool('bundle');
+      await tool.handler({ configPath: './flow.json' });
+
+      expect(mockBundle).toHaveBeenCalled();
+      expect(mockBundleRemote).not.toHaveBeenCalled();
+    });
+
+    it('returns error when remote is true but content is missing', async () => {
+      const tool = server.getTool('bundle');
+      const result = await tool.handler({ remote: true });
+
+      expect(result.isError).toBe(true);
+      expect(JSON.parse(result.content[0].text).error).toContain('content');
+    });
+
+    it('returns error on remote API failure', async () => {
+      mockBundleRemote.mockRejectedValue(new Error('Invalid config'));
+
+      const tool = server.getTool('bundle');
+      const result = await tool.handler({
+        remote: true,
+        content: { version: 1 },
+      });
+
+      expect(result.isError).toBe(true);
+    });
   });
 });

@@ -1,6 +1,7 @@
 import { defineConfig } from 'tsup';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
+import { resolve, join } from 'path';
+import { pathToFileURL } from 'url';
 
 const baseConfig = {
   entry: ['src/index.ts'],
@@ -73,11 +74,133 @@ const buildES5 = (customConfig = {}) => ({
   ...customConfig,
 });
 
+/**
+ * Deep-clone a value for JSON serialization.
+ *
+ * Conventions:
+ * - Functions → { $code: fn.toString() } — serialized source for documentation, not executable
+ * - Zod instances → filtered out (returns undefined)
+ *   Zod 3: detected via _def.typeName starting with 'Zod'
+ *   Zod 4: detected via _zod property
+ * - Everything else → recursively passed through
+ */
+const toSerializable = (value) => {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'function') return { $code: value.toString() };
+  if (
+    typeof value === 'object' &&
+    (value._def?.typeName?.startsWith?.('Zod') || '_zod' in value)
+  )
+    return undefined;
+  if (Array.isArray(value)) {
+    return value.map((item) => toSerializable(item));
+  }
+  if (typeof value === 'object') {
+    const result = {};
+    for (const [key, val] of Object.entries(value)) {
+      const serialized = toSerializable(val);
+      if (serialized !== undefined) result[key] = serialized;
+    }
+    return result;
+  }
+  return value;
+};
+
+// Dev build: builds src/dev.ts and generates walkerOS.json
+const buildDev = (customConfig = {}) => {
+  const { onSuccess: customOnSuccess, ...restConfig } = customConfig;
+
+  const modulesConfig = buildModules({
+    entry: ['src/dev.ts'],
+    ...restConfig,
+  });
+
+  return {
+    ...modulesConfig,
+    async onSuccess() {
+      const cwd = process.cwd();
+      const packagePath = resolve(cwd, 'package.json');
+      let pkg = { name: 'unknown', version: '0.0.0' };
+      try {
+        pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
+      } catch (error) {
+        console.warn('[buildDev] Could not read package.json:', error.message);
+      }
+
+      // Check the built module exists
+      const devMjsPath = resolve(cwd, 'dist/dev.mjs');
+      if (!existsSync(devMjsPath)) {
+        console.warn('[buildDev] dist/dev.mjs not found, skipping walkerOS.json generation');
+        return;
+      }
+
+      // Import the built module (cache-bust for watch mode rebuilds)
+      const devModulePath = pathToFileURL(devMjsPath).href;
+      let devModule;
+      try {
+        devModule = await import(`${devModulePath}?t=${Date.now()}`);
+      } catch (error) {
+        console.warn(
+          `[buildDev] Could not import dist/dev.mjs: ${error.message}. Skipping walkerOS.json generation`,
+        );
+        return;
+      }
+
+      // Extract schemas (Zod instances filtered by toSerializable)
+      const schemas = toSerializable(devModule.schemas || {}) || {};
+
+      // Extract examples (convert functions to $code strings)
+      const rawExamples = devModule.examples || {};
+      const examples = toSerializable(rawExamples) || {};
+
+      // Read type and platform from package.json walkerOS field
+      const walkerOS = pkg.walkerOS || {};
+      const meta = { package: pkg.name, version: pkg.version };
+      if (walkerOS.type) meta.type = walkerOS.type;
+      if (walkerOS.platform) meta.platform = walkerOS.platform;
+
+      const output = { $meta: meta, schemas, examples };
+
+      // Validate
+      if (Object.keys(schemas).length === 0) {
+        console.warn('[buildDev] Warning: schemas is empty');
+      }
+
+      // Verify valid JSON roundtrip
+      const jsonString = JSON.stringify(output, null, 2);
+      try {
+        JSON.parse(jsonString);
+      } catch (error) {
+        console.error(
+          '[buildDev] Error: output is not valid JSON:',
+          error.message,
+        );
+        return;
+      }
+
+      // Write to dist/walkerOS.json
+      const outDir = resolve(cwd, 'dist');
+      mkdirSync(outDir, { recursive: true });
+      writeFileSync(join(outDir, 'walkerOS.json'), jsonString);
+      console.log(
+        `[buildDev] Generated dist/walkerOS.json for ${pkg.name}@${pkg.version}`,
+      );
+
+      // Run custom onSuccess if provided
+      if (typeof customOnSuccess === 'function') {
+        await customOnSuccess();
+      }
+    },
+  };
+};
+
 export {
   baseConfig,
   buildModules,
   buildExamples,
   buildBrowser,
   buildES5,
+  buildDev,
+  toSerializable,
   defineConfig,
 };

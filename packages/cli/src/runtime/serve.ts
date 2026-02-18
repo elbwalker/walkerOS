@@ -6,6 +6,7 @@ import express from 'express';
 import { resolve } from 'path';
 import type { Logger } from '@walkeros/core';
 import { VERSION } from '../version';
+import { getStatus } from './status';
 
 export interface ServeConfig {
   port?: number;
@@ -64,6 +65,11 @@ export async function runServeMode(
         file: file,
         url: urlPath,
       });
+    });
+
+    // Detailed status endpoint
+    app.get('/status', (req, res) => {
+      res.json(getStatus());
     });
 
     // Serve single file at custom URL path

@@ -6,6 +6,7 @@ export default {
   testMatch: ['<rootDir>/src/**/*.test.{ts,tsx}'],
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   moduleNameMapper: {
+    ...webConfig.moduleNameMapper,
     '^@/(.*)$': '<rootDir>/src/$1',
   },
 };

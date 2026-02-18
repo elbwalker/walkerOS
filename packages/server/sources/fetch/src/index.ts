@@ -6,11 +6,16 @@ import {
   createCorsHeaders,
   createPixelResponse,
   createJsonResponse,
+  matchPath,
 } from './utils';
 
 export const sourceFetch: Source.Init<Types> = async (context) => {
   const { config = {}, env, setIngest } = context;
-  const settings = SettingsSchema.parse(config.settings || {});
+  const parsed = SettingsSchema.parse(config.settings || {});
+  const settings = {
+    ...parsed,
+    paths: parsed.paths ?? (parsed.path ? [parsed.path] : ['/collect']),
+  };
   const { logger } = env;
 
   const push = async (request: Request): Promise<Response> => {
@@ -31,9 +36,41 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
         );
       }
 
-      // OPTIONS (no logging - CORS preflight is routine)
+      // Resolve route configs
+      const resolvedPaths = settings.paths.map((entry) =>
+        typeof entry === 'string'
+          ? { path: entry, methods: ['GET', 'POST'] as const }
+          : {
+              path: entry.path,
+              methods: entry.methods || (['GET', 'POST'] as const),
+            },
+      );
+
+      // Match request path against configured routes
+      const matchedRoute = resolvedPaths.find((route) =>
+        matchPath(url.pathname, route.path),
+      );
+
+      if (!matchedRoute) {
+        return createJsonResponse(
+          { success: false, error: 'Not found' },
+          404,
+          corsHeaders,
+        );
+      }
+
+      // OPTIONS (CORS preflight - no logging, routine)
       if (method === 'OPTIONS') {
         return new Response(null, { status: 204, headers: corsHeaders });
+      }
+
+      // Check method is allowed for this route
+      if (!matchedRoute.methods.includes(method as 'GET' | 'POST')) {
+        return createJsonResponse(
+          { success: false, error: 'Method not allowed' },
+          405,
+          corsHeaders,
+        );
       }
 
       // Extract ingest metadata from request (if config.ingest is defined)

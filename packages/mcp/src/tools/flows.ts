@@ -1,25 +1,19 @@
 import { z } from 'zod';
+import {
+  listFlows,
+  getFlow,
+  createFlow,
+  updateFlow,
+  deleteFlow,
+  duplicateFlow,
+} from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-
-function apiResult(result: unknown) {
-  return {
-    content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-  };
-}
-
-function apiError(error: unknown) {
-  return {
-    content: [
-      {
-        type: 'text' as const,
-        text: JSON.stringify({
-          error: error instanceof Error ? error.message : 'Unknown error',
-        }),
-      },
-    ],
-    isError: true as const,
-  };
-}
+import { apiResult, apiError } from './helpers.js';
+import {
+  ListFlowsOutputShape,
+  FlowOutputShape,
+  DeleteOutputShape,
+} from '../schemas/output.js';
 
 export function registerFlowTools(server: McpServer) {
   server.registerTool(
@@ -45,6 +39,7 @@ export function registerFlowTools(server: McpServer) {
           .optional()
           .describe('Include soft-deleted flows (default: false)'),
       },
+      outputSchema: ListFlowsOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -54,7 +49,6 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ projectId, sort, order, includeDeleted }) => {
       try {
-        const { listFlows } = await import('@walkeros/cli');
         return apiResult(
           await listFlows({ projectId, sort, order, includeDeleted }),
         );
@@ -77,6 +71,7 @@ export function registerFlowTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: FlowOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -86,7 +81,6 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, projectId }) => {
       try {
-        const { getFlow } = await import('@walkeros/cli');
         return apiResult(await getFlow({ flowId, projectId }));
       } catch (error) {
         return apiError(error);
@@ -109,6 +103,7 @@ export function registerFlowTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: FlowOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -118,7 +113,6 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ name, content, projectId }) => {
       try {
-        const { createFlow } = await import('@walkeros/cli');
         return apiResult(await createFlow({ name, content, projectId }));
       } catch (error) {
         return apiError(error);
@@ -130,8 +124,7 @@ export function registerFlowTools(server: McpServer) {
     'update-flow',
     {
       title: 'Update Flow',
-      description:
-        'Update a flow configuration name and/or content. Creates a version snapshot automatically.',
+      description: 'Update a flow configuration name and/or content.',
       inputSchema: {
         flowId: z.string().describe('Flow ID (cfg_...)'),
         name: z.string().min(1).max(255).optional().describe('New flow name'),
@@ -144,6 +137,7 @@ export function registerFlowTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: FlowOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -153,7 +147,6 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, name, content, projectId }) => {
       try {
-        const { updateFlow } = await import('@walkeros/cli');
         return apiResult(
           await updateFlow({ flowId, name, content, projectId }),
         );
@@ -167,7 +160,10 @@ export function registerFlowTools(server: McpServer) {
     'delete-flow',
     {
       title: 'Delete Flow',
-      description: 'Soft-delete a flow configuration. Can be restored later.',
+      description:
+        'Soft-delete a flow configuration. ' +
+        'WARNING: This removes the flow configuration. Can be restored later. ' +
+        'Requires flowId.',
       inputSchema: {
         flowId: z.string().describe('Flow ID (cfg_...)'),
         projectId: z
@@ -175,6 +171,7 @@ export function registerFlowTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: DeleteOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -184,7 +181,6 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, projectId }) => {
       try {
-        const { deleteFlow } = await import('@walkeros/cli');
         return apiResult(await deleteFlow({ flowId, projectId }));
       } catch (error) {
         return apiError(error);
@@ -208,6 +204,7 @@ export function registerFlowTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: FlowOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -217,7 +214,6 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, name, projectId }) => {
       try {
-        const { duplicateFlow } = await import('@walkeros/cli');
         return apiResult(await duplicateFlow({ flowId, name, projectId }));
       } catch (error) {
         return apiError(error);

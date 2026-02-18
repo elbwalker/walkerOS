@@ -13,7 +13,12 @@ export const ErrorOutputShape = {
 // CLI tool output shapes
 export const ValidateOutputShape = {
   valid: z.boolean().describe('Whether validation passed'),
-  type: z.enum(['event', 'flow', 'mapping']).describe('What was validated'),
+  type: z
+    .union([
+      z.enum(['event', 'flow', 'mapping']),
+      z.string().regex(/^(destinations|sources|transformers)\.\w+$/),
+    ])
+    .describe('What was validated'),
   errors: z
     .array(
       z.object({
@@ -149,6 +154,21 @@ export const ListFlowsOutputShape = {
 // Delete output shape (shared)
 export const DeleteOutputShape = {
   success: z.literal(true).describe('Deletion succeeded'),
+};
+
+// Package Schema output shape
+export const PackageSchemaOutputShape = {
+  package: z.string().describe('Package name'),
+  version: z.string().describe('Package version'),
+  type: z.string().describe('Package type (destination, source, transformer)'),
+  platform: z.string().describe('Target platform (web, server)'),
+  schemas: z
+    .record(z.string(), z.unknown())
+    .describe('JSON Schemas for settings and mapping'),
+  examples: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe('Configuration examples'),
 };
 
 // Bundle Remote output shape
