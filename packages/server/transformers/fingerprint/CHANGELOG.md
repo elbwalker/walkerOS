@@ -1,5 +1,7 @@
 # @walkeros/server-transformer-fingerprint
 
+## 2.0.1
+
 ## 8.0.0
 
 ### Patch Changes

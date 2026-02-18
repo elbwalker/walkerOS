@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-cmp-usercentrics",
   "description": "Usercentrics consent management source for walkerOS",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "MIT",
   "walkerOS": {
     "type": "source",

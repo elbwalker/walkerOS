@@ -1,5 +1,7 @@
 # @walkeros/web-source-cmp-cookiepro
 
+## 2.0.1
+
 ## 0.1.1
 
 ### Patch Changes

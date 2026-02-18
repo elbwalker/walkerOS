@@ -1,5 +1,7 @@
 # @walkeros/web-destination-snowplow
 
+## 2.0.1
+
 ## 0.0.13
 
 ### Patch Changes

@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-gcp",
   "description": "Google Cloud Platform server destination for walkerOS (BigQuery)",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "MIT",
   "exports": {
     ".": {

@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-source-gcp",
   "description": "Google Cloud Platform server sources for walkerOS (Cloud Functions)",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

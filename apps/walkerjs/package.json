@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/walker.js",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Ready-to-use walkerOS bundle with browser source, collector, and dataLayer support",
   "license": "MIT",
   "main": "./dist/index.js",

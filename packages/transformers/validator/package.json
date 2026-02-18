@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/transformer-validator",
   "description": "Event validation transformer for walkerOS using AJV and JSON Schema",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

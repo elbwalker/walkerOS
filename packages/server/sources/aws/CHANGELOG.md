@@ -1,5 +1,7 @@
 # @walkeros/server-source-aws
 
+## 2.0.1
+
 ## 1.0.6
 
 ### Patch Changes

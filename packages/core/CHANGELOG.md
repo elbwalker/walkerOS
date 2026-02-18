@@ -1,5 +1,11 @@
 # @walkeros/core
 
+## 2.0.1
+
+### Patch Changes
+
+- e34c11e: Align all packages to unified v2 with consistent dependency structure
+
 ## 1.4.0
 
 ### Minor Changes

@@ -1,5 +1,7 @@
 # @walkeros/web-source-cmp-usercentrics
 
+## 2.0.1
+
 ## 0.1.1
 
 ### Patch Changes

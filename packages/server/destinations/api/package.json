@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-api",
   "description": "API server destination for walkerOS",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/cli",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",

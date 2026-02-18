@@ -1,5 +1,7 @@
 # @walkeros/web-source-session
 
+## 2.0.1
+
 ## 1.1.4
 
 ### Patch Changes
