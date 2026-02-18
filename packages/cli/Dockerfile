@@ -1,11 +1,15 @@
 # walkeros/flow - Production Runtime Image
-# Runtime container for executing pre-built walkerOS flows
-# Expects dist/runtime/ to be pre-built before docker build
+# Self-bundling runner: fetches config, bundles locally, runs the flow.
+# Same image for all modes: local (A), registered (B), remote (C), managed (D).
 
 FROM node:22-alpine
 
 # Install tini for proper signal handling
 RUN apk add --no-cache tini
+
+# Install full CLI (includes bundler with esbuild)
+ARG CLI_VERSION=latest
+RUN npm install -g @walkeros/cli@${CLI_VERSION}
 
 # Create non-root user
 RUN addgroup -g 1001 walker && \
@@ -13,17 +17,9 @@ RUN addgroup -g 1001 walker && \
 
 WORKDIR /app
 
-# Install only production runtime dependencies
-# Note: @walkeros/core is bundled into dist, not needed at runtime
-RUN npm install express@^4.21.2 cors@^2.8.5 chalk --omit=dev && \
-    npm cache clean --force && \
-    node -e "const p=require('./package.json'); p.type='module'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2))"
-
-# Copy pre-built runtime code
-COPY dist/runtime/ ./runtime/
-
-# Create flow directory for mounted bundles
-RUN mkdir -p /app/flow && chown -R walker:walker /app
+# Create directories for mounted configs and bundle cache
+RUN mkdir -p /app/flow /app/cache && chown -R walker:walker /app
+VOLUME /app/cache
 
 # Switch to non-root user
 USER walker
@@ -37,10 +33,10 @@ ENV BUNDLE=/app/flow/bundle.mjs
 # Expose default port
 EXPOSE 8080
 
-# Health check endpoint
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:${PORT}/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD node -e "const h=require('http');h.get('http://localhost:'+(process.env.PORT||8080)+'/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
-# Entry point with tini for proper signal handling
+# Entry point: run the runtime main.js from the globally installed CLI
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "runtime/main.js"]
+CMD ["node", "/usr/local/lib/node_modules/@walkeros/cli/dist/runtime/main.js"]

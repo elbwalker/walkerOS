@@ -36,11 +36,11 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/web-core": "1.0.5"
+    "@walkeros/web-core": "^1.0.5"
   },
   "devDependencies": {
     "@types/facebook-pixel": "^0.0.31",
-    "@walkeros/collector": "1.2.0"
+    "@walkeros/collector": "^1.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

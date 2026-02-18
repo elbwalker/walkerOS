@@ -212,6 +212,8 @@ jobs:
           context: ./packages/cli
           file: ./packages/cli/Dockerfile
           push: true
+          build-args: |
+            CLI_VERSION=${{ steps.versions.outputs.cli }}
           tags: |
             walkeros/flow:${{ steps.versions.outputs.cli }}
             walkeros/flow:${{ inputs.release_type == 'stable release' && 'latest' || 'next' }}

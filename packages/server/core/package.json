@@ -25,11 +25,11 @@
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
-  "dependencies": {
-    "@walkeros/core": "1.3.0"
+  "peerDependencies": {
+    "@walkeros/core": ">=1.3.0"
   },
   "devDependencies": {
-    "@walkeros/collector": "1.2.0"
+    "@walkeros/collector": "^1.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

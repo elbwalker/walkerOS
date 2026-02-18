@@ -21,14 +21,14 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "1.3.0"
+    "@walkeros/core": "^1.3.0"
   },
   "peerDependencies": {
     "@types/aws-lambda": "^8.10.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.159",
-    "@walkeros/collector": "1.2.0"
+    "@walkeros/collector": "^1.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

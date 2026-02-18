@@ -1,0 +1,42 @@
+# docker-compose.runner.yml — walkerOS Runner examples
+# NOTE: For production, pin to a specific version (e.g. walkeros/flow:1.3.0)
+services:
+  # Mode A: Local config only
+  runner-local:
+    image: walkeros/flow:latest
+    volumes:
+      - ./flow.json:/app/flow.json
+    environment:
+      - BUNDLE=/app/flow.json
+      - PORT=8080
+    ports:
+      - "8080:8080"
+
+  # Mode B: Local config + heartbeat
+  runner-registered:
+    image: walkeros/flow:latest
+    volumes:
+      - ./flow.json:/app/flow.json
+    environment:
+      - BUNDLE=/app/flow.json
+      - WALKEROS_TOKEN=${WALKEROS_TOKEN}
+      - PROJECT_ID=${PROJECT_ID}
+      - PORT=8080
+    ports:
+      - "8081:8080"
+
+  # Mode C: Remote config with polling
+  runner-remote:
+    image: walkeros/flow:latest
+    volumes:
+      - runner-cache:/app/cache
+    environment:
+      - WALKEROS_TOKEN=${WALKEROS_TOKEN}
+      - PROJECT_ID=${PROJECT_ID}
+      - FLOW_ID=${FLOW_ID}
+      - PORT=8080
+    ports:
+      - "8082:8080"
+
+volumes:
+  runner-cache:

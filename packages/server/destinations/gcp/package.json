@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@google-cloud/bigquery": "^8.1.1",
-    "@walkeros/server-core": "1.0.5"
+    "@walkeros/server-core": "^1.0.5"
   },
   "devDependencies": {},
   "repository": {
