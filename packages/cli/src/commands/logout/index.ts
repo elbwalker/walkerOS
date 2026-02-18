@@ -19,7 +19,7 @@ export async function logoutCommand(
   const configPath = getConfigPath();
 
   if (options.json) {
-    console.log(JSON.stringify({ success: true, deleted }));
+    logger.json({ success: true, deleted });
   } else if (deleted) {
     logger.success(`Logged out. Token removed from ${configPath}`);
   } else {

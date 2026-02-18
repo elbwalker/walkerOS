@@ -49,7 +49,7 @@ export async function loginCommand(
     const result = await login({ url: options.url });
 
     if (options.json) {
-      console.log(JSON.stringify(result, null, 2));
+      logger.json(result);
     } else if (result.success) {
       logger.success(`Logged in as ${result.email}`);
       logger.log(`Token stored in ${result.configPath}`);
@@ -60,7 +60,7 @@ export async function loginCommand(
     const message = error instanceof Error ? error.message : String(error);
 
     if (options.json) {
-      console.log(JSON.stringify({ success: false, error: message }, null, 2));
+      logger.json({ success: false, error: message });
     } else {
       logger.error(message);
     }
@@ -94,18 +94,19 @@ export async function login(options: LoginOptions = {}): Promise<LoginResult> {
   } = await codeResponse.json();
 
   // 2. Display code and open browser
-  console.error(`\n! Your one-time code: ${userCode}`);
-  console.error(`  Authorize here: ${verificationUri}\n`);
+  const prompt = (msg: string) => process.stderr.write(msg + '\n');
+  prompt(`\n! Your one-time code: ${userCode}`);
+  prompt(`  Authorize here: ${verificationUri}\n`);
 
   const opener = options.openUrl ?? openInBrowser;
   try {
     await opener(verificationUriComplete || verificationUri);
-    console.error('  Opening browser...');
+    prompt('  Opening browser...');
   } catch {
-    console.error('  Could not open browser. Visit the URL manually.');
+    prompt('  Could not open browser. Visit the URL manually.');
   }
 
-  console.error('  Waiting for authorization... (press Ctrl+C to cancel)\n');
+  prompt('  Waiting for authorization... (press Ctrl+C to cancel)\n');
 
   // 3. Poll for token
   const deadline = Date.now() + expiresIn * 1000 + POLL_TIMEOUT_BUFFER_MS;

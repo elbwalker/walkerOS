@@ -138,9 +138,11 @@ async function deployConfig(options: {
     { method: 'POST' },
   );
   if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
+    const body: { error?: { message?: string } } = await response
+      .json()
+      .catch(() => ({}));
     throw new Error(
-      (body as any)?.error?.message || `Deploy failed (${response.status})`,
+      body.error?.message || `Deploy failed (${response.status})`,
     );
   }
 
@@ -159,10 +161,10 @@ async function deployConfig(options: {
       { method: 'POST' },
     );
     if (!advResponse.ok) {
-      const body = await advResponse.json().catch(() => ({}));
-      throw new Error(
-        (body as any)?.error?.message || 'Failed to advance deployment',
-      );
+      const body: { error?: { message?: string } } = await advResponse
+        .json()
+        .catch(() => ({}));
+      throw new Error(body.error?.message || 'Failed to advance deployment');
     }
     const advanced = await advResponse.json();
     status = advanced.status;
@@ -190,10 +192,10 @@ export async function getDeployment(options: {
       `${base}/api/projects/${projectId}/flows/${options.flowId}/configs/${configId}/deploy`,
     );
     if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      throw new Error(
-        (body as any)?.error?.message || 'Failed to get deployment',
-      );
+      const body: { error?: { message?: string } } = await response
+        .json()
+        .catch(() => ({}));
+      throw new Error(body.error?.message || 'Failed to get deployment');
     }
     return response.json();
   }
