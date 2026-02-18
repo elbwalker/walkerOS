@@ -33,6 +33,9 @@
   "peerDependencies": {
     "@walkeros/core": ">=1.3.0"
   },
+  "devDependencies": {
+    "@walkeros/core": "*"
+  },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/collector"
