@@ -3,7 +3,8 @@ import { Button, ButtonProps } from '@site/src/components/atoms/buttons';
 import { tagger } from '@site/src/components/walkerjs';
 
 interface CTAProps {
-  title: ReactNode;
+  title?: ReactNode;
+  text?: ReactNode;
   description?: ReactNode;
   primaryButton?: ButtonProps;
   secondaryButton?: ButtonProps;
@@ -12,11 +13,13 @@ interface CTAProps {
 
 export default function CTA({
   title,
+  text,
   description,
   primaryButton,
   secondaryButton,
   elbTitle,
 }: CTAProps) {
+  const heading = title || text;
   return (
     <div
       {...tagger.entity('cta')}
@@ -26,13 +29,15 @@ export default function CTA({
     >
       <div className="px-6 py-24 sm:py-32 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
-          <h2
-            {...(elbTitle && tagger.property('title', elbTitle))}
-            className="text-4xl font-semibold tracking-tight sm:text-5xl"
-            style={{ color: 'var(--color-base-content)' }}
-          >
-            {title}
-          </h2>
+          {heading && (
+            <h2
+              {...(elbTitle && tagger.property('title', elbTitle))}
+              className="text-4xl font-semibold tracking-tight sm:text-5xl"
+              style={{ color: 'var(--color-base-content)' }}
+            >
+              {heading}
+            </h2>
+          )}
           {description && (
             <p
               className="mx-auto mt-6 text-lg/8"

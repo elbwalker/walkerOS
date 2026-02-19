@@ -52,9 +52,9 @@ export default function GettingStarted() {
     <div
       style={{ backgroundColor: 'var(--ifm-background-color)' }}
       className="py-24 sm:py-32"
-      {...tagger.entity('getting-started').get()}
-      {...tagger.action('visible', 'impression').get()}
-      {...tagger.context('component', 'getting-started').get()}
+      {...tagger.entity('getting-started')}
+      {...tagger.action('visible:impression')}
+      {...tagger.context('component', 'getting-started')}
     >
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-4xl">
@@ -145,12 +145,9 @@ export default function GettingStarted() {
               }
               className="text-lg font-semibold"
               style={{ color: 'var(--color-base-content)' }}
-              {...tagger
-                .action(
-                  'click',
-                  mode === 'bundled' ? 'bundled-docs' : 'integrated-docs',
-                )
-                .get()}
+              {...tagger.action(
+                `click:${mode === 'bundled' ? 'bundled-docs' : 'integrated-docs'}`,
+              )}
             >
               {mode === 'bundled'
                 ? 'Install walkerOS CLI'
