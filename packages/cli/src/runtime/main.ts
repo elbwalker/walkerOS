@@ -18,10 +18,21 @@ import { createPoller, type PollerHandle } from './poller.js';
 import { createLogger } from '../core/logger.js';
 import type { Logger } from '@walkeros/core';
 import { VERSION } from '../version.js';
-import {
-  prepareBundleForRun,
-  isPreBuiltConfig,
-} from '../commands/run/utils.js';
+async function lazyPrepareBundleForRun(
+  configPath: string,
+  options: { verbose?: boolean; silent?: boolean },
+): Promise<string> {
+  const { prepareBundleForRun } = await import('../commands/run/utils.js');
+  return prepareBundleForRun(configPath, options);
+}
+
+function isPreBuiltConfig(configPath: string): boolean {
+  return (
+    configPath.endsWith('.mjs') ||
+    configPath.endsWith('.js') ||
+    configPath.endsWith('.cjs')
+  );
+}
 import { writeFileSync, readFileSync } from 'fs';
 import {
   initStatus,
@@ -172,7 +183,7 @@ async function main() {
   cliLogger.log('Building flow...');
   let bundlePath: string;
   try {
-    bundlePath = await prepareBundleForRun(configPath, {
+    bundlePath = await lazyPrepareBundleForRun(configPath, {
       verbose: false,
       silent: true,
     });
@@ -283,7 +294,7 @@ async function runWithBundle(
             'utf-8',
           );
 
-          const newBundle = await prepareBundleForRun(tmpConfigPath, {
+          const newBundle = await lazyPrepareBundleForRun(tmpConfigPath, {
             verbose: false,
             silent: true,
           });

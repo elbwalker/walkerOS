@@ -50,6 +50,10 @@ program.hook('preAction', (thisCommand, actionCommand) => {
 program
   .command('bundle [file]')
   .description('Bundle NPM packages with custom code')
+  .option(
+    '-c, --config <path>',
+    'config file path or URL (alternative to positional argument)',
+  )
   .option('-o, --output <path>', 'write bundle to file or directory')
   .option('--flow <name>', 'flow name for multi-flow configs')
   .option('--all', 'build all flows for multi-flow configs')
@@ -64,7 +68,7 @@ program
   )
   .action(async (file, options) => {
     await bundleCommand({
-      config: file,
+      config: options.config || file,
       output: options.output,
       flow: options.flow,
       all: options.all,

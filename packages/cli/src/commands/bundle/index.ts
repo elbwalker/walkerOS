@@ -25,8 +25,10 @@ import {
   loadAllFlows,
   type LoadConfigResult,
 } from '../../config/index.js';
+import { isUrl } from '../../config/utils.js';
 import type { BuildOptions } from '../../types/bundle.js';
 import { bundleCore } from './bundler.js';
+import { uploadBundleToUrl, sanitizeUrl } from './upload.js';
 import { displayStats, createStatsSummary } from './stats.js';
 import { createApiClient } from '../../core/api-client.js';
 
@@ -131,7 +133,17 @@ export async function bundleCommand(
         }
 
         // Resolve output path
-        if (options.output) {
+        const outputIsUrl = options.output ? isUrl(options.output) : false;
+        const uploadUrl = outputIsUrl ? options.output : undefined;
+
+        if (outputIsUrl) {
+          // URL output: bundle to temp file, upload after
+          const ext = buildOptions.platform === 'browser' ? '.js' : '.mjs';
+          buildOptions.output = getTmpPath(
+            undefined,
+            `url-bundle-${Date.now()}${ext}`,
+          );
+        } else if (options.output) {
           buildOptions.output = resolveOutputPath(options.output, buildOptions);
         } else {
           // Stdout mode: bundle to temp file, then write to stdout
@@ -156,6 +168,13 @@ export async function bundleCommand(
         );
 
         results.push({ flowName, success: true, stats });
+
+        // Upload to URL if output was a presigned URL
+        if (uploadUrl) {
+          await uploadBundleToUrl(buildOptions.output, uploadUrl);
+          logger.log(`Uploaded to: ${sanitizeUrl(uploadUrl)}`);
+          await fs.remove(buildOptions.output);
+        }
 
         // Show stats if requested (for non-JSON, non-multi builds)
         if (!options.json && !options.all && options.stats && stats) {
