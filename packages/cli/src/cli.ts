@@ -50,12 +50,8 @@ program.hook('preAction', (thisCommand, actionCommand) => {
 program
   .command('bundle [file]')
   .description('Bundle NPM packages with custom code')
-  .option(
-    '-c, --config <path>',
-    'config file path or URL (alternative to positional argument)',
-  )
   .option('-o, --output <path>', 'write bundle to file or directory')
-  .option('--flow <name>', 'flow name for multi-flow configs')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('--all', 'build all flows for multi-flow configs')
   .option('--stats', 'show bundle statistics')
   .option('--json', 'output as JSON (implies --stats)')
@@ -68,7 +64,7 @@ program
   )
   .action(async (file, options) => {
     await bundleCommand({
-      config: options.config || file,
+      config: file,
       output: options.output,
       flow: options.flow,
       all: options.all,
@@ -90,7 +86,7 @@ program
     '-e, --event <source>',
     'event to simulate (JSON string, file path, or URL)',
   )
-  .option('--flow <name>', 'flow name for multi-flow configs')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('-p, --platform <platform>', 'platform override (web or server)')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
@@ -117,7 +113,7 @@ program
     'event to push (JSON string, file path, or URL)',
   )
   .option('-o, --output <path>', 'write result to file')
-  .option('--flow <name>', 'flow name for multi-flow configs')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('-p, --platform <platform>', 'platform override (web or server)')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
@@ -140,7 +136,7 @@ program
   .command('validate <type> [input]')
   .description('Validate event, flow, or mapping configuration')
   .option('-o, --output <path>', 'write result to file')
-  .option('--flow <name>', 'flow name for multi-flow configs')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
@@ -361,7 +357,7 @@ deployCmd
   .command('start <flowId>')
   .description('Deploy a flow (auto-detects web or server)')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('--flow <name>', 'flow name for multi-config flows')
+  .option('-f, --flow <name>', 'flow name for multi-config flows')
   .option('--no-wait', 'do not wait for deployment to complete')
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
@@ -375,7 +371,7 @@ deployCmd
   .command('status <flowId>')
   .description('Get the latest deployment status for a flow')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('--flow <name>', 'flow name for multi-config flows')
+  .option('-f, --flow <name>', 'flow name for multi-config flows')
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')

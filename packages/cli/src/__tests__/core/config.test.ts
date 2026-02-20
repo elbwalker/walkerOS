@@ -1,4 +1,5 @@
 import fs from 'fs-extra';
+import os from 'os';
 import path from 'path';
 import { loadJsonConfig, substituteEnvVariables } from '../../config/index.js';
 import {
@@ -9,7 +10,10 @@ import {
 import { getId } from '@walkeros/core';
 
 describe('Config utilities', () => {
-  const testDir = path.join('.tmp', `config-test-${Date.now()}-${getId()}`);
+  const testDir = path.join(
+    os.tmpdir(),
+    `config-test-${Date.now()}-${getId()}`,
+  );
 
   beforeEach(async () => {
     await fs.ensureDir(testDir);
@@ -91,14 +95,14 @@ describe('Config utilities', () => {
     it('should return absolute tmp root when no arguments', () => {
       const tmpPath = getTmpPath();
 
-      expect(tmpPath).toBe(path.resolve('.tmp'));
+      expect(tmpPath).toBe(os.tmpdir());
       expect(path.isAbsolute(tmpPath)).toBe(true);
     });
 
     it('should join path segments', () => {
       const tmpPath = getTmpPath(undefined, 'cache', 'builds');
 
-      expect(tmpPath).toBe(path.resolve('.tmp', 'cache', 'builds'));
+      expect(tmpPath).toBe(path.join(os.tmpdir(), 'cache', 'builds'));
       expect(path.isAbsolute(tmpPath)).toBe(true);
     });
 
@@ -110,16 +114,16 @@ describe('Config utilities', () => {
     });
 
     it('should return default tmp root from getDefaultTmpRoot', () => {
-      expect(getDefaultTmpRoot()).toBe('.tmp');
+      expect(getDefaultTmpRoot()).toBe(os.tmpdir());
     });
   });
 
   describe('createTmpResolver', () => {
     it('should return a function that resolves paths with default root', () => {
       const tmp = createTmpResolver();
-      expect(tmp()).toBe(path.resolve('.tmp'));
+      expect(tmp()).toBe(os.tmpdir());
       expect(tmp('cache', 'builds')).toBe(
-        path.resolve('.tmp', 'cache', 'builds'),
+        path.join(os.tmpdir(), 'cache', 'builds'),
       );
     });
 
