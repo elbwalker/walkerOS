@@ -39,6 +39,10 @@ const multiFlowContent = {
       server: { server: {} },
     },
   },
+  configs: [
+    { id: 'cfg_web', name: 'web', platform: 'web' },
+    { id: 'cfg_server', name: 'server', platform: 'server' },
+  ],
 };
 
 describe('deploy', () => {
@@ -89,7 +93,7 @@ describe('deploy', () => {
         projectId: 'proj_default',
       });
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_default/flows/cfg_1/configs/web/deploy',
+        'https://app.walkeros.io/api/projects/proj_default/flows/cfg_1/configs/cfg_web/deploy',
         { method: 'POST' },
       );
     });
@@ -138,7 +142,7 @@ describe('deploy', () => {
       expect(result).toMatchObject({ status: 'published' });
       expect(mockAuthFetch).toHaveBeenCalledTimes(2);
       expect(mockAuthFetch).toHaveBeenLastCalledWith(
-        expect.stringContaining('/configs/web/deployments/dep_1/advance'),
+        expect.stringContaining('/configs/cfg_web/deployments/dep_1/advance'),
         { method: 'POST' },
       );
       jest.useRealTimers();
@@ -169,7 +173,7 @@ describe('deploy', () => {
       await getDeployment({ flowId: 'cfg_1', flowName: 'web' });
 
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_default/flows/cfg_1/configs/web/deploy',
+        'https://app.walkeros.io/api/projects/proj_default/flows/cfg_1/configs/cfg_web/deploy',
       );
     });
   });

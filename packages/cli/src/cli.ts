@@ -37,15 +37,6 @@ program
   .description('walkerOS CLI - Bundle and deploy walkerOS components')
   .version(VERSION);
 
-// Display startup banner before any command runs
-// Suppressed when piping (non-TTY stdout), --silent, or --json
-program.hook('preAction', (thisCommand, actionCommand) => {
-  const options = actionCommand.opts();
-  if (!options.silent && !options.json && process.stdout.isTTY) {
-    printBanner(VERSION);
-  }
-});
-
 // Bundle command
 program
   .command('bundle [file]')
@@ -359,6 +350,10 @@ deployCmd
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
   .option('-f, --flow <name>', 'flow name for multi-config flows')
   .option('--no-wait', 'do not wait for deployment to complete')
+  .option(
+    '--timeout <seconds>',
+    'timeout for deployment polling (default: 120)',
+  )
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
@@ -436,5 +431,11 @@ runCmd
 // Cache command
 registerCacheCommand(program);
 
-// Run the CLI
+// Show banner when called without any arguments (bare `walkeros`)
+if (process.argv.length <= 2) {
+  printBanner(VERSION);
+  console.error('Run walkeros --help for usage information.');
+  process.exit(0);
+}
+
 program.parse();

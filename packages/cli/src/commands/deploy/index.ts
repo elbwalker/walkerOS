@@ -20,14 +20,18 @@ async function resolveConfigId(options: {
     flowId: options.flowId,
     projectId: options.projectId,
   });
-  const content = flow.content as { flows?: Record<string, unknown> };
-  const flowNames = Object.keys(content.flows ?? {});
-  if (!flowNames.includes(options.flowName)) {
+  const configs = (flow as { configs?: Array<{ id: string; name: string }> })
+    .configs;
+  if (!configs?.length) {
+    throw new Error('Flow has no configs.');
+  }
+  const match = configs.find((c) => c.name === options.flowName);
+  if (!match) {
     throw new Error(
-      `Flow "${options.flowName}" not found. Available: ${flowNames.join(', ')}`,
+      `Flow "${options.flowName}" not found. Available: ${configs.map((c) => c.name).join(', ')}`,
     );
   }
-  return options.flowName;
+  return match.id;
 }
 
 async function getAvailableFlowNames(options: {
@@ -38,8 +42,8 @@ async function getAvailableFlowNames(options: {
     flowId: options.flowId,
     projectId: options.projectId,
   });
-  const content = flow.content as { flows?: Record<string, unknown> };
-  return Object.keys(content.flows ?? {});
+  const configs = (flow as { configs?: Array<{ name: string }> }).configs;
+  return configs?.map((c) => c.name) ?? [];
 }
 
 // === Programmatic API ===
@@ -49,6 +53,8 @@ export interface DeployOptions {
   projectId?: string;
   wait?: boolean;
   flowName?: string;
+  timeout?: number; // ms, default 120_000
+  onStatus?: (status: string) => void;
 }
 
 export async function deploy(options: DeployOptions) {
@@ -61,7 +67,13 @@ export async function deploy(options: DeployOptions) {
       projectId,
       flowName: options.flowName,
     });
-    return deployConfig({ ...options, projectId, configId });
+    return deployConfig({
+      ...options,
+      projectId,
+      configId,
+      timeout: options.timeout,
+      onStatus: options.onStatus,
+    });
   }
 
   // Legacy path
@@ -90,10 +102,20 @@ export async function deploy(options: DeployOptions) {
 
   // Poll /advance until terminal
   const terminalStatuses = ['active', 'published', 'failed', 'deleted'];
+  const timeoutMs = options.timeout ?? 120_000;
+  const deadline = Date.now() + timeoutMs;
   let status = data.status;
   let result: Record<string, unknown> = { ...data };
 
   while (!terminalStatuses.includes(status)) {
+    if (Date.now() > deadline) {
+      throw new Error(
+        `Deployment timed out after ${Math.round(timeoutMs / 1000)}s. ` +
+          `Deployment ${data.deploymentId} is still in progress server-side. ` +
+          `Check status with: walkeros deploy status ${options.flowId}`,
+      );
+    }
+
     await new Promise((r) => setTimeout(r, 3000));
 
     const { data: advanced, error: advanceError } = await client.POST(
@@ -114,6 +136,9 @@ export async function deploy(options: DeployOptions) {
         advanceError.error?.message || 'Failed to advance deployment',
       );
     if (advanced) {
+      if (advanced.status !== status && options.onStatus) {
+        options.onStatus(advanced.status);
+      }
       status = advanced.status;
       result = { ...advanced };
     }
@@ -128,6 +153,8 @@ async function deployConfig(options: {
   projectId: string;
   configId: string;
   wait?: boolean;
+  timeout?: number;
+  onStatus?: (status: string) => void;
 }) {
   const { flowId, projectId, configId } = options;
   const base = resolveBaseUrl();
@@ -151,10 +178,20 @@ async function deployConfig(options: {
 
   // 2. Poll per-config advance
   const terminalStatuses = ['active', 'published', 'failed', 'deleted'];
+  const timeoutMs = options.timeout ?? 120_000;
+  const deadline = Date.now() + timeoutMs;
   let status = data.status;
   let result: Record<string, unknown> = { ...data };
 
   while (!terminalStatuses.includes(status)) {
+    if (Date.now() > deadline) {
+      throw new Error(
+        `Deployment timed out after ${Math.round(timeoutMs / 1000)}s. ` +
+          `Deployment ${data.deploymentId} is still in progress server-side. ` +
+          `Check status with: walkeros deploy status ${options.flowId}`,
+      );
+    }
+
     await new Promise((r) => setTimeout(r, 3000));
     const advResponse = await authenticatedFetch(
       `${base}/api/projects/${projectId}/flows/${flowId}/configs/${configId}/deployments/${data.deploymentId}/advance`,
@@ -167,6 +204,9 @@ async function deployConfig(options: {
       throw new Error(body.error?.message || 'Failed to advance deployment');
     }
     const advanced = await advResponse.json();
+    if (advanced.status !== status && options.onStatus) {
+      options.onStatus(advanced.status);
+    }
     status = advanced.status;
     result = { ...advanced };
   }
@@ -217,6 +257,7 @@ interface DeployCommandOptions extends GlobalOptions {
   project?: string;
   flow?: string;
   wait?: boolean;
+  timeout?: string;
   output?: string;
   json?: boolean;
 }
@@ -227,12 +268,30 @@ export async function deployCommand(
 ) {
   const log = createCommandLogger(options);
 
+  const statusLabels: Record<string, string> = {
+    bundling: 'Building bundle...',
+    deploying: 'Deploying container...',
+    active: 'Container is live',
+    published: 'Published',
+    failed: 'Deployment failed',
+  };
+
+  const timeoutMs = options.timeout
+    ? parseInt(options.timeout, 10) * 1000
+    : undefined;
+
   try {
     const result = await deploy({
       flowId,
       projectId: options.project,
       flowName: options.flow,
       wait: options.wait !== false,
+      timeout: timeoutMs,
+      onStatus: options.json
+        ? undefined
+        : (status) => {
+            log.info(statusLabels[status] || `Status: ${status}`);
+          },
     });
 
     if (options.json) {
