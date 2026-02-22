@@ -10,6 +10,7 @@ import { registerAuthTools } from './tools/auth.js';
 import { registerProjectTools } from './tools/projects.js';
 import { registerFlowTools } from './tools/flows.js';
 import { registerDeployTools } from './tools/deploy.js';
+import { registerDeploymentTools } from './tools/deployments.js';
 // CDN tools
 import { registerGetPackageSchemaTool } from './tools/get-package-schema.js';
 // Resources
@@ -34,6 +35,7 @@ registerAuthTools(server);
 registerProjectTools(server);
 registerFlowTools(server);
 registerDeployTools(server);
+registerDeploymentTools(server);
 
 // CDN tools
 registerGetPackageSchemaTool(server);

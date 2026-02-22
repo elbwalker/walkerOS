@@ -59,7 +59,7 @@ interface DeploymentResult {
   [key: string]: unknown;
 }
 
-async function streamDeploymentStatus(
+export async function streamDeploymentStatus(
   projectId: string,
   deploymentId: string,
   options: {

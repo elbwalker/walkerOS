@@ -27,6 +27,14 @@ export {
   deployCommand,
   getDeploymentCommand,
 } from './commands/deploy/index.js';
+export {
+  listDeploymentsCommand,
+  getDeploymentBySlugCommand,
+  createDeploymentCommand,
+  updateDeploymentCommand,
+  deleteDeploymentCommand,
+} from './commands/deployments/index.js';
+export { publishCommand } from './commands/publish/index.js';
 
 // === Programmatic API ===
 // High-level functions for library usage
@@ -59,8 +67,18 @@ export {
   duplicateFlow,
 } from './commands/flows/index.js';
 export { deploy, getDeployment } from './commands/deploy/index.js';
+export {
+  listDeployments,
+  getDeploymentBySlug,
+  createDeployment,
+  updateDeployment,
+  deleteDeployment,
+} from './commands/deployments/index.js';
+export { publish } from './commands/publish/index.js';
 export type { ListFlowsOptions } from './commands/flows/index.js';
 export type { DeployOptions } from './commands/deploy/index.js';
+export type { ListDeploymentsOptions } from './commands/deployments/index.js';
+export type { PublishOptions } from './commands/publish/index.js';
 export { parseSSEEvents } from './core/sse.js';
 export type { SSEEvent, SSEParseResult } from './core/sse.js';
 

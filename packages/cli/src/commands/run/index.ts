@@ -67,7 +67,20 @@ export async function runCommand(
       }
     }
 
-    // Step 3: Execute locally using runtime module
+    // Step 3: Start heartbeat if deployment is specified
+    if (options.deployment) {
+      const { startHeartbeat } = await import('./heartbeat.js');
+      await startHeartbeat({
+        deployment: options.deployment,
+        projectId: options.project,
+        url: options.url || `http://localhost:${options.port || 8080}`,
+        healthEndpoint: options.healthEndpoint,
+        heartbeatInterval: options.heartbeatInterval,
+        mode: mode as 'collect' | 'serve',
+      });
+    }
+
+    // Step 4: Execute locally using runtime module
     const modeLabel = mode === 'collect' ? 'Collector' : 'Server';
     logger.log(`Starting ${modeLabel}...`);
 
