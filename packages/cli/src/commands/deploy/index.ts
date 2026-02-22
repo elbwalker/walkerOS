@@ -4,6 +4,7 @@ import {
   requireProjectId,
   resolveBaseUrl,
 } from '../../core/auth.js';
+import { parseSSEEvents } from '../../core/sse.js';
 import { createCommandLogger } from '../../core/logger.js';
 import { writeResult } from '../../core/output.js';
 import type { GlobalOptions } from '../../types/global.js';
@@ -46,6 +47,74 @@ async function getAvailableFlowNames(options: {
   return configs?.map((c) => c.name) ?? [];
 }
 
+// === SSE Streaming ===
+
+interface DeploymentResult {
+  status: string;
+  substatus?: string | null;
+  type?: string;
+  containerUrl?: string | null;
+  publicUrl?: string | null;
+  errorMessage?: string | null;
+  [key: string]: unknown;
+}
+
+async function streamDeploymentStatus(
+  projectId: string,
+  deploymentId: string,
+  options: {
+    timeout?: number;
+    signal?: AbortSignal;
+    onStatus?: (status: string, substatus: string | null) => void;
+  },
+): Promise<DeploymentResult> {
+  const base = resolveBaseUrl();
+  const timeoutMs = options.timeout ?? 120_000;
+
+  const response = await authenticatedFetch(
+    `${base}/api/projects/${projectId}/deployments/${deploymentId}/stream`,
+    {
+      headers: { Accept: 'text/event-stream' },
+      signal: options.signal ?? AbortSignal.timeout(timeoutMs),
+    },
+  );
+
+  if (!response.ok) throw new Error(`Stream failed: ${response.status}`);
+  if (!response.body) throw new Error('No response body');
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let result: DeploymentResult | null = null;
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const { parsed, remainder } = parseSSEEvents(buffer);
+      buffer = remainder;
+
+      for (const event of parsed) {
+        if (event.type === 'status') {
+          const data = JSON.parse(event.data);
+          result = data;
+          options.onStatus?.(data.status, data.substatus ?? null);
+        }
+        if (event.type === 'done') {
+          return result!;
+        }
+      }
+    }
+  } finally {
+    reader.cancel().catch(() => {});
+  }
+
+  if (!result) throw new Error('Stream ended without terminal status');
+  return result;
+}
+
 // === Programmatic API ===
 
 export interface DeployOptions {
@@ -54,7 +123,8 @@ export interface DeployOptions {
   wait?: boolean;
   flowName?: string;
   timeout?: number; // ms, default 120_000
-  onStatus?: (status: string) => void;
+  signal?: AbortSignal;
+  onStatus?: (status: string, substatus: string | null) => void;
 }
 
 export async function deploy(options: DeployOptions) {
@@ -72,6 +142,7 @@ export async function deploy(options: DeployOptions) {
       projectId,
       configId,
       timeout: options.timeout,
+      signal: options.signal,
       onStatus: options.onStatus,
     });
   }
@@ -100,51 +171,14 @@ export async function deploy(options: DeployOptions) {
 
   if (!options.wait) return data;
 
-  // Poll /advance until terminal
-  const terminalStatuses = ['active', 'published', 'failed', 'deleted'];
-  const timeoutMs = options.timeout ?? 120_000;
-  const deadline = Date.now() + timeoutMs;
-  let status = data.status;
-  let result: Record<string, unknown> = { ...data };
+  // Stream deployment status via SSE
+  const result = await streamDeploymentStatus(projectId, data.deploymentId, {
+    timeout: options.timeout,
+    signal: options.signal,
+    onStatus: options.onStatus,
+  });
 
-  while (!terminalStatuses.includes(status)) {
-    if (Date.now() > deadline) {
-      throw new Error(
-        `Deployment timed out after ${Math.round(timeoutMs / 1000)}s. ` +
-          `Deployment ${data.deploymentId} is still in progress server-side. ` +
-          `Check status with: walkeros deploy status ${options.flowId}`,
-      );
-    }
-
-    await new Promise((r) => setTimeout(r, 3000));
-
-    const { data: advanced, error: advanceError } = await client.POST(
-      '/api/projects/{projectId}/flows/{flowId}/deploy/{deploymentId}/advance',
-      {
-        params: {
-          path: {
-            projectId,
-            flowId: options.flowId,
-            deploymentId: data.deploymentId,
-          },
-        },
-      },
-    );
-
-    if (advanceError)
-      throw new Error(
-        advanceError.error?.message || 'Failed to advance deployment',
-      );
-    if (advanced) {
-      if (advanced.status !== status && options.onStatus) {
-        options.onStatus(advanced.status);
-      }
-      status = advanced.status;
-      result = { ...advanced };
-    }
-  }
-
-  return result;
+  return { ...data, ...result };
 }
 
 // TODO: Replace with typed client.POST() once api.gen.d.ts includes per-config routes
@@ -154,7 +188,8 @@ async function deployConfig(options: {
   configId: string;
   wait?: boolean;
   timeout?: number;
-  onStatus?: (status: string) => void;
+  signal?: AbortSignal;
+  onStatus?: (status: string, substatus: string | null) => void;
 }) {
   const { flowId, projectId, configId } = options;
   const base = resolveBaseUrl();
@@ -176,42 +211,14 @@ async function deployConfig(options: {
   const data = await response.json();
   if (!options.wait) return data;
 
-  // 2. Poll per-config advance
-  const terminalStatuses = ['active', 'published', 'failed', 'deleted'];
-  const timeoutMs = options.timeout ?? 120_000;
-  const deadline = Date.now() + timeoutMs;
-  let status = data.status;
-  let result: Record<string, unknown> = { ...data };
+  // 2. Stream deployment status via SSE
+  const result = await streamDeploymentStatus(projectId, data.deploymentId, {
+    timeout: options.timeout,
+    signal: options.signal,
+    onStatus: options.onStatus,
+  });
 
-  while (!terminalStatuses.includes(status)) {
-    if (Date.now() > deadline) {
-      throw new Error(
-        `Deployment timed out after ${Math.round(timeoutMs / 1000)}s. ` +
-          `Deployment ${data.deploymentId} is still in progress server-side. ` +
-          `Check status with: walkeros deploy status ${options.flowId}`,
-      );
-    }
-
-    await new Promise((r) => setTimeout(r, 3000));
-    const advResponse = await authenticatedFetch(
-      `${base}/api/projects/${projectId}/flows/${flowId}/configs/${configId}/deployments/${data.deploymentId}/advance`,
-      { method: 'POST' },
-    );
-    if (!advResponse.ok) {
-      const body: { error?: { message?: string } } = await advResponse
-        .json()
-        .catch(() => ({}));
-      throw new Error(body.error?.message || 'Failed to advance deployment');
-    }
-    const advanced = await advResponse.json();
-    if (advanced.status !== status && options.onStatus) {
-      options.onStatus(advanced.status);
-    }
-    status = advanced.status;
-    result = { ...advanced };
-  }
-
-  return result;
+  return { ...data, ...result };
 }
 
 export async function getDeployment(options: {
@@ -262,19 +269,23 @@ interface DeployCommandOptions extends GlobalOptions {
   json?: boolean;
 }
 
+const statusLabels: Record<string, string> = {
+  bundling: 'Building bundle...',
+  'bundling:building': 'Building bundle...',
+  'bundling:publishing': 'Publishing to web...',
+  deploying: 'Deploying container...',
+  'deploying:provisioning': 'Provisioning container...',
+  'deploying:starting': 'Starting container...',
+  active: 'Container is live',
+  published: 'Published',
+  failed: 'Deployment failed',
+};
+
 export async function deployCommand(
   flowId: string,
   options: DeployCommandOptions,
 ) {
   const log = createCommandLogger(options);
-
-  const statusLabels: Record<string, string> = {
-    bundling: 'Building bundle...',
-    deploying: 'Deploying container...',
-    active: 'Container is live',
-    published: 'Published',
-    failed: 'Deployment failed',
-  };
 
   const timeoutMs = options.timeout
     ? parseInt(options.timeout, 10) * 1000
@@ -289,8 +300,11 @@ export async function deployCommand(
       timeout: timeoutMs,
       onStatus: options.json
         ? undefined
-        : (status) => {
-            log.info(statusLabels[status] || `Status: ${status}`);
+        : (status, substatus) => {
+            const key = substatus ? `${status}:${substatus}` : status;
+            log.info(
+              statusLabels[key] || statusLabels[status] || `Status: ${status}`,
+            );
           },
     });
 
@@ -303,7 +317,6 @@ export async function deployCommand(
 
     if (r.status === 'published') {
       log.success(`Published: ${r.publicUrl}`);
-      if (r.scriptTag) log.info(`Script tag: ${r.scriptTag}`);
     } else if (r.status === 'active') {
       log.success(`Active: ${r.containerUrl}`);
     } else if (r.status === 'failed') {
@@ -349,7 +362,6 @@ export async function getDeploymentCommand(
     log.info(`Status: ${r.status}`);
     if (r.containerUrl) log.info(`Endpoint: ${r.containerUrl}`);
     if (r.publicUrl) log.info(`URL: ${r.publicUrl}`);
-    if (r.scriptTag) log.info(`Script tag: ${r.scriptTag}`);
     if (r.errorMessage) log.error(`Error: ${r.errorMessage}`);
   } catch (err) {
     log.error(err instanceof Error ? err.message : 'Failed to get deployment');

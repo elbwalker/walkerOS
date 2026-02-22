@@ -61,6 +61,8 @@ export {
 export { deploy, getDeployment } from './commands/deploy/index.js';
 export type { ListFlowsOptions } from './commands/flows/index.js';
 export type { DeployOptions } from './commands/deploy/index.js';
+export { parseSSEEvents } from './core/sse.js';
+export type { SSEEvent, SSEParseResult } from './core/sse.js';
 
 // === Types ===
 // Export types for programmatic usage

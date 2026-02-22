@@ -22,6 +22,16 @@ function createMockServer() {
   };
 }
 
+function createMockExtra(options?: { progressToken?: string | number }) {
+  return {
+    _meta: options?.progressToken
+      ? { progressToken: options.progressToken }
+      : undefined,
+    sendNotification: jest.fn(),
+    signal: new AbortController().signal,
+  };
+}
+
 describe('deploy tools', () => {
   let server: ReturnType<typeof createMockServer>;
 
@@ -47,7 +57,7 @@ describe('deploy tools', () => {
       });
     });
 
-    it('calls CLI deploy with correct options', async () => {
+    it('calls CLI deploy with onStatus and signal', async () => {
       const mockResult = {
         deploymentId: 'dep_1',
         status: 'published',
@@ -55,22 +65,78 @@ describe('deploy tools', () => {
       };
       mockDeploy.mockResolvedValue(mockResult);
 
+      const extra = createMockExtra({ progressToken: 'tok_1' });
       const tool = server.getTool('deploy-flow');
-      const result = await tool.handler({
-        flowId: 'flow_1',
-        projectId: 'proj_1',
-        wait: true,
-        flowName: 'web',
-      });
+      const result = await tool.handler(
+        { flowId: 'flow_1', projectId: 'proj_1', wait: true, flowName: 'web' },
+        extra,
+      );
 
-      expect(mockDeploy).toHaveBeenCalledWith({
-        flowId: 'flow_1',
-        projectId: 'proj_1',
-        wait: true,
-        flowName: 'web',
-      });
+      expect(mockDeploy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: 'flow_1',
+          projectId: 'proj_1',
+          wait: true,
+          flowName: 'web',
+          signal: extra.signal,
+        }),
+      );
+      // onStatus should be a function
+      const callArgs = mockDeploy.mock.calls[0]![0];
+      expect(typeof callArgs.onStatus).toBe('function');
+
       expect(result.structuredContent).toEqual(mockResult);
       expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
+    });
+
+    it('sends progress notifications when progressToken provided', async () => {
+      mockDeploy.mockImplementation(async (opts) => {
+        // Simulate status callbacks
+        opts.onStatus?.('bundling', 'building');
+        opts.onStatus?.('published', null);
+        return { status: 'published' };
+      });
+
+      const extra = createMockExtra({ progressToken: 'tok_progress' });
+      const tool = server.getTool('deploy-flow');
+      await tool.handler({ flowId: 'flow_1', wait: true }, extra);
+
+      expect(extra.sendNotification).toHaveBeenCalledTimes(2);
+      expect(extra.sendNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'notifications/progress',
+          params: expect.objectContaining({
+            progressToken: 'tok_progress',
+            progress: 20,
+            total: 100,
+            message: 'Building bundle...',
+          }),
+        }),
+      );
+      expect(extra.sendNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'notifications/progress',
+          params: expect.objectContaining({
+            progressToken: 'tok_progress',
+            progress: 100,
+            total: 100,
+            message: 'Published',
+          }),
+        }),
+      );
+    });
+
+    it('skips progress notifications when no progressToken', async () => {
+      mockDeploy.mockImplementation(async (opts) => {
+        opts.onStatus?.('bundling', 'building');
+        return { status: 'bundling' };
+      });
+
+      const extra = createMockExtra(); // no progressToken
+      const tool = server.getTool('deploy-flow');
+      await tool.handler({ flowId: 'flow_1', wait: true }, extra);
+
+      expect(extra.sendNotification).not.toHaveBeenCalled();
     });
 
     it('passes undefined for optional params when not provided', async () => {
@@ -79,30 +145,37 @@ describe('deploy tools', () => {
         status: 'bundling',
       });
 
+      const extra = createMockExtra();
       const tool = server.getTool('deploy-flow');
-      await tool.handler({
-        flowId: 'flow_1',
-        projectId: undefined,
-        wait: undefined,
-        flowName: undefined,
-      });
+      await tool.handler(
+        {
+          flowId: 'flow_1',
+          projectId: undefined,
+          wait: undefined,
+          flowName: undefined,
+        },
+        extra,
+      );
 
-      expect(mockDeploy).toHaveBeenCalledWith({
-        flowId: 'flow_1',
-        projectId: undefined,
-        wait: undefined,
-        flowName: undefined,
-      });
+      expect(mockDeploy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: 'flow_1',
+          projectId: undefined,
+          wait: undefined,
+          flowName: undefined,
+        }),
+      );
     });
 
     it('returns isError on CLI failure', async () => {
       mockDeploy.mockRejectedValue(new Error('Deploy failed'));
 
+      const extra = createMockExtra();
       const tool = server.getTool('deploy-flow');
-      const result = await tool.handler({
-        flowId: 'flow_1',
-        wait: true,
-      });
+      const result = await tool.handler(
+        { flowId: 'flow_1', wait: true },
+        extra,
+      );
 
       expect(result.isError).toBe(true);
       expect(result.structuredContent).toBeUndefined();
@@ -113,11 +186,12 @@ describe('deploy tools', () => {
     it('handles non-Error exceptions', async () => {
       mockDeploy.mockRejectedValue('string error');
 
+      const extra = createMockExtra();
       const tool = server.getTool('deploy-flow');
-      const result = await tool.handler({
-        flowId: 'flow_1',
-        wait: true,
-      });
+      const result = await tool.handler(
+        { flowId: 'flow_1', wait: true },
+        extra,
+      );
 
       expect(result.isError).toBe(true);
       const parsed = JSON.parse(result.content[0].text);
