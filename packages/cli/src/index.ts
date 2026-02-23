@@ -28,13 +28,12 @@ export {
   getDeploymentCommand,
 } from './commands/deploy/index.js';
 export {
+  createDeployCommand,
   listDeploymentsCommand,
   getDeploymentBySlugCommand,
   createDeploymentCommand,
-  updateDeploymentCommand,
   deleteDeploymentCommand,
 } from './commands/deployments/index.js';
-export { publishCommand } from './commands/publish/index.js';
 
 // === Programmatic API ===
 // High-level functions for library usage
@@ -46,6 +45,7 @@ export { validate } from './commands/validate/index.js';
 export {
   getToken,
   getAuthHeaders,
+  deployAuthenticatedFetch,
   requireProjectId,
   resolveBaseUrl,
 } from './core/auth.js';
@@ -71,14 +71,11 @@ export {
   listDeployments,
   getDeploymentBySlug,
   createDeployment,
-  updateDeployment,
   deleteDeployment,
 } from './commands/deployments/index.js';
-export { publish } from './commands/publish/index.js';
 export type { ListFlowsOptions } from './commands/flows/index.js';
 export type { DeployOptions } from './commands/deploy/index.js';
 export type { ListDeploymentsOptions } from './commands/deployments/index.js';
-export type { PublishOptions } from './commands/publish/index.js';
 export { parseSSEEvents } from './core/sse.js';
 export type { SSEEvent, SSEParseResult } from './core/sse.js';
 

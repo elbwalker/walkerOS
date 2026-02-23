@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import {
-  authenticatedFetch,
+  deployAuthenticatedFetch,
   requireProjectId,
   resolveBaseUrl,
 } from '../../core/auth.js';
@@ -28,7 +28,7 @@ export async function startHeartbeat(options: HeartbeatOptions) {
   const heartbeatUrl = `${base}/api/projects/${projectId}/deployments/${options.deployment}/heartbeat`;
 
   // 1. Initial heartbeat (acts as registration)
-  const initResponse = await authenticatedFetch(heartbeatUrl, {
+  const initResponse = await deployAuthenticatedFetch(heartbeatUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -60,7 +60,7 @@ export async function startHeartbeat(options: HeartbeatOptions) {
   // 2. Ongoing heartbeat loop
   const heartbeatTimer = setInterval(async () => {
     try {
-      const resp = await authenticatedFetch(heartbeatUrl, {
+      const resp = await deployAuthenticatedFetch(heartbeatUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -102,7 +102,7 @@ export async function startHeartbeat(options: HeartbeatOptions) {
   const cleanup = async () => {
     clearInterval(heartbeatTimer);
     try {
-      await authenticatedFetch(heartbeatUrl, {
+      await deployAuthenticatedFetch(heartbeatUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

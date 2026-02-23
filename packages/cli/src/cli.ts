@@ -30,13 +30,11 @@ import {
   getDeploymentCommand,
 } from './commands/deploy/index.js';
 import {
+  createDeployCommand,
   listDeploymentsCommand,
-  getDeploymentBySlugCommand,
-  createDeploymentCommand,
-  updateDeploymentCommand,
   deleteDeploymentCommand,
+  getDeploymentBySlugCommand,
 } from './commands/deployments/index.js';
-import { publishCommand } from './commands/publish/index.js';
 
 const program = new Command();
 
@@ -347,14 +345,32 @@ flowsCmd
     await duplicateFlowCommand(flowId, options);
   });
 
-// Deploy command group
+// Unified deploy command group
 const deployCmd = program
   .command('deploy')
-  .description('Deploy flows to walkerOS cloud');
+  .description('Create, manage, and deploy flows');
 
+// deploy create [config] — placeholder until Task 2
+deployCmd
+  .command('create [config]')
+  .description(
+    'Create a deployment (infers type from flow config or remote flow)',
+  )
+  .option('--label <string>', 'human-readable label')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
+  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
+  .option('-o, --output <path>', 'output file path')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
+  .action(async (config, options) => {
+    await createDeployCommand(config, options);
+  });
+
+// deploy start <flowId> — existing cloud deploy (unchanged logic)
 deployCmd
   .command('start <flowId>')
-  .description('Deploy a flow (auto-detects web or server)')
+  .description('Deploy a flow to walkerOS cloud (auto-detects web or server)')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
   .option('-f, --flow <name>', 'flow name for multi-config flows')
   .option('--no-wait', 'do not wait for deployment to complete')
@@ -370,25 +386,8 @@ deployCmd
     await deployCommand(flowId, options);
   });
 
+// deploy list
 deployCmd
-  .command('status <flowId>')
-  .description('Get the latest deployment status for a flow')
-  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('-f, --flow <name>', 'flow name for multi-config flows')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (flowId, options) => {
-    await getDeploymentCommand(flowId, options);
-  });
-
-// Deployments command group
-const deploymentsCmd = program
-  .command('deployments')
-  .description('Manage deployments');
-
-deploymentsCmd
   .command('list')
   .description('List all deployments in a project')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
@@ -402,76 +401,29 @@ deploymentsCmd
     await listDeploymentsCommand(options);
   });
 
-deploymentsCmd
-  .command('get <slug>')
-  .description('Get deployment details')
+// deploy status <id-or-slug>
+deployCmd
+  .command('status <id-or-slug>')
+  .description('Get deployment details by ID or slug')
   .option('--project <id>', 'project ID')
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
-  .action(async (slug, options) => {
-    await getDeploymentBySlugCommand(slug, options);
+  .action(async (idOrSlug, options) => {
+    await getDeploymentBySlugCommand(idOrSlug, options);
   });
 
-deploymentsCmd
-  .command('create')
-  .description('Create a new deployment')
-  .requiredOption('--type <type>', 'deployment type: web or server')
-  .option('--project <id>', 'project ID')
-  .option('--label <string>', 'human-readable label')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (options) => {
-    await createDeploymentCommand(options);
-  });
-
-deploymentsCmd
-  .command('update <slug>')
-  .description('Update deployment metadata')
-  .option('--project <id>', 'project ID')
-  .option('--label <string>', 'new label')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (slug, options) => {
-    await updateDeploymentCommand(slug, options);
-  });
-
-deploymentsCmd
-  .command('delete <slug>')
+// deploy delete <id-or-slug>
+deployCmd
+  .command('delete <id-or-slug>')
   .description('Delete a deployment')
   .option('--project <id>', 'project ID')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
-  .action(async (slug, options) => {
-    await deleteDeploymentCommand(slug, options);
-  });
-
-// Publish command (top-level)
-program
-  .command('publish')
-  .description('Publish a flow config to a deployment')
-  .requiredOption('-d, --deployment <slug>', 'deployment slug')
-  .requiredOption('-c, --config <path>', 'path to flow config file')
-  .option('-f, --flow <name>', 'flow name for multi-flow configs')
-  .option('--project <id>', 'project ID')
-  .option('--no-wait', 'do not wait for deployment to complete')
-  .option(
-    '--timeout <seconds>',
-    'timeout for deployment polling (default: 120)',
-  )
-  .option('--idempotency-key <key>', 'prevent duplicate deploys')
-  .option('-o, --output <path>', 'output file path')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (options) => {
-    await publishCommand(options);
+  .action(async (idOrSlug, options) => {
+    await deleteDeploymentCommand(idOrSlug, options);
   });
 
 // Run command with subcommands
@@ -487,8 +439,8 @@ runCmd
   )
   .option('-p, --port <number>', 'port to listen on (default: 8080)', parseInt)
   .option('-h, --host <address>', 'host address (default: 0.0.0.0)')
-  .option('--deployment <slug>', 'deployment slug (enables heartbeat)')
-  .option('--project <id>', 'project ID (used with --deployment)')
+  .option('--deploy <id-or-slug>', 'deployment ID or slug (enables heartbeat)')
+  .option('--project <id>', 'project ID (used with --deploy)')
   .option('--url <url>', 'public URL of this server')
   .option('--health-endpoint <path>', 'health check path (default: /health)')
   .option(
@@ -504,7 +456,7 @@ runCmd
       config: file || 'server-collect.mjs',
       port: options.port,
       host: options.host,
-      deployment: options.deployment,
+      deployment: options.deploy,
       project: options.project,
       url: options.url,
       healthEndpoint: options.healthEndpoint,
@@ -525,8 +477,8 @@ runCmd
   .option('-h, --host <address>', 'host address (default: 0.0.0.0)')
   .option('--name <filename>', 'filename in URL (default: walker.js)')
   .option('--path <directory>', 'URL directory path (e.g., libs/v1)')
-  .option('--deployment <slug>', 'deployment slug (enables heartbeat)')
-  .option('--project <id>', 'project ID (used with --deployment)')
+  .option('--deploy <id-or-slug>', 'deployment ID or slug (enables heartbeat)')
+  .option('--project <id>', 'project ID (used with --deploy)')
   .option('--url <url>', 'public URL of this server')
   .option('--health-endpoint <path>', 'health check path (default: /health)')
   .option(
@@ -544,7 +496,7 @@ runCmd
       host: options.host,
       serveName: options.name,
       servePath: options.path,
-      deployment: options.deployment,
+      deployment: options.deploy,
       project: options.project,
       url: options.url,
       healthEndpoint: options.healthEndpoint,

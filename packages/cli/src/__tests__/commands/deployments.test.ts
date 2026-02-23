@@ -7,7 +7,6 @@ import {
   listDeployments,
   getDeploymentBySlug,
   createDeployment,
-  updateDeployment,
   deleteDeployment,
 } from '../../commands/deployments/index.js';
 
@@ -141,41 +140,6 @@ describe('deployments', () => {
       await expect(createDeployment({ type: 'server' })).rejects.toThrow(
         'Bad request',
       );
-    });
-  });
-
-  describe('updateDeployment', () => {
-    it('PATCHes with label', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
-        new Response(JSON.stringify({ slug: 'my-deploy', label: 'Updated' }), {
-          status: 200,
-        }),
-      );
-      const result = await updateDeployment({
-        slug: 'my-deploy',
-        label: 'Updated',
-        projectId: 'proj_123',
-      });
-      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_123/deployments/my-deploy',
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ label: 'Updated' }),
-        },
-      );
-      expect(result).toEqual({ slug: 'my-deploy', label: 'Updated' });
-    });
-
-    it('throws on error', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
-        new Response(JSON.stringify({ error: { message: 'Forbidden' } }), {
-          status: 403,
-        }),
-      );
-      await expect(
-        updateDeployment({ slug: 'my-deploy', label: 'x' }),
-      ).rejects.toThrow('Forbidden');
     });
   });
 

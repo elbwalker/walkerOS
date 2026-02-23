@@ -1,3 +1,4 @@
+import { getPlatform } from '@walkeros/core';
 import {
   authenticatedFetch,
   requireProjectId,
@@ -5,6 +6,7 @@ import {
 } from '../../core/auth.js';
 import { createCommandLogger } from '../../core/logger.js';
 import { writeResult } from '../../core/output.js';
+import { loadFlowConfig } from '../../config/loader.js';
 import type { GlobalOptions } from '../../types/global.js';
 
 // === Programmatic API ===
@@ -77,32 +79,6 @@ export async function createDeployment(options: {
     throw new Error(
       (body as { error?: { message?: string } }).error?.message ||
         'Failed to create deployment',
-    );
-  }
-  return response.json();
-}
-
-export async function updateDeployment(options: {
-  slug: string;
-  label?: string;
-  projectId?: string;
-}) {
-  const id = options.projectId ?? requireProjectId();
-  const base = resolveBaseUrl();
-
-  const response = await authenticatedFetch(
-    `${base}/api/projects/${id}/deployments/${options.slug}`,
-    {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ label: options.label }),
-    },
-  );
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(
-      (body as { error?: { message?: string } }).error?.message ||
-        'Failed to update deployment',
     );
   }
   return response.json();
@@ -193,21 +169,6 @@ export async function createDeploymentCommand(
   );
 }
 
-export async function updateDeploymentCommand(
-  slug: string,
-  options: DeploymentsCommandOptions,
-): Promise<void> {
-  await handleResult(
-    () =>
-      updateDeployment({
-        slug,
-        label: options.label,
-        projectId: options.project,
-      }),
-    options,
-  );
-}
-
 export async function deleteDeploymentCommand(
   slug: string,
   options: DeploymentsCommandOptions,
@@ -216,4 +177,102 @@ export async function deleteDeploymentCommand(
     () => deleteDeployment({ slug, projectId: options.project }),
     options,
   );
+}
+
+export async function createDeployCommand(
+  config: string | undefined,
+  options: DeploymentsCommandOptions & { flow?: string },
+): Promise<void> {
+  const log = createCommandLogger(options);
+
+  try {
+    let type: 'web' | 'server';
+
+    if (!config) {
+      log.error(
+        'Config required. Provide a flow config file or remote flow ID (cfg_xxx).',
+      );
+      process.exit(1);
+    }
+
+    // Detect: local file path vs remote flow ID
+    const isRemoteFlow = config.startsWith('cfg_');
+
+    if (isRemoteFlow) {
+      // Fetch flow from API to determine type
+      const id = options.project ?? requireProjectId();
+      const base = resolveBaseUrl();
+      const resp = await authenticatedFetch(
+        `${base}/api/projects/${id}/flows/${config}`,
+      );
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(
+          (body as { error?: { message?: string } }).error?.message ||
+            `Failed to fetch flow ${config}`,
+        );
+      }
+      const flow = (await resp.json()) as { content?: unknown };
+      if (!flow.content) throw new Error('Flow has no content');
+
+      const content = flow.content as { flows?: Record<string, unknown> };
+      const flows = content.flows;
+      if (!flows) throw new Error('Invalid flow content: missing flows');
+      const flowName = options.flow ?? Object.keys(flows)[0];
+      if (!flowName) throw new Error('No flows found in config');
+      const flowConfig = flows[flowName];
+      if (!flowConfig || typeof flowConfig !== 'object')
+        throw new Error('Invalid flow config');
+
+      if ('web' in flowConfig) type = 'web';
+      else if ('server' in flowConfig) type = 'server';
+      else throw new Error('Flow must have "web" or "server" key');
+    } else {
+      // Local file: use config loader + core getPlatform
+      const result = await loadFlowConfig(config, {
+        flowName: options.flow,
+      });
+      type = getPlatform(result.flowConfig);
+    }
+
+    // Create deployment via API
+    const deployment = await createDeployment({
+      type,
+      label: options.label,
+      projectId: options.project,
+    });
+
+    const result = deployment as Record<string, unknown>;
+
+    if (options.json) {
+      await writeResult(JSON.stringify(result, null, 2), options);
+      return;
+    }
+
+    // Human-readable output
+    log.success(`Deployment created: ${result.id}`);
+    log.info(`  Slug:  ${result.slug}`);
+    log.info(`  Type:  ${result.type}`);
+    if (result.deployToken) {
+      log.info(`  Token: ${result.deployToken}`);
+      log.warning('  Save this token — it will not be shown again.');
+    }
+    log.info('');
+    log.info('Run locally:');
+    log.info(
+      `  walkeros run collect ${isRemoteFlow ? 'flow.json' : config} --deploy ${result.id}`,
+    );
+    log.info('');
+    log.info('Docker:');
+    log.info(
+      `  docker run -e WALKEROS_DEPLOY_TOKEN=${result.deployToken ?? '<token>'} \\`,
+    );
+    log.info('             -e WALKEROS_APP_URL=https://app.walkeros.io \\');
+    log.info('             walkeros/flow:latest run collect');
+  } catch (err) {
+    log.error(
+      err instanceof Error ? err.message : 'Failed to create deployment',
+    );
+    process.exit(1);
+  }
 }

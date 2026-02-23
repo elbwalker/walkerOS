@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": {}
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "primary": true,
+          "config": {
+            "port": 8080,
+            "cors": true
+          }
+        }
+      },
+      "destinations": {}
+    }
+  }
+}
