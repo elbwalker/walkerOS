@@ -39,13 +39,18 @@
     "skills/walkeros-writing-documentation"
   ],
   "mcpServers": {
-    "walkeros": {
+    "walkeros-api": {
       "command": "npx",
-      "args": ["@walkeros/mcp"],
+      "args": ["@walkeros/mcp-api"],
       "env": {
         "WALKEROS_TOKEN": "",
         "WALKEROS_PROJECT_ID": ""
       }
+    },
+    "walkeros-cli": {
+      "command": "npx",
+      "args": ["@walkeros/mcp-cli"],
+      "env": {}
     }
   }
 }

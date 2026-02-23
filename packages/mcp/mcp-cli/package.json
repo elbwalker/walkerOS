@@ -1,7 +1,7 @@
 {
-  "name": "@walkeros/mcp",
-  "version": "2.0.1",
-  "description": "MCP server for walkerOS - validate, bundle, and simulate analytics events locally, plus manage projects and flows via the walkerOS API",
+  "name": "@walkeros/mcp-cli",
+  "version": "1.0.0",
+  "description": "MCP server for local walkerOS development - validate events, bundle flows, simulate pipelines, and discover packages",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -13,7 +13,7 @@
     }
   },
   "bin": {
-    "walkeros-mcp": "./dist/index.js"
+    "walkeros-mcp-cli": "./dist/index.js"
   },
   "files": [
     "dist/**",
@@ -27,8 +27,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.ts*\"",
     "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage",
-    "prepublishOnly": "npm run build",
-    "update": "npx npm-check-updates -u && npm update"
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
@@ -44,7 +43,7 @@
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
-    "directory": "packages/mcp"
+    "directory": "packages/mcp/mcp-cli"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme",
@@ -59,7 +58,7 @@
     "mcp",
     "model-context-protocol",
     "analytics",
-    "event-tracking"
+    "cli"
   ],
   "publishConfig": {
     "access": "public"

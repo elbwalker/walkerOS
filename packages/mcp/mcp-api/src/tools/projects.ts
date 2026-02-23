@@ -7,7 +7,7 @@ import {
   deleteProject,
 } from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiResult, apiError } from './helpers.js';
+import { mcpResult, mcpError } from '@walkeros/core';
 import {
   ListProjectsOutputShape,
   ProjectOutputShape,
@@ -32,9 +32,9 @@ export function registerProjectTools(server: McpServer) {
     },
     async () => {
       try {
-        return apiResult(await listProjects());
+        return mcpResult(await listProjects());
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -61,9 +61,9 @@ export function registerProjectTools(server: McpServer) {
     },
     async ({ projectId }) => {
       try {
-        return apiResult(await getProject({ projectId }));
+        return mcpResult(await getProject({ projectId }));
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -86,9 +86,9 @@ export function registerProjectTools(server: McpServer) {
     },
     async ({ name }) => {
       try {
-        return apiResult(await createProject({ name }));
+        return mcpResult(await createProject({ name }));
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -116,9 +116,9 @@ export function registerProjectTools(server: McpServer) {
     },
     async ({ projectId, name }) => {
       try {
-        return apiResult(await updateProject({ projectId, name }));
+        return mcpResult(await updateProject({ projectId, name }));
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -147,9 +147,9 @@ export function registerProjectTools(server: McpServer) {
     },
     async ({ projectId }) => {
       try {
-        return apiResult(await deleteProject({ projectId }));
+        return mcpResult(await deleteProject({ projectId }));
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );

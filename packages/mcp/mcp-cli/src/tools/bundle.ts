@@ -3,7 +3,7 @@ import { bundle, bundleRemote } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { BundleOutputShape } from '../schemas/output.js';
-import { apiResult } from './helpers.js';
+import { mcpResult } from '@walkeros/core';
 
 export function registerBundleTool(server: McpServer) {
   server.registerTool(
@@ -45,7 +45,7 @@ export function registerBundleTool(server: McpServer) {
             content: content as Record<string, unknown>,
             flowName: flow,
           });
-          return apiResult({ success: true, ...result });
+          return mcpResult({ success: true, ...result });
         }
 
         // Local bundle path

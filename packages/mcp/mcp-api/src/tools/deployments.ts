@@ -9,7 +9,7 @@ import {
 } from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ServerNotification } from '@modelcontextprotocol/sdk/types.js';
-import { apiResult, apiError } from './helpers.js';
+import { mcpResult, mcpError } from '@walkeros/core';
 import {
   DeployFlowOutputShape,
   DeploymentOutputShape,
@@ -102,9 +102,9 @@ export function registerDeploymentTools(server: McpServer) {
           signal: extra.signal,
         });
 
-        return apiResult(result);
+        return mcpResult(result);
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -149,21 +149,21 @@ export function registerDeploymentTools(server: McpServer) {
     async ({ flowId, slug, projectId, flowName }) => {
       try {
         if (flowId && slug) {
-          return apiError(new Error('Provide either flowId or slug, not both'));
+          return mcpError(new Error('Provide either flowId or slug, not both'));
         }
         if (!flowId && !slug) {
-          return apiError(new Error('Provide either flowId or slug'));
+          return mcpError(new Error('Provide either flowId or slug'));
         }
 
         if (slug) {
-          return apiResult(await getDeploymentBySlug({ slug, projectId }));
+          return mcpResult(await getDeploymentBySlug({ slug, projectId }));
         }
 
-        return apiResult(
+        return mcpResult(
           await getDeployment({ flowId: flowId!, projectId, flowName }),
         );
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -202,9 +202,9 @@ export function registerDeploymentTools(server: McpServer) {
     },
     async ({ projectId, type, status }) => {
       try {
-        return apiResult(await listDeployments({ projectId, type, status }));
+        return mcpResult(await listDeployments({ projectId, type, status }));
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -262,15 +262,15 @@ export function registerDeploymentTools(server: McpServer) {
           }
         }
         if (!resolvedType) {
-          return apiError(
+          return mcpError(
             new Error('type required (provide type or flowContent)'),
           );
         }
-        return apiResult(
+        return mcpResult(
           await createDep({ type: resolvedType, label, projectId }),
         );
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -295,9 +295,9 @@ export function registerDeploymentTools(server: McpServer) {
     },
     async ({ slug, projectId }) => {
       try {
-        return apiResult(await deleteDep({ slug, projectId }));
+        return mcpResult(await deleteDep({ slug, projectId }));
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );

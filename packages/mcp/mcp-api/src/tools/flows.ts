@@ -8,7 +8,7 @@ import {
   duplicateFlow,
 } from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiResult, apiError } from './helpers.js';
+import { mcpResult, mcpError } from '@walkeros/core';
 import {
   ListFlowsOutputShape,
   FlowOutputShape,
@@ -49,11 +49,11 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ projectId, sort, order, includeDeleted }) => {
       try {
-        return apiResult(
+        return mcpResult(
           await listFlows({ projectId, sort, order, includeDeleted }),
         );
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -81,9 +81,9 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, projectId }) => {
       try {
-        return apiResult(await getFlow({ flowId, projectId }));
+        return mcpResult(await getFlow({ flowId, projectId }));
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -113,9 +113,9 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ name, content, projectId }) => {
       try {
-        return apiResult(await createFlow({ name, content, projectId }));
+        return mcpResult(await createFlow({ name, content, projectId }));
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -147,11 +147,11 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, name, content, projectId }) => {
       try {
-        return apiResult(
+        return mcpResult(
           await updateFlow({ flowId, name, content, projectId }),
         );
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -181,9 +181,9 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, projectId }) => {
       try {
-        return apiResult(await deleteFlow({ flowId, projectId }));
+        return mcpResult(await deleteFlow({ flowId, projectId }));
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );
@@ -214,9 +214,9 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, name, projectId }) => {
       try {
-        return apiResult(await duplicateFlow({ flowId, name, projectId }));
+        return mcpResult(await duplicateFlow({ flowId, name, projectId }));
       } catch (error) {
-        return apiError(error);
+        return mcpError(error);
       }
     },
   );

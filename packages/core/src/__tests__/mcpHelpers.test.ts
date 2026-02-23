@@ -1,19 +1,19 @@
-import { apiResult, apiError } from '../../tools/helpers.js';
+import { mcpResult, mcpError } from '../mcpHelpers';
 
-describe('tool helpers', () => {
-  describe('apiResult', () => {
+describe('mcpHelpers', () => {
+  describe('mcpResult', () => {
     it('returns content with JSON text and structuredContent', () => {
       const data = { id: 'proj_123', name: 'Test' };
-      const result = apiResult(data);
+      const result = mcpResult(data);
       expect(result.content[0].type).toBe('text');
       expect(JSON.parse(result.content[0].text)).toEqual(data);
       expect(result.structuredContent).toEqual(data);
     });
   });
 
-  describe('apiError', () => {
+  describe('mcpError', () => {
     it('returns isError with Error message', () => {
-      const result = apiError(new Error('Not found'));
+      const result = mcpError(new Error('Not found'));
       expect(result.isError).toBe(true);
       expect(JSON.parse(result.content[0].text)).toEqual({
         error: 'Not found',
@@ -21,7 +21,7 @@ describe('tool helpers', () => {
     });
 
     it('returns isError with unknown error for non-Error', () => {
-      const result = apiError('string');
+      const result = mcpError('string');
       expect(result.isError).toBe(true);
       expect(JSON.parse(result.content[0].text)).toEqual({
         error: 'Unknown error',

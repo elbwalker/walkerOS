@@ -6,7 +6,7 @@
  * To update: copy app/dist/openapi.json → cli/openapi/spec.json
  */
 
-import baseline from '../../../cli/openapi/spec.json';
+import baseline from '../../../../cli/openapi/spec.json';
 
 interface OpenApiSpec {
   paths: Record<string, Record<string, unknown>>;
