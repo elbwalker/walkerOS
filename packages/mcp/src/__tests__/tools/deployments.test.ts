@@ -1,4 +1,10 @@
 import { registerDeploymentTools } from '../../tools/deployments.js';
+import {
+  ListDeploymentsOutputShape,
+  DeploymentOutputShape,
+  CreateDeploymentOutputShape,
+  DeleteOutputShape,
+} from '../../schemas/output.js';
 
 // Mock @walkeros/cli
 jest.mock('@walkeros/cli', () => ({
@@ -43,6 +49,13 @@ describe('deployment tools', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('list-deployments', () => {
+    it('has outputSchema matching ListDeploymentsOutputShape', () => {
+      const tool = server.getTool('list-deployments');
+      expect(Object.keys((tool.config as any).outputSchema)).toEqual(
+        Object.keys(ListDeploymentsOutputShape),
+      );
+    });
+
     it('registers with correct name, title, and annotations', () => {
       const tool = server.getTool('list-deployments');
       expect(tool).toBeDefined();
@@ -110,9 +123,36 @@ describe('deployment tools', () => {
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.error).toBe('Unknown error');
     });
+
+    it('has status input as enum with known deployment statuses', () => {
+      const tool = server.getTool('list-deployments');
+      const config = tool.config as any;
+      const statusSchema = config.inputSchema.status;
+      // Unwrap optional wrapper to get inner type
+      const inner = statusSchema._def.innerType ?? statusSchema;
+      // Zod 4 uses .options array, Zod 3 uses _def.values
+      const values = inner.options ?? inner._def.values;
+      expect(values).toEqual(
+        expect.arrayContaining([
+          'bundling',
+          'deploying',
+          'active',
+          'failed',
+          'deleted',
+          'published',
+        ]),
+      );
+    });
   });
 
   describe('get-deployment-by-slug', () => {
+    it('has outputSchema matching DeploymentOutputShape', () => {
+      const tool = server.getTool('get-deployment-by-slug');
+      expect(Object.keys((tool.config as any).outputSchema)).toEqual(
+        Object.keys(DeploymentOutputShape),
+      );
+    });
+
     it('registers with correct name, title, and annotations', () => {
       const tool = server.getTool('get-deployment-by-slug');
       expect(tool).toBeDefined();
@@ -181,6 +221,13 @@ describe('deployment tools', () => {
   });
 
   describe('create-deployment', () => {
+    it('has outputSchema matching CreateDeploymentOutputShape', () => {
+      const tool = server.getTool('create-deployment');
+      expect(Object.keys((tool.config as any).outputSchema)).toEqual(
+        Object.keys(CreateDeploymentOutputShape),
+      );
+    });
+
     it('registers with correct name, title, and annotations', () => {
       const tool = server.getTool('create-deployment');
       expect(tool).toBeDefined();
@@ -294,6 +341,18 @@ describe('deployment tools', () => {
   });
 
   describe('delete-deployment', () => {
+    it('should have idempotentHint true', () => {
+      const tool = server.getTool('delete-deployment');
+      expect((tool.config as any).annotations.idempotentHint).toBe(true);
+    });
+
+    it('has outputSchema matching DeleteOutputShape', () => {
+      const tool = server.getTool('delete-deployment');
+      expect(Object.keys((tool.config as any).outputSchema)).toEqual(
+        Object.keys(DeleteOutputShape),
+      );
+    });
+
     it('registers with correct name, title, and annotations', () => {
       const tool = server.getTool('delete-deployment');
       expect(tool).toBeDefined();
@@ -303,7 +362,7 @@ describe('deployment tools', () => {
       expect(config.annotations).toEqual({
         readOnlyHint: false,
         destructiveHint: true,
-        idempotentHint: false,
+        idempotentHint: true,
         openWorldHint: true,
       });
     });

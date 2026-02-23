@@ -11,6 +11,10 @@ import {
   ListFlowsOutputShape,
   DeleteOutputShape,
   BundleRemoteOutputShape,
+  DeployFlowOutputShape,
+  DeploymentOutputShape,
+  ListDeploymentsOutputShape,
+  CreateDeploymentOutputShape,
 } from '../../schemas/output.js';
 
 /**
@@ -329,6 +333,156 @@ describe('output schemas', () => {
     it('rejects missing required fields', () => {
       const result = parseShape(BundleRemoteOutputShape, { success: true });
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe('DeployFlowOutputShape', () => {
+    it('accepts web deploy result', () => {
+      const result = parseShape(DeployFlowOutputShape, {
+        deploymentId: 'dep_abc',
+        type: 'web',
+        status: 'published',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts server deploy result', () => {
+      const result = parseShape(DeployFlowOutputShape, {
+        deploymentId: 'dep_xyz',
+        type: 'server',
+        status: 'deploying',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts result with publicUrl and scriptTag', () => {
+      const result = parseShape(DeployFlowOutputShape, {
+        deploymentId: 'dep_abc',
+        type: 'web',
+        status: 'published',
+        publicUrl: 'https://cdn.example.com/flow.js',
+        scriptTag: '<script src="https://cdn.example.com/flow.js"></script>',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts result with containerUrl', () => {
+      const result = parseShape(DeployFlowOutputShape, {
+        deploymentId: 'dep_xyz',
+        type: 'server',
+        status: 'active',
+        containerUrl: 'https://container.example.com',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts result with errorMessage', () => {
+      const result = parseShape(DeployFlowOutputShape, {
+        deploymentId: 'dep_fail',
+        type: 'server',
+        status: 'failed',
+        errorMessage: 'Container failed to start',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects missing deploymentId', () => {
+      const result = parseShape(DeployFlowOutputShape, {
+        type: 'web',
+        status: 'published',
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('DeploymentOutputShape', () => {
+    it('accepts full deployment with all fields', () => {
+      const result = parseShape(DeploymentOutputShape, {
+        id: 'dep_abc',
+        slug: 'my-flow-v1',
+        flowId: 'cfg_123',
+        type: 'web',
+        status: 'published',
+        publicUrl: 'https://cdn.example.com/flow.js',
+        scriptTag: '<script src="https://cdn.example.com/flow.js"></script>',
+        containerUrl: null,
+        errorMessage: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-02-01T00:00:00Z',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts minimal deployment', () => {
+      const result = parseShape(DeploymentOutputShape, {
+        id: 'dep_xyz',
+        slug: 'server-flow',
+        flowId: 'cfg_456',
+        type: 'server',
+        status: 'bundling',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-02-01T00:00:00Z',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects missing required fields', () => {
+      const result = parseShape(DeploymentOutputShape, {
+        id: 'dep_abc',
+        slug: 'my-flow',
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('ListDeploymentsOutputShape', () => {
+    it('accepts deployment list', () => {
+      const result = parseShape(ListDeploymentsOutputShape, {
+        deployments: [
+          {
+            id: 'dep_abc',
+            slug: 'my-flow-v1',
+            flowId: 'cfg_123',
+            type: 'web',
+            status: 'published',
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-02-01T00:00:00Z',
+          },
+        ],
+        total: 1,
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts empty list', () => {
+      const result = parseShape(ListDeploymentsOutputShape, {
+        deployments: [],
+        total: 0,
+      });
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('CreateDeploymentOutputShape', () => {
+    it('accepts with deployToken', () => {
+      const result = parseShape(CreateDeploymentOutputShape, {
+        id: 'dep_new',
+        slug: 'new-deploy',
+        type: 'web',
+        status: 'bundling',
+        deployToken: 'tok_secret123',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts without deployToken', () => {
+      const result = parseShape(CreateDeploymentOutputShape, {
+        id: 'dep_new',
+        slug: 'new-deploy',
+        type: 'server',
+        status: 'bundling',
+      });
+      expect(result.success).toBe(true);
     });
   });
 });

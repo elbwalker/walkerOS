@@ -110,7 +110,7 @@ export function registerProjectTools(server: McpServer) {
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
-        idempotentHint: false,
+        idempotentHint: true,
         openWorldHint: true,
       },
     },
@@ -141,7 +141,7 @@ export function registerProjectTools(server: McpServer) {
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
-        idempotentHint: false,
+        idempotentHint: true,
         openWorldHint: true,
       },
     },

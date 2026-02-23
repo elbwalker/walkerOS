@@ -126,6 +126,11 @@ describe('flow tools', () => {
   });
 
   describe('update-flow', () => {
+    it('should have idempotentHint true', () => {
+      const tool = server.getTool('update-flow');
+      expect((tool.config as any).annotations.idempotentHint).toBe(true);
+    });
+
     it('should pass all fields to updateFlow()', async () => {
       mockUpdateFlow.mockResolvedValue({ id: 'cfg_abc' });
       const content = { version: 1, sources: [] };
@@ -145,6 +150,11 @@ describe('flow tools', () => {
   });
 
   describe('delete-flow', () => {
+    it('should have idempotentHint true', () => {
+      const tool = server.getTool('delete-flow');
+      expect((tool.config as any).annotations.idempotentHint).toBe(true);
+    });
+
     it('should pass flowId and projectId to deleteFlow()', async () => {
       mockDeleteFlow.mockResolvedValue({ success: true });
       const tool = server.getTool('delete-flow');

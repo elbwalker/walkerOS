@@ -1,4 +1,8 @@
 import { registerDeployTools } from '../../tools/deploy.js';
+import {
+  DeployFlowOutputShape,
+  DeploymentOutputShape,
+} from '../../schemas/output.js';
 
 // Mock @walkeros/cli
 jest.mock('@walkeros/cli', () => ({
@@ -55,6 +59,14 @@ describe('deploy tools', () => {
         idempotentHint: false,
         openWorldHint: true,
       });
+    });
+
+    it('has outputSchema matching DeployFlowOutputShape', () => {
+      const tool = server.getTool('deploy-flow');
+      const config = tool.config as any;
+      expect(Object.keys(config.outputSchema)).toEqual(
+        Object.keys(DeployFlowOutputShape),
+      );
     });
 
     it('calls CLI deploy with onStatus and signal', async () => {
@@ -212,6 +224,14 @@ describe('deploy tools', () => {
         idempotentHint: true,
         openWorldHint: true,
       });
+    });
+
+    it('has outputSchema matching DeploymentOutputShape', () => {
+      const tool = server.getTool('get-deployment');
+      const config = tool.config as any;
+      expect(Object.keys(config.outputSchema)).toEqual(
+        Object.keys(DeploymentOutputShape),
+      );
     });
 
     it('calls CLI getDeployment with correct options', async () => {

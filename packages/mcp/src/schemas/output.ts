@@ -181,3 +181,88 @@ export const BundleRemoteOutputShape = {
     .optional()
     .describe('Bundle statistics from server'),
 };
+
+// Deployment shared primitives
+const deploymentStatus = z
+  .enum(['bundling', 'deploying', 'active', 'failed', 'deleted', 'published'])
+  .describe('Deployment status');
+const deploymentType = z.enum(['web', 'server']).describe('Deployment type');
+
+// Deploy flow output shape
+export const DeployFlowOutputShape = {
+  deploymentId: z.string().describe('Deployment ID'),
+  type: deploymentType,
+  status: deploymentStatus,
+  publicUrl: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Public URL for web deployments'),
+  scriptTag: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('HTML script tag for web deployments'),
+  containerUrl: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Container URL for server deployments'),
+  errorMessage: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Error message if deployment failed'),
+};
+
+// Deployment output shape
+const deploymentFields = {
+  id: z.string().describe('Deployment ID'),
+  slug: z.string().describe('Deployment slug'),
+  flowId: flowId,
+  type: deploymentType,
+  status: deploymentStatus,
+  publicUrl: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Public URL for web deployments'),
+  scriptTag: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('HTML script tag for web deployments'),
+  containerUrl: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Container URL for server deployments'),
+  errorMessage: z
+    .string()
+    .nullable()
+    .optional()
+    .describe('Error message if deployment failed'),
+  createdAt: timestamp,
+  updatedAt: timestamp,
+};
+
+export const DeploymentOutputShape = { ...deploymentFields };
+
+export const ListDeploymentsOutputShape = {
+  deployments: z
+    .array(z.object(deploymentFields))
+    .describe('List of deployments'),
+  total: z.number().describe('Total number of deployments'),
+};
+
+// Create deployment output shape
+export const CreateDeploymentOutputShape = {
+  id: z.string().describe('Deployment ID'),
+  slug: z.string().describe('Deployment slug'),
+  type: deploymentType,
+  status: deploymentStatus,
+  deployToken: z
+    .string()
+    .optional()
+    .describe('One-time deploy token for bundle upload'),
+};

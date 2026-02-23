@@ -94,6 +94,11 @@ describe('project tools', () => {
   });
 
   describe('update-project', () => {
+    it('should have idempotentHint true', () => {
+      const tool = server.getTool('update-project');
+      expect((tool.config as any).annotations.idempotentHint).toBe(true);
+    });
+
     it('should pass projectId and name to updateProject()', async () => {
       mockUpdateProject.mockResolvedValue({
         id: 'proj_123',
@@ -110,6 +115,11 @@ describe('project tools', () => {
   });
 
   describe('delete-project', () => {
+    it('should have idempotentHint true', () => {
+      const tool = server.getTool('delete-project');
+      expect((tool.config as any).annotations.idempotentHint).toBe(true);
+    });
+
     it('should pass projectId to deleteProject() and mark as destructive', async () => {
       mockDeleteProject.mockResolvedValue({ success: true });
       const tool = server.getTool('delete-project');

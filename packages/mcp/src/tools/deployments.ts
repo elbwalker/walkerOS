@@ -7,6 +7,12 @@ import {
 } from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { apiResult, apiError } from './helpers.js';
+import {
+  ListDeploymentsOutputShape,
+  DeploymentOutputShape,
+  CreateDeploymentOutputShape,
+  DeleteOutputShape,
+} from '../schemas/output.js';
 
 export function registerDeploymentTools(server: McpServer) {
   // list-deployments
@@ -21,8 +27,19 @@ export function registerDeploymentTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
         type: z.enum(['web', 'server']).optional().describe('Filter by type'),
-        status: z.string().optional().describe('Filter by status'),
+        status: z
+          .enum([
+            'bundling',
+            'deploying',
+            'active',
+            'failed',
+            'deleted',
+            'published',
+          ])
+          .optional()
+          .describe('Filter by status'),
       },
+      outputSchema: ListDeploymentsOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -52,6 +69,7 @@ export function registerDeploymentTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: DeploymentOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -91,6 +109,7 @@ export function registerDeploymentTools(server: McpServer) {
           .optional()
           .describe('Project ID (defaults to WALKEROS_PROJECT_ID)'),
       },
+      outputSchema: CreateDeploymentOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -143,10 +162,11 @@ export function registerDeploymentTools(server: McpServer) {
         slug: z.string().describe('Deployment slug'),
         projectId: z.string().optional().describe('Project ID'),
       },
+      outputSchema: DeleteOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
-        idempotentHint: false,
+        idempotentHint: true,
         openWorldHint: true,
       },
     },

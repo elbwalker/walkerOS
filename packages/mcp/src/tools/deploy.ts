@@ -3,6 +3,10 @@ import { deploy, getDeployment } from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 import { apiResult, apiError } from './helpers.js';
+import {
+  DeployFlowOutputShape,
+  DeploymentOutputShape,
+} from '../schemas/output.js';
 
 function statusToProgress(
   status: string,
@@ -55,6 +59,7 @@ export function registerDeployTools(server: McpServer) {
             'Flow name for multi-config flows. Required when a flow has multiple configs.',
           ),
       },
+      outputSchema: DeployFlowOutputShape,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -112,6 +117,7 @@ export function registerDeployTools(server: McpServer) {
             'Flow name for multi-config flows. Required when a flow has multiple configs.',
           ),
       },
+      outputSchema: DeploymentOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
