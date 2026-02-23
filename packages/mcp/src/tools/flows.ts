@@ -17,7 +17,7 @@ import {
 
 export function registerFlowTools(server: McpServer) {
   server.registerTool(
-    'list-flows',
+    'flow_list',
     {
       title: 'List Flows',
       description: 'List all flow configurations in a project.',
@@ -59,7 +59,7 @@ export function registerFlowTools(server: McpServer) {
   );
 
   server.registerTool(
-    'get-flow',
+    'flow_get',
     {
       title: 'Get Flow',
       description:
@@ -89,7 +89,7 @@ export function registerFlowTools(server: McpServer) {
   );
 
   server.registerTool(
-    'create-flow',
+    'flow_create',
     {
       title: 'Create Flow',
       description: 'Create a new flow configuration in a project.',
@@ -121,7 +121,7 @@ export function registerFlowTools(server: McpServer) {
   );
 
   server.registerTool(
-    'update-flow',
+    'flow_update',
     {
       title: 'Update Flow',
       description: 'Update a flow configuration name and/or content.',
@@ -157,7 +157,7 @@ export function registerFlowTools(server: McpServer) {
   );
 
   server.registerTool(
-    'delete-flow',
+    'flow_delete',
     {
       title: 'Delete Flow',
       description:
@@ -189,7 +189,7 @@ export function registerFlowTools(server: McpServer) {
   );
 
   server.registerTool(
-    'duplicate-flow',
+    'flow_duplicate',
     {
       title: 'Duplicate Flow',
       description: 'Create a copy of an existing flow configuration.',

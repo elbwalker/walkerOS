@@ -16,7 +16,7 @@ import {
 
 export function registerProjectTools(server: McpServer) {
   server.registerTool(
-    'list-projects',
+    'project_list',
     {
       title: 'List Projects',
       description:
@@ -40,7 +40,7 @@ export function registerProjectTools(server: McpServer) {
   );
 
   server.registerTool(
-    'get-project',
+    'project_get',
     {
       title: 'Get Project',
       description:
@@ -69,7 +69,7 @@ export function registerProjectTools(server: McpServer) {
   );
 
   server.registerTool(
-    'create-project',
+    'project_create',
     {
       title: 'Create Project',
       description: 'Create a new project.',
@@ -94,7 +94,7 @@ export function registerProjectTools(server: McpServer) {
   );
 
   server.registerTool(
-    'update-project',
+    'project_update',
     {
       title: 'Update Project',
       description:
@@ -124,7 +124,7 @@ export function registerProjectTools(server: McpServer) {
   );
 
   server.registerTool(
-    'delete-project',
+    'project_delete',
     {
       title: 'Delete Project',
       description:

@@ -1,18 +1,21 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-// Local CLI tools
+
+// Auth
+import { registerAuthTools } from './tools/auth.js';
+// Project
+import { registerProjectTools } from './tools/projects.js';
+// Flow
+import { registerFlowTools } from './tools/flows.js';
+// Deployment
+import { registerDeploymentTools } from './tools/deployments.js';
+// CLI
+import { registerValidateTool } from './tools/validate.js';
 import { registerBundleTool } from './tools/bundle.js';
 import { registerSimulateTool } from './tools/simulate.js';
 import { registerPushTool } from './tools/push.js';
-import { registerValidateTool } from './tools/validate.js';
-// API tools
-import { registerAuthTools } from './tools/auth.js';
-import { registerProjectTools } from './tools/projects.js';
-import { registerFlowTools } from './tools/flows.js';
-import { registerDeployTools } from './tools/deploy.js';
-import { registerDeploymentTools } from './tools/deployments.js';
-// CDN tools
-import { registerGetPackageSchemaTool } from './tools/get-package-schema.js';
+// Package
+import { registerGetPackageSchemaTool } from './tools/package.js';
 // Resources
 import { registerPackageSchemaResources } from './resources/package-schemas.js';
 import { registerFlowResources } from './resources/flows.js';
@@ -24,20 +27,25 @@ const server = new McpServer({
   version: __VERSION__,
 });
 
-// Local CLI tools
+// Auth (whoami)
+registerAuthTools(server);
+
+// Project (project_*)
+registerProjectTools(server);
+
+// Flow (flow_*)
+registerFlowTools(server);
+
+// Deployment (deployment_*, deploy_flow)
+registerDeploymentTools(server);
+
+// CLI (validate, bundle, simulate, push)
+registerValidateTool(server);
 registerBundleTool(server);
 registerSimulateTool(server);
 registerPushTool(server);
-registerValidateTool(server);
 
-// API tools
-registerAuthTools(server);
-registerProjectTools(server);
-registerFlowTools(server);
-registerDeployTools(server);
-registerDeploymentTools(server);
-
-// CDN tools
+// Package (package_get)
 registerGetPackageSchemaTool(server);
 
 // Resources

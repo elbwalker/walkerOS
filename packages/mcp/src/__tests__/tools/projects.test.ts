@@ -42,60 +42,60 @@ describe('project tools', () => {
   afterEach(() => jest.clearAllMocks());
 
   it('should register all 5 project tools', () => {
-    expect(server.getTool('list-projects')).toBeDefined();
-    expect(server.getTool('get-project')).toBeDefined();
-    expect(server.getTool('create-project')).toBeDefined();
-    expect(server.getTool('update-project')).toBeDefined();
-    expect(server.getTool('delete-project')).toBeDefined();
+    expect(server.getTool('project_list')).toBeDefined();
+    expect(server.getTool('project_get')).toBeDefined();
+    expect(server.getTool('project_create')).toBeDefined();
+    expect(server.getTool('project_update')).toBeDefined();
+    expect(server.getTool('project_delete')).toBeDefined();
   });
 
   it('has outputSchema on all tools', () => {
     const keys = (name: string) =>
       Object.keys((server.getTool(name).config as any).outputSchema ?? {});
 
-    expect(keys('list-projects')).toEqual(Object.keys(ListProjectsOutputShape));
-    expect(keys('get-project')).toEqual(Object.keys(ProjectOutputShape));
-    expect(keys('create-project')).toEqual(Object.keys(ProjectOutputShape));
-    expect(keys('update-project')).toEqual(Object.keys(ProjectOutputShape));
-    expect(keys('delete-project')).toEqual(Object.keys(DeleteOutputShape));
+    expect(keys('project_list')).toEqual(Object.keys(ListProjectsOutputShape));
+    expect(keys('project_get')).toEqual(Object.keys(ProjectOutputShape));
+    expect(keys('project_create')).toEqual(Object.keys(ProjectOutputShape));
+    expect(keys('project_update')).toEqual(Object.keys(ProjectOutputShape));
+    expect(keys('project_delete')).toEqual(Object.keys(DeleteOutputShape));
   });
 
-  describe('list-projects', () => {
+  describe('project_list', () => {
     it('should call listProjects()', async () => {
       const mockResponse = { projects: [], total: 0 };
       mockListProjects.mockResolvedValue(mockResponse);
-      const result = await server.getTool('list-projects').handler({});
+      const result = await server.getTool('project_list').handler({});
       expect(mockListProjects).toHaveBeenCalled();
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toEqual(mockResponse);
     });
   });
 
-  describe('get-project', () => {
+  describe('project_get', () => {
     it('should pass projectId to getProject()', async () => {
       mockGetProject.mockResolvedValue({ id: 'proj_123' });
-      await server.getTool('get-project').handler({ projectId: 'proj_123' });
+      await server.getTool('project_get').handler({ projectId: 'proj_123' });
       expect(mockGetProject).toHaveBeenCalledWith({ projectId: 'proj_123' });
     });
 
     it('should pass undefined projectId when omitted', async () => {
       mockGetProject.mockResolvedValue({ id: 'proj_default' });
-      await server.getTool('get-project').handler({});
+      await server.getTool('project_get').handler({});
       expect(mockGetProject).toHaveBeenCalledWith({ projectId: undefined });
     });
   });
 
-  describe('create-project', () => {
+  describe('project_create', () => {
     it('should pass name to createProject()', async () => {
       mockCreateProject.mockResolvedValue({ id: 'proj_new', name: 'Test' });
-      await server.getTool('create-project').handler({ name: 'Test' });
+      await server.getTool('project_create').handler({ name: 'Test' });
       expect(mockCreateProject).toHaveBeenCalledWith({ name: 'Test' });
     });
   });
 
-  describe('update-project', () => {
+  describe('project_update', () => {
     it('should have idempotentHint true', () => {
-      const tool = server.getTool('update-project');
+      const tool = server.getTool('project_update');
       expect((tool.config as any).annotations.idempotentHint).toBe(true);
     });
 
@@ -105,7 +105,7 @@ describe('project tools', () => {
         name: 'Updated',
       });
       await server
-        .getTool('update-project')
+        .getTool('project_update')
         .handler({ projectId: 'proj_123', name: 'Updated' });
       expect(mockUpdateProject).toHaveBeenCalledWith({
         projectId: 'proj_123',
@@ -114,15 +114,15 @@ describe('project tools', () => {
     });
   });
 
-  describe('delete-project', () => {
+  describe('project_delete', () => {
     it('should have idempotentHint true', () => {
-      const tool = server.getTool('delete-project');
+      const tool = server.getTool('project_delete');
       expect((tool.config as any).annotations.idempotentHint).toBe(true);
     });
 
     it('should pass projectId to deleteProject() and mark as destructive', async () => {
       mockDeleteProject.mockResolvedValue({ success: true });
-      const tool = server.getTool('delete-project');
+      const tool = server.getTool('project_delete');
       expect((tool.config as any).annotations.destructiveHint).toBe(true);
       await tool.handler({ projectId: 'proj_123' });
       expect(mockDeleteProject).toHaveBeenCalledWith({

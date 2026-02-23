@@ -44,32 +44,32 @@ describe('flow tools', () => {
   afterEach(() => jest.clearAllMocks());
 
   it('should register all 6 flow tools', () => {
-    expect(server.getTool('list-flows')).toBeDefined();
-    expect(server.getTool('get-flow')).toBeDefined();
-    expect(server.getTool('create-flow')).toBeDefined();
-    expect(server.getTool('update-flow')).toBeDefined();
-    expect(server.getTool('delete-flow')).toBeDefined();
-    expect(server.getTool('duplicate-flow')).toBeDefined();
+    expect(server.getTool('flow_list')).toBeDefined();
+    expect(server.getTool('flow_get')).toBeDefined();
+    expect(server.getTool('flow_create')).toBeDefined();
+    expect(server.getTool('flow_update')).toBeDefined();
+    expect(server.getTool('flow_delete')).toBeDefined();
+    expect(server.getTool('flow_duplicate')).toBeDefined();
   });
 
   it('has outputSchema on all tools', () => {
     const keys = (name: string) =>
       Object.keys((server.getTool(name).config as any).outputSchema ?? {});
 
-    expect(keys('list-flows')).toEqual(Object.keys(ListFlowsOutputShape));
-    expect(keys('get-flow')).toEqual(Object.keys(FlowOutputShape));
-    expect(keys('create-flow')).toEqual(Object.keys(FlowOutputShape));
-    expect(keys('update-flow')).toEqual(Object.keys(FlowOutputShape));
-    expect(keys('delete-flow')).toEqual(Object.keys(DeleteOutputShape));
-    expect(keys('duplicate-flow')).toEqual(Object.keys(FlowOutputShape));
+    expect(keys('flow_list')).toEqual(Object.keys(ListFlowsOutputShape));
+    expect(keys('flow_get')).toEqual(Object.keys(FlowOutputShape));
+    expect(keys('flow_create')).toEqual(Object.keys(FlowOutputShape));
+    expect(keys('flow_update')).toEqual(Object.keys(FlowOutputShape));
+    expect(keys('flow_delete')).toEqual(Object.keys(DeleteOutputShape));
+    expect(keys('flow_duplicate')).toEqual(Object.keys(FlowOutputShape));
   });
 
-  describe('list-flows', () => {
+  describe('flow_list', () => {
     it('should pass options to listFlows() and return structuredContent', async () => {
       const mockResponse = { flows: [] };
       mockListFlows.mockResolvedValue(mockResponse);
       const result = await server
-        .getTool('list-flows')
+        .getTool('flow_list')
         .handler({ projectId: 'proj_1' });
       expect(mockListFlows).toHaveBeenCalledWith({
         projectId: 'proj_1',
@@ -82,7 +82,7 @@ describe('flow tools', () => {
 
     it('should pass query params', async () => {
       mockListFlows.mockResolvedValue({ flows: [] });
-      await server.getTool('list-flows').handler({
+      await server.getTool('flow_list').handler({
         projectId: 'proj_1',
         sort: 'name',
         order: 'asc',
@@ -97,11 +97,11 @@ describe('flow tools', () => {
     });
   });
 
-  describe('get-flow', () => {
+  describe('flow_get', () => {
     it('should pass flowId and projectId to getFlow()', async () => {
       mockGetFlow.mockResolvedValue({ id: 'cfg_abc' });
       await server
-        .getTool('get-flow')
+        .getTool('flow_get')
         .handler({ flowId: 'cfg_abc', projectId: 'proj_1' });
       expect(mockGetFlow).toHaveBeenCalledWith({
         flowId: 'cfg_abc',
@@ -110,12 +110,12 @@ describe('flow tools', () => {
     });
   });
 
-  describe('create-flow', () => {
+  describe('flow_create', () => {
     it('should pass name, content, projectId to createFlow()', async () => {
       mockCreateFlow.mockResolvedValue({ id: 'cfg_new' });
       const content = { version: 1 };
       await server
-        .getTool('create-flow')
+        .getTool('flow_create')
         .handler({ name: 'My Flow', content, projectId: 'proj_1' });
       expect(mockCreateFlow).toHaveBeenCalledWith({
         name: 'My Flow',
@@ -125,16 +125,16 @@ describe('flow tools', () => {
     });
   });
 
-  describe('update-flow', () => {
+  describe('flow_update', () => {
     it('should have idempotentHint true', () => {
-      const tool = server.getTool('update-flow');
+      const tool = server.getTool('flow_update');
       expect((tool.config as any).annotations.idempotentHint).toBe(true);
     });
 
     it('should pass all fields to updateFlow()', async () => {
       mockUpdateFlow.mockResolvedValue({ id: 'cfg_abc' });
       const content = { version: 1, sources: [] };
-      await server.getTool('update-flow').handler({
+      await server.getTool('flow_update').handler({
         flowId: 'cfg_abc',
         name: 'Updated',
         content,
@@ -149,15 +149,15 @@ describe('flow tools', () => {
     });
   });
 
-  describe('delete-flow', () => {
+  describe('flow_delete', () => {
     it('should have idempotentHint true', () => {
-      const tool = server.getTool('delete-flow');
+      const tool = server.getTool('flow_delete');
       expect((tool.config as any).annotations.idempotentHint).toBe(true);
     });
 
     it('should pass flowId and projectId to deleteFlow()', async () => {
       mockDeleteFlow.mockResolvedValue({ success: true });
-      const tool = server.getTool('delete-flow');
+      const tool = server.getTool('flow_delete');
       expect((tool.config as any).annotations.destructiveHint).toBe(true);
       await tool.handler({ flowId: 'cfg_abc', projectId: 'proj_1' });
       expect(mockDeleteFlow).toHaveBeenCalledWith({
@@ -167,10 +167,10 @@ describe('flow tools', () => {
     });
   });
 
-  describe('duplicate-flow', () => {
+  describe('flow_duplicate', () => {
     it('should pass flowId, name, projectId to duplicateFlow()', async () => {
       mockDuplicateFlow.mockResolvedValue({ id: 'cfg_copy' });
-      await server.getTool('duplicate-flow').handler({
+      await server.getTool('flow_duplicate').handler({
         flowId: 'cfg_abc',
         name: 'My Copy',
         projectId: 'proj_1',
@@ -185,7 +185,7 @@ describe('flow tools', () => {
     it('should pass undefined name when not provided', async () => {
       mockDuplicateFlow.mockResolvedValue({ id: 'cfg_copy' });
       await server
-        .getTool('duplicate-flow')
+        .getTool('flow_duplicate')
         .handler({ flowId: 'cfg_abc', projectId: 'proj_1' });
       expect(mockDuplicateFlow).toHaveBeenCalledWith({
         flowId: 'cfg_abc',

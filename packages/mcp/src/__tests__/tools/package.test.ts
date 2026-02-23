@@ -1,4 +1,4 @@
-import { registerGetPackageSchemaTool } from '../../tools/get-package-schema.js';
+import { registerGetPackageSchemaTool } from '../../tools/package.js';
 import { PackageSchemaOutputShape } from '../../schemas/output.js';
 import { fetchPackageSchema } from '@walkeros/core';
 
@@ -22,7 +22,7 @@ function createMockServer() {
   };
 }
 
-describe('get-package-schema tool', () => {
+describe('package_get tool', () => {
   let mockServer: ReturnType<typeof createMockServer>;
 
   beforeEach(() => {
@@ -32,7 +32,7 @@ describe('get-package-schema tool', () => {
   });
 
   it('should register with correct name and outputSchema', () => {
-    const tool = mockServer.getTool('get-package-schema');
+    const tool = mockServer.getTool('package_get');
     expect(tool).toBeDefined();
     expect((tool.config as any).outputSchema).toBe(PackageSchemaOutputShape);
   });
@@ -47,7 +47,7 @@ describe('get-package-schema tool', () => {
       examples: { mapping: {} },
     });
 
-    const tool = mockServer.getTool('get-package-schema');
+    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({
       package: '@walkeros/web-destination-snowplow',
     });
@@ -73,7 +73,7 @@ describe('get-package-schema tool', () => {
       examples: {},
     });
 
-    const tool = mockServer.getTool('get-package-schema');
+    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({ package: 'some-pkg' });
 
     expect(mockFetchPackageSchema).toHaveBeenCalledWith('some-pkg', {
@@ -88,7 +88,7 @@ describe('get-package-schema tool', () => {
       new Error('Package "nonexistent" not found on npm (HTTP 404)'),
     );
 
-    const tool = mockServer.getTool('get-package-schema');
+    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({ package: 'nonexistent' });
     expect(result.isError).toBe(true);
   });
@@ -98,7 +98,7 @@ describe('get-package-schema tool', () => {
       new Error('walkerOS.json not found at dist/walkerOS.json (HTTP 404)'),
     );
 
-    const tool = mockServer.getTool('get-package-schema');
+    const tool = mockServer.getTool('package_get');
     const result = await tool.handler({ package: 'pkg' });
     expect(result.isError).toBe(true);
   });
@@ -113,7 +113,7 @@ describe('get-package-schema tool', () => {
       examples: {},
     });
 
-    const tool = mockServer.getTool('get-package-schema');
+    const tool = mockServer.getTool('package_get');
     await tool.handler({ package: 'pkg', version: '2.0.0' });
 
     expect(mockFetchPackageSchema).toHaveBeenCalledWith('pkg', {

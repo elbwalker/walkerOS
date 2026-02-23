@@ -5,7 +5,7 @@ import { PackageSchemaOutputShape } from '../schemas/output.js';
 
 export function registerGetPackageSchemaTool(server: McpServer) {
   server.registerTool(
-    'get-package-schema',
+    'package_get',
     {
       title: 'Get Package Schema',
       description:
