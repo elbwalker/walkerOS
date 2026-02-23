@@ -15,6 +15,33 @@
 import type { Source, Destination, Collector } from '.';
 
 /**
+ * JSON Schema object for contract entry validation.
+ * Standard JSON Schema with description/examples annotations.
+ * Compatible with AJV for runtime validation.
+ */
+export type ContractSchema = Record<string, unknown>;
+
+/**
+ * Contract action entries keyed by action name.
+ * Each value is a JSON Schema describing the expected WalkerOS.Event shape.
+ * Use "*" as wildcard for all actions of an entity.
+ */
+export type ContractActions = Record<string, ContractSchema>;
+
+/**
+ * Data contract definition.
+ * Entity → action keyed JSON Schema with additive inheritance.
+ *
+ * Special keys:
+ * - "$tagging": Contract version number (syncs to event.version.tagging)
+ * - "*": Wildcard entity/action (matches all)
+ */
+export interface Contract {
+  $tagging?: number;
+  [entity: string]: ContractActions | number | undefined;
+}
+
+/**
  * Primitive value types for variables
  */
 export type Primitive = string | number | boolean;
@@ -110,7 +137,7 @@ export interface Setup {
   /**
    * Configuration schema version.
    */
-  version: 1;
+  version: 1 | 2;
 
   /**
    * JSON Schema reference for IDE validation.
@@ -136,6 +163,12 @@ export interface Setup {
    * ```
    */
   include?: string[];
+
+  /**
+   * Data contract definition (version 2+).
+   * Entity → action keyed JSON Schema with additive inheritance.
+   */
+  contract?: Contract;
 
   /**
    * Shared variables for interpolation.
@@ -181,6 +214,12 @@ export interface Config {
    * Mutually exclusive with `web`.
    */
   server?: Server;
+
+  /**
+   * Data contract definition for this flow.
+   * Merges on top of Setup-level contract (additive).
+   */
+  contract?: Contract;
 
   /**
    * Source configurations (data capture).

@@ -117,6 +117,7 @@ const sidebars: SidebarsConfig = {
       ],
     },
     'mapping',
+    'contract',
     {
       type: 'category',
       label: 'Destinations',

@@ -10,6 +10,7 @@ export interface RunnerEnv {
   token?: string;
   projectId?: string;
   flowId?: string;
+  flowName?: string;
 }
 
 export function validateEnv(
@@ -38,5 +39,6 @@ export function validateEnv(
     token,
     projectId,
     flowId,
+    flowName: env.FLOW_NAME,
   };
 }

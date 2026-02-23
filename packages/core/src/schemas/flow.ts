@@ -290,6 +290,36 @@ export const DestinationReferenceSchema = z
   .describe('Destination package reference with configuration');
 
 // ========================================
+// Contract Schemas
+// ========================================
+
+/**
+ * Contract schema entry — a JSON Schema object.
+ * Passthrough to allow any valid JSON Schema keywords.
+ */
+export const ContractSchemaEntry = z
+  .record(z.string(), z.unknown())
+  .describe(
+    'JSON Schema object for event validation with description/examples annotations',
+  );
+
+/**
+ * Contract actions — keyed by action name (or "*" wildcard).
+ */
+export const ContractActionsSchema = z
+  .record(z.string(), ContractSchemaEntry)
+  .describe('Action-level contract entries');
+
+/**
+ * Full contract definition — entity → action keyed with optional $tagging.
+ */
+export const ContractSchema = z
+  .record(z.string(), z.union([ContractActionsSchema, z.number()]))
+  .describe(
+    'Data contract: entity-action keyed JSON Schema with additive inheritance',
+  );
+
+// ========================================
 // Flow Configuration Schema (Single Flow)
 // ========================================
 
@@ -308,6 +338,9 @@ export const ConfigSchema = z
     ),
     server: ServerSchema.optional().describe(
       'Server platform configuration (Node.js). Mutually exclusive with web.',
+    ),
+    contract: ContractSchema.optional().describe(
+      'Flow-level data contract (merges on top of Setup-level contract)',
     ),
     sources: z
       .record(z.string(), SourceReferenceSchema)
@@ -364,38 +397,52 @@ export const ConfigSchema = z
  * This is the complete schema for walkeros.config.json files.
  * Contains multiple named flows with shared variables and definitions.
  */
+const SetupBaseSchema = z.object({
+  $schema: z
+    .string()
+    .url('Schema URL must be a valid URL')
+    .optional()
+    .describe(
+      'JSON Schema reference for IDE validation (e.g., "https://walkeros.io/schema/flow/v1.json")',
+    ),
+  include: z
+    .array(z.string())
+    .optional()
+    .describe('Folders to include in the bundle output'),
+  variables: VariablesSchema.optional().describe(
+    'Shared variables for interpolation across all flows (use $var.name syntax)',
+  ),
+  definitions: DefinitionsSchema.optional().describe(
+    'Reusable configuration definitions (use $def.name syntax)',
+  ),
+  flows: z
+    .record(z.string(), ConfigSchema)
+    .refine((flows) => Object.keys(flows).length > 0, {
+      message: 'At least one flow is required',
+    })
+    .describe(
+      'Named flow configurations (e.g., production, staging, development)',
+    ),
+});
+
+const SetupV1Schema = SetupBaseSchema.extend({
+  version: z.literal(1).describe('Configuration schema version 1'),
+}).describe('walkerOS v1 configuration');
+
+const SetupV2Schema = SetupBaseSchema.extend({
+  version: z.literal(2).describe('Configuration schema version 2'),
+  contract: ContractSchema.optional().describe(
+    'Data contract: entity-action keyed JSON Schema with additive inheritance',
+  ),
+}).describe('walkerOS v2 configuration with data contracts');
+
 export const SetupSchema = z
-  .object({
-    version: z
-      .literal(1, {
-        error: 'Only version 1 is currently supported',
-      })
-      .describe('Configuration schema version (currently only 1 is supported)'),
-    $schema: z
-      .string()
-      .url('Schema URL must be a valid URL')
-      .optional()
-      .describe(
-        'JSON Schema reference for IDE validation (e.g., "https://walkeros.io/schema/flow/v1.json")',
-      ),
-    variables: VariablesSchema.optional().describe(
-      'Shared variables for interpolation across all flows (use $var.name syntax)',
-    ),
-    definitions: DefinitionsSchema.optional().describe(
-      'Reusable configuration definitions (use $def.name syntax)',
-    ),
-    flows: z
-      .record(z.string(), ConfigSchema)
-      .refine((flows) => Object.keys(flows).length > 0, {
-        message: 'At least one flow is required',
-      })
-      .describe(
-        'Named flow configurations (e.g., production, staging, development)',
-      ),
-  })
+  .union([SetupV1Schema, SetupV2Schema])
   .describe(
     'Complete multi-flow walkerOS configuration (walkeros.config.json)',
   );
+
+export { SetupV2Schema };
 
 // ========================================
 // Helper Functions
@@ -498,6 +545,17 @@ export function safeParseConfig(data: unknown) {
  * ```
  */
 export const setupJsonSchema = z.toJSONSchema(SetupSchema, {
+  target: 'draft-7',
+});
+
+/**
+ * Generate JSON Schema for Flow.SetupV2.
+ *
+ * @remarks
+ * Used for IDE validation of v2 configurations with data contracts.
+ * Hosted at https://walkeros.io/schema/flow/v2.json
+ */
+export const setupV2JsonSchema = z.toJSONSchema(SetupV2Schema, {
   target: 'draft-7',
 });
 

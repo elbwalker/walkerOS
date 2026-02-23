@@ -1,0 +1,478 @@
+---
+title: Contract
+description: Centralized data contracts for event validation and documentation
+sidebar_position: 5
+---
+
+# Contract
+
+A contract defines what your events should look like — which fields are required,
+what types they have, and what values are allowed. It's a single source of truth
+for event structure, shared across your entire flow configuration.
+
+```json
+{
+  "version": 2,
+  "contract": {
+    "$tagging": 1,
+    "product": {
+      "*": {
+        "properties": {
+          "data": { "required": ["id", "name"] }
+        }
+      },
+      "add": {
+        "properties": {
+          "data": { "required": ["quantity"] }
+        }
+      }
+    }
+  },
+  "flows": { ... }
+}
+```
+
+## Why contracts?
+
+Without contracts, validation rules live inside each transformer config,
+duplicated across flows and disconnected from your event design. Contracts solve
+this:
+
+- **Single source of truth** — Define event requirements once at the setup level
+- **Shared across flows** — All flows inherit the same baseline rules
+- **Self-documenting** — JSON Schema `description` and `examples` annotate your
+  events for humans and tools
+- **Versioned** — `$tagging` tracks contract versions alongside your events
+
+## Contract structure
+
+Contracts use an entity → action keyed structure where each entry is a standard
+[JSON Schema](https://json-schema.org/) object describing a partial
+`WalkerOS.Event`:
+
+<CodeSnippet
+  code={`"contract": {
+  "$tagging": 1,
+  "product": {
+    "*": {
+      "description": "A product in the catalog",
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["id", "name"],
+          "properties": {
+            "id": { "type": "string", "description": "Product SKU", "examples": ["SKU-123"] },
+            "name": { "type": "string", "description": "Display name" }
+          }
+        }
+      }
+    },
+    "add": {
+      "description": "Product added to cart",
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["quantity"],
+          "properties": {
+            "quantity": { "type": "integer", "minimum": 1, "description": "Items added" }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+| Key | Description |
+|-----|-------------|
+| `$tagging` | Contract version number (optional, see [Versioning](#versioning)) |
+| Entity key (e.g. `product`) | Groups actions for a specific entity |
+| Action key (e.g. `add`) | JSON Schema for a specific entity-action pair |
+| `*` | Wildcard — matches all entities or all actions |
+
+## Wildcard inheritance
+
+Contracts support four wildcard levels that merge **additively**:
+
+| Level | Pattern | Matches |
+|-------|---------|---------|
+| 1 | `*` → `*` | All events (global rules) |
+| 2 | `*` → `action` | A specific action across all entities |
+| 3 | `entity` → `*` | All actions of a specific entity |
+| 4 | `entity` → `action` | Exact match |
+
+All matching levels combine. For `product add`, levels 1, 3, and 4 all apply:
+
+<CodeSnippet
+  code={`"contract": {
+  "*": {
+    "*": {
+      "properties": {
+        "consent": { "required": ["analytics"] }
+      }
+    }
+  },
+  "product": {
+    "*": {
+      "properties": {
+        "data": { "required": ["id", "name"] }
+      }
+    },
+    "add": {
+      "properties": {
+        "data": { "required": ["quantity"] }
+      }
+    }
+  }
+}
+
+// Resolved "product add":
+// consent.analytics required  (from *→*)
+// data.id, data.name required (from product→*)
+// data.quantity required      (from product→add)`}
+  language="json"
+/>
+
+:::warning Contracts vs mapping wildcards
+Contract wildcards use **additive merging** — all matching levels combine.
+Mapping wildcards use **fallback matching** — the first match wins.
+
+This difference is intentional. Contracts define cumulative requirements (entity-level
+rules always apply to all actions), while mappings select a single transformation
+target.
+
+**Contract:** `product.*` rules AND `product.add` rules both apply to `product add`
+
+**Mapping:** `product.add` matches first, so `product.*` is never checked
+:::
+
+## Merge algorithm
+
+When multiple levels match, schemas merge with these rules:
+
+| JSON Schema keyword | Merge behavior |
+|---------------------|----------------|
+| `required` | Union (deduplicated) — can only add requirements, never remove |
+| `properties` | Deep merge — child wins on conflict for scalar values |
+| Scalar keywords (`minimum`, `maximum`, `pattern`, etc.) | Child overrides parent |
+| Annotations (`description`, `examples`) | Child replaces parent |
+
+<details>
+<summary>Merge example</summary>
+
+Given a parent schema from `product.*`:
+
+```json
+{
+  "properties": {
+    "data": { "type": "object", "required": ["id", "name"] }
+  }
+}
+```
+
+And a child schema from `product.add`:
+
+```json
+{
+  "properties": {
+    "data": { "type": "object", "required": ["name", "quantity"] }
+  }
+}
+```
+
+The merged result for `product add`:
+
+```json
+{
+  "properties": {
+    "data": { "type": "object", "required": ["id", "name", "quantity"] }
+  }
+}
+```
+
+The `required` arrays are unioned and deduplicated: `["id", "name"]` + `["name", "quantity"]` = `["id", "name", "quantity"]`.
+
+</details>
+
+## Setup vs config level
+
+Contracts cascade from setup level (shared baseline) to config level
+(per-flow additions):
+
+```
+Flow.Setup (version: 2)
+  └── contract: { ... }          ← Shared across all flows
+      └── Flow.Config ("web-shop")
+          └── contract: { ... }  ← Adds flow-specific rules
+```
+
+Config-level contracts merge on top of the setup-level contract using the same
+additive algorithm. This lets you define common rules once and extend them per
+flow:
+
+<CodeSnippet
+  code={`{
+  "version": 2,
+  "contract": {
+    "product": {
+      "*": {
+        "properties": {
+          "data": { "required": ["id", "name"] }
+        }
+      }
+    }
+  },
+  "flows": {
+    "web-shop": {
+      "web": {},
+      "contract": {
+        "product": {
+          "add": {
+            "properties": {
+              "data": { "required": ["price"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// "product add" in web-shop flow resolves:
+// data.id, data.name required  (from setup product→*)
+// data.price required          (from config product→add)`}
+  language="json"
+/>
+
+## Versioning
+
+The `$tagging` field tracks contract versions as an incrementing integer:
+
+<CodeSnippet
+  code={`"contract": {
+  "$tagging": 3,
+  "product": { ... }
+}`}
+  language="json"
+/>
+
+At build time, the bundler injects `$tagging` into the collector config so every
+event gets `version.tagging: 3`. This lets you:
+
+- Know which contract version validated an event
+- Compare `event.version.tagging` against the current contract
+- Track contract evolution over time
+
+The `$` prefix signals metadata — it's not treated as an entity name during
+resolution.
+
+## Using contracts with the validator
+
+The [validator transformer](/docs/transformers/validator) enforces contracts at
+runtime. Use the `$contract` reference to automatically resolve and inject the
+contract:
+
+<CodeSnippet
+  code={`{
+  "version": 2,
+  "contract": {
+    "$tagging": 1,
+    "product": {
+      "*": {
+        "properties": {
+          "data": { "required": ["id", "name"] }
+        }
+      }
+    }
+  },
+  "flows": {
+    "default": {
+      "web": {},
+      "transformers": {
+        "validator": {
+          "package": "@walkeros/transformer-validator",
+          "config": {
+            "settings": {
+              "format": true,
+              "contract": "$contract"
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+The `$contract` reference is resolved at build time by:
+
+1. Collecting the setup-level contract (stripping `$`-prefixed metadata)
+2. Merging the config-level contract on top
+3. Resolving wildcard inheritance for each entity-action pair
+4. Stripping annotations (`description`, `examples`) for the runtime schema
+5. Passing the resolved rules to the validator
+
+The validator itself doesn't change — `$contract` produces exactly the rule
+structure it already expects.
+
+## CLI validation
+
+Validate contracts with the CLI or MCP server:
+
+<CodeSnippet
+  code={`# Validate a contract from a file
+walkeros validate --type contract contract.json
+
+# Validate inline
+echo '{"product":{"add":{"properties":{}}}}' | walkeros validate --type contract
+
+# Validate a full flow (includes contract validation)
+walkeros validate --type flow flow.json`}
+  language="bash"
+/>
+
+The contract validator checks:
+- `$tagging` is a non-negative integer (if present)
+- Entity and action keys are non-empty
+- Each entry is a valid JSON Schema object
+
+## Complete example
+
+<CodeSnippet
+  code={`{
+  "version": 2,
+  "contract": {
+    "$tagging": 1,
+    "*": {
+      "*": {
+        "description": "Global requirements for all events",
+        "properties": {
+          "consent": {
+            "type": "object",
+            "required": ["analytics"],
+            "properties": {
+              "analytics": { "type": "boolean", "const": true }
+            }
+          }
+        }
+      }
+    },
+    "product": {
+      "*": {
+        "description": "A product in the catalog",
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["id", "name"],
+            "properties": {
+              "id": { "type": "string", "description": "Product SKU", "examples": ["SKU-123"] },
+              "name": { "type": "string", "description": "Display name" }
+            }
+          }
+        }
+      },
+      "view": {
+        "description": "User viewed a product detail page"
+      },
+      "add": {
+        "description": "Product added to cart",
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["quantity"],
+            "properties": {
+              "quantity": { "type": "integer", "minimum": 1, "description": "Items added" }
+            }
+          }
+        }
+      }
+    },
+    "order": {
+      "complete": {
+        "description": "Purchase completed",
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["total", "currency"],
+            "properties": {
+              "total": { "type": "number", "minimum": 0, "description": "Order total" },
+              "currency": { "type": "string", "pattern": "^[A-Z]{3}$", "description": "ISO 4217 currency code" }
+            }
+          },
+          "nested": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Must contain at least one line item"
+          }
+        }
+      }
+    },
+    "user": {
+      "login": {
+        "description": "User authenticated",
+        "properties": {
+          "user": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": { "type": "string", "description": "Authenticated user ID" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "flows": {
+    "web-shop": {
+      "web": {},
+      "contract": {
+        "product": {
+          "add": {
+            "description": "Web cart requires price",
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": ["price"],
+                "properties": {
+                  "price": { "type": "number", "description": "Unit price" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "transformers": {
+        "validator": {
+          "package": "@walkeros/transformer-validator",
+          "config": {
+            "settings": {
+              "format": true,
+              "contract": "$contract"
+            }
+          }
+        }
+      },
+      "sources": {},
+      "destinations": {}
+    }
+  }
+}`}
+  language="json"
+/>
+
+In the `web-shop` flow, `product add` merges four levels:
+
+| Level | Source | Rules added |
+|-------|--------|-------------|
+| `*.*` | Setup | `consent.analytics` required |
+| `product.*` | Setup | `data.id`, `data.name` required |
+| `product.add` | Setup | `data.quantity` required (integer, min 1) |
+| `product.add` | Config | `data.price` required (number) |
+
+## Next steps
+
+- **[Validator transformer](/docs/transformers/validator)** — Enforce contracts at runtime
+- **[Mapping](/docs/mapping)** — Transform events for destinations
+- **[Flow configuration](/docs/getting-started/flow)** — Full flow config reference

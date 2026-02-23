@@ -413,13 +413,20 @@ describe('Flow Schemas', () => {
       ).toThrow();
     });
 
-    test('requires version to be 1', () => {
+    test('requires version to be 1 or 2', () => {
       expect(() =>
+        SetupSchema.parse({
+          version: 3,
+          flows: { prod: { web: {} } },
+        }),
+      ).toThrow();
+
+      expect(
         SetupSchema.parse({
           version: 2,
           flows: { prod: { web: {} } },
         }),
-      ).toThrow('Only version 1 is currently supported');
+      ).toBeDefined();
     });
 
     test('validates $schema as URL when provided', () => {
@@ -540,15 +547,12 @@ describe('Flow Schemas', () => {
 
     test('provides detailed error messages', () => {
       const result = safeParseSetup({
-        version: 2,
+        version: 1,
         flows: {},
       });
       expect(result.success).toBe(false);
       if (!result.success) {
         const errorMessages = result.error.issues.map((issue) => issue.message);
-        expect(errorMessages).toContain(
-          'Only version 1 is currently supported',
-        );
         expect(errorMessages).toContain('At least one flow is required');
       }
     });
@@ -589,10 +593,16 @@ describe('Flow Schemas', () => {
   describe('JSON Schema Generation', () => {
     test('setupJsonSchema is valid JSON Schema', () => {
       expect(setupJsonSchema).toHaveProperty('$schema');
-      expect(setupJsonSchema).toHaveProperty('type', 'object');
-      expect(setupJsonSchema).toHaveProperty('properties');
-      expect((setupJsonSchema as any).properties).toHaveProperty('version');
-      expect((setupJsonSchema as any).properties).toHaveProperty('flows');
+      // SetupSchema is now a union (v1 | v2), so it uses anyOf
+      expect(setupJsonSchema).toHaveProperty('anyOf');
+      const variants = (setupJsonSchema as any).anyOf;
+      expect(variants.length).toBe(2);
+      // Both variants should have version and flows
+      for (const variant of variants) {
+        expect(variant).toHaveProperty('type', 'object');
+        expect(variant.properties).toHaveProperty('version');
+        expect(variant.properties).toHaveProperty('flows');
+      }
     });
 
     test('configJsonSchema is valid JSON Schema', () => {
@@ -1940,5 +1950,189 @@ describe('resolveCodeFromPackage - default export fallback', () => {
     const config = getFlowConfig(setup as any);
     expect(config.destinations?.api1.code).toBe('_walkerosWebDestinationApi');
     expect(config.destinations?.api2.code).toBe('_walkerosWebDestinationApi');
+  });
+});
+
+describe('Contract resolution in getFlowConfig', () => {
+  test('resolves $contract in transformer settings', () => {
+    const setup = {
+      version: 2,
+      contract: {
+        $tagging: 1,
+        product: {
+          '*': {
+            properties: {
+              data: { type: 'object', required: ['id'] },
+            },
+          },
+          add: {
+            properties: {
+              data: { type: 'object', required: ['qty'] },
+            },
+          },
+        },
+      },
+      flows: {
+        default: {
+          web: {},
+          transformers: {
+            validator: {
+              package: '@walkeros/transformer-validator',
+              config: {
+                settings: {
+                  contract: '$contract',
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowConfig(setup as any);
+    const settings = (config.transformers?.validator?.config as any)?.settings;
+    // $contract should be replaced with resolved Mapping.Rules<ContractRule>
+    expect(settings.contract).toBeDefined();
+    expect(typeof settings.contract).toBe('object');
+    // product.add should have merged schema from product.* and product.add
+    expect(settings.contract.product.add).toBeDefined();
+    expect(settings.contract.product.add.schema).toBeDefined();
+    expect(
+      settings.contract.product.add.schema.properties.data.required,
+    ).toEqual(['id', 'qty']);
+  });
+
+  test('merges setup and config-level contracts', () => {
+    const setup = {
+      version: 2,
+      contract: {
+        product: {
+          '*': {
+            properties: { data: { type: 'object', required: ['id'] } },
+          },
+        },
+      },
+      flows: {
+        default: {
+          web: {},
+          contract: {
+            product: {
+              add: {
+                properties: { data: { type: 'object', required: ['price'] } },
+              },
+            },
+          },
+          transformers: {
+            validator: {
+              package: '@walkeros/transformer-validator',
+              config: {
+                settings: {
+                  contract: '$contract',
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowConfig(setup as any);
+    const settings = (config.transformers?.validator?.config as any)?.settings;
+    expect(
+      settings.contract.product.add.schema.properties.data.required,
+    ).toEqual(['id', 'price']);
+  });
+
+  test('injects $tagging into collector.tagging', () => {
+    const setup = {
+      version: 2,
+      contract: {
+        $tagging: 3,
+        product: { view: { description: 'Product view' } },
+      },
+      flows: {
+        default: {
+          web: {},
+          transformers: {
+            validator: {
+              package: '@walkeros/transformer-validator',
+              config: {
+                settings: { contract: '$contract' },
+              },
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowConfig(setup as any);
+    expect((config.collector as any)?.tagging).toBe(3);
+  });
+
+  test('explicit collector.tagging wins over $tagging', () => {
+    const setup = {
+      version: 2,
+      contract: { $tagging: 3 },
+      flows: {
+        default: {
+          web: {},
+          collector: { tagging: 5 },
+        },
+      },
+    };
+    const config = getFlowConfig(setup as any);
+    expect((config.collector as any).tagging).toBe(5);
+  });
+
+  test('strips annotation keys from resolved schemas', () => {
+    const setup = {
+      version: 2,
+      contract: {
+        product: {
+          view: {
+            description: 'Product viewed',
+            examples: [{ data: { id: 'SKU-123' } }],
+            properties: {
+              data: { type: 'object', required: ['id'] },
+            },
+          },
+        },
+      },
+      flows: {
+        default: {
+          web: {},
+          transformers: {
+            validator: {
+              package: '@walkeros/transformer-validator',
+              config: { settings: { contract: '$contract' } },
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowConfig(setup as any);
+    const settings = (config.transformers?.validator?.config as any)?.settings;
+    const schema = settings.contract.product.view.schema;
+    expect(schema.description).toBeUndefined();
+    expect(schema.examples).toBeUndefined();
+    expect(schema.properties).toBeDefined();
+  });
+
+  test('does nothing when no contract exists', () => {
+    const setup = {
+      version: 1,
+      flows: {
+        default: {
+          web: {},
+          transformers: {
+            validator: {
+              package: '@walkeros/transformer-validator',
+              config: { settings: { contract: '$contract' } },
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowConfig(setup as any);
+    const settings = (config.transformers?.validator?.config as any)?.settings;
+    // No contract → $contract stays as string (nothing to resolve)
+    expect(settings.contract).toBe('$contract');
   });
 });

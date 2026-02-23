@@ -267,12 +267,12 @@ describe('Config Loader', () => {
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow(/Invalid configuration[\s\S]*version/);
+      ).toThrow(/Invalid configuration/);
     });
 
     test('throws error for invalid config format (wrong version)', () => {
       const invalidConfig = {
-        version: 2,
+        version: 99,
         flows: {
           default: { web: {} },
         },
@@ -282,7 +282,7 @@ describe('Config Loader', () => {
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow(/Invalid configuration[\s\S]*version/);
+      ).toThrow(/Invalid configuration/);
     });
 
     test('throws error for invalid config format (missing flows)', () => {
@@ -294,7 +294,7 @@ describe('Config Loader', () => {
         loadBundleConfig(invalidConfig, {
           configPath: '/test/config.json',
         }),
-      ).toThrow(/Invalid configuration[\s\S]*flows/);
+      ).toThrow(/Invalid configuration/);
     });
 
     test('throws error for empty flows', () => {

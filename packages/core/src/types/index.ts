@@ -10,7 +10,6 @@ export * as Mapping from './mapping';
 export * as On from './on';
 export * as Transformer from './transformer';
 export * as Request from './request';
-export * as Schema from './schema';
 export * as Source from './source';
 export * as WalkerOS from './walkeros';
 

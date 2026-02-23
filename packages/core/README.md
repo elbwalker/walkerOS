@@ -396,17 +396,6 @@ onLog('Debug info', true); // Logs message
 onLog('Silent message'); // No output
 ```
 
-### Validation
-
-#### validateEvent
-
-`validateEvent(obj: unknown, customContracts?: Schema.Contracts): WalkerOS.Event | never`
-validates event structure and throws on invalid events.
-
-#### validateProperty
-
-Validates that values conform to walkerOS property types.
-
 ## Type Definitions
 
 See [src/types/](./src/types/) for TypeScript interfaces:

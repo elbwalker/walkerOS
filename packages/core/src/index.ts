@@ -26,7 +26,7 @@ export * from './trim';
 export * from './tryCatch';
 export * from './useHooks';
 export * from './userAgent';
-export * from './validate';
 export * from './wrapInlineCode';
 export * from './cdn';
+export * from './contract';
 export * from './mcpHelpers';

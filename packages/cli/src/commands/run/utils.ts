@@ -25,6 +25,7 @@ export async function prepareBundleForRun(
   options: {
     verbose?: boolean;
     silent?: boolean;
+    flowName?: string;
   },
 ): Promise<string> {
   // Create temp directory in os.tmpdir()
@@ -42,6 +43,7 @@ export async function prepareBundleForRun(
     cache: true,
     verbose: options.verbose,
     silent: options.silent,
+    flowName: options.flowName,
     buildOverrides: {
       output: tempPath,
       format: 'esm',

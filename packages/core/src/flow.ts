@@ -7,6 +7,7 @@
  */
 
 import type { Flow } from './types';
+import { resolveContract } from './contract';
 import { throwError } from './throwError';
 
 /**
@@ -298,7 +299,143 @@ export function getFlowConfig(
     result.collector = processedCollector as typeof result.collector;
   }
 
+  // Resolve $contract references
+  const setupContract = setup.contract;
+  const configContract = config.contract;
+
+  if (setupContract || configContract) {
+    // Collect all entity-action pairs from both contracts
+    const entityActions = collectEntityActions(setupContract, configContract);
+
+    // Resolve each pair and build Mapping.Rules<ContractRule>
+    const resolvedRules: Record<
+      string,
+      Record<string, { schema: Record<string, unknown> }>
+    > = {};
+
+    for (const [entity, action] of entityActions) {
+      const resolved = resolveContract(
+        setupContract || ({} as Flow.Contract),
+        entity,
+        action,
+        configContract,
+      );
+
+      if (Object.keys(resolved).length > 0) {
+        if (!resolvedRules[entity]) resolvedRules[entity] = {};
+        resolvedRules[entity][action] = {
+          schema: stripAnnotations(resolved),
+        };
+      }
+    }
+
+    // Replace $contract references in transformer configs
+    if (result.transformers) {
+      for (const [, transformer] of Object.entries(result.transformers)) {
+        replaceContractRef(transformer.config, resolvedRules);
+      }
+    }
+
+    // Inject $tagging into collector.tagging (if not already set)
+    const tagging = setupContract?.$tagging ?? configContract?.$tagging;
+    if (typeof tagging === 'number') {
+      const collector = (result.collector || {}) as Record<string, unknown>;
+      if (collector.tagging === undefined) {
+        collector.tagging = tagging;
+      }
+      result.collector = collector as typeof result.collector;
+    }
+  }
+
   return result;
+}
+
+/**
+ * Collect unique entity-action pairs from contracts (excluding $ metadata keys).
+ */
+function collectEntityActions(
+  ...contracts: (Flow.Contract | undefined)[]
+): Array<[string, string]> {
+  const pairs = new Set<string>();
+  for (const contract of contracts) {
+    if (!contract) continue;
+    for (const entity of Object.keys(contract)) {
+      if (entity.startsWith('$')) continue;
+      const actions = contract[entity];
+      if (!actions || typeof actions !== 'object') continue;
+      for (const action of Object.keys(actions as Record<string, unknown>)) {
+        if (action !== '*') {
+          pairs.add(`${entity}\0${action}`);
+        }
+      }
+    }
+  }
+  // Also add entity.* pairs expanded against all known actions
+  // For wildcards: we need concrete entity-action combinations
+  // Collect all entities and actions, then combine
+  const allEntities = new Set<string>();
+  const allActions = new Set<string>();
+  for (const contract of contracts) {
+    if (!contract) continue;
+    for (const entity of Object.keys(contract)) {
+      if (entity.startsWith('$') || entity === '*') continue;
+      allEntities.add(entity);
+      const actions = contract[entity];
+      if (actions && typeof actions === 'object') {
+        for (const action of Object.keys(actions as Record<string, unknown>)) {
+          if (action !== '*') allActions.add(action);
+        }
+      }
+    }
+  }
+  // For wildcard entities (*), expand against all known entities
+  for (const entity of allEntities) {
+    for (const action of allActions) {
+      pairs.add(`${entity}\0${action}`);
+    }
+  }
+  return [...pairs].map((p) => p.split('\0') as [string, string]);
+}
+
+/** Annotation keys to strip from AJV-compatible schemas */
+const ANNOTATION_KEYS = new Set([
+  'description',
+  'examples',
+  'title',
+  '$comment',
+]);
+
+/**
+ * Strip annotation-only keys from a resolved schema (deep).
+ */
+function stripAnnotations(
+  schema: Record<string, unknown>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (ANNOTATION_KEYS.has(key)) continue;
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      result[key] = stripAnnotations(value as Record<string, unknown>);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+/**
+ * Replace "$contract" string references in transformer config with resolved rules.
+ */
+function replaceContractRef(config: unknown, resolved: unknown): void {
+  if (!config || typeof config !== 'object') return;
+  const obj = config as Record<string, unknown>;
+  for (const key of Object.keys(obj)) {
+    if (obj[key] === '$contract') {
+      obj[key] = resolved;
+    } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+      replaceContractRef(obj[key], resolved);
+    }
+  }
 }
 
 /**

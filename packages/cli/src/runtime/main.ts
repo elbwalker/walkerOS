@@ -20,7 +20,7 @@ import type { Logger } from '@walkeros/core';
 import { VERSION } from '../version.js';
 async function lazyPrepareBundleForRun(
   configPath: string,
-  options: { verbose?: boolean; silent?: boolean },
+  options: { verbose?: boolean; silent?: boolean; flowName?: string },
 ): Promise<string> {
   const { prepareBundleForRun } = await import('../commands/run/utils.js');
   return prepareBundleForRun(configPath, options);
@@ -186,6 +186,7 @@ async function main() {
     bundlePath = await lazyPrepareBundleForRun(configPath, {
       verbose: false,
       silent: true,
+      flowName: env.flowName,
     });
   } catch (error) {
     cliLogger.error(
@@ -297,6 +298,7 @@ async function runWithBundle(
           const newBundle = await lazyPrepareBundleForRun(tmpConfigPath, {
             verbose: false,
             silent: true,
+            flowName: env.flowName,
           });
 
           handle = await swapFlow(

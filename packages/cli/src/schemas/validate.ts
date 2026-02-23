@@ -11,17 +11,18 @@ import { z } from '@walkeros/core/dev';
  *
  * @remarks
  * Validates the type of validation to perform.
+ * - `contract`: Validate a data contract
  * - `event`: Validate a walkerOS event object
  * - `flow`: Validate a flow configuration file
  * - `mapping`: Validate mapping rules
  */
 export const ValidationTypeSchema = z
   .union([
-    z.enum(['event', 'flow', 'mapping']),
+    z.enum(['contract', 'event', 'flow', 'mapping']),
     z.string().regex(/^(destinations|sources|transformers)\.\w+$|^\w+$/),
   ])
   .describe(
-    'Validation type: "event", "flow", "mapping", or dot-notation path ' +
+    'Validation type: "event", "flow", "mapping", "contract", or dot-notation path ' +
       '(e.g., "destinations.snowplow") to validate a specific entry against its package schema',
   );
 

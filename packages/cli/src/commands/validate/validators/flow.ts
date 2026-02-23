@@ -25,11 +25,28 @@ export function validateFlow(
     typeof input === 'object' && input !== null ? input : {}
   ) as Record<string, unknown>;
 
-  // 1. Validate against SetupSchema
+  // 1. Pre-check version (union errors are generic without it)
+  if (!('version' in config) || config.version === undefined) {
+    errors.push({
+      path: 'version',
+      message: 'Configuration must have a version field (1 or 2)',
+      code: 'MISSING_VERSION',
+    });
+  } else if (config.version !== 1 && config.version !== 2) {
+    errors.push({
+      path: 'version',
+      message: `Invalid version: ${config.version}. Supported versions: 1, 2`,
+      code: 'INVALID_VERSION',
+    });
+  }
+
+  // 2. Validate against SetupSchema
   const zodResult = SetupSchema.safeParse(input);
   if (!zodResult.success) {
     for (const issue of zodResult.error.issues) {
       const path = issue.path.join('.');
+      // Skip generic union errors when we already have a version error
+      if (!path && errors.some((e) => e.path === 'version')) continue;
       errors.push({
         path: path || 'root',
         message: issue.message,

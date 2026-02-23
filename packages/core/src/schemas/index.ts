@@ -113,7 +113,11 @@ export {
 // Export commonly used schemas from Flow namespace directly
 export {
   SetupSchema,
+  SetupV2Schema,
   ConfigSchema as FlowConfigSchema, // Alias to avoid conflict with other ConfigSchema exports
+  ContractSchema,
+  ContractActionsSchema,
+  ContractSchemaEntry,
   SourceReferenceSchema,
   DestinationReferenceSchema,
   PrimitiveSchema,
@@ -123,6 +127,7 @@ export {
   safeParseConfig,
   // JSON Schemas
   setupJsonSchema,
+  setupV2JsonSchema,
   configJsonSchema,
   sourceReferenceJsonSchema,
   destinationReferenceJsonSchema,

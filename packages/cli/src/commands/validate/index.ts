@@ -10,6 +10,7 @@ import {
 } from '../../core/index.js';
 import { loadJsonFromSource } from '../../config/index.js';
 import {
+  validateContract,
   validateEvent,
   validateFlow,
   validateMapping,
@@ -31,11 +32,16 @@ export async function validate(
   options: { flow?: string } = {},
 ): Promise<ValidateResult> {
   // Dot-notation entry validation (e.g., "destinations.snowplow")
-  if (type.includes('.') || !['event', 'flow', 'mapping'].includes(type)) {
+  if (
+    type.includes('.') ||
+    !['contract', 'event', 'flow', 'mapping'].includes(type)
+  ) {
     return validateEntry(type, input as Record<string, unknown>);
   }
 
   switch (type) {
+    case 'contract':
+      return validateContract(input);
     case 'event':
       return validateEvent(input);
     case 'flow':
@@ -175,6 +181,7 @@ export async function validateCommand(
 // Re-export types
 export * from './types.js';
 export {
+  validateContract,
   validateEvent,
   validateFlow,
   validateMapping,
