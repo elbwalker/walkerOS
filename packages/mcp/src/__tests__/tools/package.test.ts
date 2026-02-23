@@ -1,13 +1,23 @@
-import { registerGetPackageSchemaTool } from '../../tools/package.js';
-import { PackageSchemaOutputShape } from '../../schemas/output.js';
-import { fetchPackageSchema } from '@walkeros/core';
+import {
+  registerGetPackageSchemaTool,
+  registerPackageSearchTool,
+} from '../../tools/package.js';
+import {
+  PackageSchemaOutputShape,
+  PackageSearchOutputShape,
+} from '../../schemas/output.js';
+import { fetchPackageSchema, fetchPackageMeta } from '@walkeros/core';
 
 jest.mock('@walkeros/core', () => ({
   fetchPackageSchema: jest.fn(),
+  fetchPackageMeta: jest.fn(),
 }));
 
 const mockFetchPackageSchema = fetchPackageSchema as jest.MockedFunction<
   typeof fetchPackageSchema
+>;
+const mockFetchPackageMeta = fetchPackageMeta as jest.MockedFunction<
+  typeof fetchPackageMeta
 >;
 
 function createMockServer() {
@@ -117,6 +127,76 @@ describe('package_get tool', () => {
     await tool.handler({ package: 'pkg', version: '2.0.0' });
 
     expect(mockFetchPackageSchema).toHaveBeenCalledWith('pkg', {
+      version: '2.0.0',
+    });
+  });
+});
+
+describe('package_search tool', () => {
+  let mockServer: ReturnType<typeof createMockServer>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockServer = createMockServer();
+    registerPackageSearchTool(mockServer as any);
+  });
+
+  it('should register with correct name and outputSchema', () => {
+    const tool = mockServer.getTool('package_search');
+    expect(tool).toBeDefined();
+    expect((tool.config as any).outputSchema).toBe(PackageSearchOutputShape);
+  });
+
+  it('should return lightweight metadata without schemas/examples', async () => {
+    mockFetchPackageMeta.mockResolvedValue({
+      packageName: '@walkeros/web-destination-snowplow',
+      version: '0.0.12',
+      description: 'Snowplow destination for walkerOS',
+      type: 'destination',
+      platform: 'web',
+    });
+
+    const tool = mockServer.getTool('package_search');
+    const result = await tool.handler({
+      package: '@walkeros/web-destination-snowplow',
+    });
+
+    expect(mockFetchPackageMeta).toHaveBeenCalledWith(
+      '@walkeros/web-destination-snowplow',
+      { version: undefined },
+    );
+
+    const content = JSON.parse(result.content[0].text);
+    expect(content.package).toBe('@walkeros/web-destination-snowplow');
+    expect(content.version).toBe('0.0.12');
+    expect(content.description).toBe('Snowplow destination for walkerOS');
+    expect(content.type).toBe('destination');
+    expect(content).not.toHaveProperty('schemas');
+    expect(content).not.toHaveProperty('examples');
+  });
+
+  it('should return error when package not found', async () => {
+    mockFetchPackageMeta.mockRejectedValue(
+      new Error('Package "nonexistent" not found on npm (HTTP 404)'),
+    );
+
+    const tool = mockServer.getTool('package_search');
+    const result = await tool.handler({ package: 'nonexistent' });
+    expect(result.isError).toBe(true);
+  });
+
+  it('should support version parameter', async () => {
+    mockFetchPackageMeta.mockResolvedValue({
+      packageName: 'pkg',
+      version: '2.0.0',
+      type: undefined,
+      platform: undefined,
+    });
+
+    const tool = mockServer.getTool('package_search');
+    await tool.handler({ package: 'pkg', version: '2.0.0' });
+
+    expect(mockFetchPackageMeta).toHaveBeenCalledWith('pkg', {
       version: '2.0.0',
     });
   });

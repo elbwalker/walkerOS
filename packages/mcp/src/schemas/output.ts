@@ -156,7 +156,19 @@ export const DeleteOutputShape = {
   success: z.literal(true).describe('Deletion succeeded'),
 };
 
-// Package Schema output shape
+// Package Search output shape (lightweight metadata)
+export const PackageSearchOutputShape = {
+  package: z.string().describe('Package name'),
+  version: z.string().describe('Package version'),
+  description: z.string().optional().describe('Package description'),
+  type: z
+    .string()
+    .optional()
+    .describe('Package type (destination, source, transformer)'),
+  platform: z.string().optional().describe('Target platform (web, server)'),
+};
+
+// Package Schema output shape (full details)
 export const PackageSchemaOutputShape = {
   package: z.string().describe('Package name'),
   version: z.string().describe('Package version'),

@@ -1,4 +1,4 @@
-import { fetchPackageSchema } from '..';
+import { fetchPackageSchema, fetchPackageMeta } from '..';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -154,5 +154,72 @@ describe('fetchPackageSchema', () => {
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
     }
+  });
+});
+
+describe('fetchPackageMeta', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('should fetch only package.json and walkerOS.json $meta', async () => {
+    const mockPkgJson = {
+      name: '@walkeros/web-destination-snowplow',
+      version: '0.0.12',
+      description: 'Snowplow destination for walkerOS',
+    };
+    const mockWalkerOSJson = {
+      $meta: {
+        type: 'destination',
+        platform: 'web',
+      },
+    };
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockPkgJson),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockWalkerOSJson),
+      });
+
+    const result = await fetchPackageMeta('@walkeros/web-destination-snowplow');
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(result.packageName).toBe('@walkeros/web-destination-snowplow');
+    expect(result.version).toBe('0.0.12');
+    expect(result.description).toBe('Snowplow destination for walkerOS');
+    expect(result.type).toBe('destination');
+    expect(result.platform).toBe('web');
+    // Must NOT contain schemas or examples
+    expect(result).not.toHaveProperty('schemas');
+    expect(result).not.toHaveProperty('examples');
+  });
+
+  it('should handle missing walkerOS.json gracefully', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            name: 'pkg',
+            version: '1.0.0',
+            description: 'test',
+          }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 404 });
+
+    const result = await fetchPackageMeta('pkg');
+    expect(result.packageName).toBe('pkg');
+    expect(result.type).toBeUndefined();
+    expect(result.platform).toBeUndefined();
+  });
+
+  it('should throw when package not found', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+    await expect(fetchPackageMeta('nonexistent')).rejects.toThrow(
+      'Package "nonexistent" not found on npm (HTTP 404)',
+    );
   });
 });

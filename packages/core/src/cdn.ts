@@ -1,6 +1,14 @@
 const JSDELIVR_BASE = 'https://cdn.jsdelivr.net/npm';
 const DEFAULT_SCHEMA_PATH = 'dist/walkerOS.json';
 
+export interface WalkerOSPackageMeta {
+  packageName: string;
+  version: string;
+  description?: string;
+  type?: string;
+  platform?: string;
+}
+
 export interface WalkerOSPackageInfo {
   packageName: string;
   version: string;
@@ -52,6 +60,58 @@ export async function fetchPackageSchema(
       platform: meta.platform as string | undefined,
       schemas: (walkerOSJson.schemas as Record<string, unknown>) || {},
       examples: (walkerOSJson.examples as Record<string, unknown>) || {},
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function fetchPackageMeta(
+  packageName: string,
+  options?: { version?: string; timeout?: number },
+): Promise<WalkerOSPackageMeta> {
+  const ver = options?.version || 'latest';
+  const base = `${JSDELIVR_BASE}/${packageName}@${ver}`;
+  const controller = new AbortController();
+  const timeoutMs = options?.timeout || 10000;
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const pkgRes = await fetch(`${base}/package.json`, {
+      signal: controller.signal,
+    });
+    if (!pkgRes.ok) {
+      throw new Error(
+        `Package "${packageName}" not found on npm (HTTP ${pkgRes.status})`,
+      );
+    }
+    const pkg = (await pkgRes.json()) as Record<string, unknown>;
+
+    let type: string | undefined;
+    let platform: string | undefined;
+    try {
+      const schemaRes = await fetch(`${base}/${DEFAULT_SCHEMA_PATH}`, {
+        signal: controller.signal,
+      });
+      if (schemaRes.ok) {
+        const walkerOSJson = (await schemaRes.json()) as Record<
+          string,
+          unknown
+        >;
+        const meta = (walkerOSJson.$meta as Record<string, unknown>) || {};
+        type = meta.type as string | undefined;
+        platform = meta.platform as string | undefined;
+      }
+    } catch {
+      // walkerOS.json is optional for metadata
+    }
+
+    return {
+      packageName,
+      version: (pkg.version as string) || ver,
+      description: pkg.description as string | undefined,
+      type,
+      platform,
     };
   } finally {
     clearTimeout(timer);

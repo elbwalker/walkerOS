@@ -15,7 +15,10 @@ import { registerBundleTool } from './tools/bundle.js';
 import { registerSimulateTool } from './tools/simulate.js';
 import { registerPushTool } from './tools/push.js';
 // Package
-import { registerGetPackageSchemaTool } from './tools/package.js';
+import {
+  registerPackageSearchTool,
+  registerGetPackageSchemaTool,
+} from './tools/package.js';
 // Resources
 import { registerPackageSchemaResources } from './resources/package-schemas.js';
 import { registerFlowResources } from './resources/flows.js';
@@ -45,7 +48,8 @@ registerBundleTool(server);
 registerSimulateTool(server);
 registerPushTool(server);
 
-// Package (package_get)
+// Package (package_search, package_get)
+registerPackageSearchTool(server);
 registerGetPackageSchemaTool(server);
 
 // Resources
