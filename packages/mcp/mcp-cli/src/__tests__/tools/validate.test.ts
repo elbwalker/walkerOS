@@ -131,6 +131,38 @@ describe('validate tool', () => {
     expect(parsed.error).toBe('Validation failed');
   });
 
+  it('calls CLI validate with contract type', async () => {
+    const mockResult = {
+      valid: true,
+      type: 'contract',
+      errors: [],
+      warnings: [],
+      details: { entityCount: 2, actionCount: 3, tagging: 1 },
+    };
+    mockValidate.mockResolvedValue(mockResult);
+
+    const tool = server.getTool('validate');
+    const result = await tool.handler({
+      type: 'contract',
+      input:
+        '{"$tagging":1,"product":{"*":{"properties":{}},"add":{"properties":{}}}}',
+      flow: undefined,
+    });
+
+    expect(mockValidate).toHaveBeenCalledWith(
+      'contract',
+      {
+        $tagging: 1,
+        product: { '*': { properties: {} }, add: { properties: {} } },
+      },
+      { flow: undefined },
+    );
+    expect(result.content[0].type).toBe('text');
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.valid).toBe(true);
+    expect(parsed.details.entityCount).toBe(2);
+  });
+
   it('keeps invalid JSON as string input', async () => {
     mockValidate.mockResolvedValue({ valid: true });
 

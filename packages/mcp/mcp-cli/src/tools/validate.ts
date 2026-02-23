@@ -9,7 +9,7 @@ export function registerValidateTool(server: McpServer) {
     {
       title: 'Validate',
       description:
-        'Validate walkerOS events, flow configurations, or mapping rules. ' +
+        'Validate walkerOS events, flow configurations, mapping rules, or data contracts. ' +
         'Accepts JSON strings, file paths, or URLs as input. ' +
         'Returns validation results with errors, warnings, and details.',
       inputSchema: schemas.ValidateInputShape,

@@ -1,0 +1,71 @@
+{
+  "name": "@walkeros/mcp-source-browser",
+  "version": "0.1.0",
+  "description": "MCP server for walkerOS data-elb HTML tagging — generate, parse, and validate tracking attributes with real DOM parsing",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "walkeros-mcp-source-browser": "./dist/index.js"
+  },
+  "files": [
+    "dist/**",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "dev": "jest --watchAll --colors",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
+    "clean": "rm -rf .turbo && rm -rf dist && rm -rf coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@walkeros/core": "^2.0.0",
+    "jsdom": "^26.0.0"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^21.0.0",
+    "@types/node": "^20.0.0",
+    "@walkeros/config": "*",
+    "@walkeros/web-source-browser": "^2.0.0",
+    "@walkeros/collector": "^2.0.0",
+    "@walkeros/web-core": "^2.0.0"
+  },
+  "peerDependencies": {
+    "zod": "^4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "walkerOS",
+    "mcp",
+    "tagging",
+    "data-elb",
+    "analytics",
+    "html-attributes"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/mcp/mcp-source-browser"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  }
+}

@@ -8,6 +8,7 @@
     "packages/collector",
     "packages/mcp/mcp-api",
     "packages/mcp/mcp-cli",
+    "packages/mcp/mcp-source-browser",
     "packages/transformers/*",
     "packages/server/core",
     "packages/server/destinations/*",
