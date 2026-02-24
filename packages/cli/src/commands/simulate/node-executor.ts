@@ -89,6 +89,7 @@ export async function executeInNode(
 
   const globalMocks = buildGlobalMocksFromEnvs(envs, destinations, tracker);
   const cleanupMocks = injectGlobalMocks(globalMocks);
+  let timer: ReturnType<typeof setTimeout>;
 
   try {
     const executeWithTimeout = async (): Promise<ExecutionResult> => {
@@ -139,7 +140,7 @@ export async function executeInNode(
     };
 
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(
+      timer = setTimeout(
         () => reject(new Error(`Server simulation timeout after ${timeout}ms`)),
         timeout,
       );
@@ -149,6 +150,7 @@ export async function executeInNode(
   } catch (error) {
     throw new Error(`Node execution failed: ${getErrorMessage(error)}`);
   } finally {
+    clearTimeout(timer!);
     cleanupMocks();
   }
 }

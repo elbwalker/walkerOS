@@ -20,10 +20,15 @@ async function withTimeout<T>(
   ms: number,
   errorMessage: string,
 ): Promise<T> {
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error(errorMessage)), ms),
-  );
-  return Promise.race([promise, timeout]);
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(errorMessage)), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
 }
 
 export interface Package {

@@ -118,10 +118,8 @@ const config = {
   // Performance settings - reduced for devcontainer memory constraints
   maxWorkers: 2,
   testTimeout: 30000,
-  // forceExit disabled to allow proper cleanup and detect handle leaks
   clearMocks: true,
   restoreMocks: true,
-  detectOpenHandles: true,
   
   // Exclude from module resolution (prevents Haste collisions with cached packages)
   modulePathIgnorePatterns: ['<rootDir>/.tmp', '/dist/'],

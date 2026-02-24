@@ -274,11 +274,15 @@ export async function bundleCore(
               size: 0, // Size estimation not available for cached builds
             }),
           );
+          // Check user code for wildcard imports (same logic as collectBundleStats)
+          const hasWildcardImports = /import\s+\*\s+as\s+\w+\s+from/.test(
+            buildOptions.code || '',
+          );
           return {
             totalSize: stats.size,
             packages: packageStats,
             buildTime: Date.now() - bundleStartTime,
-            treeshakingEffective: true,
+            treeshakingEffective: !hasWildcardImports,
           };
         }
         return;

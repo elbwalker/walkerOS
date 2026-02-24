@@ -454,10 +454,11 @@ async function executeServerPush(
 ): Promise<PushResult> {
   const startTime = Date.now();
 
+  let timer: ReturnType<typeof setTimeout>;
   try {
     // Create timeout promise
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(
+      timer = setTimeout(
         () => reject(new Error(`Server push timeout after ${timeout}ms`)),
         timeout,
       );
@@ -511,6 +512,8 @@ async function executeServerPush(
       duration: Date.now() - startTime,
       error: getErrorMessage(error),
     };
+  } finally {
+    clearTimeout(timer!);
   }
 }
 
