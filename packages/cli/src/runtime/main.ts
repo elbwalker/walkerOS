@@ -15,7 +15,7 @@ import {
   type HeartbeatHandle,
 } from './heartbeat.js';
 import { createPoller, type PollerHandle } from './poller.js';
-import { fetchSecrets } from './secrets-fetcher.js';
+import { fetchSecrets, SecretsHttpError } from './secrets-fetcher.js';
 import { createLogger } from '../core/logger.js';
 import type { Logger } from '@walkeros/core';
 import { VERSION } from '../version.js';
@@ -103,22 +103,41 @@ async function main() {
   });
 
   // Step 1.5: Fetch secrets and inject into process.env
-  // No try/catch — if secrets fetch fails, the runner must crash.
-  // A runner without its secrets will produce silent failures downstream.
+  // Fatal for auth failures (401/403) — the token is invalid and nothing will work.
+  // Non-fatal for 404 (project/flow not found in secrets table) and 500 (server-side
+  // issue like missing KEK) — the flow may not use $env.* at all, so it can still run.
   if (env.apiEnabled && env.flowId) {
     cliLogger.log('Fetching secrets...');
-    const secrets = await fetchSecrets({
-      appUrl: resolveAppUrl(),
-      token: env.token!,
-      projectId: env.projectId!,
-      flowId: env.flowId,
-    });
-    const count = Object.keys(secrets).length;
-    if (count > 0) {
-      for (const [name, value] of Object.entries(secrets)) {
-        process.env[name] = value;
+    try {
+      const secrets = await fetchSecrets({
+        appUrl: resolveAppUrl(),
+        token: env.token!,
+        projectId: env.projectId!,
+        flowId: env.flowId,
+      });
+      const count = Object.keys(secrets).length;
+      if (count > 0) {
+        for (const [name, value] of Object.entries(secrets)) {
+          process.env[name] = value;
+        }
+        cliLogger.log(`Injected ${count} secret(s) into environment`);
+      } else {
+        cliLogger.log('No secrets configured for this flow');
       }
-      cliLogger.log(`Injected ${count} secret(s) into environment`);
+    } catch (error) {
+      // Auth failures are fatal — the token is broken, config fetch will also fail
+      if (
+        error instanceof SecretsHttpError &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        cliLogger.error(`Secrets fetch failed (auth): ${error.message}`);
+        process.exit(1);
+      }
+      // All other errors are warnings — the flow may not need secrets
+      cliLogger.error(
+        `Warning: Could not fetch secrets: ${error instanceof Error ? error.message : error}`,
+      );
+      cliLogger.log('Continuing without secrets (flow may not require them)');
     }
   }
 

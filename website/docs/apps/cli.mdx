@@ -42,10 +42,14 @@ npx walkeros --version`}
 | `bundle` | Build production-ready bundle from flow config | Create deployable JavaScript from configuration |
 | `simulate` | Test flow with sample events (mocked) | Validate config or bundle before deployment |
 | `push` | Execute event with real API calls | Integration testing, production validation |
-| `validate` | Validate events, flows, or mappings | Check configuration before bundling |
+| `validate` | Validate events, flows, mappings, contracts, or entries | Check configuration before bundling |
 | `run collect` | Start HTTP event collection server | Accept incoming events via HTTP POST |
 | `run serve` | Serve web bundles as static files | Host browser tracking scripts |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
+| `auth` | Authentication and identity | Log in, log out, check identity |
+| `projects` | Manage walkerOS projects | Create, list, update, delete projects |
+| `flows` | Manage walkerOS flows | Create, list, update, delete, duplicate flows |
+| `deploy` | Create and manage deployments | Deploy flows to walkerOS cloud or self-hosted |
 
 Both `simulate` and `push` accept either a config JSON or a pre-built bundle as input.
 
@@ -347,6 +351,7 @@ The bundle is now ready to deploy!
 
 | Option | Description |
 |--------|-------------|
+| `-o, --output <path>` | Write bundle to file, directory, or presigned URL |
 | `-f, --flow <name>` | Build specific flow (for multi-flow configs) |
 | `--all` | Build all flows |
 | `--dockerfile` | Generate Dockerfile alongside bundle |
@@ -354,6 +359,8 @@ The bundle is now ready to deploy!
 | `--json` | Output statistics as JSON (for CI/CD) |
 | `--no-cache` | Skip package cache, download fresh |
 | `-v, --verbose` | Detailed logging |
+
+When `--output` is a URL (e.g., a presigned S3 URL), the CLI bundles to a temp file and uploads via HTTP PUT. This is used by the walkerOS cloud service for remote builds.
 
 ### Multi-Flow Example
 
@@ -499,7 +506,9 @@ The simulation shows:
 |--------|-------------|
 | `-e, --event <json>` | Event JSON string to test |
 | `--event-file <path>` | Path to JSON file with event(s) |
+| `-f, --flow <name>` | Flow name (for multi-flow configs) |
 | `-p, --platform <platform>` | Platform override (`web` or `server`) |
+| `-o, --output <path>` | Write result to file |
 | `--json` | Output as JSON |
 | `-v, --verbose` | Detailed logging |
 
@@ -644,8 +653,9 @@ The event was sent to your real API endpoint!
 | Option | Description |
 |--------|-------------|
 | `-e, --event <source>` | **Required.** Event to push (JSON string, file path, or URL) |
-| `--flow <name>` | Flow name (for multi-flow configs) |
+| `-f, --flow <name>` | Flow name (for multi-flow configs) |
 | `-p, --platform <platform>` | Platform override (`web` or `server`) |
+| `-o, --output <path>` | Write result to file |
 | `--json` | Output results as JSON |
 | `-v, --verbose` | Verbose output with debug information |
 | `-s, --silent` | Suppress output (for CI/CD) |
@@ -744,7 +754,7 @@ walkeros push flow.json --event event.json --flow production`}
 
 ## Validate command
 
-The `validate` command checks the structure and correctness of events, flow configurations, or mapping configurations before bundling or deployment.
+The `validate` command checks the structure and correctness of events, flow configurations, mapping configurations, contracts, or individual flow entries before bundling or deployment.
 
 ### Use case
 
@@ -752,6 +762,8 @@ Before bundling or deploying your flow, you want to:
 - Catch configuration errors early
 - Verify event structure follows walkerOS conventions
 - Check mapping patterns are valid
+- Validate contracts define proper entity-action schemas
+- Validate a specific destination, source, or transformer entry against its package's published JSON Schema
 - Integrate validation into CI/CD pipelines
 
 Validate gives you fast feedback without the overhead of bundling.
@@ -766,19 +778,29 @@ walkeros validate flow flow.json
 walkeros validate event event.json
 
 # Validate a mapping configuration
-walkeros validate mapping mapping.json`}
+walkeros validate mapping mapping.json
+
+# Validate a contract
+walkeros validate contract contract.json
+
+# Validate a specific entry against its package schema
+walkeros validate destinations.snowplow flow.json`}
   language="bash"
 />
 
 ### Validation types
 
-The command accepts three validation types:
+The command accepts five validation types, plus dot-notation entry validation:
 
 | Type | What it validates |
 |------|-------------------|
 | `event` | Event structure: `name` field exists, follows "entity action" format with space, valid data types |
 | `flow` | Flow.Setup config: version, flows object, packages, sources, destinations structure |
 | `mapping` | Mapping rules: event patterns use "entity action" or wildcard format, rule structures are valid |
+| `contract` | Contract structure: entity-action entries map to JSON Schema objects, optional `$tagging` metadata |
+| `destinations.name` | Entry validation: validates a specific destination's settings against its package's published JSON Schema |
+| `sources.name` | Entry validation: validates a specific source's settings against its package's published JSON Schema |
+| `transformers.name` | Entry validation: validates a specific transformer's settings against its package's published JSON Schema |
 
 ### Step-by-step guide
 
@@ -850,7 +872,8 @@ Summary: 0 error(s), 1 warning(s)
 
 | Option | Description |
 |--------|-------------|
-| `--flow <name>` | Flow name to validate (for multi-flow configs) |
+| `-f, --flow <name>` | Flow name to validate (for multi-flow configs) |
+| `-o, --output <path>` | Write result to file |
 | `--strict` | Treat warnings as errors (exit code 2) |
 | `--json` | Output results as JSON |
 | `-v, --verbose` | Show detailed validation information |
@@ -953,6 +976,421 @@ walkeros validate mapping '{
 }'`}
   language="bash"
 />
+
+### Contract validation details
+
+Contract validation checks (see [contract.ts](https://github.com/elbwalker/walkerOS/blob/main/packages/cli/src/commands/validate/validators/contract.ts)):
+
+1. **Root structure** - Must be an object (not array or primitive)
+2. **`$tagging` metadata** - If present, must be a non-negative integer
+3. **Entity keys** - Cannot be empty strings
+4. **Action entries** - Each entity must contain an object of action entries
+5. **Schema entries** - Each action value must be a JSON Schema object
+
+<CodeSnippet
+  code={`# Valid contract
+walkeros validate contract '{
+  "page": {
+    "view": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" }
+      }
+    }
+  }
+}'`}
+  language="bash"
+/>
+
+### Entry validation (dot-notation)
+
+Entry validation checks a specific destination, source, or transformer in your flow config against the package's published JSON Schema. The CLI fetches the schema from the package on the CDN and validates the `config.settings` object using AJV.
+
+<CodeSnippet
+  code={`# Validate a specific destination entry
+walkeros validate destinations.snowplow flow.json
+
+# Validate a specific source entry
+walkeros validate sources.browser flow.json
+
+# Short form (works if the key is unique across sections)
+walkeros validate snowplow flow.json`}
+  language="bash"
+/>
+
+The entry validator:
+1. Resolves the entry from the flow config (first flow is used)
+2. Reads the `package` field to identify the npm package
+3. Fetches the package's JSON Schema from the CDN
+4. Validates the entry's `config.settings` against the schema
+
+## Auth commands
+
+The `auth` command group manages authentication with the walkerOS cloud service. Authentication is required for cloud commands (`projects`, `flows`, `deploy`).
+
+### Login
+
+Log in to walkerOS via an OAuth browser flow. The CLI requests a device code, opens your browser for authorization, and polls for the resulting token.
+
+<CodeSnippet
+  code={`walkeros auth login`}
+  language="bash"
+/>
+
+Output:
+```
+! Your one-time code: ABCD-1234
+  Authorize here: https://app.walkeros.io/auth/device?code=ABCD-1234
+
+  Opening browser...
+  Waiting for authorization... (press Ctrl+C to cancel)
+
+✓ Logged in as user@example.com
+  Token stored in ~/.config/walkeros/config.json
+```
+
+The token is stored in `~/.config/walkeros/config.json` with `0600` permissions. You can also set the `WALKEROS_TOKEN` environment variable instead of using `auth login`.
+
+| Option | Description |
+|--------|-------------|
+| `--url <url>` | Custom app URL (default: `https://app.walkeros.io`) |
+| `--json` | Output as JSON |
+| `-v, --verbose` | Verbose output |
+| `-s, --silent` | Suppress output |
+
+### Logout
+
+Remove stored credentials from disk.
+
+<CodeSnippet
+  code={`walkeros auth logout`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--json` | Output as JSON |
+| `-v, --verbose` | Verbose output |
+| `-s, --silent` | Suppress output |
+
+### Whoami
+
+Show the current authenticated user's identity, including email, user ID, and project ID (if the token is project-scoped).
+
+<CodeSnippet
+  code={`walkeros auth whoami`}
+  language="bash"
+/>
+
+Output:
+```
+user@example.com
+User: usr_abc123
+Project: proj_def456
+```
+
+| Option | Description |
+|--------|-------------|
+| `-o, --output <path>` | Write result to file |
+| `--json` | Output as JSON |
+| `-v, --verbose` | Verbose output |
+| `-s, --silent` | Suppress output |
+
+### Token resolution
+
+The CLI resolves authentication tokens in this order:
+
+1. `WALKEROS_TOKEN` environment variable
+2. Config file (`~/.config/walkeros/config.json`, written by `auth login`)
+3. Not authenticated (cloud commands will fail)
+
+## Projects commands
+
+The `projects` command group manages walkerOS cloud projects. All commands require authentication (see [Auth commands](#auth-commands)).
+
+### List projects
+
+<CodeSnippet
+  code={`walkeros projects list`}
+  language="bash"
+/>
+
+### Get project details
+
+<CodeSnippet
+  code={`# Get by explicit ID
+walkeros projects get proj_abc123
+
+# Uses WALKEROS_PROJECT_ID if omitted
+walkeros projects get`}
+  language="bash"
+/>
+
+### Create a project
+
+<CodeSnippet
+  code={`walkeros projects create "My Analytics Project"`}
+  language="bash"
+/>
+
+### Update a project
+
+<CodeSnippet
+  code={`walkeros projects update proj_abc123 --name "New Name"`}
+  language="bash"
+/>
+
+### Delete a project
+
+<CodeSnippet
+  code={`walkeros projects delete proj_abc123`}
+  language="bash"
+/>
+
+### Common options
+
+All `projects` subcommands support:
+
+| Option | Description |
+|--------|-------------|
+| `-o, --output <path>` | Write result to file |
+| `--json` | Output as JSON |
+| `-v, --verbose` | Verbose output |
+| `-s, --silent` | Suppress output |
+
+## Flows commands
+
+The `flows` command group manages flow configurations within a project. All commands require authentication and a project context (either `--project` or `WALKEROS_PROJECT_ID`).
+
+### List flows
+
+<CodeSnippet
+  code={`walkeros flows list`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
+| `--sort <field>` | Sort by: `name`, `updated_at`, `created_at` |
+| `--order <dir>` | Sort order: `asc`, `desc` |
+| `--include-deleted` | Include soft-deleted flows |
+
+### Get a flow
+
+Retrieves a flow with its full `Flow.Setup` JSON content.
+
+<CodeSnippet
+  code={`walkeros flows get cfg_abc123`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
+
+### Create a flow
+
+<CodeSnippet
+  code={`# With inline JSON
+walkeros flows create "My Flow" --content '{"version":1,"flows":{"default":{"server":{}}}}'
+
+# From a file via stdin
+cat flow.json | walkeros flows create "My Flow"`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
+| `-c, --content <json>` | Flow.Setup JSON string or file path |
+
+### Update a flow
+
+<CodeSnippet
+  code={`# Update name only
+walkeros flows update cfg_abc123 --name "Updated Flow"
+
+# Update content
+walkeros flows update cfg_abc123 --content '{"version":1,"flows":{"default":{"server":{}}}}'`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
+| `--name <name>` | New flow name |
+| `-c, --content <json>` | New Flow.Setup JSON string or file path |
+
+### Delete a flow
+
+Soft-deletes a flow configuration.
+
+<CodeSnippet
+  code={`walkeros flows delete cfg_abc123`}
+  language="bash"
+/>
+
+### Duplicate a flow
+
+Creates a copy of an existing flow configuration.
+
+<CodeSnippet
+  code={`walkeros flows duplicate cfg_abc123 --name "Flow Copy"`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
+| `--name <name>` | Name for the copy (defaults to "Copy of ...") |
+
+### Common options
+
+All `flows` subcommands support:
+
+| Option | Description |
+|--------|-------------|
+| `-o, --output <path>` | Write result to file |
+| `--json` | Output as JSON |
+| `-v, --verbose` | Verbose output |
+| `-s, --silent` | Suppress output |
+
+## Deploy commands
+
+The `deploy` command group handles deploying flows to the walkerOS cloud or managing self-hosted deployments with heartbeat registration. All commands require authentication.
+
+### deploy create
+
+Create a new deployment. The CLI infers the deployment type (`web` or `server`) from the flow configuration.
+
+<CodeSnippet
+  code={`# From a local config file
+walkeros deploy create flow.json
+
+# From a remote flow ID
+walkeros deploy create cfg_abc123
+
+# With a specific flow name (multi-config flows)
+walkeros deploy create flow.json --flow production`}
+  language="bash"
+/>
+
+On success, the CLI displays the deployment ID, slug, type, and a one-time deploy token. It also shows example commands for running the deployment locally or via Docker.
+
+| Option | Description |
+|--------|-------------|
+| `--label <string>` | Human-readable label for the deployment |
+| `-f, --flow <name>` | Flow name for multi-flow configs |
+| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
+| `-o, --output <path>` | Write result to file |
+| `--json` | Output as JSON |
+| `-v, --verbose` | Verbose output |
+| `-s, --silent` | Suppress output |
+
+### deploy start
+
+Deploy a remote flow to walkerOS cloud infrastructure. Auto-detects whether to use web (script hosting) or server (container) deployment based on the flow content. Streams deployment progress via SSE.
+
+<CodeSnippet
+  code={`# Deploy a flow
+walkeros deploy start cfg_abc123
+
+# Deploy a specific config in a multi-config flow
+walkeros deploy start cfg_abc123 --flow production
+
+# Deploy without waiting for completion
+walkeros deploy start cfg_abc123 --no-wait`}
+  language="bash"
+/>
+
+Output (web deployment):
+```
+Building bundle...
+Publishing to web...
+✓ Published: https://cdn.walkeros.io/proj_xxx/walker.js
+```
+
+Output (server deployment):
+```
+Building bundle...
+Deploying container...
+Starting container...
+✓ Active: https://collect-abc123.walkeros.io
+```
+
+| Option | Description |
+|--------|-------------|
+| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
+| `-f, --flow <name>` | Flow name for multi-config flows |
+| `--no-wait` | Return immediately after triggering (do not stream progress) |
+| `--timeout <seconds>` | Timeout for deployment polling (default: 120) |
+| `-o, --output <path>` | Write result to file |
+| `--json` | Output as JSON |
+| `-v, --verbose` | Verbose output |
+| `-s, --silent` | Suppress output |
+
+### deploy list
+
+List all deployments in a project.
+
+<CodeSnippet
+  code={`walkeros deploy list
+
+# Filter by type
+walkeros deploy list --type server
+
+# Filter by status
+walkeros deploy list --status active`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
+| `--type <type>` | Filter by type: `web`, `server` |
+| `--status <status>` | Filter by status |
+
+### deploy status
+
+Get deployment details by ID or slug.
+
+<CodeSnippet
+  code={`walkeros deploy status dep_abc123
+
+# Or by slug
+walkeros deploy status my-collector`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--project <id>` | Project ID |
+
+### deploy delete
+
+Delete a deployment by ID or slug.
+
+<CodeSnippet
+  code={`walkeros deploy delete dep_abc123`}
+  language="bash"
+/>
+
+| Option | Description |
+|--------|-------------|
+| `--project <id>` | Project ID |
+| `--json` | Output as JSON |
+
+### Common options
+
+All `deploy` subcommands support:
+
+| Option | Description |
+|--------|-------------|
+| `-o, --output <path>` | Write result to file |
+| `--json` | Output as JSON |
+| `-v, --verbose` | Verbose output |
+| `-s, --silent` | Suppress output |
 
 ## Run collect command
 
@@ -1099,8 +1537,34 @@ The collector terminal shows:
 
 | Option | Description |
 |--------|-------------|
-| `--port <number>` | Server port (default: 8080) |
+| `-p, --port <number>` | Server port (default: 8080) |
+| `-h, --host <address>` | Host address (default: 0.0.0.0) |
+| `--deploy <id-or-slug>` | Deployment ID or slug (enables heartbeat to walkerOS cloud) |
+| `--project <id>` | Project ID (used with `--deploy`) |
+| `--url <url>` | Public URL of this server (used with `--deploy`) |
+| `--health-endpoint <path>` | Health check path (default: `/health`) |
+| `--heartbeat-interval <seconds>` | Heartbeat interval in seconds (default: 60) |
+| `--json` | Output as JSON |
 | `-v, --verbose` | Detailed logging |
+| `-s, --silent` | Suppress output |
+
+<details>
+<summary>Heartbeat registration</summary>
+
+When `--deploy` is provided, the collector registers itself with the walkerOS cloud via periodic heartbeats. This makes the running instance visible in the project dashboard and enables remote management.
+
+<CodeSnippet
+  code={`walkeros run collect flow.json \\
+  --deploy dep_abc123 \\
+  --project proj_def456 \\
+  --url https://collect.example.com \\
+  --heartbeat-interval 30`}
+  language="bash"
+/>
+
+The heartbeat sends instance ID, uptime, CLI version, and mode. The server can respond with `update` (triggering a bundle refresh) or `stop` (graceful shutdown).
+
+</details>
 
 ### Running Pre-Built Bundles
 
@@ -1234,10 +1698,18 @@ Open `test.html` in your browser. Events will be sent to `http://localhost:8080/
 
 | Option | Description |
 |--------|-------------|
-| `--port <number>` | Server port (default: 3000) |
+| `-p, --port <number>` | Server port (default: 8080) |
+| `-h, --host <address>` | Host address (default: 0.0.0.0) |
 | `--path <string>` | URL path to serve script (default: `/`) |
 | `--name <string>` | Script filename (default: from config) |
+| `--deploy <id-or-slug>` | Deployment ID or slug (enables heartbeat to walkerOS cloud) |
+| `--project <id>` | Project ID (used with `--deploy`) |
+| `--url <url>` | Public URL of this server (used with `--deploy`) |
+| `--health-endpoint <path>` | Health check path (default: `/health`) |
+| `--heartbeat-interval <seconds>` | Heartbeat interval in seconds (default: 60) |
+| `--json` | Output as JSON |
 | `-v, --verbose` | Detailed logging |
+| `-s, --silent` | Suppress output |
 
 ## Complete example: Web → Server flow
 
@@ -1482,6 +1954,15 @@ These options work with all commands:
 | `--help` | Show help for command |
 | `--version` | Show CLI version |
 
+## Environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `WALKEROS_TOKEN` | API token for cloud commands (overrides `auth login` config) |
+| `WALKEROS_PROJECT_ID` | Default project ID for `projects`, `flows`, and `deploy` commands |
+| `WALKEROS_APP_URL` | Base URL override (default: `https://app.walkeros.io`) |
+| `WALKEROS_DEPLOY_TOKEN` | Deploy token for container heartbeat authentication |
+
 ## CI/CD integration
 
 ### GitHub Actions
@@ -1570,10 +2051,28 @@ lsof -ti:8080 | xargs kill`}
   language="bash"
 />
 
+### Authentication Issues
+
+If cloud commands fail with authentication errors:
+
+<CodeSnippet
+  code={`# Check current identity
+walkeros auth whoami
+
+# Re-authenticate
+walkeros auth login
+
+# Or set token directly
+export WALKEROS_TOKEN=sk-walkeros-xxx`}
+  language="bash"
+/>
+
 ## Next steps
 
 - **[Flow Configuration](/docs/getting-started/flow)** - Learn about flow config structure
 - **[Docker Deployment](/docs/apps/docker)** - Deploy flows to production
+- **[Runner](/docs/apps/runner)** - Self-hosted runner with config polling and hot-swap
+- **[MCP Server](/docs/apps/mcp)** - Use CLI tools from AI assistants
 - **[Sources](/docs/sources/)** - Explore event sources
 - **[Destinations](/docs/destinations/)** - Configure analytics tools
 - **[Mapping](/docs/mapping)** - Transform events for destinations

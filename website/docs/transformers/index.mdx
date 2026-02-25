@@ -71,6 +71,132 @@ Add to your `flow.json`:
   </TabItem>
 </Tabs>
 
+## Chains
+
+Transformers execute in **chains** — ordered sequences where each transformer processes the event and passes it to the next. Chains run at two positions in the pipeline:
+
+| Position | Config | When it runs |
+|----------|--------|--------------|
+| **Pre-collector** | `source.next` | After a source captures an event, before the collector enriches it |
+| **Post-collector** | `destination.before` | After collector enrichment, before a specific destination receives the event |
+
+### How chains are wired
+
+A source or destination points to the **first** transformer in its chain. From there, the chain is resolved in one of two ways:
+
+| Start value | Resolution |
+|-------------|------------|
+| `string` | Walk `transformer.next` links until the chain ends |
+| `string[]` | Use the array as an explicit ordered list (ignores `next` links) |
+
+<CodeSnippet
+  code={`// String start: chain resolved via next links
+// router → router.next ("parser") → parser.next ("validator") → done
+"sources": {
+  "http": {
+    "package": "@walkeros/server-source-express",
+    "next": "router"
+  }
+},
+"transformers": {
+  "router":    { "package": "@walkeros/transformer-router", "next": "parser" },
+  "parser":    { "package": "@walkeros/transformer-parser", "next": "validator" },
+  "validator": { "package": "@walkeros/transformer-validator" }
+}`}
+  language="json"
+/>
+
+<CodeSnippet
+  code={`// Array start: explicit chain, next links ignored
+"destinations": {
+  "analytics": {
+    "package": "@walkeros/server-destination-bigquery",
+    "before": ["redact", "validator"]
+  }
+}`}
+  language="json"
+/>
+
+### Return values
+
+Each transformer in a chain controls what happens next:
+
+| Return | Behavior |
+|--------|----------|
+| `event` | Continue chain with the modified event |
+| `void` | Continue chain with the current event unchanged |
+| `false` | Stop the chain — event is dropped |
+| `BranchResult` | Redirect to a different chain (fan-out) |
+
+If a transformer throws an error, the chain stops and the event is dropped (same as returning `false`).
+
+### Branching with `BranchResult`
+
+A transformer can redirect the event to a different chain by returning a `BranchResult` instead of a plain event. Use the `branch()` factory function from `@walkeros/core`:
+
+<CodeSnippet
+  code={`import { branch } from '@walkeros/core';
+
+// Inside a transformer's push function:
+push(event, context) {
+  // Redirect to a single chain
+  return branch(event, 'parser');
+
+  // Or fan out to multiple chains
+  return branch(event, ['parser', 'logger']);
+}`}
+  language="typescript"
+/>
+
+The chain runner resolves the `next` target using the same `walkChain()` logic — a string follows `next` links, an array is used directly. If the branch target does not exist, the event is dropped.
+
+The [router transformer](./router) uses branching to direct events to different parser chains based on request metadata:
+
+<CodeSnippet
+  code={`// Router inspects context.ingest, branches on first match
+"transformers": {
+  "router": {
+    "package": "@walkeros/transformer-router",
+    "config": {
+      "settings": {
+        "routes": [
+          { "match": { "key": "path", "operator": "prefix", "value": "/gtag" }, "next": "gtag-parser" },
+          { "match": { "key": "path", "operator": "prefix", "value": "/meta" }, "next": "meta-parser" },
+          { "match": "*", "next": "default-parser" }
+        ]
+      }
+    }
+  },
+  "gtag-parser":    { "package": "@walkeros/transformer-gtag" },
+  "meta-parser":    { "package": "@walkeros/transformer-meta" },
+  "default-parser": { "package": "@walkeros/transformer-default" }
+}`}
+  language="json"
+/>
+
+<details>
+<summary>Chain execution visualized</summary>
+
+**Pre-collector chain** (source with `next: "router"`):
+
+```
+Source → router → [branch] → gtag-parser → Collector → Destinations
+                           → meta-parser → Collector → Destinations
+                           → default-parser → Collector → Destinations
+```
+
+**Post-collector chain** (destination with `before: "redact"`):
+
+```
+Collector → redact → validator → Destination
+                         ↓
+                    returns false?
+                         ↓
+                    event dropped
+```
+
+</details>
+
 ## Available transformers
 
 ### Validator
