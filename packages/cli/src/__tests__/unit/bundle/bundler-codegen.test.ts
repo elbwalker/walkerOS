@@ -257,6 +257,19 @@ describe('generatePlatformWrapper', () => {
     expect(result).toContain('return await startFlow(config)');
     expect(result).not.toContain('window');
   });
+
+  it('server wrapper does not contain port override logic', () => {
+    const config =
+      '{ sources: { http: { config: { settings: { port: 8080 } } } } }';
+    const userCode = '';
+    const buildOptions = { platform: 'node' };
+
+    const result = generatePlatformWrapper(config, userCode, buildOptions);
+
+    // Port override is now handled by the Express source reading process.env.PORT
+    expect(result).not.toContain('context.port');
+    expect(result).not.toContain('src.config.settings.port');
+  });
 });
 
 describe('createEntryPoint integration', () => {

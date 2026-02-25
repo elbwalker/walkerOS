@@ -40,16 +40,16 @@ export interface RunCommandOptions {
   /** Deployment slug (enables heartbeat to walkerOS app) */
   deployment?: string;
 
-  /** Project ID (used with --deployment) */
+  /** Project ID (used with --deploy) */
   project?: string;
 
-  /** Public URL of this server (used with --deployment) */
+  /** Public URL of this server (used with --deploy) */
   url?: string;
 
-  /** Health check endpoint path (used with --deployment, default: /health) */
+  /** Health check endpoint path (used with --deploy, default: /health) */
   healthEndpoint?: string;
 
-  /** Heartbeat interval in seconds (used with --deployment, default: 60) */
+  /** Heartbeat interval in seconds (used with --deploy, default: 60) */
   heartbeatInterval?: number;
 }
 

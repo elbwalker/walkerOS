@@ -26,8 +26,10 @@ export const sourceExpress = async (
 
   // Validate and apply default settings
   const parsed = SettingsSchema.parse(config.settings || {});
+  const envPort = process.env.PORT ? parseInt(process.env.PORT, 10) : undefined;
   const settings = {
     ...parsed,
+    port: envPort ?? parsed.port,
     paths: parsed.paths ?? (parsed.path ? [parsed.path] : ['/collect']),
   };
 
