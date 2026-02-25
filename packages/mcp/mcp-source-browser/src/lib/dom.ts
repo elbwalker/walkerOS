@@ -1,33 +1,46 @@
 import { JSDOM } from 'jsdom';
 
 /**
+ * Typed view of globalThis for assigning JSDOM globals in Node.js.
+ * Walker parser functions read from globalThis.document internally.
+ */
+interface DomGlobals {
+  document?: Document;
+  window?: Window & typeof globalThis;
+  // Intentionally loose: JSDOM may not provide ShadowRoot, so we polyfill with a stub class
+  ShadowRoot?: { new (): unknown; prototype: unknown };
+}
+
+const globals = globalThis as unknown as DomGlobals;
+
+/**
  * Execute a function with JSDOM globals (document, window) temporarily set.
  * Walker parser functions read from globalThis.document internally.
  */
 export function withDom<T>(html: string, fn: (dom: JSDOM) => T): T {
   const dom = new JSDOM(html);
-  const prevDoc = globalThis.document;
-  const prevWin = globalThis.window;
+  const prevDoc = globals.document;
+  const prevWin = globals.window;
 
   try {
-    (globalThis as any).document = dom.window.document;
-    (globalThis as any).window = dom.window;
+    globals.document = dom.window.document;
+    globals.window = dom.window as unknown as Window & typeof globalThis;
     // Polyfill ShadowRoot if missing (JSDOM may not provide it)
-    if (!(globalThis as any).ShadowRoot) {
-      (globalThis as any).ShadowRoot =
-        dom.window.ShadowRoot || class ShadowRoot {};
+    if (!globals.ShadowRoot) {
+      globals.ShadowRoot =
+        (dom.window as unknown as DomGlobals).ShadowRoot || class ShadowRoot {};
     }
     return fn(dom);
   } finally {
     if (prevDoc !== undefined) {
-      (globalThis as any).document = prevDoc;
+      globals.document = prevDoc;
     } else {
-      delete (globalThis as any).document;
+      delete globals.document;
     }
     if (prevWin !== undefined) {
-      (globalThis as any).window = prevWin;
+      globals.window = prevWin;
     } else {
-      delete (globalThis as any).window;
+      delete globals.window;
     }
   }
 }

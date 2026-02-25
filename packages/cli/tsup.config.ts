@@ -17,6 +17,7 @@ export default defineConfig([
     dts: false,
     sourcemap: false,
     minify: false,
+    noExternal: [/@walkeros\//],
     banner: {
       js: '#!/usr/bin/env node',
     },
