@@ -1818,7 +1818,8 @@ describe('deferred env resolution', () => {
   it('returns __WALKEROS_ENV: marker instead of resolving $env when deferred', () => {
     const setup = makeSetup({ url: 'https://api.example.com/$env.API_KEY' });
     const config = getFlowConfig(setup, 'test', { deferred: true });
-    expect(config.collector.url).toBe(
+    const collector = config.collector as Record<string, unknown>;
+    expect(collector.url).toBe(
       'https://api.example.com/__WALKEROS_ENV:API_KEY',
     );
   });
@@ -1826,7 +1827,8 @@ describe('deferred env resolution', () => {
   it('returns marker with default value notation', () => {
     const setup = makeSetup({ host: '$env.HOST:localhost' });
     const config = getFlowConfig(setup, 'test', { deferred: true });
-    expect(config.collector.host).toBe('__WALKEROS_ENV:HOST:localhost');
+    const collector = config.collector as Record<string, unknown>;
+    expect(collector.host).toBe('__WALKEROS_ENV:HOST:localhost');
   });
 
   it('preserves colon in default values (e.g. URLs)', () => {
@@ -1834,7 +1836,8 @@ describe('deferred env resolution', () => {
       url: '$env.REDIS_URL:redis://localhost:6379',
     });
     const config = getFlowConfig(setup, 'test', { deferred: true });
-    expect(config.collector.url).toBe(
+    const collector = config.collector as Record<string, unknown>;
+    expect(collector.url).toBe(
       '__WALKEROS_ENV:REDIS_URL:redis://localhost:6379',
     );
   });
@@ -1843,7 +1846,8 @@ describe('deferred env resolution', () => {
     process.env.TEST_SECRET = 'hunter2';
     const setup = makeSetup({ key: '$env.TEST_SECRET' });
     const config = getFlowConfig(setup, 'test', { deferred: false });
-    expect(config.collector.key).toBe('hunter2');
+    const collector = config.collector as Record<string, unknown>;
+    expect(collector.key).toBe('hunter2');
     delete process.env.TEST_SECRET;
   });
 
@@ -1851,7 +1855,8 @@ describe('deferred env resolution', () => {
     process.env.TEST_SECRET = 'hunter2';
     const setup = makeSetup({ key: '$env.TEST_SECRET' });
     const config = getFlowConfig(setup, 'test');
-    expect(config.collector.key).toBe('hunter2');
+    const collector = config.collector as Record<string, unknown>;
+    expect(collector.key).toBe('hunter2');
     delete process.env.TEST_SECRET;
   });
 });
