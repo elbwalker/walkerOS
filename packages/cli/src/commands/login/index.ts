@@ -96,7 +96,7 @@ export async function login(options: LoginOptions = {}): Promise<LoginResult> {
   // 2. Display code and open browser
   const prompt = (msg: string) => process.stderr.write(msg + '\n');
   prompt(`\n! Your one-time code: ${userCode}`);
-  prompt(`  Authorize here: ${verificationUri}\n`);
+  prompt(`  Authorize here: ${verificationUriComplete || verificationUri}\n`);
 
   const opener = options.openUrl ?? openInBrowser;
   try {

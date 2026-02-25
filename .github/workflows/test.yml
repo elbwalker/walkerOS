@@ -47,6 +47,7 @@ jobs:
           github.base_ref == 'main') && '--force' || '' }}
         env:
           CI: true
+          NODE_OPTIONS: '--max-old-space-size=1536'
       - name: Show test summary
         if: always()
         run: |
@@ -73,3 +74,4 @@ jobs:
         run: npm run test:integration
         env:
           CI: true
+          NODE_OPTIONS: '--max-old-space-size=1536'

@@ -15,6 +15,7 @@ import {
   type HeartbeatHandle,
 } from './heartbeat.js';
 import { createPoller, type PollerHandle } from './poller.js';
+import { fetchSecrets } from './secrets-fetcher.js';
 import { createLogger } from '../core/logger.js';
 import type { Logger } from '@walkeros/core';
 import { VERSION } from '../version.js';
@@ -100,6 +101,26 @@ async function main() {
     configSource: env.remoteConfig ? 'api' : 'local',
     apiEnabled: env.apiEnabled,
   });
+
+  // Step 1.5: Fetch secrets and inject into process.env
+  // No try/catch — if secrets fetch fails, the runner must crash.
+  // A runner without its secrets will produce silent failures downstream.
+  if (env.apiEnabled && env.flowId) {
+    cliLogger.log('Fetching secrets...');
+    const secrets = await fetchSecrets({
+      appUrl: resolveAppUrl(),
+      token: env.token!,
+      projectId: env.projectId!,
+      flowId: env.flowId,
+    });
+    const count = Object.keys(secrets).length;
+    if (count > 0) {
+      for (const [name, value] of Object.entries(secrets)) {
+        process.env[name] = value;
+      }
+      cliLogger.log(`Injected ${count} secret(s) into environment`);
+    }
+  }
 
   // Step 2: Serve mode is simple — no bundling, no polling
   if (env.mode === 'serve') {
@@ -287,6 +308,28 @@ async function runWithBundle(
         },
         intervalMs: env.pollInterval * 1000,
         onUpdate: async (content, version) => {
+          // Refresh secrets before hot-swap.
+          // try/catch: transient failure should not crash a running runner —
+          // existing env vars remain valid, skip this hot-swap, try again next poll
+          if (env.apiEnabled && env.flowId) {
+            try {
+              const secrets = await fetchSecrets({
+                appUrl: resolveAppUrl(),
+                token: env.token!,
+                projectId: env.projectId!,
+                flowId: env.flowId,
+              });
+              for (const [name, value] of Object.entries(secrets)) {
+                process.env[name] = value;
+              }
+            } catch (error) {
+              cliLogger.error(
+                `Failed to refresh secrets during poll, skipping hot-swap: ${error instanceof Error ? error.message : error}`,
+              );
+              return;
+            }
+          }
+
           // Unique temp path per update — prevents race conditions
           const tmpConfigPath = `/tmp/walkeros-flow-${Date.now()}.json`;
           writeFileSync(

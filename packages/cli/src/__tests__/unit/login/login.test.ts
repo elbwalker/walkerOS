@@ -251,6 +251,49 @@ describe('login (device code flow)', () => {
     expect(openedUrl).toBe('https://app.test/auth/device?user_code=BCDF-GHJK');
   });
 
+  it('displays verificationUriComplete to the user', async () => {
+    const stderrWrites: string[] = [];
+    const origWrite = process.stderr.write;
+    process.stderr.write = ((chunk: string) => {
+      stderrWrites.push(chunk);
+      return true;
+    }) as typeof process.stderr.write;
+
+    const mockFetch = createMockFetch((url) => {
+      if (url.includes('/api/auth/device/code')) {
+        return fakeResponse({
+          deviceCode: 'a'.repeat(64),
+          userCode: 'BCDF-GHJK',
+          verificationUri: 'https://app.test/auth/device',
+          verificationUriComplete:
+            'https://app.test/auth/device?user_code=BCDF-GHJK',
+          expiresIn: 900,
+          interval: 0,
+        });
+      }
+      return fakeResponse({
+        token: 'sk-walkeros-' + 'f'.repeat(64),
+        email: 'test@example.com',
+        userId: 'user_123',
+      });
+    });
+
+    try {
+      await login({
+        openUrl: noopOpen,
+        fetch: mockFetch,
+        maxPollAttempts: 10,
+      });
+    } finally {
+      process.stderr.write = origWrite;
+    }
+
+    const output = stderrWrites.join('');
+    expect(output).toContain(
+      'https://app.test/auth/device?user_code=BCDF-GHJK',
+    );
+  });
+
   it('falls back to verificationUri when verificationUriComplete is missing', async () => {
     let openedUrl = '';
     const captureOpen = async (url: string) => {

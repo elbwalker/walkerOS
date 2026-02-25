@@ -86,15 +86,18 @@ export function loadBundleConfig(
   // Determine which flow to use
   const flowName = resolveFlow(setup, options.flowName, availableFlows);
 
-  // Use core getFlowConfig() for resolution (variables, $refs, cascading)
-  const flowConfig = getFlowConfig(setup, flowName);
-
-  // Detect platform from resolved config
+  // Resolve with deferred mode first (markers don't affect platform detection)
+  let flowConfig = getFlowConfig(setup, flowName, { deferred: true });
   const platform = getPlatform(flowConfig);
   if (!platform) {
     throw new Error(
       `Invalid configuration: flow "${flowName}" must have a "web" or "server" key.`,
     );
+  }
+
+  // For web: re-resolve without deferred to bake values at build time
+  if (platform === 'web') {
+    flowConfig = getFlowConfig(setup, flowName);
   }
 
   // Get static build defaults based on platform

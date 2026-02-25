@@ -42,6 +42,13 @@ function mergeDefinitions(
   return result;
 }
 
+/** Sentinel prefix for deferred $env resolution. Shared with CLI bundler. */
+export const ENV_MARKER_PREFIX = '__WALKEROS_ENV:';
+
+export interface ResolveOptions {
+  deferred?: boolean;
+}
+
 /**
  * Resolve all dynamic patterns in a value.
  *
@@ -54,6 +61,7 @@ function resolvePatterns(
   value: unknown,
   variables: Flow.Variables,
   definitions: Flow.Definitions,
+  options?: ResolveOptions,
 ): unknown {
   if (typeof value === 'string') {
     // Check if entire string is a $def.name reference (replaces whole value)
@@ -64,7 +72,12 @@ function resolvePatterns(
         throwError(`Definition "${defName}" not found`);
       }
       // Return the definition content (recursively resolved)
-      return resolvePatterns(definitions[defName], variables, definitions);
+      return resolvePatterns(
+        definitions[defName],
+        variables,
+        definitions,
+        options,
+      );
     }
 
     // Replace $var.name patterns (inline substitution)
@@ -82,6 +95,11 @@ function resolvePatterns(
     result = result.replace(
       /\$env\.([a-zA-Z_][a-zA-Z0-9_]*)(?::([^"}\s]*))?/g,
       (match, name, defaultValue) => {
+        if (options?.deferred) {
+          return defaultValue !== undefined
+            ? `${ENV_MARKER_PREFIX}${name}:${defaultValue}`
+            : `${ENV_MARKER_PREFIX}${name}`;
+        }
         if (
           typeof process !== 'undefined' &&
           process.env?.[name] !== undefined
@@ -101,13 +119,15 @@ function resolvePatterns(
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => resolvePatterns(item, variables, definitions));
+    return value.map((item) =>
+      resolvePatterns(item, variables, definitions, options),
+    );
   }
 
   if (value !== null && typeof value === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(value)) {
-      result[key] = resolvePatterns(val, variables, definitions);
+      result[key] = resolvePatterns(val, variables, definitions, options);
     }
     return result;
   }
@@ -182,6 +202,7 @@ function resolveCodeFromPackage(
 export function getFlowConfig(
   setup: Flow.Setup,
   flowName?: string,
+  options?: ResolveOptions,
 ): Flow.Config {
   const flowNames = Object.keys(setup.flows);
 
@@ -221,7 +242,12 @@ export function getFlowConfig(
         source.definitions,
       );
 
-      const processedConfig = resolvePatterns(source.config, vars, defs);
+      const processedConfig = resolvePatterns(
+        source.config,
+        vars,
+        defs,
+        options,
+      );
 
       // Resolve code from package reference
       const resolvedCode = resolveCodeFromPackage(
@@ -263,7 +289,7 @@ export function getFlowConfig(
         dest.definitions,
       );
 
-      const processedConfig = resolvePatterns(dest.config, vars, defs);
+      const processedConfig = resolvePatterns(dest.config, vars, defs, options);
 
       // Resolve code from package reference
       const resolvedCode = resolveCodeFromPackage(
@@ -295,7 +321,12 @@ export function getFlowConfig(
     const vars = mergeVariables(setup.variables, config.variables);
     const defs = mergeDefinitions(setup.definitions, config.definitions);
 
-    const processedCollector = resolvePatterns(result.collector, vars, defs);
+    const processedCollector = resolvePatterns(
+      result.collector,
+      vars,
+      defs,
+      options,
+    );
     result.collector = processedCollector as typeof result.collector;
   }
 

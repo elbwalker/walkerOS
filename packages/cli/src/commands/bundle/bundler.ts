@@ -2,7 +2,7 @@ import esbuild from 'esbuild';
 import path from 'path';
 import fs from 'fs-extra';
 import type { Flow } from '@walkeros/core';
-import { packageNameToVariable } from '@walkeros/core';
+import { packageNameToVariable, ENV_MARKER_PREFIX } from '@walkeros/core';
 
 /**
  * Type guard to check if a code value is an InlineCode object.
@@ -1239,7 +1239,7 @@ function processConfigValue(value: unknown): string {
  * Serialize a value, handling $code: prefix for inline JavaScript.
  * Values starting with "$code:" are output as raw JS (no quotes).
  */
-function serializeWithCode(value: unknown, indent: number): string {
+export function serializeWithCode(value: unknown, indent: number): string {
   const spaces = '  '.repeat(indent);
   const nextSpaces = '  '.repeat(indent + 1);
 
@@ -1248,6 +1248,79 @@ function serializeWithCode(value: unknown, indent: number): string {
     if (value.startsWith('$code:')) {
       return value.slice(6); // Strip prefix, output raw JS
     }
+
+    // Deferred env markers → raw process.env expressions in bundle output
+    // The marker regex uses a negative lookahead (?!__WALKEROS_ENV) to stop
+    // the default value capture BEFORE the next marker prefix. Without this,
+    // `__WALKEROS_ENV:A://__WALKEROS_ENV:B` would be parsed as one marker
+    // with A's default consuming the entire rest of the string.
+    const esc = ENV_MARKER_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const markerRe = new RegExp(
+      esc +
+        '([a-zA-Z_][a-zA-Z0-9_]*)' +
+        '(?::(' +
+        '(?:(?!' +
+        esc +
+        ')[^\\s"\'])' +
+        '*))?',
+      'g',
+    );
+
+    if (markerRe.test(value)) {
+      markerRe.lastIndex = 0; // reset after test()
+
+      // Pure marker (entire string is one marker)
+      const pureRe = new RegExp(
+        '^' +
+          esc +
+          '([a-zA-Z_][a-zA-Z0-9_]*)' +
+          '(?::(' +
+          '(?:(?!' +
+          esc +
+          ')[^\\s"\'])' +
+          '*))?$',
+      );
+      const pureMatch = value.match(pureRe);
+      if (pureMatch) {
+        const [, name, defaultValue] = pureMatch;
+        return defaultValue !== undefined
+          ? `process.env[${JSON.stringify(name)}] ?? ${JSON.stringify(defaultValue)}`
+          : `process.env[${JSON.stringify(name)}]`;
+      }
+
+      // Mixed content → template literal
+      // Escape backticks and non-interpolation $ in static parts to prevent
+      // broken/exploitable template literals (e.g. "Price is $5" → "$5" would
+      // be interpreted as ${5} without escaping).
+      const segments: string[] = [];
+      let lastIndex = 0;
+      markerRe.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = markerRe.exec(value)) !== null) {
+        // Static text before this marker — escape ` and $
+        const staticPart = value
+          .slice(lastIndex, m.index)
+          .replace(/\\/g, '\\\\')
+          .replace(/`/g, '\\`')
+          .replace(/\$(?!{)/g, '\\$');
+        const [, name, defaultValue] = m;
+        const envExpr =
+          defaultValue !== undefined
+            ? `\${process.env[${JSON.stringify(name)}] ?? ${JSON.stringify(defaultValue)}}`
+            : `\${process.env[${JSON.stringify(name)}]}`;
+        segments.push(staticPart + envExpr);
+        lastIndex = m.index + m[0].length;
+      }
+      // Trailing static text
+      const trailing = value
+        .slice(lastIndex)
+        .replace(/\\/g, '\\\\')
+        .replace(/`/g, '\\`')
+        .replace(/\$(?!{)/g, '\\$');
+      segments.push(trailing);
+      return '`' + segments.join('') + '`';
+    }
+
     return JSON.stringify(value);
   }
 
