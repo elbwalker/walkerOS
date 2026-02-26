@@ -44,6 +44,23 @@ export async function runCommand(
       validatePort(options.port);
     }
 
+    // Step 1b: Pre-flight check for server runtime dependencies
+    if (mode === 'collect') {
+      const runtimeDeps = ['express', 'cors'];
+      for (const dep of runtimeDeps) {
+        try {
+          require.resolve(dep);
+        } catch {
+          logger.error(
+            `Missing runtime dependency "${dep}"\n` +
+              `Server flows require express and cors when running outside Docker.\n` +
+              `Run: npm install express cors`,
+          );
+          process.exit(1);
+        }
+      }
+    }
+
     // Step 2: Determine if config is pre-built or needs bundling
     const isPreBuilt = isPreBuiltConfig(configPath);
 
@@ -151,6 +168,22 @@ export async function run(
 
     if (options.port !== undefined) {
       validatePort(options.port);
+    }
+
+    // Pre-flight check for server runtime dependencies
+    if (mode === 'collect') {
+      const runtimeDeps = ['express', 'cors'];
+      for (const dep of runtimeDeps) {
+        try {
+          require.resolve(dep);
+        } catch {
+          throw new Error(
+            `Missing runtime dependency "${dep}". ` +
+              `Server flows require express and cors when running outside Docker. ` +
+              `Run: npm install express cors`,
+          );
+        }
+      }
     }
 
     // Determine if config is pre-built or needs bundling

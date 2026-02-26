@@ -58,7 +58,7 @@ describe('output schemas', () => {
   });
 
   describe('ProjectOutputShape', () => {
-    it('accepts valid project', () => {
+    it('accepts full project with all fields', () => {
       const result = parseShape(ProjectOutputShape, {
         id: 'proj_abc',
         name: 'My Project',
@@ -69,13 +69,49 @@ describe('output schemas', () => {
       expect(result.success).toBe(true);
     });
 
+    it('accepts POST /projects response (id, name, createdAt only)', () => {
+      const result = parseShape(ProjectOutputShape, {
+        id: 'proj_abc',
+        name: 'My Project',
+        createdAt: '2026-01-01T00:00:00Z',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts GET /projects/{id} response (id, name, role only)', () => {
+      const result = parseShape(ProjectOutputShape, {
+        id: 'proj_abc',
+        name: 'My Project',
+        role: 'member',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts PATCH /projects/{id} response (id, name, updatedAt only)', () => {
+      const result = parseShape(ProjectOutputShape, {
+        id: 'proj_abc',
+        name: 'My Project',
+        updatedAt: '2026-02-01T00:00:00Z',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts all app role values', () => {
+      for (const role of ['owner', 'admin', 'member', 'deployer', 'viewer']) {
+        const result = parseShape(ProjectOutputShape, {
+          id: 'proj_abc',
+          name: 'My Project',
+          role,
+        });
+        expect(result.success).toBe(true);
+      }
+    });
+
     it('rejects invalid role', () => {
       const result = parseShape(ProjectOutputShape, {
         id: 'proj_abc',
         name: 'My Project',
-        role: 'admin',
-        createdAt: '2026-01-01T00:00:00Z',
-        updatedAt: '2026-02-01T00:00:00Z',
+        role: 'superadmin',
       });
       expect(result.success).toBe(false);
     });
@@ -104,6 +140,21 @@ describe('output schemas', () => {
         total: 0,
       });
       expect(result.success).toBe(true);
+    });
+
+    it('requires role in list items', () => {
+      const result = parseShape(ListProjectsOutputShape, {
+        projects: [
+          {
+            id: 'proj_1',
+            name: 'Project 1',
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-02-01T00:00:00Z',
+          },
+        ],
+        total: 1,
+      });
+      expect(result.success).toBe(false);
     });
   });
 
@@ -201,31 +252,45 @@ describe('output schemas', () => {
   });
 
   describe('DeployFlowOutputShape', () => {
-    it('accepts web deploy result', () => {
+    it('accepts minimal deploy result', () => {
       const result = parseShape(DeployFlowOutputShape, {
         deploymentId: 'dep_abc',
         type: 'web',
-        status: 'published',
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it('accepts server deploy result', () => {
-      const result = parseShape(DeployFlowOutputShape, {
-        deploymentId: 'dep_xyz',
-        type: 'server',
         status: 'deploying',
       });
       expect(result.success).toBe(true);
     });
 
-    it('accepts result with publicUrl and scriptTag', () => {
+    it('accepts deploy result with slug and target', () => {
+      const result = parseShape(DeployFlowOutputShape, {
+        deploymentId: 'dep_abc',
+        type: 'web',
+        status: 'deploying',
+        slug: 'k7x9m2p3q4r5',
+        target: 'https://cdn.example.com/k7x9m2p3q4r5',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts deploy result with configId', () => {
+      const result = parseShape(DeployFlowOutputShape, {
+        deploymentId: 'dep_abc',
+        type: 'server',
+        status: 'deploying',
+        slug: 'k7x9m2p3q4r5',
+        configId: 'cfg_flow1',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts completed deploy with SSE result merged', () => {
       const result = parseShape(DeployFlowOutputShape, {
         deploymentId: 'dep_abc',
         type: 'web',
         status: 'published',
+        slug: 'k7x9m2p3q4r5',
+        target: 'https://cdn.example.com/k7x9m2p3q4r5',
         publicUrl: 'https://cdn.example.com/flow.js',
-        scriptTag: '<script src="https://cdn.example.com/flow.js"></script>',
       });
       expect(result.success).toBe(true);
     });
@@ -260,17 +325,31 @@ describe('output schemas', () => {
   });
 
   describe('DeploymentOutputShape', () => {
-    it('accepts full deployment with all fields', () => {
+    it('accepts deployment with new API shape', () => {
       const result = parseShape(DeploymentOutputShape, {
         id: 'dep_abc',
-        slug: 'my-flow-v1',
-        flowId: 'cfg_123',
+        slug: 'k7x9m2p3q4r5',
         type: 'web',
         status: 'published',
-        publicUrl: 'https://cdn.example.com/flow.js',
-        scriptTag: '<script src="https://cdn.example.com/flow.js"></script>',
-        containerUrl: null,
-        errorMessage: null,
+        target: 'https://cdn.example.com/k7x9m2p3q4r5',
+        label: 'Production',
+        origin: 'cloud',
+        url: 'https://cdn.example.com/k7x9m2p3q4r5',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-02-01T00:00:00Z',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts legacy deploy response with flowId', () => {
+      const result = parseShape(DeploymentOutputShape, {
+        id: 'dep_abc',
+        slug: 'k7x9m2p3q4r5',
+        type: 'server',
+        status: 'active',
+        target: 'https://container.example.com',
+        flowId: 'flow_123',
+        containerUrl: 'https://container.example.com',
         createdAt: '2026-01-01T00:00:00Z',
         updatedAt: '2026-02-01T00:00:00Z',
       });
@@ -280,10 +359,9 @@ describe('output schemas', () => {
     it('accepts minimal deployment', () => {
       const result = parseShape(DeploymentOutputShape, {
         id: 'dep_xyz',
-        slug: 'server-flow',
-        flowId: 'cfg_456',
+        slug: 'k7x9m2p3q4r5',
         type: 'server',
-        status: 'bundling',
+        status: 'idle',
         createdAt: '2026-01-01T00:00:00Z',
         updatedAt: '2026-02-01T00:00:00Z',
       });
@@ -300,15 +378,18 @@ describe('output schemas', () => {
   });
 
   describe('ListDeploymentsOutputShape', () => {
-    it('accepts deployment list', () => {
+    it('accepts deployment list with new shape', () => {
       const result = parseShape(ListDeploymentsOutputShape, {
         deployments: [
           {
             id: 'dep_abc',
-            slug: 'my-flow-v1',
-            flowId: 'cfg_123',
+            slug: 'k7x9m2p3q4r5',
             type: 'web',
             status: 'published',
+            target: 'https://cdn.example.com/k7x9m2p3q4r5',
+            label: 'Prod',
+            origin: 'cloud',
+            url: 'https://cdn.example.com/k7x9m2p3q4r5',
             createdAt: '2026-01-01T00:00:00Z',
             updatedAt: '2026-02-01T00:00:00Z',
           },
@@ -328,23 +409,28 @@ describe('output schemas', () => {
   });
 
   describe('CreateDeploymentOutputShape', () => {
-    it('accepts with deployToken', () => {
+    it('accepts new API response shape', () => {
       const result = parseShape(CreateDeploymentOutputShape, {
         id: 'dep_new',
-        slug: 'new-deploy',
+        slug: 'k7x9m2p3q4r5',
         type: 'web',
-        status: 'bundling',
-        deployToken: 'tok_secret123',
+        status: 'idle',
+        target: 'https://cdn.example.com/k7x9m2p3q4r5',
+        label: null,
+        origin: 'cloud',
+        url: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
       });
       expect(result.success).toBe(true);
     });
 
-    it('accepts without deployToken', () => {
+    it('accepts minimal response', () => {
       const result = parseShape(CreateDeploymentOutputShape, {
         id: 'dep_new',
-        slug: 'new-deploy',
+        slug: 'k7x9m2p3q4r5',
         type: 'server',
-        status: 'bundling',
+        status: 'idle',
       });
       expect(result.success).toBe(true);
     });
