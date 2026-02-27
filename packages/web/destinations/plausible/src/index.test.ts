@@ -17,6 +17,11 @@ describe('destination plausible', () => {
   const event = getEvent();
   const script = 'https://plausible.io/js/script.manual.js';
 
+  const mappingConfig = {
+    entity: { action: examples.step.customEvent.mapping },
+    order: { complete: examples.step.purchase.mapping },
+  } as DestinationPlausible.Rules;
+
   beforeEach(async () => {
     destination = jest.requireActual('.').default;
 
@@ -141,10 +146,7 @@ describe('destination plausible', () => {
       env: testEnv as DestinationPlausible.Env,
     };
     elb('walker destination', destinationWithEnv, {
-      mapping: {
-        entity: { action: examples.step.customEvent.mapping },
-        order: { complete: examples.step.purchase.mapping },
-      },
+      mapping: mappingConfig,
     });
 
     await elb(event);
@@ -163,10 +165,7 @@ describe('destination plausible', () => {
       env: testEnv as DestinationPlausible.Env,
     };
     elb('walker destination', destinationWithEnv, {
-      mapping: {
-        entity: { action: examples.step.customEvent.mapping },
-        order: { complete: examples.step.purchase.mapping },
-      },
+      mapping: mappingConfig,
     });
 
     await elb(event);

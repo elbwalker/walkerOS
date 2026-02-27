@@ -1,5 +1,5 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
-import type { Config, Destination, Settings } from '../types';
+import type { Config, Destination, Rules, Settings } from '../types';
 import { clone, getEvent, createMockLogger } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
@@ -86,7 +86,7 @@ describe('Server Destination Meta', () => {
       settings: { accessToken, pixelId, test_event_code: 'TEST' },
       mapping: {
         order: { complete: examples.step.purchase.mapping },
-      },
+      } as Rules,
     };
 
     await destination.push(event, {
@@ -143,7 +143,7 @@ describe('Server Destination Meta', () => {
       settings: { accessToken, pixelId, test_event_code: 'TEST' },
       mapping: {
         order: { complete: examples.step.purchase.mapping },
-      },
+      } as Rules,
     };
 
     await expect(
@@ -168,7 +168,7 @@ describe('Server Destination Meta', () => {
       },
       mapping: {
         order: { complete: examples.step.purchase.mapping },
-      },
+      } as Rules,
     };
 
     await destination.push(event, {
@@ -271,7 +271,7 @@ describe('Server Destination Meta', () => {
       },
       mapping: {
         order: { complete: examples.step.purchase.mapping },
-      },
+      } as Rules,
     };
 
     const { elb } = await startFlow();

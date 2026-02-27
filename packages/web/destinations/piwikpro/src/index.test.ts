@@ -18,6 +18,15 @@ describe('Destination PiwikPro', () => {
   const mockPaq: Array<unknown> = [];
   mockPaq.push = mockFn;
 
+  const mappingConfig = {
+    order: { complete: examples.step.ecommerceOrder.mapping },
+    product: {
+      add: examples.step.ecommerceAddToCart.mapping,
+      view: examples.step.productDetailView.mapping,
+    },
+    cart: { view: examples.step.cartUpdate.mapping },
+  } as DestinationPiwikPro.Rules;
+
   const testEnv = {
     window: {
       _paq: mockPaq,
@@ -99,14 +108,7 @@ describe('Destination PiwikPro', () => {
     };
     elb('walker destination', destinationWithEnv, {
       settings,
-      mapping: {
-        order: { complete: examples.step.ecommerceOrder.mapping },
-        product: {
-          add: examples.step.ecommerceAddToCart.mapping,
-          view: examples.step.productDetailView.mapping,
-        },
-        cart: { view: examples.step.cartUpdate.mapping },
-      },
+      mapping: mappingConfig,
     });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(
@@ -122,14 +124,7 @@ describe('Destination PiwikPro', () => {
     };
     elb('walker destination', destinationWithEnv, {
       settings,
-      mapping: {
-        order: { complete: examples.step.ecommerceOrder.mapping },
-        product: {
-          add: examples.step.ecommerceAddToCart.mapping,
-          view: examples.step.productDetailView.mapping,
-        },
-        cart: { view: examples.step.cartUpdate.mapping },
-      },
+      mapping: mappingConfig,
     });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(
@@ -145,14 +140,7 @@ describe('Destination PiwikPro', () => {
     };
     elb('walker destination', destinationWithEnv, {
       settings,
-      mapping: {
-        order: { complete: examples.step.ecommerceOrder.mapping },
-        product: {
-          add: examples.step.ecommerceAddToCart.mapping,
-          view: examples.step.productDetailView.mapping,
-        },
-        cart: { view: examples.step.cartUpdate.mapping },
-      },
+      mapping: mappingConfig,
     });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(
@@ -168,14 +156,7 @@ describe('Destination PiwikPro', () => {
     };
     elb('walker destination', destinationWithEnv, {
       settings,
-      mapping: {
-        order: { complete: examples.step.ecommerceOrder.mapping },
-        product: {
-          add: examples.step.ecommerceAddToCart.mapping,
-          view: examples.step.productDetailView.mapping,
-        },
-        cart: { view: examples.step.cartUpdate.mapping },
-      },
+      mapping: mappingConfig,
     });
     await elb(event);
     expect(mockFn).toHaveBeenCalledWith(
