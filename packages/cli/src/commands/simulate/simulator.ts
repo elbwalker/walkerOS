@@ -75,19 +75,38 @@ export function formatSimulationResult(
   options: Pick<SimulateCommandOptions, 'json'> = {},
 ): string {
   if (options.json) {
-    const output = {
+    const output: Record<string, unknown> = {
       result: result.elbResult,
       usage: result.usage,
       duration: result.duration,
     };
+    if (result.exampleMatch) {
+      output.exampleMatch = result.exampleMatch;
+    }
     return JSON.stringify(output, null, 2);
   }
 
+  const lines: string[] = [];
+
   if (result.success) {
-    return 'Simulation completed';
+    lines.push('Simulation completed');
   } else {
-    return `Simulation failed: ${result.error}`;
+    lines.push(`Simulation failed: ${result.error}`);
   }
+
+  if (result.exampleMatch) {
+    const em = result.exampleMatch;
+    if (em.match) {
+      lines.push(`Example "${em.name}" (${em.step}): PASS`);
+    } else {
+      lines.push(`Example "${em.name}" (${em.step}): FAIL`);
+      if (em.diff) {
+        lines.push(em.diff);
+      }
+    }
+  }
+
+  return lines.join('\n');
 }
 
 /**

@@ -7,9 +7,13 @@ import {
   readStdin,
   writeResult,
 } from '../../core/index.js';
-import { loadJsonFromSource } from '../../config/index.js';
-import type { SimulateCommandOptions } from './types.js';
+import { loadJsonFromSource, loadJsonConfig } from '../../config/index.js';
+import { validateFlowSetup } from '../../config/validators.js';
+import { findExample } from './example-loader.js';
+import { compareOutput } from './compare.js';
+import type { SimulateCommandOptions, ExampleMatch } from './types.js';
 import type { SimulateOptions, Platform } from '../../schemas/simulate.js';
+import type { Flow } from '@walkeros/core';
 
 /**
  * CLI command handler for simulate command
@@ -36,10 +40,58 @@ export async function simulateCommand(
       config = options.config || 'bundle.config.json';
     }
 
-    // Load event from inline JSON, file path, or URL
-    const event = await loadJsonFromSource(options.event, {
-      name: 'event',
-    });
+    // Load event: from --example or from --event
+    let event: unknown;
+    let exampleContext:
+      | { stepType: string; stepName: string; expected: unknown }
+      | undefined;
+
+    if (options.example) {
+      // Load raw config to access examples (before getFlowConfig strips them)
+      const rawConfig = await loadJsonConfig<Flow.Setup>(config);
+      const setup = validateFlowSetup(rawConfig);
+
+      // Resolve flow name
+      const flowNames = Object.keys(setup.flows);
+      let flowName = options.flow;
+      if (!flowName) {
+        if (flowNames.length === 1) {
+          flowName = flowNames[0];
+        } else {
+          throw new Error(
+            `Multiple flows found. Use --flow to specify which flow contains the example.\n` +
+              `Available flows: ${flowNames.join(', ')}`,
+          );
+        }
+      }
+
+      const flowConfig = setup.flows[flowName];
+      if (!flowConfig) {
+        throw new Error(
+          `Flow "${flowName}" not found. Available: ${flowNames.join(', ')}`,
+        );
+      }
+
+      // Find the example in the raw config
+      const found = findExample(flowConfig, options.example, options.step);
+
+      if (found.example.in === undefined) {
+        throw new Error(
+          `Example "${options.example}" in ${found.stepType}.${found.stepName} has no "in" value`,
+        );
+      }
+
+      event = found.example.in;
+      exampleContext = {
+        stepType: found.stepType,
+        stepName: found.stepName,
+        expected: found.example.out,
+      };
+    } else {
+      event = await loadJsonFromSource(options.event, {
+        name: 'event',
+      });
+    }
 
     // Execute simulation
     const result = await simulateCore(config, event, {
@@ -49,10 +101,41 @@ export async function simulateCommand(
       silent: options.silent,
     });
 
-    // Add duration to result
+    // Compare output against example if --example was used
+    let exampleMatch: ExampleMatch | undefined;
+    if (exampleContext && result.success) {
+      const stepKey = `${exampleContext.stepType}.${exampleContext.stepName}`;
+
+      if (exampleContext.expected === false) {
+        // out: false means the event should be filtered (not reach the destination)
+        const calls = result.usage?.[exampleContext.stepName];
+        const wasFiltered = !calls || calls.length === 0;
+        exampleMatch = {
+          name: options.example!,
+          step: stepKey,
+          expected: false,
+          actual: wasFiltered ? false : calls,
+          match: wasFiltered,
+          diff: wasFiltered
+            ? undefined
+            : `Expected event to be filtered, but ${calls!.length} API call(s) were made`,
+        };
+      } else if (exampleContext.expected !== undefined) {
+        // Compare actual usage against expected output
+        const actual = result.usage?.[exampleContext.stepName] ?? [];
+        exampleMatch = {
+          name: options.example!,
+          step: stepKey,
+          ...compareOutput(exampleContext.expected, actual),
+        };
+      }
+    }
+
+    // Add duration and example match to result
     const resultWithDuration = {
       ...result,
       duration: (Date.now() - startTime) / 1000,
+      ...(exampleMatch ? { exampleMatch } : {}),
     };
 
     // Format and write result
@@ -61,7 +144,9 @@ export async function simulateCommand(
     });
     await writeResult(formatted + '\n', { output: options.output });
 
-    process.exit(result.success ? 0 : 1);
+    const exitCode =
+      !result.success || (exampleMatch && !exampleMatch.match) ? 1 : 0;
+    process.exit(exitCode);
   } catch (error) {
     const errorMessage = getErrorMessage(error);
 
@@ -146,3 +231,5 @@ export async function simulate(
 export * from './types.js';
 export * from './simulator.js';
 export { executeInNode } from './node-executor.js';
+export { findExample } from './example-loader.js';
+export { compareOutput } from './compare.js';

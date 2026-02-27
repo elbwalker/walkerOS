@@ -10,6 +10,17 @@ export interface SimulateCommandOptions {
   verbose?: boolean;
   silent?: boolean;
   platform?: 'web' | 'server';
+  example?: string;
+  step?: string;
+}
+
+export interface ExampleMatch {
+  name: string;
+  step: string;
+  expected: unknown;
+  actual: unknown;
+  match: boolean;
+  diff?: string;
 }
 
 export interface SimulationResult {
@@ -20,4 +31,5 @@ export interface SimulationResult {
   logs?: unknown[];
   usage?: Record<string, ApiCall[]>;
   duration?: number;
+  exampleMatch?: ExampleMatch;
 }
