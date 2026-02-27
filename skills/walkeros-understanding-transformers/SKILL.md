@@ -74,11 +74,12 @@ export const transformerMyTransformer: Transformer.Init<Types> = (context) => {
 
 The `push` function controls event flow:
 
-| Return  | Behavior                           |
-| ------- | ---------------------------------- |
-| `event` | Continue chain with modified event |
-| `void`  | Continue chain, event unchanged    |
-| `false` | Stop chain, event dropped          |
+| Return         | Behavior                                            |
+| -------------- | --------------------------------------------------- |
+| `event`        | Continue chain with modified event                  |
+| `void`         | Continue chain, event unchanged                     |
+| `false`        | Stop chain, event dropped                           |
+| `BranchResult` | Redirect chain to a different transformer (fan-out) |
 
 ```typescript
 push(event, context) {
@@ -216,6 +217,32 @@ transformers: {
   }
 }
 ```
+
+### Branching and fan-out
+
+Transformers can redirect events to different chains using the `branch()`
+factory from `@walkeros/core`:
+
+```typescript
+import { branch } from '@walkeros/core';
+
+push(event, context) {
+  return branch(event, 'parser');         // Single target
+  return branch(event, ['a', 'b']);       // Fan-out to multiple
+}
+```
+
+Routers use `branch()` for conditional routing — first match wins. If the branch
+target does not exist, the event is **dropped** (not passed through).
+
+### Chain resolution safety
+
+`walkChain()` uses a visited set to detect circular references. If a cycle is
+found, the loop is silently broken and the chain ends. If `next` points to a
+non-existent transformer, the chain also ends without error.
+
+See [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) for
+the full connection rules between sources, transformers, and destinations.
 
 ## Push Context
 

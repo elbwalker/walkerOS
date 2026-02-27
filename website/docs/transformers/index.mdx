@@ -197,6 +197,21 @@ Collector → redact → validator → Destination
 
 </details>
 
+### Chain resolution details
+
+The `walkChain()` function resolves chains with the following edge-case behaviors:
+
+| Scenario | Behavior |
+|----------|----------|
+| **Circular reference** | Detected via a visited set — the loop is silently broken and the chain ends |
+| **Missing `next` target** | If a transformer's `next` points to a name that doesn't exist, the chain ends normally (no error) |
+| **Array `next` inside a chain** | Array elements are appended to the remaining chain; walking of `next` links stops for that transformer |
+| **Branch to non-existent target** | The event is **dropped** (not passed through) |
+
+:::tip
+For full details on how sources, transformers, and destinations connect, see the [flow configuration guide](/docs/guides/flow-configuration).
+:::
+
 ## Available transformers
 
 ### Validator

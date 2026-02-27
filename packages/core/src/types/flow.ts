@@ -9,6 +9,27 @@
  * (web_prod, web_stage, server_prod, etc.) with shared configuration,
  * variables, and reusable definitions.
  *
+ * ## Connection Rules
+ *
+ * Sources use `next` to connect to transformers (pre-collector chain).
+ * Sources cannot have `before`.
+ *
+ * Destinations use `before` to connect to transformers (post-collector chain).
+ * Destinations cannot have `next`.
+ *
+ * Transformers use `next` to chain to other transformers. The same transformer
+ * pool is shared by both pre-collector and post-collector chains.
+ *
+ * The collector is implicit — it is never referenced directly in connections.
+ * It sits between the source chain and the destination chain automatically.
+ *
+ * Circular `next` references are safely handled at runtime by `walkChain()`
+ * in the collector module (visited-set detection).
+ *
+ * ```
+ * Source → [next → Transformer chain] → Collector → [before → Transformer chain] → Destination
+ * ```
+ *
  * @packageDocumentation
  */
 
@@ -486,10 +507,11 @@ export interface SourceReference {
   definitions?: Definitions;
 
   /**
-   * First transformer in post-source chain.
+   * First transformer in pre-collector chain.
    *
    * @remarks
    * Name of the transformer to execute after this source captures an event.
+   * Creates a pre-collector transformer chain. Chain ends at the collector.
    * If omitted, events route directly to the collector.
    * Can be an array for explicit chain control (bypasses transformer.next resolution).
    */
@@ -565,10 +587,11 @@ export interface TransformerReference {
    *
    * @remarks
    * Name of the next transformer to execute after this one.
-   * If omitted:
-   * - Pre-collector: routes to collector
-   * - Post-collector: routes to destination
-   * Can be an array for explicit chain control (terminates chain walking).
+   * When used in a pre-collector chain (source.next), terminates at the collector.
+   * When used in a post-collector chain (destination.before), terminates at the destination.
+   * If omitted, the chain ends and control passes to the next pipeline stage.
+   * Array values define an explicit chain (no walking). Circular references
+   * are safely detected at runtime by `walkChain()`.
    */
   next?: string | string[];
 
@@ -686,10 +709,11 @@ export interface DestinationReference {
   definitions?: Definitions;
 
   /**
-   * First transformer in pre-destination chain.
+   * First transformer in post-collector chain.
    *
    * @remarks
    * Name of the transformer to execute before sending events to this destination.
+   * Creates a post-collector transformer chain. Chain ends at this destination.
    * If omitted, events are sent directly from the collector.
    * Can be an array for explicit chain control (bypasses transformer.next resolution).
    */

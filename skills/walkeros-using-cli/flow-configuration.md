@@ -119,12 +119,13 @@ Or:
 
 ### Destination Properties
 
-| Property  | Description                        |
-| --------- | ---------------------------------- |
-| `package` | NPM package or local package name  |
-| `config`  | Destination-specific configuration |
-| `mapping` | Event transformation rules         |
-| `consent` | Required consent levels            |
+| Property  | Type                 | Description                               |
+| --------- | -------------------- | ----------------------------------------- |
+| `package` | `string`             | NPM package or local package name         |
+| `config`  | `object`             | Destination-specific configuration        |
+| `mapping` | `object`             | Event transformation rules                |
+| `consent` | `object`             | Required consent levels                   |
+| `before`  | `string \| string[]` | First transformer in post-collector chain |
 
 For mapping syntax, see
 [walkeros-understanding-mapping](../walkeros-understanding-mapping/SKILL.md).
@@ -149,10 +150,11 @@ For mapping syntax, see
 
 ### Source Properties
 
-| Property  | Description                   |
-| --------- | ----------------------------- |
-| `package` | Source package name           |
-| `config`  | Source-specific configuration |
+| Property  | Type                 | Description                              |
+| --------- | -------------------- | ---------------------------------------- |
+| `package` | `string`             | Source package name                      |
+| `config`  | `object`             | Source-specific configuration            |
+| `next`    | `string \| string[]` | First transformer in pre-collector chain |
 
 ---
 
@@ -173,6 +175,15 @@ For mapping syntax, see
   }
 }
 ```
+
+### Transformer Properties
+
+| Property  | Type                 | Description                                |
+| --------- | -------------------- | ------------------------------------------ |
+| `package` | `string`             | Transformer package name                   |
+| `config`  | `object`             | Transformer-specific configuration         |
+| `code`    | `object`             | Inline code (`push`, `init`) with `$code:` |
+| `next`    | `string \| string[]` | Next transformer in the chain              |
 
 ### Transformer Chaining
 
