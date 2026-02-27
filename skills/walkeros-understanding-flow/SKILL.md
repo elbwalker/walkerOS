@@ -197,6 +197,54 @@ transformers: {
   transformers
 - `destination.before` → starts post-collector chain per destination
 
+## Step Examples
+
+Each step in a flow (source, transformer, destination) can ship **step
+examples** -- structured `{ in, out }` pairs that define expected input/output
+behavior.
+
+### The Three Type Zones
+
+Steps sit at boundaries between arbitrary formats and walkerOS events:
+
+- **Source:** arbitrary `in` (HTTP request, DOM event) → walkerOS event `out`
+- **Transformer:** walkerOS event `in` → walkerOS event `out` (or `false`)
+- **Destination:** walkerOS event `in` → arbitrary `out` (vendor API call)
+
+See [using-step-examples](../walkeros-using-step-examples/SKILL.md) for the full
+ASCII diagram and detailed explanation.
+
+### Example: Step with Examples in Flow Config
+
+```json
+{
+  "destinations": {
+    "gtag": {
+      "package": "@walkeros/web-destination-gtag",
+      "config": { "measurementId": "G-XXXXXX" },
+      "examples": {
+        "purchase": {
+          "in": {
+            "name": "order complete",
+            "data": { "id": "ORD-123", "total": 149.97 }
+          },
+          "out": [
+            "event",
+            "purchase",
+            { "transaction_id": "ORD-123", "value": 149.97 }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+Step examples enable `it.each` testing, CLI simulation with `--example`, and
+deep validation with `--deep`. See
+[using-step-examples](../walkeros-using-step-examples/SKILL.md) for the complete
+lifecycle.
+
 ## Related Skills
 
 - [walkeros-understanding-events](../walkeros-understanding-events/SKILL.md) -

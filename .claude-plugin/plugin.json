@@ -36,7 +36,8 @@
     "skills/walkeros-mapping-configuration",
     "skills/walkeros-testing-strategy",
     "skills/walkeros-debugging",
-    "skills/walkeros-writing-documentation"
+    "skills/walkeros-writing-documentation",
+    "skills/walkeros-using-step-examples"
   ],
   "mcpServers": {
     "walkeros-api": {

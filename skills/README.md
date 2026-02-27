@@ -17,6 +17,7 @@ Tool-agnostic and accessible to Claude, Cursor, Copilot, and other AI tools.
 | [understanding-destinations](./walkeros-understanding-destinations/SKILL.md) | Destination interface, env pattern, configuration         |
 | [understanding-sources](./walkeros-understanding-sources/SKILL.md)           | Source interface, capture patterns                        |
 | [using-logger](./walkeros-using-logger/SKILL.md)                             | Logger access, DRY principles, API logging patterns       |
+| [using-step-examples](./walkeros-using-step-examples/SKILL.md)               | Step examples, Three Type Zones, in/out format            |
 
 ### Task Skills
 

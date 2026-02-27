@@ -365,6 +365,21 @@ export interface Config {
 }
 
 /**
+ * Named example pair for a step.
+ * `in` is the input to the step, `out` is the expected output.
+ * `out: false` indicates the step filters/drops this event.
+ */
+export interface StepExample {
+  in?: unknown;
+  out?: unknown;
+}
+
+/**
+ * Named step examples keyed by scenario name.
+ */
+export type StepExamples = Record<string, StepExample>;
+
+/**
  * Source reference with inline package syntax.
  *
  * @remarks
@@ -478,6 +493,12 @@ export interface SourceReference {
    * Can be an array for explicit chain control (bypasses transformer.next resolution).
    */
   next?: string | string[];
+
+  /**
+   * Named examples for testing and documentation.
+   * Stripped during flow resolution (not included in bundles).
+   */
+  examples?: StepExamples;
 }
 
 /**
@@ -561,6 +582,12 @@ export interface TransformerReference {
    * Overrides flow and setup definitions.
    */
   definitions?: Definitions;
+
+  /**
+   * Named examples for testing and documentation.
+   * Stripped during flow resolution (not included in bundles).
+   */
+  examples?: StepExamples;
 }
 
 /**
@@ -666,4 +693,10 @@ export interface DestinationReference {
    * Can be an array for explicit chain control (bypasses transformer.next resolution).
    */
   before?: string | string[];
+
+  /**
+   * Named examples for testing and documentation.
+   * Stripped during flow resolution (not included in bundles).
+   */
+  examples?: StepExamples;
 }

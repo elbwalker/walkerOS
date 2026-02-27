@@ -134,7 +134,38 @@ mkdir -p packages/server/sources/[name]/src/{examples,schemas,types}
 | `examples/requests.ts` | HTTP request examples (server) | [requests.ts](./examples/requests.ts) |
 | `examples/mapping.ts`  | Event name/data transformation | [mapping.ts](./examples/mapping.ts)   |
 
-### 2.3 Export via dev.ts
+### 2.3 Step Examples
+
+Add step examples with `{ in, out }` pairs for end-to-end step testing:
+
+| File               | Purpose                         | Status |
+| ------------------ | ------------------------------- | ------ |
+| `examples/step.ts` | Step examples with in/out pairs | NEW    |
+
+```typescript
+// examples/step.ts
+export const step = {
+  'checkout-post': {
+    in: {
+      method: 'POST',
+      path: '/collect',
+      headers: { 'content-type': 'application/json' },
+      body: {
+        name: 'order complete',
+        data: { id: 'ORD-123', total: 149.97 },
+      },
+    },
+    out: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
+  },
+};
+```
+
+For sources, `in` types are platform-specific (Express request, AWS API Gateway
+event, GCP Cloud Function request) and `out` is always a walkerOS event. See
+[using-step-examples](../walkeros-using-step-examples/SKILL.md) for the Three
+Type Zones.
+
+### 2.4 Export via dev.ts
 
 ```typescript
 export * as schemas from './schemas';

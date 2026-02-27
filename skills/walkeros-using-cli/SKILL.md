@@ -137,6 +137,43 @@ For detailed configuration options, see
 
 ---
 
+## Testing with Step Examples
+
+### Simulate with `--example`
+
+Run a named step example through the full flow pipeline:
+
+```bash
+# Simulate the "purchase" step example
+walkeros simulate flow.json --example purchase
+```
+
+Example output:
+
+```
+Step: destinations.gtag
+  in:  { name: "order complete", data: { id: "ORD-123", total: 149.97 } }
+  out: ["event", "purchase", { transaction_id: "ORD-123", value: 149.97 }]
+  Status: PASS
+```
+
+### Validate with `--deep`
+
+Cross-validate step examples across connected steps:
+
+```bash
+# Check that source out types match transformer in types, etc.
+walkeros validate flow.json --deep
+```
+
+Deep validation ensures that examples at each step boundary are type-compatible
+with their connected steps.
+
+For full details on writing and testing with step examples, see
+[using-step-examples](../walkeros-using-step-examples/SKILL.md).
+
+---
+
 ## $code: Prefix (Inline JavaScript)
 
 Embed JavaScript functions in JSON configs:

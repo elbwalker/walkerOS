@@ -52,8 +52,9 @@ expect(calls).toContainEqual({
 
 ### Rule 2: Link Tests to `dev` Examples
 
-The `dev.ts` export provides `examples.env`, `examples.events`, and
-`examples.mapping`. Using these in tests ensures documentation stays in sync.
+The `dev.ts` export provides `examples.env`, `examples.events`,
+`examples.mapping`, and `examples.step`. Using these in tests ensures
+documentation stays in sync.
 
 ```typescript
 import { examples } from '../dev';
@@ -67,6 +68,32 @@ expect(calls[0].args).toEqual(examples.events.ga4PageView());
 // Test with examples.mapping configurations
 const config = { mapping: examples.mapping.ecommerce };
 ```
+
+#### Step Examples with `it.each`
+
+Step examples (`examples.step`) provide `{ in, out }` pairs for each step. Use
+`it.each` to iterate over them:
+
+```typescript
+import { examples } from '../dev';
+
+describe('step examples', () => {
+  it.each(Object.entries(examples.step))(
+    '%s',
+    async (name, { in: input, out: expected }) => {
+      const result = await step.push(input, context);
+      if (expected === false) {
+        expect(result).toBe(false);
+      } else {
+        expect(result).toEqual(expected);
+      }
+    },
+  );
+});
+```
+
+See [using-step-examples](../walkeros-using-step-examples/SKILL.md) for the full
+lifecycle including the Three Type Zones and naming conventions.
 
 ### Rule 3: Test Real Behavior, Not Mock Behavior
 
@@ -214,6 +241,7 @@ export * as examples from './examples';
 export * as env from './env';
 export * as events from './events';
 export * as mapping from './mapping';
+export * as step from './step'; // Step examples { in, out }
 ```
 
 ## Red Flags - Stop and Fix

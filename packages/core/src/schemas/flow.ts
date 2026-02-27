@@ -139,6 +139,27 @@ export const InlineCodeSchema = z
   .describe('Inline code for custom sources/transformers/destinations');
 
 // ========================================
+// Step Example Schemas
+// ========================================
+
+/**
+ * Step example schema — a named { in, out } pair.
+ */
+export const StepExampleSchema = z
+  .object({
+    in: z.unknown().optional().describe('Input to the step'),
+    out: z.unknown().optional().describe('Expected output from the step'),
+  })
+  .describe('Named example with input/output pair');
+
+/**
+ * Step examples record — keyed by scenario name.
+ */
+export const StepExamplesSchema = z
+  .record(z.string(), StepExampleSchema)
+  .describe('Named step examples for testing and documentation');
+
+// ========================================
 // Source Reference Schema
 // ========================================
 
@@ -188,6 +209,9 @@ export const SourceReferenceSchema = z
       .describe(
         'First transformer in post-source chain. If omitted, events route directly to collector.',
       ),
+    examples: StepExamplesSchema.optional().describe(
+      'Named step examples for testing and documentation (stripped during bundling)',
+    ),
   })
   .describe('Source package reference with configuration');
 
@@ -236,6 +260,9 @@ export const TransformerReferenceSchema = z
     ),
     definitions: DefinitionsSchema.optional().describe(
       'Transformer-level definitions (highest priority in cascade)',
+    ),
+    examples: StepExamplesSchema.optional().describe(
+      'Named step examples for testing and documentation (stripped during bundling)',
     ),
   })
   .describe('Transformer package reference with configuration');
@@ -286,6 +313,9 @@ export const DestinationReferenceSchema = z
       .describe(
         'First transformer in pre-destination chain. If omitted, events are sent directly from collector.',
       ),
+    examples: StepExamplesSchema.optional().describe(
+      'Named step examples for testing and documentation (stripped during bundling)',
+    ),
   })
   .describe('Destination package reference with configuration');
 
