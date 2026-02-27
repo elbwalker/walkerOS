@@ -749,3 +749,20 @@ describe('Unified Gtag Destination', () => {
     });
   });
 });
+
+describe('Step Examples', () => {
+  it.each(Object.entries(examples.step.all))(
+    'should process %s example',
+    (name, example) => {
+      // Verify example structure
+      expect(example.in).toBeDefined();
+      expect(example.out).toBeDefined();
+      // Verify in is a walkerOS.Event shape
+      expect(example.in).toHaveProperty('name');
+      expect(example.in).toHaveProperty('data');
+      // Verify out is gtag call args shape
+      expect(Array.isArray(example.out)).toBe(true);
+      expect(example.out[0]).toBe('event');
+    },
+  );
+});

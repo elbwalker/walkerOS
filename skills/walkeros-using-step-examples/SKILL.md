@@ -112,7 +112,9 @@ export const step = {
 2. **Cover happy path and edge cases** -- include at least one positive and one
    negative case for transformers
 3. **Use realistic data** -- real-looking event names, IDs, and values
-4. **Keep examples minimal** -- only include fields relevant to the step's logic
+4. **Keep examples minimal** -- only include fields relevant to the step's
+   logic; omit empty/default-value fields (`context: {}`, `nested: []`,
+   `user: {}`, etc.)
 5. **Export from `examples/step.ts`** -- follow the existing `dev.ts` structure
 
 ### File Structure
