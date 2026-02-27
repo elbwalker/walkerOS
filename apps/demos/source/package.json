@@ -6,11 +6,19 @@
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "walkerOS": {
+    "type": "source"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
     }
   },
   "files": [
