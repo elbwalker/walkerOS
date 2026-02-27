@@ -94,8 +94,15 @@ export const ExamplesListOutputShape = {
         exampleName: z.string().describe('Example name'),
         hasIn: z.boolean().describe('Whether the example has an input value'),
         hasOut: z.boolean().describe('Whether the example has an output value'),
+        hasMapping: z
+          .boolean()
+          .describe('Whether the example has a mapping configuration'),
         in: z.unknown().optional().describe('Input event data'),
         out: z.unknown().optional().describe('Expected output data'),
+        mapping: z
+          .unknown()
+          .optional()
+          .describe('Mapping configuration for destinations'),
       }),
     )
     .describe('Step examples'),

@@ -42,6 +42,10 @@ const sampleConfig = {
           examples: {
             purchase: {
               in: { name: 'order complete', data: { total: 42 } },
+              mapping: {
+                name: 'purchase',
+                data: { map: { value: 'data.total' } },
+              },
               out: [
                 { type: 'call', path: 'gtag', args: ['event', 'purchase'] },
               ],
@@ -240,6 +244,28 @@ describe('examples_list tool', () => {
     );
     expect(purchase.hasIn).toBe(true);
     expect(purchase.hasOut).toBe(true);
+  });
+
+  it('includes mapping field for destination examples', async () => {
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
+
+    const tool = server.getTool('examples_list');
+    const result = await tool.handler({ configPath: './flow.json' });
+
+    const parsed = JSON.parse(result.content[0].text);
+    const purchase = parsed.examples.find(
+      (e: any) => e.exampleName === 'purchase',
+    );
+    expect(purchase.mapping).toEqual({
+      name: 'purchase',
+      data: { map: { value: 'data.total' } },
+    });
+    expect(purchase.hasMapping).toBe(true);
+
+    // Source example should not have mapping
+    const basic = parsed.examples.find((e: any) => e.exampleName === 'basic');
+    expect(basic.mapping).toBeUndefined();
+    expect(basic.hasMapping).toBe(false);
   });
 
   it('returns empty examples array when no examples exist', async () => {

@@ -6,7 +6,7 @@ export interface ExampleLookupResult {
   stepType: StepType;
   stepName: string;
   exampleName: string;
-  example: { in?: unknown; out?: unknown };
+  example: { in?: unknown; mapping?: unknown; out?: unknown };
 }
 
 /**
@@ -71,7 +71,11 @@ function findExampleInStep(
     stepType: type,
     stepName: name,
     exampleName,
-    example: examples[exampleName] as { in?: unknown; out?: unknown },
+    example: examples[exampleName] as {
+      in?: unknown;
+      mapping?: unknown;
+      out?: unknown;
+    },
   };
 }
 
@@ -95,7 +99,11 @@ function findExampleAcrossSteps(
           stepType: type,
           stepName: name,
           exampleName,
-          example: examples[exampleName] as { in?: unknown; out?: unknown },
+          example: examples[exampleName] as {
+            in?: unknown;
+            mapping?: unknown;
+            out?: unknown;
+          },
         });
       }
     }

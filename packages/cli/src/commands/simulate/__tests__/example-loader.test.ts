@@ -16,6 +16,10 @@ describe('findExample', () => {
         examples: {
           purchase: {
             in: { name: 'order complete', data: { total: 42 } },
+            mapping: {
+              name: 'purchase',
+              data: { map: { value: 'data.total' } },
+            },
             out: [{ type: 'call', path: 'gtag', args: ['event', 'purchase'] }],
           },
           pageview: {
@@ -130,5 +134,22 @@ describe('findExample', () => {
     expect(result.stepType).toBe('source');
     expect(result.stepName).toBe('browser');
     expect(result.example.in).toEqual({ name: 'page view' });
+  });
+
+  it('returns mapping field from destination example', () => {
+    const result = findExample(
+      configWithExamples,
+      'purchase',
+      'destination.gtag',
+    );
+    expect(result.example.mapping).toEqual({
+      name: 'purchase',
+      data: { map: { value: 'data.total' } },
+    });
+  });
+
+  it('returns undefined mapping for examples without one', () => {
+    const result = findExample(configWithExamples, 'basic');
+    expect(result.example.mapping).toBeUndefined();
   });
 });

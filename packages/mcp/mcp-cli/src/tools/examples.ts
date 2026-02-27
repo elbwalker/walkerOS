@@ -63,8 +63,10 @@ export function registerExamplesListTool(server: McpServer) {
           exampleName: string;
           hasIn: boolean;
           hasOut: boolean;
+          hasMapping: boolean;
           in?: unknown;
           out?: unknown;
+          mapping?: unknown;
         }> = [];
 
         const stepTypes = [
@@ -91,8 +93,10 @@ export function registerExamplesListTool(server: McpServer) {
                 exampleName: exName,
                 hasIn: ex.in !== undefined,
                 hasOut: ex.out !== undefined,
+                hasMapping: ex.mapping !== undefined,
                 in: ex.in,
                 out: ex.out,
+                mapping: ex.mapping,
               });
             }
           }

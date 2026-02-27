@@ -167,6 +167,10 @@ walkeros simulate flow.json --example purchase
 This runs the named example through the full flow pipeline, showing how data
 transforms at each step.
 
+The `examples_list` MCP tool returns `mapping` alongside `in`/`out` for
+destination examples, giving full visibility into how input events are
+transformed to vendor-specific output.
+
 ## Validating Examples
 
 Use the `--deep` flag to cross-validate step examples across connected steps:
