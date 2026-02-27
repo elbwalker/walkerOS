@@ -206,7 +206,12 @@ export async function simulateCommand(
 export async function simulate(
   configOrPath: string | unknown,
   event: unknown,
-  options: SimulateOptions & { flow?: string; platform?: Platform } = {},
+  options: SimulateOptions & {
+    flow?: string;
+    platform?: Platform;
+    example?: string;
+    step?: string;
+  } = {},
 ): Promise<import('./types').SimulationResult> {
   // simulateCore currently only accepts file paths, so we need to handle that
   // For now, if configOrPath is not a string, throw an error with guidance
@@ -218,13 +223,87 @@ export async function simulate(
     );
   }
 
+  let resolvedEvent = event;
+  let exampleContext:
+    | { stepType: string; stepName: string; expected: unknown }
+    | undefined;
+
+  // If --example is provided, load the example from the raw config
+  if (options.example) {
+    const rawConfig = await loadJsonConfig<Flow.Setup>(configOrPath);
+    const setup = validateFlowSetup(rawConfig);
+
+    const flowNames = Object.keys(setup.flows);
+    let flowName = options.flow;
+    if (!flowName) {
+      if (flowNames.length === 1) {
+        flowName = flowNames[0];
+      } else {
+        throw new Error(
+          `Multiple flows found. Use --flow to specify which flow contains the example.\n` +
+            `Available flows: ${flowNames.join(', ')}`,
+        );
+      }
+    }
+
+    const flowConfig = setup.flows[flowName];
+    if (!flowConfig) {
+      throw new Error(
+        `Flow "${flowName}" not found. Available: ${flowNames.join(', ')}`,
+      );
+    }
+
+    const found = findExample(flowConfig, options.example, options.step);
+    if (found.example.in === undefined) {
+      throw new Error(
+        `Example "${options.example}" in ${found.stepType}.${found.stepName} has no "in" value`,
+      );
+    }
+
+    resolvedEvent = found.example.in;
+    exampleContext = {
+      stepType: found.stepType,
+      stepName: found.stepName,
+      expected: found.example.out,
+    };
+  }
+
   // Call core simulator
-  return await simulateCore(configOrPath, event, {
+  const result = await simulateCore(configOrPath, resolvedEvent, {
     json: options.json ?? false,
     verbose: options.verbose ?? false,
     flow: options.flow,
     platform: options.platform,
   });
+
+  // Compare output against example if --example was used
+  if (exampleContext && result.success) {
+    const stepKey = `${exampleContext.stepType}.${exampleContext.stepName}`;
+
+    if (exampleContext.expected === false) {
+      const calls = result.usage?.[exampleContext.stepName];
+      const wasFiltered = !calls || calls.length === 0;
+      result.exampleMatch = {
+        name: options.example!,
+        step: stepKey,
+        expected: false,
+        actual: wasFiltered ? false : calls,
+        match: wasFiltered,
+        diff: wasFiltered
+          ? undefined
+          : `Expected event to be filtered, but ${calls!.length} API call(s) were made`,
+      };
+    } else if (exampleContext.expected !== undefined) {
+      const actual = result.usage?.[exampleContext.stepName] ?? [];
+      result.exampleMatch = {
+        name: options.example!,
+        step: stepKey,
+        ...compareOutput(exampleContext.expected, actual),
+      };
+    }
+  }
+
+  return result;
 }
 
 // Re-export types and utilities for testing

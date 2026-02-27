@@ -79,6 +79,28 @@ export const PushOutputShape = {
   error: z.string().optional().describe('Error message if push failed'),
 };
 
+// Examples List output shape
+export const ExamplesListOutputShape = {
+  flow: z.string().describe('Flow name'),
+  count: z.number().describe('Number of examples found'),
+  examples: z
+    .array(
+      z.object({
+        step: z.string().describe('Step location (e.g., "destination.gtag")'),
+        stepType: z
+          .enum(['source', 'transformer', 'destination'])
+          .describe('Step type'),
+        stepName: z.string().describe('Step name'),
+        exampleName: z.string().describe('Example name'),
+        hasIn: z.boolean().describe('Whether the example has an input value'),
+        hasOut: z.boolean().describe('Whether the example has an output value'),
+        in: z.unknown().optional().describe('Input event data'),
+        out: z.unknown().optional().describe('Expected output data'),
+      }),
+    )
+    .describe('Step examples'),
+};
+
 // Package Search output shape (lightweight metadata)
 export const PackageSearchOutputShape = {
   package: z.string().describe('Package name'),

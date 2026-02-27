@@ -79,6 +79,12 @@ export type { ListDeploymentsOptions } from './commands/deployments/index.js';
 export { parseSSEEvents } from './core/sse.js';
 export type { SSEEvent, SSEParseResult } from './core/sse.js';
 
+// === Utilities ===
+// Export utilities for programmatic usage
+export { loadJsonConfig } from './config/utils.js';
+export { findExample } from './commands/simulate/example-loader.js';
+export { compareOutput } from './commands/simulate/compare.js';
+
 // === Types ===
 // Export types for programmatic usage
 // Config structure uses Flow.Setup and Flow.Config from @walkeros/core
@@ -89,7 +95,11 @@ export type {
   MinifyOptions,
 } from './types/bundle.js';
 export type { BundleStats } from './commands/bundle/bundler.js';
-export type { SimulationResult } from './commands/simulate/types.js';
+export type {
+  SimulationResult,
+  ExampleMatch,
+} from './commands/simulate/types.js';
+export type { ExampleLookupResult } from './commands/simulate/example-loader.js';
 export type { PushResult } from './commands/push/types.js';
 export type {
   RunMode,

@@ -5,6 +5,7 @@ import { registerValidateTool } from './tools/validate.js';
 import { registerBundleTool } from './tools/bundle.js';
 import { registerSimulateTool } from './tools/simulate.js';
 import { registerPushTool } from './tools/push.js';
+import { registerExamplesListTool } from './tools/examples.js';
 import {
   registerPackageSearchTool,
   registerGetPackageSchemaTool,
@@ -22,6 +23,7 @@ registerValidateTool(server);
 registerBundleTool(server);
 registerSimulateTool(server);
 registerPushTool(server);
+registerExamplesListTool(server);
 registerPackageSearchTool(server);
 registerGetPackageSchemaTool(server);
 registerPackageSchemaResources(server);

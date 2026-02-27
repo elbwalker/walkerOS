@@ -11,7 +11,8 @@ export function registerSimulateTool(server: McpServer) {
       description:
         'Simulate events through a walkerOS flow without making real API calls. ' +
         'Processes events through the full pipeline including transformers and destinations, ' +
-        'returning detailed results with logs and usage statistics.',
+        'returning detailed results with logs and usage statistics. ' +
+        'Use --example to load event input from a step example and compare output.',
       inputSchema: schemas.SimulateInputShape,
       outputSchema: SimulateOutputShape,
       annotations: {
@@ -21,11 +22,16 @@ export function registerSimulateTool(server: McpServer) {
         openWorldHint: false,
       },
     },
-    async ({ configPath, event, flow, platform }) => {
+    async ({ configPath, event, flow, platform, example, step }) => {
       try {
+        // When example is provided, event is optional
+        if (!event && !example) {
+          throw new Error('Either event or example must be provided');
+        }
+
         // Parse event if JSON string
         let parsedEvent: unknown = event;
-        if (event.startsWith('{') || event.startsWith('[')) {
+        if (event && (event.startsWith('{') || event.startsWith('['))) {
           try {
             parsedEvent = JSON.parse(event);
           } catch {
@@ -37,6 +43,8 @@ export function registerSimulateTool(server: McpServer) {
           json: true,
           flow,
           platform,
+          example,
+          step,
         });
 
         return {
