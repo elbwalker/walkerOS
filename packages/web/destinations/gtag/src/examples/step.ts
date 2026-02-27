@@ -1,138 +1,99 @@
-import type { Flow } from '@walkeros/core';
+import type { Flow, WalkerOS } from '@walkeros/core';
+import { getEvent, isObject } from '@walkeros/core';
 
-/**
- * Step examples for the gtag destination.
- *
- * Each example represents a complete step contract:
- * - `in`: A walkerOS.Event that enters the destination
- * - `out`: The gtag() call arguments the destination produces
- *
- * These examples serve as:
- * - Test fixtures (it.each pattern)
- * - Simulation data (CLI --example flag)
- * - MCP/LLM context for mapping suggestions
- * - Living documentation of the destination's behavior
- */
-
-export const purchase: Flow.StepExamples = {
-  purchase: {
-    in: {
-      event: 'order',
-      name: 'order complete',
-      data: {
-        id: 'ORD-123',
-        total: 149.97,
-        taxes: 11.25,
-        shipping: 5.99,
-        currency: 'EUR',
+export const purchase: Flow.StepExample = {
+  in: getEvent('order complete', { timestamp: 1700000100 }),
+  mapping: {
+    name: 'purchase',
+    settings: {
+      ga4: {
+        include: ['data', 'context'],
       },
-      nested: [
-        {
-          entity: 'product',
-          data: { id: 'SKU-001', name: 'T-Shirt', quantity: 2 },
+    },
+    data: {
+      map: {
+        transaction_id: 'data.id',
+        value: 'data.total',
+        tax: 'data.taxes',
+        shipping: 'data.shipping',
+        currency: { key: 'data.currency', value: 'EUR' },
+        items: {
+          loop: [
+            'nested',
+            {
+              condition: (entity: unknown) =>
+                isObject(entity) && entity.entity === 'product',
+              map: {
+                item_id: 'data.id',
+                item_name: 'data.name',
+                quantity: { key: 'data.quantity', value: 1 },
+              },
+            },
+          ],
         },
-        {
-          entity: 'product',
-          data: { id: 'SKU-002', name: 'Hoodie', quantity: 1 },
-        },
+      },
+    },
+  },
+  out: [
+    'event',
+    'purchase',
+    {
+      transaction_id: '0rd3r1d',
+      value: 555,
+      tax: 73.76,
+      shipping: 5.22,
+      currency: 'EUR',
+      items: [
+        { item_id: 'ers', item_name: 'Everyday Ruck Snack', quantity: 1 },
+        { item_id: 'cc', item_name: 'Cool Cap', quantity: 1 },
       ],
-      id: 'evt-abc123',
-      trigger: 'click',
-      entity: 'order',
-      action: 'complete',
-      timestamp: 1700000000,
-      group: 'grp-1',
-      count: 1,
-      version: { tagging: 1, collector: '3.0.0' },
-      source: { type: 'web', id: '', previous_id: '' },
+      send_to: 'G-XXXXXX-1',
     },
-    out: [
-      'event',
-      'purchase',
-      {
-        transaction_id: 'ORD-123',
-        value: 149.97,
-        tax: 11.25,
-        shipping: 5.99,
-        currency: 'EUR',
-        items: [
-          { item_id: 'SKU-001', item_name: 'T-Shirt', quantity: 2 },
-          { item_id: 'SKU-002', item_name: 'Hoodie', quantity: 1 },
-        ],
-        send_to: 'G-XXXXXX-1',
-      },
-    ],
-  },
+  ],
 };
 
-export const addToCart: Flow.StepExamples = {
-  add_to_cart: {
-    in: {
-      event: 'product',
-      name: 'product add',
-      data: {
-        id: 'SKU-001',
-        name: 'T-Shirt',
-        price: 29.99,
-        color: 'blue',
-        currency: 'EUR',
+export const addToCart: Flow.StepExample = {
+  in: getEvent('product add', { timestamp: 1700000101 }),
+  mapping: {
+    name: 'add_to_cart',
+    settings: {
+      ga4: {
+        include: ['data'],
       },
-      id: 'evt-def456',
-      trigger: 'click',
-      entity: 'product',
-      action: 'add',
-      timestamp: 1700000001,
-      group: 'grp-2',
-      count: 1,
-      version: { tagging: 1, collector: '3.0.0' },
-      source: { type: 'web', id: '', previous_id: '' },
     },
-    out: [
-      'event',
-      'add_to_cart',
-      {
-        currency: 'EUR',
-        value: 29.99,
-        items: [{ item_id: 'SKU-001', item_variant: 'blue', quantity: 1 }],
-        send_to: 'G-XXXXXX-1',
+    data: {
+      map: {
+        currency: { value: 'EUR', key: 'data.currency' },
+        value: 'data.price',
+        items: {
+          loop: [
+            'this',
+            {
+              map: {
+                item_id: 'data.id',
+                item_variant: 'data.color',
+                quantity: { value: 1, key: 'data.quantity' },
+              },
+            },
+          ],
+        },
       },
-    ],
+    },
   },
+  out: [
+    'event',
+    'add_to_cart',
+    {
+      currency: 'EUR',
+      value: 420,
+      items: [{ item_id: 'ers', item_variant: 'black', quantity: 1 }],
+      send_to: 'G-XXXXXX-1',
+    },
+  ],
 };
 
-export const pageView: Flow.StepExamples = {
-  page_view: {
-    in: {
-      event: 'page',
-      name: 'page view',
-      data: {
-        title: 'Home Page',
-        url: 'https://example.com/',
-        path: '/',
-      },
-      id: 'evt-ghi789',
-      trigger: 'load',
-      entity: 'page',
-      action: 'view',
-      timestamp: 1700000002,
-      group: 'grp-3',
-      count: 1,
-      version: { tagging: 1, collector: '3.0.0' },
-      source: { type: 'web', id: '', previous_id: '' },
-    },
-    out: [
-      'event',
-      'page_view',
-      {
-        send_to: 'G-XXXXXX-1',
-      },
-    ],
-  },
-};
-
-/** All step examples combined for iteration */
-export const all: Flow.StepExamples = {
-  ...purchase,
-  ...addToCart,
-  ...pageView,
+export const pageView: Flow.StepExample = {
+  in: getEvent('page view', { timestamp: 1700000102 }),
+  mapping: undefined,
+  out: ['event', 'page_view', { send_to: 'G-XXXXXX-1' }],
 };

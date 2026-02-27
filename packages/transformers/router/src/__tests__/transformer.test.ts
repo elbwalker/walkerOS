@@ -2,6 +2,7 @@ import { transformerRouter } from '../transformer';
 import { createMockLogger } from '@walkeros/core';
 import type { Transformer, Collector } from '@walkeros/core';
 import type { RouterSettings } from '../types';
+import { examples } from '../dev';
 
 function createMockContext(
   settings: any,

@@ -46,6 +46,33 @@ describe('validate programmatic API', () => {
     });
   });
 
+  describe('deep validation', () => {
+    it('validates cross-step examples', async () => {
+      const result = await validate('deep', {
+        version: 1,
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              gtag: {
+                package: '@walkeros/web-destination-gtag',
+                examples: {
+                  pageview: {
+                    in: { name: 'page view' },
+                    out: ['event', 'page_view'],
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      expect(result.valid).toBe(true);
+      expect(result.type).toBe('deep');
+    });
+  });
+
   describe('dot-notation type', () => {
     it('routes unknown types to entry validation', async () => {
       const result = await validate('unknown' as any, {});

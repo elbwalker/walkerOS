@@ -5,7 +5,7 @@ import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import { hashEvent } from '../hash';
 
-const { env, events, mapping } = examples;
+const { env } = examples;
 
 describe('Server Destination Meta', () => {
   let destination: Destination;
@@ -84,7 +84,9 @@ describe('Server Destination Meta', () => {
     const event = getEvent();
     const config: Config = {
       settings: { accessToken, pixelId, test_event_code: 'TEST' },
-      mapping: mapping.config,
+      mapping: {
+        order: { complete: examples.step.purchase.mapping },
+      },
     };
 
     await destination.push(event, {
@@ -139,7 +141,9 @@ describe('Server Destination Meta', () => {
     const event = getEvent();
     const config: Config = {
       settings: { accessToken, pixelId, test_event_code: 'TEST' },
-      mapping: mapping.config,
+      mapping: {
+        order: { complete: examples.step.purchase.mapping },
+      },
     };
 
     await expect(
@@ -162,7 +166,9 @@ describe('Server Destination Meta', () => {
         pixelId,
         user_data: { fbclid: { value: 'abc' } },
       },
-      mapping: mapping.config,
+      mapping: {
+        order: { complete: examples.step.purchase.mapping },
+      },
     };
 
     await destination.push(event, {
@@ -179,7 +185,13 @@ describe('Server Destination Meta', () => {
   test('userData', async () => {
     const event = getEvent();
     const config: Config = {
-      settings: mapping.InitUserData,
+      settings: {
+        pixelId: 'p1x3l1d',
+        accessToken: 's3cr3t',
+        user_data: {
+          external_id: { set: ['user.device', 'user.session'] },
+        },
+      },
       data: {
         map: {
           user_data: {
@@ -250,8 +262,16 @@ describe('Server Destination Meta', () => {
     const event = getEvent('order complete');
 
     const config: Config = {
-      settings: mapping.InitUserData,
-      mapping: mapping.config,
+      settings: {
+        pixelId: 'p1x3l1d',
+        accessToken: 's3cr3t',
+        user_data: {
+          external_id: { set: ['user.device', 'user.session'] },
+        },
+      },
+      mapping: {
+        order: { complete: examples.step.purchase.mapping },
+      },
     };
 
     const { elb } = await startFlow();
@@ -265,6 +285,30 @@ describe('Server Destination Meta', () => {
     expect(result.done).toBeDefined();
     expect(Object.keys(result.done!)).toHaveLength(1);
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
-    expect(requestBody).toEqual(events.Purchase());
+    expect(requestBody).toEqual({
+      data: [
+        {
+          event_name: 'Purchase',
+          event_time: event.timestamp / 1000,
+          event_id: event.id,
+          event_source_url: event.source.id,
+          action_source: 'website',
+          user_data: {
+            external_id: [
+              'cc8e27118413234d4297ed00a02711365312c79325df9b5b8f4199cbd0b96e7e',
+              '9176e6f336dbdb4f99b0e45cbd7e41e0e2323812b236822842a61ffbd362ac8c',
+            ],
+          },
+          order_id: '0rd3r1d',
+          currency: 'EUR',
+          value: 555,
+          contents: [
+            { id: 'ers', quantity: 1, item_price: 420 },
+            { id: 'cc', quantity: 1, item_price: 42 },
+          ],
+          num_items: 2,
+        },
+      ],
+    });
   });
 });

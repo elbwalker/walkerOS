@@ -6,7 +6,6 @@ sidebar_position: 4
 package: '@walkeros/web-destination-plausible'
 ---
 
-import { getEvent } from '@walkeros/core';
 import destinationPlausible from '@walkeros/web-destination-plausible';
 import { examples, schemas } from '@walkeros/web-destination-plausible/dev';
 
@@ -123,8 +122,8 @@ events</Link> manually using the JavaScript function
   settings={{
     domain: 'walkeros.io',
   }}
-  event={getEvent()}
-  mapping={examples.mapping.customEvent}
+  event={examples.step.customEvent.in}
+  mapping={examples.step.customEvent.mapping}
   generic={true}
 />
 
@@ -139,7 +138,7 @@ Plausible.
   settings={{
     domain: 'walkeros.io',
   }}
-  event={getEvent('order complete')}
-  mapping={examples.mapping.purchase}
+  event={examples.step.purchase.in}
+  mapping={examples.step.purchase.mapping}
   generic={true}
 />

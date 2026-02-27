@@ -3,6 +3,7 @@ import type { Config, DestinationInterface, Settings } from '../types';
 import { getEvent, createMockLogger } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import type { OAuth2Client } from 'google-auth-library';
+import { examples } from '../dev';
 
 jest.mock('../auth', () => ({
   createAuthClient: jest.fn(),

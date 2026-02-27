@@ -18,12 +18,12 @@ import { z } from '@walkeros/core/dev';
  */
 export const ValidationTypeSchema = z
   .union([
-    z.enum(['contract', 'event', 'flow', 'mapping']),
+    z.enum(['contract', 'deep', 'event', 'flow', 'mapping']),
     z.string().regex(/^(destinations|sources|transformers)\.\w+$|^\w+$/),
   ])
   .describe(
-    'Validation type: "event", "flow", "mapping", "contract", or dot-notation path ' +
-      '(e.g., "destinations.snowplow") to validate a specific entry against its package schema',
+    'Validation type: "event", "flow", "mapping", "contract", "deep" (cross-step examples), ' +
+      'or dot-notation path (e.g., "destinations.snowplow") to validate against its package schema',
   );
 
 export type ValidationType = z.infer<typeof ValidationTypeSchema>;

@@ -43,6 +43,7 @@ const sidebars: SidebarsConfig = {
         },
         'getting-started/flow',
         'getting-started/event-model',
+        'getting-started/step-examples',
       ],
     },
     {

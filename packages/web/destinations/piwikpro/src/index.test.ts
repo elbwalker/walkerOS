@@ -4,8 +4,6 @@ import { startFlow } from '@walkeros/collector';
 import { getEvent } from '@walkeros/core';
 import { examples } from './dev';
 
-const { events, mapping } = examples;
-
 describe('Destination PiwikPro', () => {
   let elb: WalkerOS.Elb;
   let destination: DestinationPiwikPro.Destination,
@@ -101,10 +99,19 @@ describe('Destination PiwikPro', () => {
     };
     elb('walker destination', destinationWithEnv, {
       settings,
-      mapping: mapping.config,
+      mapping: {
+        order: { complete: examples.step.ecommerceOrder.mapping },
+        product: {
+          add: examples.step.ecommerceAddToCart.mapping,
+          view: examples.step.productDetailView.mapping,
+        },
+        cart: { view: examples.step.cartUpdate.mapping },
+      },
     });
     await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceOrder());
+    expect(mockFn).toHaveBeenCalledWith(
+      ...(examples.step.ecommerceOrder.out as unknown[]),
+    );
   });
 
   test('event ecommerceAddToCart', async () => {
@@ -115,10 +122,19 @@ describe('Destination PiwikPro', () => {
     };
     elb('walker destination', destinationWithEnv, {
       settings,
-      mapping: mapping.config,
+      mapping: {
+        order: { complete: examples.step.ecommerceOrder.mapping },
+        product: {
+          add: examples.step.ecommerceAddToCart.mapping,
+          view: examples.step.productDetailView.mapping,
+        },
+        cart: { view: examples.step.cartUpdate.mapping },
+      },
     });
     await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceAddToCart());
+    expect(mockFn).toHaveBeenCalledWith(
+      ...(examples.step.ecommerceAddToCart.out as unknown[]),
+    );
   });
 
   test('event ecommerceProductDetailView', async () => {
@@ -129,10 +145,19 @@ describe('Destination PiwikPro', () => {
     };
     elb('walker destination', destinationWithEnv, {
       settings,
-      mapping: mapping.config,
+      mapping: {
+        order: { complete: examples.step.ecommerceOrder.mapping },
+        product: {
+          add: examples.step.ecommerceAddToCart.mapping,
+          view: examples.step.productDetailView.mapping,
+        },
+        cart: { view: examples.step.cartUpdate.mapping },
+      },
     });
     await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceProductDetailView());
+    expect(mockFn).toHaveBeenCalledWith(
+      ...(examples.step.productDetailView.out as unknown[]),
+    );
   });
 
   test('event ecommerceCartUpdate', async () => {
@@ -143,9 +168,18 @@ describe('Destination PiwikPro', () => {
     };
     elb('walker destination', destinationWithEnv, {
       settings,
-      mapping: mapping.config,
+      mapping: {
+        order: { complete: examples.step.ecommerceOrder.mapping },
+        product: {
+          add: examples.step.ecommerceAddToCart.mapping,
+          view: examples.step.productDetailView.mapping,
+        },
+        cart: { view: examples.step.cartUpdate.mapping },
+      },
     });
     await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceCartUpdate());
+    expect(mockFn).toHaveBeenCalledWith(
+      ...(examples.step.cartUpdate.out as unknown[]),
+    );
   });
 });

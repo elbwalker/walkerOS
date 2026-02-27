@@ -371,6 +371,7 @@ export interface Config {
  */
 export interface StepExample {
   in?: unknown;
+  mapping?: unknown;
   out?: unknown;
 }
 

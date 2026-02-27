@@ -10,8 +10,9 @@ description:
 
 ## Overview
 
-Step examples are structured `{ in, out }` pairs that define the expected
-input/output behavior of each step in a flow. They serve as:
+Step examples are structured `{ in, out }` pairs (with optional `mapping` for
+destinations) that define the expected input/output behavior of each step in a
+flow. They serve as:
 
 - **Test fixtures** for automated `it.each` testing
 - **Simulation data** for `walkeros simulate`
@@ -85,23 +86,35 @@ export const step = {
 
 ### Destination Step Example
 
-`in` is a walkerOS event, `out` is vendor-specific:
+`in` is a walkerOS event, `mapping` is the mapping rule that transforms it,
+`out` is vendor-specific:
 
 ```typescript
-export const step = {
-  purchase: {
-    in: {
-      name: 'order complete',
-      data: { id: 'ORD-123', total: 149.97, currency: 'EUR' },
-    },
-    out: [
-      'event',
-      'purchase',
-      { transaction_id: 'ORD-123', value: 149.97, currency: 'EUR' },
-    ],
+import type { Flow } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
+
+export const purchase: Flow.StepExample = {
+  in: getEvent('order complete', { timestamp: 1700000000 }),
+  mapping: {
+    name: 'Purchase',
+    data: { map: { value: 'data.total', currency: { value: 'EUR' } } },
   },
+  out: [
+    'track',
+    'Purchase',
+    { value: 555, currency: 'EUR' },
+    { eventID: '1700000000-gr0up-1' },
+  ],
 };
 ```
+
+Each export is a self-contained `Flow.StepExample` — no intermediate variables,
+no `all` aggregation. The `mapping` field ties the mapping rule to the example
+so tests can register it dynamically:
+`{ [event.entity]: { [event.action]: example.mapping } }`.
+
+Consumers iterate all examples via `Object.entries(examples.step)` —
+`export * as step` exposes every named export directly.
 
 ## Writing Examples
 
@@ -120,24 +133,23 @@ export const step = {
 ### File Structure
 
 ```typescript
-// src/examples/step.ts
-export const step = {
-  'example-name': {
-    in: {
-      /* input */
-    },
-    out: {
-      /* expected output */
-    },
-  },
+// src/examples/step.ts — only Flow.StepExample exports, nothing else
+import type { Flow } from '@walkeros/core';
+import { getEvent } from '@walkeros/core';
+
+export const purchase: Flow.StepExample = {
+  in: getEvent('order complete', { timestamp: 1700000000 }),
+  mapping: { name: 'Purchase', data: { map: { value: 'data.total' } } },
+  out: ['track', 'Purchase', { value: 555 }, { eventID: '1700000000-gr0up-1' }],
 };
 
 // src/examples/index.ts
 export * as env from './env';
-export * as events from './events';
-export * as mapping from './mapping';
 export * as step from './step';
 ```
+
+The file exports **only** `Flow.StepExample` objects. No intermediate variables,
+no `all`, no `config`. Consumers iterate via `Object.entries(examples.step)`.
 
 ## Simulating with Examples
 
@@ -172,21 +184,51 @@ Deep validation checks that:
 
 ## Testing with Examples
 
-The primary use of step examples is automated testing with `it.each`:
+The primary use of step examples is automated testing with `it.each`.
+
+### Destination Functional Tests
+
+For destinations, use `startFlow` + `elb()` to run events through the real
+collector pipeline. This verifies the full flow including mapping:
 
 ```typescript
-import { examples } from '../dev';
+import { startFlow } from '@walkeros/collector';
+import { clone } from '@walkeros/core';
+import { examples } from './dev';
 
-describe('destination', () => {
-  it.each(Object.entries(examples.step))(
-    '%s',
-    (name, { in: input, out: expected }) => {
-      const result = destination.push(input, context);
-      expect(result).toEqual(expected);
-    },
-  );
+describe('Step Examples', () => {
+  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+    const event = example.in as WalkerOS.Event;
+    const mapping = example.mapping as Rule | undefined;
+
+    const mockFn = jest.fn();
+    const env = clone(examples.env.push);
+    env.window.fbq = mockFn;
+
+    const dest = jest.requireActual('.').default;
+    const { elb } = await startFlow({ tagging: 2 });
+
+    // Build mapping config from event entity/action
+    const mappingConfig = mapping
+      ? { [event.entity]: { [event.action]: mapping } }
+      : undefined;
+
+    elb(
+      'walker destination',
+      { ...dest, env },
+      {
+        settings: { pixelId: '1234567890' },
+        mapping: mappingConfig,
+      },
+    );
+
+    await elb(event);
+    expect(mockFn).toHaveBeenLastCalledWith(...(example.out as unknown[]));
+  });
 });
 ```
+
+### Transformer Tests
 
 For transformers that can return `false`:
 
@@ -212,7 +254,7 @@ describe('transformer', () => {
 
 When adding step examples to a package or flow:
 
-- [ ] Create `src/examples/step.ts` with `{ in, out }` pairs
+- [ ] Create `src/examples/step.ts` with `Flow.StepExample` exports
 - [ ] Export from `src/examples/index.ts`
 - [ ] Use kebab-case, descriptive example names
 - [ ] Include at least one happy-path example

@@ -1,6 +1,7 @@
 import type { Collector, Logger, Transformer, WalkerOS } from '@walkeros/core';
 import { transformerValidator } from '../transformer';
 import type { ValidatorSettings } from '../types';
+import { examples } from '../dev';
 
 describe('Transformer Validator', () => {
   const mockLogger: Logger.Instance = {

@@ -1,6 +1,7 @@
 import { sourceCookiePro, DEFAULT_CATEGORY_MAP } from '../index';
 import * as inputs from '../examples/inputs';
 import * as outputs from '../examples/outputs';
+import { examples } from '../dev';
 import {
   createMockElb,
   createMockWindow,

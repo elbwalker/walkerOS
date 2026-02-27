@@ -2,6 +2,7 @@ import { sourceCloudFunction } from '../index';
 import type { EventRequest, Request, Response, Types } from '../types';
 import type { Source, Collector } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
+import * as examples from '../examples';
 
 // Helper to create source context
 function createSourceContext(

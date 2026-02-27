@@ -5,6 +5,7 @@ import {
   createMockCommand,
   createSessionSource,
 } from './test-utils';
+import { examples } from '../dev';
 
 describe('Session Source', () => {
   let collectedEvents: WalkerOS.Event[];

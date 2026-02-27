@@ -5,7 +5,8 @@ export type ValidationType =
   | 'event'
   | 'flow'
   | 'mapping'
-  | 'entry';
+  | 'entry'
+  | 'deep';
 
 export interface ValidateCommandOptions {
   type: ValidationType;
@@ -16,6 +17,7 @@ export interface ValidateCommandOptions {
   verbose?: boolean;
   strict?: boolean;
   silent?: boolean;
+  deep?: boolean; // Cross-step example compatibility validation
 }
 
 export interface ValidationError {

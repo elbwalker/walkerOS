@@ -3,6 +3,7 @@ import type { EventRequest, Types } from '../types';
 import type { WalkerOS, Source, Collector } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import type { Request, Response } from 'express';
+import { examples } from '../dev';
 
 // Helper to create source context
 function createSourceContext(

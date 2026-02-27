@@ -5,8 +5,6 @@ import { startFlow } from '@walkeros/collector';
 import { getEvent, mockEnv } from '@walkeros/core';
 import { examples } from './dev';
 
-const { events, mapping } = examples;
-
 describe('destination plausible', () => {
   let elb: WalkerOS.Elb;
   let destination: DestinationPlausible.Destination;
@@ -143,7 +141,10 @@ describe('destination plausible', () => {
       env: testEnv as DestinationPlausible.Env,
     };
     elb('walker destination', destinationWithEnv, {
-      mapping: mapping.config,
+      mapping: {
+        entity: { action: examples.step.customEvent.mapping },
+        order: { complete: examples.step.purchase.mapping },
+      },
     });
 
     await elb(event);
@@ -151,7 +152,7 @@ describe('destination plausible', () => {
     // Check that plausible was called with the expected arguments
     expect(calls).toContainEqual({
       path: ['window', 'plausible'],
-      args: events.customEvent(),
+      args: examples.step.customEvent.out,
     });
   });
 
@@ -162,7 +163,10 @@ describe('destination plausible', () => {
       env: testEnv as DestinationPlausible.Env,
     };
     elb('walker destination', destinationWithEnv, {
-      mapping: mapping.config,
+      mapping: {
+        entity: { action: examples.step.customEvent.mapping },
+        order: { complete: examples.step.purchase.mapping },
+      },
     });
 
     await elb(event);
@@ -170,7 +174,7 @@ describe('destination plausible', () => {
     // Check that plausible was called with the expected arguments
     expect(calls).toContainEqual({
       path: ['window', 'plausible'],
-      args: events.purchase(),
+      args: examples.step.purchase.out,
     });
   });
 });

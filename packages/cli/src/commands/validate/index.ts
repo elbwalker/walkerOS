@@ -11,6 +11,7 @@ import {
 import { loadJsonFromSource } from '../../config/index.js';
 import {
   validateContract,
+  validateDeep,
   validateEvent,
   validateFlow,
   validateMapping,
@@ -34,7 +35,7 @@ export async function validate(
   // Dot-notation entry validation (e.g., "destinations.snowplow")
   if (
     type.includes('.') ||
-    !['contract', 'event', 'flow', 'mapping'].includes(type)
+    !['contract', 'deep', 'event', 'flow', 'mapping'].includes(type)
   ) {
     return validateEntry(type, input as Record<string, unknown>);
   }
@@ -42,6 +43,8 @@ export async function validate(
   switch (type) {
     case 'contract':
       return validateContract(input);
+    case 'deep':
+      return validateDeep(input, { flow: options.flow });
     case 'event':
       return validateEvent(input);
     case 'flow':
@@ -182,6 +185,7 @@ export async function validateCommand(
 export * from './types.js';
 export {
   validateContract,
+  validateDeep,
   validateEvent,
   validateFlow,
   validateMapping,

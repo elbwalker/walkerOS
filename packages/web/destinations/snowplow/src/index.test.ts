@@ -15,7 +15,15 @@ import {
 } from '.';
 import { resetLoadedScripts, DEFAULT_SCRIPT_URL } from './setup';
 
-const { events, mapping, walkerosEvents } = examples;
+const mappingConfig = {
+  page: { view: examples.step.pageView.mapping },
+  product: {
+    view: examples.step.productView.mapping,
+    add: examples.step.addToCart.mapping,
+  },
+  order: { complete: examples.step.transaction.mapping },
+  promotion: { view: examples.step.promoView.mapping },
+};
 
 describe('destination snowplow', () => {
   let elb: WalkerOS.Elb;
@@ -218,14 +226,14 @@ describe('destination snowplow', () => {
       settings: {
         collectorUrl: 'https://collector.example.com',
       },
-      mapping: mapping.config,
+      mapping: mappingConfig,
     });
 
     await elb(event);
 
     expect(calls).toContainEqual({
       path: ['window', 'snowplow'],
-      args: events.transaction(),
+      args: examples.step.transaction.out,
     });
   });
 
@@ -244,14 +252,14 @@ describe('destination snowplow', () => {
         collectorUrl: 'https://collector.example.com',
         pageViewEvent: 'page view',
       },
-      mapping: mapping.config,
+      mapping: mappingConfig,
     });
 
     await elb(event);
 
     expect(calls).toContainEqual({
       path: ['window', 'snowplow'],
-      args: events.pageView(),
+      args: examples.step.pageView.out,
     });
   });
 
@@ -266,14 +274,14 @@ describe('destination snowplow', () => {
       settings: {
         collectorUrl: 'https://collector.example.com',
       },
-      mapping: mapping.config,
+      mapping: mappingConfig,
     });
 
     await elb(event);
 
     expect(calls).toContainEqual({
       path: ['window', 'snowplow'],
-      args: events.productView(),
+      args: examples.step.productView.out,
     });
   });
 
@@ -286,14 +294,14 @@ describe('destination snowplow', () => {
       settings: {
         collectorUrl: 'https://collector.example.com',
       },
-      mapping: mapping.config,
+      mapping: mappingConfig,
     });
 
-    await elb(walkerosEvents.addToCart());
+    await elb(examples.step.addToCart.in as WalkerOS.Event);
 
     expect(calls).toContainEqual({
       path: ['window', 'snowplow'],
-      args: events.addToCart(),
+      args: examples.step.addToCart.out,
     });
   });
 
@@ -308,14 +316,14 @@ describe('destination snowplow', () => {
       settings: {
         collectorUrl: 'https://collector.example.com',
       },
-      mapping: mapping.config,
+      mapping: mappingConfig,
     });
 
     await elb(event);
 
     expect(calls).toContainEqual({
       path: ['window', 'snowplow'],
-      args: events.purchase(),
+      args: examples.step.transaction.out,
     });
   });
 
@@ -331,7 +339,7 @@ describe('destination snowplow', () => {
       settings: {
         collectorUrl: 'https://collector.example.com',
       },
-      mapping: mapping.config,
+      mapping: mappingConfig,
     });
 
     await elb(event);
@@ -382,7 +390,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           page: { type: 'globals.page_type' },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(
@@ -407,7 +415,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           page: { type: 'globals.page_type' },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       // First event with page_type
@@ -439,7 +447,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           page: { type: 'globals.page_type' },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       // First event with page_type 'product'
@@ -473,7 +481,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           page: { type: 'globals.page_type' }, // Will be undefined if not in globals
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       // Event without globals.page_type
@@ -493,7 +501,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           page: { type: { value: 'homepage' } },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(getEvent('page view'));
@@ -518,7 +526,7 @@ describe('destination snowplow', () => {
             locale: { value: 'en-US' },
           },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(
@@ -550,7 +558,7 @@ describe('destination snowplow', () => {
             locale: 'globals.locale', // Will be undefined
           },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(
@@ -581,7 +589,7 @@ describe('destination snowplow', () => {
             heartbeatDelay: 30,
           },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(getEvent('page view'));
@@ -610,7 +618,7 @@ describe('destination snowplow', () => {
           },
           pageViewEvent: 'page view',
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(getEvent('page view'));
@@ -634,7 +642,7 @@ describe('destination snowplow', () => {
         settings: {
           collectorUrl: 'https://collector.example.com',
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(getEvent('page view'));
@@ -1001,7 +1009,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           userId: 'user.id',
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(
@@ -1026,7 +1034,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           userId: 'user.id',
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       // First event with user
@@ -1059,7 +1067,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           userId: 'user.id',
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       // Event without user.id (explicitly set user to empty object)
@@ -1083,7 +1091,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           userId: 'user.id',
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       // First event - no user.id
@@ -1116,7 +1124,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           // No userId setting
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(
@@ -1150,7 +1158,7 @@ describe('destination snowplow', () => {
                 collectorUrl: 'https://collector.example.com',
                 userId: 'user.id',
               },
-              mapping: mapping.config,
+              mapping: mappingConfig,
             },
           },
         },
@@ -1165,7 +1173,7 @@ describe('destination snowplow', () => {
                 collectorUrl: 'https://collector.example.com',
                 userId: 'user.id',
               },
-              mapping: mapping.config,
+              mapping: mappingConfig,
             },
           },
         },
