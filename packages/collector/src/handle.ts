@@ -9,6 +9,7 @@ import { assign, getId, isFunction, isString } from '@walkeros/core';
 import { isObject } from '@walkeros/core';
 import { processConsent } from './consent';
 import { on, onApply } from './on';
+import { destroyAllSteps } from './shutdown';
 import type { RunState } from './types/collector';
 
 /**
@@ -119,6 +120,10 @@ export async function commonHandleCommand(
 
     case Const.Commands.Session:
       shouldNotify = true;
+      break;
+
+    case Const.Commands.Shutdown:
+      await destroyAllSteps(collector);
       break;
 
     case Const.Commands.User:

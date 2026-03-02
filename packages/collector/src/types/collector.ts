@@ -33,6 +33,7 @@ export type CommandTypes =
   | 'Ready'
   | 'Run'
   | 'Session'
+  | 'Shutdown'
   | 'User'
   | 'Walker';
 
