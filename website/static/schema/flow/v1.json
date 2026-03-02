@@ -330,6 +330,11 @@
           },
           "minProperties": 1,
           "description": "Named flow configurations (e.g., production, staging, development)"
+        },
+        "contract": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Event contract for data validation (entity/action keyed JSON Schema)"
         }
       },
       "required": ["version", "flows"],

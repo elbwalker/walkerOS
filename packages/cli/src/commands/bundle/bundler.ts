@@ -1394,6 +1394,15 @@ export function generatePlatformWrapper(
     config.logger = { ...config.logger, ...context.logger };
   }
 
+  // Apply runtime port override to server sources (--port flag or PORT env var)
+  if (context.port !== undefined && config.sources) {
+    for (const src of Object.values(config.sources)) {
+      if (src.config && src.config.settings && src.config.settings.port !== undefined) {
+        src.config.settings.port = context.port;
+      }
+    }
+  }
+
   return await startFlow(config);
 }`;
   }

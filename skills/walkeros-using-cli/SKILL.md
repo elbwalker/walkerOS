@@ -87,6 +87,11 @@ walkeros run collect flow.json --port 3000
 walkeros run serve flow.json --port 8080
 ```
 
+**Server port note:** The `--port` flag (or `PORT` env var) is forwarded at
+runtime to all source configs that have a `port` setting. You don't need to
+hardcode ports in the flow config — set `port: 8080` as a default and let the
+runtime override it.
+
 ---
 
 ## Flow.Setup Configuration

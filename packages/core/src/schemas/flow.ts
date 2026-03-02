@@ -78,13 +78,17 @@ export const WebSchema = z
     windowCollector: z
       .string()
       .optional()
+      .default('collector')
       .describe(
-        'Window property name for collector instance (default: "collector")',
+        'Window property name for the collector instance (default: "collector")',
       ),
     windowElb: z
       .string()
       .optional()
-      .describe('Window property name for elb function (default: "elb")'),
+      .default('elb')
+      .describe(
+        'Window property name for the elb command queue (default: "elb")',
+      ),
   })
   .describe('Web platform configuration');
 
@@ -123,7 +127,7 @@ export const InlineCodeSchema = z
       .string()
       .min(1, 'Push function cannot be empty')
       .describe(
-        'Main function that processes events. Use $code: prefix for inline JavaScript.',
+        'JavaScript function for processing events. Must start with "$code:" prefix. Example: "$code:(event) => { console.log(event); }"',
       ),
     type: z
       .string()

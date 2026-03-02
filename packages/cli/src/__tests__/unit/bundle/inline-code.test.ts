@@ -1,5 +1,8 @@
 import { describe, it, expect } from '@jest/globals';
-import { buildConfigObject } from '../../../commands/bundle/bundler.js';
+import {
+  buildConfigObject,
+  generatePlatformWrapper,
+} from '../../../commands/bundle/bundler.js';
 import type { Flow } from '@walkeros/core';
 
 describe('Validation', () => {
@@ -202,5 +205,54 @@ describe('Integration', () => {
 
     // Transformer chaining should be preserved
     expect(result).toContain('next');
+  });
+});
+
+describe('generatePlatformWrapper', () => {
+  it('should include port override logic in server wrapper', () => {
+    const configObject = `{
+      sources: { http: { code: expressSource, config: { settings: { port: 3000 } } } },
+      destinations: {}
+    }`;
+
+    const result = generatePlatformWrapper(configObject, '', {
+      platform: 'server',
+    });
+
+    // Must contain port override block
+    expect(result).toContain('context.port');
+    expect(result).toContain('config.sources');
+    // Must still contain logger override
+    expect(result).toContain('context.logger');
+    // Must export default function
+    expect(result).toContain('export default async function');
+  });
+
+  it('should not include port override in browser wrapper', () => {
+    const configObject = `{ sources: {}, destinations: {} }`;
+
+    const result = generatePlatformWrapper(configObject, '', {
+      platform: 'browser',
+    });
+
+    expect(result).not.toContain('context.port');
+  });
+
+  it('should generate port override that patches sources with existing port settings', () => {
+    const configObject = `{
+      sources: {
+        http: { code: expressSource, config: { settings: { port: 3000 } } },
+        other: { code: otherSource, config: { settings: { name: "test" } } }
+      },
+      destinations: {}
+    }`;
+
+    const result = generatePlatformWrapper(configObject, '', {
+      platform: 'server',
+    });
+
+    // The generated code should only patch sources that already have a port setting
+    expect(result).toContain('src.config.settings.port !== undefined');
+    expect(result).toContain('src.config.settings.port = context.port');
   });
 });
