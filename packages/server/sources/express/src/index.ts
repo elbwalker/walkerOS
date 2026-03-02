@@ -14,7 +14,7 @@ import { setCorsHeaders, TRANSPARENT_GIF } from './utils';
  * - Sets up middleware (JSON parsing, CORS)
  * - Registers event collection endpoints (POST, GET, OPTIONS)
  * - Starts HTTP server (if port configured)
- * - Handles graceful shutdown
+ * - Provides destroy() for graceful shutdown (called by runner)
  *
  * @param context Source context with config, env, logger, id
  * @returns Express source instance with app and push handler
@@ -167,16 +167,6 @@ export const sourceExpress = async (
           statusRoutes,
       );
     });
-
-    // Graceful shutdown handlers
-    const shutdownHandler = () => {
-      if (server) {
-        server.close();
-      }
-    };
-
-    process.on('SIGTERM', shutdownHandler);
-    process.on('SIGINT', shutdownHandler);
   }
 
   const instance: ExpressSource = {
@@ -188,6 +178,11 @@ export const sourceExpress = async (
     push,
     app, // Expose app for advanced usage
     server, // Expose server (if started)
+    destroy: (_context) =>
+      new Promise<void>((resolve, reject) => {
+        if (!server) return resolve();
+        server.close((err) => (err ? reject(err) : resolve()));
+      }),
   };
 
   return instance;

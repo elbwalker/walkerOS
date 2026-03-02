@@ -1,4 +1,4 @@
-import type { WalkerOS, Source as CoreSource } from '@walkeros/core';
+import type { Lifecycle, WalkerOS, Source as CoreSource } from '@walkeros/core';
 import type { Request, Response, Application } from 'express';
 import type {
   SettingsSchema,
@@ -46,6 +46,7 @@ export interface ExpressSource extends Omit<
   push: Push;
   app: Application; // Expose Express app for advanced usage
   server?: ReturnType<Application['listen']>; // HTTP server (if port configured)
+  destroy(context: Lifecycle.DestroyContext): Promise<void>;
 }
 
 // Event request/response types
