@@ -504,7 +504,7 @@ describe('Flow Schemas', () => {
 
     test('accepts optional contract property', () => {
       const setup = {
-        version: 1 as const,
+        version: 2 as const,
         contract: {
           $tagging: 1,
           product: { add: { properties: { data: { type: 'object' } } } },
