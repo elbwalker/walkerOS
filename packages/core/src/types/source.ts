@@ -7,6 +7,7 @@ import type {
   Collector,
   Context as BaseContext,
 } from './index';
+import type { DestroyFn } from './lifecycle';
 import type { Next } from './transformer';
 
 /**
@@ -116,7 +117,7 @@ export interface Instance<T extends TypesGeneric = Types> {
   type: string;
   config: Config<T>;
   push: Push<T>;
-  destroy?(): void | Promise<void>;
+  destroy?: DestroyFn<Config<T>, Env<T>>;
   on?(
     event: On.Types,
     context?: unknown,
