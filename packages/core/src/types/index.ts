@@ -11,6 +11,7 @@ export * as On from './on';
 export * as Transformer from './transformer';
 export * as Request from './request';
 export * as Source from './source';
+export * as Lifecycle from './lifecycle';
 export * as WalkerOS from './walkeros';
 
 // Export storage types directly
