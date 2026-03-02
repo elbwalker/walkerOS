@@ -47,10 +47,6 @@
     "terser": "^5.39.0",
     "typescript": "^5.8.2"
   },
-  "optionalDependencies": {
-    "@swc/core-linux-x64-gnu": "^1.11.13",
-    "@swc/core-linux-x64-musl": "^1.11.13"
-  },
   "publishConfig": {
     "access": "public"
   },
