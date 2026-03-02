@@ -205,12 +205,6 @@ export interface Setup {
   definitions?: Definitions;
 
   /**
-   * Event contract for data validation.
-   * Entity/action keyed JSON Schema definitions.
-   */
-  contract?: Record<string, unknown>;
-
-  /**
    * Named flow configurations.
    * If only one flow exists, it's auto-selected.
    */
