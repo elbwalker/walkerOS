@@ -21,21 +21,23 @@ export async function destroyAllSteps(
   await destroyStepGroup(collector.transformers, 'transformer', logger);
 }
 
-async function destroyStepGroup(
-  steps: Record<
-    string,
-    {
-      destroy?: (ctx: Lifecycle.DestroyContext) => void | Promise<void>;
-      config: unknown;
-      env?: unknown;
-      type?: string;
-    }
-  >,
+async function destroyStepGroup<
+  T extends { config: unknown; env?: unknown; type?: string },
+>(
+  steps: Record<string, T>,
   label: string,
   rootLogger: Logger.Instance,
 ): Promise<void> {
   const promises = Object.entries(steps).map(async ([id, step]) => {
-    if (!step.destroy) return;
+    // Access destroy via cast: its DestroyContext<C,E> generic is contravariant,
+    // so concrete step types aren't assignable to a structural destroy signature.
+    // Safe because we pass each step's own config/env back to its own destroy.
+    const destroy = (
+      step as {
+        destroy?: (ctx: Lifecycle.DestroyContext) => void | Promise<void>;
+      }
+    ).destroy;
+    if (!destroy) return;
 
     const stepType = step.type || 'unknown';
     const logger = rootLogger.scope(stepType);
@@ -49,7 +51,7 @@ async function destroyStepGroup(
 
     try {
       await Promise.race([
-        step.destroy(context),
+        destroy(context),
         new Promise<void>((_, reject) =>
           setTimeout(
             () => reject(new Error(`${label} '${id}' destroy timed out`)),

@@ -1,5 +1,5 @@
 import { startFlow } from '@walkeros/collector';
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { WalkerOS, Collector, Source } from '@walkeros/core';
 import {
   createMockPush,
   getDataLayer,
@@ -161,7 +161,7 @@ describe('DataLayer Source - Integration', () => {
     const source = await createDataLayerSource(freshCollector);
 
     // Register source on collector so on-run handler fires
-    freshCollector.sources['dataLayer'] = source;
+    freshCollector.sources['dataLayer'] = source as Source.Instance;
 
     // No events should have been collected yet (allowed=false)
     expect(freshEvents).toHaveLength(0);
