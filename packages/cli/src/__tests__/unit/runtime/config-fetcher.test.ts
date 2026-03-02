@@ -73,7 +73,9 @@ describe('fetchConfig', () => {
       status: 401,
       statusText: 'Unauthorized',
     });
-    await expect(fetchConfig(opts)).rejects.toThrow('Config fetch failed: 401');
+    await expect(fetchConfig(opts)).rejects.toThrow(
+      'Config fetch failed (401)',
+    );
   });
 
   it('does not send If-None-Match when no lastEtag', async () => {

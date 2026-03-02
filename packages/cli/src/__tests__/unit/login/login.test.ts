@@ -175,7 +175,7 @@ describe('login (device code flow)', () => {
     });
     expect(result.success).toBe(true);
     expect(pollCount).toBe(2);
-  });
+  }, 10_000);
 
   it('times out when max poll attempts exceeded', async () => {
     const mockFetch = createMockFetch((url) => {

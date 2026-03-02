@@ -7,7 +7,7 @@ import type {
   ValidationWarning,
 } from '../types.js';
 
-const { SetupSchema } = schemas;
+const { validateFlowSetup } = schemas;
 
 interface FlowValidateOptions {
   flow?: string;
@@ -21,41 +21,46 @@ export function validateFlow(
   const warnings: ValidationWarning[] = [];
   const details: Record<string, unknown> = {};
 
+  // 1. Serialize to JSON for core validator
+  //    Core's validateFlowSetup takes a JSON string, but CLI receives parsed objects.
+  //    Re-serializing is the bridge between the two interfaces.
+  let json: string;
+  try {
+    json = JSON.stringify(input, null, 2);
+  } catch {
+    errors.push({
+      path: 'root',
+      message: 'Input cannot be serialized to JSON',
+      code: 'SERIALIZATION_ERROR',
+    });
+    return { valid: false, type: 'flow', errors, warnings, details };
+  }
+
+  // 2. Run core validation (Zod schema + reference checking)
+  const coreResult = validateFlowSetup(json);
+
+  // 3. Map core errors -> CLI ValidationError
+  for (const issue of coreResult.errors) {
+    errors.push({
+      path: issue.path || 'root',
+      message: issue.message,
+      code: 'SCHEMA_VALIDATION',
+    });
+  }
+
+  // 4. Map core warnings -> CLI ValidationWarning
+  for (const issue of coreResult.warnings) {
+    warnings.push({
+      path: issue.path || 'root',
+      message: issue.message,
+    });
+  }
+
+  // 5. CLI-specific: check for empty flows
   const config = (
     typeof input === 'object' && input !== null ? input : {}
   ) as Record<string, unknown>;
 
-  // 1. Pre-check version (union errors are generic without it)
-  if (!('version' in config) || config.version === undefined) {
-    errors.push({
-      path: 'version',
-      message: 'Configuration must have a version field (1 or 2)',
-      code: 'MISSING_VERSION',
-    });
-  } else if (config.version !== 1 && config.version !== 2) {
-    errors.push({
-      path: 'version',
-      message: `Invalid version: ${config.version}. Supported versions: 1, 2`,
-      code: 'INVALID_VERSION',
-    });
-  }
-
-  // 2. Validate against SetupSchema
-  const zodResult = SetupSchema.safeParse(input);
-  if (!zodResult.success) {
-    for (const issue of zodResult.error.issues) {
-      const path = issue.path.join('.');
-      // Skip generic union errors when we already have a version error
-      if (!path && errors.some((e) => e.path === 'version')) continue;
-      errors.push({
-        path: path || 'root',
-        message: issue.message,
-        code: 'SCHEMA_VALIDATION',
-      });
-    }
-  }
-
-  // 2. Check for empty flows
   const flows = config.flows as Record<string, unknown> | undefined;
   if (flows && typeof flows === 'object' && Object.keys(flows).length === 0) {
     errors.push({
@@ -65,13 +70,13 @@ export function validateFlow(
     });
   }
 
-  // 3. Extract flow details
+  // 6. Extract flow details
   if (flows && typeof flows === 'object') {
     const flowNames = Object.keys(flows);
     details.flowNames = flowNames;
     details.flowCount = flowNames.length;
 
-    // 4. Validate specific flow if requested
+    // 7. Validate specific flow if requested
     if (options.flow) {
       if (!flowNames.includes(options.flow)) {
         errors.push({
@@ -85,7 +90,7 @@ export function validateFlow(
     }
   }
 
-  // 5. Warnings for packages without version
+  // 8. CLI-specific: warn about packages without version
   const packages = config.packages as
     | Record<string, Record<string, unknown>>
     | undefined;
@@ -100,6 +105,11 @@ export function validateFlow(
       }
     }
     details.packageCount = Object.keys(packages).length;
+  }
+
+  // 9. Expose core's IntelliSense context in details (bonus for MCP consumers)
+  if (coreResult.context) {
+    details.context = coreResult.context;
   }
 
   return {
