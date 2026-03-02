@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Collector, Logger, WalkerOS, Context as BaseContext } from '.';
+import type { DestroyFn } from './lifecycle';
 
 export type Next = string | string[];
 
@@ -125,7 +126,7 @@ export interface Instance<T extends TypesGeneric = Types> {
   config: Config<T>;
   push: Fn<T>; // Named "push" for consistency with Source/Destination
   init?: InitFn<T>; // Optional, called once before first push
-  destroy?: () => void | Promise<void>;
+  destroy?: DestroyFn<Config<T>, Env<T>>;
 }
 
 /**
