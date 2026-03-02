@@ -89,6 +89,21 @@ describe('swapFlow', () => {
     expect(mockLogger.info).toHaveBeenCalledWith('Flow swapped successfully');
   });
 
+  it('handles swap when command is undefined', async () => {
+    const oldHandle = await loadFlow(BUNDLE_V1, { port: 8080 }, mockLogger);
+    oldHandle.collector.command = undefined;
+
+    const newHandle = await swapFlow(
+      oldHandle,
+      BUNDLE_V2,
+      { port: 8080 },
+      mockLogger,
+    );
+
+    expect(newHandle.file).toBe(BUNDLE_V2);
+    expect(mockLogger.info).toHaveBeenCalledWith('Flow swapped successfully');
+  });
+
   it('keeps old handle if new bundle fails to load', async () => {
     const oldHandle = await loadFlow(BUNDLE_V1, { port: 8080 }, mockLogger);
 

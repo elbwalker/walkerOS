@@ -15,7 +15,9 @@ export interface RuntimeConfig {
 }
 
 export interface FlowHandle {
-  collector: { command?: (cmd: string) => Promise<void> };
+  collector: {
+    command?: (cmd: string) => Promise<void>;
+  };
   file: string;
 }
 
@@ -56,12 +58,17 @@ export async function loadFlow(
     throw new Error(`Invalid flow bundle: ${file} must return { collector }`);
   }
 
-  return { collector: result.collector, file };
+  return {
+    collector: {
+      command: result.collector.command,
+    },
+    file,
+  };
 }
 
 /**
- * Swap the running flow to a new bundle. If the new bundle fails to load,
- * the current flow stays active (atomic swap).
+ * Swap the running flow to a new bundle. Shuts down old flow FIRST to release
+ * the port, then loads the new bundle. Brief downtime is acceptable for Mode C.
  */
 export async function swapFlow(
   currentHandle: FlowHandle,
@@ -70,17 +77,19 @@ export async function swapFlow(
   logger: Logger.Instance,
   loggerConfig?: Logger.Config,
 ): Promise<FlowHandle> {
-  // Load new flow first — if this fails, current flow stays
-  const newHandle = await loadFlow(newFile, config, logger, loggerConfig);
+  logger.info('Shutting down current flow for hot-swap...');
 
-  // New flow loaded successfully, shut down old one
+  // Delegate to collector's shutdown command (destroys sources, destinations, transformers)
   try {
     if (currentHandle.collector.command) {
       await currentHandle.collector.command('shutdown');
     }
   } catch (error) {
-    logger.debug(`Old flow shutdown warning: ${error}`);
+    logger.debug(`Shutdown warning: ${error}`);
   }
+
+  // Now load new flow — port is free
+  const newHandle = await loadFlow(newFile, config, logger, loggerConfig);
 
   logger.info('Flow swapped successfully');
   return newHandle;
@@ -114,14 +123,21 @@ export async function runFlow(
     const shutdown = async (signal: string) => {
       logger.info(`Received ${signal}, shutting down gracefully...`);
 
+      // Hard safety valve — force exit if shutdown takes too long
+      const forceTimer = setTimeout(() => {
+        logger.error('Shutdown timed out, forcing exit');
+        process.exit(1);
+      }, 15000);
+
       try {
-        // Use collector's shutdown command if available
         if (handle.collector.command) {
           await handle.collector.command('shutdown');
         }
         logger.info('Shutdown complete');
+        clearTimeout(forceTimer);
         process.exit(0);
       } catch (error) {
+        clearTimeout(forceTimer);
         const message = error instanceof Error ? error.message : String(error);
         logger.error(`Error during shutdown: ${message}`);
         process.exit(1);
