@@ -133,6 +133,11 @@ export {
   destinationReferenceJsonSchema,
 } from './flow';
 
+// Validation
+export type { ValidationIssue, ValidationResult } from './validate';
+export type { IntelliSenseContext, PackageInfo } from './intellisense';
+export { validateFlowSetup } from './validate-flow-setup';
+
 // ========================================
 // Schema Builder - DRY utility for destinations
 // ========================================
