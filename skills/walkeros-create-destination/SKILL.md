@@ -299,6 +299,8 @@ Use these templates as your starting point:
    `ingest`
 3. **Use `getEnv(env)`**: Never access `window`/`document` directly
 4. **Return config from init**: Allows updating config during initialization
+5. **Optional `destroy` method**: Implement if the destination holds resources
+   (DB connections, SDK clients, timers) that need cleanup on shutdown
 
 ### Gate: Implementation Compiles
 

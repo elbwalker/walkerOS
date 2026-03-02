@@ -50,6 +50,12 @@ export const sourceMySource: Source.Init<Types> = async (context) => {
 | ------------- | ----------------------------------- |
 | `push(input)` | Receive external input, emit events |
 
+### Destroy Method
+
+`destroy?: DestroyFn` — Optional cleanup method. Called during
+`command('shutdown')`. Use to close HTTP servers, timers, or connections.
+Receives `{ id, config, env, logger }`.
+
 ## Push Signatures by Type
 
 | Source Type    | Signature                           | Example      |
