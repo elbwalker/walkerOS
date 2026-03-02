@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   SetupSchema,
+  SetupV2Schema,
   ConfigSchema,
   SourceReferenceSchema,
   DestinationReferenceSchema,
@@ -511,7 +512,7 @@ describe('Flow Schemas', () => {
         },
         flows: { default: { web: {} } },
       };
-      const result = SetupSchema.parse(setup);
+      const result = SetupV2Schema.parse(setup);
       expect(result.contract).toBeDefined();
     });
   });

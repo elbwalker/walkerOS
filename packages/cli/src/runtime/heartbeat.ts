@@ -13,6 +13,7 @@ export interface HeartbeatConfig {
   token: string;
   projectId: string;
   flowId?: string;
+  deploymentId?: string;
   configVersion?: string;
   mode: string;
   intervalMs: number;
@@ -46,6 +47,9 @@ export function createHeartbeat(
           body: JSON.stringify({
             instanceId,
             flowId: config.flowId,
+            ...(config.deploymentId && {
+              deploymentId: config.deploymentId,
+            }),
             configVersion,
             mode: config.mode,
             cliVersion: VERSION,
