@@ -258,7 +258,7 @@ describe('generatePlatformWrapper', () => {
     expect(result).not.toContain('window');
   });
 
-  it('server wrapper does not contain port override logic', () => {
+  it('server wrapper applies runtime port override', () => {
     const config =
       '{ sources: { http: { config: { settings: { port: 8080 } } } } }';
     const userCode = '';
@@ -266,9 +266,8 @@ describe('generatePlatformWrapper', () => {
 
     const result = generatePlatformWrapper(config, userCode, buildOptions);
 
-    // Port override is now handled by the Express source reading process.env.PORT
-    expect(result).not.toContain('context.port');
-    expect(result).not.toContain('src.config.settings.port');
+    expect(result).toContain('context.port');
+    expect(result).toContain('src.config.settings.port = context.port');
   });
 });
 
