@@ -183,6 +183,107 @@ walkeros run collect dist/bundle.mjs
 
 ---
 
+## deploy
+
+Deploy flows to walkerOS cloud. Auto-detects web (CDN hosting) or server
+(container) from the flow config.
+
+### Subcommands
+
+| Subcommand | Purpose                          |
+| ---------- | -------------------------------- |
+| `start`    | Deploy a flow (streams progress) |
+| `status`   | Get deployment details           |
+| `list`     | List all deployments             |
+| `create`   | Create a deployment record       |
+| `delete`   | Delete a deployment              |
+
+### deploy start
+
+```bash
+walkeros deploy start <flowId> [options]
+```
+
+| Option              | Description                                  |
+| ------------------- | -------------------------------------------- |
+| `--project <id>`    | Project ID (defaults to WALKEROS_PROJECT_ID) |
+| `-f, --flow <name>` | Flow name for multi-config flows             |
+| `--no-wait`         | Return immediately without streaming         |
+| `--timeout <sec>`   | Timeout in seconds (default: 120)            |
+| `--json`            | JSON output                                  |
+| `-v, --verbose`     | Verbose logging                              |
+| `-s, --silent`      | Silent mode                                  |
+
+Progress is streamed via SSE:
+
+```
+Building bundle...
+Deploying container...
+Starting container...
+✓ Active: https://collect-abc123.walkeros.io
+```
+
+For multi-config flows, use `--flow` to specify which config to deploy. Without
+it, the command errors with the available config names.
+
+### deploy status
+
+```bash
+walkeros deploy status <id-or-slug> [options]
+```
+
+| Option           | Description |
+| ---------------- | ----------- |
+| `--project <id>` | Project ID  |
+| `--json`         | JSON output |
+
+### deploy list
+
+```bash
+walkeros deploy list [options]
+```
+
+| Option              | Description                 |
+| ------------------- | --------------------------- |
+| `--project <id>`    | Project ID                  |
+| `--type <type>`     | Filter: `web` or `server`   |
+| `--status <status>` | Filter by deployment status |
+| `--json`            | JSON output                 |
+
+### deploy delete
+
+```bash
+walkeros deploy delete <id-or-slug> [options]
+```
+
+### Examples
+
+```bash
+# Deploy a flow and watch progress
+walkeros deploy start flow_abc123
+
+# Deploy specific config from multi-config flow
+walkeros deploy start flow_abc123 --flow production
+
+# Deploy without waiting
+walkeros deploy start flow_abc123 --no-wait
+
+# Check status later
+walkeros deploy status dep_xyz789
+
+# List server deployments
+walkeros deploy list --type server
+```
+
+### Prerequisites
+
+- **Authentication:** Set `WALKEROS_TOKEN` env var or run `walkeros auth`
+- **Project:** Set `WALKEROS_PROJECT_ID` or use `--project`
+- **Flow must exist:** Create via the app UI or API first
+- **Server flows need an HTTP source** with `port` setting for health checks
+
+---
+
 ## validate
 
 Validate events, flows, or mapping configurations.

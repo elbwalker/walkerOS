@@ -49,7 +49,7 @@ export function registerDeploymentTools(server: McpServer) {
     {
       title: 'Deploy Flow',
       description:
-        'Deploy a flow to walkerOS cloud. Auto-detects web (script hosting) or server (container) from the flow content. Returns deployment status and public URL.',
+        'Deploy a flow to walkerOS cloud. Auto-detects web (CDN) or server (container) from flow content.\n\nServer flows require an HTTP source (e.g., @walkeros/server-source-express) with port: 8080 and status: true for health checks. The runtime PORT env var overrides the config port automatically.\n\nReturns deployment status and public URL. Use wait: false to return immediately.',
       inputSchema: {
         flowId: z.string().describe('Flow ID to deploy'),
         projectId: z

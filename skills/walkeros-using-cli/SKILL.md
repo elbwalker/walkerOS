@@ -43,6 +43,7 @@ walkeros push flow.json -e '{"entity":"page","action":"view"}'
 | `push`        | Execute with real API calls    | ⚠️    |
 | `run collect` | Local HTTP event collection    | ✅    |
 | `run serve`   | Local static file server       | ✅    |
+| `deploy`      | Deploy flows to cloud          | ⚠️    |
 | `validate`    | Validate configs/events        | ✅    |
 | `cache`       | Manage caching                 | ✅    |
 
@@ -61,7 +62,7 @@ For detailed command reference, see
 3. Simulate: walkeros simulate flow.json -e event.json
 4. Fix issues, repeat 2-3
 5. Push test: walkeros push flow.json -e event.json
-6. Deploy bundle
+6. Deploy: walkeros deploy start <flowId>
 ```
 
 ### Multi-Flow Development
@@ -346,3 +347,4 @@ Use absolute or relative paths:
 - [commands-reference.md](commands-reference.md) - All commands with full
   options
 - [flow-configuration.md](flow-configuration.md) - Complete Flow.Setup reference
+- [server-deployment.md](server-deployment.md) - Server flow deployment guide
