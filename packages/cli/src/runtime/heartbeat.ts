@@ -35,7 +35,7 @@ export function createHeartbeat(
 
   async function sendOnce(): Promise<void> {
     try {
-      await fetch(
+      const response = await fetch(
         `${config.appUrl}/api/projects/${config.projectId}/runners/heartbeat`,
         {
           method: 'POST',
@@ -54,6 +54,12 @@ export function createHeartbeat(
           signal: AbortSignal.timeout(10_000),
         },
       );
+
+      if (response.status === 401 || response.status === 403) {
+        logger.error(
+          `Heartbeat auth failed (${response.status}). Token may have expired — redeploy to rotate.`,
+        );
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.debug(`Heartbeat failed: ${message}`);
