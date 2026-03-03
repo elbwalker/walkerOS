@@ -8,6 +8,7 @@
 import { pathToFileURL } from 'url';
 import { resolve, dirname } from 'path';
 import type { Collector, Logger } from '@walkeros/core';
+import type { HealthServer } from './health-server.js';
 
 export interface RuntimeConfig {
   port?: number;
@@ -20,6 +21,7 @@ export interface FlowHandle {
     status?: Collector.Status;
   };
   file: string;
+  httpHandler?: (...args: unknown[]) => void;
 }
 
 /**
@@ -30,12 +32,14 @@ export async function loadFlow(
   config: RuntimeConfig | undefined,
   logger: Logger.Instance,
   loggerConfig?: Logger.Config,
+  healthServer?: HealthServer,
 ): Promise<FlowHandle> {
   const absolutePath = resolve(file);
   const flowDir = dirname(absolutePath);
   process.chdir(flowDir);
 
-  if (config?.port !== undefined) {
+  // Only set PORT env when runner doesn't own the server
+  if (!healthServer && config?.port !== undefined) {
     process.env.PORT = String(config.port);
   }
 
@@ -50,13 +54,20 @@ export async function loadFlow(
     );
   }
 
-  const flowContext = loggerConfig
-    ? { ...config, logger: loggerConfig }
-    : config;
+  const flowContext = {
+    ...config,
+    ...(loggerConfig ? { logger: loggerConfig } : {}),
+    ...(healthServer ? { externalServer: true } : {}),
+  };
   const result = await module.default(flowContext);
 
   if (!result || !result.collector) {
     throw new Error(`Invalid flow bundle: ${file} must return { collector }`);
+  }
+
+  // Mount flow's httpHandler onto runner's health server (opaque — no type inspection)
+  if (healthServer && typeof result.httpHandler === 'function') {
+    healthServer.setFlowHandler(result.httpHandler);
   }
 
   return {
@@ -65,6 +76,7 @@ export async function loadFlow(
       status: result.collector.status,
     },
     file,
+    httpHandler: result.httpHandler,
   };
 }
 
@@ -78,8 +90,14 @@ export async function swapFlow(
   config: RuntimeConfig | undefined,
   logger: Logger.Instance,
   loggerConfig?: Logger.Config,
+  healthServer?: HealthServer,
 ): Promise<FlowHandle> {
   logger.info('Shutting down current flow for hot-swap...');
+
+  // Detach old handler — health endpoints still work during swap
+  if (healthServer) {
+    healthServer.setFlowHandler(null);
+  }
 
   // Delegate to collector's shutdown command (destroys sources, destinations, transformers)
   try {
@@ -90,8 +108,14 @@ export async function swapFlow(
     logger.debug(`Shutdown warning: ${error}`);
   }
 
-  // Now load new flow — port is free
-  const newHandle = await loadFlow(newFile, config, logger, loggerConfig);
+  // Load new flow — mounts new handler onto same server
+  const newHandle = await loadFlow(
+    newFile,
+    config,
+    logger,
+    loggerConfig,
+    healthServer,
+  );
 
   logger.info('Flow swapped successfully');
   return newHandle;

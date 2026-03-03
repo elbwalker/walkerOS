@@ -200,7 +200,6 @@ describe('sourceExpress', () => {
       expect(source.config.settings).toEqual({
         paths: ['/collect'],
         cors: true,
-        status: true,
       });
       expect(typeof source.push).toBe('function');
       expect(source.app).toBeDefined();
@@ -214,7 +213,6 @@ describe('sourceExpress', () => {
             settings: {
               paths: ['/events'],
               cors: false,
-              status: false,
             },
           },
           {
@@ -229,8 +227,25 @@ describe('sourceExpress', () => {
       expect(source.config.settings).toEqual({
         paths: ['/events'],
         cors: false,
-        status: false,
       });
+    });
+
+    it('exposes httpHandler on the source instance', async () => {
+      const source = await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+      expect(source.httpHandler).toBeDefined();
+      expect(typeof source.httpHandler).toBe('function');
+      // httpHandler should be the Express app itself
+      expect(source.httpHandler).toBe(source.app);
     });
 
     it('should start server when port is configured', async () => {

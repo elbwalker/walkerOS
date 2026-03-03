@@ -27,15 +27,6 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
       const origin = request.headers.get('Origin');
       const corsHeaders = createCorsHeaders(settings.cors, origin);
 
-      // Health check (no logging - routine operation)
-      if (settings.healthPath && url.pathname === settings.healthPath) {
-        return createJsonResponse(
-          { status: 'ok', timestamp: Date.now(), source: 'fetch' },
-          200,
-          corsHeaders,
-        );
-      }
-
       // Resolve route configs
       const resolvedPaths = settings.paths.map((entry) =>
         typeof entry === 'string'

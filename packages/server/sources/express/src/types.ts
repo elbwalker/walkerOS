@@ -44,6 +44,7 @@ export interface ExpressSource extends Omit<
   'push'
 > {
   push: Push;
+  httpHandler: Application; // Standard http request handler for runner integration
   app: Application; // Expose Express app for advanced usage
   server?: ReturnType<Application['listen']>; // HTTP server (if port configured)
   destroy(context: Lifecycle.DestroyContext): Promise<void>;

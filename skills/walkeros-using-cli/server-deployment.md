@@ -52,11 +52,13 @@ needs an HTTP source (Express) for health checks and event collection:
 
 **Key settings:**
 
-| Setting  | Required    | Purpose                                                                                          |
-| -------- | ----------- | ------------------------------------------------------------------------------------------------ |
-| `port`   | Yes         | HTTP server port. Set to `8080` — the runtime overrides this from `PORT` env var at deploy time. |
-| `cors`   | Recommended | Enable CORS for cross-origin event collection                                                    |
-| `status` | Recommended | Enables `/health` and `/ready` endpoints for container health checks                             |
+| Setting | Required    | Purpose                                                                                          |
+| ------- | ----------- | ------------------------------------------------------------------------------------------------ |
+| `port`  | Yes         | HTTP server port. Set to `8080` — the runtime overrides this from `PORT` env var at deploy time. |
+| `cors`  | Recommended | Enable CORS for cross-origin event collection                                                    |
+
+> **Note:** Health check endpoints (`/health`, `/ready`) are provided by the
+> runner, not by sources. No source-level health configuration is needed.
 
 ## 2. Test Locally
 
@@ -64,9 +66,9 @@ needs an HTTP source (Express) for health checks and event collection:
 # Bundle and run locally
 walkeros run collect flow.json --port 3000
 
-# In another terminal — health check
+# In another terminal — health check (provided by the runner)
 curl http://localhost:3000/health
-# → {"status":"ok","source":"express"}
+# → {"status":"ok"}
 
 # Send a test event
 curl -X POST http://localhost:3000/collect \
@@ -127,7 +129,7 @@ generate an IIFE (`walker.js`) instead.
 
 | Symptom                       | Cause                                    | Fix                                                          |
 | ----------------------------- | ---------------------------------------- | ------------------------------------------------------------ |
-| Health check fails            | Missing `status: true` in source config  | Add `"status": true` to Express source settings              |
+| Health check fails            | Runner health server not starting        | Check `PORT` env var is set and not conflicting              |
 | Container starts then crashes | No HTTP source configured                | Add `@walkeros/server-source-express` as source              |
 | Bundle is tiny (<1KB)         | Destinations nested inside `server` key  | Move sources/destinations to flow level, alongside `server`  |
 | Port mismatch                 | Config port doesn't match container PORT | Ensure config has `port: 8080` — runtime overrides it        |

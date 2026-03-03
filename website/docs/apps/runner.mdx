@@ -181,7 +181,12 @@ docker run \\
 
 ## Health checks
 
-The `/health` endpoint is available on the configured `PORT`:
+The runner provides its own health server on the configured `PORT`, independent of flow sources. Health endpoints are always available, even during flow hot-swaps or when no flow handler is loaded.
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Liveness check — always returns `200` |
+| `GET /ready` | Readiness check — returns `200` when a flow handler is mounted, `503` otherwise |
 
 <CodeSnippet
   code={`curl http://localhost:8080/health`}
@@ -189,11 +194,11 @@ The `/health` endpoint is available on the configured `PORT`:
 />
 
 <CodeSnippet
-  code={`{ "status": "ok", "version": "1.3.0", "timestamp": 1701234567890, "mode": "collect" }`}
+  code={`{ "status": "ok" }`}
   language="json"
 />
 
-In serve mode, `/status` returns detailed runner state (instance ID, config version, config source, uptime, API status).
+All other requests are delegated to the flow's HTTP handler (e.g., Express source routes).
 
 The Docker image includes a built-in `HEALTHCHECK` that polls `/health` every 30 seconds with a 30-second start period.
 

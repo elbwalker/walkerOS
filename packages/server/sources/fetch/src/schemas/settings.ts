@@ -23,11 +23,6 @@ export const SettingsSchema = z.object({
     )
     .default(true),
 
-  healthPath: z
-    .string()
-    .describe('Health check endpoint path')
-    .default('/health'),
-
   maxRequestSize: z
     .number()
     .int()

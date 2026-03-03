@@ -2,7 +2,7 @@ import sourceExpress from '../index';
 
 const mockContext = (port: number) =>
   ({
-    config: { settings: { port, status: true } },
+    config: { settings: { port } },
     env: {
       push: jest.fn(),
       command: jest.fn(),

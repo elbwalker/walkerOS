@@ -6,6 +6,7 @@
 import { validateEnv, type RunnerEnv } from './env.js';
 import { resolveBundle } from './resolve-bundle.js';
 import { loadFlow, swapFlow, type FlowHandle } from './runner.js';
+import { createHealthServer, type HealthServer } from './health-server.js';
 import { runServeMode } from './serve.js';
 import { fetchConfig } from './config-fetcher.js';
 import { writeCache, readCache } from './cache.js';
@@ -262,11 +263,21 @@ async function runWithBundle(
   cliLogger: ReturnType<typeof createLogger>,
   configVersion: string | undefined,
 ) {
+  // Create runner-owned health server on the configured port
+  const healthServer = await createHealthServer(env.port, logger);
+
   // Load and start the flow
   let handle: FlowHandle;
   try {
-    handle = await loadFlow(bundlePath, { port: env.port }, logger);
+    handle = await loadFlow(
+      bundlePath,
+      { port: env.port },
+      logger,
+      undefined,
+      healthServer,
+    );
   } catch (error) {
+    await healthServer.close();
     cliLogger.error(
       `Failed to load flow: ${error instanceof Error ? error.message : error}`,
     );
@@ -352,6 +363,8 @@ async function runWithBundle(
             newBundle,
             { port: env.port },
             logger,
+            undefined,
+            healthServer,
           );
 
           // Update cache
@@ -382,6 +395,7 @@ async function runWithBundle(
     } catch {
       /* best-effort */
     }
+    await healthServer.close();
     cliLogger.log('Shutdown complete');
     process.exit(0);
   };

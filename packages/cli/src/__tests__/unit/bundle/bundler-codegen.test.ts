@@ -254,7 +254,8 @@ describe('generatePlatformWrapper', () => {
     expect(result).toContain(
       'const config = { sources: {}, destinations: {} };',
     );
-    expect(result).toContain('return await startFlow(config)');
+    expect(result).toContain('const result = await startFlow(config)');
+    expect(result).toContain('httpHandler');
     expect(result).not.toContain('window');
   });
 

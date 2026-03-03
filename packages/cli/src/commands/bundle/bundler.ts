@@ -1394,8 +1394,16 @@ export function generatePlatformWrapper(
     config.logger = { ...config.logger, ...context.logger };
   }
 
-  // Apply runtime port override to server sources (--port flag or PORT env var)
-  if (context.port !== undefined && config.sources) {
+  // When runner provides external server, strip port from sources
+  // so they don't self-listen (runner owns the port)
+  if (context.externalServer && config.sources) {
+    for (const src of Object.values(config.sources)) {
+      if (src.config && src.config.settings && 'port' in src.config.settings) {
+        delete src.config.settings.port;
+      }
+    }
+  } else if (context.port !== undefined && config.sources) {
+    // Legacy: Apply runtime port override to server sources
     for (const src of Object.values(config.sources)) {
       if (src.config && src.config.settings && src.config.settings.port !== undefined) {
         src.config.settings.port = context.port;
@@ -1403,7 +1411,13 @@ export function generatePlatformWrapper(
     }
   }
 
-  return await startFlow(config);
+  const result = await startFlow(config);
+
+  // Discover httpHandler from initialized sources (duck-typing, no source-type coupling)
+  const httpSource = Object.values(result.collector.sources || {})
+    .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
+
+  return { ...result, httpHandler: httpSource ? httpSource.httpHandler : undefined };
 }`;
   }
 }

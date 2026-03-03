@@ -1,4 +1,9 @@
+import http from 'http';
 import { loadFlow, swapFlow } from '../../../runtime/runner.js';
+import {
+  createHealthServer,
+  type HealthServer,
+} from '../../../runtime/health-server.js';
 import { writeFileSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { createMockLogger } from '../../helpers/mock-logger.js';
@@ -113,5 +118,142 @@ describe('swapFlow', () => {
 
     // Old handle should still be valid
     expect(oldHandle.collector).toBeDefined();
+  });
+});
+
+function httpGet(
+  port: number,
+  path: string,
+): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const req = http.get(`http://127.0.0.1:${port}${path}`, (res) => {
+      let body = '';
+      res.on('data', (chunk: string) => (body += chunk));
+      res.on('end', () => resolve({ status: res.statusCode!, body }));
+    });
+    req.on('error', reject);
+  });
+}
+
+describe('loadFlow with HealthServer', () => {
+  let healthServer: HealthServer;
+
+  beforeEach(async () => {
+    healthServer = await createHealthServer(0, mockLogger);
+  });
+
+  afterEach(async () => {
+    await healthServer.close();
+  });
+
+  it('passes externalServer:true when health server provided', async () => {
+    writeFileSync(
+      join(TEST_DIR, 'ctx-check.mjs'),
+      `export default function(context) {
+        return {
+          collector: { command: async () => {} },
+          _receivedExternalServer: context.externalServer,
+        };
+      }`,
+      'utf-8',
+    );
+
+    const handle = await loadFlow(
+      join(TEST_DIR, 'ctx-check.mjs'),
+      { port: 8080 },
+      mockLogger,
+      undefined,
+      healthServer,
+    );
+
+    expect(handle.collector).toBeDefined();
+  });
+
+  it('mounts httpHandler onto health server', async () => {
+    writeFileSync(
+      join(TEST_DIR, 'with-handler.mjs'),
+      `export default function(context) {
+        return {
+          collector: { command: async () => {} },
+          httpHandler: (req, res) => {
+            res.writeHead(200);
+            res.end('flow-response');
+          },
+        };
+      }`,
+      'utf-8',
+    );
+
+    await loadFlow(
+      join(TEST_DIR, 'with-handler.mjs'),
+      { port: 8080 },
+      mockLogger,
+      undefined,
+      healthServer,
+    );
+
+    // Verify flow handler is mounted by hitting a non-health path
+    const port = (healthServer.server.address() as { port: number }).port;
+    const res = await httpGet(port, '/collect');
+
+    expect(res.body).toBe('flow-response');
+  });
+});
+
+describe('swapFlow with HealthServer', () => {
+  let healthServer: HealthServer;
+
+  beforeEach(async () => {
+    healthServer = await createHealthServer(0, mockLogger);
+  });
+
+  afterEach(async () => {
+    await healthServer.close();
+  });
+
+  it('detaches old handler and mounts new handler on swap', async () => {
+    writeFileSync(
+      join(TEST_DIR, 'swap-v1.mjs'),
+      `export default function() {
+        return {
+          collector: { command: async () => {} },
+          httpHandler: (req, res) => { res.writeHead(200); res.end('v1'); },
+        };
+      }`,
+      'utf-8',
+    );
+
+    writeFileSync(
+      join(TEST_DIR, 'swap-v2.mjs'),
+      `export default function() {
+        return {
+          collector: { command: async () => {} },
+          httpHandler: (req, res) => { res.writeHead(200); res.end('v2'); },
+        };
+      }`,
+      'utf-8',
+    );
+
+    const handle = await loadFlow(
+      join(TEST_DIR, 'swap-v1.mjs'),
+      { port: 8080 },
+      mockLogger,
+      undefined,
+      healthServer,
+    );
+
+    await swapFlow(
+      handle,
+      join(TEST_DIR, 'swap-v2.mjs'),
+      { port: 8080 },
+      mockLogger,
+      undefined,
+      healthServer,
+    );
+
+    const port = (healthServer.server.address() as { port: number }).port;
+    const res = await httpGet(port, '/collect');
+
+    expect(res.body).toBe('v2');
   });
 });

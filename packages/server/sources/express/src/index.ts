@@ -128,25 +128,11 @@ export const sourceExpress = async (
     app.options(route.path, push); // Always register OPTIONS for CORS
   }
 
-  // Health check endpoints (if enabled)
-  if (settings.status) {
-    app.get('/health', (_req, res) => {
-      res.json({ status: 'ok' });
-    });
-
-    app.get('/ready', (_req, res) => {
-      res.json({ status: 'ready' });
-    });
-  }
-
   // Source owns the HTTP server (if port configured)
   let server: ReturnType<typeof app.listen> | undefined;
 
   if (settings.port !== undefined) {
     server = app.listen(settings.port, () => {
-      const statusRoutes = settings.status
-        ? `\n   GET /health - Health check\n   GET /ready - Readiness check`
-        : '';
       const routeLines = resolvedPaths
         .map((r) => {
           const methods = [...r.methods, 'OPTIONS'].join(', ');
@@ -154,9 +140,7 @@ export const sourceExpress = async (
         })
         .join('\n');
       env.logger.info(
-        `Express source listening on port ${settings.port}\n` +
-          routeLines +
-          statusRoutes,
+        `Express source listening on port ${settings.port}\n` + routeLines,
       );
     });
   }
@@ -168,8 +152,9 @@ export const sourceExpress = async (
       settings,
     },
     push,
-    app, // Expose app for advanced usage
-    server, // Expose server (if started)
+    httpHandler: app,
+    app,
+    server,
     destroy: (_context) =>
       new Promise<void>((resolve, reject) => {
         if (!server) return resolve();

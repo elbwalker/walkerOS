@@ -67,9 +67,8 @@ describe('SettingsSchema', () => {
   });
 
   describe('other settings preserved', () => {
-    it('should keep healthPath, maxRequestSize, maxBatchSize defaults', () => {
+    it('should keep maxRequestSize, maxBatchSize defaults', () => {
       const result = SettingsSchema.parse({});
-      expect(result.healthPath).toBe('/health');
       expect(result.maxRequestSize).toBe(102400);
       expect(result.maxBatchSize).toBe(100);
       expect(result.cors).toBe(true);
