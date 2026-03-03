@@ -130,20 +130,12 @@ export const sourceExpress = async (
 
   // Health check endpoints (if enabled)
   if (settings.status) {
-    app.get('/health', (req, res) => {
-      res.json({
-        status: 'ok',
-        timestamp: Date.now(),
-        source: 'express',
-      });
+    app.get('/health', (_req, res) => {
+      res.json({ status: 'ok' });
     });
 
-    app.get('/ready', (req, res) => {
-      res.json({
-        status: 'ready',
-        timestamp: Date.now(),
-        source: 'express',
-      });
+    app.get('/ready', (_req, res) => {
+      res.json({ status: 'ready' });
     });
   }
 

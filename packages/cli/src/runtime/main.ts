@@ -35,13 +35,6 @@ function isPreBuiltConfig(configPath: string): boolean {
   );
 }
 import { writeFileSync, readFileSync } from 'fs';
-import {
-  initStatus,
-  setRunning,
-  updateLastPoll,
-  updateLastHeartbeat,
-  updateConfigVersion as updateStatusVersion,
-} from './status.js';
 
 /**
  * Adapt CLI logger to @walkeros/core Logger.Instance interface
@@ -94,14 +87,6 @@ async function main() {
   cliLogger.log(`walkeros/flow v${VERSION} — ${env.mode} mode`);
   cliLogger.log(`Instance: ${getInstanceId()}`);
 
-  // Initialize status tracking
-  initStatus({
-    mode: env.mode,
-    port: env.port,
-    configSource: env.remoteConfig ? 'api' : 'local',
-    apiEnabled: env.apiEnabled,
-  });
-
   // Step 1.5: Fetch secrets and inject into process.env
   // Fatal for auth failures (401/403) — the token is invalid and nothing will work.
   // Non-fatal for 404 (project/flow not found in secrets table) and 500 (server-side
@@ -143,7 +128,6 @@ async function main() {
 
   // Step 2: Serve mode is simple — no bundling, no polling
   if (env.mode === 'serve') {
-    setRunning();
     await runServeMode({ port: env.port, file: env.bundlePath }, logger);
     return;
   }
@@ -289,7 +273,6 @@ async function runWithBundle(
     process.exit(1);
   }
 
-  setRunning();
   cliLogger.log('Flow running');
   cliLogger.log(`Port: ${env.port}`);
 
@@ -376,10 +359,6 @@ async function runWithBundle(
 
           // Update heartbeat config version
           if (heartbeat) heartbeat.updateConfigVersion(version);
-
-          // Update status tracking
-          updateStatusVersion(version);
-          updateLastPoll();
 
           cliLogger.log(`Hot-swapped to version ${version}`);
         },

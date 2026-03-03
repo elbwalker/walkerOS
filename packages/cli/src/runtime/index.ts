@@ -34,9 +34,3 @@ export {
   type HeartbeatHandle,
 } from './heartbeat';
 export { createPoller, type PollerConfig, type PollerHandle } from './poller';
-export {
-  getStatus,
-  initStatus,
-  type RunnerStatus,
-  type StatusState,
-} from './status';
