@@ -1,4 +1,5 @@
 import { sourceUsercentrics } from '../index';
+import { createMockLogger } from '@walkeros/core';
 import * as inputs from '../examples/inputs';
 import * as outputs from '../examples/outputs';
 import { examples } from '../dev';
@@ -358,7 +359,12 @@ describe('Usercentrics Source', () => {
       const mockWindow = createMockWindow();
       const source = await createUsercentricsSource(mockWindow, mockElb);
 
-      await source.destroy?.();
+      await source.destroy?.({
+        id: 'test',
+        config: source.config,
+        env: {} as any,
+        logger: createMockLogger(),
+      });
 
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith(
         'ucEvent',
@@ -372,7 +378,12 @@ describe('Usercentrics Source', () => {
         settings: { eventName: 'myConsentEvent' },
       });
 
-      await source.destroy?.();
+      await source.destroy?.({
+        id: 'test',
+        config: source.config,
+        env: {} as any,
+        logger: createMockLogger(),
+      });
 
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith(
         'myConsentEvent',

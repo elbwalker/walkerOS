@@ -1,4 +1,5 @@
 import { sourceCookieFirst, DEFAULT_CATEGORY_MAP } from '../index';
+import { createMockLogger } from '@walkeros/core';
 import * as inputs from '../examples/inputs';
 import * as outputs from '../examples/outputs';
 import { examples } from '../dev';
@@ -264,7 +265,12 @@ describe('CookieFirst Source', () => {
       expect(consentCalls).toHaveLength(1);
 
       // Destroy the source
-      await source.destroy?.();
+      await source.destroy?.({
+        id: 'test',
+        config: source.config,
+        env: {} as any,
+        logger: createMockLogger(),
+      });
 
       // Verify removeEventListener was called
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith(

@@ -156,7 +156,7 @@ export const sourceUsercentrics: Source.Init<Types> = async (context) => {
     type: 'usercentrics',
     config: fullConfig,
     push: elb,
-    destroy: async () => {
+    destroy: async (_context) => {
       if (actualWindow && consentListener) {
         const eventName = settings.eventName ?? 'ucEvent';
         actualWindow.removeEventListener(eventName, consentListener);

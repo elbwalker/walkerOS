@@ -191,7 +191,7 @@ export const sourceCookiePro: Source.Init<Types> = async (context) => {
     type: 'cookiepro',
     config: fullConfig,
     push: elb,
-    destroy: async () => {
+    destroy: async (_context) => {
       // Remove event listener
       if (actualWindow && eventListener) {
         actualWindow.removeEventListener(

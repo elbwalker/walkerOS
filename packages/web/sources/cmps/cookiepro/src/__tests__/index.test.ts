@@ -1,4 +1,5 @@
 import { sourceCookiePro, DEFAULT_CATEGORY_MAP } from '../index';
+import { createMockLogger } from '@walkeros/core';
 import * as inputs from '../examples/inputs';
 import * as outputs from '../examples/outputs';
 import { examples } from '../dev';
@@ -456,7 +457,12 @@ describe('CookiePro Source', () => {
       const source = await createCookieProSource(mockWindow, mockElb);
 
       // Destroy the source (before OptanonWrapper self-unwraps)
-      await source.destroy?.();
+      await source.destroy?.({
+        id: 'test',
+        config: source.config,
+        env: {} as any,
+        logger: createMockLogger(),
+      });
 
       // Verify removeEventListener was called for OneTrustGroupsUpdated
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith(
@@ -473,7 +479,12 @@ describe('CookiePro Source', () => {
 
       const source = await createCookieProSource(mockWindow, mockElb);
 
-      await source.destroy?.();
+      await source.destroy?.({
+        id: 'test',
+        config: source.config,
+        env: {} as any,
+        logger: createMockLogger(),
+      });
 
       expect(mockWindow.OptanonWrapper).toBeUndefined();
     });
