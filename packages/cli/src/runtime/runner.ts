@@ -7,7 +7,7 @@
 
 import { pathToFileURL } from 'url';
 import { resolve, dirname } from 'path';
-import type { Logger } from '@walkeros/core';
+import type { Collector, Logger } from '@walkeros/core';
 
 export interface RuntimeConfig {
   port?: number;
@@ -17,6 +17,7 @@ export interface RuntimeConfig {
 export interface FlowHandle {
   collector: {
     command?: (cmd: string) => Promise<void>;
+    status?: Collector.Status;
   };
   file: string;
 }
@@ -61,6 +62,7 @@ export async function loadFlow(
   return {
     collector: {
       command: result.collector.command,
+      status: result.collector.status,
     },
     file,
   };

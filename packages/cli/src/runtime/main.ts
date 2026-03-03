@@ -291,6 +291,7 @@ async function runWithBundle(
         configVersion,
         mode: env.mode,
         intervalMs: env.heartbeatInterval * 1000,
+        getCounters: () => handle.collector.status,
       },
       logger,
     );

@@ -247,8 +247,8 @@ When `WALKEROS_TOKEN` and `PROJECT_ID` are set, the runner sends periodic heartb
 
 - **Endpoint**: `POST /api/projects/:projectId/runners/heartbeat`
 - **Interval**: Every `HEARTBEAT_INTERVAL` seconds (default 60)
-- **Payload**: instance ID, flow ID, config version, CLI version, uptime, mode
-- **Fire-and-forget**: Failures are logged, never crash the runner
+- **Payload**: instance ID, flow ID, config version, CLI version, uptime, mode, event counters (delta since last successful heartbeat)
+- **Fire-and-forget**: Failures are logged, never crash the runner. Counter deltas accumulate on failure and are included in the next successful heartbeat.
 
 Runners appear in the project dashboard after their first heartbeat.
 

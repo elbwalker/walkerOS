@@ -1,6 +1,51 @@
 import { randomBytes } from 'crypto';
 import { VERSION } from '../version.js';
-import type { Logger } from '@walkeros/core';
+import type { Collector, Logger } from '@walkeros/core';
+
+export interface CounterPayload {
+  eventsIn: number;
+  eventsOut: number;
+  eventsFailed: number;
+  destinations: Record<
+    string,
+    { count: number; failed: number; duration: number }
+  >;
+}
+
+export interface CounterSnapshot {
+  in: number;
+  out: number;
+  failed: number;
+  destinations: Record<
+    string,
+    { count: number; failed: number; duration: number }
+  >;
+}
+
+export function computeCounterDelta(
+  current: CounterSnapshot,
+  last: CounterSnapshot,
+): CounterPayload {
+  const destinations: CounterPayload['destinations'] = {};
+  for (const [name, dest] of Object.entries(current.destinations)) {
+    const prev = last.destinations[name] || {
+      count: 0,
+      failed: 0,
+      duration: 0,
+    };
+    destinations[name] = {
+      count: dest.count - prev.count,
+      failed: dest.failed - prev.failed,
+      duration: dest.duration - prev.duration,
+    };
+  }
+  return {
+    eventsIn: current.in - last.in,
+    eventsOut: current.out - last.out,
+    eventsFailed: current.failed - last.failed,
+    destinations,
+  };
+}
 
 const instanceId = randomBytes(8).toString('hex');
 
@@ -17,6 +62,7 @@ export interface HeartbeatConfig {
   configVersion?: string;
   mode: string;
   intervalMs: number;
+  getCounters?: () => Collector.Status | undefined;
 }
 
 export interface HeartbeatHandle {
@@ -34,8 +80,28 @@ export function createHeartbeat(
   const startTime = Date.now();
   let configVersion = config.configVersion;
 
+  let lastReported: CounterSnapshot = {
+    in: 0,
+    out: 0,
+    failed: 0,
+    destinations: {},
+  };
+
   async function sendOnce(): Promise<void> {
     try {
+      // Read current counters and compute delta
+      let counters: CounterPayload | undefined;
+      const status = config.getCounters?.();
+      if (status) {
+        const current: CounterSnapshot = {
+          in: status.in,
+          out: status.out,
+          failed: status.failed,
+          destinations: { ...status.destinations },
+        };
+        counters = computeCounterDelta(current, lastReported);
+      }
+
       const response = await fetch(
         `${config.appUrl}/api/projects/${config.projectId}/runners/heartbeat`,
         {
@@ -54,10 +120,21 @@ export function createHeartbeat(
             mode: config.mode,
             cliVersion: VERSION,
             uptime: Math.floor((Date.now() - startTime) / 1000),
+            ...(counters && { counters }),
           }),
           signal: AbortSignal.timeout(10_000),
         },
       );
+
+      // Update snapshot only on success so deltas accumulate on failure
+      if (response.ok && status) {
+        lastReported = {
+          in: status.in,
+          out: status.out,
+          failed: status.failed,
+          destinations: { ...status.destinations },
+        };
+      }
 
       if (response.status === 401 || response.status === 403) {
         logger.error(
@@ -65,6 +142,7 @@ export function createHeartbeat(
         );
       }
     } catch (error) {
+      // Deltas accumulate on failure — next successful send includes them
       const message = error instanceof Error ? error.message : String(error);
       logger.debug(`Heartbeat failed: ${message}`);
     }
