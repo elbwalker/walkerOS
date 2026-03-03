@@ -79,5 +79,8 @@
     "eslint": {
       "ajv": "^6.12.6"
     }
+  },
+  "dependencies": {
+    "@walkeros/explorer": "^2.1.2"
   }
 }
