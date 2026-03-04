@@ -38,11 +38,6 @@ export async function loadFlow(
   const flowDir = dirname(absolutePath);
   process.chdir(flowDir);
 
-  // Only set PORT env when runner doesn't own the server
-  if (!healthServer && config?.port !== undefined) {
-    process.env.PORT = String(config.port);
-  }
-
   const fileUrl = pathToFileURL(absolutePath).href;
 
   // Bust Node.js module cache by appending query param

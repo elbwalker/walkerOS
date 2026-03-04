@@ -1402,13 +1402,6 @@ export function generatePlatformWrapper(
         delete src.config.settings.port;
       }
     }
-  } else if (context.port !== undefined && config.sources) {
-    // Legacy: Apply runtime port override to server sources
-    for (const src of Object.values(config.sources)) {
-      if (src.config && src.config.settings && src.config.settings.port !== undefined) {
-        src.config.settings.port = context.port;
-      }
-    }
   }
 
   const result = await startFlow(config);
