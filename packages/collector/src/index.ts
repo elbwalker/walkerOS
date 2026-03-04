@@ -15,6 +15,7 @@ export {
   simulateSource,
   simulateDestination,
   simulateTransformer,
+  simulateFlow,
 } from './simulate';
 export type {
   SimulateSourceOptions,

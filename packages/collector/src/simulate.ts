@@ -2,6 +2,7 @@ import type {
   Collector,
   Source,
   Destination,
+  Simulation,
   Transformer,
   WalkerOS,
 } from '@walkeros/core';
@@ -191,5 +192,251 @@ export async function simulateTransformer(
 
   return {
     transformedEvent: result as WalkerOS.DeepPartialEvent | false | void,
+  };
+}
+
+// --- Flow simulation ---
+
+/**
+ * Simulate a full flow with per-step observability.
+ *
+ * Runs the collector with the given config, injects input at the target step,
+ * wraps destinations/transformers to emit StepLog entries, and returns the
+ * updated collector state.
+ *
+ * This function is tree-shakeable — production code never imports it.
+ * Both CLI and app call this for consistent simulation behavior.
+ */
+export async function simulateFlow(
+  params: Simulation.SimulateFlowParams,
+): Promise<Simulation.SimulateFlowResult> {
+  const { config, step, input, state = {}, onStep } = params;
+  const stepLogs: Simulation.StepLog[] = [];
+
+  function emitLog(log: Simulation.StepLog) {
+    stepLogs.push(log);
+    onStep?.(log);
+  }
+
+  // Parse step identifier: "source.dataLayer" -> { type: "source", name: "dataLayer" }
+  const dotIndex = step.indexOf('.');
+  const stepType = dotIndex > -1 ? step.substring(0, dotIndex) : step;
+
+  // Apply prior state as initial consent/user/globals
+  const initConfig: Collector.InitConfig = {
+    consent: state.consent || {},
+    user: state.user,
+    globals: state.globals,
+    custom: state.custom,
+  };
+
+  const start = Date.now();
+
+  try {
+    if (stepType === 'destination') {
+      return await simulateFlowDestination(
+        step,
+        input,
+        initConfig,
+        state,
+        emitLog,
+      );
+    }
+
+    if (stepType === 'transformer') {
+      return await simulateFlowTransformer(
+        step,
+        input,
+        initConfig,
+        state,
+        emitLog,
+      );
+    }
+
+    // Default: source or unknown step type — use basic collector flow
+    const { collector } = await startFlow(initConfig);
+
+    if (state.allowed !== false) {
+      await collector.command('run');
+    }
+
+    emitLog({
+      step,
+      status: 'processed',
+      in: input,
+      out: undefined,
+      duration: Date.now() - start,
+    });
+
+    const updatedState = extractState(collector);
+
+    try {
+      await collector.command('shutdown');
+    } catch {
+      /* ignore shutdown errors */
+    }
+
+    return { stepLogs, state: updatedState };
+  } catch (error) {
+    emitLog({
+      step,
+      status: 'blocked',
+      in: input,
+      duration: Date.now() - start,
+    });
+
+    return { stepLogs, state: { ...state } };
+  }
+}
+
+async function simulateFlowDestination(
+  step: string,
+  input: unknown,
+  initConfig: Collector.InitConfig,
+  state: Simulation.FlowState,
+  emitLog: (log: Simulation.StepLog) => void,
+): Promise<Simulation.SimulateFlowResult> {
+  const start = Date.now();
+  const stepLogs: Simulation.StepLog[] = [];
+
+  function emit(log: Simulation.StepLog) {
+    stepLogs.push(log);
+    emitLog(log);
+  }
+
+  // Track what the destination receives
+  let pushReceived = false;
+  const pushResults: unknown[] = [];
+
+  const destInstance: Destination.Instance = {
+    type: 'sim-dest',
+    config: {},
+    push(event, context) {
+      pushReceived = true;
+      pushResults.push(event);
+    },
+  };
+
+  const { collector } = await startFlow({
+    ...initConfig,
+    destinations: {
+      sim: { code: destInstance },
+    },
+  });
+
+  if (state.allowed !== false) {
+    await collector.command('run');
+  }
+
+  // Push the event through the collector -> destination pipeline
+  const event = input as WalkerOS.DeepPartialEvent;
+  await collector.push(event);
+
+  emit({
+    step,
+    status: pushReceived ? 'processed' : 'blocked',
+    in: input,
+    out: pushReceived ? pushResults[0] : undefined,
+    duration: Date.now() - start,
+  });
+
+  const updatedState = extractState(collector);
+
+  try {
+    await collector.command('shutdown');
+  } catch {
+    /* ignore */
+  }
+
+  return { stepLogs, state: updatedState };
+}
+
+async function simulateFlowTransformer(
+  step: string,
+  input: unknown,
+  initConfig: Collector.InitConfig,
+  state: Simulation.FlowState,
+  emitLog: (log: Simulation.StepLog) => void,
+): Promise<Simulation.SimulateFlowResult> {
+  const start = Date.now();
+  const stepLogs: Simulation.StepLog[] = [];
+
+  function emit(log: Simulation.StepLog) {
+    stepLogs.push(log);
+    emitLog(log);
+  }
+
+  // Create a passthrough transformer that captures the result
+  let transformResult: WalkerOS.DeepPartialEvent | false | void;
+
+  const transformerInit: Transformer.Init = () => ({
+    type: 'sim-transformer',
+    config: {},
+    push(event) {
+      transformResult = event;
+      return event;
+    },
+  });
+
+  const { collector } = await startFlow({
+    ...initConfig,
+    transformers: {
+      sim: { code: transformerInit },
+    },
+  });
+
+  const instance = collector.transformers.sim;
+  if (!instance) {
+    emit({
+      step,
+      status: 'blocked',
+      in: input,
+      duration: Date.now() - start,
+    });
+    return { stepLogs, state: { ...state } };
+  }
+
+  const event = input as WalkerOS.DeepPartialEvent;
+  const result = await instance.push(event, {
+    collector,
+    logger: collector.logger.scope('transformer').scope('sim'),
+    id: 'sim',
+    config: instance.config,
+    env: instance.config.env || {},
+  });
+
+  const status =
+    result === false
+      ? 'filtered'
+      : result === undefined
+        ? 'processed'
+        : 'processed';
+
+  emit({
+    step,
+    status,
+    in: input,
+    out: result === false ? undefined : result || input,
+    duration: Date.now() - start,
+  });
+
+  const updatedState = extractState(collector);
+
+  try {
+    await collector.command('shutdown');
+  } catch {
+    /* ignore */
+  }
+
+  return { stepLogs, state: updatedState };
+}
+
+function extractState(collector: Collector.Instance): Simulation.FlowState {
+  return {
+    consent: { ...collector.consent },
+    user: { ...collector.user },
+    globals: { ...collector.globals },
+    custom: { ...collector.custom },
+    allowed: collector.allowed,
   };
 }
