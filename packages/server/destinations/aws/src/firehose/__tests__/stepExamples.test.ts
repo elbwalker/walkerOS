@@ -1,5 +1,5 @@
 import type { Config, Destination, Env } from '../types';
-import type { Collector } from '@walkeros/core';
+import type { Collector, WalkerOS } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import * as examples from '../examples';
 
@@ -54,7 +54,7 @@ describe('Step Examples', () => {
       id: 'test-firehose',
     })) as Config;
 
-    await destination.push(example.in, {
+    await destination.push(example.in as WalkerOS.Event, {
       config,
       collector: {} as Collector.Instance,
       env: testEnv,

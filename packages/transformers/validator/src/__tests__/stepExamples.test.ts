@@ -1,4 +1,4 @@
-import type { Collector, Transformer } from '@walkeros/core';
+import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { transformerValidator } from '../transformer';
 import type { ValidatorSettings } from '../types';
@@ -17,7 +17,10 @@ describe('Step Examples', () => {
       id: 'test-validator',
     };
     const transformer = await transformerValidator(context);
-    const result = await transformer.push(example.in, context);
+    const result = await transformer.push(
+      example.in as WalkerOS.DeepPartialEvent,
+      context,
+    );
 
     if (example.out === false) {
       expect(result).toBe(false);

@@ -53,7 +53,7 @@ describe('Step Examples', () => {
     expect(actual.action_source).toBe(expected.action_source);
 
     // Verify mapped event name (from mapping or default)
-    if (mapping?.name) {
+    if ((mapping as Record<string, unknown>)?.name) {
       expect(actual.event_name).toBe(expected.event_name);
     }
 

@@ -1,4 +1,4 @@
-import type { Collector } from '@walkeros/core';
+import type { Collector, WalkerOS } from '@walkeros/core';
 import type { Config, Settings } from '../types';
 import type { OAuth2Client } from 'google-auth-library';
 import { createMockLogger } from '@walkeros/core';
@@ -62,7 +62,11 @@ describe('Step Examples', () => {
 
     // Build config.data from example mapping, with transactionId fallback
     const mappingMap =
-      (example.mapping?.data as { map?: Record<string, unknown> })?.map || {};
+      (
+        (example.mapping as Record<string, unknown>)?.data as
+          | { map?: Record<string, unknown> }
+          | undefined
+      )?.map || {};
     const configData = {
       map: {
         transactionId: 'id', // fallback to event ID
@@ -81,7 +85,7 @@ describe('Step Examples', () => {
       id: 'test-dm',
     })) as Config;
 
-    await destination.push(example.in, {
+    await destination.push(example.in as WalkerOS.Event, {
       config: { ...config, data: configData },
       collector: {} as Collector.Instance,
       env: { authClient: mockAuthClient, fetch: mockFetch },
