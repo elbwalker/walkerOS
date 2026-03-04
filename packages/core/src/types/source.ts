@@ -163,3 +163,35 @@ export type InitSource<T extends TypesGeneric = Types> = {
 export interface InitSources {
   [sourceId: string]: InitSource<any>;
 }
+
+/**
+ * Renderer hint for source simulation UI.
+ * - 'browser': Source needs a real DOM (iframe with live preview)
+ * - 'codebox': Source uses a JSON/code editor (default)
+ */
+export type Renderer = 'browser' | 'codebox';
+
+/**
+ * Minimal environment contract for source simulation.
+ * Both JSDOM and iframe satisfy this interface.
+ */
+export interface SimulationEnv {
+  window: Window & typeof globalThis;
+  document: Document;
+  localStorage: Storage;
+  [key: string]: unknown;
+}
+
+/**
+ * Setup function for source simulation.
+ * Runs BEFORE startFlow() to prepare the environment
+ * (dataLayer arrays, localStorage, window globals).
+ *
+ * Return void for sources that need no post-init action.
+ * Return a () => void trigger for sources that dispatch
+ * events AFTER startFlow() (e.g., usercentrics CustomEvent).
+ */
+export type SetupFn = (
+  input: unknown,
+  env: SimulationEnv,
+) => void | (() => void);

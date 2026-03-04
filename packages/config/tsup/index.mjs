@@ -158,6 +158,7 @@ const buildDev = (customConfig = {}) => {
       const meta = { package: pkg.name, version: pkg.version };
       if (walkerOS.type) meta.type = walkerOS.type;
       if (walkerOS.platform) meta.platform = walkerOS.platform;
+      if (walkerOS.renderer) meta.renderer = walkerOS.renderer;
 
       const output = { $meta: meta, schemas, examples };
 

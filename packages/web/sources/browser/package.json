@@ -45,7 +45,8 @@
   },
   "walkerOS": {
     "type": "source",
-    "platform": "web"
+    "platform": "web",
+    "renderer": "browser"
   },
   "keywords": [
     "walkerOS",

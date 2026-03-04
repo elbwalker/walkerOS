@@ -97,6 +97,9 @@ export function formatSimulationResult(
       usage: result.usage,
       duration: result.duration,
     };
+    if (result.capturedEvents) {
+      output.capturedEvents = result.capturedEvents;
+    }
     if (result.exampleMatch) {
       output.exampleMatch = result.exampleMatch;
     }
@@ -109,6 +112,13 @@ export function formatSimulationResult(
     lines.push('Simulation completed');
   } else {
     lines.push(`Simulation failed: ${result.error}`);
+  }
+
+  if (result.capturedEvents) {
+    lines.push(`Captured ${result.capturedEvents.length} event(s)`);
+    for (const evt of result.capturedEvents) {
+      lines.push(`  - ${(evt as { name?: string }).name || 'unknown'}`);
+    }
   }
 
   if (result.exampleMatch) {

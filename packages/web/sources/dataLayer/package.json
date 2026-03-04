@@ -53,7 +53,8 @@
   },
   "walkerOS": {
     "type": "source",
-    "platform": "web"
+    "platform": "web",
+    "renderer": "codebox"
   },
   "keywords": [
     "walkerOS",

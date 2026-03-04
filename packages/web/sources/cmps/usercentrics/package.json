@@ -5,7 +5,8 @@
   "license": "MIT",
   "walkerOS": {
     "type": "source",
-    "platform": "web"
+    "platform": "web",
+    "renderer": "codebox"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

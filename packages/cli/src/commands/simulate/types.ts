@@ -1,4 +1,4 @@
-import type { Elb } from '@walkeros/core';
+import type { Elb, WalkerOS } from '@walkeros/core';
 import type { ApiCall } from './tracker.js';
 
 export interface SimulateCommandOptions {
@@ -32,4 +32,6 @@ export interface SimulationResult {
   usage?: Record<string, ApiCall[]>;
   duration?: number;
   exampleMatch?: ExampleMatch;
+  /** Events captured by source simulation */
+  capturedEvents?: WalkerOS.DeepPartialEvent[];
 }

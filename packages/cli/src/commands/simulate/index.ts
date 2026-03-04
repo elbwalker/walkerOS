@@ -1,4 +1,5 @@
 import { simulateCore, formatSimulationResult } from './simulator.js';
+import { simulateSourceCLI } from './source-simulator.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
   getErrorMessage,
@@ -11,7 +12,11 @@ import { loadJsonFromSource, loadJsonConfig } from '../../config/index.js';
 import { validateFlowSetup } from '../../config/validators.js';
 import { findExample } from './example-loader.js';
 import { compareOutput } from './compare.js';
-import type { SimulateCommandOptions, ExampleMatch } from './types.js';
+import type {
+  SimulateCommandOptions,
+  ExampleMatch,
+  SimulationResult,
+} from './types.js';
 import type { SimulateOptions, Platform } from '../../schemas/simulate.js';
 import type { Flow } from '@walkeros/core';
 
@@ -93,13 +98,56 @@ export async function simulateCommand(
       });
     }
 
-    // Execute simulation
-    const result = await simulateCore(config, event, {
-      flow: options.flow,
-      json: options.json,
-      verbose: options.verbose,
-      silent: options.silent,
-    });
+    // Detect source simulation
+    const isSourceSimulation =
+      exampleContext?.stepType === 'source' ||
+      options.step?.startsWith('source.');
+
+    let result: SimulationResult;
+
+    if (isSourceSimulation) {
+      // Source simulation: load flow config and use shared simulateSource
+      const rawConfig = await loadJsonConfig<Flow.Setup>(config);
+      const setup = validateFlowSetup(rawConfig);
+      const flowNames = Object.keys(setup.flows);
+      const flowName =
+        options.flow || (flowNames.length === 1 ? flowNames[0] : undefined);
+      if (!flowName) {
+        throw new Error(
+          `Multiple flows found. Use --flow to specify which flow.\n` +
+            `Available: ${flowNames.join(', ')}`,
+        );
+      }
+      const flowConfig = setup.flows[flowName];
+      if (!flowConfig) {
+        throw new Error(
+          `Flow "${flowName}" not found. Available: ${flowNames.join(', ')}`,
+        );
+      }
+
+      const sourceStep =
+        exampleContext?.stepName || options.step!.substring('source.'.length);
+
+      result = await simulateSourceCLI(
+        flowConfig as unknown as Record<string, unknown>,
+        event,
+        {
+          flow: options.flow,
+          sourceStep,
+          json: options.json,
+          verbose: options.verbose,
+          silent: options.silent,
+        },
+      );
+    } else {
+      // Standard simulation (destination/transformer)
+      result = await simulateCore(config, event, {
+        flow: options.flow,
+        json: options.json,
+        verbose: options.verbose,
+        silent: options.silent,
+      });
+    }
 
     // Compare output against example if --example was used
     let exampleMatch: ExampleMatch | undefined;

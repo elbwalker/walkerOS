@@ -10,3 +10,17 @@ export * from './handle';
 export * from './on';
 export * from './source';
 export { walkChain, extractTransformerNextMap } from './transformer';
+
+export {
+  simulateSource,
+  simulateDestination,
+  simulateTransformer,
+} from './simulate';
+export type {
+  SimulateSourceOptions,
+  SimulateSourceResult,
+  SimulateDestinationOptions,
+  SimulateDestinationResult,
+  SimulateTransformerOptions,
+  SimulateTransformerResult,
+} from './simulate';
