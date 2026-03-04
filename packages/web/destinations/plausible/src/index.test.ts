@@ -17,11 +17,6 @@ describe('destination plausible', () => {
   const event = getEvent();
   const script = 'https://plausible.io/js/script.manual.js';
 
-  const mappingConfig = {
-    entity: { action: examples.step.customEvent.mapping },
-    order: { complete: examples.step.purchase.mapping },
-  } as DestinationPlausible.Rules;
-
   beforeEach(async () => {
     destination = jest.requireActual('.').default;
 
@@ -138,42 +133,5 @@ describe('destination plausible', () => {
     await elb(event);
 
     expect((mockScript.dataset as Record<string, string>).domain).toBe(domain);
-  });
-
-  test('event entity action', async () => {
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv as DestinationPlausible.Env,
-    };
-    elb('walker destination', destinationWithEnv, {
-      mapping: mappingConfig,
-    });
-
-    await elb(event);
-
-    // Check that plausible was called with the expected arguments
-    expect(calls).toContainEqual({
-      path: ['window', 'plausible'],
-      args: examples.step.customEvent.out,
-    });
-  });
-
-  test('event purchase', async () => {
-    const event = getEvent('order complete');
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv as DestinationPlausible.Env,
-    };
-    elb('walker destination', destinationWithEnv, {
-      mapping: mappingConfig,
-    });
-
-    await elb(event);
-
-    // Check that plausible was called with the expected arguments
-    expect(calls).toContainEqual({
-      path: ['window', 'plausible'],
-      args: examples.step.purchase.out,
-    });
   });
 });

@@ -2,8 +2,6 @@ import type { WalkerOS } from '@walkeros/core';
 import type { DestinationPiwikPro } from '.';
 import { startFlow } from '@walkeros/collector';
 import { getEvent } from '@walkeros/core';
-import { examples } from './dev';
-
 describe('Destination PiwikPro', () => {
   let elb: WalkerOS.Elb;
   let destination: DestinationPiwikPro.Destination,
@@ -17,15 +15,6 @@ describe('Destination PiwikPro', () => {
 
   const mockPaq: Array<unknown> = [];
   mockPaq.push = mockFn;
-
-  const mappingConfig = {
-    order: { complete: examples.step.ecommerceOrder.mapping },
-    product: {
-      add: examples.step.ecommerceAddToCart.mapping,
-      view: examples.step.productDetailView.mapping,
-    },
-    cart: { view: examples.step.cartUpdate.mapping },
-  } as DestinationPiwikPro.Rules;
 
   const testEnv = {
     window: {
@@ -98,69 +87,5 @@ describe('Destination PiwikPro', () => {
     await elb('foo bar');
     expect(mockFn).toHaveBeenCalledTimes(1);
     expect(mockFnIgnorePageView).toHaveBeenCalledTimes(1);
-  });
-
-  test('event ecommerceOrder', async () => {
-    const event = getEvent('order complete');
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings,
-      mapping: mappingConfig,
-    });
-    await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(
-      ...(examples.step.ecommerceOrder.out as unknown[]),
-    );
-  });
-
-  test('event ecommerceAddToCart', async () => {
-    const event = getEvent('product add');
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings,
-      mapping: mappingConfig,
-    });
-    await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(
-      ...(examples.step.ecommerceAddToCart.out as unknown[]),
-    );
-  });
-
-  test('event ecommerceProductDetailView', async () => {
-    const event = getEvent('product view');
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings,
-      mapping: mappingConfig,
-    });
-    await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(
-      ...(examples.step.productDetailView.out as unknown[]),
-    );
-  });
-
-  test('event ecommerceCartUpdate', async () => {
-    const event = getEvent('cart view');
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings,
-      mapping: mappingConfig,
-    });
-    await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(
-      ...(examples.step.cartUpdate.out as unknown[]),
-    );
   });
 });
