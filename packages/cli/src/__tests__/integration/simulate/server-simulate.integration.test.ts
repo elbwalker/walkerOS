@@ -64,6 +64,6 @@ describe('Server Simulation Integration', () => {
     }
 
     expect(result.success).toBe(true);
-    expect(result.elbResult).toBeDefined();
+    expect(result.usage).toBeDefined();
   }, 60000);
 });

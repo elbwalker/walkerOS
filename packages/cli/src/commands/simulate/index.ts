@@ -141,11 +141,15 @@ export async function simulateCommand(
       );
     } else {
       // Standard simulation (destination/transformer)
+      const stepTarget = exampleContext
+        ? `${exampleContext.stepType}.${exampleContext.stepName}`
+        : options.step;
       result = await simulateCore(config, event, {
         flow: options.flow,
         json: options.json,
         verbose: options.verbose,
         silent: options.silent,
+        step: stepTarget,
       });
     }
 

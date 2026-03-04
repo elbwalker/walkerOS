@@ -171,6 +171,53 @@ export function cleanupSession(session: Session) { ... }
 **Guideline:** Integration tests prove things work when stuck together. Unit
 tests efficiently cover variations. Contract tests catch API drift.
 
+## Simulation Testing
+
+The collector provides a unified `simulate()` function for testing any step type
+(source, transformer, destination) without bundling or real API calls:
+
+```typescript
+import { simulate } from '@walkeros/collector';
+
+// Transformer simulation
+const result = await simulate({
+  step: 'transformer',
+  name: 'my-transformer',
+  code: transformerModule,
+  event: { entity: 'page', action: 'view', data: { title: 'Home' } },
+});
+// result.events = transformed events (empty if filtered)
+
+// Destination simulation with call tracking
+const result = await simulate({
+  step: 'destination',
+  name: 'my-destination',
+  code: destinationModule,
+  event: { entity: 'page', action: 'view' },
+  env: mockEnv,
+  track: ['window.gtag', 'dataLayer.push'], // Paths to record
+});
+// result.calls = [{ fn: 'window.gtag', args: [...], ts: ... }]
+
+// Source simulation
+const result = await simulate({
+  step: 'source',
+  name: 'my-source',
+  code: sourceModule,
+  env: jsdomEnv,
+  setup: sourceSetup, // Optional setup function
+});
+// result.events = captured events via spy transformer
+```
+
+**Key points:**
+
+- Consumer provides `env` (JSDOM, Node globals, etc.) — collector doesn't bundle
+- Destinations use `wrapEnv` for automatic call tracking on specified paths
+- Sources capture events via a `next` spy transformer (no destinations needed)
+- Returns `Simulation.Result` with `events`, `calls`, `duration`, and optional
+  `error`
+
 ## Package-Specific Approaches
 
 | Package                 | Approach                                                                        |

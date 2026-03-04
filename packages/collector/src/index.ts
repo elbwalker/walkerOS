@@ -11,17 +11,11 @@ export * from './on';
 export * from './source';
 export { walkChain, extractTransformerNextMap } from './transformer';
 
-export {
-  simulateSource,
-  simulateDestination,
-  simulateTransformer,
-  simulateFlow,
-} from './simulate';
+export { simulate } from './simulation';
 export type {
-  SimulateSourceOptions,
-  SimulateSourceResult,
-  SimulateDestinationOptions,
-  SimulateDestinationResult,
-  SimulateTransformerOptions,
-  SimulateTransformerResult,
-} from './simulate';
+  SimulateParams,
+  SimulateSource,
+  SimulateTransformer,
+  SimulateDestination,
+} from './simulation';
+export { wrapEnv } from './wrapEnv';

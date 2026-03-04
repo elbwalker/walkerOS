@@ -1,8 +1,8 @@
 import { simulateSourceCLI } from '../source-simulator.js';
 
-// Mock @walkeros/collector's simulateSource
+// Mock @walkeros/collector's simulate
 jest.mock('@walkeros/collector', () => ({
-  simulateSource: jest.fn(),
+  simulate: jest.fn(),
 }));
 
 // Mock jsdom
@@ -24,9 +24,9 @@ jest.mock('jsdom', () => ({
   VirtualConsole: jest.fn(),
 }));
 
-const mockSimulateSource =
+const mockSimulate =
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('@walkeros/collector').simulateSource as jest.Mock;
+  require('@walkeros/collector').simulate as jest.Mock;
 
 describe('simulateSourceCLI', () => {
   beforeEach(() => {
@@ -73,9 +73,12 @@ describe('simulateSourceCLI', () => {
       { name: 'product view', data: { id: '123' } },
     ];
 
-    mockSimulateSource.mockResolvedValue({
-      capturedEvents: mockEvents,
-      collector: { command: jest.fn() },
+    mockSimulate.mockResolvedValue({
+      step: 'source',
+      name: 'dl',
+      events: mockEvents,
+      calls: [],
+      duration: 10,
     });
 
     const result = await simulateSourceCLI(

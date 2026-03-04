@@ -1,5 +1,5 @@
 import { JSDOM, VirtualConsole } from 'jsdom';
-import { simulateSource } from '@walkeros/collector';
+import { simulate } from '@walkeros/collector';
 import type { Source } from '@walkeros/core';
 import type { SimulationResult } from './types.js';
 import { getErrorMessage } from '../../core/index.js';
@@ -39,7 +39,7 @@ async function loadSourcePackage(
 }
 
 /**
- * Simulate a source using JSDOM + shared simulateSource().
+ * Simulate a source using JSDOM + unified simulate().
  */
 export async function simulateSourceCLI(
   flowConfig: Record<string, unknown>,
@@ -93,8 +93,10 @@ export async function simulateSourceCLI(
       localStorage: dom.window.localStorage as unknown as Storage,
     };
 
-    // Call shared orchestration
-    const { capturedEvents, collector } = await simulateSource({
+    // Use unified simulate()
+    const result = await simulate({
+      step: 'source',
+      name: options.sourceStep,
       code,
       config: sourceConfig.config || {},
       setup,
@@ -103,16 +105,12 @@ export async function simulateSourceCLI(
     });
 
     // Cleanup
-    try {
-      await collector.command('shutdown');
-    } catch {
-      /* ignore */
-    }
     dom.window.close();
 
     return {
-      success: true,
-      capturedEvents,
+      success: !result.error,
+      error: result.error?.message,
+      capturedEvents: result.events,
       duration: Date.now() - startTime,
     };
   } catch (error) {
