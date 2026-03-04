@@ -1,5 +1,12 @@
 import type { Elb, WalkerOS } from '@walkeros/core';
-import type { ApiCall } from './tracker.js';
+
+/** Tracked API call from destination simulation */
+export interface ApiCall {
+  type: 'call';
+  path: string;
+  args: unknown[];
+  timestamp: number;
+}
 
 export interface SimulateCommandOptions {
   config?: string;
