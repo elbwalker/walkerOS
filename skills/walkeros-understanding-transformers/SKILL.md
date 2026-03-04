@@ -272,6 +272,14 @@ push(event, context) {
 }
 ```
 
+## Response Delegation (env.respond)
+
+Transformers can customize HTTP responses by calling
+`context.env.respond?.({ body, status?, headers? })`. This is useful for
+validation transformers that reject events with custom error responses, or
+transformers that short-circuit the pipeline. First call wins (idempotent). The
+respond function is optional — only present when the source provides one.
+
 ## Transformer Paths
 
 | Path                               | Description           |

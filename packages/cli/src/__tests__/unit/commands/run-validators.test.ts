@@ -11,20 +11,18 @@ describe('validators', () => {
   describe('validateMode', () => {
     it('should accept valid modes', () => {
       expect(() => validateMode('collect')).not.toThrow();
-      expect(() => validateMode('serve')).not.toThrow();
     });
 
     it('should reject invalid modes', () => {
       expect(() => validateMode('invalid')).toThrow(/Invalid mode/);
+      expect(() => validateMode('serve')).toThrow(/Invalid mode/);
       expect(() => validateMode('bundle')).toThrow(/Invalid mode/);
       expect(() => validateMode('COLLECT')).toThrow(/Invalid mode/);
       expect(() => validateMode('')).toThrow(/Invalid mode/);
     });
 
     it('should provide helpful error message', () => {
-      expect(() => validateMode('invalid')).toThrow(
-        /Valid modes: collect, serve/,
-      );
+      expect(() => validateMode('invalid')).toThrow(/Valid modes: collect/);
       expect(() => validateMode('invalid')).toThrow(/Example:/);
     });
   });

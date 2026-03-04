@@ -529,6 +529,7 @@ describe('CookiePro Source', () => {
           },
         },
         setIngest: async () => {},
+        setRespond: jest.fn(),
       });
 
       expect(source.type).toBe('cookiepro');

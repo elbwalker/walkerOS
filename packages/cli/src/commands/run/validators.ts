@@ -24,7 +24,7 @@ export function validateMode(mode: string): asserts mode is RunMode {
   if (!result.success) {
     throw new Error(
       `Invalid mode: "${mode}"\n` +
-        `   Valid modes: collect, serve\n` +
+        `   Valid modes: collect\n` +
         `   Example: walkeros run collect ./flow.json`,
     );
   }

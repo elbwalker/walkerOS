@@ -116,6 +116,7 @@ export type CommandType =
 export interface PushOptions {
   id?: string;
   ingest?: unknown;
+  respond?: import('../respond').RespondFn;
   mapping?: Mapping.Config;
   preChain?: string[];
 }

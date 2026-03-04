@@ -90,19 +90,16 @@ export async function runCommand(
         url: options.url || `http://localhost:${options.port || 8080}`,
         healthEndpoint: options.healthEndpoint,
         heartbeatInterval: options.heartbeatInterval,
-        mode: mode as 'collect' | 'serve',
+        mode: mode as 'collect',
       });
     }
 
     // Step 4: Execute locally using runtime module
-    const modeLabel = mode === 'collect' ? 'Collector' : 'Server';
-    logger.info(`Starting ${modeLabel}...`);
+    logger.info('Starting Collector...');
 
-    await executeRunLocal(mode as 'collect' | 'serve', flowPath, {
+    await executeRunLocal(mode as 'collect', flowPath, {
       port: options.port,
       host: options.host,
-      serveName: options.serveName,
-      servePath: options.servePath,
     });
 
     // Note: Server runs forever, so we won't reach here unless it fails
@@ -202,8 +199,6 @@ export async function run(
     await executeRunLocal(mode, flowPath, {
       port: options.port,
       host: options.host,
-      serveName: options.serveName,
-      servePath: options.servePath,
     });
 
     // Success (though server runs forever, so we typically don't reach here)

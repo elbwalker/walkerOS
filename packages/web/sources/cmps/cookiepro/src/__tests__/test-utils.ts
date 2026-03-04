@@ -132,5 +132,6 @@ export async function createCookieProSource(
     id: 'test-cookiepro',
     logger: createMockLogger(),
     setIngest: async () => {},
+    setRespond: jest.fn(),
   });
 }

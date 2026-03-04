@@ -7,7 +7,7 @@
 /**
  * Run mode - determines which execution mode to use
  */
-export type RunMode = 'collect' | 'serve';
+export type RunMode = 'collect';
 
 /**
  * CLI command options for `walkeros run`
@@ -21,12 +21,6 @@ export interface RunCommandOptions {
 
   /** Server host (default: 0.0.0.0) */
   host?: string;
-
-  /** Serve path (URL directory path, e.g., 'libs/v1') */
-  servePath?: string;
-
-  /** Serve name (filename in URL, default: walker.js) */
-  serveName?: string;
 
   /** Enable JSON output */
   json?: boolean;
@@ -65,12 +59,6 @@ export interface RunOptions {
 
   /** Server host */
   host?: string;
-
-  /** Serve path (URL directory path, e.g., 'libs/v1') */
-  servePath?: string;
-
-  /** Serve name (filename in URL, default: walker.js) */
-  serveName?: string;
 
   /** Suppress output */
   silent?: boolean;

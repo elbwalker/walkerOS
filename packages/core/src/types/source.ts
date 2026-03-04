@@ -140,6 +140,8 @@ export interface Context<
    * @param value - Raw request object (Express req, Lambda event, etc.)
    */
   setIngest: (value: unknown) => Promise<void>;
+  /** Sets respond function for the current request. Called by source per-request. */
+  setRespond: (fn: import('../respond').RespondFn | undefined) => void;
 }
 
 export type Init<T extends TypesGeneric = Types> = (

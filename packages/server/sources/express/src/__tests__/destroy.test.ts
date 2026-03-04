@@ -11,6 +11,7 @@ const mockContext = (port: number) =>
     },
     id: 'test',
     setIngest: jest.fn(),
+    setRespond: jest.fn(),
   }) as any;
 
 const mockDestroyContext = () =>
@@ -49,6 +50,7 @@ describe('Express source destroy', () => {
       },
       id: 'test',
       setIngest: jest.fn(),
+      setRespond: jest.fn(),
     } as any);
     expect(source.server).toBeUndefined();
     expect(source.destroy).toBeDefined();

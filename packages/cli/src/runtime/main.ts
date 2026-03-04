@@ -7,7 +7,6 @@ import { validateEnv, type RunnerEnv } from './env.js';
 import { resolveBundle } from './resolve-bundle.js';
 import { loadFlow, swapFlow, type FlowHandle } from './runner.js';
 import { createHealthServer, type HealthServer } from './health-server.js';
-import { runServeMode } from './serve.js';
 import { fetchConfig } from './config-fetcher.js';
 import { writeCache, readCache } from './cache.js';
 import {
@@ -101,13 +100,7 @@ async function main() {
     }
   }
 
-  // Step 2: Serve mode is simple — no bundling, no polling
-  if (env.mode === 'serve') {
-    await runServeMode({ port: env.port, file: env.bundlePath }, logger);
-    return;
-  }
-
-  // Step 3: Resolve config (local file or API fetch)
+  // Step 2: Resolve config (local file or API fetch)
   let configPath: string | null = null;
   let configVersion: string | undefined;
 

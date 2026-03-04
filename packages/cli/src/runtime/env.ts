@@ -1,5 +1,5 @@
 export interface RunnerEnv {
-  mode: 'collect' | 'serve';
+  mode: 'collect';
   port: number;
   bundlePath: string;
   cacheDir: string;
@@ -28,7 +28,7 @@ export function validateEnv(
   }
 
   return {
-    mode: (env.MODE === 'serve' ? 'serve' : 'collect') as 'collect' | 'serve',
+    mode: 'collect' as const,
     port: parseInt(env.PORT || '8080', 10),
     bundlePath: env.BUNDLE || '/app/flow/bundle.mjs',
     cacheDir: env.CACHE_DIR || '/app/cache',

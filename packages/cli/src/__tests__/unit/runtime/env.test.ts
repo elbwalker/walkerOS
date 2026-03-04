@@ -50,9 +50,9 @@ describe('validateEnv', () => {
     expect(config.heartbeatInterval).toBe(120);
   });
 
-  it('uses serve mode when MODE=serve', () => {
+  it('ignores MODE=serve (serve mode removed)', () => {
     const config = validateEnv({ MODE: 'serve' });
-    expect(config.mode).toBe('serve');
+    expect(config.mode).toBe('collect');
   });
 
   it('uses custom port', () => {

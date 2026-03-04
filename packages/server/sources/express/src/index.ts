@@ -1,6 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import cors from 'cors';
-import { requestToData } from '@walkeros/core';
+import { requestToData, createRespond } from '@walkeros/core';
 import type { Source } from '@walkeros/core';
 import type { ExpressSource, Types, EventRequest } from './types';
 import { SettingsSchema } from './schemas';
@@ -58,6 +58,23 @@ export const sourceExpress = async (
       // Extract ingest metadata from request (if config.ingest is defined)
       await context.setIngest(req);
 
+      // Create per-request respond — first call wins (idempotent)
+      const respond = createRespond((options) => {
+        const status = options.status ?? 200;
+        if (options.headers) {
+          for (const [key, value] of Object.entries(options.headers)) {
+            res.set(key, value);
+          }
+        }
+        res.status(status);
+        if (typeof options.body === 'string' || Buffer.isBuffer(options.body)) {
+          res.send(options.body);
+        } else {
+          res.json(options.body);
+        }
+      });
+      context.setRespond(respond);
+
       // Handle GET requests (pixel tracking)
       if (req.method === 'GET') {
         // Parse query parameters to event data using requestToData
@@ -68,10 +85,14 @@ export const sourceExpress = async (
           await env.push(parsedData);
         }
 
-        // Return 1x1 transparent GIF for pixel tracking
-        res.set('Content-Type', 'image/gif');
-        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.send(TRANSPARENT_GIF);
+        // Default: 1x1 GIF (skipped if a step already called respond)
+        respond({
+          body: TRANSPARENT_GIF,
+          headers: {
+            'Content-Type': 'image/gif',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+          },
+        });
         return;
       }
 
@@ -90,10 +111,8 @@ export const sourceExpress = async (
         // Send event to collector
         await env.push(eventData);
 
-        res.json({
-          success: true,
-          timestamp: Date.now(),
-        });
+        // Default: JSON success (skipped if a step already called respond)
+        respond({ body: { success: true, timestamp: Date.now() } });
         return;
       }
 

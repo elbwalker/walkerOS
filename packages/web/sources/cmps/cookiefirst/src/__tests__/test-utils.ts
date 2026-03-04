@@ -85,5 +85,6 @@ export async function createCookieFirstSource(
     id: 'test-cookiefirst',
     logger: createMockLogger(),
     setIngest: async () => {},
+    setRespond: jest.fn(),
   });
 }

@@ -42,7 +42,6 @@ walkeros push flow.json -e '{"entity":"page","action":"view"}'
 | `simulate`    | Test with mocked API calls     | ✅    |
 | `push`        | Execute with real API calls    | ⚠️    |
 | `run collect` | Local HTTP event collection    | ✅    |
-| `run serve`   | Local static file server       | ✅    |
 | `deploy`      | Deploy flows to cloud          | ⚠️    |
 | `validate`    | Validate configs/events        | ✅    |
 | `cache`       | Manage caching                 | ✅    |
@@ -78,14 +77,11 @@ walkeros bundle flow.json --all
 walkeros simulate flow.json --flow myFlow -e event.json
 ```
 
-### Local Development Servers
+### Local Development Server
 
 ```bash
-# Server-side: HTTP event collection
+# HTTP event collection server
 walkeros run collect flow.json --port 3000
-
-# Browser-side: Static file server
-walkeros run serve flow.json --port 8080
 ```
 
 **Server port note:** The `--port` flag (or `PORT` env var) is forwarded at
@@ -280,12 +276,9 @@ CDN and validates `config.settings` against the published schema.
 # HTTP event collection server
 walkeros run collect <config|bundle> [options]
 
-# Static file server for browser bundles
-walkeros run serve <config|bundle> [options]
-
 Options:
-  -p, --port <number>   Port (default: 3000/8080)
-  -h, --host <string>   Host (default: localhost)
+  -p, --port <number>   Port (default: 8080)
+  -h, --host <string>   Host (default: 0.0.0.0)
 ```
 
 ---

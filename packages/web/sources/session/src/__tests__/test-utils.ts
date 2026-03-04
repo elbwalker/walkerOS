@@ -76,5 +76,6 @@ export async function createSessionSource(
     id: 'test-session',
     logger: createMockLogger(),
     setIngest: async () => {},
+    setRespond: jest.fn(),
   });
 }

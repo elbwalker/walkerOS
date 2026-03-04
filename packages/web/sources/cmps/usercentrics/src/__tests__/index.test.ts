@@ -431,6 +431,7 @@ describe('Usercentrics Source', () => {
           },
         },
         setIngest: async () => {},
+        setRespond: jest.fn(),
       });
 
       expect(source.type).toBe('usercentrics');

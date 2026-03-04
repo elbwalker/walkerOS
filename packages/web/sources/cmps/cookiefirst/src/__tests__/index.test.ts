@@ -323,6 +323,7 @@ describe('CookieFirst Source', () => {
           },
         },
         setIngest: async () => {},
+        setRespond: jest.fn(),
       });
 
       expect(source.type).toBe('cookiefirst');

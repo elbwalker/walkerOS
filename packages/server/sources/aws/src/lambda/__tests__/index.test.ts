@@ -17,6 +17,7 @@ function createSourceContext(
     id: 'test-lambda',
     collector: {} as Collector.Instance,
     setIngest: jest.fn().mockResolvedValue(undefined),
+    setRespond: jest.fn(),
   };
 }
 

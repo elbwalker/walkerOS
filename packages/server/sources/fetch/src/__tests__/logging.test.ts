@@ -15,6 +15,7 @@ function createSourceContext(
     id: 'test-fetch',
     collector: {} as Collector.Instance,
     setIngest: jest.fn().mockResolvedValue(undefined),
+    setRespond: jest.fn(),
   };
 }
 

@@ -429,7 +429,7 @@ deployCmd
 // Run command with subcommands
 const runCmd = program
   .command('run')
-  .description('Run walkerOS flows in collect or serve mode');
+  .description('Run walkerOS flows in collect mode');
 
 // Run collect subcommand
 runCmd
@@ -456,46 +456,6 @@ runCmd
       config: file || 'server-collect.mjs',
       port: options.port,
       host: options.host,
-      deployment: options.deploy,
-      project: options.project,
-      url: options.url,
-      healthEndpoint: options.healthEndpoint,
-      heartbeatInterval: options.heartbeatInterval,
-      json: options.json,
-      verbose: options.verbose,
-      silent: options.silent,
-    });
-  });
-
-// Run serve subcommand
-runCmd
-  .command('serve [file]')
-  .description(
-    'Run serve mode (single-file server for browser bundles). Defaults to baked-in web-serve.js if no file specified.',
-  )
-  .option('-p, --port <number>', 'port to listen on (default: 8080)', parseInt)
-  .option('-h, --host <address>', 'host address (default: 0.0.0.0)')
-  .option('--name <filename>', 'filename in URL (default: walker.js)')
-  .option('--path <directory>', 'URL directory path (e.g., libs/v1)')
-  .option('--deploy <id-or-slug>', 'deployment ID or slug (enables heartbeat)')
-  .option('--project <id>', 'project ID (used with --deploy)')
-  .option('--url <url>', 'public URL of this server')
-  .option('--health-endpoint <path>', 'health check path (default: /health)')
-  .option(
-    '--heartbeat-interval <seconds>',
-    'heartbeat interval in seconds (default: 60)',
-    parseInt,
-  )
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (file, options) => {
-    await runCommand('serve', {
-      config: file || 'web-serve.js',
-      port: options.port,
-      host: options.host,
-      serveName: options.name,
-      servePath: options.path,
       deployment: options.deploy,
       project: options.project,
       url: options.url,

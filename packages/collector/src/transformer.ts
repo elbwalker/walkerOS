@@ -282,6 +282,7 @@ export async function transformerPush(
   transformerId: string,
   event: WalkerOS.DeepPartialEvent,
   ingest?: unknown,
+  respond?: import('@walkeros/core').RespondFn,
 ): Promise<
   WalkerOS.DeepPartialEvent | false | void | Transformer.BranchResult
 > {
@@ -296,7 +297,10 @@ export async function transformerPush(
     id: transformerId,
     ingest, // Same frozen reference, no copying
     config: transformer.config,
-    env: mergeTransformerEnvironments(transformer.config.env),
+    env: {
+      ...mergeTransformerEnvironments(transformer.config.env),
+      ...(respond ? { respond } : {}),
+    },
   };
 
   transformerLogger.debug('push', { event: (event as { name?: string }).name });
@@ -328,6 +332,7 @@ export async function runTransformerChain(
   chain: string[],
   event: WalkerOS.DeepPartialEvent,
   ingest?: unknown,
+  respond?: import('@walkeros/core').RespondFn,
 ): Promise<WalkerOS.DeepPartialEvent | null> {
   let processedEvent = event;
 
@@ -356,7 +361,14 @@ export async function runTransformerChain(
         .scope(`transformer:${transformer.type || 'unknown'}`)
         .error('Push failed', { error: err });
       return false as const; // Stop chain on error
-    })(collector, transformer, transformerName, processedEvent, ingest);
+    })(
+      collector,
+      transformer,
+      transformerName,
+      processedEvent,
+      ingest,
+      respond,
+    );
 
     // Handle result
     if (result === false) {
@@ -378,6 +390,7 @@ export async function runTransformerChain(
           branchedChain,
           result.event,
           ingest,
+          respond,
         );
       }
 
