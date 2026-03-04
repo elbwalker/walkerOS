@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs-extra';
-import type { Logger } from './logger.js';
+import type { Logger } from '@walkeros/core';
 
 export interface LocalPackageInfo {
   name: string;
@@ -16,7 +16,7 @@ export async function resolveLocalPackage(
   packageName: string,
   localPath: string,
   configDir: string,
-  logger: Logger,
+  logger: Logger.Instance,
 ): Promise<LocalPackageInfo> {
   // Resolve relative to config file directory
   const absolutePath = path.isAbsolute(localPath)
@@ -65,7 +65,7 @@ export async function resolveLocalPackage(
 export async function copyLocalPackage(
   localPkg: LocalPackageInfo,
   targetDir: string,
-  logger: Logger,
+  logger: Logger.Instance,
 ): Promise<string> {
   const packageDir = path.join(targetDir, 'node_modules', localPkg.name);
 

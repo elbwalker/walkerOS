@@ -5,11 +5,8 @@
  */
 
 import path from 'path';
-import {
-  createCommandLogger,
-  createTimer,
-  getErrorMessage,
-} from '../../core/index.js';
+import { createCLILogger } from '../../core/cli-logger.js';
+import { createTimer, getErrorMessage } from '../../core/index.js';
 import { validateMode, validateFlowFile, validatePort } from './validators.js';
 import { prepareBundleForRun, isPreBuiltConfig } from './utils.js';
 import { executeRunLocal } from './execution.js';
@@ -33,7 +30,7 @@ export async function runCommand(
   const timer = createTimer();
   timer.start();
 
-  const logger = createCommandLogger(options);
+  const logger = createCLILogger(options);
 
   try {
     // Step 1: Validate inputs
@@ -99,7 +96,7 @@ export async function runCommand(
 
     // Step 4: Execute locally using runtime module
     const modeLabel = mode === 'collect' ? 'Collector' : 'Server';
-    logger.log(`Starting ${modeLabel}...`);
+    logger.info(`Starting ${modeLabel}...`);
 
     await executeRunLocal(mode as 'collect' | 'serve', flowPath, {
       port: options.port,

@@ -52,7 +52,7 @@ describe('createHeartbeat', () => {
     mockFetch.mockRejectedValueOnce(new Error('network down'));
     const hb = createHeartbeat(config, mockLogger);
     await expect(hb.sendOnce()).resolves.toBeUndefined();
-    expect(mockLogger.debug).toHaveBeenCalled();
+    expect(mockLogger.warn).toHaveBeenCalled();
   });
 
   it('stop clears the interval', () => {

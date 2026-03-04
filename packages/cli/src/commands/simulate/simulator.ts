@@ -1,13 +1,11 @@
 import path from 'path';
 import fs from 'fs-extra';
-import type { Flow, Logger as CoreLogger } from '@walkeros/core';
-import { getPlatform } from '@walkeros/core';
+import type { Flow, Logger } from '@walkeros/core';
+import { getPlatform, Level } from '@walkeros/core';
+import { createCLILogger } from '../../core/cli-logger.js';
 import {
-  createLogger,
-  createCollectorLoggerConfig,
   getErrorMessage,
   detectInput,
-  type Logger,
   type Platform,
 } from '../../core/index.js';
 import {
@@ -22,6 +20,25 @@ import { executeInJSDOM } from './jsdom-executor.js';
 import { executeInNode } from './node-executor.js';
 import { loadDestinationEnvs } from './env-loader.js';
 import type { SimulateCommandOptions, SimulationResult } from './types.js';
+
+function createCollectorLoggerConfigInline(
+  logger: Logger.Instance,
+  verbose?: boolean,
+): Logger.Config {
+  return {
+    level: verbose ? Level.DEBUG : Level.ERROR,
+    handler: (level, message, context, scope) => {
+      const scopePath = scope.length > 0 ? `[${scope.join(':')}] ` : '';
+      const hasContext = Object.keys(context).length > 0;
+      const contextStr = hasContext ? ` ${JSON.stringify(context)}` : '';
+      if (level === Level.ERROR) {
+        logger.error(`${scopePath}${message}${contextStr}`);
+      } else {
+        logger.debug(`${scopePath}${message}${contextStr}`);
+      }
+    },
+  };
+}
 
 /**
  * Generate a unique ID for temp files
@@ -41,7 +58,7 @@ export async function simulateCore(
     'flow' | 'json' | 'verbose' | 'silent' | 'platform'
   > = {},
 ): Promise<SimulationResult> {
-  const logger = createLogger({
+  const logger = createCLILogger({
     verbose: options.verbose || false,
     silent: options.silent || false,
     json: options.json || false,
@@ -117,14 +134,14 @@ export async function executeSimulation(
   event: unknown,
   inputPath: string,
   platformOverride?: Platform,
-  options: { flow?: string; logger?: Logger; verbose?: boolean } = {},
+  options: { flow?: string; logger?: Logger.Instance; verbose?: boolean } = {},
 ): Promise<SimulationResult> {
   const startTime = Date.now();
   const tempDir = getTmpPath();
 
   // Create collector logger config for forwarding logs
   const collectorLoggerConfig = options.logger
-    ? createCollectorLoggerConfig(options.logger, options.verbose)
+    ? createCollectorLoggerConfigInline(options.logger, options.verbose)
     : undefined;
 
   try {
@@ -195,7 +212,7 @@ async function executeConfigSimulation(
   typedEvent: { name: string; data?: unknown },
   tempDir: string,
   startTime: number,
-  loggerConfig?: CoreLogger.Config,
+  loggerConfig?: Logger.Config,
   flowName?: string,
 ): Promise<SimulationResult> {
   // Load config
@@ -242,7 +259,7 @@ async function executeConfigSimulation(
   await bundleCore(
     flowConfig,
     simulationBuildOptions,
-    createLogger({ silent: true }),
+    createCLILogger({ silent: true }),
     false,
   );
 
@@ -292,7 +309,7 @@ async function executeBundleSimulation(
   typedEvent: { name: string; data?: unknown },
   tempDir: string,
   startTime: number,
-  loggerConfig?: CoreLogger.Config,
+  loggerConfig?: Logger.Config,
 ): Promise<SimulationResult> {
   // Write bundle to temp file
   const tempOutput = path.join(

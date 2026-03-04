@@ -334,7 +334,7 @@ export async function runTransformerChain(
   for (const transformerName of chain) {
     const transformer = transformers[transformerName];
     if (!transformer) {
-      collector.logger.info(`Transformer not found: ${transformerName}`);
+      collector.logger.warn(`Transformer not found: ${transformerName}`);
       continue;
     }
 
@@ -346,7 +346,7 @@ export async function runTransformerChain(
     );
 
     if (!isInitialized) {
-      collector.logger.info(`Transformer init failed: ${transformerName}`);
+      collector.logger.error(`Transformer init failed: ${transformerName}`);
       return null; // Stop chain on init failure
     }
 
@@ -382,7 +382,7 @@ export async function runTransformerChain(
       }
 
       // Branch target not found — drop event (fail-safe).
-      collector.logger.info(
+      collector.logger.warn(
         `Branch target not found: ${JSON.stringify(result.next)}`,
       );
       return null;

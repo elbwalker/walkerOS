@@ -1,28 +1,42 @@
 import path from 'path';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
-import {
-  getPlatform,
-  type Elb,
-  type Logger as CoreLogger,
-} from '@walkeros/core';
+import { getPlatform, type Elb } from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
+import { createCLILogger } from '../../core/cli-logger.js';
 import {
-  createCommandLogger,
-  createCollectorLoggerConfig,
   getErrorMessage,
   detectInput,
   isStdinPiped,
   readStdin,
   writeResult,
-  type Logger,
   type Platform,
 } from '../../core/index.js';
+import { Level, type Logger } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
 import type { PushCommandOptions, PushResult } from './types.js';
 import type { PushOptions } from '../../schemas/push.js';
+
+function createCollectorLoggerConfig(
+  logger: Logger.Instance,
+  verbose?: boolean,
+): Logger.Config {
+  return {
+    level: verbose ? Level.DEBUG : Level.ERROR,
+    handler: (level, message, context, scope) => {
+      const scopePath = scope.length > 0 ? `[${scope.join(':')}] ` : '';
+      const hasContext = Object.keys(context).length > 0;
+      const contextStr = hasContext ? ` ${JSON.stringify(context)}` : '';
+      if (level === Level.ERROR) {
+        logger.error(`${scopePath}${message}${contextStr}`);
+      } else {
+        logger.debug(`${scopePath}${message}${contextStr}`);
+      }
+    },
+  };
+}
 
 /**
  * Core push logic without CLI concerns (no process.exit, no output formatting)
@@ -38,7 +52,7 @@ async function pushCore(
     platform?: string;
   } = {},
 ): Promise<PushResult> {
-  const logger = createCommandLogger({
+  const logger = createCLILogger({
     silent: options.silent,
     verbose: options.verbose,
   });
@@ -75,7 +89,7 @@ async function pushCore(
     };
 
     if (!validatedEvent.name.includes(' ')) {
-      logger.log(
+      logger.info(
         `Warning: Event name "${validatedEvent.name}" should follow "ENTITY ACTION" format (e.g., "page view")`,
       );
     }
@@ -103,10 +117,6 @@ async function pushCore(
         },
       );
     } else {
-      const collectorLoggerConfig = createCollectorLoggerConfig(
-        logger,
-        options.verbose,
-      );
       result = await executeBundlePush(
         detected.content,
         detected.platform,
@@ -115,7 +125,7 @@ async function pushCore(
         (dir) => {
           tempDir = dir;
         },
-        { logger: collectorLoggerConfig },
+        { logger: createCollectorLoggerConfig(logger, options.verbose) },
       );
     }
 
@@ -137,7 +147,7 @@ async function pushCore(
  * CLI command handler for push command
  */
 export async function pushCommand(options: PushCommandOptions): Promise<void> {
-  const logger = createCommandLogger({ ...options, stderr: true });
+  const logger = createCLILogger({ ...options, stderr: true });
   const startTime = Date.now();
 
   try {
@@ -273,7 +283,7 @@ export async function push(
 async function executeConfigPush(
   options: PushCommandOptions,
   validatedEvent: { name: string; data: Record<string, unknown> },
-  logger: Logger,
+  logger: Logger.Instance,
   setTempDir: (dir: string) => void,
 ): Promise<PushResult> {
   // Load config
@@ -320,12 +330,8 @@ async function executeConfigPush(
     return executeWebPush(tempPath, validatedEvent, logger);
   } else if (platform === 'server') {
     logger.debug('Executing in server environment (Node.js)');
-    const collectorLoggerConfig = createCollectorLoggerConfig(
-      logger,
-      options.verbose,
-    );
     return executeServerPush(tempPath, validatedEvent, logger, 60000, {
-      logger: collectorLoggerConfig,
+      logger: createCollectorLoggerConfig(logger, options.verbose),
     });
   } else {
     throw new Error(`Unsupported platform: ${platform}`);
@@ -339,9 +345,9 @@ async function executeBundlePush(
   bundleContent: string,
   platform: Platform,
   validatedEvent: { name: string; data: Record<string, unknown> },
-  logger: Logger,
+  logger: Logger.Instance,
   setTempDir: (dir: string) => void,
-  context: { logger?: CoreLogger.Config } = {},
+  context: { logger?: Logger.Config } = {},
 ): Promise<PushResult> {
   // Write bundle to temp file
   const tempDir = getTmpPath(
@@ -382,7 +388,7 @@ interface PushEventInput {
 async function executeWebPush(
   bundlePath: string,
   event: PushEventInput,
-  logger: Logger,
+  logger: Logger.Instance,
 ): Promise<PushResult> {
   const startTime = Date.now();
 
@@ -422,7 +428,7 @@ async function executeWebPush(
     };
 
     // Push event directly to collector (bypasses source handlers)
-    logger.log(`Pushing event: ${event.name}`);
+    logger.info(`Pushing event: ${event.name}`);
     const elbResult = await collector.push({
       name: event.name,
       data: event.data,
@@ -448,9 +454,9 @@ async function executeWebPush(
 async function executeServerPush(
   bundlePath: string,
   event: PushEventInput,
-  logger: Logger,
+  logger: Logger.Instance,
   timeout: number = 60000, // 60 second default timeout
-  context: { logger?: CoreLogger.Config } = {},
+  context: { logger?: Logger.Config } = {},
 ): Promise<PushResult> {
   const startTime = Date.now();
 
@@ -491,7 +497,7 @@ async function executeServerPush(
       const { collector } = result;
 
       // Push event directly to collector (bypasses source handlers)
-      logger.log(`Pushing event: ${event.name}`);
+      logger.info(`Pushing event: ${event.name}`);
       const elbResult = await collector.push({
         name: event.name,
         data: event.data,

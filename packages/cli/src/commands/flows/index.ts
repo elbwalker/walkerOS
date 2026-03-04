@@ -1,6 +1,6 @@
 import { createApiClient } from '../../core/api-client.js';
 import { requireProjectId } from '../../core/auth.js';
-import { createCommandLogger } from '../../core/logger.js';
+import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import { isStdinPiped, readStdin } from '../../core/stdin.js';
 import type { GlobalOptions } from '../../types/global.js';
@@ -130,7 +130,7 @@ async function handleResult(
   fn: () => Promise<unknown>,
   options: FlowsCommandOptions,
 ): Promise<void> {
-  const logger = createCommandLogger(options);
+  const logger = createCLILogger(options);
   try {
     const result = await fn();
     await writeResult(JSON.stringify(result, null, 2), options);

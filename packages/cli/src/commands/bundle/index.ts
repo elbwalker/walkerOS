@@ -7,8 +7,8 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { getPlatform } from '@walkeros/core';
+import { createCLILogger } from '../../core/cli-logger.js';
 import {
-  createCommandLogger,
   createTimer,
   createSuccessOutput,
   createErrorOutput,
@@ -67,7 +67,7 @@ export async function bundleCommand(
 
   // When writing to stdout, redirect all logs to stderr
   const writingToStdout = !options.output;
-  const logger = createCommandLogger({
+  const logger = createCLILogger({
     ...options,
     stderr: writingToStdout,
   });
@@ -153,9 +153,9 @@ export async function bundleCommand(
 
         // Log flow being built
         if (isMultiFlow || options.all) {
-          logger.log(`Bundling flow: ${flowName}...`);
+          logger.info(`Bundling flow: ${flowName}...`);
         } else {
-          logger.log('Bundling...');
+          logger.info('Bundling...');
         }
 
         // Run bundler
@@ -172,7 +172,7 @@ export async function bundleCommand(
         // Upload to URL if output was a presigned URL
         if (uploadUrl) {
           await uploadBundleToUrl(buildOptions.output, uploadUrl);
-          logger.log(`Uploaded to: ${sanitizeUrl(uploadUrl)}`);
+          logger.info(`Uploaded to: ${sanitizeUrl(uploadUrl)}`);
           await fs.remove(buildOptions.output);
         }
 
@@ -239,7 +239,7 @@ export async function bundleCommand(
       });
     } else {
       if (options.all) {
-        logger.log(
+        logger.info(
           `\nBuild Summary: ${successCount}/${results.length} succeeded`,
         );
         if (failureCount > 0) {
@@ -337,7 +337,7 @@ export async function bundle(
   }
 
   // 4. Create logger internally
-  const logger = createCommandLogger(options);
+  const logger = createCLILogger(options);
 
   // 5. Call core bundler
   return await bundleCore(
@@ -363,7 +363,7 @@ export async function bundle(
 async function generateDockerfile(
   outputDir: string,
   platform: 'web' | 'server',
-  logger: ReturnType<typeof createCommandLogger>,
+  logger: ReturnType<typeof createCLILogger>,
   customFile?: string,
 ): Promise<void> {
   const destPath = path.join(outputDir, 'Dockerfile');
@@ -371,7 +371,7 @@ async function generateDockerfile(
   // Copy mode: use custom file if it exists
   if (customFile && (await fs.pathExists(customFile))) {
     await fs.copy(customFile, destPath);
-    logger.log(`Dockerfile: ${destPath} (copied from ${customFile})`);
+    logger.info(`Dockerfile: ${destPath} (copied from ${customFile})`);
     return;
   }
 
@@ -392,7 +392,7 @@ EXPOSE 8080
 `;
 
   await fs.writeFile(destPath, dockerfile);
-  logger.log(`Dockerfile: ${destPath}`);
+  logger.info(`Dockerfile: ${destPath}`);
 }
 
 /**

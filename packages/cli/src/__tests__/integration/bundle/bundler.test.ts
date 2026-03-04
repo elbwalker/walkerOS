@@ -2,8 +2,8 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import { bundleCore as bundle } from '../../../commands/bundle/bundler.js';
-import { createLogger, type Logger } from '../../../core/index.js';
-import { getId, type Flow } from '@walkeros/core';
+import { createCLILogger } from '../../../core/cli-logger.js';
+import { getId, type Flow, type Logger } from '@walkeros/core';
 import type { BuildOptions } from '../../../types/bundle.js';
 
 /**
@@ -31,7 +31,7 @@ describe('Bundler', () => {
     '.tmp',
     `bundler-${Date.now()}-${getId()}`,
   );
-  let logger: Logger;
+  let logger: Logger.Instance;
 
   beforeEach(async () => {
     // Ensure test output directory exists
@@ -39,7 +39,7 @@ describe('Bundler', () => {
     // Clean build cache to ensure each test starts fresh (cache lives in os.tmpdir())
     await fs.remove(path.join(os.tmpdir(), 'cache', 'builds'));
     // Create a silent logger for tests
-    logger = createLogger({ silent: true });
+    logger = createCLILogger({ silent: true });
     // Mock console.log to suppress output during tests
     jest.spyOn(console, 'log').mockImplementation(() => {});
 

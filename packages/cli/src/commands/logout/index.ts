@@ -1,4 +1,4 @@
-import { createLogger } from '../../core/logger.js';
+import { createCLILogger } from '../../core/cli-logger.js';
 import { deleteConfig, getConfigPath } from '../../lib/config-file.js';
 import type { GlobalOptions } from '../../types/global.js';
 
@@ -9,11 +9,7 @@ export interface LogoutCommandOptions extends GlobalOptions {
 export async function logoutCommand(
   options: LogoutCommandOptions,
 ): Promise<void> {
-  const logger = createLogger({
-    verbose: options.verbose,
-    silent: options.silent,
-    json: options.json,
-  });
+  const logger = createCLILogger(options);
 
   const deleted = deleteConfig();
   const configPath = getConfigPath();
@@ -21,9 +17,9 @@ export async function logoutCommand(
   if (options.json) {
     logger.json({ success: true, deleted });
   } else if (deleted) {
-    logger.success(`Logged out. Token removed from ${configPath}`);
+    logger.info(`Logged out. Token removed from ${configPath}`);
   } else {
-    logger.log('No stored credentials found.');
+    logger.info('No stored credentials found.');
   }
 
   process.exit(0);

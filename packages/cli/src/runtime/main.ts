@@ -17,7 +17,7 @@ import {
 } from './heartbeat.js';
 import { createPoller, type PollerHandle } from './poller.js';
 import { fetchSecrets, SecretsHttpError } from './secrets-fetcher.js';
-import { createLogger } from '../core/logger.js';
+import { createCLILogger } from '../core/cli-logger.js';
 import type { Logger } from '@walkeros/core';
 import { VERSION } from '../version.js';
 async function lazyPrepareBundleForRun(
@@ -37,31 +37,6 @@ function isPreBuiltConfig(configPath: string): boolean {
 }
 import { writeFileSync, readFileSync } from 'fs';
 
-/**
- * Adapt CLI logger to @walkeros/core Logger.Instance interface
- */
-function adaptLogger(
-  cliLogger: ReturnType<typeof createLogger>,
-): Logger.Instance {
-  return {
-    error: (message: string | Error) => {
-      cliLogger.error(message instanceof Error ? message.message : message);
-    },
-    info: (message: string | Error) => {
-      cliLogger.info(message instanceof Error ? message.message : message);
-    },
-    debug: (message: string | Error) => {
-      cliLogger.debug(message instanceof Error ? message.message : message);
-    },
-    throw: (message: string | Error): never => {
-      const msg = message instanceof Error ? message.message : message;
-      cliLogger.error(msg);
-      throw message instanceof Error ? message : new Error(msg);
-    },
-    scope: (_name: string) => adaptLogger(cliLogger),
-  };
-}
-
 function resolveAppUrl(): string {
   return (
     process.env.APP_URL ||
@@ -71,29 +46,28 @@ function resolveAppUrl(): string {
 }
 
 async function main() {
-  const cliLogger = createLogger({ silent: false, verbose: true });
-  const logger = adaptLogger(cliLogger);
+  const logger = createCLILogger({ verbose: true });
 
   // Step 1: Validate env vars
   let env: RunnerEnv;
   try {
     env = validateEnv(process.env);
   } catch (error) {
-    cliLogger.error(
+    logger.error(
       `Configuration error: ${error instanceof Error ? error.message : error}`,
     );
     process.exit(1);
   }
 
-  cliLogger.log(`walkeros/flow v${VERSION} — ${env.mode} mode`);
-  cliLogger.log(`Instance: ${getInstanceId()}`);
+  logger.info(`walkeros/flow v${VERSION} — ${env.mode} mode`);
+  logger.info(`Instance: ${getInstanceId()}`);
 
   // Step 1.5: Fetch secrets and inject into process.env
   // Fatal for auth failures (401/403) — the token is invalid and nothing will work.
   // Non-fatal for 404 (project/flow not found in secrets table) and 500 (server-side
   // issue like missing KEK) — the flow may not use $env.* at all, so it can still run.
   if (env.apiEnabled && env.flowId) {
-    cliLogger.log('Fetching secrets...');
+    logger.info('Fetching secrets...');
     try {
       const secrets = await fetchSecrets({
         appUrl: resolveAppUrl(),
@@ -106,9 +80,9 @@ async function main() {
         for (const [name, value] of Object.entries(secrets)) {
           process.env[name] = value;
         }
-        cliLogger.log(`Injected ${count} secret(s) into environment`);
+        logger.info(`Injected ${count} secret(s) into environment`);
       } else {
-        cliLogger.log('No secrets configured for this flow');
+        logger.info('No secrets configured for this flow');
       }
     } catch (error) {
       // Auth failures are fatal — the token is broken, config fetch will also fail
@@ -116,14 +90,14 @@ async function main() {
         error instanceof SecretsHttpError &&
         (error.status === 401 || error.status === 403)
       ) {
-        cliLogger.error(`Secrets fetch failed (auth): ${error.message}`);
+        logger.error(`Secrets fetch failed (auth): ${error.message}`);
         process.exit(1);
       }
       // All other errors are warnings — the flow may not need secrets
-      cliLogger.error(
-        `Warning: Could not fetch secrets: ${error instanceof Error ? error.message : error}`,
+      logger.warn(
+        `Could not fetch secrets: ${error instanceof Error ? error.message : error}`,
       );
-      cliLogger.log('Continuing without secrets (flow may not require them)');
+      logger.info('Continuing without secrets (flow may not require them)');
     }
   }
 
@@ -139,7 +113,7 @@ async function main() {
 
   if (env.remoteConfig) {
     // Mode C/D: Fetch from API
-    cliLogger.log('Fetching config from API...');
+    logger.info('Fetching config from API...');
     try {
       const result = await fetchConfig({
         appUrl: resolveAppUrl(),
@@ -156,44 +130,38 @@ async function main() {
         );
         configPath = tmpConfigPath;
         configVersion = result.version;
-        cliLogger.log(`Config version: ${result.version}`);
+        logger.info(`Config version: ${result.version}`);
       }
     } catch (error) {
-      cliLogger.error(
+      logger.error(
         `API fetch failed: ${error instanceof Error ? error.message : error}`,
       );
 
       // Fallback to cache
       const cached = readCache(env.cacheDir);
       if (cached) {
-        cliLogger.log(`Using cached bundle (version: ${cached.version})`);
-        await runWithBundle(
-          cached.bundlePath,
-          env,
-          logger,
-          cliLogger,
-          cached.version,
-        );
+        logger.info(`Using cached bundle (version: ${cached.version})`);
+        await runWithBundle(cached.bundlePath, env, logger, cached.version);
         return;
       }
 
-      cliLogger.error('No cached bundle available. Cannot start.');
+      logger.error('No cached bundle available. Cannot start.');
       process.exit(1);
     }
   } else {
     // Mode A/B: Use local bundle
     const resolved = await resolveBundle(env.bundlePath);
     if (resolved.source === 'stdin') {
-      cliLogger.log('Bundle: received via stdin');
+      logger.info('Bundle: received via stdin');
     } else if (resolved.source === 'url') {
-      cliLogger.log('Bundle: fetched from URL');
+      logger.info('Bundle: fetched from URL');
     } else {
-      cliLogger.log(`Bundle: ${resolved.path}`);
+      logger.info(`Bundle: ${resolved.path}`);
     }
 
     // Pre-built bundles skip bundling step
     if (isPreBuiltConfig(resolved.path)) {
-      await runWithBundle(resolved.path, env, logger, cliLogger, undefined);
+      await runWithBundle(resolved.path, env, logger, undefined);
       return;
     }
     configPath = resolved.path;
@@ -201,11 +169,11 @@ async function main() {
 
   // Step 4: Bundle the config
   if (!configPath) {
-    cliLogger.error('No config resolved');
+    logger.error('No config resolved');
     process.exit(1);
   }
 
-  cliLogger.log('Building flow...');
+  logger.info('Building flow...');
   let bundlePath: string;
   try {
     bundlePath = await lazyPrepareBundleForRun(configPath, {
@@ -214,7 +182,7 @@ async function main() {
       flowName: env.flowName,
     });
   } catch (error) {
-    cliLogger.error(
+    logger.error(
       `Bundle failed: ${error instanceof Error ? error.message : error}`,
     );
 
@@ -222,14 +190,8 @@ async function main() {
     if (env.remoteConfig) {
       const cached = readCache(env.cacheDir);
       if (cached) {
-        cliLogger.log(`Using cached bundle (version: ${cached.version})`);
-        await runWithBundle(
-          cached.bundlePath,
-          env,
-          logger,
-          cliLogger,
-          cached.version,
-        );
+        logger.info(`Using cached bundle (version: ${cached.version})`);
+        await runWithBundle(cached.bundlePath, env, logger, cached.version);
         return;
       }
     }
@@ -237,7 +199,7 @@ async function main() {
     process.exit(1);
   }
 
-  cliLogger.log('Bundle ready');
+  logger.info('Bundle ready');
 
   // Step 5: Cache the working bundle
   try {
@@ -249,18 +211,17 @@ async function main() {
       configVersion || 'local',
     );
   } catch {
-    cliLogger.debug('Cache write failed (non-critical)');
+    logger.debug('Cache write failed (non-critical)');
   }
 
   // Step 6: Run
-  await runWithBundle(bundlePath, env, logger, cliLogger, configVersion);
+  await runWithBundle(bundlePath, env, logger, configVersion);
 }
 
 async function runWithBundle(
   bundlePath: string,
   env: RunnerEnv,
   logger: Logger.Instance,
-  cliLogger: ReturnType<typeof createLogger>,
   configVersion: string | undefined,
 ) {
   // Create runner-owned health server on the configured port
@@ -278,14 +239,14 @@ async function runWithBundle(
     );
   } catch (error) {
     await healthServer.close();
-    cliLogger.error(
+    logger.error(
       `Failed to load flow: ${error instanceof Error ? error.message : error}`,
     );
     process.exit(1);
   }
 
-  cliLogger.log('Flow running');
-  cliLogger.log(`Port: ${env.port}`);
+  logger.info('Flow running');
+  logger.info(`Port: ${env.port}`);
 
   // Track handles for shutdown
   let heartbeat: HeartbeatHandle | null = null;
@@ -307,7 +268,7 @@ async function runWithBundle(
       logger,
     );
     heartbeat.start();
-    cliLogger.log(`Heartbeat: active (every ${env.heartbeatInterval}s)`);
+    logger.info(`Heartbeat: active (every ${env.heartbeatInterval}s)`);
   }
 
   // Step 8: Start poller (if remote config, uses POLL_INTERVAL)
@@ -337,7 +298,7 @@ async function runWithBundle(
                 process.env[name] = value;
               }
             } catch (error) {
-              cliLogger.error(
+              logger.error(
                 `Failed to refresh secrets during poll, skipping hot-swap: ${error instanceof Error ? error.message : error}`,
               );
               return;
@@ -374,18 +335,18 @@ async function runWithBundle(
           // Update heartbeat config version
           if (heartbeat) heartbeat.updateConfigVersion(version);
 
-          cliLogger.log(`Hot-swapped to version ${version}`);
+          logger.info(`Hot-swapped to version ${version}`);
         },
       },
       logger,
     );
     poller.start();
-    cliLogger.log(`Polling: active (every ${env.pollInterval}s)`);
+    logger.info(`Polling: active (every ${env.pollInterval}s)`);
   }
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {
-    cliLogger.log(`Received ${signal}, shutting down...`);
+    logger.info(`Received ${signal}, shutting down...`);
     if (poller) poller.stop();
     if (heartbeat) heartbeat.stop();
     try {
@@ -396,7 +357,7 @@ async function runWithBundle(
       /* best-effort */
     }
     await healthServer.close();
-    cliLogger.log('Shutdown complete');
+    logger.info('Shutdown complete');
     process.exit(0);
   };
 

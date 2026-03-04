@@ -16,8 +16,8 @@ jest.mock('../../../version.js', () => ({ VERSION: '2.0.0-test' }));
 
 const mockLoggerInstance: Record<string, jest.Mock> = {};
 
-jest.mock('../../../core/logger.js', () => ({
-  createCommandLogger: jest.fn().mockImplementation(() => mockLoggerInstance),
+jest.mock('../../../core/cli-logger.js', () => ({
+  createCLILogger: jest.fn().mockImplementation(() => mockLoggerInstance),
 }));
 
 jest.mock('crypto', () => ({
@@ -43,10 +43,10 @@ describe('startHeartbeat', () => {
     jest.clearAllMocks();
     cleanupFn = undefined;
     // Reset logger methods
-    mockLoggerInstance.success = jest.fn();
     mockLoggerInstance.info = jest.fn();
+    mockLoggerInstance.warn = jest.fn();
     mockLoggerInstance.error = jest.fn();
-    mockLoggerInstance.log = jest.fn();
+    mockLoggerInstance.debug = jest.fn();
   });
 
   afterEach(async () => {

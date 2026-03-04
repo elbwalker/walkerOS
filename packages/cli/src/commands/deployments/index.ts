@@ -4,7 +4,7 @@ import {
   requireProjectId,
   resolveBaseUrl,
 } from '../../core/auth.js';
-import { createCommandLogger } from '../../core/logger.js';
+import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import { loadFlowConfig } from '../../config/loader.js';
 import type { GlobalOptions } from '../../types/global.js';
@@ -121,7 +121,7 @@ async function handleResult(
   fn: () => Promise<unknown>,
   options: DeploymentsCommandOptions,
 ): Promise<void> {
-  const logger = createCommandLogger(options);
+  const logger = createCLILogger(options);
   try {
     const result = await fn();
     await writeResult(JSON.stringify(result, null, 2), options);
@@ -183,7 +183,7 @@ export async function createDeployCommand(
   config: string | undefined,
   options: DeploymentsCommandOptions & { flow?: string },
 ): Promise<void> {
-  const log = createCommandLogger(options);
+  const log = createCLILogger(options);
 
   try {
     let type: 'web' | 'server';
@@ -250,12 +250,12 @@ export async function createDeployCommand(
     }
 
     // Human-readable output
-    log.success(`Deployment created: ${result.id}`);
+    log.info(`Deployment created: ${result.id}`);
     log.info(`  Slug:  ${result.slug}`);
     log.info(`  Type:  ${result.type}`);
     if (result.deployToken) {
       log.info(`  Token: ${result.deployToken}`);
-      log.warning('  Save this token — it will not be shown again.');
+      log.warn('  Save this token — it will not be shown again.');
     }
     log.info('');
     log.info('Run locally:');

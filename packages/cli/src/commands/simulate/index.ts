@@ -1,6 +1,6 @@
 import { simulateCore, formatSimulationResult } from './simulator.js';
+import { createCLILogger } from '../../core/cli-logger.js';
 import {
-  createCommandLogger,
   getErrorMessage,
   getTmpPath,
   isStdinPiped,
@@ -21,7 +21,7 @@ import type { Flow } from '@walkeros/core';
 export async function simulateCommand(
   options: SimulateCommandOptions,
 ): Promise<void> {
-  const logger = createCommandLogger({ ...options, stderr: true });
+  const logger = createCLILogger({ ...options, stderr: true });
   const startTime = Date.now();
 
   try {

@@ -104,7 +104,7 @@ function generateInlineCode(
 }
 import type { BuildOptions } from '../../types/bundle.js';
 import { downloadPackages } from './package-manager.js';
-import type { Logger } from '../../core/index.js';
+import type { Logger } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import {
   isBuildCached,
@@ -127,7 +127,7 @@ async function copyIncludes(
   includes: string[],
   sourceDir: string,
   outputDir: string,
-  logger: Logger,
+  logger: Logger.Instance,
 ): Promise<void> {
   for (const include of includes) {
     const sourcePath = path.resolve(sourceDir, include);
@@ -172,7 +172,10 @@ function generateCacheKeyContent(
  * Note: We use (code as unknown) === true to check for deprecated code: true
  * because the type no longer includes true, but runtime values may still have it.
  */
-function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
+function validateFlowConfig(
+  flowConfig: Flow.Config,
+  logger: Logger.Instance,
+): boolean {
   let hasDeprecatedCodeTrue = false;
 
   // Check sources for code: true (deprecated, removed from types)
@@ -183,7 +186,7 @@ function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
       typeof source === 'object' &&
       (source.code as unknown) === true
     ) {
-      logger.warning(
+      logger.warn(
         `DEPRECATED: Source "${sourceId}" uses code: true which is no longer supported. ` +
           `Use $code: prefix in config values or create a source package instead.`,
       );
@@ -195,7 +198,7 @@ function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
   const destinations = flowConfig.destinations || {};
   for (const [destId, dest] of Object.entries(destinations)) {
     if (dest && typeof dest === 'object' && (dest.code as unknown) === true) {
-      logger.warning(
+      logger.warn(
         `DEPRECATED: Destination "${destId}" uses code: true which is no longer supported. ` +
           `Use $code: prefix in config values or create a destination package instead.`,
       );
@@ -211,7 +214,7 @@ function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
       typeof transformer === 'object' &&
       (transformer.code as unknown) === true
     ) {
-      logger.warning(
+      logger.warn(
         `DEPRECATED: Transformer "${transformerId}" uses code: true which is no longer supported. ` +
           `Use $code: prefix in config values or create a transformer package instead.`,
       );
@@ -220,7 +223,7 @@ function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
   }
 
   if (hasDeprecatedCodeTrue) {
-    logger.warning(
+    logger.warn(
       `See https://www.elbwalker.com/docs/walkeros/getting-started/flow for migration guide.`,
     );
   }
@@ -231,7 +234,7 @@ function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
 export async function bundleCore(
   flowConfig: Flow.Config,
   buildOptions: BuildOptions,
-  logger: Logger,
+  logger: Logger.Instance,
   showStats = false,
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
@@ -239,7 +242,7 @@ export async function bundleCore(
   // Validate flow config and warn about deprecated features
   const hasDeprecatedFeatures = validateFlowConfig(flowConfig, logger);
   if (hasDeprecatedFeatures) {
-    logger.warning('Skipping deprecated code: true entries from bundle.');
+    logger.warn('Skipping deprecated code: true entries from bundle.');
   }
 
   // Use provided temp dir or default .tmp/
@@ -262,7 +265,7 @@ export async function bundleCore(
 
         const stats = await fs.stat(outputPath);
         const sizeKB = (stats.size / 1024).toFixed(1);
-        logger.log(`Output: ${outputPath} (${sizeKB} KB, cached)`);
+        logger.info(`Output: ${outputPath} (${sizeKB} KB, cached)`);
 
         // Return stats if requested
         if (showStats) {
@@ -402,7 +405,7 @@ export async function bundleCore(
     const outputStats = await fs.stat(outputPath);
     const sizeKB = (outputStats.size / 1024).toFixed(1);
     const buildTime = ((Date.now() - bundleStartTime) / 1000).toFixed(1);
-    logger.log(`Output: ${outputPath} (${sizeKB} KB, ${buildTime}s)`);
+    logger.info(`Output: ${outputPath} (${sizeKB} KB, ${buildTime}s)`);
 
     // Step 5: Cache the build result if caching is enabled
     if (buildOptions.cache !== false) {
@@ -492,7 +495,7 @@ function createEsbuildOptions(
   outputPath: string,
   tempDir: string,
   packagePaths: Map<string, string>,
-  logger: Logger,
+  logger: Logger.Instance,
 ): esbuild.BuildOptions {
   // Don't use aliases - they cause esbuild to bundle even external packages
   // Instead, use absWorkingDir to point to temp directory where node_modules is

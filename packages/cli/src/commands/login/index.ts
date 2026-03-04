@@ -1,5 +1,5 @@
 import { hostname } from 'os';
-import { createLogger } from '../../core/logger.js';
+import { createCLILogger } from '../../core/cli-logger.js';
 import {
   writeConfig,
   resolveAppUrl,
@@ -39,11 +39,7 @@ async function openInBrowser(url: string): Promise<void> {
 export async function loginCommand(
   options: LoginCommandOptions,
 ): Promise<void> {
-  const logger = createLogger({
-    verbose: options.verbose,
-    silent: options.silent,
-    json: options.json,
-  });
+  const logger = createCLILogger(options);
 
   try {
     const result = await login({ url: options.url });
@@ -51,8 +47,8 @@ export async function loginCommand(
     if (options.json) {
       logger.json(result);
     } else if (result.success) {
-      logger.success(`Logged in as ${result.email}`);
-      logger.log(`Token stored in ${result.configPath}`);
+      logger.info(`Logged in as ${result.email}`);
+      logger.info(`Token stored in ${result.configPath}`);
     }
 
     process.exit(result.success ? 0 : 1);

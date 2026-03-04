@@ -4,7 +4,7 @@ import {
   requireProjectId,
   resolveBaseUrl,
 } from '../../core/auth.js';
-import { createCommandLogger } from '../../core/logger.js';
+import { createCLILogger } from '../../core/cli-logger.js';
 import { VERSION } from '../../version.js';
 
 export interface HeartbeatOptions {
@@ -22,7 +22,7 @@ export async function startHeartbeat(options: HeartbeatOptions) {
   const instanceId = randomUUID();
   const healthEndpoint = options.healthEndpoint ?? '/health';
   const intervalSec = options.heartbeatInterval ?? 60;
-  const log = createCommandLogger({});
+  const log = createCLILogger();
   const startTime = Date.now();
 
   const heartbeatUrl = `${base}/api/projects/${projectId}/deployments/${options.deployment}/heartbeat`;
@@ -53,7 +53,7 @@ export async function startHeartbeat(options: HeartbeatOptions) {
     deploymentId: string;
     action: string;
   };
-  log.success(
+  log.info(
     `Registered as ${instanceId} on deployment ${options.deployment} (${initData.deploymentId})`,
   );
 

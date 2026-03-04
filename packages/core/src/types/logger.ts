@@ -3,8 +3,9 @@
  */
 export enum Level {
   ERROR = 0,
-  INFO = 1,
-  DEBUG = 2,
+  WARN = 1,
+  INFO = 2,
+  DEBUG = 3,
 }
 
 /**
@@ -74,6 +75,11 @@ export interface Instance {
   error: LogFn;
 
   /**
+   * Log a warning (degraded state, config issues, transient failures)
+   */
+  warn: LogFn;
+
+  /**
    * Log an informational message
    */
   info: LogFn;
@@ -88,6 +94,11 @@ export interface Instance {
    * Combines logging and throwing in one call
    */
   throw: ThrowFn;
+
+  /**
+   * Output structured JSON data
+   */
+  json: (data: unknown) => void;
 
   /**
    * Create a scoped child logger with automatic trace path
@@ -112,6 +123,9 @@ export interface Config {
    * Receives originalHandler to preserve default behavior
    */
   handler?: Handler;
+
+  /** Custom handler for json() output. Default: console.log(JSON.stringify(data, null, 2)) */
+  jsonHandler?: (data: unknown) => void;
 }
 
 /**
@@ -120,6 +134,7 @@ export interface Config {
 export interface InternalConfig {
   level: Level;
   handler?: Handler;
+  jsonHandler?: (data: unknown) => void;
   scope: string[];
 }
 

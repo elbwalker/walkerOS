@@ -1,8 +1,8 @@
 // walkerOS/packages/cli/src/commands/validate/index.ts
 
 import chalk from 'chalk';
+import { createCLILogger } from '../../core/cli-logger.js';
 import {
-  createCommandLogger,
   getErrorMessage,
   isStdinPiped,
   readStdin,
@@ -116,7 +116,7 @@ export async function validateCommand(
   options: ValidateCommandOptions,
 ): Promise<void> {
   // Result always goes to stdout; logs to stderr
-  const logger = createCommandLogger({ ...options, stderr: true });
+  const logger = createCLILogger({ ...options, stderr: true });
 
   try {
     // Load input: stdin > argument > error

@@ -5,9 +5,11 @@ import type { FingerprintSettings } from '../types';
 describe('Transformer Fingerprint', () => {
   const mockLogger: Logger.Instance = {
     error: jest.fn(),
+    warn: jest.fn(),
     info: jest.fn(),
     debug: jest.fn(),
     throw: jest.fn() as unknown as Logger.ThrowFn,
+    json: jest.fn(),
     scope: jest.fn().mockReturnThis(),
   };
 

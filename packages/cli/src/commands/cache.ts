@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import { Command } from 'commander';
 import { getTmpPath } from '../core/tmp.js';
-import { createLogger } from '../core/logger.js';
+import { createCLILogger } from '../core/cli-logger.js';
 
 export function registerCacheCommand(program: Command): void {
   const cache = program.command('cache').description('Manage the CLI cache');
@@ -14,18 +14,18 @@ export function registerCacheCommand(program: Command): void {
     .option('--tmp-dir <dir>', 'Custom temp directory')
     .option('--silent', 'Suppress output')
     .action(async (options) => {
-      const logger = createLogger({ silent: options.silent });
+      const logger = createCLILogger({ silent: options.silent });
       const tmpDir = options.tmpDir;
       if (options.packages) {
         await fs.remove(getTmpPath(tmpDir, 'cache', 'packages'));
-        logger.log('Package cache cleared');
+        logger.info('Package cache cleared');
       } else if (options.builds) {
         await fs.remove(getTmpPath(tmpDir, 'cache', 'builds'));
-        logger.log('Build cache cleared');
+        logger.info('Build cache cleared');
       } else {
         const cacheDir = getTmpPath(tmpDir, 'cache');
         await fs.remove(cacheDir);
-        logger.log(`Cache cleared: ${cacheDir}`);
+        logger.info(`Cache cleared: ${cacheDir}`);
       }
     });
 
@@ -35,7 +35,7 @@ export function registerCacheCommand(program: Command): void {
     .option('--tmp-dir <dir>', 'Custom temp directory')
     .option('--silent', 'Suppress output')
     .action(async (options) => {
-      const logger = createLogger({ silent: options.silent });
+      const logger = createCLILogger({ silent: options.silent });
       const tmpDir = options.tmpDir;
       const packagesDir = getTmpPath(tmpDir, 'cache', 'packages');
       const buildsDir = getTmpPath(tmpDir, 'cache', 'builds');
@@ -43,9 +43,9 @@ export function registerCacheCommand(program: Command): void {
       const packageCount = await countEntries(packagesDir);
       const buildCount = await countEntries(buildsDir);
 
-      logger.log(`Cache directory: ${getTmpPath(tmpDir, 'cache')}`);
-      logger.log(`Cached packages: ${packageCount}`);
-      logger.log(`Cached builds: ${buildCount}`);
+      logger.info(`Cache directory: ${getTmpPath(tmpDir, 'cache')}`);
+      logger.info(`Cached packages: ${packageCount}`);
+      logger.info(`Cached builds: ${buildCount}`);
     });
 }
 

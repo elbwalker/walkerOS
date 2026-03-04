@@ -144,7 +144,7 @@ export function createHeartbeat(
     } catch (error) {
       // Deltas accumulate on failure — next successful send includes them
       const message = error instanceof Error ? error.message : String(error);
-      logger.debug(`Heartbeat failed: ${message}`);
+      logger.warn(`Heartbeat failed: ${message}`);
     }
   }
 

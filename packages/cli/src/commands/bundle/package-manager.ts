@@ -1,11 +1,8 @@
 import pacote from 'pacote';
 import path from 'path';
 import fs from 'fs-extra';
-import {
-  Logger,
-  resolveLocalPackage,
-  copyLocalPackage,
-} from '../../core/index.js';
+import { resolveLocalPackage, copyLocalPackage } from '../../core/index.js';
+import type { Logger } from '@walkeros/core';
 import { getPackageCacheKey } from '../../core/cache-utils.js';
 import { getTmpPath } from '../../core/tmp.js';
 
@@ -111,7 +108,7 @@ function validateNoDuplicatePackages(packages: Package[]): void {
 async function resolveDependencies(
   pkg: Package,
   packageDir: string,
-  logger: Logger,
+  logger: Logger.Instance,
   visited: Set<string> = new Set(),
 ): Promise<Package[]> {
   const dependencies: Package[] = [];
@@ -149,7 +146,7 @@ async function resolveDependencies(
 export async function downloadPackages(
   packages: Package[],
   targetDir: string,
-  logger: Logger,
+  logger: Logger.Instance,
   useCache = true,
   configDir?: string, // For resolving relative local paths
   tmpDir?: string,

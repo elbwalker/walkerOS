@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import chalk from 'chalk';
-import { BRAND_COLOR } from './logger.js';
+const BRAND_COLOR = '#01b5e2';
 
 export function printBanner(version: string): void {
   const b = chalk.hex(BRAND_COLOR);

@@ -13,11 +13,13 @@ const noop = async () => ({
 const noopFn = () => {};
 const noopLogger: Logger.Instance = {
   error: noopFn,
+  warn: noopFn,
   info: noopFn,
   debug: noopFn,
   throw: (message: string | Error) => {
     throw typeof message === 'string' ? new Error(message) : message;
   },
+  json: noopFn,
   scope: () => noopLogger,
 };
 

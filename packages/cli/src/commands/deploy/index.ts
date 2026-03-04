@@ -5,7 +5,7 @@ import {
   resolveBaseUrl,
 } from '../../core/auth.js';
 import { parseSSEEvents } from '../../core/sse.js';
-import { createCommandLogger } from '../../core/logger.js';
+import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import type { GlobalOptions } from '../../types/global.js';
 import { getFlow } from '../flows/index.js';
@@ -285,7 +285,7 @@ export async function deployCommand(
   flowId: string,
   options: DeployCommandOptions,
 ) {
-  const log = createCommandLogger(options);
+  const log = createCLILogger(options);
 
   const timeoutMs = options.timeout
     ? parseInt(options.timeout, 10) * 1000
@@ -316,9 +316,9 @@ export async function deployCommand(
     const r = result as Record<string, unknown>;
 
     if (r.status === 'published') {
-      log.success(`Published: ${r.publicUrl}`);
+      log.info(`Published: ${r.publicUrl}`);
     } else if (r.status === 'active') {
-      log.success(`Active: ${r.containerUrl}`);
+      log.info(`Active: ${r.containerUrl}`);
     } else if (r.status === 'failed') {
       log.error(`Failed: ${r.errorMessage || 'Unknown error'}`);
       process.exit(1);
@@ -337,7 +337,7 @@ export async function getDeploymentCommand(
   flowId: string,
   options: DeployCommandOptions,
 ) {
-  const log = createCommandLogger(options);
+  const log = createCLILogger(options);
 
   try {
     const result = await getDeployment({

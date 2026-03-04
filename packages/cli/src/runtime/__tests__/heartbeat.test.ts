@@ -77,7 +77,7 @@ describe('heartbeat', () => {
 
     await heartbeat.sendOnce();
 
-    expect(mockLogger.debug).toHaveBeenCalledWith(
+    expect(mockLogger.warn).toHaveBeenCalledWith(
       expect.stringContaining('ECONNREFUSED'),
     );
   });

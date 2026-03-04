@@ -5,9 +5,11 @@ import type { ValidatorSettings } from '../types';
 describe('Contract Integration Tests', () => {
   const mockLogger: Logger.Instance = {
     error: jest.fn(),
+    warn: jest.fn(),
     info: jest.fn(),
     debug: jest.fn(),
     throw: jest.fn() as unknown as Logger.ThrowFn,
+    json: jest.fn(),
     scope: jest.fn().mockReturnThis(),
   };
 
