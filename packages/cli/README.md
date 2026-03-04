@@ -48,9 +48,6 @@ walkeros bundle flow.json
 # Test with simulated events (no real API calls)
 walkeros simulate flow.json --event '{"name":"product view"}'
 
-# Or test a pre-built bundle directly
-walkeros simulate dist/bundle.mjs --event '{"name":"product view"}'
-
 # Push real events to destinations
 walkeros push flow.json --event '{"name":"product view"}'
 
@@ -105,19 +102,12 @@ the correct `MODE` (collect/serve) based on flow type.
 
 ### simulate
 
-Test event processing with simulated events. Accepts either a config JSON (which
-gets bundled) or a pre-built bundle (executed directly).
+Test event processing with simulated events. The config JSON gets bundled and
+executed with destination mocking.
 
 ```bash
-walkeros simulate <input> --event '{"name":"page view"}' [options]
+walkeros simulate <config> --event '{"name":"page view"}' [options]
 ```
-
-**Input types:**
-
-- **Config JSON** - Bundled and executed with destination mocking
-- **Pre-built bundle** (`.js`/`.mjs`) - Executed directly, no mocking
-
-The CLI auto-detects the input type by attempting to parse as JSON.
 
 **Options:**
 
@@ -138,22 +128,7 @@ walkeros simulate examples/web-serve.json \
 
 # Simulate specific flow from multi-flow config
 walkeros simulate flow.json --flow server --event '{"name":"test"}'
-
-# Simulate with pre-built bundle
-walkeros simulate dist/bundle.mjs --event '{"name":"page view"}'
-
-# Override platform detection
-walkeros simulate dist/bundle.js --platform server --event '{"name":"page view"}'
 ```
-
-**Platform detection:**
-
-When using pre-built bundles, platform is detected from file extension:
-
-- `.mjs` → server (ESM, Node.js)
-- `.js` → web (IIFE, JSDOM)
-
-Use `--platform` to override if extension doesn't match intended runtime.
 
 ### push
 
