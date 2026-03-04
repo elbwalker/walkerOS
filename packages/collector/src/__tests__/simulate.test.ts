@@ -9,7 +9,7 @@ import { simulate } from '../simulation';
 describe('simulate', () => {
   describe('transformer', () => {
     const event: WalkerOS.DeepPartialEvent = {
-      event: 'page view',
+      name: 'page view',
       data: { title: 'Home' },
     };
 
@@ -111,10 +111,10 @@ describe('simulate', () => {
       const code: Source.Init = (ctx) => ({
         type: 'test',
         config: {},
-        push: ctx.env.push,
+        push: ctx.env.push as Source.Instance['push'],
         on(event) {
           if (event === 'run') {
-            ctx.env.push({ event: 'page view', data: { title: 'Home' } });
+            ctx.env.push({ name: 'page view', data: { title: 'Home' } });
           }
         },
       });
@@ -129,7 +129,7 @@ describe('simulate', () => {
       expect(result.step).toBe('source');
       expect(result.name).toBe('test');
       expect(result.events.length).toBeGreaterThanOrEqual(1);
-      expect(result.events[0].event).toBe('page view');
+      expect(result.events[0].name).toBe('page view');
       expect(result.calls).toEqual([]);
     });
 
@@ -139,7 +139,7 @@ describe('simulate', () => {
       const code: Source.Init = () => ({
         type: 'test',
         config: {},
-        push: () => {},
+        push: (() => {}) as unknown as Source.Instance['push'],
         on(event) {
           if (event === 'run') order.push('source-run');
         },
@@ -168,7 +168,7 @@ describe('simulate', () => {
       const code: Source.Init = () => ({
         type: 'test',
         config: {},
-        push: () => {},
+        push: (() => {}) as unknown as Source.Instance['push'],
       });
 
       const result = await simulate({
