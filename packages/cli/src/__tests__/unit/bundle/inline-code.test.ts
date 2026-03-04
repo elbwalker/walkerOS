@@ -209,7 +209,7 @@ describe('Integration', () => {
 });
 
 describe('generatePlatformWrapper', () => {
-  it('should include port override logic in server wrapper', () => {
+  it('should include external server port stripping in server wrapper', () => {
     const configObject = `{
       sources: { http: { code: expressSource, config: { settings: { port: 3000 } } } },
       destinations: {}
@@ -219,8 +219,8 @@ describe('generatePlatformWrapper', () => {
       platform: 'server',
     });
 
-    // Must contain port override block
-    expect(result).toContain('context.port');
+    // Must contain externalServer port stripping block
+    expect(result).toContain('context.externalServer');
     expect(result).toContain('config.sources');
     // Must still contain logger override
     expect(result).toContain('context.logger');
@@ -235,10 +235,10 @@ describe('generatePlatformWrapper', () => {
       platform: 'browser',
     });
 
-    expect(result).not.toContain('context.port');
+    expect(result).not.toContain('context.externalServer');
   });
 
-  it('should generate port override that patches sources with existing port settings', () => {
+  it('should strip port from sources when externalServer is provided', () => {
     const configObject = `{
       sources: {
         http: { code: expressSource, config: { settings: { port: 3000 } } },
@@ -251,8 +251,8 @@ describe('generatePlatformWrapper', () => {
       platform: 'server',
     });
 
-    // The generated code should only patch sources that already have a port setting
-    expect(result).toContain('src.config.settings.port !== undefined');
-    expect(result).toContain('src.config.settings.port = context.port');
+    // The generated code should delete port from sources when runner owns the port
+    expect(result).toContain('context.externalServer');
+    expect(result).toContain('delete src.config.settings.port');
   });
 });

@@ -259,7 +259,7 @@ describe('generatePlatformWrapper', () => {
     expect(result).not.toContain('window');
   });
 
-  it('server wrapper applies runtime port override', () => {
+  it('server wrapper strips port when externalServer provided', () => {
     const config =
       '{ sources: { http: { config: { settings: { port: 8080 } } } } }';
     const userCode = '';
@@ -267,8 +267,8 @@ describe('generatePlatformWrapper', () => {
 
     const result = generatePlatformWrapper(config, userCode, buildOptions);
 
-    expect(result).toContain('context.port');
-    expect(result).toContain('src.config.settings.port = context.port');
+    expect(result).toContain('context.externalServer');
+    expect(result).toContain('delete src.config.settings.port');
   });
 });
 
