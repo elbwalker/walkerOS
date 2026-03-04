@@ -1,24 +1,16 @@
 {
-  "name": "@walkeros/source-demo",
-  "description": "Demo source for walkerOS - generates events from config",
+  "name": "@walkeros/transformer-demo",
+  "description": "Demo transformer for walkerOS - logs and passes through events",
   "version": "2.0.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "walkerOS": {
-    "type": "source"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
-    },
-    "./dev": {
-      "types": "./dist/dev.d.ts",
-      "import": "./dist/dev.mjs",
-      "require": "./dist/dev.js"
     }
   },
   "files": [
@@ -35,12 +27,9 @@
   "dependencies": {
     "@walkeros/core": "^2.0.0"
   },
-  "devDependencies": {
-    "@walkeros/collector": "^2.0.0"
-  },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
-    "directory": "apps/demos/source"
+    "directory": "packages/transformers/demo"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme",
@@ -49,7 +38,7 @@
   },
   "keywords": [
     "walkerOS",
-    "source",
+    "transformer",
     "demo"
   ]
 }

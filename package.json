@@ -22,9 +22,6 @@
     "apps/walkerjs",
     "apps/cli",
     "apps/storybook-addon",
-    "apps/demos/destination",
-    "apps/demos/transformer",
-    "apps/demos/source",
     "apps/demos/react",
     "apps/demos/storybook",
     "website"

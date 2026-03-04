@@ -1,13 +1,13 @@
 {
-  "name": "@walkeros/destination-demo",
-  "description": "Demo destination for walkerOS - logs events to console",
+  "name": "@walkeros/source-demo",
+  "description": "Demo source for walkerOS - generates events from config",
   "version": "2.0.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "walkerOS": {
-    "type": "destination"
+    "type": "source"
   },
   "exports": {
     ".": {
@@ -35,9 +35,12 @@
   "dependencies": {
     "@walkeros/core": "^2.0.0"
   },
+  "devDependencies": {
+    "@walkeros/collector": "^2.0.0"
+  },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
-    "directory": "apps/demos/destination"
+    "directory": "packages/web/sources/demo"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme",
@@ -46,7 +49,7 @@
   },
   "keywords": [
     "walkerOS",
-    "destination",
+    "source",
     "demo"
   ]
 }
