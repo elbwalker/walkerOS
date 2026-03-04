@@ -404,8 +404,10 @@ describe('Usercentrics Source', () => {
           window: undefined,
           logger: {
             error: () => {},
+            warn: () => {},
             info: () => {},
             debug: () => {},
+            json: () => {},
             throw: (m: string | Error) => {
               throw typeof m === 'string' ? new Error(m) : m;
             },
@@ -417,8 +419,10 @@ describe('Usercentrics Source', () => {
         id: 'test-usercentrics',
         logger: {
           error: () => {},
+          warn: () => {},
           info: () => {},
           debug: () => {},
+          json: () => {},
           throw: (m: string | Error) => {
             throw typeof m === 'string' ? new Error(m) : m;
           },
