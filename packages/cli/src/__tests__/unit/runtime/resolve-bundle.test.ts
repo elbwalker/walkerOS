@@ -1,5 +1,5 @@
 import { resolveBundle } from '../../../runtime/resolve-bundle.js';
-import { unlinkSync, readFileSync } from 'fs';
+import { unlinkSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 
 // Mock stdin utilities
 jest.mock('../../../core/stdin.js', () => ({
@@ -200,6 +200,36 @@ describe('resolveBundle', () => {
       const result = await resolveBundle('/app/flow/bundle.mjs');
 
       expect(result.source).toBe('file');
+    });
+
+    it('existing file wins over stdin (Docker detached mode fix)', async () => {
+      // In Docker detached mode, stdin is /dev/null (not a TTY),
+      // so isStdinPiped() returns true. If BUNDLE points to a real file,
+      // we should use the file instead of trying to read empty stdin.
+      const tmpFile = '/tmp/walkeros-resolve-test-bundle.mjs';
+      writeFileSync(tmpFile, 'export default function() {}');
+
+      isStdinPiped.mockReturnValue(true);
+
+      try {
+        const result = await resolveBundle(tmpFile);
+
+        expect(result.source).toBe('file');
+        expect(result.path).toBe(tmpFile);
+        expect(readStdin).not.toHaveBeenCalled();
+      } finally {
+        unlinkSync(tmpFile);
+      }
+    });
+
+    it('stdin used when BUNDLE file does not exist', async () => {
+      isStdinPiped.mockReturnValue(true);
+      readStdin.mockResolvedValue('from stdin');
+
+      const result = await resolveBundle('/nonexistent/bundle.mjs');
+
+      expect(result.source).toBe('stdin');
+      expect(readStdin).toHaveBeenCalled();
     });
   });
 });
