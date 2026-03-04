@@ -550,9 +550,9 @@ function createEsbuildOptions(
       'zlib',
     ];
     // Mark runtime dependencies as external
-    // These packages are installed in the Docker container and should not be bundled
-    // - express/cors: Runtime dependencies for server sources
-    // Note: zod is bundled inline via @walkeros/core (not marked external)
+    // These packages must be resolvable at runtime from the bundle's location.
+    // In Docker: installed at /app/node_modules/ via local CLI install.
+    // Outside Docker: user must install express/cors where Node can find them.
     // Use wildcard patterns to match both ESM and CJS imports
     const npmPackages = ['express', 'express/*', 'cors', 'cors/*'];
     // All downloaded @walkeros packages will be bundled into the output
