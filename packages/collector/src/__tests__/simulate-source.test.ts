@@ -6,7 +6,7 @@ describe('simulateSource', () => {
     const code: Source.Init = (ctx) => ({
       type: 'test',
       config: {},
-      push: ctx.env.push,
+      push: ctx.env.push as unknown as Source.Push,
       on(event) {
         if (event === 'run') {
           ctx.env.push({ name: 'page view', data: { title: 'Home' } });
@@ -37,7 +37,7 @@ describe('simulateSource', () => {
     const code: Source.Init = (ctx) => ({
       type: 'test',
       config: {},
-      push: ctx.env.push,
+      push: ctx.env.push as unknown as Source.Push,
       on(event) {
         if (event === 'run') order.push('source-run');
       },
@@ -67,7 +67,7 @@ describe('simulateSource', () => {
     const code: Source.Init = (ctx) => ({
       type: 'test',
       config: {},
-      push: ctx.env.push,
+      push: ctx.env.push as unknown as Source.Push,
     });
 
     const result = await simulateSource({
@@ -87,7 +87,7 @@ describe('simulateSource', () => {
     const code: Source.Init = (ctx) => ({
       type: 'test',
       config: {},
-      push: ctx.env.push,
+      push: ctx.env.push as unknown as Source.Push,
       on(event) {
         if (event === 'run') {
           ctx.env.push({ name: 'page view', data: { title: 'Home' } });

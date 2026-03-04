@@ -15,8 +15,8 @@ describe('simulateDestination', () => {
       },
       config: {
         mapping: {
-          'product add': {
-            name: 'add_to_cart',
+          product: {
+            add: { name: 'add_to_cart' },
           },
         },
       },
