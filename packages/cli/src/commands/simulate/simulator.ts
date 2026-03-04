@@ -1,13 +1,6 @@
-import path from 'path';
 import fs from 'fs-extra';
-import type {
-  Destination,
-  Flow,
-  Logger,
-  Simulation,
-  WalkerOS,
-} from '@walkeros/core';
-import { getPlatform, Level } from '@walkeros/core';
+import type { Destination, Logger, Simulation, WalkerOS } from '@walkeros/core';
+import { Level } from '@walkeros/core';
 import { simulate } from '@walkeros/collector';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
@@ -15,16 +8,8 @@ import {
   detectInput,
   type Platform,
 } from '../../core/index.js';
-import {
-  loadFlowConfig,
-  isObject,
-  type BuildOptions,
-} from '../../config/index.js';
+import { loadFlowConfig, isObject } from '../../config/index.js';
 import { getTmpPath } from '../../core/tmp.js';
-import { bundleCore } from '../bundle/bundler.js';
-import { CallTracker } from './tracker.js';
-import { executeInJSDOM } from './jsdom-executor.js';
-import { executeInNode } from './node-executor.js';
 import { loadDestinationEnvs } from './env-loader.js';
 import type { SimulateCommandOptions, SimulationResult } from './types.js';
 
@@ -45,13 +30,6 @@ function createCollectorLoggerConfigInline(
       }
     },
   };
-}
-
-/**
- * Generate a unique ID for temp files
- */
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
@@ -167,7 +145,7 @@ export function formatSimulationResult(
 
 /**
  * Execute simulation using destination-provided mock environments.
- * Supports both config JSON and pre-built bundle inputs.
+ * Only accepts Flow.Setup config files.
  */
 export async function executeSimulation(
   event: unknown,
@@ -208,29 +186,23 @@ export async function executeSimulation(
 
     const typedEvent = event as { name: string; data?: unknown };
 
-    if (detected.type === 'config') {
-      // Config flow: try direct simulation first, fallback to bundle
-      return await executeConfigSimulation(
-        detected.content,
-        inputPath,
-        typedEvent,
-        tempDir,
-        startTime,
-        collectorLoggerConfig,
-        options.flow,
-        options.step,
-      );
-    } else {
-      // Bundle flow: execute directly without mocking
-      return await executeBundleSimulation(
-        detected.content,
-        detected.platform!,
-        typedEvent,
-        tempDir,
-        startTime,
-        collectorLoggerConfig,
+    if (detected.type !== 'config') {
+      throw new Error(
+        `Input "${inputPath}" is not valid JSON config. ` +
+          'simulate only accepts Flow.Setup config files.',
       );
     }
+
+    return await executeConfigSimulation(
+      detected.content,
+      inputPath,
+      typedEvent,
+      tempDir,
+      startTime,
+      collectorLoggerConfig,
+      options.flow,
+      options.step,
+    );
   } catch (error) {
     const duration = Date.now() - startTime;
     return {
@@ -388,59 +360,4 @@ async function executeConfigSimulation(
   }
 
   throw new Error(`Unknown step type: ${step.type}`);
-}
-
-/**
- * Execute simulation from pre-built bundle (no mocking)
- */
-async function executeBundleSimulation(
-  bundleContent: string,
-  platform: Platform,
-  typedEvent: { name: string; data?: unknown },
-  tempDir: string,
-  startTime: number,
-  loggerConfig?: Logger.Config,
-): Promise<SimulationResult> {
-  // Write bundle to temp file
-  const tempOutput = path.join(
-    tempDir,
-    `bundle-${generateId()}.${platform === 'server' ? 'mjs' : 'js'}`,
-  );
-  await fs.writeFile(tempOutput, bundleContent, 'utf8');
-
-  // Create empty tracker (no mocking for pre-built bundles)
-  const tracker = new CallTracker();
-
-  // Execute based on platform (no destinations/envs for pre-built bundles)
-  let result;
-  if (platform === 'web') {
-    result = await executeInJSDOM(
-      tempOutput,
-      {},
-      typedEvent,
-      tracker,
-      {},
-      10000,
-    );
-  } else {
-    result = await executeInNode(
-      tempOutput,
-      {},
-      typedEvent,
-      tracker,
-      {},
-      30000,
-      loggerConfig ? { logger: loggerConfig } : {},
-    );
-  }
-
-  const duration = Date.now() - startTime;
-
-  return {
-    success: true,
-    elbResult: result.elbResult,
-    usage: result.usage,
-    duration,
-    logs: [],
-  };
 }
