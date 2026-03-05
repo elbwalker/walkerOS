@@ -132,7 +132,7 @@ describe('env.respond', () => {
                 originalRespond({
                   ...response,
                   headers: {
-                    ...response.headers,
+                    ...response?.headers,
                     'X-Wrapped': 'true',
                   },
                 });

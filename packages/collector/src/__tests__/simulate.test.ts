@@ -18,7 +18,9 @@ describe('simulate', () => {
         type: 'enricher',
         config: {},
         push(event) {
-          return { ...event, data: { ...event.data, enriched: true } };
+          return {
+            event: { ...event, data: { ...event.data, enriched: true } },
+          };
         },
       });
 
