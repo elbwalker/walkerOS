@@ -14,6 +14,7 @@
     "packages/server/destinations/*",
     "packages/server/sources/*",
     "packages/server/transformers/*",
+    "packages/server/stores/*",
     "packages/stores/*",
     "packages/web/core",
     "packages/web/destinations/*",
