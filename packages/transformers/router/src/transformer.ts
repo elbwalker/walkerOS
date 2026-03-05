@@ -1,7 +1,6 @@
 import type { Transformer } from '@walkeros/core';
-import { branch } from '@walkeros/core';
+import { branch, compileMatcher } from '@walkeros/core';
 import type { RouterSettings, CompiledRoute } from './types';
-import { compileMatcher } from './matcher';
 
 export const transformerRouter: Transformer.Init<
   Transformer.Types<RouterSettings>
