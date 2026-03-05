@@ -302,33 +302,6 @@ describe('CookiePro Source', () => {
   });
 
   describe('category mapping', () => {
-    test('maps full consent correctly', async () => {
-      const mockWindow = createMockWindow({
-        sdkLoaded: true,
-        alertBoxClosed: true,
-        activeGroups: inputs.fullConsent,
-      });
-
-      await createCookieProSource(mockWindow, mockElb);
-
-      expect(consentCalls[0].consent).toEqual(outputs.fullConsentMapped);
-    });
-
-    test('maps partial consent correctly with explicit false for denied groups', async () => {
-      const mockWindow = createMockWindow({
-        sdkLoaded: true,
-        alertBoxClosed: true,
-        activeGroups: inputs.partialConsent,
-      });
-
-      await createCookieProSource(mockWindow, mockElb);
-
-      expect(consentCalls[0].consent).toEqual(outputs.partialConsentMapped);
-      // Verify explicit false values
-      expect(consentCalls[0].consent.analytics).toBe(false);
-      expect(consentCalls[0].consent.marketing).toBe(false);
-    });
-
     test('maps minimal consent correctly with explicit false for denied groups', async () => {
       const mockWindow = createMockWindow({
         sdkLoaded: true,

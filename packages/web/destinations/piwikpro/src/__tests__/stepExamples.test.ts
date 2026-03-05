@@ -17,7 +17,7 @@ describe('Step Examples', () => {
         for (const arg of args) paqCommands.push(arg);
         return paqCommands.length;
       },
-    };
+    } as unknown as typeof env.window._paq;
 
     const dest = jest.requireActual('../').default;
     const { elb } = await startFlow({ tagging: 2 });

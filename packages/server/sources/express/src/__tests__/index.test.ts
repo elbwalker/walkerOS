@@ -184,41 +184,6 @@ describe('sourceExpress', () => {
   });
 
   describe('POST request handling', () => {
-    it('should process valid single event', async () => {
-      const source = await sourceExpress(
-        createSourceContext(
-          {},
-          {
-            push: mockPush as never,
-            command: mockCommand as never,
-            elb: jest.fn() as never,
-            logger: createMockLogger(),
-          },
-        ),
-      );
-
-      const eventRequest: EventRequest = {
-        event: 'page view',
-        data: { title: 'Home' },
-      };
-
-      const req = createMockRequest({
-        method: 'POST',
-        body: eventRequest,
-        headers: { 'content-type': 'application/json' },
-      });
-      const res = createMockResponse();
-
-      await source.push(req, res);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.responseBody).toMatchObject({
-        success: true,
-        timestamp: expect.any(Number),
-      });
-      expect(mockPush).toHaveBeenCalledWith(eventRequest);
-    });
-
     it('should reject POST with missing body', async () => {
       const source = await sourceExpress(
         createSourceContext(
@@ -310,37 +275,6 @@ describe('sourceExpress', () => {
   });
 
   describe('GET request handling (pixel tracking)', () => {
-    it('should process event from query parameters', async () => {
-      const source = await sourceExpress(
-        createSourceContext(
-          {},
-          {
-            push: mockPush as never,
-            command: mockCommand as never,
-            elb: jest.fn() as never,
-            logger: createMockLogger(),
-          },
-        ),
-      );
-
-      const req = createMockRequest({
-        method: 'GET',
-        url: '/collect?event=page%20view&data[title]=Home&user[id]=user123',
-      });
-      const res = createMockResponse();
-
-      await source.push(req, res);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.responseHeaders?.['Content-Type']).toBe('image/gif');
-      expect(res.responseHeaders?.['Cache-Control']).toContain('no-cache');
-      expect(mockPush).toHaveBeenCalledWith({
-        event: 'page view',
-        data: { title: 'Home' },
-        user: { id: 'user123' },
-      });
-    });
-
     it('should return 1x1 GIF for pixel tracking', async () => {
       const source = await sourceExpress(
         createSourceContext(

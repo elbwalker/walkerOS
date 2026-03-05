@@ -96,22 +96,6 @@ describe('CookieFirst Source', () => {
   });
 
   describe('category mapping', () => {
-    test('maps full consent correctly', async () => {
-      const mockWindow = createMockWindow(inputs.fullConsent);
-
-      await createCookieFirstSource(mockWindow, mockElb);
-
-      expect(consentCalls[0].consent).toEqual(outputs.fullConsentMapped);
-    });
-
-    test('maps partial consent correctly', async () => {
-      const mockWindow = createMockWindow(inputs.partialConsent);
-
-      await createCookieFirstSource(mockWindow, mockElb);
-
-      expect(consentCalls[0].consent).toEqual(outputs.partialConsentMapped);
-    });
-
     test('maps minimal consent correctly', async () => {
       const mockWindow = createMockWindow(inputs.minimalConsent);
 

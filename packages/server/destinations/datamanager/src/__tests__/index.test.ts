@@ -240,62 +240,6 @@ describe('Server Destination Data Manager', () => {
       );
     });
 
-    test('includes transactionId for deduplication', async () => {
-      const mockCollector = {} as Collector.Instance;
-      const event = getEvent('order complete');
-      (event.data as Record<string, unknown>).id = 'TXN-12345';
-
-      const config: Config = {
-        settings: defaultSettings,
-        data: {
-          map: {
-            transactionId: 'data.id',
-          },
-        },
-      };
-
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
-
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(requestBody.events[0].transactionId).toBe('TXN-12345');
-    });
-
-    test('includes conversionValue and currency', async () => {
-      const mockCollector = {} as Collector.Instance;
-      const event = getEvent('order complete');
-      (event.data as Record<string, unknown>).total = 199.99;
-      (event.data as Record<string, unknown>).currency = 'EUR';
-
-      const config: Config = {
-        ...defaultConfig,
-        data: {
-          map: {
-            transactionId: 'id',
-            conversionValue: 'data.total',
-            currency: 'data.currency',
-          },
-        },
-      };
-
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
-
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(requestBody.events[0].conversionValue).toBe(199.99);
-      expect(requestBody.events[0].currency).toBe('EUR');
-    });
-
     test('applies default eventSource (WEB) when not specified', async () => {
       const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');

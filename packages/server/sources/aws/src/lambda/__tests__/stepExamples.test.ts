@@ -1,7 +1,7 @@
 import type { Source, Collector } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { sourceLambda } from '../index';
-import type { Types } from '../types';
+import type { LambdaContext, LambdaEvent, Types } from '../types';
 import { examples } from '../../dev';
 
 function createSourceContext(
@@ -54,7 +54,10 @@ describe('Step Examples', () => {
       }
     }
 
-    await source.push(lambdaEvent, { awsRequestId: 'test-req' });
+    await source.push(
+      lambdaEvent as unknown as LambdaEvent,
+      { awsRequestId: 'test-req' } as unknown as LambdaContext,
+    );
 
     expect(mockPush).toHaveBeenCalled();
     const pushedData = mockPush.mock.calls[0][0];

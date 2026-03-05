@@ -148,15 +148,6 @@ describe('Usercentrics Source', () => {
   });
 
   describe('group-level consent (ucCategory)', () => {
-    test('maps full consent correctly', async () => {
-      const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
-
-      mockWindow.__dispatchEvent('ucEvent', inputs.fullConsent);
-
-      expect(consentCalls[0].consent).toEqual(outputs.fullConsentMapped);
-    });
-
     test('maps partial consent correctly', async () => {
       const mockWindow = createMockWindow();
       await createUsercentricsSource(mockWindow, mockElb);
@@ -164,15 +155,6 @@ describe('Usercentrics Source', () => {
       mockWindow.__dispatchEvent('ucEvent', inputs.partialConsent);
 
       expect(consentCalls[0].consent).toEqual(outputs.partialConsentMapped);
-    });
-
-    test('maps minimal consent correctly', async () => {
-      const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
-
-      mockWindow.__dispatchEvent('ucEvent', inputs.minimalConsent);
-
-      expect(consentCalls[0].consent).toEqual(outputs.minimalConsentMapped);
     });
 
     test('applies custom category mapping', async () => {

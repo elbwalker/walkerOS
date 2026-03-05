@@ -73,7 +73,6 @@ async function main() {
   console.log('Example command:');
   console.log(`
 await run({
-  mode: 'collect',
   flowFile: '${flowFile}',
   port: 3000,
   containerName: 'my-walker',
