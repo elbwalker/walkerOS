@@ -12,8 +12,7 @@ import {
   writeResult,
   type Platform,
 } from '../../core/index.js';
-import type { Logger } from '@walkeros/core';
-import { createCollectorLoggerConfig } from '../../core/collector-logger.js';
+import { Level, type Logger } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
@@ -101,7 +100,7 @@ async function pushCore(
         (dir) => {
           tempDir = dir;
         },
-        { logger: createCollectorLoggerConfig(logger, options.verbose) },
+        { logger: { level: options.verbose ? Level.DEBUG : Level.ERROR } },
       );
     }
 
@@ -312,7 +311,7 @@ async function executeConfigPush(
   } else if (platform === 'server') {
     logger.debug('Executing in server environment (Node.js)');
     return executeServerPush(tempPath, validatedEvent, logger, 60000, {
-      logger: createCollectorLoggerConfig(logger, options.verbose),
+      logger: { level: options.verbose ? Level.DEBUG : Level.ERROR },
     });
   } else {
     throw new Error(`Unsupported platform: ${platform}`);
