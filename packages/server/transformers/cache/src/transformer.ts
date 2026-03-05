@@ -6,7 +6,7 @@ import type {
   CacheSettings,
   CacheRule,
   CacheEntry,
-  CacheStore,
+  CacheEnv,
   Types,
 } from './types';
 
@@ -23,8 +23,8 @@ export const transformerCache: Transformer.Init<Types> = (context) => {
   const rules: CacheRule[] = settings.rules || [];
   const maxSize = settings.maxSize;
 
-  const store: CacheStore =
-    (context.env as { store?: CacheStore }).store ??
+  const store =
+    (context.env as CacheEnv).store ??
     createMemoryStore<CacheEntry>({ maxSize });
 
   // Pre-compile matchers
@@ -58,7 +58,7 @@ export const transformerCache: Transformer.Init<Types> = (context) => {
       }
 
       // Check cache
-      const cached = store.get(keyValue);
+      const cached = store.get(keyValue) as CacheEntry | undefined;
 
       if (cached) {
         // HIT: respond directly and stop chain

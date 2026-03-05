@@ -1,6 +1,7 @@
 import type {
   Source,
   Destination,
+  Store,
   Elb as ElbTypes,
   Hooks,
   Logger,
@@ -42,6 +43,8 @@ export interface InitConfig extends Partial<Config> {
   destinations?: Destination.InitDestinations;
   /** Transformer configurations */
   transformers?: Transformer.InitTransformers;
+  /** Store configurations */
+  stores?: Store.InitStores;
   /** Initial custom properties */
   custom?: WalkerOS.Properties;
 }
@@ -91,6 +94,10 @@ export interface Destinations {
 
 export interface Transformers {
   [id: string]: Transformer.Instance;
+}
+
+export interface Stores {
+  [id: string]: Store.Instance;
 }
 
 export type CommandType =
@@ -181,6 +188,7 @@ export interface Instance {
   sources: Sources;
   destinations: Destinations;
   transformers: Transformers;
+  stores: Stores;
   globals: WalkerOS.Properties;
   group: string;
   hooks: Hooks.Functions;

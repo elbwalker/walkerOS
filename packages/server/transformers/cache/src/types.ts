@@ -1,17 +1,12 @@
-import type { Matcher, Transformer } from '@walkeros/core';
+import type { Matcher, Store, Transformer } from '@walkeros/core';
 
 export interface CacheEntry {
   body: unknown;
   [key: string]: unknown;
 }
 
-export interface CacheStore {
-  get(key: string): CacheEntry | undefined;
-  set(key: string, value: CacheEntry, ttl?: number): void;
-}
-
 export interface CacheEnv extends Transformer.BaseEnv {
-  store?: CacheStore;
+  store?: Store.Instance;
 }
 
 export interface CacheSettings {

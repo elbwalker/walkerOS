@@ -1,7 +1,7 @@
 import type { Transformer } from '@walkeros/core';
 import type { RespondFn } from '@walkeros/core';
 import { getMimeType } from './mime';
-import type { FileSettings, FileStore, Types } from './types';
+import type { FileSettings, FileEnv, Types } from './types';
 
 export const transformerFile: Transformer.Init<Types> = (context) => {
   const { config } = context;
@@ -10,7 +10,7 @@ export const transformerFile: Transformer.Init<Types> = (context) => {
   const defaultHeaders = settings.headers;
   const mimeOverrides = settings.mimeTypes;
 
-  const store = (context.env as { store?: FileStore }).store;
+  const store = (context.env as FileEnv).store;
 
   return {
     type: 'file',

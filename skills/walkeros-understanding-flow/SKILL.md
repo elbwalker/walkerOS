@@ -46,6 +46,7 @@ the canonical interface.
 ```typescript
 // Conceptual structure (see source for full type)
 interface Flow {
+  stores?: Record<string, Store>;
   sources?: Record<string, Source>;
   transformers?: Record<string, Transformer>;
   destinations?: Record<string, Destination>;
@@ -75,6 +76,9 @@ the `startFlow` function.
 import { startFlow } from '@walkeros/collector';
 
 const { collector, elb } = await startFlow({
+  stores: {
+    /* key-value storage, init first, destroy last */
+  },
   sources: {
     /* ... */
   },

@@ -16,6 +16,7 @@ Tool-agnostic and accessible to Claude, Cursor, Copilot, and other AI tools.
 | [understanding-transformers](./walkeros-understanding-transformers/SKILL.md) | Transformer interface, chaining, validate/enrich/redact   |
 | [understanding-destinations](./walkeros-understanding-destinations/SKILL.md) | Destination interface, env pattern, configuration         |
 | [understanding-sources](./walkeros-understanding-sources/SKILL.md)           | Source interface, capture patterns                        |
+| [understanding-stores](./walkeros-understanding-stores/SKILL.md)             | Store interface, $store: wiring, lifecycle                |
 | [using-logger](./walkeros-using-logger/SKILL.md)                             | Logger access, DRY principles, API logging patterns       |
 | [using-step-examples](./walkeros-using-step-examples/SKILL.md)               | Step examples, Three Type Zones, in/out format            |
 

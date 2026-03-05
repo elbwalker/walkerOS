@@ -398,6 +398,79 @@ Both `next` and `before` accept arrays for explicit chain control (see "Explicit
 
 See [Transformers documentation](/docs/transformers/) for available transformers and custom transformer guide.
 
+### Stores
+
+Stores provide key-value storage that other components (sources, transformers, destinations) can consume via environment injection. They are passive infrastructure — no chains, no event processing.
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "cache": {
+      "package": "@walkeros/store-memory",
+      "config": {
+        "settings": {
+          "maxSize": 10485760,
+          "maxEntries": 1000
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Configuration options:**
+- **`package`** - The npm package (required for bundled mode)
+- **`code`** - Direct import reference (for integrated mode)
+- **`config`** - Store-specific configuration
+- **`env`** - Environment-specific settings
+
+**Connecting stores to components:**
+
+Use the `$store:` prefix in a component's `env` to inject a store instance:
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "cache": {
+      "package": "@walkeros/store-memory",
+      "config": { "settings": { "maxSize": 10485760 } }
+    }
+  },
+  "transformers": {
+    "cacheResponse": {
+      "package": "@walkeros/server-transformer-cache",
+      "env": {
+        "store": "$store:cache"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Lifecycle:** Stores initialize first (before sources, transformers, and destinations) and destroy last. This ensures stores are available when other components start and remain available while they shut down.
+
+**Programmatic usage:**
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { storeMemoryInit } from '@walkeros/store-memory';
+
+const { collector } = await startFlow({
+  stores: {
+    cache: {
+      code: storeMemoryInit,
+      config: { settings: { maxSize: 10 * 1024 * 1024 } }
+    }
+  }
+});
+
+// Access stores on the collector instance
+collector.stores.cache.set('key', 'value');`}
+  language="typescript"
+/>
+
 ### Connection rules
 
 Sources, transformers, collectors, and destinations connect in specific ways. This table summarizes every valid connection:
@@ -703,7 +776,7 @@ walkeros bundle config.json --all`}
 
 ## Dynamic patterns
 
-Flow configurations support four dynamic patterns for reusable, environment-aware configs:
+Flow configurations support five dynamic patterns for reusable, environment-aware configs:
 
 ### `$var.name` - Config Variables
 
@@ -823,6 +896,19 @@ Reference reusable configuration blocks defined in `definitions`:
 
 Definitions cascade like variables - defined at setup, flow, or source/destination level.
 
+### `$store:storeId` - Store References
+
+Reference a store instance defined in the `stores` section. Used in component `env` values to inject store dependencies:
+
+<CodeSnippet
+  code={`"env": { "store": "$store:cache" }`}
+  language="json"
+/>
+
+The bundler resolves `$store:cache` to a runtime reference to the initialized store instance. Invalid references (pointing to undefined stores) are caught at build time.
+
+See the [Stores](#stores) section for a complete example with store definition and `env` wiring.
+
 ### `$code:` - Inline JavaScript
 
 Embed JavaScript code directly in JSON config values:
@@ -897,6 +983,7 @@ walkerOS uses a clear type hierarchy:
 │  Flow.Config (resolved flow)                                    │
 │  ├── web: {} or server: {}                                      │
 │  ├── packages: { ... }                                          │
+│  ├── stores: { ... }                                            │
 │  ├── sources: { ... }                                           │
 │  ├── transformers: { ... }                                      │
 │  ├── destinations: { ... }                                      │

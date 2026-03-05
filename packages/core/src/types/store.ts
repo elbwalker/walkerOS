@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { Logger, Context as BaseContext } from '.';
+import type { Logger, WalkerOS, Context as BaseContext } from '.';
 import type { DestroyFn } from './lifecycle';
 
 export interface BaseEnv {
@@ -29,7 +29,6 @@ export interface Config<T extends TypesGeneric = Types> {
   env?: Env<T>;
   id?: string;
   logger?: Logger.Config;
-  init?: boolean;
 }
 
 export interface Context<
@@ -65,7 +64,7 @@ export type Init<T extends TypesGeneric = Types> = (
 
 export type InitFn<T extends TypesGeneric = Types> = (
   context: Context<T>,
-) => void | false | Config<T> | Promise<void | false | Config<T>>;
+) => WalkerOS.PromiseOrValue<void | false | Config<T>>;
 
 export type InitStore<T extends TypesGeneric = Types> = {
   code: Init<T>;

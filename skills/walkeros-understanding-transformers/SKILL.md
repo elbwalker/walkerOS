@@ -53,14 +53,14 @@ export const transformerMyTransformer: Transformer.Init<Types> = (context) => {
 
 **Init Context contains:**
 
-| Property    | Type                 | Purpose                       |
-| ----------- | -------------------- | ----------------------------- |
-| `config`    | `Transformer.Config` | Settings, mapping, next chain |
-| `env`       | `Types['env']`       | Environment dependencies      |
-| `logger`    | `Logger`             | Logging functions             |
-| `id`        | `string`             | Transformer identifier        |
-| `collector` | `Collector.Instance` | Reference to collector        |
-| `ingest`    | `Ingest` (optional)  | Request metadata from source  |
+| Property    | Type                 | Purpose                                 |
+| ----------- | -------------------- | --------------------------------------- |
+| `config`    | `Transformer.Config` | Settings, mapping, next chain           |
+| `env`       | `Types['env']`       | Environment deps (stores via `$store:`) |
+| `logger`    | `Logger`             | Logging functions                       |
+| `id`        | `string`             | Transformer identifier                  |
+| `collector` | `Collector.Instance` | Reference to collector                  |
+| `ingest`    | `Ingest` (optional)  | Request metadata from source            |
 
 ### Instance Methods
 

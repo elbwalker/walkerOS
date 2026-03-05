@@ -243,6 +243,19 @@ export interface Config {
   contract?: Contract;
 
   /**
+   * Store configurations (key-value storage).
+   *
+   * @remarks
+   * Stores provide key-value storage consumed by sources, transformers,
+   * and destinations via env injection. Referenced using $store:storeId
+   * prefix in env values.
+   *
+   * Key = unique store identifier (arbitrary)
+   * Value = store reference with package and config
+   */
+  stores?: Record<string, StoreReference>;
+
+  /**
    * Source configurations (data capture).
    *
    * @remarks
@@ -610,6 +623,54 @@ export interface TransformerReference {
   /**
    * Named examples for testing and documentation.
    * Stripped during flow resolution (not included in bundles).
+   */
+  examples?: StepExamples;
+}
+
+/**
+ * Store reference with inline package syntax.
+ *
+ * @remarks
+ * References a store package and provides configuration.
+ * Stores provide key-value storage consumed by other components via env.
+ * Unlike sources/transformers/destinations, stores have no chain properties
+ * (no `next` or `before`) — they are passive infrastructure.
+ */
+export interface StoreReference {
+  /**
+   * Package specifier with optional version.
+   * Optional when `code` is provided for inline code.
+   */
+  package?: string;
+
+  /**
+   * Resolved import variable name or inline code definition.
+   */
+  code?: string | InlineCode;
+
+  /**
+   * Store-specific configuration.
+   */
+  config?: unknown;
+
+  /**
+   * Store environment configuration.
+   */
+  env?: unknown;
+
+  /**
+   * Store-level variables (highest priority in cascade).
+   */
+  variables?: Variables;
+
+  /**
+   * Store-level definitions (highest priority in cascade).
+   */
+  definitions?: Definitions;
+
+  /**
+   * Named examples for testing and documentation.
+   * Stripped during flow resolution.
    */
   examples?: StepExamples;
 }

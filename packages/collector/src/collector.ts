@@ -6,6 +6,7 @@ import { initTransformers } from './transformer';
 import { createPush } from './push';
 import { createCommand } from './command';
 import { initSources } from './source';
+import { initStores } from './store';
 
 declare const __VERSION__: string;
 
@@ -44,6 +45,7 @@ export async function collector(
     custom: initConfig.custom || {},
     destinations: {},
     transformers: {},
+    stores: {},
     globals: finalGlobals,
     group: '',
     hooks: {},
@@ -81,6 +83,9 @@ export async function collector(
   );
 
   collector.command = createCommand(collector, commonHandleCommand);
+
+  // Initialize stores (first — other components may depend on them)
+  collector.stores = await initStores(collector, initConfig.stores || {});
 
   // Initialize destinations after collector is fully created
   // Sources are initialized in startFlow after ELB source is created

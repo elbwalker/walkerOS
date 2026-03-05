@@ -1,4 +1,4 @@
-import type { Transformer } from '@walkeros/core';
+import type { Store, Transformer } from '@walkeros/core';
 
 export interface FileSettings {
   /** URL prefix to strip (e.g., "/static" → /static/walker.js looks up "walker.js") */
@@ -9,13 +9,9 @@ export interface FileSettings {
   mimeTypes?: Record<string, string>;
 }
 
-export interface FileStore {
-  get(key: string): unknown | Promise<unknown>;
-}
-
 export interface FileEnv extends Transformer.BaseEnv {
   /** Store providing file content. If not provided, transformer warns and passthroughs. */
-  store?: FileStore;
+  store?: Store.Instance;
 }
 
 export type Types = Transformer.Types<
