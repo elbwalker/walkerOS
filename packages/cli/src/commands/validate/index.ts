@@ -11,7 +11,6 @@ import {
 import { loadJsonFromSource } from '../../config/index.js';
 import {
   validateContract,
-  validateDeep,
   validateEvent,
   validateFlow,
   validateMapping,
@@ -28,23 +27,18 @@ import type {
  * Can be called directly from code or MCP server.
  */
 export async function validate(
-  type: ValidationType | string,
+  type: ValidationType,
   input: unknown,
-  options: { flow?: string } = {},
+  options: { flow?: string; path?: string } = {},
 ): Promise<ValidateResult> {
-  // Dot-notation entry validation (e.g., "destinations.snowplow")
-  if (
-    type.includes('.') ||
-    !['contract', 'deep', 'event', 'flow', 'mapping'].includes(type)
-  ) {
-    return validateEntry(type, input as Record<string, unknown>);
+  // Path-based entry validation takes priority
+  if (options.path) {
+    return validateEntry(options.path, input as Record<string, unknown>);
   }
 
   switch (type) {
     case 'contract':
       return validateContract(input);
-    case 'deep':
-      return validateDeep(input, { flow: options.flow });
     case 'event':
       return validateEvent(input);
     case 'flow':
@@ -138,6 +132,7 @@ export async function validateCommand(
     // Run validation
     const result = await validate(options.type, input, {
       flow: options.flow,
+      path: options.path,
     });
 
     // Format and write result
@@ -185,7 +180,6 @@ export async function validateCommand(
 export * from './types.js';
 export {
   validateContract,
-  validateDeep,
   validateEvent,
   validateFlow,
   validateMapping,

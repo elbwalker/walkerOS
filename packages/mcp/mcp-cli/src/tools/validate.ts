@@ -21,7 +21,7 @@ export function registerValidateTool(server: McpServer) {
         openWorldHint: false,
       },
     },
-    async ({ type, input, flow }) => {
+    async ({ type, input, flow, path }) => {
       try {
         // Parse input if it looks like JSON
         let parsedInput: unknown = input;
@@ -33,7 +33,7 @@ export function registerValidateTool(server: McpServer) {
           }
         }
 
-        const result = await validate(type, parsedInput, { flow });
+        const result = await validate(type, parsedInput, { flow, path });
 
         return {
           content: [

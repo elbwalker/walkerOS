@@ -286,27 +286,46 @@ walkeros deploy list --type server
 
 ## validate
 
-Validate events, flows, or mapping configurations.
+Validate flow configurations, events, mappings, or contracts.
 
 ### Usage
 
 ```bash
-walkeros validate <type> [input] [options]
+walkeros validate <input> [options]
 ```
 
-Where `<type>` is one of: `event`, `flow`, or `mapping`.
+Default: validates input as Flow.Setup (schema, references, cross-step
+examples).
 
 ### Options
 
-| Option          | Description                      |
-| --------------- | -------------------------------- |
-| `--flow <name>` | Flow name for multi-flow configs |
-| `--strict`      | Treat warnings as errors         |
-| `--json`        | JSON output                      |
-| `-v, --verbose` | Verbose output                   |
-| `-s, --silent`  | Suppress output                  |
+| Option          | Description                                                          |
+| --------------- | -------------------------------------------------------------------- |
+| `--type <type>` | Validation type (default: `flow`). See types below.                  |
+| `--path <path>` | Validate entry against package schema (e.g. `destinations.snowplow`) |
+| `--flow <name>` | Flow name for multi-flow configs                                     |
+| `--strict`      | Treat warnings as errors                                             |
+| `--json`        | JSON output                                                          |
+| `-v, --verbose` | Verbose output                                                       |
+| `-s, --silent`  | Suppress output                                                      |
 
-### Exit Codes
+### Validation types
+
+| Type             | Input        | What it checks                          |
+| ---------------- | ------------ | --------------------------------------- |
+| `flow` (default) | Flow.Setup   | Schema, references, cross-step examples |
+| `event`          | Event object | Name format, schema, consent            |
+| `mapping`        | Mapping      | Pattern format, rule structure          |
+| `contract`       | Contract     | Entity/action structure                 |
+
+Use `--path` for entry validation against package schemas:
+
+```bash
+walkeros validate flow.json --path destinations.snowplow
+walkeros validate flow.json --path sources.browser
+```
+
+### Exit codes
 
 | Code | Meaning                            |
 | ---- | ---------------------------------- |
@@ -318,23 +337,23 @@ Where `<type>` is one of: `event`, `flow`, or `mapping`.
 ### Examples
 
 ```bash
-# Validate flow config
-walkeros validate flow flow.json
+# Validate flow config (full check)
+walkeros validate flow.json
 
-# Validate event structure
-walkeros validate event event.json
+# Validate specific flow
+walkeros validate flow.json --flow analytics
 
-# Validate mapping configuration
-walkeros validate mapping mapping.json
+# Validate a single event
+walkeros validate event.json --type event
 
-# Validate specific flow in multi-flow config
-walkeros validate flow flow.json --flow analytics
+# Validate mapping
+walkeros validate mapping.json --type mapping
 
-# Strict validation (warnings = errors)
-walkeros validate flow flow.json --strict
+# Validate entry against package schema
+walkeros validate flow.json --path destinations.snowplow
 
-# CI/CD integration
-walkeros validate flow flow.json --json || exit 1
+# CI/CD
+walkeros validate flow.json --json --strict || exit 1
 ```
 
 ---

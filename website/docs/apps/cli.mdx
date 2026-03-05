@@ -771,43 +771,42 @@ Validate gives you fast feedback without the overhead of bundling.
 ### Basic usage
 
 <CodeSnippet
-  code={`# Validate a flow configuration
-walkeros validate flow flow.json
+  code={`# Validate a flow configuration (schema, references, cross-step examples)
+walkeros validate flow.json
 
 # Validate an event structure
-walkeros validate event event.json
+walkeros validate event.json --type event
 
 # Validate a mapping configuration
-walkeros validate mapping mapping.json
+walkeros validate mapping.json --type mapping
 
 # Validate a contract
-walkeros validate contract contract.json
+walkeros validate contract.json --type contract
 
 # Validate a specific entry against its package schema
-walkeros validate destinations.snowplow flow.json`}
+walkeros validate flow.json --path destinations.snowplow`}
   language="bash"
 />
 
 ### Validation types
 
-The command accepts five validation types, plus dot-notation entry validation:
+The `--type` option accepts four validation types. Default is `flow`:
 
 | Type | What it validates |
 |------|-------------------|
 | `event` | Event structure: `name` field exists, follows "entity action" format with space, valid data types |
-| `flow` | Flow.Setup config: version, flows object, packages, sources, destinations structure |
+| `flow` (default) | Flow.Setup config: schema, references, packages, and cross-step example compatibility |
 | `mapping` | Mapping rules: event patterns use "entity action" or wildcard format, rule structures are valid |
 | `contract` | Contract structure: entity-action entries map to JSON Schema objects, optional `$tagging` metadata |
-| `destinations.name` | Entry validation: validates a specific destination's settings against its package's published JSON Schema |
-| `sources.name` | Entry validation: validates a specific source's settings against its package's published JSON Schema |
-| `transformers.name` | Entry validation: validates a specific transformer's settings against its package's published JSON Schema |
+
+Use `--path` for entry validation against package schemas (e.g., `--path destinations.snowplow`).
 
 ### Step-by-step guide
 
 **1. Validate a flow configuration**
 
 <CodeSnippet
-  code={`walkeros validate flow flow.json`}
+  code={`walkeros validate flow.json`}
   language="bash"
 />
 
@@ -827,7 +826,7 @@ Summary: 0 error(s), 0 warning(s)
   code={`# Create an invalid event
 echo '{"name":"pageview"}' > bad-event.json
 
-walkeros validate event bad-event.json`}
+walkeros validate bad-event.json --type event`}
   language="bash"
 />
 
@@ -847,7 +846,7 @@ Summary: 1 error(s), 0 warning(s)
   code={`# Event without consent object
 echo '{"name":"page view","data":{"title":"Home"}}' > event.json
 
-walkeros validate event event.json`}
+walkeros validate event.json --type event`}
   language="bash"
 />
 
@@ -866,12 +865,14 @@ Summary: 0 error(s), 1 warning(s)
 ### Options
 
 <CodeSnippet
-  code={`walkeros validate <type> [input] [options]`}
+  code={`walkeros validate [input] [options]`}
   language="bash"
 />
 
 | Option | Description |
 |--------|-------------|
+| `-t, --type <type>` | Validation type (default: `flow`). Also: `event`, `mapping`, `contract` |
+| `--path <path>` | Validate a specific entry against its package schema (e.g., `destinations.snowplow`) |
 | `-f, --flow <name>` | Flow name to validate (for multi-flow configs) |
 | `-o, --output <path>` | Write result to file |
 | `--strict` | Treat warnings as errors (exit code 2) |
@@ -894,10 +895,10 @@ Use `--json` and exit codes for automated pipelines:
 
 <CodeSnippet
   code={`# Fail on any error
-walkeros validate flow flow.json --json || exit 1
+walkeros validate flow.json --json || exit 1
 
 # Fail on warnings too (strict mode)
-walkeros validate flow flow.json --strict --json || exit 1`}
+walkeros validate flow.json --strict --json || exit 1`}
   language="bash"
 />
 
@@ -928,7 +929,7 @@ Validate a specific flow in a multi-flow configuration:
 
 <CodeSnippet
   code={`# Validate only the "production" flow
-walkeros validate flow flow.json --flow production`}
+walkeros validate flow.json --flow production`}
   language="bash"
 />
 
@@ -952,10 +953,10 @@ Event validation checks (see [event.ts](https://github.com/elbwalker/walkerOS/bl
 
 <CodeSnippet
   code={`# Valid event
-walkeros validate event '{"name":"product view","data":{"id":"P123"}}'
+walkeros validate '{"name":"product view","data":{"id":"P123"}}' --type event
 
 # Invalid: missing space in name
-walkeros validate event '{"name":"productview"}'`}
+walkeros validate '{"name":"productview"}' --type event`}
   language="bash"
 />
 
@@ -970,10 +971,10 @@ Mapping validation checks (see [mapping.ts](https://github.com/elbwalker/walkerO
 
 <CodeSnippet
   code={`# Valid mapping
-walkeros validate mapping '{
+walkeros validate '{
   "page view": {"name": "pageview"},
   "*": {"name": "generic_event"}
-}'`}
+}' --type mapping`}
   language="bash"
 />
 
@@ -989,7 +990,7 @@ Contract validation checks (see [contract.ts](https://github.com/elbwalker/walke
 
 <CodeSnippet
   code={`# Valid contract
-walkeros validate contract '{
+walkeros validate '{
   "page": {
     "view": {
       "type": "object",
@@ -998,23 +999,23 @@ walkeros validate contract '{
       }
     }
   }
-}'`}
+}' --type contract`}
   language="bash"
 />
 
-### Entry validation (dot-notation)
+### Entry validation (`--path`)
 
 Entry validation checks a specific destination, source, or transformer in your flow config against the package's published JSON Schema. The CLI fetches the schema from the package on the CDN and validates the `config.settings` object using AJV.
 
 <CodeSnippet
   code={`# Validate a specific destination entry
-walkeros validate destinations.snowplow flow.json
+walkeros validate flow.json --path destinations.snowplow
 
 # Validate a specific source entry
-walkeros validate sources.browser flow.json
+walkeros validate flow.json --path sources.browser
 
 # Short form (works if the key is unique across sections)
-walkeros validate snowplow flow.json`}
+walkeros validate flow.json --path snowplow`}
   language="bash"
 />
 

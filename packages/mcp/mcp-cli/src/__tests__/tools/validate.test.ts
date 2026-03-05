@@ -8,6 +8,7 @@ jest.mock('@walkeros/cli/dev', () => ({
       type: { type: 'string' },
       input: { type: 'string' },
       flow: { type: 'string' },
+      path: { type: 'string' },
     },
   },
 }));
@@ -74,7 +75,7 @@ describe('validate tool', () => {
     expect(mockValidate).toHaveBeenCalledWith(
       'event',
       { name: 'page view' },
-      { flow: undefined },
+      { flow: undefined, path: undefined },
     );
     expect(result.content[0].type).toBe('text');
     expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
@@ -93,6 +94,7 @@ describe('validate tool', () => {
 
     expect(mockValidate).toHaveBeenCalledWith('flow', '/path/to/flow.json', {
       flow: 'myFlow',
+      path: undefined,
     });
   });
 
@@ -155,7 +157,7 @@ describe('validate tool', () => {
         $tagging: 1,
         product: { '*': { properties: {} }, add: { properties: {} } },
       },
-      { flow: undefined },
+      { flow: undefined, path: undefined },
     );
     expect(result.content[0].type).toBe('text');
     const parsed = JSON.parse(result.content[0].text);
@@ -176,6 +178,25 @@ describe('validate tool', () => {
     // Input starts with '{' but is not valid JSON, so stays as string
     expect(mockValidate).toHaveBeenCalledWith('event', '{not valid json', {
       flow: undefined,
+      path: undefined,
+    });
+  });
+
+  it('passes path option to CLI validate', async () => {
+    const mockResult = { valid: true, errors: [], warnings: [], details: {} };
+    mockValidate.mockResolvedValue(mockResult);
+
+    const tool = server.getTool('validate');
+    await tool.handler({
+      type: 'flow',
+      input: '/path/to/flow.json',
+      flow: undefined,
+      path: 'destinations.snowplow',
+    });
+
+    expect(mockValidate).toHaveBeenCalledWith('flow', '/path/to/flow.json', {
+      flow: undefined,
+      path: 'destinations.snowplow',
     });
   });
 });

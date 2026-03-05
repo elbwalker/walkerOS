@@ -1,5 +1,6 @@
 // walkerOS/packages/cli/src/commands/validate/validators/flow.ts
 
+import type { Flow } from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 import type {
   ValidateResult,
@@ -112,6 +113,38 @@ export function validateFlow(
     details.context = coreResult.context;
   }
 
+  // 10. Deep validation: cross-step example compatibility
+  if (flows && typeof flows === 'object' && errors.length === 0) {
+    const flowNames = Object.keys(flows);
+    const flowsToCheck = options.flow ? [options.flow] : flowNames;
+
+    let totalConnections = 0;
+    for (const name of flowsToCheck) {
+      const flowConfig = (flows as Record<string, Flow.Config>)[name];
+      if (!flowConfig) continue;
+
+      checkExampleCoverage(flowConfig, warnings);
+
+      const connections = buildConnectionGraph(flowConfig);
+      for (const conn of connections) {
+        checkCompatibility(conn, errors, warnings);
+      }
+      totalConnections += connections.length;
+
+      // Contract compliance
+      const setupContract = config.contract as Flow.Contract | undefined;
+      if (setupContract || flowConfig.contract) {
+        checkContractCompliance(
+          flowConfig,
+          setupContract,
+          flowConfig.contract,
+          warnings,
+        );
+      }
+    }
+    details.connectionsChecked = totalConnections;
+  }
+
   return {
     valid: errors.length === 0,
     type: 'flow',
@@ -119,4 +152,203 @@ export function validateFlow(
     warnings,
     details,
   };
+}
+
+// --- Deep validation helpers ---
+
+interface StepInfo {
+  type: 'source' | 'transformer' | 'destination';
+  name: string;
+  examples: Flow.StepExamples;
+}
+
+interface StepConnection {
+  from: StepInfo;
+  to: StepInfo;
+}
+
+function checkExampleCoverage(
+  config: Flow.Config,
+  warnings: ValidationWarning[],
+): void {
+  const stepTypes = [
+    { key: 'sources' as const, type: 'source' },
+    { key: 'transformers' as const, type: 'transformer' },
+    { key: 'destinations' as const, type: 'destination' },
+  ];
+
+  for (const { key, type } of stepTypes) {
+    const refs = config[key];
+    if (!refs) continue;
+    for (const [name, ref] of Object.entries(refs)) {
+      if (!ref.examples || Object.keys(ref.examples).length === 0) {
+        warnings.push({
+          path: `${type}.${name}`,
+          message: `Step has no examples`,
+          suggestion: `Add examples to ${type}.${name} for testing and documentation`,
+        });
+      }
+    }
+  }
+}
+
+function buildConnectionGraph(config: Flow.Config): StepConnection[] {
+  const connections: StepConnection[] = [];
+
+  // Source → next transformer
+  for (const [name, source] of Object.entries(config.sources || {})) {
+    if (!source.next || !source.examples) continue;
+    const nextNames = Array.isArray(source.next) ? source.next : [source.next];
+    for (const nextName of nextNames) {
+      const transformer = config.transformers?.[nextName];
+      if (transformer?.examples) {
+        connections.push({
+          from: { type: 'source', name, examples: source.examples },
+          to: {
+            type: 'transformer',
+            name: nextName,
+            examples: transformer.examples,
+          },
+        });
+      }
+    }
+  }
+
+  // Transformer → next transformer
+  for (const [name, transformer] of Object.entries(config.transformers || {})) {
+    if (!transformer.next || !transformer.examples) continue;
+    const nextNames = Array.isArray(transformer.next)
+      ? transformer.next
+      : [transformer.next];
+    for (const nextName of nextNames) {
+      const nextTransformer = config.transformers?.[nextName];
+      if (nextTransformer?.examples) {
+        connections.push({
+          from: {
+            type: 'transformer',
+            name,
+            examples: transformer.examples,
+          },
+          to: {
+            type: 'transformer',
+            name: nextName,
+            examples: nextTransformer.examples,
+          },
+        });
+      }
+    }
+  }
+
+  // Destination.before → transformer chain → destination
+  for (const [name, dest] of Object.entries(config.destinations || {})) {
+    if (!dest.before || !dest.examples) continue;
+    const beforeNames = Array.isArray(dest.before)
+      ? dest.before
+      : [dest.before];
+    for (const beforeName of beforeNames) {
+      const transformer = config.transformers?.[beforeName];
+      if (transformer?.examples) {
+        connections.push({
+          from: {
+            type: 'transformer',
+            name: beforeName,
+            examples: transformer.examples,
+          },
+          to: { type: 'destination', name, examples: dest.examples },
+        });
+      }
+    }
+  }
+
+  return connections;
+}
+
+function checkCompatibility(
+  conn: StepConnection,
+  errors: ValidationError[],
+  warnings: ValidationWarning[],
+): void {
+  const fromOuts = Object.entries(conn.from.examples)
+    .filter(([, ex]) => ex.out !== undefined && ex.out !== false)
+    .map(([name, ex]) => ({ name, value: ex.out }));
+
+  const toIns = Object.entries(conn.to.examples)
+    .filter(([, ex]) => ex.in !== undefined)
+    .map(([name, ex]) => ({ name, value: ex.in }));
+
+  const path = `${conn.from.type}.${conn.from.name} → ${conn.to.type}.${conn.to.name}`;
+
+  if (fromOuts.length === 0 || toIns.length === 0) {
+    warnings.push({
+      path,
+      message: 'Cannot check compatibility: missing out or in examples',
+      suggestion:
+        'Add out examples to the source step or in examples to the target step',
+    });
+    return;
+  }
+
+  let hasMatch = false;
+  for (const out of fromOuts) {
+    for (const inp of toIns) {
+      if (isStructurallyCompatible(out.value, inp.value)) {
+        hasMatch = true;
+        break;
+      }
+    }
+    if (hasMatch) break;
+  }
+
+  if (!hasMatch) {
+    errors.push({
+      path,
+      message: 'No compatible out/in pair found between connected steps',
+      code: 'INCOMPATIBLE_EXAMPLES',
+    });
+  }
+}
+
+function isStructurallyCompatible(a: unknown, b: unknown): boolean {
+  if (typeof a !== typeof b) return false;
+  if (a === null || b === null) return a === b;
+  if (Array.isArray(a) && Array.isArray(b)) return true;
+  if (typeof a === 'object' && typeof b === 'object') {
+    const keysA = Object.keys(a as object);
+    const keysB = Object.keys(b as object);
+    const shared = keysA.filter((k) => keysB.includes(k));
+    return shared.length >= Math.min(keysA.length, keysB.length) * 0.5;
+  }
+  return true;
+}
+
+function checkContractCompliance(
+  config: Flow.Config,
+  setupContract: Flow.Contract | undefined,
+  flowContract: Flow.Contract | undefined,
+  warnings: ValidationWarning[],
+): void {
+  for (const [name, dest] of Object.entries(config.destinations || {})) {
+    if (!dest.examples) continue;
+
+    for (const [exName, example] of Object.entries(dest.examples)) {
+      if (!example.in || typeof example.in !== 'object') continue;
+
+      const event = example.in as { entity?: string; action?: string };
+      if (!event.entity || !event.action) continue;
+
+      const contract =
+        (flowContract?.[event.entity] as Record<string, unknown> | undefined) ||
+        (setupContract?.[event.entity] as Record<string, unknown> | undefined);
+      if (!contract || typeof contract !== 'object') continue;
+
+      const actionSchema = contract[event.action] || contract['*'];
+      if (actionSchema) {
+        warnings.push({
+          path: `destination.${name}.examples.${exName}`,
+          message: `Example has contract for ${event.entity}.${event.action}`,
+          suggestion: 'Verify example data matches contract schema',
+        });
+      }
+    }
+  }
 }

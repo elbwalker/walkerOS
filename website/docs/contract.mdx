@@ -323,13 +323,13 @@ Validate contracts with the CLI or MCP server:
 
 <CodeSnippet
   code={`# Validate a contract from a file
-walkeros validate --type contract contract.json
+walkeros validate contract.json --type contract
 
 # Validate inline
 echo '{"product":{"add":{"properties":{}}}}' | walkeros validate --type contract
 
 # Validate a full flow (includes contract validation)
-walkeros validate --type flow flow.json`}
+walkeros validate flow.json`}
   language="bash"
 />
 

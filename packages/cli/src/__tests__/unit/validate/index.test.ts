@@ -46,9 +46,9 @@ describe('validate programmatic API', () => {
     });
   });
 
-  describe('deep validation', () => {
-    it('validates cross-step examples', async () => {
-      const result = await validate('deep', {
+  describe('flow validation includes deep checks', () => {
+    it('validates cross-step examples as part of flow validation', async () => {
+      const result = await validate('flow', {
         version: 1,
         flows: {
           default: {
@@ -69,14 +69,28 @@ describe('validate programmatic API', () => {
       });
 
       expect(result.valid).toBe(true);
-      expect(result.type).toBe('deep');
+      expect(result.type).toBe('flow');
     });
   });
 
-  describe('dot-notation type', () => {
-    it('routes unknown types to entry validation', async () => {
-      const result = await validate('unknown' as any, {});
-      // Unknown type treated as dot-notation entry — returns validation error, not throw
+  describe('path-based entry validation', () => {
+    it('routes to entry validation when path is provided', async () => {
+      const result = await validate(
+        'flow',
+        {},
+        { path: 'destinations.nonexistent' },
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors[0].code).toBe('ENTRY_VALIDATION');
+    });
+
+    it('ignores type when path is provided', async () => {
+      // Even though type is 'event', path takes priority
+      const result = await validate(
+        'event',
+        {},
+        { path: 'destinations.nonexistent' },
+      );
       expect(result.valid).toBe(false);
       expect(result.errors[0].code).toBe('ENTRY_VALIDATION');
     });

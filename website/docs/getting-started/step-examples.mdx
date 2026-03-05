@@ -195,16 +195,16 @@ Check that examples match expected shapes without running the full pipeline:
   language="bash"
 />
 
-### Deep validation
+### Cross-step validation
 
-Use `deep` validation to check cross-step example compatibility. This verifies that connected steps (source → transformer → destination) have structurally compatible `out`/`in` pairs:
+Cross-step example validation is included automatically when validating a flow. It verifies that connected steps (source → transformer → destination) have structurally compatible `out`/`in` pairs:
 
 <CodeSnippet
-  code={`walkeros validate deep flow.json`}
+  code={`walkeros validate flow.json`}
   language="bash"
 />
 
-Deep validation checks that:
+Cross-step validation checks that:
 - Source `out` types match transformer `in` types
 - Transformer `out` types match destination `in` types
 - Steps without examples produce warnings

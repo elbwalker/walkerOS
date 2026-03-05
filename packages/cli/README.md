@@ -232,6 +232,51 @@ walkeros run serve flow.json --port 8080 --static-dir ./dist
 3. Runs in current Node.js process
 4. Press Ctrl+C for graceful shutdown
 
+### validate
+
+Validate flow configurations, events, mappings, or contracts.
+
+```bash
+walkeros validate <config-file> [options]
+```
+
+By default, validates a Flow.Setup file — checking schema, references, and
+cross-step example compatibility.
+
+**Options:**
+
+- `--type <type>` - Validation type (default: `flow`). Also accepts: `event`,
+  `mapping`, `contract`
+- `--path <path>` - Validate a specific entry against its package schema (e.g.,
+  `destinations.snowplow`, `sources.browser`)
+- `--flow <name>` - Flow name for multi-flow configs
+- `--strict` - Treat warnings as errors
+- `--json` - Output as JSON
+- `-v, --verbose` - Verbose output
+- `-s, --silent` - Suppress output
+
+**Exit codes:** `0` = valid, `1` = errors, `2` = warnings (with --strict), `3` =
+input error
+
+**Examples:**
+
+```bash
+# Validate flow config (schema + examples)
+walkeros validate flow.json
+
+# Validate specific flow
+walkeros validate flow.json --flow analytics
+
+# Validate a single event
+walkeros validate event.json --type event
+
+# Validate in CI
+walkeros validate flow.json --json --strict || exit 1
+
+# Validate entry against package schema
+walkeros validate flow.json --path destinations.snowplow
+```
+
 ### deploy
 
 Deploy flows to walkerOS cloud.

@@ -173,14 +173,14 @@ transformed to vendor-specific output.
 
 ## Validating Examples
 
-Use the `--deep` flag to cross-validate step examples across connected steps:
+Cross-step example validation is included automatically when validating a flow:
 
 ```bash
 # Validate flow config including step example compatibility
-walkeros validate flow.json --deep
+walkeros validate flow.json
 ```
 
-Deep validation checks that:
+Flow validation checks that:
 
 - Source `out` types match transformer `in` types
 - Transformer `out` types match destination `in` types

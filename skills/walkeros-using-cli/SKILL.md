@@ -159,17 +159,16 @@ Step: destinations.gtag
   Status: PASS
 ```
 
-### Validate with `--deep`
+### Validate flow config
 
-Cross-validate step examples across connected steps:
+Validate schema, references, and cross-step example compatibility:
 
 ```bash
-# Check that source out types match transformer in types, etc.
-walkeros validate flow.json --deep
+walkeros validate flow.json
 ```
 
-Deep validation ensures that examples at each step boundary are type-compatible
-with their connected steps.
+All checks run automatically — schema validation, reference checking, and
+cross-step example compatibility. No flags needed for full validation.
 
 For full details on writing and testing with step examples, see
 [using-step-examples](../walkeros-using-step-examples/SKILL.md).
@@ -244,8 +243,9 @@ Options:
 walkeros validate <input> [options]
 
 Options:
-  --flow            Validate as flow config
-  --config          Validate as destination/source config
+  --type <type>     Validation type (default: flow). Also: event, mapping, contract
+  --path <path>     Validate entry against package schema (e.g. destinations.snowplow)
+  --flow <name>     Flow name for multi-flow configs
   --strict          Treat warnings as errors
   --json            JSON output
 
@@ -255,20 +255,6 @@ Exit codes:
   2 = Warnings (with --strict)
   3 = Input error
 ```
-
-### Validate a specific entry
-
-Validate a destination, source, or transformer's settings against its package
-schema:
-
-```bash
-walkeros validate destinations.snowplow
-walkeros validate sources.browser
-walkeros validate transformers.validator
-```
-
-Uses dot-notation: `{section}.{key}`. Fetches the package's `walkerOS.json` from
-CDN and validates `config.settings` against the published schema.
 
 ### Run Command
 

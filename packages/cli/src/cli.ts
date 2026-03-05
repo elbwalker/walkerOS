@@ -130,20 +130,32 @@ program
 
 // Validate command
 program
-  .command('validate <type> [input]')
-  .description('Validate event, flow, or mapping configuration')
+  .command('validate [input]')
+  .description(
+    'Validate flow configuration (schema, references, cross-step examples)',
+  )
+  .option(
+    '-t, --type <type>',
+    'validation type: flow, event, mapping, contract',
+    'flow',
+  )
+  .option(
+    '--path <path>',
+    'validate a specific entry against its package schema (e.g. destinations.snowplow)',
+  )
   .option('-o, --output <path>', 'write result to file')
   .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
   .option('--strict', 'fail on warnings')
-  .action(async (type, input, options) => {
+  .action(async (input, options) => {
     await validateCommand({
-      type,
+      type: options.type || 'flow',
       input,
       output: options.output,
       flow: options.flow,
+      path: options.path,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,

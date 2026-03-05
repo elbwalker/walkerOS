@@ -2,5 +2,5 @@
 '@walkeros/cli': minor
 ---
 
-Add deep validation for cross-step example compatibility
-(`walkeros validate deep flow.json`)
+Simplify validate command: file-first argument, --type defaults to flow, deep
+validation merged into flow, entry validation moved to --path

@@ -82,9 +82,10 @@ Validate walkerOS events, flow configurations, mapping rules, or data contracts.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `type` | `"event"` \| `"flow"` \| `"mapping"` \| `"contract"` \| dot-notation | Yes | Validation type. Dot-notation (e.g. `"destinations.snowplow"`) validates against the package schema. |
+| `type` | `"event"` \| `"flow"` \| `"mapping"` \| `"contract"` | Yes | Validation type. |
 | `input` | string | Yes | JSON string, file path, or URL to validate |
 | `flow` | string | No | Flow name for multi-flow configs |
+| `path` | string | No | Entry path for package schema validation (e.g. `"destinations.snowplow"`). When provided, validates the entry instead of using type. |
 
 #### `bundle`
 
