@@ -52,7 +52,7 @@ export const transformerRedact: Transformer.Init<Types> = (context) => {
         }
       }
 
-      return event;
+      return { event };
     },
   };
 };

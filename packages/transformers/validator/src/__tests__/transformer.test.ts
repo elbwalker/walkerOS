@@ -61,7 +61,7 @@ describe('Transformer Validator', () => {
 
       const result = await transformer.push(validEvent, context);
 
-      expect(result).toEqual(validEvent);
+      expect(result).toEqual({ event: validEvent });
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
@@ -94,7 +94,7 @@ describe('Transformer Validator', () => {
 
       const result = await transformer.push(invalidEvent, context);
 
-      expect(result).toEqual(invalidEvent);
+      expect(result).toEqual({ event: invalidEvent });
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
@@ -139,7 +139,7 @@ describe('Transformer Validator', () => {
 
       const result = await transformer.push(validEvent, context);
 
-      expect(result).toEqual(validEvent);
+      expect(result).toEqual({ event: validEvent });
       expect(mockLogger.debug).toHaveBeenCalledWith(
         'Contract validation passed',
         { rule: 'product view' },
@@ -204,7 +204,7 @@ describe('Transformer Validator', () => {
       // product view doesn't match order complete
       const result = await transformer.push(validEvent, context);
 
-      expect(result).toEqual(validEvent);
+      expect(result).toEqual({ event: validEvent });
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
   });

@@ -28,7 +28,9 @@ describe('Source Transformer Chains (source.next)', () => {
               config: context.config,
               push: async (event) => {
                 transformerCalls.push('enrich');
-                return { ...event, data: { ...event.data, enriched: true } };
+                return {
+                  event: { ...event, data: { ...event.data, enriched: true } },
+                };
               },
             }),
           },
@@ -77,7 +79,7 @@ describe('Source Transformer Chains (source.next)', () => {
               config: context.config,
               push: async (event) => {
                 order.push('validate');
-                return event;
+                return { event };
               },
             }),
             next: 'enrich',
@@ -88,7 +90,7 @@ describe('Source Transformer Chains (source.next)', () => {
               config: context.config,
               push: async (event) => {
                 order.push('enrich');
-                return event;
+                return { event };
               },
             }),
           },
@@ -135,7 +137,7 @@ describe('Source Transformer Chains (source.next)', () => {
               config: context.config,
               push: async (event) => {
                 if (event.name?.startsWith('internal')) return false;
-                return event;
+                return { event };
               },
             }),
           },
@@ -187,7 +189,7 @@ describe('Source Transformer Chains (source.next)', () => {
               config: context.config,
               push: async (event) => {
                 order.push('a');
-                return event;
+                return { event };
               },
             }),
             next: 'ignored',
@@ -198,7 +200,7 @@ describe('Source Transformer Chains (source.next)', () => {
               config: context.config,
               push: async (event) => {
                 order.push('b');
-                return event;
+                return { event };
               },
             }),
           },
@@ -208,7 +210,7 @@ describe('Source Transformer Chains (source.next)', () => {
               config: context.config,
               push: async (event) => {
                 order.push('c');
-                return event;
+                return { event };
               },
             }),
           },
@@ -218,7 +220,7 @@ describe('Source Transformer Chains (source.next)', () => {
               config: context.config,
               push: async (event) => {
                 order.push('ignored');
-                return event;
+                return { event };
               },
             }),
           },

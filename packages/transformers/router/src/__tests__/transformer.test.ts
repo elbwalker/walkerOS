@@ -37,7 +37,6 @@ describe('transformerRouter', () => {
     );
 
     expect(result).toEqual({
-      __branch: true,
       event: {},
       next: 'gtag-parser',
     });
@@ -65,7 +64,6 @@ describe('transformerRouter', () => {
     );
 
     expect(result).toEqual({
-      __branch: true,
       event: {},
       next: ['validator'],
     });
@@ -84,7 +82,7 @@ describe('transformerRouter', () => {
       ingest: { path: '/gtag' },
     });
 
-    expect(result).toEqual({ __branch: true, event: {}, next: 'parser' });
+    expect(result).toEqual({ event: {}, next: 'parser' });
   });
 
   it('should passthrough when no routes match and no wildcard', () => {
@@ -123,6 +121,6 @@ describe('transformerRouter', () => {
       },
     );
 
-    expect(result).toEqual({ __branch: true, event: {}, next: 'fallback' });
+    expect(result).toEqual({ event: {}, next: 'fallback' });
   });
 });

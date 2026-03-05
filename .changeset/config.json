@@ -7,7 +7,6 @@
       "@walkeros/core",
       "@walkeros/collector",
       "@walkeros/cli",
-      "@walkeros/explorer",
       "@walkeros/web-core",
       "@walkeros/server-core",
       "@walkeros/config",
@@ -44,7 +43,7 @@
   "linked": [],
   "access": "public",
   "baseBranch": "main",
-  "updateInternalDependencies": "minor",
+  "updateInternalDependencies": "patch",
   "ignore": [],
   "snapshot": {
     "useCalculatedVersion": true,

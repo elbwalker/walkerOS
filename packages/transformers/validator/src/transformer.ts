@@ -77,7 +77,7 @@ export const transformerValidator: Transformer.Init<
         }
       }
 
-      return event;
+      return { event };
     },
   };
 };

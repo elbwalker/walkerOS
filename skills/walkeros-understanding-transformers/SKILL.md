@@ -45,7 +45,7 @@ export const transformerMyTransformer: Transformer.Init<Types> = (context) => {
   return {
     push(event, pushContext) {
       // Process event
-      return event;
+      return { event };
     },
   };
 };
@@ -74,12 +74,13 @@ export const transformerMyTransformer: Transformer.Init<Types> = (context) => {
 
 The `push` function controls event flow:
 
-| Return         | Behavior                                            |
-| -------------- | --------------------------------------------------- |
-| `event`        | Continue chain with modified event                  |
-| `void`         | Continue chain, event unchanged                     |
-| `false`        | Stop chain, event dropped                           |
-| `BranchResult` | Redirect chain to a different transformer (fan-out) |
+| Return               | Behavior                                            |
+| -------------------- | --------------------------------------------------- |
+| `{ event }`          | Continue chain with modified event                  |
+| `void`               | Continue chain, event unchanged                     |
+| `false`              | Stop chain, event dropped                           |
+| `{ event, next }`    | Redirect chain to a different transformer (fan-out) |
+| `{ event, respond }` | Continue chain with wrapped respond function        |
 
 ```typescript
 push(event, context) {
@@ -89,7 +90,7 @@ push(event, context) {
   }
 
   event.data.enrichedAt = Date.now();
-  return event;  // Continue with modified event
+  return { event };  // Continue with modified event
 }
 ```
 
@@ -104,7 +105,7 @@ bundler to parse the following string as executable JavaScript:
   "transformers": {
     "enrich": {
       "code": {
-        "push": "$code:(event) => { event.data.enrichedAt = Date.now(); return event; }"
+        "push": "$code:(event) => { event.data.enrichedAt = Date.now(); return { event }; }"
       },
       "next": "validate"
     }
@@ -126,7 +127,7 @@ bundler to parse the following string as executable JavaScript:
 
 **Return values in push code:**
 
-- Return modified event to continue chain
+- Return `{ event }` to continue chain with modified event
 - Return `undefined` to pass event unchanged
 - Return `false` to drop event from chain
 
@@ -137,7 +138,7 @@ bundler to parse the following string as executable JavaScript:
   "transformers": {
     "filter": {
       "code": {
-        "push": "$code:(event) => { if (event.name.startsWith('internal_')) return false; return event; }"
+        "push": "$code:(event) => { if (event.name.startsWith('internal_')) return false; return { event }; }"
       }
     }
   }
@@ -151,7 +152,7 @@ bundler to parse the following string as executable JavaScript:
   "transformers": {
     "addTimestamp": {
       "code": {
-        "push": "$code:(event) => { event.data.processedAt = new Date().toISOString(); return event; }"
+        "push": "$code:(event) => { event.data.processedAt = new Date().toISOString(); return { event }; }"
       },
       "next": "validate"
     },
@@ -268,7 +269,7 @@ push(event, context) {
     event.data = { ...event.data, clientIp: ingest.ip };
   }
 
-  return event;
+  return { event };
 }
 ```
 

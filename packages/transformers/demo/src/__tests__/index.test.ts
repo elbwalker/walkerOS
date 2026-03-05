@@ -120,8 +120,8 @@ describe('Demo Transformer', () => {
     const result = await instance.push(event, createContext());
 
     expect(result).toBeDefined();
-    expect((result as any).data._processed).toBe(true);
-    expect((result as any).data._processedBy).toBe('modifier');
+    expect((result as any).event.data._processed).toBe(true);
+    expect((result as any).event.data._processedBy).toBe('modifier');
   });
 
   test('preserves existing event data when adding processed flag', async () => {
@@ -142,9 +142,9 @@ describe('Demo Transformer', () => {
     });
     const result = await instance.push(event, createContext());
 
-    expect((result as any).data.title).toBe('Home');
-    expect((result as any).data.custom).toBe('value');
-    expect((result as any).data._processed).toBe(true);
+    expect((result as any).event.data.title).toBe('Home');
+    expect((result as any).event.data.custom).toBe('value');
+    expect((result as any).event.data._processed).toBe(true);
   });
 
   test('uses console.log when env.log not provided', async () => {

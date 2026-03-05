@@ -7,7 +7,7 @@ export const routeMatch: Flow.StepExample = {
     data: { v: '2', en: 'purchase' },
     source: { type: 'server', id: '', previous_id: '' },
   }),
-  out: { __branch: true, event: {}, next: 'gtag-parser' },
+  out: { event: {}, next: 'gtag-parser' },
 };
 
 export const routeMiss: Flow.StepExample = {

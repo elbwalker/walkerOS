@@ -37,8 +37,10 @@ describe('router transformer integration', () => {
         order.push('gtag-parser');
         const body = (context.ingest as any)?.body || {};
         return {
-          name: `page ${body.en || 'unknown'}`,
-          data: { value: body.value ? Number(body.value) : undefined },
+          event: {
+            name: `page ${body.en || 'unknown'}`,
+            data: { value: body.value ? Number(body.value) : undefined },
+          },
         };
       },
     });
@@ -216,7 +218,7 @@ describe('router transformer integration', () => {
             config: context.config,
             push(event) {
               order.push('a');
-              return { ...event, data: { ...event.data, a: true } };
+              return { event: { ...event, data: { ...event.data, a: true } } };
             },
           }),
           next: 'b',
@@ -227,7 +229,7 @@ describe('router transformer integration', () => {
             config: context.config,
             push(event) {
               order.push('b');
-              return { ...event, data: { ...event.data, b: true } };
+              return { event: { ...event, data: { ...event.data, b: true } } };
             },
           }),
         },

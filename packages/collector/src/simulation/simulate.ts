@@ -102,7 +102,7 @@ async function runSource(
           config: {},
           push(event: WalkerOS.DeepPartialEvent) {
             events.push(JSON.parse(JSON.stringify(event)));
-            return event;
+            return { event };
           },
         }),
       },

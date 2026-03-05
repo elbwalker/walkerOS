@@ -55,13 +55,15 @@ export const transformerDemo: Transformer.Init<Types> = (initContext) => {
       // Optionally modify the event
       if (settings.addProcessedFlag) {
         return {
-          ...event,
-          data: {
-            ...(event.data || {}),
-            _processed: true,
-            _processedBy: settings.name,
-          },
-        } as WalkerOS.DeepPartialEvent;
+          event: {
+            ...event,
+            data: {
+              ...(event.data || {}),
+              _processed: true,
+              _processedBy: settings.name,
+            },
+          } as WalkerOS.DeepPartialEvent,
+        };
       }
 
       // Return void for passthrough (event unchanged)
