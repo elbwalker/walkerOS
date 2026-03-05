@@ -50,14 +50,14 @@ async function runTransformer(
     env: instance.config?.env || {},
   });
 
-  // Normalize: false → [], void → [original], event → [event]
+  // Normalize: false → [], void → [original], { event } → [event]
   let events: WalkerOS.DeepPartialEvent[];
   if (result === false) {
     events = [];
   } else if (result == null) {
     events = [event];
   } else {
-    events = [result as WalkerOS.DeepPartialEvent];
+    events = [result.event || event];
   }
 
   return {
