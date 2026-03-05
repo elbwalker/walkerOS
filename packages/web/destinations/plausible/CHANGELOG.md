@@ -1,5 +1,18 @@
 # @walkeros/web-destination-plausible
 
+## 2.1.0
+
+### Minor Changes
+
+- 97df0b2: Step examples: upgrade all packages to blueprint pattern with inline
+  mapping, no intermediate variables, no `all` export
+
+### Patch Changes
+
+- 97df0b2: Remove legacy events/mapping/outputs example files; tests now derive
+  from step examples
+  - @walkeros/web-core@2.1.0
+
 ## 2.0.1
 
 ## 1.0.6

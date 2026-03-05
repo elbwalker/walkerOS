@@ -1,5 +1,16 @@
 # @walkeros/web-destination-gtag
 
+## 2.1.0
+
+### Minor Changes
+
+- 97df0b2: Step examples: upgrade all packages to blueprint pattern with inline
+  mapping, no intermediate variables, no `all` export
+
+### Patch Changes
+
+- @walkeros/web-core@2.1.0
+
 ## 2.0.1
 
 ## 1.0.6

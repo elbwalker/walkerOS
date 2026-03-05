@@ -1,5 +1,40 @@
 # @walkeros/collector
 
+## 2.1.0
+
+### Minor Changes
+
+- 2bbe8c8: Add destroy lifecycle method to all step types (sources,
+  destinations, transformers) and shutdown command to collector
+- 3eb6416: Add unified `env.respond` capability. Any step (transformer,
+  destination) can now customize HTTP responses via
+  `env.respond({ body, status?, headers? })`. Sources configure the response
+  handler — Express source uses createRespond for idempotent first-call-wins
+  semantics. CLI serve mode removed (superseded by response-capable flows).
+- 026c412: Unified simulation API: single simulate() function replaces
+  simulateSource/simulateDestination/simulateTransformer/simulateFlow. Built-in
+  call tracking for destinations via wrapEnv. No bundling required for
+  simulation.
+
+### Patch Changes
+
+- 02a7958: Add WARN log level (ERROR=0, WARN=1, INFO=2, DEBUG=3). Logger
+  instances expose `warn()` method routed to `console.warn` and `json()` method
+  for structured output. Config accepts optional `jsonHandler`. MockLogger
+  includes both as jest mocks. CLI logger unified with core logger via
+  `createCLILogger()` factory.
+- Updated dependencies [7fc4cee]
+- Updated dependencies [7fc4cee]
+- Updated dependencies [cb2da05]
+- Updated dependencies [2bbe8c8]
+- Updated dependencies [3eb6416]
+- Updated dependencies [02a7958]
+- Updated dependencies [97df0b2]
+- Updated dependencies [97df0b2]
+- Updated dependencies [026c412]
+- Updated dependencies [7d38d9d]
+  - @walkeros/core@2.1.0
+
 ## 2.0.1
 
 ## 2.0.0

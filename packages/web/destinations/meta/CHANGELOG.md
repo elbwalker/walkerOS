@@ -1,5 +1,16 @@
 # @walkeros/web-destination-meta
 
+## 2.1.0
+
+### Minor Changes
+
+- 97df0b2: Step examples: add mapping field to StepExample type, rewrite Meta
+  Pixel examples with functional tests
+
+### Patch Changes
+
+- @walkeros/web-core@2.1.0
+
 ## 2.0.1
 
 ## 1.0.6

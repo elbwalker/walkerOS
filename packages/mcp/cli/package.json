@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/mcp-cli",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "description": "MCP server for local walkerOS development - validate events, bundle flows, simulate pipelines, and discover packages",
   "license": "MIT",
   "type": "module",
@@ -31,8 +31,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "@walkeros/cli": "^2.0.0",
-    "@walkeros/core": "^2.0.0"
+    "@walkeros/cli": "^2.1.0",
+    "@walkeros/core": "^2.1.0"
   },
   "peerDependencies": {
     "zod": "^4.0"

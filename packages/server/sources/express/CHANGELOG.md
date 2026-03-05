@@ -1,5 +1,35 @@
 # @walkeros/server-source-express
 
+## 2.1.0
+
+### Minor Changes
+
+- 3eb6416: Add unified `env.respond` capability. Any step (transformer,
+  destination) can now customize HTTP responses via
+  `env.respond({ body, status?, headers? })`. Sources configure the response
+  handler — Express source uses createRespond for idempotent first-call-wins
+  semantics. CLI serve mode removed (superseded by response-capable flows).
+- 66aaf2d: Runner-owned health server: The runner now provides /health and
+  /ready endpoints independently of flow sources. Express source's `status`
+  setting and fetch source's `healthPath` setting have been removed — health
+  endpoints are no longer source responsibilities.
+- 97df0b2: Step examples: upgrade all packages to blueprint pattern with inline
+  mapping, no intermediate variables, no `all` export
+
+### Patch Changes
+
+- Updated dependencies [7fc4cee]
+- Updated dependencies [7fc4cee]
+- Updated dependencies [cb2da05]
+- Updated dependencies [2bbe8c8]
+- Updated dependencies [3eb6416]
+- Updated dependencies [02a7958]
+- Updated dependencies [97df0b2]
+- Updated dependencies [97df0b2]
+- Updated dependencies [026c412]
+- Updated dependencies [7d38d9d]
+  - @walkeros/core@2.1.0
+
 ## 2.0.1
 
 ## 1.1.0

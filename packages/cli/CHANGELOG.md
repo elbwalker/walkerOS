@@ -1,5 +1,63 @@
 # @walkeros/cli
 
+## 2.1.0
+
+### Minor Changes
+
+- cb2da05: Add data contracts for centralized event validation and documentation
+- fed78f0: Replace deployment polling with SSE streaming for real-time status
+  updates
+- 3eb6416: Add unified `env.respond` capability. Any step (transformer,
+  destination) can now customize HTTP responses via
+  `env.respond({ body, status?, headers? })`. Sources configure the response
+  handler — Express source uses createRespond for idempotent first-call-wins
+  semantics. CLI serve mode removed (superseded by response-capable flows).
+- 39780b0: Add event usage counters to heartbeat reporting
+- dd53425: Simplify `walkeros run collect` to `walkeros run` — the mode concept
+  has been removed
+- 66aaf2d: Runner-owned health server: The runner now provides /health and
+  /ready endpoints independently of flow sources. Express source's `status`
+  setting and fetch source's `healthPath` setting have been removed — health
+  endpoints are no longer source responsibilities.
+- 97df0b2: Simplify validate command: file-first argument, --type defaults to
+  flow, deep validation merged into flow, entry validation moved to --path
+- 026c412: Unified simulation API: single simulate() function replaces
+  simulateSource/simulateDestination/simulateTransformer/simulateFlow. Built-in
+  call tracking for destinations via wrapEnv. No bundling required for
+  simulation.
+
+### Patch Changes
+
+- fed78f0: Show logo only on bare `walkeros` call, not before every command
+- 7b7e37b: Consolidate flow validation to use core's validateFlowSetup, adding
+  $var/$def reference checking and IntelliSense context extraction
+- 5145662: Use os.tmpdir() as default temp directory to fix permission errors in
+  containers
+- 02a7958: Add WARN log level (ERROR=0, WARN=1, INFO=2, DEBUG=3). Logger
+  instances expose `warn()` method routed to `console.warn` and `json()` method
+  for structured output. Config accepts optional `jsonHandler`. MockLogger
+  includes both as jest mocks. CLI logger unified with core logger via
+  `createCLILogger()` factory.
+- 3bc32de: Surface mapping field in examples_list and ExampleLookupResult
+- 5145662: Add --output URL support, -f shorthand for --flow, and lazy-load
+  esbuild in runtime
+- 7fc4cee: Fix server bundle port forwarding from runtime context to source
+  configs
+- 1876bb9: Remove unused bundle simulation path, CallTracker, and executor files
+  from simulate command. Simulate now only accepts Flow.Setup config JSON files.
+- Updated dependencies [7fc4cee]
+- Updated dependencies [7fc4cee]
+- Updated dependencies [cb2da05]
+- Updated dependencies [2bbe8c8]
+- Updated dependencies [3eb6416]
+- Updated dependencies [02a7958]
+- Updated dependencies [97df0b2]
+- Updated dependencies [97df0b2]
+- Updated dependencies [026c412]
+- Updated dependencies [7d38d9d]
+  - @walkeros/core@2.1.0
+  - @walkeros/server-core@2.1.0
+
 ## 2.0.1
 
 ## 2.0.0

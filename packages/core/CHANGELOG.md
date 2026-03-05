@@ -1,5 +1,39 @@
 # @walkeros/core
 
+## 2.1.0
+
+### Minor Changes
+
+- 7fc4cee: Add default values and improved descriptions to flow schemas for
+  better IDE IntelliSense
+- cb2da05: Add data contracts for centralized event validation and documentation
+- 2bbe8c8: Add destroy lifecycle method to all step types (sources,
+  destinations, transformers) and shutdown command to collector
+- 3eb6416: Add unified `env.respond` capability. Any step (transformer,
+  destination) can now customize HTTP responses via
+  `env.respond({ body, status?, headers? })`. Sources configure the response
+  handler — Express source uses createRespond for idempotent first-call-wins
+  semantics. CLI serve mode removed (superseded by response-capable flows).
+- 02a7958: Add WARN log level (ERROR=0, WARN=1, INFO=2, DEBUG=3). Logger
+  instances expose `warn()` method routed to `console.warn` and `json()` method
+  for structured output. Config accepts optional `jsonHandler`. MockLogger
+  includes both as jest mocks. CLI logger unified with core logger via
+  `createCLILogger()` factory.
+- 026c412: Unified simulation API: single simulate() function replaces
+  simulateSource/simulateDestination/simulateTransformer/simulateFlow. Built-in
+  call tracking for destinations via wrapEnv. No bundling required for
+  simulation.
+- 7d38d9d: Add `validateFlowSetup` for portable Flow.Setup validation with
+  line/column positions and IntelliSense context extraction.
+
+### Patch Changes
+
+- 7fc4cee: Add contract as optional property to Flow.Setup schema
+- 97df0b2: Step examples: upgrade all packages to blueprint pattern with inline
+  mapping, no intermediate variables, no `all` export
+- 97df0b2: Step examples: add mapping field to StepExample type, rewrite Meta
+  Pixel examples with functional tests
+
 ## 2.0.1
 
 ### Patch Changes
