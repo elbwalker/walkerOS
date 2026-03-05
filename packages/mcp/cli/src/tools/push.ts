@@ -23,17 +23,7 @@ export function registerPushTool(server: McpServer) {
     },
     async ({ configPath, event, flow, platform }) => {
       try {
-        // Parse event if JSON string
-        let parsedEvent: unknown = event;
-        if (event.startsWith('{') || event.startsWith('[')) {
-          try {
-            parsedEvent = JSON.parse(event);
-          } catch {
-            // Keep as string (file path or URL)
-          }
-        }
-
-        const result = await push(configPath, parsedEvent, {
+        const result = await push(configPath, event, {
           json: true,
           flow,
           platform,

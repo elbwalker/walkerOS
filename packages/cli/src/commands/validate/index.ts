@@ -25,26 +25,37 @@ import type {
 /**
  * Programmatic API for validation.
  * Can be called directly from code or MCP server.
+ *
+ * Accepts parsed objects, JSON strings, file paths, or URLs as input.
  */
 export async function validate(
   type: ValidationType,
   input: unknown,
   options: { flow?: string; path?: string } = {},
 ): Promise<ValidateResult> {
+  // Resolve string inputs (file paths, URLs, JSON strings) to parsed objects
+  let resolved = input;
+  if (typeof input === 'string') {
+    resolved = await loadJsonFromSource(input, {
+      name: type,
+      required: true,
+    });
+  }
+
   // Path-based entry validation takes priority
   if (options.path) {
-    return validateEntry(options.path, input as Record<string, unknown>);
+    return validateEntry(options.path, resolved as Record<string, unknown>);
   }
 
   switch (type) {
     case 'contract':
-      return validateContract(input);
+      return validateContract(resolved);
     case 'event':
-      return validateEvent(input);
+      return validateEvent(resolved);
     case 'flow':
-      return validateFlow(input, { flow: options.flow });
+      return validateFlow(resolved, { flow: options.flow });
     case 'mapping':
-      return validateMapping(input);
+      return validateMapping(resolved);
     default:
       throw new Error(`Unknown validation type: ${type}`);
   }

@@ -60,14 +60,8 @@ async function pushCore(
   let tempDir: string | undefined;
 
   try {
-    // Load event if string (file path or URL)
-    let loadedEvent = event;
-    if (typeof event === 'string') {
-      loadedEvent = await loadJsonFromSource(event, { name: 'event' });
-    }
-
     // Validate event format using Zod schema
-    const eventResult = schemas.PartialEventSchema.safeParse(loadedEvent);
+    const eventResult = schemas.PartialEventSchema.safeParse(event);
     if (!eventResult.success) {
       const errors = eventResult.error.issues
         .map((issue) => `${String(issue.path.join('.'))}: ${issue.message}`)
@@ -164,14 +158,12 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
       config = options.config || 'bundle.config.json';
     }
 
-    const event = await loadJsonFromSource(options.event, { name: 'event' });
-
-    const result = await pushCore(config, event, {
+    const result = await push(config, options.event, {
       flow: options.flow,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,
-      platform: options.platform,
+      platform: options.platform as Platform | undefined,
     });
 
     const duration = Date.now() - startTime;
@@ -269,9 +261,16 @@ export async function push(
     );
   }
 
-  return await pushCore(configOrPath, event, {
+  // Resolve string event inputs (file paths, URLs, JSON strings)
+  let resolvedEvent = event;
+  if (typeof event === 'string') {
+    resolvedEvent = await loadJsonFromSource(event, { name: 'event' });
+  }
+
+  return await pushCore(configOrPath, resolvedEvent, {
     json: options.json ?? false,
     verbose: options.verbose ?? false,
+    silent: options.silent ?? false,
     flow: options.flow,
     platform: options.platform,
   });

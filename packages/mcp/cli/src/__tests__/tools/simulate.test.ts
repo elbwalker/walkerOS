@@ -62,7 +62,7 @@ describe('simulate tool', () => {
     expect(config.outputSchema).toBe(SimulateOutputShape);
   });
 
-  it('calls CLI simulate with parsed JSON event', async () => {
+  it('passes raw string event to simulate (resolution is CLI responsibility)', async () => {
     const mockResult = { destinations: [], logs: [], stats: {} };
     mockSimulate.mockResolvedValue(mockResult);
 
@@ -73,9 +73,10 @@ describe('simulate tool', () => {
       flow: undefined,
     });
 
+    // MCP passes raw string; simulate() handles JSON parsing via loadJsonFromSource
     expect(mockSimulate).toHaveBeenCalledWith(
       './flow.json',
-      { name: 'page view', data: { title: 'Home' } },
+      '{"name":"page view","data":{"title":"Home"}}',
       {
         json: true,
         flow: undefined,
@@ -88,7 +89,7 @@ describe('simulate tool', () => {
     expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
   });
 
-  it('calls CLI simulate with string event (file path)', async () => {
+  it('passes file path string to simulate', async () => {
     const mockResult = { destinations: [], logs: [] };
     mockSimulate.mockResolvedValue(mockResult);
 
@@ -112,7 +113,7 @@ describe('simulate tool', () => {
     );
   });
 
-  it('parses JSON array events', async () => {
+  it('passes JSON array string to simulate', async () => {
     mockSimulate.mockResolvedValue({ results: [] });
 
     const tool = server.getTool('simulate');
@@ -124,7 +125,7 @@ describe('simulate tool', () => {
 
     expect(mockSimulate).toHaveBeenCalledWith(
       './flow.json',
-      [{ name: 'page view' }, { name: 'click button' }],
+      '[{"name":"page view"},{"name":"click button"}]',
       {
         json: true,
         flow: undefined,
@@ -170,7 +171,7 @@ describe('simulate tool', () => {
     expect(parsed.error).toBe('Simulation failed');
   });
 
-  it('keeps invalid JSON as string event', async () => {
+  it('passes broken JSON string to simulate as-is', async () => {
     mockSimulate.mockResolvedValue({ results: [] });
 
     const tool = server.getTool('simulate');
@@ -202,7 +203,7 @@ describe('simulate tool', () => {
 
     expect(mockSimulate).toHaveBeenCalledWith(
       './flow.json',
-      { name: 'page view' },
+      '{"name":"page view"}',
       {
         json: true,
         flow: 'production',
@@ -226,7 +227,7 @@ describe('simulate tool', () => {
 
     expect(mockSimulate).toHaveBeenCalledWith(
       './flow.json',
-      { name: 'page view' },
+      '{"name":"page view"}',
       {
         json: true,
         flow: undefined,
@@ -312,7 +313,7 @@ describe('simulate tool', () => {
 
     expect(mockSimulate).toHaveBeenCalledWith(
       './flow.json',
-      { name: 'custom event' },
+      '{"name":"custom event"}',
       {
         json: true,
         flow: undefined,

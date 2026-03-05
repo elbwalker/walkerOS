@@ -275,7 +275,12 @@ export async function simulate(
     );
   }
 
+  // Resolve string event inputs (file paths, URLs, JSON strings)
   let resolvedEvent = event;
+  if (typeof event === 'string') {
+    resolvedEvent = await loadJsonFromSource(event, { name: 'event' });
+  }
+
   let exampleContext:
     | { stepType: string; stepName: string; expected: unknown }
     | undefined;
