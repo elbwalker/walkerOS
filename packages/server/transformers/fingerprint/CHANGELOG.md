@@ -1,5 +1,18 @@
 # @walkeros/server-transformer-fingerprint
 
+## 2.1.1
+
+### Patch Changes
+
+- fab477d: Replace union transformer return type with unified
+  `Transformer.Result` object. Transformers now return `{ event }` instead of
+  naked events, and can optionally include `respond` (for wrapping) or `next`
+  (for branching). The `BranchResult` type and `__branch` discriminant are
+  removed.
+- Updated dependencies [fab477d]
+  - @walkeros/core@2.1.1
+  - @walkeros/server-core@2.1.1
+
 ## 2.1.0
 
 ### Patch Changes
