@@ -3,7 +3,7 @@
   "type": "object",
   "properties": {
     "$schema": {
-      "description": "JSON Schema reference for IDE validation (e.g., \"https://walkeros.io/schema/flow/v1.json\")",
+      "description": "JSON Schema reference for IDE validation (e.g., \"https://walkeros.io/schema/flow/v2.json\")",
       "type": "string",
       "format": "uri"
     },
@@ -56,14 +56,17 @@
             "type": "object",
             "properties": {
               "windowCollector": {
-                "description": "Window property name for collector instance (default: \"collector\")",
+                "default": "collector",
+                "description": "Window property name for the collector instance (default: \"collector\")",
                 "type": "string"
               },
               "windowElb": {
-                "description": "Window property name for elb function (default: \"elb\")",
+                "default": "elb",
+                "description": "Window property name for the elb command queue (default: \"elb\")",
                 "type": "string"
               }
             },
+            "required": ["windowCollector", "windowElb"],
             "additionalProperties": false
           },
           "server": {
@@ -127,7 +130,7 @@
                         "push": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "Main function that processes events. Use $code: prefix for inline JavaScript."
+                          "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
                         },
                         "type": {
                           "description": "Optional type identifier for the inline instance",
@@ -185,7 +188,37 @@
                 },
                 "next": {
                   "description": "First transformer in post-source chain. If omitted, events route directly to collector.",
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "description": "Named step examples for testing and documentation (stripped during bundling)",
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "in": {
+                        "description": "Input to the step"
+                      },
+                      "out": {
+                        "description": "Expected output from the step"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Named example with input/output pair"
+                  }
                 }
               },
               "additionalProperties": false,
@@ -218,7 +251,7 @@
                         "push": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "Main function that processes events. Use $code: prefix for inline JavaScript."
+                          "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
                         },
                         "type": {
                           "description": "Optional type identifier for the inline instance",
@@ -272,7 +305,37 @@
                 },
                 "before": {
                   "description": "First transformer in pre-destination chain. If omitted, events are sent directly from collector.",
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "description": "Named step examples for testing and documentation (stripped during bundling)",
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "in": {
+                        "description": "Input to the step"
+                      },
+                      "out": {
+                        "description": "Expected output from the step"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Named example with input/output pair"
+                  }
                 }
               },
               "additionalProperties": false,
@@ -305,7 +368,7 @@
                         "push": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "Main function that processes events. Use $code: prefix for inline JavaScript."
+                          "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
                         },
                         "type": {
                           "description": "Optional type identifier for the inline instance",
@@ -330,7 +393,17 @@
                 },
                 "next": {
                   "description": "Next transformer in chain. If omitted: pre-collector routes to collector, post-collector routes to destination.",
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  ]
                 },
                 "variables": {
                   "description": "Transformer-level variables (highest priority in cascade)",
@@ -360,6 +433,26 @@
                     "type": "string"
                   },
                   "additionalProperties": {}
+                },
+                "examples": {
+                  "description": "Named step examples for testing and documentation (stripped during bundling)",
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "in": {
+                        "description": "Input to the step"
+                      },
+                      "out": {
+                        "description": "Expected output from the step"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Named example with input/output pair"
+                  }
                 }
               },
               "additionalProperties": false,

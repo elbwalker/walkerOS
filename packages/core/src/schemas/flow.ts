@@ -11,8 +11,8 @@
  * - JSON Schema generation for IDE support
  * - Type-safe parsing with Zod
  *
- * SCHEMA SYNC: When modifying these schemas, update website/static/schema/flow/v1.json
- * (served at https://walkeros.io/schema/flow/v1.json). For breaking changes, create v2.
+ * SCHEMA SYNC: Run `npx tsx scripts/generate-flow-schema.ts` from the repo root
+ * to regenerate website/static/schema/flow/v1.json and v2.json.
  *
  * @packageDocumentation
  */
@@ -208,7 +208,7 @@ export const SourceReferenceSchema = z
       'Source-level definitions (highest priority in cascade)',
     ),
     next: z
-      .string()
+      .union([z.string(), z.array(z.string())])
       .optional()
       .describe(
         'First transformer in post-source chain. If omitted, events route directly to collector.',
@@ -254,7 +254,7 @@ export const TransformerReferenceSchema = z
       .optional()
       .describe('Transformer environment configuration'),
     next: z
-      .string()
+      .union([z.string(), z.array(z.string())])
       .optional()
       .describe(
         'Next transformer in chain. If omitted: pre-collector routes to collector, post-collector routes to destination.',
@@ -312,7 +312,7 @@ export const DestinationReferenceSchema = z
       'Destination-level definitions (highest priority in cascade)',
     ),
     before: z
-      .string()
+      .union([z.string(), z.array(z.string())])
       .optional()
       .describe(
         'First transformer in pre-destination chain. If omitted, events are sent directly from collector.',
@@ -437,7 +437,7 @@ const SetupBaseSchema = z.object({
     .url('Schema URL must be a valid URL')
     .optional()
     .describe(
-      'JSON Schema reference for IDE validation (e.g., "https://walkeros.io/schema/flow/v1.json")',
+      'JSON Schema reference for IDE validation (e.g., "https://walkeros.io/schema/flow/v2.json")',
     ),
   include: z
     .array(z.string())
@@ -566,17 +566,6 @@ export function safeParseConfig(data: unknown) {
  * Hosted at https://walkeros.io/schema/flow/v1.json
  *
  * @returns JSON Schema (Draft 7) representation of SetupSchema
- *
- * @example
- * ```typescript
- * import { setupJsonSchema } from '@walkeros/core/dev';
- * import { writeFileSync } from 'fs';
- *
- * writeFileSync(
- *   'public/schema/flow/v1.json',
- *   JSON.stringify(setupJsonSchema, null, 2)
- * );
- * ```
  */
 export const setupJsonSchema = z.toJSONSchema(SetupSchema, {
   target: 'draft-7',
