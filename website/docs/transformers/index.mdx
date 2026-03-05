@@ -255,8 +255,19 @@ Routes events to different transformer chains based on ingest metadata:
 
 [Learn more →](./router)
 
+### Cache
+
+Caches HTTP responses with LRU eviction and per-rule TTL:
+
+* Match requests using the same operators as the router
+* Cache key built from ingest fields (method, path, etc.)
+* Respond-wrapping pattern: MISS caches + forwards, HIT serves directly
+
+[Learn more →](./cache)
+
 ## Next steps
 
 * **[Validator](./validator)** - JSON Schema validation
 * **[Router](./router)** - Dynamic chain branching
+* **[Cache](./cache)** - HTTP response caching
 * **[Create your own](./create-your-own)** - Custom transformer guide
