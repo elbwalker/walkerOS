@@ -49,8 +49,9 @@ packages/
 ├── collector/      # Event processing engine
 ├── config/         # Shared tooling config
 ├── mcp/            # Parent for MCP server packages
-│   ├── mcp-api/    # Cloud API MCP server (@walkeros/mcp-api)
-│   └── mcp-cli/    # Local dev MCP server (@walkeros/mcp-cli)
+│   ├── api/            # Cloud API MCP server (@walkeros/mcp-api)
+│   ├── cli/            # Local dev MCP server (@walkeros/mcp-cli)
+│   └── source-browser/ # Tagging MCP server (@walkeros/mcp-source-browser)
 ├── web/            # Browser: sources/, destinations/
 └── server/         # Node.js: sources/, destinations/
 
