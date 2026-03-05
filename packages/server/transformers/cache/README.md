@@ -61,6 +61,31 @@ const config = {
 };
 ```
 
+## Custom store backend
+
+By default the cache uses `@walkeros/store-memory` (in-memory LRU with lazy
+TTL). You can inject a different store via `env.store`:
+
+```typescript
+import { createMemoryStore } from '@walkeros/store-memory';
+
+const customStore = createMemoryStore({ maxSize: 1024 * 1024 }); // 1 MB
+
+// In your Flow.Setup config:
+{
+  transformers: {
+    cache: {
+      code: transformerCache,
+      config: { settings: { rules: [...] } },
+      env: { store: customStore },
+    },
+  },
+}
+```
+
+Any object with `get(key): T | undefined` and `set(key, value, ttl?): void`
+methods works as a store.
+
 ## Behavior notes
 
 - **LRU eviction** — when the store exceeds `maxSize`, the least-recently-used

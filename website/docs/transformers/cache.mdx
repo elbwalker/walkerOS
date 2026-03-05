@@ -179,6 +179,29 @@ Place the cache transformer **before** a responder in the chain. On HIT it stops
   language="json"
 />
 
+## Custom store backend
+
+By default the cache uses an in-memory store (`@walkeros/store-memory`) with LRU eviction and lazy TTL. You can inject a different store via `env.store`:
+
+<CodeSnippet
+  code={`import { createMemoryStore } from '@walkeros/store-memory';
+
+const customStore = createMemoryStore({ maxSize: 1024 * 1024 }); // 1 MB
+
+await startFlow({
+  transformers: {
+    cache: {
+      code: transformerCache,
+      config: { settings: { rules: [/* ... */] } },
+      env: { store: customStore },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+Any object with `get(key): T | undefined` and `set(key, value, ttl?): void` methods works as a store backend.
+
 ## Behavior notes
 
 - **LRU eviction** — when the store exceeds `maxSize`, the least-recently-used entries are evicted first

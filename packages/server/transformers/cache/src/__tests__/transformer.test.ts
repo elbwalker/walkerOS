@@ -1,7 +1,8 @@
 import type { Collector, Logger, Transformer, WalkerOS } from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
+import { createMockStore } from '@walkeros/store-memory';
 import { transformerCache } from '../transformer';
-import type { CacheSettings } from '../types';
+import type { CacheEntry, CacheSettings, Types } from '../types';
 
 describe('Transformer Cache', () => {
   const mockLogger: Logger.Instance = {
@@ -17,11 +18,12 @@ describe('Transformer Cache', () => {
   const mockCollector = {} as Collector.Instance;
 
   const createInitContext = (
-    config: Transformer.Config<Transformer.Types<CacheSettings>>,
-  ): Transformer.Context<Transformer.Types<CacheSettings>> => ({
+    config: Transformer.Config<Types>,
+    env: Partial<Transformer.Env<Types>> = {},
+  ): Transformer.Context<Types> => ({
     collector: mockCollector,
     config,
-    env: {},
+    env: env as Transformer.Env<Types>,
     logger: mockLogger,
     id: 'test-cache',
   });
@@ -29,7 +31,7 @@ describe('Transformer Cache', () => {
   const createPushContext = (
     ingest: Record<string, unknown> = {},
     respond?: RespondFn,
-  ): Transformer.Context<Transformer.Types<CacheSettings>> => ({
+  ): Transformer.Context<Types> => ({
     collector: mockCollector,
     config: {},
     env: respond ? { respond } : {},
@@ -362,6 +364,52 @@ describe('Transformer Cache', () => {
 
       expect(result).toBeDefined();
       expect((result as Transformer.Result).respond).toBeInstanceOf(Function);
+    });
+  });
+
+  describe('Store injection', () => {
+    it('should use injected store instead of default', async () => {
+      const mockStore = createMockStore<CacheEntry>();
+      const transformer = await transformerCache(
+        createInitContext(
+          {
+            settings: {
+              rules: [{ match: '*', key: ['method', 'path'], ttl: 60 }],
+            },
+          },
+          { store: mockStore },
+        ),
+      );
+
+      const ingest = { method: 'GET', path: '/api/data' };
+
+      // First call: MISS — should call store.get then store.set
+      const missResult = await transformer.push(
+        baseEvent,
+        createPushContext(ingest, () => {}),
+      );
+      (missResult as Transformer.Result).respond!({
+        body: 'cached',
+        status: 200,
+      });
+
+      expect(mockStore._gets).toContain('GET:/api/data');
+      expect(mockStore._sets.length).toBe(1);
+      expect(mockStore._sets[0].key).toBe('GET:/api/data');
+
+      // Second call: HIT — should call store.get and find the entry
+      let capturedOptions: RespondOptions | undefined;
+      const respond: RespondFn = (options) => {
+        capturedOptions = options;
+      };
+      const hitResult = await transformer.push(
+        baseEvent,
+        createPushContext(ingest, respond),
+      );
+
+      expect(hitResult).toBe(false);
+      expect(capturedOptions!.body).toBe('cached');
+      expect(capturedOptions!.headers).toMatchObject({ 'X-Cache': 'HIT' });
     });
   });
 

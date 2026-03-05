@@ -1,9 +1,14 @@
 import type { Transformer } from '@walkeros/core';
 import { compileMatcher } from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
-import type { CacheSettings, CacheRule } from './types';
-import { createMemoryStore } from './store';
-import type { CacheEntry } from './store';
+import { createMemoryStore } from '@walkeros/store-memory';
+import type {
+  CacheSettings,
+  CacheRule,
+  CacheEntry,
+  CacheStore,
+  Types,
+} from './types';
 
 interface CompiledRule {
   matcher: (ingest: Record<string, unknown>) => boolean;
@@ -12,15 +17,15 @@ interface CompiledRule {
   headers?: Record<string, string>;
 }
 
-export const transformerCache: Transformer.Init<
-  Transformer.Types<CacheSettings>
-> = (context) => {
+export const transformerCache: Transformer.Init<Types> = (context) => {
   const { config } = context;
   const settings = (config.settings || {}) as Partial<CacheSettings>;
   const rules: CacheRule[] = settings.rules || [];
   const maxSize = settings.maxSize;
 
-  const store = createMemoryStore(maxSize);
+  const store: CacheStore =
+    (context.env as { store?: CacheStore }).store ??
+    createMemoryStore<CacheEntry>({ maxSize });
 
   // Pre-compile matchers
   const compiledRules: CompiledRule[] = rules.map((rule) => ({
@@ -32,7 +37,7 @@ export const transformerCache: Transformer.Init<
 
   return {
     type: 'cache',
-    config: config as Transformer.Config<Transformer.Types<CacheSettings>>,
+    config: config as Transformer.Config<Types>,
 
     push(event, context) {
       const { logger } = context;
@@ -76,7 +81,7 @@ export const transformerCache: Transformer.Init<
           status: options.status,
           headers: options.headers,
         };
-        store.set(keyValue, entry, rule.ttl);
+        store.set(keyValue, entry, rule.ttl * 1000); // TTL: seconds → milliseconds
 
         envRespond?.({
           ...options,
