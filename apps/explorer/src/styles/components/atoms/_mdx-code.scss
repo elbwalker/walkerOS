@@ -1,0 +1,13 @@
+// MDX Inline Code Styling
+// Block code uses CodeBox component, so only inline code needs styling
+
+.elb-code-inline {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-button);
+  background-color: var(--bg-code-inline);
+  border: 1px solid var(--border-input);
+  color: var(--color-text);
+  white-space: nowrap;
+}

@@ -1,0 +1,81 @@
+@use '../../foundation/responsive' as *;
+
+.elb-button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 32px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-button);
+  border: none;
+  text-decoration: none;
+  transition: all 0.15s;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.elb-button-link-default {
+  background: transparent;
+  color: var(--color-text-button);
+  border: 1px solid var(--border-input);
+
+  &:hover:not(:disabled) {
+    background: var(--bg-button-hover);
+    color: var(--color-text-button-hover);
+  }
+}
+
+.elb-button-link-primary {
+  background: var(--color-button-primary);
+  color: var(--color-button-primary-text);
+  border: 1px solid var(--color-button-primary);
+
+  &:hover:not(:disabled) {
+    background: var(--color-button-primary-hover);
+    border-color: var(--color-button-primary-hover);
+  }
+}
+
+.elb-button-link-secondary {
+  background: var(--bg-box);
+  color: var(--color-button-primary);
+  border: 1px solid var(--border-input);
+
+  &:hover:not(:disabled) {
+    background: var(--bg-button-hover);
+  }
+}
+
+.elb-button-link-md {
+  padding: 12px 32px;
+  font-size: var(--font-size-base);
+}
+
+.elb-button-link-lg {
+  padding: 16px 40px;
+  font-size: var(--font-size-xl);
+}
+
+.elb-button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  @include mobile {
+    width: 100%;
+
+    .elb-button-link {
+      width: 100%;
+    }
+  }
+
+  @include desktop {
+    flex-direction: row;
+  }
+}

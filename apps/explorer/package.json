@@ -1,0 +1,103 @@
+{
+  "name": "@walkeros/explorer",
+  "version": "2.1.4",
+  "description": "Interactive React components for walkerOS documentation and exploration",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./styles": "./dist/styles.css"
+  },
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "dev": "jest --watchAll --colors",
+    "storybook": "storybook dev -p 6007 --no-open",
+    "lint": "tsc && eslint \"src/**/*.ts*\"",
+    "test": "jest",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "build-storybook": "storybook build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@iconify/react": "^6.0.2",
+    "@monaco-editor/react": "^4.7.0",
+    "@rjsf/core": "^6.1.2",
+    "@rjsf/utils": "^6.1.2",
+    "@rjsf/validator-ajv8": "^6.1.2",
+    "clsx": "^2.1.1",
+    "monaco-editor": "^0.55.1",
+    "prettier": "^3.7.4",
+    "roughjs": "^4.6.6",
+    "@walkeros/collector": "^2.1.0",
+    "@walkeros/core": "^2.1.0",
+    "@walkeros/web-source-browser": "^2.1.0",
+    "tailwind-merge": "^3.4.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@walkeros/config": "^2.1.0",
+    "@storybook/addon-docs": "^10.1.11",
+    "@storybook/react-vite": "^10.1.11",
+    "@swc/core": "^1.11.13",
+    "@swc/jest": "^0.2.37",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^29.5.14",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "@vitejs/plugin-react": "^5.1.2",
+    "@walkeros/web-destination-gtag": "^2.1.0",
+    "eslint": "^9.23.0",
+    "eslint-plugin-jest": "^28.11.0",
+    "eslint-plugin-storybook": "^10.1.11",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^30.0.4",
+    "jest-environment-jsdom": "^30.0.4",
+    "sass": "^1.96.0",
+    "storybook": "^10.1.11",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "apps/explorer"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "keywords": [
+    "walker",
+    "walkerOS",
+    "react",
+    "components",
+    "documentation",
+    "interactive",
+    "playground"
+  ],
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/elbwalker"
+    }
+  ]
+}

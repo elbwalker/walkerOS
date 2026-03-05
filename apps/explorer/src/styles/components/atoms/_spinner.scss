@@ -1,0 +1,31 @@
+@use '../../theme/variables' as *;
+
+.elb-spinner {
+  display: inline-block;
+  border: 2px solid var(--border-input);
+  border-top-color: var(--color-button-primary);
+  border-radius: 50%;
+  animation: elb-spin 0.6s linear infinite;
+
+  // Sizes
+  &--sm {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &--md {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  &--lg {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+@keyframes elb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

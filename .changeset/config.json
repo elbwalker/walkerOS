@@ -7,6 +7,7 @@
       "@walkeros/core",
       "@walkeros/collector",
       "@walkeros/cli",
+      "@walkeros/explorer",
       "@walkeros/web-core",
       "@walkeros/server-core",
       "@walkeros/config",

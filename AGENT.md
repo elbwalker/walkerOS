@@ -56,6 +56,7 @@ packages/
 └── server/         # Node.js: sources/, destinations/
 
 apps/
+├── explorer/       # Component & style library (@walkeros/explorer)
 ├── quickstart/     # Validated examples (source of truth)
 ├── walkerjs/       # Browser bundle
 └── demos/          # Demo applications

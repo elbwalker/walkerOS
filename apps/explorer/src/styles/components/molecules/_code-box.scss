@@ -1,0 +1,129 @@
+// CodeBox molecule uses Box atom with Code atom
+// Height is controlled via the height prop, not CSS
+// If no height is provided, it will use Box's default min-height (200px)
+.elb-code-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.elb-codebox-settings {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  margin-top: 4px;
+  padding: 8px 0;
+  background: var(--bg-dropdown);
+  border: 1px solid var(--border-box);
+  border-radius: var(--radius-button);
+  box-shadow: var(--shadow-dropdown);
+  min-width: 140px;
+}
+
+.elb-codebox-settings-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: var(--font-size-label);
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--bg-dropdown-option-hover);
+  }
+
+  input[type='checkbox'] {
+    margin: 0;
+    cursor: pointer;
+  }
+}
+
+// Marker count badges in header
+.elb-codebox-marker-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  font-size: calc(var(--font-size-base) - 2px);
+  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-mono);
+  line-height: 1;
+  transition: all 0.15s;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  &--error {
+    color: var(--color-alert-error-text);
+    background: transparent;
+
+    &:hover {
+      background: var(--color-alert-error-bg);
+    }
+  }
+
+  &--warning {
+    color: var(--color-alert-warning-text);
+    background: transparent;
+
+    &:hover {
+      background: var(--color-alert-warning-bg);
+    }
+  }
+}
+
+// Marker dropdown menu (reuses settings dropdown pattern)
+.elb-codebox-marker-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  margin-top: 4px;
+  padding: 4px 0;
+  background: var(--bg-dropdown);
+  border: 1px solid var(--border-box);
+  border-radius: var(--radius-button);
+  box-shadow: var(--shadow-dropdown);
+  min-width: 200px;
+  max-width: 340px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.elb-codebox-marker-menu-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: calc(var(--font-size-base) - 2px);
+  color: var(--color-text);
+  text-align: left;
+
+  &:hover {
+    background: var(--bg-dropdown-option-hover);
+  }
+}
+
+.elb-codebox-marker-menu-line {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-semibold);
+  opacity: 0.6;
+}
+
+.elb-codebox-marker-menu-msg {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
