@@ -11,13 +11,13 @@ const mockRouter: Transformer.Init = (context) => {
     push(event, ctx) {
       const ingest = (ctx.ingest || {}) as Record<string, unknown>;
       for (const route of routes) {
-        if (route.match === '*') return branch({}, route.next);
+        if (route.match === '*') return { next: route.next };
         const val = String(ingest[route.match.key] || '');
         if (
           route.match.operator === 'prefix' &&
           val.startsWith(route.match.value)
         )
-          return branch({}, route.next);
+          return { next: route.next };
       }
       return; // passthrough
     },

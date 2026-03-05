@@ -126,7 +126,8 @@ Each transformer in a chain controls what happens next:
 | `{ event }` | Continue chain with the modified event |
 | `void` | Continue chain with the current event unchanged |
 | `false` | Stop the chain — event is dropped |
-| `{ event, next }` | Redirect to a different chain (fan-out) |
+| `{ next }` | Redirect to a different chain, preserving the current event |
+| `{ event, next }` | Redirect to a different chain with a modified event |
 | `{ event, respond }` | Continue chain with a wrapped respond function |
 
 If a transformer throws an error, the chain stops and the event is dropped (same as returning `false`).

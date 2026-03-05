@@ -1,5 +1,5 @@
 import type { Transformer } from '@walkeros/core';
-import { branch, compileMatcher } from '@walkeros/core';
+import { compileMatcher } from '@walkeros/core';
 import type { RouterSettings, CompiledRoute } from './types';
 
 export const transformerRouter: Transformer.Init<
@@ -24,8 +24,8 @@ export const transformerRouter: Transformer.Init<
       // First match wins
       for (const route of compiledRoutes) {
         if (route.match(ingest)) {
-          // Branch: reset event to {}, let parser build from ingest
-          return branch({}, route.next);
+          // Branch: preserve event, let next transformer decide what to do
+          return { next: route.next };
         }
       }
 

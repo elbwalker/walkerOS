@@ -84,8 +84,8 @@ Add to your `flow.json`:
 
 1. A server source (express, fetch) sets `context.ingest` with request metadata (path, method, headers, etc.)
 2. The router evaluates routes **in order** — first match wins
-3. On match, the event resets to `{}` and **branches** to the matched transformer chain
-4. The downstream parser builds a proper event from `context.ingest`
+3. On match, the router **branches** to the matched transformer chain, preserving the current event
+4. The downstream parser can build a new event from `context.ingest` or work with the existing one
 5. If no route matches and there's no wildcard, the event passes through unchanged
 
 ## Route configuration
