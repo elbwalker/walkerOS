@@ -12,31 +12,13 @@ import {
   writeResult,
   type Platform,
 } from '../../core/index.js';
-import { Level, type Logger } from '@walkeros/core';
+import type { Logger } from '@walkeros/core';
+import { createCollectorLoggerConfig } from '../../core/collector-logger.js';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
 import type { PushCommandOptions, PushResult } from './types.js';
 import type { PushOptions } from '../../schemas/push.js';
-
-function createCollectorLoggerConfig(
-  logger: Logger.Instance,
-  verbose?: boolean,
-): Logger.Config {
-  return {
-    level: verbose ? Level.DEBUG : Level.ERROR,
-    handler: (level, message, context, scope) => {
-      const scopePath = scope.length > 0 ? `[${scope.join(':')}] ` : '';
-      const hasContext = Object.keys(context).length > 0;
-      const contextStr = hasContext ? ` ${JSON.stringify(context)}` : '';
-      if (level === Level.ERROR) {
-        logger.error(`${scopePath}${message}${contextStr}`);
-      } else {
-        logger.debug(`${scopePath}${message}${contextStr}`);
-      }
-    },
-  };
-}
 
 /**
  * Core push logic without CLI concerns (no process.exit, no output formatting)

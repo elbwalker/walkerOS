@@ -2,6 +2,7 @@
 '@walkeros/cli': patch
 ---
 
-Resolve string event inputs (file paths, URLs, JSON strings) in the push() API,
-matching the pattern already used by validate() and simulate(). Route
-pushCommand through push() to eliminate duplicated resolution logic.
+Standardize command pattern: all three commands (validate, simulate, push) now
+route through their programmatic APIs for string resolution and orchestration.
+Extract shared createCollectorLoggerConfig utility. Pass missing silent/step
+options through simulate() API.

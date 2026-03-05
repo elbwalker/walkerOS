@@ -134,10 +134,7 @@ export async function validateCommand(
         throw new Error('Invalid JSON received on stdin');
       }
     } else {
-      input = await loadJsonFromSource(options.input, {
-        name: options.type,
-        required: true,
-      });
+      input = options.input;
     }
 
     // Run validation
