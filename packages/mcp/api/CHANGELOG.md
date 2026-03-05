@@ -1,5 +1,13 @@
 # @walkeros/mcp-api
 
+## 2.1.1
+
+### Patch Changes
+
+- Updated dependencies [fab477d]
+  - @walkeros/core@2.1.1
+  - @walkeros/cli@2.1.1
+
 ## 2.1.0
 
 ### Minor Changes

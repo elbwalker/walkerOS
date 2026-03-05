@@ -1,5 +1,17 @@
 # @walkeros/walker.js
 
+## 2.1.1
+
+### Patch Changes
+
+- Updated dependencies [fab477d]
+  - @walkeros/core@2.1.1
+  - @walkeros/collector@2.1.1
+  - @walkeros/web-core@2.1.1
+  - @walkeros/web-source-browser@2.1.1
+  - @walkeros/web-source-session@2.1.1
+  - @walkeros/web-source-datalayer@2.1.1
+
 ## 2.1.0
 
 ### Patch Changes

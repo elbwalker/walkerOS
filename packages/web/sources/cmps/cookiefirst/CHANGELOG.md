@@ -1,5 +1,13 @@
 # @walkeros/web-source-cmp-cookiefirst
 
+## 2.1.1
+
+### Patch Changes
+
+- Updated dependencies [fab477d]
+  - @walkeros/core@2.1.1
+  - @walkeros/collector@2.1.1
+
 ## 2.1.0
 
 ### Minor Changes

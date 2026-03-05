@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/collector",
   "description": "Unified platform-agnostic collector for walkerOS",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -60,6 +60,6 @@
     }
   ],
   "dependencies": {
-    "@walkeros/core": "^2.1.0"
+    "@walkeros/core": "^2.1.1"
   }
 }
