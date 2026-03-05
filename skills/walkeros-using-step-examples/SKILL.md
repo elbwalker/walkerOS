@@ -55,7 +55,7 @@ Every step example is an object with `in` (input) and `out` (expected output):
 
 ```typescript
 export const step = {
-  'checkout-post': {
+  checkoutPost: {
     in: {
       method: 'POST',
       path: '/collect',
@@ -73,11 +73,11 @@ export const step = {
 
 ```typescript
 export const step = {
-  'order-passes': {
+  orderPasses: {
     in: { name: 'order complete', data: { id: 'ORD-123' } },
     out: { name: 'order complete', data: { id: 'ORD-123' } },
   },
-  'debug-filtered': {
+  debugFiltered: {
     in: { name: 'debug test', data: { message: 'noise' } },
     out: false, // Transformer rejects this event
   },
@@ -120,8 +120,8 @@ Consumers iterate all examples via `Object.entries(examples.step)` —
 
 ### Best Practices
 
-1. **Use kebab-case names** -- descriptive of the scenario (`checkout-post`,
-   `debug-filtered`, `page-view-basic`)
+1. **Use camelCase names** -- descriptive of the scenario (`checkoutPost`,
+   `debugFiltered`, `pageViewBasic`)
 2. **Cover happy path and edge cases** -- include at least one positive and one
    negative case for transformers
 3. **Use realistic data** -- real-looking event names, IDs, and values
@@ -260,7 +260,7 @@ When adding step examples to a package or flow:
 
 - [ ] Create `src/examples/step.ts` with `Flow.StepExample` exports
 - [ ] Export from `src/examples/index.ts`
-- [ ] Use kebab-case, descriptive example names
+- [ ] Use camelCase, descriptive example names
 - [ ] Include at least one happy-path example
 - [ ] For transformers, include a `false` (filtered) case
 - [ ] Add `it.each` test using step examples

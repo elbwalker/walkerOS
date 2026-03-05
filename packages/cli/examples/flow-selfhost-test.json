@@ -11,8 +11,10 @@
           "package": "@walkeros/server-source-express",
           "primary": true,
           "config": {
-            "port": 8080,
-            "cors": true
+            "settings": {
+              "port": 8080,
+              "cors": true
+            }
           }
         }
       },

@@ -1,18 +1,23 @@
 import type { WalkerOS } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { clone } from '@walkeros/core';
-import { examples } from './dev';
+import { examples } from '../dev';
 
 describe('Step Examples', () => {
+  const mockSendWeb = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
     const event = example.in as WalkerOS.Event;
     const mapping = example.mapping;
 
-    const mockFn = jest.fn();
     const env = clone(examples.env.push);
-    env.sendWeb = mockFn;
+    env.sendWeb = mockSendWeb;
 
-    const dest = jest.requireActual('.').default;
+    const dest = jest.requireActual('../').default;
     const { elb } = await startFlow({ tagging: 2 });
 
     const mappingConfig = mapping
@@ -27,11 +32,11 @@ describe('Step Examples', () => {
         mapping: mappingConfig,
       },
     );
-
     await elb(event);
 
-    expect(mockFn).toHaveBeenCalledTimes(1);
-    const sentBody = mockFn.mock.calls[0][1];
-    expect(sentBody).toEqual(example.out);
+    expect(mockSendWeb).toHaveBeenCalled();
+    // The body (second arg) should match example.out
+    const body = mockSendWeb.mock.calls[0][1];
+    expect(body).toBe(example.out);
   });
 });
