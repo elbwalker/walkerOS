@@ -60,7 +60,6 @@ export interface HeartbeatConfig {
   flowId?: string;
   deploymentId?: string;
   configVersion?: string;
-  mode: string;
   intervalMs: number;
   getCounters?: () => Collector.Status | undefined;
 }
@@ -117,7 +116,6 @@ export function createHeartbeat(
               deploymentId: config.deploymentId,
             }),
             configVersion,
-            mode: config.mode,
             cliVersion: VERSION,
             uptime: Math.floor((Date.now() - startTime) / 1000),
             ...(counters && { counters }),

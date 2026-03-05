@@ -2,31 +2,11 @@ import { describe, it, expect } from '@jest/globals';
 import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import {
-  validateMode,
   validateFlowFile,
   validatePort,
 } from '../../../commands/run/validators.js';
 
 describe('validators', () => {
-  describe('validateMode', () => {
-    it('should accept valid modes', () => {
-      expect(() => validateMode('collect')).not.toThrow();
-    });
-
-    it('should reject invalid modes', () => {
-      expect(() => validateMode('invalid')).toThrow(/Invalid mode/);
-      expect(() => validateMode('serve')).toThrow(/Invalid mode/);
-      expect(() => validateMode('bundle')).toThrow(/Invalid mode/);
-      expect(() => validateMode('COLLECT')).toThrow(/Invalid mode/);
-      expect(() => validateMode('')).toThrow(/Invalid mode/);
-    });
-
-    it('should provide helpful error message', () => {
-      expect(() => validateMode('invalid')).toThrow(/Valid modes: collect/);
-      expect(() => validateMode('invalid')).toThrow(/Example:/);
-    });
-  });
-
   describe('validateFlowFile', () => {
     const testDir = join(process.cwd(), '.test-tmp-validators');
     const testFile = join(testDir, 'test-flow.json');

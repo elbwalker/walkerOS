@@ -260,7 +260,7 @@ export async function createDeployCommand(
     log.info('');
     log.info('Run locally:');
     log.info(
-      `  walkeros run collect ${isRemoteFlow ? 'flow.json' : config} --deploy ${result.id}`,
+      `  walkeros run ${isRemoteFlow ? 'flow.json' : config} --deploy ${result.id}`,
     );
     log.info('');
     log.info('Docker:');
@@ -268,7 +268,7 @@ export async function createDeployCommand(
       `  docker run -e WALKEROS_DEPLOY_TOKEN=${result.deployToken ?? '<token>'} \\`,
     );
     log.info('             -e WALKEROS_APP_URL=https://app.walkeros.io \\');
-    log.info('             walkeros/flow:latest run collect');
+    log.info('             walkeros/flow:latest');
   } catch (err) {
     log.error(
       err instanceof Error ? err.message : 'Failed to create deployment',

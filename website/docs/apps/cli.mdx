@@ -43,8 +43,7 @@ npx walkeros --version`}
 | `simulate` | Test flow with sample events (mocked) | Validate config or bundle before deployment |
 | `push` | Execute event with real API calls | Integration testing, production validation |
 | `validate` | Validate events, flows, mappings, contracts, or entries | Check configuration before bundling |
-| `run collect` | Start HTTP event collection server | Accept incoming events via HTTP POST |
-| `run serve` | Serve web bundles as static files | Host browser tracking scripts |
+| `run` | Start HTTP event collection server | Accept incoming events via HTTP POST |
 | `cache` | Manage CLI package and build caches | Clear stale caches, view cache statistics |
 | `auth` | Authentication and identity | Log in, log out, check identity |
 | `projects` | Manage walkerOS projects | Create, list, update, delete projects |
@@ -1393,9 +1392,9 @@ All `deploy` subcommands support:
 | `-v, --verbose` | Verbose output |
 | `-s, --silent` | Suppress output |
 
-## Run collect command
+## Run command
 
-The `run collect` command starts an HTTP server that accepts events and processes them through your flow.
+The `run` command starts an HTTP server that accepts events and processes them through your flow.
 
 ### Use Case
 
@@ -1409,7 +1408,7 @@ This is similar to running a Segment or Jitsu collection endpoint.
 ### Basic Usage
 
 <CodeSnippet
-  code={`walkeros run collect flow.json --port 8080`}
+  code={`walkeros run flow.json --port 8080`}
   language="bash"
 />
 
@@ -1467,7 +1466,7 @@ Create `collect.json`:
 **2. Start the collector**
 
 <CodeSnippet
-  code={`walkeros run collect collect.json`}
+  code={`walkeros run flow.json`}
   language="bash"
 />
 
@@ -1532,7 +1531,7 @@ The collector terminal shows:
 ### Options
 
 <CodeSnippet
-  code={`walkeros run collect <config-or-bundle> [options]`}
+  code={`walkeros run <config-or-bundle> [options]`}
   language="bash"
 />
 
@@ -1555,7 +1554,7 @@ The collector terminal shows:
 When `--deploy` is provided, the collector registers itself with the walkerOS cloud via periodic heartbeats. This makes the running instance visible in the project dashboard and enables remote management.
 
 <CodeSnippet
-  code={`walkeros run collect flow.json \\
+  code={`walkeros run flow.json \\
   --deploy dep_abc123 \\
   --project proj_def456 \\
   --url https://collect.example.com \\
@@ -1576,141 +1575,9 @@ You can also run pre-built bundles directly:
 walkeros bundle collect.json
 
 # Then run the bundle
-walkeros run collect dist/bundle.mjs --port 8080`}
+walkeros run dist/bundle.mjs --port 8080`}
   language="bash"
 />
-
-## Run serve command
-
-The `run serve` command serves web bundles as static files for browser-side tracking.
-
-### Use Case
-
-You've created a web flow (browser event tracking) and need to:
-- Host the JavaScript bundle for your website to load
-- Test browser tracking locally before deploying to a CDN
-- Serve multiple versions or configurations
-
-This is like hosting a tracking script (similar to Segment's analytics.js or Amplitude's SDK).
-
-### Basic Usage
-
-<CodeSnippet
-  code={`walkeros run serve web-flow.json --port 3000`}
-  language="bash"
-/>
-
-### Step-by-Step Guide
-
-**1. Create a web flow**
-
-Create `web-track.json`:
-
-<CodeSnippet
-  code={`{
-  "version": 1,
-  "flows": {
-    "default": {
-      "web": {
-        "windowElb": "track"
-      },
-      "packages": {
-        "@walkeros/web-source-browser": {},
-        "@walkeros/web-destination-api": {}
-      },
-      "sources": {
-        "browser": {
-          "package": "@walkeros/web-source-browser",
-          "config": {
-            "settings": {
-              "pageview": true,
-              "session": true
-            }
-          }
-        }
-      },
-      "destinations": {
-        "api": {
-          "package": "@walkeros/web-destination-api",
-          "config": {
-            "settings": {
-              "url": "http://localhost:8080/collect",
-              "method": "POST"
-            }
-          }
-        }
-      },
-      "collector": { "run": true }
-    }
-  }
-}`}
-  language="json"
-/>
-
-**2. Start the serve mode**
-
-<CodeSnippet
-  code={`walkeros run serve web-track.json --port 3000 --path /scripts`}
-  language="bash"
-/>
-
-Output:
-```
-📦 Bundling flow...
-✓ Bundle ready: walker.js
-
-🌐 Starting static file server...
-✓ Server running on http://localhost:3000
-✓ Script available at: http://localhost:3000/scripts/walker.js
-✓ Health check: GET http://localhost:3000/health
-```
-
-**3. Use in HTML**
-
-Create `test.html`:
-
-<CodeSnippet
-  code={`<!DOCTYPE html>
-<html>
-<head>
-  <title>Test Tracking</title>
-  <script src="http://localhost:3000/scripts/walker.js"></script>
-</head>
-<body>
-  <h1>Welcome</h1>
-  <button onclick="track('button click', {label: 'test'})">
-    Click Me
-  </button>
-</body>
-</html>`}
-  language="html"
-/>
-
-**4. Test in browser**
-
-Open `test.html` in your browser. Events will be sent to `http://localhost:8080/collect`.
-
-### Options
-
-<CodeSnippet
-  code={`walkeros run serve <config-or-bundle> [options]`}
-  language="bash"
-/>
-
-| Option | Description |
-|--------|-------------|
-| `-p, --port <number>` | Server port (default: 8080) |
-| `-h, --host <address>` | Host address (default: 0.0.0.0) |
-| `--path <string>` | URL path to serve script (default: `/`) |
-| `--name <string>` | Script filename (default: from config) |
-| `--deploy <id-or-slug>` | Deployment ID or slug (enables heartbeat to walkerOS cloud) |
-| `--project <id>` | Project ID (used with `--deploy`) |
-| `--url <url>` | Public URL of this server (used with `--deploy`) |
-| `--health-endpoint <path>` | Health check path (default: `/health`) |
-| `--heartbeat-interval <seconds>` | Heartbeat interval in seconds (default: 60) |
-| `--json` | Output as JSON |
-| `-v, --verbose` | Detailed logging |
-| `-s, --silent` | Suppress output |
 
 ## Complete example: Web → Server flow
 
@@ -1803,7 +1670,7 @@ Create `web-track.json`:
 Terminal 1:
 
 <CodeSnippet
-  code={`walkeros run collect server-collect.json`}
+  code={`walkeros run server-collect.json`}
   language="bash"
 />
 
@@ -1812,7 +1679,7 @@ Terminal 1:
 Terminal 2:
 
 <CodeSnippet
-  code={`walkeros run serve web-track.json --port 3000`}
+  code={`walkeros run web-track.json --port 3000`}
   language="bash"
 />
 
@@ -2006,7 +1873,6 @@ RUN walkeros bundle flow.json
 
 FROM walkeros/flow:latest
 COPY --from=builder /build/dist/bundle.mjs /app/flow.mjs
-ENV MODE=collect
 ENV BUNDLE=/app/flow.mjs`}
   language="dockerfile"
 />
@@ -2045,7 +1911,7 @@ If the port is already in use:
 
 <CodeSnippet
   code={`# Use a different port
-walkeros run collect flow.json --port 8081
+walkeros run flow.json --port 8081
 
 # Or kill the process using the port
 lsof -ti:8080 | xargs kill`}

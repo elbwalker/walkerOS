@@ -74,7 +74,6 @@ The Docker image includes demo bundles for instant testing.
 
 <CodeSnippet
   code={`docker run -p 8080:8080 \\
-  -e MODE=collect \\
   -e FLOW=/app/demos/demo-collect.mjs \\
   walkeros/flow:latest`}
   language="bash"
@@ -96,7 +95,6 @@ The demo is self-contained and generates test events automatically.
 
 <CodeSnippet
   code={`docker run -p 3000:3000 \\
-  -e MODE=serve \\
   -e PORT=3000 \\
   -e STATIC_DIR=/app/demos \\
   walkeros/flow:latest`}
@@ -109,12 +107,11 @@ Visit `http://localhost:3000/demo-serve.js` to download the demo web bundle.
 
 The Docker container is configured via environment variables:
 
-### Collect mode
+### Server flow
 
 <CodeSnippet
   code={`docker run -p 8080:8080 \\
   -v $(pwd)/flow.mjs:/app/flow.mjs \\
-  -e MODE=collect \\
   -e FLOW=/app/flow.mjs \\
   -e PORT=8080 \\
   -e HOST=0.0.0.0 \\
@@ -124,17 +121,15 @@ The Docker container is configured via environment variables:
 
 | Environment Variable | Required | Default | Description |
 |---------------------|----------|---------|-------------|
-| `MODE` | Yes | - | Must be `collect` |
 | `BUNDLE` | Yes | - | Path, URL, or piped content of a pre-built `.mjs` bundle |
 | `PORT` | No | `8080` | Server port |
 | `HOST` | No | `0.0.0.0` | Bind address |
 
-### Serve mode
+### Web flow
 
 <CodeSnippet
   code={`docker run -p 3000:3000 \\
   -v $(pwd)/dist:/app/static \\
-  -e MODE=serve \\
   -e STATIC_DIR=/app/static \\
   -e PORT=3000 \\
   walkeros/flow:latest`}
@@ -143,7 +138,6 @@ The Docker container is configured via environment variables:
 
 | Environment Variable | Required | Default | Description |
 |---------------------|----------|---------|-------------|
-| `MODE` | Yes | - | Must be `serve` |
 | `STATIC_DIR` | No | `/app/dist` | Directory to serve |
 | `PORT` | No | `3000` | Server port |
 | `HOST` | No | `0.0.0.0` | Bind address |
@@ -202,7 +196,6 @@ This creates `dist/flow.mjs`.
   code={`docker run -d \\
   -p 8080:8080 \\
   -v $(pwd)/dist/flow.mjs:/app/flow.mjs \\
-  -e MODE=collect \\
   -e FLOW=/app/flow.mjs \\
   --name walkeros-flow \\
   walkeros/flow:latest`}
@@ -277,7 +270,6 @@ RUN walkeros bundle flow.json --output flow.mjs
 FROM walkeros/flow:latest
 COPY --from=builder /build/flow.mjs /app/flow.mjs
 
-ENV MODE=collect
 ENV BUNDLE=/app/flow.mjs
 EXPOSE 8080`}
   language="dockerfile"
@@ -302,7 +294,6 @@ services:
   collector:
     image: walkeros/flow:latest
     environment:
-      MODE: collect
       FLOW: /app/flow.mjs
       PORT: 8080
     volumes:
@@ -336,7 +327,6 @@ services:
   collector:
     image: walkeros/flow:latest
     environment:
-      MODE: collect
       FLOW: /app/server-flow.mjs
     volumes:
       - ./dist/server-flow.mjs:/app/server-flow.mjs
@@ -348,7 +338,6 @@ services:
   tracker:
     image: walkeros/flow:latest
     environment:
-      MODE: serve
       STATIC_DIR: /app/static
       PORT: 3000
     volumes:
@@ -440,7 +429,6 @@ To start console-only: remove the `bigquery` destination block.
 <CodeSnippet
   code={`FROM walkeros/flow:latest
 COPY flow.mjs /app/flow.mjs
-ENV MODE=collect
 ENV BUNDLE=/app/flow.mjs
 ENV PORT=8080`}
   language="dockerfile"
@@ -579,7 +567,6 @@ This creates `tracker.js`.
 <CodeSnippet
   code={`FROM walkeros/flow:latest
 COPY tracker.js /app/static/tracker.js
-ENV MODE=serve
 ENV STATIC_DIR=/app/static
 ENV PORT=8080`}
   language="dockerfile"
@@ -663,8 +650,6 @@ spec:
         ports:
         - containerPort: 8080
         env:
-        - name: MODE
-          value: "collect"
         - name: FLOW
           value: "/app/flow.mjs"
         - name: PORT
@@ -721,7 +706,6 @@ Response:
   code={`{
   "status": "ok",
   "timestamp": 1701234567890,
-  "mode": "collect",
   "file": "/app/flow.mjs"
 }`}
   language="json"
@@ -856,7 +840,6 @@ docker logs walkeros-flow
 
 # Common issues:
 # - FLOW path doesn't exist
-# - MODE not set or invalid
 # - Port already in use`}
   language="bash"
 />

@@ -52,7 +52,7 @@ walkeros simulate flow.json --event '{"name":"product view"}'
 walkeros push flow.json --event '{"name":"product view"}'
 
 # Run a collection server locally
-walkeros run collect dist/bundle.mjs --port 3000
+walkeros run dist/bundle.mjs --port 3000
 ```
 
 ## Commands
@@ -97,8 +97,7 @@ walkeros bundle flow.json --dockerfile Dockerfile.custom
 ```
 
 The output path uses convention-based defaults: `./dist/bundle.mjs` for server,
-`./dist/walker.js` for web. The `--dockerfile` flag generates a Dockerfile with
-the correct `MODE` (collect/serve) based on flow type.
+`./dist/walker.js` for web.
 
 ### simulate
 
@@ -196,13 +195,8 @@ real integrations.
 Run flows locally (no Docker daemon required).
 
 ```bash
-walkeros run <mode> <config-file> [options]
+walkeros run <config-file> [options]
 ```
-
-**Modes:**
-
-- `collect` - HTTP event collection server
-- `serve` - Static file server
 
 **Options:**
 
@@ -216,13 +210,10 @@ walkeros run <mode> <config-file> [options]
 
 ```bash
 # Run collection server (auto-bundles JSON)
-walkeros run collect examples/server-collect.json --port 3000
+walkeros run examples/server-collect.json --port 3000
 
 # Run with pre-built bundle
-walkeros run collect examples/server-collect.mjs --port 3000
-
-# Serve static files
-walkeros run serve flow.json --port 8080 --static-dir ./dist
+walkeros run examples/server-collect.mjs --port 3000
 ```
 
 **How it works:**
@@ -528,7 +519,7 @@ const result = await simulate(
 );
 
 // Run
-await runCommand('collect', {
+await runCommand({
   config: './flow.json',
   port: 3000,
   verbose: true,
@@ -556,7 +547,7 @@ walkeros simulate \
   --event '{"name":"product view","data":{"id":"P123"}}'
 
 # Run server
-walkeros run collect examples/server-collect.json --port 3000
+walkeros run examples/server-collect.json --port 3000
 ```
 
 ## Development Workflow
@@ -577,7 +568,7 @@ walkeros simulate \
 walkeros bundle my-flow.json --stats
 
 # 4. Run locally
-walkeros run collect dist/bundle.mjs --port 3000
+walkeros run dist/bundle.mjs --port 3000
 
 # 5. In another terminal, test it
 curl -X POST http://localhost:3000/collect \
@@ -636,7 +627,7 @@ Run the bundle directly with the CLI:
 walkeros bundle flow.json
 
 # Run in production
-walkeros run collect dist/bundle.mjs --port 8080
+walkeros run dist/bundle.mjs --port 8080
 ```
 
 This runs the flow in the current Node.js process, suitable for deployment on

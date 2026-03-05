@@ -3,7 +3,6 @@ import { validateEnv } from '../../../runtime/env.js';
 describe('validateEnv', () => {
   it('returns local mode with no env vars', () => {
     const config = validateEnv({});
-    expect(config.mode).toBe('collect');
     expect(config.apiEnabled).toBe(false);
     expect(config.remoteConfig).toBe(false);
     expect(config.pollInterval).toBe(30);
@@ -48,11 +47,6 @@ describe('validateEnv', () => {
     });
     expect(config.pollInterval).toBe(15);
     expect(config.heartbeatInterval).toBe(120);
-  });
-
-  it('ignores MODE=serve (serve mode removed)', () => {
-    const config = validateEnv({ MODE: 'serve' });
-    expect(config.mode).toBe('collect');
   });
 
   it('uses custom port', () => {

@@ -7,26 +7,17 @@
 import path from 'path';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { createTimer, getErrorMessage } from '../../core/index.js';
-import { validateMode, validateFlowFile, validatePort } from './validators.js';
+import { validateFlowFile, validatePort } from './validators.js';
 import { prepareBundleForRun, isPreBuiltConfig } from './utils.js';
 import { executeRunLocal } from './execution.js';
-import type {
-  RunMode,
-  RunCommandOptions,
-  RunOptions,
-  RunResult,
-} from './types.js';
+import type { RunCommandOptions, RunOptions, RunResult } from './types.js';
 
 /**
  * CLI command function for `walkeros run`
  *
- * @param mode - Run mode (collect | serve)
  * @param options - Command options
  */
-export async function runCommand(
-  mode: string,
-  options: RunCommandOptions,
-): Promise<void> {
+export async function runCommand(options: RunCommandOptions): Promise<void> {
   const timer = createTimer();
   timer.start();
 
@@ -34,7 +25,6 @@ export async function runCommand(
 
   try {
     // Step 1: Validate inputs
-    validateMode(mode);
     const configPath = validateFlowFile(options.config);
 
     if (options.port !== undefined) {
@@ -42,43 +32,39 @@ export async function runCommand(
     }
 
     // Step 1b: Pre-flight check for server runtime dependencies
-    if (mode === 'collect') {
-      const runtimeDeps = ['express', 'cors'];
-      for (const dep of runtimeDeps) {
-        try {
-          require.resolve(dep);
-        } catch {
-          logger.error(
-            `Missing runtime dependency "${dep}"\n` +
-              `Server flows require express and cors when running outside Docker.\n` +
-              `Run: npm install express cors`,
-          );
-          process.exit(1);
-        }
+    const runtimeDeps = ['express', 'cors'];
+    for (const dep of runtimeDeps) {
+      try {
+        require.resolve(dep);
+      } catch {
+        logger.error(
+          `Missing runtime dependency "${dep}"\n` +
+            `Server flows require express and cors when running outside Docker.\n` +
+            `Run: npm install express cors`,
+        );
+        process.exit(1);
       }
     }
 
     // Step 2: Determine if config is pre-built or needs bundling
     const isPreBuilt = isPreBuiltConfig(configPath);
 
-    let flowPath: string | null = null;
+    let flowPath: string;
 
-    if (mode === 'collect') {
-      if (isPreBuilt) {
-        // Use pre-built bundle directly
-        flowPath = path.resolve(configPath);
-        logger.debug(`Using pre-built flow: ${path.basename(flowPath)}`);
-      } else {
-        // Bundle JSON config first
-        logger.debug('Building flow bundle');
+    if (isPreBuilt) {
+      // Use pre-built bundle directly
+      flowPath = path.resolve(configPath);
+      logger.debug(`Using pre-built flow: ${path.basename(flowPath)}`);
+    } else {
+      // Bundle JSON config first
+      logger.debug('Building flow bundle');
 
-        flowPath = await prepareBundleForRun(configPath, {
-          verbose: options.verbose,
-          silent: options.json || options.silent,
-        });
+      flowPath = await prepareBundleForRun(configPath, {
+        verbose: options.verbose,
+        silent: options.json || options.silent,
+      });
 
-        logger.debug('Bundle ready');
-      }
+      logger.debug('Bundle ready');
     }
 
     // Step 3: Start heartbeat if deployment is specified
@@ -90,14 +76,13 @@ export async function runCommand(
         url: options.url || `http://localhost:${options.port || 8080}`,
         healthEndpoint: options.healthEndpoint,
         heartbeatInterval: options.heartbeatInterval,
-        mode: mode as 'collect',
       });
     }
 
     // Step 4: Execute locally using runtime module
-    logger.info('Starting Collector...');
+    logger.info('Starting flow...');
 
-    await executeRunLocal(mode as 'collect', flowPath, {
+    await executeRunLocal(flowPath, {
       port: options.port,
       host: options.host,
     });
@@ -110,7 +95,6 @@ export async function runCommand(
     if (options.json) {
       logger.json({
         success: false,
-        mode,
         error: errorMessage,
         duration,
       });
@@ -124,35 +108,28 @@ export async function runCommand(
 /**
  * Programmatic run function
  *
- * @param mode - Run mode (collect | serve)
  * @param options - Run options
  * @returns Run result
  *
  * @example
  * ```typescript
  * // Run with JSON config (bundles automatically)
- * await run('collect', {
+ * await run({
  *   config: './flow.json',
  *   port: 8080
  * });
  *
  * // Run with pre-built bundle
- * await run('collect', {
+ * await run({
  *   config: './flow.mjs',
  *   port: 8080
  * });
  * ```
  */
-export async function run(
-  mode: RunMode,
-  options: RunOptions,
-): Promise<RunResult> {
+export async function run(options: RunOptions): Promise<RunResult> {
   const startTime = Date.now();
 
   try {
-    // Validate inputs
-    validateMode(mode);
-
     let flowFile: string;
     if (typeof options.config === 'string') {
       flowFile = validateFlowFile(options.config);
@@ -165,18 +142,16 @@ export async function run(
     }
 
     // Pre-flight check for server runtime dependencies
-    if (mode === 'collect') {
-      const runtimeDeps = ['express', 'cors'];
-      for (const dep of runtimeDeps) {
-        try {
-          require.resolve(dep);
-        } catch {
-          throw new Error(
-            `Missing runtime dependency "${dep}". ` +
-              `Server flows require express and cors when running outside Docker. ` +
-              `Run: npm install express cors`,
-          );
-        }
+    const runtimeDeps = ['express', 'cors'];
+    for (const dep of runtimeDeps) {
+      try {
+        require.resolve(dep);
+      } catch {
+        throw new Error(
+          `Missing runtime dependency "${dep}". ` +
+            `Server flows require express and cors when running outside Docker. ` +
+            `Run: npm install express cors`,
+        );
       }
     }
 
@@ -196,7 +171,7 @@ export async function run(
     }
 
     // Run the flow using local runtime
-    await executeRunLocal(mode, flowPath, {
+    await executeRunLocal(flowPath, {
       port: options.port,
       host: options.host,
     });
@@ -218,4 +193,4 @@ export async function run(
 }
 
 // Export types
-export type { RunMode, RunCommandOptions, RunOptions, RunResult };
+export type { RunCommandOptions, RunOptions, RunResult };

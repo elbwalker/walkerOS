@@ -64,7 +64,7 @@ needs an HTTP source (Express) for health checks and event collection:
 
 ```bash
 # Bundle and run locally
-walkeros run collect flow.json --port 3000
+walkeros run flow.json --port 3000
 
 # In another terminal — health check (provided by the runner)
 curl http://localhost:3000/health

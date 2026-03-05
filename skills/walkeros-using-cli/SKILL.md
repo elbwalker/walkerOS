@@ -36,15 +36,15 @@ walkeros push flow.json -e '{"entity":"page","action":"view"}'
 
 ## Commands Overview
 
-| Command       | Purpose                        | Safe? |
-| ------------- | ------------------------------ | ----- |
-| `bundle`      | Generate JS bundle from config | ✅    |
-| `simulate`    | Test with mocked API calls     | ✅    |
-| `push`        | Execute with real API calls    | ⚠️    |
-| `run collect` | Local HTTP event collection    | ✅    |
-| `deploy`      | Deploy flows to cloud          | ⚠️    |
-| `validate`    | Validate configs/events        | ✅    |
-| `cache`       | Manage caching                 | ✅    |
+| Command    | Purpose                        | Safe? |
+| ---------- | ------------------------------ | ----- |
+| `bundle`   | Generate JS bundle from config | ✅    |
+| `simulate` | Test with mocked API calls     | ✅    |
+| `push`     | Execute with real API calls    | ⚠️    |
+| `run`      | Local HTTP event collection    | ✅    |
+| `deploy`   | Deploy flows to cloud          | ⚠️    |
+| `validate` | Validate configs/events        | ✅    |
+| `cache`    | Manage caching                 | ✅    |
 
 For detailed command reference, see
 [commands-reference.md](commands-reference.md).
@@ -81,7 +81,7 @@ walkeros simulate flow.json --flow myFlow -e event.json
 
 ```bash
 # HTTP event collection server
-walkeros run collect flow.json --port 3000
+walkeros run flow.json --port 3000
 ```
 
 **Server port note:** The `--port` flag (or `PORT` env var) is forwarded at
@@ -260,7 +260,7 @@ Exit codes:
 
 ```bash
 # HTTP event collection server
-walkeros run collect <config|bundle> [options]
+walkeros run <config|bundle> [options]
 
 Options:
   -p, --port <number>   Port (default: 8080)

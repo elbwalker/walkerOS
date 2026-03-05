@@ -13,7 +13,6 @@ export interface HeartbeatOptions {
   url: string; // public URL of this server
   healthEndpoint?: string; // default: /health
   heartbeatInterval?: number; // seconds, default: 60
-  mode: 'collect' | 'serve';
 }
 
 export async function startHeartbeat(options: HeartbeatOptions) {
@@ -36,7 +35,6 @@ export async function startHeartbeat(options: HeartbeatOptions) {
       healthEndpoint,
       instanceId,
       cliVersion: VERSION,
-      mode: options.mode,
     }),
   });
 

@@ -58,7 +58,7 @@ async function main() {
     process.exit(1);
   }
 
-  logger.info(`walkeros/flow v${VERSION} — ${env.mode} mode`);
+  logger.info(`walkeros/flow v${VERSION}`);
   logger.info(`Instance: ${getInstanceId()}`);
 
   // Step 1.5: Fetch secrets and inject into process.env
@@ -254,7 +254,6 @@ async function runWithBundle(
         projectId: env.projectId!,
         flowId: env.flowId,
         configVersion,
-        mode: env.mode,
         intervalMs: env.heartbeatInterval * 1000,
         getCounters: () => handle.collector.status,
       },

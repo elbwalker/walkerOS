@@ -8,19 +8,6 @@
 import { z } from '@walkeros/core/dev';
 
 /**
- * Run mode schema.
- *
- * @remarks
- * Validates CLI run mode for the `run` command.
- * - `collect`: Run as event collector
- */
-export const RunModeSchema = z
-  .enum(['collect'])
-  .describe('CLI run mode: collect events');
-
-export type RunMode = z.infer<typeof RunModeSchema>;
-
-/**
  * Port number schema.
  *
  * @remarks

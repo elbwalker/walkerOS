@@ -10,21 +10,16 @@ const logger = createLogger(loggerConfig);
 /**
  * Execute run command locally
  *
- * @param mode - Run mode (collect)
  * @param flowPath - Path to flow bundle
  * @param options - Runtime options
  */
 export async function executeRunLocal(
-  mode: 'collect',
-  flowPath: string | null,
+  flowPath: string,
   options: {
     port?: number;
     host?: string;
   },
 ): Promise<void> {
-  if (!flowPath) {
-    throw new Error('Flow path is required for collect mode');
-  }
   const config: RuntimeConfig = {
     port: options.port,
     host: options.host,

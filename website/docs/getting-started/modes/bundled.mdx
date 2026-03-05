@@ -130,7 +130,7 @@ node ./dist/bundle.mjs
 Or with Docker:
 
 ```bash
-walkeros run collect flow.json
+walkeros run flow.json
 ```
 
   </TabItem>
@@ -300,8 +300,7 @@ Build specific flow: `walkeros bundle flow.json --flow production`
 | `walkeros bundle` | Build production bundle |
 | `walkeros simulate` | Test with mocked events |
 | `walkeros push` | Test with real API calls |
-| `walkeros run collect` | Start HTTP collection server |
-| `walkeros run serve` | Serve web bundles |
+| `walkeros run` | Start HTTP collection server |
 
 See [CLI documentation](/docs/apps/cli) for full details.
 
@@ -318,7 +317,6 @@ walkeros bundle flow.json
 # Run with Docker
 docker run -p 8080:8080 \\
   -v $(pwd)/dist/bundle.mjs:/app/flow.mjs \\
-  -e MODE=collect \\
   walkeros/docker:latest`}
   language="bash"
 />

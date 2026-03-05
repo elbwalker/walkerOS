@@ -142,26 +142,10 @@ walkeros push flow.json -e ./events/purchase.json
 
 Run flows locally without Docker.
 
-### Subcommands
-
-#### run collect
-
-HTTP event collection server for server-side flows.
+### Usage
 
 ```bash
-walkeros run collect <config|bundle> [options]
-
-Options:
-  -p, --port <number>   Port (default: 3000)
-  -h, --host <string>   Host (default: localhost)
-```
-
-#### run serve
-
-Static file server for browser bundles.
-
-```bash
-walkeros run serve <config|bundle> [options]
+walkeros run <config|bundle> [options]
 
 Options:
   -p, --port <number>   Port (default: 8080)
@@ -172,13 +156,10 @@ Options:
 
 ```bash
 # Start collection server
-walkeros run collect flow.json --port 3000
-
-# Serve browser bundle
-walkeros run serve flow.json --port 8080
+walkeros run flow.json --port 3000
 
 # Use pre-built bundle
-walkeros run collect dist/bundle.mjs
+walkeros run dist/bundle.mjs
 ```
 
 ---

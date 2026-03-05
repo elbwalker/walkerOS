@@ -438,17 +438,10 @@ deployCmd
     await deleteDeploymentCommand(idOrSlug, options);
   });
 
-// Run command with subcommands
-const runCmd = program
-  .command('run')
-  .description('Run walkerOS flows in collect mode');
-
-// Run collect subcommand
-runCmd
-  .command('collect [file]')
-  .description(
-    'Run collector mode (event collection endpoint). Defaults to server-collect.mjs if no file specified.',
-  )
+// Run command
+program
+  .command('run [file]')
+  .description('Run walkerOS flows locally')
   .option('-p, --port <number>', 'port to listen on (default: 8080)', parseInt)
   .option('-h, --host <address>', 'host address (default: 0.0.0.0)')
   .option('--deploy <id-or-slug>', 'deployment ID or slug (enables heartbeat)')
@@ -464,7 +457,7 @@ runCmd
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
   .action(async (file, options) => {
-    await runCommand('collect', {
+    await runCommand({
       config: file || 'server-collect.mjs',
       port: options.port,
       host: options.host,

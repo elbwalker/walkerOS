@@ -102,7 +102,6 @@ export type {
 export type { ExampleLookupResult } from './commands/simulate/example-loader.js';
 export type { PushResult } from './commands/push/types.js';
 export type {
-  RunMode,
   RunCommandOptions,
   RunOptions,
   RunResult,

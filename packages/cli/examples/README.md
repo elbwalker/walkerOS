@@ -60,14 +60,14 @@ Feature Inventory and usage examples.
 
 ```bash
 # Web flow (opens browser with demo events)
-walkeros serve examples/flow-complete.json --flow web
+walkeros run examples/flow-complete.json --flow web
 
 # Server flow (HTTP collection endpoint)
 walkeros run examples/flow-complete.json --flow server
 
 # Both (full pipeline)
 # Terminal 1: walkeros run examples/flow-complete.json --flow server
-# Terminal 2: walkeros serve examples/flow-complete.json --flow web
+# Terminal 2: walkeros run examples/flow-complete.json --flow web
 ```
 
 ---
@@ -92,7 +92,7 @@ event flow testing
 
 ```bash
 walkeros bundle examples/web-serve.json
-walkeros run serve examples/web-serve.js -p 3000
+walkeros run examples/web-serve.js -p 3000
 # Open http://localhost:3000 in browser
 ```
 
@@ -159,7 +159,7 @@ web-serve.json
 
 ```bash
 walkeros bundle examples/server-collect.json
-walkeros run collect examples/server-collect.mjs -p 8080
+walkeros run examples/server-collect.mjs -p 8080
 
 # In another terminal, send test event:
 curl -X POST http://localhost:8080/collect \
@@ -199,7 +199,7 @@ export GTM_CONTAINER_ID="GTM-XXXXX"
 export GTM_SERVER_URL="https://your-gtm-server.com"
 
 # Run in Docker
-walkeros run collect examples/server-collection.json -p 8080
+walkeros run examples/server-collection.json -p 8080
 
 # Send test event (in another terminal)
 curl -X POST http://localhost:8080/collect \
@@ -228,14 +228,14 @@ The simplest way to see the complete event flow:
 
 ```bash
 walkeros bundle examples/server-collect.json
-walkeros run collect examples/server-collect.mjs -p 8080
+walkeros run examples/server-collect.mjs -p 8080
 ```
 
 **Terminal 2 - Start web server**:
 
 ```bash
 walkeros bundle examples/web-serve.json
-walkeros run serve examples/web-serve.js -p 3000
+walkeros run examples/web-serve.js -p 3000
 ```
 
 **Browser**: Open http://localhost:3000
@@ -253,7 +253,7 @@ For production with real analytics platforms:
 **1. Start collection server**:
 
 ```bash
-walkeros run collect examples/server-collection.json -p 8080
+walkeros run examples/server-collection.json -p 8080
 ```
 
 **2. Bundle web tracking** (configured to send to localhost:8080):

@@ -5,12 +5,7 @@
  * Follows walkerOS patterns from @walkeros/core.
  */
 
-export {
-  RunModeSchema,
-  PortSchema,
-  FilePathSchema,
-  type RunMode,
-} from './primitives';
+export { PortSchema, FilePathSchema } from './primitives';
 
 export { RunOptionsSchema, type RunOptions } from './run';
 

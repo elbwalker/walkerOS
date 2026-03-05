@@ -2,7 +2,7 @@
  * Runtime module - Execute pre-built walkerOS flows
  *
  * This module provides runtime execution capabilities for:
- * - Running pre-built flow bundles (collect mode)
+ * - Running pre-built flow bundles
  * - Self-hosted runner with heartbeat, polling, and hot-swap
  */
 

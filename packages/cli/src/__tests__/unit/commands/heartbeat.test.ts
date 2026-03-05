@@ -62,7 +62,6 @@ describe('startHeartbeat', () => {
   const defaultOptions = {
     deployment: 'my-deploy',
     url: 'https://my-server.example.com',
-    mode: 'collect' as const,
   };
 
   function mockInitResponse(overrides?: Record<string, unknown>) {
@@ -78,7 +77,7 @@ describe('startHeartbeat', () => {
   }
 
   describe('initial heartbeat (registration)', () => {
-    it('sends POST with url, healthEndpoint, instanceId, cliVersion, and mode', async () => {
+    it('sends POST with url, healthEndpoint, instanceId, and cliVersion', async () => {
       mockAuthenticatedFetch.mockResolvedValueOnce(mockInitResponse());
 
       const result = await startHeartbeat(defaultOptions);
@@ -94,7 +93,6 @@ describe('startHeartbeat', () => {
             healthEndpoint: '/health',
             instanceId: 'test-uuid-1234',
             cliVersion: '2.0.0-test',
-            mode: 'collect',
           }),
         },
       );

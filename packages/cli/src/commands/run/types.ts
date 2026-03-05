@@ -5,11 +5,6 @@
  */
 
 /**
- * Run mode - determines which execution mode to use
- */
-export type RunMode = 'collect';
-
-/**
  * CLI command options for `walkeros run`
  */
 export interface RunCommandOptions {

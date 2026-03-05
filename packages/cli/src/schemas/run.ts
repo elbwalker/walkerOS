@@ -5,7 +5,7 @@
  */
 
 import { z } from '@walkeros/core/dev';
-import { RunModeSchema, PortSchema, FilePathSchema } from './primitives';
+import { PortSchema, FilePathSchema } from './primitives';
 
 /**
  * Run command options schema.
@@ -14,7 +14,6 @@ import { RunModeSchema, PortSchema, FilePathSchema } from './primitives';
  * Validates all options for the `walkeros run` command.
  */
 export const RunOptionsSchema = z.object({
-  mode: RunModeSchema,
   flow: FilePathSchema,
   port: PortSchema.default(8080),
   flowName: z.string().optional().describe('Specific flow name to run'),

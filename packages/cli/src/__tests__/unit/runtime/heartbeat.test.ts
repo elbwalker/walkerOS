@@ -21,7 +21,6 @@ describe('createHeartbeat', () => {
     token: 'sk-walkeros-abc',
     projectId: 'proj_123',
     flowId: 'flow_456',
-    mode: 'collect',
     intervalMs: 60_000,
   };
 
@@ -44,7 +43,6 @@ describe('createHeartbeat', () => {
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.instanceId).toBeDefined();
     expect(body.flowId).toBe('flow_456');
-    expect(body.mode).toBe('collect');
     expect(body.uptime).toBeGreaterThanOrEqual(0);
   });
 
