@@ -5,6 +5,7 @@ import {
   ProjectOutputShape,
   ListProjectsOutputShape,
   FlowOutputShape,
+  FlowWriteOutputShape,
   ListFlowsOutputShape,
   DeleteOutputShape,
   BundleRemoteOutputShape,
@@ -192,6 +193,27 @@ describe('output schemas', () => {
         deletedAt: null,
       });
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe('FlowWriteOutputShape', () => {
+    it('accepts write result without content', () => {
+      const result = parseShape(FlowWriteOutputShape, {
+        id: 'cfg_abc',
+        name: 'My Flow',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-02-01T00:00:00Z',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects missing name', () => {
+      const result = parseShape(FlowWriteOutputShape, {
+        id: 'cfg_abc',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-02-01T00:00:00Z',
+      });
+      expect(result.success).toBe(false);
     });
   });
 

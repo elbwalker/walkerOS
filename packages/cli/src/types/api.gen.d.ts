@@ -183,6 +183,272 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/sessions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List sessions
+     * @description List all active sessions for the authenticated user. The current session is marked with isCurrent: true.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description List of active sessions */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListSessionsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/sessions/{sessionId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Revoke session
+     * @description Revoke a session by ID. Cannot revoke the current session (use logout instead).
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          sessionId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Session revoked */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/device/code': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Request device code
+     * @description Generate a device code and user code for the device authorization flow.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Device code generated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeviceCodeResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/device/approve': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Approve device code
+     * @description Approve a device authorization request using the user code. Requires authentication.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['ApproveDeviceRequest'];
+        };
+      };
+      responses: {
+        /** @description Device approved */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ApproveDeviceResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/device/token': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Poll device token
+     * @description Poll for authorization status using the device code. Returns a token when approved.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['DeviceTokenRequest'];
+        };
+      };
+      responses: {
+        /** @description Authorization approved */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeviceTokenResponse'];
+          };
+        };
+        /** @description Pending, slow down, or expired */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/projects': {
     parameters: {
       query?: never;
@@ -247,7 +513,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['Project'];
+            'application/json': components['schemas']['CreateProjectResponse'];
           };
         };
         /** @description Validation error */
@@ -853,11 +1119,14 @@ export interface paths {
     };
     /**
      * Get flow
-     * @description Get a single flow by ID.
+     * @description Get a single flow by ID. Use ?fields to select specific sections (reduces response size).
      */
     get: {
       parameters: {
-        query?: never;
+        query?: {
+          /** @description Comma-separated dot-paths to select specific fields (e.g., "content.variables,content.flows.web.sources"). Always includes id, createdAt, updatedAt. */
+          fields?: string;
+        };
         header?: never;
         path: {
           projectId: string;
@@ -873,7 +1142,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['Flow'];
+            'application/json': components['schemas']['FlowDetailResponse'];
           };
         };
         /** @description Unauthorized */
@@ -905,7 +1174,10 @@ export interface paths {
     delete: {
       parameters: {
         query?: never;
-        header?: never;
+        header?: {
+          /** @description ETag from a previous GET. Returns 412 if flow was modified since. */
+          'if-match'?: string;
+        };
         path: {
           projectId: string;
           flowId: string;
@@ -948,18 +1220,28 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
+        /** @description ETag mismatch — flow was modified since last read */
+        412: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
       };
     };
     options?: never;
     head?: never;
     /**
      * Update flow
-     * @description Update an existing flow. Creates a version snapshot before applying changes. Requires owner role.
+     * @description Update an existing flow. Creates a version snapshot before applying changes. Requires owner role. Use Content-Type: application/merge-patch+json to send only changed fields (RFC 7386).
      */
     patch: {
       parameters: {
         query?: never;
-        header?: never;
+        header?: {
+          /** @description ETag from a previous GET. Returns 412 if flow was modified since. */
+          'if-match'?: string;
+        };
         path: {
           projectId: string;
           flowId: string;
@@ -969,6 +1251,7 @@ export interface paths {
       requestBody?: {
         content: {
           'application/json': components['schemas']['UpdateFlowRequest'];
+          'application/merge-patch+json': components['schemas']['UpdateFlowRequest'];
         };
       };
       responses: {
@@ -978,7 +1261,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['Flow'];
+            'application/json': components['schemas']['FlowUpdateResponse'];
           };
         };
         /** @description Validation error */
@@ -1025,6 +1308,13 @@ export interface paths {
           content: {
             'application/json': components['schemas']['ErrorResponse'];
           };
+        };
+        /** @description ETag mismatch — flow was modified since last read */
+        412: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
         };
       };
     };
@@ -1106,6 +1396,837 @@ export interface paths {
         };
         /** @description Conflict */
         409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/deploy': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get latest deployment
+     * @description Get the latest deployment for a flow.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Latest deployment (or null) */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeploymentResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Start deployment
+     * @description Start a new deployment for a flow. Returns 400 AMBIGUOUS_CONFIG if the flow has multiple named configs — use the per-config deploy endpoint instead.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deployment started */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['StartDeploymentResponse'];
+          };
+        };
+        /** @description Validation error */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Deployment already in progress */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Service unavailable */
+        503: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/deploy/{deploymentId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get deployment
+     * @description Get a specific deployment by ID.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deployment details */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeploymentDetailResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    /**
+     * Delete deployment
+     * @description Delete a deployment and its container. Requires owner role.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deployment deleted */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              id: string;
+              /** @enum {string} */
+              status: 'deleted';
+            };
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/deploy/{deploymentId}/advance': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Advance deployment
+     * @description Advance the deployment state machine. Checks bundle/container status and transitions accordingly.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Current deployment state after advancement */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              id: string;
+              flowId: string;
+              /** @enum {string} */
+              type: 'web' | 'server';
+              status: string;
+              containerUrl: string | null;
+              publicUrl?: string | null;
+              errorMessage: string | null;
+              /** Format: date-time */
+              createdAt: string;
+              /** Format: date-time */
+              updatedAt: string;
+            };
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/configs': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List configs
+     * @description List active named configs for a flow.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description List of configs */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ListConfigsResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/configs/{configId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get config
+     * @description Get a single config with its latest deployment.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          configId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Config details with deployment */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['FlowConfigDetail'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/configs/{configId}/json': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Download config JSON
+     * @description Download the named flow config as a self-contained Setup JSON file. Includes parent variables and definitions.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          configId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Flow Setup JSON file */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['FlowContent'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/configs/{configId}/bundle': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Download config bundle
+     * @description Download the compiled JS/MJS for the config's latest deployment. Redirects to a presigned download URL.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          configId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Redirect to presigned bundle URL */
+        302: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Service unavailable */
+        503: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/configs/{configId}/deploy': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get latest config deployment
+     * @description Get the latest deployment for a specific config.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          configId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Latest deployment (or null) */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ConfigDeploymentResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Deploy config
+     * @description Start a deployment for a specific config. Detects platform from the config.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          configId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deployment started */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['DeployConfigResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Deployment already in progress */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Config orphaned */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Service unavailable */
+        503: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/configs/{configId}/deployments/{deploymentId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get config deployment detail
+     * @description Get a specific deployment by ID, scoped to a config.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          configId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Deployment details */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ConfigDeploymentDetailResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/configs/{configId}/deployments/{deploymentId}/advance': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Advance config deployment
+     * @description Advance the deployment state machine for a per-config deployment.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+          configId: string;
+          deploymentId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Current deployment state after advancement */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['AdvanceConfigDeploymentResponse'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
           headers: {
             [name: string]: unknown;
           };
@@ -1526,20 +2647,25 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/deploy': {
+  '/api/projects/{projectId}/flows/{flowId}/bundle': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
+    get?: never;
+    put?: never;
     /**
-     * Get latest deployment
-     * @description Get the latest deployment for a flow.
+     * Trigger flow bundle
+     * @description Start a bundle job for a project flow. For multi-config flows, specify the named flow via ?flow= query parameter.
      */
-    get: {
+    post: {
       parameters: {
-        query?: never;
+        query?: {
+          /** @description Named flow to bundle (required for multi-config flows) */
+          flow?: string;
+        };
         header?: never;
         path: {
           projectId: string;
@@ -1549,14 +2675,90 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Latest deployment (or null) */
+        /** @description Bundle job started */
         200: {
           headers: {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['Deployment'] | null;
+            'application/json': components['schemas']['BundleJobResponse'];
           };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Flow selection required for multi-config flows */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Service unavailable */
+        503: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/bundle/stream': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Stream bundle job status (SSE)
+     * @description Stream bundle job progress via Server-Sent Events.
+     */
+    get: {
+      parameters: {
+        query: {
+          jobId: string;
+        };
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description SSE event stream */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
         };
         /** @description Unauthorized */
         401: {
@@ -1570,9 +2772,67 @@ export interface paths {
       };
     };
     put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/flows/{flowId}/publish': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
     /**
-     * Deploy flow
-     * @description Start a deployment for a flow. Auto-detects web or server from flow content.
+     * Get publish status
+     * @description Get the current publish status for a flow (CDN deployment).
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+          flowId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Publish status */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+        /** @description Not found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ErrorResponse'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Publish flow to CDN
+     * @description Publish a bundled flow to the CDN for client-side loading.
      */
     post: {
       parameters: {
@@ -1586,23 +2846,12 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description Deployment started */
-        201: {
+        /** @description Flow published */
+        200: {
           headers: {
             [name: string]: unknown;
           };
-          content: {
-            'application/json': components['schemas']['DeployResponse'];
-          };
-        };
-        /** @description Invalid flow */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ErrorResponse'];
-          };
+          content?: never;
         };
         /** @description Unauthorized */
         401: {
@@ -1630,39 +2879,35 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/deploy/{deploymentId}/advance': {
+  '/api/projects/{projectId}/deployments/latest': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    get?: never;
-    put?: never;
     /**
-     * Advance deployment
-     * @description Advance the deployment state machine. Poll until terminal status.
+     * List latest deployments
+     * @description List the latest deployment for each flow in the project.
      */
-    post: {
+    get: {
       parameters: {
         query?: never;
         header?: never;
         path: {
           projectId: string;
-          flowId: string;
-          deploymentId: string;
         };
         cookie?: never;
       };
       requestBody?: never;
       responses: {
-        /** @description Current deployment state */
+        /** @description Latest deployment per flow */
         200: {
           headers: {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['Deployment'];
+            'application/json': components['schemas']['LatestDeploymentsByFlow'];
           };
         };
         /** @description Unauthorized */
@@ -1674,8 +2919,53 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Not found */
-        404: {
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/projects/{projectId}/runtimes/register': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Register runtime
+     * @description Register a server-side runtime container and get a presigned bundle URL.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          projectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['RegisterRuntimeRequest'];
+        };
+      };
+      responses: {
+        /** @description Presigned bundle URL */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Unauthorized */
+        401: {
           headers: {
             [name: string]: unknown;
           };
@@ -1721,7 +3011,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['CreateTicketResponse'];
+            'application/json': components['schemas']['ObserveTicketResponse'];
           };
         };
         /** @description Unauthorized */
@@ -2057,7 +3347,7 @@ export interface components {
     };
     FlowContent: {
       /** @enum {number} */
-      version: 1;
+      version: 2;
       $schema?: string;
       include?: string[];
       variables?: {
@@ -2069,6 +3359,9 @@ export interface components {
       flows?: {
         [key: string]: unknown;
       };
+      contract?: {
+        [key: string]: unknown;
+      };
     };
     Flow: {
       /** @example flow_a1b2c3d4 */
@@ -2076,6 +3369,7 @@ export interface components {
       /** @example my-website-flow */
       name: string;
       content: components['schemas']['FlowContent'];
+      configs?: components['schemas']['FlowConfigSummary'][];
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -2089,11 +3383,33 @@ export interface components {
       /** Format: date-time */
       deletedAt?: string | null;
     };
+    FlowConfigSummary: {
+      /** @example cfg_a1b2c3d4 */
+      id: string;
+      name: string;
+      /**
+       * @example web
+       * @enum {string}
+       */
+      platform: 'web' | 'server';
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+    };
     FlowSummary: {
       /** @example flow_a1b2c3d4 */
       id: string;
       /** @example my-website-flow */
       name: string;
+      summary?: string;
+      configs?: components['schemas']['FlowConfigListItem'][];
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -2106,6 +3422,18 @@ export interface components {
       updatedAt: string;
       /** Format: date-time */
       deletedAt: string | null;
+    };
+    FlowConfigListItem: {
+      /** @example cfg_a1b2c3d4 */
+      id: string;
+      name: string;
+      /**
+       * @example web
+       * @enum {string}
+       */
+      platform: 'web' | 'server';
+      deploymentStatus: string | null;
+      deploymentUrl: string | null;
     };
     Version: {
       /** @example 1 */
@@ -2132,7 +3460,7 @@ export interface components {
        * @example owner
        * @enum {string}
        */
-      role: 'owner' | 'member';
+      role: 'owner' | 'admin' | 'member' | 'deployer' | 'viewer';
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -2149,7 +3477,7 @@ export interface components {
       /** Format: email */
       email: string;
       /** @enum {string} */
-      role: 'owner' | 'member';
+      role: 'owner' | 'admin' | 'member' | 'deployer' | 'viewer';
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -2163,6 +3491,8 @@ export interface components {
       name: string;
       /** @example sk-walkeros-abcd */
       prefix: string;
+      /** @example manual */
+      origin: string;
       /** @example null */
       projectId: string | null;
       /** @example null */
@@ -2188,6 +3518,369 @@ export interface components {
        */
       revokedAt: string | null;
     };
+    FlowConfigDetail: {
+      /** @example cfg_a1b2c3d4 */
+      id: string;
+      name: string;
+      /**
+       * @example web
+       * @enum {string}
+       */
+      platform: 'web' | 'server';
+      config: {
+        [key: string]: unknown;
+      };
+      deployment?: {
+        id: string;
+        status: string;
+        type: string;
+        containerUrl?: string | null;
+        publicUrl?: string | null;
+        errorMessage?: string | null;
+        /**
+         * Format: date-time
+         * @example 2026-01-26T14:30:00.000Z
+         */
+        createdAt: string;
+        /**
+         * Format: date-time
+         * @example 2026-01-26T14:30:00.000Z
+         */
+        updatedAt: string;
+      } | null;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+    };
+    DeployConfigResponse: {
+      deploymentId: string;
+      /** @example cfg_a1b2c3d4 */
+      configId: string;
+      status: string;
+    };
+    FlowDetailResponse: {
+      /** @example flow_a1b2c3d4 */
+      id: string;
+      /** @example my-website-flow */
+      name: string;
+      content: components['schemas']['FlowContent'];
+      configs?: components['schemas']['FlowConfigEnriched'][];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+      /** Format: date-time */
+      deletedAt: string | null;
+    };
+    FlowConfigEnriched: {
+      id: string;
+      name: string;
+      /** @enum {string} */
+      platform: 'web' | 'server';
+      deployment: {
+        id: string;
+        slug: string;
+        status: string;
+        type: string;
+        target: string | null;
+        containerUrl: string | null;
+        /**
+         * Format: date-time
+         * @example 2026-01-26T14:30:00.000Z
+         */
+        createdAt: string;
+        updatedAt: string | null;
+      } | null;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+    };
+    FlowUpdateResponse: {
+      /** @example flow_a1b2c3d4 */
+      id: string;
+      /** @example my-website-flow */
+      name: string;
+      content: components['schemas']['FlowContent'];
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      updatedAt: string;
+    };
+    CreateProjectResponse: {
+      /** @example proj_x7y8z9 */
+      id: string;
+      name: string;
+      /**
+       * Format: date-time
+       * @example 2026-01-26T14:30:00.000Z
+       */
+      createdAt: string;
+    };
+    DeploymentSummary: {
+      /** @example dep_a1b2c3d4 */
+      id: string;
+      /**
+       * @example web
+       * @enum {string}
+       */
+      type: 'web' | 'server';
+      /** @example k7m2x9p4q1w8 */
+      slug: string;
+      target: string | null;
+      label: string | null;
+      /**
+       * @example cloud
+       * @enum {string}
+       */
+      origin: 'cloud' | 'self-hosted';
+      /**
+       * @example active
+       * @enum {string}
+       */
+      status:
+        | 'idle'
+        | 'deploying'
+        | 'published'
+        | 'active'
+        | 'stopped'
+        | 'failed';
+      currentVersionNumber: number | null;
+      url: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      usageSummary?: {
+        eventsIn24h: number;
+        healthy: boolean;
+      };
+    };
+    DeploymentDetailResponse: {
+      /** @example dep_a1b2c3d4 */
+      id: string;
+      /**
+       * @example web
+       * @enum {string}
+       */
+      type: 'web' | 'server';
+      /** @example k7m2x9p4q1w8 */
+      slug: string;
+      target: string | null;
+      label: string | null;
+      /**
+       * @example cloud
+       * @enum {string}
+       */
+      origin: 'cloud' | 'self-hosted';
+      /**
+       * @example active
+       * @enum {string}
+       */
+      status:
+        | 'idle'
+        | 'deploying'
+        | 'published'
+        | 'active'
+        | 'stopped'
+        | 'failed';
+      currentVersion: components['schemas']['DeploymentVersionDetail'];
+      url: string | null;
+      selfHosted: {
+        /** Format: date-time */
+        lastHeartbeatAt: string;
+        instanceId: string | null;
+        cliVersion: string | null;
+        healthy: boolean;
+      } | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    DeploymentVersionDetail: {
+      number: number;
+      status: string;
+      source: {
+        type: string;
+        flowId?: string;
+        flowConfigId?: string;
+        configHash?: string;
+      };
+      /** Format: date-time */
+      publishedAt: string;
+      publishedBy: string | null;
+    } | null;
+    CreateDeploymentResponse: {
+      /** @example dep_a1b2c3d4 */
+      id: string;
+      /**
+       * @example web
+       * @enum {string}
+       */
+      type: 'web' | 'server';
+      /** @example k7m2x9p4q1w8 */
+      slug: string;
+      target: string | null;
+      label: string | null;
+      /**
+       * @example cloud
+       * @enum {string}
+       */
+      origin: 'cloud' | 'self-hosted';
+      /**
+       * @example active
+       * @enum {string}
+       */
+      status:
+        | 'idle'
+        | 'deploying'
+        | 'published'
+        | 'active'
+        | 'stopped'
+        | 'failed';
+      currentVersionNumber: number | null;
+      url: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      usageSummary?: {
+        eventsIn24h: number;
+        healthy: boolean;
+      };
+    };
+    ListDeploymentsResponse: {
+      deployments: components['schemas']['DeploymentSummary'][];
+      total: number;
+      limit: number;
+      offset: number;
+    };
+    UpdateDeploymentResponse: {
+      /** @example dep_a1b2c3d4 */
+      id: string;
+      /**
+       * @example web
+       * @enum {string}
+       */
+      type: 'web' | 'server';
+      /** @example k7m2x9p4q1w8 */
+      slug: string;
+      target: string | null;
+      label: string | null;
+      /**
+       * @example cloud
+       * @enum {string}
+       */
+      origin: 'cloud' | 'self-hosted';
+      /**
+       * @example active
+       * @enum {string}
+       */
+      status:
+        | 'idle'
+        | 'deploying'
+        | 'published'
+        | 'active'
+        | 'stopped'
+        | 'failed';
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    LatestDeploymentsByFlow: {
+      [key: string]: {
+        id: string;
+        flowId: string;
+        slug: string;
+        type: string;
+        status: string;
+        target: string | null;
+        containerUrl: string | null;
+        createdAt: string;
+      };
+    };
+    PublishVersionResponse: {
+      versionNumber: number;
+      versionId: string;
+      /** @example dep_a1b2c3d4 */
+      deploymentId: string;
+      /** @enum {string} */
+      status: 'deploying';
+      source:
+        | {
+            /** @enum {string} */
+            type: 'flow';
+            flowId: string;
+            flowConfigName: string;
+          }
+        | {
+            /** @enum {string} */
+            type: 'config';
+          };
+      /** Format: date-time */
+      createdAt: string;
+    };
+    ListDeploymentVersionsResponse: {
+      versions: {
+        number: number;
+        status: string;
+        source: {
+          type: string;
+          flowId?: string;
+          flowConfigId?: string;
+          configHash?: string;
+        };
+        bundlePath: string | null;
+        /** Format: date-time */
+        publishedAt: string;
+        publishedBy: string | null;
+      }[];
+      total: number;
+      limit: number;
+      offset: number;
+    };
+    HeartbeatResponse: {
+      /** @enum {boolean} */
+      ack: true;
+      /** @example dep_a1b2c3d4 */
+      deploymentId: string;
+      /** @enum {string} */
+      action: 'none' | 'stop' | 'update';
+      versionNumber?: number;
+      bundleUrl?: string;
+    };
+    ObserveTicketResponse: {
+      ticket: string;
+      /** Format: uri */
+      observerUrl: string;
+    };
     MagicLinkResponse: {
       /** @example true */
       success: boolean;
@@ -2200,10 +3893,7 @@ export interface components {
        * @example user@example.com
        */
       email: string;
-      /**
-       * Format: uri
-       * @example /dashboard
-       */
+      /** @example /dashboard */
       redirect_to?: string;
     };
     WhoamiResponse: {
@@ -2216,6 +3906,39 @@ export interface components {
       email: string;
       /** @example null */
       projectId: string | null;
+    };
+    ListSessionsResponse: {
+      sessions: {
+        id: string;
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        expiresAt: string;
+        /** Format: date-time */
+        lastTouchedAt: string;
+        isCurrent: boolean;
+      }[];
+    };
+    DeviceCodeResponse: {
+      deviceCode: string;
+      userCode: string;
+      expiresIn: number;
+      interval: number;
+    };
+    ApproveDeviceResponse: {
+      success: boolean;
+    };
+    ApproveDeviceRequest: {
+      userCode: string;
+    };
+    DeviceTokenResponse: {
+      token: string;
+      email: string;
+      userId: string;
+    };
+    DeviceTokenRequest: {
+      deviceCode: string;
+      hostname?: string;
     };
     ListProjectsResponse: {
       projects: components['schemas']['Project'][];
@@ -2241,11 +3964,11 @@ export interface components {
        * @default member
        * @enum {string}
        */
-      role: 'owner' | 'member';
+      role: 'owner' | 'admin' | 'member' | 'deployer' | 'viewer';
     };
     UpdateMemberRequest: {
       /** @enum {string} */
-      role: 'owner' | 'member';
+      role: 'owner' | 'admin' | 'member' | 'deployer' | 'viewer';
     };
     ListFlowsResponse: {
       flows: components['schemas']['FlowSummary'][];
@@ -2264,6 +3987,73 @@ export interface components {
     DuplicateFlowRequest: {
       /** @example my-website-flow */
       name?: string;
+    };
+    DeploymentResponse: {
+      id: string;
+      flowId: string;
+      /** @enum {string} */
+      type: 'web' | 'server';
+      status: string;
+      containerUrl: string | null;
+      publicUrl?: string | null;
+      errorMessage: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    } | null;
+    StartDeploymentResponse: {
+      deploymentId: string;
+      /** @enum {string} */
+      type: 'web' | 'server';
+      status: string;
+    };
+    ListConfigsResponse: {
+      configs: components['schemas']['FlowConfigSummary'][];
+    };
+    ConfigDeploymentResponse: {
+      id: string;
+      flowId: string;
+      configId: string;
+      /** @enum {string} */
+      type: 'web' | 'server';
+      status: string;
+      containerUrl: string | null;
+      publicUrl: string | null;
+      errorMessage: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    } | null;
+    ConfigDeploymentDetailResponse: {
+      id: string;
+      flowId: string;
+      configId: string;
+      status: string;
+      /** @enum {string} */
+      type: 'web' | 'server';
+      containerUrl: string | null;
+      publicUrl: string | null;
+      errorMessage: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    AdvanceConfigDeploymentResponse: {
+      id: string;
+      flowId: string;
+      /** @enum {string} */
+      type: 'web' | 'server';
+      status: string;
+      containerUrl: string | null;
+      publicUrl?: string | null;
+      errorMessage: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
     };
     ListVersionsResponse: {
       data: components['schemas']['Version'][];
@@ -2314,14 +4104,15 @@ export interface components {
       /** @example 90 */
       expiresInDays?: number | null;
     };
-    CreateTicketResponse: {
-      /** @example tkt_abc123... */
-      ticket: string;
-      /**
-       * Format: uri
-       * @example http://localhost:3001
-       */
-      observerUrl: string;
+    BundleJobResponse: {
+      jobId: string;
+      state: string;
+      hash: string;
+      bundlePath: string;
+    };
+    RegisterRuntimeRequest: {
+      flowId: string;
+      bundlePath: string;
     };
     ValidateTicketResponse: {
       userId: string;
@@ -2333,38 +4124,6 @@ export interface components {
     };
     ValidateTicketRequest: {
       ticket: string;
-    };
-    Deployment: {
-      /** @example dep_a1b2c3d4 */
-      id: string;
-      /** @example flow_a1b2c3d4 */
-      flowId: string;
-      /** @enum {string} */
-      type: 'web' | 'server';
-      /** @enum {string} */
-      status:
-        | 'bundling'
-        | 'deploying'
-        | 'active'
-        | 'failed'
-        | 'deleted'
-        | 'published';
-      containerUrl?: string | null;
-      publicUrl?: string | null;
-      scriptTag?: string | null;
-      errorMessage?: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      updatedAt: string;
-    };
-    DeployResponse: {
-      /** @example dep_a1b2c3d4 */
-      deploymentId: string;
-      /** @enum {string} */
-      type: 'web' | 'server';
-      /** @example bundling */
-      status: string;
     };
     HealthResponse: {
       /** @example ok */

@@ -31,13 +31,20 @@ export async function listFlows(options: ListFlowsOptions = {}) {
   return data;
 }
 
-export async function getFlow(options: { flowId: string; projectId?: string }) {
+export async function getFlow(options: {
+  flowId: string;
+  projectId?: string;
+  fields?: string[];
+}) {
   const id = options.projectId ?? requireProjectId();
   const client = createApiClient();
   const { data, error } = await client.GET(
     '/api/projects/{projectId}/flows/{flowId}',
     {
-      params: { path: { projectId: id, flowId: options.flowId } },
+      params: {
+        path: { projectId: id, flowId: options.flowId },
+        query: options.fields ? { fields: options.fields.join(',') } : {},
+      },
     },
   );
   if (error) throw new Error(error.error?.message || 'Failed to get flow');
@@ -65,6 +72,7 @@ export async function updateFlow(options: {
   name?: string;
   content?: Record<string, unknown>;
   projectId?: string;
+  mergePatch?: boolean;
 }) {
   const id = options.projectId ?? requireProjectId();
   const client = createApiClient();
@@ -77,6 +85,9 @@ export async function updateFlow(options: {
       params: { path: { projectId: id, flowId: options.flowId } },
       // Dynamically constructed body; server validates the full schema
       body: body as never,
+      ...(options.mergePatch && {
+        headers: { 'Content-Type': 'application/merge-patch+json' },
+      }),
     },
   );
   if (error) throw new Error(error.error?.message || 'Failed to update flow');
