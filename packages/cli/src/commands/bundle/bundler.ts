@@ -123,7 +123,7 @@ export interface BundleStats {
  * Copy included folders to output directory.
  * Used to make credential files and other assets available alongside the bundle.
  */
-async function copyIncludes(
+export async function copyIncludes(
   includes: string[],
   sourceDir: string,
   outputDir: string,
@@ -134,13 +134,24 @@ async function copyIncludes(
     const folderName = path.basename(include);
     const destPath = path.join(outputDir, folderName);
 
+    // Detect circular copies: source contains output or output contains source
+    const resolvedOutput = path.resolve(outputDir);
+    const resolvedSource = path.resolve(sourcePath);
+    if (
+      resolvedSource === resolvedOutput ||
+      resolvedOutput.startsWith(resolvedSource + path.sep) ||
+      resolvedSource.startsWith(resolvedOutput + path.sep)
+    ) {
+      throw new Error(
+        `Circular include detected: "${include}" resolves to "${resolvedSource}" which overlaps with output directory "${resolvedOutput}"`,
+      );
+    }
+
     if (await fs.pathExists(sourcePath)) {
       await fs.copy(sourcePath, destPath);
       logger.debug(`Copied ${include} to output`);
-      // TODO: Add logging for copied folders
     } else {
-      logger.debug(`Include folder not found: ${include}`);
-      // TODO: Add logging for skipped folders (not found)
+      logger.warn(`Include folder not found: ${include}`);
     }
   }
 }
@@ -980,6 +991,27 @@ function generateImportStatements(
   return { importStatements, examplesMappings };
 }
 
+const VALID_JS_IDENTIFIER = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
+
+/**
+ * Validates that component names are valid JavaScript identifiers.
+ * The bundler generates JS where flow config keys become property names,
+ * so keys like "gtag-wrapper" would cause esbuild syntax errors.
+ * Catches this early with a helpful error message suggesting camelCase.
+ */
+export function validateComponentNames(
+  components: Record<string, unknown>,
+  section: string,
+): void {
+  for (const name of Object.keys(components)) {
+    if (!VALID_JS_IDENTIFIER.test(name)) {
+      throw new Error(
+        `Invalid ${section} name "${name}": must be a valid JavaScript identifier (use camelCase, e.g., "${name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())}")`,
+      );
+    }
+  }
+}
+
 /**
  * Validates all $store: references point to defined stores.
  * Throws descriptive error on mismatch.
@@ -1050,6 +1082,22 @@ export async function createEntryPoint(
     ),
   );
   validateStoreReferences(flowConfig, storeIds);
+
+  // Validate component names are valid JS identifiers (they become property names in generated code)
+  const flowWithSections = flowConfig as unknown as {
+    sources?: Record<string, unknown>;
+    destinations?: Record<string, unknown>;
+    transformers?: Record<string, unknown>;
+    stores?: Record<string, unknown>;
+  };
+  if (flowWithSections.sources)
+    validateComponentNames(flowWithSections.sources, 'sources');
+  if (flowWithSections.destinations)
+    validateComponentNames(flowWithSections.destinations, 'destinations');
+  if (flowWithSections.transformers)
+    validateComponentNames(flowWithSections.transformers, 'transformers');
+  if (flowWithSections.stores)
+    validateComponentNames(flowWithSections.stores, 'stores');
 
   // Generate import statements
   const { importStatements } = generateImportStatements(

@@ -269,6 +269,19 @@ Options:
 
 ---
 
+## Bundler Gotchas
+
+- **Circular copies:** Never include the output directory itself (e.g.,
+  `include: ["./dist"]` when output is `dist/bundle.mjs`). The CLI detects this
+  and errors.
+- **Runtime paths:** The runner sets CWD to the bundle directory. File paths in
+  `settings` resolve relative to the bundle, not the project root.
+- **Component names:** Source, transformer, destination, and store names must be
+  valid JavaScript identifiers (camelCase). Hyphens like `gtag-wrapper` cause
+  syntax errors — use `gtagWrapper` instead.
+
+---
+
 ## Troubleshooting
 
 ### Bundle Fails

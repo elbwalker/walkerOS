@@ -5,12 +5,15 @@
  */
 
 import path from 'path';
+import { createRequire } from 'module';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { createTimer, getErrorMessage } from '../../core/index.js';
 import { validateFlowFile, validatePort } from './validators.js';
 import { prepareBundleForRun, isPreBuiltConfig } from './utils.js';
 import { executeRunLocal } from './execution.js';
 import type { RunCommandOptions, RunOptions, RunResult } from './types.js';
+
+const esmRequire = createRequire(import.meta.url);
 
 /**
  * CLI command function for `walkeros run`
@@ -35,7 +38,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     const runtimeDeps = ['express', 'cors'];
     for (const dep of runtimeDeps) {
       try {
-        require.resolve(dep);
+        esmRequire.resolve(dep);
       } catch {
         logger.error(
           `Missing runtime dependency "${dep}"\n` +
@@ -145,7 +148,7 @@ export async function run(options: RunOptions): Promise<RunResult> {
     const runtimeDeps = ['express', 'cors'];
     for (const dep of runtimeDeps) {
       try {
-        require.resolve(dep);
+        esmRequire.resolve(dep);
       } catch {
         throw new Error(
           `Missing runtime dependency "${dep}". ` +

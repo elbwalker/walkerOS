@@ -223,6 +223,14 @@ The `include` field in your flow config copies folders into the bundle output di
   language="json"
 />
 
+:::warning Avoid circular includes
+The `include` field copies folders into the **output directory** (where the bundle is written). If your output is `dist/bundle.mjs` and you set `include: ["./dist"]`, the bundler will try to copy `dist/` into `dist/dist/` — a circular operation that will error.
+
+**Fix:** Only include folders that are **not** the output directory:
+- `"include": ["./shared"]` — copies `shared/` into the output directory
+- `"include": ["./credentials"]` — copies `credentials/` into the output directory
+:::
+
 Build with Dockerfile generation:
 
 <CodeSnippet

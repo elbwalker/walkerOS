@@ -1,4 +1,4 @@
-import { serializeWithCode } from '../bundler';
+import { serializeWithCode, validateComponentNames } from '../bundler';
 
 describe('serializeWithCode __WALKEROS_ENV marker', () => {
   it('emits process.env expression for marker-only string', () => {
@@ -64,5 +64,53 @@ describe('serializeWithCode __WALKEROS_ENV marker', () => {
 
   it('still handles plain strings', () => {
     expect(serializeWithCode('hello', 0)).toBe('"hello"');
+  });
+});
+
+describe('validateComponentNames', () => {
+  it('should accept valid camelCase names', () => {
+    expect(() =>
+      validateComponentNames(
+        {
+          cache: {},
+          router: {},
+          gtagWrapper: {},
+        },
+        'transformers',
+      ),
+    ).not.toThrow();
+  });
+
+  it('should reject names with hyphens', () => {
+    expect(() =>
+      validateComponentNames(
+        {
+          'gtag-wrapper': {},
+        },
+        'transformers',
+      ),
+    ).toThrow(/gtag-wrapper.*valid JavaScript identifier/);
+  });
+
+  it('should reject names starting with numbers', () => {
+    expect(() =>
+      validateComponentNames(
+        {
+          '123abc': {},
+        },
+        'sources',
+      ),
+    ).toThrow(/123abc.*valid JavaScript identifier/);
+  });
+
+  it('should suggest camelCase alternative for hyphenated names', () => {
+    expect(() =>
+      validateComponentNames(
+        {
+          'my-cool-source': {},
+        },
+        'sources',
+      ),
+    ).toThrow(/myCoolSource/);
   });
 });

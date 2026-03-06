@@ -277,6 +277,22 @@ Pin a specific CLI version:
 
 </details>
 
+## File paths at runtime
+
+When the runner loads a bundle, it sets the working directory (`process.cwd()`) to the **bundle's directory**. All file paths in your flow config settings resolve relative to the bundle, not your project root.
+
+For example, if your bundle is at `dist/bundle.mjs` and a transformer reads a file:
+
+```json
+{
+  "settings": {
+    "filePath": "./data.json"
+  }
+}
+```
+
+At runtime, this resolves to `dist/data.json` — not `./data.json` from the project root. Use the `include` field in your flow config to copy files alongside the bundle so they're accessible at runtime.
+
 ## Troubleshooting
 
 **Runner won't start** — Check the error message. Invalid env var combinations produce specific errors like `FLOW_ID requires WALKEROS_TOKEN and PROJECT_ID`.
