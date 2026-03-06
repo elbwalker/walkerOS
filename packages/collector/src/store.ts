@@ -16,7 +16,7 @@ export async function initStores(
 
     const storeLogger = collector.logger.scope('store').scope(storeId);
 
-    const context: Store.Context = {
+    const context = {
       collector,
       logger: storeLogger,
       id: storeId,

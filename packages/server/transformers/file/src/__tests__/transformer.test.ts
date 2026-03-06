@@ -48,7 +48,7 @@ describe('Transformer File', () => {
 
   describe('File found', () => {
     it('should respond with content and correct Content-Type', async () => {
-      const store = createMockStore<Buffer>();
+      const store = createMockStore();
       store.set('walker.js', Buffer.from('console.log("hi")'));
 
       const transformer = await transformerFile(
@@ -78,7 +78,7 @@ describe('Transformer File', () => {
 
   describe('File not found', () => {
     it('should passthrough when file not in store', async () => {
-      const store = createMockStore<Buffer>();
+      const store = createMockStore();
 
       const transformer = await transformerFile(
         createInitContext({ settings: {} }, { store }),
@@ -111,7 +111,7 @@ describe('Transformer File', () => {
 
   describe('Prefix stripping', () => {
     it('should strip prefix and serve matching paths', async () => {
-      const store = createMockStore<Buffer>();
+      const store = createMockStore();
       store.set('walker.js', Buffer.from('code'));
 
       const transformer = await transformerFile(
@@ -133,7 +133,7 @@ describe('Transformer File', () => {
     });
 
     it('should passthrough for non-matching prefix', async () => {
-      const store = createMockStore<Buffer>();
+      const store = createMockStore();
 
       const transformer = await transformerFile(
         createInitContext({ settings: { prefix: '/static' } }, { store }),
@@ -150,7 +150,7 @@ describe('Transformer File', () => {
 
   describe('Custom headers', () => {
     it('should merge custom headers into response', async () => {
-      const store = createMockStore<Buffer>();
+      const store = createMockStore();
       store.set('style.css', Buffer.from('body{}'));
 
       const transformer = await transformerFile(
@@ -183,7 +183,7 @@ describe('Transformer File', () => {
 
   describe('Custom MIME types', () => {
     it('should use mimeTypes overrides', async () => {
-      const store = createMockStore<Buffer>();
+      const store = createMockStore();
       store.set('module.xyz', Buffer.from('data'));
 
       const transformer = await transformerFile(
@@ -209,7 +209,7 @@ describe('Transformer File', () => {
 
   describe('No ingest.path', () => {
     it('should passthrough when no path in ingest', async () => {
-      const store = createMockStore<Buffer>();
+      const store = createMockStore();
 
       const transformer = await transformerFile(
         createInitContext({ settings: {} }, { store }),

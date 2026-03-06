@@ -369,7 +369,7 @@ describe('Transformer Cache', () => {
 
   describe('Store injection', () => {
     it('should use injected store instead of default', async () => {
-      const mockStore = createMockStore<CacheEntry>();
+      const mockStore = createMockStore();
       const transformer = await transformerCache(
         createInitContext(
           {

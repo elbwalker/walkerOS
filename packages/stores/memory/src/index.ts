@@ -8,3 +8,5 @@ export type {
   MemoryStoreInstance,
 } from './types';
 export type { MockStoreInstance } from './mock';
+
+export { storeMemoryInit as default } from './init';

@@ -323,6 +323,41 @@ export const DestinationReferenceSchema = z
   })
   .describe('Destination package reference with configuration');
 
+/**
+ * Store package reference.
+ *
+ * @remarks
+ * Stores are passive key-value infrastructure — no chain properties (next/before).
+ * Consumed by other components via `$store:storeId` env wiring.
+ */
+export const StoreReferenceSchema = z
+  .object({
+    package: z
+      .string()
+      .min(1, 'Package name cannot be empty')
+      .optional()
+      .describe('Store package specifier with optional version'),
+    code: z
+      .union([z.string(), InlineCodeSchema])
+      .optional()
+      .describe('Named export string or inline code definition'),
+    config: z
+      .unknown()
+      .optional()
+      .describe('Store-specific configuration object'),
+    env: z.unknown().optional().describe('Store environment configuration'),
+    variables: VariablesSchema.optional().describe(
+      'Store-level variables (highest priority in cascade)',
+    ),
+    definitions: DefinitionsSchema.optional().describe(
+      'Store-level definitions (highest priority in cascade)',
+    ),
+    examples: StepExamplesSchema.optional().describe(
+      'Named step examples for testing and documentation (stripped during bundling)',
+    ),
+  })
+  .describe('Store package reference with configuration');
+
 // ========================================
 // Contract Schemas
 // ========================================
@@ -393,6 +428,12 @@ export const ConfigSchema = z
       .optional()
       .describe(
         'Transformer configurations (event transformation) keyed by unique identifier',
+      ),
+    stores: z
+      .record(z.string(), StoreReferenceSchema)
+      .optional()
+      .describe(
+        'Store configurations (key-value storage) keyed by unique identifier',
       ),
     collector: z
       .unknown()
@@ -629,4 +670,17 @@ export const destinationReferenceJsonSchema = toJsonSchema(
 export const transformerReferenceJsonSchema = toJsonSchema(
   TransformerReferenceSchema,
   'TransformerReference',
+);
+
+/**
+ * Generate JSON Schema for StoreReference.
+ *
+ * @remarks
+ * Used for validating store package references.
+ *
+ * @returns JSON Schema (Draft 7) representation of StoreReferenceSchema
+ */
+export const storeReferenceJsonSchema = toJsonSchema(
+  StoreReferenceSchema,
+  'StoreReference',
 );
