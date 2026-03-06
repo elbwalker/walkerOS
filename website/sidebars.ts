@@ -162,6 +162,15 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Stores',
+      link: {
+        type: 'doc',
+        id: 'stores/index',
+      },
+      items: ['stores/memory', 'stores/server/fs', 'stores/server/s3'],
+    },
+    {
+      type: 'category',
       label: 'Core',
       link: {
         type: 'doc',

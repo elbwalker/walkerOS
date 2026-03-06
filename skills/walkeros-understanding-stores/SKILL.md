@@ -174,8 +174,33 @@ import { createMemoryStore } from '@walkeros/store-memory';
 File-based store for serving static assets. Server-only.
 
 ```typescript
-import { storeFs } from '@walkeros/server-store-fs';
+import { storeFsInit } from '@walkeros/server-store-fs';
 ```
+
+### `@walkeros/server-store-s3` (S3-compatible object storage)
+
+S3-compatible store using `s3mini` (~20 KB, zero dependencies). Works with AWS
+S3, Cloudflare R2, Scaleway, DigitalOcean Spaces, Backblaze B2, MinIO, and any
+S3-compatible provider. Returns `Buffer` from `get()` for file transformer
+compatibility. Server-only.
+
+```typescript
+import { storeS3Init } from '@walkeros/server-store-s3';
+```
+
+**Settings:**
+
+| Setting           | Type     | Required | Default  | Purpose                    |
+| ----------------- | -------- | -------- | -------- | -------------------------- |
+| `bucket`          | `string` | Yes      | —        | S3 bucket name             |
+| `endpoint`        | `string` | Yes      | —        | S3-compatible endpoint URL |
+| `accessKeyId`     | `string` | Yes      | —        | S3 access key ID           |
+| `secretAccessKey` | `string` | Yes      | —        | S3 secret access key       |
+| `region`          | `string` | No       | `"auto"` | AWS region (SigV4 signing) |
+| `prefix`          | `string` | No       | —        | Key prefix for scoping     |
+
+**Primary use case:** Serving static files in managed deployments (Mode D) where
+files live in a bucket rather than being baked into a Docker image.
 
 ## Stores vs direct construction
 
@@ -230,8 +255,14 @@ collector.stores.cache.delete('key');
   initStores implementation
 - [packages/stores/memory/src/](../../packages/stores/memory/src/) - Memory
   store package
+- [packages/server/stores/fs/src/](../../packages/server/stores/fs/src/) -
+  Filesystem store package
+- [packages/server/stores/s3/src/](../../packages/server/stores/s3/src/) - S3
+  store package
 
 **Documentation:**
 
 - [Website: Flow](../../website/docs/getting-started/flow.mdx) - Flow
   configuration with stores section
+- [Website: Stores](../../website/docs/stores/index.mdx) - Stores overview
+- [Website: S3 Store](../../website/docs/stores/s3.mdx) - S3 store documentation

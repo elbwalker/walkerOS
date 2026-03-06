@@ -1,0 +1,126 @@
+---
+title: Filesystem
+description: Local filesystem store for walkerOS server flows
+sidebar_position: 2
+package: '@walkeros/server-store-fs'
+---
+
+# Filesystem
+
+<PackageLink env="server" github="packages/server/stores/fs" npm="@walkeros/server-store-fs" />
+
+Local filesystem store for walkerOS server flows. Reads and writes files relative to a base directory with path traversal protection.
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the package:
+
+<CodeSnippet
+  code={`npm install @walkeros/server-store-fs`}
+  language="bash"
+/>
+
+Configure in your code:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { storeFsInit } from '@walkeros/server-store-fs';
+
+await startFlow({
+  stores: {
+    assets: {
+      code: storeFsInit,
+      config: {
+        settings: {
+          basePath: './public',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json`:
+
+<CodeSnippet
+  code={`"stores": {
+  "assets": {
+    "package": "@walkeros/server-store-fs",
+    "config": {
+      "settings": {
+        "basePath": "./public"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+## Configuration
+
+| Setting | Type | Required | Default | Description |
+|---------|------|----------|---------|-------------|
+| `basePath` | `string` | Yes | — | Root directory for file operations. All keys are resolved relative to this path. |
+
+## API
+
+<CodeSnippet
+  code={`const file = await store.get('walker.js');       // Buffer | undefined
+await store.set('data.json', Buffer.from('{}')); // void
+await store.delete('old-file.txt');               // void`}
+  language="typescript"
+/>
+
+`get()` returns `Buffer` for compatibility with the file transformer, which uses `content instanceof Buffer` for Content-Length calculation.
+
+## File serving pattern
+
+Use with the file transformer to serve static assets from the local filesystem:
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "assets": {
+      "package": "@walkeros/server-store-fs",
+      "config": {
+        "settings": { "basePath": "./public" }
+      }
+    }
+  },
+  "transformers": {
+    "file": {
+      "package": "@walkeros/server-transformer-file",
+      "config": { "settings": { "prefix": "/static" } },
+      "env": { "store": "$store:assets" }
+    }
+  }
+}`}
+  language="json"
+/>
+
+A request to `/static/walker.js` reads `./public/walker.js` from disk.
+
+## Security
+
+- **Path traversal protection**: Requests with `..`, absolute paths, or backslash traversal are rejected and logged as warnings
+- **Base path scoping**: All operations are restricted to the configured `basePath` directory
+- **Intermediate directories**: `set()` creates parent directories automatically via `mkdir -p`
+
+## When to use
+
+| Scenario | Recommended store |
+|----------|-------------------|
+| Local development | **Filesystem** — files on disk, no credentials needed |
+| Docker with baked-in assets | **Filesystem** — mount or copy files into the image |
+| Cloud / managed deployments | [S3](./s3) — files in a bucket, hot-swappable |
+| Caching / ephemeral data | [Memory](../memory) — fastest, no I/O |
