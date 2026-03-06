@@ -15,6 +15,33 @@ import {
   DeleteOutputShape,
 } from '../schemas/output.js';
 
+function summarizeFlow(flow: Record<string, unknown>): string {
+  const parts = [`Flow "${flow.name}" (${flow.id})`];
+  const content = flow.content as Record<string, unknown> | undefined;
+  if (content) {
+    const version = content.version;
+    if (version) parts.push(`v${version}`);
+    const flowsObj = content.flows as Record<string, unknown> | undefined;
+    if (flowsObj) {
+      const configs = Object.entries(flowsObj).map(([name, cfg]) => {
+        const c = cfg as Record<string, unknown>;
+        const platform = c.web ? 'web' : c.server ? 'server' : '?';
+        const sources = Object.keys((c.sources as object) ?? {});
+        const dests = Object.keys((c.destinations as object) ?? {});
+        const trans = Object.keys((c.transformers as object) ?? {});
+        const counts = [
+          sources.length && `${sources.length} sources`,
+          trans.length && `${trans.length} transformers`,
+          dests.length && `${dests.length} destinations`,
+        ].filter(Boolean);
+        return `${name}(${platform}: ${counts.join(', ') || 'empty'})`;
+      });
+      parts.push(`flows: ${configs.join(', ')}`);
+    }
+  }
+  return parts.join(' | ');
+}
+
 export function registerFlowTools(server: McpServer) {
   server.registerTool(
     'flow_list',
@@ -81,7 +108,11 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, projectId }) => {
       try {
-        return mcpResult(await getFlow({ flowId, projectId }));
+        const result = await getFlow({ flowId, projectId });
+        return mcpResult(
+          result,
+          summarizeFlow(result as Record<string, unknown>),
+        );
       } catch (error) {
         return mcpError(error);
       }
@@ -97,7 +128,7 @@ export function registerFlowTools(server: McpServer) {
         name: z.string().min(1).max(255).describe('Flow name'),
         content: z
           .record(z.string(), z.unknown())
-          .describe('Flow.Setup JSON content (must have version: 1)'),
+          .describe('Flow.Setup JSON content (version: 1 or 2)'),
         projectId: z
           .string()
           .optional()
@@ -113,7 +144,11 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ name, content, projectId }) => {
       try {
-        return mcpResult(await createFlow({ name, content, projectId }));
+        const result = await createFlow({ name, content, projectId });
+        return mcpResult(
+          result,
+          summarizeFlow(result as Record<string, unknown>),
+        );
       } catch (error) {
         return mcpError(error);
       }
@@ -147,8 +182,10 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, name, content, projectId }) => {
       try {
+        const result = await updateFlow({ flowId, name, content, projectId });
         return mcpResult(
-          await updateFlow({ flowId, name, content, projectId }),
+          result,
+          summarizeFlow(result as Record<string, unknown>),
         );
       } catch (error) {
         return mcpError(error);
@@ -214,7 +251,11 @@ export function registerFlowTools(server: McpServer) {
     },
     async ({ flowId, name, projectId }) => {
       try {
-        return mcpResult(await duplicateFlow({ flowId, name, projectId }));
+        const result = await duplicateFlow({ flowId, name, projectId });
+        return mcpResult(
+          result,
+          summarizeFlow(result as Record<string, unknown>),
+        );
       } catch (error) {
         return mcpError(error);
       }

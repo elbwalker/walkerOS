@@ -1,6 +1,11 @@
-export function mcpResult(result: unknown) {
+export function mcpResult(result: unknown, summary?: string) {
   return {
-    content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+    content: [
+      {
+        type: 'text' as const,
+        text: summary ?? JSON.stringify(result, null, 2),
+      },
+    ],
     structuredContent: result as Record<string, unknown>,
   };
 }
