@@ -196,8 +196,8 @@ const config: Config = {
       {
         redirects: [
           {
-            from: '/docs/sources/web/session',
-            to: '/docs/sources/web/session/detection',
+            from: '/docs/sources/web/session/detection',
+            to: '/docs/sources/web/session',
           },
           {
             from: '/docs/sources/walkerjs/installation/package',

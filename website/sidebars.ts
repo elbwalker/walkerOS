@@ -41,15 +41,7 @@ const sidebars: SidebarsConfig = {
             'getting-started/modes/integrated',
           ],
         },
-        {
-          type: 'category',
-          label: 'Flow',
-          link: {
-            type: 'doc',
-            id: 'getting-started/flow/index',
-          },
-          items: ['getting-started/flow/step-examples'],
-        },
+        'getting-started/flow',
         'getting-started/event-model',
       ],
     },
