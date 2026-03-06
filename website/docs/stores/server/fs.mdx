@@ -5,6 +5,8 @@ sidebar_position: 2
 package: '@walkeros/server-store-fs'
 ---
 
+import { schemas } from '@walkeros/server-store-fs/dev';
+
 # Filesystem
 
 <PackageLink env="server" github="packages/server/stores/fs" npm="@walkeros/server-store-fs" />
@@ -68,9 +70,7 @@ Add to your `flow.json`:
 
 ## Configuration
 
-| Setting | Type | Required | Default | Description |
-|---------|------|----------|---------|-------------|
-| `basePath` | `string` | Yes | — | Root directory for file operations. All keys are resolved relative to this path. |
+<PropertyTable schema={schemas.settings} />
 
 ## API
 

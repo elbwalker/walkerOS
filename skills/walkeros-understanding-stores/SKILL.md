@@ -238,6 +238,69 @@ collector.stores.cache.delete('key');
 | `require`     | Deferred activation supported     | Always eager             |
 | Interface     | `push(event, context)`            | `get/set/delete(key)`    |
 
+## Dev exports (`dev.ts`)
+
+Every store package must export schemas and examples via `dev.ts`, matching the
+convention used by sources and destinations:
+
+### Required files
+
+```
+src/
+├── schemas/
+│   ├── settings.ts   # Zod schema for store settings
+│   └── index.ts      # Re-export + zodToSchema() conversion
+├── examples/
+│   └── index.ts      # Example Store.Config objects
+└── dev.ts            # export * as schemas; export * as examples
+```
+
+### Schema pattern
+
+```typescript
+// src/schemas/settings.ts
+import { z } from '@walkeros/core/dev';
+
+export const SettingsSchema = z.object({
+  mySetting: z.string().describe('Setting description for docs and MCP'),
+});
+
+export type Settings = z.infer<typeof SettingsSchema>;
+
+// src/schemas/index.ts
+import { zodToSchema } from '@walkeros/core/dev';
+import { SettingsSchema } from './settings';
+export { SettingsSchema, type Settings } from './settings';
+export const settings = zodToSchema(SettingsSchema);
+```
+
+### tsup + package.json
+
+```typescript
+// tsup.config.ts
+import { defineConfig, buildModules, buildDev } from '@walkeros/config/tsup';
+export default defineConfig([buildModules(), buildDev()]);
+```
+
+Add `./dev` export to package.json:
+
+```json
+"./dev": {
+  "types": "./dist/dev.d.ts",
+  "import": "./dist/dev.mjs",
+  "require": "./dist/dev.js"
+}
+```
+
+### Why this matters
+
+- `buildDev()` generates `dist/walkerOS.json` at build time
+- MCP tools fetch `walkerOS.json` from CDN for package discovery and schema
+  validation
+- Website docs use `<PropertyTable schema={schemas.settings} />` instead of
+  hardcoded markdown tables
+- Without `dev.ts`, a store is invisible to MCP and docs tables rot
+
 ## Related skills
 
 - [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) -
@@ -265,4 +328,9 @@ collector.stores.cache.delete('key');
 - [Website: Flow](../../website/docs/getting-started/flow.mdx) - Flow
   configuration with stores section
 - [Website: Stores](../../website/docs/stores/index.mdx) - Stores overview
-- [Website: S3 Store](../../website/docs/stores/s3.mdx) - S3 store documentation
+- [Website: S3 Store](../../website/docs/stores/server/s3.mdx) - S3 store
+  documentation
+- [Website: FS Store](../../website/docs/stores/server/fs.mdx) - Filesystem
+  store documentation
+- [Website: Memory Store](../../website/docs/stores/memory.mdx) - Memory store
+  documentation

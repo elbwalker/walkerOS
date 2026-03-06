@@ -5,6 +5,8 @@ sidebar_position: 2
 package: '@walkeros/store-memory'
 ---
 
+import { schemas } from '@walkeros/store-memory/dev';
+
 # Memory
 
 <PackageLink github="packages/stores/memory" npm="@walkeros/store-memory" />
@@ -70,10 +72,7 @@ Add to your `flow.json`:
 
 ## Configuration
 
-| Setting | Type | Required | Default | Description |
-|---------|------|----------|---------|-------------|
-| `maxSize` | `number` | No | `10485760` (10 MB) | Maximum total size in bytes before LRU eviction |
-| `maxEntries` | `number` | No | — | Maximum number of entries before oldest is evicted |
+<PropertyTable schema={schemas.settings} />
 
 Both limits can be used together. When either is exceeded, the least-recently-used entry is evicted first.
 

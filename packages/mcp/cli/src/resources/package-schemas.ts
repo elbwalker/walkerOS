@@ -12,6 +12,11 @@ const KNOWN_PACKAGES = [
   '@walkeros/web-destination-bigquery',
   '@walkeros/web-source-walker',
   '@walkeros/web-source-datalayer',
+
+  // Stores
+  '@walkeros/store-memory',
+  '@walkeros/server-store-fs',
+  '@walkeros/server-store-s3',
 ];
 
 export function registerPackageSchemaResources(server: McpServer) {

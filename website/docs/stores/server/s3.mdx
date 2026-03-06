@@ -5,6 +5,8 @@ sidebar_position: 1
 package: '@walkeros/server-store-s3'
 ---
 
+import { schemas } from '@walkeros/server-store-s3/dev';
+
 # S3
 
 <PackageLink env="server" github="packages/server/stores/s3" npm="@walkeros/server-store-s3" />
@@ -78,14 +80,7 @@ Add to your `flow.json`:
 
 ## Configuration
 
-| Setting | Type | Required | Default | Description |
-|---------|------|----------|---------|-------------|
-| `bucket` | `string` | Yes | — | S3 bucket name |
-| `endpoint` | `string` | Yes | — | S3-compatible endpoint URL |
-| `accessKeyId` | `string` | Yes | — | S3 access key ID |
-| `secretAccessKey` | `string` | Yes | — | S3 secret access key |
-| `region` | `string` | No | `"auto"` | AWS region for SigV4 signing |
-| `prefix` | `string` | No | — | Key prefix prepended to all store keys |
+<PropertyTable schema={schemas.settings} />
 
 ## Provider examples
 

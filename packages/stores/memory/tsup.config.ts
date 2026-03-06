@@ -1,2 +1,3 @@
-import { defineConfig, buildModules } from '@walkeros/config/tsup';
-export default defineConfig([buildModules()]);
+import { defineConfig, buildModules, buildDev } from '@walkeros/config/tsup';
+
+export default defineConfig([buildModules(), buildDev()]);
