@@ -56,7 +56,21 @@ const config: Config = {
     },
   },
 
-  themes: ['@docusaurus/theme-live-codeblock', '@docusaurus/theme-mermaid'],
+  themes: [
+    '@docusaurus/theme-live-codeblock',
+    '@docusaurus/theme-mermaid',
+    [
+      require.resolve('@easyops-cn/docusaurus-search-local'),
+      {
+        hashed: true,
+        language: ['en'],
+        docsRouteBasePath: '/docs',
+        indexPages: false,
+        searchContextByPaths: ['docs'],
+        hideSearchBarWithNoSearchContext: true,
+      },
+    ],
+  ],
 
   presets: [
     [
