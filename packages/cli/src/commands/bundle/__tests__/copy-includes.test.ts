@@ -1,17 +1,19 @@
 import path from 'path';
 import fs from 'fs-extra';
 import os from 'os';
+import type { Logger } from '@walkeros/core';
 import { copyIncludes } from '../bundler';
 
-const mockLogger = {
+const mockLogger: Logger.Instance = {
   debug: jest.fn(),
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),
-  throw: jest.fn((msg: string) => {
-    throw new Error(msg);
+  throw: jest.fn((msg: string | Error): never => {
+    throw msg instanceof Error ? msg : new Error(msg);
   }),
-  level: 'DEBUG' as const,
+  json: jest.fn(),
+  scope: jest.fn((): Logger.Instance => mockLogger),
 };
 
 describe('copyIncludes', () => {

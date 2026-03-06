@@ -26,7 +26,7 @@ export const mockFlow = {
   id: 'flow_test456',
   name: 'Test Flow',
   content: {
-    version: 1 as const,
+    version: 2 as const,
   },
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
