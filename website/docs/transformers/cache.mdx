@@ -1,0 +1,216 @@
+---
+title: Cache
+description: HTTP response caching with LRU eviction and per-rule TTL
+sidebar_position: 3
+package: '@walkeros/server-transformer-cache'
+---
+
+# Cache
+
+<PackageLink env="server" github="packages/server/transformers/cache" npm="@walkeros/server-transformer-cache" />
+
+Caches HTTP responses in the transformer chain. On a cache **HIT**, serves the stored response directly and stops the chain. On a **MISS**, wraps the respond function to intercept, cache, and forward the downstream response.
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the package:
+
+<CodeSnippet
+  code={`npm install @walkeros/server-transformer-cache`}
+  language="bash"
+/>
+
+Configure in your code:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { transformerCache } from '@walkeros/server-transformer-cache';
+
+await startFlow({
+  transformers: {
+    cache: {
+      code: transformerCache,
+      config: {
+        settings: {
+          rules: [
+            {
+              match: { key: 'method', operator: 'eq', value: 'GET' },
+              key: ['method', 'path'],
+              ttl: 300,
+              headers: { 'Cache-Control': 'public, max-age=300' },
+            },
+          ],
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json`:
+
+<CodeSnippet
+  code={`"transformers": {
+  "cache": {
+    "package": "@walkeros/server-transformer-cache",
+    "config": {
+      "settings": {
+        "rules": [
+          {
+            "match": { "key": "method", "operator": "eq", "value": "GET" },
+            "key": ["method", "path"],
+            "ttl": 300,
+            "headers": { "Cache-Control": "public, max-age=300" }
+          }
+        ]
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## How it works
+
+1. A request arrives and the cache transformer checks its **rules** in order (first match wins)
+2. The cache **key** is built by joining the configured ingest fields (e.g. `method:path`)
+3. If the key exists in the store → **HIT**: respond immediately with the cached response and `X-Cache: HIT` header, stop the chain
+4. If the key is missing → **MISS**: wrap the respond function so the downstream response is intercepted, stored, and forwarded with `X-Cache: MISS` header
+5. If no rule matches → event passes through unchanged
+
+## Settings
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `rules` | `CacheRule[]` | — | Cache rules, evaluated in order (first match wins) |
+| `maxSize` | `number` | `10485760` (10 MB) | Maximum in-memory store size in bytes |
+
+## Rule configuration
+
+Each rule specifies when to cache, what to use as the cache key, and how long to keep it:
+
+<CodeSnippet
+  code={`interface CacheRule {
+  match: MatchExpression | '*';       // Condition or wildcard
+  key: string[];                      // Ingest fields for cache key
+  ttl: number;                        // Time-to-live in seconds
+  headers?: Record<string, string>;   // Extra response headers
+}`}
+  language="typescript"
+/>
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `match` | `MatchExpression \| '*'` | Condition to evaluate against ingest, or `'*'` wildcard |
+| `key` | `string[]` | Ingest fields joined with `:` to form the cache key |
+| `ttl` | `number` | Time-to-live in seconds |
+| `headers` | `Record<string, string>` | Extra headers merged into both HIT and MISS responses |
+
+### Match operators
+
+The cache transformer uses the same match expressions as the [router](./router#match-operators), including all 8 operators, negation with `not: true`, and `and`/`or` combinators.
+
+## Examples
+
+### Cache GET requests by path
+
+<CodeSnippet
+  code={`{
+  rules: [
+    {
+      match: { key: 'method', operator: 'eq', value: 'GET' },
+      key: ['method', 'path'],
+      ttl: 300,
+    },
+  ]
+}`}
+  language="typescript"
+/>
+
+### Different TTLs per path
+
+<CodeSnippet
+  code={`{
+  rules: [
+    {
+      match: { key: 'path', operator: 'prefix', value: '/api/static' },
+      key: ['path'],
+      ttl: 3600,
+      headers: { 'Cache-Control': 'public, max-age=3600' },
+    },
+    {
+      match: { key: 'path', operator: 'prefix', value: '/api' },
+      key: ['method', 'path'],
+      ttl: 60,
+    },
+  ]
+}`}
+  language="typescript"
+/>
+
+### Chain placement
+
+Place the cache transformer **before** a responder in the chain. On HIT it stops the chain, skipping the responder entirely:
+
+<CodeSnippet
+  code={`"sources": {
+  "http": {
+    "package": "@walkeros/server-source-express",
+    "next": "router"
+  }
+},
+"transformers": {
+  "router": { "package": "@walkeros/transformer-router", "next": "cache" },
+  "cache":  { "package": "@walkeros/server-transformer-cache", "next": "responder" },
+  "responder": { "package": "@walkeros/transformer-responder" }
+}`}
+  language="json"
+/>
+
+## Custom store backend
+
+By default the cache uses an in-memory store (`@walkeros/store-memory`) with LRU eviction and lazy TTL. You can inject a different store via `env.store`:
+
+<CodeSnippet
+  code={`import { createMemoryStore } from '@walkeros/store-memory';
+
+const customStore = createMemoryStore({ maxSize: 1024 * 1024 }); // 1 MB
+
+await startFlow({
+  transformers: {
+    cache: {
+      code: transformerCache,
+      config: { settings: { rules: [/* ... */] } },
+      env: { store: customStore },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+Any object with `get(key): T | undefined` and `set(key, value, ttl?): void` methods works as a store backend.
+
+## Behavior notes
+
+- **LRU eviction** — when the store exceeds `maxSize`, the least-recently-used entries are evicted first
+- **Lazy TTL** — expired entries are removed on the next lookup, not on a timer
+- **First match wins** — rules are evaluated in order; only the first matching rule applies
+- **Empty key** — if all key fields resolve to empty strings, the event passes through with a warning
+- **No respond function** — the MISS wrapper still caches the response even without `env.respond` (useful for pre-warming)
+
+## Next steps
+
+- **[Router](./router)** - Route events before caching
+- **[Create your own](./create-your-own)** - Build custom transformers

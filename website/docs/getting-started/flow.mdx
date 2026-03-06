@@ -1,0 +1,1124 @@
+---
+title: Flow
+description: Understanding the walkerOS flow configuration file structure
+sidebar_position: 4
+---
+
+# Flow
+
+Flow configuration is walkerOS's **"configuration as code"** approach. A single JSON file defines your entire event collection pipeline, making it portable, version-controlled, and deployable across environments.
+
+## Configuration structure
+
+A flow configuration uses the `Flow.Setup` format with two required fields:
+
+1. **`version`** - Schema version (`1` or `2` — use `2` for [contract](/docs/contract) support)
+2. **`flows`** - Named flow configurations
+
+### Basic example
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
+        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] }
+      },
+      "sources": {
+        "browser": {
+          "package": "@walkeros/web-source-browser",
+          "config": {
+            "settings": {
+              "pageview": true,
+              "session": true
+            }
+          }
+        }
+      },
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "settings": {
+              "url": "https://analytics.example.com/events",
+              "method": "POST",
+              "headers": {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer your-api-key"
+              }
+            }
+          }
+        }
+      },
+      "collector": {}
+    }
+  }
+}`}
+  language="json"
+/>
+
+This captures browser DOM events and sends them to your analytics API endpoint via HTTP POST requests.
+
+## Config syntax: `package:` vs `code:`
+
+When configuring sources and destinations, you'll see two different syntaxes depending on your operating mode.
+
+### Bundled mode (JSON with CLI)
+
+Use `package:` with a string reference. The CLI downloads and bundles the npm package:
+
+<CodeSnippet
+  code={`"sources": {
+    "browser": {
+      "package": "@walkeros/web-source-browser",
+      "config": { "settings": { "pageview": true } }
+    }
+}`}
+  language="json"
+/>
+
+### Integrated mode (TypeScript with startFlow)
+
+Use `code:` with a direct import reference:
+
+<CodeSnippet
+  code={`import { sourceBrowser } from '@walkeros/web-source-browser';
+
+const flow = await startFlow({
+  sources: {
+    browser: {
+      code: sourceBrowser,
+      config: { settings: { pageview: true } }
+    }
+  }
+});`}
+  language="typescript"
+/>
+
+### Quick reference
+
+| Property | Mode | Value | When to Use |
+|----------|------|-------|-------------|
+| `package:` | Bundled | `"@walkeros/..."` (string) | CLI resolves and bundles from npm |
+| `code:` | Integrated | `sourceBrowser` (import) | Direct code reference in your app |
+
+Both achieve the same result. The difference is whether the CLI bundles the code for you (Bundled) or you import it directly (Integrated).
+
+See [Operating Modes](/docs/getting-started/modes) for more details on choosing your approach.
+
+## Flow configuration (Flow.Config)
+
+Each flow in `flows` is a `Flow.Config` that defines runtime behavior.
+
+### Platform
+
+Platform is determined by the presence of the `web` or `server` key:
+
+<CodeSnippet
+  code={`{
+    "version": 1,
+    "flows": {
+      "default": {
+        "server": {}  // Server platform (Node.js)
+      }
+    }
+}`}
+  language="json"
+/>
+
+<CodeSnippet
+  code={`{
+    "version": 1,
+    "flows": {
+      "default": {
+        "web": {}  // Web platform (browser)
+      }
+    }
+}`}
+  language="json"
+/>
+
+**Platform options:**
+- `"server": {}` - Node.js server environment (HTTP endpoints, cloud functions)
+- `"web": {}` - Browser environment (client-side tracking)
+
+The CLI automatically applies platform-specific build defaults:
+- **Web**: IIFE format, ES2020 target, output to `./dist/walker.js`
+- **Server**: ESM format, Node20 target, output to `./dist/bundle.mjs`
+
+### Packages
+
+Specifies npm packages to download and bundle:
+
+<CodeSnippet
+  code={`{
+  "packages": {
+    "@walkeros/collector": {
+      "version": "latest",
+      "imports": ["startFlow"]
+    },
+    "@walkeros/web-source-browser": {
+      "version": "0.4.0",
+      "imports": ["sourceBrowser"]
+    },
+    "@walkeros/web-destination-api": {
+      "imports": ["destinationAPI"]
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Properties:**
+- **`version`** - npm version (semver or "latest", defaults to "latest")
+- **`imports`** - Array of named exports to import
+- **`path`** - Local filesystem path (takes precedence over `version`)
+
+For development or custom packages, use `path` to reference a local directory:
+
+<CodeSnippet
+  code={`{
+  "packages": {
+    "@my/custom-destination": {
+      "path": "./my-destination",
+      "imports": ["myDestination"]
+    }
+  }
+}`}
+  language="json"
+/>
+
+See [Local Packages](/docs/apps/cli#local-packages) in the CLI documentation for more details.
+
+### Sources
+
+Sources capture events from various inputs. Each source needs:
+- **`package`** - The npm package (with optional version)
+- **`config`** - Source-specific settings
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "config": {
+        "settings": {
+          "path": "/collect",
+          "port": 8080,
+          "cors": true
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+See [Sources documentation](/docs/sources/) for all available options.
+
+### Destinations
+
+Destinations receive processed events and send them to analytics tools, databases, or APIs:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "bigquery": {
+      "package": "@walkeros/server-destination-gcp",
+      "config": {
+        "settings": {
+          "projectId": "my-project",
+          "datasetId": "analytics",
+          "tableId": "events"
+        },
+        "mapping": {
+          "page": {
+            "view": {
+              "name": "page_view"
+            }
+          }
+        }
+      }
+    },
+    "console": {
+      "package": "@walkeros/destination-demo",
+      "config": {
+        "settings": {
+          "name": "Debug Logger"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Configuration options:**
+- **`settings`** - Destination-specific configuration (API keys, endpoints, etc.)
+- **`mapping`** - Event transformation rules (see [Mapping documentation](/docs/mapping))
+- **`consent`** - Required consent states
+- **`policy`** - Processing rules
+
+**Conditional activation:**
+
+Sources and destinations support `require` to delay initialization until specific collector events fire. Use `require: ["consent"]` to prevent loading until consent is granted:
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "session": {
+      "package": "@walkeros/web-source-session",
+      "config": { "require": ["consent"] }
+    }
+  },
+  "destinations": {
+    "ga4": {
+      "package": "@walkeros/web-destination-gtag-ga4",
+      "config": {
+        "require": ["consent"],
+        "consent": { "marketing": true }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+See [Destinations documentation](/docs/destinations/) for all available options.
+
+### Transformers
+
+Transformers process events between sources and destinations. They validate, enrich, or redact events in the pipeline.
+
+<CodeSnippet
+  code={`{
+  "transformers": {
+    "validate": {
+      "package": "@walkeros/transformer-validator",
+      "config": {
+        "settings": { "format": true }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Configuration options:**
+- **`package`** - The npm package (required)
+- **`code`** - Explicit import variable name (optional, auto-resolved)
+- **`config`** - Transformer-specific configuration
+- **`env`** - Environment-specific settings
+- **`next`** - Next transformer in chain (omit to end chain)
+- **`variables`** - Transformer-level variable overrides
+- **`definitions`** - Transformer-level definitions
+
+**Chaining transformers:**
+
+Link transformers together using `next`:
+
+<CodeSnippet
+  code={`{
+  "transformers": {
+    "enrich": {
+      "package": "@walkeros/transformer-enricher",
+      "config": { "apiUrl": "https://api.example.com" },
+      "next": "validate"
+    },
+    "validate": {
+      "package": "@walkeros/transformer-validator"
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Explicit chain control with arrays:**
+
+For explicit control over the transformer chain order, use an array instead of a string. This bypasses the automatic chain resolution:
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "next": ["validate", "enrich", "redact"]
+    }
+  },
+  "transformers": {
+    "validate": { "package": "@walkeros/transformer-validator" },
+    "enrich": { "package": "@walkeros/transformer-enricher" },
+    "redact": { "package": "@walkeros/transformer-redact" }
+  }
+}`}
+  language="json"
+/>
+
+| Syntax | Behavior |
+|--------|----------|
+| `"next": "validate"` | Walks chain via each transformer's `next` property |
+| `"next": ["validate", "enrich"]` | Uses exact order specified, ignores transformer `next` properties |
+
+**Connecting to sources and destinations:**
+
+- **Pre-collector chain**: Use `next` on a source to route events through transformers before the collector
+- **Post-collector chain**: Use `before` on a destination to route events through transformers after the collector
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "next": "validate"
+    }
+  },
+  "transformers": {
+    "validate": {
+      "package": "@walkeros/transformer-validator"
+    },
+    "redact": {
+      "package": "@walkeros/transformer-redact"
+    }
+  },
+  "destinations": {
+    "analytics": {
+      "package": "@walkeros/server-destination-gcp",
+      "before": "redact"
+    }
+  }
+}`}
+  language="json"
+/>
+
+Both `next` and `before` accept arrays for explicit chain control (see "Explicit chain control with arrays" above).
+
+See [Transformers documentation](/docs/transformers/) for available transformers and custom transformer guide.
+
+### Stores
+
+Stores provide key-value storage that other components (sources, transformers, destinations) can consume via environment injection. They are passive infrastructure — no chains, no event processing.
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "cache": {
+      "package": "@walkeros/store-memory",
+      "config": {
+        "settings": {
+          "maxSize": 10485760,
+          "maxEntries": 1000
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Configuration options:**
+- **`package`** - The npm package (required for bundled mode)
+- **`code`** - Direct import reference (for integrated mode)
+- **`config`** - Store-specific configuration
+- **`env`** - Environment-specific settings
+
+**Connecting stores to components:**
+
+Use the `$store:` prefix in a component's `env` to inject a store instance:
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "cache": {
+      "package": "@walkeros/store-memory",
+      "config": { "settings": { "maxSize": 10485760 } }
+    }
+  },
+  "transformers": {
+    "cacheResponse": {
+      "package": "@walkeros/server-transformer-cache",
+      "env": {
+        "store": "$store:cache"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Lifecycle:** Stores initialize first (before sources, transformers, and destinations) and destroy last. This ensures stores are available when other components start and remain available while they shut down.
+
+**Programmatic usage:**
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { storeMemoryInit } from '@walkeros/store-memory';
+
+const { collector } = await startFlow({
+  stores: {
+    cache: {
+      code: storeMemoryInit,
+      config: { settings: { maxSize: 10 * 1024 * 1024 } }
+    }
+  }
+});
+
+// Access stores on the collector instance
+collector.stores.cache.set('key', 'value');`}
+  language="typescript"
+/>
+
+### Connection rules
+
+Sources, transformers, collectors, and destinations connect in specific ways. This table summarizes every valid connection:
+
+| From | To | Field | Notes |
+|------|----|-------|-------|
+| Source | Transformer | `next` on source | Pre-collector chain |
+| Source | Collector | omit `next` | Default — events go straight to collector |
+| Transformer | Transformer | `next` on transformer | Chain continues to next transformer |
+| Collector | Transformer | `before` on destination | Post-collector chain |
+| Collector | Destination | omit `before` | Default — events go straight to destination |
+
+**Connections that are not allowed:**
+- Source to source
+- Source directly to destination (events must pass through the collector)
+- Destination to anything (destinations are terminal nodes)
+- Collector to source
+
+#### Chain resolution
+
+The `next` and `before` fields accept either a string or an array. The resolution behavior differs:
+
+| Value | Behavior |
+|-------|----------|
+| `"validate"` (string) | Walks `transformer.next` links until the chain ends |
+| `["validate", "enrich"]` (array) | Uses the array as-is — ignores each transformer's `next` property |
+
+When walking a string chain, three edge cases apply:
+
+1. **String with array `next`**: If `validate.next` is `["a", "b"]`, the walker appends that array and stops. The final chain becomes `["validate", "a", "b"]`.
+2. **Missing target**: If a transformer name in the chain does not exist, that step is skipped and the event proceeds unchanged. If a string chain points to a nonexistent first transformer, the chain is empty and the event goes through without transformation.
+3. **Circular reference**: Detected via a visited set and safely broken — no infinite loop.
+
+#### Pre-collector vs post-collector transformers
+
+All transformers live in a single `transformers` pool. Their position in the pipeline depends on which field references them:
+
+```
+Source ──[next]──→ Pre-transformers ──→ Collector ──→ Post-transformers ──[before]──→ Destination
+```
+
+The same transformer can appear in both a pre-collector and a post-collector chain. For example, you might use `validate` in a source's `next` chain and again in a destination's `before` chain — each invocation runs independently.
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "next": "validate"
+    }
+  },
+  "transformers": {
+    "validate": {
+      "package": "@walkeros/transformer-validator"
+    },
+    "enrich": {
+      "package": "@walkeros/transformer-enricher"
+    }
+  },
+  "destinations": {
+    "analytics": {
+      "package": "@walkeros/server-destination-gcp",
+      "before": "enrich"
+    }
+  }
+}`}
+  language="json"
+/>
+
+In this config, `validate` runs before the collector (pre-chain) and `enrich` runs after the collector but before the `analytics` destination (post-chain).
+
+#### Router fan-out
+
+The `@walkeros/transformer-router` enables dynamic branching. Each route specifies a `next` field that redirects the chain based on ingest metadata:
+
+<CodeSnippet
+  code={`{
+  "transformers": {
+    "router": {
+      "package": "@walkeros/transformer-router",
+      "config": {
+        "settings": {
+          "routes": [
+            {
+              "match": { "key": "path", "operator": "prefix", "value": "/purchase" },
+              "next": "purchase_parser"
+            },
+            {
+              "match": "*",
+              "next": "default_parser"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "next": "router"
+    }
+  }
+}`}
+  language="json"
+/>
+
+Routes are evaluated in order — the first match wins. If no route matches, the event passes through unchanged. If a route's `next` points to a transformer that does not exist, the event is dropped (fail-safe).
+
+#### Deferred activation with `require`
+
+Sources and destinations support `require` to delay initialization until a specific collector event fires. This is commonly used for consent-gated loading:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "analytics": {
+      "package": "@walkeros/web-destination-gtag",
+      "config": {
+        "require": ["consent"]
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+The `analytics` destination will not initialize until a `"consent"` event is pushed to the collector. Until then, events are queued. This works identically for sources:
+
+<CodeSnippet
+  code={`{
+  "sources": {
+    "session": {
+      "package": "@walkeros/web-source-session",
+      "config": {
+        "require": ["consent"]
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+:::tip
+Combine `require` with `consent` on destinations for full consent management: `require` controls when the destination loads, while `consent` controls which events it receives. See the [Destinations](#destinations) section above for a combined example.
+:::
+
+### Inline Code (without packages)
+
+For simple one-liner logic, define sources, transformers, or destinations inline without creating a package.
+
+Use `code` object instead of `package`:
+
+**Inline Transformer:**
+
+<CodeSnippet
+  code={`{
+  "transformers": {
+    "enrich": {
+      "code": {
+        "type": "enricher",
+        "push": "$code:(event) => ({ ...event, data: { ...event.data, timestamp: Date.now() } })"
+      },
+      "config": {}
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Inline Destination:**
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "logger": {
+      "code": {
+        "type": "console-logger",
+        "push": "$code:(event, context) => { context.logger.info(event.name, event.data); }"
+      },
+      "config": {}
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Code object properties:**
+- **`push`** - The push function with `$code:` prefix (required)
+- **`type`** - Optional instance type identifier
+- **`init`** - Optional init function with `$code:` prefix
+
+**Rules:**
+- Use `package` OR `code`, never both
+- `config` stays separate (same as package-based)
+- `$code:` prefix outputs raw JavaScript at bundle time
+
+### Collector
+
+The collector processes events from sources and routes them to destinations:
+
+<CodeSnippet
+  code={`{
+  "collector": {
+    "globals": {
+      "environment": "production"
+    },
+    "consent": {
+      "functional": true
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Options:**
+- **`run`** - Whether to start the collector automatically (default: `true`)
+- **`globals`** - Properties added to every event
+- **`consent`** - Default consent state
+
+See [Collector documentation](/docs/collector/) for complete options.
+
+### Web-specific options
+
+For browser bundles, you can configure window variable names:
+
+<CodeSnippet
+  code={`{
+  "web": {
+    "windowCollector": "walkerCollector",
+    "windowElb": "elb"
+  }
+}`}
+  language="json"
+/>
+
+**Properties:**
+- **`windowCollector`** - Global variable name for collector instance (default: `"collector"`)
+- **`windowElb`** - Global variable name for event tracking function (default: `"elb"`)
+
+## Multi-flow configuration
+
+For managing dev/staging/production flows in one file:
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "variables": {
+    "defaultCurrency": "USD"
+  },
+  "flows": {
+    "development": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      },
+      "destinations": {
+        "console": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": { "name": "Dev Logger" }
+          }
+        }
+      },
+      "collector": {}
+    },
+    "production": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] }
+      },
+      "destinations": {
+        "bigquery": {
+          "package": "@walkeros/server-destination-gcp",
+          "config": {
+            "settings": {
+              "projectId": "prod-project"
+            }
+          }
+        }
+      },
+      "collector": {}
+    }
+  }
+}`}
+  language="json"
+/>
+
+Build specific flows using the CLI:
+
+<CodeSnippet
+  code={`# Build development flow
+walkeros bundle config.json --flow development
+
+# Build production flow
+walkeros bundle config.json --flow production
+
+# Build all flows
+walkeros bundle config.json --all`}
+  language="bash"
+/>
+
+## Dynamic patterns
+
+Flow configurations support five dynamic patterns for reusable, environment-aware configs:
+
+### `$var.name` - Config Variables
+
+Reference variables defined in `variables` for shared values across your config:
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "variables": {
+    "currency": "EUR",
+    "apiVersion": "v2"
+  },
+  "flows": {
+    "default": {
+      "web": {},
+      "destinations": {
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "settings": {
+              "endpoint": "https://api.example.com/$var.apiVersion/collect",
+              "currency": "$var.currency"
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Variables can be defined at three levels (higher specificity wins):
+1. **Source/Destination level** - Highest priority
+2. **Flow (Config) level** - Middle priority
+3. **Setup level** - Lowest priority
+
+### `$env.NAME` - Environment Variables
+
+Reference environment variables with optional defaults:
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "flows": {
+    "default": {
+      "web": {},
+      "destinations": {
+        "gtag": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "settings": {
+              "ga4": { "measurementId": "$env.GA4_ID:G-DEMO123456" }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+**Syntax:**
+- `$env.GA4_ID` - Required, throws if not set
+- `$env.GA4_ID:default` - Uses "default" if not set
+
+:::note Why only `$env` supports defaults
+Environment variables are external and unpredictable - they might not be set in all environments. Config variables (`$var`) are explicitly defined, so a missing one indicates a configuration error.
+:::
+
+### `$def.name` - Definition References
+
+Reference reusable configuration blocks defined in `definitions`:
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "definitions": {
+    "commonMapping": {
+      "page": {
+        "view": { "name": "page_view" }
+      }
+    },
+    "itemsLoop": {
+      "loop": ["nested", { "map": { "item_id": "data.id", "item_name": "data.name" } }]
+    }
+  },
+  "flows": {
+    "default": {
+      "web": {},
+      "destinations": {
+        "gtag": {
+          "package": "@walkeros/web-destination-gtag",
+          "config": {
+            "mapping": "$def.commonMapping"
+          }
+        },
+        "api": {
+          "package": "@walkeros/web-destination-api",
+          "config": {
+            "mapping": {
+              "order": {
+                "complete": {
+                  "data": { "map": { "items": "$def.itemsLoop" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Definitions cascade like variables - defined at setup, flow, or source/destination level.
+
+### `$store:storeId` - Store References
+
+Reference a store instance defined in the `stores` section. Used in component `env` values to inject store dependencies:
+
+<CodeSnippet
+  code={`"env": { "store": "$store:cache" }`}
+  language="json"
+/>
+
+The bundler resolves `$store:cache` to a runtime reference to the initialized store instance. Invalid references (pointing to undefined stores) are caught at build time.
+
+See the [Stores](#stores) section for a complete example with store definition and `env` wiring.
+
+### `$code:` - Inline JavaScript
+
+Embed JavaScript code directly in JSON config values:
+
+<CodeSnippet
+  code={`{
+  "destinations": {
+    "api": {
+      "package": "@walkeros/web-destination-api",
+      "config": {
+        "mapping": {
+          "product": {
+            "view": {
+              "data": {
+                "map": {
+                  "item_id": {
+                    "key": "data.id",
+                    "fn": "$code:(value) => value.toUpperCase()"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+The `$code:` prefix is stripped during bundling, outputting raw JavaScript:
+
+<CodeSnippet
+  code={`// Bundler output
+{
+  item_id: {
+    key: "data.id",
+    fn: (value) => value.toUpperCase()
+  }
+}`}
+  language="typescript"
+/>
+
+**Use cases:**
+- **`fn:` callbacks** - Transform values in mapping
+- **`condition:` predicates** - Conditional event processing
+- **Custom logic** - Any inline function or expression
+
+**Syntax notes:**
+- Multi-line code: Use JSON escapes (`\n`, `\"`)
+- Scope: Same as bundled code (access to imports and variables)
+- Errors: Caught at build time by TypeScript/esbuild
+
+## Type hierarchy
+
+walkerOS uses a clear type hierarchy:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Flow.Setup (config file)                                       │
+│  ├── version: 1                                                 │
+│  ├── variables?: { currency: "EUR" }                            │
+│  ├── definitions?: { commonMapping: {...} }                     │
+│  └── flows:                                                     │
+│       └── default: Flow.Config                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ CLI resolves $var, $env, $def
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Flow.Config (resolved flow)                                    │
+│  ├── web: {} or server: {}                                      │
+│  ├── packages: { ... }                                          │
+│  ├── stores: { ... }                                            │
+│  ├── sources: { ... }                                           │
+│  ├── transformers: { ... }                                      │
+│  ├── destinations: { ... }                                      │
+│  └── collector: { ... }                                         │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ CLI bundles and transforms
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Collector.InitConfig (runtime)                                 │
+│  Passed to startFlow() at runtime                               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+- **`Flow.Setup`** - Root config file format for CLI
+- **`Flow.Config`** - Single flow configuration
+- **`Collector.InitConfig`** - Runtime type passed to `startFlow()`
+
+## Complete example
+
+Here's a production-ready flow that accepts HTTP events and sends them to BigQuery:
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "packages": {
+        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
+        "@walkeros/server-destination-gcp": { "imports": ["destinationGCP"] },
+        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+      },
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": {
+            "settings": {
+              "path": "/collect",
+              "port": 8080,
+              "cors": true
+            }
+          }
+        }
+      },
+      "destinations": {
+        "bigquery": {
+          "package": "@walkeros/server-destination-gcp",
+          "config": {
+            "settings": {
+              "projectId": "my-analytics-project",
+              "datasetId": "events",
+              "tableId": "raw_events"
+            },
+            "mapping": {
+              "page": {
+                "view": {
+                  "name": "page_view",
+                  "data": {
+                    "map": {
+                      "page_title": "data.title",
+                      "page_path": "data.path",
+                      "timestamp": "timestamp"
+                    }
+                  }
+                }
+              },
+              "product": {
+                "view": { "name": "product_view" },
+                "add": { "name": "add_to_cart" }
+              }
+            }
+          }
+        },
+        "console": {
+          "package": "@walkeros/destination-demo",
+          "config": {
+            "settings": {
+              "name": "Debug Logger",
+              "values": ["name", "data", "timestamp"]
+            }
+          }
+        }
+      },
+      "collector": {
+        "globals": {
+          "environment": "production",
+          "version": "1.0.0"
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Programmatic usage
+
+You can also use configuration programmatically with the `startFlow` function:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceExpress } from '@walkeros/server-source-express';
+import { destinationDemo } from '@walkeros/destination-demo';
+
+const { collector, elb } = await startFlow({
+  sources: {
+    http: {
+      ...sourceExpress,
+      config: {
+        settings: { path: '/collect', port: 8080 }
+      }
+    }
+  },
+  destinations: {
+    console: {
+      ...destinationDemo,
+      config: {
+        settings: { name: 'Logger' }
+      }
+    }
+  },
+});
+
+// Collector is now running and ready to process events`}
+  language="typescript"
+/>
+
+See the [Collector documentation](/docs/collector/) for complete API reference.
+
+## Next steps
+
+- **[CLI](/docs/apps/cli)** - Learn how to bundle and test flows
+- **[Docker](/docs/apps/docker)** - Deploy flows in containers
+- **[Sources](/docs/sources/)** - Explore available event sources
+- **[Destinations](/docs/destinations/)** - Configure analytics destinations
+- **[Mapping](/docs/mapping)** - Transform events for destinations

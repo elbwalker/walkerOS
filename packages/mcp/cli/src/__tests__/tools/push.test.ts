@@ -60,7 +60,7 @@ describe('push tool', () => {
     expect(config.outputSchema).toBe(PushOutputShape);
   });
 
-  it('calls CLI push with parsed JSON event', async () => {
+  it('passes raw string event to push (resolution is CLI responsibility)', async () => {
     const mockResult = { destinations: [], logs: [], stats: {} };
     mockPush.mockResolvedValue(mockResult);
 
@@ -71,16 +71,17 @@ describe('push tool', () => {
       flow: undefined,
     });
 
+    // MCP passes raw string; push() / pushCore handles JSON parsing
     expect(mockPush).toHaveBeenCalledWith(
       './flow.json',
-      { name: 'page view', data: { title: 'Home' } },
+      '{"name":"page view","data":{"title":"Home"}}',
       { json: true, flow: undefined, platform: undefined },
     );
     expect(result.content[0].type).toBe('text');
     expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
   });
 
-  it('calls CLI push with string event (file path)', async () => {
+  it('passes file path string to push', async () => {
     const mockResult = { destinations: [], logs: [] };
     mockPush.mockResolvedValue(mockResult);
 
@@ -98,7 +99,7 @@ describe('push tool', () => {
     );
   });
 
-  it('parses JSON array events', async () => {
+  it('passes JSON array string to push', async () => {
     mockPush.mockResolvedValue({ results: [] });
 
     const tool = server.getTool('push');
@@ -110,7 +111,7 @@ describe('push tool', () => {
 
     expect(mockPush).toHaveBeenCalledWith(
       './flow.json',
-      [{ name: 'page view' }, { name: 'click button' }],
+      '[{"name":"page view"},{"name":"click button"}]',
       { json: true, flow: undefined, platform: undefined },
     );
   });
@@ -150,7 +151,7 @@ describe('push tool', () => {
     expect(parsed.error).toBe('Push failed');
   });
 
-  it('keeps invalid JSON as string event', async () => {
+  it('passes broken JSON string to push as-is', async () => {
     mockPush.mockResolvedValue({ results: [] });
 
     const tool = server.getTool('push');
@@ -180,7 +181,7 @@ describe('push tool', () => {
 
     expect(mockPush).toHaveBeenCalledWith(
       './flow.json',
-      { name: 'page view' },
+      '{"name":"page view"}',
       { json: true, flow: 'production', platform: undefined },
     );
   });
@@ -198,7 +199,7 @@ describe('push tool', () => {
 
     expect(mockPush).toHaveBeenCalledWith(
       './flow.json',
-      { name: 'page view' },
+      '{"name":"page view"}',
       { json: true, flow: undefined, platform: 'server' },
     );
   });

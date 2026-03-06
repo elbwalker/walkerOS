@@ -120,6 +120,7 @@ export {
   ContractSchemaEntry,
   SourceReferenceSchema,
   DestinationReferenceSchema,
+  StoreReferenceSchema,
   PrimitiveSchema,
   parseSetup,
   safeParseSetup,
@@ -131,6 +132,7 @@ export {
   configJsonSchema,
   sourceReferenceJsonSchema,
   destinationReferenceJsonSchema,
+  storeReferenceJsonSchema,
 } from './flow';
 
 // Validation

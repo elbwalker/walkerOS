@@ -1,6 +1,6 @@
 {
-  "$schema": "https://walkeros.io/schema/flow/v1.json",
-  "version": 1,
+  "$schema": "https://walkeros.io/schema/flow/v2.json",
+  "version": 2,
   "variables": {
     "currency": "EUR",
     "flowVersion": "1.0.0",
@@ -476,12 +476,34 @@
         "metaAccessToken": "$env.META_ACCESS_TOKEN:demo_token"
       },
       "packages": {
-        "@walkeros/collector": {},
+        "@walkeros/core": {
+          "path": "../../core"
+        },
+        "@walkeros/collector": {
+          "path": "../../collector"
+        },
         "@walkeros/server-source-express": {},
         "@walkeros/server-destination-meta": {},
         "@walkeros/destination-demo": {},
         "@walkeros/transformer-validator": {},
-        "@walkeros/server-transformer-fingerprint": {}
+        "@walkeros/server-transformer-fingerprint": {},
+        "@walkeros/server-transformer-cache": {
+          "path": "../../server/transformers/cache"
+        },
+        "@walkeros/store-memory": {
+          "path": "../../stores/memory"
+        }
+      },
+      "stores": {
+        "cache": {
+          "package": "@walkeros/store-memory",
+          "config": {
+            "settings": {
+              "maxSize": 10485760,
+              "maxEntries": 1000
+            }
+          }
+        }
       },
       "sources": {
         "http": {
@@ -523,6 +545,26 @@
         }
       },
       "transformers": {
+        "cache": {
+          "package": "@walkeros/server-transformer-cache",
+          "next": "filter",
+          "config": {
+            "settings": {
+              "rules": [
+                {
+                  "match": {
+                    "key": "method",
+                    "operator": "equals",
+                    "value": "GET"
+                  },
+                  "key": ["method", "path"],
+                  "ttl": 300
+                }
+              ]
+            }
+          },
+          "env": { "store": "$store:cache" }
+        },
         "filter": {
           "code": {
             "type": "filter",
@@ -635,7 +677,7 @@
       "destinations": {
         "meta": {
           "package": "@walkeros/server-destination-meta",
-          "before": "filter",
+          "before": "cache",
           "config": {
             "settings": {
               "pixelId": "$var.metaPixelId",

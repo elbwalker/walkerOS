@@ -46,6 +46,7 @@ the canonical interface.
 ```typescript
 // Conceptual structure (see source for full type)
 interface Flow {
+  stores?: Record<string, Store>;
   sources?: Record<string, Source>;
   transformers?: Record<string, Transformer>;
   destinations?: Record<string, Destination>;
@@ -75,6 +76,9 @@ the `startFlow` function.
 import { startFlow } from '@walkeros/collector';
 
 const { collector, elb } = await startFlow({
+  stores: {
+    /* key-value storage, init first, destroy last */
+  },
   sources: {
     /* ... */
   },
@@ -86,6 +90,38 @@ const { collector, elb } = await startFlow({
   },
 });
 ```
+
+## Stores
+
+Stores are the 4th component type — passive key-value infrastructure that other
+components consume via `env`.
+
+- Referenced via `$store:storeId` in `env` values (bundled mode) or passed
+  directly as store instances (integrated mode)
+- **Init first, destroy last** — stores are available before any source,
+  transformer, or destination starts, and outlive them on shutdown
+- **No chains** — stores have no `next` or `before`. They don't participate in
+  the event pipeline. Components access them through their `env`.
+- Implementations: `@walkeros/store-memory` (sync, LRU),
+  `@walkeros/server-store-fs` (async, filesystem), `@walkeros/server-store-s3`
+  (async, S3-compatible)
+
+```json
+{
+  "stores": {
+    "cache": { "package": "@walkeros/store-memory" }
+  },
+  "transformers": {
+    "cacheResponse": {
+      "package": "@walkeros/server-transformer-cache",
+      "env": { "store": "$store:cache" }
+    }
+  }
+}
+```
+
+See [walkeros-understanding-stores](../walkeros-understanding-stores/SKILL.md)
+for the full store interface and lifecycle.
 
 ## Separation of Concerns
 

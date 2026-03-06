@@ -1,0 +1,120 @@
+.elb-auto-select {
+  position: relative;
+  width: 100%;
+
+  &-input-wrapper {
+    position: relative;
+    width: 100%;
+  }
+
+  &-input {
+    width: 100%;
+    max-width: 100%;
+    padding: 8px 12px;
+    padding-right: 36px;
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-base);
+    color: var(--color-text-input);
+    background: var(--bg-input);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-button);
+    outline: none;
+    transition: all 0.15s;
+    box-sizing: border-box;
+
+    &:hover {
+      background: var(--bg-input-hover);
+    }
+
+    &:focus {
+      border-color: var(--border-input-focus);
+    }
+
+    &::placeholder {
+      color: var(--color-text-placeholder);
+    }
+  }
+
+  &-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.15s;
+
+    &:hover {
+      color: var(--color-text);
+      background: var(--bg-input-hover);
+    }
+  }
+
+  &-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: fit-content;
+    overflow-y: visible;
+    background: var(--bg-dropdown);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-button);
+    box-shadow: var(--shadow-dropdown);
+    z-index: 1000;
+
+    &-fixed {
+      position: fixed;
+      right: auto;
+    }
+
+    &.scrollable {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  }
+
+  &-option {
+    padding: 8px 12px;
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-base);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--bg-dropdown-option-hover);
+    }
+
+    &.highlighted {
+      background: var(--bg-dropdown-option-highlighted);
+    }
+
+    &.elb-auto-select-no-results {
+      color: var(--color-text-muted);
+      cursor: default;
+
+      &:hover {
+        background: transparent;
+      }
+    }
+  }
+
+  &-create-label {
+    color: var(--color-text-muted);
+    font-style: italic;
+    font-size: 0.9em;
+  }
+}

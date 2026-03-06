@@ -190,9 +190,9 @@ Manage projects, flows, and deployments via the walkerOS cloud API. Requires
 | Tool | Purpose |
 |------|---------|
 | `flow_list` | List all flow configurations in a project |
-| `flow_get` | Get a flow with its full content (Flow.Setup JSON) |
+| `flow_get` | Get a flow with its full content. Use `fields` for partial responses |
 | `flow_create` | Create a new flow configuration |
-| `flow_update` | Update a flow name and/or content |
+| `flow_update` | Update a flow name and/or content. Uses merge-patch by default |
 | `flow_delete` | Soft-delete a flow configuration |
 | `flow_duplicate` | Create a copy of an existing flow |
 

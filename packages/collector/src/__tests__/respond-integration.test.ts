@@ -14,7 +14,7 @@ describe('env.respond', () => {
             config: ctx.config,
             push: async (event, context) => {
               capturedRespond = context.env.respond;
-              return event;
+              return { event };
             },
           }),
         },
@@ -114,6 +114,68 @@ describe('env.respond', () => {
     expect(sender).toHaveBeenCalledWith({ body: { ok: true }, status: 201 });
   });
 
+  it('transformer can wrap respond via TransformerResult', async () => {
+    const sender = jest.fn();
+    const respond = createRespond(sender);
+    let downstreamRespond: RespondFn | undefined;
+
+    const { collector } = await startFlow({
+      transformers: {
+        wrapper: {
+          code: async (ctx) => ({
+            type: 'wrapper',
+            config: ctx.config,
+            push: async (event, context) => {
+              // Wrap the original respond to add headers
+              const originalRespond = context.env.respond!;
+              const wrappedRespond: RespondFn = (response) => {
+                originalRespond({
+                  ...response,
+                  headers: {
+                    ...response?.headers,
+                    'X-Wrapped': 'true',
+                  },
+                });
+              };
+              return { event, respond: wrappedRespond };
+            },
+          }),
+        },
+        downstream: {
+          code: async (ctx) => ({
+            type: 'downstream',
+            config: ctx.config,
+            push: async (event, context) => {
+              downstreamRespond = context.env.respond;
+              // Downstream uses the wrapped respond
+              context.env.respond?.({
+                body: 'from downstream',
+                status: 200,
+              });
+              return { event };
+            },
+          }),
+        },
+      },
+    });
+
+    await collector.push(
+      { name: 'page view' },
+      { respond, preChain: ['wrapper', 'downstream'] },
+    );
+
+    // Downstream should have received the wrapped respond
+    expect(downstreamRespond).toBeDefined();
+    expect(downstreamRespond).not.toBe(respond);
+
+    // Sender should have been called with the added header
+    expect(sender).toHaveBeenCalledWith({
+      body: 'from downstream',
+      status: 200,
+      headers: { 'X-Wrapped': 'true' },
+    });
+  });
+
   it('source setRespond flows to transformer env', async () => {
     let capturedRespond: RespondFn | undefined;
     const sender = jest.fn();
@@ -143,7 +205,7 @@ describe('env.respond', () => {
             config: ctx.config,
             push: async (event, context) => {
               capturedRespond = context.env.respond;
-              return event;
+              return { event };
             },
           }),
         },

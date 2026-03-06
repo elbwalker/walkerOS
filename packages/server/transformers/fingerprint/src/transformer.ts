@@ -59,7 +59,7 @@ export const transformerFingerprint: Transformer.Init<
 
       // Hash and store at output path
       const hash = await getHashServer(input, length);
-      return setByPath(event, output, hash);
+      return { event: setByPath(event, output, hash) };
     },
   };
 };

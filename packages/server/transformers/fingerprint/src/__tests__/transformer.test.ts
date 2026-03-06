@@ -64,8 +64,8 @@ describe('Transformer Fingerprint', () => {
       const result = await transformer.push(baseEvent, pushContext);
 
       expect(result).toBeDefined();
-      expect((result as WalkerOS.DeepPartialEvent).user?.hash).toBeDefined();
-      expect((result as WalkerOS.DeepPartialEvent).user?.hash).toHaveLength(16);
+      expect((result as any).event.user?.hash).toBeDefined();
+      expect((result as any).event.user?.hash).toHaveLength(16);
     });
 
     it('should hash fields in order (order matters)', async () => {
@@ -95,8 +95,8 @@ describe('Transformer Fingerprint', () => {
       const result2 = await transformer2.push(baseEvent, pushContext);
 
       // Different order should produce different hashes
-      expect((result1 as WalkerOS.DeepPartialEvent).user?.hash).not.toEqual(
-        (result2 as WalkerOS.DeepPartialEvent).user?.hash,
+      expect((result1 as any).event.user?.hash).not.toEqual(
+        (result2 as any).event.user?.hash,
       );
     });
 
@@ -115,7 +115,7 @@ describe('Transformer Fingerprint', () => {
       const result = await transformer.push(baseEvent, pushContext);
 
       expect(result).toBeDefined();
-      expect((result as WalkerOS.DeepPartialEvent).user?.hash).toBeDefined();
+      expect((result as any).event.user?.hash).toBeDefined();
     });
 
     it('should support function fields via mapping config', async () => {
@@ -134,7 +134,7 @@ describe('Transformer Fingerprint', () => {
       const result = await transformer.push(baseEvent, pushContext);
 
       expect(result).toBeDefined();
-      expect((result as WalkerOS.DeepPartialEvent).user?.hash).toBeDefined();
+      expect((result as any).event.user?.hash).toBeDefined();
     });
 
     it('should support key + fn transformation', async () => {
@@ -154,7 +154,7 @@ describe('Transformer Fingerprint', () => {
       const result = await transformer.push(baseEvent, pushContext);
 
       expect(result).toBeDefined();
-      expect((result as WalkerOS.DeepPartialEvent).user?.hash).toBeDefined();
+      expect((result as any).event.user?.hash).toBeDefined();
     });
   });
 
@@ -179,7 +179,7 @@ describe('Transformer Fingerprint', () => {
 
       // Should not throw, missing field becomes empty string
       expect(result).toBeDefined();
-      expect((result as WalkerOS.DeepPartialEvent).user?.hash).toBeDefined();
+      expect((result as any).event.user?.hash).toBeDefined();
     });
 
     it('should handle undefined ingest', async () => {
@@ -197,7 +197,7 @@ describe('Transformer Fingerprint', () => {
       const result = await transformer.push(baseEvent, pushContext);
 
       expect(result).toBeDefined();
-      expect((result as WalkerOS.DeepPartialEvent).user?.hash).toBeDefined();
+      expect((result as any).event.user?.hash).toBeDefined();
     });
 
     it('should handle empty fields array', async () => {
@@ -216,7 +216,7 @@ describe('Transformer Fingerprint', () => {
 
       // Empty fields = hash of empty string
       expect(result).toBeDefined();
-      expect((result as WalkerOS.DeepPartialEvent).user?.hash).toBeDefined();
+      expect((result as any).event.user?.hash).toBeDefined();
     });
   });
 
@@ -235,7 +235,7 @@ describe('Transformer Fingerprint', () => {
 
       const result = await transformer.push(baseEvent, pushContext);
 
-      expect((result as WalkerOS.DeepPartialEvent).user?.hash).toBeDefined();
+      expect((result as any).event.user?.hash).toBeDefined();
     });
 
     it('should store hash at configured output path', async () => {
@@ -252,10 +252,8 @@ describe('Transformer Fingerprint', () => {
 
       const result = await transformer.push(baseEvent, pushContext);
 
-      expect(
-        (result as WalkerOS.DeepPartialEvent).user?.fingerprint,
-      ).toBeDefined();
-      expect((result as WalkerOS.DeepPartialEvent).user?.hash).toBeUndefined();
+      expect((result as any).event.user?.fingerprint).toBeDefined();
+      expect((result as any).event.user?.hash).toBeUndefined();
     });
 
     it('should store hash at nested path', async () => {
@@ -272,7 +270,7 @@ describe('Transformer Fingerprint', () => {
 
       const result = await transformer.push(baseEvent, pushContext);
 
-      expect((result as any).data?.tracking?.fingerprint).toBeDefined();
+      expect((result as any).event?.data?.tracking?.fingerprint).toBeDefined();
     });
   });
 
@@ -291,7 +289,7 @@ describe('Transformer Fingerprint', () => {
 
       const result = await transformer.push(baseEvent, pushContext);
 
-      expect((result as WalkerOS.DeepPartialEvent).user?.hash).toHaveLength(16);
+      expect((result as any).event.user?.hash).toHaveLength(16);
     });
 
     it('should return full hash when length is not specified', async () => {
@@ -309,7 +307,7 @@ describe('Transformer Fingerprint', () => {
       const result = await transformer.push(baseEvent, pushContext);
 
       // SHA-256 produces 64-char hex string
-      expect((result as WalkerOS.DeepPartialEvent).user?.hash).toHaveLength(64);
+      expect((result as any).event.user?.hash).toHaveLength(64);
     });
   });
 
@@ -332,8 +330,8 @@ describe('Transformer Fingerprint', () => {
       const result1 = await transformer.push({ ...baseEvent }, pushContext);
       const result2 = await transformer.push({ ...baseEvent }, pushContext);
 
-      expect((result1 as WalkerOS.DeepPartialEvent).user?.hash).toEqual(
-        (result2 as WalkerOS.DeepPartialEvent).user?.hash,
+      expect((result1 as any).event.user?.hash).toEqual(
+        (result2 as any).event.user?.hash,
       );
     });
 
@@ -353,8 +351,8 @@ describe('Transformer Fingerprint', () => {
       const result1 = await transformer.push({ ...baseEvent }, pushContext1);
       const result2 = await transformer.push({ ...baseEvent }, pushContext2);
 
-      expect((result1 as WalkerOS.DeepPartialEvent).user?.hash).not.toEqual(
-        (result2 as WalkerOS.DeepPartialEvent).user?.hash,
+      expect((result1 as any).event.user?.hash).not.toEqual(
+        (result2 as any).event.user?.hash,
       );
     });
   });

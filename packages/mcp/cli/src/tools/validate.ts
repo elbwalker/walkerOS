@@ -23,17 +23,7 @@ export function registerValidateTool(server: McpServer) {
     },
     async ({ type, input, flow, path }) => {
       try {
-        // Parse input if it looks like JSON
-        let parsedInput: unknown = input;
-        if (input.startsWith('{') || input.startsWith('[')) {
-          try {
-            parsedInput = JSON.parse(input);
-          } catch {
-            // Keep as string (file path or URL)
-          }
-        }
-
-        const result = await validate(type, parsedInput, { flow, path });
+        const result = await validate(type, input, { flow, path });
 
         return {
           content: [

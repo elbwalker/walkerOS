@@ -217,8 +217,10 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
           push: async (event) => {
             // Transform the event
             return {
-              ...event,
-              data: { ...event.data, transformed: true },
+              event: {
+                ...event,
+                data: { ...event.data, transformed: true },
+              },
             };
           },
         };
@@ -243,11 +245,13 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
           config: {},
           push: async (event) => {
             return {
-              ...event,
-              data: {
-                ...event.data,
-                enriched: true,
-                timestamp: 12345,
+              event: {
+                ...event,
+                data: {
+                  ...event.data,
+                  enriched: true,
+                  timestamp: 12345,
+                },
               },
             };
           },
@@ -290,7 +294,9 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
         config: { next: 'enricher' },
         push: async (event) => {
           if (!event.name) return false; // Stop chain if no name
-          return { ...event, data: { ...event.data, validated: true } };
+          return {
+            event: { ...event, data: { ...event.data, validated: true } },
+          };
         },
       });
 
@@ -298,7 +304,9 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
         type: 'enricher',
         config: {},
         push: async (event) => {
-          return { ...event, data: { ...event.data, enriched: true } };
+          return {
+            event: { ...event, data: { ...event.data, enriched: true } },
+          };
         },
       });
 
@@ -376,8 +384,10 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
         type: 'flow-transformer',
         config: {},
         push: async (event) => ({
-          ...event,
-          data: { ...event.data, transformed: true },
+          event: {
+            ...event,
+            data: { ...event.data, transformed: true },
+          },
         }),
       });
 

@@ -77,7 +77,10 @@ describe('flows', () => {
       expect(mockGet).toHaveBeenCalledWith(
         '/api/projects/{projectId}/flows/{flowId}',
         {
-          params: { path: { projectId: 'proj_1', flowId: 'cfg_abc' } },
+          params: {
+            path: { projectId: 'proj_1', flowId: 'cfg_abc' },
+            query: {},
+          },
         },
       );
     });
@@ -90,6 +93,25 @@ describe('flows', () => {
         {
           params: {
             path: { projectId: 'proj_default', flowId: 'cfg_abc' },
+            query: {},
+          },
+        },
+      );
+    });
+
+    it('passes fields query param', async () => {
+      mockGet.mockResolvedValue({ data: { id: 'cfg_abc' } });
+      await getFlow({
+        flowId: 'cfg_abc',
+        projectId: 'proj_1',
+        fields: ['content.variables', 'content.flows.web'],
+      });
+      expect(mockGet).toHaveBeenCalledWith(
+        '/api/projects/{projectId}/flows/{flowId}',
+        {
+          params: {
+            path: { projectId: 'proj_1', flowId: 'cfg_abc' },
+            query: { fields: 'content.variables,content.flows.web' },
           },
         },
       );
@@ -143,6 +165,46 @@ describe('flows', () => {
             path: { projectId: 'proj_1', flowId: 'cfg_abc' },
           },
           body: { name: 'Updated' },
+        },
+      );
+    });
+
+    it('sends merge-patch content type when mergePatch is true', async () => {
+      const content = { variables: { trackingId: 'G-NEW' } };
+      mockPatch.mockResolvedValue({ data: { id: 'cfg_abc' } });
+      await updateFlow({
+        flowId: 'cfg_abc',
+        content,
+        projectId: 'proj_1',
+        mergePatch: true,
+      });
+      expect(mockPatch).toHaveBeenCalledWith(
+        '/api/projects/{projectId}/flows/{flowId}',
+        {
+          params: {
+            path: { projectId: 'proj_1', flowId: 'cfg_abc' },
+          },
+          body: { content },
+          headers: { 'Content-Type': 'application/merge-patch+json' },
+        },
+      );
+    });
+
+    it('sends application/json by default (no mergePatch)', async () => {
+      const content = { version: 2, flows: {} };
+      mockPatch.mockResolvedValue({ data: { id: 'cfg_abc' } });
+      await updateFlow({
+        flowId: 'cfg_abc',
+        content,
+        projectId: 'proj_1',
+      });
+      expect(mockPatch).toHaveBeenCalledWith(
+        '/api/projects/{projectId}/flows/{flowId}',
+        {
+          params: {
+            path: { projectId: 'proj_1', flowId: 'cfg_abc' },
+          },
+          body: { content },
         },
       );
     });

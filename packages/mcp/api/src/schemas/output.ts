@@ -89,6 +89,13 @@ const flowFields = {
 
 export const FlowOutputShape = { ...flowFields };
 
+export const FlowWriteOutputShape = {
+  id: flowId,
+  name: z.string().describe('Flow name'),
+  createdAt: timestamp,
+  updatedAt: timestamp,
+};
+
 const flowSummaryFields = {
   id: flowId,
   name: z.string().describe('Flow name'),

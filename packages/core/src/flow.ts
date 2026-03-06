@@ -316,6 +316,49 @@ export function getFlowConfig(
     }
   }
 
+  // Process stores with variable and definition cascade
+  if (result.stores) {
+    for (const [name, store] of Object.entries(result.stores)) {
+      const vars = mergeVariables(
+        setup.variables,
+        config.variables,
+        store.variables,
+      );
+      const defs = mergeDefinitions(
+        setup.definitions,
+        config.definitions,
+        store.definitions,
+      );
+
+      const processedConfig = resolvePatterns(
+        store.config,
+        vars,
+        defs,
+        options,
+      );
+
+      const resolvedCode = resolveCodeFromPackage(
+        store.package,
+        store.code,
+        result.packages,
+      );
+
+      const validCode =
+        typeof store.code === 'string' || typeof store.code === 'object'
+          ? store.code
+          : undefined;
+      const finalCode = resolvedCode || validCode;
+      result.stores[name] = {
+        package: store.package,
+        config: processedConfig,
+        env: store.env,
+        variables: store.variables,
+        definitions: store.definitions,
+        code: finalCode,
+      } as Flow.StoreReference;
+    }
+  }
+
   // Process collector config
   if (result.collector) {
     const vars = mergeVariables(setup.variables, config.variables);

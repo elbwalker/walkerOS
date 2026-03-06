@@ -19,6 +19,9 @@ export async function destroyAllSteps(
 
   // Phase 3: Transformers (release caches)
   await destroyStepGroup(collector.transformers, 'transformer', logger);
+
+  // Phase 4: Stores (release storage — last, so transformers can flush during their destroy)
+  await destroyStepGroup(collector.stores, 'store', logger);
 }
 
 async function destroyStepGroup<

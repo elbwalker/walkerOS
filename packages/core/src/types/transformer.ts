@@ -74,18 +74,17 @@ export interface Context<
 }
 
 /**
- * Branch result for dynamic chain routing.
- * Returned by transformers (e.g., router) to redirect the chain.
- * The chain runner resolves `next` via walkChain() — same semantics
- * as source.next or transformer.config.next.
+ * Unified result type for transformer functions.
+ * Replaces the old union return type with a structured object.
  *
- * IMPORTANT: Always use the `branch()` factory function to create BranchResult.
- * The `__branch` discriminant is required for reliable type detection.
+ * @field event - Modified event to continue with
+ * @field respond - Wrapped respond function for downstream transformers
+ * @field next - Branch to a different chain (replaces BranchResult)
  */
-export interface BranchResult {
-  readonly __branch: true;
-  event: WalkerOS.DeepPartialEvent;
-  next: Next;
+export interface Result {
+  event?: WalkerOS.DeepPartialEvent;
+  respond?: import('../respond').RespondFn;
+  next?: Next;
 }
 
 /**
@@ -94,16 +93,14 @@ export interface BranchResult {
  *
  * @param event - The event to process
  * @param context - Transformer context with collector, config, env, logger
- * @returns event - continue with modified event
+ * @returns Result - structured result with event, respond, next
  * @returns void - continue with current event unchanged (passthrough)
  * @returns false - stop chain, cancel further processing
  */
 export type Fn<T extends TypesGeneric = Types> = (
   event: WalkerOS.DeepPartialEvent,
   context: Context<T>,
-) => WalkerOS.PromiseOrValue<
-  WalkerOS.DeepPartialEvent | false | void | BranchResult
->;
+) => WalkerOS.PromiseOrValue<Result | false | void>;
 
 /**
  * Optional initialization function.

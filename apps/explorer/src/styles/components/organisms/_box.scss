@@ -1,0 +1,180 @@
+// Box component - flexible container for content
+.elb-explorer-box {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-box);
+  border: 1px solid var(--border-box);
+  border-radius: var(--radius-box);
+  overflow: hidden;
+  box-sizing: border-box;
+
+  // Default: explicit height (works for standalone, unbounded contexts)
+  // Monaco requires explicit height to work with height="100%"
+  min-height: 200px;
+  height: 400px;
+
+  // Auto-height mode: size to content
+  &.elb-box--auto-height {
+    height: auto;
+    min-height: 1px;
+  }
+
+  .elb-explorer-grid > & {
+    // Grid: fill cell with equal heights
+    // With box-sizing: border-box, height: 100% includes borders
+    height: 100%;
+    max-height: none;
+
+    // Override: When synced mode, use auto height to size to content
+    &.elb-box--auto-height {
+      height: auto;
+    }
+
+    // Mobile: content-based height with max limit
+    @container grid-container (max-width: 799px) {
+      height: auto;
+      max-height: var(--grid-box-max-height-mobile);
+    }
+  }
+
+  // In flex context (mapping function editor): use flex to fill space
+  // Avoids circular dependency that height: 100% would create in scrollable contexts
+  .elb-mapping-function-editor > & {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+// Header section
+.elb-explorer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-header);
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-header);
+  flex-shrink: 0;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.elb-explorer-label {
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-label);
+  user-select: none;
+}
+
+// Footer section
+.elb-explorer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-footer);
+  background: var(--bg-footer);
+  border-top: 1px solid var(--border-footer);
+  flex-shrink: 0;
+  height: 40px;
+  box-sizing: border-box;
+
+  // PreviewFooter fills entire footer space - no padding needed
+  &:has(.elb-preview-footer) {
+    padding: 0;
+  }
+}
+
+// Content section - the key to proper height management
+.elb-explorer-content {
+  flex: 1;
+  min-height: 0; // Critical for flex overflow
+  position: relative;
+  background: var(--bg-box);
+  overflow: hidden; // Hidden (not auto) - lets Monaco handle internal scrolling
+  display: flex;
+  flex-direction: column;
+
+  // When Box contains auto-height content, don't use flex: 1
+  .elb-box--auto-height & {
+    flex: 0 0 auto; // Size to content, not fill parent
+  }
+
+  // Nested Box (e.g., CodeBox inside Box with tabs): fill parent via flex
+  > .elb-explorer-box {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+// Button group styling
+.elb-explorer-button-group {
+  display: flex;
+  background: var(--bg-button-group);
+  border-radius: var(--radius-button-group);
+  padding: var(--spacing-button-group);
+  border: 1px solid var(--border-button-group);
+}
+
+// Tabs header
+.elb-explorer-tabs {
+  display: flex;
+  align-items: center;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-header);
+  flex-shrink: 0;
+  min-height: 36px;
+  box-sizing: border-box;
+}
+
+.elb-explorer-tab {
+  padding: 0.5rem 1rem;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+
+  &:hover {
+    color: var(--color-text-label);
+  }
+
+  &--active {
+    color: #01b5e2;
+    border-bottom-color: #01b5e2;
+  }
+}
+
+.elb-explorer-tab-actions {
+  margin-left: auto;
+  padding-right: 0.5rem;
+}
+
+// Traffic lights (Mac window decoration)
+.elb-explorer-traffic-lights {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0 1rem;
+  align-items: center;
+}
+
+.elb-explorer-traffic-light {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+
+  &--red {
+    background-color: #ff5f56;
+  }
+
+  &--yellow {
+    background-color: #ffbd2e;
+  }
+
+  &--green {
+    background-color: #27c93f;
+  }
+}

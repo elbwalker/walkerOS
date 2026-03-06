@@ -1,0 +1,34 @@
+.elb-preview-content {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.elb-preview-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.token.attr-name {
+  color: white !important;
+
+  &[data-elb],
+  &[data-elbaction],
+  &[data-elbglobals],
+  &[data-elbcontext],
+  &[data-elbproperty] {
+    color: var(--highlight-property) !important;
+  }
+}
+
+// Preview needs more height in mobile for visual content
+@container grid-container (max-width: 799px) {
+  .elb-preview-content {
+    min-height: 300px;
+  }
+}

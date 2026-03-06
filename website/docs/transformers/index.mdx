@@ -123,16 +123,18 @@ Each transformer in a chain controls what happens next:
 
 | Return | Behavior |
 |--------|----------|
-| `event` | Continue chain with the modified event |
+| `{ event }` | Continue chain with the modified event |
 | `void` | Continue chain with the current event unchanged |
 | `false` | Stop the chain — event is dropped |
-| `BranchResult` | Redirect to a different chain (fan-out) |
+| `{ next }` | Redirect to a different chain, preserving the current event |
+| `{ event, next }` | Redirect to a different chain with a modified event |
+| `{ event, respond }` | Continue chain with a wrapped respond function |
 
 If a transformer throws an error, the chain stops and the event is dropped (same as returning `false`).
 
-### Branching with `BranchResult`
+### Branching
 
-A transformer can redirect the event to a different chain by returning a `BranchResult` instead of a plain event. Use the `branch()` factory function from `@walkeros/core`:
+A transformer can redirect the event to a different chain by returning `{ event, next }`. Use the `branch()` factory function from `@walkeros/core`:
 
 <CodeSnippet
   code={`import { branch } from '@walkeros/core';
@@ -149,6 +151,26 @@ push(event, context) {
 />
 
 The chain runner resolves the `next` target using the same `walkChain()` logic — a string follows `next` links, an array is used directly. If the branch target does not exist, the event is dropped.
+
+### Respond wrapping
+
+A transformer can wrap the `respond` function for downstream transformers by returning `{ event, respond }`. This is useful for adding headers or transforming responses:
+
+<CodeSnippet
+  code={`push(event, context) {
+  const originalRespond = context.env.respond;
+  return {
+    event,
+    respond: (response) => {
+      originalRespond?.({
+        ...response,
+        headers: { ...response.headers, 'X-Custom': 'true' },
+      });
+    },
+  };
+}`}
+  language="typescript"
+/>
 
 The [router transformer](./router) uses branching to direct events to different parser chains based on request metadata:
 
@@ -234,8 +256,19 @@ Routes events to different transformer chains based on ingest metadata:
 
 [Learn more →](./router)
 
+### Cache
+
+Caches HTTP responses with LRU eviction and per-rule TTL:
+
+* Match requests using the same operators as the router
+* Cache key built from ingest fields (method, path, etc.)
+* Respond-wrapping pattern: MISS caches + forwards, HIT serves directly
+
+[Learn more →](./cache)
+
 ## Next steps
 
 * **[Validator](./validator)** - JSON Schema validation
 * **[Router](./router)** - Dynamic chain branching
+* **[Cache](./cache)** - HTTP response caching
 * **[Create your own](./create-your-own)** - Custom transformer guide

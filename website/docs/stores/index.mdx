@@ -1,0 +1,104 @@
+---
+title: Stores
+description: Key-value storage for walkerOS flows
+sidebar_position: 6
+---
+
+# Stores
+
+Stores provide **key-value storage** for walkerOS flows. They're used for caching, file serving, and persisting data across requests.
+
+## Use cases
+
+| Use Case | Store | Example |
+|----------|-------|---------|
+| **Serve static files** | S3, Filesystem | Serve walker.js from a bucket via the file transformer |
+| **Cache responses** | Memory, S3 | Store transformed responses for repeat requests |
+| **Persist state** | S3, Filesystem | Store session or consent data server-side |
+
+## Configuration
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { storeS3Init } from '@walkeros/server-store-s3';
+
+await startFlow({
+  stores: {
+    assets: {
+      code: storeS3Init,
+      config: {
+        settings: {
+          bucket: 'my-assets',
+          endpoint: 'https://s3.eu-west-1.amazonaws.com',
+          accessKeyId: process.env.S3_ACCESS_KEY,
+          secretAccessKey: process.env.S3_SECRET_KEY,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json`:
+
+<CodeSnippet
+  code={`"stores": {
+  "assets": {
+    "package": "@walkeros/server-store-s3",
+    "config": {
+      "settings": {
+        "bucket": "my-assets",
+        "endpoint": "https://s3.eu-west-1.amazonaws.com",
+        "accessKeyId": "$env.S3_ACCESS_KEY",
+        "secretAccessKey": "$env.S3_SECRET_KEY"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+## Wiring stores to other components
+
+Other components reference stores via `$store:storeId` in their env configuration:
+
+<CodeSnippet
+  code={`"transformers": {
+  "file": {
+    "package": "@walkeros/server-transformer-file",
+    "config": { "settings": { "prefix": "/static" } },
+    "env": { "store": "$store:assets" }
+  }
+}`}
+  language="json"
+/>
+
+## Available stores
+
+### S3
+
+S3-compatible object storage. Works with AWS S3, Cloudflare R2, Scaleway, DigitalOcean Spaces, Backblaze B2, MinIO, and any S3-compatible provider.
+
+[Learn more &rarr;](./server/s3)
+
+### Filesystem
+
+Local filesystem store for server flows. Reads and writes files relative to a base path with path traversal protection.
+
+[Learn more &rarr;](./server/fs)
+
+### Memory
+
+In-process key-value store with LRU eviction and TTL support. Platform-agnostic — works in both browser and server flows. Fast but not persisted across restarts.
+
+[Learn more &rarr;](./memory)

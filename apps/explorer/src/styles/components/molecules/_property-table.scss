@@ -1,0 +1,395 @@
+// Property Table - Full-width responsive layout
+.elb-property-table__container {
+  margin: 1.5rem 0 0;
+  overflow: visible;
+  border-radius: var(--radius-box);
+  border: 1px solid var(--border-box);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.elb-property-table__container table {
+  margin: 0;
+}
+
+.elb-property-table {
+  width: 100%;
+  table-layout: auto;
+  border-collapse: collapse;
+  font-size: calc(var(--font-size-base) - 1px);
+  background: var(--bg-box);
+  display: table;
+}
+
+.elb-property-table thead {
+  background: var(--bg-header);
+}
+
+.elb-property-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-label);
+  border-bottom: 2px solid var(--border-box);
+  font-size: calc(var(--font-size-base) - 2px);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.elb-property-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-box);
+  vertical-align: top;
+}
+
+.elb-property-table tbody tr:last-child td {
+  border-bottom: none;
+  padding-bottom: 12px;
+}
+
+.elb-property-table__property-name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-button-primary);
+  font-family: var(--font-mono);
+  font-size: calc(var(--font-size-base) - 2px);
+}
+
+.elb-property-table__property-type {
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: calc(var(--font-size-base) - 3px);
+  white-space: nowrap;
+}
+
+.elb-property-table__property-type--truncated {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 30px;
+    background: linear-gradient(to right, transparent, var(--bg-box));
+    pointer-events: none;
+  }
+}
+
+.elb-property-table__type-button {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
+  display: block;
+  width: 100%;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.7;
+  }
+
+  &:hover .elb-property-table__property-type--truncated::after {
+    background: linear-gradient(to right, transparent, var(--bg-input-hover));
+  }
+}
+
+.elb-property-table__required-icon {
+  color: var(--color-button-danger);
+  font-weight: bold;
+  margin-left: 4px;
+  font-size: 1.1em;
+}
+
+.elb-property-table__action-cell {
+  text-align: center;
+  width: 60px;
+}
+
+.elb-property-table__property-cell {
+  width: 20%;
+  white-space: nowrap;
+}
+
+.elb-property-table__type-cell {
+  width: 25%;
+}
+
+// Description column will auto-fill remaining space (no width specified)
+.elb-property-table__description {
+  line-height: 1.4;
+  color: var(--color-text);
+  // No width constraint - will fill remaining space
+}
+
+.elb-property-table__more-button {
+  background: none;
+  border: none;
+  padding: 6px;
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  color: var(--color-button-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.elb-property-table__more-button:hover {
+  background: var(--bg-button-hover);
+}
+
+.elb-property-table__required-notice {
+  margin-top: 0;
+  font-size: calc(var(--font-size-base) - 2px);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+// Modal styles
+.elb-property-table__modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.elb-property-table__modal-content {
+  background: var(--bg-box);
+  border-radius: var(--radius-box);
+  box-shadow: var(--shadow-dropdown);
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  border: 1px solid var(--border-box);
+}
+
+.elb-property-table__modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-box);
+}
+
+.elb-property-table__modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+}
+
+.elb-property-table__modal-property-name {
+  font-family: var(--font-mono);
+  color: var(--color-button-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: 1rem;
+}
+
+.elb-property-table__close-button {
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  color: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.elb-property-table__close-button:hover {
+  color: var(--color-text);
+  background: var(--bg-button-hover);
+}
+
+.elb-property-table__modal-body {
+  padding: 20px 24px 24px;
+}
+
+.elb-property-table__modal-row {
+  margin-bottom: 16px;
+}
+
+.elb-property-table__modal-row:last-child {
+  margin-bottom: 0;
+}
+
+.elb-property-table__modal-label {
+  display: block;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-label);
+  margin-bottom: 6px;
+  font-size: calc(var(--font-size-base) - 1px);
+}
+
+.elb-property-table__modal-type {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  font-size: calc(var(--font-size-base) - 1px);
+}
+
+.elb-property-table__modal-type--wrap {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+.elb-property-table__modal-description {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.elb-property-table__modal-default {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  font-size: calc(var(--font-size-base) - 1px);
+}
+
+.elb-property-table__modal-example {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  font-size: calc(var(--font-size-base) - 1px);
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+// Responsive behavior
+@media (max-width: 768px) {
+  .elb-property-table__container {
+    margin: 1rem 0 0;
+  }
+
+  .elb-property-table {
+    font-size: calc(var(--font-size-base) - 2px);
+    display: block;
+  }
+
+  .elb-property-table thead {
+    display: none;
+  }
+
+  .elb-property-table tbody {
+    display: block;
+  }
+
+  .elb-property-table tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-box);
+    border-radius: var(--radius-box);
+    background: var(--bg-box);
+    position: relative;
+  }
+
+  .elb-property-table td {
+    display: block;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-box);
+    text-align: left;
+  }
+
+  .elb-property-table tbody tr:last-child td {
+    border-bottom: 1px solid var(--border-box);
+  }
+
+  .elb-property-table td:last-child {
+    border-bottom: none;
+  }
+
+  .elb-property-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-label);
+    font-size: calc(var(--font-size-base) - 3px);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .elb-property-table__property-name,
+  .elb-property-table__property-type {
+    font-size: calc(var(--font-size-base) - 2px);
+  }
+
+  .elb-property-table__property-cell {
+    width: 100%;
+    padding: 12px 44px 8px 12px; // Extra right padding for button, less bottom padding
+    border-bottom: none; // No border after property cell
+  }
+
+  .elb-property-table__property-cell::before {
+    display: none; // Hide "Property" label
+  }
+
+  .elb-property-table__type-cell,
+  .elb-property-table__description {
+    width: 100%;
+  }
+
+  .elb-property-table__description {
+    font-size: calc(var(--font-size-base) - 2px);
+  }
+
+  .elb-property-table__action-cell {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+  }
+
+  // Hide "More" label - important to override the general td::before rule
+  .elb-property-table__action-cell::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  .elb-property-table__more-button {
+    padding: 4px;
+    width: auto;
+    min-width: 28px;
+    height: 28px;
+    border-radius: 4px;
+  }
+
+  .elb-property-table__more-button svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .elb-property-table__modal-content {
+    margin: 10px;
+    max-height: 90vh;
+  }
+
+  .elb-property-table__modal-header {
+    padding: 16px 20px 12px;
+  }
+
+  .elb-property-table__modal-body {
+    padding: 16px 20px 20px;
+  }
+}

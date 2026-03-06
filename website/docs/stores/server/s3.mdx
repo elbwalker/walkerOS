@@ -1,0 +1,156 @@
+---
+title: S3
+description: S3-compatible object storage for walkerOS server flows
+sidebar_position: 1
+package: '@walkeros/server-store-s3'
+---
+
+import { schemas } from '@walkeros/server-store-s3/dev';
+
+# S3
+
+<PackageLink env="server" github="packages/server/stores/s3" npm="@walkeros/server-store-s3" />
+
+S3-compatible object storage store using [s3mini](https://github.com/good-lly/s3mini) (~20 KB, zero dependencies). Works with AWS S3, Cloudflare R2, Scaleway, DigitalOcean Spaces, Backblaze B2, MinIO, and any S3-compatible provider.
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the package:
+
+<CodeSnippet
+  code={`npm install @walkeros/server-store-s3`}
+  language="bash"
+/>
+
+Configure in your code:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { storeS3Init } from '@walkeros/server-store-s3';
+
+await startFlow({
+  stores: {
+    assets: {
+      code: storeS3Init,
+      config: {
+        settings: {
+          bucket: 'my-assets',
+          endpoint: 'https://s3.eu-west-1.amazonaws.com',
+          accessKeyId: process.env.S3_ACCESS_KEY,
+          secretAccessKey: process.env.S3_SECRET_KEY,
+          region: 'eu-west-1',
+          prefix: 'public',
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json`:
+
+<CodeSnippet
+  code={`"stores": {
+  "assets": {
+    "package": "@walkeros/server-store-s3",
+    "config": {
+      "settings": {
+        "bucket": "my-assets",
+        "endpoint": "https://s3.eu-west-1.amazonaws.com",
+        "accessKeyId": "$env.S3_ACCESS_KEY",
+        "secretAccessKey": "$env.S3_SECRET_KEY",
+        "region": "eu-west-1",
+        "prefix": "public"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+## Configuration
+
+<PropertyTable schema={schemas.settings} />
+
+## Provider examples
+
+| Provider | Endpoint | Notes |
+|----------|----------|-------|
+| AWS S3 | `https://s3.<region>.amazonaws.com` | Set `region` to your actual region |
+| Cloudflare R2 | `https://<account>.r2.cloudflarestorage.com` | No egress fees |
+| Scaleway | `https://s3.<region>.scw.cloud` | EU hosting |
+| DigitalOcean | `https://<region>.digitaloceanspaces.com` | Simple pricing |
+| Backblaze B2 | `https://s3.<region>.backblazeb2.com` | Cheapest storage |
+| MinIO | `http://localhost:9000` | Self-hosted |
+
+## Credentials
+
+Use `$env.` references in Flow.Setup to avoid hardcoding secrets:
+
+<CodeSnippet
+  code={`"accessKeyId": "$env.S3_ACCESS_KEY",
+"secretAccessKey": "$env.S3_SECRET_KEY"`}
+  language="json"
+/>
+
+Unlike the AWS SDK, `s3mini` has no implicit credential chain — `accessKeyId` and `secretAccessKey` are always required.
+
+## File serving pattern
+
+The primary use case is serving static files via the file transformer. This is the recommended pattern for managed deployments (Mode D) where files live in a bucket rather than needing to be baked into a Docker image:
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "assets": {
+      "package": "@walkeros/server-store-s3",
+      "config": {
+        "settings": {
+          "bucket": "my-assets",
+          "endpoint": "https://s3.eu-west-1.amazonaws.com",
+          "accessKeyId": "$env.S3_ACCESS_KEY",
+          "secretAccessKey": "$env.S3_SECRET_KEY",
+          "prefix": "public"
+        }
+      }
+    }
+  },
+  "transformers": {
+    "file": {
+      "package": "@walkeros/server-transformer-file",
+      "config": { "settings": { "prefix": "/static" } },
+      "env": { "store": "$store:assets" }
+    }
+  }
+}`}
+  language="json"
+/>
+
+A request to `/static/walker.js` looks up `public/walker.js` in the `my-assets` bucket.
+
+## Security
+
+- **Key validation**: Path traversal attempts (`..`, absolute paths) are rejected
+- **Prefix scoping**: The `prefix` setting restricts all operations to a subdirectory
+- **No credential chain**: Credentials must be explicitly provided (no ambient AWS credentials)
+
+## API
+
+<CodeSnippet
+  code={`const file = await store.get('walker.js');    // Buffer | undefined
+await store.set('data.json', Buffer.from('{}')); // void
+await store.delete('old-file.txt');               // void`}
+  language="typescript"
+/>
+
+`get()` returns `Buffer` for compatibility with the file transformer, which uses `content instanceof Buffer` for Content-Length calculation.

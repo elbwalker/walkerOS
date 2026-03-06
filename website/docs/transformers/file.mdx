@@ -1,0 +1,169 @@
+---
+title: File
+description: Serve static files from a store backend with MIME detection
+sidebar_position: 4
+package: '@walkeros/server-transformer-file'
+---
+
+# File
+
+<PackageLink env="server" github="packages/server/transformers/file" npm="@walkeros/server-transformer-file" />
+
+Serves static files from a [store](/docs/getting-started/stores) backend. Reads the file by `ingest.path`, derives the Content-Type from the file extension, and responds directly. Returns `false` to stop the transformer chain.
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the package:
+
+<CodeSnippet
+  code={`npm install @walkeros/server-transformer-file`}
+  language="bash"
+/>
+
+Configure in your code:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { transformerFile } from '@walkeros/server-transformer-file';
+import { storeFsInit } from '@walkeros/server-store-fs';
+
+await startFlow({
+  stores: {
+    files: {
+      code: storeFsInit,
+      config: { settings: { basePath: './public' } },
+    },
+  },
+  transformers: {
+    file: {
+      code: transformerFile,
+      config: {
+        settings: { prefix: '/static' },
+      },
+      env: { store: '$store:files' },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json`:
+
+<CodeSnippet
+  code={`"stores": {
+  "files": {
+    "package": "@walkeros/server-store-fs",
+    "config": { "settings": { "basePath": "./public" } }
+  }
+},
+"transformers": {
+  "file": {
+    "package": "@walkeros/server-transformer-file",
+    "config": { "settings": { "prefix": "/static" } },
+    "env": { "store": "$store:files" }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup &rarr;](/docs/getting-started/modes/bundled) | [CLI reference &rarr;](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## How it works
+
+1. Reads `ingest.path` from the request context
+2. Strips the configured `prefix` (if set) — e.g. `/static/image.png` becomes `image.png`
+3. Looks up the remaining path in the store via `store.get(key)`
+4. If found, derives the Content-Type from the file extension and responds with the content
+5. Returns `false` to stop the chain — no further transformers or destinations run
+6. If the file is not found or the path doesn't match the prefix, the event passes through unchanged
+
+## Settings
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `prefix` | `string` | — | URL prefix to strip (e.g., `/static`) |
+| `headers` | `Record<string, string>` | — | Default response headers (e.g., `Cache-Control`) |
+| `mimeTypes` | `Record<string, string>` | — | Extension overrides (e.g., `{ ".wasm": "application/wasm" }`) |
+
+## Environment
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `store` | `Store.Instance` | Yes | Store providing file content. Without one, the transformer warns and passes through. |
+
+## Examples
+
+### Cache + file chain
+
+Place the [cache transformer](./cache) before the file transformer. Cached files are served from memory, avoiding repeated store reads:
+
+<CodeSnippet
+  code={`"sources": {
+  "http": {
+    "package": "@walkeros/server-source-express",
+    "next": "router"
+  }
+},
+"transformers": {
+  "router": {
+    "package": "@walkeros/transformer-router",
+    "config": {
+      "settings": {
+        "routes": [
+          {
+            "match": { "key": "method", "operator": "eq", "value": "GET" },
+            "next": "cache"
+          }
+        ]
+      }
+    }
+  },
+  "cache": {
+    "package": "@walkeros/server-transformer-cache",
+    "next": "file"
+  },
+  "file": {
+    "package": "@walkeros/server-transformer-file",
+    "config": { "settings": { "prefix": "/static" } },
+    "env": { "store": "$store:files" }
+  }
+}`}
+  language="json"
+/>
+
+### Custom MIME types
+
+<CodeSnippet
+  code={`{
+  settings: {
+    mimeTypes: {
+      '.wasm': 'application/wasm',
+      '.mjs': 'application/javascript',
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+## Behavior notes
+
+- **Requires a store** — without `env.store`, every request logs a warning and passes through
+- **Prefix matching** — if `prefix` is set and the path doesn't start with it, the event passes through (not an error)
+- **Returns `false`** — a served file stops the chain; no destinations receive the event
+- **Content-Length** — automatically set for string and Buffer content
+
+## Next steps
+
+- **[Cache](./cache)** - Add response caching before file serving
+- **[Router](./router)** - Route requests to the file chain
+- **[Stores](/docs/getting-started/stores)** - Configure store backends
+- **[Docker — Including files](/docs/apps/docker#including-files)** - Bake files into Docker images

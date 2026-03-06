@@ -1,0 +1,190 @@
+// ArchitectureFlow - Responsive data flow diagram
+// Layout: Sources → Center → Destinations
+//
+// Uses CSS Container Queries to break based on available space, not viewport.
+// Horizontal when container is wide enough, vertical when narrow.
+
+// Minimum container width for horizontal layout
+$container-breakpoint: 550px;
+
+// Outer wrapper establishes the container context
+.elb-architecture-flow {
+  container-type: inline-size;
+  width: 100%;
+}
+
+// Inner grid responds to container queries
+.elb-architecture-flow__grid {
+  // Mobile: vertical flex layout (default)
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+
+  // Horizontal: CSS Grid layout when container is wide enough
+  @container (min-width: #{$container-breakpoint}) {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 16px 32px;
+  }
+}
+
+// Title styling
+.elb-architecture-flow__title {
+  font-size: var(--font-size-base, 16px);
+  font-weight: var(--font-weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  color: var(--color-text-muted, #6b7280);
+
+  &--desktop {
+    display: none;
+
+    @container (min-width: #{$container-breakpoint}) {
+      display: block;
+    }
+  }
+
+  &--mobile {
+    display: block;
+    margin-bottom: 16px;
+
+    @container (min-width: #{$container-breakpoint}) {
+      display: none;
+    }
+  }
+}
+
+// Spacer for grid alignment (empty cells in title row)
+.elb-architecture-flow__spacer {
+  display: none;
+
+  @container (min-width: #{$container-breakpoint}) {
+    display: block;
+  }
+}
+
+// Column container (sources/destinations)
+.elb-architecture-flow__column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+// Sections container within a column
+.elb-architecture-flow__sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: fit-content;
+  min-width: 180px;
+}
+
+// Individual section box
+.elb-architecture-flow__section {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-box, rgba(128, 128, 128, 0.3));
+  background-color: var(--bg-box, transparent);
+}
+
+// Section title (e.g., "Client-side", "Server-side")
+.elb-architecture-flow__section-title {
+  display: block;
+  font-size: calc(var(--font-size-base, 16px) - 2px);
+  font-weight: 500;
+  color: var(--color-text-muted, #6b7280);
+  margin-bottom: 12px;
+}
+
+// Items list within a section
+.elb-architecture-flow__items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// Individual item (icon + label)
+.elb-architecture-flow__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text, currentColor);
+}
+
+// Item icon
+.elb-architecture-flow__item-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  > svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// Item label
+.elb-architecture-flow__item-label {
+  font-size: var(--font-size-base, 16px);
+  white-space: nowrap;
+}
+
+// "and more..." indicator
+.elb-architecture-flow__more {
+  font-size: calc(var(--font-size-base, 16px) - 2px);
+  font-style: italic;
+  color: var(--color-text-muted, #6b7280);
+  opacity: 0.7;
+  text-align: center;
+}
+
+// Arrow styling
+.elb-architecture-flow__arrow {
+  color: var(--color-button-primary, #01b5e2);
+
+  > svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  &--desktop {
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    @container (min-width: #{$container-breakpoint}) {
+      display: flex;
+    }
+  }
+
+  &--mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    @container (min-width: #{$container-breakpoint}) {
+      display: none;
+    }
+  }
+}
+
+// Center element container
+.elb-architecture-flow__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+// Center content wrapper
+.elb-architecture-flow__center-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

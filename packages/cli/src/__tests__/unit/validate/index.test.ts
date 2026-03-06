@@ -1,6 +1,9 @@
 // walkerOS/packages/cli/src/commands/validate/__tests__/index.test.ts
 
 import { describe, it, expect } from '@jest/globals';
+import * as path from 'path';
+import * as os from 'os';
+import * as fs from 'fs';
 import { validate } from '../../../commands/validate/index.js';
 
 describe('validate programmatic API', () => {
@@ -29,6 +32,28 @@ describe('validate programmatic API', () => {
         version: 1,
         flows: { default: { web: {} } },
       });
+
+      expect(result.valid).toBe(true);
+      expect(result.type).toBe('flow');
+    });
+
+    it('validates flow from file path', async () => {
+      const flow = { version: 1, flows: { default: { web: {} } } };
+      const tmpFile = path.join(os.tmpdir(), 'test-flow.json');
+      fs.writeFileSync(tmpFile, JSON.stringify(flow));
+
+      try {
+        const result = await validate('flow', tmpFile);
+        expect(result.valid).toBe(true);
+        expect(result.type).toBe('flow');
+      } finally {
+        fs.unlinkSync(tmpFile);
+      }
+    });
+
+    it('validates flow from JSON string', async () => {
+      const flow = { version: 1, flows: { default: { web: {} } } };
+      const result = await validate('flow', JSON.stringify(flow));
 
       expect(result.valid).toBe(true);
       expect(result.type).toBe('flow');

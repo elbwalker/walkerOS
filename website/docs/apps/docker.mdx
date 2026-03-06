@@ -175,6 +175,90 @@ Works with presigned S3/GCS URLs, CDNs, or any HTTP(S) endpoint.
 
 Stdin takes highest priority — if data is piped, the `BUNDLE` env var is ignored.
 
+## Including files
+
+The `include` field in your flow config copies folders into the bundle output directory at build time. When combined with `--dockerfile`, these folders are automatically added as `COPY` instructions in the generated Dockerfile.
+
+### The `include` field
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "include": ["./public"],
+  "flows": {
+    "default": {
+      "server": {},
+      "stores": {
+        "files": {
+          "package": "@walkeros/server-store-fs",
+          "config": { "settings": { "basePath": "./public" } }
+        }
+      },
+      "sources": {
+        "http": { "package": "@walkeros/server-source-express" }
+      },
+      "transformers": {
+        "router": {
+          "package": "@walkeros/transformer-router",
+          "config": {
+            "settings": {
+              "routes": [
+                {
+                  "match": { "key": "method", "operator": "eq", "value": "GET" },
+                  "next": "file"
+                }
+              ]
+            }
+          }
+        },
+        "file": {
+          "package": "@walkeros/server-transformer-file",
+          "config": { "settings": { "prefix": "/static" } },
+          "env": { "store": "$store:files" }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+Build with Dockerfile generation:
+
+<CodeSnippet
+  code={`walkeros bundle flow.json -o dist/ --dockerfile`}
+  language="bash"
+/>
+
+The generated `dist/Dockerfile` includes COPY lines for both the bundle and the included folder:
+
+<CodeSnippet
+  code={`FROM walkeros/flow:latest
+COPY bundle.mjs /app/flow/bundle.mjs
+COPY public/ /app/flow/public/
+ENV BUNDLE=/app/flow/bundle.mjs
+EXPOSE 8080`}
+  language="dockerfile"
+/>
+
+### Volume mount for development
+
+During development, mount folders directly instead of baking them into the image:
+
+<CodeSnippet
+  code={`docker run -v ./public:/app/flow/public -p 8080:8080 walkeros/flow`}
+  language="bash"
+/>
+
+### Directory separation
+
+Keep served files and credentials in separate directories:
+
+- **`public/`** — Files served to clients (static assets, templates)
+- **`credentials/`** — Secret files (API keys, service accounts)
+
+The fs store only serves files under its configured `basePath`. Never point it at a directory containing secrets.
+
 ## Deployment workflows
 
 ### Workflow 1: volume mount (development)

@@ -29,17 +29,7 @@ export function registerSimulateTool(server: McpServer) {
           throw new Error('Either event or example must be provided');
         }
 
-        // Parse event if JSON string
-        let parsedEvent: unknown = event;
-        if (event && (event.startsWith('{') || event.startsWith('['))) {
-          try {
-            parsedEvent = JSON.parse(event);
-          } catch {
-            // Keep as string (file path or URL)
-          }
-        }
-
-        const result = await simulate(configPath, parsedEvent, {
+        const result = await simulate(configPath, event, {
           json: true,
           flow,
           platform,

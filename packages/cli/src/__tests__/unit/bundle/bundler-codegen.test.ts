@@ -4,6 +4,7 @@ import {
   createEntryPoint,
   detectTransformerPackages,
   detectExplicitCodeImports,
+  serializeWithCode,
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
 import type { Flow } from '@walkeros/core';
@@ -1077,6 +1078,18 @@ describe('full flow with transformers', () => {
     // Destinations
     expect(result).toContain('destinations:');
     expect(result).toContain('code: destinationBigQuery');
+  });
+});
+
+describe('$store: prefix', () => {
+  it('should resolve $store: to stores variable reference', () => {
+    const result = serializeWithCode('$store:cache', 0);
+    expect(result).toBe('stores.cache');
+  });
+
+  it('should resolve $store: in nested objects', () => {
+    const result = serializeWithCode({ store: '$store:files' }, 0);
+    expect(result).toContain('stores.files');
   });
 });
 

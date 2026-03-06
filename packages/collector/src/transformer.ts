@@ -35,23 +35,6 @@ import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { isObject, tryCatchAsync, useHooks } from '@walkeros/core';
 
 /**
- * Type guard for BranchResult.
- * Uses the __branch discriminant set by the branch() factory function.
- * This is unambiguous — a DeepPartialEvent can never have __branch: true.
- */
-function isBranchResult(
-  result: WalkerOS.DeepPartialEvent | false | void | Transformer.BranchResult,
-): result is Transformer.BranchResult {
-  return (
-    result !== null &&
-    result !== undefined &&
-    result !== false &&
-    typeof result === 'object' &&
-    (result as Transformer.BranchResult).__branch === true
-  );
-}
-
-/**
  * Extracts transformer next configuration for chain walking.
  * Maps transformer instances to their config.next values.
  *
@@ -283,9 +266,7 @@ export async function transformerPush(
   event: WalkerOS.DeepPartialEvent,
   ingest?: unknown,
   respond?: import('@walkeros/core').RespondFn,
-): Promise<
-  WalkerOS.DeepPartialEvent | false | void | Transformer.BranchResult
-> {
+): Promise<Transformer.Result | false | void> {
   const transformerType = transformer.type || 'unknown';
   const transformerLogger = collector.logger.scope(
     `transformer:${transformerType}`,
@@ -335,6 +316,7 @@ export async function runTransformerChain(
   respond?: import('@walkeros/core').RespondFn,
 ): Promise<WalkerOS.DeepPartialEvent | null> {
   let processedEvent = event;
+  let currentRespond = respond;
 
   for (const transformerName of chain) {
     const transformer = transformers[transformerName];
@@ -367,7 +349,7 @@ export async function runTransformerChain(
       transformerName,
       processedEvent,
       ingest,
-      respond,
+      currentRespond,
     );
 
     // Handle result
@@ -376,34 +358,44 @@ export async function runTransformerChain(
       return null;
     }
 
-    // Handle chain branching
-    if (isBranchResult(result)) {
-      const branchedChain = walkChain(
-        result.next,
-        extractTransformerNextMap(transformers),
-      );
+    if (result && typeof result === 'object') {
+      // Unified TransformerResult handling
+      const { event: resultEvent, respond: resultRespond, next } = result;
 
-      if (branchedChain.length > 0) {
-        return runTransformerChain(
-          collector,
-          transformers,
-          branchedChain,
-          result.event,
-          ingest,
-          respond,
-        );
+      // Update respond if transformer provided a wrapper
+      if (resultRespond) {
+        currentRespond = resultRespond;
       }
 
-      // Branch target not found — drop event (fail-safe).
-      collector.logger.warn(
-        `Branch target not found: ${JSON.stringify(result.next)}`,
-      );
-      return null;
-    }
+      // Handle chain branching
+      if (next) {
+        const branchedChain = walkChain(
+          next,
+          extractTransformerNextMap(transformers),
+        );
 
-    if (result !== undefined) {
-      // Transformer returned a modified event
-      processedEvent = result;
+        if (branchedChain.length > 0) {
+          return runTransformerChain(
+            collector,
+            transformers,
+            branchedChain,
+            resultEvent || processedEvent,
+            ingest,
+            currentRespond,
+          );
+        }
+
+        // Branch target not found — drop event (fail-safe).
+        collector.logger.warn(
+          `Branch target not found: ${JSON.stringify(next)}`,
+        );
+        return null;
+      }
+
+      // Update event if provided
+      if (resultEvent) {
+        processedEvent = resultEvent;
+      }
     }
     // If result is undefined (void), continue with current event unchanged
   }

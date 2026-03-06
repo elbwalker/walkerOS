@@ -1,6 +1,5 @@
 import fs from 'fs-extra';
-import type { Destination, Logger, Simulation, WalkerOS } from '@walkeros/core';
-import { Level } from '@walkeros/core';
+import type { Destination, Simulation, WalkerOS } from '@walkeros/core';
 import { simulate } from '@walkeros/collector';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
@@ -12,25 +11,6 @@ import { loadFlowConfig, isObject } from '../../config/index.js';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadDestinationEnvs } from './env-loader.js';
 import type { SimulateCommandOptions, SimulationResult } from './types.js';
-
-function createCollectorLoggerConfigInline(
-  logger: Logger.Instance,
-  verbose?: boolean,
-): Logger.Config {
-  return {
-    level: verbose ? Level.DEBUG : Level.ERROR,
-    handler: (level, message, context, scope) => {
-      const scopePath = scope.length > 0 ? `[${scope.join(':')}] ` : '';
-      const hasContext = Object.keys(context).length > 0;
-      const contextStr = hasContext ? ` ${JSON.stringify(context)}` : '';
-      if (level === Level.ERROR) {
-        logger.error(`${scopePath}${message}${contextStr}`);
-      } else {
-        logger.debug(`${scopePath}${message}${contextStr}`);
-      }
-    },
-  };
-}
 
 /**
  * Convert Simulation.Call[] to CLI's usage format
@@ -76,7 +56,6 @@ export async function simulateCore(
     const result = await executeSimulation(event, inputPath, options.platform, {
       flow: options.flow,
       step: options.step,
-      logger,
       verbose: options.verbose,
     });
 
@@ -154,17 +133,11 @@ export async function executeSimulation(
   options: {
     flow?: string;
     step?: string;
-    logger?: Logger.Instance;
     verbose?: boolean;
   } = {},
 ): Promise<SimulationResult> {
   const startTime = Date.now();
   const tempDir = getTmpPath();
-
-  // Create collector logger config for forwarding logs
-  const collectorLoggerConfig = options.logger
-    ? createCollectorLoggerConfigInline(options.logger, options.verbose)
-    : undefined;
 
   try {
     // Ensure temp directory exists
@@ -199,7 +172,6 @@ export async function executeSimulation(
       typedEvent,
       tempDir,
       startTime,
-      collectorLoggerConfig,
       options.flow,
       options.step,
     );
@@ -275,7 +247,6 @@ async function executeConfigSimulation(
   typedEvent: { name: string; data?: unknown },
   tempDir: string,
   startTime: number,
-  loggerConfig?: Logger.Config,
   flowName?: string,
   stepTarget?: string,
 ): Promise<SimulationResult> {

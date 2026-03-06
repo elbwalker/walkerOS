@@ -3,7 +3,7 @@ import type {
   MatchCondition,
   MatchOperator,
   CompiledMatcher,
-} from './types';
+} from './types/matcher';
 
 /**
  * Compiles a match expression into a closure for fast runtime evaluation.

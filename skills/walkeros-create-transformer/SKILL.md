@@ -247,7 +247,8 @@ complete implementation example.
    defaults (see
    [templates/validation/schemas.ts](templates/validation/schemas.ts))
 3. **Push receives pushContext**: The `push` function gets event + push context
-4. **Return values**: `event` (continue), `void` (passthrough), `false` (cancel)
+4. **Return values**: `{ event }` (continue), `void` (passthrough), `false`
+   (cancel)
 
 ### 5.3 Export
 

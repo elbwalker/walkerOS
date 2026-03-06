@@ -79,8 +79,12 @@ describe('Contract Integration Tests', () => {
       const viewEvent = createEvent('product', 'view', { id: '123' });
       const addEvent = createEvent('product', 'add', { id: '456' });
 
-      expect(await transformer.push(viewEvent, context)).toEqual(viewEvent);
-      expect(await transformer.push(addEvent, context)).toEqual(addEvent);
+      expect(await transformer.push(viewEvent, context)).toEqual({
+        event: viewEvent,
+      });
+      expect(await transformer.push(addEvent, context)).toEqual({
+        event: addEvent,
+      });
       expect(mockLogger.debug).toHaveBeenCalledWith(
         'Contract validation passed',
         { rule: 'product *' },
@@ -109,7 +113,7 @@ describe('Contract Integration Tests', () => {
 
       const event = createEvent('item', 'purchase', { value: 100 });
 
-      expect(await transformer.push(event, context)).toEqual(event);
+      expect(await transformer.push(event, context)).toEqual({ event });
       expect(mockLogger.debug).toHaveBeenCalledWith(
         'Contract validation passed',
         { rule: '* purchase' },
@@ -138,7 +142,7 @@ describe('Contract Integration Tests', () => {
 
       const event = createEvent('anything', 'random', { foo: 'bar' });
 
-      expect(await transformer.push(event, context)).toEqual(event);
+      expect(await transformer.push(event, context)).toEqual({ event });
       expect(mockLogger.debug).toHaveBeenCalledWith(
         'Contract validation passed',
         { rule: '* *' },
@@ -221,7 +225,9 @@ describe('Contract Integration Tests', () => {
         quantity: 15,
         warehouse: 'WH-1',
       });
-      expect(await transformer.push(bulkEvent, context)).toEqual(bulkEvent);
+      expect(await transformer.push(bulkEvent, context)).toEqual({
+        event: bulkEvent,
+      });
 
       // High quantity without warehouse - should fail
       const bulkEventNoWarehouse = createEvent('product', 'add', {
@@ -235,7 +241,9 @@ describe('Contract Integration Tests', () => {
         id: '456',
         quantity: 5,
       });
-      expect(await transformer.push(smallEvent, context)).toEqual(smallEvent);
+      expect(await transformer.push(smallEvent, context)).toEqual({
+        event: smallEvent,
+      });
     });
 
     it('should fall back to rule without condition', async () => {
@@ -270,7 +278,7 @@ describe('Contract Integration Tests', () => {
 
       const event = createEvent('product', 'view', { id: '123' });
 
-      expect(await transformer.push(event, context)).toEqual(event);
+      expect(await transformer.push(event, context)).toEqual({ event });
     });
   });
 
@@ -300,9 +308,15 @@ describe('Contract Integration Tests', () => {
       const event3 = createEvent('product', 'view', { id: '789' });
 
       // All should pass using the same cached validator
-      expect(await transformer.push(event1, context)).toEqual(event1);
-      expect(await transformer.push(event2, context)).toEqual(event2);
-      expect(await transformer.push(event3, context)).toEqual(event3);
+      expect(await transformer.push(event1, context)).toEqual({
+        event: event1,
+      });
+      expect(await transformer.push(event2, context)).toEqual({
+        event: event2,
+      });
+      expect(await transformer.push(event3, context)).toEqual({
+        event: event3,
+      });
 
       // Debug called 3 times with same rule
       expect(mockLogger.debug).toHaveBeenCalledTimes(3);
@@ -337,7 +351,7 @@ describe('Contract Integration Tests', () => {
       // Different entity/action - no matching rule
       const event = createEvent('product', 'view', { anything: 'goes' });
 
-      expect(await transformer.push(event, context)).toEqual(event);
+      expect(await transformer.push(event, context)).toEqual({ event });
       expect(mockLogger.error).not.toHaveBeenCalled();
       expect(mockLogger.debug).not.toHaveBeenCalled();
     });
@@ -354,7 +368,7 @@ describe('Contract Integration Tests', () => {
 
       const event = createEvent('any', 'event', {});
 
-      expect(await transformer.push(event, context)).toEqual(event);
+      expect(await transformer.push(event, context)).toEqual({ event });
     });
   });
 
@@ -381,7 +395,7 @@ describe('Contract Integration Tests', () => {
 
       const event = createEvent('product', 'view', { id: '123' });
 
-      expect(await transformer.push(event, context)).toEqual(event);
+      expect(await transformer.push(event, context)).toEqual({ event });
     });
 
     it('should fail on format before reaching contract', async () => {

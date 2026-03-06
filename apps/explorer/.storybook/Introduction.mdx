@@ -1,0 +1,115 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Introduction" />
+
+# walkerOS Explorer Component Library
+
+Interactive React components for walkerOS documentation and exploration.
+
+## Overview
+
+The `@walkeros/explorer` package provides a professional component library for building interactive walkerOS documentation, demos, and configuration tools.
+
+## Architecture
+
+Components follow **atomic design principles**:
+
+- **Atoms**: Basic UI elements (buttons, inputs, toggles)
+- **Molecules**: Component combinations (code editors, navigation)
+- **Organisms**: Complex integrated systems (full editors, config UI)
+- **Demos**: Complete workflows (mapping demos, destination testing)
+
+## Installation
+
+```bash
+npm install @walkeros/explorer
+```
+
+## Usage
+
+Import components and styles:
+
+```tsx
+import { CodeBox } from '@walkeros/explorer';
+import '@walkeros/explorer/styles.css';
+
+function App() {
+  return (
+    <CodeBox
+      code="const event = { entity: 'product', action: 'view' };"
+      language="javascript"
+      label="Event Code"
+      showCopy
+    />
+  );
+}
+```
+
+## Theme Support
+
+Components support light and dark themes via `data-theme` attribute:
+
+```html
+<div data-theme="light">
+  <!-- Components render with light theme -->
+</div>
+
+<div data-theme="dark">
+  <!-- Components render with dark theme -->
+</div>
+```
+
+Use the theme toolbar in Storybook to switch between light and dark modes.
+
+## Key Features
+
+### Monaco Editor Integration
+- Full TypeScript/JavaScript syntax highlighting
+- Auto-completion with walkerOS type definitions
+- Multiple language support (JSON, HTML, CSS, etc.)
+
+### RJSF Forms
+- React JSON Schema Forms integration
+- Custom field and widget components
+- Validation and error handling
+
+### Mapping System
+- Visual mapping configuration editor
+- Tree navigation for complex configs
+- Live preview and transformation
+
+### Destination Testing
+- Real-time destination integration testing
+- Event processing visualization
+- Configuration playground
+
+## walkerOS Integration
+
+Demo components require walkerOS packages as peer dependencies:
+
+- `@walkeros/core` - **Required** for all components
+- `@walkeros/collector` - Optional, for demo components
+- `@walkeros/web-source-browser` - Optional, for browser demos
+
+## Development
+
+This Storybook contains interactive examples for all components. Use the navigation sidebar to explore:
+
+1. **Molecules** - Start here with CodeBox and other building blocks
+2. **Organisms** - Complex integrated components
+3. **Demos** - Complete application examples
+
+## Links
+
+- [GitHub Repository](https://github.com/elbwalker/walkerOS)
+- [Documentation](https://www.elbwalker.com/docs/)
+- [NPM Package](https://www.npmjs.com/package/@walkeros/explorer)
+
+## Contributing
+
+When adding new components:
+1. Follow atomic design principles
+2. Use CSS variables for theming
+3. Create a `.stories.tsx` file with at least one default story
+4. Document props with JSDoc comments
+5. Test in both light and dark themes

@@ -39,7 +39,7 @@ The returned instance must implement:
   code={`interface Transformer.Instance {
   type: string;           // Unique identifier
   config: Transformer.Config;
-  push(event, context): event | false | void;
+  push(event, context): Transformer.Result | false | void;
 }`}
   language="typescript"
 />
@@ -48,9 +48,11 @@ The returned instance must implement:
 
 | Return | Behavior |
 |--------|----------|
-| `event` | Continue chain with modified event |
+| `{ event }` | Continue chain with modified event |
 | `void` | Continue chain, event unchanged |
 | `false` | Stop chain, event dropped |
+| `{ event, next }` | Redirect to a different chain (fan-out) |
+| `{ event, respond }` | Continue chain with wrapped respond function |
 
 ## Minimal example
 
@@ -82,7 +84,7 @@ export const transformerRedact: Transformer.Init<Types> = (context) => {
         }
       }
 
-      return event;
+      return { event };
     }
   };
 };`}
@@ -111,7 +113,7 @@ The `push` function receives an event and a push context:
     event.data = { ...event.data, clientIp: ingest.ip };
   }
 
-  return event;
+  return { event };
 }`}
   language="typescript"
 />
@@ -128,7 +130,7 @@ The `push` function receives an event and a push context:
     region: 'eu-west-1',
   };
 
-  return event;
+  return { event };
 }`}
   language="typescript"
 />
@@ -142,7 +144,7 @@ The `push` function receives an event and a push context:
     return false;  // Stop chain
   }
 
-  return event;
+  return { event };
 }`}
   language="typescript"
 />
@@ -212,8 +214,8 @@ describe('Redact Transformer', () => {
 
     const result = transformer.push(event, pushContext);
 
-    expect(result.data.email).toBeUndefined();
-    expect(result.data.id).toBe('123');
+    expect(result.event.data.email).toBeUndefined();
+    expect(result.event.data.id).toBe('123');
   });
 });`}
   language="typescript"

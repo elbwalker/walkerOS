@@ -169,13 +169,13 @@ jobs:
       - name: Verify CLI published to npm
         run: |
           CLI_VERSION=${{ steps.versions.outputs.cli }}
-          for i in 1 2 3 4 5; do
+          for i in $(seq 1 12); do
             if npm view "@walkeros/cli@$CLI_VERSION" version 2>/dev/null; then
               echo "Verified: @walkeros/cli@$CLI_VERSION exists on npm"
               exit 0
             fi
-            echo "Attempt $i: waiting for npm propagation..."
-            sleep 10
+            echo "Attempt $i/12: waiting for npm propagation..."
+            sleep 15
           done
           echo "ERROR: @walkeros/cli@$CLI_VERSION not found on npm after publish"
           exit 1

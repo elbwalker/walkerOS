@@ -1,6 +1,7 @@
 import {
   ListFlowsOutputShape,
   FlowOutputShape,
+  FlowWriteOutputShape,
   DeleteOutputShape,
 } from '../../schemas/output.js';
 
@@ -58,10 +59,10 @@ describe('flow tools', () => {
 
     expect(keys('flow_list')).toEqual(Object.keys(ListFlowsOutputShape));
     expect(keys('flow_get')).toEqual(Object.keys(FlowOutputShape));
-    expect(keys('flow_create')).toEqual(Object.keys(FlowOutputShape));
-    expect(keys('flow_update')).toEqual(Object.keys(FlowOutputShape));
+    expect(keys('flow_create')).toEqual(Object.keys(FlowWriteOutputShape));
+    expect(keys('flow_update')).toEqual(Object.keys(FlowWriteOutputShape));
     expect(keys('flow_delete')).toEqual(Object.keys(DeleteOutputShape));
-    expect(keys('flow_duplicate')).toEqual(Object.keys(FlowOutputShape));
+    expect(keys('flow_duplicate')).toEqual(Object.keys(FlowWriteOutputShape));
   });
 
   describe('flow_list', () => {
@@ -106,13 +107,37 @@ describe('flow tools', () => {
       expect(mockGetFlow).toHaveBeenCalledWith({
         flowId: 'cfg_abc',
         projectId: 'proj_1',
+        fields: undefined,
+      });
+    });
+
+    it('should pass fields to getFlow()', async () => {
+      mockGetFlow.mockResolvedValue({
+        id: 'cfg_abc',
+        content: { variables: {} },
+      });
+      await server.getTool('flow_get').handler({
+        flowId: 'cfg_abc',
+        projectId: 'proj_1',
+        fields: ['content.variables'],
+      });
+      expect(mockGetFlow).toHaveBeenCalledWith({
+        flowId: 'cfg_abc',
+        projectId: 'proj_1',
+        fields: ['content.variables'],
       });
     });
   });
 
   describe('flow_create', () => {
     it('should pass name, content, projectId to createFlow()', async () => {
-      mockCreateFlow.mockResolvedValue({ id: 'cfg_new' });
+      mockCreateFlow.mockResolvedValue({
+        id: 'cfg_new',
+        name: 'My Flow',
+        content: { version: 2 },
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
       const content = { version: 1 };
       await server
         .getTool('flow_create')
@@ -123,6 +148,26 @@ describe('flow tools', () => {
         projectId: 'proj_1',
       });
     });
+
+    it('strips content from result (write optimization)', async () => {
+      mockCreateFlow.mockResolvedValue({
+        id: 'cfg_new',
+        name: 'My Flow',
+        content: { version: 2, flows: { web: {} } },
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
+      const result = await server
+        .getTool('flow_create')
+        .handler({ name: 'My Flow', content: {}, projectId: 'proj_1' });
+      expect(result.structuredContent).toEqual({
+        id: 'cfg_new',
+        name: 'My Flow',
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
+      expect(result.structuredContent.content).toBeUndefined();
+    });
   });
 
   describe('flow_update', () => {
@@ -131,21 +176,64 @@ describe('flow tools', () => {
       expect((tool.config as any).annotations.idempotentHint).toBe(true);
     });
 
-    it('should pass all fields to updateFlow()', async () => {
-      mockUpdateFlow.mockResolvedValue({ id: 'cfg_abc' });
-      const content = { version: 1, sources: [] };
+    it('should pass mergePatch:true by default', async () => {
+      mockUpdateFlow.mockResolvedValue({
+        id: 'cfg_abc',
+        name: 'Updated',
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
       await server.getTool('flow_update').handler({
         flowId: 'cfg_abc',
         name: 'Updated',
-        content,
         projectId: 'proj_1',
       });
       expect(mockUpdateFlow).toHaveBeenCalledWith({
         flowId: 'cfg_abc',
         name: 'Updated',
+        content: undefined,
+        projectId: 'proj_1',
+        mergePatch: true,
+      });
+    });
+
+    it('should pass mergePatch:false when patch is false', async () => {
+      mockUpdateFlow.mockResolvedValue({
+        id: 'cfg_abc',
+        name: 'Updated',
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
+      const content = { version: 2, flows: {} };
+      await server.getTool('flow_update').handler({
+        flowId: 'cfg_abc',
         content,
+        patch: false,
         projectId: 'proj_1',
       });
+      expect(mockUpdateFlow).toHaveBeenCalledWith({
+        flowId: 'cfg_abc',
+        name: undefined,
+        content,
+        projectId: 'proj_1',
+        mergePatch: false,
+      });
+    });
+
+    it('strips content from result (write optimization)', async () => {
+      mockUpdateFlow.mockResolvedValue({
+        id: 'cfg_abc',
+        name: 'Updated',
+        content: { version: 2, flows: { web: {} } },
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
+      const result = await server.getTool('flow_update').handler({
+        flowId: 'cfg_abc',
+        name: 'Updated',
+        projectId: 'proj_1',
+      });
+      expect(result.structuredContent.content).toBeUndefined();
     });
   });
 
@@ -169,7 +257,12 @@ describe('flow tools', () => {
 
   describe('flow_duplicate', () => {
     it('should pass flowId, name, projectId to duplicateFlow()', async () => {
-      mockDuplicateFlow.mockResolvedValue({ id: 'cfg_copy' });
+      mockDuplicateFlow.mockResolvedValue({
+        id: 'cfg_copy',
+        name: 'My Copy',
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
       await server.getTool('flow_duplicate').handler({
         flowId: 'cfg_abc',
         name: 'My Copy',
@@ -183,7 +276,12 @@ describe('flow tools', () => {
     });
 
     it('should pass undefined name when not provided', async () => {
-      mockDuplicateFlow.mockResolvedValue({ id: 'cfg_copy' });
+      mockDuplicateFlow.mockResolvedValue({
+        id: 'cfg_copy',
+        name: 'Copy of...',
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
       await server
         .getTool('flow_duplicate')
         .handler({ flowId: 'cfg_abc', projectId: 'proj_1' });
@@ -192,6 +290,22 @@ describe('flow tools', () => {
         name: undefined,
         projectId: 'proj_1',
       });
+    });
+
+    it('strips content from result (write optimization)', async () => {
+      mockDuplicateFlow.mockResolvedValue({
+        id: 'cfg_copy',
+        name: 'My Copy',
+        content: { version: 2 },
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      });
+      const result = await server.getTool('flow_duplicate').handler({
+        flowId: 'cfg_abc',
+        name: 'My Copy',
+        projectId: 'proj_1',
+      });
+      expect(result.structuredContent.content).toBeUndefined();
     });
   });
 });
