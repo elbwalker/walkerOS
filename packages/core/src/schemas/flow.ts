@@ -55,9 +55,12 @@ export const DefinitionsSchema = z
 /**
  * Packages schema for build configuration.
  */
+const npmPackageNamePattern =
+  /^(@[a-z0-9\-~][a-z0-9\-._~]*\/)?[a-z0-9\-~][a-z0-9\-._~]*$/;
+
 export const PackagesSchema = z
   .record(
-    z.string(),
+    z.string().regex(npmPackageNamePattern, 'Invalid npm package name'),
     z.object({
       version: z.string().optional(),
       imports: z.array(z.string()).optional(),

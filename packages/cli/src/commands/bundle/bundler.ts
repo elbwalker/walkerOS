@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import esbuild from 'esbuild';
 import path from 'path';
 import fs from 'fs-extra';
@@ -256,16 +257,19 @@ export async function bundleCore(
     logger.warn('Skipping deprecated code: true entries from bundle.');
   }
 
-  // Use provided temp dir or default .tmp/
-  const TEMP_DIR = buildOptions.tempDir || getTmpPath();
+  // Per-build isolation: unique working dir, shared cache
+  const buildId = crypto.randomUUID();
+  const TEMP_DIR =
+    buildOptions.tempDir || getTmpPath(undefined, `walkeros-build-${buildId}`);
+  const CACHE_DIR = buildOptions.tempDir || getTmpPath();
 
   // Check build cache if caching is enabled
   if (buildOptions.cache !== false) {
     const configContent = generateCacheKeyContent(flowConfig, buildOptions);
 
-    const cached = await isBuildCached(configContent, TEMP_DIR);
+    const cached = await isBuildCached(configContent, CACHE_DIR);
     if (cached) {
-      const cachedBuild = await getCachedBuild(configContent, TEMP_DIR);
+      const cachedBuild = await getCachedBuild(configContent, CACHE_DIR);
       if (cachedBuild) {
         logger.debug('Using cached build');
 
@@ -340,7 +344,7 @@ export async function bundleCore(
       logger,
       buildOptions.cache,
       buildOptions.configDir, // For resolving relative local paths
-      TEMP_DIR,
+      CACHE_DIR,
     );
 
     // Fix @walkeros packages to have proper ESM exports
@@ -422,7 +426,7 @@ export async function bundleCore(
     if (buildOptions.cache !== false) {
       const configContent = generateCacheKeyContent(flowConfig, buildOptions);
       const buildOutput = await fs.readFile(outputPath, 'utf-8');
-      await cacheBuild(configContent, buildOutput, TEMP_DIR);
+      await cacheBuild(configContent, buildOutput, CACHE_DIR);
       logger.debug('Build cached for future use');
     }
 
@@ -448,11 +452,14 @@ export async function bundleCore(
       );
     }
 
-    // No auto-cleanup - user runs `walkeros clean` explicitly
-
     return stats;
   } catch (error) {
     throw error;
+  } finally {
+    // Clean up per-build directory (contains entry.js with potential secrets)
+    if (!buildOptions.tempDir) {
+      fs.remove(TEMP_DIR).catch(() => {});
+    }
   }
 }
 
