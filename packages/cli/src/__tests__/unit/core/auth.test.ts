@@ -2,6 +2,7 @@ import {
   getToken,
   getAuthHeaders,
   authenticatedFetch,
+  resolveRunToken,
 } from '../../../core/auth.js';
 
 // Isolate from real ~/.config/walkeros/config.json
@@ -11,6 +12,7 @@ jest.mock('../../../lib/config-file.js', () => ({
     if (!token) return null;
     return { token, source: 'env' as const };
   },
+  resolveDeployToken: () => process.env.WALKEROS_DEPLOY_TOKEN ?? null,
   resolveAppUrl: () =>
     process.env.WALKEROS_APP_URL || 'https://app.walkeros.io',
 }));
@@ -21,6 +23,7 @@ describe('auth', () => {
   beforeEach(() => {
     process.env = { ...originalEnv };
     delete process.env.WALKEROS_TOKEN;
+    delete process.env.WALKEROS_DEPLOY_TOKEN;
   });
 
   afterEach(() => {
@@ -133,6 +136,23 @@ describe('auth', () => {
           Authorization: 'Bearer sk-walkeros-real',
         },
       });
+    });
+  });
+
+  describe('resolveRunToken', () => {
+    it('returns WALKEROS_DEPLOY_TOKEN when set', () => {
+      process.env.WALKEROS_DEPLOY_TOKEN = 'deploy-token';
+      process.env.WALKEROS_TOKEN = 'regular-token';
+      expect(resolveRunToken()).toBe('deploy-token');
+    });
+
+    it('falls back to WALKEROS_TOKEN when no deploy token', () => {
+      process.env.WALKEROS_TOKEN = 'regular-token';
+      expect(resolveRunToken()).toBe('regular-token');
+    });
+
+    it('returns null when no token available', () => {
+      expect(resolveRunToken()).toBeNull();
     });
   });
 });

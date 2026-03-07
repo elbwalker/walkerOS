@@ -1,13 +1,8 @@
 /**
  * Runtime module - Execute pre-built walkerOS flows
- *
- * This module provides runtime execution capabilities for:
- * - Running pre-built flow bundles
- * - Self-hosted runner with heartbeat, polling, and hot-swap
  */
 
 export {
-  runFlow,
   loadFlow,
   swapFlow,
   type RuntimeConfig,
@@ -18,7 +13,6 @@ export {
   type ResolvedBundle,
   type BundleSource,
 } from './resolve-bundle';
-export { validateEnv, type RunnerEnv } from './env';
 export {
   fetchConfig,
   type FetchConfigOptions,
@@ -32,3 +26,5 @@ export {
   type HeartbeatHandle,
 } from './heartbeat';
 export { createPoller, type PollerConfig, type PollerHandle } from './poller';
+export { createHealthServer, type HealthServer } from './health-server';
+export { fetchSecrets, SecretsHttpError } from './secrets-fetcher';

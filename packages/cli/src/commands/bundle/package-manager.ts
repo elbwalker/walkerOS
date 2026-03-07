@@ -119,7 +119,7 @@ export async function collectAllSpecs(
     }
 
     // Queue regular dependencies
-    const m = manifest as Record<string, unknown>;
+    const m = manifest as unknown as Record<string, unknown>;
     const deps = (m.dependencies as Record<string, string> | undefined) || {};
     for (const [depName, depSpec] of Object.entries(deps)) {
       if (typeof depSpec === 'string') {

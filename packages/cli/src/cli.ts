@@ -441,31 +441,28 @@ deployCmd
 // Run command
 program
   .command('run [file]')
-  .description('Run walkerOS flows locally')
+  .description('Run a walkerOS flow')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
+  .option('--flow-id <id>', 'API flow ID (enables heartbeat, polling, secrets)')
+  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
   .option('-p, --port <number>', 'port to listen on (default: 8080)', parseInt)
-  .option('-h, --host <address>', 'host address (default: 0.0.0.0)')
-  .option('--deploy <id-or-slug>', 'deployment ID or slug (enables heartbeat)')
-  .option('--project <id>', 'project ID (used with --deploy)')
-  .option('--url <url>', 'public URL of this server')
-  .option('--health-endpoint <path>', 'health check path (default: /health)')
-  .option(
-    '--heartbeat-interval <seconds>',
-    'heartbeat interval in seconds (default: 60)',
-    parseInt,
-  )
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
   .action(async (file, options) => {
     await runCommand({
-      config: file || 'server-collect.mjs',
-      port: options.port,
-      host: options.host,
-      deployment: options.deploy,
-      project: options.project,
-      url: options.url,
-      healthEndpoint: options.healthEndpoint,
-      heartbeatInterval: options.heartbeatInterval,
+      config: file || process.env.BUNDLE,
+      port:
+        options.port ??
+        (process.env.PORT ? parseInt(process.env.PORT, 10) : undefined),
+      flow:
+        options.flow ?? process.env.WALKEROS_FLOW_NAME ?? process.env.FLOW_NAME,
+      flowId:
+        options.flowId ?? process.env.WALKEROS_FLOW_ID ?? process.env.FLOW_ID,
+      project:
+        options.project ??
+        process.env.WALKEROS_PROJECT_ID ??
+        process.env.PROJECT_ID,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,

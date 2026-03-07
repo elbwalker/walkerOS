@@ -28,7 +28,6 @@ USER walker
 
 # Default environment variables
 ENV NODE_ENV=production
-ENV MODE=collect
 ENV PORT=8080
 ENV BUNDLE=/app/flow/bundle.mjs
 
@@ -39,5 +38,8 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD node -e "const h=require('http');h.get('http://localhost:'+(process.env.PORT||8080)+'/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
+# Ensure walkeros binary is on PATH
+ENV PATH="/app/node_modules/.bin:${PATH}"
+
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "/app/node_modules/@walkeros/cli/dist/runtime/main.js"]
+CMD ["walkeros", "run"]

@@ -62,6 +62,14 @@ export async function deployAuthenticatedFetch(
   });
 }
 
+/**
+ * Resolve token for runtime operations (run command, heartbeat, polling).
+ * Priority: WALKEROS_DEPLOY_TOKEN > WALKEROS_TOKEN > config file
+ */
+export function resolveRunToken(): string | null {
+  return resolveDeployToken() ?? resolveToken()?.token ?? null;
+}
+
 export function resolveBaseUrl(): string {
   return resolveAppUrl();
 }
