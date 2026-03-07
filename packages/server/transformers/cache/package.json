@@ -3,6 +3,7 @@
   "description": "Cache transformer for walkerOS server - HTTP response caching with LRU eviction and per-rule TTL",
   "version": "2.1.0",
   "license": "MIT",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

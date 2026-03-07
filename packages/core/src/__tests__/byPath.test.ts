@@ -20,6 +20,16 @@ describe('byPath', () => {
       'dynamic',
     ]);
     expect(getByPath(undefined, 'na')).toBe(undefined);
+
+    // Falsy intermediate values: should return defaultValue when path continues beyond
+    expect(getByPath({ a: { b: 0 } }, 'a.b.c', 'default')).toBe('default');
+    expect(getByPath({ a: { b: false } }, 'a.b.c', 'default')).toBe('default');
+    expect(getByPath({ a: { b: '' } }, 'a.b.c', 'default')).toBe('default');
+    expect(getByPath({ a: { b: null } }, 'a.b.c', 'default')).toBe('default');
+
+    // Falsy leaf values: should still return the falsy value itself
+    expect(getByPath({ a: { b: 0 } }, 'a.b')).toBe(0);
+    expect(getByPath({ a: { b: '' } }, 'a.b')).toBe('');
   });
 
   test('setByPath', () => {

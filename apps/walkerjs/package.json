@@ -3,6 +3,10 @@
   "version": "2.1.1",
   "description": "Ready-to-use walkerOS bundle with browser source, collector, and dataLayer support",
   "license": "MIT",
+  "sideEffects": [
+    "./dist/walker.js",
+    "./dist/index.es5.js"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "browser": "./dist/walker.js",

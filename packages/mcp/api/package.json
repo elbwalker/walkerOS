@@ -3,6 +3,7 @@
   "version": "2.1.1",
   "description": "MCP server for managing walkerOS projects, flows, and deployments via the walkerOS cloud API",
   "license": "MIT",
+  "sideEffects": false,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

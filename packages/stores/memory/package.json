@@ -3,6 +3,7 @@
   "description": "In-memory store for walkerOS with LRU eviction, TTL support, and namespace utility",
   "version": "2.1.0",
   "license": "MIT",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

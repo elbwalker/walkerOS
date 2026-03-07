@@ -3,6 +3,7 @@
   "description": "Demo transformer for walkerOS - logs and passes through events",
   "version": "2.0.1",
   "license": "MIT",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

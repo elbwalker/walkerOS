@@ -132,6 +132,26 @@ const config = {
     '/coverage/',
     '.tmp',
   ],
+
+  // Coverage settings
+  coverageThreshold: {
+    global: {
+      lines: 60,
+      branches: 50,
+      functions: 50,
+      statements: 60,
+    },
+  },
+
+  coverageReporters: ['text', 'text-summary', 'lcov'],
+
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/__tests__/',
+    '/examples/',
+    '/dev.ts',
+  ],
 };
 
 export default config;

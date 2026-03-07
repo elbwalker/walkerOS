@@ -3,6 +3,7 @@
   "description": "AWS server sources for walkerOS (Lambda, API Gateway, Function URLs)",
   "version": "2.1.1",
   "license": "MIT",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

@@ -40,7 +40,7 @@ export function getByPath(
     values =
       values instanceof Object ? values[k as keyof typeof values] : undefined;
 
-    if (!values) break;
+    if (values === undefined) break;
   }
 
   return isDefined(values) ? values : defaultValue;

@@ -313,9 +313,7 @@ export async function pushToDestinations(
       destStatus.duration += result.totalDuration || 0;
       collector.status.failed++;
     } else if (result.queue && result.queue.length) {
-      destination.queuePush = (destination.queuePush || []).concat(
-        result.queue,
-      );
+      // Events already re-queued at destination.queuePush via skippedEvents push
       queued[result.id] = ref;
     } else {
       done[result.id] = ref;

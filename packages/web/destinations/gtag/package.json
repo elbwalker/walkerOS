@@ -3,6 +3,7 @@
   "description": "Unified Google destination for walkerOS (GA4, Ads, GTM)",
   "version": "2.1.1",
   "license": "MIT",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
