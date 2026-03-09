@@ -39,13 +39,17 @@ Every walkerOS setup follows one pattern:
 
 <FlowMap
   sources={{ source: { label: 'Sources', text: 'Capture', link: '/docs/sources' } }}
+  preTransformers={{ pre: { label: 'Transformers', text: 'Enrich', link: '/docs/transformers' } }}
   collector={{ label: 'Collector', text: 'Process', link: '/docs/collector' }}
+  postTransformers={{ post: { label: 'Transformers', text: 'Filter', link: '/docs/transformers' } }}
   destinations={{ dest: { label: 'Destinations', text: 'Deliver', link: '/docs/destinations' } }}
 />
 
 - **Sources:** Where events come from (browser DOM, dataLayer, HTTP endpoints, custom code)
+- **Transformers:** Middleware that validates, enriches, routes, or redacts events before and after the collector
 - **Collector:** The processing engine (consent, enrichment, routing)
 - **Destinations:** Where events go (GA4, your API, BigQuery, any service)
+- **Stores:** Shared key-value storage used by transformers and destinations (caching, file serving, session state)
 
 A "flow" connects sources to destinations through a collector. You can have one flow or many, client-side, server-side, or both working together.
 
@@ -125,7 +129,9 @@ Then: `walkeros bundle flow.json` → standalone file.
 | **Mapping** | Event transformation rules | [Mapping](/docs/mapping) |
 | **Consent** | Privacy controls at destination and property level | [Consent management](/docs/guides/consent) |
 | **Sources** | Event capture from browser, server, or custom code | [Sources](/docs/sources) |
+| **Transformers** | Middleware for validating, enriching, routing, and redacting events | [Transformers](/docs/transformers) |
 | **Destinations** | Event delivery to analytics, APIs, warehouses | [Destinations](/docs/destinations) |
+| **Stores** | Shared key-value storage for caching, file serving, and session state | [Stores](/docs/stores) |
 
 ---
 

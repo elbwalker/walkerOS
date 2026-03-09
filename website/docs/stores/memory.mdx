@@ -11,7 +11,17 @@ import { schemas } from '@walkeros/store-memory/dev';
 
 <PackageLink github="packages/stores/memory" npm="@walkeros/store-memory" />
 
-In-process key-value store with LRU eviction, TTL expiration, and namespace support. Platform-agnostic — works in both browser and server flows.
+In-process key-value store with LRU eviction, TTL expiration, and namespace support. Platform-agnostic: works in both browser and server flows.
+
+## When to use
+
+| Scenario | Recommended store |
+|----------|-------------------|
+| Caching API responses within a request cycle | **Memory**: fastest, no I/O |
+| Deduplicating events (seen-key tracking) | **Memory**: in-process, zero overhead |
+| Ephemeral session or user state | **Memory**: TTL support, auto-expiry |
+| Sharing state across browser tabs | Not memory: use a server store |
+| Persisting data across server restarts | [Filesystem](./server/fs) or [S3](./server/s3) |
 
 ## Setup
 

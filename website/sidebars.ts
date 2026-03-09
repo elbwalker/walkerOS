@@ -41,7 +41,12 @@ const sidebars: SidebarsConfig = {
             'getting-started/modes/integrated',
           ],
         },
-        'getting-started/flow',
+        {
+          type: 'category',
+          label: 'Flow',
+          link: { type: 'doc', id: 'getting-started/flow/index' },
+          items: ['getting-started/flow/step-examples'],
+        },
         'getting-started/event-model',
       ],
     },
@@ -114,6 +119,8 @@ const sidebars: SidebarsConfig = {
       items: [
         'transformers/validator',
         'transformers/router',
+        'transformers/cache',
+        'transformers/fingerprint',
         'transformers/create-your-own',
       ],
     },
