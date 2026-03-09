@@ -1,21 +1,21 @@
 import { z } from 'zod';
 import {
-  SetupSchema,
-  SetupV2Schema,
   ConfigSchema,
+  ConfigV2Schema,
+  SettingsSchema,
   SourceReferenceSchema,
   DestinationReferenceSchema,
   PrimitiveSchema,
-  parseSetup,
-  safeParseSetup,
   parseConfig,
   safeParseConfig,
-  setupJsonSchema,
+  parseSettings,
+  safeParseSettings,
   configJsonSchema,
+  settingsJsonSchema,
   sourceReferenceJsonSchema,
   destinationReferenceJsonSchema,
 } from '../schemas/flow';
-import { getFlowConfig, getPlatform, packageNameToVariable } from '../flow';
+import { getFlowSettings, getPlatform, packageNameToVariable } from '../flow';
 
 describe('Flow Schemas', () => {
   // ========================================
@@ -192,22 +192,22 @@ describe('Flow Schemas', () => {
   });
 
   // ========================================
-  // ConfigSchema Tests
+  // SettingsSchema Tests
   // ========================================
 
-  describe('ConfigSchema', () => {
+  describe('SettingsSchema', () => {
     test('accepts minimal valid web config', () => {
       const validConfig = {
         web: {},
       };
-      expect(() => ConfigSchema.parse(validConfig)).not.toThrow();
+      expect(() => SettingsSchema.parse(validConfig)).not.toThrow();
     });
 
     test('accepts minimal valid server config', () => {
       const validConfig = {
         server: {},
       };
-      expect(() => ConfigSchema.parse(validConfig)).not.toThrow();
+      expect(() => SettingsSchema.parse(validConfig)).not.toThrow();
     });
 
     test('accepts complete valid server config', () => {
@@ -239,7 +239,7 @@ describe('Flow Schemas', () => {
           DEBUG: 'false',
         },
       };
-      expect(() => ConfigSchema.parse(validConfig)).not.toThrow();
+      expect(() => SettingsSchema.parse(validConfig)).not.toThrow();
     });
 
     test('accepts complete valid web config', () => {
@@ -266,16 +266,16 @@ describe('Flow Schemas', () => {
         variables: { GA_ID: 'G-123' },
         definitions: { mapping: {} },
       };
-      expect(() => ConfigSchema.parse(validConfig)).not.toThrow();
+      expect(() => SettingsSchema.parse(validConfig)).not.toThrow();
     });
 
     test('requires either web or server', () => {
-      expect(() => ConfigSchema.parse({})).toThrow(z.ZodError);
+      expect(() => SettingsSchema.parse({})).toThrow(z.ZodError);
     });
 
     test('rejects config with neither web nor server', () => {
       expect(() =>
-        ConfigSchema.parse({
+        SettingsSchema.parse({
           sources: {},
         }),
       ).toThrow(z.ZodError);
@@ -283,7 +283,7 @@ describe('Flow Schemas', () => {
 
     test('rejects config with both web and server', () => {
       expect(() =>
-        ConfigSchema.parse({
+        SettingsSchema.parse({
           web: {},
           server: {},
         }),
@@ -291,13 +291,13 @@ describe('Flow Schemas', () => {
     });
 
     test('accepts web config', () => {
-      const config = ConfigSchema.parse({ web: {} });
+      const config = SettingsSchema.parse({ web: {} });
       expect(config.web).toBeDefined();
       expect(config.server).toBeUndefined();
     });
 
     test('accepts server config', () => {
-      const config = ConfigSchema.parse({ server: {} });
+      const config = SettingsSchema.parse({ server: {} });
       expect(config.server).toBeDefined();
       expect(config.web).toBeUndefined();
     });
@@ -311,7 +311,7 @@ describe('Flow Schemas', () => {
           BOOLEAN: true,
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.variables).toEqual({
         STRING: 'value',
         NUMBER: 42,
@@ -327,7 +327,7 @@ describe('Flow Schemas', () => {
           mapping2: ['array', 'values'],
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.definitions).toEqual({
         mapping1: { page: { view: { name: 'page_view' } } },
         mapping2: ['array', 'values'],
@@ -342,16 +342,16 @@ describe('Flow Schemas', () => {
           '@walkeros/web-source-browser': { version: '^2.0.0' },
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.packages).toBeDefined();
     });
   });
 
   // ========================================
-  // SetupSchema Tests
+  // ConfigSchema Tests
   // ========================================
 
-  describe('SetupSchema', () => {
+  describe('ConfigSchema', () => {
     test('accepts minimal valid setup', () => {
       const validSetup = {
         version: 1 as const,
@@ -361,7 +361,7 @@ describe('Flow Schemas', () => {
           },
         },
       };
-      expect(() => SetupSchema.parse(validSetup)).not.toThrow();
+      expect(() => ConfigSchema.parse(validSetup)).not.toThrow();
     });
 
     test('accepts complete valid setup', () => {
@@ -403,12 +403,12 @@ describe('Flow Schemas', () => {
           },
         },
       };
-      expect(() => SetupSchema.parse(validSetup)).not.toThrow();
+      expect(() => ConfigSchema.parse(validSetup)).not.toThrow();
     });
 
     test('requires version field', () => {
       expect(() =>
-        SetupSchema.parse({
+        ConfigSchema.parse({
           flows: { prod: { web: {} } },
         }),
       ).toThrow();
@@ -416,14 +416,14 @@ describe('Flow Schemas', () => {
 
     test('requires version to be 1 or 2', () => {
       expect(() =>
-        SetupSchema.parse({
+        ConfigSchema.parse({
           version: 3,
           flows: { prod: { web: {} } },
         }),
       ).toThrow();
 
       expect(
-        SetupSchema.parse({
+        ConfigSchema.parse({
           version: 2,
           flows: { prod: { web: {} } },
         }),
@@ -432,7 +432,7 @@ describe('Flow Schemas', () => {
 
     test('validates $schema as URL when provided', () => {
       expect(() =>
-        SetupSchema.parse({
+        ConfigSchema.parse({
           version: 1,
           $schema: 'not-a-url',
           flows: { prod: { web: {} } },
@@ -440,7 +440,7 @@ describe('Flow Schemas', () => {
       ).toThrow();
 
       expect(
-        SetupSchema.parse({
+        ConfigSchema.parse({
           version: 1,
           $schema: 'https://walkeros.io/schema/flow/v1.json',
           flows: { prod: { web: {} } },
@@ -450,7 +450,7 @@ describe('Flow Schemas', () => {
 
     test('requires at least one flow', () => {
       expect(() =>
-        SetupSchema.parse({
+        ConfigSchema.parse({
           version: 1,
           flows: {},
         }),
@@ -459,7 +459,7 @@ describe('Flow Schemas', () => {
 
     test('validates variables as primitive record', () => {
       expect(
-        SetupSchema.parse({
+        ConfigSchema.parse({
           version: 1,
           variables: {
             STRING: 'value',
@@ -487,7 +487,7 @@ describe('Flow Schemas', () => {
           prod: { web: {} },
         },
       };
-      expect(() => SetupSchema.parse(validSetup)).not.toThrow();
+      expect(() => ConfigSchema.parse(validSetup)).not.toThrow();
     });
 
     test('validates multiple flows with different platforms', () => {
@@ -500,7 +500,7 @@ describe('Flow Schemas', () => {
           server_stage: { server: {} },
         },
       };
-      expect(() => SetupSchema.parse(validSetup)).not.toThrow();
+      expect(() => ConfigSchema.parse(validSetup)).not.toThrow();
     });
 
     test('accepts optional contract property', () => {
@@ -512,7 +512,7 @@ describe('Flow Schemas', () => {
         },
         flows: { default: { web: {} } },
       };
-      const result = SetupV2Schema.parse(setup);
+      const result = ConfigV2Schema.parse(setup);
       expect(result.contract).toBeDefined();
     });
   });
@@ -521,7 +521,7 @@ describe('Flow Schemas', () => {
   // Helper Function Tests
   // ========================================
 
-  describe('parseSetup', () => {
+  describe('parseConfig', () => {
     test('successfully parses valid setup', () => {
       const validSetup = {
         version: 1,
@@ -529,16 +529,16 @@ describe('Flow Schemas', () => {
           prod: { web: {} },
         },
       };
-      expect(() => parseSetup(validSetup)).not.toThrow();
+      expect(() => parseConfig(validSetup)).not.toThrow();
     });
 
     test('throws ZodError for invalid setup', () => {
-      expect(() => parseSetup({})).toThrow(z.ZodError);
-      expect(() => parseSetup({ version: 2 })).toThrow(z.ZodError);
+      expect(() => parseConfig({})).toThrow(z.ZodError);
+      expect(() => parseConfig({ version: 2 })).toThrow(z.ZodError);
     });
   });
 
-  describe('safeParseSetup', () => {
+  describe('safeParseConfig', () => {
     test('returns success for valid setup', () => {
       const validSetup = {
         version: 1,
@@ -546,12 +546,12 @@ describe('Flow Schemas', () => {
           prod: { web: {} },
         },
       };
-      const result = safeParseSetup(validSetup);
+      const result = safeParseConfig(validSetup);
       expect(result.success).toBe(true);
     });
 
     test('returns error for invalid setup', () => {
-      const result = safeParseSetup({});
+      const result = safeParseConfig({});
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error).toBeInstanceOf(z.ZodError);
@@ -560,7 +560,7 @@ describe('Flow Schemas', () => {
     });
 
     test('provides detailed error messages', () => {
-      const result = safeParseSetup({
+      const result = safeParseConfig({
         version: 1,
         flows: {},
       });
@@ -572,27 +572,27 @@ describe('Flow Schemas', () => {
     });
   });
 
-  describe('parseConfig', () => {
+  describe('parseSettings', () => {
     test('successfully parses valid config', () => {
       const validConfig = { web: {} };
-      expect(() => parseConfig(validConfig)).not.toThrow();
+      expect(() => parseSettings(validConfig)).not.toThrow();
     });
 
     test('throws ZodError for invalid config', () => {
-      expect(() => parseConfig({})).toThrow(z.ZodError);
-      expect(() => parseConfig({ platform: 'invalid' })).toThrow(z.ZodError);
+      expect(() => parseSettings({})).toThrow(z.ZodError);
+      expect(() => parseSettings({ platform: 'invalid' })).toThrow(z.ZodError);
     });
   });
 
-  describe('safeParseConfig', () => {
+  describe('safeParseSettings', () => {
     test('returns success for valid config', () => {
       const validConfig = { server: {} };
-      const result = safeParseConfig(validConfig);
+      const result = safeParseSettings(validConfig);
       expect(result.success).toBe(true);
     });
 
     test('returns error for invalid config', () => {
-      const result = safeParseConfig({});
+      const result = safeParseSettings({});
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error).toBeInstanceOf(z.ZodError);
@@ -605,11 +605,11 @@ describe('Flow Schemas', () => {
   // ========================================
 
   describe('JSON Schema Generation', () => {
-    test('setupJsonSchema is valid JSON Schema', () => {
-      expect(setupJsonSchema).toHaveProperty('$schema');
-      // SetupSchema is now a union (v1 | v2), so it uses anyOf
-      expect(setupJsonSchema).toHaveProperty('anyOf');
-      const variants = (setupJsonSchema as any).anyOf;
+    test('configJsonSchema is valid JSON Schema', () => {
+      expect(configJsonSchema).toHaveProperty('$schema');
+      // ConfigSchema is now a union (v1 | v2), so it uses anyOf
+      expect(configJsonSchema).toHaveProperty('anyOf');
+      const variants = (configJsonSchema as any).anyOf;
       expect(variants.length).toBe(2);
       // Both variants should have version and flows
       for (const variant of variants) {
@@ -619,12 +619,12 @@ describe('Flow Schemas', () => {
       }
     });
 
-    test('configJsonSchema is valid JSON Schema', () => {
-      expect(configJsonSchema).toHaveProperty('$schema');
-      expect(configJsonSchema).toHaveProperty('type', 'object');
-      expect(configJsonSchema).toHaveProperty('properties');
-      expect((configJsonSchema as any).properties).toHaveProperty('web');
-      expect((configJsonSchema as any).properties).toHaveProperty('server');
+    test('settingsJsonSchema is valid JSON Schema', () => {
+      expect(settingsJsonSchema).toHaveProperty('$schema');
+      expect(settingsJsonSchema).toHaveProperty('type', 'object');
+      expect(settingsJsonSchema).toHaveProperty('properties');
+      expect((settingsJsonSchema as any).properties).toHaveProperty('web');
+      expect((settingsJsonSchema as any).properties).toHaveProperty('server');
     });
 
     test('sourceReferenceJsonSchema is valid JSON Schema', () => {
@@ -770,8 +770,8 @@ describe('Flow Schemas', () => {
         },
       };
 
-      expect(() => parseSetup(realWorldSetup)).not.toThrow();
-      const parsed = parseSetup(realWorldSetup);
+      expect(() => parseConfig(realWorldSetup)).not.toThrow();
+      const parsed = parseConfig(realWorldSetup);
       expect(Object.keys(parsed.flows)).toHaveLength(3);
       expect(parsed.flows.web_production.web).toBeDefined();
       expect(parsed.flows.server_production.server).toBeDefined();
@@ -795,7 +795,7 @@ describe('Flow Schemas', () => {
         },
       };
 
-      expect(() => parseSetup(setupWithVars)).not.toThrow();
+      expect(() => parseConfig(setupWithVars)).not.toThrow();
     });
 
     test('setup with definition reference structure', () => {
@@ -821,7 +821,7 @@ describe('Flow Schemas', () => {
         },
       };
 
-      expect(() => parseSetup(setupWithRefs)).not.toThrow();
+      expect(() => parseConfig(setupWithRefs)).not.toThrow();
     });
   });
 
@@ -837,8 +837,8 @@ describe('Flow Schemas', () => {
     });
 
     test('handles null and undefined appropriately', () => {
-      expect(() => SetupSchema.parse(null)).toThrow();
-      expect(() => SetupSchema.parse(undefined)).toThrow();
+      expect(() => ConfigSchema.parse(null)).toThrow();
+      expect(() => ConfigSchema.parse(undefined)).toThrow();
     });
 
     test('handles deeply nested config structures', () => {
@@ -861,7 +861,7 @@ describe('Flow Schemas', () => {
           },
         },
       };
-      expect(() => ConfigSchema.parse(deepConfig)).not.toThrow();
+      expect(() => SettingsSchema.parse(deepConfig)).not.toThrow();
     });
 
     test('validates flow names are non-empty strings', () => {
@@ -872,7 +872,7 @@ describe('Flow Schemas', () => {
         },
       };
       // Zod record allows empty string keys, but this might be caught at application level
-      expect(() => SetupSchema.parse(setup)).not.toThrow();
+      expect(() => ConfigSchema.parse(setup)).not.toThrow();
     });
   });
 
@@ -894,7 +894,7 @@ describe('Flow Schemas', () => {
           },
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.sources?.browser.variables).toEqual({
         SOURCE_VAR: 'source-specific',
         DEBUG: true,
@@ -914,7 +914,7 @@ describe('Flow Schemas', () => {
           },
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.destinations?.gtag.variables).toEqual({
         GA_ID: 'G-DEST-123',
         MEASUREMENT_ID: 'G-XYZ',
@@ -947,7 +947,7 @@ describe('Flow Schemas', () => {
           },
         },
       };
-      expect(() => SetupSchema.parse(setup)).not.toThrow();
+      expect(() => ConfigSchema.parse(setup)).not.toThrow();
     });
   });
 
@@ -966,7 +966,7 @@ describe('Flow Schemas', () => {
           },
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.sources?.browser.definitions).toBeDefined();
     });
 
@@ -984,7 +984,7 @@ describe('Flow Schemas', () => {
           },
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.destinations?.gtag.definitions).toBeDefined();
     });
 
@@ -1017,7 +1017,7 @@ describe('Flow Schemas', () => {
           },
         },
       };
-      expect(() => SetupSchema.parse(setup)).not.toThrow();
+      expect(() => ConfigSchema.parse(setup)).not.toThrow();
     });
   });
 
@@ -1030,7 +1030,7 @@ describe('Flow Schemas', () => {
           '@walkeros/web-source-browser': { version: '^2.0.0' },
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.packages?.['@walkeros/collector'].version).toBe('latest');
     });
 
@@ -1041,7 +1041,7 @@ describe('Flow Schemas', () => {
           '@walkeros/collector': { imports: ['startFlow', 'Collector'] },
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.packages?.['@walkeros/collector'].imports).toEqual([
         'startFlow',
         'Collector',
@@ -1062,7 +1062,7 @@ describe('Flow Schemas', () => {
           },
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.packages?.['@walkeros/collector']).toEqual({
         version: '2.0.0',
         imports: ['startFlow'],
@@ -1076,7 +1076,7 @@ describe('Flow Schemas', () => {
           '@walkeros/collector': {},
         },
       };
-      expect(() => ConfigSchema.parse(config)).not.toThrow();
+      expect(() => SettingsSchema.parse(config)).not.toThrow();
     });
 
     test('validates complete setup with packages at flow level', () => {
@@ -1101,7 +1101,7 @@ describe('Flow Schemas', () => {
           },
         },
       };
-      expect(() => SetupSchema.parse(setup)).not.toThrow();
+      expect(() => ConfigSchema.parse(setup)).not.toThrow();
     });
   });
 
@@ -1112,7 +1112,7 @@ describe('Flow Schemas', () => {
           windowCollector: 'customCollector',
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.web?.windowCollector).toBe('customCollector');
     });
 
@@ -1122,7 +1122,7 @@ describe('Flow Schemas', () => {
           windowElb: 'customElb',
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.web?.windowElb).toBe('customElb');
     });
 
@@ -1133,7 +1133,7 @@ describe('Flow Schemas', () => {
           windowElb: 'track',
         },
       };
-      const parsed = ConfigSchema.parse(config);
+      const parsed = SettingsSchema.parse(config);
       expect(parsed.web?.windowCollector).toBe('tracker');
       expect(parsed.web?.windowElb).toBe('track');
     });
@@ -1142,7 +1142,7 @@ describe('Flow Schemas', () => {
       const config = {
         server: {},
       };
-      expect(() => ConfigSchema.parse(config)).not.toThrow();
+      expect(() => SettingsSchema.parse(config)).not.toThrow();
     });
 
     test('rejects when both web and server are present', () => {
@@ -1150,7 +1150,7 @@ describe('Flow Schemas', () => {
         web: {},
         server: {},
       };
-      expect(() => ConfigSchema.parse(config)).toThrow(z.ZodError);
+      expect(() => SettingsSchema.parse(config)).toThrow(z.ZodError);
     });
 
     test('rejects when neither web nor server is present', () => {
@@ -1158,16 +1158,16 @@ describe('Flow Schemas', () => {
         sources: {},
         destinations: {},
       };
-      expect(() => ConfigSchema.parse(config)).toThrow(z.ZodError);
+      expect(() => SettingsSchema.parse(config)).toThrow(z.ZodError);
     });
   });
 });
 
 // ========================================
-// getFlowConfig Tests
+// getFlowSettings Tests
 // ========================================
 
-describe('getFlowConfig', () => {
+describe('getFlowSettings', () => {
   describe('code resolution from package', () => {
     test('does not set code if package not in packages config', () => {
       const setup = {
@@ -1185,7 +1185,7 @@ describe('getFlowConfig', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.sources?.http.code).toBeUndefined();
     });
 
@@ -1209,7 +1209,7 @@ describe('getFlowConfig', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.sources?.http.code).toBe('_walkerosServerSourceExpress');
     });
 
@@ -1243,7 +1243,7 @@ describe('getFlowConfig', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.sources?.http.code).toBe('_walkerosServerSourceExpress');
       expect(config.destinations?.demo.code).toBe('_walkerosDestinationDemo');
       expect(config.destinations?.bigquery.code).toBe(
@@ -1260,7 +1260,7 @@ describe('getFlowConfig', () => {
           default: { web: {} },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.web).toBeDefined();
     });
 
@@ -1272,7 +1272,9 @@ describe('getFlowConfig', () => {
           stage: { web: {} },
         },
       };
-      expect(() => getFlowConfig(setup as any)).toThrow('Multiple flows found');
+      expect(() => getFlowSettings(setup as any)).toThrow(
+        'Multiple flows found',
+      );
     });
 
     test('selects named flow', () => {
@@ -1283,7 +1285,7 @@ describe('getFlowConfig', () => {
           stage: { server: {} },
         },
       };
-      const config = getFlowConfig(setup as any, 'stage');
+      const config = getFlowSettings(setup as any, 'stage');
       expect(config.server).toBeDefined();
     });
   });
@@ -1317,7 +1319,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.gtag.config).toEqual({
         mapping: { page: { view: { name: 'page_view' } } },
       });
@@ -1344,7 +1346,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.test.config).toEqual({
         data: { nested: { key: 'value' } },
       });
@@ -1367,7 +1369,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      expect(() => getFlowConfig(setup as any)).toThrow(
+      expect(() => getFlowSettings(setup as any)).toThrow(
         'Definition "nonExistent" not found',
       );
     });
@@ -1398,7 +1400,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.test.config).toEqual({
         data: { destination: true },
       });
@@ -1426,7 +1428,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.gtag.config).toEqual({
         id: 'G-TEST123',
       });
@@ -1453,7 +1455,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.api.config).toEqual({
         endpoint: 'https://api.example.com/v2/collect',
       });
@@ -1476,7 +1478,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      expect(() => getFlowConfig(setup as any)).toThrow(
+      expect(() => getFlowSettings(setup as any)).toThrow(
         'Variable "nonExistent" not found',
       );
     });
@@ -1507,7 +1509,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.test.config).toEqual({
         value: 'destination-id',
       });
@@ -1533,7 +1535,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.test.config).toEqual({
         url: 'http://localhost:8080',
       });
@@ -1569,7 +1571,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.gtag.config).toEqual({
         id: 'G-ENV123',
       });
@@ -1593,7 +1595,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.test.config).toEqual({
         value: 'default-value',
       });
@@ -1617,7 +1619,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      expect(() => getFlowConfig(setup as any)).toThrow(
+      expect(() => getFlowSettings(setup as any)).toThrow(
         'Environment variable "REQUIRED_VAR" not found and no default provided',
       );
     });
@@ -1640,7 +1642,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.test.config).toEqual({
         value: 'from-env',
       });
@@ -1683,7 +1685,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.test.config).toEqual({
         data: { currency: 'USD' },
       });
@@ -1712,7 +1714,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.test.config).toEqual({
         api: { key: 'secret-key' },
       });
@@ -1749,7 +1751,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.test.config).toEqual({
         data: {
           nested: {
@@ -1782,7 +1784,7 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.gtag.config).toEqual({
         measurementId: 'G-FALLBACK123',
       });
@@ -1809,10 +1811,204 @@ describe('Pattern Resolution', () => {
           },
         },
       };
-      const config = getFlowConfig(setup as any);
+      const config = getFlowSettings(setup as any);
       expect(config.destinations?.gtag.config).toEqual({
         measurementId: 'G-FROM-ENV',
       });
+    });
+  });
+
+  describe('transformer pattern resolution', () => {
+    test('resolves $var in transformer config', () => {
+      const setup = {
+        version: 2,
+        variables: { apiUrl: 'https://api.example.com' },
+        flows: {
+          default: {
+            web: {},
+            transformers: {
+              enricher: {
+                package: '@walkeros/transformer-enricher',
+                config: {
+                  settings: { url: '$var.apiUrl' },
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowSettings(setup as any);
+      expect(
+        (config.transformers?.enricher?.config as any)?.settings?.url,
+      ).toBe('https://api.example.com');
+    });
+
+    test('resolves $def in transformer config', () => {
+      const setup = {
+        version: 2,
+        definitions: {
+          cacheRule: {
+            match: { key: 'method', operator: 'eq', value: 'GET' },
+            ttl: 300,
+          },
+        },
+        flows: {
+          default: {
+            server: {},
+            transformers: {
+              cache: {
+                package: '@walkeros/server-transformer-cache',
+                config: {
+                  settings: { rules: ['$def.cacheRule'] },
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowSettings(setup as any);
+      const rules = (config.transformers?.cache?.config as any)?.settings
+        ?.rules;
+      expect(rules[0]).toEqual({
+        match: { key: 'method', operator: 'eq', value: 'GET' },
+        ttl: 300,
+      });
+    });
+
+    test('resolves $env in transformer config (deferred)', () => {
+      const setup = {
+        version: 2,
+        flows: {
+          default: {
+            server: {},
+            transformers: {
+              cache: {
+                package: '@walkeros/server-transformer-cache',
+                config: {
+                  settings: { secret: '$env.API_SECRET:default_secret' },
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowSettings(setup as any, undefined, {
+        deferred: true,
+      });
+      expect(
+        (config.transformers?.cache?.config as any)?.settings?.secret,
+      ).toBe('__WALKEROS_ENV:API_SECRET:default_secret');
+    });
+
+    test('transformer-level variables override flow variables', () => {
+      const setup = {
+        version: 2,
+        variables: { ttl: '300' },
+        flows: {
+          default: {
+            server: {},
+            transformers: {
+              cache: {
+                package: '@walkeros/server-transformer-cache',
+                variables: { ttl: '600' },
+                config: {
+                  settings: { ttl: '$var.ttl' },
+                },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowSettings(setup as any);
+      expect((config.transformers?.cache?.config as any)?.settings?.ttl).toBe(
+        '600',
+      );
+    });
+  });
+
+  describe('env pattern resolution', () => {
+    test('resolves $var in source env', () => {
+      const setup = {
+        version: 2,
+        variables: { storeRef: 'myStore' },
+        flows: {
+          default: {
+            web: {},
+            sources: {
+              browser: {
+                package: '@walkeros/web-source-browser',
+                config: {},
+                env: { custom: '$var.storeRef' },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowSettings(setup as any);
+      expect((config.sources?.browser as any)?.env?.custom).toBe('myStore');
+    });
+
+    test('resolves $var in transformer env', () => {
+      const setup = {
+        version: 2,
+        variables: { storeRef: 'myStore' },
+        flows: {
+          default: {
+            web: {},
+            transformers: {
+              cache: {
+                package: '@walkeros/server-transformer-cache',
+                config: {},
+                env: { custom: '$var.storeRef' },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowSettings(setup as any);
+      expect((config.transformers?.cache as any)?.env?.custom).toBe('myStore');
+    });
+
+    test('resolves $var in destination env', () => {
+      const setup = {
+        version: 2,
+        variables: { storeRef: 'myStore' },
+        flows: {
+          default: {
+            web: {},
+            destinations: {
+              api: {
+                package: '@walkeros/web-destination-api',
+                config: {},
+                env: { custom: '$var.storeRef' },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowSettings(setup as any);
+      expect((config.destinations?.api as any)?.env?.custom).toBe('myStore');
+    });
+
+    test('resolves $var in store env', () => {
+      const setup = {
+        version: 2,
+        variables: { region: 'eu-west-1' },
+        flows: {
+          default: {
+            server: {},
+            stores: {
+              cache: {
+                package: '@walkeros/store-memory',
+                config: {},
+                env: { region: '$var.region' },
+              },
+            },
+          },
+        },
+      };
+      const config = getFlowSettings(setup as any);
+      expect((config.stores?.cache as any)?.env?.region).toBe('eu-west-1');
     });
   });
 });
@@ -1831,7 +2027,7 @@ describe('deferred env resolution', () => {
 
   it('returns __WALKEROS_ENV: marker instead of resolving $env when deferred', () => {
     const setup = makeSetup({ url: 'https://api.example.com/$env.API_KEY' });
-    const config = getFlowConfig(setup, 'test', { deferred: true });
+    const config = getFlowSettings(setup, 'test', { deferred: true });
     const collector = config.collector as Record<string, unknown>;
     expect(collector.url).toBe(
       'https://api.example.com/__WALKEROS_ENV:API_KEY',
@@ -1840,7 +2036,7 @@ describe('deferred env resolution', () => {
 
   it('returns marker with default value notation', () => {
     const setup = makeSetup({ host: '$env.HOST:localhost' });
-    const config = getFlowConfig(setup, 'test', { deferred: true });
+    const config = getFlowSettings(setup, 'test', { deferred: true });
     const collector = config.collector as Record<string, unknown>;
     expect(collector.host).toBe('__WALKEROS_ENV:HOST:localhost');
   });
@@ -1849,7 +2045,7 @@ describe('deferred env resolution', () => {
     const setup = makeSetup({
       url: '$env.REDIS_URL:redis://localhost:6379',
     });
-    const config = getFlowConfig(setup, 'test', { deferred: true });
+    const config = getFlowSettings(setup, 'test', { deferred: true });
     const collector = config.collector as Record<string, unknown>;
     expect(collector.url).toBe(
       '__WALKEROS_ENV:REDIS_URL:redis://localhost:6379',
@@ -1859,7 +2055,7 @@ describe('deferred env resolution', () => {
   it('resolves $env normally when deferred is false', () => {
     process.env.TEST_SECRET = 'hunter2';
     const setup = makeSetup({ key: '$env.TEST_SECRET' });
-    const config = getFlowConfig(setup, 'test', { deferred: false });
+    const config = getFlowSettings(setup, 'test', { deferred: false });
     const collector = config.collector as Record<string, unknown>;
     expect(collector.key).toBe('hunter2');
     delete process.env.TEST_SECRET;
@@ -1868,7 +2064,7 @@ describe('deferred env resolution', () => {
   it('resolves $env normally when no options passed', () => {
     process.env.TEST_SECRET = 'hunter2';
     const setup = makeSetup({ key: '$env.TEST_SECRET' });
-    const config = getFlowConfig(setup, 'test');
+    const config = getFlowSettings(setup, 'test');
     const collector = config.collector as Record<string, unknown>;
     expect(collector.key).toBe('hunter2');
     delete process.env.TEST_SECRET;
@@ -1890,7 +2086,7 @@ describe('getPlatform', () => {
 
   test('throws for config without platform', () => {
     expect(() => getPlatform({} as any)).toThrow(
-      'Config must have web or server key',
+      'Settings must have web or server key',
     );
   });
 });
@@ -1947,7 +2143,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
         },
       },
     };
-    const config = getFlowConfig(setup as any);
+    const config = getFlowSettings(setup as any);
     expect(config.destinations?.api.code).toBe('_walkerosServerDestinationApi');
   });
 
@@ -1970,7 +2166,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
         },
       },
     };
-    const config = getFlowConfig(setup as any);
+    const config = getFlowSettings(setup as any);
     expect(config.destinations?.api.code).toBe('myCustomCode');
   });
 
@@ -1993,7 +2189,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
         },
       },
     };
-    const config = getFlowConfig(setup as any);
+    const config = getFlowSettings(setup as any);
     expect(config.destinations?.bq.code).toBe('destinationBigQuery');
   });
 
@@ -2019,13 +2215,13 @@ describe('resolveCodeFromPackage - default export fallback', () => {
         },
       },
     };
-    const config = getFlowConfig(setup as any);
+    const config = getFlowSettings(setup as any);
     expect(config.destinations?.api1.code).toBe('_walkerosWebDestinationApi');
     expect(config.destinations?.api2.code).toBe('_walkerosWebDestinationApi');
   });
 });
 
-describe('Contract resolution in getFlowConfig', () => {
+describe('Contract resolution in getFlowSettings', () => {
   test('resolves $contract in transformer settings', () => {
     const setup = {
       version: 2,
@@ -2060,7 +2256,7 @@ describe('Contract resolution in getFlowConfig', () => {
         },
       },
     };
-    const config = getFlowConfig(setup as any);
+    const config = getFlowSettings(setup as any);
     const settings = (config.transformers?.validator?.config as any)?.settings;
     // $contract should be replaced with resolved Mapping.Rules<ContractRule>
     expect(settings.contract).toBeDefined();
@@ -2106,7 +2302,7 @@ describe('Contract resolution in getFlowConfig', () => {
         },
       },
     };
-    const config = getFlowConfig(setup as any);
+    const config = getFlowSettings(setup as any);
     const settings = (config.transformers?.validator?.config as any)?.settings;
     expect(
       settings.contract.product.add.schema.properties.data.required,
@@ -2134,7 +2330,7 @@ describe('Contract resolution in getFlowConfig', () => {
         },
       },
     };
-    const config = getFlowConfig(setup as any);
+    const config = getFlowSettings(setup as any);
     expect((config.collector as any)?.tagging).toBe(3);
   });
 
@@ -2149,7 +2345,7 @@ describe('Contract resolution in getFlowConfig', () => {
         },
       },
     };
-    const config = getFlowConfig(setup as any);
+    const config = getFlowSettings(setup as any);
     expect((config.collector as any).tagging).toBe(5);
   });
 
@@ -2179,7 +2375,7 @@ describe('Contract resolution in getFlowConfig', () => {
         },
       },
     };
-    const config = getFlowConfig(setup as any);
+    const config = getFlowSettings(setup as any);
     const settings = (config.transformers?.validator?.config as any)?.settings;
     const schema = settings.contract.product.view.schema;
     expect(schema.description).toBeUndefined();
@@ -2202,7 +2398,7 @@ describe('Contract resolution in getFlowConfig', () => {
         },
       },
     };
-    const config = getFlowConfig(setup as any);
+    const config = getFlowSettings(setup as any);
     const settings = (config.transformers?.validator?.config as any)?.settings;
     // No contract → $contract stays as string (nothing to resolve)
     expect(settings.contract).toBe('$contract');

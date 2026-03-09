@@ -179,32 +179,32 @@ function resolveCodeFromPackage(
 }
 
 /**
- * Get resolved flow configuration for a named flow.
+ * Get resolved flow settings for a named flow.
  *
- * @param setup - The complete setup configuration
+ * @param config - The complete Flow.Config configuration
  * @param flowName - Flow name (auto-selected if only one exists)
- * @returns Resolved Config with $var, $env, and $def patterns resolved
+ * @returns Resolved Settings with $var, $env, and $def patterns resolved
  * @throws Error if flow selection is required but not specified, or flow not found
  *
  * @example
  * ```typescript
- * import { getFlowConfig } from '@walkeros/core';
+ * import { getFlowSettings } from '@walkeros/core';
  *
- * const setup = JSON.parse(fs.readFileSync('walkeros.config.json', 'utf8'));
+ * const config = JSON.parse(fs.readFileSync('walkeros.config.json', 'utf8'));
  *
  * // Auto-select if only one flow
- * const config = getFlowConfig(setup);
+ * const settings = getFlowSettings(config);
  *
  * // Or specify flow
- * const prodConfig = getFlowConfig(setup, 'production');
+ * const prodSettings = getFlowSettings(config, 'production');
  * ```
  */
-export function getFlowConfig(
-  setup: Flow.Setup,
+export function getFlowSettings(
+  config: Flow.Config,
   flowName?: string,
   options?: ResolveOptions,
-): Flow.Config {
-  const flowNames = Object.keys(setup.flows);
+): Flow.Settings {
+  const flowNames = Object.keys(config.flows);
 
   // Auto-select if only one flow
   if (!flowName) {
@@ -218,27 +218,27 @@ export function getFlowConfig(
   }
 
   // Check flow exists
-  const config = setup.flows[flowName];
-  if (!config) {
+  const settings = config.flows[flowName];
+  if (!settings) {
     throwError(
       `Flow "${flowName}" not found. Available: ${flowNames.join(', ')}`,
     );
   }
 
   // Deep clone to avoid mutations
-  const result = JSON.parse(JSON.stringify(config)) as Flow.Config;
+  const result = JSON.parse(JSON.stringify(settings)) as Flow.Settings;
 
   // Process sources with variable and definition cascade
   if (result.sources) {
     for (const [name, source] of Object.entries(result.sources)) {
       const vars = mergeVariables(
-        setup.variables,
         config.variables,
+        settings.variables,
         source.variables,
       );
       const defs = mergeDefinitions(
-        setup.definitions,
         config.definitions,
+        settings.definitions,
         source.definitions,
       );
 
@@ -248,6 +248,8 @@ export function getFlowConfig(
         defs,
         options,
       );
+
+      const processedEnv = resolvePatterns(source.env, vars, defs, options);
 
       // Resolve code from package reference
       const resolvedCode = resolveCodeFromPackage(
@@ -265,7 +267,7 @@ export function getFlowConfig(
       result.sources[name] = {
         package: source.package,
         config: processedConfig,
-        env: source.env,
+        env: processedEnv,
         primary: source.primary,
         variables: source.variables,
         definitions: source.definitions,
@@ -279,17 +281,19 @@ export function getFlowConfig(
   if (result.destinations) {
     for (const [name, dest] of Object.entries(result.destinations)) {
       const vars = mergeVariables(
-        setup.variables,
         config.variables,
+        settings.variables,
         dest.variables,
       );
       const defs = mergeDefinitions(
-        setup.definitions,
         config.definitions,
+        settings.definitions,
         dest.definitions,
       );
 
       const processedConfig = resolvePatterns(dest.config, vars, defs, options);
+
+      const processedEnv = resolvePatterns(dest.env, vars, defs, options);
 
       // Resolve code from package reference
       const resolvedCode = resolveCodeFromPackage(
@@ -307,7 +311,7 @@ export function getFlowConfig(
       result.destinations[name] = {
         package: dest.package,
         config: processedConfig,
-        env: dest.env,
+        env: processedEnv,
         variables: dest.variables,
         definitions: dest.definitions,
         before: dest.before,
@@ -320,13 +324,13 @@ export function getFlowConfig(
   if (result.stores) {
     for (const [name, store] of Object.entries(result.stores)) {
       const vars = mergeVariables(
-        setup.variables,
         config.variables,
+        settings.variables,
         store.variables,
       );
       const defs = mergeDefinitions(
-        setup.definitions,
         config.definitions,
+        settings.definitions,
         store.definitions,
       );
 
@@ -336,6 +340,8 @@ export function getFlowConfig(
         defs,
         options,
       );
+
+      const processedEnv = resolvePatterns(store.env, vars, defs, options);
 
       const resolvedCode = resolveCodeFromPackage(
         store.package,
@@ -351,7 +357,7 @@ export function getFlowConfig(
       result.stores[name] = {
         package: store.package,
         config: processedConfig,
-        env: store.env,
+        env: processedEnv,
         variables: store.variables,
         definitions: store.definitions,
         code: finalCode,
@@ -359,10 +365,62 @@ export function getFlowConfig(
     }
   }
 
+  // Process transformers with variable and definition cascade
+  if (result.transformers) {
+    for (const [name, transformer] of Object.entries(result.transformers)) {
+      const vars = mergeVariables(
+        config.variables,
+        settings.variables,
+        transformer.variables,
+      );
+      const defs = mergeDefinitions(
+        config.definitions,
+        settings.definitions,
+        transformer.definitions,
+      );
+
+      const processedConfig = resolvePatterns(
+        transformer.config,
+        vars,
+        defs,
+        options,
+      );
+
+      const processedEnv = resolvePatterns(
+        transformer.env,
+        vars,
+        defs,
+        options,
+      );
+
+      const resolvedCode = resolveCodeFromPackage(
+        transformer.package,
+        transformer.code,
+        result.packages,
+      );
+
+      const validCode =
+        typeof transformer.code === 'string' ||
+        typeof transformer.code === 'object'
+          ? transformer.code
+          : undefined;
+      const finalCode = resolvedCode || validCode;
+      result.transformers[name] = {
+        package: transformer.package,
+        config: processedConfig,
+        env: processedEnv,
+        variables: transformer.variables,
+        definitions: transformer.definitions,
+        next: transformer.next,
+        code: finalCode,
+      } as Flow.TransformerReference;
+    }
+  }
+
   // Process collector config
   if (result.collector) {
-    const vars = mergeVariables(setup.variables, config.variables);
-    const defs = mergeDefinitions(setup.definitions, config.definitions);
+    const vars = mergeVariables(config.variables, settings.variables);
+    const defs = mergeDefinitions(config.definitions, settings.definitions);
 
     const processedCollector = resolvePatterns(
       result.collector,
@@ -374,12 +432,15 @@ export function getFlowConfig(
   }
 
   // Resolve $contract references
-  const setupContract = setup.contract;
   const configContract = config.contract;
+  const settingsContract = settings.contract;
 
-  if (setupContract || configContract) {
+  if (configContract || settingsContract) {
     // Collect all entity-action pairs from both contracts
-    const entityActions = collectEntityActions(setupContract, configContract);
+    const entityActions = collectEntityActions(
+      configContract,
+      settingsContract,
+    );
 
     // Resolve each pair and build Mapping.Rules<ContractRule>
     const resolvedRules: Record<
@@ -389,10 +450,10 @@ export function getFlowConfig(
 
     for (const [entity, action] of entityActions) {
       const resolved = resolveContract(
-        setupContract || ({} as Flow.Contract),
+        configContract || ({} as Flow.Contract),
         entity,
         action,
-        configContract,
+        settingsContract,
       );
 
       if (Object.keys(resolved).length > 0) {
@@ -411,7 +472,7 @@ export function getFlowConfig(
     }
 
     // Inject $tagging into collector.tagging (if not already set)
-    const tagging = setupContract?.$tagging ?? configContract?.$tagging;
+    const tagging = configContract?.$tagging ?? settingsContract?.$tagging;
     if (typeof tagging === 'number') {
       const collector = (result.collector || {}) as Record<string, unknown>;
       if (collector.tagging === undefined) {
@@ -513,9 +574,9 @@ function replaceContractRef(config: unknown, resolved: unknown): void {
 }
 
 /**
- * Get platform from config (web or server).
+ * Get platform from settings (web or server).
  *
- * @param config - Flow configuration
+ * @param settings - Flow settings
  * @returns "web" or "server"
  * @throws Error if neither web nor server is present
  *
@@ -523,12 +584,12 @@ function replaceContractRef(config: unknown, resolved: unknown): void {
  * ```typescript
  * import { getPlatform } from '@walkeros/core';
  *
- * const platform = getPlatform(config);
+ * const platform = getPlatform(settings);
  * // Returns "web" or "server"
  * ```
  */
-export function getPlatform(config: Flow.Config): 'web' | 'server' {
-  if (config.web !== undefined) return 'web';
-  if (config.server !== undefined) return 'server';
-  throwError('Config must have web or server key');
+export function getPlatform(settings: Flow.Settings): 'web' | 'server' {
+  if (settings.web !== undefined) return 'web';
+  if (settings.server !== undefined) return 'server';
+  throwError('Settings must have web or server key');
 }
