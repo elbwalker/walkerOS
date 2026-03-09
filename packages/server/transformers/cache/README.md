@@ -71,7 +71,7 @@ import { createMemoryStore } from '@walkeros/store-memory';
 
 const customStore = createMemoryStore({ maxSize: 1024 * 1024 }); // 1 MB
 
-// In your Flow.Setup config:
+// In your Flow.Config config:
 {
   transformers: {
     cache: {

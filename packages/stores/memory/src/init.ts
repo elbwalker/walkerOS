@@ -4,7 +4,7 @@ import type { MemoryStoreOptions } from './types';
 
 /**
  * Store.Init-compatible wrapper for createMemoryStore.
- * Use this in Flow.Setup configs. Use createMemoryStore() directly
+ * Use this in Flow.Config configs. Use createMemoryStore() directly
  * for programmatic usage where Store.Context is not available.
  */
 export const storeMemoryInit: Store.Init = (context) => {

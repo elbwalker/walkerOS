@@ -69,13 +69,13 @@ export type Primitive = string | number | boolean;
 
 /**
  * Variables record type for interpolation.
- * Used at Setup, Config, Source, and Destination levels.
+ * Used at Config, Settings, Source, and Destination levels.
  */
 export type Variables = Record<string, Primitive>;
 
 /**
  * Definitions record type for reusable configurations.
- * Used at Setup, Config, Source, and Destination levels.
+ * Used at Config, Settings, Source, and Destination levels.
  */
 export type Definitions = Record<string, unknown>;
 
@@ -154,7 +154,7 @@ export interface Server {
  * }
  * ```
  */
-export interface Setup {
+export interface Config {
   /**
    * Configuration schema version.
    */
@@ -193,7 +193,7 @@ export interface Setup {
 
   /**
    * Shared variables for interpolation.
-   * Resolution: destination/source > Config > Setup level
+   * Resolution: destination/source > Settings > Config level
    * Syntax: $var.name
    */
   variables?: Variables;
@@ -208,7 +208,7 @@ export interface Setup {
    * Named flow configurations.
    * If only one flow exists, it's auto-selected.
    */
-  flows: Record<string, Config>;
+  flows: Record<string, Settings>;
 }
 
 /**
@@ -219,9 +219,9 @@ export interface Setup {
  * Platform is determined by presence of `web` or `server` key.
  * Exactly one must be present.
  *
- * Variables/definitions cascade: source/destination > config > setup
+ * Variables/definitions cascade: source/destination > settings > config
  */
-export interface Config {
+export interface Settings {
   /**
    * Web platform configuration.
    * Presence indicates web platform (browser-based tracking).
@@ -238,7 +238,7 @@ export interface Config {
 
   /**
    * Data contract definition for this flow.
-   * Merges on top of Setup-level contract (additive).
+   * Merges on top of Config-level contract (additive).
    */
   contract?: Contract;
 
@@ -387,13 +387,13 @@ export interface Config {
 
   /**
    * Flow-level variables.
-   * Override Setup.variables, overridden by source/destination variables.
+   * Override Config.variables, overridden by source/destination variables.
    */
   variables?: Variables;
 
   /**
    * Flow-level definitions.
-   * Extend Setup.definitions, overridden by source/destination definitions.
+   * Extend Config.definitions, overridden by source/destination definitions.
    */
   definitions?: Definitions;
 }
@@ -449,7 +449,7 @@ export interface SourceReference {
    * Resolved import variable name or built-in code source.
    *
    * @remarks
-   * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
+   * - String: Auto-resolved from packages[package].imports[0] during getFlowSettings(),
    *   or provided explicitly for advanced use cases.
    * - InlineCode: Object with type, push, and optional init for inline code definition.
    *
@@ -562,7 +562,7 @@ export interface TransformerReference {
    * Resolved import variable name or built-in code transformer.
    *
    * @remarks
-   * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
+   * - String: Auto-resolved from packages[package].imports[0] during getFlowSettings(),
    *   or provided explicitly for advanced use cases.
    * - InlineCode: Object with type, push, and optional init for inline code definition.
    *
@@ -699,7 +699,7 @@ export interface DestinationReference {
    * Resolved import variable name or built-in code destination.
    *
    * @remarks
-   * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
+   * - String: Auto-resolved from packages[package].imports[0] during getFlowSettings(),
    *   or provided explicitly for advanced use cases.
    * - InlineCode: Object with type, push, and optional init for inline code definition.
    *

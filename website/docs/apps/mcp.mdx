@@ -99,7 +99,7 @@ Bundle a walkerOS flow configuration into deployable JavaScript. Set
 | `stats` | boolean | No | Return bundle statistics (default: `true`) |
 | `output` | string | No | Output file path (defaults to config-defined) |
 | `remote` | boolean | No | Use remote cloud bundling (requires `WALKEROS_TOKEN`). Default: `false` |
-| `content` | object | No | Flow.Setup JSON content (required when `remote: true`) |
+| `content` | object | No | Flow.Config JSON content (required when `remote: true`) |
 
 #### `simulate`
 
@@ -253,7 +253,7 @@ or `bundling` -> `provisioning` -> `starting` -> `active` (server).
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `type` | `"web"` \| `"server"` | No | Deployment type (inferred from `flowContent` if omitted) |
-| `flowContent` | object | No | Flow.Setup JSON to infer type from |
+| `flowContent` | object | No | Flow.Config JSON to infer type from |
 | `label` | string | No | Human-readable label |
 | `projectId` | string | No | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
 
@@ -346,7 +346,7 @@ without leaving the conversation.
 > "List all flows in my project and show me the content of the most recent one."
 
 The assistant calls `flow_list`, picks the latest, then calls `flow_get` to
-retrieve the full Flow.Setup JSON.
+retrieve the full Flow.Config JSON.
 
 ### Deploy a flow
 

@@ -12,7 +12,7 @@ description:
 
 Stores provide key-value storage that other components (sources, transformers,
 destinations) consume via environment injection. They are the 4th component type
-in Flow.Setup alongside sources, transformers, and destinations.
+in Flow.Config alongside sources, transformers, and destinations.
 
 **Core principle:** Stores are passive infrastructure. They don't process events
 or participate in chains — they provide state that other components read and
@@ -153,7 +153,7 @@ LRU cache with TTL support. Suitable for caching, session state, deduplication.
 
 ```typescript
 import { storeMemoryInit } from '@walkeros/store-memory';
-// Or for direct programmatic usage (no Flow.Setup context):
+// Or for direct programmatic usage (no Flow.Config context):
 import { createMemoryStore } from '@walkeros/store-memory';
 ```
 
@@ -166,7 +166,7 @@ import { createMemoryStore } from '@walkeros/store-memory';
 
 **Two entry points:**
 
-- `storeMemoryInit` — `Store.Init` wrapper for Flow.Setup / `startFlow()`
+- `storeMemoryInit` — `Store.Init` wrapper for Flow.Config / `startFlow()`
 - `createMemoryStore()` — Direct factory for programmatic usage without context
 
 ### `@walkeros/server-store-fs` (filesystem)
@@ -304,7 +304,7 @@ Add `./dev` export to package.json:
 ## Related skills
 
 - [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) -
-  Architecture and Flow.Config structure
+  Architecture and Flow.Settings structure
 - [walkeros-understanding-transformers](../walkeros-understanding-transformers/SKILL.md) -
   Transformer interface and env pattern
 - [walkeros-using-cli](../walkeros-using-cli/SKILL.md) - Bundling flows with

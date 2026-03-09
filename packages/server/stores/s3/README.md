@@ -92,7 +92,7 @@ await store.delete('old-file.txt');
 
 ## Credentials
 
-Use `$env.` references in Flow.Setup to avoid hardcoding secrets:
+Use `$env.` references in Flow.Config to avoid hardcoding secrets:
 
 ```json
 {

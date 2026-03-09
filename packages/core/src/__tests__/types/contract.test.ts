@@ -2,7 +2,7 @@ import type { Flow } from '../../types';
 
 describe('Contract types', () => {
   it('should accept a valid contract at Setup level', () => {
-    const setup: Flow.Setup = {
+    const setup: Flow.Config = {
       version: 2,
       contract: {
         $tagging: 1,

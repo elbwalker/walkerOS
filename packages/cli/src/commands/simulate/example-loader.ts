@@ -22,7 +22,7 @@ export interface ExampleLookupResult {
  * @returns The found example with its location
  */
 export function findExample(
-  config: Flow.Config,
+  config: Flow.Settings,
   exampleName: string,
   stepTarget?: string,
 ): ExampleLookupResult {
@@ -34,7 +34,7 @@ export function findExample(
 }
 
 function findExampleInStep(
-  config: Flow.Config,
+  config: Flow.Settings,
   exampleName: string,
   stepTarget: string,
 ): ExampleLookupResult {
@@ -80,7 +80,7 @@ function findExampleInStep(
 }
 
 function findExampleAcrossSteps(
-  config: Flow.Config,
+  config: Flow.Settings,
   exampleName: string,
 ): ExampleLookupResult {
   const matches: ExampleLookupResult[] = [];
@@ -126,7 +126,7 @@ function findExampleAcrossSteps(
 }
 
 function getStepMap(
-  config: Flow.Config,
+  config: Flow.Settings,
   type: StepType,
 ): Record<string, unknown> | undefined {
   switch (type) {

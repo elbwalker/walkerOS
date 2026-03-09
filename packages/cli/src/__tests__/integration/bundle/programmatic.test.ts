@@ -28,7 +28,7 @@ describe('Programmatic Bundle API', () => {
     jest.restoreAllMocks();
   });
 
-  const simpleConfig: Flow.Setup = {
+  const simpleConfig: Flow.Config = {
     version: 1,
     flows: {
       default: {
@@ -40,11 +40,11 @@ describe('Programmatic Bundle API', () => {
     },
   };
 
-  it('should bundle with Flow.Setup config object', async () => {
+  it('should bundle with Flow.Config config object', async () => {
     await expect(bundle(simpleConfig, { silent: true })).resolves.not.toThrow();
 
     expect(mockBundleCore).toHaveBeenCalledWith(
-      expect.any(Object), // flowConfig
+      expect.any(Object), // flowSettings
       expect.any(Object), // buildOptions
       expect.any(Object), // logger
       false, // showStats
@@ -112,7 +112,7 @@ describe('Programmatic Bundle API', () => {
   });
 
   it('should select flow from multi-flow config', async () => {
-    const multiFlowConfig: Flow.Setup = {
+    const multiFlowConfig: Flow.Config = {
       version: 1,
       flows: {
         production: {

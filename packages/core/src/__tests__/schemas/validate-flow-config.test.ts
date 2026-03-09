@@ -1,10 +1,10 @@
-import { validateFlowSetup } from '../../schemas/validate-flow-setup';
+import { validateFlowConfig } from '../../schemas/validate-flow-config';
 
-describe('validateFlowSetup', () => {
+describe('validateFlowConfig', () => {
   // --- JSON Parse Errors ---
 
   it('returns error for invalid JSON', () => {
-    const result = validateFlowSetup('{');
+    const result = validateFlowConfig('{');
     expect(result.valid).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0].severity).toBe('error');
@@ -12,7 +12,7 @@ describe('validateFlowSetup', () => {
   });
 
   it('returns error for empty string', () => {
-    const result = validateFlowSetup('');
+    const result = validateFlowConfig('');
     expect(result.valid).toBe(false);
     expect(result.errors).toHaveLength(1);
   });
@@ -21,7 +21,7 @@ describe('validateFlowSetup', () => {
 
   it('returns error for missing version', () => {
     const json = JSON.stringify({ flows: { default: { web: {} } } }, null, 2);
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
   });
@@ -32,13 +32,13 @@ describe('validateFlowSetup', () => {
       null,
       2,
     );
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(result.valid).toBe(false);
   });
 
   it('returns error for missing flows', () => {
     const json = JSON.stringify({ version: 1 }, null, 2);
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(result.valid).toBe(false);
   });
 
@@ -48,7 +48,7 @@ describe('validateFlowSetup', () => {
       null,
       2,
     );
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);
   });
@@ -57,7 +57,7 @@ describe('validateFlowSetup', () => {
 
   it('provides line/column for schema errors', () => {
     const json = JSON.stringify({ flows: {} }, null, 2);
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
     for (const e of result.errors) {
@@ -88,7 +88,7 @@ describe('validateFlowSetup', () => {
       null,
       2,
     );
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(result.valid).toBe(true); // warnings don't make it invalid
     expect(
       result.warnings.some((w) => w.message.includes('$var.nonExistent')),
@@ -115,7 +115,7 @@ describe('validateFlowSetup', () => {
       null,
       2,
     );
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(
       result.warnings.filter((w) => w.message.includes('$var.')),
     ).toHaveLength(0);
@@ -138,7 +138,7 @@ describe('validateFlowSetup', () => {
       null,
       2,
     );
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(
       result.warnings.some((w) => w.message.includes('$def.missing')),
     ).toBe(true);
@@ -156,7 +156,7 @@ describe('validateFlowSetup', () => {
       null,
       2,
     );
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(result.context?.variables).toEqual({ gaId: 'G-XXX', debug: false });
   });
 
@@ -175,7 +175,7 @@ describe('validateFlowSetup', () => {
       null,
       2,
     );
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(result.context?.stepNames?.sources).toEqual(['browser']);
     expect(result.context?.stepNames?.destinations).toEqual(['ga4', 'meta']);
   });
@@ -186,7 +186,7 @@ describe('validateFlowSetup', () => {
       null,
       2,
     );
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(result.context?.platform).toBe('server');
   });
 
@@ -206,7 +206,7 @@ describe('validateFlowSetup', () => {
       null,
       2,
     );
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(result.context?.packages).toEqual([
       {
         package: '@walkeros/web-source-browser',
@@ -227,14 +227,14 @@ describe('validateFlowSetup', () => {
       null,
       2,
     );
-    const result = validateFlowSetup(json);
+    const result = validateFlowConfig(json);
     expect(result.context?.contract).toEqual([
       { entity: 'page', actions: ['view', 'read'] },
     ]);
   });
 
   it('returns empty context for invalid JSON', () => {
-    const result = validateFlowSetup('{');
+    const result = validateFlowConfig('{');
     expect(result.context).toBeUndefined();
   });
 });

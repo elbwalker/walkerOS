@@ -268,12 +268,12 @@ async function executeConfigPush(
 ): Promise<PushResult> {
   // Load config
   logger.debug('Loading flow configuration');
-  const { flowConfig, buildOptions } = await loadFlowConfig(options.config!, {
+  const { flowSettings, buildOptions } = await loadFlowConfig(options.config!, {
     flowName: options.flow,
     logger,
   });
 
-  const platform = getPlatform(flowConfig);
+  const platform = getPlatform(flowSettings);
 
   // Bundle to temp file in config directory (so Node.js can find node_modules)
   logger.debug('Bundling flow configuration');
@@ -300,7 +300,7 @@ async function executeConfigPush(
     }),
   };
 
-  await bundleCore(flowConfig, pushBuildOptions, logger, false);
+  await bundleCore(flowSettings, pushBuildOptions, logger, false);
 
   logger.debug(`Bundle created: ${tempPath}`);
 

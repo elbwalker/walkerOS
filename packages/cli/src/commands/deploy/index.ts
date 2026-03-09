@@ -12,7 +12,7 @@ import { getFlow } from '../flows/index.js';
 
 // === Helpers ===
 
-async function resolveConfigId(options: {
+async function resolveSettingsId(options: {
   flowId: string;
   projectId: string;
   flowName: string;
@@ -21,15 +21,15 @@ async function resolveConfigId(options: {
     flowId: options.flowId,
     projectId: options.projectId,
   });
-  const configs = (flow as { configs?: Array<{ id: string; name: string }> })
-    .configs;
-  if (!configs?.length) {
-    throw new Error('Flow has no configs.');
+  const settings = (flow as { settings?: Array<{ id: string; name: string }> })
+    .settings;
+  if (!settings?.length) {
+    throw new Error('Flow has no settings.');
   }
-  const match = configs.find((c) => c.name === options.flowName);
+  const match = settings.find((c) => c.name === options.flowName);
   if (!match) {
     throw new Error(
-      `Flow "${options.flowName}" not found. Available: ${configs.map((c) => c.name).join(', ')}`,
+      `Flow "${options.flowName}" not found. Available: ${settings.map((c) => c.name).join(', ')}`,
     );
   }
   return match.id;
@@ -43,8 +43,8 @@ async function getAvailableFlowNames(options: {
     flowId: options.flowId,
     projectId: options.projectId,
   });
-  const configs = (flow as { configs?: Array<{ name: string }> }).configs;
-  return configs?.map((c) => c.name) ?? [];
+  const settings = (flow as { settings?: Array<{ name: string }> }).settings;
+  return settings?.map((c) => c.name) ?? [];
 }
 
 // === SSE Streaming ===
@@ -132,15 +132,15 @@ export async function deploy(options: DeployOptions) {
   const client = createApiClient();
 
   if (options.flowName) {
-    const configId = await resolveConfigId({
+    const settingsId = await resolveSettingsId({
       flowId: options.flowId,
       projectId,
       flowName: options.flowName,
     });
-    return deployConfig({
+    return deploySettings({
       ...options,
       projectId,
-      configId,
+      settingsId,
       timeout: options.timeout,
       signal: options.signal,
       onStatus: options.onStatus,
@@ -162,7 +162,7 @@ export async function deploy(options: DeployOptions) {
         projectId,
       });
       throw new Error(
-        `This flow has multiple configs. Use --flow <name> to specify one.\n` +
+        `This flow has multiple settings. Use --flow <name> to specify one.\n` +
           `Available: ${names.join(', ')}`,
       );
     }
@@ -181,22 +181,22 @@ export async function deploy(options: DeployOptions) {
   return { ...data, ...result };
 }
 
-// TODO: Replace with typed client.POST() once api.gen.d.ts includes per-config routes
-async function deployConfig(options: {
+// TODO: Replace with typed client.POST() once api.gen.d.ts includes per-settings routes
+async function deploySettings(options: {
   flowId: string;
   projectId: string;
-  configId: string;
+  settingsId: string;
   wait?: boolean;
   timeout?: number;
   signal?: AbortSignal;
   onStatus?: (status: string, substatus: string | null) => void;
 }) {
-  const { flowId, projectId, configId } = options;
+  const { flowId, projectId, settingsId } = options;
   const base = resolveBaseUrl();
 
-  // 1. Trigger per-config deploy
+  // 1. Trigger per-settings deploy
   const response = await authenticatedFetch(
-    `${base}/api/projects/${projectId}/flows/${flowId}/configs/${configId}/deploy`,
+    `${base}/api/projects/${projectId}/flows/${flowId}/settings/${settingsId}/deploy`,
     { method: 'POST' },
   );
   if (!response.ok) {
@@ -229,14 +229,14 @@ export async function getDeployment(options: {
   const projectId = options.projectId ?? requireProjectId();
 
   if (options.flowName) {
-    const configId = await resolveConfigId({
+    const settingsId = await resolveSettingsId({
       flowId: options.flowId,
       projectId,
       flowName: options.flowName,
     });
     const base = resolveBaseUrl();
     const response = await authenticatedFetch(
-      `${base}/api/projects/${projectId}/flows/${options.flowId}/configs/${configId}/deploy`,
+      `${base}/api/projects/${projectId}/flows/${options.flowId}/settings/${settingsId}/deploy`,
     );
     if (!response.ok) {
       const body: { error?: { message?: string } } = await response

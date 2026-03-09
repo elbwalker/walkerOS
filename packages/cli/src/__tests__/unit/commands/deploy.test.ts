@@ -25,13 +25,13 @@ const mockGetFlow = jest.mocked(getFlow);
 const mockAuthFetch = jest.mocked(authenticatedFetch);
 
 const multiFlowContent = {
-  content: {
+  config: {
     flows: {
       web: { web: {} },
       server: { server: {} },
     },
   },
-  configs: [
+  settings: [
     { id: 'cfg_web', name: 'web', platform: 'web' },
     { id: 'cfg_server', name: 'server', platform: 'server' },
   ],
@@ -130,7 +130,7 @@ describe('deploy', () => {
   });
 
   describe('deploy() with flowName', () => {
-    it('resolves configId and calls per-config route', async () => {
+    it('resolves settingsId and calls per-settings route', async () => {
       mockGetFlow.mockResolvedValue(multiFlowContent as any);
       mockAuthFetch.mockResolvedValue(
         new Response(
@@ -148,7 +148,7 @@ describe('deploy', () => {
         projectId: 'proj_default',
       });
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_default/flows/cfg_1/configs/cfg_web/deploy',
+        'https://app.walkeros.io/api/projects/proj_default/flows/cfg_1/settings/cfg_web/deploy',
         { method: 'POST' },
       );
     });
@@ -323,7 +323,7 @@ describe('deploy', () => {
       await getDeployment({ flowId: 'cfg_1', flowName: 'web' });
 
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_default/flows/cfg_1/configs/cfg_web/deploy',
+        'https://app.walkeros.io/api/projects/proj_default/flows/cfg_1/settings/cfg_web/deploy',
       );
     });
   });

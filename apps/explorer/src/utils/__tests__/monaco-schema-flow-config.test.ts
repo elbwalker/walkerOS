@@ -1,6 +1,6 @@
-import { enrichFlowSetupSchema } from '../monaco-schema-flow-setup';
+import { enrichFlowConfigSchema } from '../monaco-schema-flow-config';
 
-describe('enrichFlowSetupSchema', () => {
+describe('enrichFlowConfigSchema', () => {
   // Use a simplified version of the actual schema structure (anyOf-based)
   const baseSchema = {
     anyOf: [
@@ -42,13 +42,13 @@ describe('enrichFlowSetupSchema', () => {
   };
 
   it('adds markdownDescription to version', () => {
-    const result = enrichFlowSetupSchema(baseSchema);
+    const result = enrichFlowConfigSchema(baseSchema);
     const version = result.anyOf[0].properties.version;
     expect(version.markdownDescription).toContain('version');
   });
 
   it('adds defaultSnippets to flows', () => {
-    const result = enrichFlowSetupSchema(baseSchema);
+    const result = enrichFlowConfigSchema(baseSchema);
     const flows = result.anyOf[0].properties.flows;
     const snippets = flows.defaultSnippets;
     expect(snippets).toBeDefined();
@@ -56,7 +56,7 @@ describe('enrichFlowSetupSchema', () => {
   });
 
   it('includes web flow, server flow, and web+GA4 snippets', () => {
-    const result = enrichFlowSetupSchema(baseSchema);
+    const result = enrichFlowConfigSchema(baseSchema);
     const flows = result.anyOf[0].properties.flows;
     const labels = flows.defaultSnippets.map((s: { label: string }) =>
       s.label.toLowerCase(),
@@ -68,15 +68,15 @@ describe('enrichFlowSetupSchema', () => {
     ).toBe(true);
   });
 
-  it('adds defaultSnippets to sources inside FlowConfig', () => {
-    const result = enrichFlowSetupSchema(baseSchema);
+  it('adds defaultSnippets to sources inside FlowSettings', () => {
+    const result = enrichFlowConfigSchema(baseSchema);
     const sources =
       result.anyOf[0].properties.flows.additionalProperties.properties.sources;
     expect(sources?.defaultSnippets).toBeDefined();
   });
 
-  it('adds defaultSnippets to destinations inside FlowConfig', () => {
-    const result = enrichFlowSetupSchema(baseSchema);
+  it('adds defaultSnippets to destinations inside FlowSettings', () => {
+    const result = enrichFlowConfigSchema(baseSchema);
     const dests =
       result.anyOf[0].properties.flows.additionalProperties.properties
         .destinations;
@@ -84,14 +84,14 @@ describe('enrichFlowSetupSchema', () => {
   });
 
   it('adds markdownDescription to variables with $var syntax example', () => {
-    const result = enrichFlowSetupSchema(baseSchema);
+    const result = enrichFlowConfigSchema(baseSchema);
     const variables = result.anyOf[0].properties.variables;
     expect(variables.markdownDescription).toContain('$var.');
   });
 
   it('does not mutate the base schema', () => {
     const clone = JSON.parse(JSON.stringify(baseSchema));
-    enrichFlowSetupSchema(baseSchema);
+    enrichFlowConfigSchema(baseSchema);
     expect(baseSchema).toEqual(clone);
   });
 });

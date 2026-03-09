@@ -4,12 +4,12 @@ import { enrichSchema } from './monaco-schema-enrichment';
 type AnySchema = Record<string, any>;
 
 /**
- * Takes the base Flow.Setup JSON Schema (from @walkeros/core z.toJSONSchema())
+ * Takes the base Flow.Config JSON Schema (from @walkeros/core z.toJSONSchema())
  * and returns an enriched version with Monaco-specific extensions.
  *
  * The actual schema uses anyOf[0] at the top level.
  */
-export function enrichFlowSetupSchema(baseSchema: AnySchema): AnySchema {
+export function enrichFlowConfigSchema(baseSchema: AnySchema): AnySchema {
   // The schema structure is { anyOf: [{ type: 'object', properties: {...} }] }
   // We need to enrich inside anyOf[0]
   const schema = JSON.parse(JSON.stringify(baseSchema));
@@ -18,7 +18,7 @@ export function enrichFlowSetupSchema(baseSchema: AnySchema): AnySchema {
 
   const root = schema.anyOf[0];
   const props = root.properties;
-  const flowConfig = props.flows?.additionalProperties?.properties;
+  const flowSettings = props.flows?.additionalProperties?.properties;
 
   // Enrich version
   if (props.version) {
@@ -123,13 +123,13 @@ export function enrichFlowSetupSchema(baseSchema: AnySchema): AnySchema {
     ];
   }
 
-  // Enrich FlowConfig sub-properties
-  if (flowConfig) {
-    if (flowConfig.sources) {
-      flowConfig.sources.markdownDescription =
+  // Enrich FlowSettings sub-properties
+  if (flowSettings) {
+    if (flowSettings.sources) {
+      flowSettings.sources.markdownDescription =
         'Source configurations for data capture, keyed by step name.\n\n' +
         '```json\n"sources": {\n  "browser": { "package": "@walkeros/web-source-browser" }\n}\n```';
-      flowConfig.sources.defaultSnippets = [
+      flowSettings.sources.defaultSnippets = [
         {
           label: 'Add web source',
           description: 'Browser source for web tracking',
@@ -151,11 +151,11 @@ export function enrichFlowSetupSchema(baseSchema: AnySchema): AnySchema {
       ];
     }
 
-    if (flowConfig.destinations) {
-      flowConfig.destinations.markdownDescription =
+    if (flowSettings.destinations) {
+      flowSettings.destinations.markdownDescription =
         'Destination configurations for data output, keyed by step name.\n\n' +
         '```json\n"destinations": {\n  "ga4": {\n    "package": "@walkeros/web-destination-ga4",\n    "config": { "measurementId": "$var.trackingId" }\n  }\n}\n```';
-      flowConfig.destinations.defaultSnippets = [
+      flowSettings.destinations.defaultSnippets = [
         {
           label: 'Add GA4 destination',
           description: 'Google Analytics 4 destination',
@@ -182,11 +182,11 @@ export function enrichFlowSetupSchema(baseSchema: AnySchema): AnySchema {
       ];
     }
 
-    if (flowConfig.transformers) {
-      flowConfig.transformers.markdownDescription =
+    if (flowSettings.transformers) {
+      flowSettings.transformers.markdownDescription =
         'Transformer configurations for event transformation, keyed by step name.\n\n' +
         '```json\n"transformers": {\n  "validator": {\n    "code": { "push": "$code:(event) => event" }\n  }\n}\n```';
-      flowConfig.transformers.defaultSnippets = [
+      flowSettings.transformers.defaultSnippets = [
         {
           label: 'Add transformer',
           description: 'Inline transformer with code',
@@ -201,14 +201,14 @@ export function enrichFlowSetupSchema(baseSchema: AnySchema): AnySchema {
       ];
     }
 
-    if (flowConfig.web) {
-      flowConfig.web.markdownDescription =
+    if (flowSettings.web) {
+      flowSettings.web.markdownDescription =
         'Web platform configuration (browser-based). Mutually exclusive with `server`.\n\n' +
         '```json\n"web": {\n  "windowCollector": "collector",\n  "windowElb": "elb"\n}\n```';
     }
 
-    if (flowConfig.server) {
-      flowConfig.server.markdownDescription =
+    if (flowSettings.server) {
+      flowSettings.server.markdownDescription =
         'Server platform configuration (Node.js). Mutually exclusive with `web`.\n\n' +
         '```json\n"server": {}\n```';
     }

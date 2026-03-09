@@ -118,7 +118,7 @@ export {
   enrichSchema,
   type MonacoSchemaExtension,
 } from './utils/monaco-schema-enrichment';
-export { enrichFlowSetupSchema } from './utils/monaco-schema-flow-setup';
+export { enrichFlowConfigSchema } from './utils/monaco-schema-flow-config';
 export { getEnrichedContractSchema } from './utils/monaco-schema-contract';
 export { getVariablesSchema } from './utils/monaco-schema-variables';
 

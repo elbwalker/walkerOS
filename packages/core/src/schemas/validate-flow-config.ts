@@ -1,19 +1,19 @@
-import { SetupSchema } from './flow';
+import { ConfigSchema } from './flow';
 import type { ValidationIssue, ValidationResult } from './validate';
 import type { IntelliSenseContext, PackageInfo } from './intellisense';
 
 /**
- * Validate a Flow.Setup JSON string.
+ * Validate a Flow.Config JSON string.
  *
  * Performs three levels of validation:
  * 1. JSON syntax — parse error with line/column
- * 2. Schema — Zod SetupSchema validation with mapped positions
+ * 2. Schema — Zod ConfigSchema validation with mapped positions
  * 3. References — checks $var., $def., $secret. against extracted context
  *
  * Returns errors, warnings, and extracted IntelliSenseContext as a byproduct.
  * Pure function — works in Node.js (CLI/MCP) and browser (CodeBox).
  */
-export function validateFlowSetup(json: string): ValidationResult {
+export function validateFlowConfig(json: string): ValidationResult {
   // 1. JSON parse
   let parsed: unknown;
   try {
@@ -38,7 +38,7 @@ export function validateFlowSetup(json: string): ValidationResult {
   const warnings: ValidationIssue[] = [];
 
   // 2. Schema validation
-  const zodResult = SetupSchema.safeParse(parsed);
+  const zodResult = ConfigSchema.safeParse(parsed);
   if (!zodResult.success) {
     for (const issue of zodResult.error.issues) {
       const path = issue.path.join('.');

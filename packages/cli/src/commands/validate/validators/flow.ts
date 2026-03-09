@@ -8,7 +8,7 @@ import type {
   ValidationWarning,
 } from '../types.js';
 
-const { validateFlowSetup } = schemas;
+const { validateFlowConfig } = schemas;
 
 interface FlowValidateOptions {
   flow?: string;
@@ -23,7 +23,7 @@ export function validateFlow(
   const details: Record<string, unknown> = {};
 
   // 1. Serialize to JSON for core validator
-  //    Core's validateFlowSetup takes a JSON string, but CLI receives parsed objects.
+  //    Core's validateFlowConfig takes a JSON string, but CLI receives parsed objects.
   //    Re-serializing is the bridge between the two interfaces.
   let json: string;
   try {
@@ -38,7 +38,7 @@ export function validateFlow(
   }
 
   // 2. Run core validation (Zod schema + reference checking)
-  const coreResult = validateFlowSetup(json);
+  const coreResult = validateFlowConfig(json);
 
   // 3. Map core errors -> CLI ValidationError
   for (const issue of coreResult.errors) {
@@ -120,12 +120,12 @@ export function validateFlow(
 
     let totalConnections = 0;
     for (const name of flowsToCheck) {
-      const flowConfig = (flows as Record<string, Flow.Config>)[name];
-      if (!flowConfig) continue;
+      const flowSettings = (flows as Record<string, Flow.Settings>)[name];
+      if (!flowSettings) continue;
 
-      checkExampleCoverage(flowConfig, warnings);
+      checkExampleCoverage(flowSettings, warnings);
 
-      const connections = buildConnectionGraph(flowConfig);
+      const connections = buildConnectionGraph(flowSettings);
       for (const conn of connections) {
         checkCompatibility(conn, errors, warnings);
       }
@@ -133,11 +133,11 @@ export function validateFlow(
 
       // Contract compliance
       const setupContract = config.contract as Flow.Contract | undefined;
-      if (setupContract || flowConfig.contract) {
+      if (setupContract || flowSettings.contract) {
         checkContractCompliance(
-          flowConfig,
+          flowSettings,
           setupContract,
-          flowConfig.contract,
+          flowSettings.contract,
           warnings,
         );
       }
@@ -168,7 +168,7 @@ interface StepConnection {
 }
 
 function checkExampleCoverage(
-  config: Flow.Config,
+  config: Flow.Settings,
   warnings: ValidationWarning[],
 ): void {
   const stepTypes = [
@@ -192,7 +192,7 @@ function checkExampleCoverage(
   }
 }
 
-function buildConnectionGraph(config: Flow.Config): StepConnection[] {
+function buildConnectionGraph(config: Flow.Settings): StepConnection[] {
   const connections: StepConnection[] = [];
 
   // Source → next transformer
@@ -322,7 +322,7 @@ function isStructurallyCompatible(a: unknown, b: unknown): boolean {
 }
 
 function checkContractCompliance(
-  config: Flow.Config,
+  config: Flow.Settings,
   setupContract: Flow.Contract | undefined,
   flowContract: Flow.Contract | undefined,
   warnings: ValidationWarning[],

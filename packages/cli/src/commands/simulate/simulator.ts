@@ -124,7 +124,7 @@ export function formatSimulationResult(
 
 /**
  * Execute simulation using destination-provided mock environments.
- * Only accepts Flow.Setup config files.
+ * Only accepts Flow.Config config files.
  */
 export async function executeSimulation(
   event: unknown,
@@ -162,7 +162,7 @@ export async function executeSimulation(
     if (detected.type !== 'config') {
       throw new Error(
         `Input "${inputPath}" is not valid JSON config. ` +
-          'simulate only accepts Flow.Setup config files.',
+          'simulate only accepts Flow.Config config files.',
       );
     }
 
@@ -251,14 +251,14 @@ async function executeConfigSimulation(
   stepTarget?: string,
 ): Promise<SimulationResult> {
   // Load config
-  const { flowConfig } = await loadFlowConfig(configPath, {
+  const { flowSettings } = await loadFlowConfig(configPath, {
     flowName,
   });
 
   // Parse step target
   const step = parseStepTarget(
     stepTarget,
-    flowConfig as unknown as Record<string, unknown>,
+    flowSettings as unknown as Record<string, unknown>,
   );
 
   if (step.type === 'destination') {
@@ -274,7 +274,7 @@ async function executeConfigSimulation(
 
     // Load env mocks from /dev exports
     const destinations = (
-      flowConfig as unknown as { destinations?: Record<string, unknown> }
+      flowSettings as unknown as { destinations?: Record<string, unknown> }
     ).destinations;
     const envs = await loadDestinationEnvs(destinations || {});
     const destEnv = envs[step.name];

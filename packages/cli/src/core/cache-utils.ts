@@ -66,7 +66,7 @@ function normalizeJson(content: string): string {
  * Generate cache key for flow.json configuration.
  * Includes date for daily rebuild guarantee.
  */
-export async function getFlowConfigCacheKey(
+export async function getFlowSettingsCacheKey(
   content: string,
   date?: string,
 ): Promise<string> {

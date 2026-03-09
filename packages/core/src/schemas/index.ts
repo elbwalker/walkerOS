@@ -112,9 +112,9 @@ export {
 
 // Export commonly used schemas from Flow namespace directly
 export {
-  SetupSchema,
-  SetupV2Schema,
-  ConfigSchema as FlowConfigSchema, // Alias to avoid conflict with other ConfigSchema exports
+  ConfigSchema as FlowConfigSchema,
+  ConfigV2Schema as FlowConfigV2Schema,
+  SettingsSchema as FlowSettingsSchema,
   ContractSchema,
   ContractActionsSchema,
   ContractSchemaEntry,
@@ -122,14 +122,14 @@ export {
   DestinationReferenceSchema,
   StoreReferenceSchema,
   PrimitiveSchema,
-  parseSetup,
-  safeParseSetup,
   parseConfig,
   safeParseConfig,
+  parseSettings,
+  safeParseSettings,
   // JSON Schemas
-  setupJsonSchema,
-  setupV2JsonSchema,
   configJsonSchema,
+  configV2JsonSchema,
+  settingsJsonSchema,
   sourceReferenceJsonSchema,
   destinationReferenceJsonSchema,
   storeReferenceJsonSchema,
@@ -138,7 +138,7 @@ export {
 // Validation
 export type { ValidationIssue, ValidationResult } from './validate';
 export type { IntelliSenseContext, PackageInfo } from './intellisense';
-export { validateFlowSetup } from './validate-flow-setup';
+export { validateFlowConfig } from './validate-flow-config';
 
 // ========================================
 // Schema Builder - DRY utility for destinations

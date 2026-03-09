@@ -274,7 +274,7 @@ Browser → destinationAPI (POST /collect) → sourceExpress → destinationData
 
 ### Flow Configuration Structure
 
-Flow configs use the `Flow.Setup` format:
+Flow configs use the `Flow.Config` format:
 
 ```json
 {

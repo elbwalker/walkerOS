@@ -37,7 +37,7 @@ export function registerExamplesListTool(server: McpServer) {
     },
     async ({ configPath, flow, step }) => {
       try {
-        const rawConfig = await loadJsonConfig<Flow.Setup>(configPath);
+        const rawConfig = await loadJsonConfig<Flow.Config>(configPath);
 
         // Resolve flow name
         const flowNames = Object.keys(rawConfig.flows || {});
@@ -50,8 +50,8 @@ export function registerExamplesListTool(server: McpServer) {
           );
         }
 
-        const flowConfig = rawConfig.flows[flowName];
-        if (!flowConfig) {
+        const flowSettings = rawConfig.flows[flowName];
+        if (!flowSettings) {
           throw new Error(`Flow "${flowName}" not found`);
         }
 
@@ -76,7 +76,7 @@ export function registerExamplesListTool(server: McpServer) {
         ];
 
         for (const { key, type } of stepTypes) {
-          const refs = flowConfig[key] || {};
+          const refs = flowSettings[key] || {};
           for (const [name, ref] of Object.entries(refs)) {
             if (!ref.examples) continue;
 

@@ -62,7 +62,7 @@ describe('Bundler', () => {
   });
 
   it('should bundle minimal config successfully', async () => {
-    const flowConfig: Flow.Config = {
+    const flowSettings: Flow.Settings = {
       web: {},
       packages: {
         '@walkeros/core': {
@@ -72,7 +72,7 @@ describe('Bundler', () => {
     };
 
     const buildOptions = createBuildOptions({
-      packages: flowConfig.packages || {},
+      packages: flowSettings.packages || {},
       code: 'export const test = getId(8);',
       platform: 'browser',
       format: 'esm',
@@ -80,12 +80,12 @@ describe('Bundler', () => {
     });
 
     await expect(
-      bundle(flowConfig, buildOptions, logger),
+      bundle(flowSettings, buildOptions, logger),
     ).resolves.not.toThrow();
   });
 
   it('should bundle server config with ESM format', async () => {
-    const flowConfig: Flow.Config = {
+    const flowSettings: Flow.Settings = {
       server: {},
       packages: {
         '@walkeros/core': {
@@ -95,7 +95,7 @@ describe('Bundler', () => {
     };
 
     const buildOptions = createBuildOptions({
-      packages: flowConfig.packages || {},
+      packages: flowSettings.packages || {},
       code: 'export default { processText: (text) => trim(text) };',
       platform: 'node',
       format: 'esm',
@@ -103,12 +103,12 @@ describe('Bundler', () => {
     });
 
     await expect(
-      bundle(flowConfig, buildOptions, logger),
+      bundle(flowSettings, buildOptions, logger),
     ).resolves.not.toThrow();
   });
 
   it('should bundle advanced config with minification', async () => {
-    const flowConfig: Flow.Config = {
+    const flowSettings: Flow.Settings = {
       web: {},
       packages: {
         '@walkeros/core': {
@@ -118,7 +118,7 @@ describe('Bundler', () => {
     };
 
     const buildOptions = createBuildOptions({
-      packages: flowConfig.packages || {},
+      packages: flowSettings.packages || {},
       code: "export function processData(data) {\n  return data.map(item => ({\n    ...item,\n    id: getId(8),\n    timestamp: new Date().toISOString().split('T')[0],\n    processed: true\n  }));\n}\n\nexport function extractNestedValues(data, path) {\n  return data.map(item => getByPath(item, path, null)).filter(val => val !== null);\n}\n\nexport function deepCloneData(data) {\n  return clone(data);\n}\n\nexport function cleanStringData(data) {\n  return data.map(item => ({\n    ...item,\n    name: typeof item.name === 'string' ? trim(item.name) : item.name\n  }));\n}\n\n// Re-export walkerOS utilities\nexport { getId, getByPath, clone, trim, isObject };",
       platform: 'browser',
       format: 'esm',
@@ -129,13 +129,13 @@ describe('Bundler', () => {
     });
 
     await expect(
-      bundle(flowConfig, buildOptions, logger),
+      bundle(flowSettings, buildOptions, logger),
     ).resolves.not.toThrow();
   });
 
   describe('Stats Collection', () => {
     it('should collect bundle stats when requested', async () => {
-      const flowConfig: Flow.Config = {
+      const flowSettings: Flow.Settings = {
         web: {},
         packages: {
           '@walkeros/core': {
@@ -145,13 +145,13 @@ describe('Bundler', () => {
       };
 
       const buildOptions = createBuildOptions({
-        packages: flowConfig.packages || {},
+        packages: flowSettings.packages || {},
         code: 'export const test = getId(8);',
         format: 'esm',
         output: path.join(testOutputDir, 'stats-test.js'),
       });
 
-      const stats = await bundle(flowConfig, buildOptions, logger, true);
+      const stats = await bundle(flowSettings, buildOptions, logger, true);
 
       expect(stats).toBeDefined();
       expect(stats!.totalSize).toBe(1024); // From mocked fs.stat
@@ -162,25 +162,25 @@ describe('Bundler', () => {
     });
 
     it('should detect ineffective tree-shaking with wildcard imports', async () => {
-      const flowConfig: Flow.Config = {
+      const flowSettings: Flow.Settings = {
         web: {},
         packages: { '@walkeros/core': {} },
       };
 
       const buildOptions = createBuildOptions({
-        packages: flowConfig.packages || {},
+        packages: flowSettings.packages || {},
         code: 'import * as walkerCore from "@walkeros/core";\nexport const test = walkerCore.getId;',
         format: 'esm',
         output: path.join(testOutputDir, 'test.js'),
       });
 
-      const stats = await bundle(flowConfig, buildOptions, logger, true);
+      const stats = await bundle(flowSettings, buildOptions, logger, true);
 
       expect(stats!.treeshakingEffective).toBe(false);
     });
 
     it('should return undefined when stats not requested', async () => {
-      const flowConfig: Flow.Config = {
+      const flowSettings: Flow.Settings = {
         web: {},
         packages: {
           '@walkeros/core': {
@@ -190,13 +190,13 @@ describe('Bundler', () => {
       };
 
       const buildOptions = createBuildOptions({
-        packages: flowConfig.packages || {},
+        packages: flowSettings.packages || {},
         code: 'export const test = getId(8);',
         format: 'esm',
         output: path.join(testOutputDir, 'no-stats.js'),
       });
 
-      const result = await bundle(flowConfig, buildOptions, logger, false);
+      const result = await bundle(flowSettings, buildOptions, logger, false);
 
       expect(result).toBeUndefined();
     });
@@ -204,7 +204,7 @@ describe('Bundler', () => {
 
   describe('Configuration Scenarios', () => {
     it('should handle custom temp directory configuration', async () => {
-      const flowConfig: Flow.Config = {
+      const flowSettings: Flow.Settings = {
         web: {},
         packages: {
           '@walkeros/core': { imports: ['getId'] },
@@ -212,7 +212,7 @@ describe('Bundler', () => {
       };
 
       const buildOptions = createBuildOptions({
-        packages: flowConfig.packages || {},
+        packages: flowSettings.packages || {},
         code: 'export const test = getId();',
         format: 'esm',
         tempDir: '/tmp/my-custom-bundler-temp',
@@ -220,12 +220,12 @@ describe('Bundler', () => {
       });
 
       await expect(
-        bundle(flowConfig, buildOptions, logger),
+        bundle(flowSettings, buildOptions, logger),
       ).resolves.not.toThrow();
     });
 
     it('should handle version pinning correctly', async () => {
-      const flowConfig: Flow.Config = {
+      const flowSettings: Flow.Settings = {
         web: {},
         packages: {
           '@walkeros/core': { version: '0.0.7', imports: ['getId'] },
@@ -233,7 +233,7 @@ describe('Bundler', () => {
       };
 
       const buildOptions = createBuildOptions({
-        packages: flowConfig.packages || {},
+        packages: flowSettings.packages || {},
         code: '// Test version pinning\nexport const test = getId();',
         platform: 'browser',
         format: 'esm',
@@ -242,7 +242,7 @@ describe('Bundler', () => {
       });
 
       await expect(
-        bundle(flowConfig, buildOptions, logger),
+        bundle(flowSettings, buildOptions, logger),
       ).resolves.not.toThrow();
     });
   });

@@ -17,12 +17,12 @@ import {
 } from '../schemas/output.js';
 
 function summarizeFlow(flow: Record<string, unknown>): string {
-  const content = flow.content as Record<string, unknown> | undefined;
-  if (!content) return `Flow "${flow.name}" (${flow.id})`;
+  const config = flow.config as Record<string, unknown> | undefined;
+  if (!config) return `Flow "${flow.name}" (${flow.id})`;
 
-  const version = content.version ?? '?';
-  const flowConfigs = content.flows as Record<string, unknown> | undefined;
-  const variables = content.variables as Record<string, unknown> | undefined;
+  const version = config.version ?? '?';
+  const flowSettings = config.flows as Record<string, unknown> | undefined;
+  const variables = config.variables as Record<string, unknown> | undefined;
 
   const parts = [`Flow "${flow.name}" (${flow.id}) | v${version}`];
 
@@ -30,9 +30,9 @@ function summarizeFlow(flow: Record<string, unknown>): string {
     parts.push(`variables: ${Object.keys(variables).join(', ')}`);
   }
 
-  if (flowConfigs) {
-    for (const [name, config] of Object.entries(flowConfigs)) {
-      const cfg = config as Record<string, unknown>;
+  if (flowSettings) {
+    for (const [name, settings] of Object.entries(flowSettings)) {
+      const cfg = settings as Record<string, unknown>;
       const sources = cfg.sources as Record<string, unknown> | undefined;
       const destinations = cfg.destinations as
         | Record<string, unknown>
@@ -104,7 +104,7 @@ export function registerFlowTools(server: McpServer) {
     {
       title: 'Get Flow',
       description:
-        'Get a flow configuration with its full content (Flow.Setup JSON). ' +
+        'Get a flow configuration with its full content (Flow.Config JSON). ' +
         'Use fields to request only specific sections (e.g., ["content.variables", "content.flows.web.sources"]).',
       inputSchema: {
         flowId: z.string().describe('Flow ID (cfg_...)'),
@@ -151,7 +151,7 @@ export function registerFlowTools(server: McpServer) {
         name: z.string().min(1).max(255).describe('Flow name'),
         content: z
           .record(z.string(), z.unknown())
-          .describe('Flow.Setup JSON content (version: 1 or 2)'),
+          .describe('Flow.Config JSON content (version: 1 or 2)'),
         projectId: z
           .string()
           .optional()
@@ -199,7 +199,7 @@ export function registerFlowTools(server: McpServer) {
           .record(z.string(), z.unknown())
           .optional()
           .describe(
-            'Flow.Setup JSON content. With patch:true, only include changed fields.',
+            'Flow.Config JSON content. With patch:true, only include changed fields.',
           ),
         patch: z
           .boolean()

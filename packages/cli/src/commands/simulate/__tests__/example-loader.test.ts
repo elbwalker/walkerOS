@@ -1,11 +1,11 @@
 import type { Flow } from '@walkeros/core';
 import { findExample } from '../example-loader';
 
-function makeConfig(overrides: Partial<Flow.Config> = {}): Flow.Config {
+function makeConfig(overrides: Partial<Flow.Settings> = {}): Flow.Settings {
   return {
     web: {},
     ...overrides,
-  } as Flow.Config;
+  } as Flow.Settings;
 }
 
 describe('findExample', () => {

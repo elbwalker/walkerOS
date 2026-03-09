@@ -1,6 +1,6 @@
-# Flow.Setup Configuration Reference
+# Flow.Config Configuration Reference
 
-Complete reference for Flow.Setup JSON configuration format.
+Complete reference for Flow.Config JSON configuration format.
 
 ---
 

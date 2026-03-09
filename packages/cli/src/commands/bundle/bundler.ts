@@ -162,11 +162,11 @@ export async function copyIncludes(
  * Excludes non-deterministic fields (tempDir, output) from cache key.
  */
 function generateCacheKeyContent(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
   buildOptions: BuildOptions,
 ): string {
   const configForCache = {
-    flow: flowConfig,
+    flow: flowSettings,
     build: {
       ...buildOptions,
       // Exclude non-deterministic fields from cache key
@@ -185,13 +185,13 @@ function generateCacheKeyContent(
  * because the type no longer includes true, but runtime values may still have it.
  */
 function validateFlowConfig(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
   logger: Logger.Instance,
 ): boolean {
   let hasDeprecatedCodeTrue = false;
 
   // Check sources for code: true (deprecated, removed from types)
-  const sources = flowConfig.sources || {};
+  const sources = flowSettings.sources || {};
   for (const [sourceId, source] of Object.entries(sources)) {
     if (
       source &&
@@ -207,7 +207,7 @@ function validateFlowConfig(
   }
 
   // Check destinations for code: true (deprecated, removed from types)
-  const destinations = flowConfig.destinations || {};
+  const destinations = flowSettings.destinations || {};
   for (const [destId, dest] of Object.entries(destinations)) {
     if (dest && typeof dest === 'object' && (dest.code as unknown) === true) {
       logger.warn(
@@ -219,7 +219,7 @@ function validateFlowConfig(
   }
 
   // Check transformers for code: true (deprecated, removed from types)
-  const transformers = flowConfig.transformers || {};
+  const transformers = flowSettings.transformers || {};
   for (const [transformerId, transformer] of Object.entries(transformers)) {
     if (
       transformer &&
@@ -244,7 +244,7 @@ function validateFlowConfig(
 }
 
 export async function bundleCore(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
   buildOptions: BuildOptions,
   logger: Logger.Instance,
   showStats = false,
@@ -252,7 +252,7 @@ export async function bundleCore(
   const bundleStartTime = Date.now();
 
   // Validate flow config and warn about deprecated features
-  const hasDeprecatedFeatures = validateFlowConfig(flowConfig, logger);
+  const hasDeprecatedFeatures = validateFlowConfig(flowSettings, logger);
   if (hasDeprecatedFeatures) {
     logger.warn('Skipping deprecated code: true entries from bundle.');
   }
@@ -265,7 +265,7 @@ export async function bundleCore(
 
   // Check build cache if caching is enabled
   if (buildOptions.cache !== false) {
-    const configContent = generateCacheKeyContent(flowConfig, buildOptions);
+    const configContent = generateCacheKeyContent(flowSettings, buildOptions);
 
     const cached = await isBuildCached(configContent, CACHE_DIR);
     if (cached) {
@@ -315,11 +315,11 @@ export async function bundleCore(
     // Step 1.5: Auto-add collector if sources/destinations exist but collector not specified
     const hasSourcesOrDests =
       Object.keys(
-        (flowConfig as unknown as { sources?: Record<string, unknown> })
+        (flowSettings as unknown as { sources?: Record<string, unknown> })
           .sources || {},
       ).length > 0 ||
       Object.keys(
-        (flowConfig as unknown as { destinations?: Record<string, unknown> })
+        (flowSettings as unknown as { destinations?: Record<string, unknown> })
           .destinations || {},
       ).length > 0;
 
@@ -378,7 +378,7 @@ export async function bundleCore(
     // Step 4: Create entry point
     logger.debug('Creating entry point');
     const entryContent = await createEntryPoint(
-      flowConfig,
+      flowSettings,
       buildOptions,
       packagePaths,
     );
@@ -424,7 +424,7 @@ export async function bundleCore(
 
     // Step 5: Cache the build result if caching is enabled
     if (buildOptions.cache !== false) {
-      const configContent = generateCacheKeyContent(flowConfig, buildOptions);
+      const configContent = generateCacheKeyContent(flowSettings, buildOptions);
       const buildOutput = await fs.readFile(outputPath, 'utf-8');
       await cacheBuild(configContent, buildOutput, CACHE_DIR);
       logger.debug('Build cached for future use');
@@ -607,10 +607,10 @@ function createEsbuildOptions(
  * Detects destination packages from flow configuration.
  * Extracts package names from destinations that have explicit 'package' field.
  */
-function detectDestinationPackages(flowConfig: Flow.Config): Set<string> {
+function detectDestinationPackages(flowSettings: Flow.Settings): Set<string> {
   const destinationPackages = new Set<string>();
   const destinations = (
-    flowConfig as unknown as { destinations?: Record<string, unknown> }
+    flowSettings as unknown as { destinations?: Record<string, unknown> }
   ).destinations;
 
   if (destinations) {
@@ -644,10 +644,10 @@ function detectDestinationPackages(flowConfig: Flow.Config): Set<string> {
  * Detects source packages from flow configuration.
  * Extracts package names from sources that have explicit 'package' field.
  */
-function detectSourcePackages(flowConfig: Flow.Config): Set<string> {
+function detectSourcePackages(flowSettings: Flow.Settings): Set<string> {
   const sourcePackages = new Set<string>();
   const sources = (
-    flowConfig as unknown as { sources?: Record<string, unknown> }
+    flowSettings as unknown as { sources?: Record<string, unknown> }
   ).sources;
 
   if (sources) {
@@ -681,11 +681,11 @@ function detectSourcePackages(flowConfig: Flow.Config): Set<string> {
  * Extracts package names from transformers that have explicit 'package' field.
  */
 export function detectTransformerPackages(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
 ): Set<string> {
   const transformerPackages = new Set<string>();
   const transformers = (
-    flowConfig as unknown as { transformers?: Record<string, unknown> }
+    flowSettings as unknown as { transformers?: Record<string, unknown> }
   ).transformers;
 
   if (transformers) {
@@ -720,10 +720,11 @@ export function detectTransformerPackages(
  * Detects store packages from flow configuration.
  * Extracts package names from stores that have explicit 'package' field.
  */
-export function detectStorePackages(flowConfig: Flow.Config): Set<string> {
+export function detectStorePackages(flowSettings: Flow.Settings): Set<string> {
   const storePackages = new Set<string>();
-  const stores = (flowConfig as unknown as { stores?: Record<string, unknown> })
-    .stores;
+  const stores = (
+    flowSettings as unknown as { stores?: Record<string, unknown> }
+  ).stores;
 
   if (stores) {
     for (const [, storeConfig] of Object.entries(stores)) {
@@ -746,13 +747,13 @@ export function detectStorePackages(flowConfig: Flow.Config): Set<string> {
  * Returns a map of package names to sets of export names.
  */
 export function detectExplicitCodeImports(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
 ): Map<string, Set<string>> {
   const explicitCodeImports = new Map<string, Set<string>>();
 
   // Check destinations
   const destinations = (
-    flowConfig as unknown as { destinations?: Record<string, unknown> }
+    flowSettings as unknown as { destinations?: Record<string, unknown> }
   ).destinations;
 
   if (destinations) {
@@ -789,7 +790,7 @@ export function detectExplicitCodeImports(
 
   // Check sources
   const sources = (
-    flowConfig as unknown as { sources?: Record<string, unknown> }
+    flowSettings as unknown as { sources?: Record<string, unknown> }
   ).sources;
 
   if (sources) {
@@ -826,7 +827,7 @@ export function detectExplicitCodeImports(
 
   // Check transformers
   const transformers = (
-    flowConfig as unknown as { transformers?: Record<string, unknown> }
+    flowSettings as unknown as { transformers?: Record<string, unknown> }
   ).transformers;
 
   if (transformers) {
@@ -865,8 +866,9 @@ export function detectExplicitCodeImports(
   }
 
   // Check stores
-  const stores = (flowConfig as unknown as { stores?: Record<string, unknown> })
-    .stores;
+  const stores = (
+    flowSettings as unknown as { stores?: Record<string, unknown> }
+  ).stores;
 
   if (stores) {
     for (const [, storeConfig] of Object.entries(stores)) {
@@ -1024,7 +1026,7 @@ export function validateComponentNames(
  * Throws descriptive error on mismatch.
  */
 function validateStoreReferences(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
   storeIds: Set<string>,
 ): void {
   const refs: Array<{ ref: string; location: string }> = [];
@@ -1041,9 +1043,9 @@ function validateStoreReferences(
 
   // Scan all component env/config values
   for (const [section, components] of Object.entries({
-    sources: flowConfig.sources || {},
-    destinations: flowConfig.destinations || {},
-    transformers: flowConfig.transformers || {},
+    sources: flowSettings.sources || {},
+    destinations: flowSettings.destinations || {},
+    transformers: flowSettings.transformers || {},
   })) {
     for (const [id, component] of Object.entries(
       components as Record<string, Record<string, unknown>>,
@@ -1070,28 +1072,28 @@ function validateStoreReferences(
  * Generates imports, config object, and platform-specific wrapper programmatically.
  */
 export async function createEntryPoint(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
   buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
 ): Promise<string> {
   // Detect packages used by destinations, sources, transformers, and stores
-  const destinationPackages = detectDestinationPackages(flowConfig);
-  const sourcePackages = detectSourcePackages(flowConfig);
-  const transformerPackages = detectTransformerPackages(flowConfig);
-  const storePackages = detectStorePackages(flowConfig);
-  const explicitCodeImports = detectExplicitCodeImports(flowConfig);
+  const destinationPackages = detectDestinationPackages(flowSettings);
+  const sourcePackages = detectSourcePackages(flowSettings);
+  const transformerPackages = detectTransformerPackages(flowSettings);
+  const storePackages = detectStorePackages(flowSettings);
+  const explicitCodeImports = detectExplicitCodeImports(flowSettings);
 
   // Validate $store: references before code generation
   const storeIds = new Set(
     Object.keys(
-      (flowConfig as unknown as { stores?: Record<string, unknown> }).stores ||
-        {},
+      (flowSettings as unknown as { stores?: Record<string, unknown> })
+        .stores || {},
     ),
   );
-  validateStoreReferences(flowConfig, storeIds);
+  validateStoreReferences(flowSettings, storeIds);
 
   // Validate component names are valid JS identifiers (they become property names in generated code)
-  const flowWithSections = flowConfig as unknown as {
+  const flowWithSections = flowSettings as unknown as {
     sources?: Record<string, unknown>;
     destinations?: Record<string, unknown>;
     transformers?: Record<string, unknown>;
@@ -1118,10 +1120,10 @@ export async function createEntryPoint(
 
   const importsCode = importStatements.join('\n');
   const hasFlow =
-    Object.values(flowConfig.sources || {}).some(
+    Object.values(flowSettings.sources || {}).some(
       (s) => s.package || isInlineCode(s.code),
     ) ||
-    Object.values(flowConfig.destinations || {}).some(
+    Object.values(flowSettings.destinations || {}).some(
       (d) => d.package || isInlineCode(d.code),
     );
 
@@ -1132,7 +1134,7 @@ export async function createEntryPoint(
   }
 
   // Build config object programmatically (DRY - single source of truth)
-  const configObject = buildConfigObject(flowConfig, explicitCodeImports);
+  const configObject = buildConfigObject(flowSettings, explicitCodeImports);
 
   // Generate platform-specific wrapper
   const wrappedCode = generatePlatformWrapper(
@@ -1198,10 +1200,10 @@ function createBuildError(buildError: EsbuildError, code: string): Error {
  * Respects import strategy decisions from detectExplicitCodeImports.
  */
 export function buildConfigObject(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
   explicitCodeImports: Map<string, Set<string>>,
 ): string {
-  const flowWithProps = flowConfig as unknown as {
+  const flowWithProps = flowSettings as unknown as {
     sources?: Record<
       string,
       {

@@ -517,13 +517,13 @@ describe('deployment tools', () => {
       expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
     });
 
-    it('infers type from flowContent (web)', async () => {
+    it('infers type from flowConfig (web)', async () => {
       const mockResult = { slug: 'abc', type: 'web' };
       mockCreateDeployment.mockResolvedValue(mockResult);
 
       const tool = server.getTool('deployment_create');
       const result = await tool.handler({
-        flowContent: { flows: { default: { web: {} } } },
+        flowConfig: { flows: { default: { web: {} } } },
       });
 
       expect(mockCreateDeployment).toHaveBeenCalledWith({
@@ -534,13 +534,13 @@ describe('deployment tools', () => {
       expect(result.structuredContent).toEqual(mockResult);
     });
 
-    it('infers type from flowContent (server)', async () => {
+    it('infers type from flowConfig (server)', async () => {
       const mockResult = { slug: 'abc', type: 'server' };
       mockCreateDeployment.mockResolvedValue(mockResult);
 
       const tool = server.getTool('deployment_create');
       const result = await tool.handler({
-        flowContent: { flows: { default: { server: {} } } },
+        flowConfig: { flows: { default: { server: {} } } },
       });
 
       expect(mockCreateDeployment).toHaveBeenCalledWith({

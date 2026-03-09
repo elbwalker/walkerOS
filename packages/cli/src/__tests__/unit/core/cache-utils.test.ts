@@ -1,6 +1,6 @@
 import {
   getPackageCacheKey,
-  getFlowConfigCacheKey,
+  getFlowSettingsCacheKey,
   isMutableVersion,
 } from '../../../core/cache-utils';
 
@@ -76,13 +76,13 @@ describe('cache-utils', () => {
     });
   });
 
-  describe('getFlowConfigCacheKey', () => {
+  describe('getFlowSettingsCacheKey', () => {
     const fixedDate = '2025-11-25';
 
     it('produces consistent hash for same content', async () => {
       const content = JSON.stringify({ flow: { platform: 'web' }, build: {} });
-      const key1 = await getFlowConfigCacheKey(content, fixedDate);
-      const key2 = await getFlowConfigCacheKey(content, fixedDate);
+      const key1 = await getFlowSettingsCacheKey(content, fixedDate);
+      const key2 = await getFlowSettingsCacheKey(content, fixedDate);
       expect(key1).toBe(key2);
     });
 
@@ -90,8 +90,8 @@ describe('cache-utils', () => {
       const compact = '{"flow":{"platform":"web"}}';
       const formatted = '{\n  "flow": {\n    "platform": "web"\n  }\n}';
 
-      const key1 = await getFlowConfigCacheKey(compact, fixedDate);
-      const key2 = await getFlowConfigCacheKey(formatted, fixedDate);
+      const key1 = await getFlowSettingsCacheKey(compact, fixedDate);
+      const key2 = await getFlowSettingsCacheKey(formatted, fixedDate);
       expect(key1).toBe(key2);
     });
 
@@ -99,15 +99,15 @@ describe('cache-utils', () => {
       const content1 = JSON.stringify({ flow: { platform: 'web' } });
       const content2 = JSON.stringify({ flow: { platform: 'server' } });
 
-      const key1 = await getFlowConfigCacheKey(content1, fixedDate);
-      const key2 = await getFlowConfigCacheKey(content2, fixedDate);
+      const key1 = await getFlowSettingsCacheKey(content1, fixedDate);
+      const key2 = await getFlowSettingsCacheKey(content2, fixedDate);
       expect(key1).not.toBe(key2);
     });
 
     it('different dates produce different keys', async () => {
       const content = JSON.stringify({ flow: { platform: 'web' } });
-      const key1 = await getFlowConfigCacheKey(content, '2025-11-25');
-      const key2 = await getFlowConfigCacheKey(content, '2025-11-26');
+      const key1 = await getFlowSettingsCacheKey(content, '2025-11-25');
+      const key2 = await getFlowSettingsCacheKey(content, '2025-11-26');
       expect(key1).not.toBe(key2);
     });
   });

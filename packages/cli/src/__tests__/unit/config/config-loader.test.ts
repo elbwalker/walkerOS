@@ -1,7 +1,7 @@
 /**
  * Config Loader Tests
  *
- * Tests for Flow.Setup configuration loading with the new format.
+ * Tests for Flow.Config configuration loading with the new format.
  */
 
 import {
@@ -12,11 +12,11 @@ import {
 
 describe('Config Loader', () => {
   // ========================================
-  // Single Flow (Flow.Setup with one flow)
+  // Single Flow (Flow.Config with one flow)
   // ========================================
 
-  describe('Single Flow (Flow.Setup)', () => {
-    test('loads Flow.Setup with single flow automatically', () => {
+  describe('Single Flow (Flow.Config)', () => {
+    test('loads Flow.Config with single flow automatically', () => {
       const config = {
         version: 1,
         flows: {
@@ -48,8 +48,8 @@ describe('Config Loader', () => {
 
       expect(result.flowName).toBe('default');
       expect(result.isMultiFlow).toBe(false);
-      expect(result.flowConfig.web).toBeDefined();
-      expect(result.flowConfig.sources).toBeDefined();
+      expect(result.flowSettings.web).toBeDefined();
+      expect(result.flowSettings.sources).toBeDefined();
     });
 
     test('applies platform-specific defaults for web', () => {
@@ -98,7 +98,7 @@ describe('Config Loader', () => {
       expect(result.buildOptions.output).toBe('./dist/bundle.mjs');
     });
 
-    test('extracts packages from flowConfig', () => {
+    test('extracts packages from flowSettings', () => {
       const config = {
         version: 1,
         flows: {
@@ -209,7 +209,7 @@ describe('Config Loader', () => {
         'web_stage',
         'server_prod',
       ]);
-      expect(result.flowConfig.web).toBeDefined();
+      expect(result.flowSettings.web).toBeDefined();
     });
 
     test('throws error if flow not specified for multi-flow config', () => {
@@ -240,8 +240,8 @@ describe('Config Loader', () => {
         'web_stage',
         'server_prod',
       ]);
-      expect(results[0].flowConfig.web).toBeDefined();
-      expect(results[2].flowConfig.server).toBeDefined();
+      expect(results[0].flowSettings.web).toBeDefined();
+      expect(results[2].flowSettings.server).toBeDefined();
     });
 
     test('gets available flows from multi-flow config', () => {
@@ -327,7 +327,7 @@ describe('Config Loader', () => {
       ).toThrow(/web.*or.*server|Exactly one of/i);
     });
 
-    test('returns empty array for non-Flow.Setup config', () => {
+    test('returns empty array for non-Flow.Config config', () => {
       const oldFormatConfig = {
         flow: { platform: 'web' },
         build: { packages: {} },
@@ -456,8 +456,8 @@ describe('Config Loader', () => {
         flowName: 'web_production',
       });
 
-      expect(result.flowConfig.web).toBeDefined();
-      expect(result.flowConfig.sources?.browser?.package).toBe(
+      expect(result.flowSettings.web).toBeDefined();
+      expect(result.flowSettings.sources?.browser?.package).toBe(
         '@walkeros/web-source-browser@2.0.0',
       );
       expect(result.buildOptions.minify).toBe(true);
@@ -483,13 +483,14 @@ describe('Config Loader', () => {
         configPath: '/test/config.json',
       });
 
-      // Web config values should be in flowConfig
+      // Web config values should be in flowSettings
       expect(
-        (result.flowConfig.web as { windowCollector?: string }).windowCollector,
+        (result.flowSettings.web as { windowCollector?: string })
+          .windowCollector,
       ).toBe('myCollector');
-      expect((result.flowConfig.web as { windowElb?: string }).windowElb).toBe(
-        'myElb',
-      );
+      expect(
+        (result.flowSettings.web as { windowElb?: string }).windowElb,
+      ).toBe('myElb');
     });
   });
 });

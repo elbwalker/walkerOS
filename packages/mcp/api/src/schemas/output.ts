@@ -77,7 +77,7 @@ const flowFields = {
   name: z.string().describe('Flow name'),
   content: z
     .record(z.string(), z.unknown())
-    .describe('Flow.Setup JSON content'),
+    .describe('Flow.Config JSON content'),
   createdAt: timestamp,
   updatedAt: timestamp,
   deletedAt: z
@@ -161,10 +161,10 @@ export const DeployFlowOutputShape = {
     .nullable()
     .optional()
     .describe('Target URL for the deployment'),
-  configId: z
+  settingsId: z
     .string()
     .optional()
-    .describe('Config ID if deploying a specific named config'),
+    .describe('Settings ID if deploying a specific named settings'),
   publicUrl: z
     .string()
     .nullable()

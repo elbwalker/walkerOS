@@ -7,7 +7,7 @@ import type { Flow } from '@walkeros/core';
 
 describe('Validation', () => {
   it('should error when both package and code are specified', () => {
-    const flowConfig: Flow.Config = {
+    const flowSettings: Flow.Settings = {
       server: {},
       transformers: {
         invalid: {
@@ -21,13 +21,13 @@ describe('Validation', () => {
     };
 
     const explicitCodeImports = new Map<string, Set<string>>();
-    expect(() => buildConfigObject(flowConfig, explicitCodeImports)).toThrow(
+    expect(() => buildConfigObject(flowSettings, explicitCodeImports)).toThrow(
       /both package and code/i,
     );
   });
 
   it('should error when neither package nor code are specified', () => {
-    const flowConfig: Flow.Config = {
+    const flowSettings: Flow.Settings = {
       server: {},
       transformers: {
         invalid: {
@@ -37,7 +37,7 @@ describe('Validation', () => {
     };
 
     const explicitCodeImports = new Map<string, Set<string>>();
-    expect(() => buildConfigObject(flowConfig, explicitCodeImports)).toThrow(
+    expect(() => buildConfigObject(flowSettings, explicitCodeImports)).toThrow(
       /package or code/i,
     );
   });
@@ -46,7 +46,7 @@ describe('Validation', () => {
 describe('Inline Code Bundling', () => {
   describe('Transformer with code object', () => {
     it('should generate inline transformer from code object', () => {
-      const flowConfig: Flow.Config = {
+      const flowSettings: Flow.Settings = {
         server: {},
         transformers: {
           enrich: {
@@ -59,9 +59,9 @@ describe('Inline Code Bundling', () => {
         },
       };
 
-      // buildConfigObject takes flowConfig and explicitCodeImports map
+      // buildConfigObject takes flowSettings and explicitCodeImports map
       const explicitCodeImports = new Map<string, Set<string>>();
-      const result = buildConfigObject(flowConfig, explicitCodeImports);
+      const result = buildConfigObject(flowSettings, explicitCodeImports);
 
       // Should contain the inline transformer
       expect(result).toContain('enrich');
@@ -72,7 +72,7 @@ describe('Inline Code Bundling', () => {
     });
 
     it('should handle inline transformer with init function', () => {
-      const flowConfig: Flow.Config = {
+      const flowSettings: Flow.Settings = {
         server: {},
         transformers: {
           validator: {
@@ -87,7 +87,7 @@ describe('Inline Code Bundling', () => {
       };
 
       const explicitCodeImports = new Map<string, Set<string>>();
-      const result = buildConfigObject(flowConfig, explicitCodeImports);
+      const result = buildConfigObject(flowSettings, explicitCodeImports);
 
       // Should contain the inline transformer with init
       expect(result).toContain('validator');
@@ -98,7 +98,7 @@ describe('Inline Code Bundling', () => {
 
   describe('Source with code object', () => {
     it('should generate inline source from code object', () => {
-      const flowConfig: Flow.Config = {
+      const flowSettings: Flow.Settings = {
         server: {},
         sources: {
           customSource: {
@@ -113,7 +113,7 @@ describe('Inline Code Bundling', () => {
       };
 
       const explicitCodeImports = new Map<string, Set<string>>();
-      const result = buildConfigObject(flowConfig, explicitCodeImports);
+      const result = buildConfigObject(flowSettings, explicitCodeImports);
 
       // Should contain the inline source
       expect(result).toContain('customSource');
@@ -123,7 +123,7 @@ describe('Inline Code Bundling', () => {
 
   describe('Destination with code object', () => {
     it('should generate inline destination from code object', () => {
-      const flowConfig: Flow.Config = {
+      const flowSettings: Flow.Settings = {
         server: {},
         sources: {},
         destinations: {
@@ -138,7 +138,7 @@ describe('Inline Code Bundling', () => {
       };
 
       const explicitCodeImports = new Map<string, Set<string>>();
-      const result = buildConfigObject(flowConfig, explicitCodeImports);
+      const result = buildConfigObject(flowSettings, explicitCodeImports);
 
       // Should contain the inline destination
       expect(result).toContain('customDest');
@@ -149,7 +149,7 @@ describe('Inline Code Bundling', () => {
 
 describe('Integration', () => {
   it('should bundle mixed package and inline definitions', () => {
-    const flowConfig: Flow.Config = {
+    const flowSettings: Flow.Settings = {
       server: {},
       packages: {
         '@walkeros/collector': { imports: ['startFlow'] },
@@ -191,7 +191,7 @@ describe('Integration', () => {
     };
 
     const explicitCodeImports = new Map<string, Set<string>>();
-    const result = buildConfigObject(flowConfig, explicitCodeImports);
+    const result = buildConfigObject(flowSettings, explicitCodeImports);
 
     // Package-based transformer should reference the import variable
     expect(result).toContain('validate');

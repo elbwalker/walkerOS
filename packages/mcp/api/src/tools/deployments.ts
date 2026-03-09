@@ -67,7 +67,7 @@ export function registerDeploymentTools(server: McpServer) {
           .string()
           .optional()
           .describe(
-            'Flow name for multi-config flows. Required when a flow has multiple configs.',
+            'Flow name for multi-settings flows. Required when a flow has multiple settings.',
           ),
       },
       outputSchema: DeployFlowOutputShape,
@@ -135,7 +135,7 @@ export function registerDeploymentTools(server: McpServer) {
           .string()
           .optional()
           .describe(
-            'Flow name for multi-config flows. Required when a flow has multiple configs.',
+            'Flow name for multi-settings flows. Required when a flow has multiple settings.',
           ),
       },
       outputSchema: DeploymentOutputShape,
@@ -221,11 +221,11 @@ export function registerDeploymentTools(server: McpServer) {
         type: z
           .enum(['web', 'server'])
           .optional()
-          .describe('Deployment type (inferred from flowContent if omitted)'),
-        flowContent: z
+          .describe('Deployment type (inferred from flowConfig if omitted)'),
+        flowConfig: z
           .record(z.string(), z.unknown())
           .optional()
-          .describe('Flow.Setup JSON to infer type from'),
+          .describe('Flow.Config JSON to infer type from'),
         label: z.string().optional().describe('Human-readable label'),
         projectId: z
           .string()
@@ -240,11 +240,11 @@ export function registerDeploymentTools(server: McpServer) {
         openWorldHint: true,
       },
     },
-    async ({ type, flowContent, label, projectId }) => {
+    async ({ type, flowConfig, label, projectId }) => {
       try {
         let resolvedType = type;
-        if (!resolvedType && flowContent) {
-          const flows = (flowContent as { flows?: Record<string, unknown> })
+        if (!resolvedType && flowConfig) {
+          const flows = (flowConfig as { flows?: Record<string, unknown> })
             .flows;
           if (flows) {
             const firstFlow = Object.values(flows)[0] as Record<
@@ -263,7 +263,7 @@ export function registerDeploymentTools(server: McpServer) {
         }
         if (!resolvedType) {
           return mcpError(
-            new Error('type required (provide type or flowContent)'),
+            new Error('type required (provide type or flowConfig)'),
           );
         }
         return mcpResult(

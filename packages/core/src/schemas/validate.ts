@@ -17,4 +17,4 @@ export interface ValidationResult {
   context?: Partial<IntelliSenseContext>;
 }
 
-export { validateFlowSetup } from './validate-flow-setup';
+export { validateFlowConfig } from './validate-flow-config';

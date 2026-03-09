@@ -78,7 +78,7 @@
                 "additionalProperties": {}
               },
               "contract": {
-                "description": "Flow-level data contract (merges on top of Setup-level contract)",
+                "description": "Flow-level data contract (merges on top of Config-level contract)",
                 "type": "object",
                 "propertyNames": {
                   "type": "string"
@@ -461,6 +461,109 @@
                   "description": "Transformer package reference with configuration"
                 }
               },
+              "stores": {
+                "description": "Store configurations (key-value storage) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Store package specifier with optional version",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Named export string or inline code definition",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Store-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Store environment configuration"
+                    },
+                    "variables": {
+                      "description": "Store-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Store-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Store package reference with configuration"
+                }
+              },
               "collector": {
                 "description": "Collector configuration for event processing (uses Collector.InitConfig)"
               },
@@ -468,7 +571,8 @@
                 "description": "NPM packages to bundle",
                 "type": "object",
                 "propertyNames": {
-                  "type": "string"
+                  "type": "string",
+                  "pattern": "^(@[a-z0-9\\-~][a-z0-9\\-._~]*\\/)?[a-z0-9\\-~][a-z0-9\\-._~]*$"
                 },
                 "additionalProperties": {
                   "type": "object",
@@ -490,7 +594,7 @@
                 }
               },
               "variables": {
-                "description": "Flow-level variables (override Setup.variables, overridden by source/destination variables)",
+                "description": "Flow-level variables (override Config.variables, overridden by source/destination variables)",
                 "type": "object",
                 "propertyNames": {
                   "type": "string"
@@ -511,7 +615,7 @@
                 }
               },
               "definitions": {
-                "description": "Flow-level definitions (extend Setup.definitions, overridden by source/destination definitions)",
+                "description": "Flow-level definitions (extend Config.definitions, overridden by source/destination definitions)",
                 "type": "object",
                 "propertyNames": {
                   "type": "string"
@@ -520,7 +624,7 @@
               }
             },
             "additionalProperties": false,
-            "description": "Single flow configuration for one deployment target"
+            "description": "Single flow settings for one deployment target"
           },
           "description": "Named flow configurations (e.g., production, staging, development)"
         },
@@ -611,7 +715,7 @@
                 "additionalProperties": {}
               },
               "contract": {
-                "description": "Flow-level data contract (merges on top of Setup-level contract)",
+                "description": "Flow-level data contract (merges on top of Config-level contract)",
                 "type": "object",
                 "propertyNames": {
                   "type": "string"
@@ -994,6 +1098,109 @@
                   "description": "Transformer package reference with configuration"
                 }
               },
+              "stores": {
+                "description": "Store configurations (key-value storage) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Store package specifier with optional version",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Named export string or inline code definition",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Store-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Store environment configuration"
+                    },
+                    "variables": {
+                      "description": "Store-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Store-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Store package reference with configuration"
+                }
+              },
               "collector": {
                 "description": "Collector configuration for event processing (uses Collector.InitConfig)"
               },
@@ -1001,7 +1208,8 @@
                 "description": "NPM packages to bundle",
                 "type": "object",
                 "propertyNames": {
-                  "type": "string"
+                  "type": "string",
+                  "pattern": "^(@[a-z0-9\\-~][a-z0-9\\-._~]*\\/)?[a-z0-9\\-~][a-z0-9\\-._~]*$"
                 },
                 "additionalProperties": {
                   "type": "object",
@@ -1023,7 +1231,7 @@
                 }
               },
               "variables": {
-                "description": "Flow-level variables (override Setup.variables, overridden by source/destination variables)",
+                "description": "Flow-level variables (override Config.variables, overridden by source/destination variables)",
                 "type": "object",
                 "propertyNames": {
                   "type": "string"
@@ -1044,7 +1252,7 @@
                 }
               },
               "definitions": {
-                "description": "Flow-level definitions (extend Setup.definitions, overridden by source/destination definitions)",
+                "description": "Flow-level definitions (extend Config.definitions, overridden by source/destination definitions)",
                 "type": "object",
                 "propertyNames": {
                   "type": "string"
@@ -1053,7 +1261,7 @@
               }
             },
             "additionalProperties": false,
-            "description": "Single flow configuration for one deployment target"
+            "description": "Single flow settings for one deployment target"
           },
           "description": "Named flow configurations (e.g., production, staging, development)"
         },

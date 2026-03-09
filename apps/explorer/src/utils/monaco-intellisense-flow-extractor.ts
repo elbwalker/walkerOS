@@ -1,9 +1,9 @@
 import type { IntelliSenseContext, PackageInfo } from '../types/intellisense';
 
 /**
- * Extract IntelliSense context from a Flow.Setup JSON string.
+ * Extract IntelliSense context from a Flow.Config JSON string.
  *
- * Parses the JSON, walks setup → configs → steps, and collects
+ * Parses the JSON, walks config → settings → steps, and collects
  * all discoverable variables, definitions, step names, packages,
  * platform, and contract entities.
  *
@@ -20,7 +20,7 @@ export function extractFlowIntelliSenseContext(
     return {};
   }
 
-  if (!isFlowSetup(parsed)) return {};
+  if (!isFlowConfig(parsed)) return {};
 
   const variables: Record<string, string | number | boolean> = {};
   const definitions: Record<string, unknown> = {};
@@ -31,29 +31,29 @@ export function extractFlowIntelliSenseContext(
   const contractEntities: Array<{ entity: string; actions: string[] }> = [];
   let platform: 'web' | 'server' | undefined;
 
-  // Setup-level
+  // Config-level
   mergeVars(variables, parsed.variables);
   mergeDefs(definitions, parsed.definitions);
   extractContract(contractEntities, parsed.contract);
 
-  // Walk each flow config
-  for (const config of Object.values(parsed.flows)) {
-    if (!isObject(config)) continue;
+  // Walk each flow settings
+  for (const settings of Object.values(parsed.flows)) {
+    if (!isObject(settings)) continue;
 
     // Platform detection (first match wins)
     if (!platform) {
-      if ('web' in config) platform = 'web';
-      else if ('server' in config) platform = 'server';
+      if ('web' in settings) platform = 'web';
+      else if ('server' in settings) platform = 'server';
     }
 
-    // Config-level variables/definitions/contract
-    mergeVars(variables, config.variables);
-    mergeDefs(definitions, config.definitions);
-    extractContract(contractEntities, config.contract);
+    // Settings-level variables/definitions/contract
+    mergeVars(variables, settings.variables);
+    mergeDefs(definitions, settings.definitions);
+    extractContract(contractEntities, settings.contract);
 
     // Sources
-    if (isObject(config.sources)) {
-      for (const [name, ref] of Object.entries(config.sources)) {
+    if (isObject(settings.sources)) {
+      for (const [name, ref] of Object.entries(settings.sources)) {
         sources.push(name);
         if (isObject(ref)) {
           mergeVars(variables, ref.variables);
@@ -71,8 +71,8 @@ export function extractFlowIntelliSenseContext(
     }
 
     // Destinations
-    if (isObject(config.destinations)) {
-      for (const [name, ref] of Object.entries(config.destinations)) {
+    if (isObject(settings.destinations)) {
+      for (const [name, ref] of Object.entries(settings.destinations)) {
         destinations.push(name);
         if (isObject(ref)) {
           mergeVars(variables, ref.variables);
@@ -90,8 +90,8 @@ export function extractFlowIntelliSenseContext(
     }
 
     // Transformers
-    if (isObject(config.transformers)) {
-      for (const [name, ref] of Object.entries(config.transformers)) {
+    if (isObject(settings.transformers)) {
+      for (const [name, ref] of Object.entries(settings.transformers)) {
         transformers.push(name);
         if (isObject(ref)) {
           mergeVars(variables, ref.variables);
@@ -128,7 +128,7 @@ function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-function isFlowSetup(v: unknown): v is {
+function isFlowConfig(v: unknown): v is {
   version: number;
   flows: Record<string, unknown>;
   [k: string]: unknown;
@@ -166,7 +166,7 @@ function extractContract(
   if (!isObject(contract)) return;
   for (const [key, value] of Object.entries(contract)) {
     if (key.startsWith('$') || !isObject(value)) continue;
-    // Avoid duplicates when merging setup + config contracts
+    // Avoid duplicates when merging config + settings contracts
     const existing = target.find((e) => e.entity === key);
     const actions = Object.keys(value);
     if (existing) {

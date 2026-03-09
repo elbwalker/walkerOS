@@ -87,7 +87,7 @@ export { compareOutput } from './commands/simulate/compare.js';
 
 // === Types ===
 // Export types for programmatic usage
-// Config structure uses Flow.Setup and Flow.Config from @walkeros/core
+// Config structure uses Flow.Config and Flow.Settings from @walkeros/core
 export type {
   Flow,
   CLIBuildOptions,

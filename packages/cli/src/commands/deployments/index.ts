@@ -212,27 +212,27 @@ export async function createDeployCommand(
             `Failed to fetch flow ${config}`,
         );
       }
-      const flow = (await resp.json()) as { content?: unknown };
-      if (!flow.content) throw new Error('Flow has no content');
+      const flow = (await resp.json()) as { config?: unknown };
+      if (!flow.config) throw new Error('Flow has no config');
 
-      const content = flow.content as { flows?: Record<string, unknown> };
-      const flows = content.flows;
-      if (!flows) throw new Error('Invalid flow content: missing flows');
+      const flowConfig = flow.config as { flows?: Record<string, unknown> };
+      const flows = flowConfig.flows;
+      if (!flows) throw new Error('Invalid flow config: missing flows');
       const flowName = options.flow ?? Object.keys(flows)[0];
       if (!flowName) throw new Error('No flows found in config');
-      const flowConfig = flows[flowName];
-      if (!flowConfig || typeof flowConfig !== 'object')
+      const flowSettings = flows[flowName];
+      if (!flowSettings || typeof flowSettings !== 'object')
         throw new Error('Invalid flow config');
 
-      if ('web' in flowConfig) type = 'web';
-      else if ('server' in flowConfig) type = 'server';
+      if ('web' in flowSettings) type = 'web';
+      else if ('server' in flowSettings) type = 'server';
       else throw new Error('Flow must have "web" or "server" key');
     } else {
       // Local file: use config loader + core getPlatform
       const result = await loadFlowConfig(config, {
         flowName: options.flow,
       });
-      type = getPlatform(result.flowConfig);
+      type = getPlatform(result.flowSettings);
     }
 
     // Create deployment via API

@@ -17,7 +17,7 @@ describe('loadBundleConfig deferred env by platform', () => {
     const result = loadBundleConfig(config, {
       configPath: './test.json',
     });
-    const collector = result.flowConfig.collector as Record<string, unknown>;
+    const collector = result.flowSettings.collector as Record<string, unknown>;
     expect(collector.url).toBe('__WALKEROS_ENV:COLLECTOR_URL');
   });
 
@@ -36,7 +36,7 @@ describe('loadBundleConfig deferred env by platform', () => {
     const result = loadBundleConfig(config, {
       configPath: './test.json',
     });
-    const collector = result.flowConfig.collector as Record<string, unknown>;
+    const collector = result.flowSettings.collector as Record<string, unknown>;
     expect(collector.url).toBe('baked-value');
     delete process.env.WEB_KEY;
   });

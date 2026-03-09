@@ -116,7 +116,7 @@ After config is resolved, all modes converge into the same pipeline:
 3. Resolve config           local | API fetch
                                ↓
                     ┌──────────────────┐
-                    │ config (Flow.Setup) │
+                    │ config (Flow.Config) │
                     └──────────────────┘
                                ↓
 4. Bundle ───────────────── esbuild ────────────
@@ -313,4 +313,4 @@ At runtime, this resolves to `dist/data.json` — not `./data.json` from the pro
 
 - **[Docker runtime](/docs/apps/docker)** — Pre-built bundle deployment
 - **[CLI](/docs/apps/cli)** — Build and test flows locally
-- **[Flow configuration](/docs/getting-started/modes/bundled)** — Flow.Setup format reference
+- **[Flow configuration](/docs/getting-started/modes/bundled)** — Flow.Config format reference

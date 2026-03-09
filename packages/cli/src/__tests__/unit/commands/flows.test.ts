@@ -125,7 +125,7 @@ describe('flows', () => {
       await createFlow({ name: 'My Flow', content, projectId: 'proj_1' });
       expect(mockPost).toHaveBeenCalledWith('/api/projects/{projectId}/flows', {
         params: { path: { projectId: 'proj_1' } },
-        body: { name: 'My Flow', content },
+        body: { name: 'My Flow', config: content },
       });
     });
   });
@@ -146,7 +146,7 @@ describe('flows', () => {
           params: {
             path: { projectId: 'proj_1', flowId: 'cfg_abc' },
           },
-          body: { name: 'Updated', content },
+          body: { name: 'Updated', config: content },
         },
       );
     });
@@ -184,7 +184,7 @@ describe('flows', () => {
           params: {
             path: { projectId: 'proj_1', flowId: 'cfg_abc' },
           },
-          body: { content },
+          body: { config: content },
           headers: { 'Content-Type': 'application/merge-patch+json' },
         },
       );
@@ -204,7 +204,7 @@ describe('flows', () => {
           params: {
             path: { projectId: 'proj_1', flowId: 'cfg_abc' },
           },
-          body: { content },
+          body: { config: content },
         },
       );
     });

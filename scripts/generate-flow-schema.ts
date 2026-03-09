@@ -14,8 +14,8 @@ import { schemas } from '@walkeros/core/dev';
 const outDir = resolve(__dirname, '../website/static/schema/flow');
 
 const targets = [
-  { file: 'v1.json', schema: schemas.setupJsonSchema },
-  { file: 'v2.json', schema: schemas.setupV2JsonSchema },
+  { file: 'v1.json', schema: schemas.configJsonSchema },
+  { file: 'v2.json', schema: schemas.configV2JsonSchema },
 ] as const;
 
 for (const { file, schema } of targets) {

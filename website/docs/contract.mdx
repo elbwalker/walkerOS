@@ -195,19 +195,19 @@ The `required` arrays are unioned and deduplicated: `["id", "name"]` + `["name",
 
 </details>
 
-## Setup vs config level
+## Config vs settings level
 
-Contracts cascade from setup level (shared baseline) to config level
+Contracts cascade from config level (shared baseline) to settings level
 (per-flow additions):
 
 ```
-Flow.Setup (version: 2)
+Flow.Config (version: 2)
   └── contract: { ... }          ← Shared across all flows
-      └── Flow.Config ("web-shop")
+      └── Flow.Settings ("web-shop")
           └── contract: { ... }  ← Adds flow-specific rules
 ```
 
-Config-level contracts merge on top of the setup-level contract using the same
+Settings-level contracts merge on top of the config-level contract using the same
 additive algorithm. This lets you define common rules once and extend them per
 flow:
 

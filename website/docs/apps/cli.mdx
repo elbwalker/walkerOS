@@ -56,11 +56,11 @@ Both `simulate` and `push` accept either a config JSON or a pre-built bundle as 
 
 The CLI uses types from `@walkeros/core`:
 
-- **`Flow.Setup`** - Root config file format (`version`, `flows`)
-- **`Flow.Config`** - Single flow (has `web`/`server`, `sources`, `destinations`)
+- **`Flow.Config`** - Root config file format (`version`, `flows`)
+- **`Flow.Settings`** - Single flow (has `web`/`server`, `sources`, `destinations`)
 - **`Collector.InitConfig`** - Runtime type passed to `startFlow()`
 
-The CLI transforms `Flow.Setup` → `Flow.Config` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
+The CLI transforms `Flow.Config` → `Flow.Settings` (per flow) → bundled code that uses `Collector.InitConfig` at runtime.
 
 ## Package imports
 
@@ -794,7 +794,7 @@ The `--type` option accepts four validation types. Default is `flow`:
 | Type | What it validates |
 |------|-------------------|
 | `event` | Event structure: `name` field exists, follows "entity action" format with space, valid data types |
-| `flow` (default) | Flow.Setup config: schema, references, packages, and cross-step example compatibility |
+| `flow` (default) | Flow.Config config: schema, references, packages, and cross-step example compatibility |
 | `mapping` | Mapping rules: event patterns use "entity action" or wildcard format, rule structures are valid |
 | `contract` | Contract structure: entity-action entries map to JSON Schema objects, optional `$tagging` metadata |
 
@@ -1178,7 +1178,7 @@ The `flows` command group manages flow configurations within a project. All comm
 
 ### Get a flow
 
-Retrieves a flow with its full `Flow.Setup` JSON content.
+Retrieves a flow with its full `Flow.Config` JSON content.
 
 <CodeSnippet
   code={`walkeros flows get cfg_abc123`}
@@ -1203,7 +1203,7 @@ cat flow.json | walkeros flows create "My Flow"`}
 | Option | Description |
 |--------|-------------|
 | `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
-| `-c, --content <json>` | Flow.Setup JSON string or file path |
+| `-c, --content <json>` | Flow.Config JSON string or file path |
 
 ### Update a flow
 
@@ -1220,7 +1220,7 @@ walkeros flows update cfg_abc123 --content '{"version":1,"flows":{"default":{"se
 |--------|-------------|
 | `--project <id>` | Project ID (defaults to `WALKEROS_PROJECT_ID`) |
 | `--name <name>` | New flow name |
-| `-c, --content <json>` | New Flow.Setup JSON string or file path |
+| `-c, --content <json>` | New Flow.Config JSON string or file path |
 
 ### Delete a flow
 

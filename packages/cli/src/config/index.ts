@@ -1,7 +1,7 @@
 /**
  * Configuration Module
  *
- * Config format: Flow.Setup from @walkeros/core
+ * Config format: Flow.Config from @walkeros/core
  * Build options: Static platform defaults from build-defaults.ts
  */
 
@@ -9,8 +9,8 @@
 export {
   isObject,
   detectPlatform,
-  isFlowSetup,
-  validateFlowSetup,
+  isFlowConfig,
+  validateFlowConfig,
   getAvailableFlows as getFlowNames,
 } from './validators.js';
 

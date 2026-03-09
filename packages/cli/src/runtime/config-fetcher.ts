@@ -56,7 +56,7 @@ export async function fetchConfig(
   const version = etag.replace(/"/g, '');
 
   return {
-    content: data.content,
+    content: data.config,
     version,
     etag,
     changed: true,

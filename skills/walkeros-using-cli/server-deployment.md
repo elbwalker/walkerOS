@@ -113,7 +113,7 @@ curl -X POST https://your-flow-url/collect \
 ## How It Works
 
 ```
-Flow.Setup JSON → CLI bundles → API stores config → Scaleway builds container
+Flow.Config JSON → CLI bundles → API stores config → Scaleway builds container
 → Container starts → Express listens on PORT → Health check passes → Active
 ```
 
@@ -139,5 +139,5 @@ generate an IIFE (`walker.js`) instead.
 
 - [commands-reference.md](commands-reference.md) — Full `deploy` command
   reference
-- [flow-configuration.md](flow-configuration.md) — Complete Flow.Setup schema
+- [flow-configuration.md](flow-configuration.md) — Complete Flow.Config schema
 - [SKILL.md](SKILL.md) — CLI overview

@@ -392,18 +392,18 @@ export const ContractSchema = z
   );
 
 // ========================================
-// Flow Configuration Schema (Single Flow)
+// Flow Settings Schema (Single Flow)
 // ========================================
 
 /**
- * Single flow configuration schema.
+ * Single flow settings schema.
  *
  * @remarks
  * Represents a single deployment target (e.g., web_prod, server_stage).
  * Platform is determined by presence of `web` or `server` key.
  * Exactly one must be present.
  */
-export const ConfigSchema = z
+export const SettingsSchema = z
   .object({
     web: WebSchema.optional().describe(
       'Web platform configuration (browser-based tracking). Mutually exclusive with server.',
@@ -412,7 +412,7 @@ export const ConfigSchema = z
       'Server platform configuration (Node.js). Mutually exclusive with web.',
     ),
     contract: ContractSchema.optional().describe(
-      'Flow-level data contract (merges on top of Setup-level contract)',
+      'Flow-level data contract (merges on top of Config-level contract)',
     ),
     sources: z
       .record(z.string(), SourceReferenceSchema)
@@ -446,10 +446,10 @@ export const ConfigSchema = z
       ),
     packages: PackagesSchema.optional().describe('NPM packages to bundle'),
     variables: VariablesSchema.optional().describe(
-      'Flow-level variables (override Setup.variables, overridden by source/destination variables)',
+      'Flow-level variables (override Config.variables, overridden by source/destination variables)',
     ),
     definitions: DefinitionsSchema.optional().describe(
-      'Flow-level definitions (extend Setup.definitions, overridden by source/destination definitions)',
+      'Flow-level definitions (extend Config.definitions, overridden by source/destination definitions)',
     ),
   })
   .refine(
@@ -462,20 +462,20 @@ export const ConfigSchema = z
       message: 'Exactly one of "web" or "server" must be present',
     },
   )
-  .describe('Single flow configuration for one deployment target');
+  .describe('Single flow settings for one deployment target');
 
 // ========================================
-// Flow Setup Schema (Root Configuration)
+// Flow Config Schema (Root Configuration)
 // ========================================
 
 /**
- * Flow setup schema - root configuration.
+ * Flow config schema - root configuration.
  *
  * @remarks
  * This is the complete schema for walkeros.config.json files.
  * Contains multiple named flows with shared variables and definitions.
  */
-const SetupBaseSchema = z.object({
+const ConfigBaseSchema = z.object({
   $schema: z
     .string()
     .url('Schema URL must be a valid URL')
@@ -494,7 +494,7 @@ const SetupBaseSchema = z.object({
     'Reusable configuration definitions (use $def.name syntax)',
   ),
   flows: z
-    .record(z.string(), ConfigSchema)
+    .record(z.string(), SettingsSchema)
     .refine((flows) => Object.keys(flows).length > 0, {
       message: 'At least one flow is required',
     })
@@ -503,85 +503,44 @@ const SetupBaseSchema = z.object({
     ),
 });
 
-const SetupV1Schema = SetupBaseSchema.extend({
+const ConfigV1Schema = ConfigBaseSchema.extend({
   version: z.literal(1).describe('Configuration schema version 1'),
 }).describe('walkerOS v1 configuration');
 
-const SetupV2Schema = SetupBaseSchema.extend({
+const ConfigV2Schema = ConfigBaseSchema.extend({
   version: z.literal(2).describe('Configuration schema version 2'),
   contract: ContractSchema.optional().describe(
     'Data contract: entity-action keyed JSON Schema with additive inheritance',
   ),
 }).describe('walkerOS v2 configuration with data contracts');
 
-export const SetupSchema = z
-  .union([SetupV1Schema, SetupV2Schema])
+export const ConfigSchema = z
+  .union([ConfigV1Schema, ConfigV2Schema])
   .describe(
     'Complete multi-flow walkerOS configuration (walkeros.config.json)',
   );
 
-export { SetupV2Schema };
+export { ConfigV2Schema };
 
 // ========================================
 // Helper Functions
 // ========================================
 
 /**
- * Parse and validate Flow.Setup configuration.
+ * Parse and validate Flow.Config configuration.
  *
  * @param data - Raw JSON data from config file
- * @returns Validated Flow.Setup object
+ * @returns Validated Flow.Config object
  * @throws ZodError if validation fails with detailed error messages
  *
  * @example
  * ```typescript
- * import { parseSetup } from '@walkeros/core/dev';
+ * import { parseConfig } from '@walkeros/core/dev';
  * import { readFileSync } from 'fs';
  *
  * const raw = JSON.parse(readFileSync('walkeros.config.json', 'utf8'));
- * const config = parseSetup(raw);
+ * const config = parseConfig(raw);
  * console.log(`Found ${Object.keys(config.flows).length} flows`);
- * ```
- */
-export function parseSetup(data: unknown): z.infer<typeof SetupSchema> {
-  return SetupSchema.parse(data);
-}
-
-/**
- * Safely parse Flow.Setup configuration without throwing.
- *
- * @param data - Raw JSON data from config file
- * @returns Success result with data or error result with issues
- *
- * @example
- * ```typescript
- * import { safeParseSetup } from '@walkeros/core/dev';
- *
- * const result = safeParseSetup(rawData);
- * if (result.success) {
- *   console.log('Valid config:', result.data);
- * } else {
- *   console.error('Validation errors:', result.error.issues);
- * }
- * ```
- */
-export function safeParseSetup(data: unknown) {
-  return SetupSchema.safeParse(data);
-}
-
-/**
- * Parse and validate Flow.Config (single flow).
- *
- * @param data - Raw JSON data for single flow
- * @returns Validated Flow.Config object
- * @throws ZodError if validation fails
- *
- * @example
- * ```typescript
- * import { parseConfig } from '@walkeros/core/dev';
- *
- * const flowConfig = parseConfig(rawFlowData);
- * console.log(`Platform: ${flowConfig.web ? 'web' : 'server'}`);
  * ```
  */
 export function parseConfig(data: unknown): z.infer<typeof ConfigSchema> {
@@ -589,13 +548,54 @@ export function parseConfig(data: unknown): z.infer<typeof ConfigSchema> {
 }
 
 /**
- * Safely parse Flow.Config without throwing.
+ * Safely parse Flow.Config configuration without throwing.
+ *
+ * @param data - Raw JSON data from config file
+ * @returns Success result with data or error result with issues
+ *
+ * @example
+ * ```typescript
+ * import { safeParseConfig } from '@walkeros/core/dev';
+ *
+ * const result = safeParseConfig(rawData);
+ * if (result.success) {
+ *   console.log('Valid config:', result.data);
+ * } else {
+ *   console.error('Validation errors:', result.error.issues);
+ * }
+ * ```
+ */
+export function safeParseConfig(data: unknown) {
+  return ConfigSchema.safeParse(data);
+}
+
+/**
+ * Parse and validate Flow.Settings (single flow).
+ *
+ * @param data - Raw JSON data for single flow
+ * @returns Validated Flow.Settings object
+ * @throws ZodError if validation fails
+ *
+ * @example
+ * ```typescript
+ * import { parseSettings } from '@walkeros/core/dev';
+ *
+ * const flowSettings = parseSettings(rawFlowData);
+ * console.log(`Platform: ${flowSettings.web ? 'web' : 'server'}`);
+ * ```
+ */
+export function parseSettings(data: unknown): z.infer<typeof SettingsSchema> {
+  return SettingsSchema.parse(data);
+}
+
+/**
+ * Safely parse Flow.Settings without throwing.
  *
  * @param data - Raw JSON data for single flow
  * @returns Success result with data or error result with issues
  */
-export function safeParseConfig(data: unknown) {
-  return ConfigSchema.safeParse(data);
+export function safeParseSettings(data: unknown) {
+  return SettingsSchema.safeParse(data);
 }
 
 // ========================================
@@ -603,38 +603,38 @@ export function safeParseConfig(data: unknown) {
 // ========================================
 
 /**
- * Generate JSON Schema for Flow.Setup.
+ * Generate JSON Schema for Flow.Config.
  *
  * @remarks
  * Used for IDE validation and autocomplete.
  * Hosted at https://walkeros.io/schema/flow/v1.json
  *
- * @returns JSON Schema (Draft 7) representation of SetupSchema
+ * @returns JSON Schema (Draft 7) representation of ConfigSchema
  */
-export const setupJsonSchema = z.toJSONSchema(SetupSchema, {
+export const configJsonSchema = z.toJSONSchema(ConfigSchema, {
   target: 'draft-7',
 });
 
 /**
- * Generate JSON Schema for Flow.SetupV2.
+ * Generate JSON Schema for Flow.ConfigV2.
  *
  * @remarks
  * Used for IDE validation of v2 configurations with data contracts.
  * Hosted at https://walkeros.io/schema/flow/v2.json
  */
-export const setupV2JsonSchema = z.toJSONSchema(SetupV2Schema, {
+export const configV2JsonSchema = z.toJSONSchema(ConfigV2Schema, {
   target: 'draft-7',
 });
 
 /**
- * Generate JSON Schema for Flow.Config.
+ * Generate JSON Schema for Flow.Settings.
  *
  * @remarks
- * Used for validating individual flow configurations.
+ * Used for validating individual flow settings.
  *
- * @returns JSON Schema (Draft 7) representation of ConfigSchema
+ * @returns JSON Schema (Draft 7) representation of SettingsSchema
  */
-export const configJsonSchema = toJsonSchema(ConfigSchema, 'FlowConfig');
+export const settingsJsonSchema = toJsonSchema(SettingsSchema, 'FlowSettings');
 
 /**
  * Generate JSON Schema for SourceReference.

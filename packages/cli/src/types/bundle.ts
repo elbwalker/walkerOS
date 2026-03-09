@@ -2,7 +2,7 @@
  * CLI Build Configuration
  *
  * CLI-specific build options for walkerOS bundle generation.
- * Uses Flow.Setup and Flow.Config from @walkeros/core for config structure.
+ * Uses Flow.Config and Flow.Settings from @walkeros/core for config structure.
  *
  * @packageDocumentation
  */
@@ -18,17 +18,16 @@ export type { Flow };
  *
  * @remarks
  * These are CLI-only options not part of the config file.
- * The config file uses Flow.Setup from @walkeros/core.
+ * The config file uses Flow.Config from @walkeros/core.
  *
  * Platform-derived defaults:
  * - web: format=iife, target=es2020, platform=browser
  * - server: format=esm, target=node18, platform=node
  */
-export interface CLIBuildOptions
-  extends Pick<
-    ESBuildOptions,
-    'external' // External packages to not bundle
-  > {
+export interface CLIBuildOptions extends Pick<
+  ESBuildOptions,
+  'external' // External packages to not bundle
+> {
   /**
    * Output file path (CLI argument, not in config).
    * @default "./dist/walker.js" (web) or "./dist/bundle.mjs" (server)

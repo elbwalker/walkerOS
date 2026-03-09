@@ -26,7 +26,7 @@ export function registerBundleTool(server: McpServer) {
         content: z
           .record(z.string(), z.unknown())
           .optional()
-          .describe('Flow.Setup JSON content (required when remote: true)'),
+          .describe('Flow.Config JSON content (required when remote: true)'),
       },
       outputSchema: BundleOutputShape,
       annotations: {

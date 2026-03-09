@@ -1,8 +1,8 @@
-import { SetupSchema, ConfigSchema } from '../../schemas/flow';
+import { ConfigSchema, SettingsSchema } from '../../schemas/flow';
 
 describe('Contract schema validation', () => {
   it('should accept a valid v2 setup with contract', () => {
-    const result = SetupSchema.safeParse({
+    const result = ConfigSchema.safeParse({
       version: 2,
       contract: {
         $tagging: 1,
@@ -27,7 +27,7 @@ describe('Contract schema validation', () => {
   });
 
   it('should accept a v1 setup without contract', () => {
-    const result = SetupSchema.safeParse({
+    const result = ConfigSchema.safeParse({
       version: 1,
       flows: {
         default: { web: {} },
@@ -37,7 +37,7 @@ describe('Contract schema validation', () => {
   });
 
   it('should accept a config with contract', () => {
-    const result = ConfigSchema.safeParse({
+    const result = SettingsSchema.safeParse({
       web: {},
       contract: {
         product: {
@@ -53,7 +53,7 @@ describe('Contract schema validation', () => {
   });
 
   it('should reject non-integer $tagging', () => {
-    const result = SetupSchema.safeParse({
+    const result = ConfigSchema.safeParse({
       version: 2,
       contract: { $tagging: 'v1' },
       flows: { default: { web: {} } },
@@ -62,7 +62,7 @@ describe('Contract schema validation', () => {
   });
 
   it('should accept v2 setup without contract', () => {
-    const result = SetupSchema.safeParse({
+    const result = ConfigSchema.safeParse({
       version: 2,
       flows: { default: { web: {} } },
     });

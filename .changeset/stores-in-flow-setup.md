@@ -7,7 +7,7 @@
 '@walkeros/cli': minor
 ---
 
-Add stores as a first-class component type in Flow.Setup. Stores get their own
-`stores` section in flow config, a `collector.stores` registry, and
+Add stores as a first-class component type in Flow.Config. Stores get their own
+`stores` section in flow settings, a `collector.stores` registry, and
 `$store:storeId` env wiring in the bundler. Includes `storeMemoryInit` for
-Flow.Setup compatibility and type widening in cache/file transformers.
+Flow.Config compatibility and type widening in cache/file transformers.

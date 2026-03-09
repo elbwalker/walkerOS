@@ -2,7 +2,7 @@
 name: walkeros-using-cli
 description:
   Use when bundling walkerOS flows, testing events with simulate/push, running
-  local servers, validating configs, or configuring Flow.Setup JSON files.
+  local servers, validating configs, or configuring Flow.Settings JSON files.
 ---
 
 # Using the walkerOS CLI
@@ -13,7 +13,7 @@ The walkerOS CLI (`walkeros`) bundles, tests, and runs event collection flows.
 
 **Core workflow:**
 
-1. **Configure** - Write Flow.Setup JSON config
+1. **Configure** - Write Flow.Config JSON config
 2. **Bundle** - Generate optimized JS bundle
 3. **Test** - Simulate events (mocked) or push (real)
 4. **Deploy** - Run locally or deploy to production
@@ -91,7 +91,7 @@ runtime override it.
 
 ---
 
-## Flow.Setup Configuration
+## Flow.Config Configuration
 
 ### Minimal Config
 
@@ -338,5 +338,6 @@ Use absolute or relative paths:
 
 - [commands-reference.md](commands-reference.md) - All commands with full
   options
-- [flow-configuration.md](flow-configuration.md) - Complete Flow.Setup reference
+- [flow-configuration.md](flow-configuration.md) - Complete Flow.Config
+  reference
 - [server-deployment.md](server-deployment.md) - Server flow deployment guide

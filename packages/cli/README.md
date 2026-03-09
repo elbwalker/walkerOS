@@ -231,7 +231,7 @@ Validate flow configurations, events, mappings, or contracts.
 walkeros validate <config-file> [options]
 ```
 
-By default, validates a Flow.Setup file — checking schema, references, and
+By default, validates a Flow.Config file — checking schema, references, and
 cross-step example compatibility.
 
 **Options:**
@@ -339,7 +339,7 @@ walkeros bundle flow.json --no-cache
 
 ## Flow Configuration
 
-Flow configs use the `Flow.Setup` format with `version` and `flows`:
+Flow configs use the `Flow.Config` format with `version` and `flows`:
 
 ```json
 {

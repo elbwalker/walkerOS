@@ -1,17 +1,17 @@
 /**
  * Configuration Loader
  *
- * Loads and parses Flow.Setup configurations using core getFlowConfig().
+ * Loads and parses Flow.Config configurations using core getFlowSettings().
  * Build options are determined by static platform defaults.
  */
 
 import path from 'path';
 import fs from 'fs-extra';
-import { getFlowConfig, getPlatform, type Flow } from '@walkeros/core';
+import { getFlowSettings, getPlatform, type Flow } from '@walkeros/core';
 import type { BuildOptions } from '../types/bundle.js';
 import {
-  validateFlowSetup,
-  isFlowSetup,
+  validateFlowConfig,
+  isFlowConfig,
   getAvailableFlows as getFlowNames,
 } from './validators.js';
 import { getBuildDefaults, getDefaultOutput } from './build-defaults.js';
@@ -25,7 +25,7 @@ const DEFAULT_INCLUDE_FOLDER = './shared';
  */
 export interface LoadConfigResult {
   /** Runtime event processing configuration */
-  flowConfig: Flow.Config;
+  flowSettings: Flow.Settings;
   /** Build-time configuration */
   buildOptions: BuildOptions;
   /** Name of the selected flow */
@@ -57,9 +57,9 @@ export interface LoadConfigOptions {
  * Load and parse bundle configuration.
  *
  * @remarks
- * Uses Flow.Setup from @walkeros/core as the only config format.
+ * Uses Flow.Config from @walkeros/core as the only config format.
  * - Validates config structure
- * - Uses core getFlowConfig() for variable/definition resolution
+ * - Uses core getFlowSettings() for variable/definition resolution
  * - Determines platform from resolved config
  * - Applies static build defaults based on platform
  *
@@ -79,16 +79,16 @@ export function loadBundleConfig(
   rawConfig: unknown,
   options: LoadConfigOptions,
 ): LoadConfigResult {
-  // Validate as Flow.Setup
-  const setup = validateFlowSetup(rawConfig);
-  const availableFlows = getFlowNames(setup);
+  // Validate as Flow.Config
+  const config = validateFlowConfig(rawConfig);
+  const availableFlows = getFlowNames(config);
 
   // Determine which flow to use
-  const flowName = resolveFlow(setup, options.flowName, availableFlows);
+  const flowName = resolveFlow(config, options.flowName, availableFlows);
 
   // Resolve with deferred mode first (markers don't affect platform detection)
-  let flowConfig = getFlowConfig(setup, flowName, { deferred: true });
-  const platform = getPlatform(flowConfig);
+  let flowSettings = getFlowSettings(config, flowName, { deferred: true });
+  const platform = getPlatform(flowSettings);
   if (!platform) {
     throw new Error(
       `Invalid configuration: flow "${flowName}" must have a "web" or "server" key.`,
@@ -97,14 +97,14 @@ export function loadBundleConfig(
 
   // For web: re-resolve without deferred to bake values at build time
   if (platform === 'web') {
-    flowConfig = getFlowConfig(setup, flowName);
+    flowSettings = getFlowSettings(config, flowName);
   }
 
   // Get static build defaults based on platform
   const buildDefaults = getBuildDefaults(platform);
 
-  // Extract packages from flowConfig (if present)
-  const packages = flowConfig.packages || {};
+  // Extract packages from flowSettings (if present)
+  const packages = flowSettings.packages || {};
 
   // Output path: use --output if provided, otherwise default
   // Always relative to cwd, no dynamic resolution
@@ -117,7 +117,7 @@ export function loadBundleConfig(
     : path.dirname(options.configPath);
 
   // Get includes from config or use default if ./shared exists
-  let includes = setup.include;
+  let includes = config.include;
   if (!includes) {
     const defaultIncludePath = path.resolve(configDir, DEFAULT_INCLUDE_FOLDER);
     if (fs.pathExistsSync(defaultIncludePath)) {
@@ -144,7 +144,7 @@ export function loadBundleConfig(
   }
 
   return {
-    flowConfig,
+    flowSettings,
     buildOptions,
     flowName,
     isMultiFlow,
@@ -155,14 +155,14 @@ export function loadBundleConfig(
 /**
  * Resolve which flow to use.
  *
- * @param setup - Flow.Setup configuration
+ * @param config - Flow.Config configuration
  * @param requestedFlow - Flow name from CLI (optional)
  * @param available - Available flow names
  * @returns Flow name to use
  * @throws Error if flow selection is invalid
  */
 function resolveFlow(
-  setup: Flow.Setup,
+  config: Flow.Config,
   requestedFlow: string | undefined,
   available: string[],
 ): string {
@@ -204,9 +204,9 @@ export function loadAllFlows(
   rawConfig: unknown,
   options: Omit<LoadConfigOptions, 'flowName'>,
 ): LoadConfigResult[] {
-  // Validate as Flow.Setup
-  const setup = validateFlowSetup(rawConfig);
-  const flows = getFlowNames(setup);
+  // Validate as Flow.Config
+  const config = validateFlowConfig(rawConfig);
+  const flows = getFlowNames(config);
 
   if (options.logger) {
     options.logger.info(
@@ -230,7 +230,7 @@ export function loadAllFlows(
  * @returns Array of flow names
  */
 export function getAvailableFlows(rawConfig: unknown): string[] {
-  if (isFlowSetup(rawConfig)) {
+  if (isFlowConfig(rawConfig)) {
     return getFlowNames(rawConfig);
   }
   return [];
@@ -248,8 +248,8 @@ export function getAvailableFlows(rawConfig: unknown): string[] {
  *
  * @example
  * ```typescript
- * const { flowConfig, buildOptions } = await loadFlowConfig('./flow.json');
- * const { flowConfig } = await loadFlowConfig('https://example.com/flow.json');
+ * const { flowSettings, buildOptions } = await loadFlowConfig('./flow.json');
+ * const { flowSettings } = await loadFlowConfig('https://example.com/flow.json');
  * ```
  */
 export async function loadFlowConfig(

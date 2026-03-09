@@ -1,8 +1,8 @@
-import { getFlowConfig } from '../flow';
+import { getFlowSettings } from '../flow';
 import type { Flow } from '../types';
 
 describe('Step Examples', () => {
-  const setup: Flow.Setup = {
+  const setup: Flow.Config = {
     version: 1,
     flows: {
       default: {
@@ -53,8 +53,8 @@ describe('Step Examples', () => {
     expect(setup.flows.default.sources!.browser.examples).toBeDefined();
   });
 
-  it('should strip examples during getFlowConfig resolution', () => {
-    const config = getFlowConfig(setup);
+  it('should strip examples during getFlowSettings resolution', () => {
+    const config = getFlowSettings(setup);
     // examples should be stripped by the field whitelist
     expect((config.sources!.browser as any).examples).toBeUndefined();
     expect((config.destinations!.gtag as any).examples).toBeUndefined();

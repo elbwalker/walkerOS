@@ -122,7 +122,7 @@ export async function bundleCommand(
     }> = [];
 
     for (const {
-      flowConfig,
+      flowSettings,
       buildOptions,
       flowName,
       isMultiFlow,
@@ -162,7 +162,7 @@ export async function bundleCommand(
         // Run bundler
         const shouldCollectStats = options.stats || options.json;
         const stats = await bundleCore(
-          flowConfig,
+          flowSettings,
           buildOptions,
           logger,
           shouldCollectStats,
@@ -191,7 +191,7 @@ export async function bundleCommand(
 
         // Dockerfile only with -o
         if (options.dockerfile && options.output) {
-          const platform = getPlatform(flowConfig);
+          const platform = getPlatform(flowSettings);
           if (platform) {
             const outputDir = path.dirname(buildOptions.output);
             const customFile =
@@ -281,7 +281,7 @@ export async function bundleCommand(
  *
  * Handles configuration loading, parsing, and logger creation internally.
  *
- * @param configOrPath - Bundle configuration (Flow.Setup) or path to config file
+ * @param configOrPath - Bundle configuration (Flow.Config) or path to config file
  * @param options - Bundle options
  * @param options.silent - Suppress all output (default: false)
  * @param options.verbose - Enable verbose logging (default: false)
@@ -292,7 +292,7 @@ export async function bundleCommand(
  *
  * @example
  * ```typescript
- * // With Flow.Setup config object
+ * // With Flow.Config config object
  * await bundle({
  *   version: 1,
  *   flows: {
@@ -331,8 +331,8 @@ export async function bundle(
     rawConfig = configOrPath;
   }
 
-  // 2. Load and resolve config using Flow.Setup format
-  const { flowConfig, buildOptions } = loadBundleConfig(rawConfig, {
+  // 2. Load and resolve config using Flow.Config format
+  const { flowSettings, buildOptions } = loadBundleConfig(rawConfig, {
     configPath,
     flowName: options.flowName,
     buildOverrides: options.buildOverrides,
@@ -348,7 +348,7 @@ export async function bundle(
 
   // 5. Call core bundler
   return await bundleCore(
-    flowConfig,
+    flowSettings,
     buildOptions,
     logger,
     options.stats ?? false,

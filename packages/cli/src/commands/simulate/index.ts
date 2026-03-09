@@ -9,7 +9,7 @@ import {
   writeResult,
 } from '../../core/index.js';
 import { loadJsonFromSource, loadJsonConfig } from '../../config/index.js';
-import { validateFlowSetup } from '../../config/validators.js';
+import { validateFlowConfig } from '../../config/validators.js';
 import { findExample } from './example-loader.js';
 import { compareOutput } from './compare.js';
 import type { SimulateCommandOptions, SimulationResult } from './types.js';
@@ -155,8 +155,8 @@ export async function simulate(
 
   // If --example is provided, load the example from the raw config
   if (options.example) {
-    const rawConfig = await loadJsonConfig<Flow.Setup>(configOrPath);
-    const setup = validateFlowSetup(rawConfig);
+    const rawConfig = await loadJsonConfig<Flow.Config>(configOrPath);
+    const setup = validateFlowConfig(rawConfig);
 
     const flowNames = Object.keys(setup.flows);
     let flowName = options.flow;
@@ -171,14 +171,14 @@ export async function simulate(
       }
     }
 
-    const flowConfig = setup.flows[flowName];
-    if (!flowConfig) {
+    const flowSettings = setup.flows[flowName];
+    if (!flowSettings) {
       throw new Error(
         `Flow "${flowName}" not found. Available: ${flowNames.join(', ')}`,
       );
     }
 
-    const found = findExample(flowConfig, options.example, options.step);
+    const found = findExample(flowSettings, options.example, options.step);
     if (found.example.in === undefined) {
       throw new Error(
         `Example "${options.example}" in ${found.stepType}.${found.stepName} has no "in" value`,
@@ -202,8 +202,8 @@ export async function simulate(
 
   if (isSourceSimulation) {
     // Source simulation needs raw flow config
-    const rawConfig = await loadJsonConfig<Flow.Setup>(configOrPath);
-    const setup = validateFlowSetup(rawConfig);
+    const rawConfig = await loadJsonConfig<Flow.Config>(configOrPath);
+    const setup = validateFlowConfig(rawConfig);
     const flowNames = Object.keys(setup.flows);
     const flowName =
       options.flow || (flowNames.length === 1 ? flowNames[0] : undefined);
@@ -213,8 +213,8 @@ export async function simulate(
           `Available: ${flowNames.join(', ')}`,
       );
     }
-    const flowConfig = setup.flows[flowName];
-    if (!flowConfig) {
+    const flowSettings = setup.flows[flowName];
+    if (!flowSettings) {
       throw new Error(
         `Flow "${flowName}" not found. Available: ${flowNames.join(', ')}`,
       );
@@ -224,7 +224,7 @@ export async function simulate(
       exampleContext?.stepName || options.step!.substring('source.'.length);
 
     result = await simulateSourceCLI(
-      flowConfig as unknown as Record<string, unknown>,
+      flowSettings as unknown as Record<string, unknown>,
       resolvedEvent,
       {
         flow: options.flow,

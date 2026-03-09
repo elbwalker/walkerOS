@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { schemas } from '@walkeros/core/dev';
 import { CodeBox } from './code-box';
-import { enrichFlowSetupSchema } from '../../utils/monaco-schema-flow-setup';
+import { enrichFlowConfigSchema } from '../../utils/monaco-schema-flow-config';
 import { getEnrichedContractSchema } from '../../utils/monaco-schema-contract';
 import { getVariablesSchema } from '../../utils/monaco-schema-variables';
 
@@ -232,15 +232,15 @@ export const WithSettings: Story = {
 // ============================================================
 
 /**
- * Enriched Flow.Setup schema with defaultSnippets and markdownDescription
+ * Enriched Flow.Config schema with defaultSnippets and markdownDescription
  *
- * Uses the real Flow.Setup JSON Schema from @walkeros/core, enriched with
+ * Uses the real Flow.Config JSON Schema from @walkeros/core, enriched with
  * Monaco-specific extensions (snippets, markdown hover docs).
  *
  * **How to verify:** Place cursor inside `{}` after `"flows":`, press
  * Ctrl+Space — autocomplete shows property suggestions from the schema.
  */
-export const EnrichedFlowSetup: Story = {
+export const EnrichedFlowConfig: Story = {
   render: () => {
     const [code, setCode] = useState(
       JSON.stringify({ version: 1, flows: {} }, null, 2),
@@ -250,10 +250,10 @@ export const EnrichedFlowSetup: Story = {
         code={code}
         onChange={setCode}
         language="json"
-        label="Flow Setup (Enriched Schema)"
+        label="Flow Config (Enriched Schema)"
         showFormat
-        jsonSchema={enrichFlowSetupSchema(
-          schemas.setupJsonSchema as Record<string, unknown>,
+        jsonSchema={enrichFlowConfigSchema(
+          schemas.configJsonSchema as Record<string, unknown>,
         )}
         height={400}
       />
@@ -393,7 +393,7 @@ export const DynamicFlowContext: Story = {
       ),
     );
 
-    const validation = schemas.validateFlowSetup(code);
+    const validation = schemas.validateFlowConfig(code);
 
     return (
       <CodeBox
@@ -402,10 +402,10 @@ export const DynamicFlowContext: Story = {
         language="json"
         label="Flow Config (Dynamic Validation)"
         showFormat
-        jsonSchema={enrichFlowSetupSchema(
-          schemas.setupJsonSchema as Record<string, unknown>,
+        jsonSchema={enrichFlowConfigSchema(
+          schemas.configJsonSchema as Record<string, unknown>,
         )}
-        validate={schemas.validateFlowSetup}
+        validate={schemas.validateFlowConfig}
         intellisenseContext={validation.context}
         onValidationIssues={(counts) => console.log('Validation:', counts)}
         height={500}

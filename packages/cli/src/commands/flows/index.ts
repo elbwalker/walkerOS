@@ -60,8 +60,8 @@ export async function createFlow(options: {
   const client = createApiClient();
   const { data, error } = await client.POST('/api/projects/{projectId}/flows', {
     params: { path: { projectId: id } },
-    // Content is user-provided JSON; server validates the full schema
-    body: { name: options.name, content: options.content } as never,
+    // Config is user-provided JSON; server validates the full schema
+    body: { name: options.name, config: options.content } as never,
   });
   if (error) throw new Error(error.error?.message || 'Failed to create flow');
   return data;
@@ -78,7 +78,7 @@ export async function updateFlow(options: {
   const client = createApiClient();
   const body: Record<string, unknown> = {};
   if (options.name !== undefined) body.name = options.name;
-  if (options.content !== undefined) body.content = options.content;
+  if (options.content !== undefined) body.config = options.content;
   const { data, error } = await client.PATCH(
     '/api/projects/{projectId}/flows/{flowId}',
     {

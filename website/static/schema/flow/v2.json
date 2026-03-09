@@ -76,7 +76,7 @@
             "additionalProperties": {}
           },
           "contract": {
-            "description": "Flow-level data contract (merges on top of Setup-level contract)",
+            "description": "Flow-level data contract (merges on top of Config-level contract)",
             "type": "object",
             "propertyNames": {
               "type": "string"
@@ -569,7 +569,8 @@
             "description": "NPM packages to bundle",
             "type": "object",
             "propertyNames": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^(@[a-z0-9\\-~][a-z0-9\\-._~]*\\/)?[a-z0-9\\-~][a-z0-9\\-._~]*$"
             },
             "additionalProperties": {
               "type": "object",
@@ -591,7 +592,7 @@
             }
           },
           "variables": {
-            "description": "Flow-level variables (override Setup.variables, overridden by source/destination variables)",
+            "description": "Flow-level variables (override Config.variables, overridden by source/destination variables)",
             "type": "object",
             "propertyNames": {
               "type": "string"
@@ -612,7 +613,7 @@
             }
           },
           "definitions": {
-            "description": "Flow-level definitions (extend Setup.definitions, overridden by source/destination definitions)",
+            "description": "Flow-level definitions (extend Config.definitions, overridden by source/destination definitions)",
             "type": "object",
             "propertyNames": {
               "type": "string"
@@ -621,7 +622,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Single flow configuration for one deployment target"
+        "description": "Single flow settings for one deployment target"
       },
       "description": "Named flow configurations (e.g., production, staging, development)"
     },
