@@ -325,7 +325,7 @@ Add `./dev` export to package.json:
 
 **Documentation:**
 
-- [Website: Flow](../../website/docs/getting-started/flow.mdx) - Flow
+- [Website: Flow](../../website/docs/getting-started/modes/bundled.mdx) - Flow
   configuration with stores section
 - [Website: Stores](../../website/docs/stores/index.mdx) - Stores overview
 - [Website: S3 Store](../../website/docs/stores/server/s3.mdx) - S3 store

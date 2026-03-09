@@ -399,5 +399,6 @@ depends on which chain references it.
 
 **Documentation:**
 
-- [Website: Flow](../../website/docs/getting-started/flow.mdx) - Flow concept
+- [Website: Flow](../../website/docs/getting-started/modes/bundled.mdx) - Flow
+  concept
 - [Website: Collector](../../website/docs/collector/index.mdx) - Collector docs
