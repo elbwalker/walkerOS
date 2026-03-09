@@ -22,12 +22,15 @@ Transformers are middleware for **validating**, **enriching**, **routing**, and 
 
 ## Use cases
 
-| Use Case | Example |
-|----------|---------|
-| **Validate** | Ensure events match JSON Schema contracts |
-| **Route** | Branch to different chains based on request path |
-| **Enrich** | Add server-side data (user segments, geo) |
-| **Redact** | Remove PII before sending to destinations |
+| Use Case | Transformer | Example |
+|----------|-------------|---------|
+| **Validate** | [Validator](./validator) | Ensure events match JSON Schema contracts, drop invalid events |
+| **Route** | [Router](./router) | Branch to different chains based on request path or headers |
+| **Identify** | [Fingerprint](./fingerprint) | Generate server-side user hash from IP + user agent, no cookies needed |
+| **Cache** | [Cache](./cache) | Serve repeated requests from memory, reduce downstream load |
+| **Serve files** | [File](./file) + store | Self-host walker.js or tracking pixels from S3 or filesystem |
+| **Enrich** | Custom | Add server-side data (geo, segments) via a custom transformer |
+| **Redact** | Custom | Remove PII fields before events reach destinations |
 
 ## Configuration
 
@@ -266,9 +269,20 @@ Caches HTTP responses with LRU eviction and per-rule TTL:
 
 [Learn more →](./cache)
 
+### Fingerprint
+
+Generates a deterministic user identifier from configurable request fields:
+
+* Hash IP address, user agent, and other ingest fields with SHA-256
+* No cookies, no PII stored — same inputs always produce the same hash
+* Optional daily rotation to limit cross-day persistence
+
+[Learn more →](./fingerprint)
+
 ## Next steps
 
 * **[Validator](./validator)** - JSON Schema validation
 * **[Router](./router)** - Dynamic chain branching
 * **[Cache](./cache)** - HTTP response caching
+* **[Fingerprint](./fingerprint)** - Cookie-free user identification
 * **[Create your own](./create-your-own)** - Custom transformer guide

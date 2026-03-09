@@ -120,7 +120,7 @@ A request to `/static/walker.js` reads `./public/walker.js` from disk.
 
 | Scenario | Recommended store |
 |----------|-------------------|
-| Local development | **Filesystem** — files on disk, no credentials needed |
-| Docker with baked-in assets | **Filesystem** — mount or copy files into the image |
-| Cloud / managed deployments | [S3](./s3) — files in a bucket, hot-swappable |
-| Caching / ephemeral data | [Memory](../memory) — fastest, no I/O |
+| Local development | **Filesystem**: files on disk, no credentials needed |
+| Docker with baked-in assets | **Filesystem**: mount or copy files into the image |
+| Cloud / managed deployments | [S3](./s3): files in a bucket, hot-swappable |
+| Caching / ephemeral data | [Memory](../memory): fastest, no I/O |

@@ -1,0 +1,138 @@
+---
+title: Fingerprint
+description: Server-side user identification via deterministic hashing
+sidebar_position: 4
+package: '@walkeros/server-transformer-fingerprint'
+---
+
+# Fingerprint
+
+<PackageLink env="server" github="packages/server/transformers/fingerprint" npm="@walkeros/server-transformer-fingerprint" />
+
+Hashes configurable request fields (IP address, user agent, date, etc.) into a deterministic identifier and stores it on the event. No cookies, no PII stored — the same combination of inputs always produces the same hash.
+
+## When to use
+
+Server-side tracking without cookies requires a way to consistently identify a user across requests. The fingerprint transformer creates that identifier from data already available in the request context: IP address, user agent string, and optionally a daily rotation to limit persistence.
+
+Typical use cases:
+
+- **Session continuity**: Generate a consistent `user.hash` across requests from the same client without relying on client-side IDs
+- **Cookie-free analytics**: Identify returning visitors server-side when no consent has been given for cookies
+- **Cross-domain stitching**: Combine fields that are consistent across domains into a shared identity signal
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the package:
+
+<CodeSnippet
+  code={`npm install @walkeros/server-transformer-fingerprint`}
+  language="bash"
+/>
+
+Configure in your flow:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { transformerFingerprint } from '@walkeros/server-transformer-fingerprint';
+
+await startFlow({
+  transformers: {
+    fingerprint: {
+      code: transformerFingerprint,
+      config: {
+        settings: {
+          fields: ['ingest.ip', 'ingest.userAgent'],
+          output: 'user.hash',
+          length: 16,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+<CodeSnippet
+  code={`"transformers": {
+  "fingerprint": {
+    "package": "@walkeros/server-transformer-fingerprint",
+    "config": {
+      "settings": {
+        "fields": ["ingest.ip", "ingest.userAgent"],
+        "output": "user.hash",
+        "length": 16
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+## Configuration
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `fields` | `Mapping.Value[]` | required | Fields to include in the hash. Order matters — the same fields in a different order produce a different hash. |
+| `output` | `string` | `"user.hash"` | Dot-notation path where the hash is stored on the event. |
+| `length` | `number` | full (64 chars) | Truncate the SHA-256 hash to this length. |
+
+Fields are resolved from `{ event, ingest }` using walkerOS mapping. String values use dot notation (`"ingest.ip"`). Function values compute dynamically (`{ fn: () => new Date().getDate() }`).
+
+## Daily rotation
+
+Without rotation, the same IP + user agent always produce the same hash — indefinitely. To limit persistence, add a daily rotation field:
+
+<CodeSnippet
+  code={`settings: {
+  fields: [
+    'ingest.ip',
+    'ingest.userAgent',
+    { fn: () => new Date().toISOString().slice(0, 10) }, // "2024-01-15"
+  ],
+  output: 'user.hash',
+  length: 16,
+}`}
+  language="typescript"
+/>
+
+The hash resets each day, limiting cross-day tracking while maintaining session continuity within a day.
+
+## IP anonymization
+
+To avoid including the raw IP in the hash input, transform it before hashing:
+
+<CodeSnippet
+  code={`settings: {
+  fields: [
+    { key: 'ingest.ip', fn: (ip) => ip?.split('.').slice(0, 3).join('.') }, // drops last octet
+    'ingest.userAgent',
+  ],
+  output: 'user.hash',
+}`}
+  language="typescript"
+/>
+
+## Result
+
+The hash is stored at the configured `output` path on the event:
+
+<CodeSnippet
+  code={`// Input event (before fingerprint transformer)
+{ name: 'page view', entity: 'page', action: 'view', ... }
+
+// Output event (after fingerprint transformer)
+{ name: 'page view', entity: 'page', action: 'view', user: { hash: '158f99cc06e33fd6' }, ... }`}
+  language="typescript"
+/>
+
+If any field is missing (e.g., `ingest.ip` is undefined), it is treated as an empty string — the transformer never throws.
