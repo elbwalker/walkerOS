@@ -351,9 +351,11 @@ function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
     );
     if (linkState === 'child') {
       // If current element is a child-link jump to the parent
-      // Note: This searches the entire document - for scoped operation, we would need
-      // to pass scope context down to this function or redesign the linking mechanism
-      return document.querySelector(`[${linkName}="${linkId}:parent"]`);
+      let found: HTMLElement | null = null;
+      queryAll(document, `[${linkName}="${linkId}:parent"]`, (el) => {
+        if (!found) found = el as HTMLElement;
+      });
+      return found;
     }
   }
 
@@ -413,13 +415,25 @@ function getThisAndParentProperties(
   return [data, context];
 }
 
-function queryAll(
-  scope: Document | Element,
+export function queryAll(
+  scope: Document | Element | ShadowRoot,
   selector: string,
   fn: (element: Element) => void,
 ): void {
-  const elements = scope.querySelectorAll(selector);
-  elements.forEach(fn);
+  scope.querySelectorAll(selector).forEach(fn);
+
+  // Descend into open shadow roots
+  // Note: querySelectorAll('*') scans all descendants to find shadow hosts.
+  // This is bounded by the scope subtree (not full document) and shadow hosts
+  // are typically rare. Closed shadow DOM is skipped (el.shadowRoot is null).
+  if (scope instanceof Element && scope.shadowRoot) {
+    queryAll(scope.shadowRoot, selector, fn);
+  }
+  scope.querySelectorAll('*').forEach((el) => {
+    if (el.shadowRoot) {
+      queryAll(el.shadowRoot, selector, fn);
+    }
+  });
 }
 
 function resolveAttributes(

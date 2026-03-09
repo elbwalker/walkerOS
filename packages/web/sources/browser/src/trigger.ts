@@ -9,6 +9,7 @@ import {
   getEvents,
   getPageViewData,
   getTriggerActions,
+  queryAll,
 } from './walker';
 import {
   initVisibilityTracking,
@@ -122,10 +123,8 @@ export function initScopeTrigger(context: Context, settings: Settings) {
   }
 
   // Handle all children action(s)
-  const elements = scope.querySelectorAll<HTMLElement>(`[${selectorAction}]`);
-
-  elements.forEach((elem) => {
-    handleActionElem(context, elem, selectorAction, settings);
+  queryAll(scope, `[${selectorAction}]`, (elem) => {
+    handleActionElem(context, elem as HTMLElement, selectorAction, settings);
   });
 
   if (scrollElements.length) scroll(context, scope, settings);
@@ -191,16 +190,28 @@ function handleActionElem(
   );
 }
 
+/**
+ * Get the actual event target, piercing open shadow DOM boundaries.
+ * Uses composedPath() to find the real target inside shadow roots.
+ * For closed shadow DOM, falls back to the host element (by design).
+ */
+function getComposedTarget(ev: Event): Element | undefined {
+  const path = ev.composedPath?.();
+  const target = path?.length ? path[0] : ev.target;
+  return target instanceof Element ? target : undefined;
+}
+
 function triggerClick(context: Context, ev: MouseEvent) {
-  handleTrigger(context, ev.target as Element, Triggers.Click);
+  const target = getComposedTarget(ev);
+  if (target) handleTrigger(context, target, Triggers.Click);
 }
 
 function triggerHover(context: Context, elem: HTMLElement) {
   elem.addEventListener(
     'mouseenter',
     tryCatch(function (this: Document, ev: MouseEvent) {
-      if (ev.target instanceof Element)
-        handleTrigger(context, ev.target, Triggers.Hover);
+      const target = getComposedTarget(ev);
+      if (target) handleTrigger(context, target, Triggers.Hover);
     }),
   );
 }
@@ -234,9 +245,8 @@ function triggerScroll(elem: HTMLElement, triggerParams: string = '') {
 }
 
 function triggerSubmit(context: Context, ev: SubmitEvent) {
-  if (ev.target) {
-    handleTrigger(context, ev.target as Element, Triggers.Submit);
-  }
+  const target = getComposedTarget(ev);
+  if (target) handleTrigger(context, target, Triggers.Submit);
 }
 
 function triggerWait(
