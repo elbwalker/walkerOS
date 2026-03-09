@@ -28,8 +28,8 @@ describe('Contract types', () => {
     expect(setup.contract).toBeDefined();
   });
 
-  it('should accept contract at Config level', () => {
-    const config: Flow.Config = {
+  it('should accept contract at Settings level', () => {
+    const config: Flow.Settings = {
       web: {},
       contract: {
         product: {
