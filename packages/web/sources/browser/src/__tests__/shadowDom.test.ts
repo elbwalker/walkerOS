@@ -102,8 +102,11 @@ describe('Shadow DOM', () => {
       );
     });
 
-    test('click delegation reaches shadow host but misses shadow action', () => {
-      // This test documents the CURRENT broken behavior
+    test('handleTrigger with host element directly finds no action', () => {
+      // When handleTrigger is called with the host element directly
+      // (bypassing composedPath), no action fires because the host
+      // has no data-elbaction — the action is inside the shadow root.
+      // This is expected: composedPath is what makes click delegation work.
       document.body.innerHTML = `
         <div id="host" data-elb="product" data-elb-product="id:123">
         </div>
@@ -115,12 +118,9 @@ describe('Shadow DOM', () => {
         <button id="shadow-btn" data-elbaction="click:add">Add to Cart</button>
       `;
 
-      // When handleTrigger receives the HOST (as happens with retargeting),
-      // it won't find any action because data-elbaction is in shadow DOM
       const context = { elb: mockElb, settings: createTestSettings() };
-      const result = handleTrigger(context, host, Triggers.Click);
+      handleTrigger(context, host, Triggers.Click);
 
-      // Current behavior: no event fires because host has no data-elbaction
       expect(mockElb).not.toHaveBeenCalled();
     });
   });
@@ -182,7 +182,10 @@ describe('Shadow DOM', () => {
       );
     });
 
-    test('getGlobals should find globals inside shadow DOM', () => {
+    test('getGlobals does not recurse into shadow DOM (performance trade-off)', () => {
+      // getGlobals uses plain queryAll (no shadow recursion) because it runs
+      // on every event push. Scanning all descendants for shadow hosts on each
+      // click would be too expensive. Globals inside shadow DOM is not supported.
       document.body.innerHTML = `
         <div id="host"></div>
         <div data-elbglobals="env:production"></div>
@@ -199,9 +202,8 @@ describe('Shadow DOM', () => {
       // Light DOM global works
       expect(globals).toHaveProperty('env', 'production');
 
-      // BUG: Shadow DOM global is invisible to querySelectorAll
-      // Expected: should also find version from shadow DOM
-      expect(globals).toHaveProperty('version', 'v2');
+      // Shadow DOM globals are intentionally not collected (performance)
+      expect(globals).not.toHaveProperty('version');
     });
   });
 

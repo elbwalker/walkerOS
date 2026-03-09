@@ -9,7 +9,7 @@ import {
   getEvents,
   getPageViewData,
   getTriggerActions,
-  queryAll,
+  queryAllComposed,
 } from './walker';
 import {
   initVisibilityTracking,
@@ -123,7 +123,7 @@ export function initScopeTrigger(context: Context, settings: Settings) {
   }
 
   // Handle all children action(s)
-  queryAll(scope, `[${selectorAction}]`, (elem) => {
+  queryAllComposed(scope, `[${selectorAction}]`, (elem) => {
     handleActionElem(context, elem as HTMLElement, selectorAction, settings);
   });
 
