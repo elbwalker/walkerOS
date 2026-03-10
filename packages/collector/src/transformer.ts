@@ -175,6 +175,13 @@ export async function initTransformers(
       'next',
     );
 
+    // Merge definition-level env into config so it's available during push.
+    // transformerPush reads transformer.config.env to build the push context.
+    const configWithEnv =
+      Object.keys(env).length > 0
+        ? { ...configWithChain, env: env as Transformer.Env }
+        : configWithChain;
+
     // Build transformer context for init
     const transformerLogger = collector.logger
       .scope('transformer')
@@ -184,7 +191,7 @@ export async function initTransformers(
       collector,
       logger: transformerLogger,
       id: transformerId,
-      config: configWithChain,
+      config: configWithEnv,
       env: env as Transformer.Env,
     };
 
@@ -237,9 +244,12 @@ export async function transformerInit(
     // Check for initialization failure
     if (configResult === false) return false;
 
-    // Update config if returned
+    // Update config if returned, preserving env from definition
     transformer.config = {
       ...(configResult || transformer.config),
+      env:
+        ((configResult as Record<string, unknown>)?.env as Transformer.Env) ||
+        transformer.config.env,
       init: true,
     };
 

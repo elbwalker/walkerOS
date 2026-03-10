@@ -1,6 +1,6 @@
 import type { Collector, Store } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
-import { initStores } from '../store';
+import { initStores, resolveStoreReferences } from '../store';
 
 function createMockCollector(): Collector.Instance {
   return {
@@ -81,5 +81,145 @@ describe('initStores', () => {
     });
 
     expect(stores.async.type).toBe('async');
+  });
+});
+
+describe('resolveStoreReferences', () => {
+  it('should replace env value matching a raw store def with initialized instance', () => {
+    const storeDef = { code: jest.fn(), config: {} };
+    const storeInstance = {
+      type: 'mock',
+      config: {},
+      get: jest.fn(),
+      set: jest.fn(),
+      delete: jest.fn(),
+    };
+    const transformerDef = { code: jest.fn(), env: { store: storeDef } };
+
+    resolveStoreReferences(
+      { cache: storeDef },
+      { cache: storeInstance } as any,
+      { transformers: { myTransformer: transformerDef } } as any,
+    );
+
+    expect(transformerDef.env.store).toBe(storeInstance);
+  });
+
+  it('should not replace env values that do not match any store def', () => {
+    const storeDef = { code: jest.fn(), config: {} };
+    const storeInstance = {
+      type: 'mock',
+      config: {},
+      get: jest.fn(),
+      set: jest.fn(),
+      delete: jest.fn(),
+    };
+    const unrelatedValue = { something: 'else' };
+    const transformerDef = { code: jest.fn(), env: { other: unrelatedValue } };
+
+    resolveStoreReferences(
+      { cache: storeDef },
+      { cache: storeInstance } as any,
+      { transformers: { t: transformerDef } } as any,
+    );
+
+    expect(transformerDef.env.other).toBe(unrelatedValue);
+  });
+
+  it('should resolve store references in destinations and sources too', () => {
+    const storeDef = { code: jest.fn(), config: {} };
+    const storeInstance = {
+      type: 'mock',
+      config: {},
+      get: jest.fn(),
+      set: jest.fn(),
+      delete: jest.fn(),
+    };
+    const destDef = { code: jest.fn(), env: { store: storeDef } };
+    const srcDef = { code: jest.fn(), env: { store: storeDef } };
+
+    resolveStoreReferences(
+      { cache: storeDef },
+      { cache: storeInstance } as any,
+      { destinations: { d: destDef }, sources: { s: srcDef } } as any,
+    );
+
+    expect(destDef.env.store).toBe(storeInstance);
+    expect(srcDef.env.store).toBe(storeInstance);
+  });
+
+  it('should handle multiple stores resolving to different instances', () => {
+    const defA = { code: jest.fn(), config: {} };
+    const defB = { code: jest.fn(), config: {} };
+    const instanceA = {
+      type: 'a',
+      config: {},
+      get: jest.fn(),
+      set: jest.fn(),
+      delete: jest.fn(),
+    };
+    const instanceB = {
+      type: 'b',
+      config: {},
+      get: jest.fn(),
+      set: jest.fn(),
+      delete: jest.fn(),
+    };
+    const transformerDef = {
+      code: jest.fn(),
+      env: { primary: defA, secondary: defB },
+    };
+
+    resolveStoreReferences(
+      { a: defA, b: defB },
+      { a: instanceA, b: instanceB } as any,
+      { transformers: { t: transformerDef } } as any,
+    );
+
+    expect(transformerDef.env.primary).toBe(instanceA);
+    expect(transformerDef.env.secondary).toBe(instanceB);
+  });
+
+  it('should skip if store failed to initialize (not in initializedStores)', () => {
+    const storeDef = { code: jest.fn(), config: {} };
+    const transformerDef = { code: jest.fn(), env: { store: storeDef } };
+
+    resolveStoreReferences(
+      { broken: storeDef },
+      {}, // empty — store init failed
+      { transformers: { t: transformerDef } } as any,
+    );
+
+    expect(transformerDef.env.store).toBe(storeDef); // unchanged
+  });
+
+  it('should be a no-op when rawStores is empty', () => {
+    const env = { keep: 'this' };
+    const transformerDef = { code: jest.fn(), env };
+
+    resolveStoreReferences({}, {}, {
+      transformers: { t: transformerDef },
+    } as any);
+
+    expect(env.keep).toBe('this');
+  });
+
+  it('should handle components with no env', () => {
+    const storeDef = { code: jest.fn(), config: {} };
+    const storeInstance = {
+      type: 'mock',
+      config: {},
+      get: jest.fn(),
+      set: jest.fn(),
+      delete: jest.fn(),
+    };
+    const transformerDef = { code: jest.fn() }; // no env
+
+    // Should not throw
+    resolveStoreReferences(
+      { cache: storeDef },
+      { cache: storeInstance } as any,
+      { transformers: { t: transformerDef } } as any,
+    );
   });
 });

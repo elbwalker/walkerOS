@@ -30,3 +30,51 @@ export async function initStores(
 
   return result;
 }
+
+/**
+ * Resolve store references in component env values.
+ *
+ * The bundler resolves `$store:gcs` to a direct JS reference to the raw
+ * store definition object (`stores.gcs = { code, config }`). After stores
+ * are initialized, this function walks transformer/destination/source env
+ * objects and replaces any raw store definition reference with the
+ * corresponding initialized Store.Instance.
+ *
+ * IMPORTANT: Uses referential identity (`===`) to match env values against
+ * raw store definitions. This works because the bundler generates code where
+ * env values are direct references to the same objects in the `stores` map.
+ * Programmatic configs must use the same object reference — copies won't match.
+ *
+ * Only resolves top-level env keys. Nested store references are not supported.
+ */
+export function resolveStoreReferences(
+  rawStores: Store.InitStores,
+  initializedStores: Store.Stores,
+  initConfig: Collector.InitConfig,
+): void {
+  const rawEntries = Object.entries(rawStores);
+  if (rawEntries.length === 0) return;
+
+  function resolveEnv(env: Record<string, unknown> | undefined) {
+    if (!env) return;
+    for (const [key, value] of Object.entries(env)) {
+      for (const [storeId, rawDef] of rawEntries) {
+        if (value === rawDef && initializedStores[storeId]) {
+          env[key] = initializedStores[storeId];
+        }
+      }
+    }
+  }
+
+  // Walk all component types that may have env values
+  for (const defs of [
+    initConfig.transformers,
+    initConfig.destinations,
+    initConfig.sources,
+  ]) {
+    if (!defs) continue;
+    for (const def of Object.values(defs)) {
+      resolveEnv((def as { env?: Record<string, unknown> }).env);
+    }
+  }
+}

@@ -33,6 +33,7 @@ export function createTokenProvider(
 async function fetchMetadataToken(): Promise<CachedToken> {
   const res = await fetch(METADATA_URL, {
     headers: { 'Metadata-Flavor': 'Google' },
+    signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`Metadata server error: ${res.status}`);
 

@@ -356,6 +356,24 @@ describe('Transformer', () => {
       expect(result).toBe(true);
       expect(mockInit).not.toHaveBeenCalled();
     });
+
+    test('preserves config.env when init returns new config', async () => {
+      const collector = createMockCollector();
+      const storeRef = { get: jest.fn(), set: jest.fn(), delete: jest.fn() };
+      const mockInit = jest
+        .fn()
+        .mockResolvedValue({ settings: { updated: true } });
+      const transformer = createMockTransformer({
+        init: mockInit,
+        config: { init: false, env: { store: storeRef } },
+      });
+
+      await transformerInit(collector, transformer, 'test-transformer');
+
+      expect(transformer.config.init).toBe(true);
+      expect(transformer.config.env).toBeDefined();
+      expect(transformer.config.env!.store).toBe(storeRef);
+    });
   });
 
   describe('transformerPush', () => {

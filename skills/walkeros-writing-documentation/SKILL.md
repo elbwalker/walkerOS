@@ -135,6 +135,88 @@ export * as examples from './examples';
 
 ---
 
+## Writing Hints (`src/hints.ts`)
+
+Hints are the "experienced colleague" layer in `walkerOS.json` — they tell AI
+agents _when_, _why_, and _what to watch out for_ beyond what schemas and
+examples convey. Surfaced via MCP `package_get`. Not human-facing docs.
+
+**Audience:** AI agents configuring packages on behalf of users.
+
+### Core Principle: Expand Awareness, Don't Narrow It
+
+Hints should open up the space of what's possible, not prescribe a single path.
+An LLM reading hints should think "I have more options than I realized" — not "I
+must follow these steps exactly."
+
+### Writing Rules
+
+| Rule                              | Do                                                            | Don't                                   |
+| --------------------------------- | ------------------------------------------------------------- | --------------------------------------- |
+| **Describe capabilities**         | "Supports SA key, ADC, and custom client"                     | "Use a SA key file when outside GCP"    |
+| **Reference schemas/examples**    | "See `settings.projectId` in the schema"                      | Repeat what the schema description says |
+| **Explain why behind defaults**   | "Defaults to EU location; override via `location`"            | "Set location to US"                    |
+| **Flag non-obvious interactions** | "When `snakeCase: true`, all data keys transform before send" | Describe obvious behavior               |
+| **Symptoms → causes**             | "Empty table? Check projectId and dataset existence"          | Step-by-step fix instructions           |
+
+### Key Naming
+
+- **kebab-case**, group related hints with prefixes: `auth-*`, `storage-*`,
+  `query-*`, `troubleshoot-*`
+- Keep keys descriptive enough to scan: `auth-methods` not `a1`
+
+### When to Add Hints
+
+Most packages don't need hints — schemas and examples cover the common case. Add
+hints when:
+
+- Multiple auth or config strategies exist and it's non-obvious when to use
+  which
+- Non-obvious default behaviors need explaining
+- Features interact in ways the schema can't express
+- Prerequisites outside walkerOS are required
+- Common troubleshooting patterns exist
+
+### Accuracy Check
+
+Before publishing hints, verify each claim is factually correct. Don't describe
+features that aren't implemented. Don't assume behavior — confirm it.
+
+### Quality Check
+
+- [ ] Each hint expands awareness (describes capabilities, not prescriptions)
+- [ ] Code snippets reference schema fields, not duplicate them
+- [ ] No hint restates what a schema `.describe()` already says
+- [ ] Troubleshooting hints use symptom → cause format
+- [ ] Hints are atomic — one concept per hint
+- [ ] Every claim is factually correct against current implementation
+
+### Export Pattern
+
+```typescript
+// src/hints.ts
+import type { Hints } from '@walkeros/core';
+
+export const hints: Hints = {
+  'auth-methods': {
+    text: 'Supports three auth methods: ...',
+    code: [{ lang: 'json', code: '{ "settings": { ... } }' }],
+  },
+};
+```
+
+```typescript
+// src/dev.ts
+export * as schemas from './schemas';
+export * as examples from './examples';
+export { hints } from './hints';
+```
+
+Note: `hints` is a direct export (not `* as`), because it's already a
+`Record<string, Hint>`.
+
+---
+
 ## Quality Checklist
 
 ### Structure
