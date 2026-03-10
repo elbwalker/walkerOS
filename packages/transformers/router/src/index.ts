@@ -6,3 +6,5 @@ export type {
   MatchCondition,
   MatchOperator,
 } from './types';
+
+export { transformerRouter as default } from './transformer';

@@ -1134,10 +1134,14 @@ export async function createEntryPoint(
   }
 
   // Build config object programmatically (DRY - single source of truth)
-  const configObject = buildConfigObject(flowSettings, explicitCodeImports);
+  const { storesDeclaration, configObject } = buildConfigObject(
+    flowSettings,
+    explicitCodeImports,
+  );
 
   // Generate platform-specific wrapper
   const wrappedCode = generatePlatformWrapper(
+    storesDeclaration,
     configObject,
     buildOptions.code || '',
     buildOptions as {
@@ -1202,7 +1206,7 @@ function createBuildError(buildError: EsbuildError, code: string): Error {
 export function buildConfigObject(
   flowSettings: Flow.Settings,
   explicitCodeImports: Map<string, Set<string>>,
-): string {
+): { storesDeclaration: string; configObject: string } {
   const flowWithProps = flowSettings as unknown as {
     sources?: Record<
       string,
@@ -1418,6 +1422,12 @@ export function buildConfigObject(
       return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
     });
 
+  // Build stores declaration (always hoisted as a variable)
+  const storesDeclaration =
+    storesEntries.length > 0
+      ? `const stores = {\n${storesEntries.join(',\n')}\n};`
+      : 'const stores = {};';
+
   // Build collector
   const collectorStr = flowWithProps.collector
     ? `,\n  ...${processConfigValue(flowWithProps.collector)}`
@@ -1429,20 +1439,17 @@ export function buildConfigObject(
       ? `,\n  transformers: {\n${transformersEntries.join(',\n')}\n  }`
       : '';
 
-  // Build stores section (only if stores exist)
-  const storesStr =
-    storesEntries.length > 0
-      ? `,\n  stores: {\n${storesEntries.join(',\n')}\n  }`
-      : '';
-
-  return `{
+  const configObject = `{
   sources: {
 ${sourcesEntries.join(',\n')}
   },
   destinations: {
 ${destinationsEntries.join(',\n')}
-  }${transformersStr}${storesStr}${collectorStr}
+  }${transformersStr},
+  stores${collectorStr}
 }`;
+
+  return { storesDeclaration, configObject };
 }
 
 /**
@@ -1575,6 +1582,7 @@ export function serializeWithCode(value: unknown, indent: number): string {
  * Generate platform-specific wrapper code.
  */
 export function generatePlatformWrapper(
+  storesDeclaration: string,
   configObject: string,
   userCode: string,
   buildOptions: {
@@ -1600,6 +1608,8 @@ export function generatePlatformWrapper(
       windowAssignments.length > 0 ? '\n' + windowAssignments.join('\n') : '';
 
     return `(async () => {
+  ${storesDeclaration}
+
   const config = ${configObject};
 
   ${userCode}
@@ -1611,6 +1621,8 @@ export function generatePlatformWrapper(
     const codeSection = userCode ? `\n  ${userCode}\n` : '';
 
     return `export default async function(context = {}) {
+  ${storesDeclaration}
+
   const config = ${configObject};${codeSection}
   // Apply context overrides (e.g., logger config from CLI)
   if (context.logger) {

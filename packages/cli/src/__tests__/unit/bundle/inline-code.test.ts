@@ -61,7 +61,10 @@ describe('Inline Code Bundling', () => {
 
       // buildConfigObject takes flowSettings and explicitCodeImports map
       const explicitCodeImports = new Map<string, Set<string>>();
-      const result = buildConfigObject(flowSettings, explicitCodeImports);
+      const { configObject: result } = buildConfigObject(
+        flowSettings,
+        explicitCodeImports,
+      );
 
       // Should contain the inline transformer
       expect(result).toContain('enrich');
@@ -87,7 +90,10 @@ describe('Inline Code Bundling', () => {
       };
 
       const explicitCodeImports = new Map<string, Set<string>>();
-      const result = buildConfigObject(flowSettings, explicitCodeImports);
+      const { configObject: result } = buildConfigObject(
+        flowSettings,
+        explicitCodeImports,
+      );
 
       // Should contain the inline transformer with init
       expect(result).toContain('validator');
@@ -113,7 +119,10 @@ describe('Inline Code Bundling', () => {
       };
 
       const explicitCodeImports = new Map<string, Set<string>>();
-      const result = buildConfigObject(flowSettings, explicitCodeImports);
+      const { configObject: result } = buildConfigObject(
+        flowSettings,
+        explicitCodeImports,
+      );
 
       // Should contain the inline source
       expect(result).toContain('customSource');
@@ -138,7 +147,10 @@ describe('Inline Code Bundling', () => {
       };
 
       const explicitCodeImports = new Map<string, Set<string>>();
-      const result = buildConfigObject(flowSettings, explicitCodeImports);
+      const { configObject: result } = buildConfigObject(
+        flowSettings,
+        explicitCodeImports,
+      );
 
       // Should contain the inline destination
       expect(result).toContain('customDest');
@@ -191,7 +203,10 @@ describe('Integration', () => {
     };
 
     const explicitCodeImports = new Map<string, Set<string>>();
-    const result = buildConfigObject(flowSettings, explicitCodeImports);
+    const { configObject: result } = buildConfigObject(
+      flowSettings,
+      explicitCodeImports,
+    );
 
     // Package-based transformer should reference the import variable
     expect(result).toContain('validate');
@@ -215,9 +230,14 @@ describe('generatePlatformWrapper', () => {
       destinations: {}
     }`;
 
-    const result = generatePlatformWrapper(configObject, '', {
-      platform: 'server',
-    });
+    const result = generatePlatformWrapper(
+      'const stores = {};',
+      configObject,
+      '',
+      {
+        platform: 'server',
+      },
+    );
 
     // Must contain externalServer port stripping block
     expect(result).toContain('context.externalServer');
@@ -231,9 +251,14 @@ describe('generatePlatformWrapper', () => {
   it('should not include port override in browser wrapper', () => {
     const configObject = `{ sources: {}, destinations: {} }`;
 
-    const result = generatePlatformWrapper(configObject, '', {
-      platform: 'browser',
-    });
+    const result = generatePlatformWrapper(
+      'const stores = {};',
+      configObject,
+      '',
+      {
+        platform: 'browser',
+      },
+    );
 
     expect(result).not.toContain('context.externalServer');
   });
@@ -247,9 +272,14 @@ describe('generatePlatformWrapper', () => {
       destinations: {}
     }`;
 
-    const result = generatePlatformWrapper(configObject, '', {
-      platform: 'server',
-    });
+    const result = generatePlatformWrapper(
+      'const stores = {};',
+      configObject,
+      '',
+      {
+        platform: 'server',
+      },
+    );
 
     // The generated code should delete port from sources when runner owns the port
     expect(result).toContain('context.externalServer');
