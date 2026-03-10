@@ -1,6 +1,11 @@
 const JSDELIVR_BASE = 'https://cdn.jsdelivr.net/npm';
 const DEFAULT_SCHEMA_PATH = 'dist/walkerOS.json';
 
+export interface ExampleSummary {
+  name: string;
+  description?: string;
+}
+
 export interface WalkerOSPackageMeta {
   packageName: string;
   version: string;
@@ -19,10 +24,16 @@ export interface WalkerOSPackageInfo {
   hints?: Record<string, unknown>;
 }
 
-export async function fetchPackageSchema(
+export interface WalkerOSPackage extends WalkerOSPackageInfo {
+  description?: string;
+  hintKeys: string[];
+  exampleSummaries: ExampleSummary[];
+}
+
+export async function fetchPackage(
   packageName: string,
   options?: { version?: string; timeout?: number },
-): Promise<WalkerOSPackageInfo> {
+): Promise<WalkerOSPackage> {
   const ver = options?.version || 'latest';
   const base = `${JSDELIVR_BASE}/${packageName}@${ver}`;
   const controller = new AbortController();
@@ -41,7 +52,7 @@ export async function fetchPackageSchema(
     }
     const pkg = (await pkgRes.json()) as Record<string, unknown>;
 
-    // Fetch walkerOS.json (convention: always at dist/walkerOS.json)
+    // Fetch walkerOS.json
     const schemaRes = await fetch(`${base}/${DEFAULT_SCHEMA_PATH}`, {
       signal: controller.signal,
     });
@@ -54,70 +65,56 @@ export async function fetchPackageSchema(
     const walkerOSJson = (await schemaRes.json()) as Record<string, unknown>;
     const meta = (walkerOSJson.$meta as Record<string, unknown>) || {};
 
+    const schemas = (walkerOSJson.schemas as Record<string, unknown>) || {};
+    const examples = (walkerOSJson.examples as Record<string, unknown>) || {};
     const hints = walkerOSJson.hints as Record<string, unknown> | undefined;
 
-    return {
-      packageName,
-      version: (pkg.version as string) || ver,
-      type: meta.type as string | undefined,
-      platform: meta.platform as string | undefined,
-      schemas: (walkerOSJson.schemas as Record<string, unknown>) || {},
-      examples: (walkerOSJson.examples as Record<string, unknown>) || {},
-      ...(hints && Object.keys(hints).length > 0 ? { hints } : {}),
-    };
-  } finally {
-    clearTimeout(timer);
-  }
-}
+    // Extract hint keys
+    const hintKeys = hints ? Object.keys(hints) : [];
 
-export async function fetchPackageMeta(
-  packageName: string,
-  options?: { version?: string; timeout?: number },
-): Promise<WalkerOSPackageMeta> {
-  const ver = options?.version || 'latest';
-  const base = `${JSDELIVR_BASE}/${packageName}@${ver}`;
-  const controller = new AbortController();
-  const timeoutMs = options?.timeout || 10000;
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const pkgRes = await fetch(`${base}/package.json`, {
-      signal: controller.signal,
-    });
-    if (!pkgRes.ok) {
-      throw new Error(
-        `Package "${packageName}" not found on npm (HTTP ${pkgRes.status})`,
-      );
-    }
-    const pkg = (await pkgRes.json()) as Record<string, unknown>;
-
-    let type: string | undefined;
-    let platform: string | undefined;
-    try {
-      const schemaRes = await fetch(`${base}/${DEFAULT_SCHEMA_PATH}`, {
-        signal: controller.signal,
-      });
-      if (schemaRes.ok) {
-        const walkerOSJson = (await schemaRes.json()) as Record<
-          string,
-          unknown
-        >;
-        const meta = (walkerOSJson.$meta as Record<string, unknown>) || {};
-        type = meta.type as string | undefined;
-        platform = meta.platform as string | undefined;
-      }
-    } catch {
-      // walkerOS.json is optional for metadata
+    // Extract example summaries from step examples
+    const exampleSummaries: ExampleSummary[] = [];
+    const stepExamples = (examples.step || {}) as Record<string, unknown>;
+    for (const [name, example] of Object.entries(stepExamples)) {
+      const ex = example as Record<string, unknown> | undefined;
+      const summary: ExampleSummary = { name };
+      if (ex?.description) summary.description = ex.description as string;
+      exampleSummaries.push(summary);
     }
 
     return {
       packageName,
       version: (pkg.version as string) || ver,
       description: pkg.description as string | undefined,
-      type,
-      platform,
+      type: meta.type as string | undefined,
+      platform: meta.platform as string | undefined,
+      schemas,
+      examples,
+      ...(hints && Object.keys(hints).length > 0 ? { hints } : {}),
+      hintKeys,
+      exampleSummaries,
     };
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * @deprecated Use fetchPackage instead.
+ * Still used by: entry.ts (validator), package-schemas.ts (MCP resource).
+ */
+export async function fetchPackageSchema(
+  packageName: string,
+  options?: { version?: string; timeout?: number },
+): Promise<WalkerOSPackageInfo> {
+  const pkg = await fetchPackage(packageName, options);
+  return {
+    packageName: pkg.packageName,
+    version: pkg.version,
+    type: pkg.type,
+    platform: pkg.platform,
+    schemas: pkg.schemas,
+    examples: pkg.examples,
+    ...(pkg.hints ? { hints: pkg.hints } : {}),
+  };
 }

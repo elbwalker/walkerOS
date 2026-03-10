@@ -445,6 +445,7 @@ export interface Settings {
  * `out: false` indicates the step filters/drops this event.
  */
 export interface StepExample {
+  description?: string;
   in?: unknown;
   mapping?: unknown;
   out?: unknown;

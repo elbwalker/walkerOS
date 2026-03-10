@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { fetchPackageSchema, fetchPackageMeta } from '@walkeros/core';
+import { fetchPackage } from '@walkeros/core';
 import {
   PackageSchemaOutputShape,
   PackageSearchOutputShape,
@@ -12,9 +12,8 @@ export function registerPackageSearchTool(server: McpServer) {
     {
       title: 'Search Package',
       description:
-        'Look up a walkerOS package to see its metadata (type, platform, version, description) ' +
-        'without fetching full schemas and examples. Use this to browse packages before ' +
-        'calling package_get for full configuration details.',
+        'Look up a walkerOS package to see its metadata, available hint keys, and example summaries. ' +
+        'Use this to browse packages before calling package_get for full details.',
       inputSchema: {
         package: z
           .string()
@@ -37,7 +36,7 @@ export function registerPackageSearchTool(server: McpServer) {
     },
     async ({ package: packageName, version }) => {
       try {
-        const info = await fetchPackageMeta(packageName, { version });
+        const info = await fetchPackage(packageName, { version });
 
         const result = {
           package: info.packageName,
@@ -45,6 +44,8 @@ export function registerPackageSearchTool(server: McpServer) {
           description: info.description,
           type: info.type,
           platform: info.platform,
+          hintKeys: info.hintKeys,
+          exampleSummaries: info.exampleSummaries,
         };
 
         return {
@@ -76,9 +77,9 @@ export function registerGetPackageSchemaTool(server: McpServer) {
     {
       title: 'Get Package',
       description:
-        'Fetch full walkerOS package details including JSON Schemas and examples from npm via jsdelivr CDN. ' +
-        'Returns settings and mapping configuration schemas, plus configuration examples. ' +
-        'Use package_search first to browse, then this tool for full details.',
+        'Fetch walkerOS package details from npm. By default returns schemas + hint texts + example summaries (lightweight). ' +
+        'Use section parameter to get full content: "hints" (with code blocks), "examples" (full in/out data), ' +
+        'or "all" (everything). Use package_search first to browse available packages.',
       inputSchema: {
         package: z
           .string()
@@ -90,6 +91,12 @@ export function registerGetPackageSchemaTool(server: McpServer) {
           .string()
           .optional()
           .describe('Package version (default: latest)'),
+        section: z
+          .enum(['hints', 'examples', 'all'])
+          .optional()
+          .describe(
+            'Section to expand with full content. Default: summary view with schemas + hint texts + example descriptions',
+          ),
       },
       outputSchema: PackageSchemaOutputShape,
       annotations: {
@@ -99,9 +106,9 @@ export function registerGetPackageSchemaTool(server: McpServer) {
         openWorldHint: true,
       },
     },
-    async ({ package: packageName, version }) => {
+    async ({ package: packageName, version, section }) => {
       try {
-        const info = await fetchPackageSchema(packageName, { version });
+        const info = await fetchPackage(packageName, { version });
 
         const result: Record<string, unknown> = {
           package: info.packageName,
@@ -109,21 +116,43 @@ export function registerGetPackageSchemaTool(server: McpServer) {
           type: info.type,
           platform: info.platform,
           schemas: info.schemas,
-          examples: info.examples,
         };
 
+        // Hints
         if (info.hints) {
-          result.hints = info.hints;
+          if (section === 'hints' || section === 'all') {
+            // Full hints with code blocks
+            result.hints = info.hints;
+          } else {
+            // Summary: text only, no code blocks
+            const hintSummary: Record<string, { text: string }> = {};
+            for (const [key, hint] of Object.entries(info.hints)) {
+              const h = hint as { text: string };
+              hintSummary[key] = { text: h.text };
+            }
+            result.hints = hintSummary;
+          }
         }
 
+        // Examples
+        if (section === 'examples' || section === 'all') {
+          result.examples = info.examples;
+        } else {
+          // Summary: names + descriptions only
+          result.exampleSummaries = info.exampleSummaries;
+        }
+
+        // Text summary
         const schemaCount = Object.keys(info.schemas).length;
-        const exampleCount = Object.keys(info.examples).length;
-        const hintCount = info.hints ? Object.keys(info.hints).length : 0;
+        const hintCount = info.hintKeys.length;
+        const exampleCount = info.exampleSummaries.length;
+        const sectionLabel = section ? ` [section=${section}]` : '';
         const parts = [
           `Package ${info.packageName} v${info.version}`,
           info.type ? `(${info.type}/${info.platform})` : '',
-          `— ${schemaCount} schemas, ${exampleCount} examples`,
+          `- ${schemaCount} schemas, ${exampleCount} examples`,
           hintCount > 0 ? `, ${hintCount} hints` : '',
+          sectionLabel,
         ];
         const summary = parts.filter(Boolean).join(' ');
 

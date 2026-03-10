@@ -108,7 +108,7 @@ export const ExamplesListOutputShape = {
     .describe('Step examples'),
 };
 
-// Package Search output shape (lightweight metadata)
+// Package Search output shape (lightweight metadata + content keys)
 export const PackageSearchOutputShape = {
   package: z.string().describe('Package name'),
   version: z.string().describe('Package version'),
@@ -118,9 +118,22 @@ export const PackageSearchOutputShape = {
     .optional()
     .describe('Package type (destination, source, transformer)'),
   platform: z.string().optional().describe('Target platform (web, server)'),
+  hintKeys: z
+    .array(z.string())
+    .describe('Available hint keys (use package_get section=hints to read)'),
+  exampleSummaries: z
+    .array(
+      z.object({
+        name: z.string().describe('Example name'),
+        description: z.string().optional().describe('What this example shows'),
+      }),
+    )
+    .describe(
+      'Step example names and descriptions (use package_get section=examples to read full content)',
+    ),
 };
 
-// Package Schema output shape (full details)
+// Package Schema output shape (full details, supports progressive disclosure)
 export const PackageSchemaOutputShape = {
   package: z.string().describe('Package name'),
   version: z.string().describe('Package version'),
@@ -128,11 +141,25 @@ export const PackageSchemaOutputShape = {
   platform: z.string().describe('Target platform (web, server)'),
   schemas: z
     .record(z.string(), z.unknown())
+    .optional()
     .describe('JSON Schemas for settings and mapping'),
   examples: z
     .record(z.string(), z.unknown())
     .optional()
-    .describe('Configuration examples'),
+    .describe(
+      'Full configuration examples (included when section=examples or section=all)',
+    ),
+  exampleSummaries: z
+    .array(
+      z.object({
+        name: z.string().describe('Example name'),
+        description: z.string().optional().describe('What this example shows'),
+      }),
+    )
+    .optional()
+    .describe(
+      'Example names and descriptions (included in default/summary mode)',
+    ),
   hints: z
     .record(
       z.string(),
@@ -149,5 +176,7 @@ export const PackageSchemaOutputShape = {
       }),
     )
     .optional()
-    .describe('Lightweight actionable hints for AI consumption'),
+    .describe(
+      'Hints — text only in summary mode, with code blocks when section=hints or section=all',
+    ),
 };

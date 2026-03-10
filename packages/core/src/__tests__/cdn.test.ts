@@ -1,4 +1,4 @@
-import { fetchPackageSchema, fetchPackageMeta } from '..';
+import { fetchPackageSchema, fetchPackage } from '..';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -157,22 +157,30 @@ describe('fetchPackageSchema', () => {
   });
 });
 
-describe('fetchPackageMeta', () => {
+describe('fetchPackage', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('should fetch only package.json and walkerOS.json $meta', async () => {
-    const mockPkgJson = {
-      name: '@walkeros/web-destination-snowplow',
-      version: '0.0.12',
-      description: 'Snowplow destination for walkerOS',
-    };
-    const mockWalkerOSJson = {
-      $meta: {
-        type: 'destination',
-        platform: 'web',
-      },
-    };
+  const mockPkgJson = {
+    name: '@walkeros/web-destination-gtag',
+    version: '2.1.1',
+    description: 'Google gtag destination',
+  };
 
+  const mockWalkerOSJson = {
+    $meta: { type: 'destination', platform: 'web' },
+    schemas: { settings: { type: 'object' } },
+    examples: {
+      step: {
+        purchase: { description: 'GA4 purchase', in: {}, out: [] },
+        pageView: { in: {}, out: [] },
+      },
+    },
+    hints: {
+      'consent-mode': { text: 'Consent Mode v2 enabled by default' },
+    },
+  };
+
+  function setupMocks() {
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
@@ -182,44 +190,62 @@ describe('fetchPackageMeta', () => {
         ok: true,
         json: () => Promise.resolve(mockWalkerOSJson),
       });
+  }
 
-    const result = await fetchPackageMeta('@walkeros/web-destination-snowplow');
-
-    expect(mockFetch).toHaveBeenCalledTimes(2);
-    expect(result.packageName).toBe('@walkeros/web-destination-snowplow');
-    expect(result.version).toBe('0.0.12');
-    expect(result.description).toBe('Snowplow destination for walkerOS');
+  it('should return full package info with summaries', async () => {
+    setupMocks();
+    const result = await fetchPackage('@walkeros/web-destination-gtag');
+    expect(result.packageName).toBe('@walkeros/web-destination-gtag');
+    expect(result.version).toBe('2.1.1');
+    expect(result.description).toBe('Google gtag destination');
     expect(result.type).toBe('destination');
     expect(result.platform).toBe('web');
-    // Must NOT contain schemas or examples
-    expect(result).not.toHaveProperty('schemas');
-    expect(result).not.toHaveProperty('examples');
+    expect(result.schemas).toEqual({ settings: { type: 'object' } });
+    expect(result.examples).toBeDefined();
+    expect(result.hints).toBeDefined();
   });
 
-  it('should handle missing walkerOS.json gracefully', async () => {
+  it('should extract hint keys', async () => {
+    setupMocks();
+    const result = await fetchPackage('@walkeros/web-destination-gtag');
+    expect(result.hintKeys).toEqual(['consent-mode']);
+  });
+
+  it('should extract example summaries with descriptions', async () => {
+    setupMocks();
+    const result = await fetchPackage('@walkeros/web-destination-gtag');
+    expect(result.exampleSummaries).toEqual([
+      { name: 'purchase', description: 'GA4 purchase' },
+      { name: 'pageView' },
+    ]);
+  });
+
+  it('should throw when walkerOS.json not found', async () => {
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
-        json: () =>
-          Promise.resolve({
-            name: 'pkg',
-            version: '1.0.0',
-            description: 'test',
-          }),
+        json: () => Promise.resolve(mockPkgJson),
       })
       .mockResolvedValueOnce({ ok: false, status: 404 });
-
-    const result = await fetchPackageMeta('pkg');
-    expect(result.packageName).toBe('pkg');
-    expect(result.type).toBeUndefined();
-    expect(result.platform).toBeUndefined();
+    await expect(
+      fetchPackage('@walkeros/web-destination-gtag'),
+    ).rejects.toThrow('walkerOS.json not found');
   });
 
-  it('should throw when package not found', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
-
-    await expect(fetchPackageMeta('nonexistent')).rejects.toThrow(
-      'Package "nonexistent" not found on npm (HTTP 404)',
-    );
+  it('should handle missing hints and examples', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockPkgJson),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ $meta: {}, schemas: {} }),
+      });
+    const result = await fetchPackage('@walkeros/web-destination-gtag');
+    expect(result.hints).toBeUndefined();
+    expect(result.examples).toEqual({});
+    expect(result.hintKeys).toEqual([]);
+    expect(result.exampleSummaries).toEqual([]);
   });
 });
