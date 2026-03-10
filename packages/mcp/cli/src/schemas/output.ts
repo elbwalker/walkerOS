@@ -133,4 +133,21 @@ export const PackageSchemaOutputShape = {
     .record(z.string(), z.unknown())
     .optional()
     .describe('Configuration examples'),
+  hints: z
+    .record(
+      z.string(),
+      z.object({
+        text: z.string(),
+        code: z
+          .array(
+            z.object({
+              lang: z.string().optional(),
+              code: z.string(),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .optional()
+    .describe('Lightweight actionable hints for AI consumption'),
 };

@@ -56,6 +56,9 @@ export {
   UtilitySchemas,
 };
 
+// Hint schemas (direct export — flat record, no namespace needed)
+export { CodeSchema, HintSchema, HintsSchema } from './hint';
+
 // ========================================
 // Direct Exports (commonly used schemas)
 // ========================================

@@ -103,7 +103,7 @@ export function registerGetPackageSchemaTool(server: McpServer) {
       try {
         const info = await fetchPackageSchema(packageName, { version });
 
-        const result = {
+        const result: Record<string, unknown> = {
           package: info.packageName,
           version: info.version,
           type: info.type,
@@ -112,11 +112,24 @@ export function registerGetPackageSchemaTool(server: McpServer) {
           examples: info.examples,
         };
 
+        if (info.hints) {
+          result.hints = info.hints;
+        }
+
+        const schemaCount = Object.keys(info.schemas).length;
+        const exampleCount = Object.keys(info.examples).length;
+        const hintCount = info.hints ? Object.keys(info.hints).length : 0;
+        const parts = [
+          `Package ${info.packageName} v${info.version}`,
+          info.type ? `(${info.type}/${info.platform})` : '',
+          `— ${schemaCount} schemas, ${exampleCount} examples`,
+          hintCount > 0 ? `, ${hintCount} hints` : '',
+        ];
+        const summary = parts.filter(Boolean).join(' ');
+
         return {
-          content: [
-            { type: 'text' as const, text: JSON.stringify(result, null, 2) },
-          ],
-          structuredContent: result as unknown as Record<string, unknown>,
+          content: [{ type: 'text' as const, text: summary }],
+          structuredContent: result,
         };
       } catch (error) {
         return {

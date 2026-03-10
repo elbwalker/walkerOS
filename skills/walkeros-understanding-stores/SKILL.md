@@ -321,6 +321,32 @@ Add `./dev` export to package.json:
   hardcoded markdown tables
 - Without `dev.ts`, a store is invisible to MCP and docs tables rot
 
+### Hints (Optional)
+
+Stores can optionally export hints — lightweight, actionable context for AI
+agents beyond what schemas and examples already provide. Create `src/hints.ts`:
+
+```typescript
+import type { Hint } from '@walkeros/core';
+
+export const hints: Hint.Hints = {
+  'persistence-behavior': {
+    text: 'Describes persistence guarantees. See settings schema for options.',
+  },
+};
+```
+
+Export from `src/dev.ts` alongside schemas and examples:
+
+```typescript
+export * as schemas from './schemas';
+export * as examples from './examples';
+export { hints } from './hints';
+```
+
+Most stores don't need hints — only add them for non-obvious behaviors,
+prerequisites, or troubleshooting patterns.
+
 ## Related skills
 
 - [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) -

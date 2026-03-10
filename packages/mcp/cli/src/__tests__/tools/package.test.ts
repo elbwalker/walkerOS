@@ -67,9 +67,12 @@ describe('package_get tool', () => {
       { version: undefined },
     );
 
-    const content = JSON.parse(result.content[0].text);
+    expect(result.content[0].text).toContain(
+      '@walkeros/web-destination-snowplow',
+    );
+    const content = result.structuredContent;
     expect(content.package).toBe('@walkeros/web-destination-snowplow');
-    expect(content.schemas.settings).toBeDefined();
+    expect((content.schemas as Record<string, unknown>).settings).toBeDefined();
     expect(content.type).toBe('destination');
   });
 
@@ -89,7 +92,8 @@ describe('package_get tool', () => {
     expect(mockFetchPackageSchema).toHaveBeenCalledWith('some-pkg', {
       version: undefined,
     });
-    const content = JSON.parse(result.content[0].text);
+    expect(result.content[0].text).toContain('some-pkg');
+    const content = result.structuredContent;
     expect(content.package).toBe('some-pkg');
   });
 
@@ -129,6 +133,56 @@ describe('package_get tool', () => {
     expect(mockFetchPackageSchema).toHaveBeenCalledWith('pkg', {
       version: '2.0.0',
     });
+  });
+
+  it('should include hints when present', async () => {
+    mockFetchPackageSchema.mockResolvedValue({
+      packageName: '@walkeros/server-destination-gcp',
+      version: '2.1.1',
+      type: 'destination',
+      platform: 'server',
+      schemas: { settings: {} },
+      examples: { mapping: {} },
+      hints: {
+        'auth-default': { text: 'Use default credentials on GCP' },
+        'query-tips': {
+          text: 'Use JSON_EXTRACT_SCALAR',
+          code: [{ lang: 'sql', code: 'SELECT 1' }],
+        },
+      },
+    });
+
+    const tool = mockServer.getTool('package_get');
+    const result = await tool.handler({
+      package: '@walkeros/server-destination-gcp',
+    });
+
+    expect(result.content[0].text).toContain('2 hints');
+    const content = result.structuredContent;
+    expect(content.hints).toBeDefined();
+    const hints = content.hints as Record<string, unknown>;
+    expect(Object.keys(hints)).toHaveLength(2);
+    expect(hints['auth-default']).toEqual({
+      text: 'Use default credentials on GCP',
+    });
+  });
+
+  it('should work without hints (backward compat)', async () => {
+    mockFetchPackageSchema.mockResolvedValue({
+      packageName: 'pkg',
+      version: '1.0.0',
+      type: 'destination',
+      platform: 'web',
+      schemas: { settings: {} },
+      examples: {},
+    });
+
+    const tool = mockServer.getTool('package_get');
+    const result = await tool.handler({ package: 'pkg' });
+
+    expect(result.content[0].text).not.toContain('hints');
+    const content = result.structuredContent;
+    expect(content.hints).toBeUndefined();
   });
 });
 

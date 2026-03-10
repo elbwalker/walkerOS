@@ -15,6 +15,7 @@ export * as Lifecycle from './lifecycle';
 export * as WalkerOS from './walkeros';
 export * as Simulation from './simulation';
 export * as Matcher from './matcher';
+export * as Hint from './hint';
 
 // Export storage types directly
 export type { StorageType } from './storage';

@@ -214,6 +214,44 @@ buildDev(),
 
 This auto-generates `dist/walkerOS.json` from your Zod schemas at build time.
 
+### Hints (Optional)
+
+If your transformer has capabilities, behaviors, or troubleshooting patterns not
+obvious from schemas alone, add hints. See `walkeros-writing-documentation`
+skill for full guidelines.
+
+Create `src/hints.ts`:
+
+```typescript
+import type { Hint } from '@walkeros/core';
+
+export const hints: Hint.Hints = {
+  'validation-behavior': {
+    text: 'Describes how validation works. See settings schema for options.',
+    code: [{ lang: 'json', code: '{ "settings": { ... } }' }],
+  },
+};
+```
+
+Export from `src/dev.ts`:
+
+```typescript
+export * as schemas from './schemas';
+export * as examples from './examples';
+export { hints } from './hints';
+```
+
+Guidelines:
+
+- Expand awareness — describe capabilities ("supports X, Y, Z"), don't prescribe
+  one path
+- Reference schemas and examples, don't duplicate them
+- Verify every claim against actual implementation before publishing
+- Key naming: kebab-case, group with prefixes (validation-\*, enrichment-\*,
+  troubleshoot-\*)
+- Most transformers don't need hints — schemas and examples cover the common
+  case
+
 ### Gate: Convention Met
 
 - [ ] `walkerOS` field in package.json with `type: "transformer"`

@@ -269,6 +269,44 @@ buildDev(),
 
 This auto-generates `dist/walkerOS.json` from your Zod schemas at build time.
 
+### Hints (Optional)
+
+If your destination has capabilities, behaviors, or troubleshooting patterns not
+obvious from schemas alone, add hints. See `walkeros-writing-documentation`
+skill for full guidelines.
+
+Create `src/hints.ts`:
+
+```typescript
+import type { Hint } from '@walkeros/core';
+
+export const hints: Hint.Hints = {
+  'auth-methods': {
+    text: 'Supports X, Y, and Z auth methods. See settings schema for all options.',
+    code: [{ lang: 'json', code: '{ "settings": { ... } }' }],
+  },
+};
+```
+
+Export from `src/dev.ts`:
+
+```typescript
+export * as schemas from './schemas';
+export * as examples from './examples';
+export { hints } from './hints';
+```
+
+Guidelines:
+
+- Expand awareness — describe capabilities ("supports X, Y, Z"), don't prescribe
+  one path
+- Reference schemas and examples, don't duplicate them
+- Verify every claim against actual implementation before publishing
+- Key naming: kebab-case, group with prefixes (auth-\*, storage-\*,
+  troubleshoot-\*)
+- Most destinations don't need hints — schemas and examples cover the common
+  case
+
 ### Gate: Convention Met
 
 - [ ] `walkerOS` field in package.json with type and platform

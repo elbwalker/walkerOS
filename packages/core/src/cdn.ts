@@ -16,6 +16,7 @@ export interface WalkerOSPackageInfo {
   platform?: string;
   schemas: Record<string, unknown>;
   examples: Record<string, unknown>;
+  hints?: Record<string, unknown>;
 }
 
 export async function fetchPackageSchema(
@@ -53,6 +54,8 @@ export async function fetchPackageSchema(
     const walkerOSJson = (await schemaRes.json()) as Record<string, unknown>;
     const meta = (walkerOSJson.$meta as Record<string, unknown>) || {};
 
+    const hints = walkerOSJson.hints as Record<string, unknown> | undefined;
+
     return {
       packageName,
       version: (pkg.version as string) || ver,
@@ -60,6 +63,7 @@ export async function fetchPackageSchema(
       platform: meta.platform as string | undefined,
       schemas: (walkerOSJson.schemas as Record<string, unknown>) || {},
       examples: (walkerOSJson.examples as Record<string, unknown>) || {},
+      ...(hints && Object.keys(hints).length > 0 ? { hints } : {}),
     };
   } finally {
     clearTimeout(timer);

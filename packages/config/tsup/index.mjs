@@ -160,7 +160,15 @@ const buildDev = (customConfig = {}) => {
       if (walkerOS.platform) meta.platform = walkerOS.platform;
       if (walkerOS.renderer) meta.renderer = walkerOS.renderer;
 
+      // Extract hints (optional)
+      const hints = devModule.hints
+        ? toSerializable(devModule.hints)
+        : undefined;
+
       const output = { $meta: meta, schemas, examples };
+      if (hints && Object.keys(hints).length > 0) {
+        output.hints = hints;
+      }
 
       // Validate
       if (Object.keys(schemas).length === 0) {
