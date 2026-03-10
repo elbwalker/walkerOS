@@ -57,37 +57,25 @@ export type ContractActions = Record<string, ContractSchema>;
 export type ContractEvents = Record<string, ContractActions>;
 
 /**
- * Data contract definition.
+ * A single named contract entry.
  *
- * Supports two formats:
- * - **Legacy (no version):** Flat entity-action map with `$tagging` metadata.
- *   Entity keys sit at root level alongside `$tagging`.
- * - **v2 (structured):** Explicit sections mirroring WalkerOS.Event fields.
- *   Entity-action schemas move under `events`. Top-level sections
- *   (`globals`, `context`, `custom`, `user`, `consent`) describe
- *   cross-event properties with JSON Schema.
+ * All sections are optional. Sections mirror WalkerOS.Event fields:
+ * globals, context, custom, user, consent.
+ * Entity-action schemas live under `events`.
  *
- * The `version` field distinguishes formats:
- * - Absent: legacy flat format
- * - 2: structured sections format
- *
- * Special keys:
- * - "$tagging": Contract version number (syncs to event.version.tagging)
- * - "*": Wildcard entity/action (matches all) — inside `events` for v2
+ * Use `extends` to inherit from another named contract (additive merge).
  */
-export interface Contract {
-  /** Contract format version. 2 = structured sections. */
-  version?: number;
+export interface ContractEntry {
+  /** Inherit from another named contract (additive merge). */
+  extends?: string;
 
   /** Contract version number (syncs to event.version.tagging). */
-  $tagging?: number;
+  tagging?: number;
 
   /** Human-readable description of the contract. */
   description?: string;
 
-  // --- v3 cross-event sections (JSON Schema for each event field) ---
-
-  /** JSON Schema for event.globals (cross-event properties). */
+  /** JSON Schema for event.globals. */
   globals?: ContractSchema;
 
   /** JSON Schema for event.context. */
@@ -102,20 +90,24 @@ export interface Contract {
   /** JSON Schema for event.consent. */
   consent?: ContractSchema;
 
-  /** Entity-action event schemas (v3). */
+  /** Entity-action event schemas. */
   events?: ContractEvents;
-
-  // --- v2 legacy entity-action entries (flat map) ---
-
-  /** v2: Entity-action entries keyed by entity name. */
-  [entity: string]:
-    | ContractActions
-    | ContractEvents
-    | ContractSchema
-    | number
-    | string
-    | undefined;
 }
+
+/**
+ * Named contract map.
+ * Each key is a contract name, each value is a contract entry.
+ *
+ * Example:
+ * ```json
+ * {
+ *   "default": { "globals": { ... }, "consent": { ... } },
+ *   "web": { "extends": "default", "events": { ... } },
+ *   "server": { "extends": "default", "events": { ... } }
+ * }
+ * ```
+ */
+export type Contract = Record<string, ContractEntry>;
 
 /**
  * Primitive value types for variables
@@ -290,12 +282,6 @@ export interface Settings {
    * Mutually exclusive with `web`.
    */
   server?: Server;
-
-  /**
-   * Data contract definition for this flow.
-   * Merges on top of Config-level contract (additive).
-   */
-  contract?: Contract;
 
   /**
    * Store configurations (key-value storage).

@@ -1,16 +1,8 @@
 import Ajv, { ValidateFunction } from 'ajv';
-import { getMappingEvent } from '@walkeros/core';
-import type { Mapping, Transformer } from '@walkeros/core';
+import type { Transformer } from '@walkeros/core';
 import { formatSchema } from './format-schema';
-import type { ValidatorSettings, ContractRule, JsonSchema } from './types';
+import type { ValidatorSettings, JsonSchema } from './types';
 
-/**
- * Event validation transformer using AJV with JSON Schema.
- *
- * Two validation modes:
- * - format: Pre-compiled WalkerOS.Event structure validation (runs on every event)
- * - contract: Entity/action keyed business rules with lazy compilation
- */
 export const transformerValidator: Transformer.Init<
   Transformer.Types<ValidatorSettings>
 > = (context) => {
@@ -18,7 +10,7 @@ export const transformerValidator: Transformer.Init<
   const settings = config.settings || {};
   const {
     format = true,
-    contract,
+    events,
     globals,
     context: ctx,
     custom,
@@ -28,7 +20,7 @@ export const transformerValidator: Transformer.Init<
 
   const ajv = new Ajv({ allErrors: true, strict: false });
 
-  // Pre-compile format validator (runs on every event)
+  // Pre-compile format validator
   const formatValidator = format ? ajv.compile(formatSchema) : null;
 
   // Pre-compile section validators (run on every event)
@@ -49,17 +41,48 @@ export const transformerValidator: Transformer.Init<
     }
   }
 
-  // Lazy-compiled contract validators - keyed by schema reference
-  // Using WeakMap to cache by schema object, handling array rules with conditions
-  const contractValidators = new WeakMap<JsonSchema, ValidateFunction>();
+  // Lazy-compiled event validators
+  const eventValidators = new Map<string, ValidateFunction>();
 
-  function getContractValidator(schema: JsonSchema) {
-    if (!contractValidators.has(schema)) {
-      // Auto-wrap with type: 'object'
-      const fullSchema = { type: 'object', ...schema };
-      contractValidators.set(schema, ajv.compile(fullSchema));
+  function getEventValidator(
+    entity: string,
+    action: string,
+    schema: JsonSchema,
+  ) {
+    const key = `${entity}.${action}`;
+    if (!eventValidators.has(key)) {
+      eventValidators.set(key, ajv.compile({ type: 'object', ...schema }));
     }
-    return contractValidators.get(schema)!;
+    return eventValidators.get(key)!;
+  }
+
+  /**
+   * Find matching event schema using wildcard fallback.
+   * Checks: entity.action → entity.* → *.action → *.*
+   */
+  function findEventSchema(
+    entity: string,
+    action: string,
+  ): { schema: JsonSchema; key: string } | undefined {
+    if (!events) return undefined;
+
+    // Direct match
+    if (events[entity]?.[action]) {
+      return { schema: events[entity][action], key: `${entity} ${action}` };
+    }
+    // Entity wildcard
+    if (events[entity]?.['*']) {
+      return { schema: events[entity]['*'], key: `${entity} *` };
+    }
+    // Action wildcard
+    if (events['*']?.[action]) {
+      return { schema: events['*'][action], key: `* ${action}` };
+    }
+    // Global wildcard
+    if (events['*']?.['*']) {
+      return { schema: events['*']['*'], key: '* *' };
+    }
+    return undefined;
   }
 
   return {
@@ -88,29 +111,26 @@ export const transformerValidator: Transformer.Init<
         }
       }
 
-      // 3. Contract validation (lazy compiled)
-      if (contract) {
-        // Contract is typed as Mapping.Rules<ContractRule> - cast needed for getMappingEvent
-        const { eventMapping: rule, mappingKey } = await getMappingEvent(
-          event,
-          contract as Mapping.Rules,
-        );
+      // 3. Event validation (lazy compiled)
+      if (events && event.entity && event.action) {
+        const match = findEventSchema(event.entity, event.action);
 
-        // Type assertion: we know our rules have schema
-        const contractRule = rule as ContractRule | undefined;
-
-        if (contractRule?.schema) {
-          const validator = getContractValidator(contractRule.schema);
+        if (match) {
+          const validator = getEventValidator(
+            event.entity,
+            event.action,
+            match.schema,
+          );
 
           if (!validator(event)) {
             logger.error('Contract validation failed', {
-              rule: mappingKey,
+              rule: match.key,
               errors: ajv.errorsText(validator.errors),
             });
             return false;
           }
 
-          logger.debug('Contract validation passed', { rule: mappingKey });
+          logger.debug('Contract validation passed', { rule: match.key });
         }
       }
 

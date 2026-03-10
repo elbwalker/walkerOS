@@ -1,4 +1,5 @@
 import type { Flow } from './types';
+import { throwError } from './throwError';
 
 /** Section keys that map to WalkerOS.Event fields. */
 const SECTION_KEYS = [
@@ -8,61 +9,215 @@ const SECTION_KEYS = [
   'user',
   'consent',
 ] as const;
-type SectionKey = (typeof SECTION_KEYS)[number];
 
-/** Contract sections extracted from a v2 contract. */
-export interface ContractSections {
-  globals?: Record<string, unknown>;
-  context?: Record<string, unknown>;
-  custom?: Record<string, unknown>;
-  user?: Record<string, unknown>;
-  consent?: Record<string, unknown>;
-}
-
-/** Check if a contract uses v2 structured format. */
-export function isV2Contract(contract: Flow.Contract): boolean {
-  return contract.version === 2;
-}
+/** Annotation keys to strip from AJV-compatible schemas. */
+const ANNOTATION_KEYS = new Set([
+  'description',
+  'examples',
+  'title',
+  '$comment',
+]);
 
 /**
- * Extract the entity-action event map from a contract.
- * - v2: returns `contract.events`
- * - Legacy: returns the flat map with metadata keys stripped
+ * Resolve all named contracts: process extends chains, expand wildcards,
+ * strip annotations from event schemas.
+ *
+ * Returns a fully resolved map where each contract entry has inherited
+ * properties merged in and wildcards expanded into concrete actions.
  */
-export function getContractEvents(
-  contract: Flow.Contract,
-): Record<string, Record<string, unknown>> {
-  if (isV2Contract(contract)) {
-    return (contract.events || {}) as Record<string, Record<string, unknown>>;
-  }
+export function resolveContracts(
+  contracts: Flow.Contract,
+): Record<string, Flow.ContractEntry> {
+  const resolved: Record<string, Flow.ContractEntry> = {};
+  const resolving = new Set<string>(); // Circular detection
 
-  // Legacy: filter out metadata and non-object entries
-  const events: Record<string, Record<string, unknown>> = {};
-  for (const [key, value] of Object.entries(contract)) {
-    if (key.startsWith('$')) continue;
-    if (key === 'version' || key === 'description') continue;
-    if (SECTION_KEYS.includes(key as SectionKey)) continue;
-    if (typeof value === 'object' && value !== null) {
-      events[key] = value as Record<string, unknown>;
+  function resolve(name: string): Flow.ContractEntry {
+    if (resolved[name]) return resolved[name];
+
+    if (resolving.has(name)) {
+      throwError(
+        `Circular extends chain detected: ${[...resolving, name].join(' → ')}`,
+      );
     }
+
+    const entry = contracts[name];
+    if (!entry) {
+      throwError(`Contract "${name}" not found`);
+    }
+
+    resolving.add(name);
+
+    let result: Flow.ContractEntry = {};
+
+    // 1. Resolve parent first (if extends)
+    if (entry.extends) {
+      const parent = resolve(entry.extends);
+      result = mergeContractEntries(parent, entry);
+    } else {
+      result = { ...entry };
+    }
+
+    // Remove extends from resolved entry
+    delete result.extends;
+
+    // 2. Expand wildcards in events
+    if (result.events) {
+      result.events = expandWildcards(result.events);
+    }
+
+    // 3. Strip annotations from event schemas (not from section schemas)
+    if (result.events) {
+      const stripped: Flow.ContractEvents = {};
+      for (const [entity, actions] of Object.entries(result.events)) {
+        stripped[entity] = {};
+        for (const [action, schema] of Object.entries(actions)) {
+          stripped[entity][action] = stripAnnotations(schema);
+        }
+      }
+      result.events = stripped;
+    }
+
+    resolving.delete(name);
+    resolved[name] = result;
+    return result;
   }
-  return events;
+
+  // Resolve all contracts
+  for (const name of Object.keys(contracts)) {
+    resolve(name);
+  }
+
+  return resolved;
 }
 
 /**
- * Extract cross-event sections from a v2 contract.
- * Returns empty sections for legacy contracts.
+ * Merge two contract entries additively.
+ * Sections merge via mergeContractSchemas.
+ * Events merge at the entity-action level.
+ * Metadata: child wins for scalars.
  */
-export function getContractSections(contract: Flow.Contract): ContractSections {
-  if (!isV2Contract(contract)) return {};
+function mergeContractEntries(
+  parent: Flow.ContractEntry,
+  child: Flow.ContractEntry,
+): Flow.ContractEntry {
+  const result: Flow.ContractEntry = {};
 
-  const sections: ContractSections = {};
+  // Merge metadata (child wins)
+  if (parent.tagging !== undefined || child.tagging !== undefined) {
+    result.tagging = child.tagging ?? parent.tagging;
+  }
+  if (parent.description !== undefined || child.description !== undefined) {
+    result.description = child.description ?? parent.description;
+  }
+
+  // Merge sections additively
   for (const key of SECTION_KEYS) {
-    if (contract[key] && typeof contract[key] === 'object') {
-      sections[key] = contract[key] as Record<string, unknown>;
+    const p = parent[key];
+    const c = child[key];
+    if (p && c) {
+      result[key] = mergeContractSchemas(
+        p as Record<string, unknown>,
+        c as Record<string, unknown>,
+      );
+    } else if (p || c) {
+      result[key] = { ...((p || c) as Record<string, unknown>) };
     }
   }
-  return sections;
+
+  // Merge events
+  if (parent.events || child.events) {
+    const merged: Flow.ContractEvents = {};
+    const allEntities = new Set([
+      ...Object.keys(parent.events || {}),
+      ...Object.keys(child.events || {}),
+    ]);
+
+    for (const entity of allEntities) {
+      const pActions = parent.events?.[entity] || {};
+      const cActions = child.events?.[entity] || {};
+      const allActions = new Set([
+        ...Object.keys(pActions),
+        ...Object.keys(cActions),
+      ]);
+
+      merged[entity] = {};
+      for (const action of allActions) {
+        const pSchema = pActions[action];
+        const cSchema = cActions[action];
+        if (pSchema && cSchema) {
+          merged[entity][action] = mergeContractSchemas(
+            pSchema as Record<string, unknown>,
+            cSchema as Record<string, unknown>,
+          );
+        } else {
+          merged[entity][action] = {
+            ...((pSchema || cSchema) as Record<string, unknown>),
+          };
+        }
+      }
+    }
+
+    result.events = merged;
+  }
+
+  return result;
+}
+
+/**
+ * Expand wildcards in an events map.
+ * Merges *.* into all concrete actions, *.action into matching actions,
+ * entity.* into all actions of that entity.
+ */
+function expandWildcards(events: Flow.ContractEvents): Flow.ContractEvents {
+  const result: Flow.ContractEvents = {};
+
+  // For each concrete entity-action pair, merge all matching wildcard levels
+  for (const entity of Object.keys(events)) {
+    if (entity === '*') continue;
+    result[entity] = {};
+
+    for (const action of Object.keys(events[entity] || {})) {
+      let merged: Record<string, unknown> = {};
+
+      // Level 1: *.*
+      const globalWild = events['*']?.['*'];
+      if (globalWild)
+        merged = mergeContractSchemas(
+          merged,
+          globalWild as Record<string, unknown>,
+        );
+
+      // Level 2: *.action
+      const actionWild = events['*']?.[action];
+      if (actionWild && action !== '*')
+        merged = mergeContractSchemas(
+          merged,
+          actionWild as Record<string, unknown>,
+        );
+
+      // Level 3: entity.*
+      const entityWild = events[entity]?.['*'];
+      if (entityWild && action !== '*')
+        merged = mergeContractSchemas(
+          merged,
+          entityWild as Record<string, unknown>,
+        );
+
+      // Level 4: entity.action
+      const exact = events[entity]?.[action];
+      if (exact)
+        merged = mergeContractSchemas(merged, exact as Record<string, unknown>);
+
+      result[entity][action] = merged;
+    }
+  }
+
+  // Preserve * entries for reference
+  if (events['*']) {
+    result['*'] = { ...events['*'] };
+  }
+
+  return result;
 }
 
 /**
@@ -101,72 +256,21 @@ export function mergeContractSchemas(
 }
 
 /**
- * Resolve a contract for a specific entity-action pair.
- *
- * Legacy: Merges matching wildcard levels from flat entity-action map.
- * v2: Same wildcard merging from `events`, then merges top-level
- *     sections (globals, context, etc.) into `properties.*`.
- *
- * Levels merged additively:
- * 1. setup["*"]["*"]  (or events["*"]["*"])
- * 2. setup["*"][action]
- * 3. setup[entity]["*"]
- * 4. setup[entity][action]
- * 5-8. Same for config-level contract
+ * Strip annotation-only keys from a schema (deep).
  */
-export function resolveContract(
-  setup: Flow.Contract,
-  entity: string,
-  action: string,
-  config?: Flow.Contract,
+function stripAnnotations(
+  schema: Record<string, unknown>,
 ): Record<string, unknown> {
-  let result: Record<string, unknown> = {};
-
-  for (const contract of [setup, config]) {
-    if (!contract) continue;
-
-    // Get the entity-action map (v2: from events, legacy: from root)
-    const events = getContractEvents(contract);
-
-    const levels = [
-      getEntry(events, '*', '*'),
-      getEntry(events, '*', action),
-      getEntry(events, entity, '*'),
-      getEntry(events, entity, action),
-    ];
-
-    for (const level of levels) {
-      if (level) {
-        result = mergeContractSchemas(result, level);
-      }
-    }
-
-    // v2: merge top-level sections into properties.*
-    if (isV2Contract(contract)) {
-      const sections = getContractSections(contract);
-      for (const [key, schema] of Object.entries(sections)) {
-        if (!schema) continue;
-        const sectionAsProperty: Record<string, unknown> = {
-          properties: { [key]: schema },
-        };
-        result = mergeContractSchemas(result, sectionAsProperty);
-      }
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (ANNOTATION_KEYS.has(key)) continue;
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      result[key] = stripAnnotations(value as Record<string, unknown>);
+    } else {
+      result[key] = value;
     }
   }
-
   return result;
-}
-
-function getEntry(
-  events: Record<string, Record<string, unknown>>,
-  entity: string,
-  action: string,
-): Record<string, unknown> | undefined {
-  const entityEntry = events[entity];
-  if (!entityEntry || typeof entityEntry !== 'object') return undefined;
-  const actionEntry = entityEntry[action];
-  if (!actionEntry || typeof actionEntry !== 'object') return undefined;
-  return actionEntry as Record<string, unknown>;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

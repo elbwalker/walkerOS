@@ -1,22 +1,30 @@
-import { ConfigSchema, SettingsSchema } from '../../schemas/flow';
+import { ConfigSchema } from '../../schemas/flow';
 
 describe('Contract schema validation', () => {
   it('should accept a valid v2 setup with contract', () => {
     const result = ConfigSchema.safeParse({
       version: 2,
       contract: {
-        $tagging: 1,
-        product: {
-          '*': {
-            description: 'A product',
-            properties: {
-              data: {
-                type: 'object',
-                required: ['id'],
-                properties: { id: { type: 'string' } },
+        default: {
+          tagging: 1,
+          globals: { required: ['country'] },
+          events: {
+            product: {
+              '*': {
+                properties: {
+                  data: {
+                    type: 'object',
+                    required: ['id'],
+                    properties: { id: { type: 'string' } },
+                  },
+                },
               },
             },
           },
+        },
+        web: {
+          extends: 'default',
+          consent: { required: ['analytics'] },
         },
       },
       flows: {
@@ -36,27 +44,14 @@ describe('Contract schema validation', () => {
     expect(result.success).toBe(true);
   });
 
-  it('should accept a config with contract', () => {
-    const result = SettingsSchema.safeParse({
-      web: {},
-      contract: {
-        product: {
-          add: {
-            properties: {
-              data: { type: 'object', required: ['quantity'] },
-            },
-          },
-        },
-      },
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it('should accept contract with any values (validation done by CLI)', () => {
-    // Zod schema is permissive — detailed validation happens in CLI validator
+  it('should accept contract with only sections, no events', () => {
     const result = ConfigSchema.safeParse({
       version: 2,
-      contract: { $tagging: 'v1' },
+      contract: {
+        consent_only: {
+          consent: { required: ['analytics'] },
+        },
+      },
       flows: { default: { web: {} } },
     });
     expect(result.success).toBe(true);
@@ -68,5 +63,16 @@ describe('Contract schema validation', () => {
       flows: { default: { web: {} } },
     });
     expect(result.success).toBe(true);
+  });
+
+  it('should reject contract entry with invalid tagging', () => {
+    const result = ConfigSchema.safeParse({
+      version: 2,
+      contract: {
+        web: { tagging: -1 },
+      },
+      flows: { default: { web: {} } },
+    });
+    expect(result.success).toBe(false);
   });
 });

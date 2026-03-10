@@ -7,12 +7,7 @@
  */
 
 import type { Flow } from './types';
-import {
-  resolveContract,
-  getContractEvents,
-  getContractSections,
-  mergeContractSchemas,
-} from './contract';
+import { resolveContracts } from './contract';
 import { throwError } from './throwError';
 
 /**
@@ -55,10 +50,48 @@ export interface ResolveOptions {
 }
 
 /**
+ * Walk a dot-separated path into a value.
+ * Throws if any intermediate segment is missing or not an object.
+ */
+export function walkPath(
+  value: unknown,
+  path: string,
+  refPrefix: string,
+): unknown {
+  const segments = path.split('.');
+  let current = value;
+
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+    if (
+      current === null ||
+      current === undefined ||
+      typeof current !== 'object'
+    ) {
+      const visited = segments.slice(0, i).join('.');
+      throwError(
+        `Path "${path}" not found in "${refPrefix}": "${segment}" does not exist${visited ? ` in "${visited}"` : ''}`,
+      );
+    }
+    const obj = current as Record<string, unknown>;
+    if (!(segment in obj)) {
+      const visited = segments.slice(0, i).join('.');
+      throwError(
+        `Path "${path}" not found in "${refPrefix}": "${segment}" does not exist${visited ? ` in "${visited}"` : ''}`,
+      );
+    }
+    current = obj[segment];
+  }
+
+  return current;
+}
+
+/**
  * Resolve all dynamic patterns in a value.
  *
  * Patterns:
  * - $def.name → Look up definitions[name], replace entire value with definition content
+ * - $def.name.path → Look up definitions[name], then walk dot-separated path
  * - $var.name → Look up variables[name]
  * - $env.NAME or $env.NAME:default → Look up process.env[NAME]
  */
@@ -67,22 +100,57 @@ function resolvePatterns(
   variables: Flow.Variables,
   definitions: Flow.Definitions,
   options?: ResolveOptions,
+  resolvedContracts?: Record<string, Flow.ContractEntry>,
 ): unknown {
   if (typeof value === 'string') {
-    // Check if entire string is a $def.name reference (replaces whole value)
-    const defMatch = value.match(/^\$def\.([a-zA-Z_][a-zA-Z0-9_]*)$/);
+    // Check if entire string is a $def reference with optional deep path
+    const defMatch = value.match(
+      /^\$def\.([a-zA-Z_][a-zA-Z0-9_]*)(?:\.(.+))?$/,
+    );
     if (defMatch) {
       const defName = defMatch[1];
+      const path = defMatch[2]; // e.g., "nested.deep" or undefined
+
       if (definitions[defName] === undefined) {
         throwError(`Definition "${defName}" not found`);
       }
-      // Return the definition content (recursively resolved)
-      return resolvePatterns(
+
+      // Resolve the definition content recursively first
+      let resolved = resolvePatterns(
         definitions[defName],
         variables,
         definitions,
         options,
+        resolvedContracts,
       );
+
+      // Walk deep path if present
+      if (path) {
+        resolved = walkPath(resolved, path, `$def.${defName}`);
+      }
+
+      return resolved;
+    }
+
+    // Check if entire string is a $contract reference with path
+    const contractMatch = value.match(
+      /^\$contract\.([a-zA-Z_][a-zA-Z0-9_]*)(?:\.(.+))?$/,
+    );
+    if (contractMatch && resolvedContracts) {
+      const contractName = contractMatch[1];
+      const path = contractMatch[2];
+
+      if (!(contractName in resolvedContracts)) {
+        throwError(`Contract "${contractName}" not found`);
+      }
+
+      let resolved: unknown = resolvedContracts[contractName];
+
+      if (path) {
+        resolved = walkPath(resolved, path, `$contract.${contractName}`);
+      }
+
+      return resolved;
     }
 
     // Replace $var.name patterns (inline substitution)
@@ -125,14 +193,20 @@ function resolvePatterns(
 
   if (Array.isArray(value)) {
     return value.map((item) =>
-      resolvePatterns(item, variables, definitions, options),
+      resolvePatterns(item, variables, definitions, options, resolvedContracts),
     );
   }
 
   if (value !== null && typeof value === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(value)) {
-      result[key] = resolvePatterns(val, variables, definitions, options);
+      result[key] = resolvePatterns(
+        val,
+        variables,
+        definitions,
+        options,
+        resolvedContracts,
+      );
     }
     return result;
   }
@@ -233,6 +307,22 @@ export function getFlowSettings(
   // Deep clone to avoid mutations
   const result = JSON.parse(JSON.stringify(settings)) as Flow.Settings;
 
+  // Pre-process contracts: resolve $def inside contracts, then extends + wildcards
+  let resolvedContracts: Record<string, Flow.ContractEntry> | undefined;
+  if (config.contract) {
+    // Two-pass: resolve $def/$var/$env inside contract first
+    const vars = mergeVariables(config.variables, settings.variables);
+    const defs = mergeDefinitions(config.definitions, settings.definitions);
+    const resolvedContractInput = resolvePatterns(
+      config.contract,
+      vars,
+      defs,
+      options,
+    ) as Flow.Contract;
+
+    resolvedContracts = resolveContracts(resolvedContractInput);
+  }
+
   // Process sources with variable and definition cascade
   if (result.sources) {
     for (const [name, source] of Object.entries(result.sources)) {
@@ -252,9 +342,16 @@ export function getFlowSettings(
         vars,
         defs,
         options,
+        resolvedContracts,
       );
 
-      const processedEnv = resolvePatterns(source.env, vars, defs, options);
+      const processedEnv = resolvePatterns(
+        source.env,
+        vars,
+        defs,
+        options,
+        resolvedContracts,
+      );
 
       // Resolve code from package reference
       const resolvedCode = resolveCodeFromPackage(
@@ -296,9 +393,21 @@ export function getFlowSettings(
         dest.definitions,
       );
 
-      const processedConfig = resolvePatterns(dest.config, vars, defs, options);
+      const processedConfig = resolvePatterns(
+        dest.config,
+        vars,
+        defs,
+        options,
+        resolvedContracts,
+      );
 
-      const processedEnv = resolvePatterns(dest.env, vars, defs, options);
+      const processedEnv = resolvePatterns(
+        dest.env,
+        vars,
+        defs,
+        options,
+        resolvedContracts,
+      );
 
       // Resolve code from package reference
       const resolvedCode = resolveCodeFromPackage(
@@ -344,9 +453,16 @@ export function getFlowSettings(
         vars,
         defs,
         options,
+        resolvedContracts,
       );
 
-      const processedEnv = resolvePatterns(store.env, vars, defs, options);
+      const processedEnv = resolvePatterns(
+        store.env,
+        vars,
+        defs,
+        options,
+        resolvedContracts,
+      );
 
       const resolvedCode = resolveCodeFromPackage(
         store.package,
@@ -389,6 +505,7 @@ export function getFlowSettings(
         vars,
         defs,
         options,
+        resolvedContracts,
       );
 
       const processedEnv = resolvePatterns(
@@ -396,6 +513,7 @@ export function getFlowSettings(
         vars,
         defs,
         options,
+        resolvedContracts,
       );
 
       const resolvedCode = resolveCodeFromPackage(
@@ -432,193 +550,12 @@ export function getFlowSettings(
       vars,
       defs,
       options,
+      resolvedContracts,
     );
     result.collector = processedCollector as typeof result.collector;
   }
 
-  // Resolve $contract references
-  const configContract = config.contract;
-  const settingsContract = settings.contract;
-
-  if (configContract || settingsContract) {
-    // Collect all entity-action pairs from both contracts
-    const entityActions = collectEntityActions(
-      configContract,
-      settingsContract,
-    );
-
-    // Resolve each pair and build Mapping.Rules<ContractRule>
-    const resolvedRules: Record<
-      string,
-      Record<string, { schema: Record<string, unknown> }>
-    > = {};
-
-    for (const [entity, action] of entityActions) {
-      const resolved = resolveContract(
-        configContract || ({} as Flow.Contract),
-        entity,
-        action,
-        settingsContract,
-      );
-
-      if (Object.keys(resolved).length > 0) {
-        if (!resolvedRules[entity]) resolvedRules[entity] = {};
-        resolvedRules[entity][action] = {
-          schema: stripAnnotations(resolved),
-        };
-      }
-    }
-
-    // Resolve section references ($globals, $context, $custom, $user, $consent)
-    const setupSections = configContract
-      ? getContractSections(configContract)
-      : {};
-    const configSections = settingsContract
-      ? getContractSections(settingsContract)
-      : {};
-
-    const mergedSections: Record<string, Record<string, unknown>> = {};
-    for (const key of [
-      'globals',
-      'context',
-      'custom',
-      'user',
-      'consent',
-    ] as const) {
-      const s = setupSections[key];
-      const c = configSections[key];
-      if (s && c) {
-        mergedSections[key] = mergeContractSchemas(s, c);
-      } else if (s || c) {
-        mergedSections[key] = (s || c)!;
-      }
-    }
-
-    // Replace $contract and section references in transformer configs
-    if (result.transformers) {
-      for (const [, transformer] of Object.entries(result.transformers)) {
-        replaceContractRef(transformer.config, resolvedRules);
-        for (const [sectionKey, schema] of Object.entries(mergedSections)) {
-          replaceSectionRef(
-            transformer.config,
-            `$${sectionKey}`,
-            stripAnnotations(schema),
-          );
-        }
-      }
-    }
-
-    // Inject $tagging into collector.tagging (if not already set)
-    const tagging = configContract?.$tagging ?? settingsContract?.$tagging;
-    if (typeof tagging === 'number') {
-      const collector = (result.collector || {}) as Record<string, unknown>;
-      if (collector.tagging === undefined) {
-        collector.tagging = tagging;
-      }
-      result.collector = collector as typeof result.collector;
-    }
-  }
-
   return result;
-}
-
-/**
- * Collect unique entity-action pairs from contracts (excluding metadata keys).
- */
-function collectEntityActions(
-  ...contracts: (Flow.Contract | undefined)[]
-): Array<[string, string]> {
-  const pairs = new Set<string>();
-  const allEntities = new Set<string>();
-  const allActions = new Set<string>();
-
-  for (const contract of contracts) {
-    if (!contract) continue;
-    const events = getContractEvents(contract);
-
-    for (const entity of Object.keys(events)) {
-      if (entity === '*') continue;
-      allEntities.add(entity);
-      const actions = events[entity];
-      if (actions && typeof actions === 'object') {
-        for (const action of Object.keys(actions as Record<string, unknown>)) {
-          if (action !== '*') {
-            allActions.add(action);
-            pairs.add(`${entity}\0${action}`);
-          }
-        }
-      }
-    }
-  }
-
-  // Expand wildcards against all known entities/actions
-  for (const entity of allEntities) {
-    for (const action of allActions) {
-      pairs.add(`${entity}\0${action}`);
-    }
-  }
-
-  return [...pairs].map((p) => p.split('\0') as [string, string]);
-}
-
-/** Annotation keys to strip from AJV-compatible schemas */
-const ANNOTATION_KEYS = new Set([
-  'description',
-  'examples',
-  'title',
-  '$comment',
-]);
-
-/**
- * Strip annotation-only keys from a resolved schema (deep).
- */
-function stripAnnotations(
-  schema: Record<string, unknown>,
-): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(schema)) {
-    if (ANNOTATION_KEYS.has(key)) continue;
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      result[key] = stripAnnotations(value as Record<string, unknown>);
-    } else {
-      result[key] = value;
-    }
-  }
-  return result;
-}
-
-/**
- * Replace "$contract" string references in transformer config with resolved rules.
- */
-function replaceContractRef(config: unknown, resolved: unknown): void {
-  if (!config || typeof config !== 'object') return;
-  const obj = config as Record<string, unknown>;
-  for (const key of Object.keys(obj)) {
-    if (obj[key] === '$contract') {
-      obj[key] = resolved;
-    } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-      replaceContractRef(obj[key], resolved);
-    }
-  }
-}
-
-/**
- * Replace "$<section>" string references in transformer config with resolved schema.
- */
-function replaceSectionRef(
-  config: unknown,
-  ref: string,
-  resolved: unknown,
-): void {
-  if (!config || typeof config !== 'object') return;
-  const obj = config as Record<string, unknown>;
-  for (const key of Object.keys(obj)) {
-    if (obj[key] === ref) {
-      obj[key] = resolved;
-    } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-      replaceSectionRef(obj[key], ref, resolved);
-    }
-  }
 }
 
 /**

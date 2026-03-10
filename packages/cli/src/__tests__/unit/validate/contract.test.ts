@@ -2,156 +2,88 @@ import { describe, it, expect } from '@jest/globals';
 import { validateContract } from '../../../commands/validate/validators/contract.js';
 
 describe('validateContract', () => {
-  it('passes valid contract', () => {
+  it('should validate a valid named contract', () => {
     const result = validateContract({
-      $tagging: 1,
-      product: {
-        '*': {
-          description: 'A product',
-          properties: {
-            data: { type: 'object', required: ['id'] },
-          },
-        },
-        add: {
-          properties: {
-            data: { type: 'object', required: ['qty'] },
-          },
-        },
+      default: {
+        tagging: 1,
+        globals: { required: ['country'] },
+        consent: { required: ['analytics'] },
       },
-    });
-    expect(result.valid).toBe(true);
-    expect(result.errors).toHaveLength(0);
-  });
-
-  it('fails when $tagging is not a positive integer', () => {
-    const result = validateContract({
-      $tagging: -1,
-      product: { view: {} },
-    });
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContainEqual(
-      expect.objectContaining({ code: 'INVALID_TAGGING' }),
-    );
-  });
-
-  it('fails when $tagging is a string', () => {
-    const result = validateContract({
-      $tagging: 'v1',
-      product: { view: {} },
-    });
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContainEqual(
-      expect.objectContaining({ code: 'INVALID_TAGGING' }),
-    );
-  });
-
-  it('fails when entity key is empty', () => {
-    const result = validateContract({
-      '': { view: {} },
-    });
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContainEqual(
-      expect.objectContaining({ code: 'INVALID_ENTITY_KEY' }),
-    );
-  });
-
-  it('fails when action key is empty', () => {
-    const result = validateContract({
-      product: { '': { properties: {} } },
-    });
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContainEqual(
-      expect.objectContaining({ code: 'INVALID_ACTION_KEY' }),
-    );
-  });
-
-  it('fails when entry is not an object', () => {
-    const result = validateContract({
-      product: { view: 'not-an-object' },
-    });
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContainEqual(
-      expect.objectContaining({ code: 'INVALID_SCHEMA_ENTRY' }),
-    );
-  });
-
-  it('accepts wildcard entity and action keys', () => {
-    const result = validateContract({
-      '*': {
-        '*': { properties: { consent: { required: ['analytics'] } } },
-      },
-    });
-    expect(result.valid).toBe(true);
-  });
-
-  it('reports entity and action counts in details', () => {
-    const result = validateContract({
-      $tagging: 1,
-      product: {
-        '*': { properties: {} },
-        view: { properties: {} },
-        add: { properties: {} },
-      },
-      order: {
-        complete: { properties: {} },
-      },
-    });
-    expect(result.valid).toBe(true);
-    expect(result.details.entityCount).toBe(2);
-    expect(result.details.actionCount).toBe(4);
-    expect(result.details.tagging).toBe(1);
-  });
-
-  it('passes empty contract', () => {
-    const result = validateContract({});
-    expect(result.valid).toBe(true);
-  });
-});
-
-describe('v2 contract validation', () => {
-  it('should validate a valid v2 contract', () => {
-    const result = validateContract({
-      version: 2,
-      $tagging: 1,
-      globals: {
-        type: 'object',
-        required: ['country'],
-        properties: {
-          country: { type: 'string' },
-        },
-      },
-      events: {
-        product: {
-          add: {
-            properties: {
-              data: { required: ['id'] },
-            },
+      web: {
+        extends: 'default',
+        events: {
+          product: {
+            add: { properties: { data: { required: ['id'] } } },
           },
         },
       },
     });
     expect(result.valid).toBe(true);
-    expect(result.details.entityCount).toBe(1);
-    expect(result.details.actionCount).toBe(1);
-    expect(result.details.sections).toEqual(['globals']);
+    expect(result.details.contractCount).toBe(2);
+  });
+
+  it('should report error for non-object input', () => {
+    const result = validateContract('not an object');
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].code).toBe('INVALID_CONTRACT');
+  });
+
+  it('should report error for invalid tagging', () => {
+    const result = validateContract({
+      web: { tagging: -1 },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].code).toBe('INVALID_TAGGING');
+  });
+
+  it('should report error for tagging as string', () => {
+    const result = validateContract({
+      web: { tagging: 'v1' },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].code).toBe('INVALID_TAGGING');
+  });
+
+  it('should report error for extends referencing non-existent contract', () => {
+    const result = validateContract({
+      web: { extends: 'nonExistent' },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].code).toBe('INVALID_EXTENDS');
+  });
+
+  it('should report error for circular extends', () => {
+    const result = validateContract({
+      a: { extends: 'b' },
+      b: { extends: 'a' },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].code).toBe('CIRCULAR_EXTENDS');
+  });
+
+  it('should report error for self-referencing extends', () => {
+    const result = validateContract({
+      web: { extends: 'web' },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].code).toBe('CIRCULAR_EXTENDS');
   });
 
   it('should report error for invalid section type', () => {
     const result = validateContract({
-      version: 2,
-      globals: 'not an object',
-      events: {},
+      web: { globals: 'not an object' },
     });
     expect(result.valid).toBe(false);
     expect(result.errors[0].code).toBe('INVALID_SECTION');
   });
 
-  it('should validate events section like legacy entities', () => {
+  it('should validate events entity-action structure', () => {
     const result = validateContract({
-      version: 2,
-      events: {
-        product: {
-          '': { properties: {} },
+      web: {
+        events: {
+          product: {
+            '': { properties: {} },
+          },
         },
       },
     });
@@ -159,14 +91,65 @@ describe('v2 contract validation', () => {
     expect(result.errors[0].code).toBe('INVALID_ACTION_KEY');
   });
 
-  it('should accept v2 with description', () => {
+  it('should accept contract with only consent', () => {
     const result = validateContract({
-      version: 2,
-      description: 'Web shop tracking',
-      events: {
-        product: { view: {} },
+      consent_only: {
+        consent: { required: ['analytics'] },
       },
     });
     expect(result.valid).toBe(true);
+  });
+
+  it('should accept empty contract', () => {
+    const result = validateContract({});
+    expect(result.valid).toBe(true);
+    expect(result.details.contractCount).toBe(0);
+  });
+
+  it('should accept wildcard entity and action keys', () => {
+    const result = validateContract({
+      web: {
+        events: {
+          '*': {
+            '*': { properties: { consent: { required: ['analytics'] } } },
+          },
+          product: {
+            '*': { properties: { data: { required: ['id'] } } },
+            add: { properties: {} },
+          },
+        },
+      },
+    });
+    expect(result.valid).toBe(true);
+  });
+
+  it('should report error for non-object contract entry', () => {
+    const result = validateContract({
+      web: 'not an object',
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].code).toBe('INVALID_CONTRACT_ENTRY');
+  });
+
+  it('should accept contract with description', () => {
+    const result = validateContract({
+      web: {
+        description: 'Web shop tracking',
+        events: {
+          product: { view: {} },
+        },
+      },
+    });
+    expect(result.valid).toBe(true);
+  });
+
+  it('should validate deep extends chain', () => {
+    const result = validateContract({
+      default: { consent: { required: ['analytics'] } },
+      web: { extends: 'default', events: { product: { view: {} } } },
+      web_loggedin: { extends: 'web', user: { required: ['id'] } },
+    });
+    expect(result.valid).toBe(true);
+    expect(result.details.contractCount).toBe(3);
   });
 });

@@ -390,17 +390,46 @@ export const ContractEventsSchema = z
   .describe('Entity-action event schemas');
 
 /**
- * Full contract definition.
- * Supports legacy (flat entity-action map) and v2 (structured sections).
- *
- * Legacy: { "$tagging": 1, "product": { "add": { ... } } }
- * v2: { "version": 2, "globals": { ... }, "events": { "product": { "add": { ... } } } }
+ * Single named contract entry.
+ */
+export const ContractEntrySchema = z
+  .object({
+    extends: z
+      .string()
+      .optional()
+      .describe('Inherit from another named contract'),
+    tagging: z
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .describe('Contract version number'),
+    description: z.string().optional().describe('Human-readable description'),
+    globals: ContractSchemaEntry.optional().describe(
+      'JSON Schema for event.globals',
+    ),
+    context: ContractSchemaEntry.optional().describe(
+      'JSON Schema for event.context',
+    ),
+    custom: ContractSchemaEntry.optional().describe(
+      'JSON Schema for event.custom',
+    ),
+    user: ContractSchemaEntry.optional().describe('JSON Schema for event.user'),
+    consent: ContractSchemaEntry.optional().describe(
+      'JSON Schema for event.consent',
+    ),
+    events: ContractEventsSchema.optional().describe(
+      'Entity-action event schemas',
+    ),
+  })
+  .describe('Named contract entry with optional sections and events');
+
+/**
+ * Named contract map.
  */
 export const ContractSchema = z
-  .record(z.string(), z.unknown())
-  .describe(
-    'Data contract: legacy flat entity-action map or v2 structured sections with globals/context/user/consent/custom/events',
-  );
+  .record(z.string(), ContractEntrySchema)
+  .describe('Named contracts with optional extends inheritance');
 
 // ========================================
 // Flow Settings Schema (Single Flow)
@@ -421,9 +450,6 @@ export const SettingsSchema = z
     ),
     server: ServerSchema.optional().describe(
       'Server platform configuration (Node.js). Mutually exclusive with web.',
-    ),
-    contract: ContractSchema.optional().describe(
-      'Flow-level data contract (merges on top of Config-level contract)',
     ),
     sources: z
       .record(z.string(), SourceReferenceSchema)
@@ -521,7 +547,7 @@ const ConfigV1Schema = ConfigBaseSchema.extend({
 const ConfigV2Schema = ConfigBaseSchema.extend({
   version: z.literal(2).describe('Configuration schema version 2'),
   contract: ContractSchema.optional().describe(
-    'Data contract: entity-action keyed JSON Schema with additive inheritance',
+    'Named contracts with extends inheritance and dot-path references',
   ),
 }).describe('walkerOS v2 configuration with data contracts');
 

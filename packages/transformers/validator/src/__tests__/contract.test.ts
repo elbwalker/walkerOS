@@ -59,13 +59,11 @@ describe('Contract Integration Tests', () => {
       const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
         settings: {
           format: false,
-          contract: {
+          events: {
             product: {
               '*': {
-                schema: {
-                  properties: {
-                    data: { required: ['id'] },
-                  },
+                properties: {
+                  data: { required: ['id'] },
                 },
               },
             },
@@ -73,7 +71,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = await transformerValidator(context);
+      const transformer = transformerValidator(context);
 
       // Any product action should match
       const viewEvent = createEvent('product', 'view', { id: '123' });
@@ -95,13 +93,11 @@ describe('Contract Integration Tests', () => {
       const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
         settings: {
           format: false,
-          contract: {
+          events: {
             '*': {
               purchase: {
-                schema: {
-                  properties: {
-                    data: { required: ['value'] },
-                  },
+                properties: {
+                  data: { required: ['value'] },
                 },
               },
             },
@@ -109,7 +105,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = await transformerValidator(context);
+      const transformer = transformerValidator(context);
 
       const event = createEvent('item', 'purchase', { value: 100 });
 
@@ -124,13 +120,11 @@ describe('Contract Integration Tests', () => {
       const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
         settings: {
           format: false,
-          contract: {
+          events: {
             '*': {
               '*': {
-                schema: {
-                  properties: {
-                    data: { type: 'object' },
-                  },
+                properties: {
+                  data: { type: 'object' },
                 },
               },
             },
@@ -138,7 +132,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = await transformerValidator(context);
+      const transformer = transformerValidator(context);
 
       const event = createEvent('anything', 'random', { foo: 'bar' });
 
@@ -153,20 +147,16 @@ describe('Contract Integration Tests', () => {
       const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
         settings: {
           format: false,
-          contract: {
+          events: {
             product: {
               view: {
-                schema: {
-                  properties: {
-                    data: { required: ['id', 'name'] }, // Stricter
-                  },
+                properties: {
+                  data: { required: ['id', 'name'] }, // Stricter
                 },
               },
               '*': {
-                schema: {
-                  properties: {
-                    data: { required: ['id'] }, // Less strict
-                  },
+                properties: {
+                  data: { required: ['id'] }, // Less strict
                 },
               },
             },
@@ -174,7 +164,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = await transformerValidator(context);
+      const transformer = transformerValidator(context);
 
       // Missing 'name' should fail exact match
       const event = createEvent('product', 'view', { id: '123' });
@@ -187,113 +177,16 @@ describe('Contract Integration Tests', () => {
     });
   });
 
-  describe('Conditional Rules', () => {
-    it('should use first matching condition', async () => {
-      const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
-        settings: {
-          format: false,
-          contract: {
-            product: {
-              add: [
-                {
-                  condition: (event) => Number(event.data?.quantity ?? 0) > 10,
-                  schema: {
-                    properties: {
-                      data: { required: ['id', 'quantity', 'warehouse'] },
-                    },
-                  },
-                },
-                {
-                  // Default (no condition)
-                  schema: {
-                    properties: {
-                      data: { required: ['id', 'quantity'] },
-                    },
-                  },
-                },
-              ],
-            },
-          },
-        },
-      };
-      const context = createContext(config);
-      const transformer = await transformerValidator(context);
-
-      // High quantity - needs warehouse
-      const bulkEvent = createEvent('product', 'add', {
-        id: '123',
-        quantity: 15,
-        warehouse: 'WH-1',
-      });
-      expect(await transformer.push(bulkEvent, context)).toEqual({
-        event: bulkEvent,
-      });
-
-      // High quantity without warehouse - should fail
-      const bulkEventNoWarehouse = createEvent('product', 'add', {
-        id: '123',
-        quantity: 15,
-      });
-      expect(await transformer.push(bulkEventNoWarehouse, context)).toBe(false);
-
-      // Low quantity - uses default rule
-      const smallEvent = createEvent('product', 'add', {
-        id: '456',
-        quantity: 5,
-      });
-      expect(await transformer.push(smallEvent, context)).toEqual({
-        event: smallEvent,
-      });
-    });
-
-    it('should fall back to rule without condition', async () => {
-      const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
-        settings: {
-          format: false,
-          contract: {
-            product: {
-              view: [
-                {
-                  condition: () => false, // Never matches
-                  schema: {
-                    properties: {
-                      data: { required: ['never'] },
-                    },
-                  },
-                },
-                {
-                  schema: {
-                    properties: {
-                      data: { required: ['id'] },
-                    },
-                  },
-                },
-              ],
-            },
-          },
-        },
-      };
-      const context = createContext(config);
-      const transformer = await transformerValidator(context);
-
-      const event = createEvent('product', 'view', { id: '123' });
-
-      expect(await transformer.push(event, context)).toEqual({ event });
-    });
-  });
-
   describe('Lazy Compilation Caching', () => {
     it('should reuse compiled validators', async () => {
       const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
         settings: {
           format: false,
-          contract: {
+          events: {
             product: {
               view: {
-                schema: {
-                  properties: {
-                    data: { required: ['id'] },
-                  },
+                properties: {
+                  data: { required: ['id'] },
                 },
               },
             },
@@ -301,7 +194,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = await transformerValidator(context);
+      const transformer = transformerValidator(context);
 
       const event1 = createEvent('product', 'view', { id: '123' });
       const event2 = createEvent('product', 'view', { id: '456' });
@@ -332,13 +225,11 @@ describe('Contract Integration Tests', () => {
       const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
         settings: {
           format: false,
-          contract: {
+          events: {
             order: {
               complete: {
-                schema: {
-                  properties: {
-                    data: { required: ['total'] },
-                  },
+                properties: {
+                  data: { required: ['total'] },
                 },
               },
             },
@@ -346,7 +237,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = await transformerValidator(context);
+      const transformer = transformerValidator(context);
 
       // Different entity/action - no matching rule
       const event = createEvent('product', 'view', { anything: 'goes' });
@@ -356,15 +247,15 @@ describe('Contract Integration Tests', () => {
       expect(mockLogger.debug).not.toHaveBeenCalled();
     });
 
-    it('should pass events when contract is not configured', async () => {
+    it('should pass events when events is not configured', async () => {
       const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
         settings: {
           format: false,
-          // No contract
+          // No events
         },
       };
       const context = createContext(config);
-      const transformer = await transformerValidator(context);
+      const transformer = transformerValidator(context);
 
       const event = createEvent('any', 'event', {});
 
@@ -377,13 +268,11 @@ describe('Contract Integration Tests', () => {
       const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
         settings: {
           format: true,
-          contract: {
+          events: {
             product: {
               view: {
-                schema: {
-                  properties: {
-                    data: { required: ['id'] },
-                  },
+                properties: {
+                  data: { required: ['id'] },
                 },
               },
             },
@@ -391,7 +280,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = await transformerValidator(context);
+      const transformer = transformerValidator(context);
 
       const event = createEvent('product', 'view', { id: '123' });
 
@@ -402,13 +291,11 @@ describe('Contract Integration Tests', () => {
       const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
         settings: {
           format: true,
-          contract: {
+          events: {
             product: {
               view: {
-                schema: {
-                  properties: {
-                    data: { required: ['id'] },
-                  },
+                properties: {
+                  data: { required: ['id'] },
                 },
               },
             },
@@ -416,7 +303,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = await transformerValidator(context);
+      const transformer = transformerValidator(context);
 
       const invalidEvent = {
         ...createEvent('product', 'view', { id: '123' }),

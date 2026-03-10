@@ -220,8 +220,13 @@ describe('validateFlowConfig', () => {
   it('returns context with contract entities', () => {
     const json = JSON.stringify(
       {
-        version: 1,
-        contract: { $tagging: 1, page: { view: {}, read: {} } },
+        version: 2,
+        contract: {
+          default: {
+            tagging: 1,
+            events: { page: { view: {}, read: {} } },
+          },
+        },
         flows: { default: { web: {} } },
       },
       null,

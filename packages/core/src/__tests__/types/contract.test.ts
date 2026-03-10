@@ -1,23 +1,39 @@
 import type { Flow } from '../../types';
 
 describe('Contract types', () => {
-  it('should accept a valid contract at Setup level', () => {
+  it('should accept a valid named contract at Config level', () => {
     const setup: Flow.Config = {
       version: 2,
       contract: {
-        $tagging: 1,
-        product: {
-          '*': {
-            description: 'A product',
+        default: {
+          tagging: 1,
+          description: 'Base contract',
+          globals: {
+            required: ['country'],
             properties: {
-              data: {
-                type: 'object',
-                required: ['id'],
+              country: { type: 'string' },
+            },
+          },
+          events: {
+            product: {
+              '*': {
                 properties: {
-                  id: { type: 'string', description: 'Product SKU' },
+                  data: {
+                    type: 'object',
+                    required: ['id'],
+                    properties: {
+                      id: { type: 'string', description: 'Product SKU' },
+                    },
+                  },
                 },
               },
             },
+          },
+        },
+        web: {
+          extends: 'default',
+          consent: {
+            required: ['analytics'],
           },
         },
       },
@@ -28,25 +44,15 @@ describe('Contract types', () => {
     expect(setup.contract).toBeDefined();
   });
 
-  it('should accept contract at Settings level', () => {
-    const config: Flow.Settings = {
-      web: {},
-      contract: {
-        product: {
-          add: {
-            properties: {
-              data: {
-                type: 'object',
-                required: ['quantity'],
-                properties: {
-                  quantity: { type: 'integer', minimum: 1 },
-                },
-              },
-            },
-          },
-        },
+  it('should accept contract with extends chain', () => {
+    const contract: Flow.Contract = {
+      default: { tagging: 1 },
+      web: { extends: 'default', events: { product: { view: {} } } },
+      web_loggedin: {
+        extends: 'web',
+        user: { required: ['id'] },
       },
     };
-    expect(config.contract).toBeDefined();
+    expect(Object.keys(contract)).toHaveLength(3);
   });
 });

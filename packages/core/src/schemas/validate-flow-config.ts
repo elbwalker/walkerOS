@@ -106,7 +106,6 @@ function extractContext(
 
     mergeVars(variables, config.variables);
     mergeDefs(definitions, config.definitions);
-    extractContractEntities(contractEntities, config.contract);
 
     for (const type of ['sources', 'destinations', 'transformers'] as const) {
       const stepType =
@@ -307,16 +306,24 @@ function extractContractEntities(
   contract: unknown,
 ): void {
   if (!isObject(contract)) return;
-  for (const [key, value] of Object.entries(contract)) {
-    if (key.startsWith('$') || !isObject(value)) continue;
-    const existing = target.find((e) => e.entity === key);
-    const actions = Object.keys(value);
-    if (existing) {
-      for (const a of actions) {
-        if (!existing.actions.includes(a)) existing.actions.push(a);
+
+  // Named contracts: iterate each named entry
+  for (const [, entry] of Object.entries(contract)) {
+    if (!isObject(entry)) continue;
+    const events = entry.events;
+    if (!isObject(events)) continue;
+
+    for (const [entity, actions] of Object.entries(events)) {
+      if (!isObject(actions)) continue;
+      const existing = target.find((e) => e.entity === entity);
+      const actionNames = Object.keys(actions);
+      if (existing) {
+        for (const a of actionNames) {
+          if (!existing.actions.includes(a)) existing.actions.push(a);
+        }
+      } else {
+        target.push({ entity, actions: actionNames });
       }
-    } else {
-      target.push({ entity: key, actions });
     }
   }
 }
