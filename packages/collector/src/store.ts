@@ -52,16 +52,20 @@ export function resolveStoreReferences(
   initializedStores: Store.Stores,
   initConfig: Collector.InitConfig,
 ): void {
-  const rawEntries = Object.entries(rawStores);
-  if (rawEntries.length === 0) return;
+  // Build a lookup: raw store def → initialized instance (O(1) per env value)
+  const lookup = new Map<object, Store.Instance>();
+  for (const [storeId, rawDef] of Object.entries(rawStores)) {
+    if (initializedStores[storeId])
+      lookup.set(rawDef, initializedStores[storeId]);
+  }
+  if (lookup.size === 0) return;
 
   function resolveEnv(env: Record<string, unknown> | undefined) {
     if (!env) return;
     for (const [key, value] of Object.entries(env)) {
-      for (const [storeId, rawDef] of rawEntries) {
-        if (value === rawDef && initializedStores[storeId]) {
-          env[key] = initializedStores[storeId];
-        }
+      if (typeof value === 'object' && value !== null) {
+        const instance = lookup.get(value);
+        if (instance) env[key] = instance;
       }
     }
   }
