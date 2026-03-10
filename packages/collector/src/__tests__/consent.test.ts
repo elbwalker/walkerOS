@@ -7,6 +7,12 @@ describe('consent', () => {
     });
   });
 
+  test('empty object required (same as undefined)', () => {
+    expect(getGrantedConsent({}, { foo: true })).toStrictEqual({
+      foo: true,
+    });
+  });
+
   test('denied', () => {
     expect(
       getGrantedConsent(
