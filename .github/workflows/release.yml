@@ -43,7 +43,7 @@ jobs:
         run: npm run clean
 
       - name: Build
-        run: npm run build
+        run: npx turbo run build --filter='!@walkeros/website'
 
       - name: Test
         run: npm run test
