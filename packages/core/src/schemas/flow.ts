@@ -383,12 +383,23 @@ export const ContractActionsSchema = z
   .describe('Action-level contract entries');
 
 /**
- * Full contract definition — entity → action keyed with optional $tagging.
+ * Contract events map — entity → action keyed.
+ */
+export const ContractEventsSchema = z
+  .record(z.string(), ContractActionsSchema)
+  .describe('Entity-action event schemas');
+
+/**
+ * Full contract definition.
+ * Supports legacy (flat entity-action map) and v2 (structured sections).
+ *
+ * Legacy: { "$tagging": 1, "product": { "add": { ... } } }
+ * v2: { "version": 2, "globals": { ... }, "events": { "product": { "add": { ... } } } }
  */
 export const ContractSchema = z
-  .record(z.string(), z.union([ContractActionsSchema, z.number()]))
+  .record(z.string(), z.unknown())
   .describe(
-    'Data contract: entity-action keyed JSON Schema with additive inheritance',
+    'Data contract: legacy flat entity-action map or v2 structured sections with globals/context/user/consent/custom/events',
   );
 
 // ========================================

@@ -297,7 +297,7 @@ examples).
 | `flow` (default) | Flow.Config  | Schema, references, cross-step examples |
 | `event`          | Event object | Name format, schema, consent            |
 | `mapping`        | Mapping      | Pattern format, rule structure          |
-| `contract`       | Contract     | Entity/action structure                 |
+| `contract`       | Contract     | Entity/action structure, v2 sections    |
 
 Use `--path` for entry validation against package schemas:
 

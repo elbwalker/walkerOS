@@ -16,12 +16,38 @@ export const transformerValidator: Transformer.Init<
 > = (context) => {
   const { config } = context;
   const settings = config.settings || {};
-  const { format = true, contract } = settings;
+  const {
+    format = true,
+    contract,
+    globals,
+    context: ctx,
+    custom,
+    user,
+    consent,
+  } = settings;
 
   const ajv = new Ajv({ allErrors: true, strict: false });
 
   // Pre-compile format validator (runs on every event)
   const formatValidator = format ? ajv.compile(formatSchema) : null;
+
+  // Pre-compile section validators (run on every event)
+  const sectionValidators: Array<{
+    name: string;
+    field: string;
+    validate: ValidateFunction;
+  }> = [];
+
+  const sectionSchemas = { globals, context: ctx, custom, user, consent };
+  for (const [name, schema] of Object.entries(sectionSchemas)) {
+    if (schema) {
+      sectionValidators.push({
+        name,
+        field: name,
+        validate: ajv.compile({ type: 'object', ...schema }),
+      });
+    }
+  }
 
   // Lazy-compiled contract validators - keyed by schema reference
   // Using WeakMap to cache by schema object, handling array rules with conditions
@@ -51,7 +77,18 @@ export const transformerValidator: Transformer.Init<
         return false;
       }
 
-      // 2. Contract validation (lazy compiled)
+      // 2. Section validation (pre-compiled, runs on every event)
+      for (const { name, field, validate } of sectionValidators) {
+        const value = (event as Record<string, unknown>)[field];
+        if (!validate(value)) {
+          logger.error(`${name} validation failed`, {
+            errors: ajv.errorsText(validate.errors),
+          });
+          return false;
+        }
+      }
+
+      // 3. Contract validation (lazy compiled)
       if (contract) {
         // Contract is typed as Mapping.Rules<ContractRule> - cast needed for getMappingEvent
         const { eventMapping: rule, mappingKey } = await getMappingEvent(

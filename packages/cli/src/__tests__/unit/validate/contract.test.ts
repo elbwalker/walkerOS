@@ -107,3 +107,66 @@ describe('validateContract', () => {
     expect(result.valid).toBe(true);
   });
 });
+
+describe('v2 contract validation', () => {
+  it('should validate a valid v2 contract', () => {
+    const result = validateContract({
+      version: 2,
+      $tagging: 1,
+      globals: {
+        type: 'object',
+        required: ['country'],
+        properties: {
+          country: { type: 'string' },
+        },
+      },
+      events: {
+        product: {
+          add: {
+            properties: {
+              data: { required: ['id'] },
+            },
+          },
+        },
+      },
+    });
+    expect(result.valid).toBe(true);
+    expect(result.details.entityCount).toBe(1);
+    expect(result.details.actionCount).toBe(1);
+    expect(result.details.sections).toEqual(['globals']);
+  });
+
+  it('should report error for invalid section type', () => {
+    const result = validateContract({
+      version: 2,
+      globals: 'not an object',
+      events: {},
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].code).toBe('INVALID_SECTION');
+  });
+
+  it('should validate events section like legacy entities', () => {
+    const result = validateContract({
+      version: 2,
+      events: {
+        product: {
+          '': { properties: {} },
+        },
+      },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors[0].code).toBe('INVALID_ACTION_KEY');
+  });
+
+  it('should accept v2 with description', () => {
+    const result = validateContract({
+      version: 2,
+      description: 'Web shop tracking',
+      events: {
+        product: { view: {} },
+      },
+    });
+    expect(result.valid).toBe(true);
+  });
+});

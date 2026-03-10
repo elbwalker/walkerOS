@@ -50,16 +50,71 @@ export type ContractSchema = Record<string, unknown>;
 export type ContractActions = Record<string, ContractSchema>;
 
 /**
+ * Entity-action event map used inside contracts.
+ * Keyed by entity name, each value is an action map.
+ * Use "*" as wildcard for all entities or all actions.
+ */
+export type ContractEvents = Record<string, ContractActions>;
+
+/**
  * Data contract definition.
- * Entity → action keyed JSON Schema with additive inheritance.
+ *
+ * Supports two formats:
+ * - **Legacy (no version):** Flat entity-action map with `$tagging` metadata.
+ *   Entity keys sit at root level alongside `$tagging`.
+ * - **v2 (structured):** Explicit sections mirroring WalkerOS.Event fields.
+ *   Entity-action schemas move under `events`. Top-level sections
+ *   (`globals`, `context`, `custom`, `user`, `consent`) describe
+ *   cross-event properties with JSON Schema.
+ *
+ * The `version` field distinguishes formats:
+ * - Absent: legacy flat format
+ * - 2: structured sections format
  *
  * Special keys:
  * - "$tagging": Contract version number (syncs to event.version.tagging)
- * - "*": Wildcard entity/action (matches all)
+ * - "*": Wildcard entity/action (matches all) — inside `events` for v2
  */
 export interface Contract {
+  /** Contract format version. 2 = structured sections. */
+  version?: number;
+
+  /** Contract version number (syncs to event.version.tagging). */
   $tagging?: number;
-  [entity: string]: ContractActions | number | undefined;
+
+  /** Human-readable description of the contract. */
+  description?: string;
+
+  // --- v3 cross-event sections (JSON Schema for each event field) ---
+
+  /** JSON Schema for event.globals (cross-event properties). */
+  globals?: ContractSchema;
+
+  /** JSON Schema for event.context. */
+  context?: ContractSchema;
+
+  /** JSON Schema for event.custom. */
+  custom?: ContractSchema;
+
+  /** JSON Schema for event.user. */
+  user?: ContractSchema;
+
+  /** JSON Schema for event.consent. */
+  consent?: ContractSchema;
+
+  /** Entity-action event schemas (v3). */
+  events?: ContractEvents;
+
+  // --- v2 legacy entity-action entries (flat map) ---
+
+  /** v2: Entity-action entries keyed by entity name. */
+  [entity: string]:
+    | ContractActions
+    | ContractEvents
+    | ContractSchema
+    | number
+    | string
+    | undefined;
 }
 
 /**

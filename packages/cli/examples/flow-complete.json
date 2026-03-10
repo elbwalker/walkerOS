@@ -35,6 +35,69 @@
       ]
     }
   },
+  "contract": {
+    "version": 2,
+    "$tagging": 1,
+    "description": "Web shop tracking contract",
+    "globals": {
+      "type": "object",
+      "properties": {
+        "environment": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "required": ["functional"],
+      "properties": {
+        "functional": { "type": "boolean", "const": true }
+      }
+    },
+    "events": {
+      "product": {
+        "*": {
+          "description": "A product in the catalog",
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": ["id", "name"],
+              "properties": {
+                "id": { "type": "string", "description": "Product SKU" },
+                "name": { "type": "string", "description": "Display name" }
+              }
+            }
+          }
+        },
+        "add": {
+          "description": "Product added to cart",
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": ["quantity"],
+              "properties": {
+                "quantity": { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
+        }
+      },
+      "order": {
+        "complete": {
+          "description": "Purchase completed",
+          "properties": {
+            "data": {
+              "type": "object",
+              "required": ["id", "total"],
+              "properties": {
+                "id": { "type": "string" },
+                "total": { "type": "number", "minimum": 0 }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "flows": {
     "web": {
       "web": {
@@ -199,19 +262,8 @@
           "package": "@walkeros/transformer-validator",
           "config": {
             "settings": {
-              "contract": {
-                "product": {
-                  "add": {
-                    "schema": {
-                      "properties": {
-                        "data": {
-                          "required": ["id", "name"]
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "contract": "$contract",
+              "globals": "$globals"
             }
           }
         }

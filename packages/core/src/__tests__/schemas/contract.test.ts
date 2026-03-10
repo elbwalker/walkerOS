@@ -52,13 +52,14 @@ describe('Contract schema validation', () => {
     expect(result.success).toBe(true);
   });
 
-  it('should reject non-integer $tagging', () => {
+  it('should accept contract with any values (validation done by CLI)', () => {
+    // Zod schema is permissive — detailed validation happens in CLI validator
     const result = ConfigSchema.safeParse({
       version: 2,
       contract: { $tagging: 'v1' },
       flows: { default: { web: {} } },
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it('should accept v2 setup without contract', () => {

@@ -50,4 +50,19 @@ export interface ValidatorSettings {
    * Schemas lazy-compiled on first match.
    */
   contract?: Contract;
+
+  /** JSON Schema for event.globals — validates on every event. */
+  globals?: JsonSchema;
+
+  /** JSON Schema for event.context — validates on every event. */
+  context?: JsonSchema;
+
+  /** JSON Schema for event.custom — validates on every event. */
+  custom?: JsonSchema;
+
+  /** JSON Schema for event.user — validates on every event. */
+  user?: JsonSchema;
+
+  /** JSON Schema for event.consent — validates on every event. */
+  consent?: JsonSchema;
 }

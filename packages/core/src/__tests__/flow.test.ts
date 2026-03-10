@@ -2383,6 +2383,194 @@ describe('Contract resolution in getFlowSettings', () => {
     expect(schema.properties).toBeDefined();
   });
 
+  test('resolves v2 $contract with globals section', () => {
+    const setup = {
+      version: 2,
+      contract: {
+        version: 2,
+        $tagging: 1,
+        globals: {
+          type: 'object',
+          required: ['country'],
+          properties: {
+            country: { type: 'string', description: 'ISO country code' },
+          },
+        },
+        events: {
+          product: {
+            add: {
+              description: 'Product added',
+              properties: {
+                data: { required: ['id'] },
+              },
+            },
+          },
+        },
+      },
+      flows: {
+        default: {
+          web: {},
+          transformers: {
+            validator: {
+              package: '@walkeros/transformer-validator',
+              config: { settings: { contract: '$contract' } },
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowSettings(setup as any);
+    const settings = (config.transformers?.validator?.config as any)?.settings;
+    // product.add should include globals from top-level
+    const schema = settings.contract.product.add.schema;
+    expect(schema.properties.globals.required).toEqual(['country']);
+    expect(schema.properties.data.required).toEqual(['id']);
+    // Annotations stripped
+    expect(
+      schema.properties.globals.properties.country.description,
+    ).toBeUndefined();
+  });
+
+  test('resolves v2 $contract with consent section', () => {
+    const setup = {
+      version: 2,
+      contract: {
+        version: 2,
+        consent: {
+          type: 'object',
+          required: ['analytics'],
+        },
+        events: {
+          product: {
+            add: {
+              properties: {
+                data: { required: ['id'] },
+              },
+            },
+          },
+          page: {
+            view: {
+              properties: {
+                data: { required: ['url'] },
+              },
+            },
+          },
+        },
+      },
+      flows: {
+        default: {
+          web: {},
+          transformers: {
+            validator: {
+              package: '@walkeros/transformer-validator',
+              config: { settings: { contract: '$contract' } },
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowSettings(setup as any);
+    const settings = (config.transformers?.validator?.config as any)?.settings;
+    // Both events should have consent from top-level
+    expect(
+      settings.contract.product.add.schema.properties.consent.required,
+    ).toEqual(['analytics']);
+    expect(
+      settings.contract.page.view.schema.properties.consent.required,
+    ).toEqual(['analytics']);
+  });
+
+  test('resolves v2 $tagging from contract root', () => {
+    const setup = {
+      version: 2,
+      contract: {
+        version: 2,
+        $tagging: 5,
+        events: {
+          product: { view: {} },
+        },
+      },
+      flows: {
+        default: {
+          web: {},
+          transformers: {
+            validator: {
+              package: '@walkeros/transformer-validator',
+              config: { settings: { contract: '$contract' } },
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowSettings(setup as any);
+    expect((config.collector as any)?.tagging).toBe(5);
+  });
+
+  test('resolves $globals from v2 contract', () => {
+    const setup = {
+      version: 2,
+      contract: {
+        version: 2,
+        globals: {
+          type: 'object',
+          required: ['country'],
+          properties: {
+            country: { type: 'string', description: 'ISO country code' },
+          },
+        },
+        events: {
+          product: { view: {} },
+        },
+      },
+      flows: {
+        default: {
+          web: {},
+          transformers: {
+            validator: {
+              package: '@walkeros/transformer-validator',
+              config: {
+                settings: {
+                  contract: '$contract',
+                  globals: '$globals',
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowSettings(setup as any);
+    const settings = (config.transformers?.validator?.config as any)?.settings;
+    expect(settings.globals).toBeDefined();
+    expect(settings.globals.required).toEqual(['country']);
+    // Description stripped for runtime
+    expect(settings.globals.properties.country.description).toBeUndefined();
+  });
+
+  test('$globals stays as string when no v2 contract', () => {
+    const setup = {
+      version: 2,
+      contract: {
+        $tagging: 1,
+        product: { view: {} },
+      },
+      flows: {
+        default: {
+          web: {},
+          transformers: {
+            validator: {
+              package: '@walkeros/transformer-validator',
+              config: { settings: { globals: '$globals' } },
+            },
+          },
+        },
+      },
+    };
+    const config = getFlowSettings(setup as any);
+    const settings = (config.transformers?.validator?.config as any)?.settings;
+    expect(settings.globals).toBe('$globals');
+  });
+
   test('does nothing when no contract exists', () => {
     const setup = {
       version: 1,
@@ -2402,5 +2590,52 @@ describe('Contract resolution in getFlowSettings', () => {
     const settings = (config.transformers?.validator?.config as any)?.settings;
     // No contract → $contract stays as string (nothing to resolve)
     expect(settings.contract).toBe('$contract');
+  });
+});
+
+describe('v2 contract schema validation', () => {
+  test('accepts valid v2 contract', () => {
+    const config = {
+      version: 2,
+      contract: {
+        version: 2,
+        $tagging: 1,
+        description: 'Test contract',
+        globals: {
+          type: 'object',
+          required: ['country'],
+          properties: {
+            country: { type: 'string' },
+          },
+        },
+        events: {
+          product: {
+            add: {
+              properties: {
+                data: { required: ['id'] },
+              },
+            },
+          },
+        },
+      },
+      flows: {
+        default: { web: {} },
+      },
+    };
+    expect(() => parseConfig(config)).not.toThrow();
+  });
+
+  test('accepts legacy contract (backward compat)', () => {
+    const config = {
+      version: 2,
+      contract: {
+        $tagging: 1,
+        product: { add: { properties: {} } },
+      },
+      flows: {
+        default: { web: {} },
+      },
+    };
+    expect(() => parseConfig(config)).not.toThrow();
   });
 });

@@ -7,7 +7,12 @@
  */
 
 import type { Flow } from './types';
-import { resolveContract } from './contract';
+import {
+  resolveContract,
+  getContractEvents,
+  getContractSections,
+  mergeContractSchemas,
+} from './contract';
 import { throwError } from './throwError';
 
 /**
@@ -464,10 +469,42 @@ export function getFlowSettings(
       }
     }
 
-    // Replace $contract references in transformer configs
+    // Resolve section references ($globals, $context, $custom, $user, $consent)
+    const setupSections = configContract
+      ? getContractSections(configContract)
+      : {};
+    const configSections = settingsContract
+      ? getContractSections(settingsContract)
+      : {};
+
+    const mergedSections: Record<string, Record<string, unknown>> = {};
+    for (const key of [
+      'globals',
+      'context',
+      'custom',
+      'user',
+      'consent',
+    ] as const) {
+      const s = setupSections[key];
+      const c = configSections[key];
+      if (s && c) {
+        mergedSections[key] = mergeContractSchemas(s, c);
+      } else if (s || c) {
+        mergedSections[key] = (s || c)!;
+      }
+    }
+
+    // Replace $contract and section references in transformer configs
     if (result.transformers) {
       for (const [, transformer] of Object.entries(result.transformers)) {
         replaceContractRef(transformer.config, resolvedRules);
+        for (const [sectionKey, schema] of Object.entries(mergedSections)) {
+          replaceSectionRef(
+            transformer.config,
+            `$${sectionKey}`,
+            stripAnnotations(schema),
+          );
+        }
       }
     }
 
@@ -486,49 +523,41 @@ export function getFlowSettings(
 }
 
 /**
- * Collect unique entity-action pairs from contracts (excluding $ metadata keys).
+ * Collect unique entity-action pairs from contracts (excluding metadata keys).
  */
 function collectEntityActions(
   ...contracts: (Flow.Contract | undefined)[]
 ): Array<[string, string]> {
   const pairs = new Set<string>();
-  for (const contract of contracts) {
-    if (!contract) continue;
-    for (const entity of Object.keys(contract)) {
-      if (entity.startsWith('$')) continue;
-      const actions = contract[entity];
-      if (!actions || typeof actions !== 'object') continue;
-      for (const action of Object.keys(actions as Record<string, unknown>)) {
-        if (action !== '*') {
-          pairs.add(`${entity}\0${action}`);
-        }
-      }
-    }
-  }
-  // Also add entity.* pairs expanded against all known actions
-  // For wildcards: we need concrete entity-action combinations
-  // Collect all entities and actions, then combine
   const allEntities = new Set<string>();
   const allActions = new Set<string>();
+
   for (const contract of contracts) {
     if (!contract) continue;
-    for (const entity of Object.keys(contract)) {
-      if (entity.startsWith('$') || entity === '*') continue;
+    const events = getContractEvents(contract);
+
+    for (const entity of Object.keys(events)) {
+      if (entity === '*') continue;
       allEntities.add(entity);
-      const actions = contract[entity];
+      const actions = events[entity];
       if (actions && typeof actions === 'object') {
         for (const action of Object.keys(actions as Record<string, unknown>)) {
-          if (action !== '*') allActions.add(action);
+          if (action !== '*') {
+            allActions.add(action);
+            pairs.add(`${entity}\0${action}`);
+          }
         }
       }
     }
   }
-  // For wildcard entities (*), expand against all known entities
+
+  // Expand wildcards against all known entities/actions
   for (const entity of allEntities) {
     for (const action of allActions) {
       pairs.add(`${entity}\0${action}`);
     }
   }
+
   return [...pairs].map((p) => p.split('\0') as [string, string]);
 }
 
@@ -569,6 +598,25 @@ function replaceContractRef(config: unknown, resolved: unknown): void {
       obj[key] = resolved;
     } else if (typeof obj[key] === 'object' && obj[key] !== null) {
       replaceContractRef(obj[key], resolved);
+    }
+  }
+}
+
+/**
+ * Replace "$<section>" string references in transformer config with resolved schema.
+ */
+function replaceSectionRef(
+  config: unknown,
+  ref: string,
+  resolved: unknown,
+): void {
+  if (!config || typeof config !== 'object') return;
+  const obj = config as Record<string, unknown>;
+  for (const key of Object.keys(obj)) {
+    if (obj[key] === ref) {
+      obj[key] = resolved;
+    } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+      replaceSectionRef(obj[key], ref, resolved);
     }
   }
 }
