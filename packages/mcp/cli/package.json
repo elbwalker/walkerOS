@@ -3,7 +3,6 @@
   "version": "2.1.1",
   "description": "MCP server for local walkerOS development - validate events, bundle flows, simulate pipelines, and discover packages",
   "license": "MIT",
-  "sideEffects": false,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

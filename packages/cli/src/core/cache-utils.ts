@@ -7,6 +7,7 @@
  */
 
 import { getHashServer } from '@walkeros/server-core';
+import semver from 'semver';
 
 const HASH_LENGTH = 12;
 
@@ -14,13 +15,11 @@ const HASH_LENGTH = 12;
  * Check if a version specifier is mutable (can change over time)
  */
 export function isMutableVersion(version: string): boolean {
-  return (
-    version === 'latest' ||
-    version.includes('^') ||
-    version.includes('~') ||
-    version.includes('*') ||
-    version.includes('x')
-  );
+  // Dist tags (latest, next, beta, etc.) are mutable — they can point to
+  // different versions over time, so caching must include a date component.
+  // A version is immutable only if it's an exact semver (e.g., "1.2.3").
+  if (semver.valid(version)) return false;
+  return true;
 }
 
 /**

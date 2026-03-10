@@ -29,6 +29,7 @@ Flow startup order:
 | [**Memory**](./memory) | Web + Server | Process lifetime (lost on restart) | Fastest (in-process) | Caching, deduplication, ephemeral state |
 | [**Filesystem**](./server/fs) | Server only | Disk (survives restarts) | Fast (local I/O) | Local dev, Docker with baked-in assets |
 | [**S3**](./server/s3) | Server only | Cloud (always available) | Network I/O | Managed deployments, shared assets, hot-swap |
+| [**GCS**](./server/gcs) | Server only | Cloud (always available) | Network I/O | Cloud Run / GKE deployments, GCP-native |
 
 ## Wiring stores to components
 
@@ -129,3 +130,9 @@ Local filesystem store for server flows. Reads and writes files relative to a ba
 S3-compatible object storage. Works with AWS S3, Cloudflare R2, Scaleway, DigitalOcean Spaces, Backblaze B2, MinIO, and any S3-compatible provider. The recommended store for managed cloud deployments.
 
 [Learn more &rarr;](./server/s3)
+
+### GCS
+
+Google Cloud Storage with zero runtime dependencies. Built-in auth supports Application Default Credentials (ADC) on Cloud Run / GKE and explicit service account JSON for non-GCP environments. The recommended store for GCP-native deployments.
+
+[Learn more &rarr;](./server/gcs)

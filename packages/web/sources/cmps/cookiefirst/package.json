@@ -3,7 +3,6 @@
   "description": "CookieFirst consent management source for walkerOS",
   "version": "2.1.1",
   "license": "MIT",
-  "sideEffects": false,
   "walkerOS": {
     "type": "source",
     "platform": "web",

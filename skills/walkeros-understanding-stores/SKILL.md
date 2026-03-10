@@ -202,6 +202,26 @@ import { storeS3Init } from '@walkeros/server-store-s3';
 **Primary use case:** Serving static files in managed deployments (Mode D) where
 files live in a bucket rather than being baked into a Docker image.
 
+### `@walkeros/server-store-gcs` (Google Cloud Storage)
+
+Zero-dependency GCS store using raw `fetch` + GCS JSON API. Built-in auth: ADC
+on Cloud Run / GKE, or explicit service account JWT. Server-only.
+
+```typescript
+import { storeGcsInit } from '@walkeros/server-store-gcs';
+```
+
+**Settings:**
+
+| Setting       | Type               | Required | Default | Purpose                  |
+| ------------- | ------------------ | -------- | ------- | ------------------------ |
+| `bucket`      | `string`           | Yes      | —       | GCS bucket name          |
+| `prefix`      | `string`           | No       | —       | Key prefix for scoping   |
+| `credentials` | `string \| object` | No       | ADC     | SA JSON for non-GCP envs |
+
+**Primary use case:** Serving static files on GCP infrastructure (Cloud Run,
+GKE) where ADC provides seamless authentication.
+
 ## Stores vs direct construction
 
 | Approach                        | When to use                                                                    |
@@ -322,6 +342,8 @@ Add `./dev` export to package.json:
   Filesystem store package
 - [packages/server/stores/s3/src/](../../packages/server/stores/s3/src/) - S3
   store package
+- [packages/server/stores/gcs/src/](../../packages/server/stores/gcs/src/) - GCS
+  store package
 
 **Documentation:**
 
@@ -333,4 +355,6 @@ Add `./dev` export to package.json:
 - [Website: FS Store](../../website/docs/stores/server/fs.mdx) - Filesystem
   store documentation
 - [Website: Memory Store](../../website/docs/stores/memory.mdx) - Memory store
+  documentation
+- [Website: GCS Store](../../website/docs/stores/server/gcs.mdx) - GCS store
   documentation

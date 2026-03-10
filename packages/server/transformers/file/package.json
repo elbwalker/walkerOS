@@ -3,7 +3,6 @@
   "description": "File serving transformer for walkerOS - serves static files via pluggable Store backend",
   "version": "2.1.0",
   "license": "MIT",
-  "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

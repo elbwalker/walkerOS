@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "MCP server for walkerOS data-elb HTML tagging — generate, parse, and validate tracking attributes with real DOM parsing",
   "license": "MIT",
-  "sideEffects": false,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -3,7 +3,6 @@
   "description": "Google Cloud Platform server sources for walkerOS (Cloud Functions)",
   "version": "2.1.1",
   "license": "MIT",
-  "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
