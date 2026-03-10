@@ -66,7 +66,7 @@ describe('globals validation', () => {
         },
       },
     };
-    const instance = transformerValidator(createContext(config));
+    const instance = await transformerValidator(createContext(config));
     const event = makeEvent({ globals: { country: 'DE' } });
     const result = await instance.push(event, {
       logger: mockLogger,
@@ -87,7 +87,7 @@ describe('globals validation', () => {
         },
       },
     };
-    const instance = transformerValidator(createContext(config));
+    const instance = await transformerValidator(createContext(config));
     const event = makeEvent({ globals: {} });
     const result = await instance.push(event, {
       logger: mockLogger,
@@ -107,7 +107,7 @@ describe('globals validation', () => {
         },
       },
     };
-    const instance = transformerValidator(createContext(config));
+    const instance = await transformerValidator(createContext(config));
     const event = makeEvent({ globals: { country: 123 } });
     const result = await instance.push(event, {
       logger: mockLogger,

@@ -71,7 +71,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       // Any product action should match
       const viewEvent = createEvent('product', 'view', { id: '123' });
@@ -105,7 +105,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       const event = createEvent('item', 'purchase', { value: 100 });
 
@@ -132,7 +132,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       const event = createEvent('anything', 'random', { foo: 'bar' });
 
@@ -164,7 +164,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       // Missing 'name' should fail exact match
       const event = createEvent('product', 'view', { id: '123' });
@@ -194,7 +194,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       const event1 = createEvent('product', 'view', { id: '123' });
       const event2 = createEvent('product', 'view', { id: '456' });
@@ -237,7 +237,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       // Different entity/action - no matching rule
       const event = createEvent('product', 'view', { anything: 'goes' });
@@ -255,7 +255,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       const event = createEvent('any', 'event', {});
 
@@ -280,7 +280,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       const event = createEvent('product', 'view', { id: '123' });
 
@@ -303,7 +303,7 @@ describe('Contract Integration Tests', () => {
         },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       const invalidEvent = {
         ...createEvent('product', 'view', { id: '123' }),

@@ -131,15 +131,10 @@ export function validateFlow(
       }
       totalConnections += connections.length;
 
-      // Contract compliance
-      const setupContract = config.contract as Flow.Contract | undefined;
-      if (setupContract || flowSettings.contract) {
-        checkContractCompliance(
-          flowSettings,
-          setupContract,
-          flowSettings.contract,
-          warnings,
-        );
+      // Contract compliance (contracts live on Config level only)
+      const contract = config.contract as Flow.Contract | undefined;
+      if (contract) {
+        checkContractCompliance(flowSettings, contract, warnings);
       }
     }
     details.connectionsChecked = totalConnections;
@@ -323,8 +318,7 @@ function isStructurallyCompatible(a: unknown, b: unknown): boolean {
 
 function checkContractCompliance(
   config: Flow.Settings,
-  setupContract: Flow.Contract | undefined,
-  flowContract: Flow.Contract | undefined,
+  contract: Flow.Contract,
   warnings: ValidationWarning[],
 ): void {
   for (const [name, dest] of Object.entries(config.destinations || {})) {
@@ -336,12 +330,12 @@ function checkContractCompliance(
       const event = example.in as { entity?: string; action?: string };
       if (!event.entity || !event.action) continue;
 
-      const contract =
-        (flowContract?.[event.entity] as Record<string, unknown> | undefined) ||
-        (setupContract?.[event.entity] as Record<string, unknown> | undefined);
-      if (!contract || typeof contract !== 'object') continue;
+      const entityContract = contract[event.entity] as
+        | Record<string, unknown>
+        | undefined;
+      if (!entityContract || typeof entityContract !== 'object') continue;
 
-      const actionSchema = contract[event.action] || contract['*'];
+      const actionSchema = entityContract[event.action] || entityContract['*'];
       if (actionSchema) {
         warnings.push({
           path: `destination.${name}.examples.${exName}`,

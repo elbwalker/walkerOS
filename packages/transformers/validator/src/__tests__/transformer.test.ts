@@ -57,7 +57,7 @@ describe('Transformer Validator', () => {
         settings: { format: true },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       const result = await transformer.push(validEvent, context);
 
@@ -70,7 +70,7 @@ describe('Transformer Validator', () => {
         settings: { format: true },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       const invalidEvent = { ...validEvent, name: 'invalid' }; // Missing space
 
@@ -88,7 +88,7 @@ describe('Transformer Validator', () => {
         settings: { format: false },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       const invalidEvent = { ...validEvent, name: 'invalid' };
 
@@ -103,7 +103,7 @@ describe('Transformer Validator', () => {
         settings: {},
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       const invalidEvent = { ...validEvent, name: 'invalid' };
 
@@ -133,7 +133,7 @@ describe('Transformer Validator', () => {
         },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       const result = await transformer.push(validEvent, context);
 
@@ -163,7 +163,7 @@ describe('Transformer Validator', () => {
         },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       const result = await transformer.push(validEvent, context);
 
@@ -193,7 +193,7 @@ describe('Transformer Validator', () => {
         },
       };
       const context = createContext(config);
-      const transformer = transformerValidator(context);
+      const transformer = await transformerValidator(context);
 
       // product view doesn't match order complete
       const result = await transformer.push(validEvent, context);
