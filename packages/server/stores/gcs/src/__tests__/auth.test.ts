@@ -29,7 +29,9 @@ describe('createTokenProvider', () => {
       expect(token).toBe('adc-token');
       expect(mockFetch).toHaveBeenCalledWith(
         'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token',
-        { headers: { 'Metadata-Flavor': 'Google' } },
+        expect.objectContaining({
+          headers: { 'Metadata-Flavor': 'Google' },
+        }),
       );
     });
 
