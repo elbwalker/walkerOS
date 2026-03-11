@@ -1,5 +1,102 @@
 # @walkeros/cli
 
+## 3.0.0
+
+### Major Changes
+
+- d11f574: Rename Flow.Setup to Flow.Config and Flow.Config to Flow.Settings for
+  consistent Config/Settings naming convention at every level. Breaking change:
+  all type names, function names, schema names, and API URL paths (/configs →
+  /settings) updated.
+- 23f218a: Replace flat/v2 contract format with named contracts supporting
+  extends inheritance.
+
+  BREAKING CHANGES:
+  - `contract` is now a map of named contract entries (e.g.,
+    `{ "default": { ... }, "web": { ... } }`)
+  - `version` field inside contracts removed
+  - `$tagging` renamed to `tagging`
+  - Legacy flat contract format removed
+  - `$globals`, `$context`, `$custom`, `$user`, `$consent` references removed
+  - Settings-level `contract` field removed (use named contracts at config
+    level)
+  - Auto-injection of `$tagging` into `collector.tagging` removed (use
+    `$contract.name.tagging` explicitly)
+  - Validator `contract` setting renamed to `events` (receives raw schemas, not
+    `{ schema: ... }` wrappers)
+
+  NEW FEATURES:
+  - Named contracts with `extends` for inheritance (additive merge)
+  - Generalized dot-path resolution: `$def.name.nested.path`,
+    `$contract.name.section`
+  - `$contract` as first-class reference type with path access
+  - `$def` inside contracts supported via two-pass resolution
+  - `$def` aliasing for reducing repetition: `{ "c": "$contract.web" }` then
+    `$def.c.events`
+
+- d5af3cf: Unified CLI and Docker runner into single `walkeros run` code path
+  with built-in health server, heartbeat, polling, and secrets support. Added
+  `--flow-id` and `--project` flags. Removed legacy `--deploy`, `--url`,
+  `--health-endpoint`, `--heartbeat-interval`, and `-h/--host` flags.
+
+### Minor Changes
+
+- 6ae0ee3: Add v2 structured contract format with globals, context, custom,
+  user, and consent sections.
+
+  Contracts can now describe cross-event properties (globals, consent, etc.)
+  alongside entity-action event schemas. Top-level sections are JSON Schemas
+  that merge additively into per-event validation.
+
+  Breaking: None. Legacy flat contracts continue working unchanged. v2 is opt-in
+  via `version: 2` field.
+
+- b6c8fa8: Add stores as a first-class component type in Flow.Config. Stores get
+  their own `stores` section in flow settings, a `collector.stores` registry,
+  and `$store:storeId` env wiring in the bundler. Includes `storeMemoryInit` for
+  Flow.Config compatibility and type widening in cache/file transformers.
+
+### Patch Changes
+
+- 2b259b6: Fix deterministic package version resolution in bundler.
+  - Two-phase resolve-then-install prevents version overwrites
+  - peerDependencies resolved at lowest priority (not equal to deps)
+  - Per-build temp directories prevent cross-build interference
+  - Optional peerDeps (peerDependenciesMeta) correctly skipped
+  - Prerelease versions handled with includePrerelease flag
+  - Package names validated against npm naming rules
+
+- ddd6a21: Generated Dockerfiles now include COPY lines for `include` folders,
+  enabling fs store support in Docker containers.
+- 5cb84c1: Replace hand-written MCP resources with auto-generated JSON Schemas
+  from @walkeros/core. Add walkerOS.json to 5 transformer packages. Variables
+  resource remains hand-maintained (runtime interpolation patterns).
+- 67dd7c8: Standardize command pattern: all three commands (validate, simulate,
+  push) now route through their programmatic APIs for string resolution and
+  orchestration. Extract shared createCollectorLoggerConfig utility. Pass
+  missing silent/step options through simulate() API.
+- 499e27a: Add sideEffects declarations to all packages for bundler tree-shaking
+  support.
+- 55ce33e: Fix $store: forward reference bug in bundler codegen — stores are now
+  hoisted into a separate variable declaration before the config object,
+  ensuring store references resolve correctly at runtime
+- Updated dependencies [2b259b6]
+- Updated dependencies [2614014]
+- Updated dependencies [6ae0ee3]
+- Updated dependencies [37299a9]
+- Updated dependencies [499e27a]
+- Updated dependencies [0e5eede]
+- Updated dependencies [d11f574]
+- Updated dependencies [d11f574]
+- Updated dependencies [1fe337a]
+- Updated dependencies [5cb84c1]
+- Updated dependencies [23f218a]
+- Updated dependencies [499e27a]
+- Updated dependencies [c83d909]
+- Updated dependencies [b6c8fa8]
+  - @walkeros/core@3.0.0
+  - @walkeros/server-core@3.0.0
+
 ## 2.1.1
 
 ### Patch Changes

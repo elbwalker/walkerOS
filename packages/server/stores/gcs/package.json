@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-store-gcs",
   "description": "Google Cloud Storage for walkerOS server flows",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -31,10 +31,10 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "peerDependencies": {
-    "@walkeros/core": "^2.1.0"
+    "@walkeros/core": "^3.0.0"
   },
   "devDependencies": {
-    "@walkeros/core": "^2.1.1"
+    "@walkeros/core": "^3.0.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

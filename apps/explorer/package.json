@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/explorer",
-  "version": "2.1.5",
+  "version": "3.0.0",
   "description": "Interactive React components for walkerOS documentation and exploration",
   "license": "MIT",
   "type": "module",
@@ -39,9 +39,9 @@
     "monaco-editor": "^0.55.1",
     "prettier": "^3.7.4",
     "roughjs": "^4.6.6",
-    "@walkeros/collector": "^2.1.1",
-    "@walkeros/core": "^2.1.1",
-    "@walkeros/web-source-browser": "^2.1.1",
+    "@walkeros/collector": "^3.0.0",
+    "@walkeros/core": "^3.0.0",
+    "@walkeros/web-source-browser": "^3.0.0",
     "tailwind-merge": "^3.4.0"
   },
   "peerDependencies": {
@@ -49,7 +49,7 @@
     "react-dom": ">=18.0.0"
   },
   "devDependencies": {
-    "@walkeros/config": "^2.1.1",
+    "@walkeros/config": "^3.0.0",
     "@storybook/addon-docs": "^10.1.11",
     "@storybook/react-vite": "^10.1.11",
     "@swc/core": "^1.11.13",
@@ -63,7 +63,7 @@
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
     "@vitejs/plugin-react": "^5.1.2",
-    "@walkeros/web-destination-gtag": "^2.1.1",
+    "@walkeros/web-destination-gtag": "^3.0.0",
     "eslint": "^9.23.0",
     "eslint-plugin-jest": "^28.11.0",
     "eslint-plugin-storybook": "^10.1.11",

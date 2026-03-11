@@ -1,5 +1,14 @@
 # @walkeros/web-destination-plausible
 
+## 3.0.0
+
+### Patch Changes
+
+- 499e27a: Add sideEffects declarations to all packages for bundler tree-shaking
+  support.
+- Updated dependencies [499e27a]
+  - @walkeros/web-core@3.0.0
+
 ## 2.1.1
 
 ### Patch Changes

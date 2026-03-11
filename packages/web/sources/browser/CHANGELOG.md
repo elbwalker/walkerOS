@@ -1,5 +1,20 @@
 # @walkeros/web-source-browser
 
+## 3.0.0
+
+### Patch Changes
+
+- a30095c: Fix Shadow DOM support: use composedPath for event targets, recurse
+  into open shadow roots for element discovery and property collection
+- 499e27a: Add sideEffects declarations to all packages for bundler tree-shaking
+  support.
+- Updated dependencies [499e27a]
+- Updated dependencies [499e27a]
+- Updated dependencies [a2aa491]
+- Updated dependencies [b6c8fa8]
+  - @walkeros/collector@3.0.0
+  - @walkeros/web-core@3.0.0
+
 ## 2.1.1
 
 ### Patch Changes

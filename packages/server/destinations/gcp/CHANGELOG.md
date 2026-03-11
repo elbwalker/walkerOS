@@ -1,5 +1,26 @@
 # @walkeros/server-destination-gcp
 
+## 3.0.0
+
+### Minor Changes
+
+- 1fe337a: Add hints field to walkerOS.json for lightweight AI-consumable
+  package context.
+
+  Packages can now export a `hints` record from `src/dev.ts` containing short
+  actionable tips with optional code snippets. Hints are serialized into
+  `walkerOS.json` by buildDev() and surfaced via the MCP `package_get` tool.
+
+  Pilot: BigQuery destination includes hints for authentication, table setup,
+  and querying.
+
+### Patch Changes
+
+- 499e27a: Add sideEffects declarations to all packages for bundler tree-shaking
+  support.
+- Updated dependencies [499e27a]
+  - @walkeros/server-core@3.0.0
+
 ## 2.1.1
 
 ### Patch Changes
