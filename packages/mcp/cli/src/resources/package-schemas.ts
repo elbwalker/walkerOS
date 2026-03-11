@@ -1,31 +1,15 @@
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetchPackageSchema } from '@walkeros/core';
-
-const KNOWN_PACKAGES = [
-  '@walkeros/web-destination-google-ga4',
-  '@walkeros/web-destination-meta-pixel',
-  '@walkeros/web-destination-plausible',
-  '@walkeros/web-destination-snowplow',
-  '@walkeros/web-destination-piwikpro',
-  '@walkeros/web-destination-etag',
-  '@walkeros/web-destination-bigquery',
-  '@walkeros/web-source-walker',
-  '@walkeros/web-source-datalayer',
-
-  // Stores
-  '@walkeros/store-memory',
-  '@walkeros/server-store-fs',
-  '@walkeros/server-store-s3',
-];
+import { PACKAGE_REGISTRY } from '../registry.js';
 
 export function registerPackageSchemaResources(server: McpServer) {
   const template = new ResourceTemplate('walkeros://schema/{packageName}', {
     list: async () => ({
-      resources: KNOWN_PACKAGES.map((pkg) => ({
-        uri: `walkeros://schema/${encodeURIComponent(pkg)}`,
-        name: pkg,
-        description: `Schema and examples for ${pkg}`,
+      resources: PACKAGE_REGISTRY.map((pkg) => ({
+        uri: `walkeros://schema/${encodeURIComponent(pkg.name)}`,
+        name: pkg.name,
+        description: `Schema and examples for ${pkg.name}`,
         mimeType: 'application/json' as const,
       })),
     }),

@@ -7,6 +7,7 @@ import {
   PackageSearchOutputShape,
 } from '../../schemas/output.js';
 import { fetchPackage } from '@walkeros/core';
+import { PACKAGE_REGISTRY } from '../../registry.js';
 
 jest.mock('@walkeros/core', () => ({
   fetchPackage: jest.fn(),
@@ -413,6 +414,61 @@ describe('package_search tool', () => {
     expect(mockFetchPackage).toHaveBeenCalledWith('pkg', {
       version: '2.0.0',
     });
+  });
+
+  // Browse mode tests (no package specified)
+  it('should return full catalog when no args', async () => {
+    const tool = mockServer.getTool('package_search');
+    const result = await tool.handler({});
+
+    expect(mockFetchPackage).not.toHaveBeenCalled();
+    expect(result.content[0].text).toContain(
+      `Found ${PACKAGE_REGISTRY.length} packages`,
+    );
+    const catalog = JSON.parse(result.content[1].text);
+    expect(catalog.length).toBe(PACKAGE_REGISTRY.length);
+  });
+
+  it('should filter catalog by type', async () => {
+    const tool = mockServer.getTool('package_search');
+    const result = await tool.handler({ type: 'destination' });
+
+    expect(mockFetchPackage).not.toHaveBeenCalled();
+    const catalog = JSON.parse(result.content[1].text);
+    expect(catalog.length).toBeGreaterThan(0);
+    expect(catalog.every((p: any) => p.type === 'destination')).toBe(true);
+  });
+
+  it('should filter catalog by platform', async () => {
+    const tool = mockServer.getTool('package_search');
+    const result = await tool.handler({ platform: 'web' });
+
+    expect(mockFetchPackage).not.toHaveBeenCalled();
+    const catalog = JSON.parse(result.content[1].text);
+    expect(catalog.length).toBeGreaterThan(0);
+    expect(
+      catalog.every(
+        (p: any) => p.platform === 'web' || p.platform === 'universal',
+      ),
+    ).toBe(true);
+  });
+
+  it('should filter catalog by type and platform', async () => {
+    const tool = mockServer.getTool('package_search');
+    const result = await tool.handler({
+      type: 'source',
+      platform: 'server',
+    });
+
+    const catalog = JSON.parse(result.content[1].text);
+    expect(catalog.length).toBeGreaterThan(0);
+    expect(
+      catalog.every(
+        (p: any) =>
+          p.type === 'source' &&
+          (p.platform === 'server' || p.platform === 'universal'),
+      ),
+    ).toBe(true);
   });
 
   it('should return hint keys and example summaries', async () => {

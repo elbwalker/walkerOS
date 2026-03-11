@@ -5,6 +5,7 @@ import {
   PackageSchemaOutputShape,
   PackageSearchOutputShape,
 } from '../schemas/output.js';
+import { filterRegistry } from '../registry.js';
 
 export function registerPackageSearchTool(server: McpServer) {
   server.registerTool(
@@ -12,29 +13,61 @@ export function registerPackageSearchTool(server: McpServer) {
     {
       title: 'Search Package',
       description:
-        'Look up a walkerOS package to see its metadata, available hint keys, and example summaries. ' +
-        'Use this to browse packages before calling package_get for full details.',
+        'Browse walkerOS packages or look up a specific one. Without package name: returns catalog ' +
+        'filtered by type/platform. With package name: returns metadata, hint keys, and example summaries.',
       inputSchema: {
         package: z
           .string()
           .min(1)
+          .optional()
           .describe(
-            'Exact npm package name (e.g., @walkeros/web-destination-snowplow)',
+            'Exact npm package name for detailed lookup (e.g., @walkeros/web-destination-snowplow)',
+          ),
+        type: z
+          .enum(['source', 'destination', 'transformer', 'store'])
+          .optional()
+          .describe('Filter by package type (browse mode)'),
+        platform: z
+          .enum(['web', 'server'])
+          .optional()
+          .describe(
+            'Filter by platform (browse mode, includes universal packages)',
           ),
         version: z
           .string()
           .optional()
-          .describe('Package version (default: latest)'),
+          .describe('Package version for detailed lookup (default: latest)'),
       },
       outputSchema: PackageSearchOutputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
         idempotentHint: true,
-        openWorldHint: true,
+        openWorldHint: false,
       },
     },
-    async ({ package: packageName, version }) => {
+    async ({ package: packageName, type, platform, version }) => {
+      // Browse mode: no package specified → return catalog
+      if (!packageName) {
+        const catalog = filterRegistry({ type, platform });
+        const text =
+          `Found ${catalog.length} packages` +
+          (type ? ` of type "${type}"` : '') +
+          (platform ? ` for platform "${platform}"` : '') +
+          '.';
+
+        return {
+          content: [
+            { type: 'text' as const, text },
+            {
+              type: 'text' as const,
+              text: JSON.stringify(catalog, null, 2),
+            },
+          ],
+        };
+      }
+
+      // Lookup mode: fetch specific package details
       try {
         const info = await fetchPackage(packageName, { version });
 

@@ -49,9 +49,9 @@
         "WALKEROS_PROJECT_ID": ""
       }
     },
-    "walkeros-cli": {
+    "walkeros-flow": {
       "command": "npx",
-      "args": ["@walkeros/mcp-cli"],
+      "args": ["@walkeros/mcp-flow"],
       "env": {}
     }
   }

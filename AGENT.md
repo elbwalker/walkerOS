@@ -51,7 +51,7 @@ packages/
 ├── config/         # Shared tooling config
 ├── mcp/            # Parent for MCP server packages
 │   ├── api/            # Cloud API MCP server (@walkeros/mcp-api)
-│   ├── cli/            # Local dev MCP server (@walkeros/mcp-cli)
+│   ├── cli/            # Flow dev MCP server (@walkeros/mcp-flow)
 │   └── source-browser/ # Tagging MCP server (@walkeros/mcp-source-browser)
 ├── web/            # Browser: sources/, destinations/
 └── server/         # Node.js: sources/, destinations/

@@ -11,7 +11,7 @@
       "@walkeros/server-core",
       "@walkeros/config",
       "@walkeros/mcp-api",
-      "@walkeros/mcp-cli",
+      "@walkeros/mcp-flow",
       "@walkeros/web-source-browser",
       "@walkeros/web-source-session",
       "@walkeros/web-source-datalayer",

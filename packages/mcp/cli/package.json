@@ -1,7 +1,7 @@
 {
-  "name": "@walkeros/mcp-cli",
+  "name": "@walkeros/mcp-flow",
   "version": "2.1.1",
-  "description": "MCP server for local walkerOS development - validate events, bundle flows, simulate pipelines, and discover packages",
+  "description": "MCP server for walkerOS flow development - discover packages, scaffold configs, validate, bundle, simulate, and test event pipelines",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -13,7 +13,7 @@
     }
   },
   "bin": {
-    "walkeros-mcp-cli": "./dist/index.js"
+    "walkeros-mcp-flow": "./dist/index.js"
   },
   "files": [
     "dist/**",
