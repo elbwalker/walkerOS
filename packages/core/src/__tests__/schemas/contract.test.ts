@@ -34,14 +34,14 @@ describe('Contract schema validation', () => {
     expect(result.success).toBe(true);
   });
 
-  it('should accept a v1 setup without contract', () => {
+  it('should reject v1 configs', () => {
     const result = ConfigSchema.safeParse({
       version: 1,
       flows: {
         default: { web: {} },
       },
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it('should accept contract with only sections, no events', () => {

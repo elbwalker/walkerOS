@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import {
   ConfigSchema,
-  ConfigV2Schema,
   SettingsSchema,
   SourceReferenceSchema,
   DestinationReferenceSchema,
@@ -11,7 +10,6 @@ import {
   parseSettings,
   safeParseSettings,
   configJsonSchema,
-  configV3JsonSchema,
   settingsJsonSchema,
   sourceReferenceJsonSchema,
   destinationReferenceJsonSchema,
@@ -355,7 +353,7 @@ describe('Flow Schemas', () => {
   describe('ConfigSchema', () => {
     test('accepts minimal valid setup', () => {
       const validSetup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           prod: {
             web: {},
@@ -367,7 +365,7 @@ describe('Flow Schemas', () => {
 
     test('accepts complete valid setup', () => {
       const validSetup = {
-        version: 1 as const,
+        version: 3 as const,
         $schema: 'https://walkeros.io/schema/flow/v1.json',
         variables: {
           CURRENCY: 'USD',
@@ -415,10 +413,17 @@ describe('Flow Schemas', () => {
       ).toThrow();
     });
 
-    test('requires version to be 1, 2, or 3', () => {
+    test('requires version to be 3', () => {
       expect(() =>
         ConfigSchema.parse({
-          version: 4,
+          version: 1,
+          flows: { prod: { web: {} } },
+        }),
+      ).toThrow();
+
+      expect(() =>
+        ConfigSchema.parse({
+          version: 2,
           flows: { prod: { web: {} } },
         }),
       ).toThrow();
@@ -426,21 +431,6 @@ describe('Flow Schemas', () => {
       expect(
         ConfigSchema.parse({
           version: 3,
-          flows: { prod: { web: {} } },
-        }),
-      ).toBeDefined();
-
-      // Backward compat: v1 and v2 still accepted
-      expect(
-        ConfigSchema.parse({
-          version: 1,
-          flows: { prod: { web: {} } },
-        }),
-      ).toBeDefined();
-
-      expect(
-        ConfigSchema.parse({
-          version: 2,
           flows: { prod: { web: {} } },
         }),
       ).toBeDefined();
@@ -493,7 +483,7 @@ describe('Flow Schemas', () => {
 
     test('allows unknown definitions structure', () => {
       const validSetup = {
-        version: 1 as const,
+        version: 3 as const,
         definitions: {
           mapping1: { complex: { nested: { structure: true } } },
           mapping2: ['array', 'values'],
@@ -508,7 +498,7 @@ describe('Flow Schemas', () => {
 
     test('validates multiple flows with different platforms', () => {
       const validSetup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           web_prod: { web: {} },
           web_stage: { web: {} },
@@ -521,7 +511,7 @@ describe('Flow Schemas', () => {
 
     test('accepts optional contract property', () => {
       const setup = {
-        version: 2 as const,
+        version: 3 as const,
         contract: {
           default: {
             tagging: 1,
@@ -534,7 +524,7 @@ describe('Flow Schemas', () => {
         },
         flows: { default: { web: {} } },
       };
-      const result = ConfigV2Schema.parse(setup);
+      const result = ConfigSchema.parse(setup);
       expect(result.contract).toBeDefined();
     });
   });
@@ -629,16 +619,9 @@ describe('Flow Schemas', () => {
   describe('JSON Schema Generation', () => {
     test('configJsonSchema is valid JSON Schema', () => {
       expect(configJsonSchema).toHaveProperty('$schema');
-      // ConfigSchema is now a union (v1 | v2 | v3), so it uses anyOf
-      expect(configJsonSchema).toHaveProperty('anyOf');
-      const variants = (configJsonSchema as any).anyOf;
-      expect(variants.length).toBe(3);
-      // All variants should have version and flows
-      for (const variant of variants) {
-        expect(variant).toHaveProperty('type', 'object');
-        expect(variant.properties).toHaveProperty('version');
-        expect(variant.properties).toHaveProperty('flows');
-      }
+      expect(configJsonSchema).toHaveProperty('type', 'object');
+      expect((configJsonSchema as any).properties).toHaveProperty('version');
+      expect((configJsonSchema as any).properties).toHaveProperty('flows');
     });
 
     test('settingsJsonSchema is valid JSON Schema', () => {
@@ -1193,7 +1176,7 @@ describe('getFlowSettings', () => {
   describe('code resolution from package', () => {
     test('does not set code if package not in packages config', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           default: {
             server: {},
@@ -1213,7 +1196,7 @@ describe('getFlowSettings', () => {
 
     test('auto-generates code when not provided', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           default: {
             server: {},
@@ -1237,7 +1220,7 @@ describe('getFlowSettings', () => {
 
     test('auto-generates code for multiple sources and destinations when not provided', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           default: {
             server: {},
@@ -1277,7 +1260,7 @@ describe('getFlowSettings', () => {
   describe('flow selection', () => {
     test('auto-selects single flow', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           default: { web: {} },
         },
@@ -1288,7 +1271,7 @@ describe('getFlowSettings', () => {
 
     test('throws for multiple flows without name', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           prod: { web: {} },
           stage: { web: {} },
@@ -1301,7 +1284,7 @@ describe('getFlowSettings', () => {
 
     test('selects named flow', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           prod: { web: {} },
           stage: { server: {} },
@@ -1321,7 +1304,7 @@ describe('Pattern Resolution', () => {
   describe('$def.name - Definition References', () => {
     test('resolves $def.name to definition content', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         definitions: {
           commonMapping: {
             page: { view: { name: 'page_view' } },
@@ -1349,7 +1332,7 @@ describe('Pattern Resolution', () => {
 
     test('resolves nested $def references', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         definitions: {
           inner: { key: 'value' },
           outer: { nested: '$def.inner' },
@@ -1376,7 +1359,7 @@ describe('Pattern Resolution', () => {
 
     test('throws for missing definition', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           default: {
             web: {},
@@ -1398,7 +1381,7 @@ describe('Pattern Resolution', () => {
 
     test('definition cascade: destination level overrides setup level', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         definitions: {
           mapping: { setup: true },
         },
@@ -1432,7 +1415,7 @@ describe('Pattern Resolution', () => {
   describe('$var.name - Variable References', () => {
     test('resolves $var.name to variable value', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         variables: {
           measurementId: 'G-TEST123',
         },
@@ -1458,7 +1441,7 @@ describe('Pattern Resolution', () => {
 
     test('resolves multiple $var references in same string', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         variables: {
           host: 'api.example.com',
           version: 'v2',
@@ -1485,7 +1468,7 @@ describe('Pattern Resolution', () => {
 
     test('throws for missing variable', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           default: {
             web: {},
@@ -1507,7 +1490,7 @@ describe('Pattern Resolution', () => {
 
     test('variable cascade: destination level overrides setup level', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         variables: {
           id: 'setup-id',
         },
@@ -1539,7 +1522,7 @@ describe('Pattern Resolution', () => {
 
     test('converts number variables to strings', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         variables: {
           port: 8080,
         },
@@ -1578,7 +1561,7 @@ describe('Pattern Resolution', () => {
     test('resolves $env.NAME from process.env', () => {
       process.env.GA4_ID = 'G-ENV123';
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           default: {
             web: {},
@@ -1602,7 +1585,7 @@ describe('Pattern Resolution', () => {
     test('uses default value when env var not set', () => {
       delete process.env.MISSING_VAR;
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           default: {
             web: {},
@@ -1626,7 +1609,7 @@ describe('Pattern Resolution', () => {
     test('throws when env var missing and no default', () => {
       delete process.env.REQUIRED_VAR;
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           default: {
             web: {},
@@ -1649,7 +1632,7 @@ describe('Pattern Resolution', () => {
     test('env var takes precedence over default when set', () => {
       process.env.MY_VAR = 'from-env';
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         flows: {
           default: {
             web: {},
@@ -1684,7 +1667,7 @@ describe('Pattern Resolution', () => {
 
     test('resolves $var inside $def content', () => {
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         variables: {
           currency: 'USD',
         },
@@ -1716,7 +1699,7 @@ describe('Pattern Resolution', () => {
     test('resolves $env inside $def content', () => {
       process.env.API_KEY = 'secret-key';
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         definitions: {
           apiConfig: {
             key: '$env.API_KEY',
@@ -1745,7 +1728,7 @@ describe('Pattern Resolution', () => {
     test('handles complex nested structure with all pattern types', () => {
       process.env.ENV_VALUE = 'from-env';
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         variables: {
           varValue: 'from-var',
         },
@@ -1788,7 +1771,7 @@ describe('Pattern Resolution', () => {
     test('uses $var as default value for $env when env not set', () => {
       delete process.env.GA4_ID;
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         variables: {
           ga4Default: 'G-FALLBACK123',
         },
@@ -1815,7 +1798,7 @@ describe('Pattern Resolution', () => {
     test('env value takes precedence over $var default', () => {
       process.env.GA4_ID = 'G-FROM-ENV';
       const setup = {
-        version: 1 as const,
+        version: 3 as const,
         variables: {
           ga4Default: 'G-FALLBACK123',
         },
@@ -2041,7 +2024,7 @@ describe('Pattern Resolution', () => {
 
 describe('deferred env resolution', () => {
   const makeSetup = (collector: Record<string, unknown>) => ({
-    version: 1 as const,
+    version: 3 as const,
     flows: {
       test: { server: {}, collector, destinations: {} },
     },
@@ -2149,7 +2132,7 @@ describe('packageNameToVariable', () => {
 describe('resolveCodeFromPackage - default export fallback', () => {
   test('auto-generates code when not provided', () => {
     const setup = {
-      version: 1 as const,
+      version: 3 as const,
       flows: {
         default: {
           server: {},
@@ -2171,7 +2154,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
 
   test('uses explicit code when provided', () => {
     const setup = {
-      version: 1 as const,
+      version: 3 as const,
       flows: {
         default: {
           server: {},
@@ -2194,7 +2177,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
 
   test('uses explicit code for named exports', () => {
     const setup = {
-      version: 1 as const,
+      version: 3 as const,
       flows: {
         default: {
           server: {},
@@ -2217,7 +2200,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
 
   test('auto-generates code for multiple destinations with same package', () => {
     const setup = {
-      version: 1 as const,
+      version: 3 as const,
       flows: {
         default: {
           web: {},
@@ -2572,7 +2555,7 @@ describe('$contract reference resolution', () => {
 
   test('$contract stays as string when no contract exists', () => {
     const setup = {
-      version: 1,
+      version: 3,
       flows: {
         default: {
           web: {},

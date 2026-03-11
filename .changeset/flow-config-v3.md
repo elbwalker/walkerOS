@@ -1,8 +1,8 @@
 ---
-'@walkeros/core': minor
+'@walkeros/core': major
 '@walkeros/mcp': patch
 ---
 
-Add version 3 as the new default flow config version. Version 3 is functionally
-identical to version 2 (supports contracts) and is now used as the default
-everywhere. Versions 1 and 2 remain supported for backward compatibility.
+BREAKING: Flow configs now require `"version": 3`. Versions 1 and 2 are no
+longer accepted. To migrate, change `"version": 1` or `"version": 2` to
+`"version": 3` in your walkeros.config.json.

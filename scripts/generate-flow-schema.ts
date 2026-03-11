@@ -13,14 +13,6 @@ import { schemas } from '@walkeros/core/dev';
 
 const outDir = resolve(__dirname, '../website/static/schema/flow');
 
-const targets = [
-  { file: 'v1.json', schema: schemas.configJsonSchema },
-  { file: 'v2.json', schema: schemas.configV2JsonSchema },
-  { file: 'v3.json', schema: schemas.configV3JsonSchema },
-] as const;
-
-for (const { file, schema } of targets) {
-  const path = resolve(outDir, file);
-  writeFileSync(path, JSON.stringify(schema, null, 2) + '\n');
-  console.log(`Wrote ${path}`);
-}
+const path = resolve(outDir, 'v3.json');
+writeFileSync(path, JSON.stringify(schemas.configJsonSchema, null, 2) + '\n');
+console.log(`Wrote ${path}`);

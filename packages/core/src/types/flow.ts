@@ -205,7 +205,7 @@ export interface Config {
   /**
    * Configuration schema version.
    */
-  version: 1 | 2 | 3;
+  version: 3;
 
   /**
    * JSON Schema reference for IDE validation.

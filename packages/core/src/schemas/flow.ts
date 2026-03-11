@@ -540,31 +540,12 @@ const ConfigBaseSchema = z.object({
     ),
 });
 
-const ConfigV1Schema = ConfigBaseSchema.extend({
-  version: z.literal(1).describe('Configuration schema version 1'),
-}).describe('walkerOS v1 configuration');
-
-const ConfigV2Schema = ConfigBaseSchema.extend({
-  version: z.literal(2).describe('Configuration schema version 2'),
+export const ConfigSchema = ConfigBaseSchema.extend({
+  version: z.literal(3).describe('Configuration schema version'),
   contract: ContractSchema.optional().describe(
     'Named contracts with extends inheritance and dot-path references',
   ),
-}).describe('walkerOS v2 configuration with data contracts');
-
-const ConfigV3Schema = ConfigBaseSchema.extend({
-  version: z.literal(3).describe('Configuration schema version 3'),
-  contract: ContractSchema.optional().describe(
-    'Named contracts with extends inheritance and dot-path references',
-  ),
-}).describe('walkerOS v3 configuration with data contracts');
-
-export const ConfigSchema = z
-  .union([ConfigV1Schema, ConfigV2Schema, ConfigV3Schema])
-  .describe(
-    'Complete multi-flow walkerOS configuration (walkeros.config.json)',
-  );
-
-export { ConfigV2Schema, ConfigV3Schema };
+}).describe('walkerOS flow configuration (walkeros.config.json)');
 
 // ========================================
 // Helper Functions
@@ -651,33 +632,11 @@ export function safeParseSettings(data: unknown) {
  *
  * @remarks
  * Used for IDE validation and autocomplete.
- * Hosted at https://walkeros.io/schema/flow/v1.json
+ * Hosted at https://walkeros.io/schema/flow/v3.json
  *
  * @returns JSON Schema (Draft 7) representation of ConfigSchema
  */
 export const configJsonSchema = z.toJSONSchema(ConfigSchema, {
-  target: 'draft-7',
-});
-
-/**
- * Generate JSON Schema for Flow.ConfigV2.
- *
- * @remarks
- * Used for IDE validation of v2 configurations with data contracts.
- * Hosted at https://walkeros.io/schema/flow/v2.json
- */
-export const configV2JsonSchema = z.toJSONSchema(ConfigV2Schema, {
-  target: 'draft-7',
-});
-
-/**
- * Generate JSON Schema for Flow.ConfigV3.
- *
- * @remarks
- * Used for IDE validation of v3 configurations with data contracts.
- * Hosted at https://walkeros.io/schema/flow/v3.json
- */
-export const configV3JsonSchema = z.toJSONSchema(ConfigV3Schema, {
   target: 'draft-7',
 });
 

@@ -116,8 +116,6 @@ export {
 // Export commonly used schemas from Flow namespace directly
 export {
   ConfigSchema as FlowConfigSchema,
-  ConfigV2Schema as FlowConfigV2Schema,
-  ConfigV3Schema as FlowConfigV3Schema,
   SettingsSchema as FlowSettingsSchema,
   ContractSchema,
   ContractActionsSchema,
@@ -132,8 +130,6 @@ export {
   safeParseSettings,
   // JSON Schemas
   configJsonSchema,
-  configV2JsonSchema,
-  configV3JsonSchema,
   settingsJsonSchema,
   sourceReferenceJsonSchema,
   destinationReferenceJsonSchema,
