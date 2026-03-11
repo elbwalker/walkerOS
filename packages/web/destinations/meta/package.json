@@ -53,7 +53,8 @@
   },
   "walkerOS": {
     "type": "destination",
-    "platform": "web"
+    "platform": "web",
+    "docs": "https://www.walkeros.io/docs/destinations/web/meta-pixel"
   },
   "keywords": [
     "walkerOS",

@@ -26,6 +26,8 @@ export interface WalkerOSPackageInfo {
 
 export interface WalkerOSPackage extends WalkerOSPackageInfo {
   description?: string;
+  docs?: string;
+  source?: string;
   hintKeys: string[];
   exampleSummaries: ExampleSummary[];
 }
@@ -82,6 +84,9 @@ export async function fetchPackage(
       exampleSummaries.push(summary);
     }
 
+    const docs = meta.docs as string | undefined;
+    const source = meta.source as string | undefined;
+
     return {
       packageName,
       version: (pkg.version as string) || ver,
@@ -90,6 +95,8 @@ export async function fetchPackage(
       platform: meta.platform as string | undefined,
       schemas,
       examples,
+      ...(docs ? { docs } : {}),
+      ...(source ? { source } : {}),
       ...(hints && Object.keys(hints).length > 0 ? { hints } : {}),
       hintKeys,
       exampleSummaries,

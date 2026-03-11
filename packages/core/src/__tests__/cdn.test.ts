@@ -232,6 +232,33 @@ describe('fetchPackage', () => {
     ).rejects.toThrow('walkerOS.json not found');
   });
 
+  it('should extract docs and source from $meta', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockPkgJson),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            $meta: {
+              docs: 'https://www.walkeros.io/docs/destinations/web/gtag',
+              source:
+                'https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/gtag/src',
+            },
+            schemas: {},
+          }),
+      });
+    const result = await fetchPackage('@walkeros/web-destination-gtag');
+    expect(result.docs).toBe(
+      'https://www.walkeros.io/docs/destinations/web/gtag',
+    );
+    expect(result.source).toBe(
+      'https://github.com/elbwalker/walkerOS/tree/main/packages/web/destinations/gtag/src',
+    );
+  });
+
   it('should handle missing hints and examples', async () => {
     mockFetch
       .mockResolvedValueOnce({

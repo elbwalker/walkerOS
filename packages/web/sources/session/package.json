@@ -49,7 +49,8 @@
   "walkerOS": {
     "type": "source",
     "platform": "web",
-    "renderer": "codebox"
+    "renderer": "codebox",
+    "docs": "https://www.walkeros.io/docs/sources/web/session/detection"
   },
   "keywords": [
     "walkerOS",

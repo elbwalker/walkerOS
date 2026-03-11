@@ -160,6 +160,16 @@ const buildDev = (customConfig = {}) => {
       if (walkerOS.platform) meta.platform = walkerOS.platform;
       if (walkerOS.renderer) meta.renderer = walkerOS.renderer;
 
+      // Docs URL (manual, from walkerOS.docs in package.json)
+      if (walkerOS.docs) meta.docs = walkerOS.docs;
+
+      // Source URL (auto-derived from repository.directory)
+      const repo = pkg.repository;
+      if (repo?.directory) {
+        const repoUrl = (repo.url || '').replace(/^git\+/, '').replace(/\.git$/, '');
+        if (repoUrl) meta.source = `${repoUrl}/tree/main/${repo.directory}/src`;
+      }
+
       // Extract hints (optional)
       const hints = devModule.hints
         ? toSerializable(devModule.hints)

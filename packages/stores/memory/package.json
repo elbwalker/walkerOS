@@ -46,7 +46,8 @@
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
   "walkerOS": {
-    "type": "store"
+    "type": "store",
+    "docs": "https://www.walkeros.io/docs/stores/memory"
   },
   "keywords": [
     "walkerOS",

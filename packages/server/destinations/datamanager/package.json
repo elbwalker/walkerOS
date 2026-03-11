@@ -51,7 +51,8 @@
   },
   "walkerOS": {
     "type": "destination",
-    "platform": "server"
+    "platform": "server",
+    "docs": "https://www.walkeros.io/docs/destinations/server/datamanager"
   },
   "keywords": [
     "walkerOS",

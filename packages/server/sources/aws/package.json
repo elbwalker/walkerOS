@@ -41,7 +41,8 @@
   },
   "walkerOS": {
     "type": "source",
-    "platform": "server"
+    "platform": "server",
+    "docs": "https://www.walkeros.io/docs/sources/server/aws"
   },
   "keywords": [
     "walkerOS",
