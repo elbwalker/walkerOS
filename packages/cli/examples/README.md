@@ -278,7 +278,7 @@ Flow configs use the `Flow.Config` format:
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "web": {},

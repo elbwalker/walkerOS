@@ -28,7 +28,7 @@ Configure in your Flow JSON:
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "server": {},

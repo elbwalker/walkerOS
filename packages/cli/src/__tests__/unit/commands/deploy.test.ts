@@ -330,7 +330,7 @@ describe('deploy', () => {
 
   describe('bundleRemote()', () => {
     it('without flowName sends only flow in body', async () => {
-      const content = { version: 1, flows: { default: {} } };
+      const content = { version: 3, flows: { default: {} } };
       mockPost.mockResolvedValue({
         data: 'console.log("bundle")',
         response: { headers: new Headers() },
@@ -343,7 +343,7 @@ describe('deploy', () => {
     });
 
     it('with flowName includes flowName in body', async () => {
-      const content = { version: 1, flows: { web: {}, server: {} } };
+      const content = { version: 3, flows: { web: {}, server: {} } };
       mockPost.mockResolvedValue({
         data: 'console.log("bundle")',
         response: { headers: new Headers() },

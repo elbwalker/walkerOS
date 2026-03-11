@@ -4,7 +4,7 @@ import { loadJsonConfig } from '@walkeros/cli';
 import { mcpResult, mcpError } from '@walkeros/core';
 
 const WEB_SKELETON = {
-  version: 1,
+  version: 3,
   flows: {
     default: {
       web: {},
@@ -16,7 +16,7 @@ const WEB_SKELETON = {
 };
 
 const SERVER_SKELETON = {
-  version: 1,
+  version: 3,
   flows: {
     default: {
       server: {},

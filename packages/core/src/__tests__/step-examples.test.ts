@@ -3,7 +3,7 @@ import type { Flow } from '../types';
 
 describe('Step Examples', () => {
   const setup: Flow.Config = {
-    version: 1,
+    version: 3,
     flows: {
       default: {
         web: {},

@@ -3,7 +3,7 @@ import { PACKAGE_REGISTRY } from '../registry.js';
 
 const FLOW_SCHEMA_REFERENCE = {
   structure: {
-    version: '1 (required, use 1 for new flows)',
+    version: '3 (required, use 3 for new flows)',
     flows: {
       '<flowName>': {
         'web: {} | server: {}':
@@ -37,7 +37,7 @@ const FLOW_SCHEMA_REFERENCE = {
       'Node.js environment — uses @walkeros/server-source-express as default source',
   },
   minimalExample: {
-    version: 1,
+    version: 3,
     flows: {
       default: {
         web: {},

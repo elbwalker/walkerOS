@@ -16,7 +16,7 @@ needs an HTTP source (Express) for health checks and event collection:
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "server": {},

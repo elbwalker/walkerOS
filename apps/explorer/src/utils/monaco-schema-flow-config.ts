@@ -23,13 +23,13 @@ export function enrichFlowConfigSchema(baseSchema: AnySchema): AnySchema {
   // Enrich version
   if (props.version) {
     props.version.markdownDescription =
-      'Schema version number. Must be `1` for the current format.\n\n```json\n"version": 1\n```';
+      'Schema version number. Use `3` for the current format.\n\n```json\n"version": 3\n```';
   }
 
   // Enrich $schema
   if (props.$schema) {
     props.$schema.markdownDescription =
-      'JSON Schema URI for IDE validation.\n\n```json\n"$schema": "https://walkeros.io/schema/flow/v1.json"\n```';
+      'JSON Schema URI for IDE validation.\n\n```json\n"$schema": "https://walkeros.io/schema/flow/v3.json"\n```';
   }
 
   // Enrich include

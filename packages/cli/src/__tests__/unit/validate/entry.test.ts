@@ -4,7 +4,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 const flowConfig = {
-  version: 1,
+  version: 3,
   flows: {
     default: {
       web: {},

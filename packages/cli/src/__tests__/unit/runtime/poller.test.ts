@@ -29,7 +29,7 @@ describe('createPoller', () => {
     const onUpdate = jest.fn().mockResolvedValue(undefined);
     mockFetchConfig.mockResolvedValueOnce({
       changed: true,
-      content: { version: 1, flows: {} },
+      content: { version: 3, flows: {} },
       version: 'abc123',
       etag: '"abc123"',
     });
@@ -44,7 +44,7 @@ describe('createPoller', () => {
     );
 
     await poller.pollOnce();
-    expect(onUpdate).toHaveBeenCalledWith({ version: 1, flows: {} }, 'abc123');
+    expect(onUpdate).toHaveBeenCalledWith({ version: 3, flows: {} }, 'abc123');
     poller.stop();
   });
 
@@ -90,7 +90,7 @@ describe('createPoller', () => {
     mockFetchConfig
       .mockResolvedValueOnce({
         changed: true,
-        content: { version: 1 },
+        content: { version: 3 },
         version: 'v1',
         etag: '"v1"',
       })

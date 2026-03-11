@@ -599,8 +599,8 @@
     },
     "version": {
       "type": "number",
-      "const": 2,
-      "description": "Configuration schema version 2"
+      "const": 3,
+      "description": "Configuration schema version 3"
     },
     "contract": {
       "description": "Named contracts with extends inheritance and dot-path references",
@@ -695,5 +695,5 @@
   },
   "required": ["flows", "version"],
   "additionalProperties": false,
-  "description": "walkerOS v2 configuration with data contracts"
+  "description": "walkerOS v3 configuration with data contracts"
 }

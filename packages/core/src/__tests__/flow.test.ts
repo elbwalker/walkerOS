@@ -11,6 +11,7 @@ import {
   parseSettings,
   safeParseSettings,
   configJsonSchema,
+  configV3JsonSchema,
   settingsJsonSchema,
   sourceReferenceJsonSchema,
   destinationReferenceJsonSchema,
@@ -414,13 +415,28 @@ describe('Flow Schemas', () => {
       ).toThrow();
     });
 
-    test('requires version to be 1 or 2', () => {
+    test('requires version to be 1, 2, or 3', () => {
       expect(() =>
+        ConfigSchema.parse({
+          version: 4,
+          flows: { prod: { web: {} } },
+        }),
+      ).toThrow();
+
+      expect(
         ConfigSchema.parse({
           version: 3,
           flows: { prod: { web: {} } },
         }),
-      ).toThrow();
+      ).toBeDefined();
+
+      // Backward compat: v1 and v2 still accepted
+      expect(
+        ConfigSchema.parse({
+          version: 1,
+          flows: { prod: { web: {} } },
+        }),
+      ).toBeDefined();
 
       expect(
         ConfigSchema.parse({
@@ -433,7 +449,7 @@ describe('Flow Schemas', () => {
     test('validates $schema as URL when provided', () => {
       expect(() =>
         ConfigSchema.parse({
-          version: 1,
+          version: 3,
           $schema: 'not-a-url',
           flows: { prod: { web: {} } },
         }),
@@ -441,7 +457,7 @@ describe('Flow Schemas', () => {
 
       expect(
         ConfigSchema.parse({
-          version: 1,
+          version: 3,
           $schema: 'https://walkeros.io/schema/flow/v1.json',
           flows: { prod: { web: {} } },
         }),
@@ -451,7 +467,7 @@ describe('Flow Schemas', () => {
     test('requires at least one flow', () => {
       expect(() =>
         ConfigSchema.parse({
-          version: 1,
+          version: 3,
           flows: {},
         }),
       ).toThrow('At least one flow is required');
@@ -460,7 +476,7 @@ describe('Flow Schemas', () => {
     test('validates variables as primitive record', () => {
       expect(
         ConfigSchema.parse({
-          version: 1,
+          version: 3,
           variables: {
             STRING: 'value',
             NUMBER: 42,
@@ -530,7 +546,7 @@ describe('Flow Schemas', () => {
   describe('parseConfig', () => {
     test('successfully parses valid setup', () => {
       const validSetup = {
-        version: 1,
+        version: 3,
         flows: {
           prod: { web: {} },
         },
@@ -540,14 +556,14 @@ describe('Flow Schemas', () => {
 
     test('throws ZodError for invalid setup', () => {
       expect(() => parseConfig({})).toThrow(z.ZodError);
-      expect(() => parseConfig({ version: 2 })).toThrow(z.ZodError);
+      expect(() => parseConfig({ version: 3 })).toThrow(z.ZodError);
     });
   });
 
   describe('safeParseConfig', () => {
     test('returns success for valid setup', () => {
       const validSetup = {
-        version: 1,
+        version: 3,
         flows: {
           prod: { web: {} },
         },
@@ -567,7 +583,7 @@ describe('Flow Schemas', () => {
 
     test('provides detailed error messages', () => {
       const result = safeParseConfig({
-        version: 1,
+        version: 3,
         flows: {},
       });
       expect(result.success).toBe(false);
@@ -613,11 +629,11 @@ describe('Flow Schemas', () => {
   describe('JSON Schema Generation', () => {
     test('configJsonSchema is valid JSON Schema', () => {
       expect(configJsonSchema).toHaveProperty('$schema');
-      // ConfigSchema is now a union (v1 | v2), so it uses anyOf
+      // ConfigSchema is now a union (v1 | v2 | v3), so it uses anyOf
       expect(configJsonSchema).toHaveProperty('anyOf');
       const variants = (configJsonSchema as any).anyOf;
-      expect(variants.length).toBe(2);
-      // Both variants should have version and flows
+      expect(variants.length).toBe(3);
+      // All variants should have version and flows
       for (const variant of variants) {
         expect(variant).toHaveProperty('type', 'object');
         expect(variant.properties).toHaveProperty('version');
@@ -659,7 +675,7 @@ describe('Flow Schemas', () => {
   describe('Real-world Scenarios', () => {
     test('complete multi-flow setup', () => {
       const realWorldSetup = {
-        version: 1,
+        version: 3,
         $schema: 'https://walkeros.io/schema/flow/v1.json',
         variables: {
           CURRENCY: 'USD',
@@ -785,7 +801,7 @@ describe('Flow Schemas', () => {
 
     test('setup with variable interpolation structure', () => {
       const setupWithVars = {
-        version: 1,
+        version: 3,
         variables: {
           GA4_PROD: 'G-PROD123',
           GA4_STAGE: 'G-STAGE456',
@@ -806,7 +822,7 @@ describe('Flow Schemas', () => {
 
     test('setup with definition reference structure', () => {
       const setupWithRefs = {
-        version: 1,
+        version: 3,
         definitions: {
           common_mapping: {
             page: { view: { name: 'page_view' } },
@@ -872,7 +888,7 @@ describe('Flow Schemas', () => {
 
     test('validates flow names are non-empty strings', () => {
       const setup = {
-        version: 1,
+        version: 3,
         flows: {
           '': { web: {} }, // Empty string key
         },
@@ -929,7 +945,7 @@ describe('Flow Schemas', () => {
 
     test('validates variables cascade from setup to config to source/destination', () => {
       const setup = {
-        version: 1,
+        version: 3,
         variables: {
           GLOBAL: 'setup-level',
           OVERRIDE_TEST: 'setup',
@@ -996,7 +1012,7 @@ describe('Flow Schemas', () => {
 
     test('validates definitions cascade structure', () => {
       const setup = {
-        version: 1,
+        version: 3,
         definitions: {
           commonMapping: {
             page: { view: { name: 'page_view' } },
@@ -1087,7 +1103,7 @@ describe('Flow Schemas', () => {
 
     test('validates complete setup with packages at flow level', () => {
       const setup = {
-        version: 1,
+        version: 3,
         flows: {
           prod: {
             web: { windowCollector: 'tracker' },
@@ -1827,7 +1843,7 @@ describe('Pattern Resolution', () => {
   describe('transformer pattern resolution', () => {
     test('resolves $var in transformer config', () => {
       const setup = {
-        version: 2,
+        version: 3,
         variables: { apiUrl: 'https://api.example.com' },
         flows: {
           default: {
@@ -1851,7 +1867,7 @@ describe('Pattern Resolution', () => {
 
     test('resolves $def in transformer config', () => {
       const setup = {
-        version: 2,
+        version: 3,
         definitions: {
           cacheRule: {
             match: { key: 'method', operator: 'eq', value: 'GET' },
@@ -1883,7 +1899,7 @@ describe('Pattern Resolution', () => {
 
     test('resolves $env in transformer config (deferred)', () => {
       const setup = {
-        version: 2,
+        version: 3,
         flows: {
           default: {
             server: {},
@@ -1908,7 +1924,7 @@ describe('Pattern Resolution', () => {
 
     test('transformer-level variables override flow variables', () => {
       const setup = {
-        version: 2,
+        version: 3,
         variables: { ttl: '300' },
         flows: {
           default: {
@@ -1935,7 +1951,7 @@ describe('Pattern Resolution', () => {
   describe('env pattern resolution', () => {
     test('resolves $var in source env', () => {
       const setup = {
-        version: 2,
+        version: 3,
         variables: { storeRef: 'myStore' },
         flows: {
           default: {
@@ -1956,7 +1972,7 @@ describe('Pattern Resolution', () => {
 
     test('resolves $var in transformer env', () => {
       const setup = {
-        version: 2,
+        version: 3,
         variables: { storeRef: 'myStore' },
         flows: {
           default: {
@@ -1977,7 +1993,7 @@ describe('Pattern Resolution', () => {
 
     test('resolves $var in destination env', () => {
       const setup = {
-        version: 2,
+        version: 3,
         variables: { storeRef: 'myStore' },
         flows: {
           default: {
@@ -1998,7 +2014,7 @@ describe('Pattern Resolution', () => {
 
     test('resolves $var in store env', () => {
       const setup = {
-        version: 2,
+        version: 3,
         variables: { region: 'eu-west-1' },
         flows: {
           default: {
@@ -2230,7 +2246,7 @@ describe('resolveCodeFromPackage - default export fallback', () => {
 describe('$contract edge cases', () => {
   test('$def aliasing works with $contract', () => {
     const setup = {
-      version: 2,
+      version: 3,
       contract: {
         web: {
           globals: { required: ['country'] },
@@ -2265,7 +2281,7 @@ describe('$contract edge cases', () => {
 
   test('$contract works in destinations', () => {
     const setup = {
-      version: 2,
+      version: 3,
       contract: {
         web: { consent: { required: ['analytics'] } },
       },
@@ -2288,7 +2304,7 @@ describe('$contract edge cases', () => {
 
   test('$contract works in transformers', () => {
     const setup = {
-      version: 2,
+      version: 3,
       contract: {
         web: {
           events: {
@@ -2317,7 +2333,7 @@ describe('$contract edge cases', () => {
 describe('Deep dot-path resolution for $def', () => {
   test('resolves $def.name.nested.path', () => {
     const setup = {
-      version: 2,
+      version: 3,
       definitions: {
         apiConfig: {
           host: 'api.example.com',
@@ -2347,7 +2363,7 @@ describe('Deep dot-path resolution for $def', () => {
 
   test('resolves $def.name (single level) still works', () => {
     const setup = {
-      version: 2,
+      version: 3,
       definitions: {
         endpoint: { url: 'https://example.com' },
       },
@@ -2368,7 +2384,7 @@ describe('Deep dot-path resolution for $def', () => {
 
   test('throws for missing intermediate path segment', () => {
     const setup = {
-      version: 2,
+      version: 3,
       definitions: {
         config: { host: 'example.com' },
       },
@@ -2386,7 +2402,7 @@ describe('Deep dot-path resolution for $def', () => {
 
   test('throws for missing top-level definition', () => {
     const setup = {
-      version: 2,
+      version: 3,
       definitions: {},
       flows: {
         default: {
@@ -2402,7 +2418,7 @@ describe('Deep dot-path resolution for $def', () => {
 
   test('resolves $def with array leaf', () => {
     const setup = {
-      version: 2,
+      version: 3,
       definitions: {
         schema: { required: ['id', 'name'] },
       },
@@ -2423,7 +2439,7 @@ describe('Deep dot-path resolution for $def', () => {
 describe('$contract reference resolution', () => {
   test('resolves $contract.name.section', () => {
     const setup = {
-      version: 2,
+      version: 3,
       contract: {
         web: {
           globals: { required: ['country'] },
@@ -2449,7 +2465,7 @@ describe('$contract reference resolution', () => {
 
   test('resolves $contract.name for whole contract', () => {
     const setup = {
-      version: 2,
+      version: 3,
       contract: {
         web: {
           globals: { required: ['country'] },
@@ -2472,7 +2488,7 @@ describe('$contract reference resolution', () => {
 
   test('resolves $contract.name.events.entity.action', () => {
     const setup = {
-      version: 2,
+      version: 3,
       contract: {
         web: {
           events: {
@@ -2500,7 +2516,7 @@ describe('$contract reference resolution', () => {
 
   test('resolves $contract.name.tagging', () => {
     const setup = {
-      version: 2,
+      version: 3,
       contract: {
         web: { tagging: 5 },
       },
@@ -2517,7 +2533,7 @@ describe('$contract reference resolution', () => {
 
   test('resolves extends before path resolution', () => {
     const setup = {
-      version: 2,
+      version: 3,
       contract: {
         default: { consent: { required: ['analytics'] } },
         web: { extends: 'default', events: { product: { view: {} } } },
@@ -2540,7 +2556,7 @@ describe('$contract reference resolution', () => {
 
   test('throws for missing contract name', () => {
     const setup = {
-      version: 2,
+      version: 3,
       contract: { web: { events: {} } },
       flows: {
         default: {
@@ -2574,7 +2590,7 @@ describe('$contract reference resolution', () => {
 
   test('supports $def inside contracts', () => {
     const setup = {
-      version: 2,
+      version: 3,
       definitions: {
         idSchema: { required: ['id'], properties: { id: { type: 'string' } } },
       },

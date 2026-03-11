@@ -18,7 +18,7 @@ describe('Config Loader', () => {
   describe('Single Flow (Flow.Config)', () => {
     test('loads Flow.Config with single flow automatically', () => {
       const config = {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             web: {},
@@ -54,7 +54,7 @@ describe('Config Loader', () => {
 
     test('applies platform-specific defaults for web', () => {
       const config = {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             web: {},
@@ -77,7 +77,7 @@ describe('Config Loader', () => {
 
     test('applies platform-specific defaults for server', () => {
       const config = {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             server: {},
@@ -100,7 +100,7 @@ describe('Config Loader', () => {
 
     test('extracts packages from flowSettings', () => {
       const config = {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             web: {},
@@ -124,7 +124,7 @@ describe('Config Loader', () => {
 
     test('respects build overrides from CLI', () => {
       const config = {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             web: {},
@@ -152,7 +152,7 @@ describe('Config Loader', () => {
 
   describe('Multi-Flow Config', () => {
     const multiFlowConfig = {
-      version: 1,
+      version: 3,
       flows: {
         web_prod: {
           web: {},
@@ -287,7 +287,7 @@ describe('Config Loader', () => {
 
     test('throws error for invalid config format (missing flows)', () => {
       const invalidConfig = {
-        version: 1,
+        version: 3,
       };
 
       expect(() =>
@@ -299,7 +299,7 @@ describe('Config Loader', () => {
 
     test('throws error for empty flows', () => {
       const invalidConfig = {
-        version: 1,
+        version: 3,
         flows: {},
       };
 
@@ -312,7 +312,7 @@ describe('Config Loader', () => {
 
     test('throws error for flow without web/server key', () => {
       const invalidConfig = {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             packages: {},
@@ -350,7 +350,7 @@ describe('Config Loader', () => {
       };
 
       const config = {
-        version: 1,
+        version: 3,
         flows: {
           prod: {
             web: {},
@@ -381,7 +381,7 @@ describe('Config Loader', () => {
       };
 
       const config = {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             web: {},
@@ -407,7 +407,7 @@ describe('Config Loader', () => {
   describe('Real-World Scenarios', () => {
     test('loads complex multi-flow setup', () => {
       const complexConfig = {
-        version: 1,
+        version: 3,
         variables: {
           CURRENCY: 'USD',
         },
@@ -467,7 +467,7 @@ describe('Config Loader', () => {
 
     test('extracts windowCollector and windowElb from web config', () => {
       const config = {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             web: {

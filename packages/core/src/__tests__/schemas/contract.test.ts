@@ -3,7 +3,7 @@ import { ConfigSchema } from '../../schemas/flow';
 describe('Contract schema validation', () => {
   it('should accept a valid v2 setup with contract', () => {
     const result = ConfigSchema.safeParse({
-      version: 2,
+      version: 3,
       contract: {
         default: {
           tagging: 1,
@@ -46,7 +46,7 @@ describe('Contract schema validation', () => {
 
   it('should accept contract with only sections, no events', () => {
     const result = ConfigSchema.safeParse({
-      version: 2,
+      version: 3,
       contract: {
         consent_only: {
           consent: { required: ['analytics'] },
@@ -59,7 +59,7 @@ describe('Contract schema validation', () => {
 
   it('should accept v2 setup without contract', () => {
     const result = ConfigSchema.safeParse({
-      version: 2,
+      version: 3,
       flows: { default: { web: {} } },
     });
     expect(result.success).toBe(true);
@@ -67,7 +67,7 @@ describe('Contract schema validation', () => {
 
   it('should reject contract entry with invalid tagging', () => {
     const result = ConfigSchema.safeParse({
-      version: 2,
+      version: 3,
       contract: {
         web: { tagging: -1 },
       },

@@ -38,7 +38,7 @@ describe('flow-schema reference resource', () => {
     expect(Array.isArray(parsed.connectionRules)).toBe(true);
     expect(parsed.connectionRules.length).toBeGreaterThan(0);
     expect(parsed.minimalExample).toBeDefined();
-    expect(parsed.minimalExample.version).toBe(1);
+    expect(parsed.minimalExample.version).toBe(3);
     expect(parsed.minimalExample.flows.default).toBeDefined();
   });
 

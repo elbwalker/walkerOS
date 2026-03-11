@@ -3,7 +3,7 @@ import { loadBundleConfig } from '../loader';
 describe('loadBundleConfig deferred env by platform', () => {
   it('produces markers for server flows', () => {
     const config = {
-      version: 1,
+      version: 3,
       flows: {
         serverflow: {
           server: {},
@@ -24,7 +24,7 @@ describe('loadBundleConfig deferred env by platform', () => {
   it('resolves env normally for web flows', () => {
     process.env.WEB_KEY = 'baked-value';
     const config = {
-      version: 1,
+      version: 3,
       flows: {
         webflow: {
           web: {},

@@ -29,7 +29,7 @@ The simplest possible flow: receive events and log them.
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "server": {
       "server": {},
@@ -109,7 +109,7 @@ Add the BigQuery destination to your flow.json:
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "server": {
       "server": {},
@@ -203,7 +203,7 @@ Add the `web` flow to your flow.json:
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "server": {
       // ... same as Step 2

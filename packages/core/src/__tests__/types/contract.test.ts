@@ -3,7 +3,7 @@ import type { Flow } from '../../types';
 describe('Contract types', () => {
   it('should accept a valid named contract at Config level', () => {
     const setup: Flow.Config = {
-      version: 2,
+      version: 3,
       contract: {
         default: {
           tagging: 1,

@@ -97,7 +97,7 @@ runtime override it.
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "web": {},
@@ -119,7 +119,7 @@ runtime override it.
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "<flowName>": {
       "web": {} | "server": {},     // Platform (required)

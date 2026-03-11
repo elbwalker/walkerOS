@@ -11,7 +11,7 @@ relative to a base directory with path traversal protection.
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "server": {},

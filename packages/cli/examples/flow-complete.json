@@ -1,6 +1,6 @@
 {
-  "$schema": "https://walkeros.io/schema/flow/v2.json",
-  "version": 2,
+  "$schema": "https://walkeros.io/schema/flow/v3.json",
+  "version": 3,
   "variables": {
     "currency": "EUR",
     "flowVersion": "1.0.0",

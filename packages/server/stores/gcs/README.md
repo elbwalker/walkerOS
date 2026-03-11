@@ -9,7 +9,7 @@ built-in auth (ADC on Cloud Run / service account JWT elsewhere).
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "server": {},

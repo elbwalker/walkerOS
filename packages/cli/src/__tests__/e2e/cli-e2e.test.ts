@@ -102,7 +102,7 @@ describeIfBuilt('CLI E2E', () => {
 
     it('should output JSON format for successful bundle', async () => {
       const testConfig = {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             web: {},
@@ -152,7 +152,7 @@ describeIfBuilt('CLI E2E', () => {
 
     it('should output JSON format for failed bundle', async () => {
       const testConfig = {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             web: {},
@@ -190,7 +190,7 @@ describeIfBuilt('CLI E2E', () => {
 
     it('should suppress decorative output in JSON mode', async () => {
       const testConfig = {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             web: {},

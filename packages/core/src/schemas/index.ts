@@ -117,6 +117,7 @@ export {
 export {
   ConfigSchema as FlowConfigSchema,
   ConfigV2Schema as FlowConfigV2Schema,
+  ConfigV3Schema as FlowConfigV3Schema,
   SettingsSchema as FlowSettingsSchema,
   ContractSchema,
   ContractActionsSchema,
@@ -132,6 +133,7 @@ export {
   // JSON Schemas
   configJsonSchema,
   configV2JsonSchema,
+  configV3JsonSchema,
   settingsJsonSchema,
   sourceReferenceJsonSchema,
   destinationReferenceJsonSchema,

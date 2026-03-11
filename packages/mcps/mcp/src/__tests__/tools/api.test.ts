@@ -194,14 +194,14 @@ describe('api tool', () => {
 
       const tool = server.getTool('api');
       await tool.handler(
-        { action: 'flow.update', id: 'cfg_1', content: { version: 1 } },
+        { action: 'flow.update', id: 'cfg_1', content: { version: 3 } },
         mockExtra,
       );
 
       expect(updateFlow).toHaveBeenCalledWith({
         flowId: 'cfg_1',
         name: undefined,
-        content: { version: 1 },
+        content: { version: 3 },
         mergePatch: true,
       });
     });

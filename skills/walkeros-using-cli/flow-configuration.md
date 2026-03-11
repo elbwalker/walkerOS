@@ -8,7 +8,7 @@ Complete reference for Flow.Config JSON configuration format.
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "<flowName>": {
       "web": {} | "server": {},
@@ -244,7 +244,7 @@ Embed JavaScript in JSON for mappings:
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "analytics": {
       "web": {},
@@ -287,7 +287,7 @@ walkeros bundle config.json --all
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "ecommerce": {
       "web": {},

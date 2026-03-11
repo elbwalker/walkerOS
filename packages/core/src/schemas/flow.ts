@@ -551,13 +551,20 @@ const ConfigV2Schema = ConfigBaseSchema.extend({
   ),
 }).describe('walkerOS v2 configuration with data contracts');
 
+const ConfigV3Schema = ConfigBaseSchema.extend({
+  version: z.literal(3).describe('Configuration schema version 3'),
+  contract: ContractSchema.optional().describe(
+    'Named contracts with extends inheritance and dot-path references',
+  ),
+}).describe('walkerOS v3 configuration with data contracts');
+
 export const ConfigSchema = z
-  .union([ConfigV1Schema, ConfigV2Schema])
+  .union([ConfigV1Schema, ConfigV2Schema, ConfigV3Schema])
   .describe(
     'Complete multi-flow walkerOS configuration (walkeros.config.json)',
   );
 
-export { ConfigV2Schema };
+export { ConfigV2Schema, ConfigV3Schema };
 
 // ========================================
 // Helper Functions
@@ -660,6 +667,17 @@ export const configJsonSchema = z.toJSONSchema(ConfigSchema, {
  * Hosted at https://walkeros.io/schema/flow/v2.json
  */
 export const configV2JsonSchema = z.toJSONSchema(ConfigV2Schema, {
+  target: 'draft-7',
+});
+
+/**
+ * Generate JSON Schema for Flow.ConfigV3.
+ *
+ * @remarks
+ * Used for IDE validation of v3 configurations with data contracts.
+ * Hosted at https://walkeros.io/schema/flow/v3.json
+ */
+export const configV3JsonSchema = z.toJSONSchema(ConfigV3Schema, {
   target: 'draft-7',
 });
 

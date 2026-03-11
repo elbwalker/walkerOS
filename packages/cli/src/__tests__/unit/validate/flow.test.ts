@@ -6,7 +6,7 @@ import { validateFlow } from '../../../commands/validate/validators/flow.js';
 describe('validateFlow', () => {
   it('passes valid flow configuration', () => {
     const result = validateFlow({
-      version: 1,
+      version: 3,
       flows: {
         default: {
           web: {},
@@ -49,7 +49,7 @@ describe('validateFlow', () => {
 
   it('fails when flows object is empty', () => {
     const result = validateFlow({
-      version: 1,
+      version: 3,
       flows: {},
     });
 
@@ -63,7 +63,7 @@ describe('validateFlow', () => {
 
   it('extracts flow names in details', () => {
     const result = validateFlow({
-      version: 1,
+      version: 3,
       flows: {
         production: {
           web: {},
@@ -81,7 +81,7 @@ describe('validateFlow', () => {
   it('validates specific flow when flow option provided', () => {
     const result = validateFlow(
       {
-        version: 1,
+        version: 3,
         flows: {
           production: {
             web: {},
@@ -102,7 +102,7 @@ describe('validateFlow', () => {
   it('fails when specified flow does not exist', () => {
     const result = validateFlow(
       {
-        version: 1,
+        version: 3,
         flows: {
           production: {
             web: {},
@@ -139,7 +139,7 @@ describe('validateFlow', () => {
 
   it('warns for dangling $var. references', () => {
     const result = validateFlow({
-      version: 1,
+      version: 3,
       variables: { gaId: 'G-XXX' },
       flows: {
         default: {
@@ -162,7 +162,7 @@ describe('validateFlow', () => {
 
   it('does not warn for valid $var. references', () => {
     const result = validateFlow({
-      version: 1,
+      version: 3,
       variables: { gaId: 'G-XXX' },
       flows: {
         default: {
@@ -183,7 +183,7 @@ describe('validateFlow', () => {
 
   it('validates a realistic production config with context extraction', () => {
     const result = validateFlow({
-      version: 1,
+      version: 3,
       variables: { gaId: 'G-12345', debug: false },
       definitions: { cleanUrl: { condition: true } },
       packages: {
@@ -231,7 +231,7 @@ describe('validateFlow', () => {
 
   it('warns about packages without version', () => {
     const result = validateFlow({
-      version: 1,
+      version: 3,
       packages: {
         '@walkeros/collector': {},
       },
@@ -254,7 +254,7 @@ describe('validateFlow', () => {
 
   describe('deep validation (cross-step examples)', () => {
     const baseSetup = (overrides: Record<string, unknown> = {}) => ({
-      version: 1,
+      version: 3,
       flows: {
         default: {
           web: {},
@@ -455,7 +455,7 @@ describe('validateFlow', () => {
     it('runs deep checks for specific flow when --flow provided', () => {
       const result = validateFlow(
         {
-          version: 1,
+          version: 3,
           flows: {
             web: {
               web: {},
@@ -482,7 +482,7 @@ describe('validateFlow', () => {
 
     it('warns about contract compliance', () => {
       const result = validateFlow({
-        version: 1,
+        version: 3,
         contract: {
           page: {
             view: {

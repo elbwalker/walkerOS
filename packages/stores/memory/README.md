@@ -11,7 +11,7 @@ support.
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "server": {},

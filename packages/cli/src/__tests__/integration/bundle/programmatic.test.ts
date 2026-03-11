@@ -29,7 +29,7 @@ describe('Programmatic Bundle API', () => {
   });
 
   const simpleConfig: Flow.Config = {
-    version: 1,
+    version: 3,
     flows: {
       default: {
         web: {},
@@ -113,7 +113,7 @@ describe('Programmatic Bundle API', () => {
 
   it('should select flow from multi-flow config', async () => {
     const multiFlowConfig: Flow.Config = {
-      version: 1,
+      version: 3,
       flows: {
         production: {
           web: {},

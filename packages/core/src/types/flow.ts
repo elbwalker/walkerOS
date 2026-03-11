@@ -192,8 +192,8 @@ export interface Server {
  * @example
  * ```json
  * {
- *   "version": 1,
- *   "$schema": "https://walkeros.io/schema/flow/v1.json",
+ *   "version": 3,
+ *   "$schema": "https://walkeros.io/schema/flow/v3.json",
  *   "variables": { "CURRENCY": "USD" },
  *   "flows": {
  *     "default": { "web": {}, ... }
@@ -205,7 +205,7 @@ export interface Config {
   /**
    * Configuration schema version.
    */
-  version: 1 | 2;
+  version: 1 | 2 | 3;
 
   /**
    * JSON Schema reference for IDE validation.

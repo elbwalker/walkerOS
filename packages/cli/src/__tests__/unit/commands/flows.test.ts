@@ -120,7 +120,7 @@ describe('flows', () => {
 
   describe('createFlow', () => {
     it('POSTs with name and content', async () => {
-      const content = { version: 1 };
+      const content = { version: 3 };
       mockPost.mockResolvedValue({ data: { id: 'cfg_new' } });
       await createFlow({ name: 'My Flow', content, projectId: 'proj_1' });
       expect(mockPost).toHaveBeenCalledWith('/api/projects/{projectId}/flows', {
@@ -132,7 +132,7 @@ describe('flows', () => {
 
   describe('updateFlow', () => {
     it('PATCHes with name and content', async () => {
-      const content = { version: 1, sources: [] };
+      const content = { version: 3, sources: [] };
       mockPatch.mockResolvedValue({ data: { id: 'cfg_abc' } });
       await updateFlow({
         flowId: 'cfg_abc',
@@ -191,7 +191,7 @@ describe('flows', () => {
     });
 
     it('sends application/json by default (no mergePatch)', async () => {
-      const content = { version: 2, flows: {} };
+      const content = { version: 3, flows: {} };
       mockPatch.mockResolvedValue({ data: { id: 'cfg_abc' } });
       await updateFlow({
         flowId: 'cfg_abc',

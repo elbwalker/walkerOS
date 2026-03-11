@@ -41,7 +41,7 @@ function createMockServer() {
 }
 
 const sampleConfig = {
-  version: 1,
+  version: 3,
   flows: {
     default: {
       web: {},
@@ -188,7 +188,7 @@ describe('flow_examples tool', () => {
 
   it('errors on multi-flow without flow param', async () => {
     const multiFlowConfig = {
-      version: 1,
+      version: 3,
       flows: {
         production: { web: {} },
         staging: { web: {} },
@@ -217,7 +217,7 @@ describe('flow_examples tool', () => {
 
   it('returns empty examples array when no examples exist', async () => {
     const configNoExamples = {
-      version: 1,
+      version: 3,
       flows: {
         default: {
           web: {},

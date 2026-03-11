@@ -37,14 +37,14 @@ describe('validateFlowConfig', () => {
   });
 
   it('returns error for missing flows', () => {
-    const json = JSON.stringify({ version: 1 }, null, 2);
+    const json = JSON.stringify({ version: 3 }, null, 2);
     const result = validateFlowConfig(json);
     expect(result.valid).toBe(false);
   });
 
   it('passes for minimal valid config', () => {
     const json = JSON.stringify(
-      { version: 1, flows: { default: { web: {} } } },
+      { version: 3, flows: { default: { web: {} } } },
       null,
       2,
     );
@@ -71,7 +71,7 @@ describe('validateFlowConfig', () => {
   it('warns for dangling $var. reference', () => {
     const json = JSON.stringify(
       {
-        version: 1,
+        version: 3,
         variables: { gaId: 'G-XXX' },
         flows: {
           default: {
@@ -99,7 +99,7 @@ describe('validateFlowConfig', () => {
   it('does not warn for valid $var. reference', () => {
     const json = JSON.stringify(
       {
-        version: 1,
+        version: 3,
         variables: { gaId: 'G-XXX' },
         flows: {
           default: {
@@ -124,7 +124,7 @@ describe('validateFlowConfig', () => {
   it('warns for dangling $def. reference', () => {
     const json = JSON.stringify(
       {
-        version: 1,
+        version: 3,
         definitions: { clean: {} },
         flows: {
           default: {
@@ -149,7 +149,7 @@ describe('validateFlowConfig', () => {
   it('returns context with variables', () => {
     const json = JSON.stringify(
       {
-        version: 1,
+        version: 3,
         variables: { gaId: 'G-XXX', debug: false },
         flows: { default: { web: {} } },
       },
@@ -163,7 +163,7 @@ describe('validateFlowConfig', () => {
   it('returns context with step names', () => {
     const json = JSON.stringify(
       {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             web: {},
@@ -182,7 +182,7 @@ describe('validateFlowConfig', () => {
 
   it('returns context with platform', () => {
     const json = JSON.stringify(
-      { version: 1, flows: { default: { server: {} } } },
+      { version: 3, flows: { default: { server: {} } } },
       null,
       2,
     );
@@ -193,7 +193,7 @@ describe('validateFlowConfig', () => {
   it('returns context with packages', () => {
     const json = JSON.stringify(
       {
-        version: 1,
+        version: 3,
         flows: {
           default: {
             web: {},
@@ -220,7 +220,7 @@ describe('validateFlowConfig', () => {
   it('returns context with contract entities', () => {
     const json = JSON.stringify(
       {
-        version: 2,
+        version: 3,
         contract: {
           default: {
             tagging: 1,

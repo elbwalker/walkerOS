@@ -343,7 +343,7 @@ Flow configs use the `Flow.Config` format with `version` and `flows`:
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "server": {},

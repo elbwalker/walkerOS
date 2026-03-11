@@ -19,7 +19,7 @@ describe('fetchConfig', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      json: async () => ({ config: { version: 1 } }),
+      json: async () => ({ config: { version: 3 } }),
       headers: new Headers([['etag', '"abc123"']]),
     });
     await fetchConfig(opts);
@@ -37,13 +37,13 @@ describe('fetchConfig', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      json: async () => ({ config: { version: 1, flows: {} } }),
+      json: async () => ({ config: { version: 3, flows: {} } }),
       headers: new Headers([['etag', '"abc123"']]),
     });
     const result = await fetchConfig(opts);
     expect(result.changed).toBe(true);
     if (result.changed) {
-      expect(result.content).toEqual({ version: 1, flows: {} });
+      expect(result.content).toEqual({ version: 3, flows: {} });
       expect(result.etag).toBe('"abc123"');
     }
   });
@@ -82,7 +82,7 @@ describe('fetchConfig', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      json: async () => ({ config: { version: 1 } }),
+      json: async () => ({ config: { version: 3 } }),
       headers: new Headers([['etag', '"def456"']]),
     });
     await fetchConfig(opts);

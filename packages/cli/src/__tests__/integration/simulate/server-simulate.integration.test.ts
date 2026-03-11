@@ -16,7 +16,7 @@ describe('Server Simulation Integration', () => {
     await fs.ensureDir(testConfigDir);
 
     const serverConfig = {
-      version: 1,
+      version: 3,
       flows: {
         default: {
           server: {},
