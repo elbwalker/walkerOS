@@ -1,4 +1,4 @@
-# @walkeros/mcp-api
+# @walkeros/mcp
 
 ## 2.1.1
 
@@ -12,11 +12,11 @@
 
 ### Minor Changes
 
-- fed78f0: Replace deployment polling with SSE streaming for real-time status
-  updates
+- cb2da05: Add data contracts for centralized event validation and documentation
 
 ### Patch Changes
 
+- 3bc32de: Surface mapping field in examples_list and ExampleLookupResult
 - Updated dependencies [fed78f0]
 - Updated dependencies [7b7e37b]
 - Updated dependencies [7fc4cee]

@@ -2,8 +2,7 @@
 '@walkeros/core': patch
 '@walkeros/collector': patch
 '@walkeros/cli': patch
-'@walkeros/mcp-api': patch
-'@walkeros/mcp-cli': patch
+'@walkeros/mcp': patch
 '@walkeros/mcp-source-browser': patch
 '@walkeros/store-memory': patch
 '@walkeros/transformer-demo': patch

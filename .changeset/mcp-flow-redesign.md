@@ -1,5 +1,5 @@
 ---
-'@walkeros/mcp-flow': minor
+'@walkeros/mcp': minor
 ---
 
 Redesign MCP flow server into unified orchestrator

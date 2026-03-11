@@ -1,5 +1,5 @@
 {
-  "name": "@walkeros/mcp-flow",
+  "name": "@walkeros/mcp",
   "version": "2.1.1",
   "description": "MCP server for walkerOS flow development - discover packages, scaffold configs, validate, bundle, simulate, and test event pipelines",
   "license": "MIT",
@@ -13,7 +13,7 @@
     }
   },
   "bin": {
-    "walkeros-mcp-flow": "./dist/index.js"
+    "walkeros-mcp": "./dist/index.js"
   },
   "files": [
     "dist/**",
@@ -43,7 +43,7 @@
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
-    "directory": "packages/mcp/cli"
+    "directory": "packages/mcps/mcp"
   },
   "author": "elbwalker <hello@elbwalker.com>",
   "homepage": "https://github.com/elbwalker/walkerOS#readme",

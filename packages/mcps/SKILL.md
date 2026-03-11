@@ -17,13 +17,12 @@ See `DESIGN.md` for full vision and principles.
 
 ## Packages
 
-| Package                                            | Purpose                                                                   |
-| -------------------------------------------------- | ------------------------------------------------------------------------- |
-| `cli/` (`@walkeros/mcp-flow`)                      | Main server: flow dev tools, reference resources, prompts, unified API    |
-| `api/` (`@walkeros/mcp-api`)                       | Deprecated — API capabilities merged into `@walkeros/mcp-flow` `api` tool |
-| `source-browser/` (`@walkeros/mcp-source-browser`) | Tagging MCP server for source browser                                     |
+| Package                                            | Purpose                                                                |
+| -------------------------------------------------- | ---------------------------------------------------------------------- |
+| `mcp/` (`@walkeros/mcp`)                           | Main server: flow dev tools, reference resources, prompts, unified API |
+| `source-browser/` (`@walkeros/mcp-source-browser`) | Tagging MCP server for source browser                                  |
 
-## Tools (in `@walkeros/mcp-flow`)
+## Tools (in `@walkeros/mcp`)
 
 | Tool             | Description                                          |
 | ---------------- | ---------------------------------------------------- |

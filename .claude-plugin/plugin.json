@@ -43,7 +43,7 @@
   "mcpServers": {
     "walkeros-flow": {
       "command": "npx",
-      "args": ["@walkeros/mcp-flow"],
+      "args": ["@walkeros/mcp"],
       "env": {
         "WALKEROS_TOKEN": "",
         "WALKEROS_PROJECT_ID": ""

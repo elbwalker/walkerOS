@@ -1,7 +1,7 @@
 ---
 '@walkeros/core': minor
 '@walkeros/server-destination-gcp': minor
-'@walkeros/mcp-cli': minor
+'@walkeros/mcp': minor
 '@walkeros/config': patch
 ---
 

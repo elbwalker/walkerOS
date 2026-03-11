@@ -12,7 +12,7 @@ assistant integration.
 
 | Package | Purpose |
 |---------|---------|
-| `@walkeros/mcp-flow` | Flow development — tools, reference resources, guided prompts, cloud API |
+| `@walkeros/mcp` | Flow development — tools, reference resources, guided prompts, cloud API |
 | `@walkeros/mcp-source-browser` | HTML tagging — generate, parse, and validate `data-elb` attributes |
 
 ## Quick start
@@ -24,7 +24,7 @@ Add servers to your Claude Desktop or Claude Code configuration:
   "mcpServers": {
     "walkeros-flow": {
       "command": "npx",
-      "args": ["@walkeros/mcp-flow"],
+      "args": ["@walkeros/mcp"],
       "env": {
         "WALKEROS_TOKEN": "sk-walkeros-..."
       }
@@ -44,16 +44,16 @@ Each server starts on STDIO and registers its tools automatically.
 
 | Variable | Used by | Required | Default | Purpose |
 |----------|---------|----------|---------|---------|
-| `WALKEROS_TOKEN` | mcp-flow | No | — | Bearer token for cloud API and remote bundling |
-| `WALKEROS_PROJECT_ID` | mcp-flow | No | — | Active project ID (`proj_...`) |
-| `WALKEROS_APP_URL` | mcp-flow | No | `https://app.walkeros.io` | Base URL override |
+| `WALKEROS_TOKEN` | mcp | No | — | Bearer token for cloud API and remote bundling |
+| `WALKEROS_PROJECT_ID` | mcp | No | — | Active project ID (`proj_...`) |
+| `WALKEROS_APP_URL` | mcp | No | `https://app.walkeros.io` | Base URL override |
 
 `@walkeros/mcp-source-browser` works without any environment variables.
 When `WALKEROS_TOKEN` is set, the `api` tool is registered for cloud operations.
 
 ---
 
-## `@walkeros/mcp-flow` — flow development
+## `@walkeros/mcp` — flow development
 
 Unified server for flow development, package discovery, reference resources,
 guided prompts, and cloud API. Replaces the previous separate `@walkeros/mcp-cli`
@@ -62,7 +62,7 @@ and `@walkeros/mcp-api` packages.
 ### Installation
 
 <CodeSnippet
-  code={`npm install @walkeros/mcp-flow`}
+  code={`npm install @walkeros/mcp`}
   language="bash"
 />
 
@@ -318,12 +318,12 @@ then `package_get` to fetch schemas, hints, and examples.
 ## Migration from separate servers
 
 The previous `@walkeros/mcp-cli` and `@walkeros/mcp-api` packages are now
-unified in `@walkeros/mcp-flow`. Key changes:
+unified in `@walkeros/mcp`. Key changes:
 
 | Old | New |
 |-----|-----|
-| `@walkeros/mcp-cli` | `@walkeros/mcp-flow` |
-| `@walkeros/mcp-api` (17 tools) | `api` tool in `@walkeros/mcp-flow` |
+| `@walkeros/mcp-cli` | `@walkeros/mcp` |
+| `@walkeros/mcp-api` (17 tools) | `api` tool in `@walkeros/mcp` |
 | `validate` | `flow_validate` |
 | `bundle` | `flow_bundle` |
 | `simulate` | `flow_simulate` |
