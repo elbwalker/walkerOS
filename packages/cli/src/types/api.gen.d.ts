@@ -1466,7 +1466,7 @@ export interface paths {
     put?: never;
     /**
      * Start deployment
-     * @description Start a new deployment for a flow. Returns 400 AMBIGUOUS_CONFIG if the flow has multiple named settings — use the per-settings deploy endpoint instead.
+     * @description Start a new deployment for a flow. Returns 400 AMBIGUOUS_CONFIG if the flow has multiple named configs — use the per-config deploy endpoint instead.
      */
     post: {
       parameters: {
@@ -1735,7 +1735,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/settings': {
+  '/api/projects/{projectId}/flows/{flowId}/configs': {
     parameters: {
       query?: never;
       header?: never;
@@ -1743,8 +1743,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * List settings
-     * @description List active named settings for a flow.
+     * List configs
+     * @description List active named configs for a flow.
      */
     get: {
       parameters: {
@@ -1758,13 +1758,13 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description List of settings */
+        /** @description List of configs */
         200: {
           headers: {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['ListSettingsResponse'];
+            'application/json': components['schemas']['ListConfigsResponse'];
           };
         };
         /** @description Unauthorized */
@@ -1795,7 +1795,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}': {
+  '/api/projects/{projectId}/flows/{flowId}/configs/{configId}': {
     parameters: {
       query?: never;
       header?: never;
@@ -1803,8 +1803,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get settings
-     * @description Get a single settings entry with its latest deployment.
+     * Get config
+     * @description Get a single config with its latest deployment.
      */
     get: {
       parameters: {
@@ -1813,19 +1813,19 @@ export interface paths {
         path: {
           projectId: string;
           flowId: string;
-          settingsId: string;
+          configId: string;
         };
         cookie?: never;
       };
       requestBody?: never;
       responses: {
-        /** @description Settings details with deployment */
+        /** @description Config details with deployment */
         200: {
           headers: {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['FlowSettingsDetail'];
+            'application/json': components['schemas']['FlowConfigDetail'];
           };
         };
         /** @description Unauthorized */
@@ -1856,7 +1856,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/json': {
+  '/api/projects/{projectId}/flows/{flowId}/configs/{configId}/json': {
     parameters: {
       query?: never;
       header?: never;
@@ -1864,8 +1864,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Download settings JSON
-     * @description Download the named flow settings as a self-contained Setup JSON file. Includes parent variables and definitions.
+     * Download config JSON
+     * @description Download the named flow config as a self-contained Setup JSON file. Includes parent variables and definitions.
      */
     get: {
       parameters: {
@@ -1874,7 +1874,7 @@ export interface paths {
         path: {
           projectId: string;
           flowId: string;
-          settingsId: string;
+          configId: string;
         };
         cookie?: never;
       };
@@ -1917,7 +1917,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/bundle': {
+  '/api/projects/{projectId}/flows/{flowId}/configs/{configId}/bundle': {
     parameters: {
       query?: never;
       header?: never;
@@ -1925,8 +1925,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Download settings bundle
-     * @description Download the compiled JS/MJS for the settings' latest deployment. Redirects to a presigned download URL.
+     * Download config bundle
+     * @description Download the compiled JS/MJS for the config's latest deployment. Redirects to a presigned download URL.
      */
     get: {
       parameters: {
@@ -1935,7 +1935,7 @@ export interface paths {
         path: {
           projectId: string;
           flowId: string;
-          settingsId: string;
+          configId: string;
         };
         cookie?: never;
       };
@@ -1985,7 +1985,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deploy': {
+  '/api/projects/{projectId}/flows/{flowId}/configs/{configId}/deploy': {
     parameters: {
       query?: never;
       header?: never;
@@ -1993,8 +1993,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get latest settings deployment
-     * @description Get the latest deployment for a specific settings entry.
+     * Get latest config deployment
+     * @description Get the latest deployment for a specific config.
      */
     get: {
       parameters: {
@@ -2003,7 +2003,7 @@ export interface paths {
         path: {
           projectId: string;
           flowId: string;
-          settingsId: string;
+          configId: string;
         };
         cookie?: never;
       };
@@ -2015,7 +2015,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['SettingsDeploymentResponse'];
+            'application/json': components['schemas']['ConfigDeploymentResponse'];
           };
         };
         /** @description Unauthorized */
@@ -2040,8 +2040,8 @@ export interface paths {
     };
     put?: never;
     /**
-     * Deploy settings
-     * @description Start a deployment for a specific settings entry. Detects platform from the settings.
+     * Deploy config
+     * @description Start a deployment for a specific config. Detects platform from the config.
      */
     post: {
       parameters: {
@@ -2050,7 +2050,7 @@ export interface paths {
         path: {
           projectId: string;
           flowId: string;
-          settingsId: string;
+          configId: string;
         };
         cookie?: never;
       };
@@ -2062,7 +2062,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['DeploySettingsResponse'];
+            'application/json': components['schemas']['DeployConfigResponse'];
           };
         };
         /** @description Unauthorized */
@@ -2092,7 +2092,7 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Settings orphaned */
+        /** @description Config orphaned */
         422: {
           headers: {
             [name: string]: unknown;
@@ -2118,7 +2118,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deployments/{deploymentId}': {
+  '/api/projects/{projectId}/flows/{flowId}/configs/{configId}/deployments/{deploymentId}': {
     parameters: {
       query?: never;
       header?: never;
@@ -2126,8 +2126,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Get settings deployment detail
-     * @description Get a specific deployment by ID, scoped to a settings entry.
+     * Get config deployment detail
+     * @description Get a specific deployment by ID, scoped to a config.
      */
     get: {
       parameters: {
@@ -2136,7 +2136,7 @@ export interface paths {
         path: {
           projectId: string;
           flowId: string;
-          settingsId: string;
+          configId: string;
           deploymentId: string;
         };
         cookie?: never;
@@ -2149,7 +2149,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['SettingsDeploymentDetailResponse'];
+            'application/json': components['schemas']['ConfigDeploymentDetailResponse'];
           };
         };
         /** @description Unauthorized */
@@ -2180,7 +2180,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deployments/{deploymentId}/advance': {
+  '/api/projects/{projectId}/flows/{flowId}/configs/{configId}/deployments/{deploymentId}/advance': {
     parameters: {
       query?: never;
       header?: never;
@@ -2190,8 +2190,8 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Advance settings deployment
-     * @description Advance the deployment state machine for a per-settings deployment.
+     * Advance config deployment
+     * @description Advance the deployment state machine for a per-config deployment.
      */
     post: {
       parameters: {
@@ -2200,7 +2200,7 @@ export interface paths {
         path: {
           projectId: string;
           flowId: string;
-          settingsId: string;
+          configId: string;
           deploymentId: string;
         };
         cookie?: never;
@@ -2213,7 +2213,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['AdvanceSettingsDeploymentResponse'];
+            'application/json': components['schemas']['AdvanceConfigDeploymentResponse'];
           };
         };
         /** @description Unauthorized */
@@ -2658,12 +2658,12 @@ export interface paths {
     put?: never;
     /**
      * Trigger flow bundle
-     * @description Start a bundle job for a project flow. For multi-settings flows, specify the named flow via ?flow= query parameter.
+     * @description Start a bundle job for a project flow. For multi-config flows, specify the named flow via ?flow= query parameter.
      */
     post: {
       parameters: {
         query?: {
-          /** @description Named flow to bundle (required for multi-settings flows) */
+          /** @description Named flow to bundle (required for multi-config flows) */
           flow?: string;
         };
         header?: never;
@@ -2702,7 +2702,7 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse'];
           };
         };
-        /** @description Flow selection required for multi-settings flows */
+        /** @description Flow selection required for multi-config flows */
         422: {
           headers: {
             [name: string]: unknown;
@@ -3368,8 +3368,8 @@ export interface components {
       id: string;
       /** @example my-website-flow */
       name: string;
-      config: components['schemas']['FlowContent'];
-      settings?: components['schemas']['FlowSettingsSummary'][];
+      content: components['schemas']['FlowContent'];
+      configs?: components['schemas']['FlowConfigSummary'][];
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -3383,7 +3383,7 @@ export interface components {
       /** Format: date-time */
       deletedAt?: string | null;
     };
-    FlowSettingsSummary: {
+    FlowConfigSummary: {
       /** @example cfg_a1b2c3d4 */
       id: string;
       name: string;
@@ -3409,7 +3409,7 @@ export interface components {
       /** @example my-website-flow */
       name: string;
       summary?: string;
-      settings?: components['schemas']['FlowSettingsListItem'][];
+      configs?: components['schemas']['FlowConfigListItem'][];
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -3423,7 +3423,7 @@ export interface components {
       /** Format: date-time */
       deletedAt: string | null;
     };
-    FlowSettingsListItem: {
+    FlowConfigListItem: {
       /** @example cfg_a1b2c3d4 */
       id: string;
       name: string;
@@ -3518,7 +3518,7 @@ export interface components {
        */
       revokedAt: string | null;
     };
-    FlowSettingsDetail: {
+    FlowConfigDetail: {
       /** @example cfg_a1b2c3d4 */
       id: string;
       name: string;
@@ -3559,10 +3559,10 @@ export interface components {
        */
       updatedAt: string;
     };
-    DeploySettingsResponse: {
+    DeployConfigResponse: {
       deploymentId: string;
       /** @example cfg_a1b2c3d4 */
-      settingsId: string;
+      configId: string;
       status: string;
     };
     FlowDetailResponse: {
@@ -3570,8 +3570,8 @@ export interface components {
       id: string;
       /** @example my-website-flow */
       name: string;
-      config: components['schemas']['FlowContent'];
-      settings?: components['schemas']['FlowSettingsEnriched'][];
+      content: components['schemas']['FlowContent'];
+      configs?: components['schemas']['FlowConfigEnriched'][];
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -3585,7 +3585,7 @@ export interface components {
       /** Format: date-time */
       deletedAt: string | null;
     };
-    FlowSettingsEnriched: {
+    FlowConfigEnriched: {
       id: string;
       name: string;
       /** @enum {string} */
@@ -3620,7 +3620,7 @@ export interface components {
       id: string;
       /** @example my-website-flow */
       name: string;
-      config: components['schemas']['FlowContent'];
+      content: components['schemas']['FlowContent'];
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
@@ -3729,7 +3729,7 @@ export interface components {
       source: {
         type: string;
         flowId?: string;
-        flowSettingsId?: string;
+        flowConfigId?: string;
         configHash?: string;
       };
       /** Format: date-time */
@@ -3838,7 +3838,7 @@ export interface components {
             /** @enum {string} */
             type: 'flow';
             flowId: string;
-            flowSettingsName: string;
+            flowConfigName: string;
           }
         | {
             /** @enum {string} */
@@ -3854,7 +3854,7 @@ export interface components {
         source: {
           type: string;
           flowId?: string;
-          flowSettingsId?: string;
+          flowConfigId?: string;
           configHash?: string;
         };
         bundlePath: string | null;
@@ -3977,12 +3977,12 @@ export interface components {
     CreateFlowRequest: {
       /** @example my-website-flow */
       name: string;
-      config?: components['schemas']['FlowContent'];
+      content?: components['schemas']['FlowContent'];
     };
     UpdateFlowRequest: {
       /** @example my-website-flow */
       name?: string;
-      config?: components['schemas']['FlowContent'];
+      content?: components['schemas']['FlowContent'];
     };
     DuplicateFlowRequest: {
       /** @example my-website-flow */
@@ -4008,13 +4008,13 @@ export interface components {
       type: 'web' | 'server';
       status: string;
     };
-    ListSettingsResponse: {
-      settings: components['schemas']['FlowSettingsSummary'][];
+    ListConfigsResponse: {
+      configs: components['schemas']['FlowConfigSummary'][];
     };
-    SettingsDeploymentResponse: {
+    ConfigDeploymentResponse: {
       id: string;
       flowId: string;
-      settingsId: string;
+      configId: string;
       /** @enum {string} */
       type: 'web' | 'server';
       status: string;
@@ -4026,10 +4026,10 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     } | null;
-    SettingsDeploymentDetailResponse: {
+    ConfigDeploymentDetailResponse: {
       id: string;
       flowId: string;
-      settingsId: string;
+      configId: string;
       status: string;
       /** @enum {string} */
       type: 'web' | 'server';
@@ -4041,7 +4041,7 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
     };
-    AdvanceSettingsDeploymentResponse: {
+    AdvanceConfigDeploymentResponse: {
       id: string;
       flowId: string;
       /** @enum {string} */
@@ -4064,7 +4064,7 @@ export interface components {
     GetVersionResponse: {
       /** @example 1 */
       version: number;
-      config: components['schemas']['FlowContent'];
+      content: components['schemas']['FlowContent'];
       /**
        * Format: date-time
        * @example 2026-01-26T14:30:00.000Z
