@@ -80,15 +80,15 @@ export const WebSchema = z
   .object({
     windowCollector: z
       .string()
-      .optional()
       .default('collector')
+      .optional()
       .describe(
         'Window property name for the collector instance (default: "collector")',
       ),
     windowElb: z
       .string()
-      .optional()
       .default('elb')
+      .optional()
       .describe(
         'Window property name for the elb command queue (default: "elb")',
       ),

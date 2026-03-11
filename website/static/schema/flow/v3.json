@@ -56,17 +56,16 @@
             "type": "object",
             "properties": {
               "windowCollector": {
-                "default": "collector",
                 "description": "Window property name for the collector instance (default: \"collector\")",
+                "default": "collector",
                 "type": "string"
               },
               "windowElb": {
-                "default": "elb",
                 "description": "Window property name for the elb command queue (default: \"elb\")",
+                "default": "elb",
                 "type": "string"
               }
             },
-            "required": ["windowCollector", "windowElb"],
             "additionalProperties": false
           },
           "server": {
