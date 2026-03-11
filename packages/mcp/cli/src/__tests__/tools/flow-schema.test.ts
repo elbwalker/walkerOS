@@ -1,36 +1,36 @@
-import { registerFlowSchemaTool } from '../../tools/flow-schema.js';
+import { registerReferenceResources } from '../../resources/references.js';
 
 function createMockServer() {
-  const tools: Record<string, { config: unknown; handler: Function }> = {};
+  const resources: Record<string, { metadata: unknown; handler: Function }> =
+    {};
   return {
-    registerTool(name: string, config: unknown, handler: Function) {
-      tools[name] = { config, handler };
+    resource(name: string, uri: string, metadata: unknown, handler: Function) {
+      resources[name] = { metadata, handler };
     },
-    getTool(name: string) {
-      return tools[name];
+    getResource(name: string) {
+      return resources[name];
     },
   };
 }
 
-describe('flow_schema tool', () => {
+describe('flow-schema reference resource', () => {
   let mockServer: ReturnType<typeof createMockServer>;
 
   beforeEach(() => {
     mockServer = createMockServer();
-    registerFlowSchemaTool(mockServer as any);
+    registerReferenceResources(mockServer as any);
   });
 
-  it('should register with correct name', () => {
-    const tool = mockServer.getTool('flow_schema');
-    expect(tool).toBeDefined();
-    expect((tool.config as any).title).toBe('Flow Config Schema');
+  it('should register flow-schema resource', () => {
+    const resource = mockServer.getResource('flow-schema');
+    expect(resource).toBeDefined();
   });
 
   it('should return structure, connectionRules, and minimalExample', async () => {
-    const tool = mockServer.getTool('flow_schema');
-    const result = await tool.handler({});
+    const resource = mockServer.getResource('flow-schema');
+    const result = await resource.handler();
 
-    const parsed = JSON.parse(result.content[0].text);
+    const parsed = JSON.parse(result.contents[0].text);
     expect(parsed.structure).toBeDefined();
     expect(parsed.structure.version).toBeDefined();
     expect(parsed.structure.flows).toBeDefined();
@@ -43,20 +43,68 @@ describe('flow_schema tool', () => {
   });
 
   it('should include platform options', async () => {
-    const tool = mockServer.getTool('flow_schema');
-    const result = await tool.handler({});
+    const resource = mockServer.getResource('flow-schema');
+    const result = await resource.handler();
 
-    const parsed = JSON.parse(result.content[0].text);
+    const parsed = JSON.parse(result.contents[0].text);
     expect(parsed.platformOptions).toBeDefined();
     expect(parsed.platformOptions.web).toBeDefined();
     expect(parsed.platformOptions.server).toBeDefined();
   });
+});
 
-  it('should be idempotent and read-only', () => {
-    const tool = mockServer.getTool('flow_schema');
-    const annotations = (tool.config as any).annotations;
-    expect(annotations.readOnlyHint).toBe(true);
-    expect(annotations.idempotentHint).toBe(true);
-    expect(annotations.destructiveHint).toBe(false);
+describe('reference resources catalog', () => {
+  let mockServer: ReturnType<typeof createMockServer>;
+
+  beforeEach(() => {
+    mockServer = createMockServer();
+    registerReferenceResources(mockServer as any);
+  });
+
+  it('should register event-model resource', () => {
+    expect(mockServer.getResource('event-model')).toBeDefined();
+  });
+
+  it('should register mapping resource', () => {
+    expect(mockServer.getResource('mapping')).toBeDefined();
+  });
+
+  it('should register consent resource', () => {
+    expect(mockServer.getResource('consent')).toBeDefined();
+  });
+
+  it('should register variables resource', () => {
+    expect(mockServer.getResource('variables')).toBeDefined();
+  });
+
+  it('should register contract resource', () => {
+    expect(mockServer.getResource('contract')).toBeDefined();
+  });
+
+  it('should register api resource', () => {
+    expect(mockServer.getResource('api')).toBeDefined();
+  });
+
+  it('should register packages resource', () => {
+    expect(mockServer.getResource('packages')).toBeDefined();
+  });
+
+  it('event-model resource returns valid JSON', async () => {
+    const resource = mockServer.getResource('event-model');
+    const result = await resource.handler();
+    const parsed = JSON.parse(result.contents[0].text);
+    expect(parsed.naming).toBeDefined();
+    expect(parsed.properties).toBeDefined();
+    expect(parsed.properties.data).toBeDefined();
+  });
+
+  it('packages resource returns registry entries', async () => {
+    const resource = mockServer.getResource('packages');
+    const result = await resource.handler();
+    const parsed = JSON.parse(result.contents[0].text);
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed.length).toBeGreaterThan(0);
+    expect(parsed[0].name).toBeDefined();
+    expect(parsed[0].type).toBeDefined();
   });
 });

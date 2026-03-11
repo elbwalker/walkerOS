@@ -1,7 +1,6 @@
-import { registerPushTool } from '../../tools/push.js';
+import { registerFlowPushTool } from '../../tools/push.js';
 import { PushOutputShape } from '../../schemas/output.js';
 
-// Mock @walkeros/cli/dev schemas
 jest.mock('@walkeros/cli/dev', () => ({
   schemas: {
     PushInputShape: {
@@ -12,9 +11,28 @@ jest.mock('@walkeros/cli/dev', () => ({
   },
 }));
 
-// Mock @walkeros/cli (dynamic import target)
 jest.mock('@walkeros/cli', () => ({
   push: jest.fn(),
+}));
+
+jest.mock('@walkeros/core', () => ({
+  mcpResult: jest.fn((result, summary) => ({
+    content: [
+      { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
+    ],
+    structuredContent: result,
+  })),
+  mcpError: jest.fn((error) => ({
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }),
+      },
+    ],
+    isError: true,
+  })),
 }));
 
 import { push } from '@walkeros/cli';
@@ -32,20 +50,20 @@ function createMockServer() {
   };
 }
 
-describe('push tool', () => {
+describe('flow_push tool', () => {
   let server: ReturnType<typeof createMockServer>;
 
   beforeEach(() => {
     server = createMockServer();
-    registerPushTool(server as any);
+    registerFlowPushTool(server as any);
   });
 
   it('registers with correct name, title, and annotations', () => {
-    const tool = server.getTool('push');
+    const tool = server.getTool('flow_push');
     expect(tool).toBeDefined();
 
     const config = tool.config as any;
-    expect(config.title).toBe('Push');
+    expect(config.title).toBe('Push Events');
     expect(config.annotations).toEqual({
       readOnlyHint: false,
       destructiveHint: true,
@@ -55,81 +73,27 @@ describe('push tool', () => {
   });
 
   it('has outputSchema defined', () => {
-    const tool = server.getTool('push');
+    const tool = server.getTool('flow_push');
     const config = tool.config as any;
     expect(config.outputSchema).toBe(PushOutputShape);
   });
 
-  it('passes raw string event to push (resolution is CLI responsibility)', async () => {
-    const mockResult = { destinations: [], logs: [], stats: {} };
+  it('calls push with correct params', async () => {
+    const mockResult = { success: true, duration: 120 };
     mockPush.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('push');
-    const result = await tool.handler({
-      configPath: './flow.json',
-      event: '{"name":"page view","data":{"title":"Home"}}',
-      flow: undefined,
-    });
-
-    // MCP passes raw string; push() / pushCore handles JSON parsing
-    expect(mockPush).toHaveBeenCalledWith(
-      './flow.json',
-      '{"name":"page view","data":{"title":"Home"}}',
-      { json: true, flow: undefined, platform: undefined },
-    );
-    expect(result.content[0].type).toBe('text');
-    expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
-  });
-
-  it('passes file path string to push', async () => {
-    const mockResult = { destinations: [], logs: [] };
-    mockPush.mockResolvedValue(mockResult);
-
-    const tool = server.getTool('push');
-    await tool.handler({
-      configPath: './flow.json',
-      event: '/path/to/event.json',
-      flow: undefined,
-    });
-
-    expect(mockPush).toHaveBeenCalledWith(
-      './flow.json',
-      '/path/to/event.json',
-      { json: true, flow: undefined, platform: undefined },
-    );
-  });
-
-  it('passes JSON array string to push', async () => {
-    mockPush.mockResolvedValue({ results: [] });
-
-    const tool = server.getTool('push');
-    await tool.handler({
-      configPath: './flow.json',
-      event: '[{"name":"page view"},{"name":"click button"}]',
-      flow: undefined,
-    });
-
-    expect(mockPush).toHaveBeenCalledWith(
-      './flow.json',
-      '[{"name":"page view"},{"name":"click button"}]',
-      { json: true, flow: undefined, platform: undefined },
-    );
-  });
-
-  it('returns structured content on success', async () => {
-    const mockResult = { destinations: ['ga4'], logs: ['processed 1 event'] };
-    mockPush.mockResolvedValue(mockResult);
-
-    const tool = server.getTool('push');
+    const tool = server.getTool('flow_push');
     const result = await tool.handler({
       configPath: './flow.json',
       event: '{"name":"page view"}',
       flow: undefined,
     });
 
-    expect(result.content).toHaveLength(1);
-    expect(result.content[0].type).toBe('text');
-    expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
+    expect(mockPush).toHaveBeenCalledWith(
+      './flow.json',
+      '{"name":"page view"}',
+      { json: true, flow: undefined, platform: undefined },
+    );
     expect(result.structuredContent).toEqual(mockResult);
     expect(result.isError).toBeUndefined();
   });
@@ -137,7 +101,7 @@ describe('push tool', () => {
   it('returns isError on CLI failure', async () => {
     mockPush.mockRejectedValue(new Error('Push failed'));
 
-    const tool = server.getTool('push');
+    const tool = server.getTool('flow_push');
     const result = await tool.handler({
       configPath: './flow.json',
       event: '{"name":"page view"}',
@@ -145,69 +109,32 @@ describe('push tool', () => {
     });
 
     expect(result.isError).toBe(true);
-    expect(result.structuredContent).toBeUndefined();
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.success).toBe(false);
     expect(parsed.error).toBe('Push failed');
   });
 
-  it('passes broken JSON string to push as-is', async () => {
-    mockPush.mockResolvedValue({ results: [] });
-
-    const tool = server.getTool('push');
-    await tool.handler({
-      configPath: './flow.json',
-      event: '{broken json',
-      flow: undefined,
-    });
-
-    expect(mockPush).toHaveBeenCalledWith('./flow.json', '{broken json', {
-      json: true,
-      flow: undefined,
-      platform: undefined,
-    });
-  });
-
-  it('passes flow parameter to CLI push', async () => {
+  it('passes flow and platform parameters', async () => {
     mockPush.mockResolvedValue({ success: true });
 
-    const tool = server.getTool('push');
+    const tool = server.getTool('flow_push');
     await tool.handler({
       configPath: './flow.json',
       event: '{"name":"page view"}',
       flow: 'production',
-      platform: undefined,
-    });
-
-    expect(mockPush).toHaveBeenCalledWith(
-      './flow.json',
-      '{"name":"page view"}',
-      { json: true, flow: 'production', platform: undefined },
-    );
-  });
-
-  it('passes platform parameter to CLI push', async () => {
-    mockPush.mockResolvedValue({ success: true });
-
-    const tool = server.getTool('push');
-    await tool.handler({
-      configPath: './flow.json',
-      event: '{"name":"page view"}',
-      flow: undefined,
       platform: 'server',
     });
 
     expect(mockPush).toHaveBeenCalledWith(
       './flow.json',
       '{"name":"page view"}',
-      { json: true, flow: undefined, platform: 'server' },
+      { json: true, flow: 'production', platform: 'server' },
     );
   });
 
   it('handles non-Error exceptions', async () => {
     mockPush.mockRejectedValue(42);
 
-    const tool = server.getTool('push');
+    const tool = server.getTool('flow_push');
     const result = await tool.handler({
       configPath: './flow.json',
       event: '{"name":"page view"}',

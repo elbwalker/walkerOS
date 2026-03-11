@@ -1,14 +1,15 @@
 import { z } from 'zod';
 import { loadJsonConfig } from '@walkeros/cli';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { mcpResult, mcpError } from '@walkeros/core';
 import type { Flow } from '@walkeros/core';
 import { ExamplesListOutputShape } from '../schemas/output.js';
 
-export function registerExamplesListTool(server: McpServer) {
+export function registerFlowExamplesTool(server: McpServer) {
   server.registerTool(
-    'examples_list',
+    'flow_examples',
     {
-      title: 'List Step Examples',
+      title: 'Flow Examples',
       description:
         'List all step examples in a walkerOS flow configuration. ' +
         'Shows example names, step locations, and in/out shapes. ' +
@@ -26,6 +27,12 @@ export function registerExamplesListTool(server: McpServer) {
           .string()
           .optional()
           .describe('Filter to a specific step (e.g., "destination.gtag")'),
+        full: z
+          .boolean()
+          .optional()
+          .describe(
+            'Return full in/out/mapping data for each example (default: false, returns metadata only)',
+          ),
       },
       outputSchema: ExamplesListOutputShape,
       annotations: {
@@ -35,7 +42,7 @@ export function registerExamplesListTool(server: McpServer) {
         openWorldHint: false,
       },
     },
-    async ({ configPath, flow, step }) => {
+    async ({ configPath, flow, step, full }) => {
       try {
         const rawConfig = await loadJsonConfig<Flow.Config>(configPath);
 
@@ -94,13 +101,16 @@ export function registerExamplesListTool(server: McpServer) {
                 hasIn: ex.in !== undefined,
                 hasOut: ex.out !== undefined,
                 hasMapping: ex.mapping !== undefined,
-                in: ex.in,
-                out: ex.out,
-                mapping: ex.mapping,
+                ...(full
+                  ? { in: ex.in, out: ex.out, mapping: ex.mapping }
+                  : {}),
               });
             }
           }
         }
+
+        // Count unique steps
+        const stepSet = new Set(examples.map((e) => e.step));
 
         const result = {
           flow: flowName,
@@ -108,27 +118,12 @@ export function registerExamplesListTool(server: McpServer) {
           examples,
         };
 
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-          structuredContent: result as unknown as Record<string, unknown>,
-        };
+        const summary = `${examples.length} examples across ${stepSet.size} steps`;
+        return mcpResult(result, summary, {
+          next: ['Use flow_simulate with example parameter to test'],
+        });
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({
-                error: error instanceof Error ? error.message : 'Unknown error',
-              }),
-            },
-          ],
-          isError: true,
-        };
+        return mcpError(error);
       }
     },
   );

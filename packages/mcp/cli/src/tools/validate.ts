@@ -1,13 +1,14 @@
 import { validate } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { mcpResult, mcpError } from '@walkeros/core';
 import { ValidateOutputShape } from '../schemas/output.js';
 
-export function registerValidateTool(server: McpServer) {
+export function registerFlowValidateTool(server: McpServer) {
   server.registerTool(
-    'validate',
+    'flow_validate',
     {
-      title: 'Validate',
+      title: 'Validate Flow',
       description:
         'Validate walkerOS events, flow configurations, mapping rules, or data contracts. ' +
         'Accepts JSON strings, file paths, or URLs as input. ' +
@@ -24,29 +25,24 @@ export function registerValidateTool(server: McpServer) {
     async ({ type, input, flow, path }) => {
       try {
         const result = await validate(type, input, { flow, path });
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-          structuredContent: result as unknown as Record<string, unknown>,
-        };
+        const r = result as Record<string, unknown>;
+        const valid = r.valid as boolean;
+        const errors = (r.errors as unknown[]) ?? [];
+        const warnings = (r.warnings as unknown[]) ?? [];
+        const summary = valid
+          ? 'Valid'
+          : `Invalid: ${errors.length} errors, ${warnings.length} warnings`;
+        const hints = valid
+          ? {
+              next: [
+                'Use flow_simulate to test event flow',
+                'Use flow_bundle to build',
+              ],
+            }
+          : { next: ['Fix errors above, then run flow_validate again'] };
+        return mcpResult(result, summary, hints);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({
-                valid: false,
-                error: error instanceof Error ? error.message : 'Unknown error',
-              }),
-            },
-          ],
-          isError: true,
-        };
+        return mcpError(error);
       }
     },
   );

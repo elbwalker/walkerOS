@@ -41,18 +41,13 @@
     "skills/walkeros-using-step-examples"
   ],
   "mcpServers": {
-    "walkeros-api": {
+    "walkeros-flow": {
       "command": "npx",
-      "args": ["@walkeros/mcp-api"],
+      "args": ["@walkeros/mcp-flow"],
       "env": {
         "WALKEROS_TOKEN": "",
         "WALKEROS_PROJECT_ID": ""
       }
-    },
-    "walkeros-flow": {
-      "command": "npx",
-      "args": ["@walkeros/mcp-flow"],
-      "env": {}
     }
   }
 }

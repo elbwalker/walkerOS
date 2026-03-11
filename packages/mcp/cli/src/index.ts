@@ -1,18 +1,23 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
-import { registerValidateTool } from './tools/validate.js';
-import { registerBundleTool } from './tools/bundle.js';
-import { registerSimulateTool } from './tools/simulate.js';
-import { registerPushTool } from './tools/push.js';
-import { registerExamplesListTool } from './tools/examples.js';
+import { registerFlowValidateTool } from './tools/validate.js';
+import { registerFlowBundleTool } from './tools/bundle.js';
+import { registerFlowSimulateTool } from './tools/simulate.js';
+import { registerFlowPushTool } from './tools/push.js';
+import { registerFlowExamplesTool } from './tools/examples.js';
 import {
   registerPackageSearchTool,
   registerGetPackageSchemaTool,
 } from './tools/package.js';
-import { registerFlowSchemaTool } from './tools/flow-schema.js';
-import { registerFlowInitTool } from './tools/flow-init.js';
+import { registerFlowLoadTool } from './tools/flow-load.js';
+import { registerApiTool } from './tools/api.js';
 import { registerPackageSchemaResources } from './resources/package-schemas.js';
+import { registerReferenceResources } from './resources/references.js';
+import { registerAddStepPrompt } from './prompts/add-step.js';
+import { registerSetupMappingPrompt } from './prompts/setup-mapping.js';
+import { registerManageContractPrompt } from './prompts/manage-contract.js';
+import { registerUseDefinitionsPrompt } from './prompts/use-definitions.js';
 
 declare const __VERSION__: string;
 
@@ -22,49 +27,54 @@ const server = new McpServer(
     version: __VERSION__,
   },
   {
-    instructions: `walkerOS is an open-source, privacy-first event data collection platform. It lets you define event pipelines as code using JSON configuration files (flow.json).
+    instructions: `walkerOS is an open-source, privacy-first event data collection platform. Define event pipelines as code using JSON flow configurations.
 
-## Core Architecture: Source → Collector → Destination(s)
+## Architecture: Source → Collector → Destination(s)
 
-- **Sources** capture events from browsers, servers, or CMPs (consent management platforms). Events use entity-action naming: "page view", "product add", "order complete".
-- **Collector** receives events from sources, applies consent rules, and distributes them to destinations. It's the central hub.
-- **Destinations** deliver events to analytics/marketing tools (GA4, Meta, Snowplow, BigQuery, etc.). Each destination can have a **mapping** that transforms vendor-agnostic events into vendor-specific formats.
-- **Transformers** (optional) process events in chains: validate, enrich, fingerprint, route, or redact. Sources link via \`next\`, destinations link via \`before\`.
-- **Stores** (optional) provide key-value storage (memory, filesystem, S3, GCS). Wired via \`$store:storeName\` in env values.
+Every component in a flow is a **step**: sources capture events, transformers process them, destinations deliver them, stores provide shared state. Steps connect via \`next\` (pre-collector) and \`before\` (post-collector) chains.
 
-## Flow.Config
+## Getting Started
 
-A flow.json defines the complete pipeline: which packages to use, how sources/destinations/transformers/stores connect, and configuration for each. Use \`flow_schema()\` to see the full structure.
+1. \`flow_load({ platform: "web" })\` or \`flow_load({ source: "./flow.json" })\` — create or load a flow
+2. Use the \`add-step\` prompt to add sources, destinations, transformers, or stores
+3. Use the \`setup-mapping\` prompt to configure event transformations
+4. \`flow_validate({ type: "flow", input: "flow.json" })\` — verify configuration
+5. \`flow_simulate({ configPath: "flow.json", event: "..." })\` — test with mocked API calls
+6. \`flow_bundle({ configPath: "flow.json" })\` — build deployable JavaScript
+7. \`api({ action: "deploy", id: "cfg_..." })\` — deploy to walkerOS cloud (requires WALKEROS_TOKEN)
 
-## Recommended Workflow
+## Reference Resources
 
-1. \`package_search()\` — browse available packages by type/platform
-2. \`package_search({ package: "..." })\` — inspect specific package metadata
-3. \`package_get({ package: "...", section: "examples" })\` — see configuration examples
-4. \`flow_schema()\` — understand config structure and connection rules
-5. \`flow_init({ platform, destinations })\` — scaffold starter flow.json
-6. \`validate({ input: "flow.json" })\` — check config validity
-7. \`simulate({ config: "flow.json", event: {...} })\` — test event processing with mocked API calls
-8. \`bundle({ config: "flow.json" })\` — create deployable JavaScript bundle
+Attach these for context: \`walkeros://reference/flow-schema\`, \`walkeros://reference/mapping\`, \`walkeros://reference/event-model\`, \`walkeros://reference/consent\`, \`walkeros://reference/variables\`, \`walkeros://reference/contract\`.
 
 ## Key Concepts
 
-- **Packages** are npm modules following the \`@walkeros/\` naming convention. Each provides a walkerOS.json manifest with schemas, examples, and hints.
-- **Mappings** transform events at the destination level using data/map/loop/set/condition rules. This keeps events vendor-agnostic until delivery.
-- **Env pattern** — destinations and sources accept an \`env\` object for runtime values (API keys, endpoints). Use \`$store:storeName\` to wire in store values.`,
+- **Steps** are sources, destinations, transformers, or stores — each backed by an npm package with schemas, hints, and examples.
+- **Mapping** transforms events using data/map/loop/set/condition rules. Same syntax on sources and destinations.
+- **Contracts** define event schemas using entity-action keying. Can generate FROM mappings or scaffold mappings FROM contracts.
+- **Variables** (\$var, \$env, \$def, \$code, \$store) enable DRY, environment-aware config. Use the \`use-definitions\` prompt to extract shared patterns.
+- **Consent** gates destinations, mapping rules, and individual fields. Privacy-first by design.`,
   },
 );
 
-registerValidateTool(server);
-registerBundleTool(server);
-registerSimulateTool(server);
-registerPushTool(server);
-registerExamplesListTool(server);
+registerFlowValidateTool(server);
+registerFlowBundleTool(server);
+registerFlowSimulateTool(server);
+registerFlowPushTool(server);
+registerFlowExamplesTool(server);
 registerPackageSearchTool(server);
 registerGetPackageSchemaTool(server);
-registerFlowSchemaTool(server);
-registerFlowInitTool(server);
+registerFlowLoadTool(server);
 registerPackageSchemaResources(server);
+registerReferenceResources(server);
+registerAddStepPrompt(server);
+registerSetupMappingPrompt(server);
+registerManageContractPrompt(server);
+registerUseDefinitionsPrompt(server);
+
+if (process.env.WALKEROS_TOKEN) {
+  registerApiTool(server);
+}
 
 async function main() {
   const transport = new StdioServerTransport();

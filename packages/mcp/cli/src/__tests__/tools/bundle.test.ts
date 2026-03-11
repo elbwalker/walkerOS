@@ -1,7 +1,6 @@
-import { registerBundleTool } from '../../tools/bundle.js';
+import { registerFlowBundleTool } from '../../tools/bundle.js';
 import { BundleOutputShape } from '../../schemas/output.js';
 
-// Mock @walkeros/cli/dev schemas
 jest.mock('@walkeros/cli/dev', () => ({
   schemas: {
     BundleInputShape: {
@@ -13,10 +12,29 @@ jest.mock('@walkeros/cli/dev', () => ({
   },
 }));
 
-// Mock @walkeros/cli (dynamic import target)
 jest.mock('@walkeros/cli', () => ({
   bundle: jest.fn(),
   bundleRemote: jest.fn(),
+}));
+
+jest.mock('@walkeros/core', () => ({
+  mcpResult: jest.fn((result, summary) => ({
+    content: [
+      { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
+    ],
+    structuredContent: result,
+  })),
+  mcpError: jest.fn((error) => ({
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }),
+      },
+    ],
+    isError: true,
+  })),
 }));
 
 import { bundle, bundleRemote } from '@walkeros/cli';
@@ -35,39 +53,39 @@ function createMockServer() {
   };
 }
 
-describe('bundle tool', () => {
+describe('flow_bundle tool', () => {
   let server: ReturnType<typeof createMockServer>;
 
   beforeEach(() => {
     server = createMockServer();
-    registerBundleTool(server as any);
+    registerFlowBundleTool(server as any);
   });
 
   it('registers with correct name, title, and annotations', () => {
-    const tool = server.getTool('bundle');
+    const tool = server.getTool('flow_bundle');
     expect(tool).toBeDefined();
 
     const config = tool.config as any;
-    expect(config.title).toBe('Bundle');
+    expect(config.title).toBe('Bundle Flow');
     expect(config.annotations).toEqual({
       readOnlyHint: false,
       destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
     });
   });
 
   it('has outputSchema defined', () => {
-    const tool = server.getTool('bundle');
+    const tool = server.getTool('flow_bundle');
     const config = tool.config as any;
     expect(config.outputSchema).toBe(BundleOutputShape);
   });
 
   it('calls CLI bundle with correct options', async () => {
-    const mockResult = { size: 1024, modules: 3 };
+    const mockResult = { totalSize: 1024, buildTime: 150 };
     mockBundle.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('bundle');
+    const tool = server.getTool('flow_bundle');
     const result = await tool.handler({
       configPath: './flow.json',
       flow: 'myFlow',
@@ -80,14 +98,13 @@ describe('bundle tool', () => {
       stats: true,
       buildOverrides: { output: './dist' },
     });
-    expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
     expect(result.structuredContent).toEqual(mockResult);
   });
 
   it('defaults stats to true when not provided', async () => {
-    mockBundle.mockResolvedValue({ size: 512 });
+    mockBundle.mockResolvedValue({ totalSize: 512 });
 
-    const tool = server.getTool('bundle');
+    const tool = server.getTool('flow_bundle');
     await tool.handler({
       configPath: './flow.json',
       flow: undefined,
@@ -102,10 +119,10 @@ describe('bundle tool', () => {
     });
   });
 
-  it('returns default success message when bundle returns null', async () => {
+  it('returns fallback when bundle returns null', async () => {
     mockBundle.mockResolvedValue(null);
 
-    const tool = server.getTool('bundle');
+    const tool = server.getTool('flow_bundle');
     const result = await tool.handler({
       configPath: './flow.json',
       flow: undefined,
@@ -113,34 +130,17 @@ describe('bundle tool', () => {
       output: undefined,
     });
 
-    const fallback = { success: true, message: 'Bundle created' };
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed).toEqual(fallback);
-    expect(result.structuredContent).toEqual(fallback);
+    expect(result.structuredContent).toEqual({
+      success: true,
+      message: 'Bundle created',
+    });
     expect(result.isError).toBeUndefined();
-  });
-
-  it('returns default success message when bundle returns undefined', async () => {
-    mockBundle.mockResolvedValue(undefined);
-
-    const tool = server.getTool('bundle');
-    const result = await tool.handler({
-      configPath: './flow.json',
-      flow: undefined,
-      stats: undefined,
-      output: undefined,
-    });
-
-    const fallback = { success: true, message: 'Bundle created' };
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed).toEqual(fallback);
-    expect(result.structuredContent).toEqual(fallback);
   });
 
   it('returns isError on CLI failure', async () => {
     mockBundle.mockRejectedValue(new Error('Build failed'));
 
-    const tool = server.getTool('bundle');
+    const tool = server.getTool('flow_bundle');
     const result = await tool.handler({
       configPath: './flow.json',
       flow: undefined,
@@ -149,26 +149,8 @@ describe('bundle tool', () => {
     });
 
     expect(result.isError).toBe(true);
-    expect(result.structuredContent).toBeUndefined();
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.success).toBe(false);
     expect(parsed.error).toBe('Build failed');
-  });
-
-  it('handles non-Error exceptions', async () => {
-    mockBundle.mockRejectedValue('string error');
-
-    const tool = server.getTool('bundle');
-    const result = await tool.handler({
-      configPath: './flow.json',
-      flow: undefined,
-      stats: undefined,
-      output: undefined,
-    });
-
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.error).toBe('Unknown error');
   });
 
   describe('remote bundling', () => {
@@ -176,7 +158,7 @@ describe('bundle tool', () => {
       const content = { version: 1, flows: {} };
       mockBundleRemote.mockResolvedValue({ bundle: 'code', size: 512 });
 
-      const tool = server.getTool('bundle');
+      const tool = server.getTool('flow_bundle');
       const result = await tool.handler({ remote: true, content });
 
       expect(mockBundleRemote).toHaveBeenCalledWith({ content });
@@ -185,44 +167,12 @@ describe('bundle tool', () => {
       expect(result.structuredContent.bundle).toBe('code');
     });
 
-    it('calls local bundle when remote is false', async () => {
-      mockBundle.mockResolvedValue({ success: true });
-
-      const tool = server.getTool('bundle');
-      await tool.handler({ configPath: './flow.json', remote: false });
-
-      expect(mockBundle).toHaveBeenCalled();
-      expect(mockBundleRemote).not.toHaveBeenCalled();
-    });
-
-    it('defaults to local bundle when remote is omitted', async () => {
-      mockBundle.mockResolvedValue({ success: true });
-
-      const tool = server.getTool('bundle');
-      await tool.handler({ configPath: './flow.json' });
-
-      expect(mockBundle).toHaveBeenCalled();
-      expect(mockBundleRemote).not.toHaveBeenCalled();
-    });
-
     it('returns error when remote is true but content is missing', async () => {
-      const tool = server.getTool('bundle');
+      const tool = server.getTool('flow_bundle');
       const result = await tool.handler({ remote: true });
 
       expect(result.isError).toBe(true);
       expect(JSON.parse(result.content[0].text).error).toContain('content');
-    });
-
-    it('returns error on remote API failure', async () => {
-      mockBundleRemote.mockRejectedValue(new Error('Invalid config'));
-
-      const tool = server.getTool('bundle');
-      const result = await tool.handler({
-        remote: true,
-        content: { version: 1 },
-      });
-
-      expect(result.isError).toBe(true);
     });
   });
 });

@@ -123,17 +123,21 @@ describe('output schemas', () => {
 
   describe('SimulateOutputShape', () => {
     it('accepts minimal success result', () => {
-      const result = parseShape(SimulateOutputShape, { success: true });
+      const result = parseShape(SimulateOutputShape, {
+        success: true,
+        summary: '0/0 destinations received the event',
+      });
       expect(result.success).toBe(true);
     });
 
-    it('accepts full result with all optional fields', () => {
+    it('accepts full result with destinations', () => {
       const result = parseShape(SimulateOutputShape, {
         success: true,
-        collector: { events: [] },
-        elbResult: { ok: true },
-        logs: [{ level: 'info', msg: 'processed' }],
-        usage: { ga4: [{ method: 'POST' }] },
+        summary: '1/2 destinations received the event',
+        destinations: {
+          gtag: { received: true, calls: 1, payload: { args: ['event'] } },
+          meta: { received: false, calls: 0 },
+        },
         duration: 42,
       });
       expect(result.success).toBe(true);
@@ -143,6 +147,20 @@ describe('output schemas', () => {
       const result = parseShape(SimulateOutputShape, {
         success: false,
         error: 'Config not found',
+        summary: 'Simulation failed',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts result with exampleMatch', () => {
+      const result = parseShape(SimulateOutputShape, {
+        success: true,
+        summary: '1/1 destinations received the event',
+        exampleMatch: {
+          name: 'purchase',
+          step: 'destination.gtag',
+          match: true,
+        },
       });
       expect(result.success).toBe(true);
     });

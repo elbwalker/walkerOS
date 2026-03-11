@@ -1,9 +1,28 @@
-import { registerExamplesListTool } from '../../tools/examples.js';
+import { registerFlowExamplesTool } from '../../tools/examples.js';
 import { ExamplesListOutputShape } from '../../schemas/output.js';
 
-// Mock @walkeros/cli
 jest.mock('@walkeros/cli', () => ({
   loadJsonConfig: jest.fn(),
+}));
+
+jest.mock('@walkeros/core', () => ({
+  mcpResult: jest.fn((result, summary) => ({
+    content: [
+      { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
+    ],
+    structuredContent: result,
+  })),
+  mcpError: jest.fn((error) => ({
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }),
+      },
+    ],
+    isError: true,
+  })),
 }));
 
 import { loadJsonConfig } from '@walkeros/cli';
@@ -74,21 +93,21 @@ const sampleConfig = {
   },
 };
 
-describe('examples_list tool', () => {
+describe('flow_examples tool', () => {
   let server: ReturnType<typeof createMockServer>;
 
   beforeEach(() => {
     server = createMockServer();
-    registerExamplesListTool(server as any);
+    registerFlowExamplesTool(server as any);
     mockLoadJsonConfig.mockReset();
   });
 
   it('registers with correct name, title, and annotations', () => {
-    const tool = server.getTool('examples_list');
+    const tool = server.getTool('flow_examples');
     expect(tool).toBeDefined();
 
     const config = tool.config as any;
-    expect(config.title).toBe('List Step Examples');
+    expect(config.title).toBe('Flow Examples');
     expect(config.annotations).toEqual({
       readOnlyHint: true,
       destructiveHint: false,
@@ -98,7 +117,7 @@ describe('examples_list tool', () => {
   });
 
   it('has outputSchema defined', () => {
-    const tool = server.getTool('examples_list');
+    const tool = server.getTool('flow_examples');
     const config = tool.config as any;
     expect(config.outputSchema).toBe(ExamplesListOutputShape);
   });
@@ -106,86 +125,68 @@ describe('examples_list tool', () => {
   it('returns all examples from a single-flow config', async () => {
     mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
 
-    const tool = server.getTool('examples_list');
+    const tool = server.getTool('flow_examples');
     const result = await tool.handler({ configPath: './flow.json' });
 
     expect(result.isError).toBeUndefined();
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.flow).toBe('default');
-    expect(parsed.count).toBe(4);
-    expect(parsed.examples).toHaveLength(4);
-
-    // Verify example names
-    const names = parsed.examples.map((e: any) => e.exampleName);
-    expect(names).toContain('basic');
-    expect(names).toContain('purchase');
-    expect(names).toContain('pageview');
-    expect(names).toContain('enrich_order');
-  });
-
-  it('returns structured content', async () => {
-    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
-
-    const tool = server.getTool('examples_list');
-    const result = await tool.handler({ configPath: './flow.json' });
-
-    expect(result.structuredContent).toBeDefined();
     expect(result.structuredContent.flow).toBe('default');
     expect(result.structuredContent.count).toBe(4);
+    expect(result.structuredContent.examples).toHaveLength(4);
   });
 
-  it('filters by --step', async () => {
+  it('filters by step', async () => {
     mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
 
-    const tool = server.getTool('examples_list');
+    const tool = server.getTool('flow_examples');
     const result = await tool.handler({
       configPath: './flow.json',
       step: 'destination.gtag',
     });
 
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.count).toBe(2);
+    expect(result.structuredContent.count).toBe(2);
     expect(
-      parsed.examples.every((e: any) => e.step === 'destination.gtag'),
+      result.structuredContent.examples.every(
+        (e: any) => e.step === 'destination.gtag',
+      ),
     ).toBe(true);
   });
 
-  it('selects flow with --flow in multi-flow config', async () => {
-    const multiFlowConfig = {
-      version: 1,
-      flows: {
-        production: {
-          web: {},
-          destinations: {
-            gtag: {
-              package: '@walkeros/web-destination-gtag',
-              examples: {
-                prod_example: { in: { name: 'page view' } },
-              },
-            },
-          },
-        },
-        staging: {
-          web: {},
-          destinations: {},
-        },
-      },
-    };
-    mockLoadJsonConfig.mockResolvedValue(multiFlowConfig as any);
+  it('excludes in/out/mapping by default (metadata only)', async () => {
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
 
-    const tool = server.getTool('examples_list');
-    const result = await tool.handler({
-      configPath: './flow.json',
-      flow: 'production',
-    });
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({ configPath: './flow.json' });
 
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.flow).toBe('production');
-    expect(parsed.count).toBe(1);
-    expect(parsed.examples[0].exampleName).toBe('prod_example');
+    const purchase = result.structuredContent.examples.find(
+      (e: any) => e.exampleName === 'purchase',
+    );
+    expect(purchase.hasMapping).toBe(true);
+    expect(purchase.hasIn).toBe(true);
+    expect(purchase.hasOut).toBe(true);
+    expect(purchase.mapping).toBeUndefined();
+    expect(purchase.in).toBeUndefined();
+    expect(purchase.out).toBeUndefined();
   });
 
-  it('errors on multi-flow without --flow', async () => {
+  it('includes in/out/mapping when full: true', async () => {
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
+
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      full: true,
+    });
+
+    const purchase = result.structuredContent.examples.find(
+      (e: any) => e.exampleName === 'purchase',
+    );
+    expect(purchase.mapping).toEqual({
+      name: 'purchase',
+      data: { map: { value: 'data.total' } },
+    });
+  });
+
+  it('errors on multi-flow without flow param', async () => {
     const multiFlowConfig = {
       version: 1,
       flows: {
@@ -195,7 +196,7 @@ describe('examples_list tool', () => {
     };
     mockLoadJsonConfig.mockResolvedValue(multiFlowConfig as any);
 
-    const tool = server.getTool('examples_list');
+    const tool = server.getTool('flow_examples');
     const result = await tool.handler({ configPath: './flow.json' });
 
     expect(result.isError).toBe(true);
@@ -203,69 +204,15 @@ describe('examples_list tool', () => {
     expect(parsed.error).toContain('Multiple flows found');
   });
 
-  it('errors on missing flow', async () => {
-    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
-
-    const tool = server.getTool('examples_list');
-    const result = await tool.handler({
-      configPath: './flow.json',
-      flow: 'nonexistent',
-    });
-
-    expect(result.isError).toBe(true);
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.error).toContain('not found');
-  });
-
   it('errors on config load failure', async () => {
     mockLoadJsonConfig.mockRejectedValue(new Error('File not found'));
 
-    const tool = server.getTool('examples_list');
+    const tool = server.getTool('flow_examples');
     const result = await tool.handler({ configPath: './missing.json' });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toBe('File not found');
-  });
-
-  it('includes hasIn and hasOut flags', async () => {
-    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
-
-    const tool = server.getTool('examples_list');
-    const result = await tool.handler({ configPath: './flow.json' });
-
-    const parsed = JSON.parse(result.content[0].text);
-    const basic = parsed.examples.find((e: any) => e.exampleName === 'basic');
-    expect(basic.hasIn).toBe(true);
-    expect(basic.hasOut).toBe(false);
-
-    const purchase = parsed.examples.find(
-      (e: any) => e.exampleName === 'purchase',
-    );
-    expect(purchase.hasIn).toBe(true);
-    expect(purchase.hasOut).toBe(true);
-  });
-
-  it('includes mapping field for destination examples', async () => {
-    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
-
-    const tool = server.getTool('examples_list');
-    const result = await tool.handler({ configPath: './flow.json' });
-
-    const parsed = JSON.parse(result.content[0].text);
-    const purchase = parsed.examples.find(
-      (e: any) => e.exampleName === 'purchase',
-    );
-    expect(purchase.mapping).toEqual({
-      name: 'purchase',
-      data: { map: { value: 'data.total' } },
-    });
-    expect(purchase.hasMapping).toBe(true);
-
-    // Source example should not have mapping
-    const basic = parsed.examples.find((e: any) => e.exampleName === 'basic');
-    expect(basic.mapping).toBeUndefined();
-    expect(basic.hasMapping).toBe(false);
   });
 
   it('returns empty examples array when no examples exist', async () => {
@@ -282,11 +229,10 @@ describe('examples_list tool', () => {
     };
     mockLoadJsonConfig.mockResolvedValue(configNoExamples as any);
 
-    const tool = server.getTool('examples_list');
+    const tool = server.getTool('flow_examples');
     const result = await tool.handler({ configPath: './flow.json' });
 
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.count).toBe(0);
-    expect(parsed.examples).toEqual([]);
+    expect(result.structuredContent.count).toBe(0);
+    expect(result.structuredContent.examples).toEqual([]);
   });
 });

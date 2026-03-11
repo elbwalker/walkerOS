@@ -55,21 +55,45 @@ export const BundleOutputShape = {
 
 export const SimulateOutputShape = {
   success: z.boolean().describe('Whether simulation succeeded'),
-  error: z.string().optional().describe('Error message if simulation failed'),
-  collector: z
-    .unknown()
+  error: z.string().optional().describe('Error message if failed'),
+  summary: z.string().describe('One-line result summary'),
+  destinations: z
+    .record(
+      z.string(),
+      z.object({
+        received: z
+          .boolean()
+          .describe('Whether destination received the event'),
+        calls: z.number().describe('Number of API calls made'),
+        payload: z.unknown().optional().describe('Transformed payload sent'),
+        errors: z
+          .array(z.string())
+          .optional()
+          .describe('Errors for this destination'),
+      }),
+    )
     .optional()
-    .describe('Collector state after simulation'),
-  elbResult: z.unknown().optional().describe('Push result from the collector'),
-  logs: z.array(z.unknown()).optional().describe('Log entries from simulation'),
-  usage: z
-    .record(z.string(), z.array(z.unknown()))
+    .describe('Per-destination results'),
+  transformers: z
+    .record(
+      z.string(),
+      z.object({
+        passed: z.boolean().describe('Whether event passed through'),
+        modified: z.boolean().describe('Whether event was modified'),
+      }),
+    )
     .optional()
-    .describe('API call usage per destination'),
-  duration: z
-    .number()
+    .describe('Per-transformer results'),
+  exampleMatch: z
+    .object({
+      name: z.string(),
+      step: z.string(),
+      match: z.boolean(),
+      diff: z.string().optional(),
+    })
     .optional()
-    .describe('Simulation duration in milliseconds'),
+    .describe('Example comparison result when using example parameter'),
+  duration: z.number().optional().describe('Simulation duration in ms'),
 };
 
 export const PushOutputShape = {

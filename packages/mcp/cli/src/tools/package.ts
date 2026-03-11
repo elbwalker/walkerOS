@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { fetchPackage } from '@walkeros/core';
+import { fetchPackage, mcpResult, mcpError } from '@walkeros/core';
 import {
   PackageSchemaOutputShape,
   PackageSearchOutputShape,
@@ -50,21 +50,10 @@ export function registerPackageSearchTool(server: McpServer) {
       // Browse mode: no package specified → return catalog
       if (!packageName) {
         const catalog = filterRegistry({ type, platform });
-        const text =
-          `Found ${catalog.length} packages` +
-          (type ? ` of type "${type}"` : '') +
-          (platform ? ` for platform "${platform}"` : '') +
-          '.';
-
-        return {
-          content: [
-            { type: 'text' as const, text },
-            {
-              type: 'text' as const,
-              text: JSON.stringify(catalog, null, 2),
-            },
-          ],
-        };
+        const summary = `${catalog.length} packages found`;
+        return mcpResult(catalog, summary, {
+          next: ['Use package_get for schemas and examples'],
+        });
       }
 
       // Lookup mode: fetch specific package details
@@ -81,24 +70,12 @@ export function registerPackageSearchTool(server: McpServer) {
           exampleSummaries: info.exampleSummaries,
         };
 
-        return {
-          content: [
-            { type: 'text' as const, text: JSON.stringify(result, null, 2) },
-          ],
-          structuredContent: result as unknown as Record<string, unknown>,
-        };
+        const summary = `${info.packageName} v${info.version}`;
+        return mcpResult(result, summary, {
+          next: ['Use package_get for schemas and examples'],
+        });
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({
-                error: error instanceof Error ? error.message : 'Unknown error',
-              }),
-            },
-          ],
-          isError: true,
-        };
+        return mcpError(error);
       }
     },
   );
@@ -154,10 +131,8 @@ export function registerGetPackageSchemaTool(server: McpServer) {
         // Hints
         if (info.hints) {
           if (section === 'hints' || section === 'all') {
-            // Full hints with code blocks
             result.hints = info.hints;
           } else {
-            // Summary: text only, no code blocks
             const hintSummary: Record<string, { text: string }> = {};
             for (const [key, hint] of Object.entries(info.hints)) {
               const h = hint as { text: string };
@@ -171,40 +146,16 @@ export function registerGetPackageSchemaTool(server: McpServer) {
         if (section === 'examples' || section === 'all') {
           result.examples = info.examples;
         } else {
-          // Summary: names + descriptions only
           result.exampleSummaries = info.exampleSummaries;
         }
 
-        // Text summary
         const schemaCount = Object.keys(info.schemas).length;
-        const hintCount = info.hintKeys.length;
         const exampleCount = info.exampleSummaries.length;
-        const sectionLabel = section ? ` [section=${section}]` : '';
-        const parts = [
-          `Package ${info.packageName} v${info.version}`,
-          info.type ? `(${info.type}/${info.platform})` : '',
-          `- ${schemaCount} schemas, ${exampleCount} examples`,
-          hintCount > 0 ? `, ${hintCount} hints` : '',
-          sectionLabel,
-        ];
-        const summary = parts.filter(Boolean).join(' ');
+        const summary = `${info.packageName} — ${schemaCount} schemas, ${exampleCount} examples`;
 
-        return {
-          content: [{ type: 'text' as const, text: summary }],
-          structuredContent: result,
-        };
+        return mcpResult(result, summary);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({
-                error: error instanceof Error ? error.message : 'Unknown error',
-              }),
-            },
-          ],
-          isError: true,
-        };
+        return mcpError(error);
       }
     },
   );

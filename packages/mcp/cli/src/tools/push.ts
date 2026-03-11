@@ -1,17 +1,19 @@
 import { push } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { mcpResult, mcpError } from '@walkeros/core';
 import { PushOutputShape } from '../schemas/output.js';
 
-export function registerPushTool(server: McpServer) {
+export function registerFlowPushTool(server: McpServer) {
   server.registerTool(
-    'push',
+    'flow_push',
     {
-      title: 'Push',
+      title: 'Push Events',
       description:
         'Push a real event through a walkerOS flow to actual destinations. ' +
         'WARNING: This makes real API calls to real endpoints. ' +
-        'Events will be sent to configured destinations (analytics, CRM, etc.).',
+        'Note: Web destinations (gtag, meta, etc.) require browser globals that are not available in Node.js. ' +
+        'For web flows, use flow_simulate to test. flow_push works best for server-side flows.',
       inputSchema: schemas.PushInputShape,
       outputSchema: PushOutputShape,
       annotations: {
@@ -29,28 +31,13 @@ export function registerPushTool(server: McpServer) {
           platform,
         });
 
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-          structuredContent: result as unknown as Record<string, unknown>,
-        };
+        const r = result as Record<string, unknown>;
+        const duration = r.duration as number | undefined;
+        const summary = `Pushed event${duration ? ` (${duration}ms)` : ''}`;
+
+        return mcpResult(result, summary);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({
-                success: false,
-                error: error instanceof Error ? error.message : 'Unknown error',
-              }),
-            },
-          ],
-          isError: true,
-        };
+        return mcpError(error);
       }
     },
   );

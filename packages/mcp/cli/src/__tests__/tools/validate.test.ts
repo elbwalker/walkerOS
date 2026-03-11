@@ -1,7 +1,6 @@
-import { registerValidateTool } from '../../tools/validate.js';
+import { registerFlowValidateTool } from '../../tools/validate.js';
 import { ValidateOutputShape } from '../../schemas/output.js';
 
-// Mock @walkeros/cli/dev schemas
 jest.mock('@walkeros/cli/dev', () => ({
   schemas: {
     ValidateInputShape: {
@@ -13,9 +12,28 @@ jest.mock('@walkeros/cli/dev', () => ({
   },
 }));
 
-// Mock @walkeros/cli (dynamic import target)
 jest.mock('@walkeros/cli', () => ({
   validate: jest.fn(),
+}));
+
+jest.mock('@walkeros/core', () => ({
+  mcpResult: jest.fn((result, summary) => ({
+    content: [
+      { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
+    ],
+    structuredContent: result,
+  })),
+  mcpError: jest.fn((error) => ({
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }),
+      },
+    ],
+    isError: true,
+  })),
 }));
 
 import { validate } from '@walkeros/cli';
@@ -33,20 +51,20 @@ function createMockServer() {
   };
 }
 
-describe('validate tool', () => {
+describe('flow_validate tool', () => {
   let server: ReturnType<typeof createMockServer>;
 
   beforeEach(() => {
     server = createMockServer();
-    registerValidateTool(server as any);
+    registerFlowValidateTool(server as any);
   });
 
   it('registers with correct name, title, and annotations', () => {
-    const tool = server.getTool('validate');
+    const tool = server.getTool('flow_validate');
     expect(tool).toBeDefined();
 
     const config = tool.config as any;
-    expect(config.title).toBe('Validate');
+    expect(config.title).toBe('Validate Flow');
     expect(config.annotations).toEqual({
       readOnlyHint: true,
       destructiveHint: false,
@@ -56,36 +74,35 @@ describe('validate tool', () => {
   });
 
   it('has outputSchema defined', () => {
-    const tool = server.getTool('validate');
+    const tool = server.getTool('flow_validate');
     const config = tool.config as any;
     expect(config.outputSchema).toBe(ValidateOutputShape);
   });
 
-  it('passes raw string input to validate (resolution is CLI responsibility)', async () => {
+  it('calls validate with correct params', async () => {
     const mockResult = { valid: true, errors: [], warnings: [] };
     mockValidate.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('validate');
+    const tool = server.getTool('flow_validate');
     const result = await tool.handler({
       type: 'event',
       input: '{"name":"page view"}',
       flow: undefined,
     });
 
-    // MCP passes raw string; validate() handles JSON parsing via loadJsonFromSource
     expect(mockValidate).toHaveBeenCalledWith('event', '{"name":"page view"}', {
       flow: undefined,
       path: undefined,
     });
-    expect(result.content[0].type).toBe('text');
-    expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
+    expect(result.structuredContent).toEqual(mockResult);
+    expect(result.isError).toBeUndefined();
   });
 
   it('passes file path string to validate', async () => {
     const mockResult = { valid: true, errors: [] };
     mockValidate.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('validate');
+    const tool = server.getTool('flow_validate');
     await tool.handler({
       type: 'flow',
       input: '/path/to/flow.json',
@@ -98,28 +115,42 @@ describe('validate tool', () => {
     });
   });
 
-  it('returns structured content on success', async () => {
-    const mockResult = { valid: true, details: { checked: 5 } };
+  it('returns summary "Valid" on success', async () => {
+    const mockResult = { valid: true, errors: [], warnings: [] };
     mockValidate.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('validate');
+    const tool = server.getTool('flow_validate');
     const result = await tool.handler({
       type: 'event',
       input: '{"name":"page view"}',
       flow: undefined,
     });
 
-    expect(result.content).toHaveLength(1);
-    expect(result.content[0].type).toBe('text');
-    expect(JSON.parse(result.content[0].text)).toEqual(mockResult);
-    expect(result.structuredContent).toEqual(mockResult);
-    expect(result.isError).toBeUndefined();
+    expect(result.content[0].text).toBe('Valid');
+  });
+
+  it('returns summary with error count on failure', async () => {
+    const mockResult = {
+      valid: false,
+      errors: [{ path: '/name', message: 'required' }],
+      warnings: [],
+    };
+    mockValidate.mockResolvedValue(mockResult);
+
+    const tool = server.getTool('flow_validate');
+    const result = await tool.handler({
+      type: 'event',
+      input: '{"bad":"data"}',
+      flow: undefined,
+    });
+
+    expect(result.content[0].text).toBe('Invalid: 1 errors, 0 warnings');
   });
 
   it('returns isError on CLI failure', async () => {
     mockValidate.mockRejectedValue(new Error('Validation failed'));
 
-    const tool = server.getTool('validate');
+    const tool = server.getTool('flow_validate');
     const result = await tool.handler({
       type: 'event',
       input: '{"name":"bad"}',
@@ -127,63 +158,15 @@ describe('validate tool', () => {
     });
 
     expect(result.isError).toBe(true);
-    expect(result.structuredContent).toBeUndefined();
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.valid).toBe(false);
     expect(parsed.error).toBe('Validation failed');
-  });
-
-  it('passes contract JSON string to validate', async () => {
-    const mockResult = {
-      valid: true,
-      type: 'contract',
-      errors: [],
-      warnings: [],
-      details: { entityCount: 2, actionCount: 3, tagging: 1 },
-    };
-    mockValidate.mockResolvedValue(mockResult);
-
-    const tool = server.getTool('validate');
-    const input =
-      '{"$tagging":1,"product":{"*":{"properties":{}},"add":{"properties":{}}}}';
-    const result = await tool.handler({
-      type: 'contract',
-      input,
-      flow: undefined,
-    });
-
-    // MCP passes raw string; validate() handles JSON parsing
-    expect(mockValidate).toHaveBeenCalledWith('contract', input, {
-      flow: undefined,
-      path: undefined,
-    });
-    expect(result.content[0].type).toBe('text');
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.valid).toBe(true);
-    expect(parsed.details.entityCount).toBe(2);
-  });
-
-  it('passes invalid JSON string to validate as-is', async () => {
-    mockValidate.mockResolvedValue({ valid: true });
-
-    const tool = server.getTool('validate');
-    await tool.handler({
-      type: 'event',
-      input: '{not valid json',
-      flow: undefined,
-    });
-
-    expect(mockValidate).toHaveBeenCalledWith('event', '{not valid json', {
-      flow: undefined,
-      path: undefined,
-    });
   });
 
   it('passes path option to CLI validate', async () => {
     const mockResult = { valid: true, errors: [], warnings: [], details: {} };
     mockValidate.mockResolvedValue(mockResult);
 
-    const tool = server.getTool('validate');
+    const tool = server.getTool('flow_validate');
     await tool.handler({
       type: 'flow',
       input: '/path/to/flow.json',

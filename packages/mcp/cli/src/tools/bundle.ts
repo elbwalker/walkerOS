@@ -2,14 +2,14 @@ import { z } from 'zod';
 import { bundle, bundleRemote } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { mcpResult, mcpError } from '@walkeros/core';
 import { BundleOutputShape } from '../schemas/output.js';
-import { mcpResult } from '@walkeros/core';
 
-export function registerBundleTool(server: McpServer) {
+export function registerFlowBundleTool(server: McpServer) {
   server.registerTool(
-    'bundle',
+    'flow_bundle',
     {
-      title: 'Bundle',
+      title: 'Bundle Flow',
       description:
         'Bundle a walkerOS flow configuration into deployable JavaScript. ' +
         'Resolves all destinations, sources, and transformers, then outputs ' +
@@ -32,8 +32,8 @@ export function registerBundleTool(server: McpServer) {
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
       },
     },
     async ({ configPath, flow, stats, output, remote, content }) => {
@@ -45,10 +45,18 @@ export function registerBundleTool(server: McpServer) {
             content: content as Record<string, unknown>,
             flowName: flow,
           });
-          return mcpResult({ success: true, ...result });
+          const r = result as Record<string, unknown>;
+          const size = r.totalSize ?? r.size;
+          const time = r.buildTime;
+          const summary = `Bundled${size ? ` (${formatBytes(size as number)}` : ''}${time ? `, ${time}ms)` : size ? ')' : ''}`;
+          return mcpResult({ success: true, ...result }, summary, {
+            next: [
+              'Use flow_simulate to test',
+              "Use api({ action: 'deploy' }) to publish",
+            ],
+          });
         }
 
-        // Local bundle path
         const result = await bundle(configPath, {
           flowName: flow,
           stats: stats ?? true,
@@ -60,29 +68,24 @@ export function registerBundleTool(server: McpServer) {
           message: 'Bundle created',
         };
 
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify(output_, null, 2),
-            },
+        const size = output_.totalSize as number | undefined;
+        const time = output_.buildTime as number | undefined;
+        const summary = `Bundled${size ? ` (${formatBytes(size)}` : ''}${time ? `, ${time}ms)` : size ? ')' : ''}`;
+
+        return mcpResult(output_, summary, {
+          next: [
+            'Use flow_simulate to test',
+            "Use api({ action: 'deploy' }) to publish",
           ],
-          structuredContent: output_,
-        };
+        });
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: JSON.stringify({
-                success: false,
-                error: error instanceof Error ? error.message : 'Unknown error',
-              }),
-            },
-          ],
-          isError: true,
-        };
+        return mcpError(error, 'Run flow_validate for detailed error messages');
       }
     },
   );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  return `${(bytes / 1024).toFixed(1)} KB`;
 }

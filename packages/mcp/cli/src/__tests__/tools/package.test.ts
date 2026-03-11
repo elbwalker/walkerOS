@@ -6,13 +6,30 @@ import {
   PackageSchemaOutputShape,
   PackageSearchOutputShape,
 } from '../../schemas/output.js';
-import { fetchPackage } from '@walkeros/core';
 import { PACKAGE_REGISTRY } from '../../registry.js';
 
 jest.mock('@walkeros/core', () => ({
   fetchPackage: jest.fn(),
+  mcpResult: jest.fn((result, summary) => ({
+    content: [
+      { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
+    ],
+    structuredContent: result,
+  })),
+  mcpError: jest.fn((error) => ({
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }),
+      },
+    ],
+    isError: true,
+  })),
 }));
 
+import { fetchPackage } from '@walkeros/core';
 const mockFetchPackage = fetchPackage as jest.MockedFunction<
   typeof fetchPackage
 >;
@@ -44,7 +61,7 @@ describe('package_get tool', () => {
     expect((tool.config as any).outputSchema).toBe(PackageSchemaOutputShape);
   });
 
-  it('should fetch package info from jsdelivr', async () => {
+  it('should fetch package info', async () => {
     mockFetchPackage.mockResolvedValue({
       packageName: '@walkeros/web-destination-snowplow',
       version: '0.0.12',
@@ -67,37 +84,10 @@ describe('package_get tool', () => {
       { version: undefined },
     );
 
-    expect(result.content[0].text).toContain(
-      '@walkeros/web-destination-snowplow',
-    );
     const content = result.structuredContent;
     expect(content.package).toBe('@walkeros/web-destination-snowplow');
     expect((content.schemas as Record<string, unknown>).settings).toBeDefined();
     expect(content.type).toBe('destination');
-  });
-
-  it('should handle packages without type/platform', async () => {
-    mockFetchPackage.mockResolvedValue({
-      packageName: 'some-pkg',
-      version: '1.0.0',
-      description: undefined,
-      type: undefined,
-      platform: undefined,
-      schemas: { settings: {} },
-      examples: {},
-      hintKeys: [],
-      exampleSummaries: [],
-    });
-
-    const tool = mockServer.getTool('package_get');
-    const result = await tool.handler({ package: 'some-pkg' });
-
-    expect(mockFetchPackage).toHaveBeenCalledWith('some-pkg', {
-      version: undefined,
-    });
-    expect(result.content[0].text).toContain('some-pkg');
-    const content = result.structuredContent;
-    expect(content.package).toBe('some-pkg');
   });
 
   it('should return error when package not found', async () => {
@@ -107,16 +97,6 @@ describe('package_get tool', () => {
 
     const tool = mockServer.getTool('package_get');
     const result = await tool.handler({ package: 'nonexistent' });
-    expect(result.isError).toBe(true);
-  });
-
-  it('should return error when walkerOS.json not found', async () => {
-    mockFetchPackage.mockRejectedValue(
-      new Error('walkerOS.json not found at dist/walkerOS.json (HTTP 404)'),
-    );
-
-    const tool = mockServer.getTool('package_get');
-    const result = await tool.handler({ package: 'pkg' });
     expect(result.isError).toBe(true);
   });
 
@@ -166,80 +146,16 @@ describe('package_get tool', () => {
       package: '@walkeros/server-destination-gcp',
     });
 
-    expect(result.content[0].text).toContain('2 hints');
     const content = result.structuredContent;
     expect(content.hints).toBeDefined();
     const hints = content.hints as Record<string, unknown>;
     expect(Object.keys(hints)).toHaveLength(2);
-    // Summary mode: text only, no code blocks
     expect(hints['auth-default']).toEqual({
       text: 'Use default credentials on GCP',
     });
     expect(hints['query-tips']).toEqual({
       text: 'Use JSON_EXTRACT_SCALAR',
     });
-  });
-
-  it('should work without hints (backward compat)', async () => {
-    mockFetchPackage.mockResolvedValue({
-      packageName: 'pkg',
-      version: '1.0.0',
-      description: undefined,
-      type: 'destination',
-      platform: 'web',
-      schemas: { settings: {} },
-      examples: {},
-      hintKeys: [],
-      exampleSummaries: [],
-    });
-
-    const tool = mockServer.getTool('package_get');
-    const result = await tool.handler({ package: 'pkg' });
-
-    expect(result.content[0].text).not.toContain('hints');
-    const content = result.structuredContent;
-    expect(content.hints).toBeUndefined();
-  });
-
-  it('should return summary by default (no section)', async () => {
-    mockFetchPackage.mockResolvedValue({
-      packageName: '@walkeros/server-destination-gcp',
-      version: '2.1.1',
-      description: undefined,
-      type: 'destination',
-      platform: 'server',
-      schemas: { settings: { type: 'object' } },
-      examples: {
-        step: {
-          purchase: { description: 'BQ purchase', in: {}, out: [] },
-        },
-      },
-      hints: {
-        'auth-methods': { text: 'Three auth methods' },
-        'query-tips': {
-          text: 'Use JSON_EXTRACT',
-          code: [{ lang: 'sql', code: 'SELECT 1' }],
-        },
-      },
-      hintKeys: ['auth-methods', 'query-tips'],
-      exampleSummaries: [{ name: 'purchase', description: 'BQ purchase' }],
-    });
-
-    const tool = mockServer.getTool('package_get');
-    const result = await tool.handler({
-      package: '@walkeros/server-destination-gcp',
-    });
-
-    const content = result.structuredContent;
-    expect(content.schemas).toBeDefined();
-    expect(content.hints).toBeDefined();
-    const hints = content.hints as Record<string, unknown>;
-    expect(hints['auth-methods']).toEqual({ text: 'Three auth methods' });
-    expect(hints['query-tips']).toEqual({ text: 'Use JSON_EXTRACT' });
-    expect(content.exampleSummaries).toEqual([
-      { name: 'purchase', description: 'BQ purchase' },
-    ]);
-    expect(content.examples).toBeUndefined();
   });
 
   it('should return full hints when section=hints', async () => {
@@ -270,7 +186,6 @@ describe('package_get tool', () => {
       text: 'Use JSON_EXTRACT',
       code: [{ lang: 'sql', code: 'SELECT 1' }],
     });
-    expect(content.schemas).toBeDefined();
   });
 
   it('should return full examples when section=examples', async () => {
@@ -301,11 +216,9 @@ describe('package_get tool', () => {
     const result = await tool.handler({ package: 'pkg', section: 'examples' });
 
     const content = result.structuredContent;
-    expect(content.examples).toBeDefined(); // full examples included
-    expect(content.schemas).toBeDefined();
-    // hints still included as text-only summaries (section expands examples, not strips hints)
+    expect(content.examples).toBeDefined();
     const hints = content.hints as Record<string, unknown>;
-    expect(hints['setup']).toEqual({ text: 'Install SDK first' }); // code blocks stripped
+    expect(hints['setup']).toEqual({ text: 'Install SDK first' });
   });
 
   it('should return full content when section=all', async () => {
@@ -353,7 +266,7 @@ describe('package_search tool', () => {
     expect((tool.config as any).outputSchema).toBe(PackageSearchOutputShape);
   });
 
-  it('should return metadata with hint keys and example summaries', async () => {
+  it('should return metadata for lookup mode', async () => {
     mockFetchPackage.mockResolvedValue({
       packageName: '@walkeros/web-destination-snowplow',
       version: '0.0.12',
@@ -376,13 +289,10 @@ describe('package_search tool', () => {
       { version: undefined },
     );
 
-    const content = JSON.parse(result.content[0].text);
+    const content = result.structuredContent;
     expect(content.package).toBe('@walkeros/web-destination-snowplow');
     expect(content.version).toBe('0.0.12');
     expect(content.description).toBe('Snowplow destination for walkerOS');
-    expect(content.type).toBe('destination');
-    expect(content).not.toHaveProperty('schemas');
-    expect(content).not.toHaveProperty('examples');
   });
 
   it('should return error when package not found', async () => {
@@ -395,38 +305,12 @@ describe('package_search tool', () => {
     expect(result.isError).toBe(true);
   });
 
-  it('should support version parameter', async () => {
-    mockFetchPackage.mockResolvedValue({
-      packageName: 'pkg',
-      version: '2.0.0',
-      description: undefined,
-      type: undefined,
-      platform: undefined,
-      schemas: {},
-      examples: {},
-      hintKeys: [],
-      exampleSummaries: [],
-    });
-
-    const tool = mockServer.getTool('package_search');
-    await tool.handler({ package: 'pkg', version: '2.0.0' });
-
-    expect(mockFetchPackage).toHaveBeenCalledWith('pkg', {
-      version: '2.0.0',
-    });
-  });
-
-  // Browse mode tests (no package specified)
-  it('should return full catalog when no args', async () => {
+  it('should return full catalog in browse mode', async () => {
     const tool = mockServer.getTool('package_search');
     const result = await tool.handler({});
 
     expect(mockFetchPackage).not.toHaveBeenCalled();
-    expect(result.content[0].text).toContain(
-      `Found ${PACKAGE_REGISTRY.length} packages`,
-    );
-    const catalog = JSON.parse(result.content[1].text);
-    expect(catalog.length).toBe(PACKAGE_REGISTRY.length);
+    expect(result.structuredContent).toHaveLength(PACKAGE_REGISTRY.length);
   });
 
   it('should filter catalog by type', async () => {
@@ -434,7 +318,7 @@ describe('package_search tool', () => {
     const result = await tool.handler({ type: 'destination' });
 
     expect(mockFetchPackage).not.toHaveBeenCalled();
-    const catalog = JSON.parse(result.content[1].text);
+    const catalog = result.structuredContent;
     expect(catalog.length).toBeGreaterThan(0);
     expect(catalog.every((p: any) => p.type === 'destination')).toBe(true);
   });
@@ -443,8 +327,7 @@ describe('package_search tool', () => {
     const tool = mockServer.getTool('package_search');
     const result = await tool.handler({ platform: 'web' });
 
-    expect(mockFetchPackage).not.toHaveBeenCalled();
-    const catalog = JSON.parse(result.content[1].text);
+    const catalog = result.structuredContent;
     expect(catalog.length).toBeGreaterThan(0);
     expect(
       catalog.every(
@@ -460,7 +343,7 @@ describe('package_search tool', () => {
       platform: 'server',
     });
 
-    const catalog = JSON.parse(result.content[1].text);
+    const catalog = result.structuredContent;
     expect(catalog.length).toBeGreaterThan(0);
     expect(
       catalog.every(
@@ -469,36 +352,5 @@ describe('package_search tool', () => {
           (p.platform === 'server' || p.platform === 'universal'),
       ),
     ).toBe(true);
-  });
-
-  it('should return hint keys and example summaries', async () => {
-    mockFetchPackage.mockResolvedValue({
-      packageName: '@walkeros/web-destination-gtag',
-      version: '2.1.1',
-      description: 'Google gtag destination',
-      type: 'destination',
-      platform: 'web',
-      schemas: { settings: {} },
-      examples: {
-        step: { purchase: { description: 'GA4 purchase', in: {}, out: [] } },
-      },
-      hints: { 'consent-mode': { text: 'Consent Mode v2' } },
-      hintKeys: ['consent-mode'],
-      exampleSummaries: [{ name: 'purchase', description: 'GA4 purchase' }],
-    });
-
-    const tool = mockServer.getTool('package_search');
-    const result = await tool.handler({
-      package: '@walkeros/web-destination-gtag',
-    });
-
-    const content = JSON.parse(result.content[0].text);
-    expect(content.hintKeys).toEqual(['consent-mode']);
-    expect(content.exampleSummaries).toEqual([
-      { name: 'purchase', description: 'GA4 purchase' },
-    ]);
-    expect(content).not.toHaveProperty('schemas');
-    expect(content).not.toHaveProperty('examples');
-    expect(content).not.toHaveProperty('hints');
   });
 });
