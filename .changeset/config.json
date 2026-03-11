@@ -36,7 +36,18 @@
       "@walkeros/transformer-validator",
       "@walkeros/server-transformer-fingerprint",
       "@walkeros/walker.js",
-      "@walkeros/storybook-addon"
+      "@walkeros/storybook-addon",
+      "@walkeros/store-memory",
+      "@walkeros/server-store-fs",
+      "@walkeros/server-store-gcs",
+      "@walkeros/server-store-s3",
+      "@walkeros/server-transformer-cache",
+      "@walkeros/server-transformer-file",
+      "@walkeros/explorer",
+      "@walkeros/mcp-source-browser",
+      "@walkeros/destination-demo",
+      "@walkeros/source-demo",
+      "@walkeros/transformer-demo"
     ]
   ],
   "linked": [],

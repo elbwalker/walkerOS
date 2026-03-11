@@ -1,7 +1,7 @@
 ---
-'@walkeros/core': minor
-'@walkeros/transformer-validator': minor
-'@walkeros/cli': minor
+'@walkeros/core': major
+'@walkeros/transformer-validator': major
+'@walkeros/cli': major
 ---
 
 Replace flat/v2 contract format with named contracts supporting extends

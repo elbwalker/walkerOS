@@ -6,8 +6,12 @@ import {
   getSecretCompletions,
   getPackageCompletions,
   getStepNameCompletions,
+  getContractCompletions,
+  getMappingPathCompletions,
   type CompletionEntry,
 } from './monaco-walkeros-completions';
+import { getJsonPathAtOffset } from './monaco-json-path';
+import { detectMappingContext } from './mapping-context-detector';
 
 // Store context per model path for scoped completions
 const contextRegistry = new Map<string, IntelliSenseContext>();
@@ -73,6 +77,21 @@ export function registerWalkerOSProviders(
           textBeforeCursor.endsWith('"$secret')
         ) {
           entries.push(...getSecretCompletions(context.secrets));
+        } else if (
+          textBeforeCursor.includes('$contract.') ||
+          textBeforeCursor.endsWith('"$contract')
+        ) {
+          const match = textBeforeCursor.match(
+            /\$contract\.([a-zA-Z0-9_.]*)?$/,
+          );
+          const pathStr = match?.[1] || '';
+          const segments = pathStr ? pathStr.split('.').filter(Boolean) : [];
+          if (pathStr && !pathStr.endsWith('.') && segments.length > 0) {
+            segments.pop();
+          }
+          entries.push(
+            ...getContractCompletions(context.contractRaw, segments),
+          );
         } else if (isInsideKey(model, position, 'package')) {
           entries.push(
             ...getPackageCompletions(context.packages, context.platform),
@@ -90,18 +109,48 @@ export function registerWalkerOSProviders(
           entries.push(...getVariableCompletions(context.variables));
           entries.push(...getDefinitionCompletions(context.definitions));
           entries.push(...getSecretCompletions(context.secrets));
+          entries.push(...getContractCompletions(context.contractRaw, []));
+        }
+
+        // Mapping value path completions (data., globals., user., etc.)
+        if (entries.length === 0 && context.contractRaw) {
+          const fullText = model.getValue();
+          const offset = model.getOffsetAt(position);
+          const jsonPath = getJsonPathAtOffset(fullText, offset);
+          const mappingCtx = detectMappingContext(jsonPath);
+
+          if (mappingCtx) {
+            const valueMatch = textBeforeCursor.match(/"([a-z_]*)\.?$/);
+            if (valueMatch) {
+              const prefix = valueMatch[1];
+              const mappingEntries = getMappingPathCompletions(
+                context.contractRaw,
+                mappingCtx.entity,
+                mappingCtx.action,
+                prefix,
+              );
+              if (mappingEntries.length > 0) {
+                entries.push(...mappingEntries);
+              }
+            }
+          }
         }
 
         // Calculate range that covers the full $ref.name token.
         // Monaco's getWordUntilPosition doesn't understand $ or . as word chars,
         // so we scan backwards to find the $ that starts the reference.
         const refStartMatch = textBeforeCursor.match(
-          /\$(?:var|def|secret|env|code)[.:]?\w*$/,
+          /\$(?:var|def|secret|env|code|contract)[.:]?[\w.]*$/,
         );
+        const mappingPathMatch = !refStartMatch
+          ? textBeforeCursor.match(/[a-z_][\w.]*$/i)
+          : null;
         const word = model.getWordUntilPosition(position);
         const startCol = refStartMatch
           ? position.column - refStartMatch[0].length
-          : word.startColumn;
+          : mappingPathMatch
+            ? position.column - mappingPathMatch[0].length
+            : word.startColumn;
         const range = {
           startLineNumber: position.lineNumber,
           endLineNumber: position.lineNumber,
@@ -227,6 +276,30 @@ export function registerWalkerOSProviders(
                 value: `**Unknown secret** \`$secret.${name}\`\n\nAvailable secrets: ${context.secrets?.join(', ') || 'none'}`,
               },
             ],
+          };
+        }
+
+        // $contract.path
+        const contractMatch = matchAtCursor(/\$contract\.[\w.]+/);
+        if (contractMatch && context.contractRaw) {
+          const fullRef = contractMatch[0];
+          const pathStr = fullRef.replace('$contract.', '');
+          const segments = pathStr.split('.');
+
+          const contractName = segments[0];
+          const description =
+            segments.length === 1
+              ? `**Contract:** \`${fullRef}\`\n\nNamed contract entry "${contractName}".`
+              : `**Contract reference:** \`${fullRef}\`\n\nResolves path \`${segments.slice(1).join('.')}\` in contract "${contractName}".`;
+
+          return {
+            range: {
+              startLineNumber: position.lineNumber,
+              startColumn: contractMatch.index + 1,
+              endLineNumber: position.lineNumber,
+              endColumn: contractMatch.index + contractMatch[0].length + 1,
+            },
+            contents: [{ value: description }],
           };
         }
 

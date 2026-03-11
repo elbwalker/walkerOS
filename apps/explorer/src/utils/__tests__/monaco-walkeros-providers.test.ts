@@ -15,4 +15,12 @@ describe('IntelliSense context registry', () => {
     // Clean up
     removeIntelliSenseContext('/test/model.json');
   });
+
+  it('stores contractRaw in context for $contract completions', () => {
+    const contractRaw = {
+      default: { events: { page: { view: {} } } },
+    };
+    setIntelliSenseContext('/test/contract.json', { contractRaw });
+    removeIntelliSenseContext('/test/contract.json');
+  });
 });

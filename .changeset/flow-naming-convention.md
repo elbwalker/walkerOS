@@ -1,6 +1,6 @@
 ---
-'@walkeros/core': minor
-'@walkeros/cli': minor
+'@walkeros/core': major
+'@walkeros/cli': major
 ---
 
 Rename Flow.Setup to Flow.Config and Flow.Config to Flow.Settings for consistent

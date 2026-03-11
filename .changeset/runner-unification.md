@@ -1,5 +1,5 @@
 ---
-'@walkeros/cli': minor
+'@walkeros/cli': major
 ---
 
 Unified CLI and Docker runner into single `walkeros run` code path with built-in

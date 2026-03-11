@@ -4,6 +4,8 @@ import {
   getSecretCompletions,
   getPackageCompletions,
   getStepNameCompletions,
+  getContractCompletions,
+  getMappingPathCompletions,
 } from '../monaco-walkeros-completions';
 
 describe('getVariableCompletions', () => {
@@ -92,5 +94,156 @@ describe('getStepNameCompletions', () => {
     const stepNames = { transformers: ['validator'] };
     const items = getStepNameCompletions(stepNames, 'before');
     expect(items).toHaveLength(1);
+  });
+});
+
+describe('getContractCompletions', () => {
+  const contractRaw = {
+    default: {
+      tagging: 1,
+      globals: {
+        type: 'object',
+        properties: { lang: { type: 'string' } },
+      },
+      events: {
+        page: {
+          view: {
+            type: 'object',
+            properties: { url: { type: 'string' } },
+          },
+        },
+      },
+    },
+    web: { extends: 'default' },
+  };
+
+  it('returns contract names for empty path', () => {
+    const items = getContractCompletions(contractRaw, []);
+    expect(items.length).toBeGreaterThanOrEqual(2);
+    expect(items.map((i) => i.label)).toEqual(
+      expect.arrayContaining(['$contract.default', '$contract.web']),
+    );
+    expect(items[0].kind).toBe('property');
+  });
+
+  it('returns entry keys for contract name path', () => {
+    const items = getContractCompletions(contractRaw, ['default']);
+    const labels = items.map((i) => i.label);
+    expect(labels).toEqual(
+      expect.arrayContaining([
+        '$contract.default.globals',
+        '$contract.default.events',
+      ]),
+    );
+  });
+
+  it('returns entity names for events path', () => {
+    const items = getContractCompletions(contractRaw, ['web', 'events']);
+    const labels = items.map((i) => i.label);
+    expect(labels).toEqual(
+      expect.arrayContaining(['$contract.web.events.page']),
+    );
+  });
+
+  it('returns empty for undefined contractRaw', () => {
+    expect(getContractCompletions(undefined, [])).toEqual([]);
+  });
+});
+
+describe('getMappingPathCompletions', () => {
+  const contractRaw = {
+    default: {
+      globals: {
+        type: 'object',
+        properties: { lang: { type: 'string' }, env: { type: 'string' } },
+      },
+      user: {
+        type: 'object',
+        properties: { email: { type: 'string' } },
+      },
+      events: {
+        page: {
+          view: {
+            type: 'object',
+            properties: {
+              url: { type: 'string' },
+              referrer: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  it('returns data properties for entity.action from contract', () => {
+    const items = getMappingPathCompletions(
+      contractRaw,
+      'page',
+      'view',
+      'data',
+    );
+    const labels = items.map((i) => i.label);
+    expect(labels).toEqual(
+      expect.arrayContaining(['data.url', 'data.referrer']),
+    );
+  });
+
+  it('returns globals properties', () => {
+    const items = getMappingPathCompletions(
+      contractRaw,
+      'page',
+      'view',
+      'globals',
+    );
+    const labels = items.map((i) => i.label);
+    expect(labels).toEqual(
+      expect.arrayContaining(['globals.lang', 'globals.env']),
+    );
+  });
+
+  it('returns user properties from contract', () => {
+    const items = getMappingPathCompletions(
+      contractRaw,
+      'page',
+      'view',
+      'user',
+    );
+    const labels = items.map((i) => i.label);
+    expect(labels).toContain('user.email');
+  });
+
+  it('returns built-in event fields when prefix is empty', () => {
+    const items = getMappingPathCompletions(contractRaw, 'page', 'view', '');
+    const labels = items.map((i) => i.label);
+    expect(labels).toEqual(
+      expect.arrayContaining([
+        'data',
+        'globals',
+        'user',
+        'context',
+        'custom',
+        'entity',
+        'action',
+        'name',
+        'timestamp',
+        'consent',
+      ]),
+    );
+  });
+
+  it('returns empty when no contract matches entity.action', () => {
+    const items = getMappingPathCompletions(
+      contractRaw,
+      'order',
+      'complete',
+      'data',
+    );
+    expect(items).toEqual([]);
+  });
+
+  it('returns empty for undefined contractRaw', () => {
+    expect(
+      getMappingPathCompletions(undefined, 'page', 'view', 'data'),
+    ).toEqual([]);
   });
 });

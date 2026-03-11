@@ -29,12 +29,14 @@ export function extractFlowIntelliSenseContext(
   const transformers: string[] = [];
   const packages: PackageInfo[] = [];
   const contractEntities: Array<{ entity: string; actions: string[] }> = [];
+  const contractRaw: Record<string, unknown> = {};
   let platform: 'web' | 'server' | undefined;
 
   // Config-level
   mergeVars(variables, parsed.variables);
   mergeDefs(definitions, parsed.definitions);
   extractContract(contractEntities, parsed.contract);
+  if (isObject(parsed.contract)) Object.assign(contractRaw, parsed.contract);
 
   // Walk each flow settings
   for (const settings of Object.values(parsed.flows)) {
@@ -50,6 +52,8 @@ export function extractFlowIntelliSenseContext(
     mergeVars(variables, settings.variables);
     mergeDefs(definitions, settings.definitions);
     extractContract(contractEntities, settings.contract);
+    if (isObject(settings.contract))
+      Object.assign(contractRaw, settings.contract);
 
     // Sources
     if (isObject(settings.sources)) {
@@ -118,6 +122,7 @@ export function extractFlowIntelliSenseContext(
   if (platform) result.platform = platform;
   if (packages.length > 0) result.packages = packages;
   if (contractEntities.length > 0) result.contract = contractEntities;
+  if (Object.keys(contractRaw).length > 0) result.contractRaw = contractRaw;
 
   return result;
 }

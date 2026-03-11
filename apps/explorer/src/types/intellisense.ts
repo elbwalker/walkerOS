@@ -29,6 +29,9 @@ export interface IntelliSenseContext {
     actions: string[];
   }>;
 
+  /** Raw contract object for $contract completions and mapping hints */
+  contractRaw?: Record<string, unknown>;
+
   /** Available packages for autocomplete */
   packages?: PackageInfo[];
 
