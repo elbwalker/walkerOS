@@ -1,19 +1,18 @@
+import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 export function registerSetupMappingPrompt(server: McpServer) {
-  server.prompt(
+  server.registerPrompt(
     'setup-mapping',
     {
       description:
         'Set up event mapping for any step in a flow. Teaches mapping syntax and uses package examples as templates.',
-      arguments: [
-        {
-          name: 'stepName',
-          description:
-            'Step name in the flow (e.g., "gtag", "meta", "express")',
-          required: false,
-        },
-      ],
+      argsSchema: {
+        stepName: z
+          .string()
+          .optional()
+          .describe('Step name in the flow (e.g., "gtag", "meta", "express")'),
+      },
     },
     async ({ stepName }) => ({
       messages: [

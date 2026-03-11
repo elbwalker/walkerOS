@@ -1,18 +1,18 @@
+import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 export function registerUseDefinitionsPrompt(server: McpServer) {
-  server.prompt(
+  server.registerPrompt(
     'use-definitions',
     {
       description:
         'Extract shared patterns into definitions and variables for DRY, environment-aware flow configurations.',
-      arguments: [
-        {
-          name: 'flowPath',
-          description: 'Path to the flow.json file to analyze',
-          required: false,
-        },
-      ],
+      argsSchema: {
+        flowPath: z
+          .string()
+          .optional()
+          .describe('Path to the flow.json file to analyze'),
+      },
     },
     async ({ flowPath }) => ({
       messages: [

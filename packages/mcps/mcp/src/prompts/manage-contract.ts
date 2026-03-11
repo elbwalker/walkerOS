@@ -1,20 +1,21 @@
+import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 export function registerManageContractPrompt(server: McpServer) {
-  server.prompt(
+  server.registerPrompt(
     'manage-contract',
     {
       description:
         'Create or update event contracts for a flow. Can generate contracts from existing mappings or scaffold mappings from contracts.',
-      arguments: [
-        {
-          name: 'direction',
-          description:
+      argsSchema: {
+        direction: z
+          .string()
+          .optional()
+          .describe(
             'Direction: "from-mappings" (extract contract from existing mappings), ' +
-            '"from-scratch" (create new contract), or "to-mappings" (scaffold mappings from contract)',
-          required: false,
-        },
-      ],
+              '"from-scratch" (create new contract), or "to-mappings" (scaffold mappings from contract)',
+          ),
+      },
     },
     async ({ direction }) => ({
       messages: [

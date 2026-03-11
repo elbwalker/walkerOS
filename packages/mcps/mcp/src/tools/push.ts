@@ -1,4 +1,5 @@
 import { push } from '@walkeros/cli';
+import type { PushResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
@@ -25,15 +26,13 @@ export function registerFlowPushTool(server: McpServer) {
     },
     async ({ configPath, event, flow, platform }) => {
       try {
-        const result = await push(configPath, event, {
+        const result: PushResult = await push(configPath, event, {
           json: true,
           flow,
           platform,
         });
 
-        const r = result as Record<string, unknown>;
-        const duration = r.duration as number | undefined;
-        const summary = `Pushed event${duration ? ` (${duration}ms)` : ''}`;
+        const summary = `Pushed event${result.duration ? ` (${result.duration}ms)` : ''}`;
 
         return mcpResult(result, summary);
       } catch (error) {

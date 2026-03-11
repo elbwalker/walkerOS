@@ -1,25 +1,25 @@
+import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 export function registerAddStepPrompt(server: McpServer) {
-  server.prompt(
+  server.registerPrompt(
     'add-step',
     {
       description:
         'Add a source, destination, transformer, or store step to a flow configuration. ' +
         'Guides through package selection, config scaffolding, and wiring.',
-      arguments: [
-        {
-          name: 'stepType',
-          description:
+      argsSchema: {
+        stepType: z
+          .string()
+          .optional()
+          .describe(
             'Type of step to add: source, destination, transformer, or store',
-          required: false,
-        },
-        {
-          name: 'flowPath',
-          description: 'Path to the flow.json file to modify',
-          required: false,
-        },
-      ],
+          ),
+        flowPath: z
+          .string()
+          .optional()
+          .describe('Path to the flow.json file to modify'),
+      },
     },
     async ({ stepType, flowPath }) => ({
       messages: [

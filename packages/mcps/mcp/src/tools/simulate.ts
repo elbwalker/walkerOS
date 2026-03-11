@@ -1,8 +1,16 @@
 import { simulate } from '@walkeros/cli';
+import type { SimulationResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
 import { SimulateOutputShape } from '../schemas/output.js';
+
+interface DestinationSummary {
+  received: boolean;
+  calls: number;
+  payload?: unknown;
+  errors: string[];
+}
 
 export function registerFlowSimulateTool(server: McpServer) {
   server.registerTool(
@@ -29,7 +37,7 @@ export function registerFlowSimulateTool(server: McpServer) {
           throw new Error('Either event or example must be provided');
         }
 
-        const raw = await simulate(configPath, event, {
+        const raw: SimulationResult = await simulate(configPath, event, {
           json: true,
           flow,
           platform,
@@ -38,13 +46,10 @@ export function registerFlowSimulateTool(server: McpServer) {
         });
 
         // Summarize per-destination
-        const usage = (raw as Record<string, unknown>).usage as
-          | Record<string, unknown[]>
-          | undefined;
-        const destinations: Record<string, unknown> = {};
+        const destinations: Record<string, DestinationSummary> = {};
 
-        if (usage) {
-          for (const [name, calls] of Object.entries(usage)) {
+        if (raw.usage) {
+          for (const [name, calls] of Object.entries(raw.usage)) {
             destinations[name] = {
               received: calls.length > 0,
               calls: calls.length,
@@ -56,18 +61,18 @@ export function registerFlowSimulateTool(server: McpServer) {
 
         const destCount = Object.keys(destinations).length;
         const receivedCount = Object.values(destinations).filter(
-          (d) => (d as { received: boolean }).received,
+          (d) => d.received,
         ).length;
 
         const summary = `${receivedCount}/${destCount} destinations received the event`;
 
-        const result: Record<string, unknown> = {
-          success: (raw as Record<string, unknown>).success ?? true,
-          error: (raw as Record<string, unknown>).error,
+        const result = {
+          success: raw.success,
+          error: raw.error,
           summary,
           destinations: destCount > 0 ? destinations : undefined,
-          exampleMatch: (raw as Record<string, unknown>).exampleMatch,
-          duration: (raw as Record<string, unknown>).duration,
+          exampleMatch: raw.exampleMatch,
+          duration: raw.duration,
         };
 
         return mcpResult(result, summary, {

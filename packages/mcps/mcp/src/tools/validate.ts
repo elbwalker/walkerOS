@@ -1,4 +1,5 @@
 import { validate } from '@walkeros/cli';
+import type { ValidateResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
@@ -24,15 +25,14 @@ export function registerFlowValidateTool(server: McpServer) {
     },
     async ({ type, input, flow, path }) => {
       try {
-        const result = await validate(type, input, { flow, path });
-        const r = result as Record<string, unknown>;
-        const valid = r.valid as boolean;
-        const errors = (r.errors as unknown[]) ?? [];
-        const warnings = (r.warnings as unknown[]) ?? [];
-        const summary = valid
+        const result: ValidateResult = await validate(type, input, {
+          flow,
+          path,
+        });
+        const summary = result.valid
           ? 'Valid'
-          : `Invalid: ${errors.length} errors, ${warnings.length} warnings`;
-        const hints = valid
+          : `Invalid: ${result.errors.length} errors, ${result.warnings.length} warnings`;
+        const hints = result.valid
           ? {
               next: [
                 'Use flow_simulate to test event flow',
