@@ -16,3 +16,5 @@ export const serviceAccount: Store.Config = {
     credentials: '$env.GCS_SA_KEY',
   },
 };
+
+export * as step from './step';

@@ -33,3 +33,22 @@ export const cacheHit: Flow.StepExample = {
   },
   out: false,
 };
+
+export const differentCacheKeys: Flow.StepExample = {
+  description:
+    'POST to the same path produces a separate cache entry (key includes HTTP method)',
+  in: {
+    name: 'page view',
+    data: { url: '/api/events' },
+    id: '1700000602-gr0up-3',
+    trigger: 'load',
+    entity: 'page',
+    action: 'view',
+    timestamp: 1700000602,
+    group: 'gr0up',
+    count: 3,
+    version: { tagging: 1 },
+    source: { type: 'server', id: '', previous_id: '' },
+  },
+  out: { respond: true },
+};

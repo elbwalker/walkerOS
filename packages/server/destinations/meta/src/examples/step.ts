@@ -83,3 +83,43 @@ export const lead: Flow.StepExample = {
     ],
   },
 };
+
+export const purchaseWithClickAttribution: Flow.StepExample = {
+  in: getEvent('order complete', {
+    timestamp: 1700000902,
+    data: { id: 'ORD-700', total: 89.99, currency: 'USD' },
+    user: { id: 'cust-42' },
+    context: { fbclid: ['abc123xyz', 0] },
+    source: { type: 'server', id: 'https://shop.example.com', previous_id: '' },
+  }),
+  mapping: {
+    name: 'Purchase',
+    data: {
+      map: {
+        currency: { key: 'data.currency', value: 'EUR' },
+        value: 'data.total',
+        order_id: 'data.id',
+        user_data: {
+          map: {
+            external_id: 'user.id',
+            fbclid: 'context.fbclid',
+          },
+        },
+      },
+    },
+  },
+  out: {
+    data: [
+      {
+        event_name: 'Purchase',
+        event_time: 1700000902,
+        event_id: '1700000902-gr0up-1',
+        event_source_url: 'https://shop.example.com',
+        action_source: 'website',
+        currency: 'USD',
+        value: 89.99,
+        order_id: 'ORD-700',
+      },
+    ],
+  },
+};

@@ -19,11 +19,18 @@ describe('Step Examples', () => {
     const eventDetail = example.in as Record<string, unknown>;
     const expected = example.out as Record<string, boolean>;
 
-    const mockWindow = createMockWindow();
-    await createUsercentricsSource(mockWindow, mockElb);
+    // Pass config settings from mapping field if present
+    const settings = example.mapping as Record<string, unknown> | undefined;
+    const config = settings ? { settings } : undefined;
 
-    // Dispatch ucEvent with the step example input as detail
-    mockWindow.__dispatchEvent('ucEvent', eventDetail as never);
+    // Determine which event name to dispatch on
+    const eventName = (settings?.eventName as string | undefined) ?? 'ucEvent';
+
+    const mockWindow = createMockWindow();
+    await createUsercentricsSource(mockWindow, mockElb, config);
+
+    // Dispatch event with the step example input as detail
+    mockWindow.__dispatchEvent(eventName, eventDetail as never);
 
     expect(consentCalls.length).toBeGreaterThan(0);
     const lastConsent = consentCalls[consentCalls.length - 1].consent;

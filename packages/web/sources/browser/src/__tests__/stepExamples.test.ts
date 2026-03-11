@@ -37,7 +37,7 @@ describe('Step Examples', () => {
       action: string;
     };
 
-    if (input.trigger === 'load') {
+    if (input.trigger === 'load' && input.url) {
       // Page view: set URL and init with pageview enabled
       const url = input.url as string;
       const urlObj = new URL(url);

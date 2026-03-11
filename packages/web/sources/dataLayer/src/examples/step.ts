@@ -44,6 +44,80 @@ export const consentUpdate: Flow.StepExample = {
   },
 };
 
+export const gtagAddToCart: Flow.StepExample = {
+  in: [
+    'event',
+    'add_to_cart',
+    {
+      currency: 'EUR',
+      value: 15.25,
+      items: [
+        {
+          item_id: 'SKU_12345',
+          item_name: 'T-Shirt',
+          item_variant: 'red',
+          quantity: 1,
+          price: 15.25,
+        },
+      ],
+    },
+  ],
+  out: {
+    name: 'dataLayer add_to_cart',
+    data: {
+      currency: 'EUR',
+      value: 15.25,
+      items: [
+        {
+          item_id: 'SKU_12345',
+          item_name: 'T-Shirt',
+          item_variant: 'red',
+          quantity: 1,
+          price: 15.25,
+        },
+      ],
+    },
+    entity: 'dataLayer',
+    action: 'add_to_cart',
+  },
+};
+
+export const gtagViewItem: Flow.StepExample = {
+  in: [
+    'event',
+    'view_item',
+    {
+      currency: 'EUR',
+      value: 29.99,
+      items: [
+        {
+          item_id: 'SKU_67890',
+          item_name: 'Sneakers',
+          item_category: 'Footwear',
+          price: 29.99,
+        },
+      ],
+    },
+  ],
+  out: {
+    name: 'dataLayer view_item',
+    data: {
+      currency: 'EUR',
+      value: 29.99,
+      items: [
+        {
+          item_id: 'SKU_67890',
+          item_name: 'Sneakers',
+          item_category: 'Footwear',
+          price: 29.99,
+        },
+      ],
+    },
+    entity: 'dataLayer',
+    action: 'view_item',
+  },
+};
+
 export const directEvent: Flow.StepExample = {
   in: {
     event: 'custom_event',

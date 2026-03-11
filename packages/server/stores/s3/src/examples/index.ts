@@ -21,3 +21,5 @@ export const r2Bucket: Store.Config = {
     secretAccessKey: '$env.R2_SECRET_KEY',
   },
 };
+
+export * as step from './step';

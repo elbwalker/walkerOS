@@ -17,6 +17,25 @@ export const postEvent: Flow.StepExample = {
   },
 };
 
+export const batchRequest: Flow.StepExample = {
+  in: {
+    method: 'POST',
+    url: 'https://example.com/collect',
+    body: {
+      batch: [
+        { name: 'page view', data: { title: 'Home' } },
+        { name: 'button click', data: { id: 'cta' } },
+      ],
+    },
+  },
+  out: {
+    name: 'page view',
+    data: { title: 'Home' },
+    entity: 'page',
+    action: 'view',
+  },
+};
+
 export const pixelGet: Flow.StepExample = {
   in: {
     method: 'GET',

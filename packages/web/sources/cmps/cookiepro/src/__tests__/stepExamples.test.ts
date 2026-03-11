@@ -26,7 +26,12 @@ describe('Step Examples', () => {
       activeGroups,
     });
 
-    await createCookieProSource(mockWindow, mockElb);
+    // Pass config settings from mapping field if present
+    const config = example.mapping
+      ? { settings: example.mapping as Record<string, unknown> }
+      : undefined;
+
+    await createCookieProSource(mockWindow, mockElb, config);
 
     expect(consentCalls.length).toBeGreaterThan(0);
     const lastConsent = consentCalls[consentCalls.length - 1].consent;

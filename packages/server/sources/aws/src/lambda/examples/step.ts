@@ -21,6 +21,29 @@ export const lambdaPost: Flow.StepExample = {
   },
 };
 
+export const apiGatewayV1Post: Flow.StepExample = {
+  in: {
+    httpMethod: 'POST',
+    path: '/collect',
+    requestContext: {
+      requestId: 'req-789',
+      identity: { sourceIp: '203.0.113.42' },
+    },
+    queryStringParameters: null,
+    body: JSON.stringify({
+      name: 'page view',
+      data: { title: 'Home' },
+    }),
+    isBase64Encoded: false,
+  },
+  out: {
+    name: 'page view',
+    data: { title: 'Home' },
+    entity: 'page',
+    action: 'view',
+  },
+};
+
 export const lambdaGet: Flow.StepExample = {
   in: {
     version: '2.0',

@@ -230,3 +230,28 @@ export const cartUpdate: Flow.StepExample = {
     ],
   ],
 };
+
+export const customEvent: Flow.StepExample = {
+  in: getEvent('promotion visible', { timestamp: 1700000304 }),
+  mapping: {
+    name: 'trackEvent',
+    settings: {
+      goalId: 'goal_1',
+    },
+    data: {
+      set: ['data.name', 'data.position'],
+    },
+  },
+  out: [
+    ['trackEvent', 'Setting up tracking easily', 'hero'],
+    ['trackGoal', 'goal_1', undefined],
+  ],
+};
+
+export const pageViewWithTitle: Flow.StepExample = {
+  in: getEvent('page view', { timestamp: 1700000305 }),
+  mapping: {
+    data: 'data.title',
+  },
+  out: [['trackPageView', 'walkerOS documentation']],
+};

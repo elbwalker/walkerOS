@@ -64,3 +64,31 @@ export const lead: Flow.StepExample = {
     ],
   },
 };
+
+export const ga4PageView: Flow.StepExample = {
+  in: getEvent('page view', {
+    timestamp: 1700001202,
+    data: { title: 'Pricing', url: 'https://example.com/pricing' },
+    user: { id: 'visitor-55' },
+    source: { type: 'server', id: '', previous_id: '' },
+  }),
+  mapping: {
+    name: 'page_view',
+    data: {
+      map: {
+        eventName: { value: 'page_view' },
+        userId: 'user.id',
+      },
+    },
+  },
+  out: {
+    events: [
+      {
+        transactionId: '1700001202-gr0up-1',
+        eventName: 'page_view',
+        eventSource: 'WEB',
+        userId: 'visitor-55',
+      },
+    ],
+  },
+};

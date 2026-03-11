@@ -18,10 +18,11 @@ describe('Step Examples', () => {
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
     const consent = example.in as Record<string, boolean>;
     const expected = example.out as Record<string, boolean>;
+    const config = example.mapping as Record<string, unknown> | undefined;
 
     // Init source with the consent already set
     const mockWindow = createMockWindow(consent as never);
-    await createCookieFirstSource(mockWindow, mockElb);
+    await createCookieFirstSource(mockWindow, mockElb, config);
 
     // Dispatch cf_init to trigger consent processing
     (

@@ -6,3 +6,5 @@ export const staticAssets: Store.Config = {
     basePath: './public',
   },
 };
+
+export * as step from './step';

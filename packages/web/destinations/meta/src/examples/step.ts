@@ -167,3 +167,25 @@ export const pageView: Flow.StepExample = {
   mapping: undefined,
   out: ['track', 'PageView', {}, { eventID: '1700000004-gr0up-1' }],
 };
+
+export const customEventWithTrackCustom: Flow.StepExample = {
+  in: getEvent('video complete', {
+    timestamp: 1700000005,
+    data: { video_id: 'v1d30', duration: 120 },
+  }),
+  mapping: {
+    settings: { trackCustom: 'VideoComplete' },
+    data: {
+      map: {
+        video_id: 'data.video_id',
+        duration: 'data.duration',
+      },
+    },
+  },
+  out: [
+    'trackCustom',
+    'VideoComplete',
+    { video_id: 'v1d30', duration: 120 },
+    { eventID: '1700000005-gr0up-1' },
+  ],
+};

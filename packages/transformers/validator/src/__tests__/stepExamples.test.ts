@@ -5,9 +5,31 @@ import type { ValidatorSettings } from '../types';
 import { examples } from '../dev';
 
 describe('Step Examples', () => {
+  // Per-example settings overrides for examples needing contract validation
+  const settingsOverrides: Record<string, ValidatorSettings> = {
+    contractValidationPass: {
+      format: true,
+      events: {
+        order: {
+          complete: {
+            properties: {
+              data: {
+                type: 'object',
+                required: ['id', 'total', 'currency'],
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  const defaultSettings: ValidatorSettings = { format: true };
+
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
+    const settings = settingsOverrides[name] || defaultSettings;
     const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
-      settings: { format: true },
+      settings,
     };
     const context: Transformer.Context<Transformer.Types<ValidatorSettings>> = {
       collector: {} as Collector.Instance,

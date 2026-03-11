@@ -23,3 +23,20 @@ export const invalidFormat: Flow.StepExample = {
   },
   out: false,
 };
+
+export const contractValidationPass: Flow.StepExample = {
+  description:
+    'Contract validation passes when event data matches the entity.action JSON Schema',
+  in: getEvent('order complete', {
+    timestamp: 1700000800,
+    data: { id: '0rd3r1d', total: 555, currency: 'EUR' },
+    source: { type: 'web', id: 'https://shop.example.com', previous_id: '' },
+  }),
+  out: {
+    event: getEvent('order complete', {
+      timestamp: 1700000800,
+      data: { id: '0rd3r1d', total: 555, currency: 'EUR' },
+      source: { type: 'web', id: 'https://shop.example.com', previous_id: '' },
+    }),
+  },
+};

@@ -17,3 +17,25 @@ export const minimalConsent: Flow.StepExample = {
     marketing: false,
   },
 };
+
+export const categoryMapOverride: Flow.StepExample = {
+  description: 'Custom categoryMap remaps C0002 from analytics to statistics',
+  in: ',C0001,C0002,',
+  mapping: { categoryMap: { C0002: 'statistics' } },
+  out: {
+    functional: true,
+    statistics: true,
+    marketing: false,
+  },
+};
+
+export const sdkLoadedDetection: Flow.StepExample = {
+  description:
+    'Immediate detection when OneTrust SDK is already loaded with IsAlertBoxClosed() = true',
+  in: ',C0001,C0003,C0004,',
+  out: {
+    functional: true,
+    analytics: false,
+    marketing: true,
+  },
+};

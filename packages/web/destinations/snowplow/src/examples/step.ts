@@ -240,3 +240,149 @@ export const pageView: Flow.StepExample = {
   mapping: undefined,
   out: ['trackPageView'],
 };
+
+export const checkoutStep: Flow.StepExample = {
+  in: getEvent('checkout view', { timestamp: 1700000405 }),
+  mapping: {
+    name: ACTIONS.CHECKOUT_STEP,
+    settings: {
+      context: [
+        {
+          schema: SCHEMAS.CHECKOUT_STEP,
+          data: {
+            step: 'data.step',
+            option: 'data.option',
+          },
+        },
+      ],
+    },
+  },
+  out: [
+    'trackSelfDescribingEvent',
+    {
+      event: {
+        schema:
+          'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
+        data: {
+          type: 'checkout_step',
+        },
+      },
+      context: [
+        {
+          schema:
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/checkout_step/jsonschema/1-0-0',
+          data: {
+            step: 'payment',
+          },
+        },
+      ],
+    },
+  ],
+};
+
+export const structuredEvent: Flow.StepExample = {
+  in: getEvent('product visible', { timestamp: 1700000406 }),
+  mapping: {
+    settings: {
+      struct: {
+        category: { value: 'ecommerce' },
+        action: { value: 'impression' },
+        label: 'data.name',
+        property: 'data.color',
+        value: 'data.price',
+      },
+    },
+  },
+  out: [
+    'trackStructEvent',
+    {
+      category: 'ecommerce',
+      action: 'impression',
+      label: 'Everyday Ruck Snack',
+      property: 'black',
+      value: 420,
+    },
+  ],
+};
+
+export const contextLoop: Flow.StepExample = {
+  in: getEvent('order complete', { timestamp: 1700000407 }),
+  mapping: {
+    name: ACTIONS.TRANSACTION,
+    settings: {
+      context: [
+        {
+          schema: SCHEMAS.TRANSACTION,
+          data: {
+            transaction_id: 'data.id',
+            revenue: 'data.total',
+            currency: 'data.currency',
+          },
+        },
+        {
+          schema: SCHEMAS.PRODUCT,
+          data: {
+            loop: [
+              'nested',
+              {
+                map: {
+                  id: 'data.id',
+                  name: 'data.name',
+                  price: 'data.price',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  },
+  out: [
+    'trackSelfDescribingEvent',
+    {
+      event: {
+        schema:
+          'iglu:com.snowplowanalytics.snowplow.ecommerce/snowplow_ecommerce_action/jsonschema/1-0-2',
+        data: {
+          type: 'transaction',
+        },
+      },
+      context: [
+        {
+          schema:
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/transaction/jsonschema/1-0-0',
+          data: {
+            transaction_id: '0rd3r1d',
+            revenue: 555,
+            currency: 'EUR',
+          },
+        },
+        {
+          schema:
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+          data: {
+            id: 'ers',
+            name: 'Everyday Ruck Snack',
+            price: 420,
+          },
+        },
+        {
+          schema:
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+          data: {
+            id: 'cc',
+            name: 'Cool Cap',
+            price: 42,
+          },
+        },
+        {
+          schema:
+            'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
+          data: {
+            name: 'Surprise',
+          },
+        },
+      ],
+    },
+  ],
+};

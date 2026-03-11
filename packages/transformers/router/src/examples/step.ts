@@ -18,3 +18,14 @@ export const routeMiss: Flow.StepExample = {
   }),
   out: false,
 };
+
+export const wildcardFallback: Flow.StepExample = {
+  description:
+    'Catch-all wildcard route captures events not matching specific routes',
+  in: getEvent('entity action', {
+    timestamp: 1700000602,
+    data: { path: '/unknown/endpoint', method: 'POST' },
+    source: { type: 'server', id: '', previous_id: '' },
+  }),
+  out: { next: 'default-handler' },
+};

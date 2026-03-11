@@ -41,3 +41,24 @@ export const orderEvent: Flow.StepExample = {
     ],
   },
 };
+
+export const userSignupEvent: Flow.StepExample = {
+  in: getEvent('user signup', {
+    timestamp: 1700001002,
+    data: { plan: 'pro', source: 'landing-page' },
+    user: { id: 'usr-789', email: 'new@example.com' },
+    source: { type: 'server', id: '', previous_id: '' },
+  }),
+  mapping: undefined,
+  out: {
+    DeliveryStreamName: 'walkeros-events',
+    Records: [
+      {
+        Data: JSON.stringify({
+          plan: 'pro',
+          source: 'landing-page',
+        }),
+      },
+    ],
+  },
+};

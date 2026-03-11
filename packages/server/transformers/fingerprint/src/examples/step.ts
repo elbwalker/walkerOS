@@ -71,3 +71,47 @@ export const missingFields: Flow.StepExample = {
     },
   },
 };
+
+export const ipAnonymization: Flow.StepExample = {
+  description:
+    'Privacy-preserving fingerprint using key+fn pattern: ' +
+    'fn truncates IP to /24 subnet before hashing, so 10.0.42.* users share a hash. ' +
+    'Config: fields: [{ key: "ingest.ip", fn: ip => ip.replace(/\\.\\d+$/, ".0") }, "ingest.userAgent"]',
+  in: {
+    name: 'page view',
+    data: {
+      domain: 'www.example.com',
+      title: 'Privacy Policy',
+      id: '/privacy',
+    },
+    id: '1700000602-gr0up-3',
+    trigger: 'load',
+    entity: 'page',
+    action: 'view',
+    timestamp: 1700000602,
+    group: 'gr0up',
+    count: 3,
+    version: { tagging: 1 },
+    source: { type: 'server', id: '', previous_id: '' },
+  },
+  out: {
+    event: {
+      name: 'page view',
+      data: {
+        domain: 'www.example.com',
+        title: 'Privacy Policy',
+        id: '/privacy',
+      },
+      user: { hash: '44d9154b9a9b3792' },
+      id: '1700000602-gr0up-3',
+      trigger: 'load',
+      entity: 'page',
+      action: 'view',
+      timestamp: 1700000602,
+      group: 'gr0up',
+      count: 3,
+      version: { tagging: 1 },
+      source: { type: 'server', id: '', previous_id: '' },
+    },
+  },
+};
