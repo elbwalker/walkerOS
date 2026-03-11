@@ -265,7 +265,7 @@ export const RulesSchema = z
     z.record(z.string(), z.union([RuleSchema, z.array(RuleSchema)])).optional(),
   )
   .describe(
-    'Nested mapping rules: { entity: { action: Rule | Rule[] } } with wildcard support',
+    'Event mapping rules: entity → action → Rule. Keys match event name split by space. Use "*" as wildcard for entity or action. Priority: exact > entity wildcard > action wildcard > global wildcard (*→*).',
   );
 
 /**

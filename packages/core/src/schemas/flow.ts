@@ -214,7 +214,7 @@ export const SourceReferenceSchema = z
       .union([z.string(), z.array(z.string())])
       .optional()
       .describe(
-        'First transformer in post-source chain. If omitted, events route directly to collector.',
+        'Pre-collector transformer chain. Name of the first transformer to run after this source captures an event. If omitted, events go directly to the collector. Can be an array for explicit chain control.',
       ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
@@ -318,7 +318,7 @@ export const DestinationReferenceSchema = z
       .union([z.string(), z.array(z.string())])
       .optional()
       .describe(
-        'First transformer in pre-destination chain. If omitted, events are sent directly from collector.',
+        'Post-collector transformer chain. Name of the first transformer to run before sending events to this destination. If omitted, events come directly from the collector. Can be an array for explicit chain control.',
       ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
@@ -701,3 +701,26 @@ export const storeReferenceJsonSchema = toJsonSchema(
   StoreReferenceSchema,
   'StoreReference',
 );
+
+/**
+ * Generate JSON Schema for ContractEntry.
+ *
+ * @remarks
+ * Used for validating individual contract entries.
+ *
+ * @returns JSON Schema (Draft 7) representation of ContractEntrySchema
+ */
+export const contractEntryJsonSchema = toJsonSchema(
+  ContractEntrySchema,
+  'ContractEntry',
+);
+
+/**
+ * Generate JSON Schema for Contract.
+ *
+ * @remarks
+ * Used for validating named contract maps.
+ *
+ * @returns JSON Schema (Draft 7) representation of ContractSchema
+ */
+export const contractJsonSchema = toJsonSchema(ContractSchema, 'Contract');

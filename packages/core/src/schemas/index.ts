@@ -128,12 +128,16 @@ export {
   safeParseConfig,
   parseSettings,
   safeParseSettings,
+  TransformerReferenceSchema,
   // JSON Schemas
   configJsonSchema,
   settingsJsonSchema,
   sourceReferenceJsonSchema,
   destinationReferenceJsonSchema,
   storeReferenceJsonSchema,
+  contractEntryJsonSchema,
+  contractJsonSchema,
+  transformerReferenceJsonSchema,
 } from './flow';
 
 // Validation

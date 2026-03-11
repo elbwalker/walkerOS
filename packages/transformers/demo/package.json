@@ -36,6 +36,10 @@
   "bugs": {
     "url": "https://github.com/elbwalker/walkerOS/issues"
   },
+  "walkerOS": {
+    "type": "transformer",
+    "docs": "https://www.walkeros.io/docs/transformers/demo"
+  },
   "keywords": [
     "walkerOS",
     "transformer",

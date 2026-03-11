@@ -13,7 +13,7 @@ function createMockServer() {
   };
 }
 
-describe('flow-schema reference resource', () => {
+describe('reference resources', () => {
   let mockServer: ReturnType<typeof createMockServer>;
 
   beforeEach(() => {
@@ -21,90 +21,123 @@ describe('flow-schema reference resource', () => {
     registerReferenceResources(mockServer as any);
   });
 
-  it('should register flow-schema resource', () => {
-    const resource = mockServer.getResource('flow-schema');
-    expect(resource).toBeDefined();
+  describe('flow-schema', () => {
+    it('should register flow-schema resource', () => {
+      expect(mockServer.getResource('flow-schema')).toBeDefined();
+    });
+
+    it('should return a valid JSON Schema with config properties', async () => {
+      const resource = mockServer.getResource('flow-schema');
+      const result = await resource.handler();
+      const parsed = JSON.parse(result.contents[0].text);
+
+      expect(parsed.$schema).toBe('http://json-schema.org/draft-07/schema#');
+      expect(parsed.type).toBe('object');
+      expect(parsed.properties).toBeDefined();
+      expect(parsed.properties.version).toBeDefined();
+      expect(parsed.properties.flows).toBeDefined();
+      expect(parsed.properties.variables).toBeDefined();
+      expect(parsed.properties.contract).toBeDefined();
+      // Descriptions auto-generated from Zod .describe()
+      expect(parsed.properties.flows.description).toBeDefined();
+    });
   });
 
-  it('should return structure, connectionRules, and minimalExample', async () => {
-    const resource = mockServer.getResource('flow-schema');
-    const result = await resource.handler();
+  describe('event-model', () => {
+    it('should return a valid JSON Schema for events', async () => {
+      const resource = mockServer.getResource('event-model');
+      const result = await resource.handler();
+      const parsed = JSON.parse(result.contents[0].text);
 
-    const parsed = JSON.parse(result.contents[0].text);
-    expect(parsed.structure).toBeDefined();
-    expect(parsed.structure.version).toBeDefined();
-    expect(parsed.structure.flows).toBeDefined();
-    expect(parsed.connectionRules).toBeDefined();
-    expect(Array.isArray(parsed.connectionRules)).toBe(true);
-    expect(parsed.connectionRules.length).toBeGreaterThan(0);
-    expect(parsed.minimalExample).toBeDefined();
-    expect(parsed.minimalExample.version).toBe(3);
-    expect(parsed.minimalExample.flows.default).toBeDefined();
+      expect(parsed.$schema).toBe('http://json-schema.org/draft-07/schema#');
+      expect(parsed.properties.name).toBeDefined();
+      expect(parsed.properties.data).toBeDefined();
+      expect(parsed.properties.entity).toBeDefined();
+      expect(parsed.properties.action).toBeDefined();
+    });
   });
 
-  it('should include platform options', async () => {
-    const resource = mockServer.getResource('flow-schema');
-    const result = await resource.handler();
+  describe('mapping', () => {
+    it('should return JSON Schemas for mapping components', async () => {
+      const resource = mockServer.getResource('mapping');
+      const result = await resource.handler();
+      const parsed = JSON.parse(result.contents[0].text);
 
-    const parsed = JSON.parse(result.contents[0].text);
-    expect(parsed.platformOptions).toBeDefined();
-    expect(parsed.platformOptions.web).toBeDefined();
-    expect(parsed.platformOptions.server).toBeDefined();
-  });
-});
-
-describe('reference resources catalog', () => {
-  let mockServer: ReturnType<typeof createMockServer>;
-
-  beforeEach(() => {
-    mockServer = createMockServer();
-    registerReferenceResources(mockServer as any);
+      expect(parsed.rules).toBeDefined();
+      expect(parsed.rules.$schema).toBe(
+        'http://json-schema.org/draft-07/schema#',
+      );
+      expect(parsed.valueConfig).toBeDefined();
+      expect(parsed.rule).toBeDefined();
+      expect(parsed.policy).toBeDefined();
+    });
   });
 
-  it('should register event-model resource', () => {
-    expect(mockServer.getResource('event-model')).toBeDefined();
+  describe('contract', () => {
+    it('should return a valid JSON Schema', async () => {
+      const resource = mockServer.getResource('contract');
+      const result = await resource.handler();
+      const parsed = JSON.parse(result.contents[0].text);
+
+      expect(parsed.$schema).toBe('http://json-schema.org/draft-07/schema#');
+    });
   });
 
-  it('should register mapping resource', () => {
-    expect(mockServer.getResource('mapping')).toBeDefined();
+  describe('consent', () => {
+    it('should return a valid JSON Schema', async () => {
+      const resource = mockServer.getResource('consent');
+      const result = await resource.handler();
+      const parsed = JSON.parse(result.contents[0].text);
+
+      expect(parsed.$schema).toBe('http://json-schema.org/draft-07/schema#');
+    });
   });
 
-  it('should register consent resource', () => {
-    expect(mockServer.getResource('consent')).toBeDefined();
+  describe('variables', () => {
+    it('should return interpolation pattern reference (hand-maintained)', async () => {
+      const resource = mockServer.getResource('variables');
+      const result = await resource.handler();
+      const parsed = JSON.parse(result.contents[0].text);
+
+      expect(parsed.patterns).toBeDefined();
+      expect(parsed.patterns['$var.name']).toBeDefined();
+      expect(parsed.patterns['$env.NAME']).toBeDefined();
+      expect(parsed.patterns['$code:(expr)']).toBeDefined();
+      expect(parsed.patterns['$store:storeId']).toBeDefined();
+    });
   });
 
-  it('should register variables resource', () => {
-    expect(mockServer.getResource('variables')).toBeDefined();
+  describe('examples', () => {
+    it('should register examples resource', () => {
+      expect(mockServer.getResource('examples')).toBeDefined();
+    });
+
+    it('should return a valid flow config from real file', async () => {
+      const resource = mockServer.getResource('examples');
+      const result = await resource.handler();
+      const parsed = JSON.parse(result.contents[0].text);
+
+      expect(parsed.version).toBe(3);
+      expect(parsed.flows).toBeDefined();
+    });
   });
 
-  it('should register contract resource', () => {
-    expect(mockServer.getResource('contract')).toBeDefined();
-  });
+  describe('already-automated resources', () => {
+    it('should register api resource', () => {
+      expect(mockServer.getResource('api')).toBeDefined();
+    });
 
-  it('should register api resource', () => {
-    expect(mockServer.getResource('api')).toBeDefined();
-  });
+    it('should register packages resource', () => {
+      expect(mockServer.getResource('packages')).toBeDefined();
+    });
 
-  it('should register packages resource', () => {
-    expect(mockServer.getResource('packages')).toBeDefined();
-  });
+    it('packages resource returns registry entries', async () => {
+      const resource = mockServer.getResource('packages');
+      const result = await resource.handler();
+      const parsed = JSON.parse(result.contents[0].text);
 
-  it('event-model resource returns valid JSON', async () => {
-    const resource = mockServer.getResource('event-model');
-    const result = await resource.handler();
-    const parsed = JSON.parse(result.contents[0].text);
-    expect(parsed.naming).toBeDefined();
-    expect(parsed.properties).toBeDefined();
-    expect(parsed.properties.data).toBeDefined();
-  });
-
-  it('packages resource returns registry entries', async () => {
-    const resource = mockServer.getResource('packages');
-    const result = await resource.handler();
-    const parsed = JSON.parse(result.contents[0].text);
-    expect(Array.isArray(parsed)).toBe(true);
-    expect(parsed.length).toBeGreaterThan(0);
-    expect(parsed[0].name).toBeDefined();
-    expect(parsed[0].type).toBeDefined();
+      expect(Array.isArray(parsed)).toBe(true);
+      expect(parsed.length).toBeGreaterThan(0);
+    });
   });
 });

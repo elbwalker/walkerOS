@@ -14,7 +14,8 @@
     "./dev": {
       "types": "./dist/dev.d.ts",
       "default": "./dist/dev.js"
-    }
+    },
+    "./examples/*": "./examples/*"
   },
   "bin": {
     "walkeros": "./dist/cli.js"

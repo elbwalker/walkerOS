@@ -45,6 +45,7 @@ export function registerAddStepPrompt(server: McpServer) {
               '- Destinations connect to post-collector transformers via `before`.',
               '- Stores are passive — referenced via `$store:storeName` in env values.',
               '- Use variables ($var) for values that change between environments.',
+              '- For required settings without defaults in the package schema, ask the user which value to use. Do not guess credentials, IDs, or environment-specific values.',
             ].join('\n'),
           },
         },
