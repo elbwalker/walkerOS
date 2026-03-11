@@ -63,16 +63,26 @@ export function registerFlowBundleTool(server: McpServer) {
           buildOverrides: output ? { output } : undefined,
         });
 
-        const output_ = (result as unknown as Record<string, unknown>) ?? {
-          success: true,
-          message: 'Bundle created',
-        };
+        if (!result) {
+          return mcpResult(
+            { success: false, message: 'Bundle produced no output' },
+            'Bundle produced no output',
+            {
+              warnings: [
+                'The build returned no result. The flow may be empty or misconfigured.',
+              ],
+              next: ['Run flow_validate to check your configuration'],
+            },
+          );
+        }
+
+        const output_ = result as unknown as Record<string, unknown>;
 
         const size = output_.totalSize as number | undefined;
         const time = output_.buildTime as number | undefined;
         const summary = `Bundled${size ? ` (${formatBytes(size)}` : ''}${time ? `, ${time}ms)` : size ? ')' : ''}`;
 
-        return mcpResult(output_, summary, {
+        return mcpResult({ success: true, ...output_ }, summary, {
           next: [
             'Use flow_simulate to test',
             "Use api({ action: 'deploy' }) to publish",

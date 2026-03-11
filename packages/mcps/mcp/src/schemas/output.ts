@@ -66,24 +66,10 @@ export const SimulateOutputShape = {
           .describe('Whether destination received the event'),
         calls: z.number().describe('Number of API calls made'),
         payload: z.unknown().optional().describe('Transformed payload sent'),
-        errors: z
-          .array(z.string())
-          .optional()
-          .describe('Errors for this destination'),
       }),
     )
     .optional()
     .describe('Per-destination results'),
-  transformers: z
-    .record(
-      z.string(),
-      z.object({
-        passed: z.boolean().describe('Whether event passed through'),
-        modified: z.boolean().describe('Whether event was modified'),
-      }),
-    )
-    .optional()
-    .describe('Per-transformer results'),
   exampleMatch: z
     .object({
       name: z.string(),

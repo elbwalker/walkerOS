@@ -98,7 +98,10 @@ describe('flow_bundle tool', () => {
       stats: true,
       buildOverrides: { output: './dist' },
     });
-    expect(result.structuredContent).toEqual(mockResult);
+    expect(result.structuredContent).toEqual({
+      success: true,
+      ...mockResult,
+    });
   });
 
   it('defaults stats to true when not provided', async () => {
@@ -119,7 +122,7 @@ describe('flow_bundle tool', () => {
     });
   });
 
-  it('returns fallback when bundle returns null', async () => {
+  it('returns warning when bundle returns null', async () => {
     mockBundle.mockResolvedValue(null);
 
     const tool = server.getTool('flow_bundle');
@@ -130,11 +133,7 @@ describe('flow_bundle tool', () => {
       output: undefined,
     });
 
-    expect(result.structuredContent).toEqual({
-      success: true,
-      message: 'Bundle created',
-    });
-    expect(result.isError).toBeUndefined();
+    expect(result.structuredContent.success).toBe(false);
   });
 
   it('returns isError on CLI failure', async () => {

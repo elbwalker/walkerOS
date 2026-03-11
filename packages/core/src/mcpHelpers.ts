@@ -18,14 +18,42 @@ export function mcpResult(
 }
 
 export function mcpError(error: unknown, hint?: string) {
-  const message = error instanceof Error ? error.message : 'Unknown error';
+  let message: string;
+  let path: string | undefined;
+
+  if (error instanceof Error) {
+    message = error.message;
+  } else if (typeof error === 'string') {
+    message = error;
+  } else if (
+    error &&
+    typeof error === 'object' &&
+    'issues' in error &&
+    Array.isArray((error as { issues: unknown[] }).issues)
+  ) {
+    const issues = (
+      error as { issues: Array<{ path?: unknown[]; message: string }> }
+    ).issues;
+    message = issues.map((i) => i.message).join('; ');
+    path = issues[0]?.path?.join('.') || undefined;
+  } else if (error && typeof error === 'object' && 'message' in error) {
+    message = String((error as { message: unknown }).message);
+  } else {
+    message = 'Unknown error';
+  }
+
+  const structured: Record<string, unknown> = { error: message };
+  if (hint) structured.hint = hint;
+  if (path) structured.path = path;
+
   return {
     content: [
       {
         type: 'text' as const,
-        text: JSON.stringify({ error: message, ...(hint ? { hint } : {}) }),
+        text: JSON.stringify(structured),
       },
     ],
+    structuredContent: structured,
     isError: true as const,
   };
 }

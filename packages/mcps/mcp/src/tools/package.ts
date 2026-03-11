@@ -1,10 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetchPackage, mcpResult, mcpError } from '@walkeros/core';
-import {
-  PackageSchemaOutputShape,
-  PackageSearchOutputShape,
-} from '../schemas/output.js';
+import { PackageSchemaOutputShape } from '../schemas/output.js';
 import { filterRegistry } from '../registry.js';
 
 export function registerPackageSearchTool(server: McpServer) {
@@ -38,7 +35,7 @@ export function registerPackageSearchTool(server: McpServer) {
           .optional()
           .describe('Package version for detailed lookup (default: latest)'),
       },
-      outputSchema: PackageSearchOutputShape,
+      // No outputSchema: browse mode returns {catalog, count}, lookup returns metadata — incompatible shapes
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -50,8 +47,9 @@ export function registerPackageSearchTool(server: McpServer) {
       // Browse mode: no package specified → return catalog
       if (!packageName) {
         const catalog = filterRegistry({ type, platform });
+        const result = { catalog, count: catalog.length };
         const summary = `${catalog.length} packages found`;
-        return mcpResult(catalog, summary, {
+        return mcpResult(result, summary, {
           next: ['Use package_get for schemas and examples'],
         });
       }
@@ -75,7 +73,10 @@ export function registerPackageSearchTool(server: McpServer) {
           next: ['Use package_get for schemas and examples'],
         });
       } catch (error) {
-        return mcpError(error);
+        return mcpError(
+          error,
+          'Package not found. Use package_search without parameters to browse available packages.',
+        );
       }
     },
   );
@@ -155,7 +156,10 @@ export function registerGetPackageSchemaTool(server: McpServer) {
 
         return mcpResult(result, summary);
       } catch (error) {
-        return mcpError(error);
+        return mcpError(
+          error,
+          'Use package_search to browse available package names.',
+        );
       }
     },
   );

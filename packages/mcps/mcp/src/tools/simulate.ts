@@ -9,7 +9,6 @@ interface DestinationSummary {
   received: boolean;
   calls: number;
   payload?: unknown;
-  errors: string[];
 }
 
 export function registerFlowSimulateTool(server: McpServer) {
@@ -19,8 +18,9 @@ export function registerFlowSimulateTool(server: McpServer) {
       title: 'Simulate Flow',
       description:
         'Simulate events through a walkerOS flow without making real API calls. ' +
-        'Processes events through the full pipeline including transformers and destinations, ' +
-        'returning summarized per-destination results. ' +
+        'Events must be in walkerOS format (post-source): { name: "entity action", data: {...} }. ' +
+        'Raw source input (dataLayer pushes, HTTP requests) must first be converted to walkerOS events. ' +
+        'Check source package examples to see what events a source outputs. ' +
         'Use the example parameter to load event input from a step example and compare output.',
       inputSchema: schemas.SimulateInputShape,
       outputSchema: SimulateOutputShape,
@@ -54,7 +54,6 @@ export function registerFlowSimulateTool(server: McpServer) {
               received: calls.length > 0,
               calls: calls.length,
               payload: calls.length > 0 ? calls[calls.length - 1] : undefined,
-              errors: [],
             };
           }
         }
@@ -63,6 +62,18 @@ export function registerFlowSimulateTool(server: McpServer) {
         const receivedCount = Object.values(destinations).filter(
           (d) => d.received,
         ).length;
+
+        const warnings: string[] = [];
+        if (destCount === 0) {
+          warnings.push(
+            'No destinations found in flow configuration. Check that your flow defines at least one destination.',
+          );
+        }
+        if (destCount > 0 && receivedCount === 0) {
+          warnings.push(
+            'No destinations received the event. Most common cause: mapping keys must be NESTED entity → action objects — event "product add" needs { "product": { "add": Rule } }, not "product.add". Also check event name match and consent settings.',
+          );
+        }
 
         const summary = `${receivedCount}/${destCount} destinations received the event`;
 
@@ -77,6 +88,7 @@ export function registerFlowSimulateTool(server: McpServer) {
 
         return mcpResult(result, summary, {
           next: ['Use flow_bundle to build for production'],
+          ...(warnings.length > 0 ? { warnings } : {}),
         });
       } catch (error) {
         return mcpError(error, 'Run flow_validate for detailed error messages');

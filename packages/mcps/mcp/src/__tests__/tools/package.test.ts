@@ -2,19 +2,16 @@ import {
   registerGetPackageSchemaTool,
   registerPackageSearchTool,
 } from '../../tools/package.js';
-import {
-  PackageSchemaOutputShape,
-  PackageSearchOutputShape,
-} from '../../schemas/output.js';
+import { PackageSchemaOutputShape } from '../../schemas/output.js';
 import { PACKAGE_REGISTRY } from '../../registry.js';
 
 jest.mock('@walkeros/core', () => ({
   fetchPackage: jest.fn(),
-  mcpResult: jest.fn((result, summary) => ({
+  mcpResult: jest.fn((result, summary, hints) => ({
     content: [
       { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
     ],
-    structuredContent: result,
+    structuredContent: hints ? { ...result, _hints: hints } : result,
   })),
   mcpError: jest.fn((error) => ({
     content: [
@@ -260,10 +257,9 @@ describe('package_search tool', () => {
     registerPackageSearchTool(mockServer as any);
   });
 
-  it('should register with correct name and outputSchema', () => {
+  it('should register with correct name', () => {
     const tool = mockServer.getTool('package_search');
     expect(tool).toBeDefined();
-    expect((tool.config as any).outputSchema).toBe(PackageSearchOutputShape);
   });
 
   it('should return metadata for lookup mode', async () => {
@@ -305,12 +301,14 @@ describe('package_search tool', () => {
     expect(result.isError).toBe(true);
   });
 
-  it('should return full catalog in browse mode', async () => {
+  it('should return full catalog in browse mode as wrapped object', async () => {
     const tool = mockServer.getTool('package_search');
     const result = await tool.handler({});
 
     expect(mockFetchPackage).not.toHaveBeenCalled();
-    expect(result.structuredContent).toHaveLength(PACKAGE_REGISTRY.length);
+    expect(result.structuredContent.catalog).toBeDefined();
+    expect(Array.isArray(result.structuredContent.catalog)).toBe(true);
+    expect(result.structuredContent.count).toBe(PACKAGE_REGISTRY.length);
   });
 
   it('should filter catalog by type', async () => {
@@ -318,7 +316,7 @@ describe('package_search tool', () => {
     const result = await tool.handler({ type: 'destination' });
 
     expect(mockFetchPackage).not.toHaveBeenCalled();
-    const catalog = result.structuredContent;
+    const catalog = result.structuredContent.catalog;
     expect(catalog.length).toBeGreaterThan(0);
     expect(catalog.every((p: any) => p.type === 'destination')).toBe(true);
   });
@@ -327,7 +325,7 @@ describe('package_search tool', () => {
     const tool = mockServer.getTool('package_search');
     const result = await tool.handler({ platform: 'web' });
 
-    const catalog = result.structuredContent;
+    const catalog = result.structuredContent.catalog;
     expect(catalog.length).toBeGreaterThan(0);
     expect(
       catalog.every(
@@ -343,7 +341,7 @@ describe('package_search tool', () => {
       platform: 'server',
     });
 
-    const catalog = result.structuredContent;
+    const catalog = result.structuredContent.catalog;
     expect(catalog.length).toBeGreaterThan(0);
     expect(
       catalog.every(

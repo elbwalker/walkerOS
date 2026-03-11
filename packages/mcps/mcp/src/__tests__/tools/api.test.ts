@@ -222,6 +222,21 @@ describe('api tool', () => {
       expect(result.isError).toBe(true);
     });
 
+    it('deploy failure returns ok: false', async () => {
+      (deploy as jest.Mock).mockResolvedValue({
+        status: 'failed',
+        errorMessage: 'Bundle too large',
+      });
+
+      const tool = server.getTool('api');
+      const result = await tool.handler(
+        { action: 'deploy', id: 'cfg_123' },
+        mockExtra,
+      );
+
+      expect(result.structuredContent.ok).toBe(false);
+    });
+
     it('deploy routes correctly', async () => {
       (deploy as jest.Mock).mockResolvedValue({ status: 'active' });
 

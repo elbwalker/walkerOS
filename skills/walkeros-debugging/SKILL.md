@@ -263,6 +263,16 @@ await push(event, { config: testConfig, env: testEnv });
 console.log(calls);
 ```
 
+## MCP Tool Debugging
+
+When using walkerOS MCP tools, check `_hints.warnings` in tool responses for
+diagnostic information:
+
+- **`flow_simulate`** warns when 0 destinations exist or none received the event
+- **`flow_bundle`** warns when the build produces no output
+- **`flow_examples`** warns when no examples are found in the config
+- All error responses include a `hint` field with recovery suggestions
+
 ## Related Skills
 
 - [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) - Event

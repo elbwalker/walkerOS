@@ -250,7 +250,10 @@ export function registerApiTool(server: McpServer) {
             const st = (data as Record<string, unknown>).status;
             const deployData = data as Record<string, unknown>;
             if (st === 'failed') {
-              summary = `Deploy failed: ${deployData.errorMessage ?? 'unknown error'}`;
+              const msg = `Deploy failed: ${deployData.errorMessage ?? 'unknown error'}`;
+              return mcpResult({ action, ok: false, data }, msg, {
+                next: ['Run flow_validate to check your configuration'],
+              });
             } else {
               summary = `Deployed flow ${id} — status: ${st}`;
               const publicUrl = deployData.publicUrl as string | undefined;

@@ -9,11 +9,11 @@ const FLOW_SCHEMA_REFERENCE = {
         'web: {} | server: {}':
           'Platform marker (exactly one, use empty object as value)',
         packages:
-          'Record<packageName, {} | { path?, imports? }> — all referenced packages',
+          'Record<packageName, { version?, path?, imports? }> — all referenced packages. Use version to pin: { "@walkeros/web-destination-meta": { "version": "2.1.0" } }',
         sources:
           'Record<name, { package, config?, env?, next? }> — event capture',
         destinations:
-          'Record<name, { package, config?, env?, mapping?, before? }> — event delivery',
+          'Record<name, { package, config?: { settings?, mapping?, consent? }, env?, before? }> — event delivery',
         transformers:
           'Record<name, { package, config?, env?, next? }> — event processing',
         stores: 'Record<name, { package, config?, env? }> — key-value storage',
@@ -29,7 +29,7 @@ const FLOW_SCHEMA_REFERENCE = {
     'Destinations have `before` → links to post-collector transformer chain (e.g., before: "transformerName")',
     'Transformers have `next` → chains to next transformer (e.g., next: "anotherTransformer")',
     'Stores are passive — injected via `env` values using `$store:storeName` syntax',
-    'Mapping on destinations transforms vendor-agnostic events into vendor-specific formats',
+    'Mapping on destinations uses nested entity → action structure: { "product": { "view": Rule, "add": Rule } }. Event name "product view" splits into entity "product", action "view". Read walkeros://reference/mapping for syntax.',
   ],
   platformOptions: {
     web: 'Browser environment — uses @walkeros/web-source-browser as default source',
@@ -43,7 +43,7 @@ const FLOW_SCHEMA_REFERENCE = {
         web: {},
         packages: {
           '@walkeros/web-source-browser': {},
-          '@walkeros/web-destination-gtag': {},
+          '@walkeros/web-destination-gtag': { version: '3.0.0' },
         },
         sources: {
           browser: { package: '@walkeros/web-source-browser', config: {} },
@@ -51,7 +51,20 @@ const FLOW_SCHEMA_REFERENCE = {
         destinations: {
           gtag: {
             package: '@walkeros/web-destination-gtag',
-            config: { measurementId: 'G-XXXXXXXXXX' },
+            config: {
+              settings: { measurementId: 'G-XXXXXXXXXX' },
+              mapping: {
+                page: {
+                  view: { name: 'page_view' },
+                },
+                product: {
+                  add: {
+                    name: 'add_to_cart',
+                    data: { map: { value: 'data.price' } },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -155,17 +168,34 @@ export function registerReferenceResources(server: McpServer) {
               },
               rules: {
                 keying:
-                  'entity.action format with wildcards: "product.add", "*.view", "order.*", "*.*"',
+                  'Mapping uses NESTED entity → action structure. Event name splits by space: "product add" → entity "product", action "add". Keys are nested objects, NOT dot-separated strings.',
+                structure:
+                  '{ entity: { action: Rule | Rule[] } } — e.g., { "product": { "add": { name: "add_to_cart" } } }',
+                wildcards:
+                  'Use "*" at either level: { "*": { "view": Rule } } matches any entity with action "view"',
                 priority:
-                  'Exact match > entity wildcard > action wildcard > global wildcard',
+                  'Exact match > entity wildcard > action wildcard > global wildcard (* → *)',
                 example: {
-                  'product.add': [
-                    {
-                      name: 'add_to_cart',
-                      data: { map: { value: 'data.price' } },
-                    },
-                  ],
-                  '*.view': [{ name: 'page_view' }],
+                  product: {
+                    add: [
+                      {
+                        name: 'add_to_cart',
+                        data: { map: { value: 'data.price' } },
+                      },
+                    ],
+                    view: [
+                      {
+                        name: 'view_item',
+                        data: {
+                          map: {
+                            value: 'data.price',
+                            currency: { value: 'EUR' },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                  '*': { view: [{ name: 'page_view' }] },
                 },
               },
               valueConfig: {
@@ -339,15 +369,14 @@ export function registerReferenceResources(server: McpServer) {
               overview:
                 'Contracts define event schemas using entity-action keying. Used by the validator transformer to enforce data quality.',
               structure: {
-                $tagging: '1 — contract format version (required)',
                 namedContracts:
-                  'Top-level keys are contract names with extends support',
-                entityAction:
-                  'Keys use entity.action format: "product.add", "order.*", "*.*"',
+                  'Top-level keys are contract names. Each is a ContractEntry with extends, tagging, events, globals, context, custom, user, consent.',
+                tagging:
+                  'number — contract version (inside each contract entry, not at top level)',
+                events:
+                  'Record<entity, Record<action, Schema>> — nested entity → action → JSON Schema',
                 wildcards: {
-                  '*.*': 'Matches all events',
-                  '*.action': 'Matches any entity with specific action',
-                  'entity.*': 'Matches all actions of specific entity',
+                  '*': 'As entity key: matches all entities. As action key: matches all actions of that entity.',
                 },
               },
               inheritance: {
@@ -369,29 +398,35 @@ export function registerReferenceResources(server: McpServer) {
               reference:
                 '$contract.name — use in flow config to reference a named contract',
               example: {
-                $tagging: 1,
                 ecommerce: {
-                  'product.*': {
-                    properties: {
-                      data: {
-                        type: 'object',
+                  tagging: 1,
+                  events: {
+                    product: {
+                      '*': {
                         properties: {
-                          name: { type: 'string' },
-                          price: { type: 'number' },
+                          data: {
+                            type: 'object',
+                            properties: {
+                              name: { type: 'string' },
+                              price: { type: 'number' },
+                            },
+                            required: ['name'],
+                          },
                         },
-                        required: ['name'],
                       },
                     },
-                  },
-                  'order.complete': {
-                    properties: {
-                      data: {
-                        type: 'object',
+                    order: {
+                      complete: {
                         properties: {
-                          total: { type: 'number' },
-                          orderId: { type: 'string' },
+                          data: {
+                            type: 'object',
+                            properties: {
+                              total: { type: 'number' },
+                              orderId: { type: 'string' },
+                            },
+                            required: ['total', 'orderId'],
+                          },
                         },
-                        required: ['total', 'orderId'],
                       },
                     },
                   },

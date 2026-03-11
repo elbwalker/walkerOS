@@ -39,10 +39,18 @@ export function registerFlowValidateTool(server: McpServer) {
                 'Use flow_bundle to build',
               ],
             }
-          : { next: ['Fix errors above, then run flow_validate again'] };
+          : {
+              next: [
+                'Fix errors above, then run flow_validate again',
+                'Read walkeros://reference/flow-schema for correct structure',
+              ],
+            };
         return mcpResult(result, summary, hints);
       } catch (error) {
-        return mcpError(error);
+        return mcpError(
+          error,
+          'Check the input parameter — expected a JSON string, file path, or URL',
+        );
       }
     },
   );

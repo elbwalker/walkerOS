@@ -118,12 +118,19 @@ export function registerFlowExamplesTool(server: McpServer) {
           examples,
         };
 
-        const summary = `${examples.length} examples across ${stepSet.size} steps`;
-        return mcpResult(result, summary, {
+        const totalExamples = examples.length;
+        const summary = `${totalExamples} examples across ${stepSet.size} steps`;
+        const hints: { next: string[]; warnings?: string[] } = {
           next: ['Use flow_simulate with example parameter to test'],
-        });
+        };
+        if (totalExamples === 0) {
+          hints.warnings = [
+            'No examples found. Add examples to step definitions in your flow config for testing.',
+          ];
+        }
+        return mcpResult(result, summary, hints);
       } catch (error) {
-        return mcpError(error);
+        return mcpError(error, 'Check configPath — expected a flow.json file');
       }
     },
   );

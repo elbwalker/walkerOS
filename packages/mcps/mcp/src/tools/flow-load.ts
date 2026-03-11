@@ -52,6 +52,10 @@ export function registerFlowLoadTool(server: McpServer) {
               'web = browser tracking, server = Node.js HTTP.',
           ),
       },
+      outputSchema: {
+        version: z.number().describe('Flow config version'),
+        flows: z.record(z.string(), z.unknown()).describe('Flow definitions'),
+      },
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -88,7 +92,12 @@ export function registerFlowLoadTool(server: McpServer) {
         return mcpResult(
           skeleton,
           `Created empty ${platform} flow. Use the add-step prompt to add sources, destinations, and transformers.`,
-          { next: ['Use add-step prompt to add sources and destinations'] },
+          {
+            next: [
+              'Read walkeros://reference/flow-schema for config structure',
+              'Use add-step prompt to add sources and destinations',
+            ],
+          },
         );
       } catch (error) {
         const msg = error instanceof Error ? error.message : '';

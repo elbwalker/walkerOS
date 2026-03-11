@@ -20,11 +20,11 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
-  mcpResult: jest.fn((result, summary) => ({
+  mcpResult: jest.fn((result, summary, hints) => ({
     content: [
       { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
     ],
-    structuredContent: result,
+    structuredContent: hints ? { ...result, _hints: hints } : result,
   })),
   mcpError: jest.fn((error) => ({
     content: [
@@ -215,6 +215,47 @@ describe('flow_simulate tool', () => {
       '0/0 destinations received the event',
     );
     expect(result.structuredContent.destinations).toBeUndefined();
+  });
+
+  it('warns when 0/0 destinations received event', async () => {
+    mockSimulate.mockResolvedValue({
+      success: true,
+      usage: {},
+      duration: 5,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+    });
+
+    expect(result.structuredContent._hints?.warnings).toBeDefined();
+    expect(result.structuredContent._hints.warnings.length).toBeGreaterThan(0);
+  });
+
+  it('warns when destinations exist but none received event', async () => {
+    mockSimulate.mockResolvedValue({
+      success: true,
+      usage: {
+        gtag: [],
+        meta: [],
+      },
+      duration: 5,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+    });
+
+    expect(result.structuredContent._hints?.warnings).toBeDefined();
+    expect(result.structuredContent._hints.warnings[0]).toContain(
+      'No destinations received the event',
+    );
   });
 
   it('handles non-Error exceptions', async () => {

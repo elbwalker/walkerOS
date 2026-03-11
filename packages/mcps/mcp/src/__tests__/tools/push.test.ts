@@ -131,6 +131,23 @@ describe('flow_push tool', () => {
     );
   });
 
+  it('returns error when result.success is false', async () => {
+    mockPush.mockResolvedValue({
+      success: false,
+      error: 'Connection refused',
+      duration: 50,
+    });
+
+    const tool = server.getTool('flow_push');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+    });
+
+    expect(result.isError).toBe(true);
+  });
+
   it('handles non-Error exceptions', async () => {
     mockPush.mockRejectedValue(42);
 

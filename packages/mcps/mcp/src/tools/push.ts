@@ -32,11 +32,21 @@ export function registerFlowPushTool(server: McpServer) {
           platform,
         });
 
+        if (!result.success) {
+          return mcpError(
+            new Error(result.error || 'Push failed'),
+            'Check destination configuration and network connectivity. For web destinations, use flow_simulate instead.',
+          );
+        }
+
         const summary = `Pushed event${result.duration ? ` (${result.duration}ms)` : ''}`;
 
         return mcpResult(result, summary);
       } catch (error) {
-        return mcpError(error);
+        return mcpError(
+          error,
+          'Check configPath and event format. For web destinations, use flow_simulate instead.',
+        );
       }
     },
   );

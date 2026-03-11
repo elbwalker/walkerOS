@@ -123,8 +123,6 @@ export function validateFlow(
       const flowSettings = (flows as Record<string, Flow.Settings>)[name];
       if (!flowSettings) continue;
 
-      checkExampleCoverage(flowSettings, warnings);
-
       const connections = buildConnectionGraph(flowSettings);
       for (const conn of connections) {
         checkCompatibility(conn, errors, warnings);
@@ -138,6 +136,33 @@ export function validateFlow(
       }
     }
     details.connectionsChecked = totalConnections;
+
+    // Check for flat dot-separated mapping keys (common mistake)
+    for (const name of flowsToCheck) {
+      const flowSettings = (flows as Record<string, Flow.Settings>)[name];
+      if (!flowSettings) continue;
+
+      for (const [destName, dest] of Object.entries(
+        flowSettings.destinations || {},
+      )) {
+        const destConfig = dest as {
+          config?: { mapping?: Record<string, unknown> };
+        };
+        const mapping = destConfig.config?.mapping;
+        if (!mapping || typeof mapping !== 'object') continue;
+
+        for (const key of Object.keys(mapping)) {
+          if (key.includes('.') && !key.includes(' ')) {
+            const parts = key.split('.');
+            warnings.push({
+              path: `destination.${destName}.config.mapping`,
+              message: `Mapping key "${key}" looks like dot-notation. Mapping uses nested entity → action structure.`,
+              suggestion: `Use nested format: { "${parts[0]}": { "${parts.slice(1).join('.')}": { ... } } }`,
+            });
+          }
+        }
+      }
+    }
   }
 
   return {
@@ -160,31 +185,6 @@ interface StepInfo {
 interface StepConnection {
   from: StepInfo;
   to: StepInfo;
-}
-
-function checkExampleCoverage(
-  config: Flow.Settings,
-  warnings: ValidationWarning[],
-): void {
-  const stepTypes = [
-    { key: 'sources' as const, type: 'source' },
-    { key: 'transformers' as const, type: 'transformer' },
-    { key: 'destinations' as const, type: 'destination' },
-  ];
-
-  for (const { key, type } of stepTypes) {
-    const refs = config[key];
-    if (!refs) continue;
-    for (const [name, ref] of Object.entries(refs)) {
-      if (!ref.examples || Object.keys(ref.examples).length === 0) {
-        warnings.push({
-          path: `${type}.${name}`,
-          message: `Step has no examples`,
-          suggestion: `Add examples to ${type}.${name} for testing and documentation`,
-        });
-      }
-    }
-  }
 }
 
 function buildConnectionGraph(config: Flow.Settings): StepConnection[] {

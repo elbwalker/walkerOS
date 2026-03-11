@@ -357,7 +357,7 @@ describe('validateFlow', () => {
       );
     });
 
-    it('warns when steps have no examples', () => {
+    it('does not warn when steps have no examples', () => {
       const result = validateFlow(
         baseSetup({
           sources: {
@@ -374,15 +374,8 @@ describe('validateFlow', () => {
       );
 
       expect(result.valid).toBe(true);
-      expect(result.warnings).toContainEqual(
+      expect(result.warnings).not.toContainEqual(
         expect.objectContaining({
-          path: 'source.browser',
-          message: 'Step has no examples',
-        }),
-      );
-      expect(result.warnings).toContainEqual(
-        expect.objectContaining({
-          path: 'destination.gtag',
           message: 'Step has no examples',
         }),
       );

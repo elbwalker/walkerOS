@@ -36,3 +36,11 @@ export const push: Env = {
     head: { appendChild: () => {} },
   },
 };
+
+/**
+ * Simulation tracking paths
+ * Specifies which function calls to track during simulation
+ */
+export const simulation = [
+  'call:window._paq.push', // Track _paq.push calls
+];
