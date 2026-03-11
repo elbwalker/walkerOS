@@ -128,7 +128,37 @@ Create these files based on the templates in this skill:
 | `examples/env.ts`     | Mock environment for testing         | [env.ts](./examples/env.ts)         |
 | `examples/mapping.ts` | Default event transformation         | [mapping.ts](./examples/mapping.ts) |
 
-### 2.3 Export via dev.ts
+### 2.3 Step Examples
+
+Add step examples with `{ in, out }` pairs for end-to-end step testing:
+
+| File               | Purpose                         | Status |
+| ------------------ | ------------------------------- | ------ |
+| `examples/step.ts` | Step examples with in/out pairs | NEW    |
+
+```typescript
+// examples/step.ts
+export const step = {
+  purchase: {
+    in: {
+      name: 'order complete',
+      data: { id: 'ORD-123', total: 149.97, currency: 'EUR' },
+    },
+    out: [
+      'event',
+      'purchase',
+      { transaction_id: 'ORD-123', value: 149.97, currency: 'EUR' },
+    ],
+  },
+};
+```
+
+For destinations, `in` is a walkerOS event and `out` is vendor-specific (gtag
+args, API payload, pixel call). See
+[using-step-examples](../walkeros-using-step-examples/SKILL.md) for the Three
+Type Zones.
+
+### 2.4 Export via dev.ts
 
 ```typescript
 export * as schemas from './schemas';
@@ -239,6 +269,44 @@ buildDev(),
 
 This auto-generates `dist/walkerOS.json` from your Zod schemas at build time.
 
+### Hints (Optional)
+
+If your destination has capabilities, behaviors, or troubleshooting patterns not
+obvious from schemas alone, add hints. See `walkeros-writing-documentation`
+skill for full guidelines.
+
+Create `src/hints.ts`:
+
+```typescript
+import type { Hint } from '@walkeros/core';
+
+export const hints: Hint.Hints = {
+  'auth-methods': {
+    text: 'Supports X, Y, and Z auth methods. See settings schema for all options.',
+    code: [{ lang: 'json', code: '{ "settings": { ... } }' }],
+  },
+};
+```
+
+Export from `src/dev.ts`:
+
+```typescript
+export * as schemas from './schemas';
+export * as examples from './examples';
+export { hints } from './hints';
+```
+
+Guidelines:
+
+- Expand awareness — describe capabilities ("supports X, Y, Z"), don't prescribe
+  one path
+- Reference schemas and examples, don't duplicate them
+- Verify every claim against actual implementation before publishing
+- Key naming: kebab-case, group with prefixes (auth-\*, storage-\*,
+  troubleshoot-\*)
+- Most destinations don't need hints — schemas and examples cover the common
+  case
+
 ### Gate: Convention Met
 
 - [ ] `walkerOS` field in package.json with type and platform
@@ -269,6 +337,8 @@ Use these templates as your starting point:
    `ingest`
 3. **Use `getEnv(env)`**: Never access `window`/`document` directly
 4. **Return config from init**: Allows updating config during initialization
+5. **Optional `destroy` method**: Implement if the destination holds resources
+   (DB connections, SDK clients, timers) that need cleanup on shutdown
 
 ### Gate: Implementation Compiles
 
@@ -291,6 +361,7 @@ Use the test template: [index.test.ts](./templates/simple/index.test.ts)
 2. **Include `id` field** - Required in context (new requirement)
 3. **Use `rule` instead of `mapping`** - Property renamed in PushContext
 4. **Use examples for test data** - Don't hardcode test values
+5. **Use `it.each` with step examples** - Iterate `examples.step` for coverage
 
 ### Gate: Tests Pass
 

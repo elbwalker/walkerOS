@@ -107,7 +107,11 @@ export async function addDestination(
 export async function pushToDestinations(
   collector: Collector.Instance,
   event?: WalkerOS.Event,
-  meta: { id?: string; ingest?: unknown } = {},
+  meta: {
+    id?: string;
+    ingest?: unknown;
+    respond?: import('@walkeros/core').RespondFn;
+  } = {},
   destinations?: Collector.Destinations,
 ): Promise<Elb.PushResult> {
   const { allowed, consent, globals, user } = collector;
@@ -229,6 +233,7 @@ export async function pushToDestinations(
               postChain,
               event,
               meta.ingest,
+              meta.respond,
             );
 
             if (chainResult === null) {
@@ -254,7 +259,14 @@ export async function pushToDestinations(
             destination.dlq!.push([processedEvent!, err]);
 
             return undefined;
-          })(collector, destination, id, processedEvent!, meta.ingest);
+          })(
+            collector,
+            destination,
+            id,
+            processedEvent!,
+            meta.ingest,
+            meta.respond,
+          );
           totalDuration += Date.now() - pushStart;
 
           // Capture the last response (for single event pushes)
@@ -301,9 +313,7 @@ export async function pushToDestinations(
       destStatus.duration += result.totalDuration || 0;
       collector.status.failed++;
     } else if (result.queue && result.queue.length) {
-      destination.queuePush = (destination.queuePush || []).concat(
-        result.queue,
-      );
+      // Events already re-queued at destination.queuePush via skippedEvents push
       queued[result.id] = ref;
     } else {
       done[result.id] = ref;
@@ -401,6 +411,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
   destId: string,
   event: WalkerOS.Event,
   ingest?: unknown,
+  respond?: import('@walkeros/core').RespondFn,
 ): Promise<unknown> {
   const { config } = destination;
 
@@ -420,7 +431,10 @@ export async function destinationPush<Destination extends Destination.Instance>(
     data: processed.data,
     rule: processed.mapping,
     ingest,
-    env: mergeEnvironments(destination.env, config.env),
+    env: {
+      ...mergeEnvironments(destination.env, config.env),
+      ...(respond ? { respond } : {}),
+    },
   };
 
   const eventMapping = processed.mapping;
@@ -453,7 +467,10 @@ export async function destinationPush<Destination extends Destination.Instance>(
             data: undefined,
             rule: eventMapping, // Renamed from mapping to rule
             ingest, // Same frozen reference
-            env: mergeEnvironments(destination.env, config.env),
+            env: {
+              ...mergeEnvironments(destination.env, config.env),
+              ...(respond ? { respond } : {}),
+            },
           };
 
           destLogger.debug('push batch', {

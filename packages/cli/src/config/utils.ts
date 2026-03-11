@@ -2,6 +2,7 @@
  * Configuration Utility Functions
  */
 
+import crypto from 'crypto';
 import fs from 'fs-extra';
 import path from 'path';
 import { getErrorMessage } from '../core/index.js';
@@ -56,8 +57,8 @@ export async function downloadFromUrl(url: string): Promise<string> {
     const downloadsDir = getTmpPath(undefined, 'downloads');
     await fs.ensureDir(downloadsDir);
 
-    // Use a consistent filename - always re-downloaded fresh anyway
-    const tempPath = path.join(downloadsDir, 'flow.json');
+    const downloadId = crypto.randomUUID().slice(0, 8);
+    const tempPath = path.join(downloadsDir, `flow-${downloadId}.json`);
     await fs.writeFile(tempPath, content, 'utf-8');
 
     return tempPath;

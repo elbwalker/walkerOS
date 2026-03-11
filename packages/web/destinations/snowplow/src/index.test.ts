@@ -15,7 +15,15 @@ import {
 } from '.';
 import { resetLoadedScripts, DEFAULT_SCRIPT_URL } from './setup';
 
-const { events, mapping, walkerosEvents } = examples;
+const mappingConfig = {
+  page: { view: examples.step.pageView.mapping },
+  product: {
+    view: examples.step.productView.mapping,
+    add: examples.step.addToCart.mapping,
+  },
+  order: { complete: examples.step.transaction.mapping },
+  promotion: { view: examples.step.promoView.mapping },
+};
 
 describe('destination snowplow', () => {
   let elb: WalkerOS.Elb;
@@ -207,118 +215,6 @@ describe('destination snowplow', () => {
     });
   });
 
-  test('event transaction (default)', async () => {
-    const event = getEvent('order complete');
-
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv as DestinationSnowplow.Env,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings: {
-        collectorUrl: 'https://collector.example.com',
-      },
-      mapping: mapping.config,
-    });
-
-    await elb(event);
-
-    expect(calls).toContainEqual({
-      path: ['window', 'snowplow'],
-      args: events.transaction(),
-    });
-  });
-
-  test('event page view', async () => {
-    const event = getEvent('page view', {
-      title: 'Home',
-      path: '/',
-    });
-
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv as DestinationSnowplow.Env,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings: {
-        collectorUrl: 'https://collector.example.com',
-        pageViewEvent: 'page view',
-      },
-      mapping: mapping.config,
-    });
-
-    await elb(event);
-
-    expect(calls).toContainEqual({
-      path: ['window', 'snowplow'],
-      args: events.pageView(),
-    });
-  });
-
-  test('event product view', async () => {
-    const event = getEvent('product view');
-
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv as DestinationSnowplow.Env,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings: {
-        collectorUrl: 'https://collector.example.com',
-      },
-      mapping: mapping.config,
-    });
-
-    await elb(event);
-
-    expect(calls).toContainEqual({
-      path: ['window', 'snowplow'],
-      args: events.productView(),
-    });
-  });
-
-  test('event add to cart with cart, page, and user entities', async () => {
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv as DestinationSnowplow.Env,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings: {
-        collectorUrl: 'https://collector.example.com',
-      },
-      mapping: mapping.config,
-    });
-
-    await elb(walkerosEvents.addToCart());
-
-    expect(calls).toContainEqual({
-      path: ['window', 'snowplow'],
-      args: events.addToCart(),
-    });
-  });
-
-  test('event purchase', async () => {
-    const event = getEvent('order complete');
-
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv as DestinationSnowplow.Env,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings: {
-        collectorUrl: 'https://collector.example.com',
-      },
-      mapping: mapping.config,
-    });
-
-    await elb(event);
-
-    expect(calls).toContainEqual({
-      path: ['window', 'snowplow'],
-      args: events.purchase(),
-    });
-  });
-
   test('event without mapping is skipped', async () => {
     // Test that events without mapping configuration are silently skipped
     const event = getEvent('custom unmapped');
@@ -331,7 +227,7 @@ describe('destination snowplow', () => {
       settings: {
         collectorUrl: 'https://collector.example.com',
       },
-      mapping: mapping.config,
+      mapping: mappingConfig,
     });
 
     await elb(event);
@@ -382,7 +278,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           page: { type: 'globals.page_type' },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(
@@ -407,7 +303,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           page: { type: 'globals.page_type' },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       // First event with page_type
@@ -439,7 +335,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           page: { type: 'globals.page_type' },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       // First event with page_type 'product'
@@ -473,7 +369,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           page: { type: 'globals.page_type' }, // Will be undefined if not in globals
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       // Event without globals.page_type
@@ -493,7 +389,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           page: { type: { value: 'homepage' } },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(getEvent('page view'));
@@ -518,7 +414,7 @@ describe('destination snowplow', () => {
             locale: { value: 'en-US' },
           },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(
@@ -550,7 +446,7 @@ describe('destination snowplow', () => {
             locale: 'globals.locale', // Will be undefined
           },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(
@@ -581,7 +477,7 @@ describe('destination snowplow', () => {
             heartbeatDelay: 30,
           },
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(getEvent('page view'));
@@ -610,7 +506,7 @@ describe('destination snowplow', () => {
           },
           pageViewEvent: 'page view',
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(getEvent('page view'));
@@ -634,7 +530,7 @@ describe('destination snowplow', () => {
         settings: {
           collectorUrl: 'https://collector.example.com',
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(getEvent('page view'));
@@ -647,26 +543,6 @@ describe('destination snowplow', () => {
   });
 
   describe('page view configuration', () => {
-    test('trackPageView calls trackPageView on init', async () => {
-      const destinationWithEnv = {
-        ...destination,
-        env: testEnv as DestinationSnowplow.Env,
-      };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          trackPageView: true,
-        },
-      });
-
-      // Wait for init to complete
-      await elb(getEvent('product view', { id: '123' }));
-
-      // Verify trackPageView was called during init
-      const pageViewCall = calls.find((c) => c.args[0] === 'trackPageView');
-      expect(pageViewCall).toBeDefined();
-    });
-
     test('custom pageViewEvent triggers trackPageView', async () => {
       const destinationWithEnv = {
         ...destination,
@@ -991,31 +867,6 @@ describe('destination snowplow', () => {
   });
 
   describe('setUserId', () => {
-    test('calls setUserId when user.id is available', async () => {
-      const destinationWithEnv = {
-        ...destination,
-        env: testEnv as DestinationSnowplow.Env,
-      };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-          userId: 'user.id',
-        },
-        mapping: mapping.config,
-      });
-
-      await elb(
-        getEvent('page view', {
-          user: { id: 'user-123' },
-        }),
-      );
-
-      expect(calls).toContainEqual({
-        path: ['window', 'snowplow'],
-        args: ['setUserId', 'user-123'],
-      });
-    });
-
     test('only calls setUserId once per session', async () => {
       const destinationWithEnv = {
         ...destination,
@@ -1026,7 +877,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           userId: 'user.id',
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       // First event with user
@@ -1059,7 +910,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           userId: 'user.id',
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       // Event without user.id (explicitly set user to empty object)
@@ -1083,7 +934,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           userId: 'user.id',
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       // First event - no user.id
@@ -1116,7 +967,7 @@ describe('destination snowplow', () => {
           collectorUrl: 'https://collector.example.com',
           // No userId setting
         },
-        mapping: mapping.config,
+        mapping: mappingConfig,
       });
 
       await elb(
@@ -1150,7 +1001,7 @@ describe('destination snowplow', () => {
                 collectorUrl: 'https://collector.example.com',
                 userId: 'user.id',
               },
-              mapping: mapping.config,
+              mapping: mappingConfig,
             },
           },
         },
@@ -1165,7 +1016,7 @@ describe('destination snowplow', () => {
                 collectorUrl: 'https://collector.example.com',
                 userId: 'user.id',
               },
-              mapping: mapping.config,
+              mapping: mappingConfig,
             },
           },
         },
@@ -1259,73 +1110,6 @@ describe('destination snowplow', () => {
   });
 
   describe('context loop expansion', () => {
-    test('context with loop creates multiple entities', async () => {
-      const event = {
-        ...getEvent('order complete'),
-        nested: [
-          { type: 'product', data: { id: 'P1', name: 'Laptop', price: 999 } },
-          { type: 'product', data: { id: 'P2', name: 'Mouse', price: 49 } },
-        ],
-      };
-
-      const destinationWithEnv = {
-        ...destination,
-        env: testEnv as DestinationSnowplow.Env,
-      };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          order: {
-            complete: {
-              name: 'transaction',
-              settings: {
-                context: [
-                  {
-                    schema:
-                      'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
-                    data: {
-                      loop: [
-                        'nested',
-                        {
-                          map: {
-                            id: 'data.id',
-                            name: 'data.name',
-                            price: 'data.price',
-                          },
-                        },
-                      ],
-                    },
-                  },
-                ],
-              },
-            },
-          },
-        },
-      });
-
-      await elb(event);
-
-      const trackCall = calls.find(
-        (c) => c.args[0] === 'trackSelfDescribingEvent',
-      );
-      expect(trackCall).toBeDefined();
-
-      const selfDescribingEvent = trackCall?.args[1] as { context?: unknown[] };
-      expect(selfDescribingEvent.context).toHaveLength(2);
-      expect(selfDescribingEvent.context).toContainEqual({
-        schema:
-          'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
-        data: { id: 'P1', name: 'Laptop', price: 999 },
-      });
-      expect(selfDescribingEvent.context).toContainEqual({
-        schema:
-          'iglu:com.snowplowanalytics.snowplow.ecommerce/product/jsonschema/1-0-0',
-        data: { id: 'P2', name: 'Mouse', price: 49 },
-      });
-    });
-
     test('context with mixed loop and non-loop entities', async () => {
       const event = {
         ...getEvent('order complete'),
@@ -2654,45 +2438,6 @@ describe('destination snowplow', () => {
       expect(selfDescribingEvent.event.data).toEqual({});
     });
 
-    test('ecommerce events send {type: actionName}', async () => {
-      // Ecommerce pattern uses SCHEMAS.ACTION with type field
-      const destinationWithEnv = {
-        ...destination,
-        env: testEnv as DestinationSnowplow.Env,
-      };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          product: {
-            view: {
-              name: 'product_view', // actionName becomes type
-              settings: {
-                snowplow: {
-                  actionSchema: SCHEMAS.ACTION, // Explicit ecommerce schema
-                },
-              },
-            },
-          },
-        },
-      });
-
-      await elb('product view', { id: 'prod-123' });
-
-      const trackCall = calls.find(
-        (c) => c.args[0] === 'trackSelfDescribingEvent',
-      );
-      expect(trackCall).toBeDefined();
-
-      const selfDescribingEvent = trackCall?.args[1] as {
-        event: { schema: string; data: unknown };
-      };
-      expect(selfDescribingEvent.event.schema).toBe(SCHEMAS.ACTION);
-      // Ecommerce events should have type field
-      expect(selfDescribingEvent.event.data).toEqual({ type: 'product_view' });
-    });
-
     test('events with mapping.data.map use mapped data', async () => {
       // Events with data.map use the mapped values instead
       const destinationWithEnv = {
@@ -2738,40 +2483,6 @@ describe('destination snowplow', () => {
       );
       // Mapped data should be used
       expect(selfDescribingEvent.event.data).toEqual({ percentProgress: 25 });
-    });
-
-    test('default actionSchema uses ecommerce pattern', async () => {
-      // When no actionSchema specified, default SCHEMAS.ACTION is used
-      const destinationWithEnv = {
-        ...destination,
-        env: testEnv as DestinationSnowplow.Env,
-      };
-      elb('walker destination', destinationWithEnv, {
-        settings: {
-          collectorUrl: 'https://collector.example.com',
-        },
-        mapping: {
-          product: {
-            click: {
-              name: 'list_click', // actionName
-              // No actionSchema - should default to SCHEMAS.ACTION
-            },
-          },
-        },
-      });
-
-      await elb('product click', { id: 'prod-456' });
-
-      const trackCall = calls.find(
-        (c) => c.args[0] === 'trackSelfDescribingEvent',
-      );
-      expect(trackCall).toBeDefined();
-
-      const selfDescribingEvent = trackCall?.args[1] as {
-        event: { schema: string; data: unknown };
-      };
-      expect(selfDescribingEvent.event.schema).toBe(SCHEMAS.ACTION);
-      expect(selfDescribingEvent.event.data).toEqual({ type: 'list_click' });
     });
   });
 

@@ -1,5 +1,168 @@
 # @walkeros/cli
 
+## 3.0.0
+
+### Major Changes
+
+- d11f574: Rename Flow.Setup to Flow.Config and Flow.Config to Flow.Settings for
+  consistent Config/Settings naming convention at every level. Breaking change:
+  all type names, function names, schema names, and API URL paths (/configs →
+  /settings) updated.
+- 23f218a: Replace flat/v2 contract format with named contracts supporting
+  extends inheritance.
+
+  BREAKING CHANGES:
+  - `contract` is now a map of named contract entries (e.g.,
+    `{ "default": { ... }, "web": { ... } }`)
+  - `version` field inside contracts removed
+  - `$tagging` renamed to `tagging`
+  - Legacy flat contract format removed
+  - `$globals`, `$context`, `$custom`, `$user`, `$consent` references removed
+  - Settings-level `contract` field removed (use named contracts at config
+    level)
+  - Auto-injection of `$tagging` into `collector.tagging` removed (use
+    `$contract.name.tagging` explicitly)
+  - Validator `contract` setting renamed to `events` (receives raw schemas, not
+    `{ schema: ... }` wrappers)
+
+  NEW FEATURES:
+  - Named contracts with `extends` for inheritance (additive merge)
+  - Generalized dot-path resolution: `$def.name.nested.path`,
+    `$contract.name.section`
+  - `$contract` as first-class reference type with path access
+  - `$def` inside contracts supported via two-pass resolution
+  - `$def` aliasing for reducing repetition: `{ "c": "$contract.web" }` then
+    `$def.c.events`
+
+- d5af3cf: Unified CLI and Docker runner into single `walkeros run` code path
+  with built-in health server, heartbeat, polling, and secrets support. Added
+  `--flow-id` and `--project` flags. Removed legacy `--deploy`, `--url`,
+  `--health-endpoint`, `--heartbeat-interval`, and `-h/--host` flags.
+
+### Minor Changes
+
+- 6ae0ee3: Add v2 structured contract format with globals, context, custom,
+  user, and consent sections.
+
+  Contracts can now describe cross-event properties (globals, consent, etc.)
+  alongside entity-action event schemas. Top-level sections are JSON Schemas
+  that merge additively into per-event validation.
+
+  Breaking: None. Legacy flat contracts continue working unchanged. v2 is opt-in
+  via `version: 2` field.
+
+- b6c8fa8: Add stores as a first-class component type in Flow.Config. Stores get
+  their own `stores` section in flow settings, a `collector.stores` registry,
+  and `$store:storeId` env wiring in the bundler. Includes `storeMemoryInit` for
+  Flow.Config compatibility and type widening in cache/file transformers.
+
+### Patch Changes
+
+- 2b259b6: Fix deterministic package version resolution in bundler.
+  - Two-phase resolve-then-install prevents version overwrites
+  - peerDependencies resolved at lowest priority (not equal to deps)
+  - Per-build temp directories prevent cross-build interference
+  - Optional peerDeps (peerDependenciesMeta) correctly skipped
+  - Prerelease versions handled with includePrerelease flag
+  - Package names validated against npm naming rules
+
+- ddd6a21: Generated Dockerfiles now include COPY lines for `include` folders,
+  enabling fs store support in Docker containers.
+- 5cb84c1: Replace hand-written MCP resources with auto-generated JSON Schemas
+  from @walkeros/core. Add walkerOS.json to 5 transformer packages. Variables
+  resource remains hand-maintained (runtime interpolation patterns).
+- 67dd7c8: Standardize command pattern: all three commands (validate, simulate,
+  push) now route through their programmatic APIs for string resolution and
+  orchestration. Extract shared createCollectorLoggerConfig utility. Pass
+  missing silent/step options through simulate() API.
+- 499e27a: Add sideEffects declarations to all packages for bundler tree-shaking
+  support.
+- 55ce33e: Fix $store: forward reference bug in bundler codegen — stores are now
+  hoisted into a separate variable declaration before the config object,
+  ensuring store references resolve correctly at runtime
+- Updated dependencies [2b259b6]
+- Updated dependencies [2614014]
+- Updated dependencies [6ae0ee3]
+- Updated dependencies [37299a9]
+- Updated dependencies [499e27a]
+- Updated dependencies [0e5eede]
+- Updated dependencies [d11f574]
+- Updated dependencies [d11f574]
+- Updated dependencies [1fe337a]
+- Updated dependencies [5cb84c1]
+- Updated dependencies [23f218a]
+- Updated dependencies [499e27a]
+- Updated dependencies [c83d909]
+- Updated dependencies [b6c8fa8]
+  - @walkeros/core@3.0.0
+  - @walkeros/server-core@3.0.0
+
+## 2.1.1
+
+### Patch Changes
+
+- Updated dependencies [fab477d]
+  - @walkeros/core@2.1.1
+  - @walkeros/server-core@2.1.1
+
+## 2.1.0
+
+### Minor Changes
+
+- cb2da05: Add data contracts for centralized event validation and documentation
+- fed78f0: Replace deployment polling with SSE streaming for real-time status
+  updates
+- 3eb6416: Add unified `env.respond` capability. Any step (transformer,
+  destination) can now customize HTTP responses via
+  `env.respond({ body, status?, headers? })`. Sources configure the response
+  handler — Express source uses createRespond for idempotent first-call-wins
+  semantics. CLI serve mode removed (superseded by response-capable flows).
+- 39780b0: Add event usage counters to heartbeat reporting
+- dd53425: Simplify `walkeros run collect` to `walkeros run` — the mode concept
+  has been removed
+- 66aaf2d: Runner-owned health server: The runner now provides /health and
+  /ready endpoints independently of flow sources. Express source's `status`
+  setting and fetch source's `healthPath` setting have been removed — health
+  endpoints are no longer source responsibilities.
+- 97df0b2: Simplify validate command: file-first argument, --type defaults to
+  flow, deep validation merged into flow, entry validation moved to --path
+- 026c412: Unified simulation API: single simulate() function replaces
+  simulateSource/simulateDestination/simulateTransformer/simulateFlow. Built-in
+  call tracking for destinations via wrapEnv. No bundling required for
+  simulation.
+
+### Patch Changes
+
+- fed78f0: Show logo only on bare `walkeros` call, not before every command
+- 7b7e37b: Consolidate flow validation to use core's validateFlowSetup, adding
+  $var/$def reference checking and IntelliSense context extraction
+- 5145662: Use os.tmpdir() as default temp directory to fix permission errors in
+  containers
+- 02a7958: Add WARN log level (ERROR=0, WARN=1, INFO=2, DEBUG=3). Logger
+  instances expose `warn()` method routed to `console.warn` and `json()` method
+  for structured output. Config accepts optional `jsonHandler`. MockLogger
+  includes both as jest mocks. CLI logger unified with core logger via
+  `createCLILogger()` factory.
+- 3bc32de: Surface mapping field in examples_list and ExampleLookupResult
+- 5145662: Add --output URL support, -f shorthand for --flow, and lazy-load
+  esbuild in runtime
+- 7fc4cee: Fix server bundle port forwarding from runtime context to source
+  configs
+- 1876bb9: Remove unused bundle simulation path, CallTracker, and executor files
+  from simulate command. Simulate now only accepts Flow.Setup config JSON files.
+- Updated dependencies [7fc4cee]
+- Updated dependencies [7fc4cee]
+- Updated dependencies [cb2da05]
+- Updated dependencies [2bbe8c8]
+- Updated dependencies [3eb6416]
+- Updated dependencies [02a7958]
+- Updated dependencies [97df0b2]
+- Updated dependencies [97df0b2]
+- Updated dependencies [026c412]
+- Updated dependencies [7d38d9d]
+  - @walkeros/core@2.1.0
+  - @walkeros/server-core@2.1.0
+
 ## 2.0.1
 
 ## 2.0.0

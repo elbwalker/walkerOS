@@ -1,0 +1,57 @@
+// Explorer button
+.elb-explorer-btn {
+  padding: var(--spacing-button);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-button);
+  transition: all 0.15s;
+
+  &:hover {
+    background: var(--bg-button-hover);
+    color: var(--color-text-button-hover);
+  }
+
+  &.active {
+    background: var(--bg-button-active);
+    color: var(--color-text-button-active);
+    box-shadow: var(--shadow-button-active);
+    font-weight: var(--font-weight-semibold);
+  }
+}
+
+// Explorer button group
+.elb-explorer-button-group {
+  display: flex;
+  background: var(--bg-button-group);
+  border-radius: var(--radius-button-group);
+  padding: var(--spacing-button-group);
+  border: 1px solid var(--border-button-group);
+}
+
+// Explorer controls container
+.elb-explorer-controls {
+  padding: 8px 0 12px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+// Explorer toggle (checkbox with label)
+.elb-explorer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-toggle);
+  color: var(--color-text-toggle);
+  cursor: pointer;
+  user-select: none;
+
+  input[type='checkbox'] {
+    margin: 0;
+    cursor: pointer;
+  }
+}

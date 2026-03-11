@@ -6,7 +6,6 @@ sidebar_position: 4
 package: '@walkeros/web-destination-snowplow'
 ---
 
-import { getEvent } from '@walkeros/core';
 import destinationSnowplow from '@walkeros/web-destination-snowplow';
 import { examples, schemas } from '@walkeros/web-destination-snowplow/dev';
 
@@ -751,8 +750,8 @@ Map your walkerOS event to get a Snowplow `product_view` ecommerce event with pr
   }}
   smallText={true}
   height={'512px'}
-  event={getEvent('product view')}
-  mapping={examples.mapping.productView}
+  event={examples.step.productView.in}
+  mapping={examples.step.productView.mapping}
   generic={true}
 />
 
@@ -767,8 +766,8 @@ Map your walkerOS event to get a Snowplow `add_to_cart` ecommerce event with pro
   }}
   smallText={true}
   height={'512px'}
-  event={getEvent('product add')}
-  mapping={examples.mapping.addToCart}
+  event={examples.step.addToCart.in}
+  mapping={examples.step.addToCart.mapping}
   generic={true}
 />
 
@@ -783,8 +782,8 @@ Map your walkerOS event to get a Snowplow `transaction` ecommerce event with tra
   }}
   smallText={true}
   height={'512px'}
-  event={getEvent('order complete')}
-  mapping={examples.mapping.transaction}
+  event={examples.step.transaction.in}
+  mapping={examples.step.transaction.mapping}
   generic={true}
 />
 
@@ -799,8 +798,8 @@ Map your walkerOS event to get a Snowplow `promo_view` ecommerce event with prom
   }}
   smallText={true}
   height={'512px'}
-  event={getEvent('promotion visible')}
-  mapping={examples.mapping.promoView}
+  event={examples.step.promoView.in}
+  mapping={examples.step.promoView.mapping}
   generic={true}
 />
 

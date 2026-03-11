@@ -6,12 +6,15 @@
     "packages/cli",
     "packages/core",
     "packages/collector",
-    "packages/mcp",
+    "packages/mcps/mcp",
+    "packages/mcps/source-browser",
     "packages/transformers/*",
     "packages/server/core",
     "packages/server/destinations/*",
     "packages/server/sources/*",
     "packages/server/transformers/*",
+    "packages/server/stores/*",
+    "packages/stores/*",
     "packages/web/core",
     "packages/web/destinations/*",
     "packages/web/sources/*",
@@ -20,9 +23,7 @@
     "apps/walkerjs",
     "apps/cli",
     "apps/storybook-addon",
-    "apps/demos/destination",
-    "apps/demos/transformer",
-    "apps/demos/source",
+    "apps/explorer",
     "apps/demos/react",
     "apps/demos/storybook",
     "website"
@@ -33,15 +34,16 @@
     "build:apps": "turbo run build --filter='./apps/*'",
     "build:website": "turbo run build --filter=@walkeros/website",
     "clean": "turbo run clean",
-    "dev": "turbo run dev --output-logs=errors-only",
+    "dev": "turbo run dev",
     "format": "prettier --write .",
-    "typecheck": "turbo run typecheck --output-logs=errors-only",
-    "lint": "turbo run lint --output-logs=errors-only",
-    "publish-packages": "npm run clean && npm run build && npm run lint && npm run test && changeset version && changeset publish",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "publish-packages": "npm run clean && npm run build && npm run lint && npm run test && npm run test:integration && changeset version && changeset publish",
     "reset": "rm -rf .turbo && rm -rf node_modules && npm ci",
     "publish-docker": "npm run -w @walkeros/cli docker:publish",
-    "test": "turbo run test --output-logs=errors-only",
-    "test:integration": "turbo run test:integration --filter=@walkeros/cli --output-logs=errors-only",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test --filter=!@walkeros/website --output-logs=errors-only -- --coverage --coverageReporters=text-summary --coverageReporters=lcov",
+    "test:integration": "turbo run test:integration --filter=@walkeros/cli --concurrency=1",
     "prepare": "husky || true",
     "validate:links": "npx tsx apps/scripts/validate-links.ts",
     "validate:docs": "npx tsx apps/scripts/validate-docs.ts",
@@ -49,7 +51,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.8",
-    "@walkeros/config": "^1.0.1",
+    "@walkeros/config": "^2.0.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
@@ -77,5 +79,6 @@
     "eslint": {
       "ajv": "^6.12.6"
     }
-  }
+  },
+  "dependencies": {}
 }

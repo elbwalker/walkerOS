@@ -1,6 +1,8 @@
 import { sourceCookieFirst, DEFAULT_CATEGORY_MAP } from '../index';
+import { createMockLogger } from '@walkeros/core';
 import * as inputs from '../examples/inputs';
 import * as outputs from '../examples/outputs';
+import { examples } from '../dev';
 import {
   createMockElb,
   createMockWindow,
@@ -94,22 +96,6 @@ describe('CookieFirst Source', () => {
   });
 
   describe('category mapping', () => {
-    test('maps full consent correctly', async () => {
-      const mockWindow = createMockWindow(inputs.fullConsent);
-
-      await createCookieFirstSource(mockWindow, mockElb);
-
-      expect(consentCalls[0].consent).toEqual(outputs.fullConsentMapped);
-    });
-
-    test('maps partial consent correctly', async () => {
-      const mockWindow = createMockWindow(inputs.partialConsent);
-
-      await createCookieFirstSource(mockWindow, mockElb);
-
-      expect(consentCalls[0].consent).toEqual(outputs.partialConsentMapped);
-    });
-
     test('maps minimal consent correctly', async () => {
       const mockWindow = createMockWindow(inputs.minimalConsent);
 
@@ -263,7 +249,12 @@ describe('CookieFirst Source', () => {
       expect(consentCalls).toHaveLength(1);
 
       // Destroy the source
-      await source.destroy?.();
+      await source.destroy?.({
+        id: 'test',
+        config: source.config,
+        env: {} as any,
+        logger: createMockLogger(),
+      });
 
       // Verify removeEventListener was called
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith(
@@ -289,8 +280,10 @@ describe('CookieFirst Source', () => {
           window: undefined,
           logger: {
             error: () => {},
+            warn: () => {},
             info: () => {},
             debug: () => {},
+            json: () => {},
             throw: (m: string | Error) => {
               throw typeof m === 'string' ? new Error(m) : m;
             },
@@ -302,8 +295,10 @@ describe('CookieFirst Source', () => {
         id: 'test-cookiefirst',
         logger: {
           error: () => {},
+          warn: () => {},
           info: () => {},
           debug: () => {},
+          json: () => {},
           throw: (m: string | Error) => {
             throw typeof m === 'string' ? new Error(m) : m;
           },
@@ -312,6 +307,7 @@ describe('CookieFirst Source', () => {
           },
         },
         setIngest: async () => {},
+        setRespond: jest.fn(),
       });
 
       expect(source.type).toBe('cookiefirst');

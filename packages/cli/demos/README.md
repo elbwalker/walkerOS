@@ -27,7 +27,7 @@ This demonstrates:
 - Bundle generation
 - Event simulation
 - Docker image build
-- Docker collect mode
+- Docker run
 - CLI Docker orchestration
 - Automatic cleanup
 
@@ -74,29 +74,15 @@ node packages/cli/dist/index.js simulate walker-bundle.js \
     '{"name":"page view","data":{"title":"Home","path":"/"}}'
 ```
 
-### Run in Docker (Collect Mode)
+### Run in Docker
 
 ```bash
 # Build Docker image first
 docker build -f packages/docker/Dockerfile -t walkeros-local .
 
 # Run via CLI
-node packages/cli/dist/index.js run collect packages/docker/flows/demo.json \
+node packages/cli/dist/index.js run packages/docker/flows/demo.json \
     --port 3000 \
-    --image walkeros-local \
-    --no-pull
-```
-
-### Run in Docker (Serve Mode)
-
-```bash
-# Create a static bundle
-node packages/cli/dist/index.js bundle packages/docker/flows/demo.json \
-    --output static-walker.js
-
-# Serve it
-node packages/cli/dist/index.js run serve static-walker.js \
-    --port 8080 \
     --image walkeros-local \
     --no-pull
 ```

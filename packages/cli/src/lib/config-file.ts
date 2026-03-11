@@ -86,6 +86,14 @@ export function resolveToken(): {
 }
 
 /**
+ * Resolve the deploy token for container/heartbeat auth.
+ * Only checks WALKEROS_DEPLOY_TOKEN env var (never stored in config file).
+ */
+export function resolveDeployToken(): string | null {
+  return process.env.WALKEROS_DEPLOY_TOKEN ?? null;
+}
+
+/**
  * Resolve the app URL using priority order:
  * 1. WALKEROS_APP_URL env var
  * 2. Config file appUrl

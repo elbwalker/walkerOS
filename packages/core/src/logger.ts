@@ -73,18 +73,17 @@ const defaultHandler: DefaultHandler = (level, message, context, scope) => {
 
   const hasContext = Object.keys(context).length > 0;
 
-  if (level === Level.ERROR) {
-    if (hasContext) {
-      console.error(prefix, message, context);
-    } else {
-      console.error(prefix, message);
-    }
+  const consoleFn =
+    level === Level.ERROR
+      ? console.error
+      : level === Level.WARN
+        ? console.warn
+        : console.log;
+
+  if (hasContext) {
+    consoleFn(prefix, message, context);
   } else {
-    if (hasContext) {
-      console.log(prefix, message, context);
-    } else {
-      console.log(prefix, message);
-    }
+    consoleFn(prefix, message);
   }
 };
 
@@ -130,16 +129,22 @@ export function createLogger(config: Config = {}): Instance {
   const level =
     config.level !== undefined ? normalizeLevel(config.level) : Level.ERROR;
   const customHandler = config.handler;
+  const jsonHandler = config.jsonHandler;
   const scope: string[] = [];
 
-  return createLoggerInternal({ level, handler: customHandler, scope });
+  return createLoggerInternal({
+    level,
+    handler: customHandler,
+    jsonHandler,
+    scope,
+  });
 }
 
 /**
  * Internal logger creation with resolved config
  */
 function createLoggerInternal(config: InternalConfig): Instance {
-  const { level, handler, scope } = config;
+  const { level, handler, jsonHandler, scope } = config;
 
   /**
    * Internal log function that checks level and delegates to handler
@@ -197,13 +202,23 @@ function createLoggerInternal(config: InternalConfig): Instance {
 
   return {
     error: (message, context) => log(Level.ERROR, message, context),
+    warn: (message, context) => log(Level.WARN, message, context),
     info: (message, context) => log(Level.INFO, message, context),
     debug: (message, context) => log(Level.DEBUG, message, context),
     throw: logAndThrow,
+    json: (data: unknown) => {
+      if (jsonHandler) {
+        jsonHandler(data);
+      } else {
+        // eslint-disable-next-line no-console
+        console.log(JSON.stringify(data, null, 2));
+      }
+    },
     scope: (name: string) =>
       createLoggerInternal({
         level,
         handler,
+        jsonHandler,
         scope: [...scope, name],
       }),
   };

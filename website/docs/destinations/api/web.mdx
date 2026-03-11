@@ -6,7 +6,6 @@ path: packages/web/destinations/api
 sidebar_position: 1
 ---
 
-import { getEvent } from '@walkeros/core';
 import destinationWebAPI from '@walkeros/web-destination-api';
 import { examples, schemas } from '@walkeros/web-destination-api/dev';
 
@@ -259,7 +258,7 @@ is used to send the events to an API.
   }}
   smallText={true}
   height={'128px'}
-  event={getEvent()}
-  mapping={examples.mapping.entity_action}
+  event={examples.step.entityAction.in}
+  mapping={examples.step.entityAction.mapping}
   generic={true}
 />

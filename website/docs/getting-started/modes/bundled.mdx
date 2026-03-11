@@ -30,7 +30,7 @@ Create `flow.json`:
 
 <CodeSnippet
   code={`{
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "web": {},
@@ -61,7 +61,7 @@ Create `flow.json`:
 
 <CodeSnippet
   code={`{
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "server": {},
@@ -130,7 +130,7 @@ node ./dist/bundle.mjs
 Or with Docker:
 
 ```bash
-walkeros run collect flow.json
+walkeros run flow.json
 ```
 
   </TabItem>
@@ -144,7 +144,7 @@ Add destinations to your `flow.json`:
 
 <CodeSnippet
   code={`{
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "web": {},
@@ -242,7 +242,7 @@ Use variables for environment-specific values:
 
 <CodeSnippet
   code={`{
-  "version": 1,
+  "version": 3,
   "variables": {
     "GA_ID": "$env.GA_MEASUREMENT_ID:G-DEFAULT",
     "API_URL": "$env.API_ENDPOINT:https://api.example.com"
@@ -270,7 +270,7 @@ Define different flows for different environments:
 
 <CodeSnippet
   code={`{
-  "version": 1,
+  "version": 3,
   "flows": {
     "development": {
       "web": {},
@@ -300,8 +300,7 @@ Build specific flow: `walkeros bundle flow.json --flow production`
 | `walkeros bundle` | Build production bundle |
 | `walkeros simulate` | Test with mocked events |
 | `walkeros push` | Test with real API calls |
-| `walkeros run collect` | Start HTTP collection server |
-| `walkeros run serve` | Serve web bundles |
+| `walkeros run` | Start HTTP collection server |
 
 See [CLI documentation](/docs/apps/cli) for full details.
 
@@ -318,7 +317,6 @@ walkeros bundle flow.json
 # Run with Docker
 docker run -p 8080:8080 \\
   -v $(pwd)/dist/bundle.mjs:/app/flow.mjs \\
-  -e MODE=collect \\
   walkeros/docker:latest`}
   language="bash"
 />
@@ -329,7 +327,6 @@ See [Docker documentation](/docs/apps/docker) for complete deployment guides.
 
 ## Next steps
 
-- [**Flow configuration**](/docs/getting-started/flow): Full configuration reference
 - [**CLI documentation**](/docs/apps/cli): All CLI commands and options
 - [**Docker deployment**](/docs/apps/docker): Production container deployment
 - [**Mapping**](/docs/mapping): Transform events for destinations

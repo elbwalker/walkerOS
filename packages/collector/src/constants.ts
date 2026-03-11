@@ -19,6 +19,7 @@ export const Commands: Record<CommandTypes, Collector.CommandType> = {
   Ready: 'ready',
   Run: 'run',
   Session: 'session',
+  Shutdown: 'shutdown',
   User: 'user',
   Walker: 'walker',
 } as const;

@@ -41,6 +41,11 @@ export async function fetchConfig(
   }
 
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(
+        `Config fetch failed (${response.status}): token may have expired — redeploy to rotate`,
+      );
+    }
     throw new Error(
       `Config fetch failed: ${response.status} ${response.statusText}`,
     );
@@ -51,7 +56,7 @@ export async function fetchConfig(
   const version = etag.replace(/"/g, '');
 
   return {
-    content: data.content,
+    content: data.config,
     version,
     etag,
     changed: true,

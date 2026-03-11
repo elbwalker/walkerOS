@@ -27,7 +27,12 @@ for canonical interface.
 | `init(context)`             | Load scripts, authenticate | Optional     |
 | `push(event, context)`      | Transform and send event   | **Required** |
 | `pushBatch(batch, context)` | Batch processing           | Optional     |
+| `destroy(context)`          | Cleanup on shutdown        | Optional     |
 | `config`                    | Settings, mapping, consent | **Required** |
+
+`destroy?: DestroyFn` — Optional cleanup method. Called during
+`command('shutdown')`. Use to close DB connections, flush buffers, or release
+SDK clients. Receives `{ id, config, env, logger }`.
 
 ## The env Pattern
 
@@ -116,6 +121,14 @@ The transformer chain runs after collector enrichment, before the destination
 receives events. Each destination can have its own chain. See
 [understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
 for chain details.
+
+## Response Delegation (env.respond)
+
+Destinations can customize HTTP responses by calling
+`context.env.respond?.({ body, status?, headers? })`. This is useful for
+destinations that need to signal success/failure back to the HTTP caller. First
+call wins (idempotent). The respond function is optional — only present when the
+source provides one.
 
 ## Related Skills
 

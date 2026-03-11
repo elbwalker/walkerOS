@@ -96,7 +96,7 @@ export function getAllEvents(
     processElementEvents(actualScope as Element);
   }
 
-  queryAll(actualScope, actionSelector, processElementEvents);
+  queryAllComposed(actualScope, actionSelector, processElementEvents);
 
   return events;
 }
@@ -288,22 +288,26 @@ function getEntity(
   );
 
   // Add linked elements (data-elblink)
-  queryAll(element, `[${linkName}]`, (link) => {
+  queryAllComposed(element, `[${linkName}]`, (link) => {
     const [linkId, linkState]: Walker.KeyVal = splitKeyVal(
       getAttribute(link, linkName),
     );
 
     // Get all linked child elements if link is a parent
-    // Note: This searches the entire document - for scoped operation, we would need
-    // to pass scope context down to this function or redesign the linking mechanism
+    // Note: Searches entire document including shadow roots.
+    // Acceptable because link-parent usage is rare in practice.
     if (linkState === 'parent')
-      queryAll(document.body, `[${linkName}="${linkId}:child"]`, (wormhole) => {
-        scopeElems.push(wormhole);
+      queryAllComposed(
+        document.body,
+        `[${linkName}="${linkId}:child"]`,
+        (wormhole) => {
+          scopeElems.push(wormhole);
 
-        // A linked child can also be an entity
-        const nestedEntity = getEntity(prefix, wormhole);
-        if (nestedEntity) nested.push(nestedEntity);
-      });
+          // A linked child can also be an entity
+          const nestedEntity = getEntity(prefix, wormhole);
+          if (nestedEntity) nested.push(nestedEntity);
+        },
+      );
   });
 
   // Get all property elements including linked elements
@@ -312,7 +316,7 @@ function getEntity(
     // Also check for property on same level
     if (elem.matches(dataSelector)) propertyElems.push(elem);
 
-    queryAll(elem, dataSelector, (elem) => propertyElems.push(elem));
+    queryAllComposed(elem, dataSelector, (elem) => propertyElems.push(elem));
   });
 
   // Get properties
@@ -328,7 +332,7 @@ function getEntity(
 
   // Get nested entities
   scopeElems.forEach((elem) => {
-    queryAll(
+    queryAllComposed(
       elem,
       `[${getElbAttributeName(prefix)}]`,
       (nestedEntityElement) => {
@@ -350,10 +354,14 @@ function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
       getAttribute(elem, linkName),
     );
     if (linkState === 'child') {
-      // If current element is a child-link jump to the parent
-      // Note: This searches the entire document - for scoped operation, we would need
-      // to pass scope context down to this function or redesign the linking mechanism
-      return document.querySelector(`[${linkName}="${linkId}:parent"]`);
+      // Link-parent lookup does not cross shadow boundaries.
+      // Uses simple queryAll (no shadow recursion) since this runs
+      // during per-event entity traversal.
+      let found: HTMLElement | null = null;
+      queryAll(document, `[${linkName}="${linkId}:parent"]`, (el) => {
+        if (!found) found = el as HTMLElement;
+      });
+      return found;
     }
   }
 
@@ -418,8 +426,27 @@ function queryAll(
   selector: string,
   fn: (element: Element) => void,
 ): void {
-  const elements = scope.querySelectorAll(selector);
-  elements.forEach(fn);
+  scope.querySelectorAll(selector).forEach(fn);
+}
+
+// Shadow-aware version that recurses into open shadow roots.
+// Use for discovery (init) and entity-scoped queries (small subtrees).
+// Avoid for per-event document-scoped queries (e.g. getGlobals).
+export function queryAllComposed(
+  scope: Document | Element | ShadowRoot,
+  selector: string,
+  fn: (element: Element) => void,
+): void {
+  scope.querySelectorAll(selector).forEach(fn);
+
+  if (scope instanceof Element && scope.shadowRoot) {
+    queryAllComposed(scope.shadowRoot, selector, fn);
+  }
+  scope.querySelectorAll('*').forEach((el) => {
+    if (el.shadowRoot) {
+      queryAllComposed(el.shadowRoot, selector, fn);
+    }
+  });
 }
 
 function resolveAttributes(

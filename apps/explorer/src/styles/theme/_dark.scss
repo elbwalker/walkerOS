@@ -1,0 +1,75 @@
+// Scope dark theme to .elb-explorer under [data-theme='dark']
+// Colors aligned with website (Tailwind gray scale)
+[data-theme='dark'] .elb-explorer {
+  --color-text: #f3f4f6;
+  --color-text-label: #d1d5db;
+  --color-text-button: #d1d5db;
+  --color-text-button-hover: #ffffff;
+  --color-text-button-active: #ffffff;
+  --color-text-muted: #9ca3af;
+  --color-text-toggle: #9ca3af;
+  --color-text-input: #f3f4f6;
+  --color-text-placeholder: #6b7280;
+
+  --bg-box: #292d3e;
+  --bg-header: #1f2937;
+  --bg-footer: #1f2937;
+  --bg-button-hover: #374151;
+  --bg-button-active: #111827;
+  --bg-button-group: #374151;
+  --bg-input: #1f2937;
+  --bg-input-hover: #374151;
+  --bg-code-inline: rgba(255, 255, 255, 0.05);
+  --bg-dropdown: #1f2937;
+  --bg-dropdown-option-hover: #374151;
+  --bg-dropdown-option-highlighted: #1e3a5f;
+
+  --border-box: #4b5563;
+  --border-header: #4b5563;
+  --border-footer: #4b5563;
+  --border-button-group: #4b5563;
+  --border-input: #4b5563;
+  --border-input-focus: #01b5e2;
+
+  --shadow-button-active: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-dropdown: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+
+  --color-button-primary: #01b5e2;
+  --color-button-primary-hover: #015372;
+  --color-button-danger: #ef4444;
+  --color-button-danger-hover: #dc2626;
+
+  // FlowMap - data flow visualization colors (dark theme)
+  // Soft Pastels palette: mint → amber → sky → amber → lavender
+  --flow-source-fill: transparent;
+  --flow-source-stroke: #6ee7b7;      // Mint
+  --flow-transformer-fill: transparent;
+  --flow-transformer-stroke: #fcd34d;   // Amber (warm, between stages)
+  --flow-collector-fill: transparent;
+  --flow-collector-stroke: #7dd3fc;   // Sky
+  --flow-destination-fill: transparent;
+  --flow-destination-stroke: #c4b5fd; // Lavender
+  --flow-edge-stroke: #9ca3af;
+  --flow-before-fill: transparent;
+  --flow-before-stroke: #9ca3af;     // Gray (neutral)
+  --flow-after-fill: transparent;
+  --flow-after-stroke: #9ca3af;      // Gray (neutral)
+
+  // Alert variants (dark theme)
+  --color-alert-info-bg: rgba(59, 130, 246, 0.15);
+  --color-alert-info-border: rgba(59, 130, 246, 0.3);
+  --color-alert-info-text: #93c5fd;
+  --color-alert-success-bg: rgba(34, 197, 94, 0.15);
+  --color-alert-success-border: rgba(34, 197, 94, 0.3);
+  --color-alert-success-text: #86efac;
+  --color-alert-warning-bg: rgba(245, 158, 11, 0.15);
+  --color-alert-warning-border: rgba(245, 158, 11, 0.3);
+  --color-alert-warning-text: #fcd34d;
+  --color-alert-error-bg: rgba(239, 68, 68, 0.15);
+  --color-alert-error-border: rgba(239, 68, 68, 0.3);
+  --color-alert-error-text: #fca5a5;
+
+  // Focus/error states (dark theme)
+  --color-focus-ring: rgba(1, 181, 226, 0.3);
+  --color-error-ring: rgba(239, 68, 68, 0.3);
+}

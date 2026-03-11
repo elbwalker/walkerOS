@@ -1,8 +1,8 @@
 // walkerOS/packages/cli/src/commands/validate/index.ts
 
 import chalk from 'chalk';
+import { createCLILogger } from '../../core/cli-logger.js';
 import {
-  createCommandLogger,
   getErrorMessage,
   isStdinPiped,
   readStdin,
@@ -10,6 +10,7 @@ import {
 } from '../../core/index.js';
 import { loadJsonFromSource } from '../../config/index.js';
 import {
+  validateContract,
   validateEvent,
   validateFlow,
   validateMapping,
@@ -24,24 +25,37 @@ import type {
 /**
  * Programmatic API for validation.
  * Can be called directly from code or MCP server.
+ *
+ * Accepts parsed objects, JSON strings, file paths, or URLs as input.
  */
 export async function validate(
-  type: ValidationType | string,
+  type: ValidationType,
   input: unknown,
-  options: { flow?: string } = {},
+  options: { flow?: string; path?: string } = {},
 ): Promise<ValidateResult> {
-  // Dot-notation entry validation (e.g., "destinations.snowplow")
-  if (type.includes('.') || !['event', 'flow', 'mapping'].includes(type)) {
-    return validateEntry(type, input as Record<string, unknown>);
+  // Resolve string inputs (file paths, URLs, JSON strings) to parsed objects
+  let resolved = input;
+  if (typeof input === 'string') {
+    resolved = await loadJsonFromSource(input, {
+      name: type,
+      required: true,
+    });
+  }
+
+  // Path-based entry validation takes priority
+  if (options.path) {
+    return validateEntry(options.path, resolved as Record<string, unknown>);
   }
 
   switch (type) {
+    case 'contract':
+      return validateContract(resolved);
     case 'event':
-      return validateEvent(input);
+      return validateEvent(resolved);
     case 'flow':
-      return validateFlow(input, { flow: options.flow });
+      return validateFlow(resolved, { flow: options.flow });
     case 'mapping':
-      return validateMapping(input);
+      return validateMapping(resolved);
     default:
       throw new Error(`Unknown validation type: ${type}`);
   }
@@ -107,7 +121,7 @@ export async function validateCommand(
   options: ValidateCommandOptions,
 ): Promise<void> {
   // Result always goes to stdout; logs to stderr
-  const logger = createCommandLogger({ ...options, stderr: true });
+  const logger = createCLILogger({ ...options, stderr: true });
 
   try {
     // Load input: stdin > argument > error
@@ -120,15 +134,13 @@ export async function validateCommand(
         throw new Error('Invalid JSON received on stdin');
       }
     } else {
-      input = await loadJsonFromSource(options.input, {
-        name: options.type,
-        required: true,
-      });
+      input = options.input;
     }
 
     // Run validation
     const result = await validate(options.type, input, {
       flow: options.flow,
+      path: options.path,
     });
 
     // Format and write result
@@ -175,6 +187,7 @@ export async function validateCommand(
 // Re-export types
 export * from './types.js';
 export {
+  validateContract,
   validateEvent,
   validateFlow,
   validateMapping,

@@ -1,6 +1,6 @@
 {
   "name": "@walkeros/cli",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "description": "walkerOS CLI - Bundle and deploy walkerOS components",
   "license": "MIT",
   "type": "module",
@@ -14,7 +14,8 @@
     "./dev": {
       "types": "./dist/dev.d.ts",
       "default": "./dist/dev.js"
-    }
+    },
+    "./examples/*": "./examples/*"
   },
   "bin": {
     "walkeros": "./dist/cli.js"
@@ -29,8 +30,9 @@
     "build": "tsup",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
-    "test": "jest --colors",
-    "test:integration": "jest --colors --testPathPatterns='(cli\\.test|cli-e2e\\.test)'",
+    "test": "jest --colors --testPathIgnorePatterns '__tests__/e2e/'",
+    "test:debug": "jest --colors --detectOpenHandles --testPathIgnorePatterns '__tests__/e2e/'",
+    "test:integration": "jest --colors --testPathPatterns='__tests__/e2e/'",
     "generate:types": "openapi-typescript ${OPENAPI_SPEC:-./openapi/spec.json} -o src/types/api.gen.d.ts",
     "generate:types:local": "OPENAPI_SPEC=${WALKEROS_APP_URL:-http://localhost:3000}/api/openapi.json npm run generate:types",
     "typecheck": "tsc --noEmit",
@@ -42,7 +44,8 @@
     "docker:publish": "bash scripts/publish-docker.sh"
   },
   "dependencies": {
-    "@walkeros/server-core": "^2.0.0",
+    "@walkeros/core": "^3.0.0",
+    "@walkeros/server-core": "^3.0.0",
     "ajv": "^8.17.1",
     "chalk": "^5.6.2",
     "commander": "^14.0.2",
@@ -54,7 +57,7 @@
     "open": "^11.0.0",
     "openapi-fetch": "^0.17.0",
     "pacote": "^21.0.4",
-    "@walkeros/core": "^2.0.0"
+    "semver": "^7.7.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -62,6 +65,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/jsdom": "^21.1.7",
     "@types/pacote": "^11.1.8",
+    "@types/semver": "^7.7.1",
     "@walkeros/config": "*",
     "@walkeros/core": "*",
     "msw": "^2.12.10",

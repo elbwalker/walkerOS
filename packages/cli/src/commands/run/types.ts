@@ -1,32 +1,27 @@
 /**
  * Run Command Types
  *
- * Types for running walkerOS flows via CLI using local runtime
+ * Types for running walkerOS flows via CLI or Docker.
  */
-
-/**
- * Run mode - determines which execution mode to use
- */
-export type RunMode = 'collect' | 'serve';
 
 /**
  * CLI command options for `walkeros run`
  */
 export interface RunCommandOptions {
   /** Flow configuration file path (.json or pre-built .mjs) */
-  config: string;
+  config?: string;
 
   /** Server port (overrides flow config) */
   port?: number;
 
-  /** Server host (default: 0.0.0.0) */
-  host?: string;
+  /** Flow name for multi-flow configs */
+  flow?: string;
 
-  /** Serve path (URL directory path, e.g., 'libs/v1') */
-  servePath?: string;
+  /** API flow ID (enables heartbeat, polling, secrets) */
+  flowId?: string;
 
-  /** Serve name (filename in URL, default: walker.js) */
-  serveName?: string;
+  /** Project ID */
+  project?: string;
 
   /** Enable JSON output */
   json?: boolean;
@@ -39,29 +34,29 @@ export interface RunCommandOptions {
 }
 
 /**
- * Programmatic run options (subset of CLI options)
+ * Programmatic run options
  */
 export interface RunOptions {
   /** Flow configuration file path (.json or pre-built .mjs) */
-  config: string | unknown;
+  config?: string;
 
   /** Server port */
   port?: number;
 
-  /** Server host */
-  host?: string;
+  /** Flow name for multi-flow configs */
+  flow?: string;
 
-  /** Serve path (URL directory path, e.g., 'libs/v1') */
-  servePath?: string;
+  /** API flow ID (enables heartbeat, polling, secrets) */
+  flowId?: string;
 
-  /** Serve name (filename in URL, default: walker.js) */
-  serveName?: string;
-
-  /** Suppress output */
-  silent?: boolean;
+  /** Project ID */
+  project?: string;
 
   /** Verbose logging */
   verbose?: boolean;
+
+  /** Suppress output */
+  silent?: boolean;
 }
 
 /**

@@ -1,0 +1,121 @@
+---
+title: Stores
+description: Key-value storage for walkerOS components
+sidebar_position: 6
+---
+
+# Stores
+
+Stores are the fourth component type in walkerOS, alongside sources, transformers, and destinations. They provide **passive key-value storage** that other components consume — no event chains, no push functions.
+
+## The Store interface
+
+Every store implements four operations:
+
+<CodeSnippet
+  code={`interface Store.Instance {
+  type: string;
+  config: Store.Config;
+  get(key: string): T | undefined | Promise<T | undefined>;
+  set(key: string, value: T, ttl?: number): void | Promise<void>;
+  delete(key: string): void | Promise<void>;
+  destroy?(): void | Promise<void>;
+}`}
+  language="typescript"
+/>
+
+Stores can be synchronous or asynchronous — the interface supports both.
+
+## Available implementations
+
+| Package | Environment | Storage | Features |
+|---------|-------------|---------|----------|
+| `@walkeros/store-memory` | Any | In-memory | LRU eviction, TTL, namespace utility |
+| `@walkeros/server-store-fs` | Node.js | Filesystem | Read/write files, directory listing |
+| `@walkeros/server-store-s3` | Node.js | S3-compatible | Object storage via AWS SDK |
+
+## Configuration
+
+### Bundled mode (flow.json)
+
+Define stores in the `stores` section of a flow config:
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "cache": {
+      "package": "@walkeros/store-memory",
+      "config": {
+        "settings": { "maxSize": 10485760, "maxEntries": 1000 }
+      }
+    },
+    "files": {
+      "package": "@walkeros/server-store-fs",
+      "config": {
+        "settings": { "basePath": "./public" }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+### Integrated mode (TypeScript)
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { storeMemoryInit } from '@walkeros/store-memory';
+
+const { collector } = await startFlow({
+  stores: {
+    cache: {
+      code: storeMemoryInit,
+      config: { settings: { maxSize: 10 * 1024 * 1024 } },
+    },
+  },
+});
+
+// Access stores on the collector
+collector.stores.cache.set('key', 'value');
+const val = collector.stores.cache.get('key');`}
+  language="typescript"
+/>
+
+## Connecting stores to components
+
+Use the `$store:` prefix in a component's `env` to inject a store instance at runtime:
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "cache": {
+      "package": "@walkeros/store-memory"
+    }
+  },
+  "transformers": {
+    "cacheResponse": {
+      "package": "@walkeros/server-transformer-cache",
+      "env": { "store": "$store:cache" }
+    }
+  }
+}`}
+  language="json"
+/>
+
+The bundler resolves `$store:cache` to the initialized store instance. Invalid references (pointing to undefined stores) are caught at build time.
+
+## Lifecycle
+
+Stores follow a strict lifecycle relative to other components:
+
+1. **Stores initialize first** — before sources, transformers, and destinations
+2. **Stores destroy last** — after all other components have shut down
+
+This guarantees stores are available when any component starts and remain available while they gracefully shut down.
+
+## Next steps
+
+- **[Flow configuration](/docs/getting-started/modes/bundled)** - Stores in flow.json
+- **[File transformer](/docs/transformers/file)** - Serve files from a store
+- **[Cache transformer](/docs/transformers/cache)** - Response caching with stores
+- **[Docker — Including files](/docs/apps/docker#including-files)** - Bake store data into Docker images

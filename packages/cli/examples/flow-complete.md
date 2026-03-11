@@ -33,7 +33,7 @@ complete event tracking architecture.
 
 ```bash
 cd walkerOS
-npx walkeros serve packages/cli/examples/flow-complete.json --flow web
+npx walkeros run packages/cli/examples/flow-complete.json --flow web
 # Open http://localhost:3000 - demo events fire automatically
 ```
 
@@ -64,7 +64,7 @@ curl -X POST http://localhost:8080/collect \
 npx walkeros run packages/cli/examples/flow-complete.json --flow server
 
 # Terminal 2: Start web (sends to server via API destination)
-npx walkeros serve packages/cli/examples/flow-complete.json --flow web
+npx walkeros run packages/cli/examples/flow-complete.json --flow web
 ```
 
 ---

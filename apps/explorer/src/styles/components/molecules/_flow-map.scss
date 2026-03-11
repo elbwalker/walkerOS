@@ -1,0 +1,11 @@
+// FlowMap - Hand-drawn flow visualization component
+// Displays walkerOS data flow: Source -> Collector -> Destination
+
+.elb-flow-map {
+  display: inline-block;
+  padding: 8px 0;
+
+  canvas {
+    display: block;
+  }
+}

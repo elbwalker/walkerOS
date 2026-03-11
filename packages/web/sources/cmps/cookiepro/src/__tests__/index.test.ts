@@ -1,6 +1,8 @@
 import { sourceCookiePro, DEFAULT_CATEGORY_MAP } from '../index';
+import { createMockLogger } from '@walkeros/core';
 import * as inputs from '../examples/inputs';
 import * as outputs from '../examples/outputs';
+import { examples } from '../dev';
 import {
   createMockElb,
   createMockWindow,
@@ -300,33 +302,6 @@ describe('CookiePro Source', () => {
   });
 
   describe('category mapping', () => {
-    test('maps full consent correctly', async () => {
-      const mockWindow = createMockWindow({
-        sdkLoaded: true,
-        alertBoxClosed: true,
-        activeGroups: inputs.fullConsent,
-      });
-
-      await createCookieProSource(mockWindow, mockElb);
-
-      expect(consentCalls[0].consent).toEqual(outputs.fullConsentMapped);
-    });
-
-    test('maps partial consent correctly with explicit false for denied groups', async () => {
-      const mockWindow = createMockWindow({
-        sdkLoaded: true,
-        alertBoxClosed: true,
-        activeGroups: inputs.partialConsent,
-      });
-
-      await createCookieProSource(mockWindow, mockElb);
-
-      expect(consentCalls[0].consent).toEqual(outputs.partialConsentMapped);
-      // Verify explicit false values
-      expect(consentCalls[0].consent.analytics).toBe(false);
-      expect(consentCalls[0].consent.marketing).toBe(false);
-    });
-
     test('maps minimal consent correctly with explicit false for denied groups', async () => {
       const mockWindow = createMockWindow({
         sdkLoaded: true,
@@ -455,7 +430,12 @@ describe('CookiePro Source', () => {
       const source = await createCookieProSource(mockWindow, mockElb);
 
       // Destroy the source (before OptanonWrapper self-unwraps)
-      await source.destroy?.();
+      await source.destroy?.({
+        id: 'test',
+        config: source.config,
+        env: {} as any,
+        logger: createMockLogger(),
+      });
 
       // Verify removeEventListener was called for OneTrustGroupsUpdated
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith(
@@ -472,7 +452,12 @@ describe('CookiePro Source', () => {
 
       const source = await createCookieProSource(mockWindow, mockElb);
 
-      await source.destroy?.();
+      await source.destroy?.({
+        id: 'test',
+        config: source.config,
+        env: {} as any,
+        logger: createMockLogger(),
+      });
 
       expect(mockWindow.OptanonWrapper).toBeUndefined();
     });
@@ -490,8 +475,10 @@ describe('CookiePro Source', () => {
           window: undefined,
           logger: {
             error: () => {},
+            warn: () => {},
             info: () => {},
             debug: () => {},
+            json: () => {},
             throw: (m: string | Error) => {
               throw typeof m === 'string' ? new Error(m) : m;
             },
@@ -503,8 +490,10 @@ describe('CookiePro Source', () => {
         id: 'test-cookiepro',
         logger: {
           error: () => {},
+          warn: () => {},
           info: () => {},
           debug: () => {},
+          json: () => {},
           throw: (m: string | Error) => {
             throw typeof m === 'string' ? new Error(m) : m;
           },
@@ -513,6 +502,7 @@ describe('CookiePro Source', () => {
           },
         },
         setIngest: async () => {},
+        setRespond: jest.fn(),
       });
 
       expect(source.type).toBe('cookiepro');

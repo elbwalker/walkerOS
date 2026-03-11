@@ -25,13 +25,13 @@ export const mockProject = {
 export const mockFlow = {
   id: 'flow_test456',
   name: 'Test Flow',
-  content: {
-    version: 1 as const,
+  config: {
+    version: 3 as const,
   },
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
   deletedAt: null,
-} satisfies FlowResponse;
+};
 
 export const mockWhoami = {
   userId: 'user_test789',
@@ -88,24 +88,21 @@ export const handlers = [
     return HttpResponse.json(body);
   }),
   http.get('*/api/projects/:projectId/flows/:flowId', () => {
-    return HttpResponse.json(mockFlow satisfies FlowResponse);
+    return HttpResponse.json(mockFlow);
   }),
   http.post('*/api/projects/:projectId/flows', async ({ request }) => {
     const body = (await request.json()) as { name: string };
-    return HttpResponse.json(
-      { ...mockFlow, name: body.name } satisfies FlowResponse,
-      { status: 201 },
-    );
+    return HttpResponse.json({ ...mockFlow, name: body.name }, { status: 201 });
   }),
   http.patch('*/api/projects/:projectId/flows/:flowId', () => {
-    return HttpResponse.json(mockFlow satisfies FlowResponse);
+    return HttpResponse.json(mockFlow);
   }),
   http.delete('*/api/projects/:projectId/flows/:flowId', () => {
     return new HttpResponse(null, { status: 204 });
   }),
   http.post('*/api/projects/:projectId/flows/:flowId/duplicate', () => {
     return HttpResponse.json(
-      { ...mockFlow, id: 'flow_copy789' } satisfies FlowResponse,
+      { ...mockFlow, id: 'flow_copy789' },
       { status: 201 },
     );
   }),

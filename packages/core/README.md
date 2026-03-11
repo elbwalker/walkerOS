@@ -26,7 +26,7 @@ configuration:
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "web": {},
@@ -395,17 +395,6 @@ const throttledScroll = throttle(scrollHandler, 100);
 onLog('Debug info', true); // Logs message
 onLog('Silent message'); // No output
 ```
-
-### Validation
-
-#### validateEvent
-
-`validateEvent(obj: unknown, customContracts?: Schema.Contracts): WalkerOS.Event | never`
-validates event structure and throws on invalid events.
-
-#### validateProperty
-
-Validates that values conform to walkerOS property types.
 
 ## Type Definitions
 

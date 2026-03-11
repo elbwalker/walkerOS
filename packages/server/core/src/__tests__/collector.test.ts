@@ -31,10 +31,15 @@ describe('Server Collector', () => {
   }
 
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     jest.resetModules();
 
     mockEvent = createEvent();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   test('version has correct format', async () => {

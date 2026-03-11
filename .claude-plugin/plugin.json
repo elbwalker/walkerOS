@@ -27,6 +27,7 @@
     "skills/walkeros-understanding-destinations",
     "skills/walkeros-understanding-sources",
     "skills/walkeros-understanding-transformers",
+    "skills/walkeros-understanding-stores",
     "skills/walkeros-understanding-development",
     "skills/walkeros-using-logger",
     "skills/walkeros-using-cli",
@@ -36,10 +37,11 @@
     "skills/walkeros-mapping-configuration",
     "skills/walkeros-testing-strategy",
     "skills/walkeros-debugging",
-    "skills/walkeros-writing-documentation"
+    "skills/walkeros-writing-documentation",
+    "skills/walkeros-using-step-examples"
   ],
   "mcpServers": {
-    "walkeros": {
+    "walkeros-flow": {
       "command": "npx",
       "args": ["@walkeros/mcp"],
       "env": {

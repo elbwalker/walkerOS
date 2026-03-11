@@ -1,0 +1,41 @@
+import type { Flow } from '@walkeros/core';
+
+export const fullConsent: Flow.StepExample = {
+  in: ',C0001,C0002,C0003,C0004,C0005,',
+  out: {
+    functional: true,
+    analytics: true,
+    marketing: true,
+  },
+};
+
+export const minimalConsent: Flow.StepExample = {
+  in: ',C0001,',
+  out: {
+    functional: true,
+    analytics: false,
+    marketing: false,
+  },
+};
+
+export const categoryMapOverride: Flow.StepExample = {
+  description: 'Custom categoryMap remaps C0002 from analytics to statistics',
+  in: ',C0001,C0002,',
+  mapping: { categoryMap: { C0002: 'statistics' } },
+  out: {
+    functional: true,
+    statistics: true,
+    marketing: false,
+  },
+};
+
+export const sdkLoadedDetection: Flow.StepExample = {
+  description:
+    'Immediate detection when OneTrust SDK is already loaded with IsAlertBoxClosed() = true',
+  in: ',C0001,C0003,C0004,',
+  out: {
+    functional: true,
+    analytics: false,
+    marketing: true,
+  },
+};

@@ -8,13 +8,12 @@ description: Get walkerOS running with Docker in 5 minutes
 ## Try the demo
 
 ```bash
-docker run -p 8080:8080 -e MODE=collect -e FLOW=/app/demos/demo-collect.mjs walkeros/flow:latest
+docker run -p 8080:8080 -e FLOW=/app/demos/demo-collect.mjs walkeros/flow:latest
 ```
 
 Output:
 
 ```
-INFO Mode: COLLECT
 INFO [runner] Loading flow from /app/demos/demo-collect.mjs
 INFO [runner] Flow running
 INFO [runner] Port: 8080
@@ -32,7 +31,6 @@ curl -X POST http://localhost:8080/collect \
 
 ```bash
 docker run -d -p 8080:8080 \
-  -e MODE=collect \
   -e FLOW=/app/demos/demo-collect.mjs \
   walkeros/flow
 
@@ -59,14 +57,13 @@ Docker runtime requires **pre-built bundles**, not JSON configs.
 
 1. Create JSON config: `flow.json`
 2. Bundle with CLI: `walkeros bundle flow.json --output flow.mjs`
-3. Run in Docker: `docker run -e MODE=collect -e FLOW=/app/flow.mjs`
+3. Run in Docker: `docker run -e FLOW=/app/flow.mjs`
 
 ### Build custom image
 
 ```dockerfile
 FROM walkeros/flow:latest
 COPY flow.mjs /app/flow.mjs
-ENV MODE=collect
 ENV BUNDLE=/app/flow.mjs
 ```
 
@@ -84,7 +81,6 @@ services:
   walkeros:
     image: walkeros/flow:latest
     environment:
-      MODE: collect
       FLOW: /app/demos/demo-collect.mjs
     ports:
       - '8080:8080'
@@ -95,7 +91,6 @@ services:
 
 | Variable     | Description                                         | Default           |
 | ------------ | --------------------------------------------------- | ----------------- |
-| `MODE`       | Operational mode: `collect` or `serve`              | Required          |
 | `BUNDLE`     | Path to pre-bundled flow file                       | Required          |
 | `PORT`       | Server port                                         | 8080              |
 | `HOST`       | Server host                                         | 0.0.0.0           |

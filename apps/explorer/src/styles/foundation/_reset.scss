@@ -1,0 +1,21 @@
+// Scope all resets under .elb-explorer to avoid affecting host application
+.elb-explorer {
+  // Establish baseline styles for embedded environments
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-grid-gap);
+
+  * {
+    box-sizing: border-box;
+  }
+
+  // Note: body styles removed - the host application controls body
+  // Explorer components should work within any container
+
+  button {
+    font-family: inherit;
+  }
+}

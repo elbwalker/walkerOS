@@ -1,0 +1,13 @@
+# Dev-only: builds CLI image from local npm pack tarball.
+# Usage:
+#   cd walkerOS/packages/cli
+#   npm pack
+#   docker build -f Dockerfile.cli.dev -t rg.fr-par.scw.cloud/NAMESPACE/cli:dev .
+FROM node:22-alpine
+RUN apk add --no-cache curl
+COPY walkeros-cli-*.tgz /tmp/
+RUN npm install -g /tmp/walkeros-cli-*.tgz && rm /tmp/*.tgz
+RUN addgroup -g 1001 walker && adduser -D -u 1001 -G walker walker
+USER walker
+ENTRYPOINT ["walkeros"]
+CMD ["--help"]

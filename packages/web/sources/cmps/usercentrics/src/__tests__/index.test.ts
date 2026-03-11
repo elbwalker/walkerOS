@@ -1,6 +1,8 @@
 import { sourceUsercentrics } from '../index';
+import { createMockLogger } from '@walkeros/core';
 import * as inputs from '../examples/inputs';
 import * as outputs from '../examples/outputs';
+import { examples } from '../dev';
 import {
   createMockElb,
   createMockWindow,
@@ -146,15 +148,6 @@ describe('Usercentrics Source', () => {
   });
 
   describe('group-level consent (ucCategory)', () => {
-    test('maps full consent correctly', async () => {
-      const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
-
-      mockWindow.__dispatchEvent('ucEvent', inputs.fullConsent);
-
-      expect(consentCalls[0].consent).toEqual(outputs.fullConsentMapped);
-    });
-
     test('maps partial consent correctly', async () => {
       const mockWindow = createMockWindow();
       await createUsercentricsSource(mockWindow, mockElb);
@@ -162,15 +155,6 @@ describe('Usercentrics Source', () => {
       mockWindow.__dispatchEvent('ucEvent', inputs.partialConsent);
 
       expect(consentCalls[0].consent).toEqual(outputs.partialConsentMapped);
-    });
-
-    test('maps minimal consent correctly', async () => {
-      const mockWindow = createMockWindow();
-      await createUsercentricsSource(mockWindow, mockElb);
-
-      mockWindow.__dispatchEvent('ucEvent', inputs.minimalConsent);
-
-      expect(consentCalls[0].consent).toEqual(outputs.minimalConsentMapped);
     });
 
     test('applies custom category mapping', async () => {
@@ -357,7 +341,12 @@ describe('Usercentrics Source', () => {
       const mockWindow = createMockWindow();
       const source = await createUsercentricsSource(mockWindow, mockElb);
 
-      await source.destroy?.();
+      await source.destroy?.({
+        id: 'test',
+        config: source.config,
+        env: {} as any,
+        logger: createMockLogger(),
+      });
 
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith(
         'ucEvent',
@@ -371,7 +360,12 @@ describe('Usercentrics Source', () => {
         settings: { eventName: 'myConsentEvent' },
       });
 
-      await source.destroy?.();
+      await source.destroy?.({
+        id: 'test',
+        config: source.config,
+        env: {} as any,
+        logger: createMockLogger(),
+      });
 
       expect(mockWindow.removeEventListener).toHaveBeenCalledWith(
         'myConsentEvent',
@@ -392,8 +386,10 @@ describe('Usercentrics Source', () => {
           window: undefined,
           logger: {
             error: () => {},
+            warn: () => {},
             info: () => {},
             debug: () => {},
+            json: () => {},
             throw: (m: string | Error) => {
               throw typeof m === 'string' ? new Error(m) : m;
             },
@@ -405,8 +401,10 @@ describe('Usercentrics Source', () => {
         id: 'test-usercentrics',
         logger: {
           error: () => {},
+          warn: () => {},
           info: () => {},
           debug: () => {},
+          json: () => {},
           throw: (m: string | Error) => {
             throw typeof m === 'string' ? new Error(m) : m;
           },
@@ -415,6 +413,7 @@ describe('Usercentrics Source', () => {
           },
         },
         setIngest: async () => {},
+        setRespond: jest.fn(),
       });
 
       expect(source.type).toBe('usercentrics');

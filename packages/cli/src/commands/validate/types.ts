@@ -1,12 +1,15 @@
 // walkerOS/packages/cli/src/commands/validate/types.ts
 
-export type ValidationType = 'event' | 'flow' | 'mapping' | 'entry';
+export type ValidationType = 'contract' | 'event' | 'flow' | 'mapping';
+
+export type ValidateResultType = ValidationType | 'entry';
 
 export interface ValidateCommandOptions {
   type: ValidationType;
   input?: string;
   output?: string;
   flow?: string; // Flow name for multi-flow configs
+  path?: string; // Entry path for dot-notation validation (e.g., "destinations.snowplow")
   json?: boolean;
   verbose?: boolean;
   strict?: boolean;
@@ -28,7 +31,7 @@ export interface ValidationWarning {
 
 export interface ValidateResult {
   valid: boolean;
-  type: ValidationType;
+  type: ValidateResultType;
   errors: ValidationError[];
   warnings: ValidationWarning[];
   details: Record<string, unknown>;

@@ -1,185 +1,343 @@
 ---
-title: MCP Server
+title: MCP
 description: Use walkerOS tools from AI assistants via Model Context Protocol
 sidebar_position: 5
-package: '@walkeros/mcp'
 ---
 
-# MCP server
+# MCP servers
 
-The walkerOS MCP server (`@walkeros/mcp`) exposes CLI tools and the walkerOS API
-as [Model Context Protocol](https://modelcontextprotocol.io/) tools. This lets
-AI assistants like Claude validate events, bundle flows, simulate pipelines, and
-manage projects without leaving the conversation.
+walkerOS provides
+[Model Context Protocol](https://modelcontextprotocol.io/) servers for AI
+assistant integration.
+
+| Package | Purpose |
+|---------|---------|
+| `@walkeros/mcp` | Flow development — tools, reference resources, guided prompts, cloud API |
+| `@walkeros/mcp-source-browser` | HTML tagging — generate, parse, and validate `data-elb` attributes |
 
 ## Quick start
 
-Add the server to your Claude Desktop or Claude Code configuration:
+Add servers to your Claude Desktop or Claude Code configuration:
 
 <CodeSnippet
   code={`{
   "mcpServers": {
-    "walkeros": {
+    "walkeros-flow": {
       "command": "npx",
       "args": ["@walkeros/mcp"],
       "env": {
-        "WALKEROS_TOKEN": "sk-walkeros-...",
-        "WALKEROS_PROJECT_ID": "proj_..."
+        "WALKEROS_TOKEN": "sk-walkeros-..."
       }
+    },
+    "walkeros-source-browser": {
+      "command": "npx",
+      "args": ["@walkeros/mcp-source-browser"]
     }
   }
 }`}
   language="json"
 />
 
-The server starts on STDIO and registers all tools automatically.
+Each server starts on STDIO and registers its tools automatically.
 
 ## Environment variables
 
-| Variable | Required | Default | Purpose |
-|----------|----------|---------|---------|
-| `WALKEROS_TOKEN` | Yes (API tools) | — | Bearer token (`sk-walkeros-...`) |
-| `WALKEROS_PROJECT_ID` | Yes (project-scoped tools) | — | Active project ID (`proj_...`) |
-| `WALKEROS_APP_URL` | No | `https://app.walkeros.io` | Base URL override |
+| Variable | Used by | Required | Default | Purpose |
+|----------|---------|----------|---------|---------|
+| `WALKEROS_TOKEN` | mcp | No | — | Bearer token for cloud API and remote bundling |
+| `WALKEROS_PROJECT_ID` | mcp | No | — | Active project ID (`proj_...`) |
+| `WALKEROS_APP_URL` | mcp | No | `https://app.walkeros.io` | Base URL override |
 
-CLI tools (`validate`, `bundle`, `simulate`, `push`) work without any
-environment variables. API tools (`whoami`, flows, projects, versions) require
-`WALKEROS_TOKEN`.
+`@walkeros/mcp-source-browser` works without any environment variables.
+When `WALKEROS_TOKEN` is set, the `api` tool is registered for cloud operations.
 
-## Available tools (20)
+---
 
-### Local CLI tools
+## `@walkeros/mcp` — flow development
 
-These wrap the [walkerOS CLI](/docs/apps/cli) for use by AI assistants.
+Unified server for flow development, package discovery, reference resources,
+guided prompts, and cloud API. Replaces the previous separate `@walkeros/mcp-cli`
+and `@walkeros/mcp-api` packages.
 
-#### `validate`
-
-Validate walkerOS events, flow configurations, or mapping rules.
-
-- `type` (required): `"event"` | `"flow"` | `"mapping"`
-- `input` (required): JSON string or file path to validate
-- `flow` (optional): Flow name to validate against
-
-#### `bundle`
-
-Bundle a walkerOS flow configuration into deployable JavaScript.
-
-- `configPath` (required): Path to the flow configuration file
-- `flow` (optional): Specific flow name to bundle
-- `stats` (optional): Include bundle statistics in output
-- `output` (optional): Output file path for the bundle
-
-#### `simulate`
-
-Simulate events through a walkerOS flow without making real API calls. Processes
-events through the full pipeline including transformers and destinations.
-
-- `configPath` (required): Path to the flow configuration file
-- `event` (required): JSON string representing the event to simulate
-- `flow` (optional): Flow name for multi-flow configs
-- `platform` (optional): `"web"` | `"server"` (default: `"web"`)
-
-#### `push`
-
-Push a real event through a walkerOS flow to actual destinations. **This makes
-real API calls to real endpoints.**
-
-- `configPath` (required): Path to the flow configuration file
-- `event` (required): JSON string representing the event to push
-- `flow` (optional): Flow name for multi-flow configs
-- `platform` (optional): `"web"` | `"server"` (default: `"web"`)
-
-### API tools
-
-These require `WALKEROS_TOKEN` to authenticate with the walkerOS API.
-
-#### Auth
-
-| Tool | Purpose |
-|------|---------|
-| `whoami` | Verify your API token and see your identity |
-
-#### Projects
-
-| Tool | Purpose |
-|------|---------|
-| `list-projects` | List all projects you have access to |
-| `get-project` | Get details for a project |
-| `create-project` | Create a new project |
-| `update-project` | Update a project name |
-| `delete-project` | Soft-delete a project and all its flows |
-
-#### Flows
-
-| Tool | Purpose |
-|------|---------|
-| `list-flows` | List all flow configurations in a project |
-| `get-flow` | Get a flow with its full content (Flow.Setup JSON) |
-| `create-flow` | Create a new flow configuration |
-| `update-flow` | Update a flow name and/or content (creates version snapshot) |
-| `delete-flow` | Soft-delete a flow configuration |
-| `duplicate-flow` | Create a copy of an existing flow |
-
-#### Versions
-
-| Tool | Purpose |
-|------|---------|
-| `list-versions` | List version history for a flow |
-| `get-version` | Get a specific version of a flow |
-| `restore-version` | Restore a flow to a previous version |
-
-#### Remote bundling
-
-| Tool | Purpose |
-|------|---------|
-| `bundle-remote` | Bundle a flow using the walkerOS cloud service (no local build tools needed) |
-
-## Example workflows
-
-### Validate and simulate a flow
-
-Ask your AI assistant:
-
-> "Validate my flow config at `./walker.config.json`, then simulate a
-> `page view` event through it."
-
-The assistant will call `validate` first, then `simulate` with the event — all
-without leaving the conversation.
-
-### Manage flows via the API
-
-> "List all flows in my project and show me the content of the most recent one."
-
-The assistant calls `list-flows`, picks the latest, then calls `get-flow` to
-retrieve the full Flow.Setup JSON.
-
-### Bundle and deploy
-
-> "Bundle the default flow from `./walker.config.json` and show me the bundle
-> stats."
-
-The assistant calls `bundle` with `stats: true` and returns the output.
-
-## Installation
+### Installation
 
 <CodeSnippet
   code={`npm install @walkeros/mcp`}
   language="bash"
 />
 
-### Peer dependencies
+### Tools (9)
 
-The MCP server requires the walkerOS CLI as a peer dependency:
+#### `flow_load`
+
+Load an existing flow configuration from a local file path, URL, or walkerOS API,
+or create a new empty flow by specifying a platform.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `source` | string | No | Flow source: file path, URL, or API flow ID. Omit to create new. |
+| `platform` | `"web"` \| `"server"` | No | Platform for new flows. Required when source is omitted. |
+
+#### `flow_validate`
+
+Validate walkerOS events, flow configurations, mapping rules, or data contracts.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `type` | `"event"` \| `"flow"` \| `"mapping"` \| `"contract"` | Yes | Validation type |
+| `input` | string | Yes | JSON string, file path, or URL to validate |
+| `flow` | string | No | Flow name for multi-flow configs |
+| `path` | string | No | Entry path for package schema validation |
+
+#### `flow_bundle`
+
+Bundle a walkerOS flow configuration into deployable JavaScript.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `configPath` | string | Yes | Path to flow configuration file |
+| `flow` | string | No | Flow name for multi-flow configs |
+| `stats` | boolean | No | Return bundle statistics (default: `true`) |
+| `output` | string | No | Output file path |
+| `remote` | boolean | No | Use remote cloud bundling (requires `WALKEROS_TOKEN`). Default: `false` |
+| `content` | object | No | Flow.Config JSON content (required when `remote: true`) |
+
+#### `flow_simulate`
+
+Simulate events through a walkerOS flow without making real API calls.
+Returns summarized per-destination results.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `configPath` | string | Yes | Path to flow configuration file |
+| `event` | string | No | Event as JSON string, file path, or URL |
+| `flow` | string | No | Flow name for multi-flow configs |
+| `platform` | `"web"` \| `"server"` | No | Override platform detection |
+| `example` | string | No | Load event from a step example |
+| `step` | string | No | Step to use with example parameter |
+
+#### `flow_push`
+
+Push a real event through a walkerOS flow to actual destinations.
+**This makes real API calls.** Best for server-side flows — web destinations
+require browser globals not available in Node.js.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `configPath` | string | Yes | Path to flow configuration file |
+| `event` | string | Yes | Event as JSON string, file path, or URL |
+| `flow` | string | No | Flow name for multi-flow configs |
+| `platform` | `"web"` \| `"server"` | No | Override platform detection |
+
+#### `flow_examples`
+
+List all step examples in a walkerOS flow configuration.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `configPath` | string | Yes | Path to flow configuration file |
+| `flow` | string | No | Flow name for multi-flow configs |
+| `step` | string | No | Filter to a specific step (e.g., `"destination.gtag"`) |
+| `full` | boolean | No | Return full in/out/mapping data (default: `false`, metadata only) |
+
+#### `package_search`
+
+Browse walkerOS packages or look up a specific one. Without package name: returns
+catalog filtered by type/platform. With package name: returns metadata.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `package` | string | No | Exact npm package name for lookup |
+| `type` | `"source"` \| `"destination"` \| `"transformer"` \| `"store"` | No | Filter by type (browse) |
+| `platform` | `"web"` \| `"server"` | No | Filter by platform (browse) |
+| `version` | string | No | Package version (default: latest) |
+
+#### `package_get`
+
+Fetch walkerOS package details from npm. By default returns schemas + hint texts +
+example summaries. Use `section` parameter for full content.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `package` | string | Yes | Exact npm package name |
+| `version` | string | No | Package version (default: latest) |
+| `section` | `"hints"` \| `"examples"` \| `"all"` | No | Section to expand with full content |
+
+#### `api`
+
+Unified walkerOS cloud API. Only available when `WALKEROS_TOKEN` is set.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | enum | Yes | API action (see below) |
+| `id` | string | No | Resource ID (flowId, projectId, or slug) |
+| `name` | string | No | Name for create/update operations |
+| `content` | object | No | Flow.Config JSON for flow operations |
+| `wait` | boolean | No | Wait for deploy to complete (default: `true`) |
+
+**Actions:** `whoami`, `project.list`, `project.get`, `project.create`,
+`project.update`, `project.delete`, `flow.list`, `flow.get`, `flow.create`,
+`flow.update`, `flow.delete`, `flow.duplicate`, `deploy`, `deployment.get`,
+`deployment.list`, `deployment.create`, `deployment.delete`
+
+### Resources
+
+| URI | Description |
+|-----|-------------|
+| `walkeros://reference/flow-schema` | Flow.Config structure and connection rules |
+| `walkeros://reference/event-model` | Event naming, properties, auto-populated fields |
+| `walkeros://reference/mapping` | Mapping syntax (data/map/loop/set/condition/consent/policy) |
+| `walkeros://reference/consent` | Consent model (destination/rule/field level) |
+| `walkeros://reference/variables` | Variable patterns ($var/$env/$def/$code/$store) |
+| `walkeros://reference/contract` | Event schemas, wildcards, inheritance |
+| `walkeros://reference/api` | OpenAPI 3.1 specification |
+| `walkeros://reference/packages` | Full package catalog |
+| `walkeros://schema/{packageName}` | Per-package JSON schemas |
+
+### Prompts
+
+| Prompt | Description |
+|--------|-------------|
+| `add-step` | Add a source, destination, transformer, or store to a flow |
+| `setup-mapping` | Configure event mapping for a step |
+| `manage-contract` | Create/update event contracts (bidirectional with mappings) |
+| `use-definitions` | Extract shared patterns into definitions and variables |
+
+---
+
+## `@walkeros/mcp-source-browser` — HTML tagging tools
+
+Generate, parse, and validate walkerOS `data-elb` HTML attributes using real DOM
+parsing (JSDOM). No API token or CLI dependency required.
+
+### Installation
 
 <CodeSnippet
-  code={`npm install @walkeros/cli`}
+  code={`npm install @walkeros/mcp-source-browser`}
   language="bash"
 />
+
+### Tools (3)
+
+#### `generate_tagging`
+
+Generate walkerOS `data-elb` HTML attributes from structured input. Returns
+attribute key-value pairs and an example HTML snippet.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `entity` | string | No | Entity name (creates `data-elb="entity"`) |
+| `data` | object | No | Entity properties as key:value pairs |
+| `action` | object | No | Trigger:action pairs for `data-elbaction` (nearest entity) |
+| `actions` | object | No | Trigger:action pairs for `data-elbactions` (all entities) |
+| `context` | object | No | Context properties for `data-elbcontext` |
+| `globals` | object | No | Global properties for `data-elbglobals` |
+| `link` | object | No | Link relationships for `data-elblink` |
+| `prefix` | string | No | Custom prefix (default: `data-elb`) |
+
+At least one parameter must be provided.
+
+#### `parse_tagging`
+
+Parse HTML with `data-elb` attributes using real DOM parsing (JSDOM). Extracts
+all walkerOS events and globals.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `html` | string | Yes | HTML snippet with `data-elb` attributes |
+| `prefix` | string | No | Custom prefix (default: `data-elb`) |
+
+#### `validate_tagging`
+
+Validate HTML `data-elb` tagging for common mistakes. Checks for orphan actions,
+missing entities, unknown triggers, orphan properties, and entities without
+actions.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `html` | string | Yes | HTML snippet to validate |
+| `prefix` | string | No | Custom prefix (default: `data-elb`) |
+
+### Resources
+
+| URI | Description |
+|-----|-------------|
+| `walkeros://docs/tagging/html-attributes` | Complete guide to `data-elb` HTML attribute tagging |
+| `walkeros://docs/tagging/tagger` | `createTagger()` fluent API reference |
+
+---
+
+## Example workflows
+
+### Create and validate a flow
+
+Ask your AI assistant:
+
+> "Create a new web flow, add a GA4 destination, then validate it."
+
+The assistant uses `flow_load` to create a skeleton, the `add-step` prompt to
+add GA4, and `flow_validate` to check the result.
+
+### Simulate events
+
+> "Simulate a page view event through my flow at ./flow.json."
+
+The assistant calls `flow_simulate` and returns per-destination results showing
+which destinations received the event.
+
+### Deploy a flow
+
+> "Deploy flow cfg_abc123 and wait for it to finish."
+
+The assistant calls `api({ action: "deploy", id: "cfg_abc123" })` and streams
+progress updates through bundling, publishing, and activation.
+
+### Set up event mapping
+
+> "Help me set up mapping for the gtag destination in my flow."
+
+The assistant uses the `setup-mapping` prompt, reads the mapping reference
+resource, fetches package examples, and generates mapping rules.
+
+### Generate HTML tagging
+
+> "Generate data-elb attributes for a promotion entity with name 'Summer Sale'
+> and a click action."
+
+The assistant calls `generate_tagging` with `entity: "promotion"`,
+`data: { name: "Summer Sale" }`, and `action: { click: "click" }`, returning
+ready-to-use HTML attributes.
+
+### Discover a package
+
+> "What configuration does the Snowplow destination need?"
+
+The assistant calls `package_search` for `@walkeros/web-destination-snowplow`,
+then `package_get` to fetch schemas, hints, and examples.
+
+## Migration from separate servers
+
+The previous `@walkeros/mcp-cli` and `@walkeros/mcp-api` packages are now
+unified in `@walkeros/mcp`. Key changes:
+
+| Old | New |
+|-----|-----|
+| `@walkeros/mcp-cli` | `@walkeros/mcp` |
+| `@walkeros/mcp-api` (17 tools) | `api` tool in `@walkeros/mcp` |
+| `validate` | `flow_validate` |
+| `bundle` | `flow_bundle` |
+| `simulate` | `flow_simulate` |
+| `push` | `flow_push` |
+| `examples_list` | `flow_examples` |
+| `flow_init` | `flow_load` |
+| `flow_schema` tool | `walkeros://reference/flow-schema` resource |
 
 ## Next steps
 
 - **[CLI](/docs/apps/cli)** — Learn about the underlying CLI commands
-- **[Flow configuration](/docs/getting-started/flow)** — Understand flow
+- **[Flow configuration](/docs/getting-started/modes/bundled)** — Understand flow
   structure
+- **[HTML attributes](/docs/sources/web/browser/tagging/html-attributes)** — Learn about
+  `data-elb` tagging
 - **[MCP specification](https://modelcontextprotocol.io/)** — Learn about the
   Model Context Protocol

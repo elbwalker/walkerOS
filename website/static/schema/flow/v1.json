@@ -1,340 +1,2010 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$ref": "#/definitions/FlowSetup",
-  "definitions": {
-    "Primitive": {
-      "type": ["string", "number", "boolean"],
-      "description": "Primitive value: string, number, or boolean"
-    },
-    "Variables": {
-      "type": "object",
-      "additionalProperties": {
-        "$ref": "#/definitions/Primitive"
-      },
-      "description": "Variables for interpolation"
-    },
-    "Definitions": {
-      "type": "object",
-      "additionalProperties": {},
-      "description": "Reusable configuration definitions"
-    },
-    "InlineCode": {
+  "anyOf": [
+    {
       "type": "object",
       "properties": {
-        "push": {
-          "type": "string",
-          "description": "Push function with $code: prefix (required)"
-        },
-        "type": {
-          "type": "string",
-          "description": "Optional instance type identifier"
-        },
-        "init": {
-          "type": "string",
-          "description": "Optional init function with $code: prefix"
-        }
-      },
-      "required": ["push"],
-      "additionalProperties": false,
-      "description": "Inline code definition for sources/destinations/transformers"
-    },
-    "PackageConfig": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "type": "string",
-          "description": "Package version to use"
-        },
-        "imports": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Named exports to import from the package"
-        },
-        "path": {
-          "type": "string",
-          "description": "Local path (takes precedence over version)"
-        }
-      },
-      "additionalProperties": false
-    },
-    "Packages": {
-      "type": "object",
-      "additionalProperties": {
-        "$ref": "#/definitions/PackageConfig"
-      },
-      "description": "NPM packages to bundle"
-    },
-    "WebConfig": {
-      "type": "object",
-      "properties": {
-        "windowCollector": {
-          "type": "string",
-          "description": "Window property name for collector instance (default: \"collector\")"
-        },
-        "windowElb": {
-          "type": "string",
-          "description": "Window property name for elb function (default: \"elb\")"
-        }
-      },
-      "additionalProperties": false,
-      "description": "Web platform configuration"
-    },
-    "ServerConfig": {
-      "type": "object",
-      "additionalProperties": true,
-      "description": "Server platform configuration (reserved for future options)"
-    },
-    "SourceReference": {
-      "type": "object",
-      "properties": {
-        "package": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Package specifier with optional version (e.g., \"@walkeros/web-source-browser@2.0.0\")"
-        },
-        "code": {
-          "oneOf": [
-            {
-              "type": "string",
-              "description": "Named export to use from the package"
-            },
-            {
-              "$ref": "#/definitions/InlineCode",
-              "description": "Inline code definition (use instead of package)"
-            }
-          ],
-          "description": "Either a named export string (with package) or an InlineCode object (without package)"
-        },
-        "config": {
-          "description": "Source-specific configuration object"
-        },
-        "env": {
-          "description": "Source environment configuration"
-        },
-        "primary": {
-          "type": "boolean",
-          "description": "Mark as primary source (provides main elb). Only one source should be primary."
-        },
-        "next": {
-          "type": "string",
-          "description": "Next transformer in chain (pre-collector processing)"
-        },
-        "variables": {
-          "$ref": "#/definitions/Variables",
-          "description": "Source-level variables (highest priority in cascade)"
-        },
-        "definitions": {
-          "$ref": "#/definitions/Definitions",
-          "description": "Source-level definitions (highest priority in cascade)"
-        }
-      },
-      "additionalProperties": false,
-      "oneOf": [
-        {
-          "required": ["package"],
-          "properties": { "code": false }
-        },
-        {
-          "required": ["code"],
-          "properties": { "package": false }
-        }
-      ],
-      "description": "Source reference - use either 'package' or 'code' object, not both"
-    },
-    "DestinationReference": {
-      "type": "object",
-      "properties": {
-        "package": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Package specifier with optional version (e.g., \"@walkeros/web-destination-gtag@2.0.0\")"
-        },
-        "code": {
-          "oneOf": [
-            {
-              "type": "string",
-              "description": "Named export to use from the package"
-            },
-            {
-              "$ref": "#/definitions/InlineCode",
-              "description": "Inline code definition (use instead of package)"
-            }
-          ],
-          "description": "Either a named export string (with package) or an InlineCode object (without package)"
-        },
-        "config": {
-          "description": "Destination-specific configuration object"
-        },
-        "env": {
-          "description": "Destination environment configuration"
-        },
-        "before": {
-          "type": "string",
-          "description": "Transformer to run before this destination (post-collector processing)"
-        },
-        "variables": {
-          "$ref": "#/definitions/Variables",
-          "description": "Destination-level variables (highest priority in cascade)"
-        },
-        "definitions": {
-          "$ref": "#/definitions/Definitions",
-          "description": "Destination-level definitions (highest priority in cascade)"
-        }
-      },
-      "additionalProperties": false,
-      "oneOf": [
-        {
-          "required": ["package"],
-          "properties": { "code": false }
-        },
-        {
-          "required": ["code"],
-          "properties": { "package": false }
-        }
-      ],
-      "description": "Destination reference - use either 'package' or 'code' object, not both"
-    },
-    "TransformerReference": {
-      "type": "object",
-      "properties": {
-        "package": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Package specifier with optional version (e.g., \"@walkeros/transformer-validator@1.0.0\")"
-        },
-        "code": {
-          "oneOf": [
-            {
-              "type": "string",
-              "description": "Named export to use from the package"
-            },
-            {
-              "$ref": "#/definitions/InlineCode",
-              "description": "Inline code definition (use instead of package)"
-            }
-          ],
-          "description": "Either a named export string (with package) or an InlineCode object (without package)"
-        },
-        "config": {
-          "description": "Transformer-specific configuration object"
-        },
-        "env": {
-          "description": "Transformer environment configuration"
-        },
-        "next": {
-          "type": "string",
-          "description": "Next transformer in chain (omit to end chain)"
-        },
-        "variables": {
-          "$ref": "#/definitions/Variables",
-          "description": "Transformer-level variables (highest priority in cascade)"
-        },
-        "definitions": {
-          "$ref": "#/definitions/Definitions",
-          "description": "Transformer-level definitions (highest priority in cascade)"
-        }
-      },
-      "additionalProperties": false,
-      "oneOf": [
-        {
-          "required": ["package"],
-          "properties": { "code": false }
-        },
-        {
-          "required": ["code"],
-          "properties": { "package": false }
-        }
-      ],
-      "description": "Transformer reference - use either 'package' or 'code' object, not both"
-    },
-    "FlowConfig": {
-      "type": "object",
-      "properties": {
-        "web": {
-          "$ref": "#/definitions/WebConfig",
-          "description": "Web platform configuration (browser-based tracking). Mutually exclusive with server."
-        },
-        "server": {
-          "$ref": "#/definitions/ServerConfig",
-          "description": "Server platform configuration (Node.js). Mutually exclusive with web."
-        },
-        "sources": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/SourceReference"
-          },
-          "description": "Source configurations (data capture) keyed by unique identifier"
-        },
-        "destinations": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/DestinationReference"
-          },
-          "description": "Destination configurations (data output) keyed by unique identifier"
-        },
-        "transformers": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/TransformerReference"
-          },
-          "description": "Transformer configurations (event processing) keyed by unique identifier"
-        },
-        "collector": {
-          "description": "Collector configuration for event processing (uses Collector.InitConfig)"
-        },
-        "packages": {
-          "$ref": "#/definitions/Packages",
-          "description": "NPM packages to bundle"
-        },
-        "variables": {
-          "$ref": "#/definitions/Variables",
-          "description": "Flow-level variables (override Setup.variables, overridden by source/destination variables)"
-        },
-        "definitions": {
-          "$ref": "#/definitions/Definitions",
-          "description": "Flow-level definitions (extend Setup.definitions, overridden by source/destination definitions)"
-        }
-      },
-      "oneOf": [
-        { "required": ["web"], "not": { "required": ["server"] } },
-        { "required": ["server"], "not": { "required": ["web"] } }
-      ],
-      "additionalProperties": false,
-      "description": "Single flow configuration for one deployment target. Exactly one of 'web' or 'server' must be present."
-    },
-    "FlowSetup": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "type": "integer",
-          "const": 1,
-          "description": "Configuration schema version (currently only 1 is supported)"
-        },
         "$schema": {
+          "description": "JSON Schema reference for IDE validation (e.g., \"https://walkeros.io/schema/flow/v2.json\")",
           "type": "string",
-          "format": "uri",
-          "description": "JSON Schema reference for IDE validation (e.g., \"https://walkeros.io/schema/flow/v1.json\")"
+          "format": "uri"
+        },
+        "include": {
+          "description": "Folders to include in the bundle output",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "variables": {
-          "$ref": "#/definitions/Variables",
-          "description": "Shared variables for interpolation across all flows (use ${VAR_NAME} or ${VAR_NAME:default} syntax)"
+          "description": "Shared variables for interpolation across all flows (use $var.name syntax)",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "description": "Primitive value: string, number, or boolean"
+          }
         },
         "definitions": {
-          "$ref": "#/definitions/Definitions",
-          "description": "Reusable configuration definitions (reference with JSON Schema $ref syntax: { \"$ref\": \"#/definitions/name\" })"
+          "description": "Reusable configuration definitions (use $def.name syntax)",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
         },
         "flows": {
           "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/FlowConfig"
+          "propertyNames": {
+            "type": "string"
           },
-          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "web": {
+                "description": "Web platform configuration (browser-based tracking). Mutually exclusive with server.",
+                "type": "object",
+                "properties": {
+                  "windowCollector": {
+                    "default": "collector",
+                    "description": "Window property name for the collector instance (default: \"collector\")",
+                    "type": "string"
+                  },
+                  "windowElb": {
+                    "default": "elb",
+                    "description": "Window property name for the elb command queue (default: \"elb\")",
+                    "type": "string"
+                  }
+                },
+                "required": ["windowCollector", "windowElb"],
+                "additionalProperties": false
+              },
+              "server": {
+                "description": "Server platform configuration (Node.js). Mutually exclusive with web.",
+                "type": "object",
+                "properties": {},
+                "additionalProperties": {}
+              },
+              "sources": {
+                "description": "Source configurations (data capture) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Package specifier with optional version (e.g., \"@walkeros/web-source-browser@2.0.0\")",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Either a named export string (e.g., \"sourceExpress\") or an inline code object with push function",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Source-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Source environment configuration"
+                    },
+                    "primary": {
+                      "description": "Mark as primary source (provides main elb). Only one source should be primary.",
+                      "type": "boolean"
+                    },
+                    "variables": {
+                      "description": "Source-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Source-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "next": {
+                      "description": "First transformer in post-source chain. If omitted, events route directly to collector.",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Source package reference with configuration"
+                }
+              },
+              "destinations": {
+                "description": "Destination configurations (data output) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Package specifier with optional version (e.g., \"@walkeros/web-destination-gtag@2.0.0\")",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Either a named export string (e.g., \"destinationAnalytics\") or an inline code object with push function",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Destination-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Destination environment configuration"
+                    },
+                    "variables": {
+                      "description": "Destination-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Destination-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "before": {
+                      "description": "First transformer in pre-destination chain. If omitted, events are sent directly from collector.",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Destination package reference with configuration"
+                }
+              },
+              "transformers": {
+                "description": "Transformer configurations (event transformation) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Package specifier with optional version (e.g., \"@walkeros/transformer-enricher@1.0.0\")",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Either a named export string (e.g., \"transformerEnricher\") or an inline code object with push function",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Transformer-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Transformer environment configuration"
+                    },
+                    "next": {
+                      "description": "Next transformer in chain. If omitted: pre-collector routes to collector, post-collector routes to destination.",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "variables": {
+                      "description": "Transformer-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Transformer-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Transformer package reference with configuration"
+                }
+              },
+              "stores": {
+                "description": "Store configurations (key-value storage) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Store package specifier with optional version",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Named export string or inline code definition",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Store-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Store environment configuration"
+                    },
+                    "variables": {
+                      "description": "Store-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Store-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Store package reference with configuration"
+                }
+              },
+              "collector": {
+                "description": "Collector configuration for event processing (uses Collector.InitConfig)"
+              },
+              "packages": {
+                "description": "NPM packages to bundle",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^(@[a-z0-9\\-~][a-z0-9\\-._~]*\\/)?[a-z0-9\\-~][a-z0-9\\-._~]*$"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string"
+                    },
+                    "imports": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "variables": {
+                "description": "Flow-level variables (override Config.variables, overridden by source/destination variables)",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ],
+                  "description": "Primitive value: string, number, or boolean"
+                }
+              },
+              "definitions": {
+                "description": "Flow-level definitions (extend Config.definitions, overridden by source/destination definitions)",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            },
+            "additionalProperties": false,
+            "description": "Single flow settings for one deployment target"
+          },
           "description": "Named flow configurations (e.g., production, staging, development)"
+        },
+        "version": {
+          "type": "number",
+          "const": 1,
+          "description": "Configuration schema version 1"
         }
       },
-      "required": ["version", "flows"],
+      "required": ["flows", "version"],
       "additionalProperties": false,
-      "description": "Complete multi-flow walkerOS configuration (walkeros.config.json)"
+      "description": "walkerOS v1 configuration"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "description": "JSON Schema reference for IDE validation (e.g., \"https://walkeros.io/schema/flow/v2.json\")",
+          "type": "string",
+          "format": "uri"
+        },
+        "include": {
+          "description": "Folders to include in the bundle output",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "variables": {
+          "description": "Shared variables for interpolation across all flows (use $var.name syntax)",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "description": "Primitive value: string, number, or boolean"
+          }
+        },
+        "definitions": {
+          "description": "Reusable configuration definitions (use $def.name syntax)",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "flows": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "web": {
+                "description": "Web platform configuration (browser-based tracking). Mutually exclusive with server.",
+                "type": "object",
+                "properties": {
+                  "windowCollector": {
+                    "default": "collector",
+                    "description": "Window property name for the collector instance (default: \"collector\")",
+                    "type": "string"
+                  },
+                  "windowElb": {
+                    "default": "elb",
+                    "description": "Window property name for the elb command queue (default: \"elb\")",
+                    "type": "string"
+                  }
+                },
+                "required": ["windowCollector", "windowElb"],
+                "additionalProperties": false
+              },
+              "server": {
+                "description": "Server platform configuration (Node.js). Mutually exclusive with web.",
+                "type": "object",
+                "properties": {},
+                "additionalProperties": {}
+              },
+              "sources": {
+                "description": "Source configurations (data capture) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Package specifier with optional version (e.g., \"@walkeros/web-source-browser@2.0.0\")",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Either a named export string (e.g., \"sourceExpress\") or an inline code object with push function",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Source-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Source environment configuration"
+                    },
+                    "primary": {
+                      "description": "Mark as primary source (provides main elb). Only one source should be primary.",
+                      "type": "boolean"
+                    },
+                    "variables": {
+                      "description": "Source-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Source-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "next": {
+                      "description": "First transformer in post-source chain. If omitted, events route directly to collector.",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Source package reference with configuration"
+                }
+              },
+              "destinations": {
+                "description": "Destination configurations (data output) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Package specifier with optional version (e.g., \"@walkeros/web-destination-gtag@2.0.0\")",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Either a named export string (e.g., \"destinationAnalytics\") or an inline code object with push function",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Destination-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Destination environment configuration"
+                    },
+                    "variables": {
+                      "description": "Destination-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Destination-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "before": {
+                      "description": "First transformer in pre-destination chain. If omitted, events are sent directly from collector.",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Destination package reference with configuration"
+                }
+              },
+              "transformers": {
+                "description": "Transformer configurations (event transformation) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Package specifier with optional version (e.g., \"@walkeros/transformer-enricher@1.0.0\")",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Either a named export string (e.g., \"transformerEnricher\") or an inline code object with push function",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Transformer-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Transformer environment configuration"
+                    },
+                    "next": {
+                      "description": "Next transformer in chain. If omitted: pre-collector routes to collector, post-collector routes to destination.",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "variables": {
+                      "description": "Transformer-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Transformer-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Transformer package reference with configuration"
+                }
+              },
+              "stores": {
+                "description": "Store configurations (key-value storage) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Store package specifier with optional version",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Named export string or inline code definition",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Store-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Store environment configuration"
+                    },
+                    "variables": {
+                      "description": "Store-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Store-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Store package reference with configuration"
+                }
+              },
+              "collector": {
+                "description": "Collector configuration for event processing (uses Collector.InitConfig)"
+              },
+              "packages": {
+                "description": "NPM packages to bundle",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^(@[a-z0-9\\-~][a-z0-9\\-._~]*\\/)?[a-z0-9\\-~][a-z0-9\\-._~]*$"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string"
+                    },
+                    "imports": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "variables": {
+                "description": "Flow-level variables (override Config.variables, overridden by source/destination variables)",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ],
+                  "description": "Primitive value: string, number, or boolean"
+                }
+              },
+              "definitions": {
+                "description": "Flow-level definitions (extend Config.definitions, overridden by source/destination definitions)",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            },
+            "additionalProperties": false,
+            "description": "Single flow settings for one deployment target"
+          },
+          "description": "Named flow configurations (e.g., production, staging, development)"
+        },
+        "version": {
+          "type": "number",
+          "const": 2,
+          "description": "Configuration schema version 2"
+        },
+        "contract": {
+          "description": "Named contracts with extends inheritance and dot-path references",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "extends": {
+                "description": "Inherit from another named contract",
+                "type": "string"
+              },
+              "tagging": {
+                "description": "Contract version number",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "description": {
+                "description": "Human-readable description",
+                "type": "string"
+              },
+              "globals": {
+                "description": "JSON Schema for event.globals",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "context": {
+                "description": "JSON Schema for event.context",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "custom": {
+                "description": "JSON Schema for event.custom",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "user": {
+                "description": "JSON Schema for event.user",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "consent": {
+                "description": "JSON Schema for event.consent",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "events": {
+                "description": "Entity-action event schemas",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "JSON Schema object for event validation with description/examples annotations"
+                  },
+                  "description": "Action-level contract entries"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "description": "Named contract entry with optional sections and events"
+          }
+        }
+      },
+      "required": ["flows", "version"],
+      "additionalProperties": false,
+      "description": "walkerOS v2 configuration with data contracts"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "description": "JSON Schema reference for IDE validation (e.g., \"https://walkeros.io/schema/flow/v2.json\")",
+          "type": "string",
+          "format": "uri"
+        },
+        "include": {
+          "description": "Folders to include in the bundle output",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "variables": {
+          "description": "Shared variables for interpolation across all flows (use $var.name syntax)",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "description": "Primitive value: string, number, or boolean"
+          }
+        },
+        "definitions": {
+          "description": "Reusable configuration definitions (use $def.name syntax)",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "flows": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "web": {
+                "description": "Web platform configuration (browser-based tracking). Mutually exclusive with server.",
+                "type": "object",
+                "properties": {
+                  "windowCollector": {
+                    "default": "collector",
+                    "description": "Window property name for the collector instance (default: \"collector\")",
+                    "type": "string"
+                  },
+                  "windowElb": {
+                    "default": "elb",
+                    "description": "Window property name for the elb command queue (default: \"elb\")",
+                    "type": "string"
+                  }
+                },
+                "required": ["windowCollector", "windowElb"],
+                "additionalProperties": false
+              },
+              "server": {
+                "description": "Server platform configuration (Node.js). Mutually exclusive with web.",
+                "type": "object",
+                "properties": {},
+                "additionalProperties": {}
+              },
+              "sources": {
+                "description": "Source configurations (data capture) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Package specifier with optional version (e.g., \"@walkeros/web-source-browser@2.0.0\")",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Either a named export string (e.g., \"sourceExpress\") or an inline code object with push function",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Source-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Source environment configuration"
+                    },
+                    "primary": {
+                      "description": "Mark as primary source (provides main elb). Only one source should be primary.",
+                      "type": "boolean"
+                    },
+                    "variables": {
+                      "description": "Source-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Source-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "next": {
+                      "description": "First transformer in post-source chain. If omitted, events route directly to collector.",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Source package reference with configuration"
+                }
+              },
+              "destinations": {
+                "description": "Destination configurations (data output) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Package specifier with optional version (e.g., \"@walkeros/web-destination-gtag@2.0.0\")",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Either a named export string (e.g., \"destinationAnalytics\") or an inline code object with push function",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Destination-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Destination environment configuration"
+                    },
+                    "variables": {
+                      "description": "Destination-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Destination-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "before": {
+                      "description": "First transformer in pre-destination chain. If omitted, events are sent directly from collector.",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Destination package reference with configuration"
+                }
+              },
+              "transformers": {
+                "description": "Transformer configurations (event transformation) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Package specifier with optional version (e.g., \"@walkeros/transformer-enricher@1.0.0\")",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Either a named export string (e.g., \"transformerEnricher\") or an inline code object with push function",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Transformer-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Transformer environment configuration"
+                    },
+                    "next": {
+                      "description": "Next transformer in chain. If omitted: pre-collector routes to collector, post-collector routes to destination.",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "variables": {
+                      "description": "Transformer-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Transformer-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Transformer package reference with configuration"
+                }
+              },
+              "stores": {
+                "description": "Store configurations (key-value storage) keyed by unique identifier",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "package": {
+                      "description": "Store package specifier with optional version",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "code": {
+                      "description": "Named export string or inline code definition",
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "push": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "JavaScript function for processing events. Must start with \"$code:\" prefix. Example: \"$code:(event) => { console.log(event); }\""
+                            },
+                            "type": {
+                              "description": "Optional type identifier for the inline instance",
+                              "type": "string"
+                            },
+                            "init": {
+                              "description": "Optional initialization function. Use $code: prefix for inline JavaScript.",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["push"],
+                          "additionalProperties": false,
+                          "description": "Inline code for custom sources/transformers/destinations"
+                        }
+                      ]
+                    },
+                    "config": {
+                      "description": "Store-specific configuration object"
+                    },
+                    "env": {
+                      "description": "Store environment configuration"
+                    },
+                    "variables": {
+                      "description": "Store-level variables (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "Primitive value: string, number, or boolean"
+                      }
+                    },
+                    "definitions": {
+                      "description": "Store-level definitions (highest priority in cascade)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    },
+                    "examples": {
+                      "description": "Named step examples for testing and documentation (stripped during bundling)",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "in": {
+                            "description": "Input to the step"
+                          },
+                          "out": {
+                            "description": "Expected output from the step"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "description": "Named example with input/output pair"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Store package reference with configuration"
+                }
+              },
+              "collector": {
+                "description": "Collector configuration for event processing (uses Collector.InitConfig)"
+              },
+              "packages": {
+                "description": "NPM packages to bundle",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^(@[a-z0-9\\-~][a-z0-9\\-._~]*\\/)?[a-z0-9\\-~][a-z0-9\\-._~]*$"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string"
+                    },
+                    "imports": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "variables": {
+                "description": "Flow-level variables (override Config.variables, overridden by source/destination variables)",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ],
+                  "description": "Primitive value: string, number, or boolean"
+                }
+              },
+              "definitions": {
+                "description": "Flow-level definitions (extend Config.definitions, overridden by source/destination definitions)",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            },
+            "additionalProperties": false,
+            "description": "Single flow settings for one deployment target"
+          },
+          "description": "Named flow configurations (e.g., production, staging, development)"
+        },
+        "version": {
+          "type": "number",
+          "const": 3,
+          "description": "Configuration schema version 3"
+        },
+        "contract": {
+          "description": "Named contracts with extends inheritance and dot-path references",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "extends": {
+                "description": "Inherit from another named contract",
+                "type": "string"
+              },
+              "tagging": {
+                "description": "Contract version number",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "description": {
+                "description": "Human-readable description",
+                "type": "string"
+              },
+              "globals": {
+                "description": "JSON Schema for event.globals",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "context": {
+                "description": "JSON Schema for event.context",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "custom": {
+                "description": "JSON Schema for event.custom",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "user": {
+                "description": "JSON Schema for event.user",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "consent": {
+                "description": "JSON Schema for event.consent",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "events": {
+                "description": "Entity-action event schemas",
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "JSON Schema object for event validation with description/examples annotations"
+                  },
+                  "description": "Action-level contract entries"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "description": "Named contract entry with optional sections and events"
+          }
+        }
+      },
+      "required": ["flows", "version"],
+      "additionalProperties": false,
+      "description": "walkerOS v3 configuration with data contracts"
     }
-  }
+  ],
+  "description": "Complete multi-flow walkerOS configuration (walkeros.config.json)"
 }

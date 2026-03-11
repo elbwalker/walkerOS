@@ -36,12 +36,14 @@ export const sourceDataLayer: Source.Init<Types> = async (context) => {
     const dl = (envWindow as Record<string, unknown>)[dataLayerName];
     pendingReplayCount = Array.isArray(dl) ? dl.length : 0;
 
+    const win = envWindow as unknown as Record<string, unknown>;
+
     // Set up interceptor immediately so no new events are missed
-    interceptDataLayer(elb, fullConfig);
+    interceptDataLayer(elb, fullConfig, win);
 
     if (context.collector.allowed && pendingReplayCount > 0) {
       // Collector already ran — process existing events immediately
-      processExistingEvents(elb, fullConfig, pendingReplayCount);
+      processExistingEvents(elb, fullConfig, pendingReplayCount, win);
       pendingReplayCount = 0;
     }
   }
@@ -49,7 +51,8 @@ export const sourceDataLayer: Source.Init<Types> = async (context) => {
   // Handle on-run to replay existing events (when source inits before run)
   const handleEvent = async (event: On.Types) => {
     if (event === 'run' && envWindow && pendingReplayCount > 0) {
-      processExistingEvents(elb, fullConfig, pendingReplayCount);
+      const win = envWindow as unknown as Record<string, unknown>;
+      processExistingEvents(elb, fullConfig, pendingReplayCount, win);
       pendingReplayCount = 0;
     }
   };

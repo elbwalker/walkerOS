@@ -15,7 +15,9 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: {},
               push: async (event) => {
                 transformerCalls.push('enricher');
-                return { ...event, data: { ...event.data, enriched: true } };
+                return {
+                  event: { ...event, data: { ...event.data, enriched: true } },
+                };
               },
             }),
           },
@@ -55,7 +57,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: { next: 'second' },
               push: async (event) => {
                 order.push('first');
-                return event;
+                return { event };
               },
             }),
           },
@@ -65,7 +67,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: { next: 'third' },
               push: async (event) => {
                 order.push('second');
-                return event;
+                return { event };
               },
             }),
           },
@@ -75,7 +77,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: {},
               push: async (event) => {
                 order.push('third');
-                return event;
+                return { event };
               },
             }),
           },
@@ -109,7 +111,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               push: async (event) => {
                 // Filter out walker commands
                 if (event.name?.startsWith('walker ')) return false;
-                return event;
+                return { event };
               },
             }),
           },
@@ -148,7 +150,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: {},
               push: async (event) => {
                 order.push('a');
-                return event;
+                return { event };
               },
             }),
           },
@@ -158,7 +160,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: {},
               push: async (event) => {
                 order.push('b');
-                return event;
+                return { event };
               },
             }),
           },
@@ -229,7 +231,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: {},
               push: async (event) => {
                 transformerCalls.push('tracker');
-                return event;
+                return { event };
               },
             }),
           },
@@ -265,7 +267,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: context.config,
               push: async (event) => {
                 order.push('first');
-                return event;
+                return { event };
               },
             }),
             next: 'second',
@@ -276,7 +278,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: context.config,
               push: async (event) => {
                 order.push('second');
-                return event;
+                return { event };
               },
             }),
             next: 'third',
@@ -287,7 +289,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: context.config,
               push: async (event) => {
                 order.push('third');
-                return event;
+                return { event };
               },
             }),
           },
@@ -320,7 +322,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: context.config,
               push: async (event) => {
                 order.push('first');
-                return event;
+                return { event };
               },
             }),
             next: 'second',
@@ -331,7 +333,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: { next: 'third' },
               push: async (event) => {
                 order.push('second');
-                return event;
+                return { event };
               },
             }),
           },
@@ -341,7 +343,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
               config: context.config,
               push: async (event) => {
                 order.push('third');
-                return event;
+                return { event };
               },
             }),
           },

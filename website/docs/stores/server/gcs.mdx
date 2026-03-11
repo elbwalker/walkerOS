@@ -1,0 +1,140 @@
+---
+title: GCS
+description: Google Cloud Storage for walkerOS server flows
+sidebar_position: 2
+package: '@walkeros/server-store-gcs'
+---
+
+import { schemas } from '@walkeros/server-store-gcs/dev';
+
+# GCS
+
+<PackageLink env="server" github="packages/server/stores/gcs" npm="@walkeros/server-store-gcs" />
+
+Google Cloud Storage store with zero runtime dependencies. Uses raw `fetch` against the GCS JSON API with built-in auth — Application Default Credentials (ADC) on Cloud Run / GKE, or explicit service account JWT for non-GCP environments.
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the package:
+
+<CodeSnippet
+  code={`npm install @walkeros/server-store-gcs`}
+  language="bash"
+/>
+
+Configure in your code:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { storeGcsInit } from '@walkeros/server-store-gcs';
+
+await startFlow({
+  stores: {
+    assets: {
+      code: storeGcsInit,
+      config: {
+        settings: {
+          bucket: 'my-assets',
+          prefix: 'public',
+          // Omit credentials for ADC on Cloud Run/GKE
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json`:
+
+<CodeSnippet
+  code={`"stores": {
+  "assets": {
+    "package": "@walkeros/server-store-gcs",
+    "config": {
+      "settings": {
+        "bucket": "my-assets",
+        "prefix": "public"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+## Configuration
+
+<PropertyTable schema={schemas.settings} />
+
+## Authentication
+
+### Cloud Run / GKE (ADC)
+
+When running on GCP infrastructure, omit `credentials`. The store fetches access tokens from the metadata server automatically — no configuration needed.
+
+### Non-GCP (Service Account)
+
+Pass a service account JSON via `$env.` reference. The store signs JWTs locally using `node:crypto` and exchanges them for access tokens via Google's OAuth2 endpoint.
+
+<CodeSnippet
+  code={`"credentials": "$env.GCS_SA_KEY"`}
+  language="json"
+/>
+
+The `GCS_SA_KEY` environment variable should contain the full service account JSON (with `client_email` and `private_key` fields).
+
+## File serving pattern
+
+The primary use case is serving static files via the file transformer:
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "assets": {
+      "package": "@walkeros/server-store-gcs",
+      "config": {
+        "settings": {
+          "bucket": "my-assets",
+          "prefix": "public"
+        }
+      }
+    }
+  },
+  "transformers": {
+    "file": {
+      "package": "@walkeros/server-transformer-file",
+      "config": { "settings": { "prefix": "/static" } },
+      "env": { "store": "$store:assets" }
+    }
+  }
+}`}
+  language="json"
+/>
+
+A request to `/static/walker.js` looks up `public/walker.js` in the `my-assets` bucket.
+
+## Security
+
+- **Key validation**: Path traversal attempts (`..`, absolute paths) are rejected
+- **Prefix scoping**: The `prefix` setting restricts all operations to a subdirectory
+- **No ambient credentials**: ADC only works on GCP infrastructure; off-GCP requires explicit SA JSON
+
+## API
+
+<CodeSnippet
+  code={`const file = await store.get('walker.js');    // Buffer | undefined
+await store.set('data.json', Buffer.from('{}')); // void
+await store.delete('old-file.txt');               // void`}
+  language="typescript"
+/>
+
+`get()` returns `Buffer` for compatibility with the file transformer, which uses `content instanceof Buffer` for Content-Length calculation.

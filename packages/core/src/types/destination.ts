@@ -7,6 +7,7 @@ import type {
   WalkerOS,
   Context as BaseContext,
 } from '.';
+import type { DestroyFn } from './lifecycle';
 
 /**
  * Base environment requirements interface for walkerOS destinations
@@ -69,6 +70,7 @@ export interface Instance<T extends TypesGeneric = Types> {
   push: PushFn<T>;
   pushBatch?: PushBatchFn<T>;
   on?: On.OnFn;
+  destroy?: DestroyFn<Config<T>, Env<T>>;
 }
 
 export interface Config<T extends TypesGeneric = Types> {

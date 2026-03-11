@@ -12,11 +12,12 @@ export default defineConfig([
   // CLI binary (with shebang)
   {
     ...baseConfig,
-    entry: ['src/cli.ts', 'src/runtime/main.ts'],
+    entry: ['src/cli.ts'],
     format: ['esm'],
     dts: false,
     sourcemap: false,
     minify: false,
+    noExternal: [/@walkeros\//],
     banner: {
       js: '#!/usr/bin/env node',
     },

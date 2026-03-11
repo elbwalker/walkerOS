@@ -33,6 +33,14 @@
       "description": "Flow version history"
     },
     {
+      "name": "Deployments",
+      "description": "Flow deployment management"
+    },
+    {
+      "name": "Configs",
+      "description": "Per-config management (named flows within a Setup)"
+    },
+    {
       "name": "Tokens",
       "description": "API token management"
     },
@@ -107,7 +115,7 @@
         "properties": {
           "version": {
             "type": "number",
-            "enum": [1]
+            "enum": [2]
           },
           "$schema": {
             "type": "string"
@@ -141,6 +149,10 @@
           "flows": {
             "type": "object",
             "additionalProperties": {}
+          },
+          "contract": {
+            "type": "object",
+            "additionalProperties": {}
           }
         },
         "required": ["version"]
@@ -162,6 +174,12 @@
           "content": {
             "$ref": "#/components/schemas/FlowContent"
           },
+          "configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowConfigSummary"
+            }
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -179,6 +197,35 @@
         },
         "required": ["id", "name", "content", "createdAt", "updatedAt"]
       },
+      "FlowConfigSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^cfg_[a-zA-Z0-9_-]+$",
+            "example": "cfg_a1b2c3d4"
+          },
+          "name": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string",
+            "enum": ["web", "server"],
+            "example": "web"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": ["id", "name", "platform", "createdAt", "updatedAt"]
+      },
       "FlowSummary": {
         "type": "object",
         "properties": {
@@ -192,6 +239,15 @@
             "minLength": 1,
             "maxLength": 255,
             "example": "my-website-flow"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowConfigListItem"
+            }
           },
           "createdAt": {
             "type": "string",
@@ -209,6 +265,37 @@
           }
         },
         "required": ["id", "name", "createdAt", "updatedAt", "deletedAt"]
+      },
+      "FlowConfigListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^cfg_[a-zA-Z0-9_-]+$",
+            "example": "cfg_a1b2c3d4"
+          },
+          "name": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string",
+            "enum": ["web", "server"],
+            "example": "web"
+          },
+          "deploymentStatus": {
+            "type": ["string", "null"]
+          },
+          "deploymentUrl": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "platform",
+          "deploymentStatus",
+          "deploymentUrl"
+        ]
       },
       "Version": {
         "type": "object",
@@ -249,7 +336,7 @@
           },
           "role": {
             "type": "string",
-            "enum": ["owner", "member"],
+            "enum": ["owner", "admin", "member", "deployer", "viewer"],
             "example": "owner"
           },
           "createdAt": {
@@ -277,7 +364,7 @@
           },
           "role": {
             "type": "string",
-            "enum": ["owner", "member"]
+            "enum": ["owner", "admin", "member", "deployer", "viewer"]
           },
           "createdAt": {
             "type": "string",
@@ -301,6 +388,10 @@
           "prefix": {
             "type": "string",
             "example": "sk-walkeros-abcd"
+          },
+          "origin": {
+            "type": "string",
+            "example": "manual"
           },
           "projectId": {
             "type": ["string", "null"],
@@ -338,6 +429,7 @@
           "id",
           "name",
           "prefix",
+          "origin",
           "projectId",
           "scopes",
           "createdAt",
@@ -345,6 +437,868 @@
           "expiresAt",
           "revokedAt"
         ]
+      },
+      "FlowConfigDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^cfg_[a-zA-Z0-9_-]+$",
+            "example": "cfg_a1b2c3d4"
+          },
+          "name": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string",
+            "enum": ["web", "server"],
+            "example": "web"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "deployment": {
+            "type": ["object", "null"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "containerUrl": {
+                "type": ["string", "null"]
+              },
+              "publicUrl": {
+                "type": ["string", "null"]
+              },
+              "errorMessage": {
+                "type": ["string", "null"]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-01-26T14:30:00.000Z"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-01-26T14:30:00.000Z"
+              }
+            },
+            "required": ["id", "status", "type", "createdAt", "updatedAt"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "platform",
+          "config",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "DeployConfigResponse": {
+        "type": "object",
+        "properties": {
+          "deploymentId": {
+            "type": "string"
+          },
+          "configId": {
+            "type": "string",
+            "pattern": "^cfg_[a-zA-Z0-9_-]+$",
+            "example": "cfg_a1b2c3d4"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": ["deploymentId", "configId", "status"]
+      },
+      "FlowDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^flow_[a-zA-Z0-9_-]+$",
+            "example": "flow_a1b2c3d4"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "example": "my-website-flow"
+          },
+          "content": {
+            "$ref": "#/components/schemas/FlowContent"
+          },
+          "configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowConfigEnriched"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "deletedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "content",
+          "createdAt",
+          "updatedAt",
+          "deletedAt"
+        ]
+      },
+      "FlowConfigEnriched": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string",
+            "enum": ["web", "server"]
+          },
+          "deployment": {
+            "type": ["object", "null"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "target": {
+                "type": ["string", "null"]
+              },
+              "containerUrl": {
+                "type": ["string", "null"]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-01-26T14:30:00.000Z"
+              },
+              "updatedAt": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": [
+              "id",
+              "slug",
+              "status",
+              "type",
+              "target",
+              "containerUrl",
+              "createdAt",
+              "updatedAt"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "platform",
+          "deployment",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "FlowUpdateResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^flow_[a-zA-Z0-9_-]+$",
+            "example": "flow_a1b2c3d4"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "example": "my-website-flow"
+          },
+          "content": {
+            "$ref": "#/components/schemas/FlowContent"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": ["id", "name", "content", "createdAt", "updatedAt"]
+      },
+      "CreateProjectResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^proj_[a-zA-Z0-9_-]+$",
+            "example": "proj_x7y8z9"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-26T14:30:00.000Z"
+          }
+        },
+        "required": ["id", "name", "createdAt"]
+      },
+      "DeploymentSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^dep_[a-zA-Z0-9_-]+$",
+            "example": "dep_a1b2c3d4"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["web", "server"],
+            "example": "web"
+          },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9]{12}$",
+            "example": "k7m2x9p4q1w8"
+          },
+          "target": {
+            "type": ["string", "null"]
+          },
+          "label": {
+            "type": ["string", "null"]
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["cloud", "self-hosted"],
+            "example": "cloud"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "deploying",
+              "published",
+              "active",
+              "stopped",
+              "failed"
+            ],
+            "example": "active"
+          },
+          "currentVersionNumber": {
+            "type": ["integer", "null"],
+            "exclusiveMinimum": 0
+          },
+          "url": {
+            "type": ["string", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usageSummary": {
+            "type": "object",
+            "properties": {
+              "eventsIn24h": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "healthy": {
+                "type": "boolean"
+              }
+            },
+            "required": ["eventsIn24h", "healthy"]
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "slug",
+          "target",
+          "label",
+          "origin",
+          "status",
+          "currentVersionNumber",
+          "url",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "DeploymentDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^dep_[a-zA-Z0-9_-]+$",
+            "example": "dep_a1b2c3d4"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["web", "server"],
+            "example": "web"
+          },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9]{12}$",
+            "example": "k7m2x9p4q1w8"
+          },
+          "target": {
+            "type": ["string", "null"]
+          },
+          "label": {
+            "type": ["string", "null"]
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["cloud", "self-hosted"],
+            "example": "cloud"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "deploying",
+              "published",
+              "active",
+              "stopped",
+              "failed"
+            ],
+            "example": "active"
+          },
+          "currentVersion": {
+            "$ref": "#/components/schemas/DeploymentVersionDetail"
+          },
+          "url": {
+            "type": ["string", "null"]
+          },
+          "selfHosted": {
+            "type": ["object", "null"],
+            "properties": {
+              "lastHeartbeatAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "instanceId": {
+                "type": ["string", "null"]
+              },
+              "cliVersion": {
+                "type": ["string", "null"]
+              },
+              "healthy": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "lastHeartbeatAt",
+              "instanceId",
+              "cliVersion",
+              "healthy"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "slug",
+          "target",
+          "label",
+          "origin",
+          "status",
+          "currentVersion",
+          "url",
+          "selfHosted",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "DeploymentVersionDetail": {
+        "type": ["object", "null"],
+        "properties": {
+          "number": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "status": {
+            "type": "string"
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "flowId": {
+                "type": "string"
+              },
+              "flowConfigId": {
+                "type": "string"
+              },
+              "configHash": {
+                "type": "string"
+              }
+            },
+            "required": ["type"]
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "publishedBy": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["number", "status", "source", "publishedAt", "publishedBy"]
+      },
+      "CreateDeploymentResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^dep_[a-zA-Z0-9_-]+$",
+            "example": "dep_a1b2c3d4"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["web", "server"],
+            "example": "web"
+          },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9]{12}$",
+            "example": "k7m2x9p4q1w8"
+          },
+          "target": {
+            "type": ["string", "null"]
+          },
+          "label": {
+            "type": ["string", "null"]
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["cloud", "self-hosted"],
+            "example": "cloud"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "deploying",
+              "published",
+              "active",
+              "stopped",
+              "failed"
+            ],
+            "example": "active"
+          },
+          "currentVersionNumber": {
+            "type": ["integer", "null"],
+            "exclusiveMinimum": 0
+          },
+          "url": {
+            "type": ["string", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usageSummary": {
+            "type": "object",
+            "properties": {
+              "eventsIn24h": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "healthy": {
+                "type": "boolean"
+              }
+            },
+            "required": ["eventsIn24h", "healthy"]
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "slug",
+          "target",
+          "label",
+          "origin",
+          "status",
+          "currentVersionNumber",
+          "url",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ListDeploymentsResponse": {
+        "type": "object",
+        "properties": {
+          "deployments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeploymentSummary"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["deployments", "total", "limit", "offset"]
+      },
+      "UpdateDeploymentResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^dep_[a-zA-Z0-9_-]+$",
+            "example": "dep_a1b2c3d4"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["web", "server"],
+            "example": "web"
+          },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9]{12}$",
+            "example": "k7m2x9p4q1w8"
+          },
+          "target": {
+            "type": ["string", "null"]
+          },
+          "label": {
+            "type": ["string", "null"]
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["cloud", "self-hosted"],
+            "example": "cloud"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "deploying",
+              "published",
+              "active",
+              "stopped",
+              "failed"
+            ],
+            "example": "active"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "slug",
+          "target",
+          "label",
+          "origin",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "LatestDeploymentsByFlow": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "flowId": {
+              "type": "string"
+            },
+            "slug": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "target": {
+              "type": ["string", "null"]
+            },
+            "containerUrl": {
+              "type": ["string", "null"]
+            },
+            "createdAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "flowId",
+            "slug",
+            "type",
+            "status",
+            "target",
+            "containerUrl",
+            "createdAt"
+          ]
+        }
+      },
+      "PublishVersionResponse": {
+        "type": "object",
+        "properties": {
+          "versionNumber": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "versionId": {
+            "type": "string"
+          },
+          "deploymentId": {
+            "type": "string",
+            "pattern": "^dep_[a-zA-Z0-9_-]+$",
+            "example": "dep_a1b2c3d4"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["deploying"]
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["flow"]
+                  },
+                  "flowId": {
+                    "type": "string"
+                  },
+                  "flowConfigName": {
+                    "type": "string"
+                  }
+                },
+                "required": ["type", "flowId", "flowConfigName"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["config"]
+                  }
+                },
+                "required": ["type"]
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "versionNumber",
+          "versionId",
+          "deploymentId",
+          "status",
+          "source",
+          "createdAt"
+        ]
+      },
+      "ListDeploymentVersionsResponse": {
+        "type": "object",
+        "properties": {
+          "versions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "number": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "status": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "flowId": {
+                      "type": "string"
+                    },
+                    "flowConfigId": {
+                      "type": "string"
+                    },
+                    "configHash": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type"]
+                },
+                "bundlePath": {
+                  "type": ["string", "null"]
+                },
+                "publishedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "publishedBy": {
+                  "type": ["string", "null"]
+                }
+              },
+              "required": [
+                "number",
+                "status",
+                "source",
+                "bundlePath",
+                "publishedAt",
+                "publishedBy"
+              ]
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["versions", "total", "limit", "offset"]
+      },
+      "HeartbeatResponse": {
+        "type": "object",
+        "properties": {
+          "ack": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "deploymentId": {
+            "type": "string",
+            "pattern": "^dep_[a-zA-Z0-9_-]+$",
+            "example": "dep_a1b2c3d4"
+          },
+          "action": {
+            "type": "string",
+            "enum": ["none", "stop", "update"]
+          },
+          "versionNumber": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "bundleUrl": {
+            "type": "string"
+          }
+        },
+        "required": ["ack", "deploymentId", "action"]
+      },
+      "ObserveTicketResponse": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "minLength": 1
+          },
+          "observerUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": ["ticket", "observerUrl"]
       },
       "MagicLinkResponse": {
         "type": "object",
@@ -370,7 +1324,6 @@
           },
           "redirect_to": {
             "type": "string",
-            "format": "uri",
             "example": "/dashboard"
           }
         },
@@ -394,6 +1347,110 @@
           }
         },
         "required": ["userId", "email", "projectId"]
+      },
+      "ListSessionsResponse": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "expiresAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "lastTouchedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "isCurrent": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "createdAt",
+                "expiresAt",
+                "lastTouchedAt",
+                "isCurrent"
+              ]
+            }
+          }
+        },
+        "required": ["sessions"]
+      },
+      "DeviceCodeResponse": {
+        "type": "object",
+        "properties": {
+          "deviceCode": {
+            "type": "string"
+          },
+          "userCode": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "number"
+          },
+          "interval": {
+            "type": "number"
+          }
+        },
+        "required": ["deviceCode", "userCode", "expiresIn", "interval"]
+      },
+      "ApproveDeviceResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": ["success"]
+      },
+      "ApproveDeviceRequest": {
+        "type": "object",
+        "properties": {
+          "userCode": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["userCode"]
+      },
+      "DeviceTokenResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["token", "email", "userId"]
+      },
+      "DeviceTokenRequest": {
+        "type": "object",
+        "properties": {
+          "deviceCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "hostname": {
+            "type": "string"
+          }
+        },
+        "required": ["deviceCode"]
       },
       "ListProjectsResponse": {
         "type": "object",
@@ -456,7 +1513,7 @@
           },
           "role": {
             "type": "string",
-            "enum": ["owner", "member"],
+            "enum": ["owner", "admin", "member", "deployer", "viewer"],
             "default": "member"
           }
         },
@@ -467,7 +1524,7 @@
         "properties": {
           "role": {
             "type": "string",
-            "enum": ["owner", "member"]
+            "enum": ["owner", "admin", "member", "deployer", "viewer"]
           }
         },
         "required": ["role"]
@@ -527,6 +1584,224 @@
             "example": "my-website-flow"
           }
         }
+      },
+      "DeploymentResponse": {
+        "type": ["object", "null"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "flowId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["web", "server"]
+          },
+          "status": {
+            "type": "string"
+          },
+          "containerUrl": {
+            "type": ["string", "null"]
+          },
+          "publicUrl": {
+            "type": ["string", "null"]
+          },
+          "errorMessage": {
+            "type": ["string", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "flowId",
+          "type",
+          "status",
+          "containerUrl",
+          "errorMessage",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "StartDeploymentResponse": {
+        "type": "object",
+        "properties": {
+          "deploymentId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["web", "server"]
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": ["deploymentId", "type", "status"]
+      },
+      "ListConfigsResponse": {
+        "type": "object",
+        "properties": {
+          "configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowConfigSummary"
+            }
+          }
+        },
+        "required": ["configs"]
+      },
+      "ConfigDeploymentResponse": {
+        "type": ["object", "null"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "flowId": {
+            "type": "string"
+          },
+          "configId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["web", "server"]
+          },
+          "status": {
+            "type": "string"
+          },
+          "containerUrl": {
+            "type": ["string", "null"]
+          },
+          "publicUrl": {
+            "type": ["string", "null"]
+          },
+          "errorMessage": {
+            "type": ["string", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "flowId",
+          "configId",
+          "type",
+          "status",
+          "containerUrl",
+          "publicUrl",
+          "errorMessage",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ConfigDeploymentDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "flowId": {
+            "type": "string"
+          },
+          "configId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["web", "server"]
+          },
+          "containerUrl": {
+            "type": ["string", "null"]
+          },
+          "publicUrl": {
+            "type": ["string", "null"]
+          },
+          "errorMessage": {
+            "type": ["string", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "flowId",
+          "configId",
+          "status",
+          "type",
+          "containerUrl",
+          "publicUrl",
+          "errorMessage",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "AdvanceConfigDeploymentResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "flowId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["web", "server"]
+          },
+          "status": {
+            "type": "string"
+          },
+          "containerUrl": {
+            "type": ["string", "null"]
+          },
+          "publicUrl": {
+            "type": ["string", "null"]
+          },
+          "errorMessage": {
+            "type": ["string", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "flowId",
+          "type",
+          "status",
+          "containerUrl",
+          "errorMessage",
+          "createdAt",
+          "updatedAt"
+        ]
       },
       "ListVersionsResponse": {
         "type": "object",
@@ -646,20 +1921,35 @@
         },
         "required": ["name"]
       },
-      "CreateTicketResponse": {
+      "BundleJobResponse": {
         "type": "object",
         "properties": {
-          "ticket": {
-            "type": "string",
-            "example": "tkt_abc123..."
+          "jobId": {
+            "type": "string"
           },
-          "observerUrl": {
-            "type": "string",
-            "format": "uri",
-            "example": "http://localhost:3001"
+          "state": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "bundlePath": {
+            "type": "string"
           }
         },
-        "required": ["ticket", "observerUrl"]
+        "required": ["jobId", "state", "hash", "bundlePath"]
+      },
+      "RegisterRuntimeRequest": {
+        "type": "object",
+        "properties": {
+          "flowId": {
+            "type": "string"
+          },
+          "bundlePath": {
+            "type": "string"
+          }
+        },
+        "required": ["flowId", "bundlePath"]
       },
       "ValidateTicketResponse": {
         "type": "object",
@@ -825,6 +2115,193 @@
         }
       }
     },
+    "/api/sessions": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "List sessions",
+        "description": "List all active sessions for the authenticated user. The current session is marked with isCurrent: true.",
+        "responses": {
+          "200": {
+            "description": "List of active sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListSessionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{sessionId}": {
+      "delete": {
+        "tags": ["Auth"],
+        "summary": "Revoke session",
+        "description": "Revoke a session by ID. Cannot revoke the current session (use logout instead).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "ses_abc123"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Session revoked"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/device/code": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Request device code",
+        "description": "Generate a device code and user code for the device authorization flow.",
+        "responses": {
+          "200": {
+            "description": "Device code generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceCodeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/device/approve": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Approve device code",
+        "description": "Approve a device authorization request using the user code. Requires authentication.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDeviceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Device approved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApproveDeviceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/device/token": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Poll device token",
+        "description": "Poll for authorization status using the device code. Returns a token when approved.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authorization approved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceTokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Pending, slow down, or expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects": {
       "get": {
         "tags": ["Projects"],
@@ -872,7 +2349,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Project"
+                  "$ref": "#/components/schemas/CreateProjectResponse"
                 }
               }
             }
@@ -1533,7 +3010,7 @@
       "get": {
         "tags": ["Flows"],
         "summary": "Get flow",
-        "description": "Get a single flow by ID.",
+        "description": "Get a single flow by ID. Use ?fields to select specific sections (reduces response size).",
         "parameters": [
           {
             "schema": {
@@ -1554,6 +3031,17 @@
             "required": true,
             "name": "flowId",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated dot-paths to select specific fields (e.g., \"content.variables,content.flows.web.sources\"). Always includes id, createdAt, updatedAt.",
+              "example": "content.variables,content.flows.web.sources"
+            },
+            "required": false,
+            "description": "Comma-separated dot-paths to select specific fields (e.g., \"content.variables,content.flows.web.sources\"). Always includes id, createdAt, updatedAt.",
+            "name": "fields",
+            "in": "query"
           }
         ],
         "responses": {
@@ -1562,7 +3050,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Flow"
+                  "$ref": "#/components/schemas/FlowDetailResponse"
                 }
               }
             }
@@ -1592,7 +3080,7 @@
       "patch": {
         "tags": ["Flows"],
         "summary": "Update flow",
-        "description": "Update an existing flow. Creates a version snapshot before applying changes. Requires owner role.",
+        "description": "Update an existing flow. Creates a version snapshot before applying changes. Requires owner role. Use Content-Type: application/merge-patch+json to send only changed fields (RFC 7386).",
         "parameters": [
           {
             "schema": {
@@ -1613,11 +3101,27 @@
             "required": true,
             "name": "flowId",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "ETag from a previous GET. Returns 412 if flow was modified since.",
+              "example": "\"a1b2c3d4e5f6g7h8\""
+            },
+            "required": false,
+            "description": "ETag from a previous GET. Returns 412 if flow was modified since.",
+            "name": "if-match",
+            "in": "header"
           }
         ],
         "requestBody": {
           "content": {
             "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFlowRequest"
+              }
+            },
+            "application/merge-patch+json": {
               "schema": {
                 "$ref": "#/components/schemas/UpdateFlowRequest"
               }
@@ -1630,7 +3134,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Flow"
+                  "$ref": "#/components/schemas/FlowUpdateResponse"
                 }
               }
             }
@@ -1684,6 +3188,9 @@
                 }
               }
             }
+          },
+          "412": {
+            "description": "ETag mismatch — flow was modified since last read"
           }
         }
       },
@@ -1711,6 +3218,17 @@
             "required": true,
             "name": "flowId",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "ETag from a previous GET. Returns 412 if flow was modified since.",
+              "example": "\"a1b2c3d4e5f6g7h8\""
+            },
+            "required": false,
+            "description": "ETag from a previous GET. Returns 412 if flow was modified since.",
+            "name": "if-match",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1746,6 +3264,9 @@
                 }
               }
             }
+          },
+          "412": {
+            "description": "ETag mismatch — flow was modified since last read"
           }
         }
       }
@@ -1839,6 +3360,1033 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/deploy": {
+      "get": {
+        "tags": ["Deployments"],
+        "summary": "Get latest deployment",
+        "description": "Get the latest deployment for a flow.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest deployment (or null)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Deployments"],
+        "summary": "Start deployment",
+        "description": "Start a new deployment for a flow. Returns 400 AMBIGUOUS_CONFIG if the flow has multiple named configs — use the per-config deploy endpoint instead.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Deployment started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartDeploymentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Deployment already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/deploy/{deploymentId}": {
+      "get": {
+        "tags": ["Deployments"],
+        "summary": "Get deployment",
+        "description": "Get a specific deployment by ID.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "dep_abc123"
+            },
+            "required": true,
+            "name": "deploymentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deployment details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Deployments"],
+        "summary": "Delete deployment",
+        "description": "Delete a deployment and its container. Requires owner role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "dep_abc123"
+            },
+            "required": true,
+            "name": "deploymentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deployment deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["deleted"]
+                    }
+                  },
+                  "required": ["id", "status"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/deploy/{deploymentId}/advance": {
+      "post": {
+        "tags": ["Deployments"],
+        "summary": "Advance deployment",
+        "description": "Advance the deployment state machine. Checks bundle/container status and transitions accordingly.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "dep_abc123"
+            },
+            "required": true,
+            "name": "deploymentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current deployment state after advancement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "flowId": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": ["web", "server"]
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "containerUrl": {
+                      "type": ["string", "null"]
+                    },
+                    "publicUrl": {
+                      "type": ["string", "null"]
+                    },
+                    "errorMessage": {
+                      "type": ["string", "null"]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "flowId",
+                    "type",
+                    "status",
+                    "containerUrl",
+                    "errorMessage",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/configs": {
+      "get": {
+        "tags": ["Configs"],
+        "summary": "List configs",
+        "description": "List active named configs for a flow.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of configs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListConfigsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/configs/{configId}": {
+      "get": {
+        "tags": ["Configs"],
+        "summary": "Get config",
+        "description": "Get a single config with its latest deployment.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^cfg_[a-zA-Z0-9_-]+$",
+              "example": "cfg_a1b2c3d4"
+            },
+            "required": true,
+            "name": "configId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Config details with deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowConfigDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/configs/{configId}/json": {
+      "get": {
+        "tags": ["Configs"],
+        "summary": "Download config JSON",
+        "description": "Download the named flow config as a self-contained Setup JSON file. Includes parent variables and definitions.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^cfg_[a-zA-Z0-9_-]+$",
+              "example": "cfg_a1b2c3d4"
+            },
+            "required": true,
+            "name": "configId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Flow Setup JSON file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowContent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/configs/{configId}/bundle": {
+      "get": {
+        "tags": ["Configs"],
+        "summary": "Download config bundle",
+        "description": "Download the compiled JS/MJS for the config's latest deployment. Redirects to a presigned download URL.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^cfg_[a-zA-Z0-9_-]+$",
+              "example": "cfg_a1b2c3d4"
+            },
+            "required": true,
+            "name": "configId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to presigned bundle URL"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/configs/{configId}/deploy": {
+      "post": {
+        "tags": ["Configs"],
+        "summary": "Deploy config",
+        "description": "Start a deployment for a specific config. Detects platform from the config.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^cfg_[a-zA-Z0-9_-]+$",
+              "example": "cfg_a1b2c3d4"
+            },
+            "required": true,
+            "name": "configId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Deployment started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeployConfigResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Deployment already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Config orphaned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Configs"],
+        "summary": "Get latest config deployment",
+        "description": "Get the latest deployment for a specific config.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^cfg_[a-zA-Z0-9_-]+$",
+              "example": "cfg_a1b2c3d4"
+            },
+            "required": true,
+            "name": "configId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest deployment (or null)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigDeploymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/configs/{configId}/deployments/{deploymentId}": {
+      "get": {
+        "tags": ["Configs"],
+        "summary": "Get config deployment detail",
+        "description": "Get a specific deployment by ID, scoped to a config.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^cfg_[a-zA-Z0-9_-]+$",
+              "example": "cfg_a1b2c3d4"
+            },
+            "required": true,
+            "name": "configId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "dep_abc123"
+            },
+            "required": true,
+            "name": "deploymentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deployment details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigDeploymentDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/configs/{configId}/deployments/{deploymentId}/advance": {
+      "post": {
+        "tags": ["Configs"],
+        "summary": "Advance config deployment",
+        "description": "Advance the deployment state machine for a per-config deployment.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^cfg_[a-zA-Z0-9_-]+$",
+              "example": "cfg_a1b2c3d4"
+            },
+            "required": true,
+            "name": "configId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "dep_abc123"
+            },
+            "required": true,
+            "name": "deploymentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current deployment state after advancement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdvanceConfigDeploymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2233,6 +4781,341 @@
         }
       }
     },
+    "/api/projects/{projectId}/flows/{flowId}/bundle": {
+      "post": {
+        "tags": ["Bundle"],
+        "summary": "Trigger flow bundle",
+        "description": "Start a bundle job for a project flow. For multi-config flows, specify the named flow via ?flow= query parameter.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "my-web-flow",
+              "description": "Named flow to bundle (required for multi-config flows)"
+            },
+            "required": false,
+            "description": "Named flow to bundle (required for multi-config flows)",
+            "name": "flow",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bundle job started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Flow selection required for multi-config flows",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/bundle/stream": {
+      "get": {
+        "tags": ["Bundle"],
+        "summary": "Stream bundle job status (SSE)",
+        "description": "Stream bundle job progress via Server-Sent Events.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "jobId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE event stream"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/flows/{flowId}/publish": {
+      "get": {
+        "tags": ["Deployments"],
+        "summary": "Get publish status",
+        "description": "Get the current publish status for a flow (CDN deployment).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Publish status"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Deployments"],
+        "summary": "Publish flow to CDN",
+        "description": "Publish a bundled flow to the CDN for client-side loading.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[a-zA-Z0-9_-]+$",
+              "example": "flow_a1b2c3d4"
+            },
+            "required": true,
+            "name": "flowId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Flow published"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/deployments/latest": {
+      "get": {
+        "tags": ["Deployments"],
+        "summary": "List latest deployments",
+        "description": "List the latest deployment for each flow in the project.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest deployment per flow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LatestDeploymentsByFlow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/runtimes/register": {
+      "post": {
+        "tags": ["Deployments"],
+        "summary": "Register runtime",
+        "description": "Register a server-side runtime container and get a presigned bundle URL.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^proj_[a-zA-Z0-9_-]+$",
+              "example": "proj_x7y8z9"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRuntimeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Presigned bundle URL"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/projects/{projectId}/observe/ticket": {
       "post": {
         "tags": ["Observe"],
@@ -2256,7 +5139,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateTicketResponse"
+                  "$ref": "#/components/schemas/ObserveTicketResponse"
                 }
               }
             }

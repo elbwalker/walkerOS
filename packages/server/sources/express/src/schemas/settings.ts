@@ -32,11 +32,6 @@ export const SettingsSchema = z.object({
       'CORS configuration: false = disabled, true = allow all origins (default), object = custom configuration',
     )
     .default(true),
-
-  status: z
-    .boolean()
-    .describe('Enable health check endpoints (/health, /ready)')
-    .default(true),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

@@ -27,9 +27,8 @@ npx runneros bundle
 # Simulate event processing
 npx runneros simulate
 
-# Run collector/server
-npx runneros run collect <file>
-npx runneros run serve <file>
+# Run flows
+npx runneros run <file>
 ```
 
 ## Installation

@@ -1,0 +1,55 @@
+{
+  "name": "@walkeros/source-demo",
+  "description": "Demo source for walkerOS - generates events from config",
+  "version": "3.0.0",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "walkerOS": {
+    "type": "source"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "import": "./dist/dev.mjs",
+      "require": "./dist/dev.js"
+    }
+  },
+  "files": [
+    "dist/**"
+  ],
+  "scripts": {
+    "build": "tsup --silent",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "jest --watchAll --colors",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"**/*.ts*\"",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@walkeros/core": "^3.0.0"
+  },
+  "devDependencies": {
+    "@walkeros/collector": "^3.0.0"
+  },
+  "repository": {
+    "url": "git+https://github.com/elbwalker/walkerOS.git",
+    "directory": "packages/web/sources/demo"
+  },
+  "author": "elbwalker <hello@elbwalker.com>",
+  "homepage": "https://github.com/elbwalker/walkerOS#readme",
+  "bugs": {
+    "url": "https://github.com/elbwalker/walkerOS/issues"
+  },
+  "keywords": [
+    "walkerOS",
+    "source",
+    "demo"
+  ]
+}

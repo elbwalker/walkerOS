@@ -7,7 +7,8 @@
 
 import { pathToFileURL } from 'url';
 import { resolve, dirname } from 'path';
-import type { Logger } from '@walkeros/core';
+import type { Collector, Logger } from '@walkeros/core';
+import type { HealthServer } from './health-server.js';
 
 export interface RuntimeConfig {
   port?: number;
@@ -15,8 +16,12 @@ export interface RuntimeConfig {
 }
 
 export interface FlowHandle {
-  collector: { command?: (cmd: string) => Promise<void> };
+  collector: {
+    command?: (cmd: string) => Promise<void>;
+    status?: Collector.Status;
+  };
   file: string;
+  httpHandler?: (...args: unknown[]) => void;
 }
 
 /**
@@ -27,6 +32,7 @@ export async function loadFlow(
   config: RuntimeConfig | undefined,
   logger: Logger.Instance,
   loggerConfig?: Logger.Config,
+  healthServer?: HealthServer,
 ): Promise<FlowHandle> {
   const absolutePath = resolve(file);
   const flowDir = dirname(absolutePath);
@@ -43,21 +49,35 @@ export async function loadFlow(
     );
   }
 
-  const flowContext = loggerConfig
-    ? { ...config, logger: loggerConfig }
-    : config;
+  const flowContext = {
+    ...config,
+    ...(loggerConfig ? { logger: loggerConfig } : {}),
+    ...(healthServer ? { externalServer: true } : {}),
+  };
   const result = await module.default(flowContext);
 
   if (!result || !result.collector) {
     throw new Error(`Invalid flow bundle: ${file} must return { collector }`);
   }
 
-  return { collector: result.collector, file };
+  // Mount flow's httpHandler onto runner's health server (opaque — no type inspection)
+  if (healthServer && typeof result.httpHandler === 'function') {
+    healthServer.setFlowHandler(result.httpHandler);
+  }
+
+  return {
+    collector: {
+      command: result.collector.command,
+      status: result.collector.status,
+    },
+    file,
+    httpHandler: result.httpHandler,
+  };
 }
 
 /**
- * Swap the running flow to a new bundle. If the new bundle fails to load,
- * the current flow stays active (atomic swap).
+ * Swap the running flow to a new bundle. Shuts down old flow FIRST to release
+ * the port, then loads the new bundle. Brief downtime is acceptable for Mode C.
  */
 export async function swapFlow(
   currentHandle: FlowHandle,
@@ -65,77 +85,33 @@ export async function swapFlow(
   config: RuntimeConfig | undefined,
   logger: Logger.Instance,
   loggerConfig?: Logger.Config,
+  healthServer?: HealthServer,
 ): Promise<FlowHandle> {
-  // Load new flow first — if this fails, current flow stays
-  const newHandle = await loadFlow(newFile, config, logger, loggerConfig);
+  logger.info('Shutting down current flow for hot-swap...');
 
-  // New flow loaded successfully, shut down old one
+  // Detach old handler — health endpoints still work during swap
+  if (healthServer) {
+    healthServer.setFlowHandler(null);
+  }
+
+  // Delegate to collector's shutdown command (destroys sources, destinations, transformers)
   try {
     if (currentHandle.collector.command) {
       await currentHandle.collector.command('shutdown');
     }
   } catch (error) {
-    logger.debug(`Old flow shutdown warning: ${error}`);
+    logger.debug(`Shutdown warning: ${error}`);
   }
+
+  // Load new flow — mounts new handler onto same server
+  const newHandle = await loadFlow(
+    newFile,
+    config,
+    logger,
+    loggerConfig,
+    healthServer,
+  );
 
   logger.info('Flow swapped successfully');
   return newHandle;
-}
-
-/**
- * Run a pre-built flow bundle (legacy API — kept for backward compatibility)
- *
- * @param file - Absolute path to pre-built .mjs flow file
- * @param config - Optional runtime configuration
- * @param logger - Logger instance for output
- * @param loggerConfig - Optional logger config to forward to the flow's collector
- */
-export async function runFlow(
-  file: string,
-  config: RuntimeConfig | undefined,
-  logger: Logger.Instance,
-  loggerConfig?: Logger.Config,
-): Promise<void> {
-  logger.info(`Loading flow from ${file}`);
-
-  try {
-    const handle = await loadFlow(file, config, logger, loggerConfig);
-
-    logger.info('Flow running');
-    if (config?.port) {
-      logger.info(`Port: ${config.port}`);
-    }
-
-    // Graceful shutdown handler
-    const shutdown = async (signal: string) => {
-      logger.info(`Received ${signal}, shutting down gracefully...`);
-
-      try {
-        // Use collector's shutdown command if available
-        if (handle.collector.command) {
-          await handle.collector.command('shutdown');
-        }
-        logger.info('Shutdown complete');
-        process.exit(0);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logger.error(`Error during shutdown: ${message}`);
-        process.exit(1);
-      }
-    };
-
-    // Register shutdown handlers
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
-
-    // Keep process alive
-    await new Promise(() => {});
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    logger.error(`Failed to run flow: ${message}`);
-    if (error instanceof Error && error.stack) {
-      logger.debug('Stack trace:', { stack: error.stack });
-    }
-    throw error;
-  }
 }

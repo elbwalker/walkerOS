@@ -1,0 +1,294 @@
+---
+title: Session
+description: Standalone session detection and management for walkerOS
+sidebar_position: 1
+package: '@walkeros/web-source-session'
+---
+import { schemas } from '@walkeros/web-source-session/dev';
+
+<PackageLink github="packages/web/sources/session" npm="@walkeros/web-source-session" />
+
+# Session source
+
+Standalone session detection and management that can be composed with any walkerOS source.
+
+## Installation
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the packages:
+
+<CodeSnippet
+  code={`npm install @walkeros/collector @walkeros/web-source-session`}
+  language="bash"
+/>
+
+Configure in your code:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
+import { sourceSession } from '@walkeros/web-source-session';
+
+const { collector, elb } = await startFlow({
+  sources: {
+    browser: sourceBrowser,
+    session: {
+      code: sourceSession,
+      config: {
+        settings: {
+          storage: true,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json` sources:
+
+<CodeSnippet
+  code={`"sources": {
+  "browser": {
+    "package": "@walkeros/web-source-browser"
+  },
+  "session": {
+    "package": "@walkeros/web-source-session",
+    "config": {
+      "settings": {
+        "storage": true
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+
+  </TabItem>
+</Tabs>
+
+## Detection methods
+
+The session source uses two complementary methods:
+
+| Method | Storage | Use Case |
+|--------|---------|----------|
+| **Window** | None | Privacy-first, per-page session |
+| **Storage** | localStorage | Cross-page session tracking |
+
+### Window-based detection
+
+Without storage, session detection relies on browser signals:
+
+**Navigation type:**
+<CodeSnippet
+  code={`// Session starts when navigation type indicates new visit
+const isNewSession =
+  performance.navigation.type === 0 || // Navigate (new page load)
+  document.referrer === '' ||          // No referrer (direct visit)
+  !isSameHost(document.referrer);      // External referrer`}
+  language="typescript"
+/>
+
+**Marketing parameters:**
+
+UTM and other marketing parameters trigger session start. The following are recognized by default:
+
+<CodeSnippet
+  code={`// UTM parameters → mapped to short names
+utm_source    → source
+utm_medium    → medium
+utm_campaign  → campaign
+utm_term      → term
+utm_content   → content
+
+// Click IDs → stored as clickId + original key
+gclid, dclid, fbclid, msclkid, ttclid, twclid, igshid, sclid`}
+  language="typescript"
+/>
+
+To capture additional URL parameters, pass a `parameters` map. Each entry maps a URL parameter name to the property name it should be stored as in the session data:
+
+<CodeSnippet
+  code={`session: {
+  code: sourceSession,
+  config: {
+    settings: { storage: true },
+    parameters: {
+      ref: 'referral',           // ?ref=newsletter → { referral: 'newsletter' }
+      affiliate_id: 'affiliate', // ?affiliate_id=abc → { affiliate: 'abc' }
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+### Storage-based detection
+
+With `storage: true`, sessions persist across page loads:
+
+<CodeSnippet
+  code={`session: {
+  code: sourceSession,
+  config: {
+    settings: {
+      storage: true,
+      length: 30, // Session timeout in minutes
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+**Session lifecycle:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Session Timeline                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  User visits    Page 2       Page 3       30min idle       │
+│       │            │            │              │            │
+│       ▼            ▼            ▼              ▼            │
+│   [Session 1] ─────────────────────────────► [Expires]     │
+│   id: abc123                                                │
+│                                                             │
+│                                          User returns       │
+│                                               │             │
+│                                               ▼             │
+│                                         [Session 2]        │
+│                                         id: def456         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Storage keys:**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `sessionKey` | `elbSessionId` | localStorage key for session ID |
+| `deviceKey` | `elbDeviceId` | localStorage key for device ID |
+
+## Session start event
+
+When a new session is detected, the source pushes a `session start` event and sets the user's session and device IDs on the collector:
+
+<CodeSnippet
+  code={`{
+  name: 'session start',
+  data: {
+    isStart: true,           // Always true when this event fires
+    isNew: true,             // True only on the device's very first session
+    id: 'abc123',            // Session ID
+    device: 'xyz789',        // Device ID (storage mode only)
+    storage: true,           // Whether storage is active
+    count: 5,                // Total session count for this device
+    runs: 1,                 // Page views in this session
+    start: 1704067200,       // Session start timestamp
+    referrer: 'google.com',  // Hostname only (not full URL)
+    marketing: {
+      source: 'google',
+      medium: 'cpc',
+      campaign: 'winter-sale',
+      clickId: 'gclid',      // Which click ID platform (if present)
+      gclid: 'AW-123...',    // The actual click ID value
+    }
+  }
+}`}
+  language="typescript"
+/>
+
+**`isStart` vs `isNew`:**
+
+| Field | Meaning |
+|-------|---------|
+| `isStart: true` | A new session began on this page load |
+| `isNew: true` | This is the device's very first session ever (storage mode only) |
+
+A returning visitor starting their second session has `isStart: true` but `isNew: false`. `isNew` only appears in storage mode since window-only mode has no device memory.
+
+**Click ID parameters** are stored twice: `clickId` identifies which platform originated the click (e.g. `'gclid'`), and a separate field stores the actual value (e.g. `gclid: 'AW-123...'`). This makes it easy to filter by platform without inspecting the value.
+
+## Configuration
+
+<PropertyTable schema={schemas.settings} />
+
+## Consent integration
+
+Session detection adapts to consent state:
+
+| Consent State | Behavior |
+|---------------|----------|
+| No consent | Window-only detection (no storage) |
+| Consent granted | Storage-based with device ID |
+| Consent revoked | Falls back to window-only |
+
+<CodeSnippet
+  code={`// Configure consent requirement
+session: {
+  code: sourceSession,
+  config: {
+    settings: {
+      consent: 'analytics', // Wait for this consent key
+      storage: true,
+    },
+  },
+}
+
+// Grant consent to enable storage
+elb('walker consent', { analytics: true });`}
+  language="typescript"
+/>
+
+## Pulse mode
+
+With `pulse: true`, the source updates the session's last-seen timestamp on each page load without counting it as a new page view and without triggering a new `session start` event. Use this for heartbeat-style presence tracking where you want to extend session lifetime without inflating `runs`:
+
+<CodeSnippet
+  code={`session: {
+  code: sourceSession,
+  config: {
+    settings: {
+      storage: true,
+      pulse: true,  // Extends session, does not increment runs
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+## Custom session callback
+
+The `cb` setting lets you hook into session detection. It receives the detected session data, the collector instance, and the default callback:
+
+<CodeSnippet
+  code={`session: {
+  code: sourceSession,
+  config: {
+    settings: {
+      cb: (session, collector, defaultCb) => {
+        // Run custom logic first
+        console.log('New session:', session.id);
+
+        // Then run the default behavior (sets user IDs + pushes event)
+        defaultCb(session, collector);
+      },
+    },
+  },
+}`}
+  language="typescript"
+/>
+
+Set `cb: false` to completely disable the default behavior — no `user` commands and no `session start` event will be emitted. This is useful when you want full control over what happens after detection.
+
+## Next steps
+
+* [Browser Source](/docs/sources/web/browser) - DOM-based event tracking
+* [DataLayer Source](/docs/sources/web/dataLayer) - GTM/GA4 integration
+* [Consent Guide](/docs/guides/consent) - Consent management patterns

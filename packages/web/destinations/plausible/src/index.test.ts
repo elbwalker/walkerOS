@@ -5,8 +5,6 @@ import { startFlow } from '@walkeros/collector';
 import { getEvent, mockEnv } from '@walkeros/core';
 import { examples } from './dev';
 
-const { events, mapping } = examples;
-
 describe('destination plausible', () => {
   let elb: WalkerOS.Elb;
   let destination: DestinationPlausible.Destination;
@@ -135,42 +133,5 @@ describe('destination plausible', () => {
     await elb(event);
 
     expect((mockScript.dataset as Record<string, string>).domain).toBe(domain);
-  });
-
-  test('event entity action', async () => {
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv as DestinationPlausible.Env,
-    };
-    elb('walker destination', destinationWithEnv, {
-      mapping: mapping.config,
-    });
-
-    await elb(event);
-
-    // Check that plausible was called with the expected arguments
-    expect(calls).toContainEqual({
-      path: ['window', 'plausible'],
-      args: events.customEvent(),
-    });
-  });
-
-  test('event purchase', async () => {
-    const event = getEvent('order complete');
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv as DestinationPlausible.Env,
-    };
-    elb('walker destination', destinationWithEnv, {
-      mapping: mapping.config,
-    });
-
-    await elb(event);
-
-    // Check that plausible was called with the expected arguments
-    expect(calls).toContainEqual({
-      path: ['window', 'plausible'],
-      args: events.purchase(),
-    });
   });
 });

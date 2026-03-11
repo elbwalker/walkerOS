@@ -56,20 +56,23 @@ automatically with proper scoping.
 ```typescript
 interface Logger.Instance {
   error(message: string | Error, context?: unknown | Error): void;
+  warn(message: string | Error, context?: unknown | Error): void;
   info(message: string | Error, context?: unknown | Error): void;
   debug(message: string | Error, context?: unknown | Error): void;
   throw(message: string | Error, context?: unknown): never;
+  json(data: unknown): void;
   scope(name: string): Logger.Instance;
 }
 ```
 
 ### Log Levels
 
-- **ERROR (0)**: Always visible—use for errors only
-- **INFO (1)**: High-level operations (server startup, event processed)
-- **DEBUG (2)**: Low-level details (API calls, transformations)
+- **ERROR (0)**: Always visible—use for fatal/critical errors only
+- **WARN (1)**: Degraded state, config issues, transient failures
+- **INFO (2)**: High-level operations (server startup, event processed)
+- **DEBUG (3)**: Low-level details (API calls, transformations)
 
-**Default**: ERROR only (must configure to see INFO/DEBUG)
+**Default**: ERROR only (must configure to see WARN/INFO/DEBUG)
 
 ### Context Parameter
 
@@ -296,8 +299,9 @@ const { elb } = await startFlow({
 **Levels:**
 
 - `'ERROR'`: Only errors (default)
-- `'INFO'`: Errors + info
-- `'DEBUG'`: Everything (errors + info + debug)
+- `'WARN'`: Errors + warnings
+- `'INFO'`: Errors + warnings + info
+- `'DEBUG'`: Everything
 
 ## Related Skills
 

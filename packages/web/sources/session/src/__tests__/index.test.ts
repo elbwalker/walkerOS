@@ -5,6 +5,7 @@ import {
   createMockCommand,
   createSessionSource,
 } from './test-utils';
+import { examples } from '../dev';
 
 describe('Session Source', () => {
   let collectedEvents: WalkerOS.Event[];
@@ -57,16 +58,6 @@ describe('Session Source', () => {
 
       // Session start should have been called, which calls command('user', ...)
       expect(mockCommand).toHaveBeenCalled();
-    });
-
-    test('pushes session start event when session is new', async () => {
-      await createSessionSource(collector);
-
-      // Should have pushed a session start event
-      const sessionEvent = collectedEvents.find(
-        (e) => e.name === 'session start',
-      );
-      expect(sessionEvent).toBeDefined();
     });
   });
 

@@ -7,28 +7,7 @@
 
 import { existsSync } from 'fs';
 import { resolveAsset } from '../../core/asset-resolver.js';
-import {
-  RunModeSchema,
-  PortSchema,
-  type RunMode,
-} from '../../schemas/index.js';
-
-/**
- * Validates run mode using Zod schema.
- *
- * @param mode - Mode to validate
- * @throws Error if mode is invalid
- */
-export function validateMode(mode: string): asserts mode is RunMode {
-  const result = RunModeSchema.safeParse(mode);
-  if (!result.success) {
-    throw new Error(
-      `Invalid mode: "${mode}"\n` +
-        `   Valid modes: collect, serve\n` +
-        `   Example: walkeros run collect ./flow.json`,
-    );
-  }
-}
+import { PortSchema } from '../../schemas/index.js';
 
 /**
  * Validates flow file exists.

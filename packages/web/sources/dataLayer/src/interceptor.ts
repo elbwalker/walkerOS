@@ -10,6 +10,10 @@ let isProcessing = false;
 export function interceptDataLayer(
   push: Collector.PushFn,
   config: Source.Config,
+  win: Record<string, unknown> = globalThis.window as unknown as Record<
+    string,
+    unknown
+  >,
 ): void {
   const settings = config.settings as {
     name?: string;
@@ -19,11 +23,11 @@ export function interceptDataLayer(
   const dataLayerName = settings?.name || 'dataLayer';
 
   // Ensure dataLayer exists
-  if (!window[dataLayerName]) {
-    window[dataLayerName] = [];
+  if (!win[dataLayerName]) {
+    win[dataLayerName] = [];
   }
 
-  const dataLayer = window[dataLayerName] as unknown[];
+  const dataLayer = win[dataLayerName] as unknown[];
   if (!Array.isArray(dataLayer)) return;
 
   // Store original push
@@ -58,6 +62,10 @@ export function processExistingEvents(
   push: Collector.PushFn,
   config: Source.Config,
   limit?: number,
+  win: Record<string, unknown> = globalThis.window as unknown as Record<
+    string,
+    unknown
+  >,
 ): void {
   const settings = config.settings as {
     name?: string;
@@ -65,7 +73,7 @@ export function processExistingEvents(
     filter?: (event: unknown) => boolean;
   };
   const dataLayerName = settings?.name || 'dataLayer';
-  const dataLayer = window[dataLayerName] as unknown[];
+  const dataLayer = win[dataLayerName] as unknown[];
 
   if (!Array.isArray(dataLayer)) return;
 

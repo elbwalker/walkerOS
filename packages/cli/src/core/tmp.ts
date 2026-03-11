@@ -2,12 +2,13 @@
  * Unified Temporary Directory Utility
  *
  * Single source of truth for all temp paths in the CLI.
- * All temp files go to ./.tmp/ relative to current working directory.
+ * All temp files go to os.tmpdir() by default.
  */
 
+import os from 'os';
 import path from 'path';
 
-const DEFAULT_TMP_ROOT = '.tmp';
+const DEFAULT_TMP_ROOT = os.tmpdir();
 
 /**
  * Get a path within the temp directory.
@@ -18,9 +19,9 @@ const DEFAULT_TMP_ROOT = '.tmp';
  *
  * @example
  * ```typescript
- * getTmpPath()                           // → "/cwd/.tmp"
- * getTmpPath(undefined, 'entry.js')      // → "/cwd/.tmp/entry.js"
- * getTmpPath(undefined, 'cache', 'builds') // → "/cwd/.tmp/cache/builds"
+ * getTmpPath()                           // → "/tmp"
+ * getTmpPath(undefined, 'entry.js')      // → "/tmp/entry.js"
+ * getTmpPath(undefined, 'cache', 'builds') // → "/tmp/cache/builds"
  * getTmpPath('/custom', 'cache')         // → "/custom/cache"
  * ```
  */
@@ -38,7 +39,7 @@ export function getTmpPath(tmpDir?: string, ...segments: string[]): string {
  * the resolver to downstream functions. This prevents the class of bugs
  * where callers forget to pass tmpDir.
  *
- * @param tmpDir - Custom temp directory (optional, defaults to '.tmp')
+ * @param tmpDir - Custom temp directory (optional, defaults to os.tmpdir())
  * @returns A function that resolves paths within the temp directory
  *
  * @example

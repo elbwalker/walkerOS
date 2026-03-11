@@ -83,5 +83,6 @@ export async function createUsercentricsSource(
     id: 'test-usercentrics',
     logger: createMockLogger(),
     setIngest: async () => {},
+    setRespond: jest.fn(),
   });
 }

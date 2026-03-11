@@ -4,14 +4,15 @@ import {
   requireProjectId,
   resolveBaseUrl,
 } from '../../core/auth.js';
-import { createCommandLogger } from '../../core/logger.js';
+import { parseSSEEvents } from '../../core/sse.js';
+import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import type { GlobalOptions } from '../../types/global.js';
 import { getFlow } from '../flows/index.js';
 
 // === Helpers ===
 
-async function resolveConfigId(options: {
+async function resolveSettingsId(options: {
   flowId: string;
   projectId: string;
   flowName: string;
@@ -20,14 +21,18 @@ async function resolveConfigId(options: {
     flowId: options.flowId,
     projectId: options.projectId,
   });
-  const content = flow.content as { flows?: Record<string, unknown> };
-  const flowNames = Object.keys(content.flows ?? {});
-  if (!flowNames.includes(options.flowName)) {
+  const settings = (flow as { settings?: Array<{ id: string; name: string }> })
+    .settings;
+  if (!settings?.length) {
+    throw new Error('Flow has no settings.');
+  }
+  const match = settings.find((c) => c.name === options.flowName);
+  if (!match) {
     throw new Error(
-      `Flow "${options.flowName}" not found. Available: ${flowNames.join(', ')}`,
+      `Flow "${options.flowName}" not found. Available: ${settings.map((c) => c.name).join(', ')}`,
     );
   }
-  return options.flowName;
+  return match.id;
 }
 
 async function getAvailableFlowNames(options: {
@@ -38,8 +43,76 @@ async function getAvailableFlowNames(options: {
     flowId: options.flowId,
     projectId: options.projectId,
   });
-  const content = flow.content as { flows?: Record<string, unknown> };
-  return Object.keys(content.flows ?? {});
+  const settings = (flow as { settings?: Array<{ name: string }> }).settings;
+  return settings?.map((c) => c.name) ?? [];
+}
+
+// === SSE Streaming ===
+
+interface DeploymentResult {
+  status: string;
+  substatus?: string | null;
+  type?: string;
+  containerUrl?: string | null;
+  publicUrl?: string | null;
+  errorMessage?: string | null;
+  [key: string]: unknown;
+}
+
+export async function streamDeploymentStatus(
+  projectId: string,
+  deploymentId: string,
+  options: {
+    timeout?: number;
+    signal?: AbortSignal;
+    onStatus?: (status: string, substatus: string | null) => void;
+  },
+): Promise<DeploymentResult> {
+  const base = resolveBaseUrl();
+  const timeoutMs = options.timeout ?? 120_000;
+
+  const response = await authenticatedFetch(
+    `${base}/api/projects/${projectId}/deployments/${deploymentId}/stream`,
+    {
+      headers: { Accept: 'text/event-stream' },
+      signal: options.signal ?? AbortSignal.timeout(timeoutMs),
+    },
+  );
+
+  if (!response.ok) throw new Error(`Stream failed: ${response.status}`);
+  if (!response.body) throw new Error('No response body');
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let result: DeploymentResult | null = null;
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const { parsed, remainder } = parseSSEEvents(buffer);
+      buffer = remainder;
+
+      for (const event of parsed) {
+        if (event.type === 'status') {
+          const data = JSON.parse(event.data);
+          result = data;
+          options.onStatus?.(data.status, data.substatus ?? null);
+        }
+        if (event.type === 'done') {
+          return result!;
+        }
+      }
+    }
+  } finally {
+    reader.cancel().catch(() => {});
+  }
+
+  if (!result) throw new Error('Stream ended without terminal status');
+  return result;
 }
 
 // === Programmatic API ===
@@ -49,6 +122,9 @@ export interface DeployOptions {
   projectId?: string;
   wait?: boolean;
   flowName?: string;
+  timeout?: number; // ms, default 120_000
+  signal?: AbortSignal;
+  onStatus?: (status: string, substatus: string | null) => void;
 }
 
 export async function deploy(options: DeployOptions) {
@@ -56,12 +132,19 @@ export async function deploy(options: DeployOptions) {
   const client = createApiClient();
 
   if (options.flowName) {
-    const configId = await resolveConfigId({
+    const settingsId = await resolveSettingsId({
       flowId: options.flowId,
       projectId,
       flowName: options.flowName,
     });
-    return deployConfig({ ...options, projectId, configId });
+    return deploySettings({
+      ...options,
+      projectId,
+      settingsId,
+      timeout: options.timeout,
+      signal: options.signal,
+      onStatus: options.onStatus,
+    });
   }
 
   // Legacy path
@@ -79,7 +162,7 @@ export async function deploy(options: DeployOptions) {
         projectId,
       });
       throw new Error(
-        `This flow has multiple configs. Use --flow <name> to specify one.\n` +
+        `This flow has multiple settings. Use --flow <name> to specify one.\n` +
           `Available: ${names.join(', ')}`,
       );
     }
@@ -88,53 +171,32 @@ export async function deploy(options: DeployOptions) {
 
   if (!options.wait) return data;
 
-  // Poll /advance until terminal
-  const terminalStatuses = ['active', 'published', 'failed', 'deleted'];
-  let status = data.status;
-  let result: Record<string, unknown> = { ...data };
+  // Stream deployment status via SSE
+  const result = await streamDeploymentStatus(projectId, data.deploymentId, {
+    timeout: options.timeout,
+    signal: options.signal,
+    onStatus: options.onStatus,
+  });
 
-  while (!terminalStatuses.includes(status)) {
-    await new Promise((r) => setTimeout(r, 3000));
-
-    const { data: advanced, error: advanceError } = await client.POST(
-      '/api/projects/{projectId}/flows/{flowId}/deploy/{deploymentId}/advance',
-      {
-        params: {
-          path: {
-            projectId,
-            flowId: options.flowId,
-            deploymentId: data.deploymentId,
-          },
-        },
-      },
-    );
-
-    if (advanceError)
-      throw new Error(
-        advanceError.error?.message || 'Failed to advance deployment',
-      );
-    if (advanced) {
-      status = advanced.status;
-      result = { ...advanced };
-    }
-  }
-
-  return result;
+  return { ...data, ...result };
 }
 
-// TODO: Replace with typed client.POST() once api.gen.d.ts includes per-config routes
-async function deployConfig(options: {
+// TODO: Replace with typed client.POST() once api.gen.d.ts includes per-settings routes
+async function deploySettings(options: {
   flowId: string;
   projectId: string;
-  configId: string;
+  settingsId: string;
   wait?: boolean;
+  timeout?: number;
+  signal?: AbortSignal;
+  onStatus?: (status: string, substatus: string | null) => void;
 }) {
-  const { flowId, projectId, configId } = options;
+  const { flowId, projectId, settingsId } = options;
   const base = resolveBaseUrl();
 
-  // 1. Trigger per-config deploy
+  // 1. Trigger per-settings deploy
   const response = await authenticatedFetch(
-    `${base}/api/projects/${projectId}/flows/${flowId}/configs/${configId}/deploy`,
+    `${base}/api/projects/${projectId}/flows/${flowId}/settings/${settingsId}/deploy`,
     { method: 'POST' },
   );
   if (!response.ok) {
@@ -149,29 +211,14 @@ async function deployConfig(options: {
   const data = await response.json();
   if (!options.wait) return data;
 
-  // 2. Poll per-config advance
-  const terminalStatuses = ['active', 'published', 'failed', 'deleted'];
-  let status = data.status;
-  let result: Record<string, unknown> = { ...data };
+  // 2. Stream deployment status via SSE
+  const result = await streamDeploymentStatus(projectId, data.deploymentId, {
+    timeout: options.timeout,
+    signal: options.signal,
+    onStatus: options.onStatus,
+  });
 
-  while (!terminalStatuses.includes(status)) {
-    await new Promise((r) => setTimeout(r, 3000));
-    const advResponse = await authenticatedFetch(
-      `${base}/api/projects/${projectId}/flows/${flowId}/configs/${configId}/deployments/${data.deploymentId}/advance`,
-      { method: 'POST' },
-    );
-    if (!advResponse.ok) {
-      const body: { error?: { message?: string } } = await advResponse
-        .json()
-        .catch(() => ({}));
-      throw new Error(body.error?.message || 'Failed to advance deployment');
-    }
-    const advanced = await advResponse.json();
-    status = advanced.status;
-    result = { ...advanced };
-  }
-
-  return result;
+  return { ...data, ...result };
 }
 
 export async function getDeployment(options: {
@@ -182,14 +229,14 @@ export async function getDeployment(options: {
   const projectId = options.projectId ?? requireProjectId();
 
   if (options.flowName) {
-    const configId = await resolveConfigId({
+    const settingsId = await resolveSettingsId({
       flowId: options.flowId,
       projectId,
       flowName: options.flowName,
     });
     const base = resolveBaseUrl();
     const response = await authenticatedFetch(
-      `${base}/api/projects/${projectId}/flows/${options.flowId}/configs/${configId}/deploy`,
+      `${base}/api/projects/${projectId}/flows/${options.flowId}/settings/${settingsId}/deploy`,
     );
     if (!response.ok) {
       const body: { error?: { message?: string } } = await response
@@ -217,15 +264,32 @@ interface DeployCommandOptions extends GlobalOptions {
   project?: string;
   flow?: string;
   wait?: boolean;
+  timeout?: string;
   output?: string;
   json?: boolean;
 }
+
+const statusLabels: Record<string, string> = {
+  bundling: 'Building bundle...',
+  'bundling:building': 'Building bundle...',
+  'bundling:publishing': 'Publishing to web...',
+  deploying: 'Deploying container...',
+  'deploying:provisioning': 'Provisioning container...',
+  'deploying:starting': 'Starting container...',
+  active: 'Container is live',
+  published: 'Published',
+  failed: 'Deployment failed',
+};
 
 export async function deployCommand(
   flowId: string,
   options: DeployCommandOptions,
 ) {
-  const log = createCommandLogger(options);
+  const log = createCLILogger(options);
+
+  const timeoutMs = options.timeout
+    ? parseInt(options.timeout, 10) * 1000
+    : undefined;
 
   try {
     const result = await deploy({
@@ -233,6 +297,15 @@ export async function deployCommand(
       projectId: options.project,
       flowName: options.flow,
       wait: options.wait !== false,
+      timeout: timeoutMs,
+      onStatus: options.json
+        ? undefined
+        : (status, substatus) => {
+            const key = substatus ? `${status}:${substatus}` : status;
+            log.info(
+              statusLabels[key] || statusLabels[status] || `Status: ${status}`,
+            );
+          },
     });
 
     if (options.json) {
@@ -243,10 +316,9 @@ export async function deployCommand(
     const r = result as Record<string, unknown>;
 
     if (r.status === 'published') {
-      log.success(`Published: ${r.publicUrl}`);
-      if (r.scriptTag) log.info(`Script tag: ${r.scriptTag}`);
+      log.info(`Published: ${r.publicUrl}`);
     } else if (r.status === 'active') {
-      log.success(`Active: ${r.containerUrl}`);
+      log.info(`Active: ${r.containerUrl}`);
     } else if (r.status === 'failed') {
       log.error(`Failed: ${r.errorMessage || 'Unknown error'}`);
       process.exit(1);
@@ -265,7 +337,7 @@ export async function getDeploymentCommand(
   flowId: string,
   options: DeployCommandOptions,
 ) {
-  const log = createCommandLogger(options);
+  const log = createCLILogger(options);
 
   try {
     const result = await getDeployment({
@@ -290,7 +362,6 @@ export async function getDeploymentCommand(
     log.info(`Status: ${r.status}`);
     if (r.containerUrl) log.info(`Endpoint: ${r.containerUrl}`);
     if (r.publicUrl) log.info(`URL: ${r.publicUrl}`);
-    if (r.scriptTag) log.info(`Script tag: ${r.scriptTag}`);
     if (r.errorMessage) log.error(`Error: ${r.errorMessage}`);
   } catch (err) {
     log.error(err instanceof Error ? err.message : 'Failed to get deployment');

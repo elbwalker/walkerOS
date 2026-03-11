@@ -2,7 +2,7 @@
 name: walkeros-using-cli
 description:
   Use when bundling walkerOS flows, testing events with simulate/push, running
-  local servers, validating configs, or configuring Flow.Setup JSON files.
+  local servers, validating configs, or configuring Flow.Settings JSON files.
 ---
 
 # Using the walkerOS CLI
@@ -13,7 +13,7 @@ The walkerOS CLI (`walkeros`) bundles, tests, and runs event collection flows.
 
 **Core workflow:**
 
-1. **Configure** - Write Flow.Setup JSON config
+1. **Configure** - Write Flow.Config JSON config
 2. **Bundle** - Generate optimized JS bundle
 3. **Test** - Simulate events (mocked) or push (real)
 4. **Deploy** - Run locally or deploy to production
@@ -36,15 +36,15 @@ walkeros push flow.json -e '{"entity":"page","action":"view"}'
 
 ## Commands Overview
 
-| Command       | Purpose                        | Safe? |
-| ------------- | ------------------------------ | ----- |
-| `bundle`      | Generate JS bundle from config | ✅    |
-| `simulate`    | Test with mocked API calls     | ✅    |
-| `push`        | Execute with real API calls    | ⚠️    |
-| `run collect` | Local HTTP event collection    | ✅    |
-| `run serve`   | Local static file server       | ✅    |
-| `validate`    | Validate configs/events        | ✅    |
-| `cache`       | Manage caching                 | ✅    |
+| Command    | Purpose                        | Safe? |
+| ---------- | ------------------------------ | ----- |
+| `bundle`   | Generate JS bundle from config | ✅    |
+| `simulate` | Test with mocked API calls     | ✅    |
+| `push`     | Execute with real API calls    | ⚠️    |
+| `run`      | Local HTTP event collection    | ✅    |
+| `deploy`   | Deploy flows to cloud          | ⚠️    |
+| `validate` | Validate configs/events        | ✅    |
+| `cache`    | Manage caching                 | ✅    |
 
 For detailed command reference, see
 [commands-reference.md](commands-reference.md).
@@ -61,7 +61,7 @@ For detailed command reference, see
 3. Simulate: walkeros simulate flow.json -e event.json
 4. Fix issues, repeat 2-3
 5. Push test: walkeros push flow.json -e event.json
-6. Deploy bundle
+6. Deploy: walkeros deploy start <flowId>
 ```
 
 ### Multi-Flow Development
@@ -77,25 +77,27 @@ walkeros bundle flow.json --all
 walkeros simulate flow.json --flow myFlow -e event.json
 ```
 
-### Local Development Servers
+### Local Development Server
 
 ```bash
-# Server-side: HTTP event collection
-walkeros run collect flow.json --port 3000
-
-# Browser-side: Static file server
-walkeros run serve flow.json --port 8080
+# HTTP event collection server
+walkeros run flow.json --port 3000
 ```
+
+**Server port note:** The `--port` flag (or `PORT` env var) is forwarded at
+runtime to all source configs that have a `port` setting. You don't need to
+hardcode ports in the flow config — set `port: 8080` as a default and let the
+runtime override it.
 
 ---
 
-## Flow.Setup Configuration
+## Flow.Config Configuration
 
 ### Minimal Config
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "web": {},
@@ -117,7 +119,7 @@ walkeros run serve flow.json --port 8080
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "<flowName>": {
       "web": {} | "server": {},     // Platform (required)
@@ -134,6 +136,42 @@ walkeros run serve flow.json --port 8080
 
 For detailed configuration options, see
 [flow-configuration.md](flow-configuration.md).
+
+---
+
+## Testing with Step Examples
+
+### Simulate with `--example`
+
+Run a named step example through the full flow pipeline:
+
+```bash
+# Simulate the "purchase" step example
+walkeros simulate flow.json --example purchase
+```
+
+Example output:
+
+```
+Step: destinations.gtag
+  in:  { name: "order complete", data: { id: "ORD-123", total: 149.97 } }
+  out: ["event", "purchase", { transaction_id: "ORD-123", value: 149.97 }]
+  Status: PASS
+```
+
+### Validate flow config
+
+Validate schema, references, and cross-step example compatibility:
+
+```bash
+walkeros validate flow.json
+```
+
+All checks run automatically — schema validation, reference checking, and
+cross-step example compatibility. No flags needed for full validation.
+
+For full details on writing and testing with step examples, see
+[using-step-examples](../walkeros-using-step-examples/SKILL.md).
 
 ---
 
@@ -205,8 +243,9 @@ Options:
 walkeros validate <input> [options]
 
 Options:
-  --flow            Validate as flow config
-  --config          Validate as destination/source config
+  --type <type>     Validation type (default: flow). Also: event, mapping, contract
+  --path <path>     Validate entry against package schema (e.g. destinations.snowplow)
+  --flow <name>     Flow name for multi-flow configs
   --strict          Treat warnings as errors
   --json            JSON output
 
@@ -217,33 +256,29 @@ Exit codes:
   3 = Input error
 ```
 
-### Validate a specific entry
-
-Validate a destination, source, or transformer's settings against its package
-schema:
-
-```bash
-walkeros validate destinations.snowplow
-walkeros validate sources.browser
-walkeros validate transformers.validator
-```
-
-Uses dot-notation: `{section}.{key}`. Fetches the package's `walkerOS.json` from
-CDN and validates `config.settings` against the published schema.
-
 ### Run Command
 
 ```bash
 # HTTP event collection server
-walkeros run collect <config|bundle> [options]
-
-# Static file server for browser bundles
-walkeros run serve <config|bundle> [options]
+walkeros run <config|bundle> [options]
 
 Options:
-  -p, --port <number>   Port (default: 3000/8080)
-  -h, --host <string>   Host (default: localhost)
+  -p, --port <number>   Port (default: 8080)
+  -h, --host <string>   Host (default: 0.0.0.0)
 ```
+
+---
+
+## Bundler Gotchas
+
+- **Circular copies:** Never include the output directory itself (e.g.,
+  `include: ["./dist"]` when output is `dist/bundle.mjs`). The CLI detects this
+  and errors.
+- **Runtime paths:** The runner sets CWD to the bundle directory. File paths in
+  `settings` resolve relative to the bundle, not the project root.
+- **Component names:** Source, transformer, destination, and store names must be
+  valid JavaScript identifiers (camelCase). Hyphens like `gtag-wrapper` cause
+  syntax errors — use `gtagWrapper` instead.
 
 ---
 
@@ -303,4 +338,6 @@ Use absolute or relative paths:
 
 - [commands-reference.md](commands-reference.md) - All commands with full
   options
-- [flow-configuration.md](flow-configuration.md) - Complete Flow.Setup reference
+- [flow-configuration.md](flow-configuration.md) - Complete Flow.Config
+  reference
+- [server-deployment.md](server-deployment.md) - Server flow deployment guide

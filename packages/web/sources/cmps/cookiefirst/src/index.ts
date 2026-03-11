@@ -132,7 +132,7 @@ export const sourceCookieFirst: Source.Init<Types> = async (context) => {
     type: 'cookiefirst',
     config: fullConfig,
     push: elb,
-    destroy: async () => {
+    destroy: async (_context) => {
       // Remove event listeners on cleanup
       if (actualWindow && initListener) {
         actualWindow.removeEventListener('cf_init', initListener);

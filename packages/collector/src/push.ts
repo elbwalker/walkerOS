@@ -29,7 +29,7 @@ export function createPush<T extends Collector.Instance>(
       return await tryCatchAsync(
         async (): Promise<Elb.PushResult> => {
           const pushStart = Date.now();
-          const { id, ingest, mapping, preChain } = options;
+          const { id, ingest, respond, mapping, preChain } = options;
           let partialEvent = event;
 
           // Freeze ingest for performance (pass by reference, no copying)
@@ -76,6 +76,7 @@ export function createPush<T extends Collector.Instance>(
               preChain,
               partialEvent,
               frozenIngest,
+              respond,
             );
 
             // Chain was stopped - event dropped
@@ -96,6 +97,7 @@ export function createPush<T extends Collector.Instance>(
           const result = await pushToDestinations(collector, fullEvent, {
             id,
             ingest: frozenIngest,
+            respond,
           });
 
           // Update source status

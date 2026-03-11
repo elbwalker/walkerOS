@@ -15,6 +15,9 @@ export async function initSource(
 
   // Track current ingest metadata (set per-request by setIngest)
   let currentIngest: unknown = undefined;
+  // Track current respond function (set per-request by setRespond)
+  let currentRespond: import('@walkeros/core').RespondFn | undefined =
+    undefined;
 
   // Resolve transformer chain for this source
   const preChain = walkChain(
@@ -31,6 +34,7 @@ export async function initSource(
       ...options,
       id: sourceId,
       ingest: currentIngest,
+      respond: currentRespond,
       mapping: config,
       preChain,
     });
@@ -63,6 +67,10 @@ export async function initSource(
     });
   };
 
+  const setRespond = (fn: import('@walkeros/core').RespondFn | undefined) => {
+    currentRespond = fn;
+  };
+
   const sourceContext: Source.Context = {
     collector,
     logger: initialLogger,
@@ -70,6 +78,7 @@ export async function initSource(
     config,
     env: cleanEnv,
     setIngest,
+    setRespond,
   };
 
   const sourceInstance = await tryCatchAsync(code)(sourceContext);

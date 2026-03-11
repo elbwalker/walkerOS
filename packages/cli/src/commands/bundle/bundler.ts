@@ -1,8 +1,9 @@
+import crypto from 'crypto';
 import esbuild from 'esbuild';
 import path from 'path';
 import fs from 'fs-extra';
 import type { Flow } from '@walkeros/core';
-import { packageNameToVariable } from '@walkeros/core';
+import { packageNameToVariable, ENV_MARKER_PREFIX } from '@walkeros/core';
 
 /**
  * Type guard to check if a code value is an InlineCode object.
@@ -104,7 +105,7 @@ function generateInlineCode(
 }
 import type { BuildOptions } from '../../types/bundle.js';
 import { downloadPackages } from './package-manager.js';
-import type { Logger } from '../../core/index.js';
+import type { Logger } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import {
   isBuildCached,
@@ -123,24 +124,35 @@ export interface BundleStats {
  * Copy included folders to output directory.
  * Used to make credential files and other assets available alongside the bundle.
  */
-async function copyIncludes(
+export async function copyIncludes(
   includes: string[],
   sourceDir: string,
   outputDir: string,
-  logger: Logger,
+  logger: Logger.Instance,
 ): Promise<void> {
   for (const include of includes) {
     const sourcePath = path.resolve(sourceDir, include);
     const folderName = path.basename(include);
     const destPath = path.join(outputDir, folderName);
 
+    // Detect circular copies: source contains output or output contains source
+    const resolvedOutput = path.resolve(outputDir);
+    const resolvedSource = path.resolve(sourcePath);
+    if (
+      resolvedSource === resolvedOutput ||
+      resolvedOutput.startsWith(resolvedSource + path.sep) ||
+      resolvedSource.startsWith(resolvedOutput + path.sep)
+    ) {
+      throw new Error(
+        `Circular include detected: "${include}" resolves to "${resolvedSource}" which overlaps with output directory "${resolvedOutput}"`,
+      );
+    }
+
     if (await fs.pathExists(sourcePath)) {
       await fs.copy(sourcePath, destPath);
       logger.debug(`Copied ${include} to output`);
-      // TODO: Add logging for copied folders
     } else {
-      logger.debug(`Include folder not found: ${include}`);
-      // TODO: Add logging for skipped folders (not found)
+      logger.warn(`Include folder not found: ${include}`);
     }
   }
 }
@@ -150,11 +162,11 @@ async function copyIncludes(
  * Excludes non-deterministic fields (tempDir, output) from cache key.
  */
 function generateCacheKeyContent(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
   buildOptions: BuildOptions,
 ): string {
   const configForCache = {
-    flow: flowConfig,
+    flow: flowSettings,
     build: {
       ...buildOptions,
       // Exclude non-deterministic fields from cache key
@@ -172,18 +184,21 @@ function generateCacheKeyContent(
  * Note: We use (code as unknown) === true to check for deprecated code: true
  * because the type no longer includes true, but runtime values may still have it.
  */
-function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
+function validateFlowConfig(
+  flowSettings: Flow.Settings,
+  logger: Logger.Instance,
+): boolean {
   let hasDeprecatedCodeTrue = false;
 
   // Check sources for code: true (deprecated, removed from types)
-  const sources = flowConfig.sources || {};
+  const sources = flowSettings.sources || {};
   for (const [sourceId, source] of Object.entries(sources)) {
     if (
       source &&
       typeof source === 'object' &&
       (source.code as unknown) === true
     ) {
-      logger.warning(
+      logger.warn(
         `DEPRECATED: Source "${sourceId}" uses code: true which is no longer supported. ` +
           `Use $code: prefix in config values or create a source package instead.`,
       );
@@ -192,10 +207,10 @@ function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
   }
 
   // Check destinations for code: true (deprecated, removed from types)
-  const destinations = flowConfig.destinations || {};
+  const destinations = flowSettings.destinations || {};
   for (const [destId, dest] of Object.entries(destinations)) {
     if (dest && typeof dest === 'object' && (dest.code as unknown) === true) {
-      logger.warning(
+      logger.warn(
         `DEPRECATED: Destination "${destId}" uses code: true which is no longer supported. ` +
           `Use $code: prefix in config values or create a destination package instead.`,
       );
@@ -204,14 +219,14 @@ function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
   }
 
   // Check transformers for code: true (deprecated, removed from types)
-  const transformers = flowConfig.transformers || {};
+  const transformers = flowSettings.transformers || {};
   for (const [transformerId, transformer] of Object.entries(transformers)) {
     if (
       transformer &&
       typeof transformer === 'object' &&
       (transformer.code as unknown) === true
     ) {
-      logger.warning(
+      logger.warn(
         `DEPRECATED: Transformer "${transformerId}" uses code: true which is no longer supported. ` +
           `Use $code: prefix in config values or create a transformer package instead.`,
       );
@@ -220,7 +235,7 @@ function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
   }
 
   if (hasDeprecatedCodeTrue) {
-    logger.warning(
+    logger.warn(
       `See https://www.elbwalker.com/docs/walkeros/getting-started/flow for migration guide.`,
     );
   }
@@ -229,29 +244,32 @@ function validateFlowConfig(flowConfig: Flow.Config, logger: Logger): boolean {
 }
 
 export async function bundleCore(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
   buildOptions: BuildOptions,
-  logger: Logger,
+  logger: Logger.Instance,
   showStats = false,
 ): Promise<BundleStats | void> {
   const bundleStartTime = Date.now();
 
   // Validate flow config and warn about deprecated features
-  const hasDeprecatedFeatures = validateFlowConfig(flowConfig, logger);
+  const hasDeprecatedFeatures = validateFlowConfig(flowSettings, logger);
   if (hasDeprecatedFeatures) {
-    logger.warning('Skipping deprecated code: true entries from bundle.');
+    logger.warn('Skipping deprecated code: true entries from bundle.');
   }
 
-  // Use provided temp dir or default .tmp/
-  const TEMP_DIR = buildOptions.tempDir || getTmpPath();
+  // Per-build isolation: unique working dir, shared cache
+  const buildId = crypto.randomUUID();
+  const TEMP_DIR =
+    buildOptions.tempDir || getTmpPath(undefined, `walkeros-build-${buildId}`);
+  const CACHE_DIR = buildOptions.tempDir || getTmpPath();
 
   // Check build cache if caching is enabled
   if (buildOptions.cache !== false) {
-    const configContent = generateCacheKeyContent(flowConfig, buildOptions);
+    const configContent = generateCacheKeyContent(flowSettings, buildOptions);
 
-    const cached = await isBuildCached(configContent, TEMP_DIR);
+    const cached = await isBuildCached(configContent, CACHE_DIR);
     if (cached) {
-      const cachedBuild = await getCachedBuild(configContent, TEMP_DIR);
+      const cachedBuild = await getCachedBuild(configContent, CACHE_DIR);
       if (cachedBuild) {
         logger.debug('Using cached build');
 
@@ -262,7 +280,7 @@ export async function bundleCore(
 
         const stats = await fs.stat(outputPath);
         const sizeKB = (stats.size / 1024).toFixed(1);
-        logger.log(`Output: ${outputPath} (${sizeKB} KB, cached)`);
+        logger.info(`Output: ${outputPath} (${sizeKB} KB, cached)`);
 
         // Return stats if requested
         if (showStats) {
@@ -274,11 +292,15 @@ export async function bundleCore(
               size: 0, // Size estimation not available for cached builds
             }),
           );
+          // Check user code for wildcard imports (same logic as collectBundleStats)
+          const hasWildcardImports = /import\s+\*\s+as\s+\w+\s+from/.test(
+            buildOptions.code || '',
+          );
           return {
             totalSize: stats.size,
             packages: packageStats,
             buildTime: Date.now() - bundleStartTime,
-            treeshakingEffective: true,
+            treeshakingEffective: !hasWildcardImports,
           };
         }
         return;
@@ -293,11 +315,11 @@ export async function bundleCore(
     // Step 1.5: Auto-add collector if sources/destinations exist but collector not specified
     const hasSourcesOrDests =
       Object.keys(
-        (flowConfig as unknown as { sources?: Record<string, unknown> })
+        (flowSettings as unknown as { sources?: Record<string, unknown> })
           .sources || {},
       ).length > 0 ||
       Object.keys(
-        (flowConfig as unknown as { destinations?: Record<string, unknown> })
+        (flowSettings as unknown as { destinations?: Record<string, unknown> })
           .destinations || {},
       ).length > 0;
 
@@ -322,7 +344,7 @@ export async function bundleCore(
       logger,
       buildOptions.cache,
       buildOptions.configDir, // For resolving relative local paths
-      TEMP_DIR,
+      CACHE_DIR,
     );
 
     // Fix @walkeros packages to have proper ESM exports
@@ -356,7 +378,7 @@ export async function bundleCore(
     // Step 4: Create entry point
     logger.debug('Creating entry point');
     const entryContent = await createEntryPoint(
-      flowConfig,
+      flowSettings,
       buildOptions,
       packagePaths,
     );
@@ -398,13 +420,13 @@ export async function bundleCore(
     const outputStats = await fs.stat(outputPath);
     const sizeKB = (outputStats.size / 1024).toFixed(1);
     const buildTime = ((Date.now() - bundleStartTime) / 1000).toFixed(1);
-    logger.log(`Output: ${outputPath} (${sizeKB} KB, ${buildTime}s)`);
+    logger.info(`Output: ${outputPath} (${sizeKB} KB, ${buildTime}s)`);
 
     // Step 5: Cache the build result if caching is enabled
     if (buildOptions.cache !== false) {
-      const configContent = generateCacheKeyContent(flowConfig, buildOptions);
+      const configContent = generateCacheKeyContent(flowSettings, buildOptions);
       const buildOutput = await fs.readFile(outputPath, 'utf-8');
-      await cacheBuild(configContent, buildOutput, TEMP_DIR);
+      await cacheBuild(configContent, buildOutput, CACHE_DIR);
       logger.debug('Build cached for future use');
     }
 
@@ -430,11 +452,14 @@ export async function bundleCore(
       );
     }
 
-    // No auto-cleanup - user runs `walkeros clean` explicitly
-
     return stats;
   } catch (error) {
     throw error;
+  } finally {
+    // Clean up per-build directory (contains entry.js with potential secrets)
+    if (!buildOptions.tempDir) {
+      fs.remove(TEMP_DIR).catch(() => {});
+    }
   }
 }
 
@@ -488,7 +513,7 @@ function createEsbuildOptions(
   outputPath: string,
   tempDir: string,
   packagePaths: Map<string, string>,
-  logger: Logger,
+  logger: Logger.Instance,
 ): esbuild.BuildOptions {
   // Don't use aliases - they cause esbuild to bundle even external packages
   // Instead, use absWorkingDir to point to temp directory where node_modules is
@@ -546,9 +571,9 @@ function createEsbuildOptions(
       'zlib',
     ];
     // Mark runtime dependencies as external
-    // These packages are installed in the Docker container and should not be bundled
-    // - express/cors: Runtime dependencies for server sources
-    // Note: zod is bundled inline via @walkeros/core (not marked external)
+    // These packages must be resolvable at runtime from the bundle's location.
+    // In Docker: installed at /app/node_modules/ via local CLI install.
+    // Outside Docker: user must install express/cors where Node can find them.
     // Use wildcard patterns to match both ESM and CJS imports
     const npmPackages = ['express', 'express/*', 'cors', 'cors/*'];
     // All downloaded @walkeros packages will be bundled into the output
@@ -582,10 +607,10 @@ function createEsbuildOptions(
  * Detects destination packages from flow configuration.
  * Extracts package names from destinations that have explicit 'package' field.
  */
-function detectDestinationPackages(flowConfig: Flow.Config): Set<string> {
+function detectDestinationPackages(flowSettings: Flow.Settings): Set<string> {
   const destinationPackages = new Set<string>();
   const destinations = (
-    flowConfig as unknown as { destinations?: Record<string, unknown> }
+    flowSettings as unknown as { destinations?: Record<string, unknown> }
   ).destinations;
 
   if (destinations) {
@@ -619,10 +644,10 @@ function detectDestinationPackages(flowConfig: Flow.Config): Set<string> {
  * Detects source packages from flow configuration.
  * Extracts package names from sources that have explicit 'package' field.
  */
-function detectSourcePackages(flowConfig: Flow.Config): Set<string> {
+function detectSourcePackages(flowSettings: Flow.Settings): Set<string> {
   const sourcePackages = new Set<string>();
   const sources = (
-    flowConfig as unknown as { sources?: Record<string, unknown> }
+    flowSettings as unknown as { sources?: Record<string, unknown> }
   ).sources;
 
   if (sources) {
@@ -656,11 +681,11 @@ function detectSourcePackages(flowConfig: Flow.Config): Set<string> {
  * Extracts package names from transformers that have explicit 'package' field.
  */
 export function detectTransformerPackages(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
 ): Set<string> {
   const transformerPackages = new Set<string>();
   const transformers = (
-    flowConfig as unknown as { transformers?: Record<string, unknown> }
+    flowSettings as unknown as { transformers?: Record<string, unknown> }
   ).transformers;
 
   if (transformers) {
@@ -692,17 +717,43 @@ export function detectTransformerPackages(
 }
 
 /**
+ * Detects store packages from flow configuration.
+ * Extracts package names from stores that have explicit 'package' field.
+ */
+export function detectStorePackages(flowSettings: Flow.Settings): Set<string> {
+  const storePackages = new Set<string>();
+  const stores = (
+    flowSettings as unknown as { stores?: Record<string, unknown> }
+  ).stores;
+
+  if (stores) {
+    for (const [, storeConfig] of Object.entries(stores)) {
+      if (
+        typeof storeConfig === 'object' &&
+        storeConfig !== null &&
+        'package' in storeConfig &&
+        typeof storeConfig.package === 'string'
+      ) {
+        storePackages.add(storeConfig.package);
+      }
+    }
+  }
+
+  return storePackages;
+}
+
+/**
  * Detects explicit code imports from destinations, sources, and transformers.
  * Returns a map of package names to sets of export names.
  */
 export function detectExplicitCodeImports(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
 ): Map<string, Set<string>> {
   const explicitCodeImports = new Map<string, Set<string>>();
 
   // Check destinations
   const destinations = (
-    flowConfig as unknown as { destinations?: Record<string, unknown> }
+    flowSettings as unknown as { destinations?: Record<string, unknown> }
   ).destinations;
 
   if (destinations) {
@@ -739,7 +790,7 @@ export function detectExplicitCodeImports(
 
   // Check sources
   const sources = (
-    flowConfig as unknown as { sources?: Record<string, unknown> }
+    flowSettings as unknown as { sources?: Record<string, unknown> }
   ).sources;
 
   if (sources) {
@@ -776,7 +827,7 @@ export function detectExplicitCodeImports(
 
   // Check transformers
   const transformers = (
-    flowConfig as unknown as { transformers?: Record<string, unknown> }
+    flowSettings as unknown as { transformers?: Record<string, unknown> }
   ).transformers;
 
   if (transformers) {
@@ -814,6 +865,32 @@ export function detectExplicitCodeImports(
     }
   }
 
+  // Check stores
+  const stores = (
+    flowSettings as unknown as { stores?: Record<string, unknown> }
+  ).stores;
+
+  if (stores) {
+    for (const [, storeConfig] of Object.entries(stores)) {
+      if (
+        typeof storeConfig === 'object' &&
+        storeConfig !== null &&
+        'package' in storeConfig &&
+        typeof storeConfig.package === 'string' &&
+        'code' in storeConfig &&
+        typeof storeConfig.code === 'string'
+      ) {
+        const isAutoGenerated = storeConfig.code.startsWith('_');
+        if (!isAutoGenerated) {
+          if (!explicitCodeImports.has(storeConfig.package)) {
+            explicitCodeImports.set(storeConfig.package, new Set());
+          }
+          explicitCodeImports.get(storeConfig.package)!.add(storeConfig.code);
+        }
+      }
+    }
+  }
+
   return explicitCodeImports;
 }
 
@@ -831,6 +908,7 @@ function generateImportStatements(
   destinationPackages: Set<string>,
   sourcePackages: Set<string>,
   transformerPackages: Set<string>,
+  storePackages: Set<string>,
   explicitCodeImports: Map<string, Set<string>>,
 ): ImportGenerationResult {
   const importStatements: string[] = [];
@@ -839,6 +917,7 @@ function generateImportStatements(
     ...destinationPackages,
     ...sourcePackages,
     ...transformerPackages,
+    ...storePackages,
   ]);
 
   for (const [packageName, packageConfig] of Object.entries(packages)) {
@@ -921,20 +1000,113 @@ function generateImportStatements(
   return { importStatements, examplesMappings };
 }
 
+const VALID_JS_IDENTIFIER = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
+
+/**
+ * Validates that component names are valid JavaScript identifiers.
+ * The bundler generates JS where flow config keys become property names,
+ * so keys like "gtag-wrapper" would cause esbuild syntax errors.
+ * Catches this early with a helpful error message suggesting camelCase.
+ */
+export function validateComponentNames(
+  components: Record<string, unknown>,
+  section: string,
+): void {
+  for (const name of Object.keys(components)) {
+    if (!VALID_JS_IDENTIFIER.test(name)) {
+      throw new Error(
+        `Invalid ${section} name "${name}": must be a valid JavaScript identifier (use camelCase, e.g., "${name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())}")`,
+      );
+    }
+  }
+}
+
+/**
+ * Validates all $store: references point to defined stores.
+ * Throws descriptive error on mismatch.
+ */
+function validateStoreReferences(
+  flowSettings: Flow.Settings,
+  storeIds: Set<string>,
+): void {
+  const refs: Array<{ ref: string; location: string }> = [];
+
+  function collectRefs(obj: unknown, path: string) {
+    if (typeof obj === 'string' && obj.startsWith('$store:')) {
+      refs.push({ ref: obj.slice(7), location: path });
+    } else if (obj && typeof obj === 'object') {
+      for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {
+        collectRefs(val, `${path}.${key}`);
+      }
+    }
+  }
+
+  // Scan all component env/config values
+  for (const [section, components] of Object.entries({
+    sources: flowSettings.sources || {},
+    destinations: flowSettings.destinations || {},
+    transformers: flowSettings.transformers || {},
+  })) {
+    for (const [id, component] of Object.entries(
+      components as Record<string, Record<string, unknown>>,
+    )) {
+      collectRefs(component, `${section}.${id}`);
+    }
+  }
+
+  for (const { ref, location } of refs) {
+    if (!storeIds.has(ref)) {
+      const available =
+        storeIds.size > 0
+          ? `Available stores: ${Array.from(storeIds).join(', ')}`
+          : 'No stores defined';
+      throw new Error(
+        `Store reference "$store:${ref}" in ${location} — store "${ref}" not found. ${available}`,
+      );
+    }
+  }
+}
+
 /**
  * Creates the entry point code for the bundle.
  * Generates imports, config object, and platform-specific wrapper programmatically.
  */
 export async function createEntryPoint(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
   buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
 ): Promise<string> {
-  // Detect packages used by destinations, sources, and transformers
-  const destinationPackages = detectDestinationPackages(flowConfig);
-  const sourcePackages = detectSourcePackages(flowConfig);
-  const transformerPackages = detectTransformerPackages(flowConfig);
-  const explicitCodeImports = detectExplicitCodeImports(flowConfig);
+  // Detect packages used by destinations, sources, transformers, and stores
+  const destinationPackages = detectDestinationPackages(flowSettings);
+  const sourcePackages = detectSourcePackages(flowSettings);
+  const transformerPackages = detectTransformerPackages(flowSettings);
+  const storePackages = detectStorePackages(flowSettings);
+  const explicitCodeImports = detectExplicitCodeImports(flowSettings);
+
+  // Validate $store: references before code generation
+  const storeIds = new Set(
+    Object.keys(
+      (flowSettings as unknown as { stores?: Record<string, unknown> })
+        .stores || {},
+    ),
+  );
+  validateStoreReferences(flowSettings, storeIds);
+
+  // Validate component names are valid JS identifiers (they become property names in generated code)
+  const flowWithSections = flowSettings as unknown as {
+    sources?: Record<string, unknown>;
+    destinations?: Record<string, unknown>;
+    transformers?: Record<string, unknown>;
+    stores?: Record<string, unknown>;
+  };
+  if (flowWithSections.sources)
+    validateComponentNames(flowWithSections.sources, 'sources');
+  if (flowWithSections.destinations)
+    validateComponentNames(flowWithSections.destinations, 'destinations');
+  if (flowWithSections.transformers)
+    validateComponentNames(flowWithSections.transformers, 'transformers');
+  if (flowWithSections.stores)
+    validateComponentNames(flowWithSections.stores, 'stores');
 
   // Generate import statements
   const { importStatements } = generateImportStatements(
@@ -942,15 +1114,16 @@ export async function createEntryPoint(
     destinationPackages,
     sourcePackages,
     transformerPackages,
+    storePackages,
     explicitCodeImports,
   );
 
   const importsCode = importStatements.join('\n');
   const hasFlow =
-    Object.values(flowConfig.sources || {}).some(
+    Object.values(flowSettings.sources || {}).some(
       (s) => s.package || isInlineCode(s.code),
     ) ||
-    Object.values(flowConfig.destinations || {}).some(
+    Object.values(flowSettings.destinations || {}).some(
       (d) => d.package || isInlineCode(d.code),
     );
 
@@ -961,10 +1134,14 @@ export async function createEntryPoint(
   }
 
   // Build config object programmatically (DRY - single source of truth)
-  const configObject = buildConfigObject(flowConfig, explicitCodeImports);
+  const { storesDeclaration, configObject } = buildConfigObject(
+    flowSettings,
+    explicitCodeImports,
+  );
 
   // Generate platform-specific wrapper
   const wrappedCode = generatePlatformWrapper(
+    storesDeclaration,
     configObject,
     buildOptions.code || '',
     buildOptions as {
@@ -1027,10 +1204,10 @@ function createBuildError(buildError: EsbuildError, code: string): Error {
  * Respects import strategy decisions from detectExplicitCodeImports.
  */
 export function buildConfigObject(
-  flowConfig: Flow.Config,
+  flowSettings: Flow.Settings,
   explicitCodeImports: Map<string, Set<string>>,
-): string {
-  const flowWithProps = flowConfig as unknown as {
+): { storesDeclaration: string; configObject: string } {
+  const flowWithProps = flowSettings as unknown as {
     sources?: Record<
       string,
       {
@@ -1061,12 +1238,22 @@ export function buildConfigObject(
         next?: string;
       }
     >;
+    stores?: Record<
+      string,
+      {
+        package?: string;
+        code?: string | true;
+        config?: unknown;
+        env?: unknown;
+      }
+    >;
     collector?: unknown;
   };
 
   const sources = flowWithProps.sources || {};
   const destinations = flowWithProps.destinations || {};
   const transformers = flowWithProps.transformers || {};
+  const stores = flowWithProps.stores || {};
 
   // Validate references before processing (skip deprecated code: true entries)
   Object.entries(sources).forEach(([name, source]) => {
@@ -1202,6 +1389,45 @@ export function buildConfigObject(
       return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${nextStr}\n    }`;
     });
 
+  // Build stores
+  Object.entries(stores).forEach(([name, store]) => {
+    if (store.package || isInlineCode(store.code)) {
+      validateReference('Store', name, store);
+    }
+  });
+
+  const storesEntries = Object.entries(stores)
+    .filter(([, store]) => store.package || isInlineCode(store.code))
+    .map(([key, store]) => {
+      if (isInlineCode(store.code)) {
+        return `    ${key}: ${generateInlineCode(store.code, (store.config as object) || {}, store.env as object)}`;
+      }
+
+      let codeVar: string;
+      if (
+        store.code &&
+        typeof store.code === 'string' &&
+        explicitCodeImports.has(store.package!)
+      ) {
+        codeVar = store.code;
+      } else {
+        codeVar = packageNameToVariable(store.package!);
+      }
+
+      const configStr = store.config ? processConfigValue(store.config) : '{}';
+      const envStr = store.env
+        ? `,\n      env: ${processConfigValue(store.env)}`
+        : '';
+
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
+    });
+
+  // Build stores declaration (always hoisted as a variable)
+  const storesDeclaration =
+    storesEntries.length > 0
+      ? `const stores = {\n${storesEntries.join(',\n')}\n};`
+      : 'const stores = {};';
+
   // Build collector
   const collectorStr = flowWithProps.collector
     ? `,\n  ...${processConfigValue(flowWithProps.collector)}`
@@ -1213,14 +1439,17 @@ export function buildConfigObject(
       ? `,\n  transformers: {\n${transformersEntries.join(',\n')}\n  }`
       : '';
 
-  return `{
+  const configObject = `{
   sources: {
 ${sourcesEntries.join(',\n')}
   },
   destinations: {
 ${destinationsEntries.join(',\n')}
-  }${transformersStr}${collectorStr}
+  }${transformersStr},
+  stores${collectorStr}
 }`;
+
+  return { storesDeclaration, configObject };
 }
 
 /**
@@ -1235,15 +1464,93 @@ function processConfigValue(value: unknown): string {
  * Serialize a value, handling $code: prefix for inline JavaScript.
  * Values starting with "$code:" are output as raw JS (no quotes).
  */
-function serializeWithCode(value: unknown, indent: number): string {
+export function serializeWithCode(value: unknown, indent: number): string {
   const spaces = '  '.repeat(indent);
   const nextSpaces = '  '.repeat(indent + 1);
 
-  // Handle $code: prefix - output raw JavaScript
+  // Handle $code: and $store: prefixes - output raw JavaScript
   if (typeof value === 'string') {
+    if (value.startsWith('$store:')) {
+      const storeId = value.slice(7);
+      return `stores.${storeId}`;
+    }
+
     if (value.startsWith('$code:')) {
       return value.slice(6); // Strip prefix, output raw JS
     }
+
+    // Deferred env markers → raw process.env expressions in bundle output
+    // The marker regex uses a negative lookahead (?!__WALKEROS_ENV) to stop
+    // the default value capture BEFORE the next marker prefix. Without this,
+    // `__WALKEROS_ENV:A://__WALKEROS_ENV:B` would be parsed as one marker
+    // with A's default consuming the entire rest of the string.
+    const esc = ENV_MARKER_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const markerRe = new RegExp(
+      esc +
+        '([a-zA-Z_][a-zA-Z0-9_]*)' +
+        '(?::(' +
+        '(?:(?!' +
+        esc +
+        ')[^\\s"\'])' +
+        '*))?',
+      'g',
+    );
+
+    if (markerRe.test(value)) {
+      markerRe.lastIndex = 0; // reset after test()
+
+      // Pure marker (entire string is one marker)
+      const pureRe = new RegExp(
+        '^' +
+          esc +
+          '([a-zA-Z_][a-zA-Z0-9_]*)' +
+          '(?::(' +
+          '(?:(?!' +
+          esc +
+          ')[^\\s"\'])' +
+          '*))?$',
+      );
+      const pureMatch = value.match(pureRe);
+      if (pureMatch) {
+        const [, name, defaultValue] = pureMatch;
+        return defaultValue !== undefined
+          ? `process.env[${JSON.stringify(name)}] ?? ${JSON.stringify(defaultValue)}`
+          : `process.env[${JSON.stringify(name)}]`;
+      }
+
+      // Mixed content → template literal
+      // Escape backticks and non-interpolation $ in static parts to prevent
+      // broken/exploitable template literals (e.g. "Price is $5" → "$5" would
+      // be interpreted as ${5} without escaping).
+      const segments: string[] = [];
+      let lastIndex = 0;
+      markerRe.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = markerRe.exec(value)) !== null) {
+        // Static text before this marker — escape ` and $
+        const staticPart = value
+          .slice(lastIndex, m.index)
+          .replace(/\\/g, '\\\\')
+          .replace(/`/g, '\\`')
+          .replace(/\$(?!{)/g, '\\$');
+        const [, name, defaultValue] = m;
+        const envExpr =
+          defaultValue !== undefined
+            ? `\${process.env[${JSON.stringify(name)}] ?? ${JSON.stringify(defaultValue)}}`
+            : `\${process.env[${JSON.stringify(name)}]}`;
+        segments.push(staticPart + envExpr);
+        lastIndex = m.index + m[0].length;
+      }
+      // Trailing static text
+      const trailing = value
+        .slice(lastIndex)
+        .replace(/\\/g, '\\\\')
+        .replace(/`/g, '\\`')
+        .replace(/\$(?!{)/g, '\\$');
+      segments.push(trailing);
+      return '`' + segments.join('') + '`';
+    }
+
     return JSON.stringify(value);
   }
 
@@ -1275,6 +1582,7 @@ function serializeWithCode(value: unknown, indent: number): string {
  * Generate platform-specific wrapper code.
  */
 export function generatePlatformWrapper(
+  storesDeclaration: string,
   configObject: string,
   userCode: string,
   buildOptions: {
@@ -1300,6 +1608,8 @@ export function generatePlatformWrapper(
       windowAssignments.length > 0 ? '\n' + windowAssignments.join('\n') : '';
 
     return `(async () => {
+  ${storesDeclaration}
+
   const config = ${configObject};
 
   ${userCode}
@@ -1311,13 +1621,31 @@ export function generatePlatformWrapper(
     const codeSection = userCode ? `\n  ${userCode}\n` : '';
 
     return `export default async function(context = {}) {
+  ${storesDeclaration}
+
   const config = ${configObject};${codeSection}
   // Apply context overrides (e.g., logger config from CLI)
   if (context.logger) {
     config.logger = { ...config.logger, ...context.logger };
   }
 
-  return await startFlow(config);
+  // When runner provides external server, strip port from sources
+  // so they don't self-listen (runner owns the port)
+  if (context.externalServer && config.sources) {
+    for (const src of Object.values(config.sources)) {
+      if (src.config && src.config.settings && 'port' in src.config.settings) {
+        delete src.config.settings.port;
+      }
+    }
+  }
+
+  const result = await startFlow(config);
+
+  // Discover httpHandler from initialized sources (duck-typing, no source-type coupling)
+  const httpSource = Object.values(result.collector.sources || {})
+    .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
+
+  return { ...result, httpHandler: httpSource ? httpSource.httpHandler : undefined };
 }`;
   }
 }

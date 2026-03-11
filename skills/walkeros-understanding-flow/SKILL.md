@@ -46,6 +46,7 @@ the canonical interface.
 ```typescript
 // Conceptual structure (see source for full type)
 interface Flow {
+  stores?: Record<string, Store>;
   sources?: Record<string, Source>;
   transformers?: Record<string, Transformer>;
   destinations?: Record<string, Destination>;
@@ -75,6 +76,9 @@ the `startFlow` function.
 import { startFlow } from '@walkeros/collector';
 
 const { collector, elb } = await startFlow({
+  stores: {
+    /* key-value storage, init first, destroy last */
+  },
   sources: {
     /* ... */
   },
@@ -86,6 +90,38 @@ const { collector, elb } = await startFlow({
   },
 });
 ```
+
+## Stores
+
+Stores are the 4th component type — passive key-value infrastructure that other
+components consume via `env`.
+
+- Referenced via `$store:storeId` in `env` values (bundled mode) or passed
+  directly as store instances (integrated mode)
+- **Init first, destroy last** — stores are available before any source,
+  transformer, or destination starts, and outlive them on shutdown
+- **No chains** — stores have no `next` or `before`. They don't participate in
+  the event pipeline. Components access them through their `env`.
+- Implementations: `@walkeros/store-memory` (sync, LRU),
+  `@walkeros/server-store-fs` (async, filesystem), `@walkeros/server-store-s3`
+  (async, S3-compatible)
+
+```json
+{
+  "stores": {
+    "cache": { "package": "@walkeros/store-memory" }
+  },
+  "transformers": {
+    "cacheResponse": {
+      "package": "@walkeros/server-transformer-cache",
+      "env": { "store": "$store:cache" }
+    }
+  }
+}
+```
+
+See [walkeros-understanding-stores](../walkeros-understanding-stores/SKILL.md)
+for the full store interface and lifecycle.
 
 ## Separation of Concerns
 
@@ -197,6 +233,151 @@ transformers: {
   transformers
 - `destination.before` → starts post-collector chain per destination
 
+## Step Examples
+
+Each step in a flow (source, transformer, destination) can ship **step
+examples** -- structured `{ in, out }` pairs that define expected input/output
+behavior.
+
+### The Three Type Zones
+
+Steps sit at boundaries between arbitrary formats and walkerOS events:
+
+- **Source:** arbitrary `in` (HTTP request, DOM event) → walkerOS event `out`
+- **Transformer:** walkerOS event `in` → walkerOS event `out` (or `false`)
+- **Destination:** walkerOS event `in` → arbitrary `out` (vendor API call)
+
+See [using-step-examples](../walkeros-using-step-examples/SKILL.md) for the full
+ASCII diagram and detailed explanation.
+
+### Example: Step with Examples in Flow Config
+
+```json
+{
+  "destinations": {
+    "gtag": {
+      "package": "@walkeros/web-destination-gtag",
+      "config": { "measurementId": "G-XXXXXX" },
+      "examples": {
+        "purchase": {
+          "in": {
+            "name": "order complete",
+            "data": { "id": "ORD-123", "total": 149.97 }
+          },
+          "out": [
+            "event",
+            "purchase",
+            { "transaction_id": "ORD-123", "value": 149.97 }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+Step examples enable `it.each` testing, CLI simulation with `--example`, and
+deep validation with `--deep`. See
+[using-step-examples](../walkeros-using-step-examples/SKILL.md) for the complete
+lifecycle.
+
+## Flow Graph Connection Rules
+
+This section defines which components can connect to which, and how chains are
+resolved at runtime. Use it as the canonical reference for building flow graphs,
+validating configurations, and rendering UI visualizations.
+
+### Valid connection matrix
+
+| From        | To          | Via Field                   | Valid?           |
+| ----------- | ----------- | --------------------------- | ---------------- |
+| Source      | Transformer | `source.next`               | Yes              |
+| Source      | Collector   | (implicit, no next)         | Yes              |
+| Source      | Source      | —                           | No               |
+| Source      | Destination | —                           | No               |
+| Transformer | Transformer | `transformer.next`          | Yes              |
+| Transformer | Collector   | (implicit, pre-chain ends)  | Yes              |
+| Transformer | Destination | (implicit, post-chain ends) | Yes              |
+| Collector   | Destination | (implicit, no before)       | Yes              |
+| Collector   | Transformer | `destination.before`        | Yes (post-chain) |
+| Destination | anything    | —                           | No (terminal)    |
+| Collector   | Source      | —                           | No               |
+
+### Pre-transformer chains (`source.next`)
+
+- Entry: `source.next: "transformerId"` or `source.next: ["t1", "t2"]`
+- Chaining: `transformer.next: "nextId"` walks forward; array stops walking
+- Exit: chain ends, event reaches collector
+- Multiple sources can reference the same transformer (fan-in)
+- No `next` = source connects directly to collector
+
+### Post-transformer chains (`destination.before`)
+
+- Entry: `destination.before: "transformerId"` or
+  `destination.before: ["t1", "t2"]`
+- Same `transformer.next` chain-walking logic as pre-chains
+- Exit: chain ends, event reaches destination
+- Multiple destinations can share the same transformer
+- No `before` = collector connects directly to destination
+
+### Chain resolution algorithm (`walkChain`)
+
+See
+[packages/collector/src/transformer.ts](../../packages/collector/src/transformer.ts)
+for the implementation.
+
+- **String start:** walks `transformer.next` links until chain ends
+- **Array start:** uses array as-is (explicit chain, no walking)
+- **Array `next` inside chain:** appends array elements and stops walking
+- **Circular references:** detected via visited set, silently breaks loop
+- **Non-existent transformer ID:** chain ends (no error, event proceeds without
+  transformation)
+
+### Router fan-out
+
+Router transformers use `branch(event, next)` from `@walkeros/core` to redirect
+to different chains dynamically.
+
+- Each route's `next` target creates a potential edge via `walkChain`
+- First matching route wins; no match = passthrough
+- Branch to non-existent transformer = event dropped (silent, logged as info)
+
+See [packages/core/src/branch.ts](../../packages/core/src/branch.ts) for the
+`branch()` helper.
+
+### Transformer sharing
+
+A single transformer can appear in both pre-chains (`source.next`) and
+post-chains (`destination.before`). The same transformer pool is shared; role
+depends on which chain references it.
+
+### Deferred activation (`require`)
+
+- `source.config.require: ["consent"]` — source deferred until "consent" event
+  fires
+- `destination.config.require: ["user"]` — destination deferred until "user"
+  event fires
+- Multiple requirements: all must be fulfilled (each fires independently)
+
+### Mapping and consent gating
+
+- **Source-level:** `source.config.mapping` and `source.config.consent` —
+  applied before pre-chain; blocks event entirely
+- **Destination-level:** `destination.config.mapping` and
+  `destination.config.consent` — applied after post-chain; skips only that
+  destination, queues denied events
+
+### Canvas rendering rules (for UI graph visualization)
+
+- **Shared transformers (pre+post):** duplicate visually with a link indicator;
+  editing one updates the other
+- **Router fan-out:** keep graph planar; trace edges individually
+- **Orphan transformers (not in any chain):** render grey/muted; gain color when
+  connected
+- **Diamond patterns (fan-in + fan-out):** expected and valid
+- **Overlapping `destination.before` chains:** intentional (e.g., shared
+  validator for monitoring)
+
 ## Related Skills
 
 - [walkeros-understanding-events](../walkeros-understanding-events/SKILL.md) -
@@ -218,5 +399,6 @@ transformers: {
 
 **Documentation:**
 
-- [Website: Flow](../../website/docs/getting-started/flow.mdx) - Flow concept
+- [Website: Flow](../../website/docs/getting-started/modes/bundled.mdx) - Flow
+  concept
 - [Website: Collector](../../website/docs/collector/index.mdx) - Collector docs

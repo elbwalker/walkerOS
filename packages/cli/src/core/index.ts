@@ -1,5 +1,4 @@
-export * from './logger.js';
-export * from './collector-logger.js';
+export * from './cli-logger.js';
 export * from './timer.js';
 export * from './output.js';
 export * from './tmp.js';
@@ -9,3 +8,5 @@ export * from './local-packages.js';
 export * from './input-detector.js';
 export * from './stdin.js';
 export { getToken, getAuthHeaders, authenticatedFetch } from './auth.js';
+export { parseSSEEvents } from './sse.js';
+export type { SSEEvent, SSEParseResult } from './sse.js';

@@ -1,13 +1,16 @@
 import type { Collector, Logger, Transformer, WalkerOS } from '@walkeros/core';
 import { transformerValidator } from '../transformer';
 import type { ValidatorSettings } from '../types';
+import { examples } from '../dev';
 
 describe('Transformer Validator', () => {
   const mockLogger: Logger.Instance = {
     error: jest.fn(),
+    warn: jest.fn(),
     info: jest.fn(),
     debug: jest.fn(),
     throw: jest.fn() as unknown as Logger.ThrowFn,
+    json: jest.fn(),
     scope: jest.fn().mockReturnThis(),
   };
 
@@ -58,7 +61,7 @@ describe('Transformer Validator', () => {
 
       const result = await transformer.push(validEvent, context);
 
-      expect(result).toEqual(validEvent);
+      expect(result).toEqual({ event: validEvent });
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
@@ -91,7 +94,7 @@ describe('Transformer Validator', () => {
 
       const result = await transformer.push(invalidEvent, context);
 
-      expect(result).toEqual(invalidEvent);
+      expect(result).toEqual({ event: invalidEvent });
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
@@ -115,15 +118,13 @@ describe('Transformer Validator', () => {
       const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
         settings: {
           format: false,
-          contract: {
+          events: {
             product: {
               view: {
-                schema: {
-                  properties: {
-                    data: {
-                      type: 'object',
-                      required: ['id', 'name'],
-                    },
+                properties: {
+                  data: {
+                    type: 'object',
+                    required: ['id', 'name'],
                   },
                 },
               },
@@ -136,7 +137,7 @@ describe('Transformer Validator', () => {
 
       const result = await transformer.push(validEvent, context);
 
-      expect(result).toEqual(validEvent);
+      expect(result).toEqual({ event: validEvent });
       expect(mockLogger.debug).toHaveBeenCalledWith(
         'Contract validation passed',
         { rule: 'product view' },
@@ -147,15 +148,13 @@ describe('Transformer Validator', () => {
       const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
         settings: {
           format: false,
-          contract: {
+          events: {
             product: {
               view: {
-                schema: {
-                  properties: {
-                    data: {
-                      type: 'object',
-                      required: ['id', 'name', 'price'], // price is missing
-                    },
+                properties: {
+                  data: {
+                    type: 'object',
+                    required: ['id', 'name', 'price'], // price is missing
                   },
                 },
               },
@@ -182,13 +181,11 @@ describe('Transformer Validator', () => {
       const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
         settings: {
           format: false,
-          contract: {
+          events: {
             order: {
               complete: {
-                schema: {
-                  properties: {
-                    data: { required: ['total'] },
-                  },
+                properties: {
+                  data: { required: ['total'] },
                 },
               },
             },
@@ -201,7 +198,7 @@ describe('Transformer Validator', () => {
       // product view doesn't match order complete
       const result = await transformer.push(validEvent, context);
 
-      expect(result).toEqual(validEvent);
+      expect(result).toEqual({ event: validEvent });
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
   });

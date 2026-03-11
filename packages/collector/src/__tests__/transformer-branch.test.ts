@@ -6,7 +6,7 @@ import {
   extractTransformerNextMap,
 } from '../transformer';
 
-describe('BranchResult type', () => {
+describe('TransformerResult branching', () => {
   it('should be a valid transformer return type via branch() factory', () => {
     const fn: Transformer.Fn = (event, context) => {
       return branch({ name: 'test action' }, 'parser');
@@ -16,19 +16,16 @@ describe('BranchResult type', () => {
 
   it('should accept string next', () => {
     const result = branch({ name: 'test action' }, 'parser');
-    expect(result.__branch).toBe(true);
     expect(result.next).toBe('parser');
   });
 
   it('should accept string[] next', () => {
     const result = branch({}, ['parser', 'validator']);
-    expect(result.__branch).toBe(true);
     expect(result.next).toEqual(['parser', 'validator']);
   });
 
-  it('should satisfy Transformer.BranchResult interface', () => {
-    const result: Transformer.BranchResult = branch({}, 'parser');
-    expect(result.__branch).toBe(true);
+  it('should satisfy Transformer.Result interface', () => {
+    const result: Transformer.Result = branch({}, 'parser');
     expect(result.event).toEqual({});
     expect(result.next).toBe('parser');
   });
@@ -69,7 +66,7 @@ describe('chain branching', () => {
     const parser = createTransformer((event) => {
       order.push('parser');
       expect(event.name).toBe('routed action');
-      return { ...event, data: { parsed: true } };
+      return { event: { ...event, data: { parsed: true } } };
     });
 
     const transformers = { router, parser };
@@ -94,13 +91,13 @@ describe('chain branching', () => {
 
     const a = createTransformer(
       (event) => {
-        return { ...event, data: { ...event.data, a: true } };
+        return { event: { ...event, data: { ...event.data, a: true } } };
       },
       { next: 'b' },
     );
 
     const b = createTransformer((event) => {
-      return { ...event, data: { ...event.data, b: true } };
+      return { event: { ...event, data: { ...event.data, b: true } } };
     });
 
     const transformers = { router, a, b };
@@ -128,7 +125,7 @@ describe('chain branching', () => {
     const parser = createTransformer((event, context) => {
       expect(context.ingest).toBe(ingestData);
       const body = (context.ingest as any).body;
-      return { name: `page ${body.en}`, data: body };
+      return { event: { name: `page ${body.en}`, data: body } };
     });
 
     const transformers = { router, parser };
@@ -171,7 +168,7 @@ describe('chain branching', () => {
 
     const enricher = createTransformer((event) => {
       order.push('enricher');
-      return { ...event, data: { enriched: true } };
+      return { event: { ...event, data: { enriched: true } } };
     });
 
     const router = createTransformer((event) => {
@@ -181,7 +178,7 @@ describe('chain branching', () => {
 
     const parser = createTransformer((event) => {
       order.push('parser');
-      return { ...event, name: 'parsed action' };
+      return { event: { ...event, name: 'parsed action' } };
     });
 
     const transformers = { enricher, router, parser };

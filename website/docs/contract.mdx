@@ -1,0 +1,606 @@
+---
+title: Contract
+description: Named data contracts with inheritance for event validation
+sidebar_position: 5
+---
+
+# Contract
+
+A contract defines what your events should look like — which fields are required,
+what types they have, and what values are allowed. Contracts are named entries
+with optional inheritance via `extends`.
+
+```json
+{
+  "contract": {
+    "default": {
+      "tagging": 1,
+      "globals": { "required": ["country"] },
+      "events": {
+        "product": {
+          "*": { "properties": { "data": { "required": ["id", "name"] } } },
+          "add": { "properties": { "data": { "required": ["quantity"] } } }
+        }
+      }
+    },
+    "web": {
+      "extends": "default",
+      "consent": { "required": ["analytics"] }
+    }
+  }
+}
+```
+
+## Why contracts?
+
+Without contracts, validation rules live inside each transformer config,
+duplicated across flows. Contracts solve this:
+
+- **Single source of truth** — Define event requirements once at the config level
+- **Named and composable** — Multiple contracts with inheritance via `extends`
+- **Self-documenting** — JSON Schema `description` and `examples` annotate your events
+- **Versioned** — `tagging` tracks contract versions alongside your events
+- **Dot-path access** — Reference any part with `$contract.name.section`
+
+## Named contracts
+
+Contracts are always a map of named entries. Each entry can contain sections
+(`globals`, `context`, `custom`, `user`, `consent`), event schemas (`events`),
+metadata (`tagging`, `description`), and an optional `extends` reference:
+
+<CodeSnippet
+  code={`"contract": {
+  "default": {
+    "tagging": 1,
+    "globals": {
+      "required": ["country"],
+      "properties": {
+        "country": { "type": "string" }
+      }
+    },
+    "consent": {
+      "required": ["analytics"],
+      "properties": {
+        "analytics": { "type": "boolean", "const": true }
+      }
+    }
+  },
+  "web": {
+    "extends": "default",
+    "events": {
+      "product": {
+        "add": {
+          "properties": {
+            "data": { "required": ["id", "quantity"] }
+          }
+        }
+      }
+    }
+  },
+  "web_loggedin": {
+    "extends": "web",
+    "user": {
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Inheritance with `extends`
+
+Use `extends` to inherit from another named contract. Inheritance is additive —
+the child contract merges on top of the parent:
+
+- **Sections** (`globals`, `consent`, etc.) merge additively
+- **Events** merge at the entity-action level
+- **Scalars** (`tagging`) — child wins
+- **Chains** work: `web_loggedin` extends `web` extends `default`
+- **Circular references** are detected and throw an error
+
+Resolution order: extends chains are resolved first, then wildcards are expanded
+on the fully merged result.
+
+## Sections
+
+Each section is a JSON Schema for the corresponding `WalkerOS.Event` field:
+
+| Section | Event field | Purpose |
+|---------|------------|---------|
+| `globals` | `event.globals` | Cross-event key-value pairs (country, currency) |
+| `context` | `event.context` | Timing/context properties |
+| `custom` | `event.custom` | Custom properties |
+| `user` | `event.user` | User identity and attributes |
+| `consent` | `event.consent` | Consent state |
+
+## Event schemas
+
+Inside `events`, entity-action keyed entries define JSON Schema objects
+describing a partial `WalkerOS.Event`:
+
+<CodeSnippet
+  code={`"events": {
+  "product": {
+    "*": {
+      "description": "A product in the catalog",
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["id", "name"],
+          "properties": {
+            "id": { "type": "string", "description": "Product SKU" },
+            "name": { "type": "string", "description": "Display name" }
+          }
+        }
+      }
+    },
+    "add": {
+      "description": "Product added to cart",
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["quantity"],
+          "properties": {
+            "quantity": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## Wildcard inheritance
+
+Contracts support four wildcard levels that merge **additively**:
+
+| Level | Pattern | Matches |
+|-------|---------|---------|
+| 1 | `*` → `*` | All events (global rules) |
+| 2 | `*` → `action` | A specific action across all entities |
+| 3 | `entity` → `*` | All actions of a specific entity |
+| 4 | `entity` → `action` | Exact match |
+
+All matching levels combine. For `product add`, levels 1, 3, and 4 all apply:
+
+<CodeSnippet
+  code={`"events": {
+  "*": {
+    "*": {
+      "properties": {
+        "consent": { "required": ["analytics"] }
+      }
+    }
+  },
+  "product": {
+    "*": {
+      "properties": {
+        "data": { "required": ["id", "name"] }
+      }
+    },
+    "add": {
+      "properties": {
+        "data": { "required": ["quantity"] }
+      }
+    }
+  }
+}
+
+// Resolved "product add":
+// consent.analytics required  (from *→*)
+// data.id, data.name required (from product→*)
+// data.quantity required      (from product→add)`}
+  language="json"
+/>
+
+:::warning Contracts vs mapping wildcards
+Contract wildcards use **additive merging** — all matching levels combine.
+Mapping wildcards use **fallback matching** — the first match wins.
+
+This difference is intentional. Contracts define cumulative requirements (entity-level
+rules always apply to all actions), while mappings select a single transformation
+target.
+
+**Contract:** `product.*` rules AND `product.add` rules both apply to `product add`
+
+**Mapping:** `product.add` matches first, so `product.*` is never checked
+:::
+
+## Merge algorithm
+
+When multiple levels match, schemas merge with these rules:
+
+| JSON Schema keyword | Merge behavior |
+|---------------------|----------------|
+| `required` | Union (deduplicated) — can only add requirements, never remove |
+| `properties` | Deep merge — child wins on conflict for scalar values |
+| Scalar keywords (`minimum`, `maximum`, `pattern`, etc.) | Child overrides parent |
+| Annotations (`description`, `examples`) | Stripped from resolved event schemas |
+
+<details>
+<summary>Merge example</summary>
+
+Given a parent schema from `product.*`:
+
+```json
+{
+  "properties": {
+    "data": { "type": "object", "required": ["id", "name"] }
+  }
+}
+```
+
+And a child schema from `product.add`:
+
+```json
+{
+  "properties": {
+    "data": { "type": "object", "required": ["name", "quantity"] }
+  }
+}
+```
+
+The merged result for `product add`:
+
+```json
+{
+  "properties": {
+    "data": { "type": "object", "required": ["id", "name", "quantity"] }
+  }
+}
+```
+
+The `required` arrays are unioned and deduplicated: `["id", "name"]` + `["name", "quantity"]` = `["id", "name", "quantity"]`.
+
+</details>
+
+## `$contract` dot-path references
+
+Use `$contract.name.path` to reference any part of a resolved contract.
+The contract is fully resolved (extends + wildcards) before path access:
+
+<CodeSnippet
+  code={`"flows": {
+  "web-shop": {
+    "web": {},
+    "sources": {
+      "cmp": {
+        "config": {
+          "consent": "$contract.web.consent"
+        }
+      }
+    },
+    "transformers": {
+      "validator": {
+        "package": "@walkeros/transformer-validator",
+        "config": {
+          "settings": {
+            "events": "$contract.web.events",
+            "globals": "$contract.web.globals",
+            "consent": "$contract.web.consent"
+          }
+        }
+      }
+    },
+    "collector": {
+      "tagging": "$contract.web.tagging"
+    }
+  }
+}`}
+  language="json"
+/>
+
+### Deep paths
+
+Access nested values with dot notation:
+
+- `$contract.web.events` — all event schemas for the "web" contract
+- `$contract.web.events.product.add` — single event schema
+- `$contract.web.consent` — consent section
+- `$contract.web.tagging` — tagging version number
+
+<details>
+<summary>Advanced: `$def` aliasing</summary>
+
+Reduce repetition by aliasing a contract in definitions:
+
+<CodeSnippet
+  code={`{
+  "definitions": {
+    "c": "$contract.web"
+  },
+  "flows": {
+    "web-shop": {
+      "web": {},
+      "transformers": {
+        "validator": {
+          "config": {
+            "settings": {
+              "events": "$def.c.events",
+              "globals": "$def.c.globals"
+            }
+          }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+</details>
+
+<details>
+<summary>Advanced: `$def` inside contracts</summary>
+
+Definitions can be used inside contracts for shared schema fragments:
+
+<CodeSnippet
+  code={`{
+  "definitions": {
+    "idSchema": {
+      "required": ["id"],
+      "properties": { "id": { "type": "string" } }
+    }
+  },
+  "contract": {
+    "web": {
+      "events": {
+        "product": {
+          "*": { "properties": { "data": "$def.idSchema" } }
+        }
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+</details>
+
+## Versioning
+
+The `tagging` field tracks contract versions as an incrementing integer:
+
+<CodeSnippet
+  code={`"contract": {
+  "default": {
+    "tagging": 3,
+    "events": { ... }
+  }
+}`}
+  language="json"
+/>
+
+Use `$contract.default.tagging` to inject the version into collector config:
+
+<CodeSnippet
+  code={`"collector": {
+  "tagging": "$contract.default.tagging"
+}`}
+  language="json"
+/>
+
+This lets you:
+
+- Know which contract version validated an event
+- Compare `event.version.tagging` against the current contract
+- Track contract evolution over time
+
+## Using contracts with the validator
+
+The [validator transformer](/docs/transformers/validator) enforces contracts at
+runtime. Wire contract sections to the validator settings:
+
+<CodeSnippet
+  code={`{
+  "version": 3,
+  "contract": {
+    "default": {
+      "tagging": 1,
+      "globals": { "required": ["country"] },
+      "events": {
+        "product": {
+          "*": {
+            "properties": {
+              "data": { "required": ["id", "name"] }
+            }
+          }
+        }
+      }
+    }
+  },
+  "flows": {
+    "default": {
+      "web": {},
+      "transformers": {
+        "validator": {
+          "package": "@walkeros/transformer-validator",
+          "config": {
+            "settings": {
+              "format": true,
+              "events": "$contract.default.events",
+              "globals": "$contract.default.globals"
+            }
+          }
+        }
+      },
+      "collector": {
+        "tagging": "$contract.default.tagging"
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+## CLI validation
+
+Validate contracts with the CLI or MCP server:
+
+<CodeSnippet
+  code={`# Validate a contract from a file
+walkeros validate contract.json --type contract
+
+# Validate inline
+echo '{"default":{"events":{"product":{"add":{"properties":{}}}}}}' | walkeros validate --type contract
+
+# Validate a full flow (includes contract validation)
+walkeros validate flow.json`}
+  language="bash"
+/>
+
+The contract validator checks:
+- `tagging` is a non-negative integer (if present)
+- `extends` references exist and are not circular
+- Entity and action keys are non-empty
+- Each entry is a valid JSON Schema object
+- Sections (`globals`, `context`, etc.) are valid JSON Schema objects
+
+## Complete example
+
+<CodeSnippet
+  code={`{
+  "version": 3,
+  "contract": {
+    "default": {
+      "tagging": 1,
+      "description": "Web shop tracking contract",
+      "globals": {
+        "type": "object",
+        "required": ["country", "currency"],
+        "properties": {
+          "country": { "type": "string", "pattern": "^[A-Z]{2}$", "description": "ISO country code" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$", "description": "ISO 4217 currency code" }
+        }
+      },
+      "consent": {
+        "type": "object",
+        "required": ["analytics"],
+        "properties": {
+          "analytics": { "type": "boolean", "const": true, "description": "Analytics consent required" }
+        }
+      },
+      "events": {
+        "product": {
+          "*": {
+            "description": "A product in the catalog",
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": ["id", "name"],
+                "properties": {
+                  "id": { "type": "string", "description": "Product SKU" },
+                  "name": { "type": "string", "description": "Display name" }
+                }
+              }
+            }
+          },
+          "add": {
+            "description": "Product added to cart",
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": ["quantity"],
+                "properties": {
+                  "quantity": { "type": "integer", "minimum": 1 }
+                }
+              }
+            }
+          }
+        },
+        "order": {
+          "complete": {
+            "description": "Purchase completed",
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": ["total"],
+                "properties": {
+                  "total": { "type": "number", "minimum": 0 }
+                }
+              },
+              "nested": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "web": {
+      "extends": "default",
+      "events": {
+        "user": {
+          "login": {
+            "description": "User authenticated",
+            "properties": {
+              "user": {
+                "type": "object",
+                "required": ["id"],
+                "properties": {
+                  "id": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "web_loggedin": {
+      "extends": "web",
+      "user": {
+        "required": ["id", "email"],
+        "properties": {
+          "id": { "type": "string" },
+          "email": { "type": "string", "format": "email" }
+        }
+      }
+    }
+  },
+  "flows": {
+    "web-shop": {
+      "web": {},
+      "transformers": {
+        "validator": {
+          "package": "@walkeros/transformer-validator",
+          "config": {
+            "settings": {
+              "format": true,
+              "events": "$contract.web.events",
+              "globals": "$contract.web.globals",
+              "consent": "$contract.web.consent"
+            }
+          }
+        }
+      },
+      "collector": {
+        "tagging": "$contract.web.tagging"
+      },
+      "sources": {},
+      "destinations": {}
+    }
+  }
+}`}
+  language="json"
+/>
+
+In the `web-shop` flow, `product add` merges these levels:
+
+| Level | Source | Rules added |
+|-------|--------|-------------|
+| Top-level `globals` | `default` (inherited) | `globals.country`, `globals.currency` required |
+| Top-level `consent` | `default` (inherited) | `consent.analytics` required |
+| `product.*` | `default` events (inherited) | `data.id`, `data.name` required |
+| `product.add` | `default` events (inherited) | `data.quantity` required |
+
+## Next steps
+
+- **[Validator transformer](/docs/transformers/validator)** — Enforce contracts at runtime
+- **[Mapping](/docs/mapping)** — Transform events for destinations
+- **[Flow configuration](/docs/getting-started/modes/bundled)** — Full flow config reference

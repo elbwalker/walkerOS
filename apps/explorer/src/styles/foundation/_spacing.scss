@@ -1,0 +1,29 @@
+@use '../theme/tokens' as *;
+
+@mixin spacing($property, $size) {
+  #{$property}: var(--spacing-#{$size}, $size);
+}
+
+@mixin padding-sm {
+  padding: $spacing-sm;
+}
+
+@mixin padding-md {
+  padding: $spacing-md;
+}
+
+@mixin padding-lg {
+  padding: $spacing-lg;
+}
+
+@mixin gap-sm {
+  gap: $spacing-sm;
+}
+
+@mixin gap-md {
+  gap: $spacing-md;
+}
+
+@mixin gap-lg {
+  gap: $spacing-lg;
+}

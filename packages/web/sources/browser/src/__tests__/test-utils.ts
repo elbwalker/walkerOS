@@ -40,6 +40,7 @@ export async function createBrowserSource(
     id: 'test-browser',
     logger: createMockLogger(),
     setIngest: async () => {},
+    setRespond: jest.fn(),
   });
 
   // Use the source's own push method which includes proper translation

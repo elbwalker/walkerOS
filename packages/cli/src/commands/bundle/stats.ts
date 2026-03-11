@@ -3,12 +3,15 @@
  */
 import { formatBytes } from '../../core/index.js';
 import type { BundleStats } from './bundler.js';
-import type { Logger } from '../../core/index.js';
+import type { Logger } from '@walkeros/core';
 
 /**
  * Display detailed bundle statistics to console
  */
-export function displayStats(stats: BundleStats, logger: Logger): void {
+export function displayStats(
+  stats: BundleStats,
+  logger: Logger.Instance,
+): void {
   logger.info('\n📊 Bundle Statistics');
   logger.info('─'.repeat(50));
 

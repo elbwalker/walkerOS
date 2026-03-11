@@ -1,5 +1,12 @@
-import type { Elb } from '@walkeros/core';
-import type { ApiCall } from './tracker.js';
+import type { Elb, WalkerOS } from '@walkeros/core';
+
+/** Tracked API call from destination simulation */
+export interface ApiCall {
+  type: 'call';
+  path: string;
+  args: unknown[];
+  timestamp: number;
+}
 
 export interface SimulateCommandOptions {
   config?: string;
@@ -10,6 +17,17 @@ export interface SimulateCommandOptions {
   verbose?: boolean;
   silent?: boolean;
   platform?: 'web' | 'server';
+  example?: string;
+  step?: string;
+}
+
+export interface ExampleMatch {
+  name: string;
+  step: string;
+  expected: unknown;
+  actual: unknown;
+  match: boolean;
+  diff?: string;
 }
 
 export interface SimulationResult {
@@ -20,4 +38,7 @@ export interface SimulationResult {
   logs?: unknown[];
   usage?: Record<string, ApiCall[]>;
   duration?: number;
+  exampleMatch?: ExampleMatch;
+  /** Events captured by source simulation */
+  capturedEvents?: WalkerOS.DeepPartialEvent[];
 }

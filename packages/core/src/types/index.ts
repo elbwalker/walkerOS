@@ -1,6 +1,5 @@
 export * as Collector from './collector';
 export * as Context from './context';
-export * as Data from './data';
 export * as Destination from './destination';
 export * as Elb from './elb';
 export * as Flow from './flow';
@@ -10,9 +9,13 @@ export * as Mapping from './mapping';
 export * as On from './on';
 export * as Transformer from './transformer';
 export * as Request from './request';
-export * as Schema from './schema';
 export * as Source from './source';
+export * as Store from './store';
+export * as Lifecycle from './lifecycle';
 export * as WalkerOS from './walkeros';
+export * as Simulation from './simulation';
+export * as Matcher from './matcher';
+export * as Hint from './hint';
 
 // Export storage types directly
 export type { StorageType } from './storage';

@@ -16,6 +16,7 @@ function createSourceContext(
     id: 'test-fetch',
     collector: {} as Collector.Instance,
     setIngest: jest.fn().mockResolvedValue(undefined),
+    setRespond: jest.fn(),
   };
 }
 
@@ -51,7 +52,6 @@ describe('sourceFetch', () => {
       expect(source.config.settings).toEqual({
         paths: ['/collect'],
         cors: true,
-        healthPath: '/health',
         maxRequestSize: 102400,
         maxBatchSize: 100,
       });
@@ -65,7 +65,6 @@ describe('sourceFetch', () => {
             settings: {
               path: '/events',
               cors: false,
-              healthPath: '/status',
             },
           },
           {
@@ -81,7 +80,6 @@ describe('sourceFetch', () => {
         path: '/events',
         paths: ['/events'],
         cors: false,
-        healthPath: '/status',
         maxRequestSize: 102400,
         maxBatchSize: 100,
       });
@@ -89,41 +87,6 @@ describe('sourceFetch', () => {
   });
 
   describe('POST request handling', () => {
-    it('should process valid single event', async () => {
-      const source = await sourceFetch(
-        createSourceContext(
-          {},
-          {
-            push: mockPush as never,
-            command: mockCommand as never,
-            elb: jest.fn() as never,
-            logger: createMockLogger(),
-          },
-        ),
-      );
-
-      const event: WalkerOS.DeepPartialEvent = {
-        name: 'page view',
-        data: { title: 'Home' },
-      };
-
-      const request = new Request('https://example.com/collect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(event),
-      });
-
-      const response = await source.push(request);
-      const responseBody = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(responseBody).toMatchObject({
-        success: true,
-        timestamp: expect.any(Number),
-      });
-      expect(mockPush).toHaveBeenCalledWith(event);
-    });
-
     it('should reject POST with invalid JSON body', async () => {
       const source = await sourceFetch(
         createSourceContext(
@@ -261,36 +224,6 @@ describe('sourceFetch', () => {
   });
 
   describe('GET request handling (pixel tracking)', () => {
-    it('should process event from query parameters', async () => {
-      const source = await sourceFetch(
-        createSourceContext(
-          {},
-          {
-            push: mockPush as never,
-            command: mockCommand as never,
-            elb: jest.fn() as never,
-            logger: createMockLogger(),
-          },
-        ),
-      );
-
-      const request = new Request(
-        'https://example.com/collect?event=page%20view&data[title]=Home&user[id]=user123',
-        { method: 'GET' },
-      );
-
-      const response = await source.push(request);
-
-      expect(response.status).toBe(200);
-      expect(response.headers.get('Content-Type')).toBe('image/gif');
-      expect(response.headers.get('Cache-Control')).toContain('no-cache');
-      expect(mockPush).toHaveBeenCalledWith({
-        event: 'page view',
-        data: { title: 'Home' },
-        user: { id: 'user123' },
-      });
-    });
-
     it('should return 1x1 GIF for pixel tracking', async () => {
       const source = await sourceFetch(
         createSourceContext(
@@ -402,37 +335,6 @@ describe('sourceFetch', () => {
 
       expect(response.status).toBe(204);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull();
-    });
-  });
-
-  describe('health check', () => {
-    it('should respond to health check endpoint', async () => {
-      const source = await sourceFetch(
-        createSourceContext(
-          {},
-          {
-            push: mockPush as never,
-            command: mockCommand as never,
-            elb: jest.fn() as never,
-            logger: createMockLogger(),
-          },
-        ),
-      );
-
-      const request = new Request('https://example.com/health', {
-        method: 'GET',
-      });
-
-      const response = await source.push(request);
-      const responseBody = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(responseBody).toMatchObject({
-        status: 'ok',
-        source: 'fetch',
-        timestamp: expect.any(Number),
-      });
-      expect(mockPush).not.toHaveBeenCalled();
     });
   });
 

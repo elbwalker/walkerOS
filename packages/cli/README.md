@@ -48,14 +48,11 @@ walkeros bundle flow.json
 # Test with simulated events (no real API calls)
 walkeros simulate flow.json --event '{"name":"product view"}'
 
-# Or test a pre-built bundle directly
-walkeros simulate dist/bundle.mjs --event '{"name":"product view"}'
-
 # Push real events to destinations
 walkeros push flow.json --event '{"name":"product view"}'
 
 # Run a collection server locally
-walkeros run collect dist/bundle.mjs --port 3000
+walkeros run dist/bundle.mjs --port 3000
 ```
 
 ## Commands
@@ -100,24 +97,16 @@ walkeros bundle flow.json --dockerfile Dockerfile.custom
 ```
 
 The output path uses convention-based defaults: `./dist/bundle.mjs` for server,
-`./dist/walker.js` for web. The `--dockerfile` flag generates a Dockerfile with
-the correct `MODE` (collect/serve) based on flow type.
+`./dist/walker.js` for web.
 
 ### simulate
 
-Test event processing with simulated events. Accepts either a config JSON (which
-gets bundled) or a pre-built bundle (executed directly).
+Test event processing with simulated events. The config JSON gets bundled and
+executed with destination mocking.
 
 ```bash
-walkeros simulate <input> --event '{"name":"page view"}' [options]
+walkeros simulate <config> --event '{"name":"page view"}' [options]
 ```
-
-**Input types:**
-
-- **Config JSON** - Bundled and executed with destination mocking
-- **Pre-built bundle** (`.js`/`.mjs`) - Executed directly, no mocking
-
-The CLI auto-detects the input type by attempting to parse as JSON.
 
 **Options:**
 
@@ -138,22 +127,7 @@ walkeros simulate examples/web-serve.json \
 
 # Simulate specific flow from multi-flow config
 walkeros simulate flow.json --flow server --event '{"name":"test"}'
-
-# Simulate with pre-built bundle
-walkeros simulate dist/bundle.mjs --event '{"name":"page view"}'
-
-# Override platform detection
-walkeros simulate dist/bundle.js --platform server --event '{"name":"page view"}'
 ```
-
-**Platform detection:**
-
-When using pre-built bundles, platform is detected from file extension:
-
-- `.mjs` → server (ESM, Node.js)
-- `.js` → web (IIFE, JSDOM)
-
-Use `--platform` to override if extension doesn't match intended runtime.
 
 ### push
 
@@ -221,13 +195,8 @@ real integrations.
 Run flows locally (no Docker daemon required).
 
 ```bash
-walkeros run <mode> <config-file> [options]
+walkeros run <config-file> [options]
 ```
-
-**Modes:**
-
-- `collect` - HTTP event collection server
-- `serve` - Static file server
 
 **Options:**
 
@@ -241,13 +210,10 @@ walkeros run <mode> <config-file> [options]
 
 ```bash
 # Run collection server (auto-bundles JSON)
-walkeros run collect examples/server-collect.json --port 3000
+walkeros run examples/server-collect.json --port 3000
 
 # Run with pre-built bundle
-walkeros run collect examples/server-collect.mjs --port 3000
-
-# Serve static files
-walkeros run serve flow.json --port 8080 --static-dir ./dist
+walkeros run examples/server-collect.mjs --port 3000
 ```
 
 **How it works:**
@@ -256,6 +222,51 @@ walkeros run serve flow.json --port 8080 --static-dir ./dist
 2. `.mjs` bundles are used directly
 3. Runs in current Node.js process
 4. Press Ctrl+C for graceful shutdown
+
+### validate
+
+Validate flow configurations, events, mappings, or contracts.
+
+```bash
+walkeros validate <config-file> [options]
+```
+
+By default, validates a Flow.Config file — checking schema, references, and
+cross-step example compatibility.
+
+**Options:**
+
+- `--type <type>` - Validation type (default: `flow`). Also accepts: `event`,
+  `mapping`, `contract`
+- `--path <path>` - Validate a specific entry against its package schema (e.g.,
+  `destinations.snowplow`, `sources.browser`)
+- `--flow <name>` - Flow name for multi-flow configs
+- `--strict` - Treat warnings as errors
+- `--json` - Output as JSON
+- `-v, --verbose` - Verbose output
+- `-s, --silent` - Suppress output
+
+**Exit codes:** `0` = valid, `1` = errors, `2` = warnings (with --strict), `3` =
+input error
+
+**Examples:**
+
+```bash
+# Validate flow config (schema + examples)
+walkeros validate flow.json
+
+# Validate specific flow
+walkeros validate flow.json --flow analytics
+
+# Validate a single event
+walkeros validate event.json --type event
+
+# Validate in CI
+walkeros validate flow.json --json --strict || exit 1
+
+# Validate entry against package schema
+walkeros validate flow.json --path destinations.snowplow
+```
 
 ### deploy
 
@@ -328,11 +339,11 @@ walkeros bundle flow.json --no-cache
 
 ## Flow Configuration
 
-Flow configs use the `Flow.Setup` format with `version` and `flows`:
+Flow configs use the `Flow.Config` format with `version` and `flows`:
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "server": {},
@@ -508,7 +519,7 @@ const result = await simulate(
 );
 
 // Run
-await runCommand('collect', {
+await runCommand({
   config: './flow.json',
   port: 3000,
   verbose: true,
@@ -536,7 +547,7 @@ walkeros simulate \
   --event '{"name":"product view","data":{"id":"P123"}}'
 
 # Run server
-walkeros run collect examples/server-collect.json --port 3000
+walkeros run examples/server-collect.json --port 3000
 ```
 
 ## Development Workflow
@@ -557,7 +568,7 @@ walkeros simulate \
 walkeros bundle my-flow.json --stats
 
 # 4. Run locally
-walkeros run collect dist/bundle.mjs --port 3000
+walkeros run dist/bundle.mjs --port 3000
 
 # 5. In another terminal, test it
 curl -X POST http://localhost:3000/collect \
@@ -616,7 +627,7 @@ Run the bundle directly with the CLI:
 walkeros bundle flow.json
 
 # Run in production
-walkeros run collect dist/bundle.mjs --port 8080
+walkeros run dist/bundle.mjs --port 8080
 ```
 
 This runs the flow in the current Node.js process, suitable for deployment on

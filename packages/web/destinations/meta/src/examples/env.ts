@@ -59,5 +59,13 @@ export const push: Env = {
   },
 };
 
+/**
+ * Simulation tracking paths
+ * Specifies which function calls to track during simulation
+ */
+export const simulation = [
+  'call:window.fbq', // Track fbq function calls
+];
+
 // Future: error scenarios (v2)
 // export const error: Env = { ... };

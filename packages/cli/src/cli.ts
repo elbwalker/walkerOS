@@ -29,6 +29,12 @@ import {
   deployCommand,
   getDeploymentCommand,
 } from './commands/deploy/index.js';
+import {
+  createDeployCommand,
+  listDeploymentsCommand,
+  deleteDeploymentCommand,
+  getDeploymentBySlugCommand,
+} from './commands/deployments/index.js';
 
 const program = new Command();
 
@@ -37,21 +43,12 @@ program
   .description('walkerOS CLI - Bundle and deploy walkerOS components')
   .version(VERSION);
 
-// Display startup banner before any command runs
-// Suppressed when piping (non-TTY stdout), --silent, or --json
-program.hook('preAction', (thisCommand, actionCommand) => {
-  const options = actionCommand.opts();
-  if (!options.silent && !options.json && process.stdout.isTTY) {
-    printBanner(VERSION);
-  }
-});
-
 // Bundle command
 program
   .command('bundle [file]')
   .description('Bundle NPM packages with custom code')
   .option('-o, --output <path>', 'write bundle to file or directory')
-  .option('--flow <name>', 'flow name for multi-flow configs')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('--all', 'build all flows for multi-flow configs')
   .option('--stats', 'show bundle statistics')
   .option('--json', 'output as JSON (implies --stats)')
@@ -86,7 +83,7 @@ program
     '-e, --event <source>',
     'event to simulate (JSON string, file path, or URL)',
   )
-  .option('--flow <name>', 'flow name for multi-flow configs')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('-p, --platform <platform>', 'platform override (web or server)')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
@@ -113,7 +110,7 @@ program
     'event to push (JSON string, file path, or URL)',
   )
   .option('-o, --output <path>', 'write result to file')
-  .option('--flow <name>', 'flow name for multi-flow configs')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('-p, --platform <platform>', 'platform override (web or server)')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
@@ -133,20 +130,32 @@ program
 
 // Validate command
 program
-  .command('validate <type> [input]')
-  .description('Validate event, flow, or mapping configuration')
+  .command('validate [input]')
+  .description(
+    'Validate flow configuration (schema, references, cross-step examples)',
+  )
+  .option(
+    '-t, --type <type>',
+    'validation type: flow, event, mapping, contract',
+    'flow',
+  )
+  .option(
+    '--path <path>',
+    'validate a specific entry against its package schema (e.g. destinations.snowplow)',
+  )
   .option('-o, --output <path>', 'write result to file')
-  .option('--flow <name>', 'flow name for multi-flow configs')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
   .option('--strict', 'fail on warnings')
-  .action(async (type, input, options) => {
+  .action(async (input, options) => {
     await validateCommand({
-      type,
+      type: options.type || 'flow',
       input,
       output: options.output,
       flow: options.flow,
+      path: options.path,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,
@@ -300,7 +309,7 @@ flowsCmd
   .command('create <name>')
   .description('Create a new flow')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('-c, --content <json>', 'Flow.Setup JSON string or file path')
+  .option('-c, --content <json>', 'Flow.Config JSON string or file path')
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
@@ -314,7 +323,7 @@ flowsCmd
   .description('Update a flow')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
   .option('--name <name>', 'new flow name')
-  .option('-c, --content <json>', 'new Flow.Setup JSON string or file path')
+  .option('-c, --content <json>', 'new Flow.Config JSON string or file path')
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
@@ -348,17 +357,39 @@ flowsCmd
     await duplicateFlowCommand(flowId, options);
   });
 
-// Deploy command group
+// Unified deploy command group
 const deployCmd = program
   .command('deploy')
-  .description('Deploy flows to walkerOS cloud');
+  .description('Create, manage, and deploy flows');
 
+// deploy create [config] — placeholder until Task 2
+deployCmd
+  .command('create [config]')
+  .description(
+    'Create a deployment (infers type from flow config or remote flow)',
+  )
+  .option('--label <string>', 'human-readable label')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
+  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
+  .option('-o, --output <path>', 'output file path')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
+  .action(async (config, options) => {
+    await createDeployCommand(config, options);
+  });
+
+// deploy start <flowId> — existing cloud deploy (unchanged logic)
 deployCmd
   .command('start <flowId>')
-  .description('Deploy a flow (auto-detects web or server)')
+  .description('Deploy a flow to walkerOS cloud (auto-detects web or server)')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('--flow <name>', 'flow name for multi-config flows')
+  .option('-f, --flow <name>', 'flow name for multi-config flows')
   .option('--no-wait', 'do not wait for deployment to complete')
+  .option(
+    '--timeout <seconds>',
+    'timeout for deployment polling (default: 120)',
+  )
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
@@ -367,66 +398,71 @@ deployCmd
     await deployCommand(flowId, options);
   });
 
+// deploy list
 deployCmd
-  .command('status <flowId>')
-  .description('Get the latest deployment status for a flow')
+  .command('list')
+  .description('List all deployments in a project')
   .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
-  .option('--flow <name>', 'flow name for multi-config flows')
+  .option('--type <type>', 'filter by type: web, server')
+  .option('--status <status>', 'filter by status')
   .option('-o, --output <path>', 'output file path')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
-  .action(async (flowId, options) => {
-    await getDeploymentCommand(flowId, options);
+  .action(async (options) => {
+    await listDeploymentsCommand(options);
   });
 
-// Run command with subcommands
-const runCmd = program
-  .command('run')
-  .description('Run walkerOS flows in collect or serve mode');
+// deploy status <id-or-slug>
+deployCmd
+  .command('status <id-or-slug>')
+  .description('Get deployment details by ID or slug')
+  .option('--project <id>', 'project ID')
+  .option('-o, --output <path>', 'output file path')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
+  .action(async (idOrSlug, options) => {
+    await getDeploymentBySlugCommand(idOrSlug, options);
+  });
 
-// Run collect subcommand
-runCmd
-  .command('collect [file]')
-  .description(
-    'Run collector mode (event collection endpoint). Defaults to server-collect.mjs if no file specified.',
-  )
+// deploy delete <id-or-slug>
+deployCmd
+  .command('delete <id-or-slug>')
+  .description('Delete a deployment')
+  .option('--project <id>', 'project ID')
+  .option('--json', 'output as JSON')
+  .option('-v, --verbose', 'verbose output')
+  .option('-s, --silent', 'suppress output')
+  .action(async (idOrSlug, options) => {
+    await deleteDeploymentCommand(idOrSlug, options);
+  });
+
+// Run command
+program
+  .command('run [file]')
+  .description('Run a walkerOS flow')
+  .option('-f, --flow <name>', 'flow name for multi-flow configs')
+  .option('--flow-id <id>', 'API flow ID (enables heartbeat, polling, secrets)')
+  .option('--project <id>', 'project ID (defaults to WALKEROS_PROJECT_ID)')
   .option('-p, --port <number>', 'port to listen on (default: 8080)', parseInt)
-  .option('-h, --host <address>', 'host address (default: 0.0.0.0)')
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
   .action(async (file, options) => {
-    await runCommand('collect', {
-      config: file || 'server-collect.mjs',
-      port: options.port,
-      host: options.host,
-      json: options.json,
-      verbose: options.verbose,
-      silent: options.silent,
-    });
-  });
-
-// Run serve subcommand
-runCmd
-  .command('serve [file]')
-  .description(
-    'Run serve mode (single-file server for browser bundles). Defaults to baked-in web-serve.js if no file specified.',
-  )
-  .option('-p, --port <number>', 'port to listen on (default: 8080)', parseInt)
-  .option('-h, --host <address>', 'host address (default: 0.0.0.0)')
-  .option('--name <filename>', 'filename in URL (default: walker.js)')
-  .option('--path <directory>', 'URL directory path (e.g., libs/v1)')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .action(async (file, options) => {
-    await runCommand('serve', {
-      config: file || 'web-serve.js',
-      port: options.port,
-      host: options.host,
-      serveName: options.name,
-      servePath: options.path,
+    await runCommand({
+      config: file || process.env.BUNDLE,
+      port:
+        options.port ??
+        (process.env.PORT ? parseInt(process.env.PORT, 10) : undefined),
+      flow:
+        options.flow ?? process.env.WALKEROS_FLOW_NAME ?? process.env.FLOW_NAME,
+      flowId:
+        options.flowId ?? process.env.WALKEROS_FLOW_ID ?? process.env.FLOW_ID,
+      project:
+        options.project ??
+        process.env.WALKEROS_PROJECT_ID ??
+        process.env.PROJECT_ID,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,
@@ -436,5 +472,11 @@ runCmd
 // Cache command
 registerCacheCommand(program);
 
-// Run the CLI
+// Show banner when called without any arguments (bare `walkeros`)
+if (process.argv.length <= 2) {
+  printBanner(VERSION);
+  console.error('Run walkeros --help for usage information.');
+  process.exit(0);
+}
+
 program.parse();

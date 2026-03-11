@@ -1,15 +1,20 @@
 import { simulateCore, formatSimulationResult } from './simulator.js';
+import { simulateSourceCLI } from './source-simulator.js';
+import { createCLILogger } from '../../core/cli-logger.js';
 import {
-  createCommandLogger,
   getErrorMessage,
   getTmpPath,
   isStdinPiped,
   readStdin,
   writeResult,
 } from '../../core/index.js';
-import { loadJsonFromSource } from '../../config/index.js';
-import type { SimulateCommandOptions } from './types.js';
+import { loadJsonFromSource, loadJsonConfig } from '../../config/index.js';
+import { validateFlowConfig } from '../../config/validators.js';
+import { findExample } from './example-loader.js';
+import { compareOutput } from './compare.js';
+import type { SimulateCommandOptions, SimulationResult } from './types.js';
 import type { SimulateOptions, Platform } from '../../schemas/simulate.js';
+import type { Flow } from '@walkeros/core';
 
 /**
  * CLI command handler for simulate command
@@ -17,7 +22,7 @@ import type { SimulateOptions, Platform } from '../../schemas/simulate.js';
 export async function simulateCommand(
   options: SimulateCommandOptions,
 ): Promise<void> {
-  const logger = createCommandLogger({ ...options, stderr: true });
+  const logger = createCLILogger({ ...options, stderr: true });
   const startTime = Date.now();
 
   try {
@@ -25,7 +30,6 @@ export async function simulateCommand(
     let config: string;
     if (isStdinPiped() && !options.config) {
       const stdinContent = await readStdin();
-      // Write stdin to temp file for simulateCore (expects file path)
       const fs = await import('fs-extra');
       const path = await import('path');
       const tmpPath = getTmpPath(undefined, 'stdin-simulate.json');
@@ -36,20 +40,17 @@ export async function simulateCommand(
       config = options.config || 'bundle.config.json';
     }
 
-    // Load event from inline JSON, file path, or URL
-    const event = await loadJsonFromSource(options.event, {
-      name: 'event',
-    });
-
-    // Execute simulation
-    const result = await simulateCore(config, event, {
+    const result = await simulate(config, options.event, {
       flow: options.flow,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,
+      platform: options.platform,
+      example: options.example,
+      step: options.step,
     });
 
-    // Add duration to result
+    // Add duration
     const resultWithDuration = {
       ...result,
       duration: (Date.now() - startTime) / 1000,
@@ -61,7 +62,11 @@ export async function simulateCommand(
     });
     await writeResult(formatted + '\n', { output: options.output });
 
-    process.exit(result.success ? 0 : 1);
+    const exitCode =
+      !result.success || (result.exampleMatch && !result.exampleMatch.match)
+        ? 1
+        : 0;
+    process.exit(exitCode);
   } catch (error) {
     const errorMessage = getErrorMessage(error);
 
@@ -121,7 +126,12 @@ export async function simulateCommand(
 export async function simulate(
   configOrPath: string | unknown,
   event: unknown,
-  options: SimulateOptions & { flow?: string; platform?: Platform } = {},
+  options: SimulateOptions & {
+    flow?: string;
+    platform?: Platform;
+    example?: string;
+    step?: string;
+  } = {},
 ): Promise<import('./types').SimulationResult> {
   // simulateCore currently only accepts file paths, so we need to handle that
   // For now, if configOrPath is not a string, throw an error with guidance
@@ -133,16 +143,144 @@ export async function simulate(
     );
   }
 
-  // Call core simulator
-  return await simulateCore(configOrPath, event, {
-    json: options.json ?? false,
-    verbose: options.verbose ?? false,
-    flow: options.flow,
-    platform: options.platform,
-  });
+  // Resolve string event inputs (file paths, URLs, JSON strings)
+  let resolvedEvent = event;
+  if (typeof event === 'string') {
+    resolvedEvent = await loadJsonFromSource(event, { name: 'event' });
+  }
+
+  let exampleContext:
+    | { stepType: string; stepName: string; expected: unknown }
+    | undefined;
+
+  // If --example is provided, load the example from the raw config
+  if (options.example) {
+    const rawConfig = await loadJsonConfig<Flow.Config>(configOrPath);
+    const setup = validateFlowConfig(rawConfig);
+
+    const flowNames = Object.keys(setup.flows);
+    let flowName = options.flow;
+    if (!flowName) {
+      if (flowNames.length === 1) {
+        flowName = flowNames[0];
+      } else {
+        throw new Error(
+          `Multiple flows found. Use --flow to specify which flow contains the example.\n` +
+            `Available flows: ${flowNames.join(', ')}`,
+        );
+      }
+    }
+
+    const flowSettings = setup.flows[flowName];
+    if (!flowSettings) {
+      throw new Error(
+        `Flow "${flowName}" not found. Available: ${flowNames.join(', ')}`,
+      );
+    }
+
+    const found = findExample(flowSettings, options.example, options.step);
+    if (found.example.in === undefined) {
+      throw new Error(
+        `Example "${options.example}" in ${found.stepType}.${found.stepName} has no "in" value`,
+      );
+    }
+
+    resolvedEvent = found.example.in;
+    exampleContext = {
+      stepType: found.stepType,
+      stepName: found.stepName,
+      expected: found.example.out,
+    };
+  }
+
+  // Detect source simulation
+  const isSourceSimulation =
+    exampleContext?.stepType === 'source' ||
+    options.step?.startsWith('source.');
+
+  let result: SimulationResult;
+
+  if (isSourceSimulation) {
+    // Source simulation needs raw flow config
+    const rawConfig = await loadJsonConfig<Flow.Config>(configOrPath);
+    const setup = validateFlowConfig(rawConfig);
+    const flowNames = Object.keys(setup.flows);
+    const flowName =
+      options.flow || (flowNames.length === 1 ? flowNames[0] : undefined);
+    if (!flowName) {
+      throw new Error(
+        `Multiple flows found. Use --flow to specify which flow.\n` +
+          `Available: ${flowNames.join(', ')}`,
+      );
+    }
+    const flowSettings = setup.flows[flowName];
+    if (!flowSettings) {
+      throw new Error(
+        `Flow "${flowName}" not found. Available: ${flowNames.join(', ')}`,
+      );
+    }
+
+    const sourceStep =
+      exampleContext?.stepName || options.step!.substring('source.'.length);
+
+    result = await simulateSourceCLI(
+      flowSettings as unknown as Record<string, unknown>,
+      resolvedEvent,
+      {
+        flow: options.flow,
+        sourceStep,
+        json: options.json,
+        verbose: options.verbose,
+        silent: options.silent,
+      },
+    );
+  } else {
+    // Standard simulation (destination/transformer)
+    const stepTarget = exampleContext
+      ? `${exampleContext.stepType}.${exampleContext.stepName}`
+      : options.step;
+    result = await simulateCore(configOrPath, resolvedEvent, {
+      json: options.json ?? false,
+      verbose: options.verbose ?? false,
+      silent: options.silent ?? false,
+      flow: options.flow,
+      platform: options.platform,
+      step: stepTarget,
+    });
+  }
+
+  // Compare output against example if --example was used
+  if (exampleContext && result.success) {
+    const stepKey = `${exampleContext.stepType}.${exampleContext.stepName}`;
+
+    if (exampleContext.expected === false) {
+      const calls = result.usage?.[exampleContext.stepName];
+      const wasFiltered = !calls || calls.length === 0;
+      result.exampleMatch = {
+        name: options.example!,
+        step: stepKey,
+        expected: false,
+        actual: wasFiltered ? false : calls,
+        match: wasFiltered,
+        diff: wasFiltered
+          ? undefined
+          : `Expected event to be filtered, but ${calls!.length} API call(s) were made`,
+      };
+    } else if (exampleContext.expected !== undefined) {
+      const actual = result.usage?.[exampleContext.stepName] ?? [];
+      result.exampleMatch = {
+        name: options.example!,
+        step: stepKey,
+        ...compareOutput(exampleContext.expected, actual),
+      };
+    }
+  }
+
+  return result;
 }
 
 // Re-export types and utilities for testing
 export * from './types.js';
 export * from './simulator.js';
-export { executeInNode } from './node-executor.js';
+export { findExample } from './example-loader.js';
+export { compareOutput } from './compare.js';

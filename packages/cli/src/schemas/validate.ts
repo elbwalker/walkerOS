@@ -11,19 +11,14 @@ import { z } from '@walkeros/core/dev';
  *
  * @remarks
  * Validates the type of validation to perform.
+ * - `contract`: Validate a data contract
  * - `event`: Validate a walkerOS event object
  * - `flow`: Validate a flow configuration file
  * - `mapping`: Validate mapping rules
  */
 export const ValidationTypeSchema = z
-  .union([
-    z.enum(['event', 'flow', 'mapping']),
-    z.string().regex(/^(destinations|sources|transformers)\.\w+$|^\w+$/),
-  ])
-  .describe(
-    'Validation type: "event", "flow", "mapping", or dot-notation path ' +
-      '(e.g., "destinations.snowplow") to validate a specific entry against its package schema',
-  );
+  .enum(['contract', 'event', 'flow', 'mapping'])
+  .describe('Validation type: "event", "flow", "mapping", or "contract"');
 
 export type ValidationType = z.infer<typeof ValidationTypeSchema>;
 
@@ -35,6 +30,12 @@ export type ValidationType = z.infer<typeof ValidationTypeSchema>;
  */
 export const ValidateOptionsSchema = z.object({
   flow: z.string().optional().describe('Flow name for multi-flow configs'),
+  path: z
+    .string()
+    .optional()
+    .describe(
+      'Entry path for package schema validation (e.g., "destinations.snowplow", "sources.browser")',
+    ),
 });
 
 export type ValidateOptions = z.infer<typeof ValidateOptionsSchema>;
@@ -53,6 +54,12 @@ export const ValidateInputShape = {
     .min(1)
     .describe('JSON string, file path, or URL to validate'),
   flow: z.string().optional().describe('Flow name for multi-flow configs'),
+  path: z
+    .string()
+    .optional()
+    .describe(
+      'Entry path for package schema validation (e.g., "destinations.snowplow"). When provided, validates the entry against its package JSON Schema instead of using --type.',
+    ),
 };
 
 /**

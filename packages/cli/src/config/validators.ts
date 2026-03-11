@@ -2,13 +2,13 @@
  * Configuration Type Guards and Validators
  *
  * Type checking utilities for configuration validation.
- * Uses Zod schemas from @walkeros/core for Flow.Setup validation.
+ * Uses Zod schemas from @walkeros/core for Flow.Config validation.
  */
 
 import type { Flow } from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
 
-const { safeParseSetup } = schemas;
+const { safeParseConfig } = schemas;
 
 /**
  * Type guard: Check if value is a plain object.
@@ -40,7 +40,7 @@ export function detectPlatform(
 }
 
 /**
- * Type guard: Check if config is a valid Flow.Setup structure.
+ * Type guard: Check if config is a valid Flow.Config structure.
  *
  * @remarks
  * Uses Zod validation from @walkeros/core.
@@ -48,29 +48,29 @@ export function detectPlatform(
  *
  * @example
  * ```typescript
- * if (isFlowSetup(config)) {
- *   const flowConfig = getFlowConfig(config, 'production');
+ * if (isFlowConfig(config)) {
+ *   const flowSettings = getFlowSettings(config, 'production');
  * }
  * ```
  */
-export function isFlowSetup(data: unknown): data is Flow.Setup {
-  const result = safeParseSetup(data);
+export function isFlowConfig(data: unknown): data is Flow.Config {
+  const result = safeParseConfig(data);
   return result.success;
 }
 
 /**
- * Validate Flow.Setup and throw descriptive error if invalid.
+ * Validate Flow.Config and throw descriptive error if invalid.
  *
  * @remarks
  * Uses Zod validation from @walkeros/core.
  * Provides detailed error messages from Zod.
  *
  * @param data - Raw configuration data
- * @returns Validated Flow.Setup
+ * @returns Validated Flow.Config
  * @throws Error with descriptive message if validation fails
  */
-export function validateFlowSetup(data: unknown): Flow.Setup {
-  const result = safeParseSetup(data);
+export function validateFlowConfig(data: unknown): Flow.Config {
+  const result = safeParseConfig(data);
 
   if (!result.success) {
     // Format Zod errors for CLI display
@@ -85,16 +85,16 @@ export function validateFlowSetup(data: unknown): Flow.Setup {
     throw new Error(`Invalid configuration:\n${errors}`);
   }
 
-  // Cast to Flow.Setup since Zod's inferred type is compatible but not identical
-  return result.data as Flow.Setup;
+  // Cast to Flow.Config since Zod's inferred type is compatible but not identical
+  return result.data as Flow.Config;
 }
 
 /**
- * Get available flow names from a Flow.Setup.
+ * Get available flow names from a Flow.Config.
  *
- * @param setup - Flow.Setup configuration
+ * @param config - Flow.Config configuration
  * @returns Array of flow names
  */
-export function getAvailableFlows(setup: Flow.Setup): string[] {
-  return Object.keys(setup.flows);
+export function getAvailableFlows(config: Flow.Config): string[] {
+  return Object.keys(config.flows);
 }

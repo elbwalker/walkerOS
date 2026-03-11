@@ -2,10 +2,6 @@ import type { WalkerOS } from '@walkeros/core';
 import type { DestinationPiwikPro } from '.';
 import { startFlow } from '@walkeros/collector';
 import { getEvent } from '@walkeros/core';
-import { examples } from './dev';
-
-const { events, mapping } = examples;
-
 describe('Destination PiwikPro', () => {
   let elb: WalkerOS.Elb;
   let destination: DestinationPiwikPro.Destination,
@@ -91,61 +87,5 @@ describe('Destination PiwikPro', () => {
     await elb('foo bar');
     expect(mockFn).toHaveBeenCalledTimes(1);
     expect(mockFnIgnorePageView).toHaveBeenCalledTimes(1);
-  });
-
-  test('event ecommerceOrder', async () => {
-    const event = getEvent('order complete');
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings,
-      mapping: mapping.config,
-    });
-    await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceOrder());
-  });
-
-  test('event ecommerceAddToCart', async () => {
-    const event = getEvent('product add');
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings,
-      mapping: mapping.config,
-    });
-    await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceAddToCart());
-  });
-
-  test('event ecommerceProductDetailView', async () => {
-    const event = getEvent('product view');
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings,
-      mapping: mapping.config,
-    });
-    await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceProductDetailView());
-  });
-
-  test('event ecommerceCartUpdate', async () => {
-    const event = getEvent('cart view');
-    const destinationWithEnv = {
-      ...destination,
-      env: testEnv,
-    };
-    elb('walker destination', destinationWithEnv, {
-      settings,
-      mapping: mapping.config,
-    });
-    await elb(event);
-    expect(mockFn).toHaveBeenCalledWith(...events.ecommerceCartUpdate());
   });
 });

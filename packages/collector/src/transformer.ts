@@ -35,23 +35,6 @@ import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
 import { isObject, tryCatchAsync, useHooks } from '@walkeros/core';
 
 /**
- * Type guard for BranchResult.
- * Uses the __branch discriminant set by the branch() factory function.
- * This is unambiguous — a DeepPartialEvent can never have __branch: true.
- */
-function isBranchResult(
-  result: WalkerOS.DeepPartialEvent | false | void | Transformer.BranchResult,
-): result is Transformer.BranchResult {
-  return (
-    result !== null &&
-    result !== undefined &&
-    result !== false &&
-    typeof result === 'object' &&
-    (result as Transformer.BranchResult).__branch === true
-  );
-}
-
-/**
  * Extracts transformer next configuration for chain walking.
  * Maps transformer instances to their config.next values.
  *
@@ -192,6 +175,13 @@ export async function initTransformers(
       'next',
     );
 
+    // Merge definition-level env into config so it's available during push.
+    // transformerPush reads transformer.config.env to build the push context.
+    const configWithEnv =
+      Object.keys(env).length > 0
+        ? { ...configWithChain, env: env as Transformer.Env }
+        : configWithChain;
+
     // Build transformer context for init
     const transformerLogger = collector.logger
       .scope('transformer')
@@ -201,7 +191,7 @@ export async function initTransformers(
       collector,
       logger: transformerLogger,
       id: transformerId,
-      config: configWithChain,
+      config: configWithEnv,
       env: env as Transformer.Env,
     };
 
@@ -254,9 +244,12 @@ export async function transformerInit(
     // Check for initialization failure
     if (configResult === false) return false;
 
-    // Update config if returned
+    // Update config if returned, preserving env from definition
     transformer.config = {
       ...(configResult || transformer.config),
+      env:
+        ((configResult as Record<string, unknown>)?.env as Transformer.Env) ||
+        transformer.config.env,
       init: true,
     };
 
@@ -282,9 +275,8 @@ export async function transformerPush(
   transformerId: string,
   event: WalkerOS.DeepPartialEvent,
   ingest?: unknown,
-): Promise<
-  WalkerOS.DeepPartialEvent | false | void | Transformer.BranchResult
-> {
+  respond?: import('@walkeros/core').RespondFn,
+): Promise<Transformer.Result | false | void> {
   const transformerType = transformer.type || 'unknown';
   const transformerLogger = collector.logger.scope(
     `transformer:${transformerType}`,
@@ -296,7 +288,10 @@ export async function transformerPush(
     id: transformerId,
     ingest, // Same frozen reference, no copying
     config: transformer.config,
-    env: mergeTransformerEnvironments(transformer.config.env),
+    env: {
+      ...mergeTransformerEnvironments(transformer.config.env),
+      ...(respond ? { respond } : {}),
+    },
   };
 
   transformerLogger.debug('push', { event: (event as { name?: string }).name });
@@ -328,13 +323,15 @@ export async function runTransformerChain(
   chain: string[],
   event: WalkerOS.DeepPartialEvent,
   ingest?: unknown,
+  respond?: import('@walkeros/core').RespondFn,
 ): Promise<WalkerOS.DeepPartialEvent | null> {
   let processedEvent = event;
+  let currentRespond = respond;
 
   for (const transformerName of chain) {
     const transformer = transformers[transformerName];
     if (!transformer) {
-      collector.logger.info(`Transformer not found: ${transformerName}`);
+      collector.logger.warn(`Transformer not found: ${transformerName}`);
       continue;
     }
 
@@ -346,7 +343,7 @@ export async function runTransformerChain(
     );
 
     if (!isInitialized) {
-      collector.logger.info(`Transformer init failed: ${transformerName}`);
+      collector.logger.error(`Transformer init failed: ${transformerName}`);
       return null; // Stop chain on init failure
     }
 
@@ -356,7 +353,14 @@ export async function runTransformerChain(
         .scope(`transformer:${transformer.type || 'unknown'}`)
         .error('Push failed', { error: err });
       return false as const; // Stop chain on error
-    })(collector, transformer, transformerName, processedEvent, ingest);
+    })(
+      collector,
+      transformer,
+      transformerName,
+      processedEvent,
+      ingest,
+      currentRespond,
+    );
 
     // Handle result
     if (result === false) {
@@ -364,33 +368,44 @@ export async function runTransformerChain(
       return null;
     }
 
-    // Handle chain branching
-    if (isBranchResult(result)) {
-      const branchedChain = walkChain(
-        result.next,
-        extractTransformerNextMap(transformers),
-      );
+    if (result && typeof result === 'object') {
+      // Unified TransformerResult handling
+      const { event: resultEvent, respond: resultRespond, next } = result;
 
-      if (branchedChain.length > 0) {
-        return runTransformerChain(
-          collector,
-          transformers,
-          branchedChain,
-          result.event,
-          ingest,
-        );
+      // Update respond if transformer provided a wrapper
+      if (resultRespond) {
+        currentRespond = resultRespond;
       }
 
-      // Branch target not found — drop event (fail-safe).
-      collector.logger.info(
-        `Branch target not found: ${JSON.stringify(result.next)}`,
-      );
-      return null;
-    }
+      // Handle chain branching
+      if (next) {
+        const branchedChain = walkChain(
+          next,
+          extractTransformerNextMap(transformers),
+        );
 
-    if (result !== undefined) {
-      // Transformer returned a modified event
-      processedEvent = result;
+        if (branchedChain.length > 0) {
+          return runTransformerChain(
+            collector,
+            transformers,
+            branchedChain,
+            resultEvent || processedEvent,
+            ingest,
+            currentRespond,
+          );
+        }
+
+        // Branch target not found — drop event (fail-safe).
+        collector.logger.warn(
+          `Branch target not found: ${JSON.stringify(next)}`,
+        );
+        return null;
+      }
+
+      // Update event if provided
+      if (resultEvent) {
+        processedEvent = resultEvent;
+      }
     }
     // If result is undefined (void), continue with current event unchanged
   }

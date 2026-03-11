@@ -173,7 +173,7 @@ describe('Transformer', () => {
     test('uses modified event from transformer', async () => {
       const collector = createMockCollector();
       const modifiedEvent = { name: 'page view', data: { modified: true } };
-      const mockPush = jest.fn().mockResolvedValue(modifiedEvent);
+      const mockPush = jest.fn().mockResolvedValue({ event: modifiedEvent });
       const transformers = {
         modifier: createMockTransformer({ push: mockPush }),
       };
@@ -241,11 +241,11 @@ describe('Transformer', () => {
       const callOrder: string[] = [];
       const mockPush1 = jest.fn().mockImplementation(async (event) => {
         callOrder.push('first');
-        return { ...event, data: { ...event.data, first: true } };
+        return { event: { ...event, data: { ...event.data, first: true } } };
       });
       const mockPush2 = jest.fn().mockImplementation(async (event) => {
         callOrder.push('second');
-        return { ...event, data: { ...event.data, second: true } };
+        return { event: { ...event, data: { ...event.data, second: true } } };
       });
       const transformers = {
         first: createMockTransformer({ push: mockPush1 }),
@@ -356,6 +356,24 @@ describe('Transformer', () => {
       expect(result).toBe(true);
       expect(mockInit).not.toHaveBeenCalled();
     });
+
+    test('preserves config.env when init returns new config', async () => {
+      const collector = createMockCollector();
+      const storeRef = { get: jest.fn(), set: jest.fn(), delete: jest.fn() };
+      const mockInit = jest
+        .fn()
+        .mockResolvedValue({ settings: { updated: true } });
+      const transformer = createMockTransformer({
+        init: mockInit,
+        config: { init: false, env: { store: storeRef } },
+      });
+
+      await transformerInit(collector, transformer, 'test-transformer');
+
+      expect(transformer.config.init).toBe(true);
+      expect(transformer.config.env).toBeDefined();
+      expect(transformer.config.env!.store).toBe(storeRef);
+    });
   });
 
   describe('transformerPush', () => {
@@ -379,7 +397,7 @@ describe('Transformer', () => {
     test('returns modified event from transformer', async () => {
       const collector = createMockCollector();
       const modifiedEvent = { name: 'modified', data: { changed: true } };
-      const mockPush = jest.fn().mockResolvedValue(modifiedEvent);
+      const mockPush = jest.fn().mockResolvedValue({ event: modifiedEvent });
       const transformer = createMockTransformer({ push: mockPush });
       const event: WalkerOS.DeepPartialEvent = { name: 'original' };
 
@@ -390,7 +408,7 @@ describe('Transformer', () => {
         event,
       );
 
-      expect(result).toEqual(modifiedEvent);
+      expect(result).toEqual({ event: modifiedEvent });
     });
 
     test('returns false when transformer stops chain', async () => {

@@ -1,23 +1,18 @@
 import path from 'path';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
-import {
-  getPlatform,
-  type Elb,
-  type Logger as CoreLogger,
-} from '@walkeros/core';
+import { getPlatform, type Elb } from '@walkeros/core';
 import { schemas } from '@walkeros/core/dev';
+import { createCLILogger } from '../../core/cli-logger.js';
 import {
-  createCommandLogger,
-  createCollectorLoggerConfig,
   getErrorMessage,
   detectInput,
   isStdinPiped,
   readStdin,
   writeResult,
-  type Logger,
   type Platform,
 } from '../../core/index.js';
+import { Level, type Logger } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
@@ -38,7 +33,7 @@ async function pushCore(
     platform?: string;
   } = {},
 ): Promise<PushResult> {
-  const logger = createCommandLogger({
+  const logger = createCLILogger({
     silent: options.silent,
     verbose: options.verbose,
   });
@@ -46,14 +41,8 @@ async function pushCore(
   let tempDir: string | undefined;
 
   try {
-    // Load event if string (file path or URL)
-    let loadedEvent = event;
-    if (typeof event === 'string') {
-      loadedEvent = await loadJsonFromSource(event, { name: 'event' });
-    }
-
     // Validate event format using Zod schema
-    const eventResult = schemas.PartialEventSchema.safeParse(loadedEvent);
+    const eventResult = schemas.PartialEventSchema.safeParse(event);
     if (!eventResult.success) {
       const errors = eventResult.error.issues
         .map((issue) => `${String(issue.path.join('.'))}: ${issue.message}`)
@@ -75,7 +64,7 @@ async function pushCore(
     };
 
     if (!validatedEvent.name.includes(' ')) {
-      logger.log(
+      logger.info(
         `Warning: Event name "${validatedEvent.name}" should follow "ENTITY ACTION" format (e.g., "page view")`,
       );
     }
@@ -103,10 +92,6 @@ async function pushCore(
         },
       );
     } else {
-      const collectorLoggerConfig = createCollectorLoggerConfig(
-        logger,
-        options.verbose,
-      );
       result = await executeBundlePush(
         detected.content,
         detected.platform,
@@ -115,7 +100,7 @@ async function pushCore(
         (dir) => {
           tempDir = dir;
         },
-        { logger: collectorLoggerConfig },
+        { logger: { level: options.verbose ? Level.DEBUG : Level.ERROR } },
       );
     }
 
@@ -137,7 +122,7 @@ async function pushCore(
  * CLI command handler for push command
  */
 export async function pushCommand(options: PushCommandOptions): Promise<void> {
-  const logger = createCommandLogger({ ...options, stderr: true });
+  const logger = createCLILogger({ ...options, stderr: true });
   const startTime = Date.now();
 
   try {
@@ -154,14 +139,12 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
       config = options.config || 'bundle.config.json';
     }
 
-    const event = await loadJsonFromSource(options.event, { name: 'event' });
-
-    const result = await pushCore(config, event, {
+    const result = await push(config, options.event, {
       flow: options.flow,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,
-      platform: options.platform,
+      platform: options.platform as Platform | undefined,
     });
 
     const duration = Date.now() - startTime;
@@ -259,9 +242,16 @@ export async function push(
     );
   }
 
-  return await pushCore(configOrPath, event, {
+  // Resolve string event inputs (file paths, URLs, JSON strings)
+  let resolvedEvent = event;
+  if (typeof event === 'string') {
+    resolvedEvent = await loadJsonFromSource(event, { name: 'event' });
+  }
+
+  return await pushCore(configOrPath, resolvedEvent, {
     json: options.json ?? false,
     verbose: options.verbose ?? false,
+    silent: options.silent ?? false,
     flow: options.flow,
     platform: options.platform,
   });
@@ -273,17 +263,17 @@ export async function push(
 async function executeConfigPush(
   options: PushCommandOptions,
   validatedEvent: { name: string; data: Record<string, unknown> },
-  logger: Logger,
+  logger: Logger.Instance,
   setTempDir: (dir: string) => void,
 ): Promise<PushResult> {
   // Load config
   logger.debug('Loading flow configuration');
-  const { flowConfig, buildOptions } = await loadFlowConfig(options.config!, {
+  const { flowSettings, buildOptions } = await loadFlowConfig(options.config!, {
     flowName: options.flow,
     logger,
   });
 
-  const platform = getPlatform(flowConfig);
+  const platform = getPlatform(flowSettings);
 
   // Bundle to temp file in config directory (so Node.js can find node_modules)
   logger.debug('Bundling flow configuration');
@@ -310,7 +300,7 @@ async function executeConfigPush(
     }),
   };
 
-  await bundleCore(flowConfig, pushBuildOptions, logger, false);
+  await bundleCore(flowSettings, pushBuildOptions, logger, false);
 
   logger.debug(`Bundle created: ${tempPath}`);
 
@@ -320,12 +310,8 @@ async function executeConfigPush(
     return executeWebPush(tempPath, validatedEvent, logger);
   } else if (platform === 'server') {
     logger.debug('Executing in server environment (Node.js)');
-    const collectorLoggerConfig = createCollectorLoggerConfig(
-      logger,
-      options.verbose,
-    );
     return executeServerPush(tempPath, validatedEvent, logger, 60000, {
-      logger: collectorLoggerConfig,
+      logger: { level: options.verbose ? Level.DEBUG : Level.ERROR },
     });
   } else {
     throw new Error(`Unsupported platform: ${platform}`);
@@ -339,9 +325,9 @@ async function executeBundlePush(
   bundleContent: string,
   platform: Platform,
   validatedEvent: { name: string; data: Record<string, unknown> },
-  logger: Logger,
+  logger: Logger.Instance,
   setTempDir: (dir: string) => void,
-  context: { logger?: CoreLogger.Config } = {},
+  context: { logger?: Logger.Config } = {},
 ): Promise<PushResult> {
   // Write bundle to temp file
   const tempDir = getTmpPath(
@@ -382,7 +368,7 @@ interface PushEventInput {
 async function executeWebPush(
   bundlePath: string,
   event: PushEventInput,
-  logger: Logger,
+  logger: Logger.Instance,
 ): Promise<PushResult> {
   const startTime = Date.now();
 
@@ -422,7 +408,7 @@ async function executeWebPush(
     };
 
     // Push event directly to collector (bypasses source handlers)
-    logger.log(`Pushing event: ${event.name}`);
+    logger.info(`Pushing event: ${event.name}`);
     const elbResult = await collector.push({
       name: event.name,
       data: event.data,
@@ -448,16 +434,17 @@ async function executeWebPush(
 async function executeServerPush(
   bundlePath: string,
   event: PushEventInput,
-  logger: Logger,
+  logger: Logger.Instance,
   timeout: number = 60000, // 60 second default timeout
-  context: { logger?: CoreLogger.Config } = {},
+  context: { logger?: Logger.Config } = {},
 ): Promise<PushResult> {
   const startTime = Date.now();
 
+  let timer: ReturnType<typeof setTimeout>;
   try {
     // Create timeout promise
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(
+      timer = setTimeout(
         () => reject(new Error(`Server push timeout after ${timeout}ms`)),
         timeout,
       );
@@ -490,7 +477,7 @@ async function executeServerPush(
       const { collector } = result;
 
       // Push event directly to collector (bypasses source handlers)
-      logger.log(`Pushing event: ${event.name}`);
+      logger.info(`Pushing event: ${event.name}`);
       const elbResult = await collector.push({
         name: event.name,
         data: event.data,
@@ -511,6 +498,8 @@ async function executeServerPush(
       duration: Date.now() - startTime,
       error: getErrorMessage(error),
     };
+  } finally {
+    clearTimeout(timer!);
   }
 }
 

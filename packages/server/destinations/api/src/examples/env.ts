@@ -18,3 +18,9 @@ export const standard: Env = {
     // Add any specific properties if needed for sendServer
   }) as unknown as Env['sendServer'],
 };
+
+/**
+ * Simulation tracking paths
+ * Specifies which function calls to track during simulation
+ */
+export const simulation = ['sendServer'];

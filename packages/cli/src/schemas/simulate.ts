@@ -42,9 +42,27 @@ export type SimulateOptions = z.infer<typeof SimulateOptionsSchema>;
  */
 export const SimulateInputShape = {
   configPath: FilePathSchema.describe('Path to flow configuration file'),
-  event: z.string().min(1).describe('Event as JSON string, file path, or URL'),
+  event: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      'Event as JSON string, file path, or URL. Optional when example is provided.',
+    ),
   flow: z.string().optional().describe('Flow name for multi-flow configs'),
   platform: PlatformSchema.optional().describe('Override platform detection'),
+  example: z
+    .string()
+    .optional()
+    .describe(
+      'Name of a step example to use as event input (uses its "in" value)',
+    ),
+  step: z
+    .string()
+    .optional()
+    .describe(
+      'Step target in type.name format (e.g. "destination.gtag") to narrow example lookup',
+    ),
 };
 
 /**

@@ -11,14 +11,13 @@ import { schemas } from '@walkeros/server-source-express/dev';
 
 # Express
 
-Turn-key HTTP event collection server with Express.js. Handles JSON POST events, pixel tracking (GET), CORS, and health checks.
+Turn-key HTTP event collection server with Express.js. Handles JSON POST events, pixel tracking (GET), and CORS.
 
 ## Features
 
 * **Standalone or embedded**: Start server automatically or integrate with existing Express app
 * **CORS support**: Configurable cross-origin resource sharing
 * **Pixel tracking**: 1x1 transparent GIF for GET requests
-* **Health checks**: Built-in `/health` and `/ready` endpoints
 
 :::info Where This Fits
 The Express Source is a **server source** in the walkerOS flow:
@@ -81,8 +80,7 @@ const { collector } = await startFlow({
 
 // Server running at http://localhost:8080
 // POST /collect - JSON event ingestion
-// GET  /collect - Pixel tracking
-// GET  /health  - Health check`}
+// GET  /collect - Pixel tracking`}
   language="typescript"
 />
 
@@ -148,8 +146,10 @@ Server sources require platform-specific handlers. For containerized deployments
 | POST | `/collect` | JSON event ingestion |
 | GET | `/collect` | Pixel tracking (returns 1x1 GIF) |
 | OPTIONS | `/collect` | CORS preflight |
-| GET | `/health` | Liveness check |
-| GET | `/ready` | Readiness check |
+
+:::tip Health Checks
+Health check endpoints (`/health` and `/ready`) are provided by the [runner](/docs/apps/runner), not by individual sources. This means health checks work regardless of which source type you use.
+:::
 
 ## Ingest Metadata
 

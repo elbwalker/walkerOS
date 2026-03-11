@@ -1,0 +1,67 @@
+.elb-preview-footer {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  flex: 1;
+  align-self: stretch;
+  background: var(--bg-footer);
+}
+
+.elb-preview-btn {
+  padding: 6px 8px;
+  font-size: var(--font-size-toggle);
+  font-weight: 600;
+  color: var(--color-text-button);
+  border: 0;
+  background: transparent;
+  transition: color 0.2s ease, background 0.2s ease;
+  position: relative;
+  cursor: pointer;
+  text-align: center;
+  margin: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: var(--color-text-button-hover);
+    background: var(--bg-button-hover);
+  }
+
+  &:active {
+    background: var(--bg-button-active);
+  }
+
+  // Separator line between buttons
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 20%;
+    height: 60%;
+    width: 1px;
+    background: var(--border-footer);
+    opacity: 0.3;
+  }
+
+  // Active states with color highlights
+  &.highlight-globals {
+    color: var(--highlight-globals);
+  }
+
+  &.highlight-context {
+    color: var(--highlight-context);
+  }
+
+  &.highlight-entity {
+    color: var(--highlight-entity);
+  }
+
+  &.highlight-property {
+    color: var(--highlight-property);
+  }
+
+  &.highlight-action {
+    color: var(--highlight-action);
+  }
+}

@@ -1,0 +1,152 @@
+---
+title: Memory
+description: In-process key-value store with LRU eviction and TTL support
+sidebar_position: 2
+package: '@walkeros/store-memory'
+---
+
+import { schemas } from '@walkeros/store-memory/dev';
+
+# Memory
+
+<PackageLink github="packages/stores/memory" npm="@walkeros/store-memory" />
+
+In-process key-value store with LRU eviction, TTL expiration, and namespace support. Platform-agnostic: works in both browser and server flows.
+
+## When to use
+
+| Scenario | Recommended store |
+|----------|-------------------|
+| Caching API responses within a request cycle | **Memory**: fastest, no I/O |
+| Deduplicating events (seen-key tracking) | **Memory**: in-process, zero overhead |
+| Ephemeral session or user state | **Memory**: TTL support, auto-expiry |
+| Sharing state across browser tabs | Not memory: use a server store |
+| Persisting data across server restarts | [Filesystem](./server/fs) or [S3](./server/s3) |
+
+## Setup
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+Install the package:
+
+<CodeSnippet
+  code={`npm install @walkeros/store-memory`}
+  language="bash"
+/>
+
+Configure in your code:
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { storeMemoryInit } from '@walkeros/store-memory';
+
+await startFlow({
+  stores: {
+    cache: {
+      code: storeMemoryInit,
+      config: {
+        settings: {
+          maxSize: 10 * 1024 * 1024, // 10 MB (default)
+          maxEntries: 1000,
+        },
+      },
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+Add to your `flow.json`:
+
+<CodeSnippet
+  code={`"stores": {
+  "cache": {
+    "package": "@walkeros/store-memory",
+    "config": {
+      "settings": {
+        "maxSize": 10485760,
+        "maxEntries": 1000
+      }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+## Configuration
+
+<PropertyTable schema={schemas.settings} />
+
+Both limits can be used together. When either is exceeded, the least-recently-used entry is evicted first.
+
+## API
+
+<CodeSnippet
+  code={`const value = store.get('key');         // T | undefined
+store.set('key', 'value');               // void
+store.set('key', 'value', 5000);         // void (TTL in ms)
+store.delete('key');                     // void
+store.destroy();                         // void (clears all entries)`}
+  language="typescript"
+/>
+
+## TTL expiration
+
+Pass a TTL in milliseconds as the third argument to `set()`. Expired entries are cleaned up lazily on the next `get()`:
+
+<CodeSnippet
+  code={`// Cache a response for 60 seconds
+store.set('response', data, 60_000);
+
+// Entry returns undefined after 60s
+store.get('response'); // undefined`}
+  language="typescript"
+/>
+
+Entries without a TTL never expire.
+
+## LRU eviction
+
+When the store exceeds `maxSize` or `maxEntries`, the least-recently-used entries are evicted to make room. Calling `get()` refreshes an entry's position, so frequently accessed entries survive longer.
+
+Size is estimated from `JSON.stringify(value).length + key.length`.
+
+## Namespace utility
+
+Use `withNamespace` to scope keys for different components sharing one store:
+
+<CodeSnippet
+  code={`import { createMemoryStore, withNamespace } from '@walkeros/store-memory';
+
+const store = createMemoryStore();
+const sessions = withNamespace(store, 'session');
+const cache = withNamespace(store, 'cache');
+
+sessions.set('user', 'alice');  // stored as "session:user"
+cache.set('page', '<html>');    // stored as "cache:page"`}
+  language="typescript"
+/>
+
+## Testing
+
+Use `createMockStore` for unit tests. It implements the same interface and tracks all operations:
+
+<CodeSnippet
+  code={`import { createMockStore } from '@walkeros/store-memory';
+
+const store = createMockStore<string>();
+store.set('key', 'value');
+store.get('key');
+
+console.log(store._sets);    // [{ key: 'key', value: 'value', ttl: undefined }]
+console.log(store._gets);    // ['key']
+console.log(store._deletes); // []`}
+  language="typescript"
+/>

@@ -7,8 +7,8 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { getPlatform } from '@walkeros/core';
+import { createCLILogger } from '../../core/cli-logger.js';
 import {
-  createCommandLogger,
   createTimer,
   createSuccessOutput,
   createErrorOutput,
@@ -25,10 +25,13 @@ import {
   loadAllFlows,
   type LoadConfigResult,
 } from '../../config/index.js';
+import { isUrl } from '../../config/utils.js';
 import type { BuildOptions } from '../../types/bundle.js';
 import { bundleCore } from './bundler.js';
+import { uploadBundleToUrl, sanitizeUrl } from './upload.js';
 import { displayStats, createStatsSummary } from './stats.js';
 import { createApiClient } from '../../core/api-client.js';
+import { generateDockerfile } from './dockerfile.js';
 
 export interface BundleCommandOptions {
   config?: string;
@@ -65,7 +68,7 @@ export async function bundleCommand(
 
   // When writing to stdout, redirect all logs to stderr
   const writingToStdout = !options.output;
-  const logger = createCommandLogger({
+  const logger = createCLILogger({
     ...options,
     stderr: writingToStdout,
   });
@@ -119,7 +122,7 @@ export async function bundleCommand(
     }> = [];
 
     for (const {
-      flowConfig,
+      flowSettings,
       buildOptions,
       flowName,
       isMultiFlow,
@@ -131,7 +134,17 @@ export async function bundleCommand(
         }
 
         // Resolve output path
-        if (options.output) {
+        const outputIsUrl = options.output ? isUrl(options.output) : false;
+        const uploadUrl = outputIsUrl ? options.output : undefined;
+
+        if (outputIsUrl) {
+          // URL output: bundle to temp file, upload after
+          const ext = buildOptions.platform === 'browser' ? '.js' : '.mjs';
+          buildOptions.output = getTmpPath(
+            undefined,
+            `url-bundle-${Date.now()}${ext}`,
+          );
+        } else if (options.output) {
           buildOptions.output = resolveOutputPath(options.output, buildOptions);
         } else {
           // Stdout mode: bundle to temp file, then write to stdout
@@ -141,21 +154,28 @@ export async function bundleCommand(
 
         // Log flow being built
         if (isMultiFlow || options.all) {
-          logger.log(`Bundling flow: ${flowName}...`);
+          logger.info(`Bundling flow: ${flowName}...`);
         } else {
-          logger.log('Bundling...');
+          logger.info('Bundling...');
         }
 
         // Run bundler
         const shouldCollectStats = options.stats || options.json;
         const stats = await bundleCore(
-          flowConfig,
+          flowSettings,
           buildOptions,
           logger,
           shouldCollectStats,
         );
 
         results.push({ flowName, success: true, stats });
+
+        // Upload to URL if output was a presigned URL
+        if (uploadUrl) {
+          await uploadBundleToUrl(buildOptions.output, uploadUrl);
+          logger.info(`Uploaded to: ${sanitizeUrl(uploadUrl)}`);
+          await fs.remove(buildOptions.output);
+        }
 
         // Show stats if requested (for non-JSON, non-multi builds)
         if (!options.json && !options.all && options.stats && stats) {
@@ -171,14 +191,20 @@ export async function bundleCommand(
 
         // Dockerfile only with -o
         if (options.dockerfile && options.output) {
-          const platform = getPlatform(flowConfig);
+          const platform = getPlatform(flowSettings);
           if (platform) {
             const outputDir = path.dirname(buildOptions.output);
             const customFile =
               typeof options.dockerfile === 'string'
                 ? options.dockerfile
                 : undefined;
-            await generateDockerfile(outputDir, platform, logger, customFile);
+            await generateDockerfile(
+              outputDir,
+              platform,
+              logger,
+              customFile,
+              buildOptions.include,
+            );
           }
         }
       } catch (error) {
@@ -220,7 +246,7 @@ export async function bundleCommand(
       });
     } else {
       if (options.all) {
-        logger.log(
+        logger.info(
           `\nBuild Summary: ${successCount}/${results.length} succeeded`,
         );
         if (failureCount > 0) {
@@ -255,7 +281,7 @@ export async function bundleCommand(
  *
  * Handles configuration loading, parsing, and logger creation internally.
  *
- * @param configOrPath - Bundle configuration (Flow.Setup) or path to config file
+ * @param configOrPath - Bundle configuration (Flow.Config) or path to config file
  * @param options - Bundle options
  * @param options.silent - Suppress all output (default: false)
  * @param options.verbose - Enable verbose logging (default: false)
@@ -266,7 +292,7 @@ export async function bundleCommand(
  *
  * @example
  * ```typescript
- * // With Flow.Setup config object
+ * // With Flow.Config config object
  * await bundle({
  *   version: 1,
  *   flows: {
@@ -305,8 +331,8 @@ export async function bundle(
     rawConfig = configOrPath;
   }
 
-  // 2. Load and resolve config using Flow.Setup format
-  const { flowConfig, buildOptions } = loadBundleConfig(rawConfig, {
+  // 2. Load and resolve config using Flow.Config format
+  const { flowSettings, buildOptions } = loadBundleConfig(rawConfig, {
     configPath,
     flowName: options.flowName,
     buildOverrides: options.buildOverrides,
@@ -318,62 +344,15 @@ export async function bundle(
   }
 
   // 4. Create logger internally
-  const logger = createCommandLogger(options);
+  const logger = createCLILogger(options);
 
   // 5. Call core bundler
   return await bundleCore(
-    flowConfig,
+    flowSettings,
     buildOptions,
     logger,
     options.stats ?? false,
   );
-}
-
-/**
- * Generate or copy a Dockerfile for the bundled flow.
- *
- * Two modes:
- * - Generate mode: Creates a Dockerfile based on platform (web/server)
- * - Copy mode: Copies a custom Dockerfile if provided and exists
- *
- * @param outputDir - Directory to write the Dockerfile (dist/)
- * @param platform - Platform type ('web' or 'server')
- * @param logger - Logger instance for output
- * @param customFile - Optional path to custom Dockerfile to copy
- */
-async function generateDockerfile(
-  outputDir: string,
-  platform: 'web' | 'server',
-  logger: ReturnType<typeof createCommandLogger>,
-  customFile?: string,
-): Promise<void> {
-  const destPath = path.join(outputDir, 'Dockerfile');
-
-  // Copy mode: use custom file if it exists
-  if (customFile && (await fs.pathExists(customFile))) {
-    await fs.copy(customFile, destPath);
-    logger.log(`Dockerfile: ${destPath} (copied from ${customFile})`);
-    return;
-  }
-
-  // Generate mode: create based on platform
-  const isWeb = platform === 'web';
-  const bundleFile = isWeb ? 'walker.js' : 'bundle.mjs';
-  const mode = isWeb ? 'serve' : 'collect';
-
-  const dockerfile = `# Generated by walkeros CLI
-FROM walkeros/flow:latest
-
-COPY ${bundleFile} /app/flow/${bundleFile}
-
-ENV MODE=${mode}
-ENV BUNDLE=/app/flow/${bundleFile}
-
-EXPOSE 8080
-`;
-
-  await fs.writeFile(destPath, dockerfile);
-  logger.log(`Dockerfile: ${destPath}`);
 }
 
 /**

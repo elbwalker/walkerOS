@@ -1,6 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import cors from 'cors';
-import { requestToData } from '@walkeros/core';
+import { requestToData, createRespond } from '@walkeros/core';
 import type { Source } from '@walkeros/core';
 import type { ExpressSource, Types, EventRequest } from './types';
 import { SettingsSchema } from './schemas';
@@ -14,7 +14,7 @@ import { setCorsHeaders, TRANSPARENT_GIF } from './utils';
  * - Sets up middleware (JSON parsing, CORS)
  * - Registers event collection endpoints (POST, GET, OPTIONS)
  * - Starts HTTP server (if port configured)
- * - Handles graceful shutdown
+ * - Provides destroy() for graceful shutdown (called by runner)
  *
  * @param context Source context with config, env, logger, id
  * @returns Express source instance with app and push handler
@@ -58,6 +58,23 @@ export const sourceExpress = async (
       // Extract ingest metadata from request (if config.ingest is defined)
       await context.setIngest(req);
 
+      // Create per-request respond — first call wins (idempotent)
+      const respond = createRespond((options) => {
+        const status = options.status ?? 200;
+        if (options.headers) {
+          for (const [key, value] of Object.entries(options.headers)) {
+            res.set(key, value);
+          }
+        }
+        res.status(status);
+        if (typeof options.body === 'string' || Buffer.isBuffer(options.body)) {
+          res.send(options.body);
+        } else {
+          res.json(options.body);
+        }
+      });
+      context.setRespond(respond);
+
       // Handle GET requests (pixel tracking)
       if (req.method === 'GET') {
         // Parse query parameters to event data using requestToData
@@ -68,10 +85,14 @@ export const sourceExpress = async (
           await env.push(parsedData);
         }
 
-        // Return 1x1 transparent GIF for pixel tracking
-        res.set('Content-Type', 'image/gif');
-        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.send(TRANSPARENT_GIF);
+        // Default: 1x1 GIF (skipped if a step already called respond)
+        respond({
+          body: TRANSPARENT_GIF,
+          headers: {
+            'Content-Type': 'image/gif',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+          },
+        });
         return;
       }
 
@@ -90,10 +111,8 @@ export const sourceExpress = async (
         // Send event to collector
         await env.push(eventData);
 
-        res.json({
-          success: true,
-          timestamp: Date.now(),
-        });
+        // Default: JSON success (skipped if a step already called respond)
+        respond({ body: { success: true, timestamp: Date.now() } });
         return;
       }
 
@@ -126,33 +145,11 @@ export const sourceExpress = async (
     app.options(route.path, push); // Always register OPTIONS for CORS
   }
 
-  // Health check endpoints (if enabled)
-  if (settings.status) {
-    app.get('/health', (req, res) => {
-      res.json({
-        status: 'ok',
-        timestamp: Date.now(),
-        source: 'express',
-      });
-    });
-
-    app.get('/ready', (req, res) => {
-      res.json({
-        status: 'ready',
-        timestamp: Date.now(),
-        source: 'express',
-      });
-    });
-  }
-
   // Source owns the HTTP server (if port configured)
   let server: ReturnType<typeof app.listen> | undefined;
 
   if (settings.port !== undefined) {
     server = app.listen(settings.port, () => {
-      const statusRoutes = settings.status
-        ? `\n   GET /health - Health check\n   GET /ready - Readiness check`
-        : '';
       const routeLines = resolvedPaths
         .map((r) => {
           const methods = [...r.methods, 'OPTIONS'].join(', ');
@@ -160,21 +157,9 @@ export const sourceExpress = async (
         })
         .join('\n');
       env.logger.info(
-        `Express source listening on port ${settings.port}\n` +
-          routeLines +
-          statusRoutes,
+        `Express source listening on port ${settings.port}\n` + routeLines,
       );
     });
-
-    // Graceful shutdown handlers
-    const shutdownHandler = () => {
-      if (server) {
-        server.close();
-      }
-    };
-
-    process.on('SIGTERM', shutdownHandler);
-    process.on('SIGINT', shutdownHandler);
   }
 
   const instance: ExpressSource = {
@@ -184,8 +169,14 @@ export const sourceExpress = async (
       settings,
     },
     push,
-    app, // Expose app for advanced usage
-    server, // Expose server (if started)
+    httpHandler: app,
+    app,
+    server,
+    destroy: (_context) =>
+      new Promise<void>((resolve, reject) => {
+        if (!server) return resolve();
+        server.close((err) => (err ? reject(err) : resolve()));
+      }),
   };
 
   return instance;

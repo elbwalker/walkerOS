@@ -9,10 +9,105 @@
  * (web_prod, web_stage, server_prod, etc.) with shared configuration,
  * variables, and reusable definitions.
  *
+ * ## Connection Rules
+ *
+ * Sources use `next` to connect to transformers (pre-collector chain).
+ * Sources cannot have `before`.
+ *
+ * Destinations use `before` to connect to transformers (post-collector chain).
+ * Destinations cannot have `next`.
+ *
+ * Transformers use `next` to chain to other transformers. The same transformer
+ * pool is shared by both pre-collector and post-collector chains.
+ *
+ * The collector is implicit — it is never referenced directly in connections.
+ * It sits between the source chain and the destination chain automatically.
+ *
+ * Circular `next` references are safely handled at runtime by `walkChain()`
+ * in the collector module (visited-set detection).
+ *
+ * ```
+ * Source → [next → Transformer chain] → Collector → [before → Transformer chain] → Destination
+ * ```
+ *
  * @packageDocumentation
  */
 
 import type { Source, Destination, Collector } from '.';
+
+/**
+ * JSON Schema object for contract entry validation.
+ * Standard JSON Schema with description/examples annotations.
+ * Compatible with AJV for runtime validation.
+ */
+export type ContractSchema = Record<string, unknown>;
+
+/**
+ * Contract action entries keyed by action name.
+ * Each value is a JSON Schema describing the expected WalkerOS.Event shape.
+ * Use "*" as wildcard for all actions of an entity.
+ */
+export type ContractActions = Record<string, ContractSchema>;
+
+/**
+ * Entity-action event map used inside contracts.
+ * Keyed by entity name, each value is an action map.
+ * Use "*" as wildcard for all entities or all actions.
+ */
+export type ContractEvents = Record<string, ContractActions>;
+
+/**
+ * A single named contract entry.
+ *
+ * All sections are optional. Sections mirror WalkerOS.Event fields:
+ * globals, context, custom, user, consent.
+ * Entity-action schemas live under `events`.
+ *
+ * Use `extends` to inherit from another named contract (additive merge).
+ */
+export interface ContractEntry {
+  /** Inherit from another named contract (additive merge). */
+  extends?: string;
+
+  /** Contract version number (syncs to event.version.tagging). */
+  tagging?: number;
+
+  /** Human-readable description of the contract. */
+  description?: string;
+
+  /** JSON Schema for event.globals. */
+  globals?: ContractSchema;
+
+  /** JSON Schema for event.context. */
+  context?: ContractSchema;
+
+  /** JSON Schema for event.custom. */
+  custom?: ContractSchema;
+
+  /** JSON Schema for event.user. */
+  user?: ContractSchema;
+
+  /** JSON Schema for event.consent. */
+  consent?: ContractSchema;
+
+  /** Entity-action event schemas. */
+  events?: ContractEvents;
+}
+
+/**
+ * Named contract map.
+ * Each key is a contract name, each value is a contract entry.
+ *
+ * Example:
+ * ```json
+ * {
+ *   "default": { "globals": { ... }, "consent": { ... } },
+ *   "web": { "extends": "default", "events": { ... } },
+ *   "server": { "extends": "default", "events": { ... } }
+ * }
+ * ```
+ */
+export type Contract = Record<string, ContractEntry>;
 
 /**
  * Primitive value types for variables
@@ -21,13 +116,13 @@ export type Primitive = string | number | boolean;
 
 /**
  * Variables record type for interpolation.
- * Used at Setup, Config, Source, and Destination levels.
+ * Used at Config, Settings, Source, and Destination levels.
  */
 export type Variables = Record<string, Primitive>;
 
 /**
  * Definitions record type for reusable configurations.
- * Used at Setup, Config, Source, and Destination levels.
+ * Used at Config, Settings, Source, and Destination levels.
  */
 export type Definitions = Record<string, unknown>;
 
@@ -97,8 +192,8 @@ export interface Server {
  * @example
  * ```json
  * {
- *   "version": 1,
- *   "$schema": "https://walkeros.io/schema/flow/v1.json",
+ *   "version": 3,
+ *   "$schema": "https://walkeros.io/schema/flow/v3.json",
  *   "variables": { "CURRENCY": "USD" },
  *   "flows": {
  *     "default": { "web": {}, ... }
@@ -106,11 +201,11 @@ export interface Server {
  * }
  * ```
  */
-export interface Setup {
+export interface Config {
   /**
    * Configuration schema version.
    */
-  version: 1;
+  version: 3;
 
   /**
    * JSON Schema reference for IDE validation.
@@ -138,8 +233,14 @@ export interface Setup {
   include?: string[];
 
   /**
+   * Data contract definition (version 2+).
+   * Entity → action keyed JSON Schema with additive inheritance.
+   */
+  contract?: Contract;
+
+  /**
    * Shared variables for interpolation.
-   * Resolution: destination/source > Config > Setup level
+   * Resolution: destination/source > Settings > Config level
    * Syntax: $var.name
    */
   variables?: Variables;
@@ -154,7 +255,7 @@ export interface Setup {
    * Named flow configurations.
    * If only one flow exists, it's auto-selected.
    */
-  flows: Record<string, Config>;
+  flows: Record<string, Settings>;
 }
 
 /**
@@ -165,9 +266,9 @@ export interface Setup {
  * Platform is determined by presence of `web` or `server` key.
  * Exactly one must be present.
  *
- * Variables/definitions cascade: source/destination > config > setup
+ * Variables/definitions cascade: source/destination > settings > config
  */
-export interface Config {
+export interface Settings {
   /**
    * Web platform configuration.
    * Presence indicates web platform (browser-based tracking).
@@ -181,6 +282,19 @@ export interface Config {
    * Mutually exclusive with `web`.
    */
   server?: Server;
+
+  /**
+   * Store configurations (key-value storage).
+   *
+   * @remarks
+   * Stores provide key-value storage consumed by sources, transformers,
+   * and destinations via env injection. Referenced using $store:storeId
+   * prefix in env values.
+   *
+   * Key = unique store identifier (arbitrary)
+   * Value = store reference with package and config
+   */
+  stores?: Record<string, StoreReference>;
 
   /**
    * Source configurations (data capture).
@@ -314,16 +428,33 @@ export interface Config {
 
   /**
    * Flow-level variables.
-   * Override Setup.variables, overridden by source/destination variables.
+   * Override Config.variables, overridden by source/destination variables.
    */
   variables?: Variables;
 
   /**
    * Flow-level definitions.
-   * Extend Setup.definitions, overridden by source/destination definitions.
+   * Extend Config.definitions, overridden by source/destination definitions.
    */
   definitions?: Definitions;
 }
+
+/**
+ * Named example pair for a step.
+ * `in` is the input to the step, `out` is the expected output.
+ * `out: false` indicates the step filters/drops this event.
+ */
+export interface StepExample {
+  description?: string;
+  in?: unknown;
+  mapping?: unknown;
+  out?: unknown;
+}
+
+/**
+ * Named step examples keyed by scenario name.
+ */
+export type StepExamples = Record<string, StepExample>;
 
 /**
  * Source reference with inline package syntax.
@@ -360,7 +491,7 @@ export interface SourceReference {
    * Resolved import variable name or built-in code source.
    *
    * @remarks
-   * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
+   * - String: Auto-resolved from packages[package].imports[0] during getFlowSettings(),
    *   or provided explicitly for advanced use cases.
    * - InlineCode: Object with type, push, and optional init for inline code definition.
    *
@@ -431,14 +562,21 @@ export interface SourceReference {
   definitions?: Definitions;
 
   /**
-   * First transformer in post-source chain.
+   * First transformer in pre-collector chain.
    *
    * @remarks
    * Name of the transformer to execute after this source captures an event.
+   * Creates a pre-collector transformer chain. Chain ends at the collector.
    * If omitted, events route directly to the collector.
    * Can be an array for explicit chain control (bypasses transformer.next resolution).
    */
   next?: string | string[];
+
+  /**
+   * Named examples for testing and documentation.
+   * Stripped during flow resolution (not included in bundles).
+   */
+  examples?: StepExamples;
 }
 
 /**
@@ -466,7 +604,7 @@ export interface TransformerReference {
    * Resolved import variable name or built-in code transformer.
    *
    * @remarks
-   * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
+   * - String: Auto-resolved from packages[package].imports[0] during getFlowSettings(),
    *   or provided explicitly for advanced use cases.
    * - InlineCode: Object with type, push, and optional init for inline code definition.
    *
@@ -504,10 +642,11 @@ export interface TransformerReference {
    *
    * @remarks
    * Name of the next transformer to execute after this one.
-   * If omitted:
-   * - Pre-collector: routes to collector
-   * - Post-collector: routes to destination
-   * Can be an array for explicit chain control (terminates chain walking).
+   * When used in a pre-collector chain (source.next), terminates at the collector.
+   * When used in a post-collector chain (destination.before), terminates at the destination.
+   * If omitted, the chain ends and control passes to the next pipeline stage.
+   * Array values define an explicit chain (no walking). Circular references
+   * are safely detected at runtime by `walkChain()`.
    */
   next?: string | string[];
 
@@ -522,6 +661,60 @@ export interface TransformerReference {
    * Overrides flow and setup definitions.
    */
   definitions?: Definitions;
+
+  /**
+   * Named examples for testing and documentation.
+   * Stripped during flow resolution (not included in bundles).
+   */
+  examples?: StepExamples;
+}
+
+/**
+ * Store reference with inline package syntax.
+ *
+ * @remarks
+ * References a store package and provides configuration.
+ * Stores provide key-value storage consumed by other components via env.
+ * Unlike sources/transformers/destinations, stores have no chain properties
+ * (no `next` or `before`) — they are passive infrastructure.
+ */
+export interface StoreReference {
+  /**
+   * Package specifier with optional version.
+   * Optional when `code` is provided for inline code.
+   */
+  package?: string;
+
+  /**
+   * Resolved import variable name or inline code definition.
+   */
+  code?: string | InlineCode;
+
+  /**
+   * Store-specific configuration.
+   */
+  config?: unknown;
+
+  /**
+   * Store environment configuration.
+   */
+  env?: unknown;
+
+  /**
+   * Store-level variables (highest priority in cascade).
+   */
+  variables?: Variables;
+
+  /**
+   * Store-level definitions (highest priority in cascade).
+   */
+  definitions?: Definitions;
+
+  /**
+   * Named examples for testing and documentation.
+   * Stripped during flow resolution.
+   */
+  examples?: StepExamples;
 }
 
 /**
@@ -548,7 +741,7 @@ export interface DestinationReference {
    * Resolved import variable name or built-in code destination.
    *
    * @remarks
-   * - String: Auto-resolved from packages[package].imports[0] during getFlowConfig(),
+   * - String: Auto-resolved from packages[package].imports[0] during getFlowSettings(),
    *   or provided explicitly for advanced use cases.
    * - InlineCode: Object with type, push, and optional init for inline code definition.
    *
@@ -619,12 +812,19 @@ export interface DestinationReference {
   definitions?: Definitions;
 
   /**
-   * First transformer in pre-destination chain.
+   * First transformer in post-collector chain.
    *
    * @remarks
    * Name of the transformer to execute before sending events to this destination.
+   * Creates a post-collector transformer chain. Chain ends at this destination.
    * If omitted, events are sent directly from the collector.
    * Can be an array for explicit chain control (bypasses transformer.next resolution).
    */
   before?: string | string[];
+
+  /**
+   * Named examples for testing and documentation.
+   * Stripped during flow resolution (not included in bundles).
+   */
+  examples?: StepExamples;
 }

@@ -7,7 +7,7 @@
  * 3. File path    - BUNDLE env var is a local path (default)
  */
 
-import { writeFileSync } from 'fs';
+import { existsSync, writeFileSync } from 'fs';
 import { isStdinPiped, readStdin } from '../core/stdin.js';
 
 const TEMP_BUNDLE_PATH = '/tmp/walkeros-bundle.mjs';
@@ -63,7 +63,10 @@ async function readBundleFromStdin(): Promise<string> {
 /**
  * Resolve the bundle to a local file path
  *
- * Priority: stdin > URL > file path
+ * Priority: file path (if exists) > stdin > URL > file path (fallback)
+ *
+ * File path is checked first because !isTTY is true in Docker detached mode
+ * (/dev/null stdin), which would falsely trigger stdin reading and crash.
  *
  * @param bundleEnv - Value of the BUNDLE env var (path or URL)
  * @returns Resolved bundle with file path and source type
@@ -71,18 +74,24 @@ async function readBundleFromStdin(): Promise<string> {
 export async function resolveBundle(
   bundleEnv: string,
 ): Promise<ResolvedBundle> {
-  // 1. Stdin takes highest priority
+  // 1. If BUNDLE points to an existing file, use it directly
+  //    This prevents false stdin detection in Docker detached mode
+  if (!isUrl(bundleEnv) && existsSync(bundleEnv)) {
+    return { path: bundleEnv, source: 'file' };
+  }
+
+  // 2. Stdin pipe (only when BUNDLE doesn't point to a file)
   if (isStdinPiped()) {
     const path = await readBundleFromStdin();
     return { path, source: 'stdin' };
   }
 
-  // 2. URL detection
+  // 3. URL detection
   if (isUrl(bundleEnv)) {
     const path = await fetchBundle(bundleEnv);
     return { path, source: 'url' };
   }
 
-  // 3. File path (default, existing behavior)
+  // 4. File path (fallback — file may not exist yet for config paths)
   return { path: bundleEnv, source: 'file' };
 }

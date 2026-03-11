@@ -134,7 +134,38 @@ mkdir -p packages/server/sources/[name]/src/{examples,schemas,types}
 | `examples/requests.ts` | HTTP request examples (server) | [requests.ts](./examples/requests.ts) |
 | `examples/mapping.ts`  | Event name/data transformation | [mapping.ts](./examples/mapping.ts)   |
 
-### 2.3 Export via dev.ts
+### 2.3 Step Examples
+
+Add step examples with `{ in, out }` pairs for end-to-end step testing:
+
+| File               | Purpose                         | Status |
+| ------------------ | ------------------------------- | ------ |
+| `examples/step.ts` | Step examples with in/out pairs | NEW    |
+
+```typescript
+// examples/step.ts
+export const step = {
+  'checkout-post': {
+    in: {
+      method: 'POST',
+      path: '/collect',
+      headers: { 'content-type': 'application/json' },
+      body: {
+        name: 'order complete',
+        data: { id: 'ORD-123', total: 149.97 },
+      },
+    },
+    out: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
+  },
+};
+```
+
+For sources, `in` types are platform-specific (Express request, AWS API Gateway
+event, GCP Cloud Function request) and `out` is always a walkerOS event. See
+[using-step-examples](../walkeros-using-step-examples/SKILL.md) for the Three
+Type Zones.
+
+### 2.4 Export via dev.ts
 
 ```typescript
 export * as schemas from './schemas';
@@ -249,6 +280,43 @@ buildDev(),
 
 This auto-generates `dist/walkerOS.json` from your Zod schemas at build time.
 
+### Hints (Optional)
+
+If your source has capabilities, behaviors, or troubleshooting patterns not
+obvious from schemas alone, add hints. See `walkeros-writing-documentation`
+skill for full guidelines.
+
+Create `src/hints.ts`:
+
+```typescript
+import type { Hint } from '@walkeros/core';
+
+export const hints: Hint.Hints = {
+  'capture-timing': {
+    text: 'Describes when events are captured. See settings schema for options.',
+    code: [{ lang: 'json', code: '{ "settings": { ... } }' }],
+  },
+};
+```
+
+Export from `src/dev.ts`:
+
+```typescript
+export * as schemas from './schemas';
+export * as examples from './examples';
+export { hints } from './hints';
+```
+
+Guidelines:
+
+- Expand awareness — describe capabilities ("supports X, Y, Z"), don't prescribe
+  one path
+- Reference schemas and examples, don't duplicate them
+- Verify every claim against actual implementation before publishing
+- Key naming: kebab-case, group with prefixes (auth-\*, capture-\*,
+  troubleshoot-\*)
+- Most sources don't need hints — schemas and examples cover the common case
+
 ### Gate: Convention Met
 
 - [ ] `walkerOS` field in package.json with type and platform
@@ -280,6 +348,8 @@ This auto-generates `dist/walkerOS.json` from your Zod schemas at build time.
 4. **Error logging**: Use `logger?.error()` for errors only, not routine
    operations
 5. **Return Source.Instance**: Return `{ type, config, push }` object
+6. **Optional `destroy` method**: Implement if the source holds resources (HTTP
+   servers, timers, connections) that need cleanup on shutdown
 
 ### Gate: Implementation Compiles
 

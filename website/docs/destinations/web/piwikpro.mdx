@@ -6,7 +6,6 @@ sidebar_position: 3
 package: '@walkeros/web-destination-piwikpro'
 ---
 
-import { getEvent } from '@walkeros/core';
 import destinationPiwikPro from '@walkeros/web-destination-piwikpro';
 import { examples, schemas } from '@walkeros/web-destination-piwikpro/dev';
 
@@ -137,8 +136,8 @@ event.
   }}
   smallText={true}
   height={'512px'}
-  event={getEvent('product view')}
-  mapping={examples.mapping.ecommerceProductDetailView}
+  event={examples.step.productDetailView.in}
+  mapping={examples.step.productDetailView.mapping}
   generic={true}
 />
 
@@ -156,8 +155,8 @@ event.
   }}
   smallText={true}
   height={'512px'}
-  event={getEvent('product add')}
-  mapping={examples.mapping.ecommerceAddToCart}
+  event={examples.step.ecommerceAddToCart.in}
+  mapping={examples.step.ecommerceAddToCart.mapping}
   generic={true}
 />
 
@@ -175,8 +174,8 @@ event.
   }}
   smallText={true}
   height={'512px'}
-  event={getEvent('cart view')}
-  mapping={examples.mapping.ecommerceCartUpdate}
+  event={examples.step.cartUpdate.in}
+  mapping={examples.step.cartUpdate.mapping}
   generic={true}
 />
 
@@ -194,7 +193,7 @@ event.
   }}
   smallText={true}
   height={'512px'}
-  event={getEvent('order complete')}
-  mapping={examples.mapping.ecommerceOrder}
+  event={examples.step.ecommerceOrder.in}
+  mapping={examples.step.ecommerceOrder.mapping}
   generic={true}
 />

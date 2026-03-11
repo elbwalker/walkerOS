@@ -1,33 +1,36 @@
-import path from 'path';
 import fs from 'fs-extra';
-import type { Flow, Logger as CoreLogger } from '@walkeros/core';
-import { getPlatform } from '@walkeros/core';
+import type { Destination, Simulation, WalkerOS } from '@walkeros/core';
+import { simulate } from '@walkeros/collector';
+import { createCLILogger } from '../../core/cli-logger.js';
 import {
-  createLogger,
-  createCollectorLoggerConfig,
   getErrorMessage,
   detectInput,
-  type Logger,
   type Platform,
 } from '../../core/index.js';
-import {
-  loadFlowConfig,
-  isObject,
-  type BuildOptions,
-} from '../../config/index.js';
+import { loadFlowConfig, isObject } from '../../config/index.js';
 import { getTmpPath } from '../../core/tmp.js';
-import { bundleCore } from '../bundle/bundler.js';
-import { CallTracker } from './tracker.js';
-import { executeInJSDOM } from './jsdom-executor.js';
-import { executeInNode } from './node-executor.js';
 import { loadDestinationEnvs } from './env-loader.js';
 import type { SimulateCommandOptions, SimulationResult } from './types.js';
 
 /**
- * Generate a unique ID for temp files
+ * Convert Simulation.Call[] to CLI's usage format
  */
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+function callsToUsage(
+  destName: string,
+  calls: Simulation.Call[],
+): Record<
+  string,
+  Array<{ type: 'call'; path: string; args: unknown[]; timestamp: number }>
+> {
+  if (!calls.length) return {};
+  return {
+    [destName]: calls.map((c) => ({
+      type: 'call' as const,
+      path: c.fn,
+      args: c.args,
+      timestamp: c.ts,
+    })),
+  };
 }
 
 /**
@@ -38,10 +41,10 @@ export async function simulateCore(
   event: unknown,
   options: Pick<
     SimulateCommandOptions,
-    'flow' | 'json' | 'verbose' | 'silent' | 'platform'
+    'flow' | 'json' | 'verbose' | 'silent' | 'platform' | 'step'
   > = {},
 ): Promise<SimulationResult> {
-  const logger = createLogger({
+  const logger = createCLILogger({
     verbose: options.verbose || false,
     silent: options.silent || false,
     json: options.json || false,
@@ -52,7 +55,7 @@ export async function simulateCore(
     logger.debug(`Simulating event: ${JSON.stringify(event)}`);
     const result = await executeSimulation(event, inputPath, options.platform, {
       flow: options.flow,
-      logger,
+      step: options.step,
       verbose: options.verbose,
     });
 
@@ -75,38 +78,66 @@ export function formatSimulationResult(
   options: Pick<SimulateCommandOptions, 'json'> = {},
 ): string {
   if (options.json) {
-    const output = {
+    const output: Record<string, unknown> = {
       result: result.elbResult,
       usage: result.usage,
       duration: result.duration,
     };
+    if (result.capturedEvents) {
+      output.capturedEvents = result.capturedEvents;
+    }
+    if (result.exampleMatch) {
+      output.exampleMatch = result.exampleMatch;
+    }
     return JSON.stringify(output, null, 2);
   }
 
+  const lines: string[] = [];
+
   if (result.success) {
-    return 'Simulation completed';
+    lines.push('Simulation completed');
   } else {
-    return `Simulation failed: ${result.error}`;
+    lines.push(`Simulation failed: ${result.error}`);
   }
+
+  if (result.capturedEvents) {
+    lines.push(`Captured ${result.capturedEvents.length} event(s)`);
+    for (const evt of result.capturedEvents) {
+      lines.push(`  - ${(evt as { name?: string }).name || 'unknown'}`);
+    }
+  }
+
+  if (result.exampleMatch) {
+    const em = result.exampleMatch;
+    if (em.match) {
+      lines.push(`Example "${em.name}" (${em.step}): PASS`);
+    } else {
+      lines.push(`Example "${em.name}" (${em.step}): FAIL`);
+      if (em.diff) {
+        lines.push(em.diff);
+      }
+    }
+  }
+
+  return lines.join('\n');
 }
 
 /**
  * Execute simulation using destination-provided mock environments.
- * Supports both config JSON and pre-built bundle inputs.
+ * Only accepts Flow.Config config files.
  */
 export async function executeSimulation(
   event: unknown,
   inputPath: string,
   platformOverride?: Platform,
-  options: { flow?: string; logger?: Logger; verbose?: boolean } = {},
+  options: {
+    flow?: string;
+    step?: string;
+    verbose?: boolean;
+  } = {},
 ): Promise<SimulationResult> {
   const startTime = Date.now();
   const tempDir = getTmpPath();
-
-  // Create collector logger config for forwarding logs
-  const collectorLoggerConfig = options.logger
-    ? createCollectorLoggerConfig(options.logger, options.verbose)
-    : undefined;
 
   try {
     // Ensure temp directory exists
@@ -128,28 +159,22 @@ export async function executeSimulation(
 
     const typedEvent = event as { name: string; data?: unknown };
 
-    if (detected.type === 'config') {
-      // Config flow: load config, bundle, execute with mocking
-      return await executeConfigSimulation(
-        detected.content,
-        inputPath,
-        typedEvent,
-        tempDir,
-        startTime,
-        collectorLoggerConfig,
-        options.flow,
-      );
-    } else {
-      // Bundle flow: execute directly without mocking
-      return await executeBundleSimulation(
-        detected.content,
-        detected.platform!,
-        typedEvent,
-        tempDir,
-        startTime,
-        collectorLoggerConfig,
+    if (detected.type !== 'config') {
+      throw new Error(
+        `Input "${inputPath}" is not valid JSON config. ` +
+          'simulate only accepts Flow.Config config files.',
       );
     }
+
+    return await executeConfigSimulation(
+      detected.content,
+      inputPath,
+      typedEvent,
+      tempDir,
+      startTime,
+      options.flow,
+      options.step,
+    );
   } catch (error) {
     const duration = Date.now() - startTime;
     return {
@@ -168,7 +193,53 @@ export async function executeSimulation(
 }
 
 /**
- * Execute simulation from config JSON (existing behavior with mocking)
+ * Parse step target into type + name.
+ * E.g., "destination.gtag" → { type: "destination", name: "gtag" }
+ */
+function parseStepTarget(
+  stepTarget: string | undefined,
+  flowConfig: Record<string, unknown>,
+): {
+  type: 'destination' | 'transformer';
+  name: string;
+  config: Record<string, unknown>;
+} {
+  if (stepTarget) {
+    const dotIndex = stepTarget.indexOf('.');
+    if (dotIndex > -1) {
+      const type = stepTarget.substring(0, dotIndex) as
+        | 'destination'
+        | 'transformer';
+      const name = stepTarget.substring(dotIndex + 1);
+      const section = (flowConfig as Record<string, Record<string, unknown>>)[
+        type + 's'
+      ];
+      if (!section?.[name]) {
+        throw new Error(`Step "${stepTarget}" not found in flow config`);
+      }
+      return { type, name, config: section[name] as Record<string, unknown> };
+    }
+  }
+
+  // Default: first destination
+  const destinations = (
+    flowConfig as { destinations?: Record<string, unknown> }
+  ).destinations;
+  if (destinations) {
+    const [name, config] = Object.entries(destinations)[0];
+    return {
+      type: 'destination',
+      name,
+      config: config as Record<string, unknown>,
+    };
+  }
+
+  throw new Error('No destination found in flow config');
+}
+
+/**
+ * Execute simulation from config JSON using unified simulate().
+ * Uses direct package imports instead of bundling.
  */
 async function executeConfigSimulation(
   _content: string,
@@ -176,145 +247,88 @@ async function executeConfigSimulation(
   typedEvent: { name: string; data?: unknown },
   tempDir: string,
   startTime: number,
-  loggerConfig?: CoreLogger.Config,
   flowName?: string,
+  stepTarget?: string,
 ): Promise<SimulationResult> {
   // Load config
-  const { flowConfig, buildOptions } = await loadFlowConfig(configPath, {
+  const { flowSettings } = await loadFlowConfig(configPath, {
     flowName,
   });
 
-  // Detect platform from flowConfig
-  const platform = getPlatform(flowConfig);
-
-  // Create tracker
-  const tracker = new CallTracker();
-
-  // Create temporary bundle
-  const tempOutput = path.join(
-    tempDir,
-    `simulation-bundle-${generateId()}.${platform === 'web' ? 'js' : 'mjs'}`,
+  // Parse step target
+  const step = parseStepTarget(
+    stepTarget,
+    flowSettings as unknown as Record<string, unknown>,
   );
 
-  const destinations = (
-    flowConfig as unknown as { destinations?: Record<string, unknown> }
-  ).destinations;
+  if (step.type === 'destination') {
+    const packageName = step.config.package as string;
+    if (!packageName) {
+      throw new Error(`Destination "${step.name}" has no package field`);
+    }
 
-  // Create build options for simulation - platform-aware bundling
-  const simulationBuildOptions: BuildOptions = {
-    ...buildOptions,
-    code: buildOptions.code || '',
-    output: tempOutput,
-    tempDir,
-    ...(platform === 'web'
-      ? {
-          format: 'iife' as const,
-          platform: 'browser' as const,
-          windowCollector: 'collector',
-          windowElb: 'elb',
-        }
-      : {
-          format: 'esm' as const,
-          platform: 'node' as const,
-        }),
-  };
+    // Load destination code
+    const destModule = await import(packageName);
+    const code: Destination.Instance =
+      destModule.default || Object.values(destModule)[0];
 
-  // Bundle (downloads packages internally)
-  await bundleCore(
-    flowConfig,
-    simulationBuildOptions,
-    createLogger({ silent: true }),
-    false,
-  );
+    // Load env mocks from /dev exports
+    const destinations = (
+      flowSettings as unknown as { destinations?: Record<string, unknown> }
+    ).destinations;
+    const envs = await loadDestinationEnvs(destinations || {});
+    const destEnv = envs[step.name];
 
-  // Load env examples dynamically from destination packages
-  const envs = await loadDestinationEnvs(destinations || {});
+    const result = await simulate({
+      step: 'destination',
+      name: step.name,
+      code,
+      event: typedEvent as WalkerOS.DeepPartialEvent,
+      config: step.config.config as Record<string, unknown>,
+      env: destEnv?.push,
+      track: destEnv?.simulation,
+    });
 
-  // Execute based on platform
-  let result;
-  if (platform === 'web') {
-    result = await executeInJSDOM(
-      tempOutput,
-      destinations || {},
-      typedEvent,
-      tracker,
-      envs,
-      10000,
-    );
-  } else {
-    result = await executeInNode(
-      tempOutput,
-      destinations || {},
-      typedEvent,
-      tracker,
-      envs,
-      30000,
-      loggerConfig ? { logger: loggerConfig } : {},
-    );
+    const duration = Date.now() - startTime;
+
+    return {
+      success: !result.error,
+      error: result.error?.message,
+      usage: callsToUsage(step.name, result.calls),
+      duration,
+      logs: [],
+    };
   }
 
-  const duration = Date.now() - startTime;
+  if (step.type === 'transformer') {
+    const packageName = step.config.package as string;
+    if (!packageName) {
+      throw new Error(`Transformer "${step.name}" has no package field`);
+    }
 
-  return {
-    success: true,
-    elbResult: result.elbResult,
-    usage: result.usage,
-    duration,
-    logs: [],
-  };
-}
+    // Load transformer code
+    const mod = await import(packageName);
+    const code = mod.default || Object.values(mod)[0];
 
-/**
- * Execute simulation from pre-built bundle (no mocking)
- */
-async function executeBundleSimulation(
-  bundleContent: string,
-  platform: Platform,
-  typedEvent: { name: string; data?: unknown },
-  tempDir: string,
-  startTime: number,
-  loggerConfig?: CoreLogger.Config,
-): Promise<SimulationResult> {
-  // Write bundle to temp file
-  const tempOutput = path.join(
-    tempDir,
-    `bundle-${generateId()}.${platform === 'server' ? 'mjs' : 'js'}`,
-  );
-  await fs.writeFile(tempOutput, bundleContent, 'utf8');
+    const result = await simulate({
+      step: 'transformer',
+      name: step.name,
+      code,
+      event: typedEvent as WalkerOS.DeepPartialEvent,
+      config: step.config.config as Record<string, unknown>,
+    });
 
-  // Create empty tracker (no mocking for pre-built bundles)
-  const tracker = new CallTracker();
+    const duration = Date.now() - startTime;
 
-  // Execute based on platform (no destinations/envs for pre-built bundles)
-  let result;
-  if (platform === 'web') {
-    result = await executeInJSDOM(
-      tempOutput,
-      {},
-      typedEvent,
-      tracker,
-      {},
-      10000,
-    );
-  } else {
-    result = await executeInNode(
-      tempOutput,
-      {},
-      typedEvent,
-      tracker,
-      {},
-      30000,
-      loggerConfig ? { logger: loggerConfig } : {},
-    );
+    return {
+      success: !result.error,
+      error: result.error?.message,
+      capturedEvents: result.events,
+      duration,
+      usage: {},
+      logs: [],
+    };
   }
 
-  const duration = Date.now() - startTime;
-
-  return {
-    success: true,
-    elbResult: result.elbResult,
-    usage: result.usage,
-    duration,
-    logs: [],
-  };
+  throw new Error(`Unknown step type: ${step.type}`);
 }

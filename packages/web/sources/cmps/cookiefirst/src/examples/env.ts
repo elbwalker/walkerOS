@@ -27,11 +27,13 @@ export const createMockElbFn = (): Elb.Fn => {
  */
 export const noopLogger: Logger.Instance = {
   error: noop,
+  warn: noop,
   info: noop,
   debug: noop,
   throw: (message: string | Error) => {
     throw typeof message === 'string' ? new Error(message) : message;
   },
+  json: noop,
   scope: () => noopLogger,
 };
 

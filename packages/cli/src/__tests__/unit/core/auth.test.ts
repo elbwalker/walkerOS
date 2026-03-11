@@ -1,0 +1,158 @@
+import {
+  getToken,
+  getAuthHeaders,
+  authenticatedFetch,
+  resolveRunToken,
+} from '../../../core/auth.js';
+
+// Isolate from real ~/.config/walkeros/config.json
+jest.mock('../../../lib/config-file.js', () => ({
+  resolveToken: () => {
+    const token = process.env.WALKEROS_TOKEN;
+    if (!token) return null;
+    return { token, source: 'env' as const };
+  },
+  resolveDeployToken: () => process.env.WALKEROS_DEPLOY_TOKEN ?? null,
+  resolveAppUrl: () =>
+    process.env.WALKEROS_APP_URL || 'https://app.walkeros.io',
+}));
+
+describe('auth', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+    delete process.env.WALKEROS_TOKEN;
+    delete process.env.WALKEROS_DEPLOY_TOKEN;
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+    jest.restoreAllMocks();
+  });
+
+  describe('getToken', () => {
+    it('returns undefined when WALKEROS_TOKEN is not set', () => {
+      expect(getToken()).toBeUndefined();
+    });
+
+    it('returns token when WALKEROS_TOKEN is set', () => {
+      process.env.WALKEROS_TOKEN = 'sk-walkeros-abc123';
+      expect(getToken()).toBe('sk-walkeros-abc123');
+    });
+
+    it('returns undefined for empty string', () => {
+      process.env.WALKEROS_TOKEN = '';
+      expect(getToken()).toBeUndefined();
+    });
+  });
+
+  describe('getAuthHeaders', () => {
+    it('returns empty object when no token', () => {
+      expect(getAuthHeaders()).toEqual({});
+    });
+
+    it('returns Authorization header when token is set', () => {
+      process.env.WALKEROS_TOKEN = 'sk-walkeros-test';
+      expect(getAuthHeaders()).toEqual({
+        Authorization: 'Bearer sk-walkeros-test',
+      });
+    });
+  });
+
+  describe('authenticatedFetch', () => {
+    it('adds auth header to requests when token is set', async () => {
+      process.env.WALKEROS_TOKEN = 'sk-walkeros-fetch-test';
+      const mockFetch = jest
+        .spyOn(global, 'fetch')
+        .mockResolvedValue(new Response('ok', { status: 200 }));
+
+      await authenticatedFetch('https://example.com/api');
+
+      expect(mockFetch).toHaveBeenCalledWith('https://example.com/api', {
+        headers: { Authorization: 'Bearer sk-walkeros-fetch-test' },
+      });
+    });
+
+    it('calls fetch without auth header when no token', async () => {
+      const mockFetch = jest
+        .spyOn(global, 'fetch')
+        .mockResolvedValue(new Response('ok', { status: 200 }));
+
+      await authenticatedFetch('https://example.com/api');
+
+      expect(mockFetch).toHaveBeenCalledWith('https://example.com/api', {
+        headers: {},
+      });
+    });
+
+    it('merges custom headers with auth header', async () => {
+      process.env.WALKEROS_TOKEN = 'sk-walkeros-merge';
+      const mockFetch = jest
+        .spyOn(global, 'fetch')
+        .mockResolvedValue(new Response('ok', { status: 200 }));
+
+      await authenticatedFetch('https://example.com/api', {
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith('https://example.com/api', {
+        headers: {
+          Authorization: 'Bearer sk-walkeros-merge',
+          'Content-Type': 'application/json',
+        },
+      });
+    });
+
+    it('passes through other fetch options', async () => {
+      const mockFetch = jest
+        .spyOn(global, 'fetch')
+        .mockResolvedValue(new Response('ok', { status: 200 }));
+
+      await authenticatedFetch('https://example.com/api', {
+        method: 'POST',
+        body: '{"test":true}',
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith('https://example.com/api', {
+        method: 'POST',
+        body: '{"test":true}',
+        headers: {},
+      });
+    });
+
+    it('auth header cannot be overridden by caller', async () => {
+      process.env.WALKEROS_TOKEN = 'sk-walkeros-real';
+      const mockFetch = jest
+        .spyOn(global, 'fetch')
+        .mockResolvedValue(new Response('ok', { status: 200 }));
+
+      await authenticatedFetch('https://example.com/api', {
+        headers: { Authorization: 'Bearer sk-walkeros-evil' },
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith('https://example.com/api', {
+        headers: {
+          Authorization: 'Bearer sk-walkeros-real',
+        },
+      });
+    });
+  });
+
+  describe('resolveRunToken', () => {
+    it('returns WALKEROS_DEPLOY_TOKEN when set', () => {
+      process.env.WALKEROS_DEPLOY_TOKEN = 'deploy-token';
+      process.env.WALKEROS_TOKEN = 'regular-token';
+      expect(resolveRunToken()).toBe('deploy-token');
+    });
+
+    it('falls back to WALKEROS_TOKEN when no deploy token', () => {
+      process.env.WALKEROS_TOKEN = 'regular-token';
+      expect(resolveRunToken()).toBe('regular-token');
+    });
+
+    it('returns null when no token available', () => {
+      expect(resolveRunToken()).toBeNull();
+    });
+  });
+});

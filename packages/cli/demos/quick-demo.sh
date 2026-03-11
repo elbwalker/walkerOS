@@ -132,17 +132,16 @@ cd "$DEMO_DIR"
 read -p "Press Enter to continue to Demo 4..."
 echo ""
 
-# Demo 4: Docker Collect Mode
+# Demo 4: Docker Run
 echo -e "${GREEN}═══════════════════════════════════════${NC}"
-echo -e "${GREEN}Demo 4: Docker Collect Mode${NC}"
+echo -e "${GREEN}Demo 4: Docker Run${NC}"
 echo -e "${GREEN}═══════════════════════════════════════${NC}"
 echo ""
-echo "Starting walkerOS in collect mode..."
+echo "Starting walkerOS..."
 echo ""
 
 docker run -d \
     --name walkeros-demo-collect \
-    -e MODE=collect \
     -e FLOW=/app/flows/demo.json \
     -e PORT=8080 \
     -p 13000:8080 \
@@ -196,7 +195,7 @@ echo "(Starting on port 13001)"
 echo ""
 
 # Run in background for demo
-node "$MONO_ROOT/packages/cli/dist/index.js" run collect "$DEMO_DIR/flow.json" \
+node "$MONO_ROOT/packages/cli/dist/index.js" run "$DEMO_DIR/flow.json" \
     --port 13001 \
     --container-name walkeros-demo-cli \
     --image walkeros-demo:latest \
@@ -260,7 +259,7 @@ echo "What you just saw:"
 echo "  ✓ Bundle generation from flow config"
 echo "  ✓ Event simulation"
 echo "  ✓ Docker image build"
-echo "  ✓ Docker collect mode (direct)"
+echo "  ✓ Docker run (direct)"
 echo "  ✓ CLI Docker orchestration"
 echo ""
 echo "Next steps:"

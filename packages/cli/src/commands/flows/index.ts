@@ -1,6 +1,6 @@
 import { createApiClient } from '../../core/api-client.js';
 import { requireProjectId } from '../../core/auth.js';
-import { createCommandLogger } from '../../core/logger.js';
+import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import { isStdinPiped, readStdin } from '../../core/stdin.js';
 import type { GlobalOptions } from '../../types/global.js';
@@ -31,13 +31,20 @@ export async function listFlows(options: ListFlowsOptions = {}) {
   return data;
 }
 
-export async function getFlow(options: { flowId: string; projectId?: string }) {
+export async function getFlow(options: {
+  flowId: string;
+  projectId?: string;
+  fields?: string[];
+}) {
   const id = options.projectId ?? requireProjectId();
   const client = createApiClient();
   const { data, error } = await client.GET(
     '/api/projects/{projectId}/flows/{flowId}',
     {
-      params: { path: { projectId: id, flowId: options.flowId } },
+      params: {
+        path: { projectId: id, flowId: options.flowId },
+        query: options.fields ? { fields: options.fields.join(',') } : {},
+      },
     },
   );
   if (error) throw new Error(error.error?.message || 'Failed to get flow');
@@ -53,8 +60,8 @@ export async function createFlow(options: {
   const client = createApiClient();
   const { data, error } = await client.POST('/api/projects/{projectId}/flows', {
     params: { path: { projectId: id } },
-    // Content is user-provided JSON; server validates the full schema
-    body: { name: options.name, content: options.content } as never,
+    // Config is user-provided JSON; server validates the full schema
+    body: { name: options.name, config: options.content } as never,
   });
   if (error) throw new Error(error.error?.message || 'Failed to create flow');
   return data;
@@ -65,18 +72,22 @@ export async function updateFlow(options: {
   name?: string;
   content?: Record<string, unknown>;
   projectId?: string;
+  mergePatch?: boolean;
 }) {
   const id = options.projectId ?? requireProjectId();
   const client = createApiClient();
   const body: Record<string, unknown> = {};
   if (options.name !== undefined) body.name = options.name;
-  if (options.content !== undefined) body.content = options.content;
+  if (options.content !== undefined) body.config = options.content;
   const { data, error } = await client.PATCH(
     '/api/projects/{projectId}/flows/{flowId}',
     {
       params: { path: { projectId: id, flowId: options.flowId } },
       // Dynamically constructed body; server validates the full schema
       body: body as never,
+      ...(options.mergePatch && {
+        headers: { 'Content-Type': 'application/merge-patch+json' },
+      }),
     },
   );
   if (error) throw new Error(error.error?.message || 'Failed to update flow');
@@ -130,7 +141,7 @@ async function handleResult(
   fn: () => Promise<unknown>,
   options: FlowsCommandOptions,
 ): Promise<void> {
-  const logger = createCommandLogger(options);
+  const logger = createCLILogger(options);
   try {
     const result = await fn();
     await writeResult(JSON.stringify(result, null, 2), options);

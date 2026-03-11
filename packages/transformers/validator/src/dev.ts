@@ -32,3 +32,5 @@ export const schemas: { format: JsonSchema; settings: JsonSchema } = {
   format: formatSchema,
   settings: settingsSchema,
 };
+
+export * as examples from './examples';

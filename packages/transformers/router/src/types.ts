@@ -1,4 +1,10 @@
-import type { Transformer } from '@walkeros/core';
+import type { Matcher, Transformer } from '@walkeros/core';
+
+// Re-export matcher types from core for backward compatibility
+export type MatchExpression = Matcher.MatchExpression;
+export type MatchCondition = Matcher.MatchCondition;
+export type MatchOperator = Matcher.MatchOperator;
+export type CompiledMatcher = Matcher.CompiledMatcher;
 
 export interface RouterSettings {
   routes?: Route[];
@@ -8,31 +14,6 @@ export interface Route {
   match: MatchExpression | '*';
   next: Transformer.Next;
 }
-
-export type MatchExpression =
-  | MatchCondition
-  | { and: MatchExpression[] }
-  | { or: MatchExpression[] };
-
-export interface MatchCondition {
-  key: string;
-  operator: MatchOperator;
-  value: string;
-  not?: boolean;
-}
-
-export type MatchOperator =
-  | 'eq'
-  | 'contains'
-  | 'prefix'
-  | 'suffix'
-  | 'regex'
-  | 'gt'
-  | 'lt'
-  | 'exists';
-
-// Compiled matcher (internal)
-export type CompiledMatcher = (ingest: Record<string, unknown>) => boolean;
 
 export interface CompiledRoute {
   match: CompiledMatcher;

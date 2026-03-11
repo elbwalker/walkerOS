@@ -199,7 +199,31 @@ describe('Destination', () => {
     expect(destination.dlq).toContainEqual([event, new Error('kaputt')]);
   });
 
-  test('skip on denied consent', async () => {});
+  test('skip on denied consent', async () => {
+    // Destination requires marketing consent
+    const destinationWithConsent = createDestination({
+      config: { consent: { marketing: true } },
+    });
+
+    // Collector only has analytics consent (no marketing)
+    const collector = createWalkerjs({
+      consent: { analytics: true },
+      destinations: { dest: destinationWithConsent },
+    });
+
+    // Push an event -- collector lacks marketing, destination requires it
+    const result = await pushToDestinations(collector, event);
+
+    // Push must NOT have been called -- consent denied
+    expect(mockPush).not.toHaveBeenCalled();
+
+    // The denied event must be queued back into destination.queuePush
+    // Strict length: exactly 1 event queued, not 0 (lost) or 2+ (double-queued)
+    expect(destinationWithConsent.queuePush).toHaveLength(1);
+
+    // Result has no failed key, so ok is true (event is queued, not rejected)
+    expect(result.ok).toBeTruthy();
+  });
 
   test('preserves denied events in queue when some events are allowed', async () => {
     // Destination requires marketing consent

@@ -5,6 +5,7 @@ import {
   getDataLayer,
   createDataLayerSource,
 } from './test-utils';
+import { examples } from '../dev';
 
 describe('DataLayer Source - Minimal', () => {
   let collectedEvents: WalkerOS.Event[];

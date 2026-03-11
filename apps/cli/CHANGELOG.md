@@ -1,5 +1,22 @@
 # walkeros
 
+## 2.0.1
+
+### Patch Changes
+
+- Updated dependencies [2b259b6]
+- Updated dependencies [6ae0ee3]
+- Updated dependencies [ddd6a21]
+- Updated dependencies [d11f574]
+- Updated dependencies [5cb84c1]
+- Updated dependencies [23f218a]
+- Updated dependencies [67dd7c8]
+- Updated dependencies [d5af3cf]
+- Updated dependencies [499e27a]
+- Updated dependencies [55ce33e]
+- Updated dependencies [b6c8fa8]
+  - @walkeros/cli@3.0.0
+
 ## 1.0.9
 
 ### Patch Changes

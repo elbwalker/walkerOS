@@ -1,6 +1,8 @@
 import baseConfig from '@walkeros/config/jest/node.config';
 
 const config = {
+  maxWorkers: 1,
+  forceExit: true,    // Required: stdin PIPEWRAP handle from process.stdin access keeps Jest alive
   testTimeout: 30000,
   // Transform ESM packages: jsdom 27+ and its dependencies are pure ESM
   transformIgnorePatterns: [

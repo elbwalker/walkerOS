@@ -7,9 +7,11 @@ import type { Instance } from './types/logger';
  */
 export interface MockLogger extends Instance {
   error: jest.Mock;
+  warn: jest.Mock;
   info: jest.Mock;
   debug: jest.Mock;
   throw: jest.Mock<never, [string | Error, unknown?]>;
+  json: jest.Mock;
   scope: jest.Mock<MockLogger, [string]>;
 
   /**
@@ -54,9 +56,11 @@ export function createMockLogger(): MockLogger {
 
   const mockLogger: MockLogger = {
     error: jest.fn(),
+    warn: jest.fn(),
     info: jest.fn(),
     debug: jest.fn(),
     throw: mockThrow,
+    json: jest.fn(),
     scope: mockScope,
     scopedLoggers,
   };

@@ -17,7 +17,7 @@ export function getGrantedConsent(
   const states: WalkerOS.Consent = { ...state, ...individual };
 
   const grantedStates: WalkerOS.Consent = {};
-  let hasRequiredConsent = required === undefined;
+  let hasRequiredConsent = !required || Object.keys(required).length === 0;
 
   Object.keys(states).forEach((name) => {
     if (states[name]) {

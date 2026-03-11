@@ -1,0 +1,49 @@
+// Code component - Monaco editor wrapper
+.elb-code {
+  flex: 1;
+  min-height: 0; // Critical for flex overflow
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden; // Monaco handles scrolling internally
+
+  // Monaco wrapper div - must fill available space
+  > div {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  // Auto-height mode: don't use flex, size based on content
+  &.elb-code--auto-height {
+    flex: 0 0 auto; // Don't grow, size to content
+
+    > div {
+      flex: 0 0 auto; // Don't grow, size to content
+      height: auto; // Let Monaco's explicit height control size
+    }
+  }
+
+  // Monaco editor styling - transparent, let box handle background
+  .monaco-editor {
+    background: transparent !important;
+
+    .margin {
+      background: transparent !important;
+    }
+
+    .monaco-editor-background {
+      background: transparent !important;
+    }
+
+    // Sticky scroll widget: opaque background so content doesn't show through
+    .sticky-widget {
+      background: var(--bg-content) !important;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+  }
+}

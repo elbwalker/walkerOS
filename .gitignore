@@ -98,3 +98,7 @@ typings/
 .DS_Store
 .npm-cache
 .tmp
+
+# Storybook
+storybook-static
+*storybook.log

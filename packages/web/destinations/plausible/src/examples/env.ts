@@ -45,5 +45,13 @@ export const push: Env = {
   },
 };
 
+/**
+ * Simulation tracking paths
+ * Specifies which function calls to track during simulation
+ */
+export const simulation = [
+  'call:window.plausible', // Track plausible function calls
+];
+
 // Future: error scenarios (v2)
 // export const error: Env = { ... };

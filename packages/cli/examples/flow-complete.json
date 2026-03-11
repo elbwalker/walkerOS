@@ -1,6 +1,6 @@
 {
-  "$schema": "https://walkeros.io/schema/flow/v1.json",
-  "version": 1,
+  "$schema": "https://walkeros.io/schema/flow/v3.json",
+  "version": 3,
   "variables": {
     "currency": "EUR",
     "flowVersion": "1.0.0",
@@ -33,6 +33,70 @@
           }
         }
       ]
+    }
+  },
+  "contract": {
+    "default": {
+      "tagging": 1,
+      "description": "Web shop tracking contract",
+      "globals": {
+        "type": "object",
+        "properties": {
+          "environment": { "type": "string" },
+          "version": { "type": "string" }
+        }
+      },
+      "consent": {
+        "type": "object",
+        "required": ["functional"],
+        "properties": {
+          "functional": { "type": "boolean", "const": true }
+        }
+      },
+      "events": {
+        "product": {
+          "*": {
+            "description": "A product in the catalog",
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": ["id", "name"],
+                "properties": {
+                  "id": { "type": "string", "description": "Product SKU" },
+                  "name": { "type": "string", "description": "Display name" }
+                }
+              }
+            }
+          },
+          "add": {
+            "description": "Product added to cart",
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": ["quantity"],
+                "properties": {
+                  "quantity": { "type": "integer", "minimum": 1 }
+                }
+              }
+            }
+          }
+        },
+        "order": {
+          "complete": {
+            "description": "Purchase completed",
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": ["id", "total"],
+                "properties": {
+                  "id": { "type": "string" },
+                  "total": { "type": "number", "minimum": 0 }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "flows": {
@@ -199,19 +263,8 @@
           "package": "@walkeros/transformer-validator",
           "config": {
             "settings": {
-              "contract": {
-                "product": {
-                  "add": {
-                    "schema": {
-                      "properties": {
-                        "data": {
-                          "required": ["id", "name"]
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "events": "$contract.default.events",
+              "globals": "$contract.default.globals"
             }
           }
         }
@@ -318,6 +371,89 @@
                 }
               }
             }
+          },
+          "examples": {
+            "page-view": {
+              "in": {
+                "name": "page view",
+                "data": { "title": "Home", "path": "/" },
+                "entity": "page",
+                "action": "view"
+              },
+              "mapping": {
+                "name": "page_view",
+                "data": {
+                  "map": {
+                    "page_title": "data.title",
+                    "page_location": "data.path"
+                  }
+                }
+              },
+              "out": [
+                "event",
+                "page_view",
+                { "page_title": "Home", "page_location": "/" }
+              ]
+            },
+            "product-add": {
+              "in": {
+                "name": "product add",
+                "data": {
+                  "id": "SKU-001",
+                  "name": "Blue Shirt",
+                  "price": 49.99,
+                  "currency": "EUR",
+                  "quantity": 2
+                },
+                "entity": "product",
+                "action": "add"
+              },
+              "mapping": {
+                "name": "add_to_cart",
+                "data": {
+                  "map": {
+                    "currency": { "key": "data.currency", "value": "EUR" },
+                    "value": "data.price",
+                    "items": {
+                      "loop": [
+                        "this",
+                        {
+                          "map": {
+                            "item_id": "data.id",
+                            "item_name": "data.name",
+                            "quantity": { "key": "data.quantity", "value": 1 }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "out": [
+                "event",
+                "add_to_cart",
+                {
+                  "currency": "EUR",
+                  "value": 49.99,
+                  "items": [
+                    {
+                      "item_id": "SKU-001",
+                      "item_name": "Blue Shirt",
+                      "quantity": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            "test-ignored": {
+              "in": {
+                "name": "test debug",
+                "data": { "message": "This should be ignored" },
+                "entity": "test",
+                "action": "debug"
+              },
+              "out": false
+            }
           }
         },
         "api": {
@@ -393,12 +529,34 @@
         "metaAccessToken": "$env.META_ACCESS_TOKEN:demo_token"
       },
       "packages": {
-        "@walkeros/collector": {},
+        "@walkeros/core": {
+          "path": "../../core"
+        },
+        "@walkeros/collector": {
+          "path": "../../collector"
+        },
         "@walkeros/server-source-express": {},
         "@walkeros/server-destination-meta": {},
         "@walkeros/destination-demo": {},
         "@walkeros/transformer-validator": {},
-        "@walkeros/server-transformer-fingerprint": {}
+        "@walkeros/server-transformer-fingerprint": {},
+        "@walkeros/server-transformer-cache": {
+          "path": "../../server/transformers/cache"
+        },
+        "@walkeros/store-memory": {
+          "path": "../../stores/memory"
+        }
+      },
+      "stores": {
+        "cache": {
+          "package": "@walkeros/store-memory",
+          "config": {
+            "settings": {
+              "maxSize": 10485760,
+              "maxEntries": 1000
+            }
+          }
+        }
       },
       "sources": {
         "http": {
@@ -417,17 +575,81 @@
               "context.language": "headers.accept-language",
               "context.referer": "headers.referer"
             }
+          },
+          "examples": {
+            "post-event": {
+              "in": {
+                "method": "POST",
+                "path": "/collect",
+                "headers": { "content-type": "application/json" },
+                "body": {
+                  "name": "page view",
+                  "data": { "title": "Home", "url": "https://example.com" }
+                }
+              },
+              "out": {
+                "name": "page view",
+                "data": { "title": "Home", "url": "https://example.com" },
+                "entity": "page",
+                "action": "view"
+              }
+            }
           }
         }
       },
       "transformers": {
+        "cache": {
+          "package": "@walkeros/server-transformer-cache",
+          "next": "filter",
+          "config": {
+            "settings": {
+              "rules": [
+                {
+                  "match": {
+                    "key": "method",
+                    "operator": "equals",
+                    "value": "GET"
+                  },
+                  "key": ["method", "path"],
+                  "ttl": 300
+                }
+              ]
+            }
+          },
+          "env": { "store": "$store:cache" }
+        },
         "filter": {
           "code": {
             "type": "filter",
             "push": "$code:(event) => event.name.startsWith('internal_') || event.name.startsWith('debug_') ? false : event"
           },
           "next": "fingerprint",
-          "config": {}
+          "config": {},
+          "examples": {
+            "passes-normal": {
+              "in": {
+                "name": "page view",
+                "data": { "title": "Home" },
+                "entity": "page",
+                "action": "view"
+              },
+              "out": {
+                "name": "page view",
+                "data": { "title": "Home" },
+                "entity": "page",
+                "action": "view"
+              }
+            },
+            "filters-internal": {
+              "in": {
+                "name": "internal_heartbeat",
+                "data": {},
+                "entity": "internal",
+                "action": "heartbeat"
+              },
+              "out": false
+            }
+          }
         },
         "fingerprint": {
           "package": "@walkeros/server-transformer-fingerprint",
@@ -450,57 +672,9 @@
           "config": {
             "settings": {
               "format": true,
-              "contract": {
-                "product": {
-                  "add": [
-                    {
-                      "condition": "$code:(event) => Number(event.data?.quantity ?? 0) > 10",
-                      "schema": {
-                        "properties": {
-                          "data": {
-                            "required": [
-                              "id",
-                              "name",
-                              "price",
-                              "quantity",
-                              "warehouse"
-                            ]
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "schema": {
-                        "properties": {
-                          "data": {
-                            "required": ["id", "name", "price"]
-                          }
-                        }
-                      }
-                    }
-                  ],
-                  "*": {
-                    "schema": {
-                      "properties": {
-                        "data": {
-                          "required": ["id", "name", "price"]
-                        }
-                      }
-                    }
-                  }
-                },
-                "order": {
-                  "complete": {
-                    "schema": {
-                      "properties": {
-                        "data": {
-                          "required": ["id", "total"]
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "events": "$contract.default.events",
+              "globals": "$contract.default.globals",
+              "consent": "$contract.default.consent"
             }
           }
         }
@@ -508,7 +682,7 @@
       "destinations": {
         "meta": {
           "package": "@walkeros/server-destination-meta",
-          "before": "filter",
+          "before": "cache",
           "config": {
             "settings": {
               "pixelId": "$var.metaPixelId",
@@ -608,6 +782,42 @@
                   "name": "CustomEvent",
                   "data": "data"
                 }
+              }
+            }
+          },
+          "examples": {
+            "purchase": {
+              "in": {
+                "name": "order complete",
+                "data": {
+                  "id": "ORD-123",
+                  "total": 149.97,
+                  "currency": "EUR"
+                },
+                "entity": "order",
+                "action": "complete"
+              },
+              "mapping": {
+                "name": "Purchase",
+                "data": {
+                  "map": {
+                    "value": "data.total",
+                    "currency": { "key": "data.currency", "value": "EUR" },
+                    "order_id": "data.id"
+                  }
+                }
+              },
+              "out": {
+                "data": [
+                  {
+                    "event_name": "Purchase",
+                    "custom_data": {
+                      "value": 149.97,
+                      "currency": "EUR",
+                      "order_id": "ORD-123"
+                    }
+                  }
+                ]
               }
             }
           }

@@ -1,5 +1,31 @@
 # @walkeros/server-destination-aws
 
+## 3.0.0
+
+### Patch Changes
+
+- 499e27a: Add sideEffects declarations to all packages for bundler tree-shaking
+  support.
+- Updated dependencies [499e27a]
+  - @walkeros/server-core@3.0.0
+
+## 2.1.1
+
+### Patch Changes
+
+- @walkeros/server-core@2.1.1
+
+## 2.1.0
+
+### Minor Changes
+
+- 97df0b2: Step examples: upgrade all packages to blueprint pattern with inline
+  mapping, no intermediate variables, no `all` export
+
+### Patch Changes
+
+- @walkeros/server-core@2.1.0
+
 ## 2.0.1
 
 ## 1.0.6

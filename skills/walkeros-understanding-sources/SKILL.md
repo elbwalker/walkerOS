@@ -36,19 +36,27 @@ export const sourceMySource: Source.Init<Types> = async (context) => {
 
 **Context contains:**
 
-| Property    | Type                 | Purpose                    |
-| ----------- | -------------------- | -------------------------- |
-| `config`    | `Source.Config<T>`   | Settings, mapping, options |
-| `env`       | `Types['env']`       | Environment (push, logger) |
-| `logger`    | `Logger`             | Logging functions          |
-| `id`        | `string`             | Source identifier          |
-| `collector` | `Collector.Instance` | Reference to collector     |
+| Property     | Type                 | Purpose                          |
+| ------------ | -------------------- | -------------------------------- |
+| `config`     | `Source.Config<T>`   | Settings, mapping, options       |
+| `env`        | `Types['env']`       | Environment (push, logger)       |
+| `logger`     | `Logger`             | Logging functions                |
+| `id`         | `string`             | Source identifier                |
+| `collector`  | `Collector.Instance` | Reference to collector           |
+| `setIngest`  | `(value) => void`    | Set ingest metadata per request  |
+| `setRespond` | `(fn) => void`       | Set respond function per request |
 
 ### Push Method
 
 | Method        | Purpose                             |
 | ------------- | ----------------------------------- |
 | `push(input)` | Receive external input, emit events |
+
+### Destroy Method
+
+`destroy?: DestroyFn` — Optional cleanup method. Called during
+`command('shutdown')`. Use to close HTTP servers, timers, or connections.
+Receives `{ id, config, env, logger }`.
 
 ## Push Signatures by Type
 
@@ -146,6 +154,19 @@ sources: {
 The transformer chain runs before events reach the collector. See
 [understanding-transformers](../walkeros-understanding-transformers/SKILL.md)
 for chain details.
+
+## Response Delegation (env.respond)
+
+Server sources can delegate HTTP response handling to downstream steps via
+`setRespond`. Call `createRespond(sender)` to create an idempotent respond
+function, then pass it via `context.setRespond(respond)` before pushing events.
+
+Any transformer or destination in the pipeline can call
+`env.respond?.({ body, status?, headers? })` to customize the response. First
+call wins — the source's default response is a no-op if a step already
+responded.
+
+See `@walkeros/server-source-express` for the reference implementation.
 
 ## Related Skills
 

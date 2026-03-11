@@ -2,7 +2,6 @@ import { transformerRouter } from '../transformer';
 import { createMockLogger } from '@walkeros/core';
 import type { Transformer, Collector } from '@walkeros/core';
 import type { RouterSettings } from '../types';
-
 function createMockContext(
   settings: any,
 ): Transformer.Context<Transformer.Types<Partial<RouterSettings>>> {
@@ -38,8 +37,6 @@ describe('transformerRouter', () => {
     );
 
     expect(result).toEqual({
-      __branch: true,
-      event: {},
       next: 'gtag-parser',
     });
   });
@@ -66,26 +63,24 @@ describe('transformerRouter', () => {
     );
 
     expect(result).toEqual({
-      __branch: true,
-      event: {},
       next: ['validator'],
     });
   });
 
-  it('should pass event through to branch (reset to {})', () => {
+  it('should preserve event when branching (not reset to {})', () => {
     const instance = transformerRouter(
       createMockContext({
         routes: [{ match: '*', next: 'parser' }],
       }),
     ) as Transformer.Instance;
 
-    // Router receives raw body as event, but resets to {} for the branch
     const result = instance.push({ v: '2', en: 'purchase' } as any, {
       ...createMockContext({}),
       ingest: { path: '/gtag' },
     });
 
-    expect(result).toEqual({ __branch: true, event: {}, next: 'parser' });
+    // Router returns only next, event is preserved by the chain runner
+    expect(result).toEqual({ next: 'parser' });
   });
 
   it('should passthrough when no routes match and no wildcard', () => {
@@ -124,6 +119,6 @@ describe('transformerRouter', () => {
       },
     );
 
-    expect(result).toEqual({ __branch: true, event: {}, next: 'fallback' });
+    expect(result).toEqual({ next: 'fallback' });
   });
 });

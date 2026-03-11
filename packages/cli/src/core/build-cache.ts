@@ -7,7 +7,7 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import { getFlowConfigCacheKey } from './cache-utils.js';
+import { getFlowSettingsCacheKey } from './cache-utils.js';
 import { getTmpPath } from './tmp.js';
 
 /**
@@ -18,7 +18,7 @@ export async function getBuildCachePath(
   tmpDir?: string,
 ): Promise<string> {
   const cacheDir = getTmpPath(tmpDir, 'cache', 'builds');
-  const cacheKey = await getFlowConfigCacheKey(configContent);
+  const cacheKey = await getFlowSettingsCacheKey(configContent);
   return path.join(cacheDir, `${cacheKey}.js`);
 }
 

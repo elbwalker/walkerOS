@@ -133,7 +133,7 @@ describe('Destination API', () => {
       collector: {} as Collector.Instance,
       config: {
         settings: { url },
-        mapping: examples.mapping.config,
+        mapping: { entity: { action: { data: 'data' } } },
       },
       env: testEnv,
       logger: mockLogger,

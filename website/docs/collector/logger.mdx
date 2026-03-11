@@ -9,7 +9,7 @@ sidebar_position: 3
 # Logger
 
 walkerOS provides a centralized logging system that enables consistent logging
-across the collector, sources, and destinations. The logger supports three log
+across the collector, sources, and destinations. The logger supports four log
 levels and provides scoped logging for better debugging.
 
 ## Configuration
@@ -21,7 +21,7 @@ Configure logging when initializing the collector:
 
 const { collector, elb } = await startFlow({
   logger: {
-    level: 'DEBUG', // 'ERROR' | 'INFO' | 'DEBUG'
+    level: 'DEBUG', // 'ERROR' | 'WARN' | 'INFO' | 'DEBUG'
   },
 });`}
   language="typescript"
@@ -32,8 +32,9 @@ const { collector, elb } = await startFlow({
 | Level   | Value | Description                              |
 | ------- | ----- | ---------------------------------------- |
 | `ERROR` | 0     | Only errors (default)                    |
-| `INFO`  | 1     | Errors and informational messages        |
-| `DEBUG` | 2     | All messages including debug information |
+| `WARN`  | 1     | Errors and warnings                      |
+| `INFO`  | 2     | Errors, warnings, and informational      |
+| `DEBUG` | 3     | All messages including debug information |
 
 ## Using the logger
 
@@ -54,7 +55,11 @@ The logger is automatically available in destination and source contexts:
       sendToService(event);
       logger.info('Event sent successfully');
     } catch (error) {
-      logger.error('Failed to send event', error);
+      if (error.retryable) {
+        logger.warn('Event send failed, will retry', error);
+      } else {
+        logger.error('Failed to send event', error);
+      }
     }
   },
 };`}
@@ -88,9 +93,11 @@ The logger is automatically available in destination and source contexts:
 | Method                       | Description                                              |
 | ---------------------------- | -------------------------------------------------------- |
 | `error(message, context?)`   | Log an error message                                     |
+| `warn(message, context?)`    | Log a warning (degraded state, config issues)            |
 | `info(message, context?)`    | Log an informational message                             |
 | `debug(message, context?)`   | Log a debug message                                      |
 | `throw(message, context?)`   | Log an error and throw an exception (returns `never`)    |
+| `json(data)`                 | Output structured JSON data                              |
 | `scope(name)`                | Create a scoped logger with a prefixed scope             |
 
 ### Error handling
@@ -178,7 +185,7 @@ The handler receives:
 
 | Parameter         | Type            | Description                                  |
 | ----------------- | --------------- | -------------------------------------------- |
-| `level`           | `Level`         | Log level enum (ERROR=0, INFO=1, DEBUG=2)    |
+| `level`           | `Level`         | Log level enum (ERROR=0, WARN=1, INFO=2, DEBUG=3) |
 | `message`         | `string`        | The log message                              |
 | `context`         | `LogContext`    | Additional context object                    |
 | `scope`           | `string[]`      | Array of scope names                         |

@@ -414,6 +414,12 @@ buildDev(),
 `buildModules({ entry: ['src/dev.ts'] })` instead. New CMP sources should prefer
 `buildDev()` for consistency.
 
+### Hints (Optional)
+
+If your CMP source has non-obvious behaviors or troubleshooting patterns, add
+hints. See `walkeros-writing-documentation` skill for full guidelines and
+`walkeros-create-source` skill for the hints pattern.
+
 ### Gate: Convention met
 
 - [ ] `walkerOS` field in package.json with type and platform

@@ -112,7 +112,30 @@ Each example file should include:
 
 Adapt [examples/config.ts](examples/config.ts) for your transformer's settings.
 
-### 2.4 Export via dev.ts
+### 2.4 Step Examples
+
+Add step examples with `{ in, out }` pairs for end-to-end step testing:
+
+```typescript
+// examples/step.ts
+export const step = {
+  'order-passes': {
+    in: { name: 'order complete', data: { id: 'ORD-123' } },
+    out: { name: 'order complete', data: { id: 'ORD-123' } },
+  },
+  'debug-filtered': {
+    in: { name: 'debug test', data: { message: 'noise' } },
+    out: false, // Transformer rejects this event
+  },
+};
+```
+
+For transformers, both `in` and `out` are walkerOS events, except `out: false`
+which indicates the transformer filters (rejects) the event. See
+[using-step-examples](../walkeros-using-step-examples/SKILL.md) for the Three
+Type Zones.
+
+### 2.5 Export via dev.ts
 
 ```typescript
 export * as schemas from './schemas';
@@ -191,6 +214,44 @@ buildDev(),
 
 This auto-generates `dist/walkerOS.json` from your Zod schemas at build time.
 
+### Hints (Optional)
+
+If your transformer has capabilities, behaviors, or troubleshooting patterns not
+obvious from schemas alone, add hints. See `walkeros-writing-documentation`
+skill for full guidelines.
+
+Create `src/hints.ts`:
+
+```typescript
+import type { Hint } from '@walkeros/core';
+
+export const hints: Hint.Hints = {
+  'validation-behavior': {
+    text: 'Describes how validation works. See settings schema for options.',
+    code: [{ lang: 'json', code: '{ "settings": { ... } }' }],
+  },
+};
+```
+
+Export from `src/dev.ts`:
+
+```typescript
+export * as schemas from './schemas';
+export * as examples from './examples';
+export { hints } from './hints';
+```
+
+Guidelines:
+
+- Expand awareness — describe capabilities ("supports X, Y, Z"), don't prescribe
+  one path
+- Reference schemas and examples, don't duplicate them
+- Verify every claim against actual implementation before publishing
+- Key naming: kebab-case, group with prefixes (validation-\*, enrichment-\*,
+  troubleshoot-\*)
+- Most transformers don't need hints — schemas and examples cover the common
+  case
+
 ### Gate: Convention Met
 
 - [ ] `walkerOS` field in package.json with `type: "transformer"`
@@ -224,7 +285,8 @@ complete implementation example.
    defaults (see
    [templates/validation/schemas.ts](templates/validation/schemas.ts))
 3. **Push receives pushContext**: The `push` function gets event + push context
-4. **Return values**: `event` (continue), `void` (passthrough), `false` (cancel)
+4. **Return values**: `{ event }` (continue), `void` (passthrough), `false`
+   (cancel)
 
 ### 5.3 Export
 

@@ -118,10 +118,8 @@ const config = {
   // Performance settings - reduced for devcontainer memory constraints
   maxWorkers: 2,
   testTimeout: 30000,
-  // forceExit disabled to allow proper cleanup and detect handle leaks
   clearMocks: true,
   restoreMocks: true,
-  detectOpenHandles: true,
   
   // Exclude from module resolution (prevents Haste collisions with cached packages)
   modulePathIgnorePatterns: ['<rootDir>/.tmp', '/dist/'],
@@ -133,6 +131,26 @@ const config = {
     '/build/',
     '/coverage/',
     '.tmp',
+  ],
+
+  // Coverage settings
+  coverageThreshold: {
+    global: {
+      lines: 60,
+      branches: 50,
+      functions: 50,
+      statements: 60,
+    },
+  },
+
+  coverageReporters: ['text', 'text-summary', 'lcov'],
+
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/__tests__/',
+    '/examples/',
+    '/dev.ts',
   ],
 };
 

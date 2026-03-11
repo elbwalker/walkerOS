@@ -431,6 +431,10 @@ Use `buildDev()` from the shared tsup config to auto-generate `walkerOS.json`:
 
 This file contains your package's JSON Schemas and examples, enabling MCP tools and the CLI to validate configurations without installing your package.
 
+### Optional: Hints
+
+Packages can export a `hints` record from `src/dev.ts` to provide lightweight, actionable context beyond schemas and examples — such as authentication methods, storage behavior, or troubleshooting tips. Hints are serialized into `walkerOS.json` and surfaced via MCP tools. See the `walkeros-create-destination` skill for details.
+
 ## Publishing checklist
 
 - [ ] `walkerOS` field in package.json

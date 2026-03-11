@@ -1,4 +1,4 @@
-import { compileMatcher } from '../matcher';
+import { compileMatcher } from '@walkeros/core';
 
 describe('compileMatcher', () => {
   describe('wildcard', () => {

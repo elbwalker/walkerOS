@@ -12,8 +12,7 @@ import { getTmpPath } from '../../core/index.js';
 /**
  * Prepares a JSON config file for execution by bundling it to a temporary location.
  *
- * Creates bundle in .tmp/ directory relative to config file (not /tmp)
- * so Node.js module resolution finds node_modules.
+ * Creates bundle in os.tmpdir() (e.g. /tmp) by default.
  *
  * @param configPath - Path to the JSON configuration file
  * @param options - Bundle options
@@ -26,9 +25,10 @@ export async function prepareBundleForRun(
   options: {
     verbose?: boolean;
     silent?: boolean;
+    flowName?: string;
   },
 ): Promise<string> {
-  // Create temp directory relative to cwd (ensures node_modules is findable)
+  // Create temp directory in os.tmpdir()
   const tempDir = getTmpPath(
     undefined,
     `run-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -43,6 +43,7 @@ export async function prepareBundleForRun(
     cache: true,
     verbose: options.verbose,
     silent: options.silent,
+    flowName: options.flowName,
     buildOverrides: {
       output: tempPath,
       format: 'esm',

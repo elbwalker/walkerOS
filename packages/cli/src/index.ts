@@ -27,6 +27,13 @@ export {
   deployCommand,
   getDeploymentCommand,
 } from './commands/deploy/index.js';
+export {
+  createDeployCommand,
+  listDeploymentsCommand,
+  getDeploymentBySlugCommand,
+  createDeploymentCommand,
+  deleteDeploymentCommand,
+} from './commands/deployments/index.js';
 
 // === Programmatic API ===
 // High-level functions for library usage
@@ -38,6 +45,7 @@ export { validate } from './commands/validate/index.js';
 export {
   getToken,
   getAuthHeaders,
+  deployAuthenticatedFetch,
   requireProjectId,
   resolveBaseUrl,
 } from './core/auth.js';
@@ -59,12 +67,27 @@ export {
   duplicateFlow,
 } from './commands/flows/index.js';
 export { deploy, getDeployment } from './commands/deploy/index.js';
+export {
+  listDeployments,
+  getDeploymentBySlug,
+  createDeployment,
+  deleteDeployment,
+} from './commands/deployments/index.js';
 export type { ListFlowsOptions } from './commands/flows/index.js';
 export type { DeployOptions } from './commands/deploy/index.js';
+export type { ListDeploymentsOptions } from './commands/deployments/index.js';
+export { parseSSEEvents } from './core/sse.js';
+export type { SSEEvent, SSEParseResult } from './core/sse.js';
+
+// === Utilities ===
+// Export utilities for programmatic usage
+export { loadJsonConfig } from './config/utils.js';
+export { findExample } from './commands/simulate/example-loader.js';
+export { compareOutput } from './commands/simulate/compare.js';
 
 // === Types ===
 // Export types for programmatic usage
-// Config structure uses Flow.Setup and Flow.Config from @walkeros/core
+// Config structure uses Flow.Config and Flow.Settings from @walkeros/core
 export type {
   Flow,
   CLIBuildOptions,
@@ -72,10 +95,13 @@ export type {
   MinifyOptions,
 } from './types/bundle.js';
 export type { BundleStats } from './commands/bundle/bundler.js';
-export type { SimulationResult } from './commands/simulate/types.js';
+export type {
+  SimulationResult,
+  ExampleMatch,
+} from './commands/simulate/types.js';
+export type { ExampleLookupResult } from './commands/simulate/example-loader.js';
 export type { PushResult } from './commands/push/types.js';
 export type {
-  RunMode,
   RunCommandOptions,
   RunOptions,
   RunResult,

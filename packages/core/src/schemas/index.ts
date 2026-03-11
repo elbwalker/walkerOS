@@ -56,6 +56,9 @@ export {
   UtilitySchemas,
 };
 
+// Hint schemas (direct export — flat record, no namespace needed)
+export { CodeSchema, HintSchema, HintsSchema } from './hint';
+
 // ========================================
 // Direct Exports (commonly used schemas)
 // ========================================
@@ -112,21 +115,35 @@ export {
 
 // Export commonly used schemas from Flow namespace directly
 export {
-  SetupSchema,
-  ConfigSchema as FlowConfigSchema, // Alias to avoid conflict with other ConfigSchema exports
+  ConfigSchema as FlowConfigSchema,
+  SettingsSchema as FlowSettingsSchema,
+  ContractSchema,
+  ContractActionsSchema,
+  ContractSchemaEntry,
   SourceReferenceSchema,
   DestinationReferenceSchema,
+  StoreReferenceSchema,
   PrimitiveSchema,
-  parseSetup,
-  safeParseSetup,
   parseConfig,
   safeParseConfig,
+  parseSettings,
+  safeParseSettings,
+  TransformerReferenceSchema,
   // JSON Schemas
-  setupJsonSchema,
   configJsonSchema,
+  settingsJsonSchema,
   sourceReferenceJsonSchema,
   destinationReferenceJsonSchema,
+  storeReferenceJsonSchema,
+  contractEntryJsonSchema,
+  contractJsonSchema,
+  transformerReferenceJsonSchema,
 } from './flow';
+
+// Validation
+export type { ValidationIssue, ValidationResult } from './validate';
+export type { IntelliSenseContext, PackageInfo } from './intellisense';
+export { validateFlowConfig } from './validate-flow-config';
 
 // ========================================
 // Schema Builder - DRY utility for destinations

@@ -5,7 +5,6 @@ sidebar_position: 2
 package: '@walkeros/web-destination-gtag'
 ---
 
-import { getEvent } from '@walkeros/core';
 import destinationGtag from '@walkeros/web-destination-gtag';
 import { examples, schemas } from '@walkeros/web-destination-gtag/dev';
 
@@ -113,8 +112,8 @@ gtag.js event.
       measurementId: 'G-XXXXXXXXXX',
     },
   }}
-  event={getEvent('product add')}
-  mapping={examples.mapping.ga4AddToCart}
+  event={examples.step.addToCart.in}
+  mapping={examples.step.addToCart.mapping}
   generic={true}
   smallText={true}
   height={'512px'}
@@ -133,8 +132,8 @@ gtag.js event.
       measurementId: 'G-XXXXXXXXXX',
     },
   }}
-  event={getEvent('order complete')}
-  mapping={examples.mapping.ga4Purchase}
+  event={examples.step.purchase.in}
+  mapping={examples.step.purchase.mapping}
   generic={true}
   smallText={true}
   height={'512px'}

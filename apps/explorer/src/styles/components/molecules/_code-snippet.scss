@@ -1,0 +1,12 @@
+@use '../../theme/tokens' as *;
+
+// CodeSnippet wraps CodeBox with prominent styling for code snippets
+// Uses larger font size (via fontSize prop), generous padding, and minimal min-height
+.elb-code-snippet {
+  min-height: var(--height-snippet-min);
+
+  // Add generous padding to content area
+  .elb-explorer-content {
+    padding: var(--spacing-snippet);
+  }
+}

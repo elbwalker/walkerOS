@@ -6,7 +6,6 @@ sidebar_position: 2
 package: '@walkeros/web-destination-meta'
 ---
 
-import { getEvent } from '@walkeros/core';
 import destinationMetaPixel from '@walkeros/web-destination-meta';
 import { examples, schemas } from '@walkeros/web-destination-meta/dev';
 
@@ -125,13 +124,11 @@ Learn more aboot
 
 <DestinationDemo
   destination={destination}
-  settings={{
-    pixelId: '1234567890',
-  }}
+  settings={{ pixelId: '1234567890' }}
   smallText={true}
   height={'512px'}
-  event={getEvent('product view')}
-  mapping={examples.mapping.ViewContent}
+  event={examples.step.viewContent.in}
+  mapping={examples.step.viewContent.mapping}
   generic={true}
 />
 
@@ -139,13 +136,11 @@ Learn more aboot
 
 <DestinationDemo
   destination={destination}
-  settings={{
-    pixelId: '1234567890',
-  }}
+  settings={{ pixelId: '1234567890' }}
   smallText={true}
   height={'512px'}
-  event={getEvent('product add')}
-  mapping={examples.mapping.AddToCart}
+  event={examples.step.addToCart.in}
+  mapping={examples.step.addToCart.mapping}
   generic={true}
 />
 
@@ -153,13 +148,11 @@ Learn more aboot
 
 <DestinationDemo
   destination={destination}
-  settings={{
-    pixelId: '1234567890',
-  }}
+  settings={{ pixelId: '1234567890' }}
   smallText={true}
   height={'512px'}
-  event={getEvent('cart view')}
-  mapping={examples.mapping.InitiateCheckout}
+  event={examples.step.initiateCheckout.in}
+  mapping={examples.step.initiateCheckout.mapping}
   generic={true}
 />
 
@@ -167,12 +160,10 @@ Learn more aboot
 
 <DestinationDemo
   destination={destination}
-  settings={{
-    pixelId: '1234567890',
-  }}
+  settings={{ pixelId: '1234567890' }}
   smallText={true}
   height={'512px'}
-  event={getEvent('order complete')}
-  mapping={examples.mapping.Purchase}
+  event={examples.step.purchase.in}
+  mapping={examples.step.purchase.mapping}
   generic={true}
 />

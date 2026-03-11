@@ -1,5 +1,31 @@
 # @walkeros/web-destination-meta
 
+## 3.0.0
+
+### Patch Changes
+
+- 499e27a: Add sideEffects declarations to all packages for bundler tree-shaking
+  support.
+- Updated dependencies [499e27a]
+  - @walkeros/web-core@3.0.0
+
+## 2.1.1
+
+### Patch Changes
+
+- @walkeros/web-core@2.1.1
+
+## 2.1.0
+
+### Minor Changes
+
+- 97df0b2: Step examples: add mapping field to StepExample type, rewrite Meta
+  Pixel examples with functional tests
+
+### Patch Changes
+
+- @walkeros/web-core@2.1.0
+
 ## 2.0.1
 
 ## 1.0.6

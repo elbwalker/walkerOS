@@ -1,0 +1,114 @@
+@use '../_config' as *;
+@use 'sass:map';
+@use '../foundation/responsive' as *;
+
+// Grid wrapper with container query context
+.elb-explorer-grid-wrapper {
+  position: relative;
+  width: 100%;
+  container-type: inline-size;
+  container-name: grid-container;
+}
+
+// Grid layout - modern CSS, no JS required
+.elb-explorer-grid {
+  display: grid;
+  gap: var(--spacing-grid-gap);
+  width: 100%;
+
+  // Mobile-first: Vertical stack
+  grid-auto-flow: row;
+  grid-template-columns: 1fr;
+  grid-auto-rows: auto;
+  overflow: visible;
+
+  @container grid-container (min-width: 800px) {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(var(--grid-min-box-width), 1fr);
+    grid-auto-rows: minmax(
+      var(--grid-row-min-height),
+      var(--grid-row-max-height, auto)
+    );
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+
+    // Force minimum width on grid children to prevent collapse
+    > * {
+      min-width: var(--grid-min-box-width);
+    }
+
+    // Hide scrollbar on mobile for cleaner appearance
+    @include mobile {
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+  }
+
+  // Row height modifiers
+  &.elb-explorer-grid--row-auto {
+    @container grid-container (min-width: 800px) {
+      grid-auto-rows: auto;
+      max-height: none;
+    }
+  }
+
+  &.elb-explorer-grid--row-synced {
+    @container grid-container (min-width: 800px) {
+      // Synced mode uses dynamic height from context
+      // Grid auto-rows will respect the Box heights set by context
+      grid-auto-rows: auto;
+    }
+  }
+}
+
+// Scroll buttons for horizontal navigation
+.elb-explorer-grid-scroll-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-box);
+  color: var(--color-text);
+  font-size: 24px;
+  line-height: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  user-select: none;
+
+  // Hide in narrow containers (vertical stack mode)
+  @container grid-container (max-width: 799px) {
+    display: none;
+  }
+
+  &:hover {
+    background: var(--bg-button-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-50%) scale(1.1);
+  }
+
+  &:active {
+    transform: translateY(-50%) scale(0.95);
+  }
+
+  &--left {
+    left: 8px;
+  }
+
+  &--right {
+    right: 8px;
+  }
+}

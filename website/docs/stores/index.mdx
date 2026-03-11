@@ -1,0 +1,138 @@
+---
+title: Stores
+description: Key-value storage for walkerOS flows
+sidebar_position: 6
+---
+
+# Stores
+
+Without stores, each event in a flow is processed in isolation: no shared state, no caching, no persisted data between requests. Stores add a **shared memory layer** that any component in your flow (transformers, destinations) can read from and write to.
+
+A common example: serving the walker.js script from your own infrastructure. The file lives in a store (S3 or filesystem), and a transformer reads it on each request: no hardcoded paths, no rebuilds needed to swap the file.
+
+## When stores are active
+
+Stores are initialized **before** any other component in the flow. Once running, they're available to transformers and destinations via `$store:storeId` wiring. A transformer might cache a processed result; a destination might check a store before making an external API call.
+
+```
+Flow startup order:
+  1. Stores        ← initialized first
+  2. Transformers  ← can reference stores via $store:id
+  3. Destinations  ← can reference stores via $store:id
+  4. Sources       ← start pushing events
+```
+
+## Choosing a store
+
+| Store | Platform | Persistence | Speed | Best for |
+|-------|----------|-------------|-------|----------|
+| [**Memory**](./memory) | Web + Server | Process lifetime (lost on restart) | Fastest (in-process) | Caching, deduplication, ephemeral state |
+| [**Filesystem**](./server/fs) | Server only | Disk (survives restarts) | Fast (local I/O) | Local dev, Docker with baked-in assets |
+| [**S3**](./server/s3) | Server only | Cloud (always available) | Network I/O | Managed deployments, shared assets, hot-swap |
+| [**GCS**](./server/gcs) | Server only | Cloud (always available) | Network I/O | Cloud Run / GKE deployments, GCP-native |
+
+## Wiring stores to components
+
+Components reference stores via `$store:storeId` in their `env` configuration. The collector resolves this at startup and passes the live store instance to the component.
+
+<Tabs groupId="mode">
+  <TabItem value="integrated" label="Integrated" default>
+
+<CodeSnippet
+  code={`import { startFlow } from '@walkeros/collector';
+import { storeS3Init } from '@walkeros/server-store-s3';
+import { transformerFile } from '@walkeros/server-transformer-file';
+
+await startFlow({
+  stores: {
+    assets: {
+      code: storeS3Init,
+      config: {
+        settings: {
+          bucket: 'my-assets',
+          endpoint: 'https://s3.eu-west-1.amazonaws.com',
+          accessKeyId: process.env.S3_ACCESS_KEY,
+          secretAccessKey: process.env.S3_SECRET_KEY,
+        },
+      },
+    },
+  },
+  transformers: {
+    file: {
+      code: transformerFile,
+      config: { settings: { prefix: '/static' } },
+      env: { store: '$store:assets' }, // wired to the assets store
+    },
+  },
+});`}
+  language="typescript"
+/>
+
+  </TabItem>
+  <TabItem value="bundled" label="Bundled">
+
+<CodeSnippet
+  code={`{
+  "stores": {
+    "assets": {
+      "package": "@walkeros/server-store-s3",
+      "config": {
+        "settings": {
+          "bucket": "my-assets",
+          "endpoint": "https://s3.eu-west-1.amazonaws.com",
+          "accessKeyId": "$env.S3_ACCESS_KEY",
+          "secretAccessKey": "$env.S3_SECRET_KEY"
+        }
+      }
+    }
+  },
+  "transformers": {
+    "file": {
+      "package": "@walkeros/server-transformer-file",
+      "config": { "settings": { "prefix": "/static" } },
+      "env": { "store": "$store:assets" }
+    }
+  }
+}`}
+  language="json"
+/>
+
+  </TabItem>
+</Tabs>
+
+## Common patterns
+
+Stores are rarely used alone — they work together with transformers to enable analytics use cases that aren't possible with stateless event processing.
+
+| Pattern | Store | Transformer | What it enables |
+|---------|-------|-------------|-----------------|
+| **Self-hosted tag delivery** | S3 or Filesystem | [File](/docs/transformers/file) | Serve walker.js and tracking pixels from your own infrastructure |
+| **Cookie-free user identification** | Memory | [Fingerprint](/docs/transformers/fingerprint) | Store session hashes server-side, identify users without cookies or PII |
+| **Response caching** | Memory | [Cache](/docs/transformers/cache) | Deduplicate identical requests, reduce load on downstream analytics APIs |
+| **Local development** | Filesystem | [File](/docs/transformers/file) | Serve assets from disk during development, no S3 credentials needed |
+
+## Available stores
+
+### Memory
+
+In-process key-value store with LRU eviction and TTL support. Works in both browser and server flows. Fast but not persisted: data is lost on restart.
+
+[Learn more &rarr;](./memory)
+
+### Filesystem
+
+Local filesystem store for server flows. Reads and writes files relative to a base path with path traversal protection. Good for local development and Docker deployments with baked-in assets.
+
+[Learn more &rarr;](./server/fs)
+
+### S3
+
+S3-compatible object storage. Works with AWS S3, Cloudflare R2, Scaleway, DigitalOcean Spaces, Backblaze B2, MinIO, and any S3-compatible provider. The recommended store for managed cloud deployments.
+
+[Learn more &rarr;](./server/s3)
+
+### GCS
+
+Google Cloud Storage with zero runtime dependencies. Built-in auth supports Application Default Credentials (ADC) on Cloud Run / GKE and explicit service account JSON for non-GCP environments. The recommended store for GCP-native deployments.
+
+[Learn more &rarr;](./server/gcs)
