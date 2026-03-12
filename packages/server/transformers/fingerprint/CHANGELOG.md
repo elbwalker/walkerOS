@@ -1,5 +1,14 @@
 # @walkeros/server-transformer-fingerprint
 
+## 3.0.2
+
+### Patch Changes
+
+- afd4d07: Add MCP hints documenting ingest prerequisite and field resolution
+  patterns
+  - @walkeros/core@3.0.2
+  - @walkeros/server-core@3.0.2
+
 ## 3.0.1
 
 ### Patch Changes

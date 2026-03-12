@@ -1,5 +1,12 @@
 # @walkeros/web-destination-piwikpro
 
+## 3.0.2
+
+### Patch Changes
+
+- @walkeros/core@3.0.2
+- @walkeros/web-core@3.0.2
+
 ## 3.0.1
 
 ### Patch Changes

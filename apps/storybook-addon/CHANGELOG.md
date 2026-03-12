@@ -1,5 +1,14 @@
 # @walkeros/storybook-addon
 
+## 3.0.2
+
+### Patch Changes
+
+- @walkeros/core@3.0.2
+- @walkeros/collector@3.0.2
+- @walkeros/web-core@3.0.2
+- @walkeros/web-source-browser@3.0.2
+
 ## 3.0.1
 
 ### Patch Changes
