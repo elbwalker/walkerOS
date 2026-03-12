@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-destination-aws",
   "description": "AWS server destination for walkerOS",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "license": "MIT",
   "exports": {
     ".": {
@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-firehose": "^3.952.0",
-    "@walkeros/server-core": "^3.0.0"
+    "@walkeros/server-core": "^3.0.1"
   },
   "devDependencies": {},
   "repository": {

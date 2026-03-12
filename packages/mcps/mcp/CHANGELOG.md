@@ -1,5 +1,15 @@
 # @walkeros/mcp
 
+## 3.0.1
+
+### Patch Changes
+
+- 86c81d1: Add default export to server-transformer-fingerprint and exports
+  metadata to multi-service packages for bundler named import support
+- Updated dependencies [86c81d1]
+  - @walkeros/cli@3.0.1
+  - @walkeros/core@3.0.1
+
 ## 3.0.0
 
 ### Minor Changes

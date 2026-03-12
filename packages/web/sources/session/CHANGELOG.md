@@ -1,5 +1,12 @@
 # @walkeros/web-source-session
 
+## 3.0.1
+
+### Patch Changes
+
+- @walkeros/core@3.0.1
+- @walkeros/web-core@3.0.1
+
 ## 3.0.0
 
 ### Patch Changes

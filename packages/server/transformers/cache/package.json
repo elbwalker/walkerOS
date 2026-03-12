@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-transformer-cache",
   "description": "Cache transformer for walkerOS server - HTTP response caching with LRU eviction and per-rule TTL",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -26,11 +26,11 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "devDependencies": {
-    "@walkeros/core": "^3.0.0"
+    "@walkeros/core": "^3.0.1"
   },
   "dependencies": {
-    "@walkeros/core": "^3.0.0",
-    "@walkeros/store-memory": "^3.0.0"
+    "@walkeros/core": "^3.0.1",
+    "@walkeros/store-memory": "^3.0.1"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
