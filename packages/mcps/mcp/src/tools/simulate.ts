@@ -19,8 +19,10 @@ export function registerFlowSimulateTool(server: McpServer) {
       description:
         'Simulate events through a walkerOS flow without making real API calls. ' +
         'Events must be in walkerOS format (post-source): { name: "entity action", data: {...} }. ' +
-        'Raw source input (dataLayer pushes, HTTP requests) must first be converted to walkerOS events. ' +
-        'Check source package examples to see what events a source outputs. ' +
+        'IMPORTANT: Sources transform raw input — always use package_get(section="examples") to see what a source actually outputs, not what it receives. ' +
+        'Example: web-source-datalayer receives ["event","add_to_cart",{items:[...]}] but outputs { name: "dataLayer add_to_cart", entity: "dataLayer", action: "add_to_cart", data: {items:[...]} }. ' +
+        'Destination mapping keys must match the SOURCE OUTPUT entity/action (e.g. "dataLayer"→"add_to_cart"), NOT the raw input name. ' +
+        'Source mapping (config.mapping) uses raw action names as top-level keys (e.g. "add_to_cart"→{"*":{name:"product add"}}) to rename events to walkerOS conventions before destinations see them. ' +
         'Use the example parameter to load event input from a step example and compare output.',
       inputSchema: schemas.SimulateInputShape,
       outputSchema: SimulateOutputShape,
@@ -71,7 +73,12 @@ export function registerFlowSimulateTool(server: McpServer) {
         }
         if (destCount > 0 && receivedCount === 0) {
           warnings.push(
-            'No destinations received the event. Most common cause: mapping keys must be NESTED entity → action objects — event "product add" needs { "product": { "add": Rule } }, not "product.add". Also check event name match and consent settings.',
+            'No destinations received the event. Most common causes: ' +
+              '(1) Mapping keys must match the SOURCE OUTPUT entity→action — use package_get(section="examples") on your source to see what it outputs. ' +
+              'E.g. web-source-datalayer outputs entity "dataLayer" + action "add_to_cart", so destination mapping needs { "dataLayer": { "add_to_cart": Rule } }, not { "product": { "add": Rule } }. ' +
+              'Use source mapping (config.mapping) to rename events to walkerOS conventions if needed. ' +
+              '(2) Mapping must use NESTED objects — { "product": { "add": Rule } }, not "product.add". ' +
+              '(3) Check consent settings.',
           );
         }
 
