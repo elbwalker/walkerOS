@@ -12,9 +12,8 @@ export function registerFlowPushTool(server: McpServer) {
       title: 'Push Events',
       description:
         'Push a real event through a walkerOS flow to actual destinations. ' +
-        'WARNING: This makes real API calls to real endpoints. ' +
-        'Note: Web destinations (gtag, meta, etc.) require browser globals that are not available in Node.js. ' +
-        'For web flows, use flow_simulate to test. flow_push works best for server-side flows.',
+        'Makes real API calls to real endpoints. ' +
+        'Best suited for server-side flows — web flows should use flow_simulate for testing.',
       inputSchema: schemas.PushInputShape,
       outputSchema: PushOutputShape,
       annotations: {
@@ -35,7 +34,7 @@ export function registerFlowPushTool(server: McpServer) {
         if (!result.success) {
           return mcpError(
             new Error(result.error || 'Push failed'),
-            'Check destination configuration and network connectivity. For web destinations, use flow_simulate instead.',
+            'Check destination configuration and connectivity.',
           );
         }
 
@@ -45,7 +44,7 @@ export function registerFlowPushTool(server: McpServer) {
       } catch (error) {
         return mcpError(
           error,
-          'Check configPath and event format. For web destinations, use flow_simulate instead.',
+          'Check configPath and event format. For web flows, use flow_simulate.',
         );
       }
     },
