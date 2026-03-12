@@ -10,7 +10,7 @@
     "server": {
       "server": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
+        "@walkeros/collector": {},
         "@walkeros/server-source-express": {},
         "@walkeros/server-destination-gcp": {}
       },
