@@ -10,16 +10,16 @@ Flow configuration is walkerOS's **"configuration as code"** approach. A single 
 
 ## Configuration structure
 
-A flow configuration uses the `Flow.Setup` format with two required fields:
+A flow configuration uses the `Flow.Config` format with two required fields:
 
-1. **`version`** - Schema version (`1` or `2` — use `2` for [contract](/docs/contract) support)
-2. **`flows`** - Named flow configurations
+1. **`version`** - Schema version (`3`)
+2. **`flows`** - Named flow configurations (each a `Flow.Settings`)
 
 ### Basic example
 
 <CodeSnippet
   code={`{
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "web": {},
@@ -86,7 +86,8 @@ Use `package:` with a string reference. The CLI downloads and bundles the npm pa
 Use `code:` with a direct import reference:
 
 <CodeSnippet
-  code={`import { sourceBrowser } from '@walkeros/web-source-browser';
+  code={`import { startFlow } from '@walkeros/collector';
+import { sourceBrowser } from '@walkeros/web-source-browser';
 
 const flow = await startFlow({
   sources: {
@@ -112,7 +113,7 @@ See [Operating Modes](/docs/getting-started/modes) for more details on choosing 
 
 ## Flow configuration (Flow.Config)
 
-Each flow in `flows` is a `Flow.Config` that defines runtime behavior.
+Each flow in `flows` is a `Flow.Settings` that defines runtime behavior.
 
 ### Platform
 
@@ -120,7 +121,7 @@ Platform is determined by the presence of the `web` or `server` key:
 
 <CodeSnippet
   code={`{
-    "version": 1,
+    "version": 3,
     "flows": {
       "default": {
         "server": {}  // Server platform (Node.js)
@@ -132,7 +133,7 @@ Platform is determined by the presence of the `web` or `server` key:
 
 <CodeSnippet
   code={`{
-    "version": 1,
+    "version": 3,
     "flows": {
       "default": {
         "web": {}  // Web platform (browser)
@@ -197,7 +198,7 @@ See [Local Packages](/docs/apps/cli#local-packages) in the CLI documentation for
 ### Sources
 
 Sources capture events from various inputs. Each source needs:
-- **`package`** - The npm package (with optional version)
+- **`package`** - The npm package (required for package-based sources, optional when using `code:`)
 - **`config`** - Source-specific settings
 
 <CodeSnippet
@@ -309,7 +310,7 @@ Transformers process events between sources and destinations. They validate, enr
 />
 
 **Configuration options:**
-- **`package`** - The npm package (required)
+- **`package`** - The npm package (required for package-based steps, optional when using `code:`)
 - **`code`** - Explicit import variable name (optional, auto-resolved)
 - **`config`** - Transformer-specific configuration
 - **`env`** - Environment-specific settings
@@ -643,7 +644,7 @@ For managing dev/staging/production flows in one file:
 
 <CodeSnippet
   code={`{
-  "version": 1,
+  "version": 3,
   "variables": {
     "defaultCurrency": "USD"
   },
@@ -711,7 +712,7 @@ Reference variables defined in `variables` for shared values across your config:
 
 <CodeSnippet
   code={`{
-  "version": 1,
+  "version": 3,
   "variables": {
     "currency": "EUR",
     "apiVersion": "v2"
@@ -747,7 +748,7 @@ Reference environment variables with optional defaults:
 
 <CodeSnippet
   code={`{
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "web": {},
@@ -781,7 +782,7 @@ Reference reusable configuration blocks defined in `definitions`:
 
 <CodeSnippet
   code={`{
-  "version": 1,
+  "version": 3,
   "definitions": {
     "commonMapping": {
       "page": {
@@ -883,23 +884,24 @@ walkerOS uses a clear type hierarchy:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Flow.Setup (config file)                                       │
-│  ├── version: 1                                                 │
+│  Flow.Config (config file)                                      │
+│  ├── version: 3                                                 │
 │  ├── variables?: { currency: "EUR" }                            │
 │  ├── definitions?: { commonMapping: {...} }                     │
 │  └── flows:                                                     │
-│       └── default: Flow.Config                                  │
+│       └── default: Flow.Settings                                │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               │ CLI resolves $var, $env, $def
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  Flow.Config (resolved flow)                                    │
+│  Flow.Settings (resolved flow)                                  │
 │  ├── web: {} or server: {}                                      │
 │  ├── packages: { ... }                                          │
 │  ├── sources: { ... }                                           │
 │  ├── transformers: { ... }                                      │
 │  ├── destinations: { ... }                                      │
+│  ├── stores: { ... }                                            │
 │  └── collector: { ... }                                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -911,8 +913,8 @@ walkerOS uses a clear type hierarchy:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-- **`Flow.Setup`** - Root config file format for CLI
-- **`Flow.Config`** - Single flow configuration
+- **`Flow.Config`** - Root config file format for CLI
+- **`Flow.Settings`** - Single flow configuration
 - **`Collector.InitConfig`** - Runtime type passed to `startFlow()`
 
 ## Complete example
@@ -921,7 +923,7 @@ Here's a production-ready flow that accepts HTTP events and sends them to BigQue
 
 <CodeSnippet
   code={`{
-  "version": 1,
+  "version": 3,
   "flows": {
     "default": {
       "server": {},

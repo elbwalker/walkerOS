@@ -32,13 +32,13 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@walkeros/core": "^3.0.1",
+    "@walkeros/web-source-browser": "^3.0.1",
     "jsdom": "^26.0.0"
   },
   "devDependencies": {
     "@types/jsdom": "^21.0.0",
     "@types/node": "^20.0.0",
     "@walkeros/config": "*",
-    "@walkeros/web-source-browser": "^3.0.1",
     "@walkeros/collector": "^3.0.1",
     "@walkeros/web-core": "^3.0.1"
   },
