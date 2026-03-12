@@ -37,8 +37,8 @@
       "description": "Flow deployment management"
     },
     {
-      "name": "Configs",
-      "description": "Per-config management (named flows within a Setup)"
+      "name": "Settings",
+      "description": "Per-settings management (named flows within a Config)"
     },
     {
       "name": "Tokens",
@@ -110,12 +110,12 @@
         },
         "required": ["error"]
       },
-      "FlowContent": {
+      "FlowConfig": {
         "type": "object",
         "properties": {
           "version": {
             "type": "number",
-            "enum": [2]
+            "enum": [3]
           },
           "$schema": {
             "type": "string"
@@ -155,7 +155,8 @@
             "additionalProperties": {}
           }
         },
-        "required": ["version"]
+        "required": ["version"],
+        "additionalProperties": {}
       },
       "Flow": {
         "type": "object",
@@ -171,13 +172,13 @@
             "maxLength": 255,
             "example": "my-website-flow"
           },
-          "content": {
-            "$ref": "#/components/schemas/FlowContent"
+          "config": {
+            "$ref": "#/components/schemas/FlowConfig"
           },
-          "configs": {
+          "settings": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/FlowConfigSummary"
+              "$ref": "#/components/schemas/FlowSettingsSummary"
             }
           },
           "createdAt": {
@@ -195,9 +196,9 @@
             "format": "date-time"
           }
         },
-        "required": ["id", "name", "content", "createdAt", "updatedAt"]
+        "required": ["id", "name", "config", "createdAt", "updatedAt"]
       },
-      "FlowConfigSummary": {
+      "FlowSettingsSummary": {
         "type": "object",
         "properties": {
           "id": {
@@ -243,10 +244,10 @@
           "summary": {
             "type": "string"
           },
-          "configs": {
+          "settings": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/FlowConfigListItem"
+              "$ref": "#/components/schemas/FlowSettingsListItem"
             }
           },
           "createdAt": {
@@ -266,7 +267,7 @@
         },
         "required": ["id", "name", "createdAt", "updatedAt", "deletedAt"]
       },
-      "FlowConfigListItem": {
+      "FlowSettingsListItem": {
         "type": "object",
         "properties": {
           "id": {
@@ -438,7 +439,7 @@
           "revokedAt"
         ]
       },
-      "FlowConfigDetail": {
+      "FlowSettingsDetail": {
         "type": "object",
         "properties": {
           "id": {
@@ -512,13 +513,13 @@
           "updatedAt"
         ]
       },
-      "DeployConfigResponse": {
+      "DeploySettingsResponse": {
         "type": "object",
         "properties": {
           "deploymentId": {
             "type": "string"
           },
-          "configId": {
+          "settingsId": {
             "type": "string",
             "pattern": "^cfg_[a-zA-Z0-9_-]+$",
             "example": "cfg_a1b2c3d4"
@@ -527,7 +528,7 @@
             "type": "string"
           }
         },
-        "required": ["deploymentId", "configId", "status"]
+        "required": ["deploymentId", "settingsId", "status"]
       },
       "FlowDetailResponse": {
         "type": "object",
@@ -543,13 +544,13 @@
             "maxLength": 255,
             "example": "my-website-flow"
           },
-          "content": {
-            "$ref": "#/components/schemas/FlowContent"
+          "config": {
+            "$ref": "#/components/schemas/FlowConfig"
           },
-          "configs": {
+          "settings": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/FlowConfigEnriched"
+              "$ref": "#/components/schemas/FlowSettingsEnriched"
             }
           },
           "createdAt": {
@@ -570,13 +571,13 @@
         "required": [
           "id",
           "name",
-          "content",
+          "config",
           "createdAt",
           "updatedAt",
           "deletedAt"
         ]
       },
-      "FlowConfigEnriched": {
+      "FlowSettingsEnriched": {
         "type": "object",
         "properties": {
           "id": {
@@ -664,8 +665,8 @@
             "maxLength": 255,
             "example": "my-website-flow"
           },
-          "content": {
-            "$ref": "#/components/schemas/FlowContent"
+          "config": {
+            "$ref": "#/components/schemas/FlowConfig"
           },
           "createdAt": {
             "type": "string",
@@ -678,7 +679,7 @@
             "example": "2026-01-26T14:30:00.000Z"
           }
         },
-        "required": ["id", "name", "content", "createdAt", "updatedAt"]
+        "required": ["id", "name", "config", "createdAt", "updatedAt"]
       },
       "CreateProjectResponse": {
         "type": "object",
@@ -897,7 +898,7 @@
               "flowId": {
                 "type": "string"
               },
-              "flowConfigId": {
+              "flowSettingsId": {
                 "type": "string"
               },
               "configHash": {
@@ -1159,11 +1160,11 @@
                   "flowId": {
                     "type": "string"
                   },
-                  "flowConfigName": {
+                  "flowSettingsName": {
                     "type": "string"
                   }
                 },
-                "required": ["type", "flowId", "flowConfigName"]
+                "required": ["type", "flowId", "flowSettingsName"]
               },
               {
                 "type": "object",
@@ -1215,7 +1216,7 @@
                     "flowId": {
                       "type": "string"
                     },
-                    "flowConfigId": {
+                    "flowSettingsId": {
                       "type": "string"
                     },
                     "configHash": {
@@ -1554,8 +1555,8 @@
             "maxLength": 255,
             "example": "my-website-flow"
           },
-          "content": {
-            "$ref": "#/components/schemas/FlowContent"
+          "config": {
+            "$ref": "#/components/schemas/FlowConfig"
           }
         },
         "required": ["name"]
@@ -1569,8 +1570,8 @@
             "maxLength": 255,
             "example": "my-website-flow"
           },
-          "content": {
-            "$ref": "#/components/schemas/FlowContent"
+          "config": {
+            "$ref": "#/components/schemas/FlowConfig"
           }
         }
       },
@@ -1646,19 +1647,19 @@
         },
         "required": ["deploymentId", "type", "status"]
       },
-      "ListConfigsResponse": {
+      "ListSettingsResponse": {
         "type": "object",
         "properties": {
-          "configs": {
+          "settings": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/FlowConfigSummary"
+              "$ref": "#/components/schemas/FlowSettingsSummary"
             }
           }
         },
-        "required": ["configs"]
+        "required": ["settings"]
       },
-      "ConfigDeploymentResponse": {
+      "SettingsDeploymentResponse": {
         "type": ["object", "null"],
         "properties": {
           "id": {
@@ -1667,7 +1668,7 @@
           "flowId": {
             "type": "string"
           },
-          "configId": {
+          "settingsId": {
             "type": "string"
           },
           "type": {
@@ -1698,7 +1699,7 @@
         "required": [
           "id",
           "flowId",
-          "configId",
+          "settingsId",
           "type",
           "status",
           "containerUrl",
@@ -1708,7 +1709,7 @@
           "updatedAt"
         ]
       },
-      "ConfigDeploymentDetailResponse": {
+      "SettingsDeploymentDetailResponse": {
         "type": "object",
         "properties": {
           "id": {
@@ -1717,7 +1718,7 @@
           "flowId": {
             "type": "string"
           },
-          "configId": {
+          "settingsId": {
             "type": "string"
           },
           "status": {
@@ -1748,7 +1749,7 @@
         "required": [
           "id",
           "flowId",
-          "configId",
+          "settingsId",
           "status",
           "type",
           "containerUrl",
@@ -1758,7 +1759,7 @@
           "updatedAt"
         ]
       },
-      "AdvanceConfigDeploymentResponse": {
+      "AdvanceSettingsDeploymentResponse": {
         "type": "object",
         "properties": {
           "id": {
@@ -1833,7 +1834,7 @@
             "example": 1
           },
           "content": {
-            "$ref": "#/components/schemas/FlowContent"
+            "$ref": "#/components/schemas/FlowConfig"
           },
           "createdAt": {
             "type": "string",
@@ -3035,11 +3036,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Comma-separated dot-paths to select specific fields (e.g., \"content.variables,content.flows.web.sources\"). Always includes id, createdAt, updatedAt.",
-              "example": "content.variables,content.flows.web.sources"
+              "description": "Comma-separated dot-paths to select specific fields (e.g., \"config.variables,config.flows.web.sources\"). Always includes id, createdAt, updatedAt.",
+              "example": "config.variables,config.flows.web.sources"
             },
             "required": false,
-            "description": "Comma-separated dot-paths to select specific fields (e.g., \"content.variables,content.flows.web.sources\"). Always includes id, createdAt, updatedAt.",
+            "description": "Comma-separated dot-paths to select specific fields (e.g., \"config.variables,config.flows.web.sources\"). Always includes id, createdAt, updatedAt.",
             "name": "fields",
             "in": "query"
           }
@@ -3434,7 +3435,7 @@
       "post": {
         "tags": ["Deployments"],
         "summary": "Start deployment",
-        "description": "Start a new deployment for a flow. Returns 400 AMBIGUOUS_CONFIG if the flow has multiple named configs — use the per-config deploy endpoint instead.",
+        "description": "Start a new deployment for a flow. Returns 400 AMBIGUOUS_SETTINGS if the flow has multiple named settings — use the per-settings deploy endpoint instead.",
         "parameters": [
           {
             "schema": {
@@ -3791,11 +3792,11 @@
         }
       }
     },
-    "/api/projects/{projectId}/flows/{flowId}/configs": {
+    "/api/projects/{projectId}/flows/{flowId}/settings": {
       "get": {
-        "tags": ["Configs"],
-        "summary": "List configs",
-        "description": "List active named configs for a flow.",
+        "tags": ["Settings"],
+        "summary": "List settings",
+        "description": "List active named settings for a flow.",
         "parameters": [
           {
             "schema": {
@@ -3820,11 +3821,11 @@
         ],
         "responses": {
           "200": {
-            "description": "List of configs",
+            "description": "List of settings",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListConfigsResponse"
+                  "$ref": "#/components/schemas/ListSettingsResponse"
                 }
               }
             }
@@ -3852,11 +3853,11 @@
         }
       }
     },
-    "/api/projects/{projectId}/flows/{flowId}/configs/{configId}": {
+    "/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}": {
       "get": {
-        "tags": ["Configs"],
-        "summary": "Get config",
-        "description": "Get a single config with its latest deployment.",
+        "tags": ["Settings"],
+        "summary": "Get settings",
+        "description": "Get a single settings entry with its latest deployment.",
         "parameters": [
           {
             "schema": {
@@ -3885,17 +3886,17 @@
               "example": "cfg_a1b2c3d4"
             },
             "required": true,
-            "name": "configId",
+            "name": "settingsId",
             "in": "path"
           }
         ],
         "responses": {
           "200": {
-            "description": "Config details with deployment",
+            "description": "Settings details with deployment",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FlowConfigDetail"
+                  "$ref": "#/components/schemas/FlowSettingsDetail"
                 }
               }
             }
@@ -3923,11 +3924,11 @@
         }
       }
     },
-    "/api/projects/{projectId}/flows/{flowId}/configs/{configId}/json": {
+    "/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/json": {
       "get": {
-        "tags": ["Configs"],
-        "summary": "Download config JSON",
-        "description": "Download the named flow config as a self-contained Setup JSON file. Includes parent variables and definitions.",
+        "tags": ["Settings"],
+        "summary": "Download settings JSON",
+        "description": "Download the named flow settings as a self-contained Config JSON file. Includes parent variables and definitions.",
         "parameters": [
           {
             "schema": {
@@ -3956,17 +3957,17 @@
               "example": "cfg_a1b2c3d4"
             },
             "required": true,
-            "name": "configId",
+            "name": "settingsId",
             "in": "path"
           }
         ],
         "responses": {
           "200": {
-            "description": "Flow Setup JSON file",
+            "description": "Flow Config JSON file",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FlowContent"
+                  "$ref": "#/components/schemas/FlowConfig"
                 }
               }
             }
@@ -3994,11 +3995,11 @@
         }
       }
     },
-    "/api/projects/{projectId}/flows/{flowId}/configs/{configId}/bundle": {
+    "/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/bundle": {
       "get": {
-        "tags": ["Configs"],
-        "summary": "Download config bundle",
-        "description": "Download the compiled JS/MJS for the config's latest deployment. Redirects to a presigned download URL.",
+        "tags": ["Settings"],
+        "summary": "Download settings bundle",
+        "description": "Download the compiled JS/MJS for the settings' latest deployment. Redirects to a presigned download URL.",
         "parameters": [
           {
             "schema": {
@@ -4027,7 +4028,7 @@
               "example": "cfg_a1b2c3d4"
             },
             "required": true,
-            "name": "configId",
+            "name": "settingsId",
             "in": "path"
           }
         ],
@@ -4068,11 +4069,11 @@
         }
       }
     },
-    "/api/projects/{projectId}/flows/{flowId}/configs/{configId}/deploy": {
+    "/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deploy": {
       "post": {
-        "tags": ["Configs"],
-        "summary": "Deploy config",
-        "description": "Start a deployment for a specific config. Detects platform from the config.",
+        "tags": ["Settings"],
+        "summary": "Deploy settings",
+        "description": "Start a deployment for a specific settings entry. Detects platform from the settings.",
         "parameters": [
           {
             "schema": {
@@ -4101,7 +4102,7 @@
               "example": "cfg_a1b2c3d4"
             },
             "required": true,
-            "name": "configId",
+            "name": "settingsId",
             "in": "path"
           }
         ],
@@ -4111,7 +4112,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeployConfigResponse"
+                  "$ref": "#/components/schemas/DeploySettingsResponse"
                 }
               }
             }
@@ -4147,7 +4148,7 @@
             }
           },
           "422": {
-            "description": "Config orphaned",
+            "description": "Settings orphaned",
             "content": {
               "application/json": {
                 "schema": {
@@ -4169,9 +4170,9 @@
         }
       },
       "get": {
-        "tags": ["Configs"],
-        "summary": "Get latest config deployment",
-        "description": "Get the latest deployment for a specific config.",
+        "tags": ["Settings"],
+        "summary": "Get latest settings deployment",
+        "description": "Get the latest deployment for a specific settings entry.",
         "parameters": [
           {
             "schema": {
@@ -4200,7 +4201,7 @@
               "example": "cfg_a1b2c3d4"
             },
             "required": true,
-            "name": "configId",
+            "name": "settingsId",
             "in": "path"
           }
         ],
@@ -4210,7 +4211,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConfigDeploymentResponse"
+                  "$ref": "#/components/schemas/SettingsDeploymentResponse"
                 }
               }
             }
@@ -4238,11 +4239,11 @@
         }
       }
     },
-    "/api/projects/{projectId}/flows/{flowId}/configs/{configId}/deployments/{deploymentId}": {
+    "/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deployments/{deploymentId}": {
       "get": {
-        "tags": ["Configs"],
-        "summary": "Get config deployment detail",
-        "description": "Get a specific deployment by ID, scoped to a config.",
+        "tags": ["Settings"],
+        "summary": "Get settings deployment detail",
+        "description": "Get a specific deployment by ID, scoped to a settings entry.",
         "parameters": [
           {
             "schema": {
@@ -4271,7 +4272,7 @@
               "example": "cfg_a1b2c3d4"
             },
             "required": true,
-            "name": "configId",
+            "name": "settingsId",
             "in": "path"
           },
           {
@@ -4290,7 +4291,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConfigDeploymentDetailResponse"
+                  "$ref": "#/components/schemas/SettingsDeploymentDetailResponse"
                 }
               }
             }
@@ -4318,11 +4319,11 @@
         }
       }
     },
-    "/api/projects/{projectId}/flows/{flowId}/configs/{configId}/deployments/{deploymentId}/advance": {
+    "/api/projects/{projectId}/flows/{flowId}/settings/{settingsId}/deployments/{deploymentId}/advance": {
       "post": {
-        "tags": ["Configs"],
-        "summary": "Advance config deployment",
-        "description": "Advance the deployment state machine for a per-config deployment.",
+        "tags": ["Settings"],
+        "summary": "Advance settings deployment",
+        "description": "Advance the deployment state machine for a per-settings deployment.",
         "parameters": [
           {
             "schema": {
@@ -4351,7 +4352,7 @@
               "example": "cfg_a1b2c3d4"
             },
             "required": true,
-            "name": "configId",
+            "name": "settingsId",
             "in": "path"
           },
           {
@@ -4370,7 +4371,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AdvanceConfigDeploymentResponse"
+                  "$ref": "#/components/schemas/AdvanceSettingsDeploymentResponse"
                 }
               }
             }
@@ -4785,7 +4786,7 @@
       "post": {
         "tags": ["Bundle"],
         "summary": "Trigger flow bundle",
-        "description": "Start a bundle job for a project flow. For multi-config flows, specify the named flow via ?flow= query parameter.",
+        "description": "Start a bundle job for a project flow. For multi-settings flows, specify the named flow via ?flow= query parameter.",
         "parameters": [
           {
             "schema": {
@@ -4811,10 +4812,10 @@
             "schema": {
               "type": "string",
               "example": "my-web-flow",
-              "description": "Named flow to bundle (required for multi-config flows)"
+              "description": "Named flow to bundle (required for multi-settings flows)"
             },
             "required": false,
-            "description": "Named flow to bundle (required for multi-config flows)",
+            "description": "Named flow to bundle (required for multi-settings flows)",
             "name": "flow",
             "in": "query"
           }
@@ -4851,7 +4852,7 @@
             }
           },
           "422": {
-            "description": "Flow selection required for multi-config flows",
+            "description": "Flow selection required for multi-settings flows",
             "content": {
               "application/json": {
                 "schema": {

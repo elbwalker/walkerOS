@@ -159,6 +159,7 @@ const buildDev = (customConfig = {}) => {
       if (walkerOS.type) meta.type = walkerOS.type;
       if (walkerOS.platform) meta.platform = walkerOS.platform;
       if (walkerOS.renderer) meta.renderer = walkerOS.renderer;
+      if (walkerOS.exports) meta.exports = walkerOS.exports;
 
       // Docs URL (manual, from walkerOS.docs in package.json)
       if (walkerOS.docs) meta.docs = walkerOS.docs;

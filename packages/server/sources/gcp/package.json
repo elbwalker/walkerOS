@@ -37,7 +37,10 @@
   "walkerOS": {
     "type": "source",
     "platform": "server",
-    "docs": "https://www.walkeros.io/docs/sources/server/gcp"
+    "docs": "https://www.walkeros.io/docs/sources/server/gcp",
+    "exports": {
+      "sourceCloudFunction": "GCP Cloud Function event source"
+    }
   },
   "keywords": [
     "walkerOS",
