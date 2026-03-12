@@ -1,6 +1,8 @@
 import type { Flow } from '@walkeros/core';
 
 export const serverFingerprint: Flow.StepExample = {
+  description:
+    'Standard server fingerprint using ingest.ip and ingest.userAgent. Requires source config.ingest.',
   in: {
     name: 'page view',
     data: {
@@ -41,6 +43,8 @@ export const serverFingerprint: Flow.StepExample = {
 };
 
 export const missingFields: Flow.StepExample = {
+  description:
+    'Graceful handling when ingest is missing — fields resolve to empty strings, hash is still generated.',
   in: {
     name: 'session start',
     data: { id: 's3ss10n' },
