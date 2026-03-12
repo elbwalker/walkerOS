@@ -1,5 +1,26 @@
 # @walkeros/mcp
 
+## 3.0.2
+
+### Patch Changes
+
+- afd4d07: Add feedback command and MCP tool for sending user feedback
+- 78ed476: Improve MCP guidance: source-output-first mapping, ingest awareness,
+  concise warnings, source-agnostic tools
+- Updated dependencies [afd4d07]
+  - @walkeros/cli@3.0.2
+  - @walkeros/core@3.0.2
+
+## 3.0.1
+
+### Patch Changes
+
+- 86c81d1: Add default export to server-transformer-fingerprint and exports
+  metadata to multi-service packages for bundler named import support
+- Updated dependencies [86c81d1]
+  - @walkeros/cli@3.0.1
+  - @walkeros/core@3.0.1
+
 ## 3.0.0
 
 ### Minor Changes

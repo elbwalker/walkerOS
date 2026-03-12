@@ -1,0 +1,271 @@
+---
+title: Step examples
+description: Embed input/output examples on each flow step for testing, documentation, and simulation
+sidebar_position: 1
+---
+
+# Step examples
+
+Add `examples` to any step in your flow config to document what it expects and produces:
+
+```json
+"examples": {
+  "purchase": {
+    "in": { "name": "order complete", "data": { "id": "ORD-123", "total": 149.97 } },
+    "mapping": { "name": "purchase", "data": { "map": { "transaction_id": "data.id", "value": "data.total" } } },
+    "out": ["event", "purchase", { "transaction_id": "ORD-123", "value": 149.97 }]
+  }
+}
+```
+
+Examples are test fixtures, documentation, and simulation data in one place. They live in your flow config, get stripped at build time, and have zero runtime impact.
+
+## What are step examples
+
+Every source, transformer, and destination in a walkerOS flow is a **step**. Each step receives input and produces output. Step examples are named `{ in, out }` pairs that capture concrete data for each step — what goes in, what comes out.
+
+They serve multiple purposes simultaneously:
+
+- **Documentation** — developers see real data shapes, not just type signatures
+- **Testing** — CI runs examples as regression tests via `walkeros simulate`
+- **Simulation** — debug your pipeline before deployment
+- **LLM context** — AI tools use examples to suggest correct mappings
+
+## The `{ in, out }` format
+
+Each example has a human-readable name and two fields:
+
+<CodeSnippet
+  code={`{
+  "examples": {
+    "page view": {
+      "in": {
+        "name": "page view",
+        "data": { "title": "Home", "path": "/" }
+      },
+      "out": ["event", "page_view", { "page_title": "Home" }]
+    },
+    "purchase": {
+      "in": {
+        "name": "order complete",
+        "data": { "id": "ORD-123", "total": 149.97, "currency": "EUR" }
+      },
+      "mapping": {
+        "name": "purchase",
+        "data": {
+          "map": {
+            "transaction_id": "data.id",
+            "value": "data.total",
+            "currency": "data.currency"
+          }
+        }
+      },
+      "out": ["event", "purchase", {
+        "transaction_id": "ORD-123",
+        "value": 149.97,
+        "currency": "EUR"
+      }]
+    }
+  }
+}`}
+  language="json"
+/>
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `in` | any | The data the step receives |
+| `mapping` | object | The mapping rule applied to this event (destinations only) |
+| `out` | any | The data the step produces |
+| `out: false` | `false` | The step rejects or filters this event |
+
+For destinations, the optional `mapping` field captures the mapping rule that transforms the walkerOS event into the vendor-specific output. This ties the example to a specific mapping configuration, so tests and simulations can register it dynamically as `{ [entity]: { [action]: example.mapping } }`.
+
+You can add as many named examples as you need. Each name becomes addressable from the CLI with `--example`.
+
+## Three type zones
+
+A walkerOS flow has three distinct type zones. The shape of `in` and `out` depends on where the step sits:
+
+```
+  ARBITRARY          walkerOS.Event              ARBITRARY
+ ┌─────────┐    ┌──────────────────────┐    ┌──────────────┐
+ │ Source   │ →  │ Collector → Transform │ →  │ Destination  │
+ │ ingest   │    │ → ... → Transform    │    │ output       │
+ └─────────┘    └──────────────────────┘    └──────────────┘
+  package-        known structure,            package-
+  specific        varying properties          specific
+```
+
+- **Source `in`** — raw HTTP request body, DOM event, dataLayer push (package-specific)
+- **Source `out` through destination `in`** — `walkerOS.Event` (known structure, varying properties)
+- **Destination `out`** — `gtag()` args, `fbq()` args, HTTP POST body (vendor-specific)
+
+Transformers that filter events use `out: false` to indicate rejection.
+
+## Adding examples to a flow
+
+Here is a complete flow config with examples on a source, transformer, and destination:
+
+<CodeSnippet
+  code={`{
+  "version": 1,
+  "flows": {
+    "default": {
+      "server": {},
+      "sources": {
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "config": { "settings": { "port": 8080 } },
+          "examples": {
+            "page view": {
+              "in": {
+                "method": "POST",
+                "body": { "name": "page view", "data": { "title": "Home" } }
+              },
+              "out": { "name": "page view", "data": { "title": "Home" } }
+            }
+          }
+        }
+      },
+      "transformers": {
+        "validate": {
+          "package": "@walkeros/transformer-validator",
+          "examples": {
+            "valid event": {
+              "in": { "name": "page view", "data": { "title": "Home" } },
+              "out": { "name": "page view", "data": { "title": "Home" } }
+            },
+            "invalid event": {
+              "in": { "name": "", "data": {} },
+              "out": false
+            }
+          }
+        }
+      },
+      "destinations": {
+        "ga4": {
+          "package": "@walkeros/web-destination-gtag-ga4",
+          "config": {
+            "settings": { "measurementId": "G-DEMO123456" }
+          },
+          "examples": {
+            "page view": {
+              "in": { "name": "page view", "data": { "title": "Home" } },
+              "mapping": {
+                "name": "page_view",
+                "data": { "map": { "page_title": "data.title" } }
+              },
+              "out": ["event", "page_view", { "page_title": "Home" }]
+            }
+          }
+        }
+      },
+      "collector": {}
+    }
+  }
+}`}
+  language="json"
+/>
+
+Examples are stripped by the bundler at build time. They never appear in your production bundle.
+
+## Using examples with the CLI
+
+### Simulate a single example
+
+Run a named example through the pipeline:
+
+<CodeSnippet
+  code={`# Run the "page view" example from the ga4 destination
+walkeros simulate flow.json --example "page view"
+
+# Run all examples in the flow (planned)
+walkeros simulate flow.json --all-examples`}
+  language="bash"
+/>
+
+The CLI feeds `in` to the step, runs it through the pipeline, and compares the actual output against `out`. Mismatches are reported as errors.
+
+### Validate examples
+
+Check that examples match expected shapes without running the full pipeline:
+
+<CodeSnippet
+  code={`walkeros validate flow.json`}
+  language="bash"
+/>
+
+### Cross-step validation
+
+Cross-step example validation is included automatically when validating a flow. It verifies that connected steps (source → transformer → destination) have structurally compatible `out`/`in` pairs:
+
+<CodeSnippet
+  code={`walkeros validate flow.json`}
+  language="bash"
+/>
+
+Cross-step validation checks that:
+- Source `out` types match transformer `in` types
+- Transformer `out` types match destination `in` types
+- Steps without examples produce warnings
+- Contract compliance when contracts are defined
+
+## Using examples in tests
+
+Extract examples from your flow config and use them as test fixtures:
+
+<CodeSnippet
+  code={`import { readFileSync } from 'fs';
+import { push } from '@walkeros/web-destination-gtag-ga4';
+
+const flow = JSON.parse(readFileSync('flow.json', 'utf-8'));
+const ga4Examples = flow.flows.default.destinations.ga4.examples;
+
+const cases = Object.entries(ga4Examples).map(
+  ([name, ex]) => [name, ex.in, ex.out]
+);
+
+it.each(cases)('ga4 destination: %s', (name, input, expected) => {
+  const result = push(input);
+  expect(result).toEqual(expected);
+});`}
+  language="typescript"
+/>
+
+This pattern means your flow config is the single source of truth for both documentation and tests.
+
+## Package-level vs flow-level examples
+
+Examples exist at two levels:
+
+| Level | Where | Purpose |
+|-------|-------|---------|
+| **Package** | `walkerOS.json` in the npm package (via `dev.ts`) | Generic examples showing what the package handles |
+| **Flow** | Inline on step references in `flow.json` | Specific examples for your actual data and mappings |
+
+**Package examples** are generic and ship with the npm package. They show the package's capabilities with sample data. The CLI and MCP tools discover them from CDN.
+
+**Flow examples** are specific to your setup. They use your real event names, your actual data properties, and your configured mappings. They override or complement package examples.
+
+<details>
+<summary>How packages ship examples</summary>
+
+Packages export examples through the `dev.ts` convention:
+
+<CodeSnippet
+  code={`// src/dev.ts
+export * as schemas from './schemas';
+export * as examples from './examples';`}
+  language="typescript"
+/>
+
+These are included in the package's `walkerOS.json` metadata and discoverable via CDN, following the same `{ in, out }` format used in flow configs.
+
+</details>
+
+## Next steps
+
+- **[CLI](/docs/apps/cli)** — Bundle and simulate flows with examples
+- **[Flow](/docs/getting-started/flow)** — Learn the full flow configuration format
+- **[Mapping](/docs/mapping)** — Transform events between steps
+- **[Event model](/docs/getting-started/event-model)** — Understand the walkerOS event structure

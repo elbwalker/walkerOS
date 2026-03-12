@@ -15,9 +15,30 @@ assistant integration.
 | `@walkeros/mcp` | Flow development — tools, reference resources, guided prompts, cloud API |
 | `@walkeros/mcp-source-browser` | HTML tagging — generate, parse, and validate `data-elb` attributes |
 
+## Claude Code plugin
+
+The recommended way to get started in Claude Code. One plugin installs both MCP
+servers **and** 18 skills that teach Claude how to build sources, destinations,
+transformers, and flows.
+
+**Step 1 — add the marketplace:**
+
+```
+/plugin marketplace add elbwalker/walkerOS
+```
+
+**Step 2 — install the plugin:**
+
+```
+/plugin install walkeros@elbwalker-walkerOS
+```
+
+That's it. Claude Code will reload with the MCP tools and skills active.
+
 ## Quick start
 
-Add servers to your Claude Desktop or Claude Code configuration:
+For Claude Desktop or other MCP clients, add servers to your configuration
+manually:
 
 <CodeSnippet
   code={`{

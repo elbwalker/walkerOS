@@ -12,6 +12,7 @@ export interface WalkerOSConfig {
   token: string;
   email: string;
   appUrl: string;
+  anonymousFeedback?: boolean;
 }
 
 /**

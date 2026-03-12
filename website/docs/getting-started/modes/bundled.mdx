@@ -35,8 +35,8 @@ Create `flow.json`:
     "default": {
       "web": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] }
+        "@walkeros/collector": {},
+        "@walkeros/web-source-browser": {}
       },
       "sources": {
         "browser": {
@@ -66,9 +66,9 @@ Create `flow.json`:
     "default": {
       "server": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/server-source-express": { "imports": ["sourceExpress"] },
-        "@walkeros/destination-demo": { "imports": ["destinationDemo"] }
+        "@walkeros/collector": {},
+        "@walkeros/server-source-express": {},
+        "@walkeros/destination-demo": {}
       },
       "sources": {
         "http": {
@@ -149,10 +149,10 @@ Add destinations to your `flow.json`:
     "default": {
       "web": {},
       "packages": {
-        "@walkeros/collector": { "imports": ["startFlow"] },
-        "@walkeros/web-source-browser": { "imports": ["sourceBrowser"] },
-        "@walkeros/web-destination-api": { "imports": ["destinationAPI"] },
-        "@walkeros/web-destination-gtag": { "imports": ["destinationGtag"] }
+        "@walkeros/collector": {},
+        "@walkeros/web-source-browser": {},
+        "@walkeros/web-destination-api": {},
+        "@walkeros/web-destination-gtag": {}
       },
       "sources": {
         "browser": {

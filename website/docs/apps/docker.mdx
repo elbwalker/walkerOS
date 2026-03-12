@@ -490,10 +490,10 @@ Create `bigquery-collect.json`:
   },
   "build": {
     "packages": {
-      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
-      "@walkeros/server-source-express": { "version": "latest", "imports": ["sourceExpress"] },
-      "@walkeros/server-destination-gcp": { "version": "latest", "imports": ["destinationGCP"] },
-      "@walkeros/destination-demo": { "version": "latest", "imports": ["destinationDemo"] }
+      "@walkeros/collector": { "version": "latest" },
+      "@walkeros/server-source-express": { "version": "latest" },
+      "@walkeros/server-destination-gcp": { "version": "latest" },
+      "@walkeros/destination-demo": { "version": "latest" }
     }
   }
 }`}
@@ -633,9 +633,9 @@ Create `web-tracker.json`:
   },
   "build": {
     "packages": {
-      "@walkeros/collector": { "version": "latest", "imports": ["startFlow"] },
-      "@walkeros/web-source-browser": { "version": "latest", "imports": ["sourceBrowser"] },
-      "@walkeros/web-destination-api": { "version": "latest", "imports": ["destinationAPI"] }
+      "@walkeros/collector": { "version": "latest" },
+      "@walkeros/web-source-browser": { "version": "latest" },
+      "@walkeros/web-destination-api": { "version": "latest" }
     },
     "output": "./tracker.js",
     "format": "iife",

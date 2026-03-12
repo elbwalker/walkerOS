@@ -6,7 +6,7 @@ sidebar_position: 5
 
 # Transformers
 
-Transformers are middleware for **validating**, **enriching**, **routing**, and **redacting** events in the walkerOS pipeline. Together with [Mapping](/docs/mapping), they give you full control over how events are shaped before reaching destinations.
+Transformers are middleware for **validating**, **enriching**, and **redacting** events in the walkerOS pipeline. Together with [Mapping](/docs/mapping), they give you full control over how events are shaped before reaching destinations.
 
 <FlowMap
   sources={{ default: { label: 'Source', next: 'pre', highlight: false } }}
@@ -22,29 +22,21 @@ Transformers are middleware for **validating**, **enriching**, **routing**, and 
 
 ## Use cases
 
-| Use Case | Transformer | Example |
-|----------|-------------|---------|
-| **Validate** | [Validator](./validator) | Ensure events match JSON Schema contracts, drop invalid events |
-| **Route** | [Router](./router) | Branch to different chains based on request path or headers |
-| **Identify** | [Fingerprint](./fingerprint) | Generate server-side user hash from IP + user agent, no cookies needed |
-| **Cache** | [Cache](./cache) | Serve repeated requests from memory, reduce downstream load |
-| **Serve files** | [File](./file) + store | Self-host walker.js or tracking pixels from S3 or filesystem |
-| **Enrich** | Custom | Add server-side data (geo, segments) via a custom transformer |
-| **Redact** | Custom | Remove PII fields before events reach destinations |
+| Use Case | Example |
+|----------|---------|
+| **Validate** | Ensure events match JSON Schema contracts |
+| **Enrich** | Add server-side data (user segments, geo) |
+| **Redact** | Remove PII before sending to destinations |
 
 ## Configuration
 
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
-
 <CodeSnippet
   code={`import { startFlow } from '@walkeros/collector';
-import { transformerValidator } from '@walkeros/transformer-validator';
 
 await startFlow({
   transformers: {
     validate: {
-      code: transformerValidator,
+      package: '@walkeros/transformer-validator',
       config: {
         settings: { format: true }
       }
@@ -53,189 +45,6 @@ await startFlow({
 });`}
   language="typescript"
 />
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json`:
-
-<CodeSnippet
-  code={`"transformers": {
-  "validate": {
-    "package": "@walkeros/transformer-validator",
-    "config": {
-      "settings": { "format": true }
-    }
-  }
-}`}
-  language="json"
-/>
-
-  </TabItem>
-</Tabs>
-
-## Chains
-
-Transformers execute in **chains** — ordered sequences where each transformer processes the event and passes it to the next. Chains run at two positions in the pipeline:
-
-| Position | Config | When it runs |
-|----------|--------|--------------|
-| **Pre-collector** | `source.next` | After a source captures an event, before the collector enriches it |
-| **Post-collector** | `destination.before` | After collector enrichment, before a specific destination receives the event |
-
-### How chains are wired
-
-A source or destination points to the **first** transformer in its chain. From there, the chain is resolved in one of two ways:
-
-| Start value | Resolution |
-|-------------|------------|
-| `string` | Walk `transformer.next` links until the chain ends |
-| `string[]` | Use the array as an explicit ordered list (ignores `next` links) |
-
-<CodeSnippet
-  code={`// String start: chain resolved via next links
-// router → router.next ("parser") → parser.next ("validator") → done
-"sources": {
-  "http": {
-    "package": "@walkeros/server-source-express",
-    "next": "router"
-  }
-},
-"transformers": {
-  "router":    { "package": "@walkeros/transformer-router", "next": "parser" },
-  "parser":    { "package": "@walkeros/transformer-parser", "next": "validator" },
-  "validator": { "package": "@walkeros/transformer-validator" }
-}`}
-  language="json"
-/>
-
-<CodeSnippet
-  code={`// Array start: explicit chain, next links ignored
-"destinations": {
-  "analytics": {
-    "package": "@walkeros/server-destination-bigquery",
-    "before": ["redact", "validator"]
-  }
-}`}
-  language="json"
-/>
-
-### Return values
-
-Each transformer in a chain controls what happens next:
-
-| Return | Behavior |
-|--------|----------|
-| `{ event }` | Continue chain with the modified event |
-| `void` | Continue chain with the current event unchanged |
-| `false` | Stop the chain — event is dropped |
-| `{ next }` | Redirect to a different chain, preserving the current event |
-| `{ event, next }` | Redirect to a different chain with a modified event |
-| `{ event, respond }` | Continue chain with a wrapped respond function |
-
-If a transformer throws an error, the chain stops and the event is dropped (same as returning `false`).
-
-### Branching
-
-A transformer can redirect the event to a different chain by returning `{ event, next }`. Use the `branch()` factory function from `@walkeros/core`:
-
-<CodeSnippet
-  code={`import { branch } from '@walkeros/core';
-
-// Inside a transformer's push function:
-push(event, context) {
-  // Redirect to a single chain
-  return branch(event, 'parser');
-
-  // Or fan out to multiple chains
-  return branch(event, ['parser', 'logger']);
-}`}
-  language="typescript"
-/>
-
-The chain runner resolves the `next` target using the same `walkChain()` logic — a string follows `next` links, an array is used directly. If the branch target does not exist, the event is dropped.
-
-### Respond wrapping
-
-A transformer can wrap the `respond` function for downstream transformers by returning `{ event, respond }`. This is useful for adding headers or transforming responses:
-
-<CodeSnippet
-  code={`push(event, context) {
-  const originalRespond = context.env.respond;
-  return {
-    event,
-    respond: (response) => {
-      originalRespond?.({
-        ...response,
-        headers: { ...response.headers, 'X-Custom': 'true' },
-      });
-    },
-  };
-}`}
-  language="typescript"
-/>
-
-The [router transformer](./router) uses branching to direct events to different parser chains based on request metadata:
-
-<CodeSnippet
-  code={`// Router inspects context.ingest, branches on first match
-"transformers": {
-  "router": {
-    "package": "@walkeros/transformer-router",
-    "config": {
-      "settings": {
-        "routes": [
-          { "match": { "key": "path", "operator": "prefix", "value": "/gtag" }, "next": "gtag-parser" },
-          { "match": { "key": "path", "operator": "prefix", "value": "/meta" }, "next": "meta-parser" },
-          { "match": "*", "next": "default-parser" }
-        ]
-      }
-    }
-  },
-  "gtag-parser":    { "package": "@walkeros/transformer-gtag" },
-  "meta-parser":    { "package": "@walkeros/transformer-meta" },
-  "default-parser": { "package": "@walkeros/transformer-default" }
-}`}
-  language="json"
-/>
-
-<details>
-<summary>Chain execution visualized</summary>
-
-**Pre-collector chain** (source with `next: "router"`):
-
-```
-Source → router → [branch] → gtag-parser → Collector → Destinations
-                           → meta-parser → Collector → Destinations
-                           → default-parser → Collector → Destinations
-```
-
-**Post-collector chain** (destination with `before: "redact"`):
-
-```
-Collector → redact → validator → Destination
-                         ↓
-                    returns false?
-                         ↓
-                    event dropped
-```
-
-</details>
-
-### Chain resolution details
-
-The `walkChain()` function resolves chains with the following edge-case behaviors:
-
-| Scenario | Behavior |
-|----------|----------|
-| **Circular reference** | Detected via a visited set — the loop is silently broken and the chain ends |
-| **Missing `next` target** | If a transformer's `next` points to a name that doesn't exist, the chain ends normally (no error) |
-| **Array `next` inside a chain** | Array elements are appended to the remaining chain; walking of `next` links stops for that transformer |
-| **Branch to non-existent target** | The event is **dropped** (not passed through) |
-
-:::tip
-For full details on how sources, transformers, and destinations connect, see the [flow configuration guide](/docs/getting-started/modes/bundled).
-:::
 
 ## Available transformers
 
@@ -249,40 +58,7 @@ Validates events using JSON Schema:
 
 [Learn more →](./validator)
 
-### Router
-
-Routes events to different transformer chains based on ingest metadata:
-
-* Match on path, method, headers, or any ingest field
-* 8 match operators with boolean logic (AND/OR, nestable)
-* First match wins, wildcard fallback
-
-[Learn more →](./router)
-
-### Cache
-
-Caches HTTP responses with LRU eviction and per-rule TTL:
-
-* Match requests using the same operators as the router
-* Cache key built from ingest fields (method, path, etc.)
-* Respond-wrapping pattern: MISS caches + forwards, HIT serves directly
-
-[Learn more →](./cache)
-
-### Fingerprint
-
-Generates a deterministic user identifier from configurable request fields:
-
-* Hash IP address, user agent, and other ingest fields with SHA-256
-* No cookies, no PII stored — same inputs always produce the same hash
-* Optional daily rotation to limit cross-day persistence
-
-[Learn more →](./fingerprint)
-
 ## Next steps
 
 * **[Validator](./validator)** - JSON Schema validation
-* **[Router](./router)** - Dynamic chain branching
-* **[Cache](./cache)** - HTTP response caching
-* **[Fingerprint](./fingerprint)** - Cookie-free user identification
 * **[Create your own](./create-your-own)** - Custom transformer guide

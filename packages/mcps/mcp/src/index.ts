@@ -11,6 +11,7 @@ import {
   registerGetPackageSchemaTool,
 } from './tools/package.js';
 import { registerFlowLoadTool } from './tools/flow-load.js';
+import { registerFeedbackTool } from './tools/feedback.js';
 import { registerApiTool } from './tools/api.js';
 import { registerPackageSchemaResources } from './resources/package-schemas.js';
 import { registerReferenceResources } from './resources/references.js';
@@ -93,6 +94,7 @@ registerFlowExamplesTool(server);
 registerPackageSearchTool(server);
 registerGetPackageSchemaTool(server);
 registerFlowLoadTool(server);
+registerFeedbackTool(server);
 registerPackageSchemaResources(server);
 registerReferenceResources(server);
 registerAddStepPrompt(server);

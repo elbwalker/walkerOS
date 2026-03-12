@@ -1,5 +1,19 @@
 # @walkeros/server-destination-datamanager
 
+## 3.0.2
+
+### Patch Changes
+
+- @walkeros/core@3.0.2
+- @walkeros/server-core@3.0.2
+
+## 3.0.1
+
+### Patch Changes
+
+- @walkeros/core@3.0.1
+- @walkeros/server-core@3.0.1
+
 ## 3.0.0
 
 ### Patch Changes

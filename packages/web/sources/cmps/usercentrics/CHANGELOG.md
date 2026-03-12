@@ -1,5 +1,19 @@
 # @walkeros/web-source-cmp-usercentrics
 
+## 3.0.2
+
+### Patch Changes
+
+- @walkeros/core@3.0.2
+- @walkeros/collector@3.0.2
+
+## 3.0.1
+
+### Patch Changes
+
+- @walkeros/core@3.0.1
+- @walkeros/collector@3.0.1
+
 ## 3.0.0
 
 ### Patch Changes

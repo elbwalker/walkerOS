@@ -1,3 +1,11 @@
+/**
+ * Reference resources — pure schema and structural data only.
+ *
+ * Design principle: resources are loaded into context and should contain
+ * only schemas, type definitions, and structural references. Behavioral
+ * guidance, tutorials, and step-by-step instructions belong in prompts.
+ * Vendor-specific examples belong in packages (fetched via package_get).
+ */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { schemas } from '@walkeros/core/dev';
 import { PACKAGE_REGISTRY } from '../registry.js';

@@ -38,6 +38,8 @@ export function registerAddStepPrompt(server: McpServer) {
               '5. Wire the step into the flow: add to packages section (with version if needed), connect via next/before chains if needed.',
               '6. For destinations: configure mapping using nested entity → action keys. Event "product add" maps to `{ "product": { "add": { name: "AddToCart" } } }`. Use the setup-mapping prompt for guidance.',
               '7. Use flow_validate to verify the result.',
+              '8. For server sources: check if the package supports `ingest` configuration via package_get. Ingest extracts request metadata (IP, user-agent, headers) using mapping syntax. Transformers like fingerprint depend on ingest data.',
+              '9. When adding a transformer that uses ingest fields, verify the source has `ingest` configured — otherwise ingest fields resolve to empty values.',
               '',
               'Important:',
               '- Read the walkeros://reference/flow-schema resource to understand connection rules.',

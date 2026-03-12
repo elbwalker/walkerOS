@@ -35,6 +35,7 @@ import {
   deleteDeploymentCommand,
   getDeploymentBySlugCommand,
 } from './commands/deployments/index.js';
+import { feedbackCommand } from './commands/feedback/index.js';
 
 const program = new Command();
 
@@ -467,6 +468,14 @@ program
       verbose: options.verbose,
       silent: options.silent,
     });
+  });
+
+// Feedback command
+program
+  .command('feedback <text>')
+  .description('Send feedback to walkerOS')
+  .action(async (text) => {
+    await feedbackCommand(text);
   });
 
 // Cache command

@@ -34,6 +34,7 @@ export {
   createDeploymentCommand,
   deleteDeploymentCommand,
 } from './commands/deployments/index.js';
+export { feedbackCommand } from './commands/feedback/index.js';
 
 // === Programmatic API ===
 // High-level functions for library usage
@@ -58,6 +59,7 @@ export {
   deleteProject,
 } from './commands/projects/index.js';
 export { whoami } from './commands/auth/index.js';
+export { feedback } from './commands/feedback/index.js';
 export {
   listFlows,
   getFlow,
@@ -73,6 +75,9 @@ export {
   createDeployment,
   deleteDeployment,
 } from './commands/deployments/index.js';
+export type { FeedbackOptions } from './commands/feedback/index.js';
+export { readConfig, writeConfig } from './lib/config-file.js';
+export type { WalkerOSConfig } from './lib/config-file.js';
 export type { ListFlowsOptions } from './commands/flows/index.js';
 export type { DeployOptions } from './commands/deploy/index.js';
 export type { ListDeploymentsOptions } from './commands/deployments/index.js';

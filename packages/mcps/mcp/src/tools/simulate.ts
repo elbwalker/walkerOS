@@ -18,9 +18,8 @@ export function registerFlowSimulateTool(server: McpServer) {
       title: 'Simulate Flow',
       description:
         'Simulate events through a walkerOS flow without making real API calls. ' +
-        'Events must be in walkerOS format (post-source): { name: "entity action", data: {...} }. ' +
-        'Raw source input (dataLayer pushes, HTTP requests) must first be converted to walkerOS events. ' +
-        'Check source package examples to see what events a source outputs. ' +
+        'Events must be in walkerOS event format (post-source output): { name: "entity action", data: {...} }. ' +
+        'Use package_get on your source to check its output shape. ' +
         'Use the example parameter to load event input from a step example and compare output.',
       inputSchema: schemas.SimulateInputShape,
       outputSchema: SimulateOutputShape,
@@ -71,7 +70,7 @@ export function registerFlowSimulateTool(server: McpServer) {
         }
         if (destCount > 0 && receivedCount === 0) {
           warnings.push(
-            'No destinations received the event. Most common cause: mapping keys must be NESTED entity → action objects — event "product add" needs { "product": { "add": Rule } }, not "product.add". Also check event name match and consent settings.',
+            'No destinations received the event. Check: mapping keys use nested entity→action structure (not dot-separated), event name matches, consent is granted. Use package_get on the destination for mapping examples.',
           );
         }
 

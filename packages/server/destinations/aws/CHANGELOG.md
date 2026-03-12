@@ -1,5 +1,19 @@
 # @walkeros/server-destination-aws
 
+## 3.0.2
+
+### Patch Changes
+
+- @walkeros/server-core@3.0.2
+
+## 3.0.1
+
+### Patch Changes
+
+- 86c81d1: Add default export to server-transformer-fingerprint and exports
+  metadata to multi-service packages for bundler named import support
+  - @walkeros/server-core@3.0.1
+
 ## 3.0.0
 
 ### Patch Changes

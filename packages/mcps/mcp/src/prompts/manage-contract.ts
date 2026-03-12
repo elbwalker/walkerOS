@@ -41,6 +41,8 @@ export function registerManageContractPrompt(server: McpServer) {
               '- **Contract → Mappings**: contract defines what events look like, mappings are scaffolded to match.',
               '- **Mappings → Contract**: existing mappings reveal which fields are used, contract formalizes them.',
               '',
+              'For server flows: if the contract references fields populated by ingest (e.g., user fingerprint hash), verify the source config.ingest extracts the needed request metadata.',
+              '',
               'Use $contract.name references to link contracts in the flow.',
               'Contracts support extends for inheritance between event types.',
             ].join('\n'),
