@@ -7,19 +7,25 @@ export interface StorageValue {
   v: string; // Value
 }
 
+export interface StorageEnv {
+  window?: Window & typeof globalThis;
+  document?: Document;
+}
+
 export function storageDelete(
   key: string,
   storage: StorageType = Const.Utils.Storage.Session,
+  env?: StorageEnv,
 ) {
   switch (storage) {
     case Const.Utils.Storage.Cookie:
-      storageWrite(key, '', 0, storage);
+      storageWrite(key, '', 0, storage, undefined, env);
       break;
     case Const.Utils.Storage.Local:
-      window.localStorage.removeItem(key);
+      (env?.window ?? window).localStorage.removeItem(key);
       break;
     case Const.Utils.Storage.Session:
-      window.sessionStorage.removeItem(key);
+      (env?.window ?? window).sessionStorage.removeItem(key);
       break;
   }
 }
@@ -27,6 +33,7 @@ export function storageDelete(
 export function storageRead(
   key: string,
   storage: StorageType = Const.Utils.Storage.Session,
+  env?: StorageEnv,
 ): WalkerOS.PropertyType {
   // Helper function for local and session storage to support expiration
   function parseItem(string: string | null): StorageValue {
@@ -50,17 +57,17 @@ export function storageRead(
   switch (storage) {
     case Const.Utils.Storage.Cookie:
       value = decodeURIComponent(
-        document.cookie
+        (env?.document ?? document).cookie
           .split('; ')
           .find((row) => row.startsWith(key + '='))
           ?.split('=')[1] || '',
       );
       break;
     case Const.Utils.Storage.Local:
-      item = parseItem(window.localStorage.getItem(key));
+      item = parseItem((env?.window ?? window).localStorage.getItem(key));
       break;
     case Const.Utils.Storage.Session:
-      item = parseItem(window.sessionStorage.getItem(key));
+      item = parseItem((env?.window ?? window).sessionStorage.getItem(key));
       break;
   }
 
@@ -69,7 +76,7 @@ export function storageRead(
     value = item.v;
 
     if (item.e != 0 && item.e < Date.now()) {
-      storageDelete(key, storage); // Remove item
+      storageDelete(key, storage, env);
       value = ''; // Conceal the outdated value
     }
   }
@@ -83,6 +90,7 @@ export function storageWrite(
   maxAgeInMinutes = 30,
   storage: StorageType = Const.Utils.Storage.Session,
   domain?: string,
+  env?: StorageEnv,
 ): WalkerOS.PropertyType {
   const e = Date.now() + 1000 * 60 * maxAgeInMinutes;
   const item: StorageValue = { e, v: String(value) };
@@ -97,16 +105,16 @@ export function storageWrite(
 
       if (domain) cookie += '; domain=' + domain;
 
-      document.cookie = cookie;
+      (env?.document ?? document).cookie = cookie;
       break;
     }
     case Const.Utils.Storage.Local:
-      window.localStorage.setItem(key, stringifiedItem);
+      (env?.window ?? window).localStorage.setItem(key, stringifiedItem);
       break;
     case Const.Utils.Storage.Session:
-      window.sessionStorage.setItem(key, stringifiedItem);
+      (env?.window ?? window).sessionStorage.setItem(key, stringifiedItem);
       break;
   }
 
-  return storageRead(key, storage);
+  return storageRead(key, storage, env);
 }

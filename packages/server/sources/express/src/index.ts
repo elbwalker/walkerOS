@@ -23,6 +23,8 @@ export const sourceExpress = async (
   context: Source.Context<Types>,
 ): Promise<ExpressSource> => {
   const { config = {}, env } = context;
+  const expressLib = env.express ?? express;
+  const corsLib = env.cors ?? cors;
 
   // Validate and apply default settings
   const parsed = SettingsSchema.parse(config.settings || {});
@@ -31,15 +33,15 @@ export const sourceExpress = async (
     paths: parsed.paths ?? (parsed.path ? [parsed.path] : ['/collect']),
   };
 
-  const app = express();
+  const app = expressLib();
 
   // Middleware setup - JSON body parsing with 10mb default limit
-  app.use(express.json({ limit: '1mb' }));
+  app.use(expressLib.json({ limit: '1mb' }));
 
   // CORS middleware (enabled by default)
   if (settings.cors !== false) {
     const corsOptions = settings.cors === true ? {} : settings.cors;
-    app.use(cors(corsOptions));
+    app.use(corsLib(corsOptions));
   }
 
   /**

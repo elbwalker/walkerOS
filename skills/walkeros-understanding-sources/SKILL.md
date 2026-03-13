@@ -138,6 +138,36 @@ export const handler = source.push;
 See [packages/server/sources/gcp/](../../packages/server/sources/gcp/) for
 implementation.
 
+## Env Pattern (Dependency Injection)
+
+Platform dependencies go through `env` with fallback to globals or direct
+imports. This enables testing and simulation without touching globals.
+
+```typescript
+// Express source: env.express ?? express (import fallback)
+const expressLib = env.express ?? express;
+const app = expressLib();
+
+// Web sources: env.window ?? window (global fallback)
+const win = env.window ?? window;
+const doc = env.document ?? document;
+```
+
+Every source's `Env` interface extends `Source.BaseEnv` with optional platform
+deps:
+
+```typescript
+export interface Env extends Source.BaseEnv {
+  window?: Window & typeof globalThis; // web sources
+  document?: Document; // web sources
+  express?: typeof express; // express source
+  cors?: typeof cors; // express source
+}
+```
+
+Tests inject mocks via `env` instead of mocking globals. See
+[testing-strategy](../walkeros-testing-strategy/SKILL.md).
+
 ## Transformer Wiring
 
 Sources can wire to pre-collector transformer chains via the `next` property:

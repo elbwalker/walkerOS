@@ -345,10 +345,13 @@ Guidelines:
 2. **Schema validation**: Use Zod schemas to validate settings and provide
    defaults
 3. **Forward to collector**: Call `env.push()` to send events to the collector
-4. **Error logging**: Use `logger?.error()` for errors only, not routine
+4. **Platform deps via env**: All platform dependencies (window, document,
+   express, cors) must go through `env` with fallback to globals/imports:
+   `env.express ?? express`. This enables testing without mocking globals.
+5. **Error logging**: Use `logger?.error()` for errors only, not routine
    operations
-5. **Return Source.Instance**: Return `{ type, config, push }` object
-6. **Optional `destroy` method**: Implement if the source holds resources (HTTP
+6. **Return Source.Instance**: Return `{ type, config, push }` object
+7. **Optional `destroy` method**: Implement if the source holds resources (HTTP
    servers, timers, connections) that need cleanup on shutdown
 
 ### Gate: Implementation Compiles

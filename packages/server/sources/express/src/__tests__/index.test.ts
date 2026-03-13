@@ -158,6 +158,47 @@ describe('sourceExpress', () => {
       expect(source.httpHandler).toBe(source.app);
     });
 
+    it('should use env.express and env.cors when provided', async () => {
+      const mockJsonMiddleware = jest.fn();
+      const mockCorsMiddleware = jest.fn();
+
+      const mockApp = {
+        use: jest.fn(),
+        post: jest.fn(),
+        get: jest.fn(),
+        options: jest.fn(),
+      };
+
+      const mockExpress = Object.assign(jest.fn().mockReturnValue(mockApp), {
+        json: jest.fn().mockReturnValue(mockJsonMiddleware),
+      });
+
+      const mockCors = jest.fn().mockReturnValue(mockCorsMiddleware);
+
+      await sourceExpress(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+            express: mockExpress as never,
+            cors: mockCors as never,
+          },
+        ),
+      );
+
+      // Verify env.express was used to create app and middleware
+      expect(mockExpress).toHaveBeenCalled();
+      expect(mockExpress.json).toHaveBeenCalledWith({ limit: '1mb' });
+      expect(mockApp.use).toHaveBeenCalledWith(mockJsonMiddleware);
+
+      // Verify env.cors was used for CORS middleware
+      expect(mockCors).toHaveBeenCalled();
+      expect(mockApp.use).toHaveBeenCalledWith(mockCorsMiddleware);
+    });
+
     it('should start server when port is configured', async () => {
       const source = await sourceExpress(
         createSourceContext(

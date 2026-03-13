@@ -61,6 +61,25 @@ describe('Session Source', () => {
     });
   });
 
+  describe('Env Injection', () => {
+    test('threads env.window/env.document to session', async () => {
+      const mockWindow = {
+        performance: {
+          getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
+        },
+        location: { href: 'https://injected.test/' },
+      } as unknown as Window & typeof globalThis;
+
+      const source = await createSessionSource(collector, undefined, {
+        window: mockWindow,
+      });
+
+      expect(source.type).toBe('session');
+      // Session initialized without errors using injected window
+      expect(mockCommand).toHaveBeenCalled();
+    });
+  });
+
   describe('Consent Handling', () => {
     test('re-initializes session on consent event', async () => {
       const source = await createSessionSource(collector);

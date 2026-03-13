@@ -1,6 +1,7 @@
 import type { Collector } from '@walkeros/core';
 import type { SessionWindowConfig } from './sessionWindow';
 import type { StorageType } from '@walkeros/core';
+import type { StorageEnv } from '@walkeros/web-core';
 import { getId, tryCatch } from '@walkeros/core';
 import { storageRead, storageWrite } from '@walkeros/web-core';
 import { sessionWindow } from './sessionWindow';
@@ -28,15 +29,19 @@ export function sessionStorage(
     sessionStorage = 'local',
     pulse = false, // Handle the counting
   } = config;
+  const storageEnv: StorageEnv | undefined =
+    config.window || config.document
+      ? { window: config.window, document: config.document }
+      : undefined;
   const windowSession = sessionWindow(config); // Status based on window only
   let isStart = false;
 
   // Retrieve or create device ID
   const device = tryCatch((key: string, age: number, storage: StorageType) => {
-    let id = storageRead(key, storage);
+    let id = storageRead(key, storage, storageEnv);
     if (!id) {
       id = getId(8); // Create a new device ID
-      storageWrite(key, id, age * 1440, storage); // Write device ID to storage
+      storageWrite(key, id, age * 1440, storage, undefined, storageEnv); // Write device ID to storage
     }
     return String(id);
   })(deviceKey, deviceAge, deviceStorage);
@@ -45,7 +50,9 @@ export function sessionStorage(
   const existingSession: Collector.SessionData =
     tryCatch(
       (key: string, storage?: StorageType) => {
-        const session = JSON.parse(String(storageRead(key, storage)));
+        const session = JSON.parse(
+          String(storageRead(key, storage, storageEnv)),
+        );
 
         // Only update session if it's not a pulse check
         if (pulse) return session;
@@ -101,7 +108,14 @@ export function sessionStorage(
   );
 
   // Write (updated) session to storage
-  storageWrite(sessionKey, JSON.stringify(session), length * 2, sessionStorage);
+  storageWrite(
+    sessionKey,
+    JSON.stringify(session),
+    length * 2,
+    sessionStorage,
+    undefined,
+    storageEnv,
+  );
 
   return session;
 }

@@ -12,6 +12,8 @@ export interface SessionWindowConfig {
   parameters?: MarketingParameters;
   referrer?: string;
   url?: string;
+  window?: Window & typeof globalThis;
+  document?: Document;
 }
 
 export function sessionWindow(
@@ -23,18 +25,21 @@ export function sessionWindow(
   // If session has explicitly started, return known
   if (config.isStart === false) return known;
 
+  const win = config.window ?? window;
+  const doc = config.document ?? document;
+
   // Entry type
   if (!isStart) {
     // Only focus on linked or direct navigation types
     // and ignore reloads and all others
-    const [perf] = performance.getEntriesByType(
+    const [perf] = win.performance.getEntriesByType(
       'navigation',
     ) as PerformanceNavigationTiming[];
     if (perf.type !== 'navigate') return known;
   }
 
-  const url = new URL(config.url || window.location.href);
-  const ref = config.referrer || document.referrer;
+  const url = new URL(config.url || win.location.href);
+  const ref = config.referrer || doc.referrer;
   const referrer = ref && new URL(ref).hostname;
 
   // Marketing

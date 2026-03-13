@@ -86,6 +86,25 @@ describe('SessionStart', () => {
     );
   });
 
+  test('sessionWindow uses config.window and config.document', () => {
+    const mockPerf = jest.fn().mockReturnValue([{ type: 'navigate' }]);
+    const result = sessionWindow({
+      window: {
+        performance: { getEntriesByType: mockPerf },
+        location: { href: 'https://injected.test/' },
+      } as unknown as Window & typeof globalThis,
+      document: {
+        referrer: 'https://external.test/',
+      } as unknown as Document,
+    });
+
+    // Verify injected performance was used
+    expect(mockPerf).toHaveBeenCalledWith('navigation');
+    // Verify session detected from injected referrer
+    expect(result.isStart).toBe(true);
+    expect(result.referrer).toBe('external.test');
+  });
+
   test('Reload', () => {
     window.performance.getEntriesByType = jest
       .fn()
