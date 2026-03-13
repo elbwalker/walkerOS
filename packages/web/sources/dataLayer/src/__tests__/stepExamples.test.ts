@@ -1,10 +1,6 @@
 import { startFlow } from '@walkeros/collector';
 import type { WalkerOS, Collector } from '@walkeros/core';
-import {
-  createMockPush,
-  getDataLayer,
-  createDataLayerSource,
-} from './test-utils';
+import { createMockPush, createDataLayerSource } from './test-utils';
 import { examples } from '../dev';
 
 describe('Step Examples', () => {
@@ -34,8 +30,8 @@ describe('Step Examples', () => {
       action: string;
     };
 
-    // Push the example input to dataLayer
-    getDataLayer().push(example.in);
+    // Push the example input to dataLayer via trigger
+    examples.trigger(example.in, { window, document, localStorage });
 
     expect(collectedEvents.length).toBeGreaterThan(0);
     const event = collectedEvents[collectedEvents.length - 1];

@@ -3,6 +3,7 @@ import { createMockLogger } from '@walkeros/core';
 import { sourceFetch } from '../index';
 import type { Types } from '../types';
 import { examples } from '../dev';
+import type { Content } from '../examples/trigger';
 
 function createSourceContext(
   env: Partial<Types['env']> = {},
@@ -29,12 +30,6 @@ describe('Step Examples', () => {
   });
 
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
-    const input = example.in as {
-      method: string;
-      url: string;
-      body?: unknown;
-    };
-
     const source = await sourceFetch(
       createSourceContext({
         push: mockPush as never,
@@ -44,23 +39,18 @@ describe('Step Examples', () => {
       }),
     );
 
-    const request = new Request(input.url, {
-      method: input.method,
-      body: input.body ? JSON.stringify(input.body) : undefined,
-      headers: input.body ? { 'content-type': 'application/json' } : undefined,
-    });
-
-    await source.push(request);
+    const trigger = examples.createTrigger(source);
+    await trigger(example.in as Content);
 
     expect(mockPush).toHaveBeenCalled();
     const pushedData = mockPush.mock.calls[0][0];
     const expected = example.out as { name: string; data?: unknown };
+    const input = example.in as Content;
 
     if (input.method === 'POST') {
       expect(pushedData.name).toBe(expected.name);
       if (expected.data) expect(pushedData.data).toEqual(expected.data);
     } else {
-      // GET pushes requestToData output (e/d params); verify event name
       expect(pushedData.e || pushedData.name).toBe(expected.name);
     }
   });

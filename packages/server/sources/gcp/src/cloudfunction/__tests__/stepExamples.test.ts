@@ -1,8 +1,9 @@
 import type { Source, Collector } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { sourceCloudFunction } from '../index';
-import type { Types, Request, Response } from '../types';
+import type { Types } from '../types';
 import { examples } from '../../dev';
+import type { Content } from '../examples/trigger';
 
 function createSourceContext(
   env: Partial<Types['env']> = {},
@@ -18,17 +19,6 @@ function createSourceContext(
   };
 }
 
-function createMockResponse(): Response {
-  const mockResponse: Record<string, unknown> = {
-    status: jest.fn(() => mockResponse),
-    json: jest.fn(() => mockResponse),
-    send: jest.fn(() => mockResponse),
-    set: jest.fn(() => mockResponse),
-    end: jest.fn(),
-  };
-  return mockResponse as unknown as Response;
-}
-
 describe('Step Examples', () => {
   let mockPush: jest.Mock;
 
@@ -40,13 +30,6 @@ describe('Step Examples', () => {
   });
 
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
-    const input = example.in as {
-      method: string;
-      body: Record<string, unknown>;
-      headers?: Record<string, string>;
-    };
-    const expected = example.out as { name: string; data?: unknown };
-
     const source = await sourceCloudFunction(
       createSourceContext({
         push: mockPush as never,
@@ -56,27 +39,12 @@ describe('Step Examples', () => {
       }),
     );
 
-    // CloudFunction source expects EventRequest format (event: string, not name: string)
-    // Adapt body to match the actual source interface
-    const body = { ...input.body };
-    if (body.name && !body.event) {
-      body.event = body.name;
-      delete body.name;
-    }
+    const trigger = examples.createTrigger(source);
+    const result = await trigger(example.in as Content);
 
-    const req = {
-      method: input.method,
-      body,
-      headers: input.headers || { 'content-type': 'application/json' },
-      get: (h: string) =>
-        (input.headers || { 'content-type': 'application/json' })[
-          h.toLowerCase()
-        ],
-    } as Request;
+    const expected = example.out as { name: string; data?: unknown };
 
-    const res = createMockResponse();
-    await source.push(req, res);
-
+    expect(result.status).toBe(200);
     expect(mockPush).toHaveBeenCalled();
     const pushedData = mockPush.mock.calls[0][0];
     expect(pushedData.name).toBe(expected.name);

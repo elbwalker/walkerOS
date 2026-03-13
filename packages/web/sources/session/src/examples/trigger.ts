@@ -1,7 +1,7 @@
-import type { Source } from '@walkeros/core';
+import type { Trigger } from '@walkeros/core';
 
-/** Prepares localStorage with session/device data. */
-export const setup: Source.SetupFn = (input, env) => {
+/** Prepares localStorage with session/device data before source init. */
+export const trigger: Trigger.SetupFn = (input, env) => {
   if (!input || typeof input !== 'object') return;
   const data = input as Record<string, unknown>;
 

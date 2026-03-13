@@ -73,18 +73,18 @@ async function runSource(
   params: Extract<SimulateParams, { step: 'source' }>,
   start: number,
 ): Promise<Simulation.Result> {
-  const { code, config = {}, setup, input, env, consent } = params;
+  const { code, config = {}, trigger: triggerFn, input, env, consent } = params;
   const ALL_CONSENT: WalkerOS.Consent = {
     functional: true,
     marketing: true,
     analytics: true,
   };
 
-  // Run setup before startFlow — may return a trigger function
-  let trigger: (() => void) | undefined;
-  if (setup) {
-    const result = setup(input, env);
-    if (typeof result === 'function') trigger = result;
+  // Run trigger before startFlow — may return a post-init function
+  let postInitTrigger: (() => void) | undefined;
+  if (triggerFn) {
+    const result = triggerFn(input, env);
+    if (typeof result === 'function') postInitTrigger = result;
   }
 
   // Spy captures events via source.next transformer
@@ -110,7 +110,7 @@ async function runSource(
   });
 
   // Fire trigger after startFlow (source is initialized)
-  if (trigger) trigger();
+  if (postInitTrigger) postInitTrigger();
 
   return {
     step: 'source',

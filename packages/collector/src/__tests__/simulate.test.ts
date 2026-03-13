@@ -1,6 +1,7 @@
 import type {
   Destination,
   Source,
+  Trigger,
   Transformer,
   WalkerOS,
 } from '@walkeros/core';
@@ -103,7 +104,7 @@ describe('simulate', () => {
 
   describe('source', () => {
     // Minimal browser-like env for testing
-    const env: Source.SimulationEnv = {
+    const env: Trigger.SimulationEnv = {
       window: {} as any,
       document: {} as any,
       localStorage: {} as any,
@@ -147,7 +148,7 @@ describe('simulate', () => {
         },
       });
 
-      const setup: Source.SetupFn = () => {
+      const trigger: Trigger.SetupFn = () => {
         order.push('setup');
         return () => {
           order.push('trigger');
@@ -158,7 +159,7 @@ describe('simulate', () => {
         step: 'source',
         name: 'test',
         code,
-        setup,
+        trigger,
         input: {},
         env,
       });

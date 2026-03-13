@@ -1,2 +1,2 @@
 export * as step from './step';
-export { setup } from './setup';
+export { trigger } from './trigger';

@@ -1,6 +1,6 @@
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { simulate } from '@walkeros/collector';
-import type { Source } from '@walkeros/core';
+import type { Source, Trigger } from '@walkeros/core';
 import type { SimulationResult } from './types.js';
 import { getErrorMessage } from '../../core/index.js';
 
@@ -13,29 +13,29 @@ interface SourceSimulationOptions {
 }
 
 /**
- * Load source code and optional setup from an npm package.
+ * Load source code and optional trigger from an npm package.
  */
 async function loadSourcePackage(
   packageName: string,
-): Promise<{ code: Source.Init; setup?: Source.SetupFn }> {
+): Promise<{ code: Source.Init; trigger?: Trigger.SetupFn }> {
   const mainModule = await import(packageName);
   const code = mainModule.default || Object.values(mainModule)[0];
   if (!code || typeof code !== 'function') {
     throw new Error(`Package ${packageName} missing source init function`);
   }
 
-  let setup: Source.SetupFn | undefined;
+  let trigger: Trigger.SetupFn | undefined;
   try {
     const devModule = await import(`${packageName}/dev`);
     const examples = devModule.examples || devModule.default?.examples;
-    if (examples?.setup && typeof examples.setup === 'function') {
-      setup = examples.setup;
+    if (examples?.trigger && typeof examples.trigger === 'function') {
+      trigger = examples.trigger;
     }
   } catch {
     // No dev exports — skip
   }
 
-  return { code, setup };
+  return { code, trigger };
 }
 
 /**
@@ -72,8 +72,8 @@ export async function simulateSourceCLI(
       throw new Error(`Source "${options.sourceStep}" has no package field`);
     }
 
-    // Load source code + setup
-    const { code, setup } = await loadSourcePackage(sourceConfig.package);
+    // Load source code + trigger
+    const { code, trigger } = await loadSourcePackage(sourceConfig.package);
 
     // Create JSDOM
     const virtualConsole = new VirtualConsole();
@@ -87,7 +87,7 @@ export async function simulateSourceCLI(
       },
     );
 
-    const env: Source.SimulationEnv = {
+    const env: Trigger.SimulationEnv = {
       window: dom.window as unknown as Window & typeof globalThis,
       document: dom.window.document as unknown as Document,
       localStorage: dom.window.localStorage as unknown as Storage,
@@ -99,7 +99,7 @@ export async function simulateSourceCLI(
       name: options.sourceStep,
       code,
       config: sourceConfig.config || {},
-      setup,
+      trigger,
       input: setupInput,
       env,
     });

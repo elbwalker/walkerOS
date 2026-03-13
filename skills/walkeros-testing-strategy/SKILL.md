@@ -205,7 +205,7 @@ const result = await simulate({
   name: 'my-source',
   code: sourceModule,
   env: jsdomEnv,
-  setup: sourceSetup, // Optional setup function
+  trigger: sourceTrigger, // Optional trigger function (Trigger.SetupFn)
 });
 // result.events = captured events via spy transformer
 ```

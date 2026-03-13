@@ -1,7 +1,7 @@
 import type { Source, Collector } from '@walkeros/core';
 import { createMockLogger } from '@walkeros/core';
 import { sourceLambda } from '../index';
-import type { LambdaContext, LambdaEvent, Types } from '../types';
+import type { Types } from '../types';
 import { examples } from '../../dev';
 
 function createSourceContext(
@@ -38,34 +38,18 @@ describe('Step Examples', () => {
       }),
     );
 
-    const lambdaEvent = example.in as Record<string, unknown>;
+    const trigger = examples.createTrigger(source);
+    await trigger(example.in);
+
     const expected = example.out as { name: string; data?: unknown };
-
-    // Lambda source expects EventRequest format (event: string, not name: string)
-    // Adapt body to match the actual source interface
-    if (lambdaEvent.body && typeof lambdaEvent.body === 'string') {
-      const body = JSON.parse(lambdaEvent.body);
-      if (body.name && !body.event) {
-        lambdaEvent.body = JSON.stringify({
-          ...body,
-          event: body.name,
-          name: undefined,
-        });
-      }
-    }
-
-    await source.push(
-      lambdaEvent as unknown as LambdaEvent,
-      { awsRequestId: 'test-req' } as unknown as LambdaContext,
-    );
+    const input = example.in as Record<string, unknown>;
 
     expect(mockPush).toHaveBeenCalled();
     const pushedData = mockPush.mock.calls[0][0];
-    const rc = (lambdaEvent.requestContext as Record<string, unknown>) || {};
+    const rc = (input.requestContext as Record<string, unknown>) || {};
     const http = (rc.http as Record<string, unknown>) || {};
     const isGet = http.method === 'GET';
     if (isGet) {
-      // GET pushes requestToData output ({e, d} format)
       expect(pushedData.e || pushedData.name).toBe(expected.name);
     } else {
       expect(pushedData.name).toBe(expected.name);

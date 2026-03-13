@@ -2,6 +2,7 @@ import type {
   Destination,
   Source,
   Transformer,
+  Trigger,
   WalkerOS,
 } from '@walkeros/core';
 
@@ -10,9 +11,9 @@ export interface SimulateSource {
   name: string;
   code: Source.Init;
   config?: Partial<Source.Config>;
-  setup?: Source.SetupFn;
+  trigger?: Trigger.SetupFn;
   input?: unknown;
-  env: Source.SimulationEnv;
+  env: Trigger.SimulationEnv;
   consent?: WalkerOS.Consent;
 }
 

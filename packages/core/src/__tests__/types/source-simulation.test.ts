@@ -1,21 +1,21 @@
-import type { Source } from '../../index';
+import type { Source, Trigger } from '../../index';
 
 describe('Source simulation types', () => {
   it('SetupFn accepts void return', () => {
-    const setup: Source.SetupFn = (_input, env) => {
+    const trigger: Trigger.SetupFn = (_input, env) => {
       const win = env.window as Window & { dataLayer?: unknown[] };
       win.dataLayer = [];
     };
-    expect(typeof setup).toBe('function');
+    expect(typeof trigger).toBe('function');
   });
 
   it('SetupFn accepts trigger return', () => {
-    const setup: Source.SetupFn = (input, env) => {
+    const triggerFn: Trigger.SetupFn = (input, env) => {
       return () => {
         env.window.dispatchEvent(new CustomEvent('test', { detail: input }));
       };
     };
-    const trigger = setup(
+    const postInit = triggerFn(
       {},
       {
         window: globalThis as Window & typeof globalThis,
@@ -23,7 +23,7 @@ describe('Source simulation types', () => {
         localStorage: globalThis.localStorage,
       },
     );
-    expect(typeof trigger).toBe('function');
+    expect(typeof postInit).toBe('function');
   });
 
   it('Renderer accepts both values', () => {
@@ -32,7 +32,7 @@ describe('Source simulation types', () => {
   });
 
   it('SimulationEnv is extensible', () => {
-    const env: Source.SimulationEnv = {
+    const env: Trigger.SimulationEnv = {
       window: globalThis as Window & typeof globalThis,
       document: globalThis.document,
       localStorage: globalThis.localStorage,
