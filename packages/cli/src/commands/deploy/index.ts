@@ -4,6 +4,7 @@ import {
   requireProjectId,
   resolveBaseUrl,
 } from '../../core/auth.js';
+import { ApiError, throwApiError } from '../../core/api-error.js';
 import { parseSSEEvents } from '../../core/sse.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
@@ -154,19 +155,21 @@ export async function deploy(options: DeployOptions) {
   );
 
   if (error) {
-    const msg = error.error?.message || 'Failed to start deployment';
-    const code = error.error?.code;
-    if (code === 'AMBIGUOUS_CONFIG') {
-      const names = await getAvailableFlowNames({
-        flowId: options.flowId,
-        projectId,
-      });
-      throw new Error(
-        `This flow has multiple settings. Use --flow <name> to specify one.\n` +
-          `Available: ${names.join(', ')}`,
-      );
+    try {
+      throwApiError(error, 'Failed to start deployment');
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'AMBIGUOUS_CONFIG') {
+        const names = await getAvailableFlowNames({
+          flowId: options.flowId,
+          projectId,
+        });
+        throw new ApiError(
+          `This flow has multiple settings. Use --flow <name> to specify one.\nAvailable: ${names.join(', ')}`,
+          { code: 'AMBIGUOUS_CONFIG' },
+        );
+      }
+      throw e;
     }
-    throw new Error(msg);
   }
 
   if (!options.wait) return data;
@@ -200,12 +203,8 @@ async function deploySettings(options: {
     { method: 'POST' },
   );
   if (!response.ok) {
-    const body: { error?: { message?: string } } = await response
-      .json()
-      .catch(() => ({}));
-    throw new Error(
-      body.error?.message || `Deploy failed (${response.status})`,
-    );
+    const body = await response.json().catch(() => ({}));
+    throwApiError(body, `Deploy failed (${response.status})`);
   }
 
   const data = await response.json();
@@ -239,10 +238,8 @@ export async function getDeployment(options: {
       `${base}/api/projects/${projectId}/flows/${options.flowId}/settings/${settingsId}/deploy`,
     );
     if (!response.ok) {
-      const body: { error?: { message?: string } } = await response
-        .json()
-        .catch(() => ({}));
-      throw new Error(body.error?.message || 'Failed to get deployment');
+      const body = await response.json().catch(() => ({}));
+      throwApiError(body, 'Failed to get deployment');
     }
     return response.json();
   }
@@ -253,8 +250,7 @@ export async function getDeployment(options: {
     '/api/projects/{projectId}/flows/{flowId}/deploy',
     { params: { path: { projectId, flowId: options.flowId } } },
   );
-  if (error)
-    throw new Error(error.error?.message || 'Failed to get deployment');
+  if (error) throwApiError(error, 'Failed to get deployment');
   return data;
 }
 

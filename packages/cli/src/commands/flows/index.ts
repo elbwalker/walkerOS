@@ -1,4 +1,5 @@
 import { createApiClient } from '../../core/api-client.js';
+import { throwApiError } from '../../core/api-error.js';
 import { requireProjectId } from '../../core/auth.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
@@ -27,7 +28,7 @@ export async function listFlows(options: ListFlowsOptions = {}) {
       },
     },
   });
-  if (error) throw new Error(error.error?.message || 'Failed to list flows');
+  if (error) throwApiError(error, 'Failed to list flows');
   return data;
 }
 
@@ -47,7 +48,7 @@ export async function getFlow(options: {
       },
     },
   );
-  if (error) throw new Error(error.error?.message || 'Failed to get flow');
+  if (error) throwApiError(error, 'Failed to get flow');
   return data;
 }
 
@@ -63,7 +64,7 @@ export async function createFlow(options: {
     // Config is user-provided JSON; server validates the full schema
     body: { name: options.name, config: options.content } as never,
   });
-  if (error) throw new Error(error.error?.message || 'Failed to create flow');
+  if (error) throwApiError(error, 'Failed to create flow');
   return data;
 }
 
@@ -90,7 +91,7 @@ export async function updateFlow(options: {
       }),
     },
   );
-  if (error) throw new Error(error.error?.message || 'Failed to update flow');
+  if (error) throwApiError(error, 'Failed to update flow');
   return data;
 }
 
@@ -106,7 +107,7 @@ export async function deleteFlow(options: {
       params: { path: { projectId: id, flowId: options.flowId } },
     },
   );
-  if (error) throw new Error(error.error?.message || 'Failed to delete flow');
+  if (error) throwApiError(error, 'Failed to delete flow');
   return data ?? { success: true };
 }
 
@@ -124,8 +125,7 @@ export async function duplicateFlow(options: {
       body: { name: options.name },
     },
   );
-  if (error)
-    throw new Error(error.error?.message || 'Failed to duplicate flow');
+  if (error) throwApiError(error, 'Failed to duplicate flow');
   return data;
 }
 

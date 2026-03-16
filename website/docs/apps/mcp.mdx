@@ -191,7 +191,8 @@ Unified walkerOS cloud API. Only available when `WALKEROS_TOKEN` is set.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `action` | enum | Yes | API action (see below) |
-| `id` | string | No | Resource ID (flowId, projectId, or slug) |
+| `projectId` | string | No | Project ID (`proj_...`). Required for: project.get/update/delete, flow.create, flow.list. Falls back to `WALKEROS_PROJECT_ID` env. |
+| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: flow.get/update/delete/duplicate, deploy. For deployment.get/delete: can be a deployment slug. |
 | `name` | string | No | Name for create/update operations |
 | `content` | object | No | Flow.Config JSON for flow operations |
 | `wait` | boolean | No | Wait for deploy to complete (default: `true`) |

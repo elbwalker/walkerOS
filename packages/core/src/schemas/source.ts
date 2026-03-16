@@ -1,5 +1,9 @@
 import { z, toJsonSchema } from './validation';
-import { ConfigSchema as MappingConfigSchema } from './mapping';
+import {
+  ConfigSchema as MappingConfigSchema,
+  ValueSchema,
+  ValuesSchema,
+} from './mapping';
 import { Identifier } from './primitives';
 import { ErrorHandlerSchema } from './utilities';
 
@@ -94,6 +98,30 @@ export const ConfigSchema = MappingConfigSchema.extend({
     .boolean()
     .describe('Mark as primary (only one can be primary)')
     .optional(),
+  require: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Defer source initialization until these collector events fire (e.g., ["consent"])',
+    ),
+  logger: z
+    .object({
+      level: z
+        .union([z.number(), z.enum(['ERROR', 'WARN', 'INFO', 'DEBUG'])])
+        .optional()
+        .describe('Minimum log level (default: ERROR)'),
+      handler: z.any().optional().describe('Custom log handler function'),
+    })
+    .optional()
+    .describe(
+      'Logger configuration (level, handler) to override the collector defaults',
+    ),
+  ingest: z
+    .union([ValueSchema, ValuesSchema])
+    .optional()
+    .describe(
+      'Ingest metadata extraction mapping. Extracts values from raw request objects (Express req, Lambda event) using mapping syntax.',
+    ),
 }).describe('Source configuration with mapping and environment');
 
 /**

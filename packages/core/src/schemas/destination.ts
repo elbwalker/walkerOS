@@ -83,10 +83,24 @@ export const ConfigSchema = z
       .boolean()
       .describe('Whether to queue events when consent is not granted')
       .optional(),
-    verbose: z
-      .boolean()
-      .describe('Enable verbose logging for debugging')
-      .optional(),
+    require: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Defer destination initialization until these collector events fire (e.g., ["consent"])',
+      ),
+    logger: z
+      .object({
+        level: z
+          .union([z.number(), z.enum(['ERROR', 'WARN', 'INFO', 'DEBUG'])])
+          .optional()
+          .describe('Minimum log level (default: ERROR)'),
+        handler: z.any().optional().describe('Custom log handler function'),
+      })
+      .optional()
+      .describe(
+        'Logger configuration (level, handler) to override the collector defaults',
+      ),
     // Handler functions
     onError: ErrorHandlerSchema.optional(),
     onLog: LogHandlerSchema.optional(),

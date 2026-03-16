@@ -4,6 +4,7 @@ import {
   requireProjectId,
   resolveBaseUrl,
 } from '../../core/auth.js';
+import { throwApiError } from '../../core/api-error.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import { loadFlowConfig } from '../../config/loader.js';
@@ -30,10 +31,7 @@ export async function listDeployments(options: ListDeploymentsOptions = {}) {
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(
-      (body as { error?: { message?: string } }).error?.message ||
-        'Failed to list deployments',
-    );
+    throwApiError(body, 'Failed to list deployments');
   }
   return response.json();
 }
@@ -50,10 +48,7 @@ export async function getDeploymentBySlug(options: {
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(
-      (body as { error?: { message?: string } }).error?.message ||
-        'Failed to get deployment',
-    );
+    throwApiError(body, 'Failed to get deployment');
   }
   return response.json();
 }
@@ -76,10 +71,7 @@ export async function createDeployment(options: {
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(
-      (body as { error?: { message?: string } }).error?.message ||
-        'Failed to create deployment',
-    );
+    throwApiError(body, 'Failed to create deployment');
   }
   return response.json();
 }
@@ -97,10 +89,7 @@ export async function deleteDeployment(options: {
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(
-      (body as { error?: { message?: string } }).error?.message ||
-        'Failed to delete deployment',
-    );
+    throwApiError(body, 'Failed to delete deployment');
   }
   const data = await response.json().catch(() => null);
   return data ?? { success: true };
@@ -207,10 +196,7 @@ export async function createDeployCommand(
       );
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({}));
-        throw new Error(
-          (body as { error?: { message?: string } }).error?.message ||
-            `Failed to fetch flow ${config}`,
-        );
+        throwApiError(body, `Failed to fetch flow ${config}`);
       }
       const flow = (await resp.json()) as { config?: unknown };
       if (!flow.config) throw new Error('Flow has no config');

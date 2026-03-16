@@ -51,6 +51,8 @@ export {
   resolveBaseUrl,
 } from './core/auth.js';
 export { createApiClient } from './core/api-client.js';
+export { ApiError, throwApiError } from './core/api-error.js';
+export type { ApiErrorDetail } from './core/api-error.js';
 export {
   listProjects,
   getProject,
