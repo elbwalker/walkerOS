@@ -32,7 +32,7 @@ export function registerAddStepPrompt(server: McpServer) {
               '',
               'Follow these steps:',
               `1. ${stepType ? '' : 'Ask what type of step (source, destination, transformer, store). Then '}Use package_search to browse available packages for the selected type and platform.`,
-              '2. Use package_get with section="hints" to read the selected package\'s configuration guidance.',
+              '2. Use package_get to read the package\'s config schema (schemas.config contains the full config shape: base fields like consent/require/logger + package-specific settings). Use section="hints" for additional guidance.',
               '3. Use package_get with section="examples" to see working configuration examples.',
               '4. Scaffold the step config using the package schemas — include required settings with placeholder values.',
               '5. Wire the step into the flow: add to packages section (with version if needed), connect via next/before chains if needed.',

@@ -155,7 +155,9 @@ export const PackageSchemaOutputShape = {
   schemas: z
     .record(z.string(), z.unknown())
     .optional()
-    .describe('JSON Schemas for settings and mapping'),
+    .describe(
+      'JSON Schemas — config (merged base + settings), mapping (per-event rules), and package-specific schemas',
+    ),
   examples: z
     .record(z.string(), z.unknown())
     .optional()
