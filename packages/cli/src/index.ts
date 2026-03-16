@@ -43,13 +43,13 @@ export { simulate } from './commands/simulate/index.js';
 export { push } from './commands/push/index.js';
 export { run } from './commands/run/index.js';
 export { validate } from './commands/validate/index.js';
+export { getToken, getAuthHeaders, requireProjectId } from './core/auth.js';
 export {
-  getToken,
-  getAuthHeaders,
-  deployAuthenticatedFetch,
-  requireProjectId,
-  resolveBaseUrl,
-} from './core/auth.js';
+  apiFetch,
+  publicFetch,
+  deployFetch,
+  mergeAuthHeaders,
+} from './core/http.js';
 export { createApiClient } from './core/api-client.js';
 export { ApiError, throwApiError } from './core/api-error.js';
 export type { ApiErrorDetail } from './core/api-error.js';
