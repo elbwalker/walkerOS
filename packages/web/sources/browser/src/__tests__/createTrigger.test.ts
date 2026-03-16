@@ -1,5 +1,6 @@
 import type { Trigger } from '@walkeros/core';
 import { examples } from '../dev';
+import { sourceBrowser } from '../index';
 
 describe('Browser createTrigger', () => {
   beforeEach(() => {
@@ -55,7 +56,7 @@ describe('Browser createTrigger', () => {
       consent: { functional: true },
       sources: {
         browser: {
-          code: (await import('../index')).sourceBrowser,
+          code: sourceBrowser,
           config: {
             settings: { pageview: false, scope: document },
           },

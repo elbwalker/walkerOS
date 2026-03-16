@@ -1,9 +1,10 @@
 import type { Trigger } from '@walkeros/core';
 import { examples } from '../dev';
+import type { Content, Result } from '../examples/trigger';
 import { sourceExpress } from '../index';
 
 describe('Express createTrigger', () => {
-  let instance: Trigger.Instance<unknown, unknown>;
+  let instance: Trigger.Instance<Content, Result>;
 
   afterEach(async () => {
     // Destroy server if flow was initialized
@@ -13,7 +14,7 @@ describe('Express createTrigger', () => {
   });
 
   it('should be typed as Trigger.CreateFn', () => {
-    const fn: Trigger.CreateFn = examples.createTrigger;
+    const fn: Trigger.CreateFn<Content, Result> = examples.createTrigger;
     expect(typeof fn).toBe('function');
   });
 
