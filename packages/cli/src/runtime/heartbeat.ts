@@ -1,5 +1,6 @@
 import { randomBytes } from 'crypto';
 import { VERSION } from '../version.js';
+import { mergeAuthHeaders } from '../core/http.js';
 import type { Collector, Logger } from '@walkeros/core';
 
 export interface CounterPayload {
@@ -105,10 +106,9 @@ export function createHeartbeat(
         `${config.appUrl}/api/projects/${config.projectId}/runners/heartbeat`,
         {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${config.token}`,
+          headers: mergeAuthHeaders(config.token, {
             'Content-Type': 'application/json',
-          },
+          }),
           body: JSON.stringify({
             instanceId,
             flowId: config.flowId,

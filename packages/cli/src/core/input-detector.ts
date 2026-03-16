@@ -7,7 +7,8 @@
 
 import fs from 'fs-extra';
 import { isUrl } from '../config/utils.js';
-import { authenticatedFetch } from './auth.js';
+import { mergeAuthHeaders } from './http.js';
+import { resolveToken } from '../lib/config-file.js';
 
 export type Platform = 'web' | 'server';
 
@@ -63,7 +64,10 @@ export function detectPlatformFromPath(inputPath: string): Platform {
  */
 async function loadContent(inputPath: string): Promise<string> {
   if (isUrl(inputPath)) {
-    const response = await authenticatedFetch(inputPath);
+    const token = resolveToken()?.token;
+    const response = await fetch(inputPath, {
+      headers: mergeAuthHeaders(token),
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch ${inputPath}: ${response.status}`);
     }

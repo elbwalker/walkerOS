@@ -7,7 +7,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import { getErrorMessage } from '../core/index.js';
 import { getTmpPath } from '../core/tmp.js';
-import { authenticatedFetch } from '../core/auth.js';
+import { mergeAuthHeaders } from '../core/http.js';
+import { resolveToken } from '../lib/config-file.js';
 
 /**
  * Check if a string is a valid URL
@@ -43,7 +44,10 @@ export async function downloadFromUrl(url: string): Promise<string> {
   }
 
   try {
-    const response = await authenticatedFetch(url);
+    const token = resolveToken()?.token;
+    const response = await fetch(url, {
+      headers: mergeAuthHeaders(token),
+    });
 
     if (!response.ok) {
       throw new Error(
