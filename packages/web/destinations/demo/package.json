@@ -7,7 +7,9 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "walkerOS": {
-    "type": "destination"
+    "type": "destination",
+    "platform": "web",
+    "docs": "https://www.walkeros.io/docs/destinations/demo"
   },
   "exports": {
     ".": {

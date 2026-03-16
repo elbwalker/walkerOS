@@ -73,6 +73,78 @@ async function runSource(
   params: Extract<SimulateParams, { step: 'source' }>,
   start: number,
 ): Promise<Simulation.Result> {
+  // New createTrigger path — package manages lifecycle
+  if (params.createTrigger) {
+    return await runSourceWithCreateTrigger(params, start);
+  }
+
+  // Legacy path — orchestrator manages lifecycle
+  return await runSourceLegacy(params, start);
+}
+
+async function runSourceWithCreateTrigger(
+  params: Extract<SimulateParams, { step: 'source' }>,
+  start: number,
+): Promise<Simulation.Result> {
+  const {
+    code,
+    config = {},
+    createTrigger: factory,
+    triggerType,
+    triggerOptions,
+    content,
+    consent,
+  } = params;
+  const ALL_CONSENT: WalkerOS.Consent = {
+    functional: true,
+    marketing: true,
+    analytics: true,
+  };
+
+  // Spy captures events via source.next transformer
+  const events: WalkerOS.DeepPartialEvent[] = [];
+
+  // Build initConfig for createTrigger — full config with spy wiring
+  const fullConfig = {
+    consent: consent || ALL_CONSENT,
+    sources: {
+      sim: { code, config, next: 'spy' },
+    },
+    transformers: {
+      spy: {
+        code: () => ({
+          type: 'spy',
+          config: {},
+          push(event: WalkerOS.DeepPartialEvent) {
+            events.push(JSON.parse(JSON.stringify(event)));
+            return { event };
+          },
+        }),
+      },
+    },
+  };
+
+  // createTrigger — startFlow is lazy, deferred to first trigger() call
+  const { trigger } = await factory!(fullConfig as any);
+
+  // Fire trigger with content — startFlow runs on first invocation
+  if (content !== undefined) {
+    await trigger(triggerType, triggerOptions)(content);
+  }
+
+  return {
+    step: 'source',
+    name: params.name,
+    events,
+    calls: [],
+    duration: Date.now() - start,
+  };
+}
+
+async function runSourceLegacy(
+  params: Extract<SimulateParams, { step: 'source' }>,
+  start: number,
+): Promise<Simulation.Result> {
   const { code, config = {}, trigger: triggerFn, input, env, consent } = params;
   const ALL_CONSENT: WalkerOS.Consent = {
     functional: true,
@@ -83,7 +155,7 @@ async function runSource(
   // Run trigger before startFlow — may return a post-init function
   let postInitTrigger: (() => void) | undefined;
   if (triggerFn) {
-    const result = triggerFn(input, env);
+    const result = triggerFn(input, env || {});
     if (typeof result === 'function') postInitTrigger = result;
   }
 

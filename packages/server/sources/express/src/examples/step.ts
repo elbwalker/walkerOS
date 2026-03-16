@@ -1,6 +1,7 @@
 import type { Flow } from '@walkeros/core';
 
 export const postEvent: Flow.StepExample = {
+  trigger: { type: 'POST' },
   in: {
     method: 'POST',
     path: '/collect',
@@ -18,6 +19,7 @@ export const postEvent: Flow.StepExample = {
 };
 
 export const pixelGet: Flow.StepExample = {
+  trigger: { type: 'GET' },
   in: {
     method: 'GET',
     path: '/collect',

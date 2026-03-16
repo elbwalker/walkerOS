@@ -447,6 +447,13 @@ export interface Settings {
 export interface StepExample {
   description?: string;
   in?: unknown;
+  /** Trigger metadata for sources — type and options for the trigger call. */
+  trigger?: {
+    /** Which mechanism to activate (e.g., 'click', 'POST', 'load'). */
+    type?: string;
+    /** Mechanism-specific options (e.g., CSS selector, threshold). */
+    options?: unknown;
+  };
   mapping?: unknown;
   out?: unknown;
 }

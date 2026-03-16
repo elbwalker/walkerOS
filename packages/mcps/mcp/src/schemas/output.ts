@@ -65,7 +65,10 @@ export const SimulateOutputShape = {
           .boolean()
           .describe('Whether destination received the event'),
         calls: z.number().describe('Number of API calls made'),
-        payload: z.unknown().optional().describe('Transformed payload sent'),
+        payload: z
+          .unknown()
+          .optional()
+          .describe('Full payload (only when verbose: true)'),
       }),
     )
     .optional()

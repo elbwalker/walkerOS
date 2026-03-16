@@ -45,24 +45,55 @@ the walkerOS event model:
 - **Transformer** receives and returns walkerOS events (or `false` to filter)
 - **Destination** converts a walkerOS event into vendor-specific output
 
-## The `in`/`out` Format
+## The `in`/`out`/`trigger` Format
 
-Every step example is an object with `in` (input) and `out` (expected output):
-
-### Source Step Example
-
-`in` is platform-specific, `out` is a walkerOS event:
+Every step example is an object with `in` (input), `out` (expected output), and
+optional `trigger` (how to invoke):
 
 ```typescript
-export const step = {
-  checkoutPost: {
-    in: {
-      method: 'POST',
-      path: '/collect',
-      headers: { 'content-type': 'application/json' },
-      body: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
-    },
-    out: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
+interface StepExample {
+  in: unknown; // Platform-specific input
+  out: unknown; // Expected output
+  trigger?: { type?: string; options?: unknown }; // How to invoke
+  mapping?: unknown; // Destination mapping rule
+}
+```
+
+The `trigger` field tells `createTrigger` what kind of stimulus to simulate. For
+browser sources, `type` is the event type (`'load'`, `'click'`, `'submit'`) and
+`options` varies (CSS selector for click, URL/title for load). For server
+sources, `type` is the HTTP method (`'POST'`, `'GET'`).
+
+### Source Step Example — Server (Express)
+
+`in` is an HTTP request shape, `out` is a walkerOS event:
+
+```typescript
+export const checkoutPost: Flow.StepExample = {
+  trigger: { type: 'POST' },
+  in: {
+    method: 'POST',
+    path: '/collect',
+    body: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
+  },
+  out: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
+};
+```
+
+### Source Step Example — Browser
+
+`in` is an HTML string (the DOM content), `out` is a walkerOS event:
+
+```typescript
+export const clickEvent: Flow.StepExample = {
+  trigger: { type: 'click', options: 'button' },
+  in: '<button data-elb="cta" data-elb-cta="label:Sign Up" data-elbaction="click:click">Sign Up</button>',
+  out: {
+    name: 'cta click',
+    data: { label: 'Sign Up' },
+    trigger: 'click',
+    entity: 'cta',
+    action: 'click',
   },
 };
 ```
@@ -189,6 +220,59 @@ Flow validation checks that:
 ## Testing with Examples
 
 The primary use of step examples is automated testing with `it.each`.
+
+### Source Tests (createTrigger)
+
+Sources export `createTrigger` from their examples. It follows the unified
+`Trigger.CreateFn` interface: receives `Collector.InitConfig`, lazily starts the
+flow, and returns a trigger function that simulates real-world invocations.
+
+Each package implements createTrigger differently:
+
+- **Browser:** Injects HTML into DOM, starts flow, dispatches native events
+- **Express:** Boots real HTTP server, sends `fetch()` requests
+
+Use a spy destination to capture events:
+
+```typescript
+import type { Destination, WalkerOS } from '@walkeros/core';
+import { sourceExpress } from '@walkeros/server-source-express';
+import { examples } from '@walkeros/server-source-express/dev';
+
+describe('Step Examples', () => {
+  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+    const events: WalkerOS.Event[] = [];
+    const spy: Destination.Instance = {
+      type: 'spy',
+      config: { init: true },
+      push: jest.fn((event) => {
+        events.push(JSON.parse(JSON.stringify(event)));
+      }),
+    };
+
+    const instance = await examples.createTrigger({
+      consent: { functional: true },
+      sources: {
+        express: { code: sourceExpress, config: { settings: { port: 0 } } },
+      },
+      destinations: { spy: { code: spy } },
+    });
+
+    await instance.trigger(example.trigger?.type)(example.in);
+
+    const found = events.find((e) => e.name === example.out.name);
+    expect(found).toBeDefined();
+  });
+});
+```
+
+**Browser source note:** The browser source's elbLayer processes events via a
+detached promise chain (fire-and-forget). For interactive triggers (click,
+submit), poll until events arrive:
+
+```typescript
+while (!events.length) await Promise.resolve();
+```
 
 ### Destination Functional Tests
 

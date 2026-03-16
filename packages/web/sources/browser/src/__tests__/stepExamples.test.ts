@@ -1,25 +1,11 @@
-import { startFlow } from '@walkeros/collector';
-import type { WalkerOS, Collector } from '@walkeros/core';
-import { createBrowserSource } from './test-utils';
+import type { Destination, WalkerOS } from '@walkeros/core';
+import { sourceBrowser } from '../index';
 import { examples } from '../dev';
 
 describe('Step Examples', () => {
-  let collector: Collector.Instance;
-  let collectedEvents: WalkerOS.Event[];
-  let mockPush: jest.MockedFunction<Collector.Instance['push']>;
-
-  beforeEach(async () => {
-    collectedEvents = [];
+  beforeEach(() => {
     document.body.innerHTML = '';
     (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
-
-    mockPush = jest.fn().mockImplementation((...args: unknown[]) => {
-      collectedEvents.push(args[0] as WalkerOS.Event);
-      return Promise.resolve({ ok: true });
-    }) as jest.MockedFunction<Collector.Instance['push']>;
-
-    ({ collector } = await startFlow());
-    collector.push = mockPush;
   });
 
   afterEach(() => {
@@ -27,43 +13,99 @@ describe('Step Examples', () => {
     (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
   });
 
-  // Impression trigger needs IntersectionObserver — tested separately
+  // Impression needs IntersectionObserver mock — tested separately
   const supported = Object.entries(examples.step).filter(
-    ([, ex]) => (ex.in as Record<string, unknown>).trigger !== 'impression',
+    ([name]) => name !== 'impressionEvent',
   );
 
   it.each(supported)('%s', async (name, example) => {
-    const input = example.in as Record<string, unknown>;
+    const triggerInfo = example.trigger as
+      | { type?: string; options?: unknown }
+      | undefined;
+    const content = example.in as string;
     const expected = example.out as {
       name: string;
       data?: Record<string, unknown>;
       trigger?: string;
-      entity: string;
-      action: string;
+      entity?: string;
+      action?: string;
+      context?: Record<string, unknown>;
+      globals?: Record<string, unknown>;
+      nested?: unknown[];
+      source?: Record<string, unknown>;
     };
 
-    const env = { window, document, localStorage };
-    const isLoad = !input.trigger || input.trigger === 'load';
+    // Spy destination captures events after collector processing
+    const events: WalkerOS.Event[] = [];
+    const spyDestination: Destination.Instance = {
+      type: 'spy',
+      config: { init: true },
+      push: jest.fn((event: WalkerOS.Event) => {
+        events.push(JSON.parse(JSON.stringify(event)));
+      }),
+    };
 
-    // Run trigger — returns void for load, function for interactive
-    const postInit = examples.trigger(example.in, env);
-
-    // Init source with appropriate config
-    await createBrowserSource(collector, {
-      pageview: isLoad && !!input.url,
+    const instance = await examples.createTrigger({
+      consent: { functional: true, marketing: true, analytics: true },
+      sources: {
+        browser: {
+          code: sourceBrowser,
+          config: {
+            settings: {
+              pageview: triggerInfo?.type === 'load' && !!triggerInfo?.options,
+              scope: document,
+            },
+          },
+        },
+      },
+      destinations: {
+        spy: { code: spyDestination },
+      },
     });
 
-    // Fire post-init trigger (click, submit, etc.)
-    if (typeof postInit === 'function') postInit();
+    await instance.trigger(triggerInfo?.type, triggerInfo?.options)(content);
 
-    const call = mockPush.mock.calls.find(
-      (c) => (c[0] as WalkerOS.DeepPartialEvent).name === expected.name,
-    );
-    expect(call).toBeDefined();
-    const pushed = call![0] as WalkerOS.DeepPartialEvent;
-    expect(pushed.name).toBe(expected.name);
+    // The browser source pushes events via a detached promise chain:
+    // dispatchEvent → triggerClick → handleTrigger → elb() (fire-and-forget)
+    // The elb() promise is never awaited by pushCommand, so it floats.
+    // Each `await Promise.resolve()` drains one microtask from that chain.
+    // Only microtask yields work here — setTimeout/process.nextTick/setImmediate
+    // hang because the elbLayer's microtask cycle prevents macrotasks from firing.
+    // Jest's 5000ms test timeout is the safety net if events never arrive.
+    while (!events.find((e) => e.name === expected.name))
+      await Promise.resolve();
+
+    expect(instance.flow).toBeDefined();
+
+    const found = events.find((e) => e.name === expected.name)!;
+
     if (expected.data) {
-      expect(pushed.data).toEqual(expect.objectContaining(expected.data));
+      expect(found.data).toEqual(expect.objectContaining(expected.data));
+    }
+    if (expected.entity) {
+      expect(found.entity).toBe(expected.entity);
+    }
+    if (expected.action) {
+      expect(found.action).toBe(expected.action);
+    }
+    if (expected.trigger) {
+      expect(found.trigger).toBe(expected.trigger);
+    }
+    if (expected.nested) {
+      expect(found.nested).toEqual(
+        expect.arrayContaining(
+          expected.nested.map((n) => expect.objectContaining(n as object)),
+        ),
+      );
+    }
+    if (expected.context) {
+      expect(found.context).toEqual(expect.objectContaining(expected.context));
+    }
+    if (expected.globals) {
+      expect(found.globals).toEqual(expect.objectContaining(expected.globals));
+    }
+    if (expected.source) {
+      expect(found.source).toEqual(expect.objectContaining(expected.source));
     }
   });
 });

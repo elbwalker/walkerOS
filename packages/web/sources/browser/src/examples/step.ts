@@ -1,12 +1,15 @@
 import type { Flow } from '@walkeros/core';
 
 export const pageView: Flow.StepExample = {
-  in: {
-    trigger: 'load',
-    url: 'https://example.com/docs',
-    title: 'Documentation',
-    referrer: 'https://example.com/',
+  trigger: {
+    type: 'load',
+    options: {
+      url: 'https://example.com/docs',
+      title: 'Documentation',
+      referrer: 'https://example.com/',
+    },
   },
+  in: '',
   out: {
     name: 'page view',
     data: {
@@ -27,15 +30,8 @@ export const pageView: Flow.StepExample = {
 };
 
 export const clickEvent: Flow.StepExample = {
-  in: {
-    trigger: 'click',
-    element: 'button[data-elb="cta"]',
-    attributes: {
-      'data-elb': 'cta',
-      'data-elb-cta': 'label:Sign Up',
-      'data-elbaction': 'click:click',
-    },
-  },
+  trigger: { type: 'click', options: 'button' },
+  in: '<button data-elb="cta" data-elb-cta="label:Sign Up" data-elbaction="click:click">Sign Up</button>',
   out: {
     name: 'cta click',
     data: { label: 'Sign Up' },
@@ -46,15 +42,8 @@ export const clickEvent: Flow.StepExample = {
 };
 
 export const submitEvent: Flow.StepExample = {
-  in: {
-    trigger: 'submit',
-    element: 'form[data-elb="signup"]',
-    attributes: {
-      'data-elb': 'signup',
-      'data-elb-signup': 'plan:premium',
-      'data-elbaction': 'submit:complete',
-    },
-  },
+  trigger: { type: 'submit', options: 'form' },
+  in: '<form data-elb="signup" data-elb-signup="plan:premium" data-elbaction="submit:complete"></form>',
   out: {
     name: 'signup complete',
     data: { plan: 'premium' },
@@ -65,15 +54,8 @@ export const submitEvent: Flow.StepExample = {
 };
 
 export const impressionEvent: Flow.StepExample = {
-  in: {
-    trigger: 'impression',
-    element: 'div[data-elb="banner"]',
-    attributes: {
-      'data-elb': 'banner',
-      'data-elb-banner': 'type:promotional;position:sidebar',
-      'data-elbaction': 'impression:view',
-    },
-  },
+  trigger: { type: 'impression', options: 'div' },
+  in: '<div data-elb="banner" data-elb-banner="type:promotional;position:sidebar" data-elbaction="impression:view"></div>',
   out: {
     name: 'banner view',
     data: { type: 'promotional', position: 'sidebar' },
@@ -84,21 +66,8 @@ export const impressionEvent: Flow.StepExample = {
 };
 
 export const nestedEntities: Flow.StepExample = {
-  in: {
-    trigger: 'load',
-    element: 'div[data-elb="product"]',
-    attributes: {
-      'data-elb': 'product',
-      'data-elb-product': 'id:SKU-42;name:Sneakers',
-      'data-elbaction': 'load:view',
-    },
-    children: [
-      {
-        'data-elb': 'size',
-        'data-elb-size': 'selected:large;inStock:true',
-      },
-    ],
-  },
+  trigger: { type: 'load' },
+  in: '<div data-elb="product" data-elb-product="id:SKU-42;name:Sneakers" data-elbaction="load:view"><div data-elb="size" data-elb-size="selected:large;inStock:true"></div></div>',
   out: {
     name: 'product view',
     data: { id: 'SKU-42', name: 'Sneakers' },
@@ -110,16 +79,8 @@ export const nestedEntities: Flow.StepExample = {
 };
 
 export const dataAttributeTypes: Flow.StepExample = {
-  in: {
-    trigger: 'click',
-    element: 'div[data-elb="product"]',
-    attributes: {
-      'data-elb': 'product',
-      'data-elb-product':
-        'price:99.99;available:true;colors[]:red;colors[]:blue',
-      'data-elbaction': 'click:select',
-    },
-  },
+  trigger: { type: 'click', options: 'div' },
+  in: '<div data-elb="product" data-elb-product="price:99.99;available:true;colors[]:red;colors[]:blue" data-elbaction="click:select"></div>',
   out: {
     name: 'product select',
     data: { price: 99.99, available: true, colors: ['red', 'blue'] },
@@ -130,17 +91,8 @@ export const dataAttributeTypes: Flow.StepExample = {
 };
 
 export const contextAndGlobals: Flow.StepExample = {
-  in: {
-    trigger: 'click',
-    element: 'div[data-elb="cta"]',
-    attributes: {
-      'data-elb': 'cta',
-      'data-elb-cta': 'label:Try Now',
-      'data-elbaction': 'click:signup',
-    },
-    context: { test: 'engagement_flow' },
-    globals: { language: 'en', plan: 'premium' },
-  },
+  trigger: { type: 'click', options: '[data-elb="cta"]' },
+  in: '<div data-elbcontext="test:engagement_flow" data-elbglobals="language:en;plan:premium"><div data-elb="cta" data-elb-cta="label:Try Now" data-elbaction="click:signup">Try Now</div></div>',
   out: {
     name: 'cta signup',
     data: { label: 'Try Now' },

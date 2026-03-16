@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { simulate } from '@walkeros/cli';
 import type { SimulationResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
@@ -21,7 +22,15 @@ export function registerFlowSimulateTool(server: McpServer) {
         'Events must be in walkerOS event format (post-source output): { name: "entity action", data: {...} }. ' +
         'Use package_get on your source to check its output shape. ' +
         'Use the example parameter to load event input from a step example and compare output.',
-      inputSchema: schemas.SimulateInputShape,
+      inputSchema: {
+        ...schemas.SimulateInputShape,
+        verbose: z
+          .boolean()
+          .optional()
+          .describe(
+            'Include full payload per destination (default: false, concise summary only)',
+          ),
+      },
       outputSchema: SimulateOutputShape,
       annotations: {
         readOnlyHint: true,
@@ -30,7 +39,7 @@ export function registerFlowSimulateTool(server: McpServer) {
         openWorldHint: false,
       },
     },
-    async ({ configPath, event, flow, platform, example, step }) => {
+    async ({ configPath, event, flow, platform, example, step, verbose }) => {
       try {
         if (!event && !example) {
           throw new Error('Either event or example must be provided');
@@ -44,16 +53,19 @@ export function registerFlowSimulateTool(server: McpServer) {
           step,
         });
 
-        // Summarize per-destination
+        // Summarize per-destination (keep it concise for AI consumers)
         const destinations: Record<string, DestinationSummary> = {};
 
         if (raw.usage) {
           for (const [name, calls] of Object.entries(raw.usage)) {
-            destinations[name] = {
+            const summary: DestinationSummary = {
               received: calls.length > 0,
               calls: calls.length,
-              payload: calls.length > 0 ? calls[calls.length - 1] : undefined,
             };
+            if (verbose && calls.length > 0) {
+              summary.payload = calls[calls.length - 1];
+            }
+            destinations[name] = summary;
           }
         }
 

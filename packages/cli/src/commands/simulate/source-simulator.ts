@@ -10,32 +10,48 @@ interface SourceSimulationOptions {
   json?: boolean;
   verbose?: boolean;
   silent?: boolean;
+  triggerType?: string;
+  triggerOptions?: unknown;
 }
 
 /**
- * Load source code and optional trigger from an npm package.
+ * Load source code and optional createTrigger from an npm package.
  */
-async function loadSourcePackage(
-  packageName: string,
-): Promise<{ code: Source.Init; trigger?: Trigger.SetupFn }> {
+async function loadSourcePackage(packageName: string): Promise<{
+  code: Source.Init;
+  createTrigger?: Trigger.CreateFn;
+  legacyTrigger?: (
+    input: unknown,
+    env: Record<string, unknown>,
+  ) => void | (() => void);
+}> {
   const mainModule = await import(packageName);
   const code = mainModule.default || Object.values(mainModule)[0];
   if (!code || typeof code !== 'function') {
     throw new Error(`Package ${packageName} missing source init function`);
   }
 
-  let trigger: Trigger.SetupFn | undefined;
+  let createTrigger: Trigger.CreateFn | undefined;
+  let legacyTrigger:
+    | ((input: unknown, env: Record<string, unknown>) => void | (() => void))
+    | undefined;
+
   try {
     const devModule = await import(`${packageName}/dev`);
     const examples = devModule.examples || devModule.default?.examples;
-    if (examples?.trigger && typeof examples.trigger === 'function') {
-      trigger = examples.trigger;
+    if (
+      examples?.createTrigger &&
+      typeof examples.createTrigger === 'function'
+    ) {
+      createTrigger = examples.createTrigger;
+    } else if (examples?.trigger && typeof examples.trigger === 'function') {
+      legacyTrigger = examples.trigger;
     }
   } catch {
     // No dev exports — skip
   }
 
-  return { code, trigger };
+  return { code, createTrigger, legacyTrigger };
 }
 
 /**
@@ -72,10 +88,33 @@ export async function simulateSourceCLI(
       throw new Error(`Source "${options.sourceStep}" has no package field`);
     }
 
-    // Load source code + trigger
-    const { code, trigger } = await loadSourcePackage(sourceConfig.package);
+    // Load source code + createTrigger/legacyTrigger
+    const { code, createTrigger, legacyTrigger } = await loadSourcePackage(
+      sourceConfig.package,
+    );
 
-    // Create JSDOM
+    if (createTrigger) {
+      // New path: use createTrigger — package manages its own lifecycle
+      const result = await simulate({
+        step: 'source',
+        name: options.sourceStep,
+        code,
+        config: sourceConfig.config || {},
+        createTrigger,
+        triggerType: options.triggerType,
+        triggerOptions: options.triggerOptions,
+        content: setupInput,
+      });
+
+      return {
+        success: !result.error,
+        error: result.error?.message,
+        capturedEvents: result.events,
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Legacy path: create JSDOM and use old trigger pattern
     const virtualConsole = new VirtualConsole();
     const dom = new JSDOM(
       '<!DOCTYPE html><html><head></head><body></body></html>',
@@ -87,7 +126,7 @@ export async function simulateSourceCLI(
       },
     );
 
-    const env: Trigger.SimulationEnv = {
+    const env: Record<string, unknown> = {
       window: dom.window as unknown as Window & typeof globalThis,
       document: dom.window.document as unknown as Document,
       localStorage: dom.window.localStorage as unknown as Storage,
@@ -99,7 +138,7 @@ export async function simulateSourceCLI(
       name: options.sourceStep,
       code,
       config: sourceConfig.config || {},
-      trigger,
+      trigger: legacyTrigger,
       input: setupInput,
       env,
     });

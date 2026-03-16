@@ -11,10 +11,26 @@ export interface SimulateSource {
   name: string;
   code: Source.Init;
   config?: Partial<Source.Config>;
-  trigger?: Trigger.SetupFn;
-  input?: unknown;
-  env: Trigger.SimulationEnv;
+  /** createTrigger factory from the source package's examples. */
+  createTrigger?: Trigger.CreateFn;
+  /** Trigger type (e.g., 'click', 'POST', 'load'). */
+  triggerType?: string;
+  /** Trigger options (e.g., CSS selector, threshold). */
+  triggerOptions?: unknown;
+  /** Content to pass to the trigger function. */
+  content?: unknown;
   consent?: WalkerOS.Consent;
+
+  // Legacy fields — kept temporarily for backward compat during migration.
+  /** @deprecated Use createTrigger pattern instead. */
+  trigger?: (
+    input: unknown,
+    env: Record<string, unknown>,
+  ) => void | (() => void);
+  /** @deprecated Use content instead. */
+  input?: unknown;
+  /** @deprecated Use createTrigger pattern instead. */
+  env?: Record<string, unknown>;
 }
 
 export interface SimulateTransformer {

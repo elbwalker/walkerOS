@@ -198,6 +198,31 @@ responded.
 
 See `@walkeros/server-source-express` for the reference implementation.
 
+## createTrigger Pattern
+
+Every source exports a `createTrigger` factory from its examples (`dev` entry)
+that follows the unified `Trigger.CreateFn` interface:
+
+```typescript
+type CreateFn<TContent, TResult> = (
+  config: Collector.InitConfig,
+  options?: unknown,
+) => Promise<Trigger.Instance<TContent, TResult>>;
+```
+
+`createTrigger` simulates real-world invocations from the outside — full
+blackbox, no source instance access. Each package implements it differently:
+
+| Source  | Content        | Trigger type       | Mechanism               |
+| ------- | -------------- | ------------------ | ----------------------- |
+| Browser | HTML string    | `click`, `load`... | DOM injection + events  |
+| Express | HTTP req shape | `POST`, `GET`      | Real `fetch()` requests |
+
+The trigger lazily calls `startFlow(config)` on first invocation. Tests capture
+events via spy destinations. See
+[using-step-examples](../walkeros-using-step-examples/SKILL.md) for testing
+patterns.
+
 ## Related Skills
 
 - [walkeros-understanding-flow](../walkeros-understanding-flow/SKILL.md) - How

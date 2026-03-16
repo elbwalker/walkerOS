@@ -43,6 +43,12 @@ export const PACKAGE_REGISTRY: PackageRegistryEntry[] = [
     platform: 'web',
     description: 'Generic HTTP API destination',
   },
+  {
+    name: '@walkeros/destination-demo',
+    type: 'destination',
+    platform: 'universal',
+    description: 'Demo destination that logs events to console',
+  },
 
   // Server Destinations
   {
