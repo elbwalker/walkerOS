@@ -5,26 +5,30 @@ import {
 import { PackageSchemaOutputShape } from '../../schemas/output.js';
 import { PACKAGE_REGISTRY } from '../../registry.js';
 
-jest.mock('@walkeros/core', () => ({
-  fetchPackage: jest.fn(),
-  mcpResult: jest.fn((result, summary, hints) => ({
-    content: [
-      { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
-    ],
-    structuredContent: hints ? { ...result, _hints: hints } : result,
-  })),
-  mcpError: jest.fn((error) => ({
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify({
-          error: error instanceof Error ? error.message : 'Unknown error',
-        }),
-      },
-    ],
-    isError: true,
-  })),
-}));
+jest.mock('@walkeros/core', () => {
+  const actual = jest.requireActual('@walkeros/core');
+  return {
+    fetchPackage: jest.fn(),
+    mergeConfigSchema: actual.mergeConfigSchema,
+    mcpResult: jest.fn((result, summary, hints) => ({
+      content: [
+        { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
+      ],
+      structuredContent: hints ? { ...result, _hints: hints } : result,
+    })),
+    mcpError: jest.fn((error) => ({
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }),
+        },
+      ],
+      isError: true,
+    })),
+  };
+});
 
 import { fetchPackage } from '@walkeros/core';
 const mockFetchPackage = fetchPackage as jest.MockedFunction<
@@ -83,7 +87,7 @@ describe('package_get tool', () => {
 
     const content = result.structuredContent;
     expect(content.package).toBe('@walkeros/web-destination-snowplow');
-    expect((content.schemas as Record<string, unknown>).settings).toBeDefined();
+    expect((content.schemas as Record<string, unknown>).config).toBeDefined();
     expect(content.type).toBe('destination');
   });
 
@@ -245,6 +249,127 @@ describe('package_get tool', () => {
     >;
     expect(hints['a'].code).toBeDefined();
     expect(content.exampleSummaries).toBeUndefined();
+  });
+
+  it('should return merged config schema with base + package settings', async () => {
+    mockFetchPackage.mockResolvedValue({
+      packageName: '@walkeros/web-source-browser',
+      version: '3.0.0',
+      description: undefined,
+      type: 'source',
+      platform: 'web',
+      schemas: {
+        settings: {
+          $schema: 'http://json-schema.org/draft-07/schema#',
+          type: 'object',
+          properties: {
+            pageview: { type: 'boolean', default: true },
+          },
+          additionalProperties: false,
+        },
+      },
+      examples: {},
+      hintKeys: [],
+      exampleSummaries: [],
+    });
+
+    const tool = mockServer.getTool('package_get');
+    const result = await tool.handler({
+      package: '@walkeros/web-source-browser',
+    });
+
+    const schemas = result.structuredContent.schemas as Record<string, unknown>;
+
+    // config key exists with merged schema
+    expect(schemas.config).toBeDefined();
+    const config = schemas.config as Record<string, unknown>;
+    const props = config.properties as Record<string, unknown>;
+
+    // Base source fields present
+    expect(props.consent).toBeDefined();
+    expect(props.require).toBeDefined();
+    expect(props.logger).toBeDefined();
+
+    // Package settings merged in
+    const settings = props.settings as Record<string, unknown>;
+    expect((settings.properties as any).pageview).toBeDefined();
+
+    // Runtime-only fields excluded
+    expect(props.env).toBeUndefined();
+    expect(props.onError).toBeUndefined();
+  });
+
+  it('should return merged destination config schema', async () => {
+    mockFetchPackage.mockResolvedValue({
+      packageName: '@walkeros/web-destination-api',
+      version: '3.0.0',
+      description: undefined,
+      type: 'destination',
+      platform: 'web',
+      schemas: {
+        settings: {
+          type: 'object',
+          properties: {
+            url: { type: 'string' },
+            transport: { type: 'string' },
+          },
+        },
+      },
+      examples: {},
+      hintKeys: [],
+      exampleSummaries: [],
+    });
+
+    const tool = mockServer.getTool('package_get');
+    const result = await tool.handler({
+      package: '@walkeros/web-destination-api',
+    });
+
+    const schemas = result.structuredContent.schemas as Record<string, unknown>;
+    const config = schemas.config as Record<string, unknown>;
+    const props = config.properties as Record<string, unknown>;
+
+    // Destination-specific base fields
+    expect(props.queue).toBeDefined();
+    expect(props.require).toBeDefined();
+
+    // Source-only fields absent
+    expect(props.ingest).toBeUndefined();
+  });
+
+  it('should keep non-config schemas as siblings', async () => {
+    mockFetchPackage.mockResolvedValue({
+      packageName: '@walkeros/web-destination-gtag',
+      version: '3.0.0',
+      description: undefined,
+      type: 'destination',
+      platform: 'web',
+      schemas: {
+        settings: { type: 'object', properties: {} },
+        mapping: { type: 'object', properties: { ga4: {} } },
+        ga4: { type: 'object', properties: { measurementId: {} } },
+      },
+      examples: {},
+      hintKeys: [],
+      exampleSummaries: [],
+    });
+
+    const tool = mockServer.getTool('package_get');
+    const result = await tool.handler({
+      package: '@walkeros/web-destination-gtag',
+    });
+
+    const schemas = result.structuredContent.schemas as Record<string, unknown>;
+
+    // config is merged
+    expect(schemas.config).toBeDefined();
+
+    // mapping and ga4 remain as siblings (not merged into config)
+    expect(schemas.mapping).toBeDefined();
+    expect(schemas.ga4).toBeDefined();
+
+    // original settings key removed (replaced by config)
+    expect(schemas.settings).toBeUndefined();
   });
 });
 
