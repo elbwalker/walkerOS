@@ -2,29 +2,28 @@ import { feedback } from '../../../commands/feedback/index.js';
 
 jest.mock('../../../lib/config-file.js', () => ({
   readConfig: jest.fn(),
-  resolveAppUrl: jest.fn().mockReturnValue('https://app.walkeros.io'),
 }));
 
-import { readConfig, resolveAppUrl } from '../../../lib/config-file.js';
+jest.mock('../../../core/http.js', () => ({
+  publicFetch: jest.fn().mockResolvedValue({ ok: true }),
+}));
+
+import { readConfig } from '../../../lib/config-file.js';
+import { publicFetch } from '../../../core/http.js';
 
 const mockReadConfig = readConfig as jest.Mock;
-const mockResolveAppUrl = resolveAppUrl as jest.Mock;
+const mockPublicFetch = publicFetch as jest.Mock;
 
 describe('feedback', () => {
-  const originalFetch = global.fetch;
   const originalEnv = { ...process.env };
-  let mockFetch: jest.Mock;
 
   beforeEach(() => {
-    mockFetch = jest.fn().mockResolvedValue({ ok: true });
-    global.fetch = mockFetch;
+    mockPublicFetch.mockResolvedValue({ ok: true });
     mockReadConfig.mockReturnValue(null);
-    mockResolveAppUrl.mockReturnValue('https://app.walkeros.io');
     process.env = { ...originalEnv };
   });
 
   afterEach(() => {
-    global.fetch = originalFetch;
     process.env = originalEnv;
     jest.clearAllMocks();
   });
@@ -32,14 +31,11 @@ describe('feedback', () => {
   it('sends anonymous feedback when no config exists', async () => {
     await feedback('Great tool!');
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://app.walkeros.io/api/feedback',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: 'Great tool!' }),
-      },
-    );
+    expect(mockPublicFetch).toHaveBeenCalledWith('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'Great tool!' }),
+    });
   });
 
   it('sends anonymous feedback when config has anonymousFeedback=true', async () => {
@@ -52,7 +48,7 @@ describe('feedback', () => {
 
     await feedback('Nice!');
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const body = JSON.parse(mockPublicFetch.mock.calls[0][1].body);
     expect(body).toEqual({ text: 'Nice!' });
     expect(body.userId).toBeUndefined();
     expect(body.projectId).toBeUndefined();
@@ -69,7 +65,7 @@ describe('feedback', () => {
 
     await feedback('Bug report');
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const body = JSON.parse(mockPublicFetch.mock.calls[0][1].body);
     expect(body).toEqual({
       text: 'Bug report',
       userId: 'user@example.com',
@@ -87,7 +83,7 @@ describe('feedback', () => {
 
     await feedback('Force anon', { anonymous: true });
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const body = JSON.parse(mockPublicFetch.mock.calls[0][1].body);
     expect(body).toEqual({ text: 'Force anon' });
     expect(body.userId).toBeUndefined();
   });
@@ -101,24 +97,22 @@ describe('feedback', () => {
 
     await feedback('Default anon');
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const body = JSON.parse(mockPublicFetch.mock.calls[0][1].body);
     expect(body).toEqual({ text: 'Default anon' });
     expect(body.userId).toBeUndefined();
   });
 
-  it('uses resolveAppUrl for the endpoint', async () => {
-    mockResolveAppUrl.mockReturnValue('https://custom.example.com');
-
+  it('sends to the correct path', async () => {
     await feedback('Test');
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://custom.example.com/api/feedback',
+    expect(mockPublicFetch).toHaveBeenCalledWith(
+      '/api/feedback',
       expect.any(Object),
     );
   });
 
   it('throws on non-ok response', async () => {
-    mockFetch.mockResolvedValue({
+    mockPublicFetch.mockResolvedValue({
       ok: false,
       status: 500,
       statusText: 'Internal Server Error',
@@ -140,7 +134,7 @@ describe('feedback', () => {
 
     await feedback('No project');
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const body = JSON.parse(mockPublicFetch.mock.calls[0][1].body);
     expect(body).toEqual({
       text: 'No project',
       userId: 'user@example.com',

@@ -1,9 +1,6 @@
 import { createApiClient } from '../../core/api-client.js';
-import {
-  authenticatedFetch,
-  requireProjectId,
-  resolveBaseUrl,
-} from '../../core/auth.js';
+import { requireProjectId } from '../../core/auth.js';
+import { apiFetch } from '../../core/http.js';
 import { ApiError, throwApiError } from '../../core/api-error.js';
 import { parseSSEEvents } from '../../core/sse.js';
 import { createCLILogger } from '../../core/cli-logger.js';
@@ -69,11 +66,10 @@ export async function streamDeploymentStatus(
     onStatus?: (status: string, substatus: string | null) => void;
   },
 ): Promise<DeploymentResult> {
-  const base = resolveBaseUrl();
   const timeoutMs = options.timeout ?? 120_000;
 
-  const response = await authenticatedFetch(
-    `${base}/api/projects/${projectId}/deployments/${deploymentId}/stream`,
+  const response = await apiFetch(
+    `/api/projects/${projectId}/deployments/${deploymentId}/stream`,
     {
       headers: { Accept: 'text/event-stream' },
       signal: options.signal ?? AbortSignal.timeout(timeoutMs),
@@ -195,11 +191,10 @@ async function deploySettings(options: {
   onStatus?: (status: string, substatus: string | null) => void;
 }) {
   const { flowId, projectId, settingsId } = options;
-  const base = resolveBaseUrl();
 
   // 1. Trigger per-settings deploy
-  const response = await authenticatedFetch(
-    `${base}/api/projects/${projectId}/flows/${flowId}/settings/${settingsId}/deploy`,
+  const response = await apiFetch(
+    `/api/projects/${projectId}/flows/${flowId}/settings/${settingsId}/deploy`,
     { method: 'POST' },
   );
   if (!response.ok) {
@@ -233,9 +228,8 @@ export async function getDeployment(options: {
       projectId,
       flowName: options.flowName,
     });
-    const base = resolveBaseUrl();
-    const response = await authenticatedFetch(
-      `${base}/api/projects/${projectId}/flows/${options.flowId}/settings/${settingsId}/deploy`,
+    const response = await apiFetch(
+      `/api/projects/${projectId}/flows/${options.flowId}/settings/${settingsId}/deploy`,
     );
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
