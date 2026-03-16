@@ -45,8 +45,17 @@ const { elb } = await startFlow({
   },
 });`;
 
+const mcpCode = `{
+  "mcpServers": {
+    "walkeros": {
+      "command": "npx",
+      "args": ["-y", "@walkeros/mcp"]
+    }
+  }
+}`;
+
 export default function GettingStarted() {
-  const [mode, setMode] = useState<'bundled' | 'integrated'>('bundled');
+  const [mode, setMode] = useState<'bundled' | 'integrated' | 'mcp'>('bundled');
 
   return (
     <div
@@ -106,6 +115,21 @@ export default function GettingStarted() {
             >
               Integrated
             </button>
+            <button
+              onClick={() => setMode('mcp')}
+              className={`px-6 py-2 rounded-full font-semibold transition-colors ${
+                mode === 'mcp'
+                  ? 'bg-[#01b5e2] text-white'
+                  : 'bg-transparent border border-gray-400 hover:border-[#01b5e2]'
+              }`}
+              style={
+                mode !== 'mcp'
+                  ? { color: 'var(--color-base-content)' }
+                  : undefined
+              }
+            >
+              MCP
+            </button>
           </div>
 
           {/* Mode description */}
@@ -115,7 +139,9 @@ export default function GettingStarted() {
           >
             {mode === 'bundled'
               ? 'Build a standalone script from JSON config with npx walkeros'
-              : 'Import directly into your TypeScript application'}
+              : mode === 'integrated'
+                ? 'Import directly into your TypeScript application'
+                : 'Use AI assistants like Claude to set up and manage tracking via MCP'}
           </p>
 
           {/* Code editor */}
@@ -124,9 +150,20 @@ export default function GettingStarted() {
             tabs={[
               {
                 id: 'file',
-                label: mode === 'bundled' ? 'flow.json' : 'tracking.ts',
-                code: mode === 'bundled' ? bundledCode : integratedCode,
-                language: mode === 'bundled' ? 'json' : 'typescript',
+                label:
+                  mode === 'bundled'
+                    ? 'flow.json'
+                    : mode === 'integrated'
+                      ? 'tracking.ts'
+                      : 'mcp_config.json',
+                code:
+                  mode === 'bundled'
+                    ? bundledCode
+                    : mode === 'integrated'
+                      ? integratedCode
+                      : mcpCode,
+                language:
+                  mode === 'bundled' || mode === 'mcp' ? 'json' : 'typescript',
               },
             ]}
             disabled
@@ -141,20 +178,28 @@ export default function GettingStarted() {
               to={
                 mode === 'bundled'
                   ? '/docs/getting-started/modes/bundled/'
-                  : '/docs/getting-started/modes/integrated/'
+                  : mode === 'integrated'
+                    ? '/docs/getting-started/modes/integrated/'
+                    : '/docs/apps/mcp/'
               }
               className="text-lg font-semibold"
               style={{ color: 'var(--color-base-content)' }}
               {...tagger
                 .action(
                   'click',
-                  mode === 'bundled' ? 'bundled-docs' : 'integrated-docs',
+                  mode === 'bundled'
+                    ? 'bundled-docs'
+                    : mode === 'integrated'
+                      ? 'integrated-docs'
+                      : 'mcp-docs',
                 )
                 .get()}
             >
               {mode === 'bundled'
                 ? 'Install walkerOS CLI'
-                : 'Install npm packages'}{' '}
+                : mode === 'integrated'
+                  ? 'Install npm packages'
+                  : 'Install MCP server'}{' '}
               <span aria-hidden="true">→</span>
             </Link>
           </div>
