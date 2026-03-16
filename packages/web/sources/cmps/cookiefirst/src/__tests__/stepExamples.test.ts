@@ -1,36 +1,46 @@
+import type { WalkerOS } from '@walkeros/core';
+import { sourceCookieFirst } from '../index';
 import { examples } from '../dev';
-import {
-  createMockElb,
-  createMockWindow,
-  createCookieFirstSource,
-  ConsentCall,
-} from './test-utils';
 
 describe('Step Examples', () => {
-  let consentCalls: ConsentCall[];
-  let mockElb: ReturnType<typeof createMockElb>;
-
   beforeEach(() => {
-    consentCalls = [];
-    mockElb = createMockElb(consentCalls);
+    (window as unknown as Record<string, unknown>).CookieFirst = undefined;
+  });
+
+  afterEach(() => {
+    (window as unknown as Record<string, unknown>).CookieFirst = undefined;
   });
 
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
-    const consent = example.in as Record<string, boolean>;
-    const expected = example.out as Record<string, boolean>;
-    const config = example.mapping as Record<string, unknown> | undefined;
+    const content = example.in as Record<string, boolean>;
+    const expected = example.out as WalkerOS.Consent;
+    const mapping = example.mapping as
+      | { settings?: Record<string, unknown> }
+      | undefined;
 
-    // Init source with the consent already set
-    const mockWindow = createMockWindow(consent as never);
-    await createCookieFirstSource(mockWindow, mockElb, config);
+    const instance = await examples.createTrigger({
+      consent: {},
+      sources: {
+        cookiefirst: {
+          code: sourceCookieFirst,
+          config: {
+            settings: {
+              ...(mapping?.settings || {}),
+            },
+          },
+        },
+      },
+    });
 
-    // Dispatch cf_init to trigger consent processing
-    (
-      mockWindow as unknown as { __dispatchEvent: (e: string) => void }
-    ).__dispatchEvent('cf_init');
+    await instance.trigger()(content as never);
 
-    expect(consentCalls.length).toBeGreaterThan(0);
-    const lastConsent = consentCalls[consentCalls.length - 1].consent;
-    expect(lastConsent).toEqual(expected);
+    // CMP sources push walker consent — check collector state
+    // Yield for detached elb('walker consent') chain
+    while (!Object.keys(instance.flow!.collector.consent || {}).length)
+      await Promise.resolve();
+
+    expect(instance.flow!.collector.consent).toEqual(
+      expect.objectContaining(expected),
+    );
   });
 });

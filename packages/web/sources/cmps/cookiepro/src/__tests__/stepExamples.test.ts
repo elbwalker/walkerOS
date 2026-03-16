@@ -1,40 +1,55 @@
+import type { WalkerOS } from '@walkeros/core';
+import { sourceCookiePro } from '../index';
 import { examples } from '../dev';
-import {
-  createMockElb,
-  createMockWindow,
-  createCookieProSource,
-  ConsentCall,
-} from './test-utils';
 
 describe('Step Examples', () => {
-  let consentCalls: ConsentCall[];
-  let mockElb: ReturnType<typeof createMockElb>;
-
   beforeEach(() => {
-    consentCalls = [];
-    mockElb = createMockElb(consentCalls);
+    const win = window as unknown as Record<string, unknown>;
+    win.OptanonActiveGroups = undefined;
+    win.OneTrust = undefined;
+    win.Optanon = undefined;
+    win.OptanonWrapper = undefined;
+    (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
+  });
+
+  afterEach(() => {
+    const win = window as unknown as Record<string, unknown>;
+    win.OptanonActiveGroups = undefined;
+    win.OneTrust = undefined;
+    win.Optanon = undefined;
+    win.OptanonWrapper = undefined;
+    (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
   });
 
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
-    const activeGroups = example.in as string;
-    const expected = example.out as Record<string, boolean>;
+    const expected = example.out as WalkerOS.Consent;
+    const mapping = example.mapping as Record<string, unknown> | undefined;
 
-    // Init source with SDK loaded and active groups set
-    const mockWindow = createMockWindow({
-      sdkLoaded: true,
-      alertBoxClosed: true,
-      activeGroups,
+    const instance = await examples.createTrigger({
+      consent: {},
+      sources: {
+        cookiepro: {
+          code: sourceCookiePro,
+          config: {
+            settings: {
+              ...(mapping?.categoryMap
+                ? { categoryMap: mapping.categoryMap }
+                : {}),
+            },
+          },
+        },
+      },
     });
 
-    // Pass config settings from mapping field if present
-    const config = example.mapping
-      ? { settings: example.mapping as Record<string, unknown> }
-      : undefined;
+    await instance.trigger()(example.in as string);
 
-    await createCookieProSource(mockWindow, mockElb, config);
+    // CMP sources push walker consent — check collector state
+    // Yield for detached elb('walker consent') chain
+    while (!Object.keys(instance.flow!.collector.consent || {}).length)
+      await Promise.resolve();
 
-    expect(consentCalls.length).toBeGreaterThan(0);
-    const lastConsent = consentCalls[consentCalls.length - 1].consent;
-    expect(lastConsent).toEqual(expected);
+    expect(instance.flow!.collector.consent).toEqual(
+      expect.objectContaining(expected),
+    );
   });
 });

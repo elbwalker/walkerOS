@@ -1,53 +1,70 @@
-import type { Source, Collector } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import type { Destination, WalkerOS } from '@walkeros/core';
 import { sourceCloudFunction } from '../index';
-import type { Types } from '../types';
 import { examples } from '../../dev';
 import type { Content } from '../examples/trigger';
 
-function createSourceContext(
-  env: Partial<Types['env']> = {},
-): Source.Context<Types> {
-  return {
-    config: {},
-    env: env as Types['env'],
-    logger: env.logger || createMockLogger(),
-    id: 'test-cloudfunction',
-    collector: {} as Collector.Instance,
-    setIngest: jest.fn().mockResolvedValue(undefined),
-    setRespond: jest.fn(),
-  };
-}
-
 describe('Step Examples', () => {
-  let mockPush: jest.Mock;
+  let shutdown: (() => Promise<void>) | undefined;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockPush = jest
-      .fn()
-      .mockResolvedValue({ event: { id: 'test-id' }, ok: true });
+  afterEach(async () => {
+    if (shutdown) await shutdown();
+    shutdown = undefined;
   });
 
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
-    const source = await sourceCloudFunction(
-      createSourceContext({
-        push: mockPush as never,
-        command: jest.fn() as never,
-        elb: jest.fn() as never,
-        logger: createMockLogger(),
+    const content = example.in as Content;
+    const expected = example.out as {
+      name: string;
+      data?: Record<string, unknown>;
+      entity?: string;
+      action?: string;
+    };
+
+    // Spy destination captures events after full collector processing
+    const events: WalkerOS.Event[] = [];
+    const spyDestination: Destination.Instance = {
+      type: 'spy',
+      config: { init: true },
+      push: jest.fn((event: WalkerOS.Event) => {
+        events.push(JSON.parse(JSON.stringify(event)));
       }),
-    );
+    };
 
-    const trigger = examples.createTrigger(source);
-    const result = await trigger(example.in as Content);
+    const instance = await examples.createTrigger({
+      consent: { functional: true },
+      sources: {
+        cloudfunction: {
+          code: sourceCloudFunction,
+          config: { settings: {} },
+        },
+      },
+      destinations: {
+        spy: { code: spyDestination },
+      },
+    });
 
-    const expected = example.out as { name: string; data?: unknown };
+    // Register shutdown for cleanup
+    shutdown = async () => {
+      if (instance.flow) await instance.flow.collector.command('shutdown');
+    };
 
+    const result = await instance.trigger()(content);
+
+    // HTTP response should be 200
     expect(result.status).toBe(200);
-    expect(mockPush).toHaveBeenCalled();
-    const pushedData = mockPush.mock.calls[0][0];
-    expect(pushedData.name).toBe(expected.name);
-    if (expected.data) expect(pushedData.data).toEqual(expected.data);
+
+    // Events should be captured by spy destination
+    const found = events.find((e) => e.name === expected.name);
+    expect(found).toBeDefined();
+
+    if (expected.data) {
+      expect(found!.data).toEqual(expect.objectContaining(expected.data));
+    }
+    if (expected.entity) {
+      expect(found!.entity).toBe(expected.entity);
+    }
+    if (expected.action) {
+      expect(found!.action).toBe(expected.action);
+    }
   });
 });

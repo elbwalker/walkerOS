@@ -1,6 +1,7 @@
 import type { Flow } from '@walkeros/core';
 
 export const postEvent: Flow.StepExample = {
+  trigger: { type: 'POST' },
   in: {
     method: 'POST',
     body: {
@@ -18,6 +19,7 @@ export const postEvent: Flow.StepExample = {
 };
 
 export const orderEvent: Flow.StepExample = {
+  trigger: { type: 'POST' },
   in: {
     method: 'POST',
     body: {

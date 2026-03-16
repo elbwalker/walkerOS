@@ -1,43 +1,57 @@
-import { startFlow } from '@walkeros/collector';
-import type { WalkerOS, Collector } from '@walkeros/core';
-import { createMockPush, createDataLayerSource } from './test-utils';
+import type { Destination, WalkerOS } from '@walkeros/core';
+import { sourceDataLayer } from '../index';
 import { examples } from '../dev';
 
 describe('Step Examples', () => {
-  let collectedEvents: WalkerOS.Event[];
-  let collector: Collector.Instance;
+  beforeEach(() => {
+    (window as unknown as { dataLayer?: unknown[] }).dataLayer = undefined;
+  });
 
-  beforeEach(async () => {
-    (window as Record<string, unknown>).dataLayer = [];
-    collectedEvents = [];
-
-    const mockPush = createMockPush(collectedEvents);
-
-    ({ collector } = await startFlow({
-      tagging: 2,
-    }));
-
-    collector.push = mockPush;
+  afterEach(() => {
+    (window as unknown as { dataLayer?: unknown[] }).dataLayer = undefined;
   });
 
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
-    await createDataLayerSource(collector);
-
     const expected = example.out as {
       name: string;
-      data?: unknown;
-      entity: string;
-      action: string;
+      data?: Record<string, unknown>;
+      entity?: string;
+      action?: string;
     };
 
-    // Push the example input to dataLayer via trigger
-    examples.trigger(example.in, { window, document, localStorage });
+    const events: WalkerOS.Event[] = [];
+    const spyDestination: Destination.Instance = {
+      type: 'spy',
+      config: { init: true },
+      push: jest.fn((event: WalkerOS.Event) => {
+        events.push(JSON.parse(JSON.stringify(event)));
+      }),
+    };
 
-    expect(collectedEvents.length).toBeGreaterThan(0);
-    const event = collectedEvents[collectedEvents.length - 1];
-    expect(event.name).toBe(expected.name);
-    expect(event.entity).toBe(expected.entity);
-    expect(event.action).toBe(expected.action);
-    if (expected.data) expect(event.data).toEqual(expected.data);
+    const instance = await examples.createTrigger({
+      consent: { functional: true },
+      sources: {
+        dataLayer: {
+          code: sourceDataLayer,
+          config: { settings: {} },
+        },
+      },
+      destinations: { spy: { code: spyDestination } },
+    });
+
+    await instance.trigger()(example.in);
+
+    // DataLayer interceptor pushes via tryCatch — may be detached
+    while (!events.find((e) => e.name === expected.name))
+      await Promise.resolve();
+
+    const found = events.find((e) => e.name === expected.name);
+    expect(found).toBeDefined();
+
+    if (expected.data) {
+      expect(found!.data).toEqual(expect.objectContaining(expected.data));
+    }
+    if (expected.entity) expect(found!.entity).toBe(expected.entity);
+    if (expected.action) expect(found!.action).toBe(expected.action);
   });
 });
