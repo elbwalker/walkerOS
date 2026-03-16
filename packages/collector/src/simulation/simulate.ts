@@ -1,4 +1,4 @@
-import type { Simulation, WalkerOS } from '@walkeros/core';
+import type { Collector, Simulation, WalkerOS } from '@walkeros/core';
 import { startFlow } from '../flow';
 import { wrapEnv } from '../wrapEnv';
 import type { SimulateParams } from './types';
@@ -105,7 +105,7 @@ async function runSourceWithCreateTrigger(
   const events: WalkerOS.DeepPartialEvent[] = [];
 
   // Build initConfig for createTrigger — full config with spy wiring
-  const fullConfig = {
+  const fullConfig: Collector.InitConfig = {
     consent: consent || ALL_CONSENT,
     sources: {
       sim: { code, config, next: 'spy' },
@@ -125,7 +125,7 @@ async function runSourceWithCreateTrigger(
   };
 
   // createTrigger — startFlow is lazy, deferred to first trigger() call
-  const { trigger } = await factory!(fullConfig as any);
+  const { trigger } = await factory!(fullConfig);
 
   // Fire trigger with content — startFlow runs on first invocation
   if (content !== undefined) {
