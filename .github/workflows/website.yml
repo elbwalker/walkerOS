@@ -47,7 +47,7 @@ jobs:
           DOCUSAURUS_BASEURL: /preview/pr-${{ github.event.pull_request.number }}/
 
       - name: Deploy to production
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         working-directory: website
         run: node scripts/deploy-bunny.mjs
         env:
