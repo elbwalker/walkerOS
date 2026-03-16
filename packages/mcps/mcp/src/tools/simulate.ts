@@ -23,7 +23,17 @@ export function registerFlowSimulateTool(server: McpServer) {
         'Use package_get on your source to check its output shape. ' +
         'Use the example parameter to load event input from a step example and compare output.',
       inputSchema: {
-        ...schemas.SimulateInputShape,
+        configPath: schemas.SimulateInputShape.configPath,
+        event: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe(
+            'Event object, e.g. { name: "page view", data: { title: "Home" } }. At minimum needs name and data.',
+          ),
+        flow: schemas.SimulateInputShape.flow,
+        platform: schemas.SimulateInputShape.platform,
+        example: schemas.SimulateInputShape.example,
+        step: schemas.SimulateInputShape.step,
         verbose: z
           .boolean()
           .optional()

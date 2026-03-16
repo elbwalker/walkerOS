@@ -1,0 +1,85 @@
+import type { Collector, Logger, Transformer, WalkerOS } from '@walkeros/core';
+import type { RespondFn, RespondOptions } from '@walkeros/core';
+import { createMockStore } from '@walkeros/store-memory';
+import { transformerFile } from '../transformer';
+import type { Types } from '../types';
+import { examples } from '../dev';
+
+describe('Step Examples', () => {
+  const mockLogger: Logger.Instance = {
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
+    throw: jest.fn() as unknown as Logger.ThrowFn,
+    json: jest.fn(),
+    scope: jest.fn().mockReturnThis(),
+  };
+
+  const mockCollector = {} as Collector.Instance;
+
+  const createInitContext = (
+    config: Transformer.Config<Types>,
+    env: Partial<Transformer.Env<Types>> = {},
+  ): Transformer.Context<Types> => ({
+    collector: mockCollector,
+    config,
+    env: env as Transformer.Env<Types>,
+    logger: mockLogger,
+    id: 'test-file',
+  });
+
+  const createPushContext = (
+    ingest: Record<string, unknown> = {},
+    respond?: RespondFn,
+  ): Transformer.Context<Types> => ({
+    collector: mockCollector,
+    config: {},
+    env: respond ? { respond } : {},
+    logger: mockLogger,
+    id: 'test-file',
+    ingest,
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it.each(Object.entries(examples.step))('%s', async (name, example) => {
+    const event = example.in as WalkerOS.DeepPartialEvent;
+
+    // Create store with a file matching the example path
+    const store = createMockStore();
+    store.set('walker.js', Buffer.from('console.log("walkerOS")'));
+
+    const transformer = await transformerFile(
+      createInitContext(
+        {
+          settings: {
+            prefix: '/static',
+            headers: { 'Cache-Control': 'public, max-age=3600' },
+          },
+        },
+        { store },
+      ),
+    );
+
+    let capturedOptions: RespondOptions | undefined;
+    const respond: RespondFn = (options) => {
+      capturedOptions = options;
+    };
+
+    const result = await transformer.push(
+      event,
+      createPushContext({ path: '/static/walker.js' }, respond),
+    );
+
+    // File transformer returns false when it serves a file (stops the chain)
+    expect(result).toBe(example.out);
+    expect(capturedOptions).toBeDefined();
+    expect(capturedOptions!.status).toBe(200);
+    expect(capturedOptions!.headers).toMatchObject({
+      'Content-Type': 'application/javascript',
+    });
+  });
+});
