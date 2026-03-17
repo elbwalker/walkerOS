@@ -327,6 +327,14 @@ export async function bundleCore(
       buildOptions.packages['@walkeros/collector'] = {};
     }
 
+    // Step 1.6: Auto-add step packages (sources, destinations, transformers, stores)
+    const stepPackages = collectStepPackages(flowSettings);
+    for (const pkg of stepPackages) {
+      if (!buildOptions.packages[pkg]) {
+        buildOptions.packages[pkg] = {};
+      }
+    }
+
     // Step 2: Download packages
     logger.debug('Downloading packages');
     // Convert packages object to array format expected by downloadPackages
@@ -740,6 +748,38 @@ export function detectStorePackages(flowSettings: Flow.Settings): Set<string> {
   }
 
   return storePackages;
+}
+
+/**
+ * Collects all npm package names declared in flow steps.
+ * Filters out local paths (starting with . or /) — only npm packages.
+ * Used to auto-add step packages to buildOptions.packages.
+ */
+export function collectStepPackages(flowSettings: Flow.Settings): Set<string> {
+  const allPackages = new Set<string>();
+
+  for (const pkg of detectSourcePackages(flowSettings)) {
+    allPackages.add(pkg);
+  }
+  for (const pkg of detectDestinationPackages(flowSettings)) {
+    allPackages.add(pkg);
+  }
+  for (const pkg of detectTransformerPackages(flowSettings)) {
+    allPackages.add(pkg);
+  }
+  for (const pkg of detectStorePackages(flowSettings)) {
+    allPackages.add(pkg);
+  }
+
+  // Filter: only npm packages, not local paths
+  const npmPackages = new Set<string>();
+  for (const pkg of allPackages) {
+    if (!pkg.startsWith('.') && !pkg.startsWith('/')) {
+      npmPackages.add(pkg);
+    }
+  }
+
+  return npmPackages;
 }
 
 /**

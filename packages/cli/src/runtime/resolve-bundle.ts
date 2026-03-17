@@ -1,10 +1,11 @@
 /**
  * Resolve bundle input to a local file path
  *
- * Supports three input sources (checked in priority order):
- * 1. Stdin pipe   - data piped into the process
- * 2. URL          - BUNDLE env var is an http(s) URL
- * 3. File path    - BUNDLE env var is a local path (default)
+ * Priority order:
+ * 1. File path (exists) - BUNDLE points to an existing local file
+ * 2. URL                - BUNDLE is an http(s) URL → fetch and write to disk
+ * 3. Stdin              - data piped into the process
+ * 4. File path (fallback) - BUNDLE path that doesn't exist yet
  */
 
 import { existsSync, writeFileSync } from 'fs';
@@ -80,16 +81,17 @@ export async function resolveBundle(
     return { path: bundleEnv, source: 'file' };
   }
 
-  // 2. Stdin pipe (only when BUNDLE doesn't point to a file)
-  if (isStdinPiped()) {
-    const path = await readBundleFromStdin();
-    return { path, source: 'stdin' };
-  }
-
-  // 3. URL detection
+  // 2. URL — check before stdin to avoid false stdin detection in containers
+  //    (process.stdin.isTTY is undefined in non-interactive shells/Docker)
   if (isUrl(bundleEnv)) {
     const path = await fetchBundle(bundleEnv);
     return { path, source: 'url' };
+  }
+
+  // 3. Stdin pipe (only when BUNDLE is not a file or URL)
+  if (isStdinPiped()) {
+    const path = await readBundleFromStdin();
+    return { path, source: 'stdin' };
   }
 
   // 4. File path (fallback — file may not exist yet for config paths)
