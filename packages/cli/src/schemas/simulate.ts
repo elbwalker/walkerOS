@@ -41,7 +41,9 @@ export type SimulateOptions = z.infer<typeof SimulateOptionsSchema>;
  * rather than ZodObject instances. Define shape first, then wrap.
  */
 export const SimulateInputShape = {
-  configPath: FilePathSchema.describe('Path to flow configuration file'),
+  configPath: FilePathSchema.describe(
+    'Path to flow configuration file, URL, or inline JSON string',
+  ),
   event: z
     .string()
     .min(1)

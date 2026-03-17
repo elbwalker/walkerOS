@@ -179,4 +179,25 @@ describe('flow_validate tool', () => {
       path: 'destinations.snowplow',
     });
   });
+
+  it('accepts entry type in output when path is used', async () => {
+    const mockResult = {
+      valid: true,
+      type: 'entry',
+      errors: [],
+      warnings: [],
+      details: { schema: 'destinations.snowplow' },
+    };
+    mockValidate.mockResolvedValue(mockResult);
+
+    const tool = server.getTool('flow_validate');
+    const result = await tool.handler({
+      type: 'flow',
+      input: '/path/to/flow.json',
+      path: 'destinations.snowplow',
+    });
+
+    expect(result.structuredContent).toEqual(mockResult);
+    expect(result.content[0].text).toBe('Valid');
+  });
 });

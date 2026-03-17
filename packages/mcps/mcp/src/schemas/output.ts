@@ -5,7 +5,7 @@ export const ValidateOutputShape = {
   valid: z.boolean().describe('Whether validation passed'),
   type: z
     .union([
-      z.enum(['contract', 'event', 'flow', 'mapping']),
+      z.enum(['contract', 'entry', 'event', 'flow', 'mapping']),
       z.string().regex(/^(destinations|sources|transformers)\.\w+$/),
     ])
     .describe('What was validated'),

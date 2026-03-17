@@ -3,6 +3,8 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { feedback, readConfig, writeConfig } from '@walkeros/cli';
 import { mcpResult, mcpError } from '@walkeros/core';
 
+declare const __VERSION__: string;
+
 export function registerFeedbackTool(server: McpServer) {
   server.registerTool(
     'feedback',
@@ -56,7 +58,7 @@ export function registerFeedbackTool(server: McpServer) {
         // Use explicit override if provided, otherwise use stored value
         const isAnonymous = explicitAnonymous ?? anonymous ?? true;
 
-        await feedback(text, { anonymous: isAnonymous });
+        await feedback(text, { anonymous: isAnonymous, version: __VERSION__ });
 
         return mcpResult({ ok: true }, 'Feedback sent. Thanks!');
       } catch (error) {

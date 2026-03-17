@@ -288,7 +288,7 @@ export function registerApiTool(server: McpServer) {
               signal: combinedAbort.signal,
             });
             timeoutSignal.removeEventListener('abort', onAbort);
-            extra.signal.removeEventListener('abort', onAbort);
+            extra.signal?.removeEventListener('abort', onAbort);
             const st = (data as Record<string, unknown>).status;
             const deployData = data as Record<string, unknown>;
             if (st === 'failed') {

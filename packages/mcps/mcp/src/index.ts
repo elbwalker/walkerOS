@@ -61,7 +61,7 @@ Key rules:
 
 ## Getting Started
 
-1. \`flow_load({ platform: "web" })\` or \`flow_load({ source: "./flow.json" })\` — create or load a flow
+1. \`flow_load({ platform: "web" })\` or \`flow_load({ source: "./flow.json" })\` — create or load a flow (also accepts inline JSON strings or URLs)
 2. \`package_search({ type: "destination", platform: "web" })\` — discover available packages
 3. Use the \`add-step\` prompt to add sources, destinations, transformers, or stores
 4. Use the \`setup-mapping\` prompt to configure event transformations

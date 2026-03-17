@@ -1,3 +1,6 @@
+// @ts-expect-error — __VERSION__ is injected by tsup at build time
+globalThis.__VERSION__ = '0.0.0-test';
+
 import { registerFeedbackTool } from '../../tools/feedback.js';
 
 jest.mock('@walkeros/cli', () => ({
@@ -66,6 +69,24 @@ describe('feedback tool', () => {
     });
   });
 
+  it('passes version to feedback function', async () => {
+    mockReadConfig.mockReturnValue({
+      token: 't',
+      email: 'e',
+      appUrl: 'u',
+      anonymousFeedback: true,
+    });
+    mockFeedback.mockResolvedValue(undefined);
+
+    const tool = server.getTool('feedback');
+    await tool.handler({ text: 'Test feedback' });
+
+    expect(mockFeedback).toHaveBeenCalledWith('Test feedback', {
+      anonymous: true,
+      version: '0.0.0-test',
+    });
+  });
+
   it('calls feedback with anonymous: true when config has anonymousFeedback: true', async () => {
     mockReadConfig.mockReturnValue({
       token: 't',
@@ -80,6 +101,7 @@ describe('feedback tool', () => {
 
     expect(mockFeedback).toHaveBeenCalledWith('Great tool!', {
       anonymous: true,
+      version: '0.0.0-test',
     });
     expect(result.structuredContent).toEqual({ ok: true });
     expect(result.content[0].text).toBe('Feedback sent. Thanks!');
@@ -99,6 +121,7 @@ describe('feedback tool', () => {
 
     expect(mockFeedback).toHaveBeenCalledWith('Needs improvement', {
       anonymous: false,
+      version: '0.0.0-test',
     });
     expect(result.structuredContent).toEqual({ ok: true });
   });
@@ -139,6 +162,7 @@ describe('feedback tool', () => {
     });
     expect(mockFeedback).toHaveBeenCalledWith('Feedback with consent', {
       anonymous: true,
+      version: '0.0.0-test',
     });
     expect(result.structuredContent).toEqual({ ok: true });
   });
@@ -178,6 +202,7 @@ describe('feedback tool', () => {
     });
     expect(mockFeedback).toHaveBeenCalledWith('No config feedback', {
       anonymous: false,
+      version: '0.0.0-test',
     });
     expect(result.structuredContent).toEqual({ ok: true });
   });
@@ -206,6 +231,7 @@ describe('feedback tool', () => {
 
     expect(mockFeedback).toHaveBeenCalledWith('Override test', {
       anonymous: false,
+      version: '0.0.0-test',
     });
   });
 });

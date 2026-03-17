@@ -18,7 +18,9 @@ export function registerFlowExamplesTool(server: McpServer) {
         configPath: z
           .string()
           .min(1)
-          .describe('Path to flow configuration file'),
+          .describe(
+            'Path to flow configuration file, URL, or inline JSON string',
+          ),
         flow: z
           .string()
           .optional()

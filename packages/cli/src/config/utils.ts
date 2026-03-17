@@ -97,10 +97,15 @@ export function substituteEnvVariables(value: string): string {
 }
 
 /**
- * Load and parse JSON configuration file from local path or URL.
+ * Load and parse JSON configuration from a file path, URL, or inline JSON string.
  *
- * @param configPath - Path to JSON file or HTTP/HTTPS URL
- * @returns Parsed configuration object and cleanup function
+ * Detection priority:
+ * 1. URL (http://, https://) — download and parse
+ * 2. Existing file path — read and parse
+ * 3. Inline JSON string (starting with { or [) — parse directly
+ *
+ * @param configPath - Path to JSON file, HTTP/HTTPS URL, or inline JSON string
+ * @returns Parsed configuration object
  * @throws Error if file not found, download fails, or invalid JSON
  *
  * @example
@@ -110,36 +115,25 @@ export function substituteEnvVariables(value: string): string {
  *
  * // Remote URL
  * const config = await loadJsonConfig('https://example.com/config.json')
+ *
+ * // Inline JSON
+ * const config = await loadJsonConfig('{"version":3,"flows":{}}')
  * ```
  */
 export async function loadJsonConfig<T>(configPath: string): Promise<T> {
-  let absolutePath: string;
-  let isTemporary = false;
+  const trimmed = configPath.trim();
 
-  // Check if input is a URL
-  if (isUrl(configPath)) {
-    // Download from URL to temp location
-    absolutePath = await downloadFromUrl(configPath);
-    isTemporary = true;
-  } else {
-    // Local file path
-    absolutePath = path.resolve(configPath);
-
-    if (!(await fs.pathExists(absolutePath))) {
-      throw new Error(`Configuration file not found: ${absolutePath}`);
-    }
-  }
-
-  try {
-    const rawConfig = await fs.readJson(absolutePath);
-    return rawConfig as T;
-  } catch (error) {
-    throw new Error(
-      `Invalid JSON in config file: ${configPath}. ${error instanceof Error ? error.message : error}`,
-    );
-  } finally {
-    // Clean up temporary downloaded file
-    if (isTemporary) {
+  // 1. Check if input is a URL
+  if (isUrl(trimmed)) {
+    const absolutePath = await downloadFromUrl(trimmed);
+    try {
+      const rawConfig = await fs.readJson(absolutePath);
+      return rawConfig as T;
+    } catch (error) {
+      throw new Error(
+        `Invalid JSON in config file: ${configPath}. ${error instanceof Error ? error.message : error}`,
+      );
+    } finally {
       try {
         await fs.remove(absolutePath);
       } catch {
@@ -147,6 +141,33 @@ export async function loadJsonConfig<T>(configPath: string): Promise<T> {
       }
     }
   }
+
+  // 2. Check if file path exists
+  const absolutePath = path.resolve(trimmed);
+  if (await fs.pathExists(absolutePath)) {
+    try {
+      const rawConfig = await fs.readJson(absolutePath);
+      return rawConfig as T;
+    } catch (error) {
+      throw new Error(
+        `Invalid JSON in config file: ${configPath}. ${error instanceof Error ? error.message : error}`,
+      );
+    }
+  }
+
+  // 3. Try inline JSON (for sandboxed environments where file paths don't resolve)
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      return JSON.parse(trimmed) as T;
+    } catch (jsonError) {
+      throw new Error(
+        `Input appears to be JSON but contains errors: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`,
+      );
+    }
+  }
+
+  // 4. Nothing matched — file not found
+  throw new Error(`Configuration file not found: ${absolutePath}`);
 }
 
 /**

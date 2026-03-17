@@ -40,7 +40,7 @@ export type BundleOptions = z.infer<typeof BundleOptionsSchema>;
  */
 export const BundleInputShape = {
   configPath: FilePathSchema.describe(
-    'Path to flow configuration file (JSON or JavaScript)',
+    'Path to flow configuration file (JSON or JavaScript), URL, or inline JSON string',
   ),
   flow: z.string().optional().describe('Flow name for multi-flow configs'),
   stats: z

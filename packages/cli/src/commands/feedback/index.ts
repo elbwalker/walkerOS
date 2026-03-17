@@ -7,6 +7,7 @@ import { createCLILogger } from '../../core/cli-logger.js';
 
 export interface FeedbackOptions {
   anonymous?: boolean;
+  version?: string;
 }
 
 export async function feedback(
@@ -21,7 +22,12 @@ export async function feedback(
     text: string;
     userId?: string;
     projectId?: string;
+    version?: string;
   } = { text };
+
+  if (options?.version) {
+    payload.version = options.version;
+  }
 
   if (!anonymous && config?.email) {
     payload.userId = config.email;

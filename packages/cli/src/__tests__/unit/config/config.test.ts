@@ -55,6 +55,36 @@ describe('Config utilities', () => {
         'Invalid JSON in config file',
       );
     });
+
+    it('parses inline JSON object strings', async () => {
+      const json = '{"version":3,"flows":{"default":{"web":{}}}}';
+      const result = await loadJsonConfig(json);
+      expect(result).toEqual({ version: 3, flows: { default: { web: {} } } });
+    });
+
+    it('parses inline JSON with whitespace', async () => {
+      const json = '  { "version": 3 }  ';
+      const result = await loadJsonConfig(json);
+      expect(result).toEqual({ version: 3 });
+    });
+
+    it('throws helpful error for malformed JSON-like strings', async () => {
+      await expect(loadJsonConfig('{ broken json')).rejects.toThrow(
+        /appears to be JSON/,
+      );
+    });
+
+    it('throws for non-existent file paths', async () => {
+      await expect(
+        loadJsonConfig('/tmp/does-not-exist-xyz.json'),
+      ).rejects.toThrow(/not found/);
+    });
+
+    it('parses inline JSON arrays', async () => {
+      const json = '[{"name":"test"}]';
+      const result = await loadJsonConfig(json);
+      expect(result).toEqual([{ name: 'test' }]);
+    });
   });
 
   describe('substituteEnvVariables', () => {
