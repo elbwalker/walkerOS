@@ -95,13 +95,11 @@ export function resolveDeployToken(): string | null {
 }
 
 /**
- * Resolve the app URL using priority order:
- * 1. WALKEROS_APP_URL env var
- * 2. Config file appUrl
- * 3. Default
+ * Resolve the app URL.
+ * APP_URL env var > config file > default.
  */
 export function resolveAppUrl(): string {
-  const envUrl = process.env.WALKEROS_APP_URL;
+  const envUrl = process.env.APP_URL;
   if (envUrl) return envUrl;
 
   const config = readConfig();

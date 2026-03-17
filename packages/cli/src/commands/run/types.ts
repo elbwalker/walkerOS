@@ -20,6 +20,9 @@ export interface RunCommandOptions {
   /** API flow ID (enables heartbeat, polling, secrets) */
   flowId?: string;
 
+  /** Deployment ID (for heartbeat tracking) */
+  deploymentId?: string;
+
   /** Project ID */
   project?: string;
 

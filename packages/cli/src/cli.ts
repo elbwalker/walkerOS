@@ -460,6 +460,8 @@ program
         options.flow ?? process.env.WALKEROS_FLOW_NAME ?? process.env.FLOW_NAME,
       flowId:
         options.flowId ?? process.env.WALKEROS_FLOW_ID ?? process.env.FLOW_ID,
+      deploymentId:
+        process.env.WALKEROS_DEPLOYMENT_ID ?? process.env.DEPLOYMENT_ID,
       project:
         options.project ??
         process.env.WALKEROS_PROJECT_ID ??

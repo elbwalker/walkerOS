@@ -201,6 +201,18 @@ Reference implementations:
   injection + native event dispatch
 - **Express:** `packages/server/sources/express/src/examples/trigger.ts` — real
   HTTP `fetch()` to running server
+- **CMP (Usercentrics):**
+  `packages/web/sources/cmps/usercentrics/src/examples/trigger.ts` — dispatches
+  CMP events, asserts on collector consent state
+- **Fetch (function handler):**
+  `packages/server/sources/fetch/src/examples/trigger.ts` — accesses source
+  instance via `collector.sources`, calls `source.push()` with platform-native
+  `Request`
+- **AWS Lambda:** `packages/server/sources/aws/src/lambda/examples/trigger.ts` —
+  constructs API Gateway event + Lambda context
+- **GCP CloudFunction:**
+  `packages/server/sources/gcp/src/cloudfunction/examples/trigger.ts` —
+  synthesizes mock req/res (matching GCP Functions Framework)
 
 See [using-step-examples](../walkeros-using-step-examples/SKILL.md) for testing
 patterns with `createTrigger` and spy destinations.

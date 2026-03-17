@@ -274,6 +274,55 @@ submit), poll until events arrive:
 while (!events.length) await Promise.resolve();
 ```
 
+### CMP Source Tests (Consent Assertion)
+
+CMP sources push `walker consent` commands, not regular events. Assert on
+collector consent state instead of using a spy destination:
+
+```typescript
+const instance = await examples.createTrigger({
+  consent: {},
+  sources: {
+    usercentrics: {
+      code: sourceUsercentrics,
+      config: { settings: {} },
+    },
+  },
+});
+
+await instance.trigger(
+  example.trigger?.type,
+  example.trigger?.options,
+)(example.in);
+
+// Yield for detached elb('walker consent') chain
+while (!Object.keys(instance.flow!.collector.config.consent || {}).length)
+  await Promise.resolve();
+
+expect(instance.flow!.collector.config.consent).toEqual(
+  expect.objectContaining(expected),
+);
+```
+
+### Server Function Handler Tests (collector.sources)
+
+Server function handlers (fetch, AWS Lambda, GCP CloudFunction) don't own
+servers. Their `createTrigger` accesses the source instance from
+`collector.sources` after `startFlow` and calls `source.push()` with
+platform-native types:
+
+```typescript
+function findSource(collector) {
+  for (const source of Object.values(collector.sources || {})) {
+    if (source.type === 'fetch') return source;
+  }
+}
+
+// In trigger:
+const source = findSource(flow.collector);
+const response = await source.push(request);
+```
+
 ### Destination Functional Tests
 
 For destinations, use `startFlow` + `elb()` to run events through the real

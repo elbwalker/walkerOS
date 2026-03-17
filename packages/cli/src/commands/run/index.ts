@@ -88,6 +88,7 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
         token,
         projectId,
         flowId,
+        deploymentId: options.deploymentId,
         heartbeatIntervalMs:
           parseInt(
             process.env.WALKEROS_HEARTBEAT_INTERVAL ??
