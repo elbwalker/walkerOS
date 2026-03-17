@@ -43,7 +43,9 @@
   },
   "walkerOS": {
     "type": "destination",
-    "platform": "server",
+    "platform": [
+      "server"
+    ],
     "docs": "https://www.walkeros.io/docs/destinations/server/gcp",
     "exports": {
       "destinationBigQuery": "BigQuery event storage"

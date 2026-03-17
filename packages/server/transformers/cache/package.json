@@ -43,7 +43,9 @@
   },
   "walkerOS": {
     "type": "transformer",
-    "platform": "server",
+    "platform": [
+      "server"
+    ],
     "docs": "https://www.walkeros.io/docs/transformers/cache"
   },
   "keywords": [

@@ -53,7 +53,9 @@
   },
   "walkerOS": {
     "type": "source",
-    "platform": "web",
+    "platform": [
+      "web"
+    ],
     "renderer": "codebox",
     "docs": "https://www.walkeros.io/docs/sources/web/datalayer"
   },

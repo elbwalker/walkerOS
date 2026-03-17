@@ -6,8 +6,7 @@ import {
   mcpResult,
   mcpError,
 } from '@walkeros/core';
-import { PackageSchemaOutputShape } from '../schemas/output.js';
-import { filterRegistry } from '../registry.js';
+import { fetchCatalog, normalizePlatform } from '../catalog.js';
 
 export function registerPackageSearchTool(server: McpServer) {
   server.registerTool(
@@ -51,7 +50,7 @@ export function registerPackageSearchTool(server: McpServer) {
     async ({ package: packageName, type, platform, version }) => {
       // Browse mode: no package specified → return catalog
       if (!packageName) {
-        const catalog = filterRegistry({ type, platform });
+        const catalog = await fetchCatalog({ type, platform });
         const result = { catalog, count: catalog.length };
         const summary = `${catalog.length} packages found`;
         return mcpResult(result, summary, {
@@ -68,7 +67,7 @@ export function registerPackageSearchTool(server: McpServer) {
           version: info.version,
           description: info.description,
           type: info.type,
-          platform: info.platform,
+          platform: normalizePlatform(info.platform),
           hintKeys: info.hintKeys,
           exampleSummaries: info.exampleSummaries,
         };
@@ -114,7 +113,7 @@ export function registerGetPackageSchemaTool(server: McpServer) {
             'Section to expand with full content. Default: summary view with schemas + hint texts + example descriptions',
           ),
       },
-      outputSchema: PackageSchemaOutputShape,
+      // No outputSchema — removed to avoid SDK -32602 crashes on unexpected field values
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -147,7 +146,7 @@ export function registerGetPackageSchemaTool(server: McpServer) {
           package: info.packageName,
           version: info.version,
           type: info.type,
-          platform: info.platform,
+          platform: normalizePlatform(info.platform),
           schemas: mergedSchemas,
         };
 

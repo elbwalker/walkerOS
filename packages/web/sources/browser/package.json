@@ -45,7 +45,9 @@
   },
   "walkerOS": {
     "type": "source",
-    "platform": "web",
+    "platform": [
+      "web"
+    ],
     "renderer": "browser",
     "docs": "https://www.walkeros.io/docs/sources/web/browser"
   },

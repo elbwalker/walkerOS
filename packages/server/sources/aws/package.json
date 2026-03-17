@@ -41,7 +41,9 @@
   },
   "walkerOS": {
     "type": "source",
-    "platform": "server",
+    "platform": [
+      "server"
+    ],
     "docs": "https://www.walkeros.io/docs/sources/server/aws",
     "exports": {
       "sourceLambda": "AWS Lambda event source"

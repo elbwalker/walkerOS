@@ -47,7 +47,11 @@
   },
   "walkerOS": {
     "type": "store",
-    "docs": "https://www.walkeros.io/docs/stores/memory"
+    "docs": "https://www.walkeros.io/docs/stores/memory",
+    "platform": [
+      "web",
+      "server"
+    ]
   },
   "keywords": [
     "walkerOS",

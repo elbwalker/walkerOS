@@ -1,0 +1,119 @@
+const NPM_SEARCH_URL = 'https://registry.npmjs.org/-/v1/search';
+const JSDELIVR_BASE = 'https://cdn.jsdelivr.net/npm';
+const WALKEROS_JSON_PATH = 'dist/walkerOS.json';
+const CACHE_TTL = 5 * 60 * 1000;
+
+export interface CatalogEntry {
+  name: string;
+  version: string;
+  description?: string;
+  type: string;
+  platform: string[];
+}
+
+let cache: { entries: CatalogEntry[]; timestamp: number } | undefined;
+
+export function clearCatalogCache() {
+  cache = undefined;
+}
+
+export function normalizePlatform(platform?: unknown): string[] {
+  if (platform == null) return [];
+  if (typeof platform === 'string') {
+    return platform === 'universal' ? ['web', 'server'] : [platform];
+  }
+  if (Array.isArray(platform)) {
+    return platform.filter((v): v is string => typeof v === 'string');
+  }
+  return [];
+}
+
+export async function fetchCatalog(filters?: {
+  type?: string;
+  platform?: string;
+}): Promise<CatalogEntry[]> {
+  if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
+    return applyFilters(cache.entries, filters);
+  }
+
+  let entries: CatalogEntry[];
+  try {
+    entries = await fetchFromNpm();
+  } catch {
+    return [];
+  }
+
+  cache = { entries, timestamp: Date.now() };
+
+  return applyFilters(entries, filters);
+}
+
+async function fetchFromNpm(): Promise<CatalogEntry[]> {
+  const res = await fetch(`${NPM_SEARCH_URL}?text=@walkeros/&size=250`, {
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) throw new Error(`npm search failed: ${res.status}`);
+
+  const data = (await res.json()) as {
+    objects: Array<{
+      package: { name: string; version: string; description?: string };
+    }>;
+  };
+
+  const metaResults = await Promise.allSettled(
+    data.objects.map((obj) => enrichWithMeta(obj.package)),
+  );
+
+  return metaResults
+    .filter(
+      (r): r is PromiseFulfilledResult<CatalogEntry | undefined> =>
+        r.status === 'fulfilled',
+    )
+    .map((r) => r.value)
+    .filter((entry): entry is CatalogEntry => entry !== undefined);
+}
+
+async function enrichWithMeta(pkg: {
+  name: string;
+  version: string;
+  description?: string;
+}): Promise<CatalogEntry | undefined> {
+  try {
+    const res = await fetch(
+      `${JSDELIVR_BASE}/${pkg.name}@${pkg.version}/${WALKEROS_JSON_PATH}`,
+      { signal: AbortSignal.timeout(5000) },
+    );
+    if (!res.ok) return undefined;
+
+    const json = (await res.json()) as { $meta?: Record<string, unknown> };
+    const meta = json.$meta;
+    if (!meta || typeof meta.type !== 'string') return undefined;
+
+    return {
+      name: pkg.name,
+      version: pkg.version,
+      description: pkg.description,
+      type: meta.type,
+      platform: normalizePlatform(meta.platform),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function applyFilters(
+  entries: CatalogEntry[],
+  filters?: { type?: string; platform?: string },
+): CatalogEntry[] {
+  let results = entries;
+  if (filters?.type) {
+    results = results.filter((e) => e.type === filters.type);
+  }
+  if (filters?.platform) {
+    // Empty platform means platform-agnostic → matches any filter
+    results = results.filter(
+      (e) => e.platform.length === 0 || e.platform.includes(filters.platform!),
+    );
+  }
+  return results;
+}

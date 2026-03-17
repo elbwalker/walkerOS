@@ -38,7 +38,11 @@
   },
   "walkerOS": {
     "type": "transformer",
-    "docs": "https://www.walkeros.io/docs/transformers/demo"
+    "docs": "https://www.walkeros.io/docs/transformers/demo",
+    "platform": [
+      "web",
+      "server"
+    ]
   },
   "keywords": [
     "walkerOS",

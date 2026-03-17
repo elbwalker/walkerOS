@@ -47,7 +47,9 @@
   },
   "walkerOS": {
     "type": "store",
-    "platform": "server",
+    "platform": [
+      "server"
+    ],
     "docs": "https://www.walkeros.io/docs/stores/server/fs"
   },
   "keywords": [

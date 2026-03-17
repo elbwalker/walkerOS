@@ -1,18 +1,21 @@
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { fetchPackageSchema } from '@walkeros/core';
-import { PACKAGE_REGISTRY } from '../registry.js';
+import { fetchCatalog } from '../catalog.js';
 
 export function registerPackageSchemaResources(server: McpServer) {
   const template = new ResourceTemplate('walkeros://schema/{packageName}', {
-    list: async () => ({
-      resources: PACKAGE_REGISTRY.map((pkg) => ({
-        uri: `walkeros://schema/${encodeURIComponent(pkg.name)}`,
-        name: pkg.name,
-        description: `Schema and examples for ${pkg.name}`,
-        mimeType: 'application/json' as const,
-      })),
-    }),
+    list: async () => {
+      const catalog = await fetchCatalog();
+      return {
+        resources: catalog.map((pkg) => ({
+          uri: `walkeros://schema/${encodeURIComponent(pkg.name)}`,
+          name: pkg.name,
+          description: `Schema and examples for ${pkg.name}`,
+          mimeType: 'application/json' as const,
+        })),
+      };
+    },
   });
 
   server.registerResource(

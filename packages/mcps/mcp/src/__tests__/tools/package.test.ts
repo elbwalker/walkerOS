@@ -2,8 +2,6 @@ import {
   registerGetPackageSchemaTool,
   registerPackageSearchTool,
 } from '../../tools/package.js';
-import { PackageSchemaOutputShape } from '../../schemas/output.js';
-import { PACKAGE_REGISTRY } from '../../registry.js';
 
 jest.mock('@walkeros/core', () => {
   const actual = jest.requireActual('@walkeros/core');
@@ -35,6 +33,16 @@ const mockFetchPackage = fetchPackage as jest.MockedFunction<
   typeof fetchPackage
 >;
 
+jest.mock('../../catalog.js', () => ({
+  fetchCatalog: jest.fn(),
+  normalizePlatform: jest.requireActual('../../catalog.js').normalizePlatform,
+}));
+
+import { fetchCatalog } from '../../catalog.js';
+const mockFetchCatalog = fetchCatalog as jest.MockedFunction<
+  typeof fetchCatalog
+>;
+
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
   return {
@@ -56,10 +64,11 @@ describe('package_get tool', () => {
     registerGetPackageSchemaTool(mockServer as any);
   });
 
-  it('should register with correct name and outputSchema', () => {
+  it('should register with correct name', () => {
     const tool = mockServer.getTool('package_get');
     expect(tool).toBeDefined();
-    expect((tool.config as any).outputSchema).toBe(PackageSchemaOutputShape);
+    // No outputSchema — removed to avoid SDK -32602 crashes on unexpected field values
+    expect((tool.config as any).outputSchema).toBeUndefined();
   });
 
   it('should fetch package info', async () => {
@@ -89,6 +98,7 @@ describe('package_get tool', () => {
     expect(content.package).toBe('@walkeros/web-destination-snowplow');
     expect((content.schemas as Record<string, unknown>).config).toBeDefined();
     expect(content.type).toBe('destination');
+    expect(content.platform).toEqual(['web']);
   });
 
   it('should return error when package not found', async () => {
@@ -115,11 +125,12 @@ describe('package_get tool', () => {
     });
 
     const tool = mockServer.getTool('package_get');
-    await tool.handler({ package: 'pkg', version: '2.0.0' });
+    const result = await tool.handler({ package: 'pkg', version: '2.0.0' });
 
     expect(mockFetchPackage).toHaveBeenCalledWith('pkg', {
       version: '2.0.0',
     });
+    expect(result.structuredContent.platform).toEqual([]);
   });
 
   it('should include hint text summaries by default (no code blocks)', async () => {
@@ -148,6 +159,7 @@ describe('package_get tool', () => {
     });
 
     const content = result.structuredContent;
+    expect(content.platform).toEqual(['server']);
     expect(content.hints).toBeDefined();
     const hints = content.hints as Record<string, unknown>;
     expect(Object.keys(hints)).toHaveLength(2);
@@ -182,6 +194,7 @@ describe('package_get tool', () => {
     const result = await tool.handler({ package: 'pkg', section: 'hints' });
 
     const content = result.structuredContent;
+    expect(content.platform).toEqual(['server']);
     const hints = content.hints as Record<string, unknown>;
     expect(hints['query-tips']).toEqual({
       text: 'Use JSON_EXTRACT',
@@ -217,6 +230,7 @@ describe('package_get tool', () => {
     const result = await tool.handler({ package: 'pkg', section: 'examples' });
 
     const content = result.structuredContent;
+    expect(content.platform).toEqual(['web']);
     expect(content.examples).toBeDefined();
     const hints = content.hints as Record<string, unknown>;
     expect(hints['setup']).toEqual({ text: 'Install SDK first' });
@@ -240,6 +254,7 @@ describe('package_get tool', () => {
     const result = await tool.handler({ package: 'pkg', section: 'all' });
 
     const content = result.structuredContent;
+    expect(content.platform).toEqual(['web']);
     expect(content.schemas).toBeDefined();
     expect(content.examples).toBeDefined();
     expect(content.hints).toBeDefined();
@@ -414,6 +429,7 @@ describe('package_search tool', () => {
     expect(content.package).toBe('@walkeros/web-destination-snowplow');
     expect(content.version).toBe('0.0.12');
     expect(content.description).toBe('Snowplow destination for walkerOS');
+    expect(content.platform).toEqual(['web']);
   });
 
   it('should return error when package not found', async () => {
@@ -426,54 +442,63 @@ describe('package_search tool', () => {
     expect(result.isError).toBe(true);
   });
 
-  it('should return full catalog in browse mode as wrapped object', async () => {
+  it('should return catalog in browse mode', async () => {
+    const mockCatalog = [
+      {
+        name: '@walkeros/web-destination-gtag',
+        version: '1.0.0',
+        type: 'destination',
+        platform: ['web'],
+        description: 'GA4',
+      },
+    ];
+    mockFetchCatalog.mockResolvedValue(mockCatalog);
+
     const tool = mockServer.getTool('package_search');
     const result = await tool.handler({});
 
     expect(mockFetchPackage).not.toHaveBeenCalled();
-    expect(result.structuredContent.catalog).toBeDefined();
-    expect(Array.isArray(result.structuredContent.catalog)).toBe(true);
-    expect(result.structuredContent.count).toBe(PACKAGE_REGISTRY.length);
+    expect(mockFetchCatalog).toHaveBeenCalledWith({
+      type: undefined,
+      platform: undefined,
+    });
+    expect(result.structuredContent.catalog).toEqual(mockCatalog);
+    expect(result.structuredContent.count).toBe(1);
   });
 
-  it('should filter catalog by type', async () => {
-    const tool = mockServer.getTool('package_search');
-    const result = await tool.handler({ type: 'destination' });
+  it('should pass type filter to catalog', async () => {
+    mockFetchCatalog.mockResolvedValue([]);
 
-    expect(mockFetchPackage).not.toHaveBeenCalled();
-    const catalog = result.structuredContent.catalog;
-    expect(catalog.length).toBeGreaterThan(0);
-    expect(catalog.every((p: any) => p.type === 'destination')).toBe(true);
+    const tool = mockServer.getTool('package_search');
+    await tool.handler({ type: 'destination' });
+
+    expect(mockFetchCatalog).toHaveBeenCalledWith({
+      type: 'destination',
+      platform: undefined,
+    });
   });
 
-  it('should filter catalog by platform', async () => {
-    const tool = mockServer.getTool('package_search');
-    const result = await tool.handler({ platform: 'web' });
+  it('should pass platform filter to catalog', async () => {
+    mockFetchCatalog.mockResolvedValue([]);
 
-    const catalog = result.structuredContent.catalog;
-    expect(catalog.length).toBeGreaterThan(0);
-    expect(
-      catalog.every(
-        (p: any) => p.platform === 'web' || p.platform === 'universal',
-      ),
-    ).toBe(true);
+    const tool = mockServer.getTool('package_search');
+    await tool.handler({ platform: 'web' });
+
+    expect(mockFetchCatalog).toHaveBeenCalledWith({
+      type: undefined,
+      platform: 'web',
+    });
   });
 
-  it('should filter catalog by type and platform', async () => {
+  it('should pass combined filters to catalog', async () => {
+    mockFetchCatalog.mockResolvedValue([]);
+
     const tool = mockServer.getTool('package_search');
-    const result = await tool.handler({
+    await tool.handler({ type: 'source', platform: 'server' });
+
+    expect(mockFetchCatalog).toHaveBeenCalledWith({
       type: 'source',
       platform: 'server',
     });
-
-    const catalog = result.structuredContent.catalog;
-    expect(catalog.length).toBeGreaterThan(0);
-    expect(
-      catalog.every(
-        (p: any) =>
-          p.type === 'source' &&
-          (p.platform === 'server' || p.platform === 'universal'),
-      ),
-    ).toBe(true);
   });
 });
