@@ -6,7 +6,6 @@
  */
 
 import path from 'path';
-import { createRequire } from 'module';
 import { writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
@@ -21,8 +20,6 @@ import { validateFlowFile, validatePort } from './validators.js';
 import { isPreBuiltConfig } from './utils.js';
 import { runPipeline, type PipelineOptions } from './pipeline.js';
 import type { RunCommandOptions, RunOptions, RunResult } from './types.js';
-
-const esmRequire = createRequire(import.meta.url);
 
 /** Default cache dir following XDG conventions */
 function defaultCacheDir(): string {
@@ -54,21 +51,6 @@ export async function runCommand(options: RunCommandOptions): Promise<void> {
     const port = options.port ?? 8080;
     if (options.port !== undefined) {
       validatePort(options.port);
-    }
-
-    // Pre-flight check for server runtime dependencies
-    const runtimeDeps = ['express', 'cors'];
-    for (const dep of runtimeDeps) {
-      try {
-        esmRequire.resolve(dep);
-      } catch {
-        logger.error(
-          `Missing runtime dependency "${dep}"\n` +
-            `Server flows require express and cors when running outside Docker.\n` +
-            `Run: npm install express cors`,
-        );
-        process.exit(1);
-      }
     }
 
     // Resolve API config
