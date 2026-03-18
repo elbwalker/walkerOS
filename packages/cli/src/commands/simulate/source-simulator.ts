@@ -1,4 +1,3 @@
-import { JSDOM, VirtualConsole } from 'jsdom';
 import { simulate } from '@walkeros/collector';
 import type { Source, Trigger } from '@walkeros/core';
 import type { SimulationResult } from './types.js';
@@ -10,20 +9,14 @@ interface SourceSimulationOptions {
   json?: boolean;
   verbose?: boolean;
   silent?: boolean;
-  triggerType?: string;
-  triggerOptions?: unknown;
 }
 
 /**
- * Load source code and optional createTrigger from an npm package.
+ * Load source code and createTrigger from an npm package.
  */
 async function loadSourcePackage(packageName: string): Promise<{
   code: Source.Init;
   createTrigger?: Trigger.CreateFn;
-  legacyTrigger?: (
-    input: unknown,
-    env: Record<string, unknown>,
-  ) => void | (() => void);
 }> {
   const mainModule = await import(packageName);
   const code = mainModule.default || Object.values(mainModule)[0];
@@ -32,9 +25,6 @@ async function loadSourcePackage(packageName: string): Promise<{
   }
 
   let createTrigger: Trigger.CreateFn | undefined;
-  let legacyTrigger:
-    | ((input: unknown, env: Record<string, unknown>) => void | (() => void))
-    | undefined;
 
   try {
     const devModule = await import(`${packageName}/dev`);
@@ -44,22 +34,24 @@ async function loadSourcePackage(packageName: string): Promise<{
       typeof examples.createTrigger === 'function'
     ) {
       createTrigger = examples.createTrigger;
-    } else if (examples?.trigger && typeof examples.trigger === 'function') {
-      legacyTrigger = examples.trigger;
     }
   } catch {
     // No dev exports — skip
   }
 
-  return { code, createTrigger, legacyTrigger };
+  return { code, createTrigger };
 }
 
 /**
- * Simulate a source using JSDOM + unified simulate().
+ * Simulate a source using the createTrigger pattern.
+ *
+ * @param flowConfig - Flow settings for the target flow
+ * @param sourceInput - SourceInput { content, trigger?, env? } — passed through to collector
+ * @param options - Simulation options
  */
 export async function simulateSourceCLI(
   flowConfig: Record<string, unknown>,
-  setupInput: unknown,
+  sourceInput: unknown,
   options: SourceSimulationOptions,
 ): Promise<SimulationResult> {
   const startTime = Date.now();
@@ -88,63 +80,27 @@ export async function simulateSourceCLI(
       throw new Error(`Source "${options.sourceStep}" has no package field`);
     }
 
-    // Load source code + createTrigger/legacyTrigger
-    const { code, createTrigger, legacyTrigger } = await loadSourcePackage(
+    const { code, createTrigger } = await loadSourcePackage(
       sourceConfig.package,
     );
 
-    if (createTrigger) {
-      // New path: use createTrigger — package manages its own lifecycle
-      const result = await simulate({
-        step: 'source',
-        name: options.sourceStep,
-        code,
-        config: sourceConfig.config || {},
-        createTrigger,
-        triggerType: options.triggerType,
-        triggerOptions: options.triggerOptions,
-        content: setupInput,
-      });
-
-      return {
-        success: !result.error,
-        error: result.error?.message,
-        capturedEvents: result.events,
-        duration: Date.now() - startTime,
-      };
+    if (!createTrigger) {
+      throw new Error(
+        `Source package ${sourceConfig.package} has no createTrigger export. ` +
+          `Ensure the package exports createTrigger from its /dev subpath.`,
+      );
     }
 
-    // Legacy path: create JSDOM and use old trigger pattern
-    const virtualConsole = new VirtualConsole();
-    const dom = new JSDOM(
-      '<!DOCTYPE html><html><head></head><body></body></html>',
-      {
-        url: 'http://localhost',
-        runScripts: 'dangerously',
-        pretendToBeVisual: true,
-        virtualConsole,
-      },
-    );
-
-    const env: Record<string, unknown> = {
-      window: dom.window as unknown as Window & typeof globalThis,
-      document: dom.window.document as unknown as Document,
-      localStorage: dom.window.localStorage as unknown as Storage,
-    };
-
-    // Use unified simulate()
+    // Pass sourceInput directly as input — the collector types it as SourceInput.
+    // No detection logic. When --step source.* is used, the event IS the SourceInput.
     const result = await simulate({
       step: 'source',
       name: options.sourceStep,
       code,
       config: sourceConfig.config || {},
-      trigger: legacyTrigger,
-      input: setupInput,
-      env,
+      createTrigger,
+      input: sourceInput as any,
     });
-
-    // Cleanup
-    dom.window.close();
 
     return {
       success: !result.error,

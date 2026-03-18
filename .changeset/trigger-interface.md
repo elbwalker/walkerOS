@@ -1,8 +1,13 @@
 ---
 '@walkeros/core': minor
+'@walkeros/collector': minor
+'@walkeros/cli': minor
+'@walkeros/mcp': minor
 ---
 
-Add Trigger type interface for standardized source invocation in simulation and
-testing. Web sources rename `setup` to `trigger` (Trigger.SetupFn), server
-sources add `createTrigger(instance)` factories. SetupFn and SimulationEnv moved
-from Source to Trigger namespace.
+Unified source simulation input. All source simulation uses SourceInput {
+content, trigger?, env? } — one format for CLI, MCP, and tests. Removes legacy
+runSourceLegacy and deprecated SimulateSource fields. CLI gains --step flag. MCP
+flow_simulate drops example parameter (use flow_examples to discover, then
+provide event). flow_examples now returns trigger metadata. StepExample Zod
+schema aligned with TypeScript type.

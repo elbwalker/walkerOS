@@ -73,9 +73,11 @@ export function registerFlowExamplesTool(server: McpServer) {
           hasIn: boolean;
           hasOut: boolean;
           hasMapping: boolean;
+          hasTrigger: boolean;
           in?: unknown;
           out?: unknown;
           mapping?: unknown;
+          trigger?: unknown;
         }> = [];
 
         const stepTypes = [
@@ -103,8 +105,14 @@ export function registerFlowExamplesTool(server: McpServer) {
                 hasIn: ex.in !== undefined,
                 hasOut: ex.out !== undefined,
                 hasMapping: ex.mapping !== undefined,
+                hasTrigger: ex.trigger !== undefined,
                 ...(full
-                  ? { in: ex.in, out: ex.out, mapping: ex.mapping }
+                  ? {
+                      in: ex.in,
+                      out: ex.out,
+                      mapping: ex.mapping,
+                      trigger: ex.trigger,
+                    }
                   : {}),
               });
             }
@@ -123,7 +131,7 @@ export function registerFlowExamplesTool(server: McpServer) {
         const totalExamples = examples.length;
         const summary = `${totalExamples} examples across ${stepSet.size} steps`;
         const hints: { next: string[]; warnings?: string[] } = {
-          next: ['Use flow_simulate with example parameter to test'],
+          next: ['Use flow_simulate with step and event to simulate'],
         };
         if (totalExamples === 0) {
           hints.warnings = [

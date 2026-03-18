@@ -49,21 +49,15 @@ export const SimulateInputShape = {
     .min(1)
     .optional()
     .describe(
-      'Event as JSON string, file path, or URL. Optional when example is provided.',
+      'Event as JSON string, file path, or URL. For sources: { content, trigger?, env? }.',
     ),
   flow: z.string().optional().describe('Flow name for multi-flow configs'),
   platform: PlatformSchema.optional().describe('Override platform detection'),
-  example: z
-    .string()
-    .optional()
-    .describe(
-      'Name of a step example to use as event input (uses its "in" value)',
-    ),
   step: z
     .string()
     .optional()
     .describe(
-      'Step target in type.name format (e.g. "destination.gtag") to narrow example lookup',
+      'Step target in type.name format (e.g. "source.browser", "destination.gtag")',
     ),
 };
 

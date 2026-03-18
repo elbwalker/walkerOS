@@ -182,25 +182,38 @@ export * as step from './step';
 The file exports **only** `Flow.StepExample` objects. No intermediate variables,
 no `all`, no `config`. Consumers iterate via `Object.entries(examples.step)`.
 
-## Simulating with Examples
+## Source Trigger Metadata
 
-Use the `--example` flag to simulate a flow with a named step example:
+Source step examples can include a `trigger` field for simulation:
 
-```bash
-# Simulate the "purchase" step example
-walkeros simulate flow.json --example purchase
-
-# Output shows the full pipeline trace:
-# Source → Transformer(s) → Destination
-# With in/out values at each step
+```typescript
+{
+  in: '<button data-elb="cta">Sign Up</button>',
+  trigger: { type: 'click' },
+  out: { name: 'cta click', data: { label: 'Sign Up' } }
+}
 ```
 
-This runs the named example through the full flow pipeline, showing how data
-transforms at each step.
+When simulating via CLI or MCP, the step example maps to `SourceInput`:
 
-The `examples_list` MCP tool returns `mapping` alongside `in`/`out` for
-destination examples, giving full visibility into how input events are
-transformed to vendor-specific output.
+- `in` -> `content` (the actual source input)
+- `trigger` -> `trigger` (which mechanism to fire)
+
+Destination and transformer examples don't use `trigger`.
+
+## Simulating with Step Examples
+
+Use the `--step` flag to target a specific step, then provide the event as
+`SourceInput` (`{ content, trigger? }`):
+
+```bash
+# Simulate a source step with trigger metadata
+walkeros simulate flow.json --step source.browser --event '{"content":"<html>...","trigger":{"type":"click"}}'
+```
+
+The MCP `flow_examples` tool returns `trigger` metadata alongside `in`/`out`,
+and `mapping` for destination examples, giving full visibility into how input
+events are transformed to vendor-specific output.
 
 ## Validating Examples
 

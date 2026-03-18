@@ -19,27 +19,26 @@ export function registerFlowSimulateTool(server: McpServer) {
       title: 'Simulate Flow',
       description:
         'Simulate events through a walkerOS flow without making real API calls. ' +
-        'Events must be in walkerOS event format (post-source output): { name: "entity action", data: {...} }. ' +
-        'Use package_get on your source to check its output shape. ' +
-        'Use the example parameter to load event input from a step example and compare output.',
+        'For destinations: event is a walkerOS event { name: "entity action", data: {...} }. ' +
+        'For sources: event is { content: ..., trigger?: { type?, options? }, env?: {...} }. ' +
+        'Use step to target a specific step. ' +
+        'Use flow_examples to discover available test data.',
       inputSchema: {
         configPath: schemas.SimulateInputShape.configPath,
         event: z
-          .record(z.string(), z.unknown())
+          .union([z.record(z.string(), z.unknown()), z.string()])
           .optional()
           .describe(
-            'Event object, e.g. { name: "page view", data: { title: "Home" } }. At minimum needs name and data.',
+            'For destinations: { name, data }. For sources: { content, trigger?, env? }. ' +
+              'Can also be a JSON string or file path.',
           ),
         flow: schemas.SimulateInputShape.flow,
         platform: schemas.SimulateInputShape.platform,
-        example: schemas.SimulateInputShape.example,
         step: schemas.SimulateInputShape.step,
         verbose: z
           .boolean()
           .optional()
-          .describe(
-            'Include full payload per destination (default: false, concise summary only)',
-          ),
+          .describe('Include full payload per destination (default: false)'),
       },
       outputSchema: SimulateOutputShape,
       annotations: {
@@ -49,21 +48,49 @@ export function registerFlowSimulateTool(server: McpServer) {
         openWorldHint: false,
       },
     },
-    async ({ configPath, event, flow, platform, example, step, verbose }) => {
+    async ({ configPath, event, flow, platform, step, verbose }) => {
       try {
-        if (!event && !example) {
-          throw new Error('Either event or example must be provided');
+        if (!event) {
+          throw new Error(
+            'event is required. For sources provide { content, trigger? }, for destinations provide { name, data }.',
+          );
         }
 
         const raw: SimulationResult = await simulate(configPath, event, {
           json: true,
           flow,
           platform,
-          example,
           step,
         });
 
-        // Summarize per-destination (keep it concise for AI consumers)
+        // Source simulation returns capturedEvents
+        if (raw.capturedEvents) {
+          const eventCount = raw.capturedEvents.length;
+          const summary = `Source captured ${eventCount} event${eventCount !== 1 ? 's' : ''}`;
+
+          return mcpResult(
+            {
+              success: raw.success,
+              error: raw.error,
+              summary,
+              capturedEvents: raw.capturedEvents,
+              duration: raw.duration,
+            },
+            summary,
+            {
+              next:
+                eventCount > 0
+                  ? [
+                      'Use flow_simulate with a destination step to test downstream processing',
+                    ]
+                  : [
+                      'Check source package examples with package_get, verify trigger type matches',
+                    ],
+            },
+          );
+        }
+
+        // Destination/transformer simulation
         const destinations: Record<string, DestinationSummary> = {};
 
         if (raw.usage) {
@@ -86,13 +113,11 @@ export function registerFlowSimulateTool(server: McpServer) {
 
         const warnings: string[] = [];
         if (destCount === 0) {
-          warnings.push(
-            'No destinations found in flow configuration. Check that your flow defines at least one destination.',
-          );
+          warnings.push('No destinations found in flow configuration.');
         }
         if (destCount > 0 && receivedCount === 0) {
           warnings.push(
-            'No destinations received the event. Check: mapping keys use nested entity→action structure (not dot-separated), event name matches, consent is granted. Use package_get on the destination for mapping examples.',
+            'No destinations received the event. Check: mapping keys use nested entity→action structure, event name matches, consent is granted.',
           );
         }
 
@@ -103,7 +128,6 @@ export function registerFlowSimulateTool(server: McpServer) {
           error: raw.error,
           summary,
           destinations: destCount > 0 ? destinations : undefined,
-          exampleMatch: raw.exampleMatch,
           duration: raw.duration,
         };
 

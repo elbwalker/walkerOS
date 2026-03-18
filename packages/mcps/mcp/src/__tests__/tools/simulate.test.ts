@@ -8,7 +8,6 @@ jest.mock('@walkeros/cli/dev', () => ({
       configPath: { type: 'string' },
       event: { type: 'string' },
       flow: { type: 'string' },
-      example: { type: 'string' },
       step: { type: 'string' },
     },
   },
@@ -120,7 +119,6 @@ describe('flow_simulate tool', () => {
       event: '{"name":"page view"}',
       flow: 'production',
       platform: 'server',
-      example: undefined,
       step: undefined,
     });
 
@@ -131,7 +129,6 @@ describe('flow_simulate tool', () => {
         json: true,
         flow: 'production',
         platform: 'server',
-        example: undefined,
         step: undefined,
       },
     );
@@ -152,52 +149,44 @@ describe('flow_simulate tool', () => {
     expect(parsed.error).toBe('Simulation failed');
   });
 
-  it('errors when neither event nor example is provided', async () => {
+  it('errors when event is not provided', async () => {
     const tool = server.getTool('flow_simulate');
     const result = await tool.handler({
       configPath: './flow.json',
       event: undefined,
       flow: undefined,
       platform: undefined,
-      example: undefined,
       step: undefined,
     });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.error).toContain('Either event or example must be provided');
+    expect(parsed.error).toContain('event is required');
   });
 
-  it('passes example and step to CLI simulate', async () => {
+  it('returns capturedEvents for source simulation', async () => {
     mockSimulate.mockResolvedValue({
       success: true,
-      usage: { gtag: [{ path: 'gtag', args: ['event', 'purchase'] }] },
-      exampleMatch: {
-        name: 'purchase',
-        step: 'destination.gtag',
-        match: true,
-      },
+      capturedEvents: [{ name: 'cta click', data: { label: 'Sign Up' } }],
+      duration: 15,
     });
 
     const tool = server.getTool('flow_simulate');
     const result = await tool.handler({
       configPath: './flow.json',
-      event: undefined,
+      event: {
+        content: '<button>Sign Up</button>',
+        trigger: { type: 'click' },
+      },
       flow: undefined,
       platform: undefined,
-      example: 'purchase',
-      step: 'destination.gtag',
+      step: 'source.browser',
     });
 
-    expect(mockSimulate).toHaveBeenCalledWith('./flow.json', undefined, {
-      json: true,
-      flow: undefined,
-      platform: undefined,
-      example: 'purchase',
-      step: 'destination.gtag',
-    });
     expect(result.isError).toBeUndefined();
-    expect(result.structuredContent.exampleMatch.match).toBe(true);
+    expect(result.structuredContent.success).toBe(true);
+    expect(result.structuredContent.summary).toBe('Source captured 1 event');
+    expect(result.structuredContent.capturedEvents).toHaveLength(1);
   });
 
   it('handles simulation with no usage data', async () => {

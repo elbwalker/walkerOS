@@ -62,14 +62,15 @@ walkeros simulate <config|bundle> [options]
 
 ### Options
 
-| Option                  | Description                             |
-| ----------------------- | --------------------------------------- |
-| `-e, --event <source>`  | Event as JSON string, file path, or URL |
-| `--flow <name>`         | Flow to simulate                        |
-| `-p, --platform <type>` | Platform: "web" or "server"             |
-| `--json`                | JSON output                             |
-| `-v, --verbose`         | Verbose logging                         |
-| `-s, --silent`          | Silent mode                             |
+| Option                  | Description                                  |
+| ----------------------- | -------------------------------------------- |
+| `-e, --event <source>`  | Event as JSON string, file path, or URL      |
+| `--step <path>`         | Target a specific step (e.g. source.browser) |
+| `--flow <name>`         | Flow to simulate                             |
+| `-p, --platform <type>` | Platform: "web" or "server"                  |
+| `--json`                | JSON output                                  |
+| `-v, --verbose`         | Verbose logging                              |
+| `-s, --silent`          | Silent mode                                  |
 
 ### Input Types
 

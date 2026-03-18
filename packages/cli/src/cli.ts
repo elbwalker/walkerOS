@@ -89,6 +89,10 @@ program
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
+  .option(
+    '--step <target>',
+    'step target in type.name format (e.g. "source.browser", "destination.gtag")',
+  )
   .action(async (file, options) => {
     await simulateCommand({
       config: file,
@@ -99,6 +103,7 @@ program
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,
+      step: options.step,
     });
   });
 

@@ -6,31 +6,32 @@ import type {
   WalkerOS,
 } from '@walkeros/core';
 
+/**
+ * Structured input for source simulation.
+ * One format — every consumer constructs this shape.
+ */
+export interface SourceInput {
+  /** The actual source input (HTML string, dataLayer array, HTTP request, etc.) */
+  content: unknown;
+  /** Which trigger mechanism to fire (e.g., { type: 'click' }) */
+  trigger?: {
+    type?: string;
+    options?: unknown;
+  };
+  /** Environment overrides (e.g., custom location, localStorage state) */
+  env?: Record<string, unknown>;
+}
+
 export interface SimulateSource {
   step: 'source';
   name: string;
   code: Source.Init;
   config?: Partial<Source.Config>;
   /** createTrigger factory from the source package's examples. */
-  createTrigger?: Trigger.CreateFn;
-  /** Trigger type (e.g., 'click', 'POST', 'load'). */
-  triggerType?: string;
-  /** Trigger options (e.g., CSS selector, threshold). */
-  triggerOptions?: unknown;
-  /** Content to pass to the trigger function. */
-  content?: unknown;
+  createTrigger: Trigger.CreateFn;
+  /** Structured source input. */
+  input: SourceInput;
   consent?: WalkerOS.Consent;
-
-  // Legacy fields — kept temporarily for backward compat during migration.
-  /** @deprecated Use createTrigger pattern instead. */
-  trigger?: (
-    input: unknown,
-    env: Record<string, unknown>,
-  ) => void | (() => void);
-  /** @deprecated Use content instead. */
-  input?: unknown;
-  /** @deprecated Use createTrigger pattern instead. */
-  env?: Record<string, unknown>;
 }
 
 export interface SimulateTransformer {

@@ -73,15 +73,10 @@ export const SimulateOutputShape = {
     )
     .optional()
     .describe('Per-destination results'),
-  exampleMatch: z
-    .object({
-      name: z.string(),
-      step: z.string(),
-      match: z.boolean(),
-      diff: z.string().optional(),
-    })
+  capturedEvents: z
+    .array(z.record(z.string(), z.unknown()))
     .optional()
-    .describe('Example comparison result when using example parameter'),
+    .describe('Events captured by source simulation'),
   duration: z.number().optional().describe('Simulation duration in ms'),
 };
 
@@ -110,12 +105,22 @@ export const ExamplesListOutputShape = {
         hasMapping: z
           .boolean()
           .describe('Whether the example has a mapping configuration'),
+        hasTrigger: z
+          .boolean()
+          .describe('Whether the example has trigger metadata'),
         in: z.unknown().optional().describe('Input event data'),
         out: z.unknown().optional().describe('Expected output data'),
         mapping: z
           .unknown()
           .optional()
           .describe('Mapping configuration for destinations'),
+        trigger: z
+          .object({
+            type: z.string().optional(),
+            options: z.unknown().optional(),
+          })
+          .optional()
+          .describe('Trigger metadata for source simulation'),
       }),
     )
     .describe('Step examples'),

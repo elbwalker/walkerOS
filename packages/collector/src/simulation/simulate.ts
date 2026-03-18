@@ -50,7 +50,6 @@ async function runTransformer(
     env: instance.config?.env || {},
   });
 
-  // Normalize: false → [], void → [original], { event } → [event]
   let events: WalkerOS.DeepPartialEvent[];
   if (result === false) {
     events = [];
@@ -73,38 +72,17 @@ async function runSource(
   params: Extract<SimulateParams, { step: 'source' }>,
   start: number,
 ): Promise<Simulation.Result> {
-  // New createTrigger path — package manages lifecycle
-  if (params.createTrigger) {
-    return await runSourceWithCreateTrigger(params, start);
-  }
+  const { code, config = {}, createTrigger: factory, input, consent } = params;
+  const { content, trigger: triggerMeta } = input;
 
-  // Legacy path — orchestrator manages lifecycle
-  return await runSourceLegacy(params, start);
-}
-
-async function runSourceWithCreateTrigger(
-  params: Extract<SimulateParams, { step: 'source' }>,
-  start: number,
-): Promise<Simulation.Result> {
-  const {
-    code,
-    config = {},
-    createTrigger: factory,
-    triggerType,
-    triggerOptions,
-    content,
-    consent,
-  } = params;
   const ALL_CONSENT: WalkerOS.Consent = {
     functional: true,
     marketing: true,
     analytics: true,
   };
 
-  // Spy captures events via source.next transformer
   const events: WalkerOS.DeepPartialEvent[] = [];
 
-  // Build initConfig for createTrigger — full config with spy wiring
   const fullConfig: Collector.InitConfig = {
     consent: consent || ALL_CONSENT,
     sources: {
@@ -124,65 +102,11 @@ async function runSourceWithCreateTrigger(
     },
   };
 
-  // createTrigger — startFlow is lazy, deferred to first trigger() call
-  const { trigger } = await factory!(fullConfig);
+  const { trigger } = await factory(fullConfig);
 
-  // Fire trigger with content — startFlow runs on first invocation
   if (content !== undefined) {
-    await trigger(triggerType, triggerOptions)(content);
+    await trigger(triggerMeta?.type, triggerMeta?.options)(content);
   }
-
-  return {
-    step: 'source',
-    name: params.name,
-    events,
-    calls: [],
-    duration: Date.now() - start,
-  };
-}
-
-async function runSourceLegacy(
-  params: Extract<SimulateParams, { step: 'source' }>,
-  start: number,
-): Promise<Simulation.Result> {
-  const { code, config = {}, trigger: triggerFn, input, env, consent } = params;
-  const ALL_CONSENT: WalkerOS.Consent = {
-    functional: true,
-    marketing: true,
-    analytics: true,
-  };
-
-  // Run trigger before startFlow — may return a post-init function
-  let postInitTrigger: (() => void) | undefined;
-  if (triggerFn) {
-    const result = triggerFn(input, env || {});
-    if (typeof result === 'function') postInitTrigger = result;
-  }
-
-  // Spy captures events via source.next transformer
-  const events: WalkerOS.DeepPartialEvent[] = [];
-
-  const { collector } = await startFlow({
-    consent: consent || ALL_CONSENT,
-    sources: {
-      sim: { code, config, env, next: 'spy' },
-    },
-    transformers: {
-      spy: {
-        code: () => ({
-          type: 'spy',
-          config: {},
-          push(event: WalkerOS.DeepPartialEvent) {
-            events.push(JSON.parse(JSON.stringify(event)));
-            return { event };
-          },
-        }),
-      },
-    },
-  });
-
-  // Fire trigger after startFlow (source is initialized)
-  if (postInitTrigger) postInitTrigger();
 
   return {
     step: 'source',
@@ -204,7 +128,6 @@ async function runDestination(
     analytics: true,
   };
 
-  // Wrap env with call tracking if track paths are provided
   let calls: Simulation.Call[] = [];
   let destEnv: Record<string, unknown> | undefined = env;
 
@@ -214,7 +137,6 @@ async function runDestination(
     calls = wrapped.calls;
   }
 
-  // Wire destination with optional env into collector
   const destConfig = { ...config };
   if (destEnv) {
     destConfig.env = destEnv;
