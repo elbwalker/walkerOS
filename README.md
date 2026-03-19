@@ -4,7 +4,7 @@
   </a>
 </p>
 
-# Open-source tag manager for developers
+# Event collection you own, version, and trust
 
 <div align="left">
   <a href="https://github.com/elbwalker/walkerOS/blob/main/LICENSE">
@@ -24,19 +24,30 @@
   </a>
 </div>
 
-Collect and route your behavioral data with full control and ownership.
-Privacy-first, vendor-free, and built for developers.
+From browser to BigQuery and ad platforms - warehouse-native, and ready for AI
+agents via MCP.
 
-No fragile UI configs. No vendor lock-in. Just tracking you can version, test,
-and trust.
+## The problem
+
+GA4, custom tags, ad pixels - each one a separate setup, none of them agreeing
+on the same numbers. When something breaks, you can't see where.
+
+walkerOS is one collection layer for all of them.
 
 ## Why walkerOS?
 
-- **Open-source** — MIT licensed, free forever, no restrictions
-- **Self-host** — Your infrastructure, your data, full ownership
-- **Config-as-code** — Version control, PRs, deploy with confidence
-- **Composable** — Mix sources, destinations, and mappings freely
-- **Developer-first** — TypeScript, no GUI, declarative tagging
+- **Config-as-code** - version control your tracking, review it in PRs, deploy
+  with confidence
+- **Declarative tagging** - tag your UI in HTML, not scattered JavaScript
+- **Consent-native** - events queue until consent is given, then flush correctly
+  to every destination
+- **Schema validation** - catch bad events at collection time, not weeks later
+  in a dashboard
+- **One layer, many destinations** - send to your warehouse and ad platforms
+  from a single event definition
+- **Warehouse-native** - events land clean and structured in your data
+  warehouse, ready to query
+- **MIT licensed** - self-host anywhere, no vendor lock-in
 
 ## How it works
 
@@ -44,9 +55,10 @@ and trust.
 
 - **Sources:** Where events come from (browser, dataLayer, Express, AWS Lambda,
   GCP Functions, and more)
-- **Collector:** The processing engine (consent, mapping, routing, enrichment)
-- **Destinations:** Where events go (GA4, Google Ads, Meta Pixel, BigQuery, Meta
-  CAPI, and more)
+- **Collector:** The processing engine (consent, validation, mapping, routing,
+  enrichment)
+- **Destinations:** Where events go (GA4, Google Ads, Meta CAPI, BigQuery, and
+  more)
 
 ## Two ways to install walkerOS
 
@@ -56,8 +68,6 @@ Choose one based on your workflow and integration possibilities:
 | -------------- | ------------------------------------------------------------ | --------------------------------------- |
 | **Integrated** | Import directly into your TypeScript application             | React/Next.js apps, TypeScript projects |
 | **Bundled**    | Build a standalone script from JSON config with npx walkeros | Static sites, Docker deployments, CI/CD |
-
-<strong>Quick comparison</strong>
 
 **Integrated** (import into your app):
 
@@ -117,10 +127,14 @@ Then: `npx walkeros bundle flow.json`
   API reference
 - **[Destinations](https://www.walkeros.io/docs/destinations/)** - GA4, Meta,
   BigQuery, and more
-- **[React Demo](https://github.com/elbwalker/walkerOS/tree/main/apps/demos/react)** -
-  Example implementation
-- **[Storybook](https://storybook.walkeros.io/)** - Interactive component
-  examples
+- **[React Demo](https://github.com/elbwalker/walkerOS/tree/main/apps/demos/react)**
+- **[Storybook](https://storybook.walkeros.io/)**
+
+## AI-ready via MCP
+
+walkerOS exposes a Model Context Protocol (MCP) interface. AI agents can read
+your event schema, suggest tracking definitions, and generate integration code -
+making your event layer programmable, not just configurable.
 
 ## Contributing
 
