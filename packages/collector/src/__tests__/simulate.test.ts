@@ -5,6 +5,7 @@ import type {
   WalkerOS,
 } from '@walkeros/core';
 import { simulate } from '../simulation';
+import { startFlow } from '../flow';
 
 describe('simulate', () => {
   describe('transformer', () => {
@@ -119,7 +120,6 @@ describe('simulate', () => {
         const trigger =
           (_type?: string, _options?: unknown) => async (_content: unknown) => {
             if (!flow) {
-              const { startFlow } = await import('../flow');
               flow = await startFlow(config);
             }
           };
@@ -163,7 +163,6 @@ describe('simulate', () => {
             receivedType = type;
             receivedOptions = options;
             if (!flow) {
-              const { startFlow } = await import('../flow');
               flow = await startFlow(config);
             }
           };
@@ -201,7 +200,6 @@ describe('simulate', () => {
         let flow: any;
         const trigger = () => async () => {
           if (!flow) {
-            const { startFlow } = await import('../flow');
             flow = await startFlow(config);
           }
         };

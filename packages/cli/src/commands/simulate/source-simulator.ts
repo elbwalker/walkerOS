@@ -99,7 +99,11 @@ export async function simulateSourceCLI(
       code,
       config: sourceConfig.config || {},
       createTrigger,
-      input: sourceInput as any,
+      input: (sourceInput || { content: undefined }) as {
+        content: unknown;
+        trigger?: { type?: string; options?: unknown };
+        env?: Record<string, unknown>;
+      },
     });
 
     return {
