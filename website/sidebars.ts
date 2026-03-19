@@ -149,6 +149,7 @@ const sidebars: SidebarsConfig = {
             'destinations/web/meta-pixel',
             'destinations/web/piwikpro',
             'destinations/web/plausible',
+            'destinations/web/snowplow',
             'destinations/server/aws',
             'destinations/server/gcp',
             'destinations/server/meta-capi',
