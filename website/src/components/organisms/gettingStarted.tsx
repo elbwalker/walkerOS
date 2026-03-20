@@ -184,16 +184,9 @@ export default function GettingStarted() {
               }
               className="text-lg font-semibold"
               style={{ color: 'var(--color-base-content)' }}
-              {...tagger
-                .action(
-                  'click',
-                  mode === 'bundled'
-                    ? 'bundled-docs'
-                    : mode === 'integrated'
-                      ? 'integrated-docs'
-                      : 'mcp-docs',
-                )
-                .get()}
+              {...tagger.action(
+                `click:${mode === 'bundled' ? 'bundled-docs' : mode === 'integrated' ? 'integrated-docs' : 'mcp-docs'}`,
+              )}
             >
               {mode === 'bundled'
                 ? 'Install walkerOS CLI'
