@@ -1,5 +1,22 @@
 # @walkeros/web-core
 
+## 3.1.0
+
+### Minor Changes
+
+- ff58828: Add optional StorageEnv parameter to storageRead, storageWrite, and
+  storageDelete. Enables dependency injection of window/document for testing and
+  simulation. Fully backwards-compatible — existing callers are unchanged.
+
+### Patch Changes
+
+- Updated dependencies [dfc6738]
+- Updated dependencies [966342b]
+- Updated dependencies [bee8ba7]
+- Updated dependencies [966342b]
+- Updated dependencies [df990d4]
+  - @walkeros/core@3.1.0
+
 ## 3.0.2
 
 ### Patch Changes

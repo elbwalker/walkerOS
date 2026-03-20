@@ -1,5 +1,29 @@
 # @walkeros/collector
 
+## 3.1.0
+
+### Minor Changes
+
+- df990d4: Unified source simulation input. All source simulation uses
+  SourceInput { content, trigger?, env? } — one format for CLI, MCP, and tests.
+  Removes legacy runSourceLegacy and deprecated SimulateSource fields. CLI gains
+  --step flag. MCP flow_simulate drops example parameter (use flow_examples to
+  discover, then provide event). flow_examples now returns trigger metadata.
+  StepExample Zod schema aligned with TypeScript type.
+
+### Patch Changes
+
+- a9149e4: Add createTrigger to browser source examples following unified
+  Trigger.CreateFn interface. Step examples migrated to HTML content format with
+  trigger metadata. Collector simulate.ts updated with dual-path support for
+  createTrigger and legacy triggers.
+- Updated dependencies [dfc6738]
+- Updated dependencies [966342b]
+- Updated dependencies [bee8ba7]
+- Updated dependencies [966342b]
+- Updated dependencies [df990d4]
+  - @walkeros/core@3.1.0
+
 ## 3.0.2
 
 ### Patch Changes

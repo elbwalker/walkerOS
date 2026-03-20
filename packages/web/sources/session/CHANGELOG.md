@@ -1,5 +1,26 @@
 # @walkeros/web-source-session
 
+## 3.1.0
+
+### Minor Changes
+
+- 956c337: Add createTrigger following unified Trigger.CreateFn interface. Step
+  examples updated with trigger metadata.
+- ff58828: Add env.window and env.document to session source Env interface.
+  Session detection (window, storage, performance) now uses injected globals
+  when provided, enabling full simulation without a browser environment.
+
+### Patch Changes
+
+- Updated dependencies [ff58828]
+- Updated dependencies [dfc6738]
+- Updated dependencies [966342b]
+- Updated dependencies [bee8ba7]
+- Updated dependencies [966342b]
+- Updated dependencies [df990d4]
+  - @walkeros/web-core@3.1.0
+  - @walkeros/core@3.1.0
+
 ## 3.0.2
 
 ### Patch Changes

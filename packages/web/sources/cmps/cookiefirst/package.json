@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/web-source-cmp-cookiefirst",
   "description": "CookieFirst consent management source for walkerOS",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "license": "MIT",
   "walkerOS": {
     "type": "source",
@@ -43,8 +43,8 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "^3.0.2",
-    "@walkeros/collector": "^3.0.2"
+    "@walkeros/core": "^3.1.0",
+    "@walkeros/collector": "^3.1.0"
   },
   "devDependencies": {},
   "repository": {

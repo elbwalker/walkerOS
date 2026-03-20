@@ -1,5 +1,22 @@
 # @walkeros/web-source-browser
 
+## 3.1.0
+
+### Minor Changes
+
+- a9149e4: Add createTrigger to browser source examples following unified
+  Trigger.CreateFn interface. Step examples migrated to HTML content format with
+  trigger metadata. Collector simulate.ts updated with dual-path support for
+  createTrigger and legacy triggers.
+
+### Patch Changes
+
+- Updated dependencies [a9149e4]
+- Updated dependencies [ff58828]
+- Updated dependencies [df990d4]
+  - @walkeros/collector@3.1.0
+  - @walkeros/web-core@3.1.0
+
 ## 3.0.2
 
 ### Patch Changes

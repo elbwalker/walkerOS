@@ -1,5 +1,43 @@
 # @walkeros/cli
 
+## 3.1.0
+
+### Minor Changes
+
+- 357aa95: Consolidate HTTP patterns into core/http.ts: apiFetch
+  (authenticated), publicFetch (unauthenticated), deployFetch (deploy token
+  priority), and mergeAuthHeaders. Remove duplicated resolveBaseUrl alias and
+  legacy authenticatedFetch/deployAuthenticatedFetch from auth.ts.
+- 8e687a6: Server bundles are now fully self-contained — all npm dependencies
+  (including express and cors) are bundled into the output. No node_modules
+  needed at runtime.
+- df990d4: Unified source simulation input. All source simulation uses
+  SourceInput { content, trigger?, env? } — one format for CLI, MCP, and tests.
+  Removes legacy runSourceLegacy and deprecated SimulateSource fields. CLI gains
+  --step flag. MCP flow_simulate drops example parameter (use flow_examples to
+  discover, then provide event). flow_examples now returns trigger metadata.
+  StepExample Zod schema aligned with TypeScript type.
+
+### Patch Changes
+
+- fc67b30: Auto-add npm packages from flow steps (sources, destinations,
+  transformers, stores) to build packages, eliminating the need for a redundant
+  `packages` section
+- dfc6738: MCP api tool: replace overloaded `id` param with explicit `projectId`
+  and `flowId`. CLI functions now throw structured ApiError with code and
+  details from the API response. mcpError forwards structured error data to MCP
+  clients.
+- 5799262: Fix MCP issues from user feedback: add 'entry' to validate output
+  type, include version in feedback payload, require Node >=20, support inline
+  JSON in loadJsonConfig for sandboxed environments
+- Updated dependencies [dfc6738]
+- Updated dependencies [966342b]
+- Updated dependencies [bee8ba7]
+- Updated dependencies [966342b]
+- Updated dependencies [df990d4]
+  - @walkeros/core@3.1.0
+  - @walkeros/server-core@3.1.0
+
 ## 3.0.2
 
 ### Patch Changes

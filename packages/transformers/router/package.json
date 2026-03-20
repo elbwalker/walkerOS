@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/transformer-router",
   "description": "Router transformer for walkerOS for dynamic chain branching based on ingest metadata",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -57,6 +57,6 @@
     }
   ],
   "dependencies": {
-    "@walkeros/core": "^3.0.2"
+    "@walkeros/core": "^3.1.0"
   }
 }

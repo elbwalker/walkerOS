@@ -1,5 +1,27 @@
 # @walkeros/server-source-express
 
+## 3.1.0
+
+### Minor Changes
+
+- ff58828: Add env.express and env.cors to Env interface for dependency
+  injection. Tests and simulations can now replace the HTTP layer without
+  touching module imports.
+- a9149e4: Rewrite createTrigger to use real HTTP requests via fetch() instead
+  of mocked req/res. Follows unified Trigger.CreateFn interface. Step examples
+  updated with trigger metadata field.
+
+### Patch Changes
+
+- Updated dependencies [a9149e4]
+- Updated dependencies [dfc6738]
+- Updated dependencies [966342b]
+- Updated dependencies [bee8ba7]
+- Updated dependencies [966342b]
+- Updated dependencies [df990d4]
+  - @walkeros/collector@3.1.0
+  - @walkeros/core@3.1.0
+
 ## 3.0.2
 
 ### Patch Changes
