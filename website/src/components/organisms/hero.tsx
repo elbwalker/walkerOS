@@ -1,5 +1,4 @@
 import React, { ReactNode } from 'react';
-import { ChevronRightIcon } from '@heroicons/react/20/solid';
 import Link from '@docusaurus/Link';
 import { ArchitectureFlow, Icon } from '@walkeros/explorer';
 import type { FlowColumn } from '@walkeros/explorer';
@@ -101,27 +100,6 @@ export default function Hero({
           <div className="px-6 xl:px-0 xl:pt-4">
             <div className="mx-auto max-w-2xl">
               <div className="max-w-lg">
-                <div className="mt-24 sm:mt-32 xl:mt-16">
-                  <a
-                    href="https://github.com/elbwalker/walkerOS/releases"
-                    className="inline-flex space-x-6"
-                  >
-                    <span className="rounded-full bg-[#01b5e2]/10 px-3 py-1 text-sm/6 font-semibold text-[#01b5e2] ring-1 ring-inset ring-[#01b5e2]/20 dark:bg-[#01b5e2]/10 dark:text-[#01b5e2] dark:ring-[#01b5e2]/25">
-                      What's new
-                    </span>
-                    <span
-                      className="inline-flex items-center space-x-2 text-sm/6 font-medium"
-                      style={{ color: 'var(--color-base-content)' }}
-                    >
-                      <span>Just shipped v1.0</span>
-                      <ChevronRightIcon
-                        aria-hidden="true"
-                        className="size-5"
-                        style={{ color: 'var(--color-gray-400)' }}
-                      />
-                    </span>
-                  </a>
-                </div>
                 <h1
                   className="mt-10 text-pretty text-5xl font-semibold tracking-tight sm:text-7xl"
                   style={{ color: 'var(--color-base-content)' }}
