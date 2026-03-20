@@ -31,14 +31,10 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
+    "@walkeros/core": "^3.0.2",
     "s3mini": "^0.9.1"
   },
-  "peerDependencies": {
-    "@walkeros/core": "^3.0.2"
-  },
-  "devDependencies": {
-    "@walkeros/core": "^3.0.2"
-  },
+  "devDependencies": {},
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/server/stores/s3"

@@ -30,12 +30,10 @@
     "test": "jest",
     "update": "npx npm-check-updates -u && npm update"
   },
-  "peerDependencies": {
+  "dependencies": {
     "@walkeros/core": "^3.0.2"
   },
-  "devDependencies": {
-    "@walkeros/core": "^3.0.2"
-  },
+  "devDependencies": {},
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/server/stores/gcs"

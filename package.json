@@ -50,7 +50,7 @@
     "validate": "npm run validate:links && npm run validate:docs"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.8",
+    "@changesets/cli": "^2.30.0",
     "@walkeros/config": "^3.0.2",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
@@ -79,6 +79,5 @@
     "eslint": {
       "ajv": "^6.12.6"
     }
-  },
-  "dependencies": {}
+  }
 }
