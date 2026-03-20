@@ -86,9 +86,6 @@ export function formatSimulationResult(
     if (result.capturedEvents) {
       output.capturedEvents = result.capturedEvents;
     }
-    if (result.exampleMatch) {
-      output.exampleMatch = result.exampleMatch;
-    }
     return JSON.stringify(output, null, 2);
   }
 
@@ -104,18 +101,6 @@ export function formatSimulationResult(
     lines.push(`Captured ${result.capturedEvents.length} event(s)`);
     for (const evt of result.capturedEvents) {
       lines.push(`  - ${(evt as { name?: string }).name || 'unknown'}`);
-    }
-  }
-
-  if (result.exampleMatch) {
-    const em = result.exampleMatch;
-    if (em.match) {
-      lines.push(`Example "${em.name}" (${em.step}): PASS`);
-    } else {
-      lines.push(`Example "${em.name}" (${em.step}): FAIL`);
-      if (em.diff) {
-        lines.push(em.diff);
-      }
     }
   }
 

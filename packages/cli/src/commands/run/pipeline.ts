@@ -38,6 +38,7 @@ export interface PipelineOptions {
     token: string;
     projectId: string;
     flowId: string;
+    deploymentId?: string;
     heartbeatIntervalMs: number;
     pollIntervalMs: number;
     cacheDir: string;
@@ -99,6 +100,7 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
         token: api.token,
         projectId: api.projectId,
         flowId: api.flowId,
+        deploymentId: api.deploymentId,
         configVersion,
         intervalMs: api.heartbeatIntervalMs,
         getCounters: () => handle.collector.status,

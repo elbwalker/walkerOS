@@ -1,5 +1,17 @@
 import { registerReferenceResources } from '../../resources/references.js';
 
+jest.mock('../../catalog.js', () => ({
+  fetchCatalog: jest.fn().mockResolvedValue([
+    {
+      name: '@walkeros/test-pkg',
+      version: '1.0.0',
+      type: 'destination',
+      platform: ['web'],
+      description: 'Test package',
+    },
+  ]),
+}));
+
 function createMockServer() {
   const resources: Record<string, { metadata: unknown; handler: Function }> =
     {};
@@ -131,13 +143,14 @@ describe('reference resources', () => {
       expect(mockServer.getResource('packages')).toBeDefined();
     });
 
-    it('packages resource returns registry entries', async () => {
+    it('packages resource returns catalog entries', async () => {
       const resource = mockServer.getResource('packages');
       const result = await resource.handler();
       const parsed = JSON.parse(result.contents[0].text);
 
       expect(Array.isArray(parsed)).toBe(true);
-      expect(parsed.length).toBeGreaterThan(0);
+      expect(parsed).toHaveLength(1);
+      expect(parsed[0].name).toBe('@walkeros/test-pkg');
     });
   });
 });

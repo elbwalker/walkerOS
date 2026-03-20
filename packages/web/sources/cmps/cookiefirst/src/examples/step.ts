@@ -1,6 +1,7 @@
 import type { Flow } from '@walkeros/core';
 
 export const fullConsent: Flow.StepExample = {
+  trigger: { type: 'consent' },
   in: {
     necessary: true,
     functional: true,
@@ -15,6 +16,7 @@ export const fullConsent: Flow.StepExample = {
 };
 
 export const partialConsent: Flow.StepExample = {
+  trigger: { type: 'consent' },
   in: {
     necessary: true,
     functional: true,
@@ -31,6 +33,7 @@ export const partialConsent: Flow.StepExample = {
 export const categoryMapOverride: Flow.StepExample = {
   description:
     'Custom categoryMap remaps performance to statistics instead of analytics',
+  trigger: { type: 'consent' },
   in: {
     necessary: true,
     functional: false,
@@ -53,6 +56,7 @@ export const categoryMapOverride: Flow.StepExample = {
 
 export const cfInitDetection: Flow.StepExample = {
   description: 'CMP detected via cf_init CustomEvent (primary detection path)',
+  trigger: { type: 'consent' },
   in: {
     necessary: true,
     functional: false,

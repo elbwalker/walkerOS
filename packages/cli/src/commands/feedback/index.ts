@@ -1,15 +1,13 @@
 import { createInterface } from 'readline';
-import {
-  readConfig,
-  writeConfig,
-  resolveAppUrl,
-} from '../../lib/config-file.js';
+import { readConfig, writeConfig } from '../../lib/config-file.js';
+import { publicFetch } from '../../core/http.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 
 // === Programmatic API ===
 
 export interface FeedbackOptions {
   anonymous?: boolean;
+  version?: string;
 }
 
 export async function feedback(
@@ -24,7 +22,12 @@ export async function feedback(
     text: string;
     userId?: string;
     projectId?: string;
+    version?: string;
   } = { text };
+
+  if (options?.version) {
+    payload.version = options.version;
+  }
 
   if (!anonymous && config?.email) {
     payload.userId = config.email;
@@ -34,8 +37,7 @@ export async function feedback(
     }
   }
 
-  const appUrl = resolveAppUrl();
-  const response = await fetch(`${appUrl}/api/feedback`, {
+  const response = await publicFetch('/api/feedback', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

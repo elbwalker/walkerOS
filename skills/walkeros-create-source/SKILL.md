@@ -136,34 +136,86 @@ mkdir -p packages/server/sources/[name]/src/{examples,schemas,types}
 
 ### 2.3 Step Examples
 
-Add step examples with `{ in, out }` pairs for end-to-end step testing:
+Add step examples with `{ in, out, trigger }` for end-to-end step testing:
 
-| File               | Purpose                         | Status |
-| ------------------ | ------------------------------- | ------ |
-| `examples/step.ts` | Step examples with in/out pairs | NEW    |
+| File                  | Purpose                           | Status |
+| --------------------- | --------------------------------- | ------ |
+| `examples/step.ts`    | Step examples with in/out/trigger | NEW    |
+| `examples/trigger.ts` | createTrigger implementation      | NEW    |
 
 ```typescript
 // examples/step.ts
-export const step = {
-  'checkout-post': {
-    in: {
-      method: 'POST',
-      path: '/collect',
-      headers: { 'content-type': 'application/json' },
-      body: {
-        name: 'order complete',
-        data: { id: 'ORD-123', total: 149.97 },
-      },
-    },
-    out: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
+import type { Flow } from '@walkeros/core';
+
+export const checkoutPost: Flow.StepExample = {
+  trigger: { type: 'POST' },
+  in: {
+    method: 'POST',
+    path: '/collect',
+    body: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
   },
+  out: { name: 'order complete', data: { id: 'ORD-123', total: 149.97 } },
 };
 ```
 
-For sources, `in` types are platform-specific (Express request, AWS API Gateway
-event, GCP Cloud Function request) and `out` is always a walkerOS event. See
-[using-step-examples](../walkeros-using-step-examples/SKILL.md) for the Three
-Type Zones.
+The `trigger` field tells `createTrigger` how to simulate the invocation (HTTP
+method for server, event type for browser). `in` is the platform-specific
+content. `out` is always a walkerOS event.
+
+### 2.4 createTrigger
+
+Every source exports a `createTrigger` from its examples that follows the
+unified `Trigger.CreateFn` interface. It simulates real-world invocations from
+the outside — no source instance access, full blackbox.
+
+```typescript
+// examples/trigger.ts
+import type { Trigger, Collector } from '@walkeros/core';
+import { startFlow } from '@walkeros/collector';
+
+const createTrigger: Trigger.CreateFn<Content, Result> = async (config) => {
+  let flow: Trigger.FlowHandle | undefined;
+
+  const trigger: Trigger.Fn<Content, Result> =
+    (type?: string) => async (content) => {
+      if (!flow) {
+        const result = await startFlow(config);
+        flow = { collector: result.collector, elb: result.elb };
+      }
+      // Package-specific: make real HTTP request, inject DOM, etc.
+      return result;
+    };
+
+  return {
+    get flow() {
+      return flow;
+    },
+    trigger,
+  };
+};
+```
+
+Reference implementations:
+
+- **Browser:** `packages/web/sources/browser/src/examples/trigger.ts` — DOM
+  injection + native event dispatch
+- **Express:** `packages/server/sources/express/src/examples/trigger.ts` — real
+  HTTP `fetch()` to running server
+- **CMP (Usercentrics):**
+  `packages/web/sources/cmps/usercentrics/src/examples/trigger.ts` — dispatches
+  CMP events, asserts on collector consent state
+- **Fetch (function handler):**
+  `packages/server/sources/fetch/src/examples/trigger.ts` — accesses source
+  instance via `collector.sources`, calls `source.push()` with platform-native
+  `Request`
+- **AWS Lambda:** `packages/server/sources/aws/src/lambda/examples/trigger.ts` —
+  constructs API Gateway event + Lambda context
+- **GCP CloudFunction:**
+  `packages/server/sources/gcp/src/cloudfunction/examples/trigger.ts` —
+  synthesizes mock req/res (matching GCP Functions Framework)
+
+See [using-step-examples](../walkeros-using-step-examples/SKILL.md) for testing
+patterns with `createTrigger` and spy destinations.
 
 ### 2.4 Export via dev.ts
 
@@ -345,10 +397,13 @@ Guidelines:
 2. **Schema validation**: Use Zod schemas to validate settings and provide
    defaults
 3. **Forward to collector**: Call `env.push()` to send events to the collector
-4. **Error logging**: Use `logger?.error()` for errors only, not routine
+4. **Platform deps via env**: All platform dependencies (window, document,
+   express, cors) must go through `env` with fallback to globals/imports:
+   `env.express ?? express`. This enables testing without mocking globals.
+5. **Error logging**: Use `logger?.error()` for errors only, not routine
    operations
-5. **Return Source.Instance**: Return `{ type, config, push }` object
-6. **Optional `destroy` method**: Implement if the source holds resources (HTTP
+6. **Return Source.Instance**: Return `{ type, config, push }` object
+7. **Optional `destroy` method**: Implement if the source holds resources (HTTP
    servers, timers, connections) that need cleanup on shutdown
 
 ### Gate: Implementation Compiles

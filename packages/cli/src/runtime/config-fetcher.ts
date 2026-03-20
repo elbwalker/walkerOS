@@ -1,3 +1,5 @@
+import { mergeAuthHeaders } from '../core/http.js';
+
 export interface FetchConfigResult {
   content: Record<string, unknown>;
   version: string;
@@ -24,12 +26,10 @@ export async function fetchConfig(
 ): Promise<ConfigFetchResult> {
   const url = `${options.appUrl}/api/projects/${options.projectId}/flows/${options.flowId}`;
 
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${options.token}`,
-  };
-  if (options.lastEtag) {
-    headers['If-None-Match'] = options.lastEtag;
-  }
+  const headers = mergeAuthHeaders(
+    options.token,
+    options.lastEtag ? { 'If-None-Match': options.lastEtag } : undefined,
+  );
 
   const response = await fetch(url, {
     headers,

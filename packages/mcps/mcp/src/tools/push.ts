@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { push } from '@walkeros/cli';
 import type { PushResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
@@ -14,7 +15,16 @@ export function registerFlowPushTool(server: McpServer) {
         'Push a real event through a walkerOS flow to actual destinations. ' +
         'Makes real API calls to real endpoints. ' +
         'Best suited for server-side flows — web flows should use flow_simulate for testing.',
-      inputSchema: schemas.PushInputShape,
+      inputSchema: {
+        configPath: schemas.PushInputShape.configPath,
+        event: z
+          .record(z.string(), z.unknown())
+          .describe(
+            'Event object, e.g. { name: "page view", data: { title: "Home" } }',
+          ),
+        flow: schemas.PushInputShape.flow,
+        platform: schemas.PushInputShape.platform,
+      },
       outputSchema: PushOutputShape,
       annotations: {
         readOnlyHint: false,

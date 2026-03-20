@@ -154,7 +154,19 @@ export const InlineCodeSchema = z
  */
 export const StepExampleSchema = z
   .object({
+    description: z.string().optional().describe('Human-readable description'),
     in: z.unknown().optional().describe('Input to the step'),
+    trigger: z
+      .object({
+        type: z
+          .string()
+          .optional()
+          .describe('Trigger mechanism (e.g., click, POST, load)'),
+        options: z.unknown().optional().describe('Mechanism-specific options'),
+      })
+      .optional()
+      .describe('Source trigger metadata'),
+    mapping: z.unknown().optional().describe('Mapping configuration'),
     out: z.unknown().optional().describe('Expected output from the step'),
   })
   .describe('Named example with input/output pair');

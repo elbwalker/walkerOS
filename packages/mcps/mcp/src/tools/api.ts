@@ -57,14 +57,24 @@ export function registerApiTool(server: McpServer) {
         '- flow.list/get/create/update/delete/duplicate — manage flow configs\n' +
         '- deploy — deploy a flow (auto-detects web/server)\n' +
         '- deployment.get/list/create/delete — manage deployments\n\n' +
-        'Parameters vary by action. id = flowId/projectId/slug depending on context. ' +
-        'content = Flow.Config JSON for flow.create/update.',
+        'Parameters vary by action. content = Flow.Config JSON for flow.create/update.',
       inputSchema: {
         action: z.enum(ACTIONS).describe('API action to perform'),
-        id: z
+        projectId: z
           .string()
           .optional()
-          .describe('Resource ID (flowId, projectId, or deployment slug)'),
+          .describe(
+            'Project ID (proj_...). Required for: project.get/update/delete, flow.create, flow.list. ' +
+              'Falls back to WALKEROS_PROJECT_ID env var.',
+          ),
+        flowId: z
+          .string()
+          .optional()
+          .describe(
+            'Flow ID (flow_...) or config ID (cfg_...). Required for: ' +
+              'flow.get, flow.update, flow.delete, flow.duplicate, deploy. ' +
+              'For deployment.get/delete: can be a deployment slug.',
+          ),
         name: z
           .string()
           .optional()
@@ -115,7 +125,8 @@ export function registerApiTool(server: McpServer) {
     async (params, extra) => {
       const {
         action,
-        id,
+        projectId,
+        flowId,
         name,
         content,
         patch,
@@ -148,7 +159,7 @@ export function registerApiTool(server: McpServer) {
             break;
           }
           case 'project.get': {
-            data = await getProject({ projectId: id });
+            data = await getProject({ projectId });
             summary = `Project "${(data as Record<string, unknown>).name}"`;
             break;
           }
@@ -160,20 +171,20 @@ export function registerApiTool(server: McpServer) {
           }
           case 'project.update': {
             if (!name) throw new Error('name required for project.update');
-            data = await updateProject({ projectId: id, name });
+            data = await updateProject({ projectId, name });
             summary = `Updated project "${name}"`;
             break;
           }
           case 'project.delete': {
-            data = await deleteProject({ projectId: id });
-            summary = `Deleted project ${id ?? 'default'}`;
+            data = await deleteProject({ projectId });
+            summary = `Deleted project ${projectId ?? 'default'}`;
             break;
           }
 
           // Flows
           case 'flow.list': {
             data = await listFlows({
-              projectId: id,
+              projectId,
               sort: sort as 'name' | 'updated_at' | 'created_at' | undefined,
               order: order as 'asc' | 'desc' | undefined,
               includeDeleted,
@@ -182,71 +193,102 @@ export function registerApiTool(server: McpServer) {
             break;
           }
           case 'flow.get': {
-            if (!id) throw new Error('id required for flow.get');
-            data = await getFlow({ flowId: id, fields });
-            summary = `Flow "${(data as Record<string, unknown>).name}" (${id})`;
+            if (!flowId) throw new Error('flowId required for flow.get');
+            data = await getFlow({ flowId, projectId, fields });
+            summary = `Flow "${(data as Record<string, unknown>).name}" (${flowId})`;
             break;
           }
           case 'flow.create': {
             if (!name) throw new Error('name required for flow.create');
             if (!content) throw new Error('content required for flow.create');
-            data = await createFlow({ name, content });
+            data = await createFlow({ name, content, projectId });
             summary = `Created flow "${name}" (${(data as Record<string, unknown>).id})`;
             break;
           }
           case 'flow.update': {
-            if (!id) throw new Error('id required for flow.update');
+            if (!flowId) throw new Error('flowId required for flow.update');
             data = await updateFlow({
-              flowId: id,
+              flowId,
               name,
               content,
+              projectId,
               mergePatch: patch ?? true,
             });
-            summary = `Updated flow ${id}`;
+            summary = `Updated flow ${flowId}`;
             break;
           }
           case 'flow.delete': {
-            if (!id) throw new Error('id required for flow.delete');
-            data = await deleteFlow({ flowId: id });
-            summary = `Deleted flow ${id}`;
+            if (!flowId) throw new Error('flowId required for flow.delete');
+            data = await deleteFlow({ flowId, projectId });
+            summary = `Deleted flow ${flowId}`;
             break;
           }
           case 'flow.duplicate': {
-            if (!id) throw new Error('id required for flow.duplicate');
-            data = await duplicateFlow({ flowId: id, name });
-            summary = `Duplicated flow ${id}`;
+            if (!flowId) throw new Error('flowId required for flow.duplicate');
+            data = await duplicateFlow({ flowId, name, projectId });
+            summary = `Duplicated flow ${flowId}`;
             break;
           }
 
           // Deploy
           case 'deploy': {
-            if (!id) throw new Error('id (flowId) required for deploy');
+            if (!flowId) throw new Error('flowId required for deploy');
             const progressToken = extra._meta?.progressToken;
+            const DEPLOY_TIMEOUT_MS = 90_000;
+            const timeoutSignal = AbortSignal.timeout(DEPLOY_TIMEOUT_MS);
+            const combinedAbort = new AbortController();
+            const onAbort = () => combinedAbort.abort();
+            timeoutSignal.addEventListener('abort', onAbort);
+            extra.signal?.addEventListener('abort', onAbort);
             data = await deploy({
-              flowId: id,
+              flowId,
+              projectId,
               wait: wait ?? true,
               flowName,
+              timeout: DEPLOY_TIMEOUT_MS,
               onStatus: (s: string, sub: string | null) => {
                 if (!progressToken) return;
-                const stages: Record<string, number> = {
-                  bundling: 15,
-                  deploying: 55,
-                  published: 100,
-                  active: 100,
-                  failed: 100,
+                const key = sub ? `${s}:${sub}` : s;
+                const stages: Record<
+                  string,
+                  { progress: number; label: string }
+                > = {
+                  'bundling:building': {
+                    progress: 20,
+                    label: 'Building bundle...',
+                  },
+                  'deploying:publishing': {
+                    progress: 60,
+                    label: 'Publishing to CDN...',
+                  },
+                  'deploying:provisioning': {
+                    progress: 60,
+                    label: 'Provisioning container...',
+                  },
+                  'deploying:starting': {
+                    progress: 80,
+                    label: 'Starting container...',
+                  },
+                  published: { progress: 100, label: 'Published' },
+                  active: { progress: 100, label: 'Active' },
+                  failed: { progress: 100, label: 'Failed' },
                 };
+                const stage = stages[key] ??
+                  stages[s] ?? { progress: 10, label: key };
                 extra.sendNotification({
                   method: 'notifications/progress',
                   params: {
                     progressToken,
-                    progress: stages[s] ?? 0,
+                    progress: stage.progress,
                     total: 100,
-                    message: sub ? `${s}:${sub}` : s,
+                    message: stage.label,
                   },
                 } as ServerNotification);
               },
-              signal: extra.signal,
+              signal: combinedAbort.signal,
             });
+            timeoutSignal.removeEventListener('abort', onAbort);
+            extra.signal?.removeEventListener('abort', onAbort);
             const st = (data as Record<string, unknown>).status;
             const deployData = data as Record<string, unknown>;
             if (st === 'failed') {
@@ -255,7 +297,7 @@ export function registerApiTool(server: McpServer) {
                 next: ['Run flow_validate to check your configuration'],
               });
             } else {
-              summary = `Deployed flow ${id} — status: ${st}`;
+              summary = `Deployed flow ${flowId} — status: ${st}`;
               const publicUrl = deployData.publicUrl as string | undefined;
               const containerUrl = deployData.containerUrl as
                 | string
@@ -280,21 +322,21 @@ export function registerApiTool(server: McpServer) {
 
           // Deployments
           case 'deployment.get': {
-            if (!id)
+            if (!flowId)
               throw new Error(
-                'id (flowId or slug) required for deployment.get',
+                'flowId (flowId or slug) required for deployment.get',
               );
             try {
-              data = await getDeployment({ flowId: id, flowName });
+              data = await getDeployment({ flowId, flowName });
             } catch {
-              data = await getDeploymentBySlug({ slug: id });
+              data = await getDeploymentBySlug({ slug: flowId });
             }
-            summary = `Deployment ${(data as Record<string, unknown>).slug ?? id} — ${(data as Record<string, unknown>).status}`;
+            summary = `Deployment ${(data as Record<string, unknown>).slug ?? flowId} — ${(data as Record<string, unknown>).status}`;
             break;
           }
           case 'deployment.list': {
             data = await listDeployments({
-              projectId: id,
+              projectId,
               type: type as 'web' | 'server' | undefined,
               status,
             });
@@ -306,15 +348,15 @@ export function registerApiTool(server: McpServer) {
               throw new Error(
                 'type (web/server) required for deployment.create',
               );
-            data = await createDep({ type, label: name, projectId: id });
+            data = await createDep({ type, label: name, projectId });
             summary = `Created ${type} deployment ${(data as Record<string, unknown>).slug}`;
             break;
           }
           case 'deployment.delete': {
-            if (!id)
-              throw new Error('id (slug) required for deployment.delete');
-            data = await deleteDep({ slug: id });
-            summary = `Deleted deployment ${id}`;
+            if (!flowId)
+              throw new Error('flowId (slug) required for deployment.delete');
+            data = await deleteDep({ slug: flowId });
+            summary = `Deleted deployment ${flowId}`;
             break;
           }
 
@@ -327,6 +369,30 @@ export function registerApiTool(server: McpServer) {
         return mcpResult({ action, ok: true, data }, summary);
       } catch (error) {
         const msg = error instanceof Error ? error.message : '';
+        const name = error instanceof Error ? error.name : '';
+
+        // Deploy timeout — return helpful status instead of raw error
+        if (
+          action === 'deploy' &&
+          (name === 'AbortError' ||
+            name === 'TimeoutError' ||
+            msg.includes('abort'))
+        ) {
+          return mcpResult(
+            {
+              action,
+              ok: true,
+              data: { status: 'deploying', flowId },
+            },
+            `Deploy in progress (timed out waiting). Use deployment.list with projectId to check status.`,
+            {
+              next: [
+                'Use api(action: "deployment.list") to check current status',
+              ],
+            },
+          );
+        }
+
         if (
           msg.includes('401') ||
           msg.includes('403') ||

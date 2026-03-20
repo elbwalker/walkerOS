@@ -1,25 +1,11 @@
-import { startFlow } from '@walkeros/collector';
-import type { WalkerOS, Collector } from '@walkeros/core';
-import { createBrowserSource } from './test-utils';
+import type { Destination, WalkerOS } from '@walkeros/core';
+import { sourceBrowser } from '../index';
 import { examples } from '../dev';
 
 describe('Step Examples', () => {
-  let collector: Collector.Instance;
-  let collectedEvents: WalkerOS.Event[];
-  let mockPush: jest.MockedFunction<Collector.Instance['push']>;
-
-  beforeEach(async () => {
-    collectedEvents = [];
+  beforeEach(() => {
     document.body.innerHTML = '';
     (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
-
-    mockPush = jest.fn().mockImplementation((...args: unknown[]) => {
-      collectedEvents.push(args[0] as WalkerOS.Event);
-      return Promise.resolve({ ok: true });
-    }) as jest.MockedFunction<Collector.Instance['push']>;
-
-    ({ collector } = await startFlow());
-    collector.push = mockPush;
   });
 
   afterEach(() => {
@@ -27,58 +13,99 @@ describe('Step Examples', () => {
     (window as unknown as { elbLayer?: unknown[] }).elbLayer = undefined;
   });
 
-  it.each(Object.entries(examples.step))('%s', async (name, example) => {
-    const input = example.in as Record<string, unknown>;
+  // Impression needs IntersectionObserver mock — tested separately
+  const supported = Object.entries(examples.step).filter(
+    ([name]) => name !== 'impressionEvent',
+  );
+
+  it.each(supported)('%s', async (name, example) => {
+    const triggerInfo = example.trigger as
+      | { type?: string; options?: unknown }
+      | undefined;
+    const content = example.in as string;
     const expected = example.out as {
       name: string;
       data?: Record<string, unknown>;
       trigger?: string;
-      entity: string;
-      action: string;
+      entity?: string;
+      action?: string;
+      context?: Record<string, unknown>;
+      globals?: Record<string, unknown>;
+      nested?: unknown[];
+      source?: Record<string, unknown>;
     };
 
-    if (input.trigger === 'load' && input.url) {
-      // Page view: set URL and init with pageview enabled
-      const url = input.url as string;
-      const urlObj = new URL(url);
-      window.history.replaceState({}, '', urlObj.pathname);
-      document.title = input.title as string;
+    // Spy destination captures events after collector processing
+    const events: WalkerOS.Event[] = [];
+    const spyDestination: Destination.Instance = {
+      type: 'spy',
+      config: { init: true },
+      push: jest.fn((event: WalkerOS.Event) => {
+        events.push(JSON.parse(JSON.stringify(event)));
+      }),
+    };
 
-      await createBrowserSource(collector, { pageview: true });
+    const instance = await examples.createTrigger({
+      consent: { functional: true, marketing: true, analytics: true },
+      sources: {
+        browser: {
+          code: sourceBrowser,
+          config: {
+            settings: {
+              pageview: triggerInfo?.type === 'load' && !!triggerInfo?.options,
+              scope: document,
+            },
+          },
+        },
+      },
+      destinations: {
+        spy: { code: spyDestination },
+      },
+    });
 
-      const call = mockPush.mock.calls.find(
-        (c) => (c[0] as WalkerOS.DeepPartialEvent).name === 'page view',
+    await instance.trigger(triggerInfo?.type, triggerInfo?.options)(content);
+
+    // The browser source pushes events via a detached promise chain:
+    // dispatchEvent → triggerClick → handleTrigger → elb() (fire-and-forget)
+    // The elb() promise is never awaited by pushCommand, so it floats.
+    // Each `await Promise.resolve()` drains one microtask from that chain.
+    // Only microtask yields work here — setTimeout/process.nextTick/setImmediate
+    // hang because the elbLayer's microtask cycle prevents macrotasks from firing.
+    // Jest's 5000ms test timeout is the safety net if events never arrive.
+    while (!events.find((e) => e.name === expected.name))
+      await Promise.resolve();
+
+    expect(instance.flow).toBeDefined();
+
+    const found = events.find((e) => e.name === expected.name)!;
+
+    if (expected.data) {
+      expect(found.data).toEqual(expect.objectContaining(expected.data));
+    }
+    if (expected.entity) {
+      expect(found.entity).toBe(expected.entity);
+    }
+    if (expected.action) {
+      expect(found.action).toBe(expected.action);
+    }
+    if (expected.trigger) {
+      expect(found.trigger).toBe(expected.trigger);
+    }
+    if (expected.nested) {
+      expect(found.nested).toEqual(
+        expect.arrayContaining(
+          expected.nested.map((n) => expect.objectContaining(n as object)),
+        ),
       );
-      expect(call).toBeDefined();
-      const pushed = call![0] as WalkerOS.DeepPartialEvent;
-      expect(pushed.name).toBe(expected.name);
-      if (expected.data?.id) expect(pushed.data?.id).toBe(expected.data.id);
-      if (expected.data?.title)
-        expect(pushed.data?.title).toBe(expected.data.title);
-    } else if (input.trigger === 'click') {
-      // Click event: set up DOM element with attributes, simulate click
-      const attrs = input.attributes as Record<string, string>;
-      const tag = ((input.element as string) || 'div').split('[')[0];
-      const el = document.createElement(tag);
-      for (const [key, value] of Object.entries(attrs)) {
-        el.setAttribute(key, value);
-      }
-      document.body.appendChild(el);
-
-      await createBrowserSource(collector, { pageview: false });
-
-      const clickEvent = new MouseEvent('click', { bubbles: true });
-      el.dispatchEvent(clickEvent);
-
-      const call = mockPush.mock.calls.find(
-        (c) => (c[0] as WalkerOS.DeepPartialEvent).name === expected.name,
-      );
-      expect(call).toBeDefined();
-      const pushed = call![0] as WalkerOS.DeepPartialEvent;
-      expect(pushed.name).toBe(expected.name);
-      if (expected.data) {
-        expect(pushed.data).toEqual(expect.objectContaining(expected.data));
-      }
+    }
+    if (expected.context) {
+      expect(found.context).toEqual(expect.objectContaining(expected.context));
+    }
+    if (expected.globals) {
+      expect(found.globals).toEqual(expect.objectContaining(expected.globals));
+    }
+    if (expected.source) {
+      expect(found.source).toEqual(expect.objectContaining(expected.source));
     }
   });
 });

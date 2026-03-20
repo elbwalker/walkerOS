@@ -32,3 +32,4 @@ export * from './contract';
 export * from './mcpHelpers';
 export * from './respond';
 export * from './matcher';
+export * from './merge-config-schema';

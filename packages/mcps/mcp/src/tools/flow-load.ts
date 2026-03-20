@@ -42,7 +42,7 @@ export function registerFlowLoadTool(server: McpServer) {
           .optional()
           .describe(
             'Flow source: local file path (./flow.json), URL (https://...), ' +
-              'or API flow ID (cfg_...). Omit to create a new flow.',
+              'inline JSON string, or API flow ID (cfg_...). Omit to create a new flow.',
           ),
         platform: z
           .enum(['web', 'server'])

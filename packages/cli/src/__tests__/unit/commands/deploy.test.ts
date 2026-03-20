@@ -1,8 +1,5 @@
-import {
-  authenticatedFetch,
-  requireProjectId,
-  resolveBaseUrl,
-} from '../../../core/auth.js';
+import { requireProjectId } from '../../../core/auth.js';
+import { apiFetch } from '../../../core/http.js';
 import { getFlow } from '../../../commands/flows/index.js';
 import { deploy, getDeployment } from '../../../commands/deploy/index.js';
 import { bundleRemote } from '../../../commands/bundle/index.js';
@@ -12,8 +9,9 @@ jest.mock('../../../core/api-client.js');
 jest.mock('../../../core/auth.js', () => ({
   ...jest.requireActual('../../../core/auth.js'),
   requireProjectId: jest.fn().mockReturnValue('proj_default'),
-  resolveBaseUrl: jest.fn().mockReturnValue('https://app.walkeros.io'),
-  authenticatedFetch: jest.fn(),
+}));
+jest.mock('../../../core/http.js', () => ({
+  apiFetch: jest.fn(),
 }));
 jest.mock('../../../commands/flows/index.js', () => ({
   getFlow: jest.fn(),
@@ -22,7 +20,7 @@ jest.mock('../../../commands/flows/index.js', () => ({
 const { GET: mockGet, POST: mockPost } = setupMockApiClient();
 
 const mockGetFlow = jest.mocked(getFlow);
-const mockAuthFetch = jest.mocked(authenticatedFetch);
+const mockApiFetch = jest.mocked(apiFetch);
 
 const multiFlowContent = {
   config: {
@@ -85,7 +83,7 @@ describe('deploy', () => {
       });
 
       // SSE stream response
-      mockAuthFetch.mockResolvedValueOnce(
+      mockApiFetch.mockResolvedValueOnce(
         new Response(
           createSSEStreamBody([
             {
@@ -118,10 +116,8 @@ describe('deploy', () => {
 
       expect(result).toMatchObject({ status: 'published' });
       expect(statuses).toEqual(['bundling', 'published']);
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        expect.stringContaining(
-          '/api/projects/proj_default/deployments/dep_1/stream',
-        ),
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_default/deployments/dep_1/stream',
         expect.objectContaining({
           headers: { Accept: 'text/event-stream' },
         }),
@@ -132,7 +128,7 @@ describe('deploy', () => {
   describe('deploy() with flowName', () => {
     it('resolves settingsId and calls per-settings route', async () => {
       mockGetFlow.mockResolvedValue(multiFlowContent as any);
-      mockAuthFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(
           JSON.stringify({ status: 'bundling', deploymentId: 'dep_1' }),
           {
@@ -147,8 +143,8 @@ describe('deploy', () => {
         flowId: 'cfg_1',
         projectId: 'proj_default',
       });
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_default/flows/cfg_1/settings/cfg_web/deploy',
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_default/flows/cfg_1/settings/cfg_web/deploy',
         { method: 'POST' },
       );
     });
@@ -165,14 +161,14 @@ describe('deploy', () => {
       mockGetFlow.mockResolvedValue(multiFlowContent as any);
 
       // First call: trigger deploy
-      mockAuthFetch.mockResolvedValueOnce(
+      mockApiFetch.mockResolvedValueOnce(
         new Response(
           JSON.stringify({ status: 'bundling', deploymentId: 'dep_1' }),
           { status: 200 },
         ),
       );
       // Second call: SSE stream
-      mockAuthFetch.mockResolvedValueOnce(
+      mockApiFetch.mockResolvedValueOnce(
         new Response(
           createSSEStreamBody([
             {
@@ -203,11 +199,9 @@ describe('deploy', () => {
       });
 
       expect(result).toMatchObject({ status: 'published' });
-      expect(mockAuthFetch).toHaveBeenCalledTimes(2);
-      expect(mockAuthFetch).toHaveBeenLastCalledWith(
-        expect.stringContaining(
-          '/api/projects/proj_default/deployments/dep_1/stream',
-        ),
+      expect(mockApiFetch).toHaveBeenCalledTimes(2);
+      expect(mockApiFetch).toHaveBeenLastCalledWith(
+        '/api/projects/proj_default/deployments/dep_1/stream',
         expect.objectContaining({
           headers: { Accept: 'text/event-stream' },
         }),
@@ -220,7 +214,7 @@ describe('deploy', () => {
       mockPost.mockResolvedValue({
         data: { status: 'bundling', deploymentId: 'dep_1' },
       });
-      mockAuthFetch.mockResolvedValueOnce(
+      mockApiFetch.mockResolvedValueOnce(
         new Response('Not found', { status: 404 }),
       );
 
@@ -240,7 +234,7 @@ describe('deploy', () => {
           controller.close();
         },
       });
-      mockAuthFetch.mockResolvedValueOnce(
+      mockApiFetch.mockResolvedValueOnce(
         new Response(body, {
           status: 200,
           headers: { 'Content-Type': 'text/event-stream' },
@@ -256,7 +250,7 @@ describe('deploy', () => {
       mockPost.mockResolvedValue({
         data: { status: 'bundling', deploymentId: 'dep_1' },
       });
-      mockAuthFetch.mockResolvedValueOnce(
+      mockApiFetch.mockResolvedValueOnce(
         new Response(
           createSSEStreamBody([
             {
@@ -313,7 +307,7 @@ describe('deploy', () => {
 
     it('with flowName calls per-config GET route', async () => {
       mockGetFlow.mockResolvedValue(multiFlowContent as any);
-      mockAuthFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(
           JSON.stringify({ id: 'dep_1', type: 'web', status: 'published' }),
           { status: 200 },
@@ -322,8 +316,8 @@ describe('deploy', () => {
 
       await getDeployment({ flowId: 'cfg_1', flowName: 'web' });
 
-      expect(mockAuthFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_default/flows/cfg_1/settings/cfg_web/deploy',
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_default/flows/cfg_1/settings/cfg_web/deploy',
       );
     });
   });

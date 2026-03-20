@@ -1,6 +1,7 @@
 import type { Flow } from '@walkeros/core';
 
 export const fullConsent: Flow.StepExample = {
+  trigger: { type: 'consent' },
   in: {
     event: 'consent_status',
     type: 'explicit',
@@ -19,6 +20,7 @@ export const fullConsent: Flow.StepExample = {
 };
 
 export const minimalConsent: Flow.StepExample = {
+  trigger: { type: 'consent' },
   in: {
     event: 'consent_status',
     type: 'explicit',
@@ -39,6 +41,7 @@ export const minimalConsent: Flow.StepExample = {
 export const categoryMapOverride: Flow.StepExample = {
   description:
     'Custom categoryMap remaps essential to functional and functional to analytics',
+  trigger: { type: 'consent' },
   in: {
     event: 'consent_status',
     type: 'explicit',
@@ -60,6 +63,7 @@ export const categoryMapOverride: Flow.StepExample = {
 
 export const customEventName: Flow.StepExample = {
   description: 'Using UC_SDK_EVENT instead of ucEvent for Usercentrics SDK v2',
+  trigger: { type: 'consent', options: { eventName: 'UC_SDK_EVENT' } },
   in: {
     event: 'consent_status',
     type: 'explicit',

@@ -1,7 +1,6 @@
 import {
   getToken,
   getAuthHeaders,
-  authenticatedFetch,
   resolveRunToken,
 } from '../../../core/auth.js';
 
@@ -56,85 +55,6 @@ describe('auth', () => {
       process.env.WALKEROS_TOKEN = 'sk-walkeros-test';
       expect(getAuthHeaders()).toEqual({
         Authorization: 'Bearer sk-walkeros-test',
-      });
-    });
-  });
-
-  describe('authenticatedFetch', () => {
-    it('adds auth header to requests when token is set', async () => {
-      process.env.WALKEROS_TOKEN = 'sk-walkeros-fetch-test';
-      const mockFetch = jest
-        .spyOn(global, 'fetch')
-        .mockResolvedValue(new Response('ok', { status: 200 }));
-
-      await authenticatedFetch('https://example.com/api');
-
-      expect(mockFetch).toHaveBeenCalledWith('https://example.com/api', {
-        headers: { Authorization: 'Bearer sk-walkeros-fetch-test' },
-      });
-    });
-
-    it('calls fetch without auth header when no token', async () => {
-      const mockFetch = jest
-        .spyOn(global, 'fetch')
-        .mockResolvedValue(new Response('ok', { status: 200 }));
-
-      await authenticatedFetch('https://example.com/api');
-
-      expect(mockFetch).toHaveBeenCalledWith('https://example.com/api', {
-        headers: {},
-      });
-    });
-
-    it('merges custom headers with auth header', async () => {
-      process.env.WALKEROS_TOKEN = 'sk-walkeros-merge';
-      const mockFetch = jest
-        .spyOn(global, 'fetch')
-        .mockResolvedValue(new Response('ok', { status: 200 }));
-
-      await authenticatedFetch('https://example.com/api', {
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith('https://example.com/api', {
-        headers: {
-          Authorization: 'Bearer sk-walkeros-merge',
-          'Content-Type': 'application/json',
-        },
-      });
-    });
-
-    it('passes through other fetch options', async () => {
-      const mockFetch = jest
-        .spyOn(global, 'fetch')
-        .mockResolvedValue(new Response('ok', { status: 200 }));
-
-      await authenticatedFetch('https://example.com/api', {
-        method: 'POST',
-        body: '{"test":true}',
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith('https://example.com/api', {
-        method: 'POST',
-        body: '{"test":true}',
-        headers: {},
-      });
-    });
-
-    it('auth header cannot be overridden by caller', async () => {
-      process.env.WALKEROS_TOKEN = 'sk-walkeros-real';
-      const mockFetch = jest
-        .spyOn(global, 'fetch')
-        .mockResolvedValue(new Response('ok', { status: 200 }));
-
-      await authenticatedFetch('https://example.com/api', {
-        headers: { Authorization: 'Bearer sk-walkeros-evil' },
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith('https://example.com/api', {
-        headers: {
-          Authorization: 'Bearer sk-walkeros-real',
-        },
       });
     });
   });

@@ -141,13 +141,17 @@ For detailed configuration options, see
 
 ## Testing with Step Examples
 
-### Simulate with `--example`
+### Simulate with `--step`
 
-Run a named step example through the full flow pipeline:
+Target a specific step and provide input as `SourceInput`
+(`{ content, trigger? }`):
 
 ```bash
-# Simulate the "purchase" step example
-walkeros simulate flow.json --example purchase
+# Simulate a source step with trigger metadata
+walkeros simulate flow.json --step source.browser --event '{"content":"<html>...","trigger":{"type":"click"}}'
+
+# Simulate a destination step with an event
+walkeros simulate flow.json --step destinations.gtag -e '{"entity":"order","action":"complete","data":{"total":149.97}}'
 ```
 
 Example output:
@@ -221,6 +225,7 @@ walkeros simulate <config|bundle> [options]
 
 Options:
   -e, --event <json|file|url>   Event to process (required for bundles)
+  --step <path>                  Target a specific step (e.g. source.browser)
   --flow <name>                  Flow to simulate
   -p, --platform <web|server>   Platform override
   --json                         JSON output

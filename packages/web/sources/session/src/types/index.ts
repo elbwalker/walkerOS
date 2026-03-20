@@ -22,7 +22,10 @@ export interface Mapping {}
 
 export type Push = Elb.Fn;
 
-export interface Env extends Source.BaseEnv {}
+export interface Env extends Source.BaseEnv {
+  window?: Window & typeof globalThis;
+  document?: Document;
+}
 
 export type Types = Source.Types<Settings, Mapping, Push, Env, InitSettings>;
 

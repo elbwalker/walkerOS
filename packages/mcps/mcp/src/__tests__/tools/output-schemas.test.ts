@@ -152,15 +152,14 @@ describe('output schemas', () => {
       expect(result.success).toBe(true);
     });
 
-    it('accepts result with exampleMatch', () => {
+    it('accepts result with capturedEvents', () => {
       const result = parseShape(SimulateOutputShape, {
         success: true,
-        summary: '1/1 destinations received the event',
-        exampleMatch: {
-          name: 'purchase',
-          step: 'destination.gtag',
-          match: true,
-        },
+        summary: 'Source captured 2 events',
+        capturedEvents: [
+          { name: 'page view', data: { title: 'Home' } },
+          { name: 'cta click', data: { label: 'Sign Up' } },
+        ],
       });
       expect(result.success).toBe(true);
     });

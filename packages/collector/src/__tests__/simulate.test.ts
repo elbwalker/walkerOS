@@ -5,6 +5,7 @@ import type {
   WalkerOS,
 } from '@walkeros/core';
 import { simulate } from '../simulation';
+import { startFlow } from '../flow';
 
 describe('simulate', () => {
   describe('transformer', () => {
@@ -102,14 +103,7 @@ describe('simulate', () => {
   });
 
   describe('source', () => {
-    // Minimal browser-like env for testing
-    const env: Source.SimulationEnv = {
-      window: {} as any,
-      document: {} as any,
-      localStorage: {} as any,
-    };
-
-    it('captures events pushed by source', async () => {
+    it('captures events pushed by source via createTrigger', async () => {
       const code: Source.Init = (ctx) => ({
         type: 'test',
         config: {},
@@ -121,11 +115,28 @@ describe('simulate', () => {
         },
       });
 
+      const createTrigger = async (config: any) => {
+        let flow: any;
+        const trigger =
+          (_type?: string, _options?: unknown) => async (_content: unknown) => {
+            if (!flow) {
+              flow = await startFlow(config);
+            }
+          };
+        return {
+          get flow() {
+            return flow;
+          },
+          trigger,
+        };
+      };
+
       const result = await simulate({
         step: 'source',
         name: 'test',
         code,
-        env,
+        createTrigger: createTrigger as any,
+        input: { content: {} },
       });
 
       expect(result.step).toBe('source');
@@ -135,22 +146,31 @@ describe('simulate', () => {
       expect(result.calls).toEqual([]);
     });
 
-    it('handles setup + trigger pattern', async () => {
-      const order: string[] = [];
+    it('passes trigger type and options from SourceInput', async () => {
+      let receivedType: string | undefined;
+      let receivedOptions: unknown;
 
       const code: Source.Init = () => ({
         type: 'test',
         config: {},
         push: (() => {}) as unknown as Source.Instance['push'],
-        on(event) {
-          if (event === 'run') order.push('source-run');
-        },
       });
 
-      const setup: Source.SetupFn = () => {
-        order.push('setup');
-        return () => {
-          order.push('trigger');
+      const createTrigger = async (config: any) => {
+        let flow: any;
+        const trigger =
+          (type?: string, options?: unknown) => async (_content: unknown) => {
+            receivedType = type;
+            receivedOptions = options;
+            if (!flow) {
+              flow = await startFlow(config);
+            }
+          };
+        return {
+          get flow() {
+            return flow;
+          },
+          trigger,
         };
       };
 
@@ -158,26 +178,45 @@ describe('simulate', () => {
         step: 'source',
         name: 'test',
         code,
-        setup,
-        input: {},
-        env,
+        createTrigger: createTrigger as any,
+        input: {
+          content: '<button>Click</button>',
+          trigger: { type: 'click', options: 'button.cta' },
+        },
       });
 
-      expect(order).toEqual(['setup', 'source-run', 'trigger']);
+      expect(receivedType).toBe('click');
+      expect(receivedOptions).toBe('button.cta');
     });
 
-    it('returns empty events when source pushes nothing', async () => {
+    it('returns empty events when content is undefined', async () => {
       const code: Source.Init = () => ({
         type: 'test',
         config: {},
         push: (() => {}) as unknown as Source.Instance['push'],
       });
 
+      const createTrigger = async (config: any) => {
+        let flow: any;
+        const trigger = () => async () => {
+          if (!flow) {
+            flow = await startFlow(config);
+          }
+        };
+        return {
+          get flow() {
+            return flow;
+          },
+          trigger,
+        };
+      };
+
       const result = await simulate({
         step: 'source',
         name: 'silent',
         code,
-        env,
+        createTrigger: createTrigger as any,
+        input: { content: undefined },
       });
 
       expect(result.events).toEqual([]);

@@ -1,5 +1,5 @@
 import { resolveBundle } from '../../../runtime/resolve-bundle.js';
-import { unlinkSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { unlinkSync, readFileSync, writeFileSync } from 'fs';
 
 // Mock stdin utilities
 jest.mock('../../../core/stdin.js', () => ({
@@ -17,14 +17,13 @@ beforeEach(() => {
 
 const { isStdinPiped, readStdin } = require('../../../core/stdin.js');
 
-const TEMP_BUNDLE_PATH = '/tmp/walkeros-bundle.mjs';
+const DEFAULT_WRITE_PATH = '/tmp/walkeros-bundle.mjs';
 
 describe('resolveBundle', () => {
   afterEach(() => {
     jest.resetAllMocks();
-    // Clean up temp file if created
     try {
-      unlinkSync(TEMP_BUNDLE_PATH);
+      unlinkSync(DEFAULT_WRITE_PATH);
     } catch {
       // ignore if not exists
     }
@@ -55,7 +54,7 @@ describe('resolveBundle', () => {
   });
 
   describe('URL input', () => {
-    it('should fetch bundle from https URL and write to temp file', async () => {
+    it('should fetch bundle from https URL and write to default path', async () => {
       isStdinPiped.mockReturnValue(false);
       mockFetch.mockResolvedValue({
         ok: true,
@@ -67,14 +66,13 @@ describe('resolveBundle', () => {
       const result = await resolveBundle('https://s3.example.com/bundle.mjs');
 
       expect(result.source).toBe('url');
-      expect(result.path).toBe(TEMP_BUNDLE_PATH);
+      expect(result.path).toBe(DEFAULT_WRITE_PATH);
       expect(mockFetch).toHaveBeenCalledWith(
         'https://s3.example.com/bundle.mjs',
         { signal: expect.any(AbortSignal) },
       );
 
-      // Verify file was written
-      const content = readFileSync(TEMP_BUNDLE_PATH, 'utf-8');
+      const content = readFileSync(DEFAULT_WRITE_PATH, 'utf-8');
       expect(content).toBe('export default function() {}');
     });
 
@@ -135,77 +133,32 @@ describe('resolveBundle', () => {
   });
 
   describe('stdin input', () => {
-    it('should read bundle from stdin and write to temp file', async () => {
+    it('should read bundle from stdin and write to default path', async () => {
       isStdinPiped.mockReturnValue(true);
       readStdin.mockResolvedValue('export default function() {}');
 
-      const result = await resolveBundle('/app/flow/bundle.mjs');
+      const result = await resolveBundle('/nonexistent/bundle.mjs');
 
       expect(result.source).toBe('stdin');
-      expect(result.path).toBe(TEMP_BUNDLE_PATH);
+      expect(result.path).toBe(DEFAULT_WRITE_PATH);
       expect(readStdin).toHaveBeenCalled();
 
-      // Verify file was written
-      const content = readFileSync(TEMP_BUNDLE_PATH, 'utf-8');
+      const content = readFileSync(DEFAULT_WRITE_PATH, 'utf-8');
       expect(content).toBe('export default function() {}');
-    });
-
-    it('should prioritize stdin over URL', async () => {
-      isStdinPiped.mockReturnValue(true);
-      readStdin.mockResolvedValue('export default function() {}');
-
-      const result = await resolveBundle('https://s3.example.com/bundle.mjs');
-
-      expect(result.source).toBe('stdin');
-      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('should propagate readStdin errors', async () => {
       isStdinPiped.mockReturnValue(true);
       readStdin.mockRejectedValue(new Error('No input received on stdin'));
 
-      await expect(resolveBundle('/app/flow/bundle.mjs')).rejects.toThrow(
+      await expect(resolveBundle('/nonexistent/bundle.mjs')).rejects.toThrow(
         'No input received on stdin',
       );
     });
   });
 
   describe('priority order', () => {
-    it('stdin > URL > file: stdin wins when piped even with URL env', async () => {
-      isStdinPiped.mockReturnValue(true);
-      readStdin.mockResolvedValue('from stdin');
-
-      const result = await resolveBundle('https://example.com/bundle.mjs');
-
-      expect(result.source).toBe('stdin');
-    });
-
-    it('URL > file: URL wins over file path', async () => {
-      isStdinPiped.mockReturnValue(false);
-      mockFetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-        text: () => Promise.resolve('from url'),
-      });
-
-      const result = await resolveBundle('https://example.com/bundle.mjs');
-
-      expect(result.source).toBe('url');
-    });
-
-    it('file is the fallback when no stdin and no URL', async () => {
-      isStdinPiped.mockReturnValue(false);
-
-      const result = await resolveBundle('/app/flow/bundle.mjs');
-
-      expect(result.source).toBe('file');
-    });
-
-    it('existing file wins over stdin (Docker detached mode fix)', async () => {
-      // In Docker detached mode, stdin is /dev/null (not a TTY),
-      // so isStdinPiped() returns true. If BUNDLE points to a real file,
-      // we should use the file instead of trying to read empty stdin.
+    it('existing file wins over everything (Docker detached mode fix)', async () => {
       const tmpFile = '/tmp/walkeros-resolve-test-bundle.mjs';
       writeFileSync(tmpFile, 'export default function() {}');
 
@@ -222,7 +175,22 @@ describe('resolveBundle', () => {
       }
     });
 
-    it('stdin used when BUNDLE file does not exist', async () => {
+    it('URL wins over stdin when no existing file', async () => {
+      isStdinPiped.mockReturnValue(true);
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: () => Promise.resolve('from url'),
+      });
+
+      const result = await resolveBundle('https://example.com/bundle.mjs');
+
+      expect(result.source).toBe('url');
+      expect(readStdin).not.toHaveBeenCalled();
+    });
+
+    it('stdin used when BUNDLE is non-existent file path', async () => {
       isStdinPiped.mockReturnValue(true);
       readStdin.mockResolvedValue('from stdin');
 
@@ -230,6 +198,14 @@ describe('resolveBundle', () => {
 
       expect(result.source).toBe('stdin');
       expect(readStdin).toHaveBeenCalled();
+    });
+
+    it('file fallback when no file exists, no URL, no stdin', async () => {
+      isStdinPiped.mockReturnValue(false);
+
+      const result = await resolveBundle('/app/flow/bundle.mjs');
+
+      expect(result.source).toBe('file');
     });
   });
 });

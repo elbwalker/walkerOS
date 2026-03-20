@@ -5,7 +5,7 @@ export const ValidateOutputShape = {
   valid: z.boolean().describe('Whether validation passed'),
   type: z
     .union([
-      z.enum(['contract', 'event', 'flow', 'mapping']),
+      z.enum(['contract', 'entry', 'event', 'flow', 'mapping']),
       z.string().regex(/^(destinations|sources|transformers)\.\w+$/),
     ])
     .describe('What was validated'),
@@ -65,20 +65,18 @@ export const SimulateOutputShape = {
           .boolean()
           .describe('Whether destination received the event'),
         calls: z.number().describe('Number of API calls made'),
-        payload: z.unknown().optional().describe('Transformed payload sent'),
+        payload: z
+          .unknown()
+          .optional()
+          .describe('Full payload (only when verbose: true)'),
       }),
     )
     .optional()
     .describe('Per-destination results'),
-  exampleMatch: z
-    .object({
-      name: z.string(),
-      step: z.string(),
-      match: z.boolean(),
-      diff: z.string().optional(),
-    })
+  capturedEvents: z
+    .array(z.record(z.string(), z.unknown()))
     .optional()
-    .describe('Example comparison result when using example parameter'),
+    .describe('Events captured by source simulation'),
   duration: z.number().optional().describe('Simulation duration in ms'),
 };
 
@@ -107,86 +105,23 @@ export const ExamplesListOutputShape = {
         hasMapping: z
           .boolean()
           .describe('Whether the example has a mapping configuration'),
+        hasTrigger: z
+          .boolean()
+          .describe('Whether the example has trigger metadata'),
         in: z.unknown().optional().describe('Input event data'),
         out: z.unknown().optional().describe('Expected output data'),
         mapping: z
           .unknown()
           .optional()
           .describe('Mapping configuration for destinations'),
+        trigger: z
+          .object({
+            type: z.string().optional(),
+            options: z.unknown().optional(),
+          })
+          .optional()
+          .describe('Trigger metadata for source simulation'),
       }),
     )
     .describe('Step examples'),
-};
-
-// Package Search output shape (lightweight metadata + content keys)
-export const PackageSearchOutputShape = {
-  package: z.string().describe('Package name'),
-  version: z.string().describe('Package version'),
-  description: z.string().optional().describe('Package description'),
-  type: z
-    .string()
-    .optional()
-    .describe('Package type (destination, source, transformer)'),
-  platform: z.string().optional().describe('Target platform (web, server)'),
-  hintKeys: z
-    .array(z.string())
-    .describe('Available hint keys (use package_get section=hints to read)'),
-  exampleSummaries: z
-    .array(
-      z.object({
-        name: z.string().describe('Example name'),
-        description: z.string().optional().describe('What this example shows'),
-      }),
-    )
-    .describe(
-      'Step example names and descriptions (use package_get section=examples to read full content)',
-    ),
-};
-
-// Package Schema output shape (full details, supports progressive disclosure)
-export const PackageSchemaOutputShape = {
-  package: z.string().describe('Package name'),
-  version: z.string().describe('Package version'),
-  type: z.string().describe('Package type (destination, source, transformer)'),
-  platform: z.string().describe('Target platform (web, server)'),
-  schemas: z
-    .record(z.string(), z.unknown())
-    .optional()
-    .describe('JSON Schemas for settings and mapping'),
-  examples: z
-    .record(z.string(), z.unknown())
-    .optional()
-    .describe(
-      'Full configuration examples (included when section=examples or section=all)',
-    ),
-  exampleSummaries: z
-    .array(
-      z.object({
-        name: z.string().describe('Example name'),
-        description: z.string().optional().describe('What this example shows'),
-      }),
-    )
-    .optional()
-    .describe(
-      'Example names and descriptions (included in default/summary mode)',
-    ),
-  hints: z
-    .record(
-      z.string(),
-      z.object({
-        text: z.string(),
-        code: z
-          .array(
-            z.object({
-              lang: z.string().optional(),
-              code: z.string(),
-            }),
-          )
-          .optional(),
-      }),
-    )
-    .optional()
-    .describe(
-      'Hints — text only in summary mode, with code blocks when section=hints or section=all',
-    ),
 };

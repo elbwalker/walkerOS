@@ -42,6 +42,8 @@ export const sourceSession: Source.Init<Types> = async (context) => {
   // Initialize session using local lib
   sessionStart({
     ...settings,
+    window: env.window,
+    document: env.document,
     collector: collectorInterface as Collector.Instance,
   });
 
@@ -51,6 +53,8 @@ export const sourceSession: Source.Init<Types> = async (context) => {
       // Re-initialize session on consent changes
       sessionStart({
         ...settings,
+        window: env.window,
+        document: env.document,
         collector: collectorInterface as Collector.Instance,
       });
     }

@@ -1,8 +1,5 @@
-import {
-  authenticatedFetch,
-  requireProjectId,
-  resolveBaseUrl,
-} from '../../../core/auth.js';
+import { requireProjectId } from '../../../core/auth.js';
+import { apiFetch } from '../../../core/http.js';
 import {
   listDeployments,
   getDeploymentBySlug,
@@ -13,11 +10,12 @@ import {
 jest.mock('../../../core/auth.js', () => ({
   ...jest.requireActual('../../../core/auth.js'),
   requireProjectId: jest.fn().mockReturnValue('proj_default'),
-  resolveBaseUrl: jest.fn().mockReturnValue('https://app.walkeros.io'),
-  authenticatedFetch: jest.fn(),
+}));
+jest.mock('../../../core/http.js', () => ({
+  apiFetch: jest.fn(),
 }));
 
-const mockAuthenticatedFetch = jest.mocked(authenticatedFetch);
+const mockApiFetch = jest.mocked(apiFetch);
 const mockRequireProjectId = jest.mocked(requireProjectId);
 
 describe('deployments', () => {
@@ -25,20 +23,20 @@ describe('deployments', () => {
 
   describe('listDeployments', () => {
     it('calls GET with correct URL', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(JSON.stringify({ deployments: [], total: 0 }), {
           status: 200,
         }),
       );
       const result = await listDeployments({ projectId: 'proj_123' });
-      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_123/deployments',
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_123/deployments',
       );
       expect(result).toEqual({ deployments: [], total: 0 });
     });
 
     it('includes query params for type and status', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(JSON.stringify({ deployments: [] }), { status: 200 }),
       );
       await listDeployments({
@@ -46,13 +44,13 @@ describe('deployments', () => {
         type: 'web',
         status: 'active',
       });
-      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_123/deployments?type=web&status=active',
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_123/deployments?type=web&status=active',
       );
     });
 
     it('throws on non-ok response', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(JSON.stringify({ error: { message: 'Unauthorized' } }), {
           status: 401,
         }),
@@ -63,41 +61,41 @@ describe('deployments', () => {
     });
 
     it('falls back to requireProjectId()', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(JSON.stringify({ deployments: [] }), { status: 200 }),
       );
       await listDeployments();
       expect(mockRequireProjectId).toHaveBeenCalled();
-      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_default/deployments',
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_default/deployments',
       );
     });
   });
 
   describe('getDeploymentBySlug', () => {
     it('calls GET with slug in URL', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(JSON.stringify({ slug: 'my-deploy' }), { status: 200 }),
       );
       const result = await getDeploymentBySlug({ slug: 'my-deploy' });
-      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_default/deployments/my-deploy',
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_default/deployments/my-deploy',
       );
       expect(result).toEqual({ slug: 'my-deploy' });
     });
 
     it('uses provided projectId', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(JSON.stringify({ slug: 'my-deploy' }), { status: 200 }),
       );
       await getDeploymentBySlug({ slug: 'my-deploy', projectId: 'proj_123' });
-      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_123/deployments/my-deploy',
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_123/deployments/my-deploy',
       );
     });
 
     it('throws on error', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(JSON.stringify({ error: { message: 'Not found' } }), {
           status: 404,
         }),
@@ -110,7 +108,7 @@ describe('deployments', () => {
 
   describe('createDeployment', () => {
     it('POSTs with type and label', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(JSON.stringify({ slug: 'new-deploy', type: 'web' }), {
           status: 201,
         }),
@@ -120,8 +118,8 @@ describe('deployments', () => {
         label: 'My Deploy',
         projectId: 'proj_123',
       });
-      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_123/deployments',
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_123/deployments',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -132,7 +130,7 @@ describe('deployments', () => {
     });
 
     it('throws on error', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(JSON.stringify({ error: { message: 'Bad request' } }), {
           status: 400,
         }),
@@ -145,30 +143,28 @@ describe('deployments', () => {
 
   describe('deleteDeployment', () => {
     it('sends DELETE', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(JSON.stringify({ success: true }), { status: 200 }),
       );
       const result = await deleteDeployment({
         slug: 'my-deploy',
         projectId: 'proj_123',
       });
-      expect(mockAuthenticatedFetch).toHaveBeenCalledWith(
-        'https://app.walkeros.io/api/projects/proj_123/deployments/my-deploy',
+      expect(mockApiFetch).toHaveBeenCalledWith(
+        '/api/projects/proj_123/deployments/my-deploy',
         { method: 'DELETE' },
       );
       expect(result).toEqual({ success: true });
     });
 
     it('returns success on empty response', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
-        new Response('', { status: 200 }),
-      );
+      mockApiFetch.mockResolvedValue(new Response('', { status: 200 }));
       const result = await deleteDeployment({ slug: 'my-deploy' });
       expect(result).toEqual({ success: true });
     });
 
     it('throws on error', async () => {
-      mockAuthenticatedFetch.mockResolvedValue(
+      mockApiFetch.mockResolvedValue(
         new Response(JSON.stringify({ error: { message: 'Not found' } }), {
           status: 404,
         }),

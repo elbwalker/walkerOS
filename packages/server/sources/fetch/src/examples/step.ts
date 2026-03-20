@@ -1,9 +1,10 @@
 import type { Flow } from '@walkeros/core';
 
 export const postEvent: Flow.StepExample = {
+  trigger: { type: 'POST' },
   in: {
     method: 'POST',
-    url: 'https://example.com/collect',
+    url: 'http://localhost/collect',
     body: {
       name: 'page view',
       data: { title: 'Docs', url: 'https://example.com/docs' },
@@ -18,9 +19,10 @@ export const postEvent: Flow.StepExample = {
 };
 
 export const batchRequest: Flow.StepExample = {
+  trigger: { type: 'POST' },
   in: {
     method: 'POST',
-    url: 'https://example.com/collect',
+    url: 'http://localhost/collect',
     body: {
       batch: [
         { name: 'page view', data: { title: 'Home' } },
@@ -37,9 +39,10 @@ export const batchRequest: Flow.StepExample = {
 };
 
 export const pixelGet: Flow.StepExample = {
+  trigger: { type: 'GET' },
   in: {
     method: 'GET',
-    url: 'https://example.com/collect?e=page+view&d=%7B%22title%22%3A%22Home%22%7D',
+    url: 'http://localhost/collect?e=page+view&d=%7B%22title%22%3A%22Home%22%7D',
   },
   out: {
     name: 'page view',

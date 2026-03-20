@@ -10,8 +10,6 @@ import {
 } from '../../core/index.js';
 import { loadJsonFromSource, loadJsonConfig } from '../../config/index.js';
 import { validateFlowConfig } from '../../config/validators.js';
-import { findExample } from './example-loader.js';
-import { compareOutput } from './compare.js';
 import type { SimulateCommandOptions, SimulationResult } from './types.js';
 import type { SimulateOptions, Platform } from '../../schemas/simulate.js';
 import type { Flow } from '@walkeros/core';
@@ -26,7 +24,6 @@ export async function simulateCommand(
   const startTime = Date.now();
 
   try {
-    // Resolve config: stdin > argument > default
     let config: string;
     if (isStdinPiped() && !options.config) {
       const stdinContent = await readStdin();
@@ -46,27 +43,20 @@ export async function simulateCommand(
       verbose: options.verbose,
       silent: options.silent,
       platform: options.platform,
-      example: options.example,
       step: options.step,
     });
 
-    // Add duration
     const resultWithDuration = {
       ...result,
       duration: (Date.now() - startTime) / 1000,
     };
 
-    // Format and write result
     const formatted = formatSimulationResult(resultWithDuration, {
       json: options.json,
     });
     await writeResult(formatted + '\n', { output: options.output });
 
-    const exitCode =
-      !result.success || (result.exampleMatch && !result.exampleMatch.match)
-        ? 1
-        : 0;
-    process.exit(exitCode);
+    process.exit(result.success ? 0 : 1);
   } catch (error) {
     const errorMessage = getErrorMessage(error);
 
@@ -92,36 +82,8 @@ export async function simulateCommand(
 /**
  * High-level simulate function for programmatic usage.
  *
- * Handles configuration loading internally and returns structured results.
- *
- * @param configOrPath - Bundle configuration object or path to config file
- * @param event - Event object to simulate
- * @param options - Simulation options
- * @param options.silent - Suppress all output (default: false)
- * @param options.verbose - Enable verbose logging (default: false)
- * @param options.json - Format output as JSON (default: false)
- * @returns Simulation result with success status, elb result, and usage data
- *
- * @example
- * ```typescript
- * // With config file
- * const result = await simulate('./walker.config.json', {
- *   name: 'page view',
- *   data: { title: 'Home Page', path: '/', url: 'https://example.com' }
- * });
- *
- * // With config object
- * const result = await simulate(
- *   {
- *     platform: 'web',
- *     packages: { '@walkeros/collector': { imports: ['startFlow'] } },
- *     code: '...',
- *     output: './bundle.js'
- *   },
- *   { name: 'page view' },
- *   { silent: true }
- * );
- * ```
+ * For destinations/transformers: event is a walkerOS event { name, data }.
+ * For sources (--step source.*): event is a SourceInput { content, trigger?, env? }.
  */
 export async function simulate(
   configOrPath: string | unknown,
@@ -129,16 +91,12 @@ export async function simulate(
   options: SimulateOptions & {
     flow?: string;
     platform?: Platform;
-    example?: string;
     step?: string;
   } = {},
-): Promise<import('./types').SimulationResult> {
-  // simulateCore currently only accepts file paths, so we need to handle that
-  // For now, if configOrPath is not a string, throw an error with guidance
+): Promise<SimulationResult> {
   if (typeof configOrPath !== 'string') {
     throw new Error(
       'simulate() currently only supports config file paths. ' +
-        'Config object support will be added in a future version. ' +
         'Please provide a path to a configuration file.',
     );
   }
@@ -149,59 +107,12 @@ export async function simulate(
     resolvedEvent = await loadJsonFromSource(event, { name: 'event' });
   }
 
-  let exampleContext:
-    | { stepType: string; stepName: string; expected: unknown }
-    | undefined;
-
-  // If --example is provided, load the example from the raw config
-  if (options.example) {
-    const rawConfig = await loadJsonConfig<Flow.Config>(configOrPath);
-    const setup = validateFlowConfig(rawConfig);
-
-    const flowNames = Object.keys(setup.flows);
-    let flowName = options.flow;
-    if (!flowName) {
-      if (flowNames.length === 1) {
-        flowName = flowNames[0];
-      } else {
-        throw new Error(
-          `Multiple flows found. Use --flow to specify which flow contains the example.\n` +
-            `Available flows: ${flowNames.join(', ')}`,
-        );
-      }
-    }
-
-    const flowSettings = setup.flows[flowName];
-    if (!flowSettings) {
-      throw new Error(
-        `Flow "${flowName}" not found. Available: ${flowNames.join(', ')}`,
-      );
-    }
-
-    const found = findExample(flowSettings, options.example, options.step);
-    if (found.example.in === undefined) {
-      throw new Error(
-        `Example "${options.example}" in ${found.stepType}.${found.stepName} has no "in" value`,
-      );
-    }
-
-    resolvedEvent = found.example.in;
-    exampleContext = {
-      stepType: found.stepType,
-      stepName: found.stepName,
-      expected: found.example.out,
-    };
-  }
-
-  // Detect source simulation
-  const isSourceSimulation =
-    exampleContext?.stepType === 'source' ||
-    options.step?.startsWith('source.');
+  // Detect source simulation via --step
+  const isSourceSimulation = options.step?.startsWith('source.');
 
   let result: SimulationResult;
 
   if (isSourceSimulation) {
-    // Source simulation needs raw flow config
     const rawConfig = await loadJsonConfig<Flow.Config>(configOrPath);
     const setup = validateFlowConfig(rawConfig);
     const flowNames = Object.keys(setup.flows);
@@ -220,8 +131,7 @@ export async function simulate(
       );
     }
 
-    const sourceStep =
-      exampleContext?.stepName || options.step!.substring('source.'.length);
+    const sourceStep = options.step!.substring('source.'.length);
 
     result = await simulateSourceCLI(
       flowSettings as unknown as Record<string, unknown>,
@@ -235,51 +145,20 @@ export async function simulate(
       },
     );
   } else {
-    // Standard simulation (destination/transformer)
-    const stepTarget = exampleContext
-      ? `${exampleContext.stepType}.${exampleContext.stepName}`
-      : options.step;
     result = await simulateCore(configOrPath, resolvedEvent, {
       json: options.json ?? false,
       verbose: options.verbose ?? false,
       silent: options.silent ?? false,
       flow: options.flow,
       platform: options.platform,
-      step: stepTarget,
+      step: options.step,
     });
-  }
-
-  // Compare output against example if --example was used
-  if (exampleContext && result.success) {
-    const stepKey = `${exampleContext.stepType}.${exampleContext.stepName}`;
-
-    if (exampleContext.expected === false) {
-      const calls = result.usage?.[exampleContext.stepName];
-      const wasFiltered = !calls || calls.length === 0;
-      result.exampleMatch = {
-        name: options.example!,
-        step: stepKey,
-        expected: false,
-        actual: wasFiltered ? false : calls,
-        match: wasFiltered,
-        diff: wasFiltered
-          ? undefined
-          : `Expected event to be filtered, but ${calls!.length} API call(s) were made`,
-      };
-    } else if (exampleContext.expected !== undefined) {
-      const actual = result.usage?.[exampleContext.stepName] ?? [];
-      result.exampleMatch = {
-        name: options.example!,
-        step: stepKey,
-        ...compareOutput(exampleContext.expected, actual),
-      };
-    }
   }
 
   return result;
 }
 
-// Re-export types and utilities for testing
+// Re-export types and utilities
 export * from './types.js';
 export * from './simulator.js';
 export { findExample } from './example-loader.js';

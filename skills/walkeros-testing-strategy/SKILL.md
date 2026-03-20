@@ -205,7 +205,7 @@ const result = await simulate({
   name: 'my-source',
   code: sourceModule,
   env: jsdomEnv,
-  setup: sourceSetup, // Optional setup function
+  trigger: sourceTrigger, // Optional trigger function (Trigger.SetupFn)
 });
 // result.events = captured events via spy transformer
 ```
@@ -290,6 +290,32 @@ export * as events from './events';
 export * as mapping from './mapping';
 export * as step from './step'; // Step examples { in, out }
 ```
+
+### Testing Sources with Injected env
+
+Sources accept platform dependencies via `env`. Mock `window`, `document`, or
+library imports by passing them through `env` instead of mocking globals:
+
+```typescript
+// Instead of mocking window.performance globally:
+const mockWindow = {
+  performance: {
+    getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
+  },
+  location: { href: 'https://test.com/' },
+} as unknown as Window & typeof globalThis;
+
+await createSessionSource(collector, undefined, { window: mockWindow });
+
+// Instead of mocking express import:
+const mockExpress = Object.assign(jest.fn().mockReturnValue(mockApp), {
+  json: jest.fn().mockReturnValue(middleware),
+});
+await sourceExpress(createSourceContext({}, { express: mockExpress as never }));
+```
+
+This pattern avoids global state pollution between tests and enables simulation
+in non-browser environments.
 
 ## Red Flags - Stop and Fix
 

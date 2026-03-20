@@ -63,6 +63,7 @@ export function createMockCommand() {
 export async function createSessionSource(
   collector: Collector.Instance,
   config?: Partial<Source.Config<Types>>,
+  envOverrides?: Partial<Types['env']>,
 ): Promise<Source.Instance<Types>> {
   return await sourceSession({
     collector,
@@ -72,6 +73,7 @@ export async function createSessionSource(
       command: collector.command.bind(collector),
       elb: collector.sources?.elb?.push,
       logger: createMockLogger(),
+      ...envOverrides,
     },
     id: 'test-session',
     logger: createMockLogger(),

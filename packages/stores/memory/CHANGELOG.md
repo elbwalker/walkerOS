@@ -1,5 +1,16 @@
 # @walkeros/store-memory
 
+## 3.1.0
+
+### Patch Changes
+
+- Updated dependencies [dfc6738]
+- Updated dependencies [966342b]
+- Updated dependencies [bee8ba7]
+- Updated dependencies [966342b]
+- Updated dependencies [df990d4]
+  - @walkeros/core@3.1.0
+
 ## 3.0.2
 
 ### Patch Changes

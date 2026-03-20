@@ -61,7 +61,7 @@ Key rules:
 
 ## Getting Started
 
-1. \`flow_load({ platform: "web" })\` or \`flow_load({ source: "./flow.json" })\` — create or load a flow
+1. \`flow_load({ platform: "web" })\` or \`flow_load({ source: "./flow.json" })\` — create or load a flow (also accepts inline JSON strings or URLs)
 2. \`package_search({ type: "destination", platform: "web" })\` — discover available packages
 3. Use the \`add-step\` prompt to add sources, destinations, transformers, or stores
 4. Use the \`setup-mapping\` prompt to configure event transformations
@@ -78,7 +78,7 @@ Read these before constructing configs manually: \`walkeros://reference/flow-sch
 
 ## Key Concepts
 
-- **Steps** are sources, destinations, transformers, or stores — each backed by an npm package. Use \`package_search\` to browse, \`package_get\` for schemas and examples.
+- **Steps** are sources, destinations, transformers, or stores — each backed by an npm package. Use \`package_search\` to browse, \`package_get\` for schemas and examples. \`package_get\` returns \`schemas.config\` — a merged JSON Schema combining base config fields (consent, require, logger, mapping, etc.) with the package's typed settings. Non-config schemas (mapping rules, utility schemas) remain as sibling keys.
 - **Mapping** transforms events using data/map/loop/set/condition rules. Same syntax on sources and destinations. Mapping rules use NESTED entity → action keying: event name "product add" maps to \`{ "product": { "add": Rule } }\`. Wildcards: \`{ "*": { "view": Rule } }\`.
 - **Contracts** define event schemas using entity-action keying. Can generate FROM mappings or scaffold mappings FROM contracts.
 - **Variables** (\$var, \$env, \$def, \$code, \$store) enable DRY, environment-aware config. Use the \`use-definitions\` prompt to extract shared patterns.

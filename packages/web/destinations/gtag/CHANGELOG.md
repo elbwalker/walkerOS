@@ -1,5 +1,12 @@
 # @walkeros/web-destination-gtag
 
+## 3.1.0
+
+### Patch Changes
+
+- Updated dependencies [ff58828]
+  - @walkeros/web-core@3.1.0
+
 ## 3.0.2
 
 ### Patch Changes

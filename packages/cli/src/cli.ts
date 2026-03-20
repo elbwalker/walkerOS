@@ -89,6 +89,10 @@ program
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
+  .option(
+    '--step <target>',
+    'step target in type.name format (e.g. "source.browser", "destination.gtag")',
+  )
   .action(async (file, options) => {
     await simulateCommand({
       config: file,
@@ -99,6 +103,7 @@ program
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,
+      step: options.step,
     });
   });
 
@@ -456,14 +461,10 @@ program
       port:
         options.port ??
         (process.env.PORT ? parseInt(process.env.PORT, 10) : undefined),
-      flow:
-        options.flow ?? process.env.WALKEROS_FLOW_NAME ?? process.env.FLOW_NAME,
-      flowId:
-        options.flowId ?? process.env.WALKEROS_FLOW_ID ?? process.env.FLOW_ID,
-      project:
-        options.project ??
-        process.env.WALKEROS_PROJECT_ID ??
-        process.env.PROJECT_ID,
+      flow: options.flow ?? process.env.WALKEROS_FLOW_NAME,
+      flowId: options.flowId ?? process.env.WALKEROS_FLOW_ID,
+      deploymentId: process.env.WALKEROS_DEPLOYMENT_ID,
+      project: options.project ?? process.env.WALKEROS_PROJECT_ID,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,

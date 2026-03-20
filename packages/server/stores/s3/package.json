@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/server-store-s3",
   "description": "S3-compatible object storage for walkerOS server flows",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -31,14 +31,10 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
+    "@walkeros/core": "^3.1.0",
     "s3mini": "^0.9.1"
   },
-  "peerDependencies": {
-    "@walkeros/core": "^3.0.2"
-  },
-  "devDependencies": {
-    "@walkeros/core": "^3.0.2"
-  },
+  "devDependencies": {},
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",
     "directory": "packages/server/stores/s3"
@@ -50,7 +46,9 @@
   },
   "walkerOS": {
     "type": "store",
-    "platform": "server",
+    "platform": [
+      "server"
+    ],
     "docs": "https://www.walkeros.io/docs/stores/server/s3"
   },
   "keywords": [

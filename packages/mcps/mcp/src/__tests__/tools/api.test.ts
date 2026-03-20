@@ -150,7 +150,7 @@ describe('api tool', () => {
   });
 
   describe('flows', () => {
-    it('flow.get requires id', async () => {
+    it('flow.get requires flowId', async () => {
       const tool = server.getTool('api');
       const result = await tool.handler({ action: 'flow.get' }, mockExtra);
 
@@ -165,12 +165,13 @@ describe('api tool', () => {
 
       const tool = server.getTool('api');
       const result = await tool.handler(
-        { action: 'flow.get', id: 'cfg_1' },
+        { action: 'flow.get', flowId: 'cfg_1' },
         mockExtra,
       );
 
       expect(getFlow).toHaveBeenCalledWith({
         flowId: 'cfg_1',
+        projectId: undefined,
         fields: undefined,
       });
       expect(result.structuredContent.ok).toBe(true);
@@ -194,7 +195,7 @@ describe('api tool', () => {
 
       const tool = server.getTool('api');
       await tool.handler(
-        { action: 'flow.update', id: 'cfg_1', content: { version: 3 } },
+        { action: 'flow.update', flowId: 'cfg_1', content: { version: 3 } },
         mockExtra,
       );
 
@@ -202,11 +203,12 @@ describe('api tool', () => {
         flowId: 'cfg_1',
         name: undefined,
         content: { version: 3 },
+        projectId: undefined,
         mergePatch: true,
       });
     });
 
-    it('flow.delete requires id', async () => {
+    it('flow.delete requires flowId', async () => {
       const tool = server.getTool('api');
       const result = await tool.handler({ action: 'flow.delete' }, mockExtra);
 
@@ -215,7 +217,7 @@ describe('api tool', () => {
   });
 
   describe('deploy', () => {
-    it('deploy requires id', async () => {
+    it('deploy requires flowId', async () => {
       const tool = server.getTool('api');
       const result = await tool.handler({ action: 'deploy' }, mockExtra);
 
@@ -230,7 +232,7 @@ describe('api tool', () => {
 
       const tool = server.getTool('api');
       const result = await tool.handler(
-        { action: 'deploy', id: 'cfg_123' },
+        { action: 'deploy', flowId: 'cfg_123' },
         mockExtra,
       );
 
@@ -242,7 +244,7 @@ describe('api tool', () => {
 
       const tool = server.getTool('api');
       const result = await tool.handler(
-        { action: 'deploy', id: 'cfg_1' },
+        { action: 'deploy', flowId: 'cfg_1' },
         mockExtra,
       );
 
@@ -290,7 +292,7 @@ describe('api tool', () => {
 
       const tool = server.getTool('api');
       const result = await tool.handler(
-        { action: 'deployment.get', id: 'abc-123' },
+        { action: 'deployment.get', flowId: 'abc-123' },
         mockExtra,
       );
 

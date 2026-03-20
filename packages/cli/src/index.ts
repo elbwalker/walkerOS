@@ -43,14 +43,16 @@ export { simulate } from './commands/simulate/index.js';
 export { push } from './commands/push/index.js';
 export { run } from './commands/run/index.js';
 export { validate } from './commands/validate/index.js';
+export { getToken, getAuthHeaders, requireProjectId } from './core/auth.js';
 export {
-  getToken,
-  getAuthHeaders,
-  deployAuthenticatedFetch,
-  requireProjectId,
-  resolveBaseUrl,
-} from './core/auth.js';
+  apiFetch,
+  publicFetch,
+  deployFetch,
+  mergeAuthHeaders,
+} from './core/http.js';
 export { createApiClient } from './core/api-client.js';
+export { ApiError, throwApiError } from './core/api-error.js';
+export type { ApiErrorDetail } from './core/api-error.js';
 export {
   listProjects,
   getProject,
@@ -100,10 +102,7 @@ export type {
   MinifyOptions,
 } from './types/bundle.js';
 export type { BundleStats } from './commands/bundle/bundler.js';
-export type {
-  SimulationResult,
-  ExampleMatch,
-} from './commands/simulate/types.js';
+export type { SimulationResult } from './commands/simulate/types.js';
 export type { ExampleLookupResult } from './commands/simulate/example-loader.js';
 export type { PushResult } from './commands/push/types.js';
 export type {

@@ -8,7 +8,7 @@
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { schemas } from '@walkeros/core/dev';
-import { PACKAGE_REGISTRY } from '../registry.js';
+import { fetchCatalog } from '../catalog.js';
 
 export function registerReferenceResources(server: McpServer) {
   // Flow Schema reference (generated from Zod)
@@ -258,14 +258,17 @@ export function registerReferenceResources(server: McpServer) {
         'Complete walkerOS package catalog — all sources, destinations, transformers, and stores',
       mimeType: 'application/json',
     },
-    async () => ({
-      contents: [
-        {
-          uri: 'walkeros://reference/packages',
-          text: JSON.stringify(PACKAGE_REGISTRY, null, 2),
-          mimeType: 'application/json',
-        },
-      ],
-    }),
+    async () => {
+      const catalog = await fetchCatalog();
+      return {
+        contents: [
+          {
+            uri: 'walkeros://reference/packages',
+            text: JSON.stringify(catalog, null, 2),
+            mimeType: 'application/json',
+          },
+        ],
+      };
+    },
   );
 }

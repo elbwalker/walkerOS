@@ -129,7 +129,7 @@ This function considers:
 
 #### storageRead
 
-`storageRead(key: string, storage?: StorageType): WalkerOS.PropertyType` reads
+`storageRead(key: string, storage?: StorageType, env?: StorageEnv): WalkerOS.PropertyType` reads
 data from browser storage with automatic type conversion.
 
 <CodeSnippet
@@ -143,7 +143,7 @@ const sessionData = storageRead('session_data', 'sessionStorage');`}
 
 #### storageWrite
 
-`storageWrite(key: string, value: WalkerOS.PropertyType, maxAgeInMinutes?: number, storage?: StorageType, domain?: string): WalkerOS.PropertyType`
+`storageWrite(key: string, value: WalkerOS.PropertyType, maxAgeInMinutes?: number, storage?: StorageType, domain?: string, env?: StorageEnv): WalkerOS.PropertyType`
 writes data to storage with expiration and domain options.
 
 <CodeSnippet
@@ -160,7 +160,7 @@ storageWrite('tracking_id', 'abc123', 1440, 'cookie', '.example.com');`}
 
 #### storageDelete
 
-`storageDelete(key: string, storage?: StorageType)` removes data from storage.
+`storageDelete(key: string, storage?: StorageType, env?: StorageEnv)` removes data from storage.
 
 <CodeSnippet
   code={`storageDelete('expired_data');
@@ -312,6 +312,15 @@ sampling?: number; // Sampling rate (0-1)
 }`}
   language="typescript"
 />
+
+### StorageEnv
+
+<CodeSnippet code={`interface StorageEnv {
+  window?: Window & typeof globalThis;
+  document?: Document;
+}`} language="typescript" />
+
+The optional `env` parameter on storage functions allows injecting `window` and `document` for testing and simulation. When omitted, the global `window` and `document` are used.
 
 ### StorageType
 

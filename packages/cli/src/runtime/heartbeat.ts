@@ -1,5 +1,6 @@
 import { randomBytes } from 'crypto';
 import { VERSION } from '../version.js';
+import { mergeAuthHeaders } from '../core/http.js';
 import type { Collector, Logger } from '@walkeros/core';
 
 export interface CounterPayload {
@@ -47,6 +48,30 @@ export function computeCounterDelta(
   };
 }
 
+/**
+ * Deep-copy destination status values to prevent shared references
+ * between snapshots from causing delta computation to always return 0.
+ */
+function snapshotDestinations(
+  destinations: Record<
+    string,
+    { count: number; failed: number; duration: number }
+  >,
+): Record<string, { count: number; failed: number; duration: number }> {
+  const result: Record<
+    string,
+    { count: number; failed: number; duration: number }
+  > = {};
+  for (const [name, dest] of Object.entries(destinations)) {
+    result[name] = {
+      count: dest.count,
+      failed: dest.failed,
+      duration: dest.duration,
+    };
+  }
+  return result;
+}
+
 const instanceId = randomBytes(8).toString('hex');
 
 export function getInstanceId(): string {
@@ -90,13 +115,14 @@ export function createHeartbeat(
     try {
       // Read current counters and compute delta
       let counters: CounterPayload | undefined;
+      let current: CounterSnapshot | undefined;
       const status = config.getCounters?.();
       if (status) {
-        const current: CounterSnapshot = {
+        current = {
           in: status.in,
           out: status.out,
           failed: status.failed,
-          destinations: { ...status.destinations },
+          destinations: snapshotDestinations(status.destinations),
         };
         counters = computeCounterDelta(current, lastReported);
       }
@@ -105,10 +131,9 @@ export function createHeartbeat(
         `${config.appUrl}/api/projects/${config.projectId}/runners/heartbeat`,
         {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${config.token}`,
+          headers: mergeAuthHeaders(config.token, {
             'Content-Type': 'application/json',
-          },
+          }),
           body: JSON.stringify({
             instanceId,
             flowId: config.flowId,
@@ -124,14 +149,10 @@ export function createHeartbeat(
         },
       );
 
-      // Update snapshot only on success so deltas accumulate on failure
-      if (response.ok && status) {
-        lastReported = {
-          in: status.in,
-          out: status.out,
-          failed: status.failed,
-          destinations: { ...status.destinations },
-        };
+      // Use the same snapshot we computed the delta from — not the live status
+      // which may have changed during the HTTP POST
+      if (response.ok && counters && current) {
+        lastReported = current;
       }
 
       if (response.status === 401 || response.status === 403) {

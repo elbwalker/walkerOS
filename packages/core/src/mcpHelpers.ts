@@ -20,9 +20,15 @@ export function mcpResult(
 export function mcpError(error: unknown, hint?: string) {
   let message: string;
   let path: string | undefined;
+  let code: string | undefined;
+  let details: unknown[] | undefined;
 
   if (error instanceof Error) {
     message = error.message;
+    // Detect ApiError (has code and/or details properties)
+    const err = error as Error & { code?: string; details?: unknown[] };
+    if (err.code) code = err.code;
+    if (Array.isArray(err.details)) details = err.details;
   } else if (typeof error === 'string') {
     message = error;
   } else if (
@@ -45,6 +51,8 @@ export function mcpError(error: unknown, hint?: string) {
   const structured: Record<string, unknown> = { error: message };
   if (hint) structured.hint = hint;
   if (path) structured.path = path;
+  if (code) structured.code = code;
+  if (details) structured.details = details;
 
   return {
     content: [

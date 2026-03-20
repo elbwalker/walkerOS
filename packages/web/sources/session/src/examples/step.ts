@@ -1,6 +1,12 @@
 import type { Flow } from '@walkeros/core';
 
 export const newMarketingSession: Flow.StepExample = {
+  trigger: {
+    type: 'load',
+    options: {
+      url: 'https://example.com/?utm_source=google&utm_medium=cpc&utm_campaign=winter-sale',
+    },
+  },
   in: { storage: true },
   out: {
     name: 'session start',
@@ -24,6 +30,12 @@ export const newMarketingSession: Flow.StepExample = {
 };
 
 export const returningVisitor: Flow.StepExample = {
+  trigger: {
+    type: 'load',
+    options: {
+      referrer: 'https://google.com',
+    },
+  },
   in: { storage: true },
   out: {
     name: 'session start',

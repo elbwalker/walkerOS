@@ -1,4 +1,6 @@
 import type { Lifecycle, WalkerOS, Source as CoreSource } from '@walkeros/core';
+import type express from 'express';
+import type cors from 'cors';
 import type { Request, Response, Application } from 'express';
 import type {
   SettingsSchema,
@@ -24,6 +26,8 @@ export type Push = (req: Request, res: Response) => Promise<void>;
 export interface Env extends CoreSource.Env {
   req?: Request;
   res?: Response;
+  express?: typeof express;
+  cors?: typeof cors;
 }
 
 // Type bundle (must be after Settings, Mapping, Push, Env are defined)

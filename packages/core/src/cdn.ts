@@ -1,6 +1,13 @@
 const JSDELIVR_BASE = 'https://cdn.jsdelivr.net/npm';
 const DEFAULT_SCHEMA_PATH = 'dist/walkerOS.json';
 
+function parsePlatform(value: unknown): string | string[] | undefined {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && value.every((v) => typeof v === 'string'))
+    return value as string[];
+  return undefined;
+}
+
 export interface ExampleSummary {
   name: string;
   description?: string;
@@ -11,14 +18,14 @@ export interface WalkerOSPackageMeta {
   version: string;
   description?: string;
   type?: string;
-  platform?: string;
+  platform?: string | string[];
 }
 
 export interface WalkerOSPackageInfo {
   packageName: string;
   version: string;
   type?: string;
-  platform?: string;
+  platform?: string | string[];
   schemas: Record<string, unknown>;
   examples: Record<string, unknown>;
   hints?: Record<string, unknown>;
@@ -80,19 +87,21 @@ export async function fetchPackage(
     for (const [name, example] of Object.entries(stepExamples)) {
       const ex = example as Record<string, unknown> | undefined;
       const summary: ExampleSummary = { name };
-      if (ex?.description) summary.description = ex.description as string;
+      if (typeof ex?.description === 'string')
+        summary.description = ex.description;
       exampleSummaries.push(summary);
     }
 
-    const docs = meta.docs as string | undefined;
-    const source = meta.source as string | undefined;
+    const docs = typeof meta.docs === 'string' ? meta.docs : undefined;
+    const source = typeof meta.source === 'string' ? meta.source : undefined;
 
     return {
       packageName,
-      version: (pkg.version as string) || ver,
-      description: pkg.description as string | undefined,
-      type: meta.type as string | undefined,
-      platform: meta.platform as string | undefined,
+      version: typeof pkg.version === 'string' ? pkg.version : ver,
+      description:
+        typeof pkg.description === 'string' ? pkg.description : undefined,
+      type: typeof meta.type === 'string' ? meta.type : undefined,
+      platform: parsePlatform(meta.platform),
       schemas,
       examples,
       ...(docs ? { docs } : {}),

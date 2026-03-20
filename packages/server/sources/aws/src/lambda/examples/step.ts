@@ -1,6 +1,7 @@
 import type { Flow } from '@walkeros/core';
 
 export const lambdaPost: Flow.StepExample = {
+  trigger: { type: 'POST' },
   in: {
     version: '2.0',
     requestContext: {
@@ -8,7 +9,7 @@ export const lambdaPost: Flow.StepExample = {
       requestId: 'req-123',
     },
     body: JSON.stringify({
-      name: 'page view',
+      event: 'page view',
       data: { title: 'Home' },
     }),
     isBase64Encoded: false,
@@ -22,6 +23,7 @@ export const lambdaPost: Flow.StepExample = {
 };
 
 export const apiGatewayV1Post: Flow.StepExample = {
+  trigger: { type: 'POST' },
   in: {
     httpMethod: 'POST',
     path: '/collect',
@@ -31,7 +33,7 @@ export const apiGatewayV1Post: Flow.StepExample = {
     },
     queryStringParameters: null,
     body: JSON.stringify({
-      name: 'page view',
+      event: 'page view',
       data: { title: 'Home' },
     }),
     isBase64Encoded: false,
@@ -45,6 +47,7 @@ export const apiGatewayV1Post: Flow.StepExample = {
 };
 
 export const lambdaGet: Flow.StepExample = {
+  trigger: { type: 'GET' },
   in: {
     version: '2.0',
     requestContext: {

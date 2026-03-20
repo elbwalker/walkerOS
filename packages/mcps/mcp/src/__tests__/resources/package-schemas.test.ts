@@ -5,6 +5,18 @@ jest.mock('@walkeros/core', () => ({
   fetchPackageSchema: jest.fn(),
 }));
 
+jest.mock('../../catalog.js', () => ({
+  fetchCatalog: jest.fn().mockResolvedValue([
+    {
+      name: '@walkeros/test-pkg',
+      version: '1.0.0',
+      type: 'destination',
+      platform: ['web'],
+      description: 'Test package',
+    },
+  ]),
+}));
+
 const mockFetchPackageSchema = fetchPackageSchema as jest.MockedFunction<
   typeof fetchPackageSchema
 >;
@@ -57,9 +69,9 @@ describe('package-schemas resource', () => {
     expect(listCallback).toBeDefined();
 
     const result = await listCallback({});
-    expect(result.resources.length).toBeGreaterThan(0);
+    expect(result.resources).toHaveLength(1);
     expect(result.resources[0]).toHaveProperty('uri');
-    expect(result.resources[0]).toHaveProperty('name');
+    expect(result.resources[0]).toHaveProperty('name', '@walkeros/test-pkg');
     expect(result.resources[0]).toHaveProperty('mimeType', 'application/json');
   });
 

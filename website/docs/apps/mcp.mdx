@@ -74,7 +74,7 @@ When `WALKEROS_TOKEN` is set, the `api` tool is registered for cloud operations.
 
 ---
 
-## `@walkeros/mcp` — flow development
+## @walkeros/mcp (flow development)
 
 Unified server for flow development, package discovery, reference resources,
 guided prompts, and cloud API. Replaces the previous separate `@walkeros/mcp-cli`
@@ -191,7 +191,8 @@ Unified walkerOS cloud API. Only available when `WALKEROS_TOKEN` is set.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `action` | enum | Yes | API action (see below) |
-| `id` | string | No | Resource ID (flowId, projectId, or slug) |
+| `projectId` | string | No | Project ID (`proj_...`). Required for: project.get/update/delete, flow.create, flow.list. Falls back to `WALKEROS_PROJECT_ID` env. |
+| `flowId` | string | No | Flow ID (`flow_...`) or config ID (`cfg_...`). Required for: flow.get/update/delete/duplicate, deploy. For deployment.get/delete: can be a deployment slug. |
 | `name` | string | No | Name for create/update operations |
 | `content` | object | No | Flow.Config JSON for flow operations |
 | `wait` | boolean | No | Wait for deploy to complete (default: `true`) |
@@ -226,7 +227,7 @@ Unified walkerOS cloud API. Only available when `WALKEROS_TOKEN` is set.
 
 ---
 
-## `@walkeros/mcp-source-browser` — HTML tagging tools
+## @walkeros/mcp-source-browser (HTML tagging tools)
 
 Generate, parse, and validate walkerOS `data-elb` HTML attributes using real DOM
 parsing (JSDOM). No API token or CLI dependency required.

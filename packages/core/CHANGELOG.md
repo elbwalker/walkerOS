@@ -1,5 +1,47 @@
 # @walkeros/core
 
+## 3.1.0
+
+### Minor Changes
+
+- 966342b: Add mergeConfigSchema to core and integrate into MCP package_get
+  tool.
+
+  package_get now returns schemas.config — a merged JSON Schema combining base
+  config fields (require, consent, logger, mapping, etc.) from core with the
+  package's typed settings schema. Runtime-only fields (env, onError, onLog) are
+  excluded.
+
+- df990d4: Unified source simulation input. All source simulation uses
+  SourceInput { content, trigger?, env? } — one format for CLI, MCP, and tests.
+  Removes legacy runSourceLegacy and deprecated SimulateSource fields. CLI gains
+  --step flag. MCP flow_simulate drops example parameter (use flow_examples to
+  discover, then provide event). flow_examples now returns trigger metadata.
+  StepExample Zod schema aligned with TypeScript type.
+
+### Patch Changes
+
+- dfc6738: MCP api tool: replace overloaded `id` param with explicit `projectId`
+  and `flowId`. CLI functions now throw structured ApiError with code and
+  details from the API response. mcpError forwards structured error data to MCP
+  clients.
+- bee8ba7: Replace hardcoded package registry with live npm search. Package
+  catalog is now fetched dynamically from npm and enriched with walkerOS.json
+  metadata from CDN.
+
+  Change platform type from string to array. Packages declare platform as
+  ["web"], ["server"], or ["web", "server"]. Empty array means
+  platform-agnostic. The normalizePlatform utility handles backwards
+  compatibility with the old string format from already-published packages.
+
+  Remove outputSchema from package_get to prevent SDK validation crashes on
+  unexpected field values.
+
+- 966342b: Add missing fields to Zod schemas: require, logger, ingest on
+  Source.Config and require, logger on Destination.Config. These fields existed
+  in TypeScript types but were absent from schemas, making them undiscoverable
+  via JSON Schema and MCP.
+
 ## 3.0.2
 
 ## 3.0.1

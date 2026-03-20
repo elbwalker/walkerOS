@@ -1,6 +1,7 @@
 import type { Flow } from '@walkeros/core';
 
 export const gtagPurchase: Flow.StepExample = {
+  trigger: { type: 'gtag' },
   in: [
     'event',
     'purchase',
@@ -25,6 +26,7 @@ export const gtagPurchase: Flow.StepExample = {
 };
 
 export const consentUpdate: Flow.StepExample = {
+  trigger: { type: 'gtag' },
   in: [
     'consent',
     'update',
@@ -40,11 +42,12 @@ export const consentUpdate: Flow.StepExample = {
       analytics_storage: 'granted',
     },
     entity: 'dataLayer',
-    action: 'consent update',
+    action: 'consent',
   },
 };
 
 export const gtagAddToCart: Flow.StepExample = {
+  trigger: { type: 'gtag' },
   in: [
     'event',
     'add_to_cart',
@@ -83,6 +86,7 @@ export const gtagAddToCart: Flow.StepExample = {
 };
 
 export const gtagViewItem: Flow.StepExample = {
+  trigger: { type: 'gtag' },
   in: [
     'event',
     'view_item',
@@ -119,6 +123,7 @@ export const gtagViewItem: Flow.StepExample = {
 };
 
 export const directEvent: Flow.StepExample = {
+  trigger: { type: 'direct' },
   in: {
     event: 'custom_event',
     category: 'engagement',

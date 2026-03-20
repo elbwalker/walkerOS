@@ -133,16 +133,32 @@ describe('SessionStorage', () => {
 
   test('Storage Session Options', () => {
     sessionStorage({});
-    expect(mockStorageRead).toHaveBeenCalledWith('elbDeviceId', 'local');
-    expect(mockStorageRead).toHaveBeenCalledWith('elbSessionId', 'local');
+    expect(mockStorageRead).toHaveBeenCalledWith(
+      'elbDeviceId',
+      'local',
+      undefined,
+    );
+    expect(mockStorageRead).toHaveBeenCalledWith(
+      'elbSessionId',
+      'local',
+      undefined,
+    );
 
     sessionStorage({ deviceKey: 'dKey', sessionKey: 'sKey' });
-    expect(mockStorageRead).toHaveBeenCalledWith('dKey', 'local');
-    expect(mockStorageRead).toHaveBeenCalledWith('sKey', 'local');
+    expect(mockStorageRead).toHaveBeenCalledWith('dKey', 'local', undefined);
+    expect(mockStorageRead).toHaveBeenCalledWith('sKey', 'local', undefined);
 
     sessionStorage({ deviceStorage: 'session', sessionStorage: 'session' });
-    expect(mockStorageRead).toHaveBeenCalledWith('elbDeviceId', 'session');
-    expect(mockStorageRead).toHaveBeenCalledWith('elbSessionId', 'session');
+    expect(mockStorageRead).toHaveBeenCalledWith(
+      'elbDeviceId',
+      'session',
+      undefined,
+    );
+    expect(mockStorageRead).toHaveBeenCalledWith(
+      'elbSessionId',
+      'session',
+      undefined,
+    );
   });
 
   test('Storage error', () => {
@@ -182,6 +198,8 @@ describe('SessionStorage', () => {
       expect.any(String),
       60,
       'local',
+      undefined,
+      undefined,
     );
     const obj = JSON.parse(mockStorageWrite.mock.calls[0][1]);
     expect(obj).toStrictEqual(
@@ -201,6 +219,8 @@ describe('SessionStorage', () => {
       expect.any(String),
       60,
       'local',
+      undefined,
+      undefined,
     );
 
     sessionStorage({
@@ -213,6 +233,8 @@ describe('SessionStorage', () => {
       expect.any(String),
       10,
       'session',
+      undefined,
+      undefined,
     );
   });
 
@@ -303,6 +325,29 @@ describe('SessionStorage', () => {
       isStart: false,
       isNew: true,
       runs: 1,
+    });
+  });
+
+  test('sessionStorage passes StorageEnv to storage functions', () => {
+    const mockWindow = {
+      performance: {
+        getEntriesByType: jest.fn().mockReturnValue([{ type: 'navigate' }]),
+      },
+      location: { href: 'https://test.com/' },
+    } as unknown as Window & typeof globalThis;
+    const mockDocument = {
+      referrer: '',
+    } as unknown as Document;
+
+    sessionStorage({
+      window: mockWindow,
+      document: mockDocument,
+    });
+
+    // Verify storageRead was called with StorageEnv
+    expect(mockStorageRead).toHaveBeenCalledWith('elbDeviceId', 'local', {
+      window: mockWindow,
+      document: mockDocument,
     });
   });
 

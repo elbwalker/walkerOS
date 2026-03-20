@@ -1,3 +1,5 @@
+import { mergeAuthHeaders } from '../core/http.js';
+
 export interface FetchSecretsOptions {
   appUrl: string;
   token: string;
@@ -26,10 +28,7 @@ export async function fetchSecrets(
   const url = `${appUrl}/api/projects/${encodeURIComponent(projectId)}/flows/${encodeURIComponent(flowId)}/secrets/values`;
 
   const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: mergeAuthHeaders(token, { 'Content-Type': 'application/json' }),
   });
 
   if (!res.ok) {

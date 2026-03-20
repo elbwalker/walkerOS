@@ -1,9 +1,7 @@
 import { getPlatform } from '@walkeros/core';
-import {
-  authenticatedFetch,
-  requireProjectId,
-  resolveBaseUrl,
-} from '../../core/auth.js';
+import { requireProjectId } from '../../core/auth.js';
+import { apiFetch } from '../../core/http.js';
+import { throwApiError } from '../../core/api-error.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { writeResult } from '../../core/output.js';
 import { loadFlowConfig } from '../../config/loader.js';
@@ -19,21 +17,17 @@ export interface ListDeploymentsOptions {
 
 export async function listDeployments(options: ListDeploymentsOptions = {}) {
   const id = options.projectId ?? requireProjectId();
-  const base = resolveBaseUrl();
   const params = new URLSearchParams();
   if (options.type) params.set('type', options.type);
   if (options.status) params.set('status', options.status);
   const qs = params.toString();
 
-  const response = await authenticatedFetch(
-    `${base}/api/projects/${id}/deployments${qs ? `?${qs}` : ''}`,
+  const response = await apiFetch(
+    `/api/projects/${id}/deployments${qs ? `?${qs}` : ''}`,
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(
-      (body as { error?: { message?: string } }).error?.message ||
-        'Failed to list deployments',
-    );
+    throwApiError(body, 'Failed to list deployments');
   }
   return response.json();
 }
@@ -43,17 +37,13 @@ export async function getDeploymentBySlug(options: {
   projectId?: string;
 }) {
   const id = options.projectId ?? requireProjectId();
-  const base = resolveBaseUrl();
 
-  const response = await authenticatedFetch(
-    `${base}/api/projects/${id}/deployments/${options.slug}`,
+  const response = await apiFetch(
+    `/api/projects/${id}/deployments/${options.slug}`,
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(
-      (body as { error?: { message?: string } }).error?.message ||
-        'Failed to get deployment',
-    );
+    throwApiError(body, 'Failed to get deployment');
   }
   return response.json();
 }
@@ -64,22 +54,15 @@ export async function createDeployment(options: {
   projectId?: string;
 }) {
   const id = options.projectId ?? requireProjectId();
-  const base = resolveBaseUrl();
 
-  const response = await authenticatedFetch(
-    `${base}/api/projects/${id}/deployments`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: options.type, label: options.label }),
-    },
-  );
+  const response = await apiFetch(`/api/projects/${id}/deployments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: options.type, label: options.label }),
+  });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(
-      (body as { error?: { message?: string } }).error?.message ||
-        'Failed to create deployment',
-    );
+    throwApiError(body, 'Failed to create deployment');
   }
   return response.json();
 }
@@ -89,18 +72,14 @@ export async function deleteDeployment(options: {
   projectId?: string;
 }) {
   const id = options.projectId ?? requireProjectId();
-  const base = resolveBaseUrl();
 
-  const response = await authenticatedFetch(
-    `${base}/api/projects/${id}/deployments/${options.slug}`,
+  const response = await apiFetch(
+    `/api/projects/${id}/deployments/${options.slug}`,
     { method: 'DELETE' },
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(
-      (body as { error?: { message?: string } }).error?.message ||
-        'Failed to delete deployment',
-    );
+    throwApiError(body, 'Failed to delete deployment');
   }
   const data = await response.json().catch(() => null);
   return data ?? { success: true };
@@ -201,16 +180,10 @@ export async function createDeployCommand(
     if (isRemoteFlow) {
       // Fetch flow from API to determine type
       const id = options.project ?? requireProjectId();
-      const base = resolveBaseUrl();
-      const resp = await authenticatedFetch(
-        `${base}/api/projects/${id}/flows/${config}`,
-      );
+      const resp = await apiFetch(`/api/projects/${id}/flows/${config}`);
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({}));
-        throw new Error(
-          (body as { error?: { message?: string } }).error?.message ||
-            `Failed to fetch flow ${config}`,
-        );
+        throwApiError(body, `Failed to fetch flow ${config}`);
       }
       const flow = (await resp.json()) as { config?: unknown };
       if (!flow.config) throw new Error('Flow has no config');

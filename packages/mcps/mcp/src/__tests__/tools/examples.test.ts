@@ -50,7 +50,8 @@ const sampleConfig = {
           package: '@walkeros/web-source-browser',
           examples: {
             basic: {
-              in: { name: 'page view' },
+              in: '<div data-elb="page">Home</div>',
+              trigger: { type: 'load' },
             },
           },
         },
@@ -213,6 +214,22 @@ describe('flow_examples tool', () => {
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toBe('File not found');
+  });
+
+  it('includes trigger metadata when full: true', async () => {
+    mockLoadJsonConfig.mockResolvedValue(sampleConfig as any);
+
+    const tool = server.getTool('flow_examples');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      full: true,
+    });
+
+    const browser = result.structuredContent.examples.find(
+      (e: any) => e.exampleName === 'basic',
+    );
+    expect(browser.hasTrigger).toBe(true);
+    expect(browser.trigger).toEqual({ type: 'load' });
   });
 
   it('returns empty examples array when no examples exist', async () => {

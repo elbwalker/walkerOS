@@ -1,4 +1,4 @@
-import type { Simulation, WalkerOS } from '@walkeros/core';
+import type { Collector, Simulation, WalkerOS } from '@walkeros/core';
 import { startFlow } from '../flow';
 import { wrapEnv } from '../wrapEnv';
 import type { SimulateParams } from './types';
@@ -50,7 +50,6 @@ async function runTransformer(
     env: instance.config?.env || {},
   });
 
-  // Normalize: false → [], void → [original], { event } → [event]
   let events: WalkerOS.DeepPartialEvent[];
   if (result === false) {
     events = [];
@@ -73,27 +72,21 @@ async function runSource(
   params: Extract<SimulateParams, { step: 'source' }>,
   start: number,
 ): Promise<Simulation.Result> {
-  const { code, config = {}, setup, input, env, consent } = params;
+  const { code, config = {}, createTrigger: factory, input, consent } = params;
+  const { content, trigger: triggerMeta } = input;
+
   const ALL_CONSENT: WalkerOS.Consent = {
     functional: true,
     marketing: true,
     analytics: true,
   };
 
-  // Run setup before startFlow — may return a trigger function
-  let trigger: (() => void) | undefined;
-  if (setup) {
-    const result = setup(input, env);
-    if (typeof result === 'function') trigger = result;
-  }
-
-  // Spy captures events via source.next transformer
   const events: WalkerOS.DeepPartialEvent[] = [];
 
-  const { collector } = await startFlow({
+  const fullConfig: Collector.InitConfig = {
     consent: consent || ALL_CONSENT,
     sources: {
-      sim: { code, config, env, next: 'spy' },
+      sim: { code, config, next: 'spy' },
     },
     transformers: {
       spy: {
@@ -107,10 +100,13 @@ async function runSource(
         }),
       },
     },
-  });
+  };
 
-  // Fire trigger after startFlow (source is initialized)
-  if (trigger) trigger();
+  const { trigger } = await factory(fullConfig);
+
+  if (content !== undefined) {
+    await trigger(triggerMeta?.type, triggerMeta?.options)(content);
+  }
 
   return {
     step: 'source',
@@ -132,7 +128,6 @@ async function runDestination(
     analytics: true,
   };
 
-  // Wrap env with call tracking if track paths are provided
   let calls: Simulation.Call[] = [];
   let destEnv: Record<string, unknown> | undefined = env;
 
@@ -142,7 +137,6 @@ async function runDestination(
     calls = wrapped.calls;
   }
 
-  // Wire destination with optional env into collector
   const destConfig = { ...config };
   if (destEnv) {
     destConfig.env = destEnv;

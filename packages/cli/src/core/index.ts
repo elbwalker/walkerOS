@@ -7,6 +7,12 @@ export * from './utils.js';
 export * from './local-packages.js';
 export * from './input-detector.js';
 export * from './stdin.js';
-export { getToken, getAuthHeaders, authenticatedFetch } from './auth.js';
+export { getToken, getAuthHeaders } from './auth.js';
+export {
+  apiFetch,
+  publicFetch,
+  deployFetch,
+  mergeAuthHeaders,
+} from './http.js';
 export { parseSSEEvents } from './sse.js';
 export type { SSEEvent, SSEParseResult } from './sse.js';

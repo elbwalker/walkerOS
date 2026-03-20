@@ -66,5 +66,40 @@ describe('mcpHelpers', () => {
       expect(result.structuredContent.error).toBe('Unknown error');
       expect(result.isError).toBe(true);
     });
+
+    it('should extract code and details from ApiError-shaped objects', () => {
+      const error = Object.assign(new Error('Request validation failed'), {
+        name: 'ApiError',
+        code: 'VALIDATION_ERROR',
+        details: [{ path: 'name', message: 'Flow name cannot be empty' }],
+      });
+
+      const result = mcpError(error);
+      expect(result.structuredContent.error).toBe('Request validation failed');
+      expect(result.structuredContent.code).toBe('VALIDATION_ERROR');
+      expect(result.structuredContent.details).toEqual([
+        { path: 'name', message: 'Flow name cannot be empty' },
+      ]);
+      expect(result.isError).toBe(true);
+    });
+
+    it('should not include code or details for plain Error', () => {
+      const result = mcpError(new Error('boom'));
+      expect(result.structuredContent.error).toBe('boom');
+      expect(result.structuredContent.code).toBeUndefined();
+      expect(result.structuredContent.details).toBeUndefined();
+    });
+
+    it('should handle Zod-style errors with multiple issues', () => {
+      const zodError = {
+        issues: [
+          { path: ['config', 'version'], message: 'Required' },
+          { path: ['name'], message: 'Too short' },
+        ],
+      };
+      const result = mcpError(zodError);
+      expect(result.structuredContent.error).toBe('Required; Too short');
+      expect(result.structuredContent.path).toBe('config.version');
+    });
   });
 });

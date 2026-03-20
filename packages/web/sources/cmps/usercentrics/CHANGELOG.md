@@ -1,5 +1,23 @@
 # @walkeros/web-source-cmp-usercentrics
 
+## 3.1.0
+
+### Minor Changes
+
+- 956c337: Add createTrigger following unified Trigger.CreateFn interface. Step
+  examples updated with trigger metadata.
+
+### Patch Changes
+
+- Updated dependencies [a9149e4]
+- Updated dependencies [dfc6738]
+- Updated dependencies [966342b]
+- Updated dependencies [bee8ba7]
+- Updated dependencies [966342b]
+- Updated dependencies [df990d4]
+  - @walkeros/collector@3.1.0
+  - @walkeros/core@3.1.0
+
 ## 3.0.2
 
 ### Patch Changes

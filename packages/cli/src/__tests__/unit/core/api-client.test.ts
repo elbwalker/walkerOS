@@ -3,7 +3,10 @@ import { getToken } from '../../../core/auth.js';
 
 jest.mock('../../../core/auth.js', () => ({
   getToken: jest.fn(),
-  resolveBaseUrl: jest.fn().mockReturnValue('https://app.walkeros.io'),
+}));
+
+jest.mock('../../../lib/config-file.js', () => ({
+  resolveAppUrl: jest.fn().mockReturnValue('https://app.walkeros.io'),
 }));
 
 const mockGetToken = jest.mocked(getToken);
