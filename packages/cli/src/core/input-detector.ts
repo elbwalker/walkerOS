@@ -73,5 +73,11 @@ async function loadContent(inputPath: string): Promise<string> {
     }
     return response.text();
   }
+  // Inline JSON passthrough: JS bundles never start with { or [
+  const trimmed = inputPath.trim();
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    return trimmed;
+  }
+
   return fs.readFile(inputPath, 'utf8');
 }
