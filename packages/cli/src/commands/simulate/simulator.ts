@@ -2,11 +2,7 @@ import fs from 'fs-extra';
 import type { Destination, Simulation, WalkerOS } from '@walkeros/core';
 import { simulate } from '@walkeros/collector';
 import { createCLILogger } from '../../core/cli-logger.js';
-import {
-  getErrorMessage,
-  detectInput,
-  type Platform,
-} from '../../core/index.js';
+import { getErrorMessage, type Platform } from '../../core/index.js';
 import { loadFlowConfig, isObject } from '../../config/index.js';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadDestinationEnvs } from './env-loader.js';
@@ -128,9 +124,6 @@ export async function executeSimulation(
     // Ensure temp directory exists
     await fs.ensureDir(tempDir);
 
-    // Detect input type first (so file errors appear before event validation errors)
-    const detected = await detectInput(inputPath, platformOverride);
-
     // Validate event format
     if (
       !isObject(event) ||
@@ -144,15 +137,7 @@ export async function executeSimulation(
 
     const typedEvent = event as { name: string; data?: unknown };
 
-    if (detected.type !== 'config') {
-      throw new Error(
-        `Input "${inputPath}" is not valid JSON config. ` +
-          'simulate only accepts Flow.Config config files.',
-      );
-    }
-
     return await executeConfigSimulation(
-      detected.content,
       inputPath,
       typedEvent,
       tempDir,
@@ -227,7 +212,6 @@ function parseStepTarget(
  * Uses direct package imports instead of bundling.
  */
 async function executeConfigSimulation(
-  _content: string,
   configPath: string,
   typedEvent: { name: string; data?: unknown },
   tempDir: string,
