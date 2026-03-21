@@ -1,5 +1,12 @@
 # @walkeros/server-transformer-cache
 
+## 3.1.1
+
+### Patch Changes
+
+- @walkeros/core@3.1.1
+- @walkeros/store-memory@3.1.1
+
 ## 3.1.0
 
 ### Patch Changes

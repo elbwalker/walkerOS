@@ -1,5 +1,14 @@
 # @walkeros/cli
 
+## 3.1.1
+
+### Patch Changes
+
+- a5d98d2: Fix inline JSON config support in detectInput for MCP tools
+  (flow_simulate, flow_push)
+  - @walkeros/core@3.1.1
+  - @walkeros/server-core@3.1.1
+
 ## 3.1.0
 
 ### Minor Changes

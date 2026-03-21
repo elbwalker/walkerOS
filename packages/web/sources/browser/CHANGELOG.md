@@ -1,5 +1,12 @@
 # @walkeros/web-source-browser
 
+## 3.1.1
+
+### Patch Changes
+
+- @walkeros/collector@3.1.1
+- @walkeros/web-core@3.1.1
+
 ## 3.1.0
 
 ### Minor Changes

@@ -1,5 +1,15 @@
 # @walkeros/mcp
 
+## 3.1.1
+
+### Patch Changes
+
+- 031be8b: Remove summary parameter from mcpResult — tool results now always
+  return full JSON data in content text instead of a lossy one-liner
+- Updated dependencies [a5d98d2]
+  - @walkeros/cli@3.1.1
+  - @walkeros/core@3.1.1
+
 ## 3.1.0
 
 ### Minor Changes

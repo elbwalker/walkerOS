@@ -1,5 +1,11 @@
 # @walkeros/transformer-router
 
+## 3.1.1
+
+### Patch Changes
+
+- @walkeros/core@3.1.1
+
 ## 3.1.0
 
 ### Patch Changes
