@@ -212,12 +212,11 @@ New features slot in without touching the tool surface.
 
 ### Response Design: Summaries, Hints, Actionable Errors
 
-All tools return three layers:
+All tools return two layers:
 
-1. **Summary** — human-readable one-liner via `mcpResult(result, summary)`
-2. **Structured content** — typed JSON for programmatic consumption
-3. **\_hints** — optional next-step guidance via
-   `mcpResult(result, summary, { next: [...] })`
+1. **Content** — full JSON data via `mcpResult(result)` in `content[0].text`
+2. **\_hints** — optional next-step guidance via
+   `mcpResult(result, { next: [...] })`
 
 Error responses include actionable hints:
 
@@ -269,9 +268,9 @@ No tool changes needed.
 
 ### Response Format
 
-All tools use `mcpResult(result, summary)` for success and `mcpError(error)` for
-failures. The summary is a human-readable one-liner; structuredContent carries
-the full typed response.
+All tools use `mcpResult(result)` for success and `mcpError(error)` for
+failures. The full typed response appears in both `content[0].text` (as JSON)
+and `structuredContent`.
 
 ### Conditional Registration
 
