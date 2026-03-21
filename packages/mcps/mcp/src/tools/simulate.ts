@@ -76,7 +76,6 @@ export function registerFlowSimulateTool(server: McpServer) {
               capturedEvents: raw.capturedEvents,
               duration: raw.duration,
             },
-            summary,
             {
               next:
                 eventCount > 0
@@ -131,7 +130,7 @@ export function registerFlowSimulateTool(server: McpServer) {
           duration: raw.duration,
         };
 
-        return mcpResult(result, summary, {
+        return mcpResult(result, {
           next: ['Use flow_bundle to build for production'],
           ...(warnings.length > 0 ? { warnings } : {}),
         });

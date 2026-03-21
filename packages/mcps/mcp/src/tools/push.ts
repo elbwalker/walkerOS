@@ -48,9 +48,7 @@ export function registerFlowPushTool(server: McpServer) {
           );
         }
 
-        const summary = `Pushed event${result.duration ? ` (${result.duration}ms)` : ''}`;
-
-        return mcpResult(result, summary);
+        return mcpResult(result);
       } catch (error) {
         return mcpError(
           error,

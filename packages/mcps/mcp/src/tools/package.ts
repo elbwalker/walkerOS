@@ -52,8 +52,7 @@ export function registerPackageSearchTool(server: McpServer) {
       if (!packageName) {
         const catalog = await fetchCatalog({ type, platform });
         const result = { catalog, count: catalog.length };
-        const summary = `${catalog.length} packages found`;
-        return mcpResult(result, summary, {
+        return mcpResult(result, {
           next: ['Use package_get for schemas and examples'],
         });
       }
@@ -72,8 +71,7 @@ export function registerPackageSearchTool(server: McpServer) {
           exampleSummaries: info.exampleSummaries,
         };
 
-        const summary = `${info.packageName} v${info.version}`;
-        return mcpResult(result, summary, {
+        return mcpResult(result, {
           next: ['Use package_get for schemas and examples'],
         });
       } catch (error) {
@@ -171,11 +169,7 @@ export function registerGetPackageSchemaTool(server: McpServer) {
           result.exampleSummaries = info.exampleSummaries;
         }
 
-        const schemaCount = Object.keys(info.schemas).length;
-        const exampleCount = info.exampleSummaries.length;
-        const summary = `${info.packageName} — ${schemaCount} schemas, ${exampleCount} examples`;
-
-        return mcpResult(result, summary);
+        return mcpResult(result);
       } catch (error) {
         return mcpError(
           error,

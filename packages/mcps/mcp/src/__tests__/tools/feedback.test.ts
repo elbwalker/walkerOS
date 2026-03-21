@@ -10,11 +10,18 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
-  mcpResult: jest.fn((result, summary) => ({
+  mcpResult: jest.fn((result, hints) => ({
     content: [
-      { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
+      {
+        type: 'text',
+        text: JSON.stringify(
+          hints ? { ...result, _hints: hints } : result,
+          null,
+          2,
+        ),
+      },
     ],
-    structuredContent: result,
+    structuredContent: hints ? { ...result, _hints: hints } : result,
   })),
   mcpError: jest.fn((error) => ({
     content: [
@@ -104,7 +111,7 @@ describe('feedback tool', () => {
       version: '0.0.0-test',
     });
     expect(result.structuredContent).toEqual({ ok: true });
-    expect(result.content[0].text).toBe('Feedback sent. Thanks!');
+    expect(JSON.parse(result.content[0].text).ok).toBe(true);
   });
 
   it('calls feedback with anonymous: false when config has anonymousFeedback: false', async () => {
@@ -137,7 +144,11 @@ describe('feedback tool', () => {
     const result = await tool.handler({ text: 'Some feedback' });
 
     expect(mockFeedback).not.toHaveBeenCalled();
-    expect(result.structuredContent).toEqual({ needsConsent: true });
+    expect(result.structuredContent.needsConsent).toBe(true);
+    expect(result.structuredContent._hints.next).toEqual([
+      'Ask the user if they want to include their info',
+      'Call feedback again with anonymous: true or false',
+    ]);
   });
 
   it('calls feedback and stores preference when config is undefined but anonymous param is provided', async () => {
@@ -214,7 +225,11 @@ describe('feedback tool', () => {
     const result = await tool.handler({ text: 'Some feedback' });
 
     expect(mockFeedback).not.toHaveBeenCalled();
-    expect(result.structuredContent).toEqual({ needsConsent: true });
+    expect(result.structuredContent.needsConsent).toBe(true);
+    expect(result.structuredContent._hints.next).toEqual([
+      'Ask the user if they want to include their info',
+      'Call feedback again with anonymous: true or false',
+    ]);
   });
 
   it('uses explicit anonymous override even when config has stored preference', async () => {

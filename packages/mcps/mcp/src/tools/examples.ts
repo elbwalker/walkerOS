@@ -119,26 +119,21 @@ export function registerFlowExamplesTool(server: McpServer) {
           }
         }
 
-        // Count unique steps
-        const stepSet = new Set(examples.map((e) => e.step));
-
         const result = {
           flow: flowName,
           count: examples.length,
           examples,
         };
 
-        const totalExamples = examples.length;
-        const summary = `${totalExamples} examples across ${stepSet.size} steps`;
         const hints: { next: string[]; warnings?: string[] } = {
           next: ['Use flow_simulate with step and event to simulate'],
         };
-        if (totalExamples === 0) {
+        if (examples.length === 0) {
           hints.warnings = [
             'No examples found. Add examples to step definitions in your flow config for testing.',
           ];
         }
-        return mcpResult(result, summary, hints);
+        return mcpResult(result, hints);
       } catch (error) {
         return mcpError(error, 'Check configPath — expected a flow.json file');
       }

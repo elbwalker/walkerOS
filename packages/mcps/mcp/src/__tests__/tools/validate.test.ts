@@ -17,11 +17,18 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
-  mcpResult: jest.fn((result, summary) => ({
+  mcpResult: jest.fn((result, hints) => ({
     content: [
-      { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
+      {
+        type: 'text',
+        text: JSON.stringify(
+          hints ? { ...result, _hints: hints } : result,
+          null,
+          2,
+        ),
+      },
     ],
-    structuredContent: result,
+    structuredContent: hints ? { ...result, _hints: hints } : result,
   })),
   mcpError: jest.fn((error) => ({
     content: [
@@ -94,7 +101,8 @@ describe('flow_validate tool', () => {
       flow: undefined,
       path: undefined,
     });
-    expect(result.structuredContent).toEqual(mockResult);
+    expect(result.structuredContent.valid).toBe(true);
+    expect(result.structuredContent.errors).toEqual([]);
     expect(result.isError).toBeUndefined();
   });
 
@@ -126,7 +134,7 @@ describe('flow_validate tool', () => {
       flow: undefined,
     });
 
-    expect(result.content[0].text).toBe('Valid');
+    expect(JSON.parse(result.content[0].text).valid).toBe(true);
   });
 
   it('returns summary with error count on failure', async () => {
@@ -144,7 +152,7 @@ describe('flow_validate tool', () => {
       flow: undefined,
     });
 
-    expect(result.content[0].text).toBe('Invalid: 1 errors, 0 warnings');
+    expect(JSON.parse(result.content[0].text).valid).toBe(false);
   });
 
   it('returns isError on CLI failure', async () => {
@@ -197,7 +205,7 @@ describe('flow_validate tool', () => {
       path: 'destinations.snowplow',
     });
 
-    expect(result.structuredContent).toEqual(mockResult);
-    expect(result.content[0].text).toBe('Valid');
+    expect(result.structuredContent.valid).toBe(true);
+    expect(JSON.parse(result.content[0].text).valid).toBe(true);
   });
 });

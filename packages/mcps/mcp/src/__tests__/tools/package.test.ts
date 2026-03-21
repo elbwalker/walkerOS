@@ -8,9 +8,16 @@ jest.mock('@walkeros/core', () => {
   return {
     fetchPackage: jest.fn(),
     mergeConfigSchema: actual.mergeConfigSchema,
-    mcpResult: jest.fn((result, summary, hints) => ({
+    mcpResult: jest.fn((result, hints) => ({
       content: [
-        { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
+        {
+          type: 'text',
+          text: JSON.stringify(
+            hints ? { ...result, _hints: hints } : result,
+            null,
+            2,
+          ),
+        },
       ],
       structuredContent: hints ? { ...result, _hints: hints } : result,
     })),

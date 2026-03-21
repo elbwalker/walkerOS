@@ -18,11 +18,18 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
-  mcpResult: jest.fn((result, summary) => ({
+  mcpResult: jest.fn((result, hints) => ({
     content: [
-      { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
+      {
+        type: 'text',
+        text: JSON.stringify(
+          hints ? { ...result, _hints: hints } : result,
+          null,
+          2,
+        ),
+      },
     ],
-    structuredContent: result,
+    structuredContent: hints ? { ...result, _hints: hints } : result,
   })),
   mcpError: jest.fn((error) => ({
     content: [
@@ -98,10 +105,9 @@ describe('flow_bundle tool', () => {
       stats: true,
       buildOverrides: { output: './dist' },
     });
-    expect(result.structuredContent).toEqual({
-      success: true,
-      ...mockResult,
-    });
+    expect(result.structuredContent.success).toBe(true);
+    expect(result.structuredContent.totalSize).toBe(mockResult.totalSize);
+    expect(result.structuredContent.buildTime).toBe(mockResult.buildTime);
   });
 
   it('defaults stats to true when not provided', async () => {
