@@ -1,6 +1,5 @@
 export function mcpResult(
   result: unknown,
-  summary?: string,
   hints?: { next?: string[]; warnings?: string[] },
 ) {
   const enriched = hints
@@ -10,7 +9,7 @@ export function mcpResult(
     content: [
       {
         type: 'text' as const,
-        text: summary ?? JSON.stringify(enriched, null, 2),
+        text: JSON.stringify(enriched, null, 2),
       },
     ],
     structuredContent: enriched as Record<string, unknown>,
