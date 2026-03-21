@@ -1,5 +1,5 @@
 import fs from 'fs-extra';
-import type { Destination, Simulation, WalkerOS } from '@walkeros/core';
+import type { Destination, Flow, Simulation, WalkerOS } from '@walkeros/core';
 import { simulate } from '@walkeros/collector';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { getErrorMessage, type Platform } from '../../core/index.js';
@@ -124,6 +124,11 @@ export async function executeSimulation(
     // Ensure temp directory exists
     await fs.ensureDir(tempDir);
 
+    // Load config first (so file errors appear before event validation errors)
+    const { flowSettings } = await loadFlowConfig(inputPath, {
+      flowName: options.flow,
+    });
+
     // Validate event format
     if (
       !isObject(event) ||
@@ -138,11 +143,10 @@ export async function executeSimulation(
     const typedEvent = event as { name: string; data?: unknown };
 
     return await executeConfigSimulation(
-      inputPath,
+      flowSettings,
       typedEvent,
       tempDir,
       startTime,
-      options.flow,
       options.step,
     );
   } catch (error) {
@@ -168,7 +172,7 @@ export async function executeSimulation(
  */
 function parseStepTarget(
   stepTarget: string | undefined,
-  flowConfig: Record<string, unknown>,
+  flowSettings: Flow.Settings,
 ): {
   type: 'destination' | 'transformer';
   name: string;
@@ -181,9 +185,11 @@ function parseStepTarget(
         | 'destination'
         | 'transformer';
       const name = stepTarget.substring(dotIndex + 1);
-      const section = (flowConfig as Record<string, Record<string, unknown>>)[
-        type + 's'
-      ];
+      const section = (
+        type === 'destination'
+          ? flowSettings.destinations
+          : flowSettings.transformers
+      ) as Record<string, Record<string, unknown>> | undefined;
       if (!section?.[name]) {
         throw new Error(`Step "${stepTarget}" not found in flow config`);
       }
@@ -192,11 +198,8 @@ function parseStepTarget(
   }
 
   // Default: first destination
-  const destinations = (
-    flowConfig as { destinations?: Record<string, unknown> }
-  ).destinations;
-  if (destinations) {
-    const [name, config] = Object.entries(destinations)[0];
+  if (flowSettings.destinations) {
+    const [name, config] = Object.entries(flowSettings.destinations)[0];
     return {
       type: 'destination',
       name,
@@ -212,23 +215,14 @@ function parseStepTarget(
  * Uses direct package imports instead of bundling.
  */
 async function executeConfigSimulation(
-  configPath: string,
+  flowSettings: Flow.Settings,
   typedEvent: { name: string; data?: unknown },
   tempDir: string,
   startTime: number,
-  flowName?: string,
   stepTarget?: string,
 ): Promise<SimulationResult> {
-  // Load config
-  const { flowSettings } = await loadFlowConfig(configPath, {
-    flowName,
-  });
-
   // Parse step target
-  const step = parseStepTarget(
-    stepTarget,
-    flowSettings as unknown as Record<string, unknown>,
-  );
+  const step = parseStepTarget(stepTarget, flowSettings);
 
   if (step.type === 'destination') {
     const packageName = step.config.package as string;
@@ -242,9 +236,9 @@ async function executeConfigSimulation(
       destModule.default || Object.values(destModule)[0];
 
     // Load env mocks from /dev exports
-    const destinations = (
-      flowSettings as unknown as { destinations?: Record<string, unknown> }
-    ).destinations;
+    const destinations = flowSettings.destinations as
+      | Record<string, unknown>
+      | undefined;
     const envs = await loadDestinationEnvs(destinations || {});
     const destEnv = envs[step.name];
 
