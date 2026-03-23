@@ -100,6 +100,8 @@ export interface Config<T extends TypesGeneric = Types> {
   require?: string[];
   /** Transformer chain to run after collector processing but before this destination. */
   before?: string | string[];
+  /** Cache configuration for deduplication (step-level: skip push on HIT). */
+  cache?: import('./cache').Cache;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
@@ -121,6 +123,7 @@ export type Init<T extends TypesGeneric = Types> = {
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
   before?: string | string[];
+  cache?: import('./cache').Cache;
 };
 
 export interface InitDestinations {

@@ -37,7 +37,7 @@ describe('native next routing', () => {
           },
           next: [
             {
-              match: { key: 'path', operator: 'prefix', value: '/gtag' },
+              match: { key: 'ingest.path', operator: 'prefix', value: '/gtag' },
               next: 'gtag-parser',
             },
             { match: '*', next: [] },
@@ -99,7 +99,7 @@ describe('native next routing', () => {
           },
           next: [
             {
-              match: { key: 'path', operator: 'prefix', value: '/gtag' },
+              match: { key: 'ingest.path', operator: 'prefix', value: '/gtag' },
               next: 'parser',
             },
           ],

@@ -367,12 +367,14 @@ export async function runTransformerChain(
     // Check transformer cache (step-level: skip push, continue chain)
     let cacheMiss: { key: string; ttl: number } | undefined;
     if (transformer.config?.cache) {
-      const compiledTCache = compileCache(transformer.config.cache as Cache);
+      const compiledTCache = compileCache(
+        transformer.config.cache as Cache.Cache,
+      );
       const cacheStore = getCacheStore(compiledTCache, collector);
       if (cacheStore) {
         const cacheContext = {
           ingest: (ingest || {}) as Record<string, unknown>,
-          event: processedEvent as Record<string, unknown>,
+          event: processedEvent as unknown as Record<string, unknown>,
         };
         const cacheResult = checkCache(
           compiledTCache,
@@ -433,7 +435,7 @@ export async function runTransformerChain(
           const compiled = compileNext(next as Transformer.Next);
           resolvedNext = resolveNext(compiled, {
             ingest: (ingest || {}) as Record<string, unknown>,
-            event: processedEvent as Record<string, unknown>,
+            event: processedEvent as unknown as Record<string, unknown>,
           });
           if (!resolvedNext) {
             // No route matched → passthrough (continue chain)
@@ -474,7 +476,9 @@ export async function runTransformerChain(
 
     // Cache MISS: store the processed event after push
     if (cacheMiss && transformer.config?.cache) {
-      const compiledTCache = compileCache(transformer.config.cache as Cache);
+      const compiledTCache = compileCache(
+        transformer.config.cache as Cache.Cache,
+      );
       const cacheStore = getCacheStore(compiledTCache, collector);
       if (cacheStore) {
         storeCache(cacheStore, cacheMiss.key, processedEvent, cacheMiss.ttl);
@@ -492,7 +496,7 @@ export async function runTransformerChain(
       );
       const resolvedConfigNext = resolveNext(compiledConfigNext, {
         ingest: (ingest || {}) as Record<string, unknown>,
-        event: processedEvent as Record<string, unknown>,
+        event: processedEvent as unknown as Record<string, unknown>,
       });
       if (resolvedConfigNext) {
         const continuationChain = walkChain(

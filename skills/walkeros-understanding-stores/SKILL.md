@@ -101,21 +101,21 @@ Use `$store:storeId` in a component's `env` to inject a store instance:
 ```json
 {
   "stores": {
-    "cache": {
+    "data": {
       "package": "@walkeros/store-memory",
       "config": { "settings": { "maxSize": 10485760 } }
     }
   },
   "transformers": {
-    "cacheResponse": {
-      "package": "@walkeros/server-transformer-cache",
-      "env": { "store": "$store:cache" }
+    "fingerprint": {
+      "package": "@walkeros/server-transformer-fingerprint",
+      "env": { "store": "$store:data" }
     }
   }
 }
 ```
 
-The bundler resolves `$store:cache` to a runtime reference. Invalid references
+The bundler resolves `$store:data` to a runtime reference. Invalid references
 are caught at build time.
 
 ### Integrated mode (TypeScript)
@@ -125,18 +125,19 @@ Pass store instances directly — no `$store:` prefix needed:
 ```typescript
 import { startFlow } from '@walkeros/collector';
 import { storeMemoryInit } from '@walkeros/store-memory';
+import { transformerFingerprint } from '@walkeros/server-transformer-fingerprint';
 
 const { collector } = await startFlow({
   stores: {
-    cache: {
+    data: {
       code: storeMemoryInit,
       config: { settings: { maxSize: 10 * 1024 * 1024 } },
     },
   },
   transformers: {
-    cacheResponse: {
-      code: transformerCache,
-      env: { store: collector.stores.cache }, // Direct reference
+    fingerprint: {
+      code: transformerFingerprint,
+      env: { store: collector.stores.data }, // Direct reference
     },
   },
 });

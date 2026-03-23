@@ -40,7 +40,6 @@
       "@walkeros/server-store-fs",
       "@walkeros/server-store-gcs",
       "@walkeros/server-store-s3",
-      "@walkeros/server-transformer-cache",
       "@walkeros/server-transformer-file",
       "@walkeros/explorer",
       "@walkeros/mcp-source-browser",

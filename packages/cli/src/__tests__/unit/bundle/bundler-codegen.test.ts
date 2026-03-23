@@ -463,7 +463,7 @@ describe('createEntryPoint integration', () => {
       packages: {
         '@walkeros/collector': { imports: ['startFlow'] },
         '@walkeros/server-source-express': {},
-        '@walkeros/server-transformer-cache': {},
+        '@walkeros/server-transformer-fingerprint': {},
         '@walkeros/store-memory': {},
       },
       sources: {
@@ -471,14 +471,14 @@ describe('createEntryPoint integration', () => {
           package: '@walkeros/server-source-express',
           code: 'sourceExpress',
           config: { settings: { port: 8080 } },
-          next: 'cache',
+          next: 'fp',
         },
       },
       destinations: {},
       transformers: {
-        cache: {
-          package: '@walkeros/server-transformer-cache',
-          code: 'transformerCache',
+        fp: {
+          package: '@walkeros/server-transformer-fingerprint',
+          code: 'transformerFingerprint',
           config: {},
           env: { store: '$store:cache' },
         },
@@ -498,7 +498,7 @@ describe('createEntryPoint integration', () => {
       packages: {
         '@walkeros/collector': { imports: ['startFlow'] },
         '@walkeros/server-source-express': {},
-        '@walkeros/server-transformer-cache': {},
+        '@walkeros/server-transformer-fingerprint': {},
         '@walkeros/store-memory': {},
       },
       output: './dist/bundle.mjs',
@@ -1254,9 +1254,9 @@ describe('$store: prefix', () => {
       sources: {},
       destinations: {},
       transformers: {
-        cache: {
-          package: '@walkeros/server-transformer-cache',
-          code: 'transformerCache',
+        fp: {
+          package: '@walkeros/server-transformer-fingerprint',
+          code: 'transformerFingerprint',
           config: {},
           env: { store: '$store:cache' },
         },
@@ -1271,7 +1271,10 @@ describe('$store: prefix', () => {
     } as Flow.Settings;
 
     const explicitCodeImports = new Map([
-      ['@walkeros/server-transformer-cache', new Set(['transformerCache'])],
+      [
+        '@walkeros/server-transformer-fingerprint',
+        new Set(['transformerFingerprint']),
+      ],
       ['@walkeros/store-memory', new Set(['storeMemory'])],
     ]);
 

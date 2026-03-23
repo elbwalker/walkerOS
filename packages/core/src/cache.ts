@@ -1,5 +1,5 @@
 import type { Cache, CacheRule } from './types/cache';
-import type { Store } from './types';
+import type { Mapping, Store } from './types';
 import type { CompiledMatcher } from './types/matcher';
 import { compileMatcher } from './matcher';
 import { getByPath, setByPath } from './byPath';
@@ -83,7 +83,10 @@ export async function applyUpdate(
 
   let result = value;
   for (const [path, valueConfig] of Object.entries(update)) {
-    const resolved = await getMappingValue(context, valueConfig);
+    const resolved = await getMappingValue(
+      context,
+      valueConfig as Mapping.Data,
+    );
     result = setByPath(result, path, resolved);
   }
   return result;

@@ -5,9 +5,13 @@ import type {
   Destination,
   Transformer,
 } from '@walkeros/core';
+import type { Cache } from '@walkeros/core';
 import {
   assign,
   clone,
+  compileCache,
+  checkCache,
+  storeCache,
   compileNext,
   debounce,
   getId,
@@ -28,6 +32,7 @@ import {
   extractTransformerNextMap,
   extractChainProperty,
 } from './transformer';
+import { getCacheStore } from './cache';
 
 /**
  * Computes transformer chain for a destination on-demand.
@@ -70,7 +75,7 @@ export async function addDestination(
   data: Destination.Init,
   options?: Destination.Config,
 ): Promise<Elb.PushResult> {
-  const { code, config: dataConfig = {}, env = {}, before } = data;
+  const { code, config: dataConfig = {}, env = {}, before, cache } = data;
 
   // Validate that code has a push method
   if (!isFunction(code.push)) {
@@ -86,8 +91,9 @@ export async function addDestination(
   }
 
   const baseConfig = options || dataConfig || { init: false };
-  // Merge before into config if provided at root level
-  const config = before ? { ...baseConfig, before } : baseConfig;
+  // Merge before and cache into config if provided at root level
+  let config = before ? { ...baseConfig, before } : { ...baseConfig };
+  if (cache) config = { ...config, cache };
 
   const destination: Destination.Instance = {
     ...code,
@@ -264,6 +270,32 @@ export async function pushToDestinations(
             processedEvent = chainResult as WalkerOS.Event;
           }
 
+          // Destination cache check (step-level: skip push on HIT = deduplication)
+          const destCacheConfig = destination.config?.cache;
+          let cacheMiss: { key: string; ttl: number } | undefined;
+          if (destCacheConfig) {
+            const compiledDCache = compileCache(destCacheConfig as Cache.Cache);
+            const cacheStore = getCacheStore(compiledDCache, collector);
+            if (cacheStore) {
+              const cacheContext = {
+                ingest: (meta.ingest || {}) as Record<string, unknown>,
+                event: processedEvent as unknown as Record<string, unknown>,
+              };
+              const cacheResult = checkCache(
+                compiledDCache,
+                cacheStore,
+                cacheContext,
+                `dest:${id}`,
+              );
+              if (cacheResult?.status === 'HIT') {
+                return event; // Skip push — deduplicated
+              }
+              if (cacheResult?.status === 'MISS') {
+                cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
+              }
+            }
+          }
+
           const pushStart = Date.now();
           const result = await tryCatchAsync(destinationPush, (err) => {
             // Log the error with destination scope
@@ -287,6 +319,15 @@ export async function pushToDestinations(
             meta.respond,
           );
           totalDuration += Date.now() - pushStart;
+
+          // Destination cache MISS: store seen marker after push attempt
+          if (cacheMiss) {
+            const compiledDCache = compileCache(destCacheConfig as Cache.Cache);
+            const cacheStore = getCacheStore(compiledDCache, collector);
+            if (cacheStore) {
+              storeCache(cacheStore, cacheMiss.key, true, cacheMiss.ttl);
+            }
+          }
 
           // Capture the last response (for single event pushes)
           if (result !== undefined) response = result;
@@ -559,9 +600,11 @@ export function createPushResult(
 export function registerDestination(
   def: Destination.Init,
 ): Destination.Instance {
-  const { code, config = {}, env = {} } = def;
+  const { code, config = {}, env = {}, cache } = def;
   const { config: configWithChain } = extractChainProperty(def, 'before');
   const mergedConfig = { ...code.config, ...config, ...configWithChain };
+  // Merge definition-level cache into config for runtime access
+  if (cache) mergedConfig.cache = cache;
   const mergedEnv = mergeEnvironments(code.env, env);
   return { ...code, config: mergedConfig, env: mergedEnv };
 }

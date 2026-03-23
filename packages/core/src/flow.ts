@@ -374,6 +374,7 @@ export function getFlowSettings(
         variables: source.variables,
         definitions: source.definitions,
         next: source.next,
+        cache: source.cache,
         code: finalCode,
       } as Flow.SourceReference;
     }
@@ -429,6 +430,7 @@ export function getFlowSettings(
         variables: dest.variables,
         definitions: dest.definitions,
         before: dest.before,
+        cache: dest.cache,
         code: finalCode,
       } as Flow.DestinationReference;
     }
@@ -535,6 +537,7 @@ export function getFlowSettings(
         variables: transformer.variables,
         definitions: transformer.definitions,
         next: transformer.next,
+        cache: transformer.cache,
         code: finalCode,
       } as Flow.TransformerReference;
     }

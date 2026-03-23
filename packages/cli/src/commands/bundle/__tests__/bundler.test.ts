@@ -151,11 +151,11 @@ describe('collectStepPackages', () => {
   it('collects transformer packages', () => {
     const settings = {
       transformers: {
-        cache: { package: '@walkeros/server-transformer-cache' },
+        fingerprint: { package: '@walkeros/server-transformer-fingerprint' },
       },
     } as unknown as Flow.Settings;
     expect(collectStepPackages(settings)).toEqual(
-      new Set(['@walkeros/server-transformer-cache']),
+      new Set(['@walkeros/server-transformer-fingerprint']),
     );
   });
 
@@ -177,7 +177,7 @@ describe('collectStepPackages', () => {
         bq: { package: '@walkeros/server-destination-bigquery' },
       },
       transformers: {
-        cache: { package: '@walkeros/server-transformer-cache' },
+        fingerprint: { package: '@walkeros/server-transformer-fingerprint' },
       },
       stores: { fs: { package: '@walkeros/server-store-fs' } },
     } as unknown as Flow.Settings;
@@ -185,7 +185,7 @@ describe('collectStepPackages', () => {
     expect(result.size).toBe(4);
     expect(result.has('@walkeros/server-source-express')).toBe(true);
     expect(result.has('@walkeros/server-destination-bigquery')).toBe(true);
-    expect(result.has('@walkeros/server-transformer-cache')).toBe(true);
+    expect(result.has('@walkeros/server-transformer-fingerprint')).toBe(true);
     expect(result.has('@walkeros/server-store-fs')).toBe(true);
   });
 

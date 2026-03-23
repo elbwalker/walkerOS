@@ -19,3 +19,4 @@ export type {
   SimulateDestination,
 } from './simulation';
 export { wrapEnv } from './wrapEnv';
+export { getCacheStore } from './cache';

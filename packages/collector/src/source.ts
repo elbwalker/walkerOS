@@ -1,4 +1,11 @@
-import type { Collector, Source, Transformer, WalkerOS } from '@walkeros/core';
+import type {
+  Collector,
+  Elb,
+  Source,
+  Transformer,
+  WalkerOS,
+} from '@walkeros/core';
+import type { RespondOptions } from '@walkeros/core';
 import {
   getMappingValue,
   tryCatchAsync,
@@ -75,7 +82,7 @@ export async function initSource(
         if (cacheResult) {
           if (cacheResult.status === 'HIT' && cacheResult.value !== undefined) {
             // HIT: respond with cached value, skip pipeline entirely
-            let respondValue = cacheResult.value;
+            let respondValue: unknown = cacheResult.value;
             if (cacheResult.rule.update) {
               respondValue = await applyUpdate(
                 respondValue,
@@ -84,7 +91,7 @@ export async function initSource(
               );
             }
             currentRespond?.(respondValue as Record<string, unknown>);
-            return { ok: true } as any;
+            return { ok: true } as Elb.PushResult;
           }
 
           if (cacheResult.status === 'MISS') {
@@ -105,7 +112,9 @@ export async function initSource(
                     respondOptions,
                     cacheResult.rule.update as Record<string, unknown>,
                     { ...cacheContext, cache: { status: 'MISS' } },
-                  ).then((updated) => originalRespond(updated as any));
+                  ).then((updated) =>
+                    originalRespond(updated as RespondOptions),
+                  );
                 } else {
                   originalRespond(respondOptions);
                 }

@@ -1852,7 +1852,7 @@ describe('Pattern Resolution', () => {
       const setup = {
         version: 3,
         definitions: {
-          cacheRule: {
+          fpRule: {
             match: { key: 'method', operator: 'eq', value: 'GET' },
             ttl: 300,
           },
@@ -1861,10 +1861,10 @@ describe('Pattern Resolution', () => {
           default: {
             server: {},
             transformers: {
-              cache: {
-                package: '@walkeros/server-transformer-cache',
+              fp: {
+                package: '@walkeros/server-transformer-fingerprint',
                 config: {
-                  settings: { rules: ['$def.cacheRule'] },
+                  settings: { rules: ['$def.fpRule'] },
                 },
               },
             },
@@ -1872,8 +1872,7 @@ describe('Pattern Resolution', () => {
         },
       };
       const config = getFlowSettings(setup as any);
-      const rules = (config.transformers?.cache?.config as any)?.settings
-        ?.rules;
+      const rules = (config.transformers?.fp?.config as any)?.settings?.rules;
       expect(rules[0]).toEqual({
         match: { key: 'method', operator: 'eq', value: 'GET' },
         ttl: 300,
@@ -1887,8 +1886,8 @@ describe('Pattern Resolution', () => {
           default: {
             server: {},
             transformers: {
-              cache: {
-                package: '@walkeros/server-transformer-cache',
+              fp: {
+                package: '@walkeros/server-transformer-fingerprint',
                 config: {
                   settings: { secret: '$env.API_SECRET:default_secret' },
                 },
@@ -1900,9 +1899,9 @@ describe('Pattern Resolution', () => {
       const config = getFlowSettings(setup as any, undefined, {
         deferred: true,
       });
-      expect(
-        (config.transformers?.cache?.config as any)?.settings?.secret,
-      ).toBe('__WALKEROS_ENV:API_SECRET:default_secret');
+      expect((config.transformers?.fp?.config as any)?.settings?.secret).toBe(
+        '__WALKEROS_ENV:API_SECRET:default_secret',
+      );
     });
 
     test('transformer-level variables override flow variables', () => {
@@ -1913,8 +1912,8 @@ describe('Pattern Resolution', () => {
           default: {
             server: {},
             transformers: {
-              cache: {
-                package: '@walkeros/server-transformer-cache',
+              fp: {
+                package: '@walkeros/server-transformer-fingerprint',
                 variables: { ttl: '600' },
                 config: {
                   settings: { ttl: '$var.ttl' },
@@ -1925,7 +1924,7 @@ describe('Pattern Resolution', () => {
         },
       };
       const config = getFlowSettings(setup as any);
-      expect((config.transformers?.cache?.config as any)?.settings?.ttl).toBe(
+      expect((config.transformers?.fp?.config as any)?.settings?.ttl).toBe(
         '600',
       );
     });
@@ -1961,8 +1960,8 @@ describe('Pattern Resolution', () => {
           default: {
             web: {},
             transformers: {
-              cache: {
-                package: '@walkeros/server-transformer-cache',
+              fp: {
+                package: '@walkeros/server-transformer-fingerprint',
                 config: {},
                 env: { custom: '$var.storeRef' },
               },
@@ -1971,7 +1970,7 @@ describe('Pattern Resolution', () => {
         },
       };
       const config = getFlowSettings(setup as any);
-      expect((config.transformers?.cache as any)?.env?.custom).toBe('myStore');
+      expect((config.transformers?.fp as any)?.env?.custom).toBe('myStore');
     });
 
     test('resolves $var in destination env', () => {
