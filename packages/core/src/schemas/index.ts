@@ -62,7 +62,7 @@ export { MatcherSchemas };
 export {
   MatchExpressionSchema,
   RoutableNextSchema,
-  RouteSchema,
+  NextRuleSchema,
 } from './matcher';
 
 // Hint schemas (direct export — flat record, no namespace needed)

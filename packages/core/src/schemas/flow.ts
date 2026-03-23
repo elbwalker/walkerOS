@@ -224,7 +224,7 @@ export const SourceReferenceSchema = z
       'Source-level definitions (highest priority in cascade)',
     ),
     next: RoutableNextSchema.optional().describe(
-      'Pre-collector transformer chain. String, string[], or Route[] for conditional routing based on ingest data.',
+      'Pre-collector transformer chain. String, string[], or NextRule[] for conditional routing based on ingest data.',
     ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
@@ -267,7 +267,7 @@ export const TransformerReferenceSchema = z
       .optional()
       .describe('Transformer environment configuration'),
     next: RoutableNextSchema.optional().describe(
-      'Next transformer in chain. String, string[], or Route[] for conditional routing.',
+      'Next transformer in chain. String, string[], or NextRule[] for conditional routing.',
     ),
     variables: VariablesSchema.optional().describe(
       'Transformer-level variables (highest priority in cascade)',
@@ -322,7 +322,7 @@ export const DestinationReferenceSchema = z
       'Destination-level definitions (highest priority in cascade)',
     ),
     before: RoutableNextSchema.optional().describe(
-      'Post-collector transformer chain. String, string[], or Route[] for conditional routing.',
+      'Post-collector transformer chain. String, string[], or NextRule[] for conditional routing.',
     ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',

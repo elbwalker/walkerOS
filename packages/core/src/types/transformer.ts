@@ -2,12 +2,12 @@
 import type { Collector, Logger, WalkerOS, Context as BaseContext } from '.';
 import type { DestroyFn } from './lifecycle';
 
-export interface Route {
+export interface NextRule {
   match: import('./matcher').MatchExpression | '*';
   next: Next;
 }
 
-export type Next = string | string[] | Route[];
+export type Next = string | string[] | NextRule[];
 
 /**
  * Base environment interface for walkerOS transformers.

@@ -32,7 +32,7 @@ import {
 /**
  * Computes transformer chain for a destination on-demand.
  * Returns empty array if destination has no 'before' configured.
- * Supports Route[] for conditional chain resolution based on ingest data.
+ * Supports NextRule[] for conditional chain resolution based on ingest data.
  */
 function getDestinationChain(
   destination: Destination.Instance,
@@ -44,10 +44,9 @@ function getDestinationChain(
 
   if (isRouteArray(before)) {
     const compiled = compileNext(before);
-    const resolved = resolveNext(
-      compiled,
-      (ingest || {}) as Record<string, unknown>,
-    );
+    const resolved = resolveNext(compiled, {
+      ingest: (ingest || {}) as Record<string, unknown>,
+    });
     if (!resolved) return [];
     return walkChain(resolved, extractTransformerNextMap(transformers));
   }

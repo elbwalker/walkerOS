@@ -198,7 +198,7 @@ describe('chain branching', () => {
     expect(result?.name).toBe('parsed action');
   });
 
-  it('should resolve Route[] in config.next after transformer executes', async () => {
+  it('should resolve NextRule[] in config.next after transformer executes', async () => {
     const order: string[] = [];
 
     const enricher = createTransformer(
@@ -209,11 +209,11 @@ describe('chain branching', () => {
       {
         next: [
           {
-            match: { key: 'type', operator: 'eq', value: 'api' },
+            match: { key: 'ingest.type', operator: 'eq', value: 'api' },
             next: 'api-handler',
           },
           { match: '*', next: 'default-handler' },
-        ] as any, // Route[] in config.next
+        ] as any, // NextRule[] in config.next
       },
     );
 
@@ -246,13 +246,13 @@ describe('chain branching', () => {
     expect(result?.data).toEqual({ enriched: true, api: true });
   });
 
-  it('should resolve Route[] returned from transformer push (Result.next)', async () => {
+  it('should resolve NextRule[] returned from transformer push (Result.next)', async () => {
     const router = createTransformer((event) => {
       return {
         event,
         next: [
           {
-            match: { key: 'path', operator: 'prefix', value: '/api' },
+            match: { key: 'ingest.path', operator: 'prefix', value: '/api' },
             next: 'api',
           },
           { match: '*', next: 'fallback' },

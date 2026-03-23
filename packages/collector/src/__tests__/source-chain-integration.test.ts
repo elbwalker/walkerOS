@@ -243,7 +243,7 @@ describe('Source Transformer Chains (source.next)', () => {
     });
   });
 
-  describe('conditional Route[] next', () => {
+  describe('conditional NextRule[] next', () => {
     it('should resolve conditional next routes based on ingest', async () => {
       const order: string[] = [];
 
@@ -263,7 +263,11 @@ describe('Source Transformer Chains (source.next)', () => {
             },
             next: [
               {
-                match: { key: 'path', operator: 'prefix', value: '/gtag' },
+                match: {
+                  key: 'ingest.path',
+                  operator: 'prefix',
+                  value: '/gtag',
+                },
                 next: 'gtag-parser',
               },
               { match: '*', next: 'default-parser' },
@@ -339,7 +343,7 @@ describe('Source Transformer Chains (source.next)', () => {
             },
             next: [
               {
-                match: { key: 'method', operator: 'eq', value: 'POST' },
+                match: { key: 'ingest.method', operator: 'eq', value: 'POST' },
                 next: 'writer',
               },
               // No wildcard — GET requests passthrough

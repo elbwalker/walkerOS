@@ -1,6 +1,6 @@
 import {
   MatchExpressionSchema,
-  RouteSchema,
+  NextRuleSchema,
   RoutableNextSchema,
 } from '../../schemas/matcher';
 import { safeParseConfig } from '../../schemas/flow';
@@ -27,7 +27,7 @@ describe('MatchExpressionSchema', () => {
   });
 
   it('validates wildcard string', () => {
-    const result = RouteSchema.safeParse({ match: '*', next: 'default' });
+    const result = NextRuleSchema.safeParse({ match: '*', next: 'default' });
     expect(result.success).toBe(true);
   });
 
@@ -51,7 +51,7 @@ describe('RoutableNextSchema', () => {
     expect(RoutableNextSchema.safeParse(['a', 'b']).success).toBe(true);
   });
 
-  it('validates a Route array', () => {
+  it('validates a NextRule array', () => {
     expect(
       RoutableNextSchema.safeParse([
         {
@@ -81,8 +81,8 @@ describe('RoutableNextSchema', () => {
   });
 });
 
-describe('Flow config with Route[] in source.next', () => {
-  it('validates source.next with Route array', () => {
+describe('Flow config with NextRule[] in source.next', () => {
+  it('validates source.next with NextRule array', () => {
     const config = {
       version: 3,
       flows: {

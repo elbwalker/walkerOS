@@ -387,16 +387,16 @@ export async function runTransformerChain(
 
       // Handle chain branching
       if (next) {
-        // Resolve Route[] if present
+        // Resolve NextRule[] if present
         let resolvedNext: string | string[] | undefined = next as
           | string
           | string[];
         if (isRouteArray(next as Transformer.Next)) {
           const compiled = compileNext(next as Transformer.Next);
-          resolvedNext = resolveNext(
-            compiled,
-            (ingest || {}) as Record<string, unknown>,
-          );
+          resolvedNext = resolveNext(compiled, {
+            ingest: (ingest || {}) as Record<string, unknown>,
+            event: processedEvent as Record<string, unknown>,
+          });
           if (!resolvedNext) {
             // No route matched → passthrough (continue chain)
             if (resultEvent) processedEvent = resultEvent;
@@ -434,7 +434,7 @@ export async function runTransformerChain(
     }
     // If result is undefined (void), continue with current event unchanged
 
-    // If transformer didn't return { next } but has Route[] config.next, resolve it
+    // If transformer didn't return { next } but has NextRule[] config.next, resolve it
     if (
       (!result || (typeof result === 'object' && !result.next)) &&
       transformer.config?.next &&
@@ -443,10 +443,10 @@ export async function runTransformerChain(
       const compiledConfigNext = compileNext(
         transformer.config.next as Transformer.Next,
       );
-      const resolvedConfigNext = resolveNext(
-        compiledConfigNext,
-        (ingest || {}) as Record<string, unknown>,
-      );
+      const resolvedConfigNext = resolveNext(compiledConfigNext, {
+        ingest: (ingest || {}) as Record<string, unknown>,
+        event: processedEvent as Record<string, unknown>,
+      });
       if (resolvedConfigNext) {
         const continuationChain = walkChain(
           resolvedConfigNext,

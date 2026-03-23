@@ -26,7 +26,7 @@ export const MatchExpressionSchema: z.ZodType = z.union([
 
 const MatchOrWildcard = z.union([MatchExpressionSchema, z.literal('*')]);
 
-// Recursive: Route.next is itself a RoutableNext
+// Recursive: NextRule.next is itself a RoutableNext
 export const RoutableNextSchema: z.ZodType = z.union([
   z.string(),
   z.array(z.string()),
@@ -38,7 +38,7 @@ export const RoutableNextSchema: z.ZodType = z.union([
   ),
 ]);
 
-export const RouteSchema = z.object({
+export const NextRuleSchema = z.object({
   match: MatchOrWildcard,
   next: z.lazy(() => RoutableNextSchema),
 });

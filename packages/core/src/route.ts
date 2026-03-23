@@ -1,4 +1,4 @@
-import type { Next, Route } from './types/transformer';
+import type { Next, NextRule } from './types/transformer';
 import type { CompiledMatcher } from './types/matcher';
 import { compileMatcher } from './matcher';
 
@@ -12,7 +12,7 @@ type CompiledNext =
   | { type: 'chain'; value: string[] }
   | { type: 'routes'; routes: CompiledRoute[] };
 
-export function isRouteArray(next: Next): next is Route[] {
+export function isRouteArray(next: Next): next is NextRule[] {
   return (
     Array.isArray(next) &&
     next.length > 0 &&

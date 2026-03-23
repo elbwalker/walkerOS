@@ -219,7 +219,7 @@ describe('Destination Transformer Chains (destination.before)', () => {
     });
   });
 
-  describe('conditional Route[] before', () => {
+  describe('conditional NextRule[] before', () => {
     it('should resolve conditional before routes based on event entity', async () => {
       const order: string[] = [];
 
@@ -267,7 +267,11 @@ describe('Destination Transformer Chains (destination.before)', () => {
             },
             before: [
               {
-                match: { key: 'entity', operator: 'eq', value: 'product' },
+                match: {
+                  key: 'ingest.entity',
+                  operator: 'eq',
+                  value: 'product',
+                },
                 next: 'product-enricher',
               },
               { match: '*', next: 'default-enricher' },
