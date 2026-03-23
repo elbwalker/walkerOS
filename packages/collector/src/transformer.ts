@@ -32,6 +32,7 @@
  * - Transformer returns event → continue with modified event
  */
 import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
+import type { Cache } from '@walkeros/core';
 import {
   isObject,
   tryCatchAsync,
@@ -39,7 +40,11 @@ import {
   compileNext,
   resolveNext,
   isRouteArray,
+  compileCache,
+  checkCache,
+  storeCache,
 } from '@walkeros/core';
+import { getCacheStore } from './cache';
 
 /**
  * Extracts transformer next configuration for chain walking.
@@ -190,6 +195,10 @@ export async function initTransformers(
         ? { ...configWithChain, env: env as Transformer.Env }
         : configWithChain;
 
+    // Merge definition-level cache into config for runtime access
+    const { cache } = transformerDef;
+    const configWithCache = cache ? { ...configWithEnv, cache } : configWithEnv;
+
     // Build transformer context for init
     const transformerLogger = collector.logger
       .scope('transformer')
@@ -199,7 +208,7 @@ export async function initTransformers(
       collector,
       logger: transformerLogger,
       id: transformerId,
-      config: configWithEnv,
+      config: configWithCache,
       env: env as Transformer.Env,
     };
 
@@ -355,6 +364,35 @@ export async function runTransformerChain(
       return null; // Stop chain on init failure
     }
 
+    // Check transformer cache (step-level: skip push, continue chain)
+    let cacheMiss: { key: string; ttl: number } | undefined;
+    if (transformer.config?.cache) {
+      const compiledTCache = compileCache(transformer.config.cache as Cache);
+      const cacheStore = getCacheStore(compiledTCache, collector);
+      if (cacheStore) {
+        const cacheContext = {
+          ingest: (ingest || {}) as Record<string, unknown>,
+          event: processedEvent as Record<string, unknown>,
+        };
+        const cacheResult = checkCache(
+          compiledTCache,
+          cacheStore,
+          cacheContext,
+          `transformer:${transformerName}`,
+        );
+
+        if (cacheResult?.status === 'HIT' && cacheResult.value) {
+          processedEvent = cacheResult.value as WalkerOS.DeepPartialEvent;
+          continue; // Skip push, continue to next transformer
+        }
+
+        // For MISS, save key and TTL so we can cache after push
+        if (cacheResult?.status === 'MISS') {
+          cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
+        }
+      }
+    }
+
     // Run the transformer
     const result = await tryCatchAsync(transformerPush, (err) => {
       collector.logger
@@ -433,6 +471,15 @@ export async function runTransformerChain(
       }
     }
     // If result is undefined (void), continue with current event unchanged
+
+    // Cache MISS: store the processed event after push
+    if (cacheMiss && transformer.config?.cache) {
+      const compiledTCache = compileCache(transformer.config.cache as Cache);
+      const cacheStore = getCacheStore(compiledTCache, collector);
+      if (cacheStore) {
+        storeCache(cacheStore, cacheMiss.key, processedEvent, cacheMiss.ttl);
+      }
+    }
 
     // If transformer didn't return { next } but has NextRule[] config.next, resolve it
     if (

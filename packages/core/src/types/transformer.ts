@@ -64,6 +64,7 @@ export interface Config<T extends TypesGeneric = Types> {
   id?: string;
   logger?: Logger.Config;
   next?: Next; // Graph wiring to next transformer
+  cache?: import('./cache').Cache; // Step-level cache config
   init?: boolean; // Track init state (like Destination)
 }
 
@@ -148,6 +149,7 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
   next?: Next;
+  cache?: import('./cache').Cache;
 };
 
 /**
