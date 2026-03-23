@@ -34,3 +34,4 @@ export * from './respond';
 export * from './matcher';
 export * from './route';
 export * from './merge-config-schema';
+export * from './cache';
