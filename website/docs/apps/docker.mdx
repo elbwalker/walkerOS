@@ -199,7 +199,7 @@ The `include` field in your flow config copies folders into the bundle output di
           "package": "@walkeros/server-source-express",
           "next": [
             {
-              "match": { "key": "method", "operator": "eq", "value": "GET" },
+              "match": { "key": "ingest.method", "operator": "eq", "value": "GET" },
               "next": "file"
             }
           ]

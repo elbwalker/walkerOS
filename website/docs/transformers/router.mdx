@@ -47,7 +47,7 @@ Replace the router transformer with `Route[]` on the source's `next` property (o
     "express": {
       "package": "@walkeros/server-source-express",
       "next": [
-        { "match": { "key": "path", "operator": "prefix", "value": "/gtag" }, "next": "gtag-parser" },
+        { "match": { "key": "ingest.path", "operator": "prefix", "value": "/gtag" }, "next": "gtag-parser" },
         { "match": "*", "next": "default-parser" }
       ]
     }
@@ -98,9 +98,9 @@ Routes can nest to any depth:
 {
   "next": [
     {
-      "match": { "key": "path", "operator": "prefix", "value": "/api" },
+      "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" },
       "next": [
-        { "match": { "key": "method", "operator": "eq", "value": "POST" }, "next": "api-writer" },
+        { "match": { "key": "ingest.method", "operator": "eq", "value": "POST" }, "next": "api-writer" },
         { "match": "*", "next": "api-reader" }
       ]
     },

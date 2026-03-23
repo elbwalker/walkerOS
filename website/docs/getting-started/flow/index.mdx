@@ -481,7 +481,7 @@ The `next` property supports conditional routing via `Route[]` — an array of `
       "package": "@walkeros/server-source-express",
       "next": [
         {
-          "match": { "key": "path", "operator": "prefix", "value": "/purchase" },
+          "match": { "key": "ingest.path", "operator": "prefix", "value": "/purchase" },
           "next": "purchase_parser"
         },
         {

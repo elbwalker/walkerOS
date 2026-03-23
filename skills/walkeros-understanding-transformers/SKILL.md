@@ -238,7 +238,7 @@ no separate router transformer needed:
 
 ```json
 "next": [
-  { "match": { "key": "path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
+  { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
   { "match": "*", "next": "default" }
 ]
 ```

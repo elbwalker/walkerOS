@@ -109,12 +109,12 @@ components consume via `env`.
 ```json
 {
   "stores": {
-    "cache": { "package": "@walkeros/store-memory" }
+    "data": { "package": "@walkeros/store-memory" }
   },
   "transformers": {
-    "cacheResponse": {
-      "package": "@walkeros/server-transformer-cache",
-      "env": { "store": "$store:cache" }
+    "fingerprint": {
+      "package": "@walkeros/server-transformer-fingerprint",
+      "env": { "store": "$store:data" }
     }
   }
 }
@@ -340,7 +340,7 @@ an array of `{ match, next }` objects evaluated against ingest data:
 
 ```json
 "next": [
-  { "match": { "key": "path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
+  { "match": { "key": "ingest.path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
   { "match": "*", "next": "default" }
 ]
 ```
