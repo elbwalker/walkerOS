@@ -333,17 +333,24 @@ for the implementation.
 - **Non-existent transformer ID:** chain ends (no error, event proceeds without
   transformation)
 
-### Router fan-out
+### Conditional routing (Route[])
 
-Router transformers use `branch(event, next)` from `@walkeros/core` to redirect
-to different chains dynamically.
+The `next` and `before` properties support conditional routing via `Route[]` —
+an array of `{ match, next }` objects evaluated against ingest data:
 
-- Each route's `next` target creates a potential edge via `walkChain`
-- First matching route wins; no match = passthrough
-- Branch to non-existent transformer = event dropped (silent, logged as info)
+```json
+"next": [
+  { "match": { "key": "path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
+  { "match": "*", "next": "default" }
+]
+```
 
-See [packages/core/src/branch.ts](../../packages/core/src/branch.ts) for the
-`branch()` helper.
+- Routes are evaluated in order — first match wins
+- No match and no wildcard = event passes through unchanged
+- Works on `source.next`, `transformer.next`, and `destination.before`
+- Routes are compiled to closures at init time for fast per-event evaluation
+- See [packages/core/src/route.ts](../../packages/core/src/route.ts) for
+  `compileNext()` and `resolveNext()`
 
 ### Transformer sharing
 

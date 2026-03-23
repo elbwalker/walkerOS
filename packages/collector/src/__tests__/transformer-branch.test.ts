@@ -198,6 +198,90 @@ describe('chain branching', () => {
     expect(result?.name).toBe('parsed action');
   });
 
+  it('should resolve Route[] in config.next after transformer executes', async () => {
+    const order: string[] = [];
+
+    const enricher = createTransformer(
+      (event) => {
+        order.push('enricher');
+        return { event: { ...event, data: { ...event.data, enriched: true } } };
+      },
+      {
+        next: [
+          {
+            match: { key: 'type', operator: 'eq', value: 'api' },
+            next: 'api-handler',
+          },
+          { match: '*', next: 'default-handler' },
+        ] as any, // Route[] in config.next
+      },
+    );
+
+    const apiHandler = createTransformer((event) => {
+      order.push('api-handler');
+      return { event: { ...event, data: { ...event.data, api: true } } };
+    });
+
+    const defaultHandler = createTransformer((event) => {
+      order.push('default-handler');
+      return { event: { ...event, data: { ...event.data, default: true } } };
+    });
+
+    const transformers = {
+      enricher,
+      'api-handler': apiHandler,
+      'default-handler': defaultHandler,
+    };
+    const collector = createMockCollector(transformers);
+
+    const result = await runTransformerChain(
+      collector,
+      transformers,
+      ['enricher'],
+      { name: 'test' },
+      { type: 'api' }, // ingest
+    );
+
+    expect(order).toEqual(['enricher', 'api-handler']);
+    expect(result?.data).toEqual({ enriched: true, api: true });
+  });
+
+  it('should resolve Route[] returned from transformer push (Result.next)', async () => {
+    const router = createTransformer((event) => {
+      return {
+        event,
+        next: [
+          {
+            match: { key: 'path', operator: 'prefix', value: '/api' },
+            next: 'api',
+          },
+          { match: '*', next: 'fallback' },
+        ],
+      };
+    });
+
+    const api = createTransformer((event) => {
+      return { event: { ...event, data: { handler: 'api' } } };
+    });
+
+    const fallback = createTransformer((event) => {
+      return { event: { ...event, data: { handler: 'fallback' } } };
+    });
+
+    const transformers = { router, api, fallback };
+    const collector = createMockCollector(transformers);
+
+    const result = await runTransformerChain(
+      collector,
+      transformers,
+      ['router'],
+      {},
+      { path: '/api/data' },
+    );
+
+    expect(result?.data).toEqual({ handler: 'api' });
+  });
+
   it('should drop event when branch target does not exist', async () => {
     const router = createTransformer(() => {
       return branch({}, 'nonexistent-parser');

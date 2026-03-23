@@ -1,5 +1,11 @@
-import type { Collector, Source, WalkerOS } from '@walkeros/core';
-import { getMappingValue, tryCatchAsync } from '@walkeros/core';
+import type { Collector, Source, Transformer, WalkerOS } from '@walkeros/core';
+import {
+  getMappingValue,
+  tryCatchAsync,
+  compileNext,
+  resolveNext,
+  isRouteArray,
+} from '@walkeros/core';
 import { walkChain, extractTransformerNextMap } from './transformer';
 
 /**
@@ -20,16 +26,36 @@ export async function initSource(
     undefined;
 
   // Resolve transformer chain for this source
-  const preChain = walkChain(
-    next,
-    extractTransformerNextMap(collector.transformers),
-  );
+  const compiledNext = compileNext(next as Transformer.Next | undefined);
+  const isConditional =
+    Array.isArray(next) && isRouteArray(next as Transformer.Next);
+  // For static next, pre-walk at init (optimization)
+  const staticPreChain =
+    !isConditional && compiledNext
+      ? walkChain(
+          resolveNext(compiledNext)!,
+          extractTransformerNextMap(collector.transformers),
+        )
+      : undefined;
 
   // Create wrapped push that auto-applies source mapping config, preChain, and ingest
   const wrappedPush: Collector.PushFn = (
     event: WalkerOS.DeepPartialEvent,
     options: Collector.PushOptions = {},
   ) => {
+    // Resolve chain: static (pre-computed) or conditional (per-event)
+    const preChain =
+      staticPreChain ??
+      (compiledNext
+        ? walkChain(
+            resolveNext(
+              compiledNext,
+              (currentIngest || {}) as Record<string, unknown>,
+            ),
+            extractTransformerNextMap(collector.transformers),
+          )
+        : []);
+
     return collector.push(event, {
       ...options,
       id: sourceId,

@@ -243,6 +243,139 @@ describe('Source Transformer Chains (source.next)', () => {
     });
   });
 
+  describe('conditional Route[] next', () => {
+    it('should resolve conditional next routes based on ingest', async () => {
+      const order: string[] = [];
+
+      const { collector } = await startFlow({
+        sources: {
+          testSource: {
+            code: async (context): Promise<Source.Instance> => {
+              const { env, config, setIngest } = context;
+              return {
+                type: 'test',
+                config: config as Source.Config,
+                push: (async (rawData: any) => {
+                  await setIngest(rawData);
+                  await env.push({});
+                }) as any,
+              };
+            },
+            next: [
+              {
+                match: { key: 'path', operator: 'prefix', value: '/gtag' },
+                next: 'gtag-parser',
+              },
+              { match: '*', next: 'default-parser' },
+            ],
+            config: {
+              ingest: {
+                map: { path: { key: 'path' } },
+              },
+            },
+          },
+        },
+        transformers: {
+          'gtag-parser': {
+            code: async (context): Promise<Transformer.Instance> => ({
+              type: 'gtag-parser',
+              config: context.config,
+              push(event) {
+                order.push('gtag-parser');
+                return { event: { ...event, name: 'gtag event' } };
+              },
+            }),
+          },
+          'default-parser': {
+            code: async (context): Promise<Transformer.Instance> => ({
+              type: 'default-parser',
+              config: context.config,
+              push(event) {
+                order.push('default-parser');
+                return { event: { ...event, name: 'default event' } };
+              },
+            }),
+          },
+        },
+        destinations: {
+          spy: {
+            code: {
+              type: 'spy',
+              config: {},
+              push: async (event: WalkerOS.Event) => {
+                order.push(`dest:${event.name}`);
+              },
+            },
+          },
+        },
+      });
+
+      // Route to gtag-parser
+      await (collector.sources.testSource.push as any)({
+        path: '/gtag/collect',
+      });
+      expect(order).toEqual(['gtag-parser', 'dest:gtag event']);
+
+      order.length = 0;
+
+      // Route to default-parser
+      await (collector.sources.testSource.push as any)({ path: '/other' });
+      expect(order).toEqual(['default-parser', 'dest:default event']);
+    });
+
+    it('should passthrough to collector when no route matches', async () => {
+      const destinationEvents: WalkerOS.Event[] = [];
+
+      const { collector } = await startFlow({
+        sources: {
+          testSource: {
+            code: async (context): Promise<Source.Instance> => {
+              const { env, config } = context;
+              return {
+                type: 'test',
+                config: config as Source.Config,
+                push: env.push as Elb.Fn,
+              };
+            },
+            next: [
+              {
+                match: { key: 'method', operator: 'eq', value: 'POST' },
+                next: 'writer',
+              },
+              // No wildcard — GET requests passthrough
+            ],
+          },
+        },
+        transformers: {
+          writer: {
+            code: async (context): Promise<Transformer.Instance> => ({
+              type: 'writer',
+              config: context.config,
+              push() {
+                throw new Error('should not be called');
+              },
+            }),
+          },
+        },
+        destinations: {
+          spy: {
+            code: {
+              type: 'spy',
+              config: {},
+              push: async (event: WalkerOS.Event) => {
+                destinationEvents.push(event);
+              },
+            },
+          },
+        },
+      });
+
+      await collector.sources.testSource.push({ name: 'page view', data: {} });
+      expect(destinationEvents).toHaveLength(1);
+      expect(destinationEvents[0].name).toBe('page view');
+    });
+  });
+
   describe('source without next', () => {
     it('sends events directly to collector without pre-chain', async () => {
       const transformerCalls: string[] = [];

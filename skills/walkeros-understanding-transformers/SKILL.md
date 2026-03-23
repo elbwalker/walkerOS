@@ -233,8 +233,18 @@ push(event, context) {
 }
 ```
 
-Routers use `branch()` for conditional routing — first match wins. If the branch
-target does not exist, the event is **dropped** (not passed through).
+Conditional routing is built into `next`/`before` properties using `Route[]` —
+no separate router transformer needed:
+
+```json
+"next": [
+  { "match": { "key": "path", "operator": "prefix", "value": "/api" }, "next": "api-handler" },
+  { "match": "*", "next": "default" }
+]
+```
+
+Routes are evaluated in order — first match wins. If no route matches and
+there's no wildcard, the event passes through unchanged.
 
 ### Chain resolution safety
 

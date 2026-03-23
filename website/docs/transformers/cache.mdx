@@ -168,11 +168,10 @@ Place the cache transformer **before** a responder in the chain. On HIT it stops
   code={`"sources": {
   "http": {
     "package": "@walkeros/server-source-express",
-    "next": "router"
+    "next": "cache"
   }
 },
 "transformers": {
-  "router": { "package": "@walkeros/transformer-router", "next": "cache" },
   "cache":  { "package": "@walkeros/server-transformer-cache", "next": "responder" },
   "responder": { "package": "@walkeros/transformer-responder" }
 }`}

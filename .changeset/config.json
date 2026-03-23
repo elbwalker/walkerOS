@@ -32,7 +32,6 @@
       "@walkeros/server-destination-datamanager",
       "@walkeros/server-destination-gcp",
       "@walkeros/server-destination-meta",
-      "@walkeros/transformer-router",
       "@walkeros/transformer-validator",
       "@walkeros/server-transformer-fingerprint",
       "@walkeros/walker.js",

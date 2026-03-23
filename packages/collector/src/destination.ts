@@ -8,13 +8,16 @@ import type {
 import {
   assign,
   clone,
+  compileNext,
   debounce,
   getId,
   getGrantedConsent,
   isDefined,
   isFunction,
   isObject,
+  isRouteArray,
   processEventMapping,
+  resolveNext,
   tryCatchAsync,
   useHooks,
 } from '@walkeros/core';
@@ -29,14 +32,30 @@ import {
 /**
  * Computes transformer chain for a destination on-demand.
  * Returns empty array if destination has no 'before' configured.
+ * Supports Route[] for conditional chain resolution based on ingest data.
  */
 function getDestinationChain(
   destination: Destination.Instance,
   transformers: Transformer.Transformers,
+  ingest?: unknown,
 ): string[] {
-  const before = destination.config.before as string | string[] | undefined;
+  const before = destination.config.before as Transformer.Next | undefined;
   if (!before) return [];
-  return walkChain(before, extractTransformerNextMap(transformers));
+
+  if (isRouteArray(before)) {
+    const compiled = compileNext(before);
+    const resolved = resolveNext(
+      compiled,
+      (ingest || {}) as Record<string, unknown>,
+    );
+    if (!resolved) return [];
+    return walkChain(resolved, extractTransformerNextMap(transformers));
+  }
+
+  return walkChain(
+    before as string | string[],
+    extractTransformerNextMap(transformers),
+  );
 }
 
 /**
@@ -210,6 +229,7 @@ export async function pushToDestinations(
       const postChain = getDestinationChain(
         destination,
         collector.transformers,
+        meta.ingest,
       );
 
       // Process allowed events and store failed ones in the dead letter queue (DLQ)

@@ -32,7 +32,14 @@
  * - Transformer returns event → continue with modified event
  */
 import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
-import { isObject, tryCatchAsync, useHooks } from '@walkeros/core';
+import {
+  isObject,
+  tryCatchAsync,
+  useHooks,
+  compileNext,
+  resolveNext,
+  isRouteArray,
+} from '@walkeros/core';
 
 /**
  * Extracts transformer next configuration for chain walking.
@@ -49,8 +56,9 @@ export function extractTransformerNextMap(
 ): Record<string, { next?: string | string[] }> {
   const result: Record<string, { next?: string | string[] }> = {};
   for (const [id, transformer] of Object.entries(transformers)) {
-    if (transformer.config?.next) {
-      result[id] = { next: transformer.config.next as string | string[] };
+    const next = transformer.config?.next;
+    if (next && !isRouteArray(next as Transformer.Next)) {
+      result[id] = { next: next as string | string[] };
     } else {
       result[id] = {};
     }
@@ -379,8 +387,25 @@ export async function runTransformerChain(
 
       // Handle chain branching
       if (next) {
+        // Resolve Route[] if present
+        let resolvedNext: string | string[] | undefined = next as
+          | string
+          | string[];
+        if (isRouteArray(next as Transformer.Next)) {
+          const compiled = compileNext(next as Transformer.Next);
+          resolvedNext = resolveNext(
+            compiled,
+            (ingest || {}) as Record<string, unknown>,
+          );
+          if (!resolvedNext) {
+            // No route matched → passthrough (continue chain)
+            if (resultEvent) processedEvent = resultEvent;
+            continue;
+          }
+        }
+
         const branchedChain = walkChain(
-          next,
+          resolvedNext,
           extractTransformerNextMap(transformers),
         );
 
@@ -408,6 +433,39 @@ export async function runTransformerChain(
       }
     }
     // If result is undefined (void), continue with current event unchanged
+
+    // If transformer didn't return { next } but has Route[] config.next, resolve it
+    if (
+      (!result || (typeof result === 'object' && !result.next)) &&
+      transformer.config?.next &&
+      isRouteArray(transformer.config.next as Transformer.Next)
+    ) {
+      const compiledConfigNext = compileNext(
+        transformer.config.next as Transformer.Next,
+      );
+      const resolvedConfigNext = resolveNext(
+        compiledConfigNext,
+        (ingest || {}) as Record<string, unknown>,
+      );
+      if (resolvedConfigNext) {
+        const continuationChain = walkChain(
+          resolvedConfigNext,
+          extractTransformerNextMap(transformers),
+        );
+        if (continuationChain.length > 0) {
+          return runTransformerChain(
+            collector,
+            transformers,
+            continuationChain,
+            processedEvent,
+            ingest,
+            currentRespond,
+          );
+        }
+      }
+      // No match → chain ends here (passthrough to collector/destination)
+      return processedEvent;
+    }
   }
 
   return processedEvent;

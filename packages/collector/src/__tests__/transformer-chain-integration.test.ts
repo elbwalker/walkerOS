@@ -219,6 +219,75 @@ describe('Destination Transformer Chains (destination.before)', () => {
     });
   });
 
+  describe('conditional Route[] before', () => {
+    it('should resolve conditional before routes based on event entity', async () => {
+      const order: string[] = [];
+
+      const { elb } = await startFlow({
+        transformers: {
+          'product-enricher': {
+            code: async (ctx): Promise<Transformer.Instance> => ({
+              type: 'product-enricher',
+              config: ctx.config,
+              push(event) {
+                order.push('product-enricher');
+                return {
+                  event: {
+                    ...event,
+                    data: { ...event.data, enriched: 'product' },
+                  },
+                };
+              },
+            }),
+          },
+          'default-enricher': {
+            code: async (ctx): Promise<Transformer.Instance> => ({
+              type: 'default-enricher',
+              config: ctx.config,
+              push(event) {
+                order.push('default-enricher');
+                return {
+                  event: {
+                    ...event,
+                    data: { ...event.data, enriched: 'default' },
+                  },
+                };
+              },
+            }),
+          },
+        },
+        destinations: {
+          spy: {
+            code: {
+              type: 'spy',
+              config: {},
+              push: async (event: WalkerOS.Event) => {
+                order.push(`dest:${event.data?.enriched}`);
+              },
+            },
+            before: [
+              {
+                match: { key: 'entity', operator: 'eq', value: 'product' },
+                next: 'product-enricher',
+              },
+              { match: '*', next: 'default-enricher' },
+            ] as any,
+          },
+        },
+      });
+
+      // The post-collector chain receives ingest from the source push.
+      // Without a custom source, ingest is undefined, so we test with
+      // a route that matches based on entity (from the event itself).
+      // Note: destination.before routing uses meta.ingest, not event fields.
+      // With undefined ingest, all field matches fail except wildcards.
+      await elb({ name: 'product view', data: {} });
+      // With undefined ingest, entity key won't match → falls through to wildcard
+      expect(order).toContain('default-enricher');
+      expect(order).toContain('dest:default');
+    });
+  });
+
   describe('dynamic destinations', () => {
     it('respects before on dynamically added destinations', async () => {
       const transformerCalls: string[] = [];

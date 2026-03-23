@@ -1,219 +1,114 @@
 ---
-title: Router
-description: Dynamic chain branching based on ingest metadata
+title: Router (Deprecated)
+description: Migrated to native conditional routing via next/before properties
 sidebar_position: 2
-package: '@walkeros/transformer-router'
 ---
 
-# Router
+# Router (Deprecated)
 
-<PackageLink env="server" github="packages/transformers/router" npm="@walkeros/transformer-router" />
+:::caution Deprecated
+The `@walkeros/transformer-router` package has been removed. Conditional routing is now built directly into the `next` and `before` config properties using the same `Route[]` syntax.
+:::
 
-Routes events to different transformer chains based on ingest metadata. The router inspects `context.ingest` (set by the source) and branches to the first matching route.
+## Migration
 
-## Setup
+Replace the router transformer with `Route[]` on the source's `next` property (or any step's `next`/`before`).
 
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
+### Before (transformer-router)
 
-Install the package:
-
-<CodeSnippet
-  code={`npm install @walkeros/transformer-router`}
-  language="bash"
-/>
-
-Configure in your code:
-
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { transformerRouter } from '@walkeros/transformer-router';
-
-await startFlow({
-  transformers: {
-    router: {
-      code: transformerRouter,
-      config: {
-        settings: {
-          routes: [
-            {
-              match: { key: 'path', operator: 'prefix', value: '/gtag' },
-              next: 'gtag-parser',
-            },
-            { match: '*', next: 'default-parser' },
-          ],
-        },
-      },
-    },
+```json
+{
+  "sources": {
+    "express": { "package": "@walkeros/server-source-express", "next": "router" }
   },
-});`}
-  language="typescript"
-/>
-
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
-
-Add to your `flow.json`:
-
-<CodeSnippet
-  code={`"transformers": {
-  "router": {
-    "package": "@walkeros/transformer-router",
-    "config": {
-      "settings": {
-        "routes": [
-          {
-            "match": { "key": "path", "operator": "prefix", "value": "/gtag" },
-            "next": "gtag-parser"
-          },
-          { "match": "*", "next": "default-parser" }
-        ]
+  "transformers": {
+    "router": {
+      "package": "@walkeros/transformer-router",
+      "config": {
+        "settings": {
+          "routes": [
+            { "match": { "key": "path", "operator": "prefix", "value": "/gtag" }, "next": "gtag-parser" },
+            { "match": "*", "next": "default-parser" }
+          ]
+        }
       }
-    }
+    },
+    "gtag-parser": { "package": "..." },
+    "default-parser": { "package": "..." }
   }
-}`}
-  language="json"
-/>
+}
+```
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
+### After (native routing)
 
-  </TabItem>
-</Tabs>
+```json
+{
+  "sources": {
+    "express": {
+      "package": "@walkeros/server-source-express",
+      "next": [
+        { "match": { "key": "path", "operator": "prefix", "value": "/gtag" }, "next": "gtag-parser" },
+        { "match": "*", "next": "default-parser" }
+      ]
+    }
+  },
+  "transformers": {
+    "gtag-parser": { "package": "..." },
+    "default-parser": { "package": "..." }
+  }
+}
+```
 
-## How it works
+The `next` property now accepts three forms:
 
-1. A server source (express, fetch) sets `context.ingest` with request metadata (path, method, headers, etc.)
-2. The router evaluates routes **in order** — first match wins
-3. On match, the router **branches** to the matched transformer chain, preserving the current event
-4. The downstream parser can build a new event from `context.ingest` or work with the existing one
-5. If no route matches and there's no wildcard, the event passes through unchanged
+| Form | Example | Description |
+|------|---------|-------------|
+| `string` | `"enricher"` | Single transformer, walks `transformer.next` links |
+| `string[]` | `["a", "b", "c"]` | Explicit chain, executed in order |
+| `Route[]` | `[{ match, next }]` | Conditional routing based on ingest data |
 
-## Route configuration
+## Route syntax
 
 Each route has a `match` expression and a `next` target:
 
-<CodeSnippet
-  code={`interface Route {
+```typescript
+interface Route {
   match: MatchExpression | '*';  // Condition or wildcard
-  next: string | string[];      // Chain name(s) to branch to
-}`}
-  language="typescript"
-/>
+  next: string | string[] | Route[];  // Chain target (supports nesting)
+}
+```
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `match` | `MatchExpression \| '*'` | Condition to evaluate against ingest, or `'*'` wildcard |
-| `next` | `string \| string[]` | Transformer chain(s) to branch to on match |
+Routes are evaluated **in order** — first match wins. Use `'*'` as a catch-all wildcard at the end.
 
-## Match operators
+Match operators, logical combinators (`and`/`or`), and negation (`not: true`) work exactly as before. See the match expression reference for details.
 
-| Operator | Description | Example |
-|----------|-------------|---------|
-| `eq` | Exact string match | `{ key: 'method', operator: 'eq', value: 'POST' }` |
-| `prefix` | Starts with | `{ key: 'path', operator: 'prefix', value: '/api' }` |
-| `suffix` | Ends with | `{ key: 'path', operator: 'suffix', value: '.json' }` |
-| `contains` | Substring match | `{ key: 'path', operator: 'contains', value: 'collect' }` |
-| `regex` | Regular expression | `{ key: 'path', operator: 'regex', value: '^/v\\d+/' }` |
-| `gt` | Greater than (numeric) | `{ key: 'contentLength', operator: 'gt', value: '1000' }` |
-| `lt` | Less than (numeric) | `{ key: 'contentLength', operator: 'lt', value: '5000' }` |
-| `exists` | Key is present | `{ key: 'authorization', operator: 'exists', value: '' }` |
+## Where routing works
 
-Every condition supports negation with `not: true`:
+Conditional `Route[]` routing works on:
 
-<CodeSnippet
-  code={`{ key: 'method', operator: 'eq', value: 'GET', not: true }
-// Matches any method except GET`}
-  language="typescript"
-/>
+- **`source.next`** — route events before the collector based on ingest data (path, method, headers)
+- **`transformer.next`** — route after a transformer based on ingest data
+- **`destination.before`** — route before a destination based on ingest data
 
-## Logical combinators
+## Nested routes
 
-Combine conditions with `and` / `or`, nestable to any depth:
+Routes can nest to any depth:
 
-<CodeSnippet
-  code={`// Match POST requests to /api/*
+```json
 {
-  and: [
-    { key: 'path', operator: 'prefix', value: '/api' },
-    { key: 'method', operator: 'eq', value: 'POST' },
-  ]
-}`}
-  language="typescript"
-/>
-
-<CodeSnippet
-  code={`// Match gtag OR Meta CAPI requests
-{
-  or: [
-    { key: 'path', operator: 'prefix', value: '/gtag' },
-    { key: 'path', operator: 'prefix', value: '/meta' },
-  ]
-}`}
-  language="typescript"
-/>
-
-<details>
-<summary>Deeply nested example</summary>
-
-<CodeSnippet
-  code={`// (path starts with /api AND method is POST)
-// OR topic equals "shopify"
-{
-  or: [
+  "next": [
     {
-      and: [
-        { key: 'path', operator: 'prefix', value: '/api' },
-        { key: 'method', operator: 'eq', value: 'POST' },
-      ],
+      "match": { "key": "path", "operator": "prefix", "value": "/api" },
+      "next": [
+        { "match": { "key": "method", "operator": "eq", "value": "POST" }, "next": "api-writer" },
+        { "match": "*", "next": "api-reader" }
+      ]
     },
-    { key: 'topic', operator: 'eq', value: 'shopify' },
+    { "match": "*", "next": "default" }
   ]
-}`}
-  language="typescript"
-/>
-
-</details>
-
-## Examples
-
-### Multi-path server endpoint
-
-Route different vendor payloads through dedicated parsers:
-
-<CodeSnippet
-  code={`{
-  routes: [
-    {
-      match: { key: 'path', operator: 'prefix', value: '/gtag' },
-      next: 'gtag-parser',
-    },
-    {
-      match: { key: 'path', operator: 'prefix', value: '/meta' },
-      next: 'meta-parser',
-    },
-    { match: '*', next: 'default-parser' },
-  ]
-}`}
-  language="typescript"
-/>
-
-### Branching to multiple chains
-
-A route can target multiple chains at once:
-
-<CodeSnippet
-  code={`{
-  match: '*',
-  next: ['validator', 'logger'],  // Fan out to both chains
-}`}
-  language="typescript"
-/>
+}
+```
 
 ## Performance
 
-Routes are compiled to closures at init time. Regular expressions are compiled once and reused on every request. Runtime evaluation is a simple loop with short-circuit logic for `and`/`or` combinators.
-
-## Next steps
-
-* **[Validator](./validator)** - Validate events after routing
-* **[Create your own](./create-your-own)** - Build custom transformers
+Routes are compiled to closures at init time. Regular expressions are compiled once. Runtime evaluation uses short-circuit logic for `and`/`or` combinators.

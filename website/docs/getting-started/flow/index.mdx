@@ -470,42 +470,32 @@ The same transformer can appear in both a pre-collector and a post-collector cha
 
 In this config, `validate` runs before the collector (pre-chain) and `enrich` runs after the collector but before the `analytics` destination (post-chain).
 
-#### Router fan-out
+#### Conditional routing
 
-The `@walkeros/transformer-router` enables dynamic branching. Each route specifies a `next` field that redirects the chain based on ingest metadata:
+The `next` property supports conditional routing via `Route[]` — an array of `{ match, next }` objects evaluated against ingest metadata:
 
 <CodeSnippet
   code={`{
-  "transformers": {
-    "router": {
-      "package": "@walkeros/transformer-router",
-      "config": {
-        "settings": {
-          "routes": [
-            {
-              "match": { "key": "path", "operator": "prefix", "value": "/purchase" },
-              "next": "purchase_parser"
-            },
-            {
-              "match": "*",
-              "next": "default_parser"
-            }
-          ]
-        }
-      }
-    }
-  },
   "sources": {
     "http": {
       "package": "@walkeros/server-source-express",
-      "next": "router"
+      "next": [
+        {
+          "match": { "key": "path", "operator": "prefix", "value": "/purchase" },
+          "next": "purchase_parser"
+        },
+        {
+          "match": "*",
+          "next": "default_parser"
+        }
+      ]
     }
   }
 }`}
   language="json"
 />
 
-Routes are evaluated in order — the first match wins. If no route matches, the event passes through unchanged. If a route's `next` points to a transformer that does not exist, the event is dropped (fail-safe).
+Routes are evaluated in order — the first match wins. If no route matches, the event passes through unchanged to the collector.
 
 #### Deferred activation with `require`
 

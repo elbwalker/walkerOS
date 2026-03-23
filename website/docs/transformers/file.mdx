@@ -110,23 +110,15 @@ Place the [cache transformer](./cache) before the file transformer. Cached files
   code={`"sources": {
   "http": {
     "package": "@walkeros/server-source-express",
-    "next": "router"
+    "next": [
+      {
+        "match": { "key": "method", "operator": "eq", "value": "GET" },
+        "next": "cache"
+      }
+    ]
   }
 },
 "transformers": {
-  "router": {
-    "package": "@walkeros/transformer-router",
-    "config": {
-      "settings": {
-        "routes": [
-          {
-            "match": { "key": "method", "operator": "eq", "value": "GET" },
-            "next": "cache"
-          }
-        ]
-      }
-    }
-  },
   "cache": {
     "package": "@walkeros/server-transformer-cache",
     "next": "file"

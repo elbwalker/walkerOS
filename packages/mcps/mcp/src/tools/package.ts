@@ -14,8 +14,9 @@ export function registerPackageSearchTool(server: McpServer) {
     {
       title: 'Search Package',
       description:
-        'Browse walkerOS packages or look up a specific one. Without package name: returns catalog ' +
-        'filtered by type/platform. With package name: returns metadata, hint keys, and example summaries.',
+        'Start here for package discovery. Never guess package names — use this tool first to find exact names. ' +
+        'Without package name: returns catalog filtered by type/platform. ' +
+        'With package name: returns metadata, hint keys, and example summaries.',
       inputSchema: {
         package: z
           .string()
@@ -90,9 +91,9 @@ export function registerGetPackageSchemaTool(server: McpServer) {
     {
       title: 'Get Package',
       description:
-        'Fetch walkerOS package details from npm. By default returns schemas + hint texts + example summaries (lightweight). ' +
-        'Use section parameter to get full content: "hints" (with code blocks), "examples" (full in/out data), ' +
-        'or "all" (everything). Use package_search first to browse available packages.',
+        'Requires exact package name — do not guess names, use package_search first to find them. ' +
+        'Returns schemas + hint texts + example summaries by default (lightweight). ' +
+        'Use section parameter for full content: "hints" (with code blocks), "examples" (full in/out data), or "all".',
       inputSchema: {
         package: z
           .string()
