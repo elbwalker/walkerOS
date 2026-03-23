@@ -147,36 +147,3 @@ By default, cache uses a shared in-memory store. Reference a custom store for pe
 }
 ```
 
-## Migration from @walkeros/server-transformer-cache
-
-The `@walkeros/server-transformer-cache` package has been replaced by native cache config. Migrate by moving cache rules from the transformer to the source:
-
-**Before:**
-```json
-"transformers": {
-  "cache": {
-    "package": "@walkeros/server-transformer-cache",
-    "config": {
-      "settings": {
-        "rules": [{ "match": "*", "key": ["method", "path"], "ttl": 300 }]
-      }
-    }
-  }
-}
-```
-
-**After:**
-```json
-"sources": {
-  "express": {
-    "cache": {
-      "rules": [{ "match": { "key": "ingest.method", "operator": "eq", "value": "GET" }, "key": ["ingest.method", "ingest.path"], "ttl": 300 }]
-    }
-  }
-}
-```
-
-Key changes:
-- `cache` is now a step-level property, not a separate transformer
-- Match keys use scoped dot-paths (`ingest.method` instead of `method`)
-- No package declaration needed
