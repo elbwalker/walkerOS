@@ -1,3 +1,4 @@
+export * as Cache from './cache';
 export * as Collector from './collector';
 export * as Context from './context';
 export * as Destination from './destination';

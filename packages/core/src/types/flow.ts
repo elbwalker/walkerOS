@@ -579,6 +579,9 @@ export interface SourceReference {
    */
   next?: string | string[];
 
+  /** Cache configuration for this source. */
+  cache?: import('./cache').Cache;
+
   /**
    * Named examples for testing and documentation.
    * Stripped during flow resolution (not included in bundles).
@@ -656,6 +659,9 @@ export interface TransformerReference {
    * are safely detected at runtime by `walkChain()`.
    */
   next?: string | string[];
+
+  /** Cache configuration for this transformer. */
+  cache?: import('./cache').Cache;
 
   /**
    * Transformer-level variables (highest priority in cascade).
@@ -828,6 +834,9 @@ export interface DestinationReference {
    * Can be an array for explicit chain control (bypasses transformer.next resolution).
    */
   before?: string | string[];
+
+  /** Cache configuration for this destination. */
+  cache?: import('./cache').Cache;
 
   /**
    * Named examples for testing and documentation.
