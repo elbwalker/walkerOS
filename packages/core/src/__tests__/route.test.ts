@@ -20,34 +20,38 @@ describe('compileNext', () => {
   it('compiles routes and resolves first match', () => {
     const compiled = compileNext([
       {
-        match: { key: 'path', operator: 'prefix', value: '/gtag' },
+        match: { key: 'ingest.path', operator: 'prefix', value: '/gtag' },
         next: 'gtag-parser',
       },
       { match: '*', next: 'default' },
     ]);
-    expect(resolveNext(compiled!, { path: '/gtag/collect' })).toBe(
+    expect(resolveNext(compiled!, { ingest: { path: '/gtag/collect' } })).toBe(
       'gtag-parser',
     );
-    expect(resolveNext(compiled!, { path: '/other' })).toBe('default');
+    expect(resolveNext(compiled!, { ingest: { path: '/other' } })).toBe(
+      'default',
+    );
   });
 
   it('returns undefined when no route matches and no wildcard', () => {
     const compiled = compileNext([
       {
-        match: { key: 'method', operator: 'eq', value: 'POST' },
+        match: { key: 'ingest.method', operator: 'eq', value: 'POST' },
         next: 'writer',
       },
     ]);
-    expect(resolveNext(compiled!, { method: 'GET' })).toBeUndefined();
+    expect(
+      resolveNext(compiled!, { ingest: { method: 'GET' } }),
+    ).toBeUndefined();
   });
 
   it('resolves nested routes recursively', () => {
     const compiled = compileNext([
       {
-        match: { key: 'path', operator: 'prefix', value: '/api' },
+        match: { key: 'ingest.path', operator: 'prefix', value: '/api' },
         next: [
           {
-            match: { key: 'method', operator: 'eq', value: 'POST' },
+            match: { key: 'ingest.method', operator: 'eq', value: 'POST' },
             next: 'api-writer',
           },
           { match: '*', next: 'api-reader' },
@@ -55,24 +59,26 @@ describe('compileNext', () => {
       },
       { match: '*', next: 'default' },
     ]);
-    expect(resolveNext(compiled!, { path: '/api/data', method: 'POST' })).toBe(
-      'api-writer',
+    expect(
+      resolveNext(compiled!, { ingest: { path: '/api/data', method: 'POST' } }),
+    ).toBe('api-writer');
+    expect(
+      resolveNext(compiled!, { ingest: { path: '/api/data', method: 'GET' } }),
+    ).toBe('api-reader');
+    expect(resolveNext(compiled!, { ingest: { path: '/other' } })).toBe(
+      'default',
     );
-    expect(resolveNext(compiled!, { path: '/api/data', method: 'GET' })).toBe(
-      'api-reader',
-    );
-    expect(resolveNext(compiled!, { path: '/other' })).toBe('default');
   });
 
   it('resolves route target to string array (chain)', () => {
     const compiled = compileNext([
       {
-        match: { key: 'method', operator: 'eq', value: 'POST' },
+        match: { key: 'ingest.method', operator: 'eq', value: 'POST' },
         next: ['validator', 'writer'],
       },
       { match: '*', next: 'reader' },
     ]);
-    expect(resolveNext(compiled!, { method: 'POST' })).toEqual([
+    expect(resolveNext(compiled!, { ingest: { method: 'POST' } })).toEqual([
       'validator',
       'writer',
     ]);
@@ -83,24 +89,37 @@ describe('compileNext', () => {
       {
         match: {
           and: [
-            { key: 'path', operator: 'prefix', value: '/api' },
-            { key: 'method', operator: 'eq', value: 'POST' },
+            { key: 'ingest.path', operator: 'prefix', value: '/api' },
+            { key: 'ingest.method', operator: 'eq', value: 'POST' },
           ],
         },
         next: 'api-writer',
       },
       { match: '*', next: 'default' },
     ]);
-    expect(resolveNext(compiled!, { path: '/api/data', method: 'POST' })).toBe(
-      'api-writer',
-    );
-    expect(resolveNext(compiled!, { path: '/api/data', method: 'GET' })).toBe(
-      'default',
-    );
+    expect(
+      resolveNext(compiled!, { ingest: { path: '/api/data', method: 'POST' } }),
+    ).toBe('api-writer');
+    expect(
+      resolveNext(compiled!, { ingest: { path: '/api/data', method: 'GET' } }),
+    ).toBe('default');
   });
 
-  it('resolves without ingest (static values pass through)', () => {
+  it('resolves without context (static values pass through)', () => {
     const compiled = compileNext('enricher');
     expect(resolveNext(compiled!)).toBe('enricher');
+  });
+
+  it('matches against event fields', () => {
+    const compiled = compileNext([
+      {
+        match: { key: 'event.name', operator: 'eq', value: 'page view' },
+        next: 'page-handler',
+      },
+      { match: '*', next: 'default' },
+    ]);
+    expect(resolveNext(compiled!, { event: { name: 'page view' } })).toBe(
+      'page-handler',
+    );
   });
 });

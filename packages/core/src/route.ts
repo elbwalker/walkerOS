@@ -43,15 +43,15 @@ export function compileNext(next: Next | undefined): CompiledNext | undefined {
 
 export function resolveNext(
   compiled: CompiledNext | undefined,
-  ingest: Record<string, unknown> = {},
+  context: Record<string, unknown> = {},
 ): string | string[] | undefined {
   if (!compiled) return undefined;
   if (compiled.type === 'static') return compiled.value;
   if (compiled.type === 'chain') return compiled.value;
 
   for (const route of compiled.routes) {
-    if (route.match(ingest)) {
-      return resolveNext(route.next, ingest);
+    if (route.match(context)) {
+      return resolveNext(route.next, context);
     }
   }
 
