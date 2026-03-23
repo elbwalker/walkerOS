@@ -540,9 +540,6 @@
         "@walkeros/destination-demo": {},
         "@walkeros/transformer-validator": {},
         "@walkeros/server-transformer-fingerprint": {},
-        "@walkeros/server-transformer-cache": {
-          "path": "../../server/transformers/cache"
-        },
         "@walkeros/store-memory": {
           "path": "../../stores/memory"
         }
@@ -562,6 +559,23 @@
         "http": {
           "package": "@walkeros/server-source-express",
           "primary": true,
+          "cache": {
+            "store": "cache",
+            "rules": [
+              {
+                "match": {
+                  "key": "ingest.method",
+                  "operator": "eq",
+                  "value": "GET"
+                },
+                "key": ["ingest.method", "ingest.path"],
+                "ttl": 300,
+                "update": {
+                  "headers.X-Cache": { "key": "cache.status" }
+                }
+              }
+            ]
+          },
           "config": {
             "settings": {
               "path": "/collect",
@@ -598,26 +612,6 @@
         }
       },
       "transformers": {
-        "cache": {
-          "package": "@walkeros/server-transformer-cache",
-          "next": "filter",
-          "config": {
-            "settings": {
-              "rules": [
-                {
-                  "match": {
-                    "key": "method",
-                    "operator": "equals",
-                    "value": "GET"
-                  },
-                  "key": ["method", "path"],
-                  "ttl": 300
-                }
-              ]
-            }
-          },
-          "env": { "store": "$store:cache" }
-        },
         "filter": {
           "code": {
             "type": "filter",
@@ -682,7 +676,7 @@
       "destinations": {
         "meta": {
           "package": "@walkeros/server-destination-meta",
-          "before": "cache",
+          "before": "fingerprint",
           "config": {
             "settings": {
               "pixelId": "$var.metaPixelId",
