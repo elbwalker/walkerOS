@@ -1,215 +1,182 @@
 ---
 title: Cache
-description: HTTP response caching with LRU eviction and per-rule TTL
-sidebar_position: 3
-package: '@walkeros/server-transformer-cache'
+sidebar_position: 2
 ---
 
 # Cache
 
-<PackageLink env="server" github="packages/server/transformers/cache" npm="@walkeros/server-transformer-cache" />
+Cache is a built-in config property available on every step type (source, transformer, destination). It prevents redundant processing by caching results and serving them on subsequent matching requests.
 
-Caches HTTP responses in the transformer chain. On a cache **HIT**, serves the stored response directly and stops the chain. On a **MISS**, wraps the respond function to intercept, cache, and forward the downstream response.
+## Configuration
 
-## Setup
+Add `cache` to any step in your flow config:
 
-<Tabs groupId="mode">
-  <TabItem value="integrated" label="Integrated" default>
+```json
+"sources": {
+  "express": {
+    "package": "@walkeros/server-source-express",
+    "cache": {
+      "rules": [
+        {
+          "match": { "key": "ingest.method", "operator": "eq", "value": "GET" },
+          "key": ["ingest.method", "ingest.path"],
+          "ttl": 300
+        }
+      ]
+    }
+  }
+}
+```
 
-Install the package:
+### Cache Rule Properties
 
-<CodeSnippet
-  code={`npm install @walkeros/server-transformer-cache`}
-  language="bash"
-/>
+| Property | Type | Description |
+|----------|------|-------------|
+| `match` | `MatchExpression \| '*'` | When to apply this cache rule |
+| `key` | `string[]` | Dot-paths to build the cache key from |
+| `ttl` | `number` | Time-to-live in seconds |
+| `update` | `Record<string, Value>` | Optional modifications applied on read |
 
-Configure in your code:
+### Cache Properties
 
-<CodeSnippet
-  code={`import { startFlow } from '@walkeros/collector';
-import { transformerCache } from '@walkeros/server-transformer-cache';
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `full` | `boolean` | `false` | Cache the full flow response (respond and stop) |
+| `store` | `string` | Built-in memory | Reference to a store in `flow.stores` |
+| `rules` | `CacheRule[]` | Required | At least one cache rule |
 
-await startFlow({
-  transformers: {
-    cache: {
-      code: transformerCache,
-      config: {
-        settings: {
-          rules: [
-            {
-              match: { key: 'method', operator: 'eq', value: 'GET' },
-              key: ['method', 'path'],
-              ttl: 300,
-              headers: { 'Cache-Control': 'public, max-age=300' },
-            },
-          ],
-        },
-      },
-    },
+## Behavior by Step Type
+
+### Source Cache (always full)
+
+Source cache intercepts requests before the pipeline runs. On cache HIT, the cached respond value is returned immediately — transformers and destinations are skipped entirely.
+
+```json
+"sources": {
+  "express": {
+    "cache": {
+      "rules": [
+        { "match": { "key": "ingest.method", "operator": "eq", "value": "GET" }, "key": ["ingest.method", "ingest.path"], "ttl": 300 }
+      ]
+    }
+  }
+}
+```
+
+### Transformer Cache (step-level)
+
+Transformer cache skips the transformer's execution on HIT but continues the chain with the cached event. Useful for expensive computations like API enrichment.
+
+```json
+"transformers": {
+  "enricher": {
+    "package": "@walkeros/server-transformer-enricher",
+    "cache": {
+      "rules": [
+        { "match": "*", "key": ["event.name"], "ttl": 60 }
+      ]
+    }
+  }
+}
+```
+
+### Destination Cache (deduplication)
+
+Destination cache skips the push on HIT — preventing duplicate events from reaching the destination. Other destinations still receive the event.
+
+```json
+"destinations": {
+  "ga4": {
+    "package": "@walkeros/web-destination-ga4",
+    "cache": {
+      "rules": [
+        { "match": "*", "key": ["event.name", "event.data.id"], "ttl": 300 }
+      ]
+    }
+  }
+}
+```
+
+## Key Resolution
+
+Cache keys use dot-path resolution from a structured context:
+
+- `ingest.method` — request method from source ingest
+- `ingest.path` — request path from source ingest
+- `event.name` — event name
+- `event.data.id` — nested event data field
+- `event.user.loggedIn` — user properties
+
+## Update Rules
+
+Use `update` to modify the result on both HIT and MISS:
+
+```json
+"cache": {
+  "rules": [{
+    "match": "*",
+    "key": ["ingest.method", "ingest.path"],
+    "ttl": 300,
+    "update": {
+      "headers.X-Cache": { "key": "cache.status" },
+      "headers.Cache-Control": { "value": "public, max-age=300" }
+    }
+  }]
+}
+```
+
+`cache.status` resolves to `"HIT"` or `"MISS"`. Static values use `{ "value": "..." }`.
+
+## Custom Store
+
+By default, cache uses a shared in-memory store. Reference a custom store for persistence:
+
+```json
+{
+  "stores": {
+    "redis": { "package": "@walkeros/server-store-redis" }
   },
-});`}
-  language="typescript"
-/>
+  "sources": {
+    "express": {
+      "cache": {
+        "store": "redis",
+        "rules": [...]
+      }
+    }
+  }
+}
+```
 
-  </TabItem>
-  <TabItem value="bundled" label="Bundled">
+## Migration from @walkeros/server-transformer-cache
 
-Add to your `flow.json`:
+The `@walkeros/server-transformer-cache` package has been replaced by native cache config. Migrate by moving cache rules from the transformer to the source:
 
-<CodeSnippet
-  code={`"transformers": {
+**Before:**
+```json
+"transformers": {
   "cache": {
     "package": "@walkeros/server-transformer-cache",
     "config": {
       "settings": {
-        "rules": [
-          {
-            "match": { "key": "method", "operator": "eq", "value": "GET" },
-            "key": ["method", "path"],
-            "ttl": 300,
-            "headers": { "Cache-Control": "public, max-age=300" }
-          }
-        ]
+        "rules": [{ "match": "*", "key": ["method", "path"], "ttl": 300 }]
       }
     }
   }
-}`}
-  language="json"
-/>
+}
+```
 
-[See Bundled Mode setup →](/docs/getting-started/modes/bundled) | [CLI reference →](/docs/apps/cli)
-
-  </TabItem>
-</Tabs>
-
-## How it works
-
-1. A request arrives and the cache transformer checks its **rules** in order (first match wins)
-2. The cache **key** is built by joining the configured ingest fields (e.g. `method:path`)
-3. If the key exists in the store → **HIT**: respond immediately with the cached response and `X-Cache: HIT` header, stop the chain
-4. If the key is missing → **MISS**: wrap the respond function so the downstream response is intercepted, stored, and forwarded with `X-Cache: MISS` header
-5. If no rule matches → event passes through unchanged
-
-## Settings
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `rules` | `CacheRule[]` | — | Cache rules, evaluated in order (first match wins) |
-| `maxSize` | `number` | `10485760` (10 MB) | Maximum in-memory store size in bytes |
-
-## Rule configuration
-
-Each rule specifies when to cache, what to use as the cache key, and how long to keep it:
-
-<CodeSnippet
-  code={`interface CacheRule {
-  match: MatchExpression | '*';       // Condition or wildcard
-  key: string[];                      // Ingest fields for cache key
-  ttl: number;                        // Time-to-live in seconds
-  headers?: Record<string, string>;   // Extra response headers
-}`}
-  language="typescript"
-/>
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `match` | `MatchExpression \| '*'` | Condition to evaluate against ingest, or `'*'` wildcard |
-| `key` | `string[]` | Ingest fields joined with `:` to form the cache key |
-| `ttl` | `number` | Time-to-live in seconds |
-| `headers` | `Record<string, string>` | Extra headers merged into both HIT and MISS responses |
-
-### Match operators
-
-The cache transformer uses the same match expressions as the [router](./router#match-operators), including all 8 operators, negation with `not: true`, and `and`/`or` combinators.
-
-## Examples
-
-### Cache GET requests by path
-
-<CodeSnippet
-  code={`{
-  rules: [
-    {
-      match: { key: 'method', operator: 'eq', value: 'GET' },
-      key: ['method', 'path'],
-      ttl: 300,
-    },
-  ]
-}`}
-  language="typescript"
-/>
-
-### Different TTLs per path
-
-<CodeSnippet
-  code={`{
-  rules: [
-    {
-      match: { key: 'path', operator: 'prefix', value: '/api/static' },
-      key: ['path'],
-      ttl: 3600,
-      headers: { 'Cache-Control': 'public, max-age=3600' },
-    },
-    {
-      match: { key: 'path', operator: 'prefix', value: '/api' },
-      key: ['method', 'path'],
-      ttl: 60,
-    },
-  ]
-}`}
-  language="typescript"
-/>
-
-### Chain placement
-
-Place the cache transformer **before** a responder in the chain. On HIT it stops the chain, skipping the responder entirely:
-
-<CodeSnippet
-  code={`"sources": {
-  "http": {
-    "package": "@walkeros/server-source-express",
-    "next": "cache"
+**After:**
+```json
+"sources": {
+  "express": {
+    "cache": {
+      "rules": [{ "match": { "key": "ingest.method", "operator": "eq", "value": "GET" }, "key": ["ingest.method", "ingest.path"], "ttl": 300 }]
+    }
   }
-},
-"transformers": {
-  "cache":  { "package": "@walkeros/server-transformer-cache", "next": "responder" },
-  "responder": { "package": "@walkeros/transformer-responder" }
-}`}
-  language="json"
-/>
+}
+```
 
-## Custom store backend
-
-By default the cache uses an in-memory store (`@walkeros/store-memory`) with LRU eviction and lazy TTL. You can inject a different store via `env.store`:
-
-<CodeSnippet
-  code={`import { createMemoryStore } from '@walkeros/store-memory';
-
-const customStore = createMemoryStore({ maxSize: 1024 * 1024 }); // 1 MB
-
-await startFlow({
-  transformers: {
-    cache: {
-      code: transformerCache,
-      config: { settings: { rules: [/* ... */] } },
-      env: { store: customStore },
-    },
-  },
-});`}
-  language="typescript"
-/>
-
-Any object with `get(key): T | undefined` and `set(key, value, ttl?): void` methods works as a store backend.
-
-## Behavior notes
-
-- **LRU eviction** — when the store exceeds `maxSize`, the least-recently-used entries are evicted first
-- **Lazy TTL** — expired entries are removed on the next lookup, not on a timer
-- **First match wins** — rules are evaluated in order; only the first matching rule applies
-- **Empty key** — if all key fields resolve to empty strings, the event passes through with a warning
-- **No respond function** — the MISS wrapper still caches the response even without `env.respond` (useful for pre-warming)
-
-## Next steps
-
-- **[Router](./router)** - Route events before caching
-- **[Create your own](./create-your-own)** - Build custom transformers
+Key changes:
+- `cache` is now a step-level property, not a separate transformer
+- Match keys use scoped dot-paths (`ingest.method` instead of `method`)
+- No package declaration needed
