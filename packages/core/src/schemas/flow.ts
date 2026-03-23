@@ -19,6 +19,7 @@
 
 import { z, toJsonSchema } from './validation';
 import { RoutableNextSchema } from './matcher';
+import { CacheSchema } from './cache';
 
 // ========================================
 // Primitive Type Schemas
@@ -229,6 +230,9 @@ export const SourceReferenceSchema = z
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
     ),
+    cache: CacheSchema.optional().describe(
+      'Cache configuration for this source (match → key → ttl rules)',
+    ),
   })
   .describe('Source package reference with configuration');
 
@@ -278,6 +282,9 @@ export const TransformerReferenceSchema = z
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
     ),
+    cache: CacheSchema.optional().describe(
+      'Cache configuration for this transformer (match → key → ttl rules)',
+    ),
   })
   .describe('Transformer package reference with configuration');
 
@@ -326,6 +333,9 @@ export const DestinationReferenceSchema = z
     ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
+    ),
+    cache: CacheSchema.optional().describe(
+      'Cache configuration for this destination (match → key → ttl rules)',
     ),
   })
   .describe('Destination package reference with configuration');
