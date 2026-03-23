@@ -4,6 +4,7 @@ import type {
   MatchOperator,
   CompiledMatcher,
 } from './types/matcher';
+import { getByPath } from './byPath';
 
 /**
  * Compiles a match expression into a closure for fast runtime evaluation.
@@ -31,8 +32,8 @@ function compileCondition(condition: MatchCondition): CompiledMatcher {
   const { key, operator, value, not } = condition;
   const test = compileOperator(operator, value);
 
-  return (ingest) => {
-    const raw = ingest[key];
+  return (context) => {
+    const raw = getByPath(context, key);
     const result = test(raw);
     return not ? !result : result;
   };

@@ -149,6 +149,50 @@ describe('compileMatcher', () => {
     });
   });
 
+  describe('nested path resolution', () => {
+    it('resolves dot-path key like ingest.method', () => {
+      const match = compileMatcher({
+        key: 'ingest.method',
+        operator: 'eq',
+        value: 'GET',
+      });
+      expect(match({ ingest: { method: 'GET' } })).toBe(true);
+      expect(match({ ingest: { method: 'POST' } })).toBe(false);
+    });
+
+    it('resolves dot-path key like event.name', () => {
+      const match = compileMatcher({
+        key: 'event.name',
+        operator: 'eq',
+        value: 'page view',
+      });
+      expect(match({ event: { name: 'page view' } })).toBe(true);
+      expect(match({ event: { name: 'click' } })).toBe(false);
+    });
+
+    it('resolves deeply nested paths like event.user.loggedIn', () => {
+      const match = compileMatcher({
+        key: 'event.user.loggedIn',
+        operator: 'eq',
+        value: 'true',
+      });
+      expect(match({ event: { user: { loggedIn: 'true' } } })).toBe(true);
+      expect(match({ event: { user: { loggedIn: 'false' } } })).toBe(false);
+    });
+
+    it('returns false for exists operator on missing nested path', () => {
+      const match = compileMatcher({
+        key: 'event.user.loggedIn',
+        operator: 'exists',
+        value: '',
+      });
+      expect(match({ event: { user: { loggedIn: true } } })).toBe(true);
+      expect(match({ event: { user: {} } })).toBe(false);
+      expect(match({ event: {} })).toBe(false);
+      expect(match({})).toBe(false);
+    });
+  });
+
   describe('nested and/or', () => {
     it('should handle nested expressions', () => {
       // (path prefix /api AND method POST) OR (topic eq shopify)
