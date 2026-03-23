@@ -5,8 +5,13 @@ import {
   compileNext,
   resolveNext,
   isRouteArray,
+  compileCache,
+  checkCache,
+  storeCache,
+  applyUpdate,
 } from '@walkeros/core';
 import { walkChain, extractTransformerNextMap } from './transformer';
+import { getCacheStore } from './cache';
 
 /**
  * Initialize a single source. Extracted from the initSources loop body
@@ -17,13 +22,23 @@ export async function initSource(
   sourceId: string,
   sourceDefinition: Source.InitSource,
 ): Promise<Source.Instance | undefined> {
-  const { code, config = {}, env = {}, primary, next } = sourceDefinition;
+  const {
+    code,
+    config = {},
+    env = {},
+    primary,
+    next,
+    cache,
+  } = sourceDefinition;
 
   // Track current ingest metadata (set per-request by setIngest)
   let currentIngest: unknown = undefined;
   // Track current respond function (set per-request by setRespond)
   let currentRespond: import('@walkeros/core').RespondFn | undefined =
     undefined;
+
+  // Compile source cache config (if configured)
+  const compiledSourceCache = cache ? compileCache(cache) : undefined;
 
   // Resolve transformer chain for this source
   const compiledNext = compileNext(next as Transformer.Next | undefined);
@@ -39,19 +54,76 @@ export async function initSource(
       : undefined;
 
   // Create wrapped push that auto-applies source mapping config, preChain, and ingest
-  const wrappedPush: Collector.PushFn = (
+  const wrappedPush: Collector.PushFn = async (
     event: WalkerOS.DeepPartialEvent,
     options: Collector.PushOptions = {},
   ) => {
+    // Source cache check (always full — respond and skip pipeline on HIT)
+    if (compiledSourceCache) {
+      const cacheStore = getCacheStore(compiledSourceCache, collector);
+      if (cacheStore) {
+        const cacheContext = {
+          ingest: (currentIngest || {}) as Record<string, unknown>,
+        };
+        const cacheResult = checkCache(
+          compiledSourceCache,
+          cacheStore,
+          cacheContext,
+          `source:${sourceId}`,
+        );
+
+        if (cacheResult) {
+          if (cacheResult.status === 'HIT' && cacheResult.value !== undefined) {
+            // HIT: respond with cached value, skip pipeline entirely
+            let respondValue = cacheResult.value;
+            if (cacheResult.rule.update) {
+              respondValue = await applyUpdate(
+                respondValue,
+                cacheResult.rule.update as Record<string, unknown>,
+                { ...cacheContext, cache: { status: 'HIT' } },
+              );
+            }
+            currentRespond?.(respondValue as Record<string, unknown>);
+            return { ok: true } as any;
+          }
+
+          if (cacheResult.status === 'MISS') {
+            // MISS: wrap respond to intercept and cache the value
+            const originalRespond = currentRespond;
+            if (originalRespond) {
+              currentRespond = ((respondOptions?: Record<string, unknown>) => {
+                // Store the respond args in cache
+                storeCache(
+                  cacheStore,
+                  cacheResult.key,
+                  respondOptions,
+                  cacheResult.rule.ttl,
+                );
+                // Apply update rules before forwarding to the original respond
+                if (cacheResult.rule.update) {
+                  applyUpdate(
+                    respondOptions,
+                    cacheResult.rule.update as Record<string, unknown>,
+                    { ...cacheContext, cache: { status: 'MISS' } },
+                  ).then((updated) => originalRespond(updated as any));
+                } else {
+                  originalRespond(respondOptions);
+                }
+              }) as import('@walkeros/core').RespondFn;
+            }
+          }
+        }
+      }
+    }
+
     // Resolve chain: static (pre-computed) or conditional (per-event)
     const preChain =
       staticPreChain ??
       (compiledNext
         ? walkChain(
-            resolveNext(
-              compiledNext,
-              (currentIngest || {}) as Record<string, unknown>,
-            ),
+            resolveNext(compiledNext, {
+              ingest: (currentIngest || {}) as Record<string, unknown>,
+            }),
             extractTransformerNextMap(collector.transformers),
           )
         : []);
