@@ -1,5 +1,5 @@
 import { startFlow } from '..';
-import type { Source, WalkerOS, Elb, Destination } from '@walkeros/core';
+import type { Source, WalkerOS, Destination } from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
 
 /**
@@ -42,7 +42,7 @@ describe('Source cache integration', () => {
                   allResponses.push(options);
                 }) as RespondFn);
                 await env.push({ name: 'page view', data: {} });
-              }) as Elb.Fn,
+              }) as any,
             };
           },
           cache: {
@@ -73,7 +73,7 @@ describe('Source cache integration', () => {
     });
 
     // First request: MISS — pipeline runs, destination calls respond (caches it)
-    await (collector.sources.testSource.push as Elb.Fn)({
+    await (collector.sources.testSource.push as any)({
       method: 'GET',
       path: '/api/data',
     });
@@ -82,7 +82,7 @@ describe('Source cache integration', () => {
     expect(allResponses[0]).toEqual({ body: 'response data', status: 200 });
 
     // Second request: HIT — pipeline skipped, respond called with cached value
-    await (collector.sources.testSource.push as Elb.Fn)({
+    await (collector.sources.testSource.push as any)({
       method: 'GET',
       path: '/api/data',
     });
@@ -105,7 +105,7 @@ describe('Source cache integration', () => {
               push: (async (rawData: unknown) => {
                 await setIngest(rawData);
                 await env.push({ name: 'page view', data: {} });
-              }) as Elb.Fn,
+              }) as any,
             };
           },
           cache: {
@@ -135,11 +135,11 @@ describe('Source cache integration', () => {
       },
     });
 
-    await (collector.sources.testSource.push as Elb.Fn)({
+    await (collector.sources.testSource.push as any)({
       method: 'POST',
       path: '/api/data',
     });
-    await (collector.sources.testSource.push as Elb.Fn)({
+    await (collector.sources.testSource.push as any)({
       method: 'POST',
       path: '/api/data',
     });
@@ -161,7 +161,7 @@ describe('Source cache integration', () => {
                 await setIngest(rawData);
                 setRespond((() => {}) as RespondFn);
                 await env.push({ name: 'page view', data: {} });
-              }) as Elb.Fn,
+              }) as any,
             };
           },
           cache: {
@@ -192,28 +192,28 @@ describe('Source cache integration', () => {
     });
 
     // Request to /api/users (MISS)
-    await (collector.sources.testSource.push as Elb.Fn)({
+    await (collector.sources.testSource.push as any)({
       method: 'GET',
       path: '/api/users',
     });
     expect(destinationCalls).toHaveLength(1);
 
     // Request to /api/data — different cache key (MISS)
-    await (collector.sources.testSource.push as Elb.Fn)({
+    await (collector.sources.testSource.push as any)({
       method: 'GET',
       path: '/api/data',
     });
     expect(destinationCalls).toHaveLength(2);
 
     // Repeat /api/users — should be HIT
-    await (collector.sources.testSource.push as Elb.Fn)({
+    await (collector.sources.testSource.push as any)({
       method: 'GET',
       path: '/api/users',
     });
     expect(destinationCalls).toHaveLength(2); // Served from cache
 
     // Repeat /api/data — should be HIT
-    await (collector.sources.testSource.push as Elb.Fn)({
+    await (collector.sources.testSource.push as any)({
       method: 'GET',
       path: '/api/data',
     });
@@ -236,7 +236,7 @@ describe('Source cache integration', () => {
                 await setIngest(rawData);
                 setRespond((() => {}) as RespondFn);
                 await env.push({ name: 'page view', data: {} });
-              }) as Elb.Fn,
+              }) as any,
             };
           },
           next: 'enrich',
@@ -265,7 +265,7 @@ describe('Source cache integration', () => {
           code: async (context) => ({
             type: 'enricher',
             config: context.config,
-            push: async (event: WalkerOS.Event) => {
+            push(event) {
               transformerCalls.push('enrich');
               return { event };
             },
@@ -280,7 +280,7 @@ describe('Source cache integration', () => {
     });
 
     // MISS: transformer and destination run
-    await (collector.sources.testSource.push as Elb.Fn)({
+    await (collector.sources.testSource.push as any)({
       method: 'GET',
       path: '/api/data',
     });
@@ -288,7 +288,7 @@ describe('Source cache integration', () => {
     expect(transformerCalls).toEqual(['enrich']);
 
     // HIT: neither transformer nor destination should run
-    await (collector.sources.testSource.push as Elb.Fn)({
+    await (collector.sources.testSource.push as any)({
       method: 'GET',
       path: '/api/data',
     });
