@@ -97,29 +97,21 @@ export async function initSource(
             currentRespond
           ) {
             // full=true MISS: wrap respond to intercept and cache the value.
-            // Capture the unwrapped respond — never wrap an already-wrapped respond.
+            // Respond synchronously first (wins first-call-wins race with source
+            // fallback), then store cache. Update rules apply to cached value only
+            // on HIT, applyUpdate runs before responding.
             const unwrappedRespond = currentRespond;
-            currentRespond = (async (
-              respondOptions?: Record<string, unknown>,
-            ) => {
-              // Store the respond args in cache
+            currentRespond = ((respondOptions?: Record<string, unknown>) => {
+              // Respond immediately (sync) to win the first-call-wins race
+              unwrappedRespond(respondOptions);
+
+              // Store the respond args in cache (async, fire-and-forget)
               storeCache(
                 cacheStore,
                 cacheResult.key,
                 respondOptions,
                 cacheResult.rule.ttl,
               );
-              // Apply update rules before forwarding
-              if (cacheResult.rule.update) {
-                const updated = await applyUpdate(
-                  respondOptions,
-                  cacheResult.rule.update as Record<string, unknown>,
-                  { ...cacheContext, cache: { status: 'MISS' } },
-                );
-                unwrappedRespond(updated as RespondOptions);
-              } else {
-                unwrappedRespond(respondOptions);
-              }
             }) as import('@walkeros/core').RespondFn;
           }
 

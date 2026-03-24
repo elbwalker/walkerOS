@@ -1249,7 +1249,9 @@ export function buildConfigObject(
         code?: string | true;
         config?: unknown;
         env?: unknown;
-        next?: string | string[];
+        next?: string | string[] | Array<{ match: unknown; next: unknown }>;
+        cache?: unknown;
+        primary?: boolean;
       }
     >;
     destinations?: Record<
@@ -1260,6 +1262,7 @@ export function buildConfigObject(
         config?: unknown;
         env?: unknown;
         before?: string | string[];
+        cache?: unknown;
       }
     >;
     transformers?: Record<
@@ -1270,6 +1273,7 @@ export function buildConfigObject(
         config?: unknown;
         env?: unknown;
         next?: string;
+        cache?: unknown;
       }
     >;
     stores?: Record<
@@ -1318,7 +1322,7 @@ export function buildConfigObject(
     .map(([key, source]) => {
       // Handle inline code object
       if (isInlineCode(source.code)) {
-        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, source.next, 'next')}`;
+        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, source.next as string | string[] | undefined, 'next')}`;
       }
 
       // Handle package-based source
@@ -1343,8 +1347,14 @@ export function buildConfigObject(
       const nextStr = source.next
         ? `,\n      next: ${JSON.stringify(source.next)}`
         : '';
+      // Include 'cache' for source-level caching
+      const cacheStr = source.cache
+        ? `,\n      cache: ${JSON.stringify(source.cache)}`
+        : '';
+      // Include 'primary' for primary source marking
+      const primaryStr = source.primary ? `,\n      primary: true` : '';
 
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${nextStr}\n    }`;
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${nextStr}${cacheStr}${primaryStr}\n    }`;
     });
 
   // Build destinations (skip deprecated code: true entries)
@@ -1380,8 +1390,12 @@ export function buildConfigObject(
       const beforeStr = dest.before
         ? `,\n      before: ${JSON.stringify(dest.before)}`
         : '';
+      // Include 'cache' for destination-level caching
+      const destCacheStr = dest.cache
+        ? `,\n      cache: ${JSON.stringify(dest.cache)}`
+        : '';
 
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${beforeStr}\n    }`;
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${beforeStr}${destCacheStr}\n    }`;
     });
 
   // Build transformers (skip deprecated code: true entries)
@@ -1419,8 +1433,12 @@ export function buildConfigObject(
       const nextStr = transformer.next
         ? `,\n      next: ${JSON.stringify(transformer.next)}`
         : '';
+      // Include 'cache' for transformer-level caching
+      const tCacheStr = transformer.cache
+        ? `,\n      cache: ${JSON.stringify(transformer.cache)}`
+        : '';
 
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${nextStr}\n    }`;
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${nextStr}${tCacheStr}\n    }`;
     });
 
   // Build stores
