@@ -349,12 +349,19 @@ describe('Source cache integration', () => {
     });
     expect(destinationCalls).toHaveLength(1);
 
-    // Second request: HIT with full=false — pipeline still runs
+    // Second request: HIT with full=false — pipeline still runs (source step skipped)
     await (collector.sources.testSource.push as any)({
       method: 'GET',
       path: '/api/data',
     });
     expect(destinationCalls).toHaveLength(2); // Destination still called
+
+    // Third request: different path — MISS, also continues pipeline
+    await (collector.sources.testSource.push as any)({
+      method: 'GET',
+      path: '/api/other',
+    });
+    expect(destinationCalls).toHaveLength(3);
   });
 
   it('should apply update rules on HIT and MISS', async () => {

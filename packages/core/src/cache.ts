@@ -34,7 +34,7 @@ export function buildCacheContext(
   event?: unknown,
 ): Record<string, unknown> {
   const ctx: Record<string, unknown> = {
-    ingest: (ingest || {}) as Record<string, unknown>,
+    ingest: (ingest ?? {}) as Record<string, unknown>,
   };
   if (event !== undefined) {
     ctx.event = event as Record<string, unknown>;

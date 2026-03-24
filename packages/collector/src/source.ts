@@ -88,15 +88,15 @@ export async function initSource(
               currentRespond?.(respondValue as Record<string, unknown>);
               return { ok: true } as Elb.PushResult;
             }
-            // full=false: skip source push, continue pipeline (fall through)
+            // full=false: cached value unused — HIT signals "seen before", pipeline continues
           }
 
           if (
             cacheResult.status === 'MISS' &&
-            currentRespond &&
-            compiledSourceCache.full
+            compiledSourceCache.full &&
+            currentRespond
           ) {
-            // MISS: wrap respond to intercept and cache the value.
+            // full=true MISS: wrap respond to intercept and cache the value.
             // Capture the unwrapped respond — never wrap an already-wrapped respond.
             const unwrappedRespond = currentRespond;
             currentRespond = (async (
@@ -121,6 +121,11 @@ export async function initSource(
                 unwrappedRespond(respondOptions);
               }
             }) as import('@walkeros/core').RespondFn;
+          }
+
+          // full=false MISS: store sentinel so subsequent requests get a HIT
+          if (cacheResult.status === 'MISS' && !compiledSourceCache.full) {
+            storeCache(cacheStore, cacheResult.key, true, cacheResult.rule.ttl);
           }
         }
       }

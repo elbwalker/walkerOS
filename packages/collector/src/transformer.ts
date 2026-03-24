@@ -482,10 +482,11 @@ export async function runTransformerChain(
     // If transformer didn't return { next } but has NextRule[] config.next, resolve it
     if (
       (!result || (typeof result === 'object' && !result.next)) &&
-      transformer.config?.next &&
-      isRouteArray(transformer.config.next!)
+      transformer.config.next &&
+      isRouteArray(transformer.config.next)
     ) {
-      const compiledConfigNext = compileNext(transformer.config.next);
+      const configNext = transformer.config.next;
+      const compiledConfigNext = compileNext(configNext);
       const resolvedConfigNext = resolveNext(
         compiledConfigNext,
         buildCacheContext(ingest, processedEvent),
