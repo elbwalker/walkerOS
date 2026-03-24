@@ -49,6 +49,12 @@ export const CacheRuleSchema = z.object({
  * - rules: at least one CacheRule is required
  */
 export const CacheSchema = z.object({
+  full: z
+    .boolean()
+    .optional()
+    .describe(
+      'Stop flow on cache HIT (default: false). When true, skip remaining steps and return cached value.',
+    ),
   store: z
     .string()
     .optional()

@@ -69,6 +69,22 @@ describe('CacheSchema', () => {
     ).toBe(true);
   });
 
+  it('validates with full flag', () => {
+    expect(
+      CacheSchema.safeParse({
+        full: true,
+        rules: [{ match: '*', key: ['ingest.path'], ttl: 60 }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it('validates without full flag', () => {
+    const result = CacheSchema.safeParse({
+      rules: [{ match: '*', key: ['ingest.path'], ttl: 60 }],
+    });
+    expect(result.success).toBe(true);
+  });
+
   it('rejects empty rules array', () => {
     expect(
       CacheSchema.safeParse({

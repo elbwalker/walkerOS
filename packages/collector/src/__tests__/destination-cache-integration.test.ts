@@ -143,4 +143,101 @@ describe('destination cache integration', () => {
       'product view', // First xyz — MISS (different key)
     ]);
   });
+
+  it('should skip before chain on HIT when full=true', async () => {
+    let transformerCalls = 0;
+    let pushCount = 0;
+
+    const { elb } = await startFlow({
+      transformers: {
+        enricher: {
+          code: async (
+            ctx,
+          ): Promise<import('@walkeros/core').Transformer.Instance> => ({
+            type: 'enricher',
+            config: ctx.config,
+            push(event) {
+              transformerCalls++;
+              return {
+                event: { ...event, data: { ...event.data, enriched: true } },
+              };
+            },
+          }),
+        },
+      },
+      destinations: {
+        spy: {
+          before: 'enricher',
+          code: {
+            type: 'spy',
+            config: {},
+            push: async () => {
+              pushCount++;
+            },
+          },
+          cache: {
+            full: true,
+            rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+          },
+        },
+      },
+    });
+
+    // First push: MISS — transformer runs, destination push runs
+    await elb({ name: 'page view', data: {} });
+    expect(transformerCalls).toBe(1);
+    expect(pushCount).toBe(1);
+
+    // Second push: HIT with full=true — transformer skipped, push skipped
+    await elb({ name: 'page view', data: {} });
+    expect(transformerCalls).toBe(1); // NOT called again
+    expect(pushCount).toBe(1); // NOT called again
+  });
+
+  it('should still run before chain on HIT when full=false (default)', async () => {
+    let transformerCalls = 0;
+    let pushCount = 0;
+
+    const { elb } = await startFlow({
+      transformers: {
+        enricher: {
+          code: async (
+            ctx,
+          ): Promise<import('@walkeros/core').Transformer.Instance> => ({
+            type: 'enricher',
+            config: ctx.config,
+            push(event) {
+              transformerCalls++;
+              return { event };
+            },
+          }),
+        },
+      },
+      destinations: {
+        spy: {
+          before: 'enricher',
+          code: {
+            type: 'spy',
+            config: {},
+            push: async () => {
+              pushCount++;
+            },
+          },
+          cache: {
+            rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+          },
+        },
+      },
+    });
+
+    // First push: MISS — both run
+    await elb({ name: 'page view', data: {} });
+    expect(transformerCalls).toBe(1);
+    expect(pushCount).toBe(1);
+
+    // Second push: HIT with full=false — push skipped but transformer still runs
+    await elb({ name: 'page view', data: {} });
+    expect(transformerCalls).toBe(2); // Still runs
+    expect(pushCount).toBe(1); // Skipped — cached
+  });
 });

@@ -296,6 +296,67 @@ describe('Source cache integration', () => {
     expect(transformerCalls).toEqual(['enrich']); // No new transformer call
   });
 
+  it('should continue pipeline on HIT when full=false', async () => {
+    const destinationCalls: string[] = [];
+
+    const { collector } = await startFlow({
+      sources: {
+        testSource: {
+          code: async (context): Promise<Source.Instance> => {
+            const { env, config, setIngest, setRespond } = context;
+            return {
+              type: 'test',
+              config: config as Source.Config,
+              push: (async (rawData: unknown) => {
+                await setIngest(rawData);
+                setRespond((() => {}) as RespondFn);
+                await env.push({ name: 'page view', data: {} });
+              }) as any,
+            };
+          },
+          cache: {
+            full: false,
+            rules: [
+              {
+                match: {
+                  key: 'ingest.method',
+                  operator: 'eq',
+                  value: 'GET',
+                },
+                key: ['ingest.method', 'ingest.path'],
+                ttl: 300,
+              },
+            ],
+          },
+          config: {
+            ingest: {
+              map: { method: { key: 'method' }, path: { key: 'path' } },
+            },
+          },
+        },
+      },
+      destinations: {
+        responder: {
+          code: createRespondingDestination(destinationCalls),
+        },
+      },
+    });
+
+    // First request: MISS — pipeline runs
+    await (collector.sources.testSource.push as any)({
+      method: 'GET',
+      path: '/api/data',
+    });
+    expect(destinationCalls).toHaveLength(1);
+
+    // Second request: HIT with full=false — pipeline still runs
+    await (collector.sources.testSource.push as any)({
+      method: 'GET',
+      path: '/api/data',
+    });
+    expect(destinationCalls).toHaveLength(2); // Destination still called
+  });
+
   it('should apply update rules on HIT and MISS', async () => {
     const respondPayloads: any[] = [];
     let respondResolve: (() => void) | undefined;

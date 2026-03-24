@@ -40,7 +40,9 @@ export async function initSource(
     undefined;
 
   // Compile source cache config (if configured)
-  const compiledSourceCache = cache ? compileCache(cache) : undefined;
+  const compiledSourceCache = cache
+    ? compileCache({ ...cache, full: cache.full ?? true })
+    : undefined;
 
   // Resolve transformer chain for this source
   const compiledNext = compileNext(next);
@@ -59,7 +61,7 @@ export async function initSource(
     event: WalkerOS.DeepPartialEvent,
     options: Collector.PushOptions = {},
   ) => {
-    // Source cache check (always full — respond and skip pipeline on HIT)
+    // Source cache check (full=true by default for sources)
     if (compiledSourceCache) {
       const cacheStore = getCacheStore(compiledSourceCache, collector);
       if (cacheStore) {
@@ -73,24 +75,33 @@ export async function initSource(
 
         if (cacheResult) {
           if (cacheResult.status === 'HIT' && cacheResult.value !== undefined) {
-            // HIT: respond with cached value, skip pipeline entirely
-            let respondValue: unknown = cacheResult.value;
-            if (cacheResult.rule.update) {
-              respondValue = await applyUpdate(
-                respondValue,
-                cacheResult.rule.update as Record<string, unknown>,
-                { ...cacheContext, cache: { status: 'HIT' } },
-              );
+            if (compiledSourceCache.full) {
+              // full=true (default): respond with cached value, skip pipeline
+              let respondValue: unknown = cacheResult.value;
+              if (cacheResult.rule.update) {
+                respondValue = await applyUpdate(
+                  respondValue,
+                  cacheResult.rule.update as Record<string, unknown>,
+                  { ...cacheContext, cache: { status: 'HIT' } },
+                );
+              }
+              currentRespond?.(respondValue as Record<string, unknown>);
+              return { ok: true } as Elb.PushResult;
             }
-            currentRespond?.(respondValue as Record<string, unknown>);
-            return { ok: true } as Elb.PushResult;
+            // full=false: skip source push, continue pipeline (fall through)
           }
 
-          if (cacheResult.status === 'MISS' && currentRespond) {
+          if (
+            cacheResult.status === 'MISS' &&
+            currentRespond &&
+            compiledSourceCache.full
+          ) {
             // MISS: wrap respond to intercept and cache the value.
             // Capture the unwrapped respond — never wrap an already-wrapped respond.
             const unwrappedRespond = currentRespond;
-            currentRespond = (async (respondOptions?: Record<string, unknown>) => {
+            currentRespond = (async (
+              respondOptions?: Record<string, unknown>,
+            ) => {
               // Store the respond args in cache
               storeCache(
                 cacheStore,

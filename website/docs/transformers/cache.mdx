@@ -41,14 +41,15 @@ Add `cache` to any step in your flow config:
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
+| `full` | `boolean` | `false` (`true` for sources) | Stop flow on cache HIT — skip remaining steps and return cached value |
 | `store` | `string` | Built-in memory | Reference to a store in `flow.stores` |
 | `rules` | `CacheRule[]` | Required | At least one cache rule |
 
 ## Behavior by Step Type
 
-### Source Cache (always full)
+### Source Cache (full by default)
 
-Source cache intercepts requests before the pipeline runs. On cache HIT, the cached respond value is returned immediately — transformers and destinations are skipped entirely.
+Source cache intercepts requests before the pipeline runs. Sources default to `full: true` — on cache HIT, the cached respond value is returned immediately and the pipeline is skipped. Set `full: false` to skip only the source step and let the pipeline continue.
 
 ```json
 "sources": {
@@ -64,7 +65,7 @@ Source cache intercepts requests before the pipeline runs. On cache HIT, the cac
 
 ### Transformer Cache (step-level)
 
-Transformer cache skips the transformer's execution on HIT but continues the chain with the cached event. Useful for expensive computations like API enrichment.
+Transformer cache skips the transformer's execution on HIT but continues the chain with the cached event. Useful for expensive computations like API enrichment. With `full: true`, the remaining chain stops on HIT — downstream transformers and destinations are skipped.
 
 ```json
 "transformers": {
@@ -81,7 +82,7 @@ Transformer cache skips the transformer's execution on HIT but continues the cha
 
 ### Destination Cache (deduplication)
 
-Destination cache skips the push on HIT — preventing duplicate events from reaching the destination. Other destinations still receive the event.
+Destination cache skips the push on HIT — preventing duplicate events from reaching the destination. Other destinations still receive the event. With `full: true`, the `before` transformer chain is also skipped on HIT.
 
 ```json
 "destinations": {

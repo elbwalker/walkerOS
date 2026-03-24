@@ -366,7 +366,9 @@ export async function runTransformerChain(
 
     // Compile transformer cache once (reused for HIT check and MISS store)
     const tCacheConfig = transformer.config?.cache;
-    const compiledTCache = tCacheConfig ? compileCache(tCacheConfig) : undefined;
+    const compiledTCache = tCacheConfig
+      ? compileCache(tCacheConfig)
+      : undefined;
     const tCacheStore = compiledTCache
       ? getCacheStore(compiledTCache, collector)
       : undefined;
@@ -384,7 +386,8 @@ export async function runTransformerChain(
 
       if (cacheResult?.status === 'HIT' && cacheResult.value) {
         processedEvent = cacheResult.value as WalkerOS.DeepPartialEvent;
-        continue; // Skip push, continue to next transformer
+        if (compiledTCache.full) return processedEvent; // full=true → stop chain
+        continue; // full=false → next transformer
       }
 
       if (cacheResult?.status === 'MISS') {

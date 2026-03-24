@@ -9,6 +9,7 @@ export interface CacheRule {
 }
 
 export interface Cache {
+  full?: boolean;
   store?: string;
   rules: CacheRule[];
 }

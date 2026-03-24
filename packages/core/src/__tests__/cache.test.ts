@@ -1,4 +1,10 @@
-import { compileCache, checkCache, storeCache, applyUpdate, buildCacheContext } from '../cache';
+import {
+  compileCache,
+  checkCache,
+  storeCache,
+  applyUpdate,
+  buildCacheContext,
+} from '../cache';
 import type { Store } from '../types';
 
 function createMockStore(): Store.Instance & { _data: Map<string, unknown> } {
@@ -38,6 +44,21 @@ describe('compileCache', () => {
       rules: [{ match: '*', key: ['ingest.path'], ttl: 60 }],
     });
     expect(compiled.storeId).toBe('redis');
+  });
+
+  it('defaults full to false', () => {
+    const compiled = compileCache({
+      rules: [{ match: '*', key: ['ingest.path'], ttl: 60 }],
+    });
+    expect(compiled.full).toBe(false);
+  });
+
+  it('preserves full flag', () => {
+    const compiled = compileCache({
+      full: true,
+      rules: [{ match: '*', key: ['ingest.path'], ttl: 60 }],
+    });
+    expect(compiled.full).toBe(true);
   });
 });
 
@@ -229,10 +250,7 @@ describe('buildCacheContext', () => {
   });
 
   it('wraps ingest and event', () => {
-    const ctx = buildCacheContext(
-      { method: 'GET' },
-      { name: 'page view' },
-    );
+    const ctx = buildCacheContext({ method: 'GET' }, { name: 'page view' });
     expect(ctx).toEqual({
       ingest: { method: 'GET' },
       event: { name: 'page view' },

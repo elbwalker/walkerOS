@@ -114,6 +114,70 @@ describe('Transformer cache integration', () => {
     expect(validatorCalls).toBe(2); // Still runs — step cache continues chain
   });
 
+  it('should stop chain on HIT when full=true', async () => {
+    let enricherCalls = 0;
+    let validatorCalls = 0;
+    const destinationEvents: WalkerOS.Event[] = [];
+
+    const { elb } = await startFlow({
+      transformers: {
+        enricher: {
+          code: async (ctx): Promise<Transformer.Instance> => ({
+            type: 'enricher',
+            config: ctx.config,
+            push(event) {
+              enricherCalls++;
+              return {
+                event: { ...event, data: { ...event.data, enriched: true } },
+              };
+            },
+          }),
+          cache: {
+            full: true,
+            rules: [{ match: '*', key: ['event.name'], ttl: 60 }],
+          },
+        },
+        validator: {
+          code: async (ctx): Promise<Transformer.Instance> => ({
+            type: 'validator',
+            config: ctx.config,
+            push(event) {
+              validatorCalls++;
+              return { event };
+            },
+          }),
+        },
+      },
+      destinations: {
+        spy: {
+          before: ['enricher', 'validator'],
+          code: {
+            type: 'spy',
+            config: {},
+            push: async (event: WalkerOS.Event) => {
+              destinationEvents.push(event);
+            },
+          },
+        },
+      },
+    });
+
+    // First push: MISS — both enricher and validator run
+    await elb({ name: 'page view', data: {} });
+    expect(enricherCalls).toBe(1);
+    expect(validatorCalls).toBe(1);
+    expect(destinationEvents).toHaveLength(1);
+
+    // Second push: HIT with full=true — chain stops, validator does NOT run
+    destinationEvents.length = 0;
+    await elb({ name: 'page view', data: {} });
+    expect(enricherCalls).toBe(1); // Cached — not called
+    expect(validatorCalls).toBe(1); // Chain stopped — not called
+    // Destination still receives the cached event (chain returned it)
+    expect(destinationEvents).toHaveLength(1);
+    expect(destinationEvents[0].data?.enriched).toBe(true);
+  });
+
   it('should work with source.next pre-collector chains', async () => {
     let enricherCalls = 0;
     const destinationEvents: WalkerOS.Event[] = [];

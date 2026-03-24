@@ -13,6 +13,7 @@ interface CompiledCacheRule {
 }
 
 export interface CompiledCache {
+  full: boolean;
   storeId?: string;
   rules: CompiledCacheRule[];
 }
@@ -43,6 +44,7 @@ export function buildCacheContext(
 
 export function compileCache(cache: Cache): CompiledCache {
   return {
+    full: cache.full ?? false,
     storeId: cache.store,
     rules: cache.rules.map((rule) => ({
       match: compileMatcher(rule.match),

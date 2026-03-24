@@ -230,9 +230,8 @@ export async function pushToDestinations(
 
       // Compile before chain once per destination batch (not per-event)
       const before = destination.config.before;
-      const compiledBefore = before && isRouteArray(before)
-        ? compileNext(before)
-        : undefined;
+      const compiledBefore =
+        before && isRouteArray(before) ? compileNext(before) : undefined;
       const postChain = resolveDestinationChain(
         before,
         compiledBefore,
@@ -256,6 +255,24 @@ export async function pushToDestinations(
           // Merge event with collector state, prioritizing event properties
           event.globals = assign(globals, event.globals);
           event.user = assign(user, event.user);
+
+          // Full cache check: before the before chain (skips everything on HIT)
+          let cacheMiss: { key: string; ttl: number } | undefined;
+          if (compiledDCache?.full && dCacheStore) {
+            const cacheContext = buildCacheContext(meta.ingest, event);
+            const cacheResult = checkCache(
+              compiledDCache,
+              dCacheStore,
+              cacheContext,
+              `d:${id}`,
+            );
+            if (cacheResult?.status === 'HIT') {
+              return event; // Skip before chain + push
+            }
+            if (cacheResult?.status === 'MISS') {
+              cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
+            }
+          }
 
           // Run post-collector transformer chain if configured for this destination
           let processedEvent: WalkerOS.Event | null = event;
@@ -282,9 +299,8 @@ export async function pushToDestinations(
             processedEvent = chainResult as WalkerOS.Event;
           }
 
-          // Destination cache check (step-level: skip push on HIT = deduplication)
-          let cacheMiss: { key: string; ttl: number } | undefined;
-          if (compiledDCache && dCacheStore) {
+          // Step-level cache check: after before chain, skip only push on HIT
+          if (compiledDCache && !compiledDCache.full && dCacheStore) {
             const cacheContext = buildCacheContext(meta.ingest, processedEvent);
             const cacheResult = checkCache(
               compiledDCache,
@@ -326,7 +342,12 @@ export async function pushToDestinations(
 
           // Destination cache MISS: store the push result after attempt
           if (cacheMiss && dCacheStore) {
-            storeCache(dCacheStore, cacheMiss.key, result ?? true, cacheMiss.ttl);
+            storeCache(
+              dCacheStore,
+              cacheMiss.key,
+              result ?? true,
+              cacheMiss.ttl,
+            );
           }
 
           // Capture the last response (for single event pushes)
