@@ -2,12 +2,12 @@ import type { Next, NextRule } from './types/transformer';
 import type { CompiledMatcher } from './types/matcher';
 import { compileMatcher } from './matcher';
 
-interface CompiledRoute {
+export interface CompiledRoute {
   match: CompiledMatcher;
   next: CompiledNext;
 }
 
-type CompiledNext =
+export type CompiledNext =
   | { type: 'static'; value: string }
   | { type: 'chain'; value: string[] }
   | { type: 'routes'; routes: CompiledRoute[] };

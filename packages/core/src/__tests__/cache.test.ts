@@ -1,4 +1,4 @@
-import { compileCache, checkCache, storeCache, applyUpdate } from '../cache';
+import { compileCache, checkCache, storeCache, applyUpdate, buildCacheContext } from '../cache';
 import type { Store } from '../types';
 
 function createMockStore(): Store.Instance & { _data: Map<string, unknown> } {
@@ -30,15 +30,6 @@ describe('compileCache', () => {
     });
     expect(compiled).toBeDefined();
     expect(compiled.rules).toHaveLength(1);
-    expect(compiled.full).toBe(false);
-  });
-
-  it('preserves full flag', () => {
-    const compiled = compileCache({
-      full: true,
-      rules: [{ match: '*', key: ['ingest.path'], ttl: 60 }],
-    });
-    expect(compiled.full).toBe(true);
   });
 
   it('preserves store reference', () => {
@@ -62,17 +53,17 @@ describe('checkCache', () => {
       {
         ingest: { method: 'GET', path: '/api/data' },
       },
-      'source:express',
+      's:express',
     );
 
     expect(result).toBeDefined();
     expect(result!.status).toBe('MISS');
-    expect(result!.key).toBe('source:express:GET:/api/data');
+    expect(result!.key).toBe('s:express:GET:/api/data');
   });
 
   it('returns HIT when store has entry', () => {
     const store = createMockStore();
-    store._data.set('source:express:GET:/api/data', { body: 'cached' });
+    store._data.set('s:express:GET:/api/data', { body: 'cached' });
 
     const compiled = compileCache({
       rules: [{ match: '*', key: ['ingest.method', 'ingest.path'], ttl: 60 }],
@@ -83,7 +74,7 @@ describe('checkCache', () => {
       {
         ingest: { method: 'GET', path: '/api/data' },
       },
-      'source:express',
+      's:express',
     );
 
     expect(result).toBeDefined();
@@ -108,7 +99,7 @@ describe('checkCache', () => {
       {
         ingest: { method: 'POST', path: '/api' },
       },
-      'transformer:enricher',
+      't:enricher',
     );
 
     expect(result).toBeNull();
@@ -125,11 +116,11 @@ describe('checkCache', () => {
       {
         event: { name: 'page view' },
       },
-      'dest:ga4',
+      'd:ga4',
     );
 
     expect(result).toBeDefined();
-    expect(result!.key).toBe('dest:ga4:page view');
+    expect(result!.key).toBe('d:ga4:page view');
   });
 
   it('returns null when key resolves to empty', () => {
@@ -228,5 +219,39 @@ describe('applyUpdate', () => {
       'X-Cache': 'HIT',
       'Cache-Control': 'max-age=300',
     });
+  });
+});
+
+describe('buildCacheContext', () => {
+  it('wraps ingest into context object', () => {
+    const ctx = buildCacheContext({ method: 'GET', path: '/api' });
+    expect(ctx).toEqual({ ingest: { method: 'GET', path: '/api' } });
+  });
+
+  it('wraps ingest and event', () => {
+    const ctx = buildCacheContext(
+      { method: 'GET' },
+      { name: 'page view' },
+    );
+    expect(ctx).toEqual({
+      ingest: { method: 'GET' },
+      event: { name: 'page view' },
+    });
+  });
+
+  it('defaults ingest to empty object when undefined', () => {
+    const ctx = buildCacheContext(undefined);
+    expect(ctx).toEqual({ ingest: {} });
+  });
+
+  it('defaults ingest to empty object when null', () => {
+    const ctx = buildCacheContext(null);
+    expect(ctx).toEqual({ ingest: {} });
+  });
+
+  it('omits event key when event is undefined', () => {
+    const ctx = buildCacheContext({ path: '/' });
+    expect(ctx).toEqual({ ingest: { path: '/' } });
+    expect('event' in ctx).toBe(false);
   });
 });

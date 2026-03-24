@@ -32,7 +32,6 @@
  * - Transformer returns event → continue with modified event
  */
 import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
-import type { Cache } from '@walkeros/core';
 import {
   isObject,
   tryCatchAsync,
@@ -43,6 +42,7 @@ import {
   compileCache,
   checkCache,
   storeCache,
+  buildCacheContext,
 } from '@walkeros/core';
 import { getCacheStore } from './cache';
 
@@ -62,7 +62,7 @@ export function extractTransformerNextMap(
   const result: Record<string, { next?: string | string[] }> = {};
   for (const [id, transformer] of Object.entries(transformers)) {
     const next = transformer.config?.next;
-    if (next && !isRouteArray(next as Transformer.Next)) {
+    if (next && !isRouteArray(next)) {
       result[id] = { next: next as string | string[] };
     } else {
       result[id] = {};
@@ -364,34 +364,31 @@ export async function runTransformerChain(
       return null; // Stop chain on init failure
     }
 
+    // Compile transformer cache once (reused for HIT check and MISS store)
+    const tCacheConfig = transformer.config?.cache;
+    const compiledTCache = tCacheConfig ? compileCache(tCacheConfig) : undefined;
+    const tCacheStore = compiledTCache
+      ? getCacheStore(compiledTCache, collector)
+      : undefined;
+
     // Check transformer cache (step-level: skip push, continue chain)
     let cacheMiss: { key: string; ttl: number } | undefined;
-    if (transformer.config?.cache) {
-      const compiledTCache = compileCache(
-        transformer.config.cache as Cache.Cache,
+    if (compiledTCache && tCacheStore) {
+      const cacheContext = buildCacheContext(ingest, processedEvent);
+      const cacheResult = checkCache(
+        compiledTCache,
+        tCacheStore,
+        cacheContext,
+        `t:${transformerName}`,
       );
-      const cacheStore = getCacheStore(compiledTCache, collector);
-      if (cacheStore) {
-        const cacheContext = {
-          ingest: (ingest || {}) as Record<string, unknown>,
-          event: processedEvent as unknown as Record<string, unknown>,
-        };
-        const cacheResult = checkCache(
-          compiledTCache,
-          cacheStore,
-          cacheContext,
-          `transformer:${transformerName}`,
-        );
 
-        if (cacheResult?.status === 'HIT' && cacheResult.value) {
-          processedEvent = cacheResult.value as WalkerOS.DeepPartialEvent;
-          continue; // Skip push, continue to next transformer
-        }
+      if (cacheResult?.status === 'HIT' && cacheResult.value) {
+        processedEvent = cacheResult.value as WalkerOS.DeepPartialEvent;
+        continue; // Skip push, continue to next transformer
+      }
 
-        // For MISS, save key and TTL so we can cache after push
-        if (cacheResult?.status === 'MISS') {
-          cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
-        }
+      if (cacheResult?.status === 'MISS') {
+        cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
       }
     }
 
@@ -431,12 +428,12 @@ export async function runTransformerChain(
         let resolvedNext: string | string[] | undefined = next as
           | string
           | string[];
-        if (isRouteArray(next as Transformer.Next)) {
-          const compiled = compileNext(next as Transformer.Next);
-          resolvedNext = resolveNext(compiled, {
-            ingest: (ingest || {}) as Record<string, unknown>,
-            event: processedEvent as unknown as Record<string, unknown>,
-          });
+        if (isRouteArray(next)) {
+          const compiled = compileNext(next);
+          resolvedNext = resolveNext(
+            compiled,
+            buildCacheContext(ingest, processedEvent),
+          );
           if (!resolvedNext) {
             // No route matched → passthrough (continue chain)
             if (resultEvent) processedEvent = resultEvent;
@@ -475,29 +472,21 @@ export async function runTransformerChain(
     // If result is undefined (void), continue with current event unchanged
 
     // Cache MISS: store the processed event after push
-    if (cacheMiss && transformer.config?.cache) {
-      const compiledTCache = compileCache(
-        transformer.config.cache as Cache.Cache,
-      );
-      const cacheStore = getCacheStore(compiledTCache, collector);
-      if (cacheStore) {
-        storeCache(cacheStore, cacheMiss.key, processedEvent, cacheMiss.ttl);
-      }
+    if (cacheMiss && tCacheStore) {
+      storeCache(tCacheStore, cacheMiss.key, processedEvent, cacheMiss.ttl);
     }
 
     // If transformer didn't return { next } but has NextRule[] config.next, resolve it
     if (
       (!result || (typeof result === 'object' && !result.next)) &&
       transformer.config?.next &&
-      isRouteArray(transformer.config.next as Transformer.Next)
+      isRouteArray(transformer.config.next!)
     ) {
-      const compiledConfigNext = compileNext(
-        transformer.config.next as Transformer.Next,
+      const compiledConfigNext = compileNext(transformer.config.next);
+      const resolvedConfigNext = resolveNext(
+        compiledConfigNext,
+        buildCacheContext(ingest, processedEvent),
       );
-      const resolvedConfigNext = resolveNext(compiledConfigNext, {
-        ingest: (ingest || {}) as Record<string, unknown>,
-        event: processedEvent as unknown as Record<string, unknown>,
-      });
       if (resolvedConfigNext) {
         const continuationChain = walkChain(
           resolvedConfigNext,

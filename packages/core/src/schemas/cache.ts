@@ -45,15 +45,10 @@ export const CacheRuleSchema = z.object({
  *
  * Mirrors: types/cache.ts → Cache
  *
- * - full: whether to cache the full response (default false)
  * - store: optional store ID for persistent caching ($store:storeId wiring)
  * - rules: at least one CacheRule is required
  */
 export const CacheSchema = z.object({
-  full: z
-    .boolean()
-    .optional()
-    .describe('Cache the full response object (default: false)'),
   store: z
     .string()
     .optional()

@@ -4,6 +4,7 @@ import type {
   Logger,
   Mapping as WalkerOSMapping,
   On,
+  Transformer,
   WalkerOS,
   Context as BaseContext,
 } from '.';
@@ -99,7 +100,7 @@ export interface Config<T extends TypesGeneric = Types> {
   /** Defer destination initialization until these collector events fire (e.g., `['consent']`). */
   require?: string[];
   /** Transformer chain to run after collector processing but before this destination. */
-  before?: string | string[];
+  before?: Transformer.Next;
   /** Cache configuration for deduplication (step-level: skip push on HIT). */
   cache?: import('./cache').Cache;
 }
@@ -122,7 +123,7 @@ export type Init<T extends TypesGeneric = Types> = {
   code: Code<T>;
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
-  before?: string | string[];
+  before?: Transformer.Next;
   cache?: import('./cache').Cache;
 };
 

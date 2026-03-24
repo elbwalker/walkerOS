@@ -4,10 +4,11 @@ import type {
   Elb,
   Destination,
   Transformer,
+  CompiledNext,
 } from '@walkeros/core';
-import type { Cache } from '@walkeros/core';
 import {
   assign,
+  buildCacheContext,
   clone,
   compileCache,
   checkCache,
@@ -35,23 +36,20 @@ import {
 import { getCacheStore } from './cache';
 
 /**
- * Computes transformer chain for a destination on-demand.
- * Returns empty array if destination has no 'before' configured.
- * Supports NextRule[] for conditional chain resolution based on ingest data.
+ * Resolves transformer chain for a destination.
+ * For conditional routing (NextRule[]), compiledBefore must be provided (compiled at init).
+ * For static routing (string | string[]), resolution is direct.
  */
-function getDestinationChain(
-  destination: Destination.Instance,
+function resolveDestinationChain(
+  before: Transformer.Next | undefined,
+  compiledBefore: CompiledNext | undefined,
   transformers: Transformer.Transformers,
   ingest?: unknown,
 ): string[] {
-  const before = destination.config.before as Transformer.Next | undefined;
   if (!before) return [];
 
-  if (isRouteArray(before)) {
-    const compiled = compileNext(before);
-    const resolved = resolveNext(compiled, {
-      ingest: (ingest || {}) as Record<string, unknown>,
-    });
+  if (compiledBefore) {
+    const resolved = resolveNext(compiledBefore, buildCacheContext(ingest));
     if (!resolved) return [];
     return walkChain(resolved, extractTransformerNextMap(transformers));
   }
@@ -230,12 +228,26 @@ export async function pushToDestinations(
       let response: unknown;
       if (!destination.dlq) destination.dlq = [];
 
-      // Compute transformer chain on-demand from destination.before
-      const postChain = getDestinationChain(
-        destination,
+      // Compile before chain once per destination batch (not per-event)
+      const before = destination.config.before;
+      const compiledBefore = before && isRouteArray(before)
+        ? compileNext(before)
+        : undefined;
+      const postChain = resolveDestinationChain(
+        before,
+        compiledBefore,
         collector.transformers,
         meta.ingest,
       );
+
+      // Compile destination cache once per batch (not per-event)
+      const destCacheConfig = destination.config?.cache;
+      const compiledDCache = destCacheConfig
+        ? compileCache(destCacheConfig)
+        : undefined;
+      const dCacheStore = compiledDCache
+        ? getCacheStore(compiledDCache, collector)
+        : undefined;
 
       // Process allowed events and store failed ones in the dead letter queue (DLQ)
       let totalDuration = 0;
@@ -271,28 +283,20 @@ export async function pushToDestinations(
           }
 
           // Destination cache check (step-level: skip push on HIT = deduplication)
-          const destCacheConfig = destination.config?.cache;
           let cacheMiss: { key: string; ttl: number } | undefined;
-          if (destCacheConfig) {
-            const compiledDCache = compileCache(destCacheConfig as Cache.Cache);
-            const cacheStore = getCacheStore(compiledDCache, collector);
-            if (cacheStore) {
-              const cacheContext = {
-                ingest: (meta.ingest || {}) as Record<string, unknown>,
-                event: processedEvent as unknown as Record<string, unknown>,
-              };
-              const cacheResult = checkCache(
-                compiledDCache,
-                cacheStore,
-                cacheContext,
-                `dest:${id}`,
-              );
-              if (cacheResult?.status === 'HIT') {
-                return event; // Skip push — deduplicated
-              }
-              if (cacheResult?.status === 'MISS') {
-                cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
-              }
+          if (compiledDCache && dCacheStore) {
+            const cacheContext = buildCacheContext(meta.ingest, processedEvent);
+            const cacheResult = checkCache(
+              compiledDCache,
+              dCacheStore,
+              cacheContext,
+              `d:${id}`,
+            );
+            if (cacheResult?.status === 'HIT') {
+              return event; // Skip push — deduplicated
+            }
+            if (cacheResult?.status === 'MISS') {
+              cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
             }
           }
 
@@ -320,13 +324,9 @@ export async function pushToDestinations(
           );
           totalDuration += Date.now() - pushStart;
 
-          // Destination cache MISS: store seen marker after push attempt
-          if (cacheMiss) {
-            const compiledDCache = compileCache(destCacheConfig as Cache.Cache);
-            const cacheStore = getCacheStore(compiledDCache, collector);
-            if (cacheStore) {
-              storeCache(cacheStore, cacheMiss.key, true, cacheMiss.ttl);
-            }
+          // Destination cache MISS: store the push result after attempt
+          if (cacheMiss && dCacheStore) {
+            storeCache(dCacheStore, cacheMiss.key, result ?? true, cacheMiss.ttl);
           }
 
           // Capture the last response (for single event pushes)

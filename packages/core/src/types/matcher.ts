@@ -21,4 +21,4 @@ export type MatchOperator =
   | 'exists';
 
 // Compiled matcher (internal)
-export type CompiledMatcher = (ingest: Record<string, unknown>) => boolean;
+export type CompiledMatcher = (context: Record<string, unknown>) => boolean;

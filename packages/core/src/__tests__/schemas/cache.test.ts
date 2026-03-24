@@ -60,10 +60,9 @@ describe('CacheSchema', () => {
     ).toBe(true);
   });
 
-  it('validates with full and store', () => {
+  it('validates with store', () => {
     expect(
       CacheSchema.safeParse({
-        full: true,
         store: 'myCache',
         rules: [{ match: '*', key: ['ingest.path'], ttl: 300 }],
       }).success,

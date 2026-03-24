@@ -13,7 +13,6 @@ interface CompiledCacheRule {
 }
 
 export interface CompiledCache {
-  full: boolean;
   storeId?: string;
   rules: CompiledCacheRule[];
 }
@@ -25,9 +24,25 @@ export interface CacheResult {
   rule: CompiledCacheRule;
 }
 
+/**
+ * Builds a structured context object for cache and routing operations.
+ * Normalizes ingest (defaulting to {}) and optionally includes event.
+ */
+export function buildCacheContext(
+  ingest?: unknown,
+  event?: unknown,
+): Record<string, unknown> {
+  const ctx: Record<string, unknown> = {
+    ingest: (ingest || {}) as Record<string, unknown>,
+  };
+  if (event !== undefined) {
+    ctx.event = event as Record<string, unknown>;
+  }
+  return ctx;
+}
+
 export function compileCache(cache: Cache): CompiledCache {
   return {
-    full: cache.full ?? false,
     storeId: cache.store,
     rules: cache.rules.map((rule) => ({
       match: compileMatcher(rule.match),

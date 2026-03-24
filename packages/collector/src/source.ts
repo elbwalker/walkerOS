@@ -1,10 +1,4 @@
-import type {
-  Collector,
-  Elb,
-  Source,
-  Transformer,
-  WalkerOS,
-} from '@walkeros/core';
+import type { Collector, Elb, Source, WalkerOS } from '@walkeros/core';
 import type { RespondOptions } from '@walkeros/core';
 import {
   getMappingValue,
@@ -16,6 +10,7 @@ import {
   checkCache,
   storeCache,
   applyUpdate,
+  buildCacheContext,
 } from '@walkeros/core';
 import { walkChain, extractTransformerNextMap } from './transformer';
 import { getCacheStore } from './cache';
@@ -48,9 +43,8 @@ export async function initSource(
   const compiledSourceCache = cache ? compileCache(cache) : undefined;
 
   // Resolve transformer chain for this source
-  const compiledNext = compileNext(next as Transformer.Next | undefined);
-  const isConditional =
-    Array.isArray(next) && isRouteArray(next as Transformer.Next);
+  const compiledNext = compileNext(next);
+  const isConditional = Array.isArray(next) && isRouteArray(next);
   // For static next, pre-walk at init (optimization)
   const staticPreChain =
     !isConditional && compiledNext
@@ -69,14 +63,12 @@ export async function initSource(
     if (compiledSourceCache) {
       const cacheStore = getCacheStore(compiledSourceCache, collector);
       if (cacheStore) {
-        const cacheContext = {
-          ingest: (currentIngest || {}) as Record<string, unknown>,
-        };
+        const cacheContext = buildCacheContext(currentIngest);
         const cacheResult = checkCache(
           compiledSourceCache,
           cacheStore,
           cacheContext,
-          `source:${sourceId}`,
+          `s:${sourceId}`,
         );
 
         if (cacheResult) {
@@ -94,32 +86,30 @@ export async function initSource(
             return { ok: true } as Elb.PushResult;
           }
 
-          if (cacheResult.status === 'MISS') {
-            // MISS: wrap respond to intercept and cache the value
-            const originalRespond = currentRespond;
-            if (originalRespond) {
-              currentRespond = ((respondOptions?: Record<string, unknown>) => {
-                // Store the respond args in cache
-                storeCache(
-                  cacheStore,
-                  cacheResult.key,
+          if (cacheResult.status === 'MISS' && currentRespond) {
+            // MISS: wrap respond to intercept and cache the value.
+            // Capture the unwrapped respond — never wrap an already-wrapped respond.
+            const unwrappedRespond = currentRespond;
+            currentRespond = (async (respondOptions?: Record<string, unknown>) => {
+              // Store the respond args in cache
+              storeCache(
+                cacheStore,
+                cacheResult.key,
+                respondOptions,
+                cacheResult.rule.ttl,
+              );
+              // Apply update rules before forwarding
+              if (cacheResult.rule.update) {
+                const updated = await applyUpdate(
                   respondOptions,
-                  cacheResult.rule.ttl,
+                  cacheResult.rule.update as Record<string, unknown>,
+                  { ...cacheContext, cache: { status: 'MISS' } },
                 );
-                // Apply update rules before forwarding to the original respond
-                if (cacheResult.rule.update) {
-                  applyUpdate(
-                    respondOptions,
-                    cacheResult.rule.update as Record<string, unknown>,
-                    { ...cacheContext, cache: { status: 'MISS' } },
-                  ).then((updated) =>
-                    originalRespond(updated as RespondOptions),
-                  );
-                } else {
-                  originalRespond(respondOptions);
-                }
-              }) as import('@walkeros/core').RespondFn;
-            }
+                unwrappedRespond(updated as RespondOptions);
+              } else {
+                unwrappedRespond(respondOptions);
+              }
+            }) as import('@walkeros/core').RespondFn;
           }
         }
       }
@@ -130,9 +120,7 @@ export async function initSource(
       staticPreChain ??
       (compiledNext
         ? walkChain(
-            resolveNext(compiledNext, {
-              ingest: (currentIngest || {}) as Record<string, unknown>,
-            }),
+            resolveNext(compiledNext, buildCacheContext(currentIngest)),
             extractTransformerNextMap(collector.transformers),
           )
         : []);
