@@ -1,4 +1,4 @@
-import type { Collector, Transformer, Destination } from './types';
+import type { Collector, Transformer, Destination, Ingest } from './types';
 import { createIngest } from './types/ingest';
 import { createMockLogger } from './mockLogger';
 
@@ -24,24 +24,24 @@ import { createMockLogger } from './mockLogger';
  * ```
  */
 export function createMockContext<
-  T extends { settings: any; initSettings: any; env: any } = Transformer.Types,
+  T extends Transformer.TypesGeneric = Transformer.Types,
 >(
   overrides: Partial<
     Omit<Transformer.Context<T>, 'config' | 'ingest'> & {
-      config?: Transformer.Config<T> | Destination.Config<any>;
-      ingest?: unknown;
+      config?: Transformer.Config<T> | Destination.Config<Destination.TypesGeneric>;
+      ingest?: Ingest | (Record<string, unknown> & { _meta: Ingest['_meta'] });
       data?: unknown;
       rule?: unknown;
     }
   > = {},
-): Transformer.Context<T> & Destination.PushContext<any> {
+): Transformer.Context<T> & Destination.PushContext<Destination.TypesGeneric> {
   return {
     collector: {} as Collector.Instance,
-    config: {} as any,
-    env: {} as any,
+    config: {} as Transformer.Config<T>,
+    env: {} as Transformer.Env<T>,
     logger: createMockLogger(),
     id: 'test',
     ingest: createIngest('test'),
     ...overrides,
-  } as Transformer.Context<T> & Destination.PushContext<any>;
+  } as Transformer.Context<T> & Destination.PushContext<Destination.TypesGeneric>;
 }
