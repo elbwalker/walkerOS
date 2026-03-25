@@ -6,9 +6,7 @@
  */
 
 import fs from 'fs-extra';
-import { isUrl } from '../config/utils.js';
-import { mergeAuthHeaders } from './http.js';
-import { resolveToken } from '../lib/config-file.js';
+import { fetchContentString, isUrl } from '../config/utils.js';
 
 export type Platform = 'web' | 'server';
 
@@ -64,14 +62,7 @@ export function detectPlatformFromPath(inputPath: string): Platform {
  */
 async function loadContent(inputPath: string): Promise<string> {
   if (isUrl(inputPath)) {
-    const token = resolveToken()?.token;
-    const response = await fetch(inputPath, {
-      headers: mergeAuthHeaders(token),
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ${inputPath}: ${response.status}`);
-    }
-    return response.text();
+    return fetchContentString(inputPath);
   }
   // Inline JSON passthrough: JS bundles never start with { or [
   const trimmed = inputPath.trim();

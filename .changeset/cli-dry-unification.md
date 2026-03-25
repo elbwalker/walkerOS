@@ -10,3 +10,7 @@ Unify duplicated CLI patterns for reliability and consistency
 - Standardize duration output to milliseconds (matching MCP schema contract)
 - Fix temp file cleanup in run command (hot-swap accumulation, shutdown handler)
 - Fix simulator bare /tmp cleanup bug
+- Unify URL fetching into shared fetchContentString, eliminate temp file
+  roundtrip
+- Refactor loadJsonFromSource as thin wrapper around loadJsonConfig
+- Remove unused downloadFromUrl function
