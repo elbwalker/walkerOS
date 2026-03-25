@@ -49,9 +49,11 @@ export function registerPackageSearchTool(server: McpServer) {
       },
     },
     async ({ package: packageName, type, platform, version }) => {
+      const baseUrl = process.env.APP_URL || undefined;
+
       // Browse mode: no package specified → return catalog
       if (!packageName) {
-        const catalog = await fetchCatalog({ type, platform });
+        const catalog = await fetchCatalog({ type, platform, baseUrl });
         const result = { catalog, count: catalog.length };
         return mcpResult(result, {
           next: ['Use package_get for schemas and examples'],
@@ -60,7 +62,7 @@ export function registerPackageSearchTool(server: McpServer) {
 
       // Lookup mode: fetch specific package details
       try {
-        const info = await fetchPackage(packageName, { version });
+        const info = await fetchPackage(packageName, { version, baseUrl });
 
         const result = {
           package: info.packageName,
@@ -121,8 +123,10 @@ export function registerGetPackageSchemaTool(server: McpServer) {
       },
     },
     async ({ package: packageName, version, section }) => {
+      const baseUrl = process.env.APP_URL || undefined;
+
       try {
-        const info = await fetchPackage(packageName, { version });
+        const info = await fetchPackage(packageName, { version, baseUrl });
 
         // Build merged schemas: base config + package settings → schemas.config
         const mergedSchemas: Record<string, unknown> = {};

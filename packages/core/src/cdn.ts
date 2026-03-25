@@ -41,78 +41,87 @@ export interface WalkerOSPackage extends WalkerOSPackageInfo {
 
 export async function fetchPackage(
   packageName: string,
-  options?: { version?: string; timeout?: number },
+  options?: { version?: string; timeout?: number; baseUrl?: string },
 ): Promise<WalkerOSPackage> {
   const ver = options?.version || 'latest';
-  const base = `${JSDELIVR_BASE}/${packageName}@${ver}`;
-  const controller = new AbortController();
   const timeoutMs = options?.timeout || 10000;
+  const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const signal = controller.signal;
 
   try {
-    // Fetch package.json
-    const pkgRes = await fetch(`${base}/package.json`, {
-      signal: controller.signal,
-    });
-    if (!pkgRes.ok) {
-      throw new Error(
-        `Package "${packageName}" not found on npm (HTTP ${pkgRes.status})`,
+    let pkg: Record<string, unknown>;
+    let walkerOSJson: Record<string, unknown>;
+
+    if (options?.baseUrl) {
+      const encoded = encodeURIComponent(packageName);
+      const base = `${options.baseUrl}/api/packages/${encoded}`;
+      pkg = await fetchJson(`${base}?version=${ver}&path=package.json`, signal);
+      walkerOSJson = await fetchJson(
+        `${base}?version=${ver}&path=dist/walkerOS.json`,
+        signal,
       );
-    }
-    const pkg = (await pkgRes.json()) as Record<string, unknown>;
-
-    // Fetch walkerOS.json
-    const schemaRes = await fetch(`${base}/${DEFAULT_SCHEMA_PATH}`, {
-      signal: controller.signal,
-    });
-    if (!schemaRes.ok) {
-      throw new Error(
-        `walkerOS.json not found at ${DEFAULT_SCHEMA_PATH} (HTTP ${schemaRes.status}). ` +
-          `This package may not support the walkerOS.json convention yet.`,
-      );
-    }
-    const walkerOSJson = (await schemaRes.json()) as Record<string, unknown>;
-    const meta = (walkerOSJson.$meta as Record<string, unknown>) || {};
-
-    const schemas = (walkerOSJson.schemas as Record<string, unknown>) || {};
-    const examples = (walkerOSJson.examples as Record<string, unknown>) || {};
-    const hints = walkerOSJson.hints as Record<string, unknown> | undefined;
-
-    // Extract hint keys
-    const hintKeys = hints ? Object.keys(hints) : [];
-
-    // Extract example summaries from step examples
-    const exampleSummaries: ExampleSummary[] = [];
-    const stepExamples = (examples.step || {}) as Record<string, unknown>;
-    for (const [name, example] of Object.entries(stepExamples)) {
-      const ex = example as Record<string, unknown> | undefined;
-      const summary: ExampleSummary = { name };
-      if (typeof ex?.description === 'string')
-        summary.description = ex.description;
-      exampleSummaries.push(summary);
+    } else {
+      const base = `${JSDELIVR_BASE}/${packageName}@${ver}`;
+      pkg = await fetchJson(`${base}/package.json`, signal);
+      walkerOSJson = await fetchJson(`${base}/${DEFAULT_SCHEMA_PATH}`, signal);
     }
 
-    const docs = typeof meta.docs === 'string' ? meta.docs : undefined;
-    const source = typeof meta.source === 'string' ? meta.source : undefined;
-
-    return {
-      packageName,
-      version: typeof pkg.version === 'string' ? pkg.version : ver,
-      description:
-        typeof pkg.description === 'string' ? pkg.description : undefined,
-      type: typeof meta.type === 'string' ? meta.type : undefined,
-      platform: parsePlatform(meta.platform),
-      schemas,
-      examples,
-      ...(docs ? { docs } : {}),
-      ...(source ? { source } : {}),
-      ...(hints && Object.keys(hints).length > 0 ? { hints } : {}),
-      hintKeys,
-      exampleSummaries,
-    };
+    return parsePackage(packageName, ver, pkg, walkerOSJson);
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function fetchJson(
+  url: string,
+  signal: AbortSignal,
+): Promise<Record<string, unknown>> {
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error(`Failed to fetch ${url} (HTTP ${res.status})`);
+  return (await res.json()) as Record<string, unknown>;
+}
+
+function parsePackage(
+  packageName: string,
+  ver: string,
+  pkg: Record<string, unknown>,
+  walkerOSJson: Record<string, unknown>,
+): WalkerOSPackage {
+  const meta = (walkerOSJson.$meta as Record<string, unknown>) || {};
+  const schemas = (walkerOSJson.schemas as Record<string, unknown>) || {};
+  const examples = (walkerOSJson.examples as Record<string, unknown>) || {};
+  const hints = walkerOSJson.hints as Record<string, unknown> | undefined;
+  const hintKeys = hints ? Object.keys(hints) : [];
+
+  const exampleSummaries: ExampleSummary[] = [];
+  const stepExamples = (examples.step || {}) as Record<string, unknown>;
+  for (const [name, example] of Object.entries(stepExamples)) {
+    const ex = example as Record<string, unknown> | undefined;
+    const summary: ExampleSummary = { name };
+    if (typeof ex?.description === 'string')
+      summary.description = ex.description;
+    exampleSummaries.push(summary);
+  }
+
+  const docs = typeof meta.docs === 'string' ? meta.docs : undefined;
+  const source = typeof meta.source === 'string' ? meta.source : undefined;
+
+  return {
+    packageName,
+    version: typeof pkg.version === 'string' ? pkg.version : ver,
+    description:
+      typeof pkg.description === 'string' ? pkg.description : undefined,
+    type: typeof meta.type === 'string' ? meta.type : undefined,
+    platform: parsePlatform(meta.platform),
+    schemas,
+    examples,
+    ...(docs ? { docs } : {}),
+    ...(source ? { source } : {}),
+    ...(hints && Object.keys(hints).length > 0 ? { hints } : {}),
+    hintKeys,
+    exampleSummaries,
+  };
 }
 
 /**
