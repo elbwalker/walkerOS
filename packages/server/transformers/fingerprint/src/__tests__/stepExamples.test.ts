@@ -1,5 +1,5 @@
 import type { Transformer, WalkerOS } from '@walkeros/core';
-import { createMockContext, createMockLogger } from '@walkeros/core';
+import { createIngest, createMockContext, createMockLogger } from '@walkeros/core';
 import { transformerFingerprint } from '../transformer';
 import type { FingerprintSettings } from '../types';
 import { examples } from '../dev';
@@ -16,11 +16,11 @@ describe('Step Examples', () => {
       id: 'test-fingerprint',
     });
 
-  const createPushContext = (ingest: unknown = {}) =>
+  const createPushContext = (ingestData: Record<string, unknown> = {}) =>
     createMockContext<FpTypes>({
       logger: mockLogger,
       id: 'test-fingerprint',
-      ingest,
+      ingest: { ...createIngest('test'), ...ingestData },
     });
 
   beforeEach(() => {

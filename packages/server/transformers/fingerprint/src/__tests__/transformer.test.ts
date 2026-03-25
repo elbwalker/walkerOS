@@ -1,5 +1,5 @@
 import type { Transformer, WalkerOS } from '@walkeros/core';
-import { createMockContext, createMockLogger } from '@walkeros/core';
+import { createIngest, createMockContext, createMockLogger } from '@walkeros/core';
 import { transformerFingerprint } from '../transformer';
 import type { FingerprintSettings } from '../types';
 
@@ -15,11 +15,11 @@ describe('Transformer Fingerprint', () => {
       id: 'test-fingerprint',
     });
 
-  const createPushContext = (ingest: unknown = {}) =>
+  const createPushContext = (ingestData: Record<string, unknown> = {}) =>
     createMockContext<Transformer.Types<FingerprintSettings>>({
       logger: mockLogger,
       id: 'test-fingerprint',
-      ingest,
+      ingest: { ...createIngest('test'), ...ingestData },
     });
 
   const baseEvent: WalkerOS.DeepPartialEvent = {
