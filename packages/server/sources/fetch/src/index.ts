@@ -100,6 +100,7 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
 
         let eventData: unknown;
         let bodyText: string;
+        let rawBody = false;
 
         try {
           bodyText = await request.text();
@@ -121,29 +122,47 @@ export const sourceFetch: Source.Init<Types> = async (context) => {
           }
 
           eventData = JSON.parse(bodyText);
-        } catch (error) {
-          logger.error('Failed to parse JSON', error);
-          return createJsonResponse(
-            { success: false, error: 'Invalid JSON body' },
-            400,
-            corsHeaders,
-          );
+        } catch {
+          // Non-JSON body: push empty event for source.before transformers
+          eventData = {};
+          rawBody = true;
         }
 
         if (!isDefined(eventData) || !isObject(eventData)) {
-          logger.error('Invalid event body type');
+          // Non-object body: push empty event for source.before transformers
+          eventData = {};
+          rawBody = true;
+        }
+
+        // Raw body: push empty event directly, skip validation
+        if (rawBody) {
+          const result = await processEvent(
+            eventData as WalkerOS.DeepPartialEvent,
+            env.push,
+          );
+          if (result.error) {
+            logger.error('Event processing failed', { error: result.error });
+            return createJsonResponse(
+              { success: false, error: result.error },
+              400,
+              corsHeaders,
+            );
+          }
+
           return createJsonResponse(
-            { success: false, error: 'Invalid event: body must be an object' },
-            400,
+            { success: true, id: result.id, timestamp: Date.now() },
+            200,
             corsHeaders,
           );
         }
 
-        // Check for batch
-        const isBatch = 'batch' in eventData && Array.isArray(eventData.batch);
+        // Check for batch (eventData is a validated object at this point)
+        const validData = eventData as Record<string, unknown>;
+        const isBatch =
+          'batch' in validData && Array.isArray(validData.batch);
 
         if (isBatch) {
-          const batch = eventData.batch as unknown[];
+          const batch = validData.batch as unknown[];
 
           if (batch.length > settings.maxBatchSize) {
             logger.error('Batch too large', {

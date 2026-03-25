@@ -199,21 +199,21 @@ const result = await simulate({
 });
 // result.calls = [{ fn: 'window.gtag', args: [...], ts: ... }]
 
-// Source simulation
+// Source simulation — package's createTrigger manages lifecycle
 const result = await simulate({
   step: 'source',
   name: 'my-source',
   code: sourceModule,
-  env: jsdomEnv,
-  trigger: sourceTrigger, // Optional trigger function (Trigger.SetupFn)
+  createTrigger, // Trigger.CreateFn from package's examples/trigger.ts
+  input: { content: myInput, trigger: { type: 'click' } },
 });
 // result.events = captured events via spy transformer
 ```
 
 **Key points:**
 
-- Consumer provides `env` (JSDOM, Node globals, etc.) — collector doesn't bundle
 - Destinations use `wrapEnv` for automatic call tracking on specified paths
+- Sources use `createTrigger` pattern — package manages its own lifecycle (lazy startFlow)
 - Sources capture events via a `next` spy transformer (no destinations needed)
 - Returns `Simulation.Result` with `events`, `calls`, `duration`, and optional
   `error`

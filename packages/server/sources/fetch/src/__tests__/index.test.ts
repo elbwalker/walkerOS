@@ -87,7 +87,7 @@ describe('sourceFetch', () => {
   });
 
   describe('POST request handling', () => {
-    it('should reject POST with invalid JSON body', async () => {
+    it('should push empty event for invalid JSON body', async () => {
       const source = await sourceFetch(
         createSourceContext(
           {},
@@ -109,15 +109,12 @@ describe('sourceFetch', () => {
       const response = await source.push(request);
       const responseBody = await response.json();
 
-      expect(response.status).toBe(400);
-      expect(responseBody).toMatchObject({
-        success: false,
-        error: expect.stringContaining('Invalid JSON'),
-      });
-      expect(mockPush).not.toHaveBeenCalled();
+      expect(response.status).toBe(200);
+      expect(responseBody).toMatchObject({ success: true });
+      expect(mockPush).toHaveBeenCalledWith({});
     });
 
-    it('should reject POST with non-object body', async () => {
+    it('should push empty event for non-object body', async () => {
       const source = await sourceFetch(
         createSourceContext(
           {},
@@ -139,11 +136,9 @@ describe('sourceFetch', () => {
       const response = await source.push(request);
       const responseBody = await response.json();
 
-      expect(response.status).toBe(400);
-      expect(responseBody).toMatchObject({
-        success: false,
-        error: expect.stringContaining('Invalid event'),
-      });
+      expect(response.status).toBe(200);
+      expect(responseBody).toMatchObject({ success: true });
+      expect(mockPush).toHaveBeenCalledWith({});
     });
 
     it('should process complete event with all properties', async () => {
@@ -187,6 +182,33 @@ describe('sourceFetch', () => {
         timestamp: expect.any(Number),
       });
       expect(mockPush).toHaveBeenCalledWith(completeEvent);
+    });
+
+    it('should push empty event for non-JSON POST body', async () => {
+      const source = await sourceFetch(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: createMockLogger(),
+          },
+        ),
+      );
+
+      const request = new Request('https://example.com/collect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: 'SGVsbG9Xb3JsZA==',
+      });
+
+      const response = await source.push(request);
+      const responseBody = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseBody).toMatchObject({ success: true });
+      expect(mockPush).toHaveBeenCalledWith({});
     });
 
     it('should handle collector errors', async () => {

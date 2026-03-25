@@ -94,10 +94,12 @@ export const sourceLambda: Source.Init<Types> = async (context) => {
 
         const body = parseBody(parsed.body, parsed.isBase64Encoded);
 
+        // If body is not a valid object, push {} to let source.before transformers handle raw input via ingest
         if (!body || typeof body !== 'object') {
+          await envPush({});
           return createResponse(
-            400,
-            { success: false, error: 'Invalid event body', requestId },
+            200,
+            { success: true, requestId },
             corsHeaders,
             requestId,
           );

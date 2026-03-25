@@ -37,6 +37,7 @@ export const sourceExpress = async (
 
   // Middleware setup - JSON body parsing with 10mb default limit
   app.use(expressLib.json({ limit: '1mb' }));
+  app.use(expressLib.text({ limit: '1mb' }));
 
   // CORS middleware (enabled by default)
   if (settings.cors !== false) {
@@ -100,20 +101,11 @@ export const sourceExpress = async (
 
       // Handle POST requests (standard event ingestion)
       if (req.method === 'POST') {
-        const eventData = req.body;
+        const eventData =
+          req.body && typeof req.body === 'object' ? req.body : {};
 
-        if (!eventData || typeof eventData !== 'object') {
-          res.status(400).json({
-            success: false,
-            error: 'Invalid event: body must be an object',
-          });
-          return;
-        }
-
-        // Send event to collector
         await env.push(eventData);
 
-        // Default: JSON success (skipped if a step already called respond)
         respond({ body: { success: true, timestamp: Date.now() } });
         return;
       }
