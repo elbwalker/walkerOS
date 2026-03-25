@@ -127,7 +127,10 @@ describe('runPipeline', () => {
         heartbeatIntervalMs: 60000,
         pollIntervalMs: 30000,
         cacheDir: '/tmp/cache',
-        prepareBundleForRun: jest.fn(),
+        prepareBundleForRun: jest.fn().mockResolvedValue({
+          bundlePath: '/tmp/new-bundle.mjs',
+          cleanup: jest.fn().mockResolvedValue(undefined),
+        }),
       },
     };
 

@@ -1,3 +1,6 @@
+import type { Flow } from '@walkeros/core';
+import { resolvePackageImportPath } from '../../core/package-path.js';
+
 interface DestinationEnv {
   init?: Record<string, unknown>;
   push: Record<string, unknown>;
@@ -18,12 +21,17 @@ interface DestinationConfig {
  * - simulation: Array of tracking paths for call verification
  *
  * @param destinations - Destination configuration from flow config
+ * @param packages - Flow config packages map for local path resolution
+ * @param configDir - Directory of the flow config file
  * @returns Map of destination key to env object
  */
 export async function loadDestinationEnvs(
   destinations: Record<string, unknown>,
+  packages?: Flow.Packages,
+  configDir?: string,
 ): Promise<Record<string, DestinationEnv>> {
   const envs: Record<string, DestinationEnv> = {};
+  const resolveDir = configDir || process.cwd();
 
   for (const [destKey, destConfig] of Object.entries(destinations)) {
     const typedConfig = destConfig as DestinationConfig;
@@ -34,10 +42,12 @@ export async function loadDestinationEnvs(
     }
 
     try {
-      // Determine import path
+      // Determine import path using package resolver
       const packageName = typedConfig.package;
       const isDemoPackage = packageName.includes('-demo');
-      const importPath = isDemoPackage ? packageName : `${packageName}/dev`;
+      const importPath = isDemoPackage
+        ? resolvePackageImportPath(packageName, packages, resolveDir)
+        : resolvePackageImportPath(packageName, packages, resolveDir, '/dev');
 
       // Dynamic import
       const module = await import(importPath);

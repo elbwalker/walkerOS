@@ -1,14 +1,18 @@
+import path from 'path';
 import { simulateCore, formatSimulationResult } from './simulator.js';
 import { simulateSourceCLI } from './source-simulator.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
   getErrorMessage,
-  getTmpPath,
   isStdinPiped,
-  readStdin,
+  readStdinToTempFile,
   writeResult,
 } from '../../core/index.js';
-import { loadJsonFromSource, loadJsonConfig } from '../../config/index.js';
+import {
+  loadJsonFromSource,
+  loadJsonConfig,
+  isUrl,
+} from '../../config/index.js';
 import { validateFlowConfig } from '../../config/validators.js';
 import type { SimulateCommandOptions, SimulationResult } from './types.js';
 import type { SimulateOptions, Platform } from '../../schemas/simulate.js';
@@ -26,13 +30,7 @@ export async function simulateCommand(
   try {
     let config: string;
     if (isStdinPiped() && !options.config) {
-      const stdinContent = await readStdin();
-      const fs = await import('fs-extra');
-      const path = await import('path');
-      const tmpPath = getTmpPath(undefined, 'stdin-simulate.json');
-      await fs.default.ensureDir(path.default.dirname(tmpPath));
-      await fs.default.writeFile(tmpPath, stdinContent, 'utf-8');
-      config = tmpPath;
+      config = await readStdinToTempFile('simulate');
     } else {
       config = options.config || 'bundle.config.json';
     }
@@ -48,7 +46,7 @@ export async function simulateCommand(
 
     const resultWithDuration = {
       ...result,
-      duration: (Date.now() - startTime) / 1000,
+      duration: Date.now() - startTime,
     };
 
     const formatted = formatSimulationResult(resultWithDuration, {
@@ -65,7 +63,7 @@ export async function simulateCommand(
         {
           success: false,
           error: errorMessage,
-          duration: (Date.now() - startTime) / 1000,
+          duration: Date.now() - startTime,
         },
         null,
         2,
@@ -131,6 +129,13 @@ export async function simulate(
       );
     }
 
+    // Extract packages and configDir for local package resolution
+    const packages =
+      (flowSettings as { packages?: Flow.Packages }).packages || {};
+    const configDir = isUrl(configOrPath)
+      ? process.cwd()
+      : path.dirname(configOrPath);
+
     const sourceStep = options.step!.substring('source.'.length);
 
     result = await simulateSourceCLI(
@@ -143,6 +148,8 @@ export async function simulate(
         verbose: options.verbose,
         silent: options.silent,
       },
+      packages,
+      configDir,
     );
   } else {
     result = await simulateCore(configOrPath, resolvedEvent, {

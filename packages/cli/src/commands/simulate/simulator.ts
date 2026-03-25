@@ -3,8 +3,10 @@ import type { Destination, Flow, Simulation, WalkerOS } from '@walkeros/core';
 import { simulate } from '@walkeros/collector';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { getErrorMessage, type Platform } from '../../core/index.js';
-import { loadFlowConfig, isObject } from '../../config/index.js';
+import { loadFlowConfig } from '../../config/index.js';
+import { validateEvent } from '../../core/event-validation.js';
 import { getTmpPath } from '../../core/tmp.js';
+import { resolvePackageImportPath } from '../../core/package-path.js';
 import { loadDestinationEnvs } from './env-loader.js';
 import type { SimulateCommandOptions, SimulationResult } from './types.js';
 
@@ -118,26 +120,29 @@ export async function executeSimulation(
   } = {},
 ): Promise<SimulationResult> {
   const startTime = Date.now();
-  const tempDir = getTmpPath();
+  const tempDir = getTmpPath(
+    undefined,
+    `simulate-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+  );
 
   try {
     // Ensure temp directory exists
     await fs.ensureDir(tempDir);
 
     // Load config first (so file errors appear before event validation errors)
-    const { flowSettings } = await loadFlowConfig(inputPath, {
+    const { flowSettings, buildOptions } = await loadFlowConfig(inputPath, {
       flowName: options.flow,
     });
 
+    // Extract packages and configDir for local package resolution
+    const packages = buildOptions.packages;
+    const configDir = buildOptions.configDir;
+
     // Validate event format
-    if (
-      !isObject(event) ||
-      !('name' in event) ||
-      typeof event.name !== 'string'
-    ) {
-      throw new Error(
-        'Event must be an object with a "name" property of type string',
-      );
+    const validation = validateEvent(event, 'minimal');
+    if (!validation.valid) {
+      const errors = validation.errors.map((e) => e.message).join(', ');
+      throw new Error(errors);
     }
 
     const typedEvent = event as { name: string; data?: unknown };
@@ -148,6 +153,8 @@ export async function executeSimulation(
       tempDir,
       startTime,
       options.step,
+      packages,
+      configDir,
     );
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -220,7 +227,11 @@ async function executeConfigSimulation(
   tempDir: string,
   startTime: number,
   stepTarget?: string,
+  packages?: Flow.Packages,
+  configDir?: string,
 ): Promise<SimulationResult> {
+  const resolveDir = configDir || process.cwd();
+
   // Parse step target
   const step = parseStepTarget(stepTarget, flowSettings);
 
@@ -231,7 +242,12 @@ async function executeConfigSimulation(
     }
 
     // Load destination code
-    const destModule = await import(packageName);
+    const destImportPath = resolvePackageImportPath(
+      packageName,
+      packages,
+      resolveDir,
+    );
+    const destModule = await import(destImportPath);
     const code: Destination.Instance =
       destModule.default || Object.values(destModule)[0];
 
@@ -239,7 +255,11 @@ async function executeConfigSimulation(
     const destinations = flowSettings.destinations as
       | Record<string, unknown>
       | undefined;
-    const envs = await loadDestinationEnvs(destinations || {});
+    const envs = await loadDestinationEnvs(
+      destinations || {},
+      packages,
+      configDir,
+    );
     const destEnv = envs[step.name];
 
     const result = await simulate({
@@ -270,7 +290,12 @@ async function executeConfigSimulation(
     }
 
     // Load transformer code
-    const mod = await import(packageName);
+    const transformerImportPath = resolvePackageImportPath(
+      packageName,
+      packages,
+      resolveDir,
+    );
+    const mod = await import(transformerImportPath);
     const code = mod.default || Object.values(mod)[0];
 
     const result = await simulate({

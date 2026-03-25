@@ -7,7 +7,9 @@
  */
 
 import { writeFileSync } from 'fs';
+import fs from 'fs-extra';
 import type { Logger } from '@walkeros/core';
+import { getTmpPath } from '../../core/tmp.js';
 import { createHealthServer } from '../../runtime/health-server.js';
 import {
   loadFlow,
@@ -47,7 +49,7 @@ export interface PipelineOptions {
     prepareBundleForRun: (
       configPath: string,
       options: { verbose?: boolean; silent?: boolean; flowName?: string },
-    ) => Promise<string>;
+    ) => Promise<{ bundlePath: string; cleanup: () => Promise<void> }>;
   };
 }
 
@@ -93,6 +95,10 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
   let heartbeat: HeartbeatHandle | null = null;
   let poller: PollerHandle | null = null;
 
+  // Track temp files for cleanup on hot-swap and shutdown
+  let currentBundleCleanup: (() => Promise<void>) | undefined;
+  let currentConfigPath: string | undefined;
+
   if (api) {
     heartbeat = createHeartbeat(
       {
@@ -130,14 +136,17 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
             return;
           }
 
-          const tmpConfigPath = `/tmp/walkeros-flow-${Date.now()}.json`;
+          const tmpConfigPath = getTmpPath(
+            undefined,
+            `walkeros-flow-${Date.now()}.json`,
+          );
           writeFileSync(
             tmpConfigPath,
             JSON.stringify(content, null, 2),
             'utf-8',
           );
 
-          const newBundle = await api.prepareBundleForRun(tmpConfigPath, {
+          const newBundleResult = await api.prepareBundleForRun(tmpConfigPath, {
             verbose: false,
             silent: true,
             flowName: api.flowName,
@@ -145,16 +154,31 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
 
           handle = await swapFlow(
             handle,
-            newBundle,
+            newBundleResult.bundlePath,
             runtimeConfig,
             logger,
             loggerConfig,
             healthServer,
           );
 
-          writeCache(api.cacheDir, newBundle, JSON.stringify(content), version);
+          writeCache(
+            api.cacheDir,
+            newBundleResult.bundlePath,
+            JSON.stringify(content),
+            version,
+          );
           configVersion = version;
           if (heartbeat) heartbeat.updateConfigVersion(version);
+
+          // Clean up previous temp files
+          if (currentBundleCleanup)
+            await currentBundleCleanup().catch(() => {});
+          if (currentConfigPath)
+            await fs.remove(currentConfigPath).catch(() => {});
+
+          // Track new paths
+          currentBundleCleanup = newBundleResult.cleanup;
+          currentConfigPath = tmpConfigPath;
 
           logger.info(`Hot-swapped to version ${version}`);
         },
@@ -181,6 +205,11 @@ export async function runPipeline(options: PipelineOptions): Promise<void> {
         await handle.collector.command('shutdown');
       }
       await healthServer.close();
+
+      // Clean up temp files
+      if (currentBundleCleanup) await currentBundleCleanup().catch(() => {});
+      if (currentConfigPath) await fs.remove(currentConfigPath).catch(() => {});
+
       logger.info('Shutdown complete');
       clearTimeout(forceTimer);
       process.exit(0);

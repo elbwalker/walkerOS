@@ -1,7 +1,8 @@
 import { simulate } from '@walkeros/collector';
-import type { Source, Trigger } from '@walkeros/core';
+import type { Flow, Source, Trigger } from '@walkeros/core';
 import type { SimulationResult } from './types.js';
 import { getErrorMessage } from '../../core/index.js';
+import { resolvePackageImportPath } from '../../core/package-path.js';
 
 interface SourceSimulationOptions {
   flow?: string;
@@ -14,11 +15,21 @@ interface SourceSimulationOptions {
 /**
  * Load source code and createTrigger from an npm package.
  */
-async function loadSourcePackage(packageName: string): Promise<{
+async function loadSourcePackage(
+  packageName: string,
+  packages?: Flow.Packages,
+  configDir?: string,
+): Promise<{
   code: Source.Init;
   createTrigger?: Trigger.CreateFn;
 }> {
-  const mainModule = await import(packageName);
+  const resolveDir = configDir || process.cwd();
+  const mainImportPath = resolvePackageImportPath(
+    packageName,
+    packages,
+    resolveDir,
+  );
+  const mainModule = await import(mainImportPath);
   const code = mainModule.default || Object.values(mainModule)[0];
   if (!code || typeof code !== 'function') {
     throw new Error(`Package ${packageName} missing source init function`);
@@ -27,7 +38,13 @@ async function loadSourcePackage(packageName: string): Promise<{
   let createTrigger: Trigger.CreateFn | undefined;
 
   try {
-    const devModule = await import(`${packageName}/dev`);
+    const devImportPath = resolvePackageImportPath(
+      packageName,
+      packages,
+      resolveDir,
+      '/dev',
+    );
+    const devModule = await import(devImportPath);
     const examples = devModule.examples || devModule.default?.examples;
     if (
       examples?.createTrigger &&
@@ -48,11 +65,15 @@ async function loadSourcePackage(packageName: string): Promise<{
  * @param flowConfig - Flow settings for the target flow
  * @param sourceInput - SourceInput { content, trigger?, env? } — passed through to collector
  * @param options - Simulation options
+ * @param packages - Flow config packages map for local path resolution
+ * @param configDir - Directory of the flow config file
  */
 export async function simulateSourceCLI(
   flowConfig: Record<string, unknown>,
   sourceInput: unknown,
   options: SourceSimulationOptions,
+  packages?: Flow.Packages,
+  configDir?: string,
 ): Promise<SimulationResult> {
   const startTime = Date.now();
 
@@ -82,6 +103,8 @@ export async function simulateSourceCLI(
 
     const { code, createTrigger } = await loadSourcePackage(
       sourceConfig.package,
+      packages,
+      configDir,
     );
 
     if (!createTrigger) {

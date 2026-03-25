@@ -2,16 +2,16 @@ import path from 'path';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
 import { getPlatform, type Elb } from '@walkeros/core';
-import { schemas } from '@walkeros/core/dev';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
   getErrorMessage,
   detectInput,
   isStdinPiped,
-  readStdin,
+  readStdinToTempFile,
   writeResult,
   type Platform,
 } from '../../core/index.js';
+import { validateEvent } from '../../core/event-validation.js';
 import { Level, type Logger } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
@@ -41,33 +41,23 @@ async function pushCore(
   let tempDir: string | undefined;
 
   try {
-    // Validate event format using Zod schema
-    const eventResult = schemas.PartialEventSchema.safeParse(event);
-    if (!eventResult.success) {
-      const errors = eventResult.error.issues
-        .map((issue) => `${String(issue.path.join('.'))}: ${issue.message}`)
+    // Validate event format
+    const validation = validateEvent(event, 'standard');
+    if (!validation.valid) {
+      const errors = validation.errors
+        .map((e) => `${e.path}: ${e.message}`)
         .join(', ');
       throw new Error(`Invalid event: ${errors}`);
     }
-
-    const parsedEvent = eventResult.data as {
-      name?: string;
-      data?: Record<string, unknown>;
-    };
-    if (!parsedEvent.name) {
-      throw new Error('Invalid event: Missing required "name" property');
+    for (const w of validation.warnings) {
+      logger.info(`Warning: ${w.message}`);
     }
 
+    const eventObj = event as { name?: string; data?: Record<string, unknown> };
     const validatedEvent: { name: string; data: Record<string, unknown> } = {
-      name: parsedEvent.name,
-      data: (parsedEvent.data || {}) as Record<string, unknown>,
+      name: eventObj.name!,
+      data: (eventObj.data || {}) as Record<string, unknown>,
     };
-
-    if (!validatedEvent.name.includes(' ')) {
-      logger.info(
-        `Warning: Event name "${validatedEvent.name}" should follow "ENTITY ACTION" format (e.g., "page view")`,
-      );
-    }
 
     // Detect input type
     logger.debug('Detecting input type');
@@ -129,12 +119,7 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
     // Resolve config: stdin > argument > default
     let config: string;
     if (isStdinPiped() && !options.config) {
-      const stdinContent = await readStdin();
-      // Write stdin to temp file for pushCore (expects file path)
-      const tmpPath = getTmpPath(undefined, 'stdin-push.json');
-      await fs.ensureDir(path.dirname(tmpPath));
-      await fs.writeFile(tmpPath, stdinContent, 'utf-8');
-      config = tmpPath;
+      config = await readStdinToTempFile('push');
     } else {
       config = options.config || 'bundle.config.json';
     }
