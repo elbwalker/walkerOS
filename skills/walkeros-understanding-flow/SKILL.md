@@ -19,13 +19,13 @@ Components are composable and replaceable.
 ## The Flow Pattern
 
 ```
-Sources → [Pre-Transformers] → Collector → [Post-Transformers] → Destinations
-(Capture)  (source.next)    (Processing) (dest.before)       (Delivery)
+[Source.before] → Sources → [Source.next] → Collector → [Dest.before] → Destinations → [Dest.next]
+(Preprocessing)  (Capture)  (Pre-chain)   (Processing) (Post-chain)   (Delivery)     (Post-push)
 
-- Browser DOM              - Validation   - Validation        - Google Analytics
-- DataLayer                - Enrichment   - Enrichment        - Meta Pixel
-- Server HTTP              - Redaction    - Consent check     - Custom API
-- Cloud Functions                         - Routing           - Data Warehouse
+Consent-exempt:                                                                        Post-consent:
+- Decode                    - Validation   - Event creation - Validation   - Push       - Audit logging
+- Validate format           - Enrichment   - Enrichment    - Enrichment   - Send       - Response parsing
+- Authenticate              - Redaction    - Consent check - Routing      - Store      - Webhooks
 ```
 
 ## Key Concepts
@@ -90,6 +90,34 @@ const { collector, elb } = await startFlow({
   },
 });
 ```
+
+## Ingest: Mutable Pipeline Context
+
+walkerOS uses a two-layer data model:
+
+- **Event** — strict schema, structured analytics data (name, data, context,
+  etc.)
+- **Ingest** — free-form mutable context that flows alongside events
+
+Any step can read and write arbitrary keys on ingest. The runtime manages
+`_meta`:
+
+- `_meta.hops` — increments per step (safety valve at 256)
+- `_meta.path` — ordered list of step IDs visited (path[0] = source ID)
+
+```typescript
+// In a transformer
+push: async (event, context) => {
+  context.ingest.botScore = 0.95; // Write freely
+  context.ingest.geo = { country: 'DE' };
+  console.log(context.ingest._meta.path); // ['express', 'validate', 'enrich']
+  return { event };
+};
+```
+
+Ingest is cloned per destination to prevent cross-contamination in parallel
+processing. After a destination push, the response is available at
+`ingest._response`.
 
 ## Stores
 
@@ -188,6 +216,25 @@ Note: In flow.json, `next` is at the reference level. The CLI bundler
 automatically moves it into `config.next` for runtime - you don't need to handle
 this yourself.
 
+### Transformer before chain
+
+Each transformer can have its own `before` chain that runs before its push
+function:
+
+```json
+{
+  "transformers": {
+    "enrich": {
+      "before": "lookup",
+      "package": "@walkeros/transformer-enricher"
+    },
+    "lookup": {
+      "package": "@walkeros/transformer-lookup"
+    }
+  }
+}
+```
+
 ### Post-Collector Chain
 
 Runs after collector enrichment, before destination receives event:
@@ -226,12 +273,54 @@ transformers: {
 }
 ```
 
+### Post-push chain (`destination.next`)
+
+Runs after destination push completes. The push response is available at
+`context.ingest._response`:
+
+**Bundled mode (flow.json):**
+
+```json
+{
+  "destinations": {
+    "api": {
+      "package": "@walkeros/server-destination-api",
+      "next": "auditLog"
+    }
+  },
+  "transformers": {
+    "auditLog": {
+      "package": "@walkeros/transformer-audit"
+    }
+  }
+}
+```
+
+**Integrated mode (TypeScript):**
+
+```typescript
+destinations: {
+  api: {
+    code: destinationApi,
+    next: 'auditLog'
+  }
+},
+transformers: {
+  auditLog: {
+    code: transformerAudit
+  }
+}
+```
+
 ### Chain Resolution
 
+- `source.before` → consent-exempt preprocessing chain
 - `source.next` → starts pre-collector chain
+- `transformer.before` → pre-transform enrichment chain
 - `transformer.next` (flow.json) or `transformer.config.next` (runtime) → links
   transformers
 - `destination.before` → starts post-collector chain per destination
+- `destination.next` → post-push processing chain
 
 ## Step Examples
 
@@ -289,19 +378,21 @@ validating configurations, and rendering UI visualizations.
 
 ### Valid connection matrix
 
-| From        | To          | Via Field                   | Valid?           |
-| ----------- | ----------- | --------------------------- | ---------------- |
-| Source      | Transformer | `source.next`               | Yes              |
-| Source      | Collector   | (implicit, no next)         | Yes              |
-| Source      | Source      | —                           | No               |
-| Source      | Destination | —                           | No               |
-| Transformer | Transformer | `transformer.next`          | Yes              |
-| Transformer | Collector   | (implicit, pre-chain ends)  | Yes              |
-| Transformer | Destination | (implicit, post-chain ends) | Yes              |
-| Collector   | Destination | (implicit, no before)       | Yes              |
-| Collector   | Transformer | `destination.before`        | Yes (post-chain) |
-| Destination | anything    | —                           | No (terminal)    |
-| Collector   | Source      | —                           | No               |
+| From        | To          | Via Field                   | Valid?                  |
+| ----------- | ----------- | --------------------------- | ----------------------- |
+| Source      | Transformer | `source.before`             | Yes (consent-exempt)    |
+| Source      | Transformer | `source.next`               | Yes (pre-collector)     |
+| Source      | Collector   | (implicit, no next)         | Yes                     |
+| Source      | Source      | —                           | No                      |
+| Source      | Destination | —                           | No                      |
+| Transformer | Transformer | `transformer.before`        | Yes (pre-transform)     |
+| Transformer | Transformer | `transformer.next`          | Yes (chain continues)   |
+| Transformer | Collector   | (implicit, pre-chain ends)  | Yes                     |
+| Transformer | Destination | (implicit, post-chain ends) | Yes                     |
+| Collector   | Destination | (implicit, no before)       | Yes                     |
+| Collector   | Transformer | `destination.before`        | Yes (post-chain)        |
+| Destination | Transformer | `destination.next`          | Yes (post-push)         |
+| Collector   | Source      | —                           | No                      |
 
 ### Pre-transformer chains (`source.next`)
 
@@ -347,7 +438,9 @@ an array of `{ match, next }` objects evaluated against ingest data:
 
 - Routes are evaluated in order — first match wins
 - No match and no wildcard = event passes through unchanged
-- Works on `source.next`, `transformer.next`, and `destination.before`
+- Works on all chain positions: `source.before`, `source.next`,
+  `transformer.before`, `transformer.next`, `destination.before`, and
+  `destination.next`
 - Routes are compiled to closures at init time for fast per-event evaluation
 - See [packages/core/src/route.ts](../../packages/core/src/route.ts) for
   `compileNext()` and `resolveNext()`

@@ -1,6 +1,6 @@
 import { destinationVendor } from '.';
-import type { Destination, Collector } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import type { Destination } from '@walkeros/core';
+import { createMockContext } from '@walkeros/core';
 import type { Settings } from './types';
 import { events, outputs, env as mockEnv } from '../../examples';
 
@@ -8,7 +8,7 @@ import { events, outputs, env as mockEnv } from '../../examples';
  * Test template for simple destinations.
  *
  * Key patterns:
- * 1. Use createPushContext() helper - standardizes context creation
+ * 1. Use createMockContext() - standardizes context creation with sensible defaults
  * 2. Include id field - required in context
  * 3. Use rule instead of mapping - property renamed in PushContext
  * 4. Use examples for test data - don't hardcode test values
@@ -17,17 +17,14 @@ import { events, outputs, env as mockEnv } from '../../examples';
 // Helper to create push context for testing
 function createPushContext(
   overrides: Partial<Destination.PushContext<Settings>> = {},
-): Destination.PushContext<Settings> {
-  return {
-    config: {},
+) {
+  return createMockContext({
     env: mockEnv.push,
-    logger: createMockLogger(),
     id: 'test-vendor',
-    collector: {} as Collector.Instance,
     data: {},
     rule: undefined,
     ...overrides,
-  };
+  });
 }
 
 describe('destinationVendor', () => {

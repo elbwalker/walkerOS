@@ -5,6 +5,7 @@ import type {
   Destination,
   Transformer,
   CompiledNext,
+  Ingest,
 } from '@walkeros/core';
 import {
   assign,
@@ -14,6 +15,7 @@ import {
   checkCache,
   storeCache,
   compileNext,
+  createIngest,
   debounce,
   getId,
   getGrantedConsent,
@@ -44,7 +46,7 @@ function resolveDestinationChain(
   before: Transformer.Next | undefined,
   compiledBefore: CompiledNext | undefined,
   transformers: Transformer.Transformers,
-  ingest?: unknown,
+  ingest?: Ingest,
 ): string[] {
   if (!before) return [];
 
@@ -73,7 +75,7 @@ export async function addDestination(
   data: Destination.Init,
   options?: Destination.Config,
 ): Promise<Elb.PushResult> {
-  const { code, config: dataConfig = {}, env = {}, before, cache } = data;
+  const { code, config: dataConfig = {}, env = {}, before, next, cache } = data;
 
   // Validate that code has a push method
   if (!isFunction(code.push)) {
@@ -89,8 +91,9 @@ export async function addDestination(
   }
 
   const baseConfig = options || dataConfig || { init: false };
-  // Merge before and cache into config if provided at root level
+  // Merge before, next, and cache into config if provided at root level
   let config = before ? { ...baseConfig, before } : { ...baseConfig };
+  if (next) config = { ...config, next };
   if (cache) config = { ...config, cache };
 
   const destination: Destination.Instance = {
@@ -131,7 +134,7 @@ export async function pushToDestinations(
   event?: WalkerOS.Event,
   meta: {
     id?: string;
-    ingest?: unknown;
+    ingest?: Ingest;
     respond?: import('@walkeros/core').RespondFn;
   } = {},
   destinations?: Collector.Destinations,
@@ -161,6 +164,14 @@ export async function pushToDestinations(
 
       // Reset original queue while processing to enable async processing
       destination.queuePush = [];
+
+      // Clone ingest for this destination (prevents cross-destination races in Promise.all)
+      const destIngest: Ingest = meta.ingest
+        ? {
+            ...meta.ingest,
+            _meta: { ...meta.ingest._meta, path: [...meta.ingest._meta.path] },
+          }
+        : createIngest('unknown');
 
       // Add event to queue stack
       if (event) {
@@ -236,8 +247,15 @@ export async function pushToDestinations(
         before,
         compiledBefore,
         collector.transformers,
-        meta.ingest,
+        destIngest,
       );
+
+      // Compile next chain once per destination batch (not per-event)
+      const nextConfig = destination.config.next;
+      const compiledNext =
+        nextConfig && isRouteArray(nextConfig)
+          ? compileNext(nextConfig)
+          : undefined;
 
       // Compile destination cache once per batch (not per-event)
       const destCacheConfig = destination.config?.cache;
@@ -259,7 +277,7 @@ export async function pushToDestinations(
           // Full cache check: before the before chain (skips everything on HIT)
           let cacheMiss: { key: string; ttl: number } | undefined;
           if (compiledDCache?.full && dCacheStore) {
-            const cacheContext = buildCacheContext(meta.ingest, event);
+            const cacheContext = buildCacheContext(destIngest, event);
             const cacheResult = checkCache(
               compiledDCache,
               dCacheStore,
@@ -286,7 +304,7 @@ export async function pushToDestinations(
               collector.transformers,
               postChain,
               event,
-              meta.ingest,
+              destIngest,
               meta.respond,
             );
 
@@ -296,12 +314,15 @@ export async function pushToDestinations(
             }
 
             // Use the processed event (cast back to full Event type)
-            processedEvent = chainResult as WalkerOS.Event;
+            // Before chains use first result if fan-out occurred
+            processedEvent = (
+              Array.isArray(chainResult) ? chainResult[0] : chainResult
+            ) as WalkerOS.Event;
           }
 
           // Step-level cache check: after before chain, skip only push on HIT
           if (compiledDCache && !compiledDCache.full && dCacheStore) {
-            const cacheContext = buildCacheContext(meta.ingest, processedEvent);
+            const cacheContext = buildCacheContext(destIngest, processedEvent);
             const cacheResult = checkCache(
               compiledDCache,
               dCacheStore,
@@ -317,6 +338,7 @@ export async function pushToDestinations(
           }
 
           const pushStart = Date.now();
+          let pushFailed = false;
           const result = await tryCatchAsync(destinationPush, (err) => {
             // Log the error with destination scope
             const destType = destination.type || 'unknown';
@@ -325,6 +347,7 @@ export async function pushToDestinations(
               event: processedEvent!.name,
             });
             error = err; // oh no
+            pushFailed = true;
 
             // Add failed event to destinations DLQ
             destination.dlq!.push([processedEvent!, err]);
@@ -335,7 +358,7 @@ export async function pushToDestinations(
             destination,
             id,
             processedEvent!,
-            meta.ingest,
+            destIngest,
             meta.respond,
           );
           totalDuration += Date.now() - pushStart;
@@ -352,6 +375,36 @@ export async function pushToDestinations(
 
           // Capture the last response (for single event pushes)
           if (result !== undefined) response = result;
+
+          // Run destination.next chain after successful push
+          if (!pushFailed && nextConfig) {
+            // Write push response to ingest for destination.next transformers
+            if (result !== undefined) {
+              destIngest._response = result;
+            }
+
+            const nextChain = resolveDestinationChain(
+              nextConfig,
+              compiledNext,
+              collector.transformers,
+              destIngest,
+            );
+
+            if (
+              nextChain.length > 0 &&
+              collector.transformers &&
+              Object.keys(collector.transformers).length > 0
+            ) {
+              await runTransformerChain(
+                collector,
+                collector.transformers,
+                nextChain,
+                processedEvent!,
+                destIngest,
+                meta.respond,
+              );
+            }
+          }
 
           return event;
         }),
@@ -483,7 +536,7 @@ export async function destinationInit<Destination extends Destination.Instance>(
  * @param destination - The destination to push to.
  * @param destId - The destination ID.
  * @param event - The event to push.
- * @param ingest - Optional ingest metadata (frozen, same reference).
+ * @param ingest - Mutable ingest context flowing through the pipeline.
  * @returns Whether the event was pushed successfully.
  */
 export async function destinationPush<Destination extends Destination.Instance>(
@@ -491,7 +544,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
   destination: Destination,
   destId: string,
   event: WalkerOS.Event,
-  ingest?: unknown,
+  ingest?: Ingest,
   respond?: import('@walkeros/core').RespondFn,
 ): Promise<unknown> {
   const { config } = destination;
@@ -511,7 +564,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
     config,
     data: processed.data,
     rule: processed.mapping,
-    ingest,
+    ingest: ingest!,
     env: {
       ...mergeEnvironments(destination.env, config.env),
       ...(respond ? { respond } : {}),
@@ -547,7 +600,7 @@ export async function destinationPush<Destination extends Destination.Instance>(
             // Note: batch.data contains all transformed data; context.data is for single events
             data: undefined,
             rule: eventMapping, // Renamed from mapping to rule
-            ingest, // Same frozen reference
+            ingest: ingest!, // Mutable shared context
             env: {
               ...mergeEnvironments(destination.env, config.env),
               ...(respond ? { respond } : {}),
@@ -622,8 +675,12 @@ export function registerDestination(
   def: Destination.Init,
 ): Destination.Instance {
   const { code, config = {}, env = {}, cache } = def;
-  const { config: configWithChain } = extractChainProperty(def, 'before');
-  const mergedConfig = { ...code.config, ...config, ...configWithChain };
+  const { config: configWithBefore } = extractChainProperty(def, 'before');
+  const { config: configWithChains } = extractChainProperty(
+    { ...def, config: configWithBefore },
+    'next',
+  );
+  const mergedConfig = { ...code.config, ...config, ...configWithChains };
   // Merge definition-level cache into config for runtime access
   if (cache) mergedConfig.cache = cache;
   const mergedEnv = mergeEnvironments(code.env, env);

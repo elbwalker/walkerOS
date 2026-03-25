@@ -1,6 +1,6 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, Destination, Rules, Settings } from '../types';
-import { clone, getEvent, createMockLogger } from '@walkeros/core';
+import { clone, getEvent, createMockContext, createMockLogger } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import { examples } from '../dev';
 import { hashEvent } from '../hash';
@@ -89,13 +89,14 @@ describe('Server Destination Meta', () => {
       } as Rules,
     };
 
-    await destination.push(event, {
-      config,
-      collector: mockCollector,
-      env: testEnv,
-      logger: createMockLogger(),
-      id: 'test-meta',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config,
+        env: testEnv,
+        id: 'test-meta',
+      }),
+    );
 
     expect(mockSendServer).toHaveBeenCalled();
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
@@ -112,13 +113,14 @@ describe('Server Destination Meta', () => {
       settings: { accessToken, pixelId },
     };
 
-    await destination.push(event, {
-      config,
-      collector: {} as Collector.Instance,
-      env: customEnv,
-      logger: createMockLogger(),
-      id: 'test-meta',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config,
+        env: customEnv,
+        id: 'test-meta',
+      }),
+    );
 
     expect(customSendServer).toHaveBeenCalled();
     expect(mockSendServer).not.toHaveBeenCalled();
@@ -147,13 +149,14 @@ describe('Server Destination Meta', () => {
     };
 
     await expect(
-      destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: testEnv,
-        logger: createMockLogger(),
-        id: 'test-meta',
-      }),
+      destination.push(
+        event,
+        createMockContext({
+          config,
+          env: testEnv,
+          id: 'test-meta',
+        }),
+      ),
     ).rejects.toThrow();
   });
 
@@ -171,13 +174,14 @@ describe('Server Destination Meta', () => {
       } as Rules,
     };
 
-    await destination.push(event, {
-      config,
-      collector: mockCollector,
-      env: testEnv,
-      logger: createMockLogger(),
-      id: 'test-meta',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config,
+        env: testEnv,
+        id: 'test-meta',
+      }),
+    );
     const requestBody = JSON.parse(mockSendServer.mock.calls[0][1]);
     expect(requestBody.data[0].user_data.fbc).toContain('.abc');
   });

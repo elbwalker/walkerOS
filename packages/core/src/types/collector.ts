@@ -10,6 +10,7 @@ import type {
   WalkerOS,
   Mapping,
 } from '.';
+import type { Ingest } from './ingest';
 
 /**
  * Core collector configuration interface
@@ -122,7 +123,7 @@ export type CommandType =
  */
 export interface PushOptions {
   id?: string;
-  ingest?: unknown;
+  ingest?: Ingest;
   respond?: import('../respond').RespondFn;
   mapping?: Mapping.Config;
   preChain?: string[];

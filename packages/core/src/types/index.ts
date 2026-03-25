@@ -25,3 +25,7 @@ export { Const } from './storage';
 
 // Export send types directly
 export type { SendDataValue, SendHeaders, SendResponse } from './send';
+
+// Export ingest types and factory directly
+export type { Ingest, IngestMeta } from './ingest';
+export { createIngest } from './ingest';

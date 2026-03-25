@@ -1,6 +1,6 @@
 import type { WalkerOS, Collector } from '@walkeros/core';
 import type { Config, DestinationInterface, Settings } from '../types';
-import { getEvent, createMockLogger } from '@walkeros/core';
+import { getEvent, createMockContext, createMockLogger } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
 import type { OAuth2Client } from 'google-auth-library';
 import { examples } from '../dev';
@@ -183,7 +183,6 @@ describe('Server Destination Data Manager', () => {
 
   describe('push', () => {
     test('sends event to Data Manager API', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
       (event.data as Record<string, unknown>).id = 'ORDER-123';
       (event.data as Record<string, unknown>).total = 99.99;
@@ -194,13 +193,15 @@ describe('Server Destination Data Manager', () => {
         env: { authClient: mockAuthClient, fetch: mockFetch },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: config.env!,
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: config.env!,
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       expect(getAccessToken).toHaveBeenCalledWith(mockAuthClient);
       expect(mockFetch).toHaveBeenCalledWith(
@@ -220,16 +221,17 @@ describe('Server Destination Data Manager', () => {
     });
 
     test('includes event timestamp in RFC 3339 format', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');
 
-      await destination.push(event, {
-        config: defaultConfig,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config: defaultConfig,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       const eventTimestamp = requestBody.events[0].eventTimestamp;
@@ -241,23 +243,23 @@ describe('Server Destination Data Manager', () => {
     });
 
     test('applies default eventSource (WEB) when not specified', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');
 
-      await destination.push(event, {
-        config: defaultConfig,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config: defaultConfig,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.events[0].eventSource).toBe('WEB');
     });
 
     test('applies custom eventSource from settings', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');
 
       const config: Config = {
@@ -268,30 +270,33 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.events[0].eventSource).toBe('APP');
     });
 
     test('includes consent information', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
       event.consent = { marketing: true, personalization: false };
 
-      await destination.push(event, {
-        config: defaultConfig,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config: defaultConfig,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.events[0].consent).toEqual({
@@ -301,7 +306,6 @@ describe('Server Destination Data Manager', () => {
     });
 
     test('applies request-level consent', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');
 
       const config: Config = {
@@ -315,13 +319,15 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.consent).toEqual({
@@ -331,7 +337,6 @@ describe('Server Destination Data Manager', () => {
     });
 
     test('uses validateOnly mode for testing', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');
 
       const config: Config = {
@@ -342,20 +347,21 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.validateOnly).toBe(true);
     });
 
     test('includes testEventCode when provided', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');
 
       const config: Config = {
@@ -366,13 +372,15 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.testEventCode).toBe('TEST12345');
@@ -385,17 +393,18 @@ describe('Server Destination Data Manager', () => {
         text: async () => 'Invalid request',
       });
 
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');
 
       await expect(
-        destination.push(event, {
-          config: defaultConfig,
-          collector: mockCollector,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
-          logger: mockLogger,
-          id: 'test-dm',
-        }),
+        destination.push(
+          event,
+          createMockContext({
+            config: defaultConfig,
+            env: { authClient: mockAuthClient, fetch: mockFetch },
+            logger: mockLogger,
+            id: 'test-dm',
+          }),
+        ),
       ).rejects.toThrow('Data Manager API error (400)');
     });
 
@@ -414,22 +423,22 @@ describe('Server Destination Data Manager', () => {
         }),
       });
 
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');
 
       await expect(
-        destination.push(event, {
-          config: defaultConfig,
-          collector: mockCollector,
-          env: { authClient: mockAuthClient, fetch: mockFetch },
-          logger: mockLogger,
-          id: 'test-dm',
-        }),
+        destination.push(
+          event,
+          createMockContext({
+            config: defaultConfig,
+            env: { authClient: mockAuthClient, fetch: mockFetch },
+            logger: mockLogger,
+            id: 'test-dm',
+          }),
+        ),
       ).rejects.toThrow('Validation errors');
     });
 
     test('uses custom URL when provided', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');
 
       const config: Config = {
@@ -440,13 +449,15 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       expect(mockFetch).toHaveBeenCalledWith(
         'https://custom-endpoint.com/v1/events:ingest',
@@ -455,7 +466,6 @@ describe('Server Destination Data Manager', () => {
     });
 
     test('supports multiple destinations', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
 
       const config: Config = {
@@ -486,13 +496,15 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.destinations).toHaveLength(2);
@@ -507,36 +519,36 @@ describe('Server Destination Data Manager', () => {
         json: async () => ({ requestId: 'custom-123' }),
       });
 
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');
 
-      await destination.push(event, {
-        config: {
-          ...defaultConfig,
-          settings: {
-            destinations: [
-              {
-                operatingAccount: {
-                  accountId: '123-456-7890',
-                  accountType: 'GOOGLE_ADS',
+      await destination.push(
+        event,
+        createMockContext({
+          config: {
+            ...defaultConfig,
+            settings: {
+              destinations: [
+                {
+                  operatingAccount: {
+                    accountId: '123-456-7890',
+                    accountType: 'GOOGLE_ADS',
+                  },
+                  productDestinationId: 'AW-CONVERSION-123',
                 },
-                productDestinationId: 'AW-CONVERSION-123',
-              },
-            ],
+              ],
+            },
           },
-        },
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: customFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+          env: { authClient: mockAuthClient, fetch: customFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       expect(customFetch).toHaveBeenCalled();
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
     test('applies Settings guided helpers (userData)', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
       event.user = { id: 'user@example.com' };
       (event.data as Record<string, unknown>).phone = '+1234567890';
@@ -560,13 +572,15 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.events[0].userData).toBeDefined();
@@ -574,7 +588,6 @@ describe('Server Destination Data Manager', () => {
     });
 
     test('applies Settings guided helpers (userId, clientId)', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('page view');
       event.user = { id: 'user-123', device: 'device-456' };
 
@@ -595,13 +608,15 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.events[0].userId).toBe('user-123');
@@ -609,7 +624,6 @@ describe('Server Destination Data Manager', () => {
     });
 
     test('applies Settings guided helpers (sessionAttributes)', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
       event.context = {
         sessionAttributes: ['gad_source=1&gad_campaignid=123', 0],
@@ -631,13 +645,15 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.events[0].adIdentifiers).toBeDefined();
@@ -647,7 +663,6 @@ describe('Server Destination Data Manager', () => {
     });
 
     test('event mapping overrides Settings helpers', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
       event.user = { id: 'default-user' };
 
@@ -673,13 +688,15 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.events[0].userId).toBe('override-user');
@@ -688,7 +705,6 @@ describe('Server Destination Data Manager', () => {
 
   describe('consent mapping', () => {
     test('maps consent from Settings using string field names', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
       event.consent = {
         ads: true,
@@ -712,13 +728,15 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.events[0].consent).toEqual({
@@ -728,7 +746,6 @@ describe('Server Destination Data Manager', () => {
     });
 
     test('maps consent from Settings using boolean static values', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
 
       const config: Config = {
@@ -748,13 +765,15 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.events[0].consent).toEqual({
@@ -764,7 +783,6 @@ describe('Server Destination Data Manager', () => {
     });
 
     test('falls back to event.consent with hardcoded field names', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
       event.consent = {
         marketing: true,
@@ -786,13 +804,15 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.events[0].consent).toEqual({
@@ -802,7 +822,6 @@ describe('Server Destination Data Manager', () => {
     });
 
     test('mapped consent overrides event.consent', async () => {
-      const mockCollector = {} as Collector.Instance;
       const event = getEvent('order complete');
       event.consent = {
         marketing: false, // This should be ignored
@@ -825,13 +844,15 @@ describe('Server Destination Data Manager', () => {
         },
       };
 
-      await destination.push(event, {
-        config,
-        collector: mockCollector,
-        env: { authClient: mockAuthClient, fetch: mockFetch },
-        logger: mockLogger,
-        id: 'test-dm',
-      });
+      await destination.push(
+        event,
+        createMockContext({
+          config,
+          env: { authClient: mockAuthClient, fetch: mockFetch },
+          logger: mockLogger,
+          id: 'test-dm',
+        }),
+      );
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.events[0].consent).toEqual({

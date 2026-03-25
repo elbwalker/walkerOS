@@ -227,6 +227,9 @@ export const SourceReferenceSchema = z
     next: RoutableNextSchema.optional().describe(
       'Pre-collector transformer chain. String, string[], or NextRule[] for conditional routing based on ingest data.',
     ),
+    before: RoutableNextSchema.optional().describe(
+      'Pre-source transformer chain (consent-exempt). Handles transport-level preprocessing.',
+    ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
     ),
@@ -270,6 +273,9 @@ export const TransformerReferenceSchema = z
       .unknown()
       .optional()
       .describe('Transformer environment configuration'),
+    before: RoutableNextSchema.optional().describe(
+      'Pre-transformer chain. Runs before this transformer push function.',
+    ),
     next: RoutableNextSchema.optional().describe(
       'Next transformer in chain. String, string[], or NextRule[] for conditional routing.',
     ),
@@ -330,6 +336,9 @@ export const DestinationReferenceSchema = z
     ),
     before: RoutableNextSchema.optional().describe(
       'Post-collector transformer chain. String, string[], or NextRule[] for conditional routing.',
+    ),
+    next: RoutableNextSchema.optional().describe(
+      'Post-push transformer chain. Push response available at context.ingest._response.',
     ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',

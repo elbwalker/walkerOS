@@ -536,6 +536,7 @@ export function getFlowSettings(
         env: processedEnv,
         variables: transformer.variables,
         definitions: transformer.definitions,
+        before: transformer.before,
         next: transformer.next,
         cache: transformer.cache,
         code: finalCode,

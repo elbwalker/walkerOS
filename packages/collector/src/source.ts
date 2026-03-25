@@ -1,6 +1,7 @@
-import type { Collector, Elb, Source, WalkerOS } from '@walkeros/core';
+import type { Collector, Elb, Ingest, Source, WalkerOS } from '@walkeros/core';
 import type { RespondOptions } from '@walkeros/core';
 import {
+  createIngest,
   getMappingValue,
   tryCatchAsync,
   compileNext,
@@ -12,7 +13,11 @@ import {
   applyUpdate,
   buildCacheContext,
 } from '@walkeros/core';
-import { walkChain, extractTransformerNextMap } from './transformer';
+import {
+  walkChain,
+  extractTransformerNextMap,
+  runTransformerChain,
+} from './transformer';
 import { getCacheStore } from './cache';
 
 /**
@@ -30,11 +35,12 @@ export async function initSource(
     env = {},
     primary,
     next,
+    before,
     cache,
   } = sourceDefinition;
 
   // Track current ingest metadata (set per-request by setIngest)
-  let currentIngest: unknown = undefined;
+  let currentIngest: Ingest = createIngest(sourceId);
   // Track current respond function (set per-request by setRespond)
   let currentRespond: import('@walkeros/core').RespondFn | undefined =
     undefined;
@@ -56,11 +62,55 @@ export async function initSource(
         )
       : undefined;
 
+  // Resolve before chain for this source (consent-exempt, pre-source preprocessing)
+  const compiledBefore = compileNext(before);
+  const isBeforeConditional = Array.isArray(before) && isRouteArray(before);
+  const staticBeforeChain =
+    !isBeforeConditional && compiledBefore
+      ? walkChain(
+          resolveNext(compiledBefore)!,
+          extractTransformerNextMap(collector.transformers),
+        )
+      : undefined;
+
   // Create wrapped push that auto-applies source mapping config, preChain, and ingest
   const wrappedPush: Collector.PushFn = async (
-    event: WalkerOS.DeepPartialEvent,
+    rawEvent: WalkerOS.DeepPartialEvent,
     options: Collector.PushOptions = {},
   ) => {
+    let event = rawEvent;
+
+    // Resolve before chain (static or conditional)
+    const beforeChain =
+      staticBeforeChain ??
+      (compiledBefore
+        ? walkChain(
+            resolveNext(compiledBefore, buildCacheContext(currentIngest))!,
+            extractTransformerNextMap(collector.transformers),
+          )
+        : []);
+
+    // Run source.before chain (consent-exempt, pre-source preprocessing)
+    if (
+      beforeChain.length > 0 &&
+      collector.transformers &&
+      Object.keys(collector.transformers).length > 0
+    ) {
+      const beforeResult = await runTransformerChain(
+        collector,
+        collector.transformers,
+        beforeChain,
+        event,
+        currentIngest,
+        currentRespond,
+      );
+      if (beforeResult === null) {
+        return { ok: true } as Elb.PushResult;
+      }
+      // Before chains use first result if fan-out occurred
+      event = Array.isArray(beforeResult) ? beforeResult[0] : beforeResult;
+    }
+
     // Source cache check (full=true by default for sources)
     if (compiledSourceCache) {
       const cacheStore = getCacheStore(compiledSourceCache, collector);
@@ -157,17 +207,25 @@ export async function initSource(
 
   /**
    * setIngest extracts metadata from raw request using config.ingest mapping.
-   * Opt-in: returns early if no config.ingest is defined.
+   * Always produces a typed Ingest with valid _meta.
    */
   const setIngest = async (value: unknown): Promise<void> => {
     if (!config.ingest) {
-      currentIngest = undefined;
+      currentIngest = createIngest(sourceId);
       return;
     }
 
-    currentIngest = await getMappingValue(value, config.ingest, {
+    const extracted = await getMappingValue(value, config.ingest, {
       collector,
     });
+
+    // Merge extracted values into a fresh Ingest
+    const fresh = createIngest(sourceId);
+    currentIngest = {
+      ...fresh,
+      ...(extracted as Record<string, unknown>),
+      _meta: fresh._meta, // Protect _meta from being overwritten by extracted data
+    };
   };
 
   const setRespond = (fn: import('@walkeros/core').RespondFn | undefined) => {

@@ -1,6 +1,6 @@
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { WalkerOS } from '@walkeros/core';
 import type { DestinationAPI } from '.';
-import { createEvent, clone, createMockLogger } from '@walkeros/core';
+import { createEvent, clone, createMockContext, createMockLogger } from '@walkeros/core';
 import { examples } from '.';
 
 describe('Destination API', () => {
@@ -25,23 +25,27 @@ describe('Destination API', () => {
 
   test('init', async () => {
     // Test with no URL - should not call sendServer
-    await destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {},
-      env: testEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config: {},
+        env: testEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
     expect(mockSendServer).not.toHaveBeenCalled();
 
     // Test with URL - should call sendServer
-    await destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: { settings: { url } },
-      env: testEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config: { settings: { url } },
+        env: testEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
     expect(mockSendServer).toHaveBeenCalledTimes(1);
 
     const [calledUrl, calledData, calledOptions] = mockSendServer.mock.calls[0];
@@ -60,15 +64,15 @@ describe('Destination API', () => {
     const customSendServer = jest.fn();
     const customEnv = { sendServer: customSendServer };
 
-    await destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {
-        settings: { url },
-      },
-      env: customEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config: { settings: { url } },
+        env: customEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
 
     expect(customSendServer).toHaveBeenCalledTimes(1);
     expect(customSendServer).toHaveBeenCalledWith(
@@ -82,15 +86,15 @@ describe('Destination API', () => {
   });
 
   test('transform', async () => {
-    await destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {
-        settings: { url, transform: () => 'transformed' },
-      },
-      env: testEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config: { settings: { url, transform: () => 'transformed' } },
+        env: testEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
       'transformed',
@@ -99,15 +103,15 @@ describe('Destination API', () => {
   });
 
   test('headers', async () => {
-    await destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {
-        settings: { url, headers: { foo: 'bar' } },
-      },
-      env: testEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config: { settings: { url, headers: { foo: 'bar' } } },
+        env: testEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
       expect.any(String),
@@ -118,15 +122,15 @@ describe('Destination API', () => {
   });
 
   test('method', async () => {
-    await destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {
-        settings: { url, method: 'POST' },
-      },
-      env: testEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config: { settings: { url, method: 'POST' } },
+        env: testEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
       expect.any(String),
@@ -137,15 +141,15 @@ describe('Destination API', () => {
   });
 
   test('timeout', async () => {
-    await destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {
-        settings: { url, timeout: 10000 },
-      },
-      env: testEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config: { settings: { url, timeout: 10000 } },
+        env: testEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
       expect.any(String),
@@ -156,16 +160,18 @@ describe('Destination API', () => {
   });
 
   test('event entity action', async () => {
-    await destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {
-        settings: { url },
-        mapping: { entity: { action: { data: 'data' } } },
-      },
-      env: testEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config: {
+          settings: { url },
+          mapping: { entity: { action: { data: 'data' } } },
+        },
+        env: testEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
 
     expect(mockSendServer).toHaveBeenCalledWith(
       url,
@@ -177,13 +183,15 @@ describe('Destination API', () => {
   test('logging', async () => {
     const testLogger = createMockLogger();
 
-    await destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: { settings: { url, method: 'PUT' } },
-      env: testEnv,
-      logger: testLogger,
-      id: 'test-api',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config: { settings: { url, method: 'PUT' } },
+        env: testEnv,
+        logger: testLogger,
+        id: 'test-api',
+      }),
+    );
 
     expect(testLogger.debug).toHaveBeenCalledWith(
       'API destination sending request',

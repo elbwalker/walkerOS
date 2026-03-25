@@ -1,7 +1,7 @@
 import type { Collector, WalkerOS } from '@walkeros/core';
 import type { Config, Settings } from '../types';
 import type { OAuth2Client } from 'google-auth-library';
-import { createMockLogger } from '@walkeros/core';
+import { createMockContext, createMockLogger } from '@walkeros/core';
 import * as examples from '../examples';
 
 jest.mock('../auth', () => ({
@@ -85,13 +85,14 @@ describe('Step Examples', () => {
       id: 'test-dm',
     })) as Config;
 
-    await destination.push(example.in as WalkerOS.Event, {
-      config: { ...config, data: configData },
-      collector: {} as Collector.Instance,
-      env: { authClient: mockAuthClient, fetch: mockFetch },
-      logger: createMockLogger(),
-      id: 'test-dm',
-    });
+    await destination.push(
+      example.in as WalkerOS.Event,
+      createMockContext({
+        config: { ...config, data: configData },
+        env: { authClient: mockAuthClient, fetch: mockFetch },
+        id: 'test-dm',
+      }),
+    );
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);

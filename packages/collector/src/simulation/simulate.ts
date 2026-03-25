@@ -1,4 +1,5 @@
 import type { Collector, Simulation, WalkerOS } from '@walkeros/core';
+import { createIngest } from '@walkeros/core';
 import { startFlow } from '../flow';
 import { wrapEnv } from '../wrapEnv';
 import type { SimulateParams } from './types';
@@ -46,6 +47,7 @@ async function runTransformer(
     collector,
     logger: collector.logger.scope('transformer').scope('sim'),
     id: 'sim',
+    ingest: createIngest('sim'),
     config: instance.config,
     env: instance.config?.env || {},
   });
@@ -55,6 +57,8 @@ async function runTransformer(
     events = [];
   } else if (result == null) {
     events = [event];
+  } else if (Array.isArray(result)) {
+    events = result.map((r) => r.event || event);
   } else {
     events = [result.event || event];
   }

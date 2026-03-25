@@ -1,6 +1,6 @@
 import type { Collector } from '@walkeros/core';
 import type { Config, Destination, Settings } from '../types';
-import { clone, createEvent, createMockLogger } from '@walkeros/core';
+import { clone, createEvent, createMockContext, createMockLogger } from '@walkeros/core';
 import * as examples from '../examples';
 
 const { env } = examples;
@@ -92,15 +92,16 @@ describe('Server Destination BigQuery', () => {
   test('push', async () => {
     const config = await getConfig({ projectId, bigquery: { credentials } });
 
-    await destination.push(event, {
-      config,
-      rule: undefined,
-      data: undefined,
-      collector: mockCollector,
-      env: testEnv,
-      logger: createMockLogger(),
-      id: 'test-bq',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config,
+        rule: undefined,
+        data: undefined,
+        env: testEnv,
+        id: 'test-bq',
+      }),
+    );
     expect(mockInsert).toHaveBeenCalledWith('insert', [
       {
         timestamp: expect.any(Date),
@@ -132,15 +133,16 @@ describe('Server Destination BigQuery', () => {
     const config = await getConfig({ projectId, bigquery: { credentials } });
     const data = { foo: 'bar' };
 
-    await destination.push(event, {
-      config,
-      rule: {},
-      data,
-      collector: mockCollector,
-      env: testEnv,
-      logger: createMockLogger(),
-      id: 'test-bq',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config,
+        rule: {},
+        data,
+        env: testEnv,
+        id: 'test-bq',
+      }),
+    );
     expect(mockInsert).toHaveBeenCalledWith('insert', [{ foo: 'bar' }]);
   });
 });

@@ -242,4 +242,90 @@ describe('validateFlowConfig', () => {
     const result = validateFlowConfig('{');
     expect(result.context).toBeUndefined();
   });
+
+  // --- Symmetric before/next ---
+
+  it('accepts source with before property', () => {
+    const json = JSON.stringify(
+      {
+        version: 3,
+        flows: {
+          test: {
+            server: {},
+            sources: {
+              express: {
+                package: '@walkeros/server-source-express',
+                before: 'decoder',
+                next: 'validate',
+              },
+            },
+            transformers: {
+              decoder: { package: '@walkeros/transformer-decoder' },
+              validate: { package: '@walkeros/transformer-validate' },
+            },
+          },
+        },
+      },
+      null,
+      2,
+    );
+    const result = validateFlowConfig(json);
+    expect(result.valid).toBe(true);
+  });
+
+  it('accepts transformer with before property', () => {
+    const json = JSON.stringify(
+      {
+        version: 3,
+        flows: {
+          test: {
+            server: {},
+            sources: { s: { package: '@walkeros/server-source-express' } },
+            transformers: {
+              enrich: {
+                package: '@walkeros/transformer-enricher',
+                before: 'lookup',
+                next: 'validate',
+              },
+              lookup: { package: '@walkeros/transformer-lookup' },
+              validate: { package: '@walkeros/transformer-validate' },
+            },
+          },
+        },
+      },
+      null,
+      2,
+    );
+    const result = validateFlowConfig(json);
+    expect(result.valid).toBe(true);
+  });
+
+  it('accepts destination with next property', () => {
+    const json = JSON.stringify(
+      {
+        version: 3,
+        flows: {
+          test: {
+            server: {},
+            sources: { s: { package: '@walkeros/server-source-express' } },
+            destinations: {
+              ga4: {
+                package: '@walkeros/server-destination-ga4',
+                before: 'redact',
+                next: 'auditLog',
+              },
+            },
+            transformers: {
+              redact: { package: '@walkeros/transformer-redact' },
+              auditLog: { package: '@walkeros/transformer-audit' },
+            },
+          },
+        },
+      },
+      null,
+      2,
+    );
+    const result = validateFlowConfig(json);
+    expect(result.valid).toBe(true);
+  });
 });

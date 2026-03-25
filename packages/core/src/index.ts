@@ -17,6 +17,7 @@ export * from './is';
 export * from './logger';
 export * from './mapping';
 export * from './mockEnv';
+export * from './mockContext';
 export * from './mockLogger';
 export * from './property';
 export * from './request';

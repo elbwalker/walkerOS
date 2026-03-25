@@ -111,11 +111,12 @@ describe('chain branching', () => {
       undefined,
     );
 
-    expect(result?.data).toEqual({ a: true, b: true });
+    const singleResult0 = Array.isArray(result) ? result[0] : result;
+    expect(singleResult0?.data).toEqual({ a: true, b: true });
   });
 
   it('should pass ingest through branched chains', async () => {
-    const ingestData = { path: '/gtag', body: { en: 'purchase' } };
+    const ingestData = { _meta: { hops: 0, path: [] }, path: '/gtag', body: { en: 'purchase' } };
 
     const router = createTransformer((event, context) => {
       expect(context.ingest).toBe(ingestData);
@@ -139,7 +140,7 @@ describe('chain branching', () => {
       ingestData,
     );
 
-    expect(result?.name).toBe('page purchase');
+    expect(!Array.isArray(result) && result?.name).toBe('page purchase');
   });
 
   it('should handle branched chain returning false (drop event)', async () => {
@@ -194,8 +195,9 @@ describe('chain branching', () => {
     );
 
     expect(order).toEqual(['enricher', 'router', 'parser']);
-    expect(result?.data).toEqual({ enriched: true });
-    expect(result?.name).toBe('parsed action');
+    const singleResult1 = Array.isArray(result) ? result[0] : result;
+    expect(singleResult1?.data).toEqual({ enriched: true });
+    expect(singleResult1?.name).toBe('parsed action');
   });
 
   it('should resolve NextRule[] in config.next after transformer executes', async () => {
@@ -239,11 +241,12 @@ describe('chain branching', () => {
       transformers,
       ['enricher'],
       { name: 'test' },
-      { type: 'api' }, // ingest
+      { _meta: { hops: 0, path: [] }, type: 'api' }, // ingest
     );
 
     expect(order).toEqual(['enricher', 'api-handler']);
-    expect(result?.data).toEqual({ enriched: true, api: true });
+    const singleResult = Array.isArray(result) ? result[0] : result;
+    expect(singleResult?.data).toEqual({ enriched: true, api: true });
   });
 
   it('should resolve NextRule[] returned from transformer push (Result.next)', async () => {
@@ -276,10 +279,11 @@ describe('chain branching', () => {
       transformers,
       ['router'],
       {},
-      { path: '/api/data' },
+      { _meta: { hops: 0, path: [] }, path: '/api/data' },
     );
 
-    expect(result?.data).toEqual({ handler: 'api' });
+    const singleResult = Array.isArray(result) ? result[0] : result;
+    expect(singleResult?.data).toEqual({ handler: 'api' });
   });
 
   it('should drop event when branch target does not exist', async () => {

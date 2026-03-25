@@ -281,7 +281,7 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
       );
 
       expect(result).not.toBeNull();
-      expect(result!.data).toEqual({
+      expect(!Array.isArray(result) && result!.data).toEqual({
         original: true,
         enriched: true,
         timestamp: 12345,
@@ -334,7 +334,7 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
       );
 
       expect(result).not.toBeNull();
-      expect(result!.data).toEqual({
+      expect(!Array.isArray(result) && result!.data).toEqual({
         original: true,
         validated: true,
         enriched: true,
@@ -449,7 +449,7 @@ describe('Inline Code Support ($code: prefix equivalent)', () => {
       );
 
       expect(transformedEvent).not.toBeNull();
-      expect(transformedEvent!.data).toEqual({
+      expect(!Array.isArray(transformedEvent) && transformedEvent!.data).toEqual({
         source: 'test',
         transformed: true,
       });

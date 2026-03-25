@@ -1,5 +1,6 @@
-import type { Collector, WalkerOS, Elb } from '@walkeros/core';
+import type { Collector, WalkerOS, Elb, Ingest } from '@walkeros/core';
 import {
+  createIngest,
   getGrantedConsent,
   processEventMapping,
   tryCatchAsync,
@@ -32,8 +33,9 @@ export function createPush<T extends Collector.Instance>(
           const { id, ingest, respond, mapping, preChain } = options;
           let partialEvent = event;
 
-          // Freeze ingest for performance (pass by reference, no copying)
-          const frozenIngest = ingest ? Object.freeze(ingest) : undefined;
+          // Create mutable Ingest — accumulates context through the pipeline
+          const pipelineIngest: Ingest =
+            (ingest as Ingest | undefined) ?? createIngest(id || 'unknown');
 
           // Apply source mapping if provided in options
           if (mapping) {
@@ -70,21 +72,53 @@ export function createPush<T extends Collector.Instance>(
             collector.transformers &&
             Object.keys(collector.transformers).length > 0
           ) {
-            const processedEvent = await runTransformerChain(
+            const chainResult = await runTransformerChain(
               collector,
               collector.transformers,
               preChain,
               partialEvent,
-              frozenIngest,
+              pipelineIngest,
               respond,
             );
 
             // Chain was stopped - event dropped
-            if (processedEvent === null) {
+            if (chainResult === null) {
               return createPushResult({ ok: true });
             }
 
-            partialEvent = processedEvent;
+            // Handle fan-out: array means multiple events from a single input
+            if (Array.isArray(chainResult)) {
+              // Process each forked event through the rest of the pipeline
+              const forkResults = await Promise.all(
+                chainResult.map(async (forkEvent) => {
+                  const enriched = prepareEvent(forkEvent);
+                  const full = createEvent(collector, enriched);
+                  return pushToDestinations(collector, full, {
+                    id,
+                    ingest: pipelineIngest,
+                    respond,
+                  });
+                }),
+              );
+
+              // Update source status
+              if (id) {
+                if (!collector.status.sources[id]) {
+                  collector.status.sources[id] = {
+                    count: 0,
+                    duration: 0,
+                  };
+                }
+                const sourceStatus = collector.status.sources[id];
+                sourceStatus.count += chainResult.length;
+                sourceStatus.lastAt = Date.now();
+                sourceStatus.duration += Date.now() - pushStart;
+              }
+
+              return forkResults[0] ?? createPushResult({ ok: true });
+            }
+
+            partialEvent = chainResult;
           }
 
           // Prepare event (add timing, source info)
@@ -96,7 +130,7 @@ export function createPush<T extends Collector.Instance>(
           // Push to destinations with id and ingest
           const result = await pushToDestinations(collector, fullEvent, {
             id,
-            ingest: frozenIngest,
+            ingest: pipelineIngest,
             respond,
           });
 

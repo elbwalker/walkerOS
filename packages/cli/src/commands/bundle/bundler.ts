@@ -1249,6 +1249,7 @@ export function buildConfigObject(
         code?: string | true;
         config?: unknown;
         env?: unknown;
+        before?: string | string[];
         next?: string | string[] | Array<{ match: unknown; next: unknown }>;
         cache?: unknown;
         primary?: boolean;
@@ -1262,6 +1263,7 @@ export function buildConfigObject(
         config?: unknown;
         env?: unknown;
         before?: string | string[];
+        next?: string | string[];
         cache?: unknown;
       }
     >;
@@ -1272,6 +1274,7 @@ export function buildConfigObject(
         code?: string | true;
         config?: unknown;
         env?: unknown;
+        before?: string | string[];
         next?: string;
         cache?: unknown;
       }
@@ -1343,6 +1346,10 @@ export function buildConfigObject(
       const envStr = source.env
         ? `,\n      env: ${processConfigValue(source.env)}`
         : '';
+      // Include 'before' for pre-source transformer chains
+      const beforeStr = source.before
+        ? `,\n      before: ${JSON.stringify(source.before)}`
+        : '';
       // Include 'next' for source transformer chains
       const nextStr = source.next
         ? `,\n      next: ${JSON.stringify(source.next)}`
@@ -1354,7 +1361,7 @@ export function buildConfigObject(
       // Include 'primary' for primary source marking
       const primaryStr = source.primary ? `,\n      primary: true` : '';
 
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${nextStr}${cacheStr}${primaryStr}\n    }`;
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${beforeStr}${nextStr}${cacheStr}${primaryStr}\n    }`;
     });
 
   // Build destinations (skip deprecated code: true entries)
@@ -1390,12 +1397,16 @@ export function buildConfigObject(
       const beforeStr = dest.before
         ? `,\n      before: ${JSON.stringify(dest.before)}`
         : '';
+      // Include 'next' for post-push transformer chains
+      const nextStr = dest.next
+        ? `,\n      next: ${JSON.stringify(dest.next)}`
+        : '';
       // Include 'cache' for destination-level caching
       const destCacheStr = dest.cache
         ? `,\n      cache: ${JSON.stringify(dest.cache)}`
         : '';
 
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${beforeStr}${destCacheStr}\n    }`;
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${beforeStr}${nextStr}${destCacheStr}\n    }`;
     });
 
   // Build transformers (skip deprecated code: true entries)
@@ -1429,6 +1440,10 @@ export function buildConfigObject(
       const envStr = transformer.env
         ? `,\n      env: ${processConfigValue(transformer.env)}`
         : '';
+      // Include 'before' for pre-transformer chains
+      const beforeStr = transformer.before
+        ? `,\n      before: ${JSON.stringify(transformer.before)}`
+        : '';
       // Include 'next' for transformer chains (top-level, consistent with before)
       const nextStr = transformer.next
         ? `,\n      next: ${JSON.stringify(transformer.next)}`
@@ -1438,7 +1453,7 @@ export function buildConfigObject(
         ? `,\n      cache: ${JSON.stringify(transformer.cache)}`
         : '';
 
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${nextStr}${tCacheStr}\n    }`;
+      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${beforeStr}${nextStr}${tCacheStr}\n    }`;
     });
 
   // Build stores

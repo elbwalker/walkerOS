@@ -1,6 +1,6 @@
 import type { Config, Destination, Env } from '../types';
 import type { Collector, WalkerOS } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import { createMockContext, createMockLogger } from '@walkeros/core';
 import * as examples from '../examples';
 
 const { env } = examples;
@@ -54,13 +54,14 @@ describe('Step Examples', () => {
       id: 'test-firehose',
     })) as Config;
 
-    await destination.push(example.in as WalkerOS.Event, {
-      config,
-      collector: {} as Collector.Instance,
-      env: testEnv,
-      logger: createMockLogger(),
-      id: 'test-firehose',
-    });
+    await destination.push(
+      example.in as WalkerOS.Event,
+      createMockContext({
+        config,
+        env: testEnv,
+        id: 'test-firehose',
+      }),
+    );
 
     expect(mockSend).toHaveBeenCalledTimes(1);
     const command = mockSend.mock.calls[0][0];

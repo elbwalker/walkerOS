@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import type { WalkerOS, Mapping, Destination } from '@walkeros/core';
+import { createIngest } from '@walkeros/core';
 import {
   createEvent,
   tryCatchAsync,
@@ -124,6 +125,7 @@ export function DestinationDemo({
         const context: Destination.PushContext = {
           id: 'demo',
           collector,
+          ingest: createIngest('demo'),
           config,
           data: processed.data,
           env: destination.env || {},

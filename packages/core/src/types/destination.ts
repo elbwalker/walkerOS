@@ -9,6 +9,7 @@ import type {
   Context as BaseContext,
 } from '.';
 import type { DestroyFn } from './lifecycle';
+import type { Ingest } from './ingest';
 
 /**
  * Base environment requirements interface for walkerOS destinations
@@ -101,6 +102,8 @@ export interface Config<T extends TypesGeneric = Types> {
   require?: string[];
   /** Transformer chain to run after collector processing but before this destination. */
   before?: Transformer.Next;
+  /** Transformer chain to run after destination push completes. Push response available at ingest._response. */
+  next?: Transformer.Next;
   /** Cache configuration for deduplication (step-level: skip push on HIT). */
   cache?: import('./cache').Cache;
 }
@@ -124,6 +127,7 @@ export type Init<T extends TypesGeneric = Types> = {
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
   before?: Transformer.Next;
+  next?: Transformer.Next;
   cache?: import('./cache').Cache;
 };
 
@@ -149,14 +153,14 @@ export interface Context<
 export interface PushContext<
   T extends TypesGeneric = Types,
 > extends Context<T> {
-  ingest?: unknown;
+  ingest: Ingest;
   rule?: WalkerOSMapping.Rule<Mapping<T>>;
 }
 
 export interface PushBatchContext<
   T extends TypesGeneric = Types,
 > extends Context<T> {
-  ingest?: unknown;
+  ingest: Ingest;
   rule?: WalkerOSMapping.Rule<Mapping<T>>;
 }
 

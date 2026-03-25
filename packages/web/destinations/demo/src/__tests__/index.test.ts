@@ -1,26 +1,24 @@
 import type { WalkerOS } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import { createMockContext, createMockLogger } from '@walkeros/core';
 import { destinationDemo } from '../index';
 
 describe('Demo Destination', () => {
   test('initializes and logs init message', () => {
     const mockLog = jest.fn();
-    const mockCollector = {} as any;
 
-    destinationDemo.init!({
-      collector: mockCollector,
-      config: { settings: { name: 'test' } },
-      env: { log: mockLog },
-      logger: createMockLogger(),
-      id: 'test-destination',
-    });
+    destinationDemo.init!(
+      createMockContext({
+        config: { settings: { name: 'test' } },
+        env: { log: mockLog },
+        id: 'test-destination',
+      }),
+    );
 
     expect(mockLog).toHaveBeenCalledWith('[test] initialized');
   });
 
   test('logs full event when values not specified', () => {
     const mockLog = jest.fn();
-    const mockCollector = {} as any;
 
     const event: WalkerOS.Event = {
       name: 'page view',
@@ -43,13 +41,14 @@ describe('Demo Destination', () => {
       version: { source: 'test', tagging: 1 },
     };
 
-    destinationDemo.push(event, {
-      collector: mockCollector,
-      config: { settings: { name: 'full' } },
-      env: { log: mockLog },
-      logger: createMockLogger(),
-      id: 'test-destination',
-    });
+    destinationDemo.push(
+      event,
+      createMockContext({
+        config: { settings: { name: 'full' } },
+        env: { log: mockLog },
+        id: 'test-destination',
+      }),
+    );
 
     expect(mockLog).toHaveBeenCalledTimes(1);
     const logCall = mockLog.mock.calls[0][0];
@@ -60,7 +59,6 @@ describe('Demo Destination', () => {
 
   test('logs only specified values with dot notation', () => {
     const mockLog = jest.fn();
-    const mockCollector = {} as any;
 
     const event: WalkerOS.Event = {
       name: 'page view',
@@ -83,18 +81,19 @@ describe('Demo Destination', () => {
       version: { source: 'test', tagging: 1 },
     };
 
-    destinationDemo.push(event, {
-      collector: mockCollector,
-      config: {
-        settings: {
-          name: 'filtered',
-          values: ['name', 'data.title', 'timestamp'],
+    destinationDemo.push(
+      event,
+      createMockContext({
+        config: {
+          settings: {
+            name: 'filtered',
+            values: ['name', 'data.title', 'timestamp'],
+          },
         },
-      },
-      env: { log: mockLog },
-      logger: createMockLogger(),
-      id: 'test-destination',
-    });
+        env: { log: mockLog },
+        id: 'test-destination',
+      }),
+    );
 
     const logCall = mockLog.mock.calls[0][0];
     expect(logCall).toContain('[filtered]');
@@ -107,7 +106,6 @@ describe('Demo Destination', () => {
 
   test('handles nested paths correctly', () => {
     const mockLog = jest.fn();
-    const mockCollector = {} as any;
 
     const event: WalkerOS.Event = {
       name: 'product view',
@@ -136,17 +134,18 @@ describe('Demo Destination', () => {
       version: { source: 'test', tagging: 1 },
     };
 
-    destinationDemo.push(event, {
-      collector: mockCollector,
-      config: {
-        settings: {
-          values: ['user.id', 'data.product.name', 'data.product.price'],
+    destinationDemo.push(
+      event,
+      createMockContext({
+        config: {
+          settings: {
+            values: ['user.id', 'data.product.name', 'data.product.price'],
+          },
         },
-      },
-      env: { log: mockLog },
-      logger: createMockLogger(),
-      id: 'test-destination',
-    });
+        env: { log: mockLog },
+        id: 'test-destination',
+      }),
+    );
 
     const logCall = mockLog.mock.calls[0][0];
     expect(logCall).toContain('"user.id": "U123"');
@@ -158,7 +157,6 @@ describe('Demo Destination', () => {
   test('uses console.log when env.log not provided', () => {
     const originalLog = console.log;
     console.log = jest.fn();
-    const mockCollector = {} as any;
 
     const event: WalkerOS.Event = {
       name: 'test',
@@ -181,13 +179,14 @@ describe('Demo Destination', () => {
       version: { source: 'test', tagging: 1 },
     };
 
-    destinationDemo.push(event, {
-      collector: mockCollector,
-      config: {},
-      env: {},
-      logger: createMockLogger(),
-      id: 'test-destination',
-    });
+    destinationDemo.push(
+      event,
+      createMockContext({
+        config: {},
+        env: {},
+        id: 'test-destination',
+      }),
+    );
 
     expect(console.log).toHaveBeenCalled();
 
@@ -196,7 +195,6 @@ describe('Demo Destination', () => {
 
   test('handles missing nested values gracefully', () => {
     const mockLog = jest.fn();
-    const mockCollector = {} as any;
 
     const event: WalkerOS.Event = {
       name: 'test',
@@ -219,17 +217,18 @@ describe('Demo Destination', () => {
       version: { source: 'test', tagging: 1 },
     };
 
-    destinationDemo.push(event, {
-      collector: mockCollector,
-      config: {
-        settings: {
-          values: ['name', 'missing.path', 'data.missing'],
+    destinationDemo.push(
+      event,
+      createMockContext({
+        config: {
+          settings: {
+            values: ['name', 'missing.path', 'data.missing'],
+          },
         },
-      },
-      env: { log: mockLog },
-      logger: createMockLogger(),
-      id: 'test-destination',
-    });
+        env: { log: mockLog },
+        id: 'test-destination',
+      }),
+    );
 
     const logCall = mockLog.mock.calls[0][0];
     expect(logCall).toContain('"name": "test"');

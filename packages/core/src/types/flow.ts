@@ -12,10 +12,11 @@
  * ## Connection Rules
  *
  * Sources use `next` to connect to transformers (pre-collector chain).
- * Sources cannot have `before`.
+ * Sources use `before` for consent-exempt pre-source preprocessing
+ * (decode, validate, authenticate raw input before the source.next chain).
  *
  * Destinations use `before` to connect to transformers (post-collector chain).
- * Destinations cannot have `next`.
+ * Destinations use `next` for post-push processing.
  *
  * Transformers use `next` to chain to other transformers. The same transformer
  * pool is shared by both pre-collector and post-collector chains.
@@ -27,7 +28,7 @@
  * in the collector module (visited-set detection).
  *
  * ```
- * Source → [next → Transformer chain] → Collector → [before → Transformer chain] → Destination
+ * Source → [before → Preprocessing] → [next → Transformer chain] → Collector → [before → Transformer chain] → Destination → [next → Post-push]
  * ```
  *
  * @packageDocumentation
@@ -579,6 +580,17 @@ export interface SourceReference {
    */
   next?: string | string[];
 
+  /**
+   * First transformer in pre-source chain (consent-exempt).
+   *
+   * @remarks
+   * Runs before source.next chain. Consent-exempt because no analytics
+   * event exists yet — these transformers handle transport-level preprocessing
+   * (decode, validate, authenticate, normalize raw input).
+   * Raw request data is available in context.ingest.
+   */
+  before?: string | string[];
+
   /** Cache configuration for this source. */
   cache?: import('./cache').Cache;
 
@@ -646,6 +658,16 @@ export interface TransformerReference {
    * Merged with default transformer environment.
    */
   env?: unknown;
+
+  /**
+   * Pre-transformer chain.
+   *
+   * @remarks
+   * Runs before this transformer's push function.
+   * Enables pre-processing or context loading before the main transform.
+   * Uses the same chain resolution as source.next and destination.before.
+   */
+  before?: string | string[];
 
   /**
    * Next transformer in chain.
@@ -834,6 +856,16 @@ export interface DestinationReference {
    * Can be an array for explicit chain control (bypasses transformer.next resolution).
    */
   before?: string | string[];
+
+  /**
+   * First transformer in post-push chain.
+   *
+   * @remarks
+   * Runs after destination.push completes. The push response is available
+   * at context.ingest._response. Consent is inherited from the destination
+   * gate — no separate consent check needed.
+   */
+  next?: string | string[];
 
   /** Cache configuration for this destination. */
   cache?: import('./cache').Cache;

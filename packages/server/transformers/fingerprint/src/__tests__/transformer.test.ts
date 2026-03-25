@@ -1,40 +1,26 @@
-import type { Collector, Logger, Transformer, WalkerOS } from '@walkeros/core';
+import type { Transformer, WalkerOS } from '@walkeros/core';
+import { createMockContext, createMockLogger } from '@walkeros/core';
 import { transformerFingerprint } from '../transformer';
 import type { FingerprintSettings } from '../types';
 
 describe('Transformer Fingerprint', () => {
-  const mockLogger: Logger.Instance = {
-    error: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    debug: jest.fn(),
-    throw: jest.fn() as unknown as Logger.ThrowFn,
-    json: jest.fn(),
-    scope: jest.fn().mockReturnThis(),
-  };
-
-  const mockCollector = {} as Collector.Instance;
+  const mockLogger = createMockLogger();
 
   const createInitContext = (
     config: Transformer.Config<Transformer.Types<FingerprintSettings>>,
-  ): Transformer.Context<Transformer.Types<FingerprintSettings>> => ({
-    collector: mockCollector,
-    config,
-    env: {},
-    logger: mockLogger,
-    id: 'test-fingerprint',
-  });
+  ) =>
+    createMockContext<Transformer.Types<FingerprintSettings>>({
+      config,
+      logger: mockLogger,
+      id: 'test-fingerprint',
+    });
 
-  const createPushContext = (
-    ingest: unknown = {},
-  ): Transformer.Context<Transformer.Types<FingerprintSettings>> => ({
-    collector: mockCollector,
-    config: {},
-    env: {},
-    logger: mockLogger,
-    id: 'test-fingerprint',
-    ingest,
-  });
+  const createPushContext = (ingest: unknown = {}) =>
+    createMockContext<Transformer.Types<FingerprintSettings>>({
+      logger: mockLogger,
+      id: 'test-fingerprint',
+      ingest,
+    });
 
   const baseEvent: WalkerOS.DeepPartialEvent = {
     name: 'page view',

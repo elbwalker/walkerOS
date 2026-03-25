@@ -2,7 +2,7 @@ import { destinationGtag, resetConsentState } from '../index';
 import { examples } from '../dev';
 import type { Settings, Rule, Include } from '../types';
 import { type WalkerOS, type Collector } from '@walkeros/core';
-import { clone, createMockLogger } from '@walkeros/core';
+import { clone, createMockContext, createMockLogger } from '@walkeros/core';
 
 // Mock all tool implementations
 jest.mock('../ga4', () => ({
@@ -215,15 +215,17 @@ describe('Unified Gtag Destination', () => {
       const config = { settings };
       const mapping: Rule = { settings: { ga4: { include: ['data'] } } };
 
-      await destinationGtag.push(mockEvent, {
-        config,
-        rule: mapping,
-        data: mockData,
-        env: mockEnv,
-        collector: mockCollector,
-        logger: mockLogger,
-        id: 'test',
-      });
+      await destinationGtag.push(
+        mockEvent,
+        createMockContext({
+          config,
+          rule: mapping,
+          data: mockData,
+          env: mockEnv,
+          logger: mockLogger,
+          id: 'test',
+        }),
+      );
 
       expect(pushGA4Event).toHaveBeenCalledWith(
         mockEvent,
@@ -245,15 +247,17 @@ describe('Unified Gtag Destination', () => {
         settings: { ads: {} },
       };
 
-      await destinationGtag.push(mockEvent, {
-        config,
-        rule: mapping,
-        data: mockData,
-        env: mockEnv,
-        collector: mockCollector,
-        logger: mockLogger,
-        id: 'test',
-      });
+      await destinationGtag.push(
+        mockEvent,
+        createMockContext({
+          config,
+          rule: mapping,
+          data: mockData,
+          env: mockEnv,
+          logger: mockLogger,
+          id: 'test',
+        }),
+      );
 
       expect(pushAdsEvent).toHaveBeenCalledWith(
         mockEvent,
@@ -273,15 +277,17 @@ describe('Unified Gtag Destination', () => {
       const config = { settings };
       const mapping = { settings: { ads: {} } };
 
-      await destinationGtag.push(mockEvent, {
-        config,
-        rule: mapping,
-        data: mockData,
-        env: mockEnv,
-        collector: mockCollector,
-        logger: mockLogger,
-        id: 'test',
-      });
+      await destinationGtag.push(
+        mockEvent,
+        createMockContext({
+          config,
+          rule: mapping,
+          data: mockData,
+          env: mockEnv,
+          logger: mockLogger,
+          id: 'test',
+        }),
+      );
 
       expect(pushAdsEvent).not.toHaveBeenCalled();
     });
@@ -293,15 +299,17 @@ describe('Unified Gtag Destination', () => {
       const config = { settings };
       const mapping = { settings: { gtm: {} } };
 
-      await destinationGtag.push(mockEvent, {
-        config,
-        rule: mapping,
-        data: mockData,
-        env: mockEnv,
-        collector: mockCollector,
-        logger: mockLogger,
-        id: 'test',
-      });
+      await destinationGtag.push(
+        mockEvent,
+        createMockContext({
+          config,
+          rule: mapping,
+          data: mockData,
+          env: mockEnv,
+          logger: mockLogger,
+          id: 'test',
+        }),
+      );
 
       expect(pushGTMEvent).toHaveBeenCalledWith(
         mockEvent,
@@ -329,15 +337,17 @@ describe('Unified Gtag Destination', () => {
         },
       };
 
-      await destinationGtag.push(mockEvent, {
-        config,
-        rule: mapping,
-        data: mockData,
-        env: mockEnv,
-        collector: mockCollector,
-        logger: mockLogger,
-        id: 'test',
-      });
+      await destinationGtag.push(
+        mockEvent,
+        createMockContext({
+          config,
+          rule: mapping,
+          data: mockData,
+          env: mockEnv,
+          logger: mockLogger,
+          id: 'test',
+        }),
+      );
 
       expect(pushGA4Event).toHaveBeenCalledWith(
         mockEvent,
@@ -373,14 +383,16 @@ describe('Unified Gtag Destination', () => {
       const config = { settings };
 
       await expect(
-        destinationGtag.push(mockEvent, {
-          config,
-          mapping: {},
-          data: mockData,
-          env: mockEnv,
-          collector: mockCollector,
-          logger: mockLogger,
-        }),
+        destinationGtag.push(
+          mockEvent,
+          createMockContext({
+            config,
+            mapping: {},
+            data: mockData,
+            env: mockEnv,
+            logger: mockLogger,
+          }),
+        ),
       ).resolves.not.toThrow();
     });
 
@@ -391,15 +403,17 @@ describe('Unified Gtag Destination', () => {
       const config = { settings };
       const mapping = {};
 
-      await destinationGtag.push(mockEvent, {
-        config,
-        rule: mapping,
-        data: mockData,
-        env: mockEnv,
-        collector: mockCollector,
-        logger: mockLogger,
-        id: 'test',
-      });
+      await destinationGtag.push(
+        mockEvent,
+        createMockContext({
+          config,
+          rule: mapping,
+          data: mockData,
+          env: mockEnv,
+          logger: mockLogger,
+          id: 'test',
+        }),
+      );
 
       expect(pushGA4Event).toHaveBeenCalledWith(
         mockEvent,
@@ -442,13 +456,15 @@ describe('Unified Gtag Destination', () => {
 
         // Call a regular event
         const event = { name: 'button click', data: { id: 'test-btn' } };
-        destination.push(event as any, {
-          config: destination.config,
-          data: {},
-          env: mockEnvWithGtag,
-          collector: mockCollector,
-          logger: mockLogger,
-        });
+        destination.push(
+          event as any,
+          createMockContext({
+            config: destination.config,
+            data: {},
+            env: mockEnvWithGtag,
+            logger: mockLogger,
+          }),
+        );
 
         // Verify no gtag consent calls were made
         expect(mockGtag).not.toHaveBeenCalledWith(
@@ -495,13 +511,15 @@ describe('Unified Gtag Destination', () => {
 
         // Call a regular event
         const event = { name: 'page view', data: { title: 'Test Page' } };
-        await destination.push(event as any, {
-          config: destination.config,
-          data: {},
-          env: mockEnvWithGtag,
-          collector: mockCollector,
-          logger: mockLogger,
-        });
+        await destination.push(
+          event as any,
+          createMockContext({
+            config: destination.config,
+            data: {},
+            env: mockEnvWithGtag,
+            logger: mockLogger,
+          }),
+        );
 
         // Verify regular event processing still works
         expect(pushGA4Event).toHaveBeenCalled();
@@ -603,13 +621,15 @@ describe('Unified Gtag Destination', () => {
 
         // Call a regular event
         const event = { name: 'order complete', data: { value: 99.99 } };
-        await destination.push(event as any, {
-          config: destination.config,
-          data: {},
-          env: mockEnvWithGtag,
-          collector: mockCollector,
-          logger: mockLogger,
-        });
+        await destination.push(
+          event as any,
+          createMockContext({
+            config: destination.config,
+            data: {},
+            env: mockEnvWithGtag,
+            logger: mockLogger,
+          }),
+        );
 
         // Verify regular event processing still works
         expect(pushGA4Event).toHaveBeenCalled();

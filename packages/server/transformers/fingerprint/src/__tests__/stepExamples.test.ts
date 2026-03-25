@@ -1,4 +1,5 @@
-import type { Collector, Logger, Transformer, WalkerOS } from '@walkeros/core';
+import type { Transformer, WalkerOS } from '@walkeros/core';
+import { createMockContext, createMockLogger } from '@walkeros/core';
 import { transformerFingerprint } from '../transformer';
 import type { FingerprintSettings } from '../types';
 import { examples } from '../dev';
@@ -6,38 +7,21 @@ import { examples } from '../dev';
 type FpTypes = Transformer.Types<FingerprintSettings>;
 
 describe('Step Examples', () => {
-  const mockLogger: Logger.Instance = {
-    error: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    debug: jest.fn(),
-    throw: jest.fn() as unknown as Logger.ThrowFn,
-    json: jest.fn(),
-    scope: jest.fn().mockReturnThis(),
-  };
+  const mockLogger = createMockLogger();
 
-  const mockCollector = {} as Collector.Instance;
+  const createInitContext = (config: Transformer.Config<FpTypes>) =>
+    createMockContext<FpTypes>({
+      config,
+      logger: mockLogger,
+      id: 'test-fingerprint',
+    });
 
-  const createInitContext = (
-    config: Transformer.Config<FpTypes>,
-  ): Transformer.Context<FpTypes> => ({
-    collector: mockCollector,
-    config,
-    env: {},
-    logger: mockLogger,
-    id: 'test-fingerprint',
-  });
-
-  const createPushContext = (
-    ingest: unknown = {},
-  ): Transformer.Context<FpTypes> => ({
-    collector: mockCollector,
-    config: {},
-    env: {},
-    logger: mockLogger,
-    id: 'test-fingerprint',
-    ingest,
-  });
+  const createPushContext = (ingest: unknown = {}) =>
+    createMockContext<FpTypes>({
+      logger: mockLogger,
+      id: 'test-fingerprint',
+      ingest,
+    });
 
   beforeEach(() => {
     jest.clearAllMocks();

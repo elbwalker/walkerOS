@@ -1,29 +1,19 @@
-import type { Collector, Logger, Transformer, WalkerOS } from '@walkeros/core';
+import type { Transformer, WalkerOS } from '@walkeros/core';
+import { createMockContext, createMockLogger } from '@walkeros/core';
 import { transformerValidator } from '../transformer';
 import type { ValidatorSettings } from '../types';
 
 describe('Contract Integration Tests', () => {
-  const mockLogger: Logger.Instance = {
-    error: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    debug: jest.fn(),
-    throw: jest.fn() as unknown as Logger.ThrowFn,
-    json: jest.fn(),
-    scope: jest.fn().mockReturnThis(),
-  };
-
-  const mockCollector = {} as Collector.Instance;
+  const mockLogger = createMockLogger();
 
   const createContext = (
     config: Transformer.Config<Transformer.Types<ValidatorSettings>>,
-  ): Transformer.Context<Transformer.Types<ValidatorSettings>> => ({
-    collector: mockCollector,
-    config,
-    env: {},
-    logger: mockLogger,
-    id: 'test-transformer',
-  });
+  ) =>
+    createMockContext<Transformer.Types<ValidatorSettings>>({
+      config,
+      logger: mockLogger,
+      id: 'test-transformer',
+    });
 
   const createEvent = (
     entity: string,

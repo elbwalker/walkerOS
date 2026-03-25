@@ -1,33 +1,23 @@
 import type { WalkerOS, Transformer } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import { createMockContext, createMockLogger } from '@walkeros/core';
 import { transformerDemo } from '../index';
 import type { Types } from '../types';
 
 describe('Demo Transformer', () => {
-  const mockCollector = {} as any;
-
   // Create init context for transformer initialization
   const createInitContext = (
     config: Partial<Transformer.Config<Types>> = {},
     env: Partial<Transformer.Env<Types>> = {},
   ) =>
-    ({
-      collector: mockCollector,
+    createMockContext<Types>({
       config,
       env,
-      logger: createMockLogger(),
       id: 'test-transformer',
-    }) as Transformer.Context<Types>;
+    });
 
-  // Use 'as any' to bypass strict type checking in tests
+  // Create push context for transformer push calls
   const createContext = () =>
-    ({
-      collector: mockCollector,
-      config: {},
-      env: {},
-      logger: createMockLogger(),
-      id: 'test-transformer',
-    }) as any;
+    createMockContext<Types>({ id: 'test-transformer' });
 
   const createEvent = (
     overrides: Partial<WalkerOS.DeepPartialEvent> = {},

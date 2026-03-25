@@ -1,5 +1,5 @@
-import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import type { Transformer, WalkerOS } from '@walkeros/core';
+import { createMockContext } from '@walkeros/core';
 import { transformerValidator } from '../transformer';
 import type { ValidatorSettings } from '../types';
 import { examples } from '../dev';
@@ -31,13 +31,10 @@ describe('Step Examples', () => {
     const config: Transformer.Config<Transformer.Types<ValidatorSettings>> = {
       settings,
     };
-    const context: Transformer.Context<Transformer.Types<ValidatorSettings>> = {
-      collector: {} as Collector.Instance,
+    const context = createMockContext<Transformer.Types<ValidatorSettings>>({
       config,
-      env: {},
-      logger: createMockLogger(),
       id: 'test-validator',
-    };
+    });
     const transformer = await transformerValidator(context);
     const result = await transformer.push(
       example.in as WalkerOS.DeepPartialEvent,
