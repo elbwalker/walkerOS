@@ -156,6 +156,11 @@ export async function pushToDestinations(
   const results = await Promise.all(
     // Process all destinations in parallel
     Object.entries(destinations || {}).map(async ([id, destination]) => {
+      // Disabled destinations are completely skipped — no queuing, no init, no processing
+      if (destination.config.disabled) {
+        return { id, destination, skipped: true };
+      }
+
       // Create a queue of events to be processed
       let currentQueue = (destination.queuePush || []).map((event) => ({
         ...event,
@@ -364,7 +369,12 @@ export async function pushToDestinations(
           totalDuration += Date.now() - pushStart;
 
           // Destination cache MISS: store the push result after attempt
-          if (cacheMiss && dCacheStore) {
+          if (
+            cacheMiss &&
+            dCacheStore &&
+            !destination.config.simulate &&
+            destination.config.mock === undefined
+          ) {
             storeCache(
               dCacheStore,
               cacheMiss.key,
@@ -571,10 +581,25 @@ export async function destinationPush<Destination extends Destination.Instance>(
     },
   };
 
+  // Mock/simulate interception — replaces the actual destination.push() call
+  if (config.mock !== undefined) {
+    destLogger.debug('mock', { event: processed.event.name });
+    return config.mock;
+  }
+  if (config.simulate) {
+    destLogger.debug('simulate', { event: processed.event.name });
+    return { simulated: true, event: processed.event, data: processed.data };
+  }
+
   const eventMapping = processed.mapping;
   const mappingKey = processed.mappingKey || '* *';
 
-  if (eventMapping?.batch && destination.pushBatch) {
+  if (
+    eventMapping?.batch &&
+    destination.pushBatch &&
+    !config.simulate &&
+    config.mock === undefined
+  ) {
     // Initialize batch registry on destination (not on shared mapping config)
     destination.batches = destination.batches || {};
 

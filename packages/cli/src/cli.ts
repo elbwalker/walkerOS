@@ -94,6 +94,9 @@ program
     'step target in type.name format (e.g. "source.browser", "destination.gtag")',
   )
   .action(async (file, options) => {
+    console.warn(
+      '\x1b[33m⚠ "walkeros simulate" is deprecated. Use "walkeros push --simulate" instead.\x1b[0m',
+    );
     await simulateCommand({
       config: file,
       output: options.output,
@@ -121,6 +124,24 @@ program
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
+  .option(
+    '--simulate <step>',
+    'simulate a destination step (repeatable)',
+    (val: string, arr: string[]) => {
+      arr.push(val);
+      return arr;
+    },
+    [] as string[],
+  )
+  .option(
+    '--mock <step=value>',
+    'mock a destination step with return value (repeatable)',
+    (val: string, arr: string[]) => {
+      arr.push(val);
+      return arr;
+    },
+    [] as string[],
+  )
   .action(async (file, options) => {
     await pushCommand({
       config: file,
@@ -131,6 +152,8 @@ program
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,
+      simulate: options.simulate,
+      mock: options.mock,
     });
   });
 

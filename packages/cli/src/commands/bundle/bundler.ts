@@ -1064,6 +1064,15 @@ export async function createEntryPoint(
     return importsCode ? `${importsCode}\n\n${userCode}` : userCode;
   }
 
+  // Ensure deepMerge is imported (required for context overrides in wrapper)
+  const hasDeepMergeImport = importStatements.some(
+    (s) => s.includes('deepMerge') && s.includes('@walkeros/core'),
+  );
+  if (!hasDeepMergeImport) {
+    importStatements.push(`import { deepMerge } from '@walkeros/core';`);
+  }
+  const finalImportsCode = importStatements.join('\n');
+
   // Build config object programmatically (DRY - single source of truth)
   const { storesDeclaration, configObject } = buildConfigObject(
     flowSettings,
@@ -1083,7 +1092,9 @@ export async function createEntryPoint(
   );
 
   // Assemble final code
-  return importsCode ? `${importsCode}\n\n${wrappedCode}` : wrappedCode;
+  return finalImportsCode
+    ? `${finalImportsCode}\n\n${wrappedCode}`
+    : wrappedCode;
 }
 
 interface EsbuildError {
@@ -1571,15 +1582,16 @@ export function generatePlatformWrapper(
     const assignments =
       windowAssignments.length > 0 ? '\n' + windowAssignments.join('\n') : '';
 
-    return `(async () => {
+    return `(async (context) => {
   ${storesDeclaration}
 
   const config = ${configObject};
+  if (context) deepMerge(config, context);
 
   ${userCode}
 
   const { collector, elb } = await startFlow(config);${assignments}
-})();`;
+})(typeof window !== 'undefined' && window.__elbConfig || undefined);`;
   } else {
     // Server platform: Export default function
     const codeSection = userCode ? `\n  ${userCode}\n` : '';
@@ -1588,10 +1600,8 @@ export function generatePlatformWrapper(
   ${storesDeclaration}
 
   const config = ${configObject};${codeSection}
-  // Apply context overrides (e.g., logger config from CLI)
-  if (context.logger) {
-    config.logger = { ...config.logger, ...context.logger };
-  }
+  // Apply context overrides (deep merge into config)
+  if (Object.keys(context).length) deepMerge(config, context);
 
   // Apply source settings overrides from runner (e.g., port: undefined to prevent self-listen)
   if (context.sourceSettings && config.sources) {

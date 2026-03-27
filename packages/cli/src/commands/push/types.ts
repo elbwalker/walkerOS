@@ -12,6 +12,8 @@ export interface PushCommandOptions {
   verbose?: boolean;
   silent?: boolean;
   platform?: 'web' | 'server';
+  simulate?: string[];
+  mock?: string[];
 }
 
 /**

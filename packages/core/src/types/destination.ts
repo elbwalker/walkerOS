@@ -106,6 +106,12 @@ export interface Config<T extends TypesGeneric = Types> {
   next?: Transformer.Next;
   /** Cache configuration for deduplication (step-level: skip push on HIT). */
   cache?: import('./cache').Cache;
+  /** Completely skip this destination — no init, no push, no queuing. */
+  disabled?: boolean;
+  /** Return this value instead of calling push(). Uses !== undefined check to support falsy values. */
+  mock?: unknown;
+  /** Capture event+context instead of calling push(). */
+  simulate?: boolean;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<

@@ -66,7 +66,115 @@ export function substituteEnvVariables(value: string): string {
 }
 
 /**
+ * Resolve raw string content from a URL, file path, or inline string.
+ *
+ * Detection priority:
+ * 1. URL (http://, https://) — download content
+ * 2. Existing file path — read file content
+ * 3. Inline string — return as-is
+ *
+ * @param input - URL, file path, or inline string
+ * @returns Raw string content and the resolved absolute path (if file-based)
+ * @throws Error if file not found or download fails
+ */
+async function resolveContent(input: string): Promise<string> {
+  const trimmed = input.trim();
+
+  // 1. Check if input is a URL
+  if (isUrl(trimmed)) {
+    return fetchContentString(trimmed);
+  }
+
+  // 2. Check if file path exists
+  const absolutePath = path.resolve(trimmed);
+  if (await fs.pathExists(absolutePath)) {
+    return fs.readFile(absolutePath, 'utf-8');
+  }
+
+  // 3. Inline content — return as-is
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    return trimmed;
+  }
+
+  // 4. Nothing matched — file not found
+  throw new Error(`Configuration file not found: ${absolutePath}`);
+}
+
+/**
+ * Load configuration from a file path, URL, or inline string.
+ *
+ * Supports two modes:
+ * - `json: true` (default) — resolves content and parses as JSON
+ * - `json: false` — resolves content and returns raw string
+ *
+ * Detection priority:
+ * 1. URL (http://, https://) — download content
+ * 2. Existing file path — read file content
+ * 3. Inline string (starting with { or [) — use directly
+ *
+ * @param input - Path to file, HTTP/HTTPS URL, or inline string
+ * @param options - Optional settings
+ * @param options.json - Parse as JSON (default: true)
+ * @returns Parsed object (json: true) or raw string (json: false)
+ * @throws Error if file not found, download fails, or invalid JSON
+ *
+ * @example
+ * ```typescript
+ * // JSON mode (default) — same as loadJsonConfig
+ * const config = await loadConfig('./config.json')
+ * const config = await loadConfig('https://example.com/config.json')
+ * const config = await loadConfig('{"version":3,"flows":{}}')
+ *
+ * // Raw string mode — returns file/URL content as string
+ * const code = await loadConfig('./bundle.js', { json: false })
+ * ```
+ */
+export async function loadConfig<T = unknown>(
+  input: string,
+  options?: { json?: boolean },
+): Promise<T | string> {
+  const json = options?.json !== false; // default true
+
+  if (!json) {
+    return resolveContent(input);
+  }
+
+  // JSON mode — resolve content then parse
+  const trimmed = input.trim();
+
+  try {
+    const content = await resolveContent(trimmed);
+
+    // Parse the resolved content as JSON
+    return JSON.parse(content) as T;
+  } catch (error) {
+    // Distinguish between JSON parse errors and resolution errors
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Re-throw resolution errors (file not found, fetch failed) as-is
+    if (
+      errorMessage.includes('not found') ||
+      errorMessage.includes('Failed to fetch')
+    ) {
+      throw error;
+    }
+
+    // JSON-looking inline content with parse errors
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      throw new Error(
+        `Input appears to be JSON but contains errors: ${errorMessage}`,
+      );
+    }
+
+    // File or URL with invalid JSON content
+    throw new Error(`Invalid JSON in config file: ${input}. ${errorMessage}`);
+  }
+}
+
+/**
  * Load and parse JSON configuration from a file path, URL, or inline JSON string.
+ *
+ * Thin wrapper around `loadConfig` with `json: true` (default).
  *
  * Detection priority:
  * 1. URL (http://, https://) — download and parse
@@ -90,46 +198,7 @@ export function substituteEnvVariables(value: string): string {
  * ```
  */
 export async function loadJsonConfig<T>(configPath: string): Promise<T> {
-  const trimmed = configPath.trim();
-
-  // 1. Check if input is a URL
-  if (isUrl(trimmed)) {
-    try {
-      const content = await fetchContentString(trimmed);
-      return JSON.parse(content) as T;
-    } catch (error) {
-      throw new Error(
-        `Invalid JSON in config file: ${configPath}. ${error instanceof Error ? error.message : error}`,
-      );
-    }
-  }
-
-  // 2. Check if file path exists
-  const absolutePath = path.resolve(trimmed);
-  if (await fs.pathExists(absolutePath)) {
-    try {
-      const rawConfig = await fs.readJson(absolutePath);
-      return rawConfig as T;
-    } catch (error) {
-      throw new Error(
-        `Invalid JSON in config file: ${configPath}. ${error instanceof Error ? error.message : error}`,
-      );
-    }
-  }
-
-  // 3. Try inline JSON (for sandboxed environments where file paths don't resolve)
-  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-    try {
-      return JSON.parse(trimmed) as T;
-    } catch (jsonError) {
-      throw new Error(
-        `Input appears to be JSON but contains errors: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`,
-      );
-    }
-  }
-
-  // 4. Nothing matched — file not found
-  throw new Error(`Configuration file not found: ${absolutePath}`);
+  return loadConfig<T>(configPath, { json: true }) as Promise<T>;
 }
 
 /**

@@ -18,6 +18,8 @@ import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
 import type { PushCommandOptions, PushResult } from './types.js';
 import type { PushOptions } from '../../schemas/push.js';
+import { buildOverrides, type PushOverrides } from './overrides.js';
+import { loadBundle } from '../../runtime/load-bundle.js';
 
 /**
  * Core push logic without CLI concerns (no process.exit, no output formatting)
@@ -260,6 +262,12 @@ async function executeConfigPush(
 
   const platform = getPlatform(flowSettings);
 
+  // Build overrides from --simulate/--mock flags
+  const overrides = buildOverrides(
+    { simulate: options.simulate, mock: options.mock },
+    flowSettings,
+  );
+
   // Bundle to temp file in config directory (so Node.js can find node_modules)
   logger.debug('Bundling flow configuration');
   const configDir = buildOptions.configDir || process.cwd();
@@ -292,11 +300,12 @@ async function executeConfigPush(
   // Execute based on platform
   if (platform === 'web') {
     logger.debug('Executing in web environment (JSDOM)');
-    return executeWebPush(tempPath, validatedEvent, logger);
+    return executeWebPush(tempPath, validatedEvent, logger, overrides);
   } else if (platform === 'server') {
     logger.debug('Executing in server environment (Node.js)');
     return executeServerPush(tempPath, validatedEvent, logger, 60000, {
-      logger: { level: options.verbose ? Level.DEBUG : Level.ERROR },
+      ...overrides,
+      ...(options.verbose ? { logger: { level: Level.DEBUG } } : {}),
     });
   } else {
     throw new Error(`Unsupported platform: ${platform}`);
@@ -312,7 +321,7 @@ async function executeBundlePush(
   validatedEvent: { name: string; data: Record<string, unknown> },
   logger: Logger.Instance,
   setTempDir: (dir: string) => void,
-  context: { logger?: Logger.Config } = {},
+  context: PushOverrides & { logger?: Logger.Config } = {},
 ): Promise<PushResult> {
   // Write bundle to temp file
   const tempDir = getTmpPath(
@@ -354,6 +363,7 @@ async function executeWebPush(
   bundlePath: string,
   event: PushEventInput,
   logger: Logger.Instance,
+  overrides?: PushOverrides,
 ): Promise<PushResult> {
   const startTime = Date.now();
 
@@ -370,6 +380,11 @@ async function executeWebPush(
     const { window } = dom;
 
     // JSDOM provides fetch natively, no need to inject node-fetch
+
+    // Set overrides on window so the bundle IIFE picks them up via __elbConfig
+    if (overrides && Object.keys(overrides).length > 0) {
+      (window as unknown as Record<string, unknown>).__elbConfig = overrides;
+    }
 
     // Load and execute bundle
     logger.debug('Loading bundle...');
@@ -421,7 +436,7 @@ async function executeServerPush(
   event: PushEventInput,
   logger: Logger.Instance,
   timeout: number = 60000, // 60 second default timeout
-  context: { logger?: Logger.Config } = {},
+  context: PushOverrides & { logger?: Logger.Config } = {},
 ): Promise<PushResult> {
   const startTime = Date.now();
 
@@ -437,29 +452,12 @@ async function executeServerPush(
 
     // Execute with timeout
     const executePromise = (async () => {
-      // Dynamic import of ESM bundle
-      logger.debug('Importing bundle...');
-      const flowModule = await import(bundlePath);
-
-      if (!flowModule.default || typeof flowModule.default !== 'function') {
-        throw new Error('Bundle does not export default factory function');
-      }
-
-      // Call factory function to start flow (pass context for verbose logging)
-      logger.debug('Calling factory function...');
-      const result = await flowModule.default(context);
-
-      if (
-        !result ||
-        !result.collector ||
-        typeof result.collector.push !== 'function'
-      ) {
-        throw new Error(
-          'Factory function did not return valid result with collector',
-        );
-      }
-
-      const { collector } = result;
+      // Load bundle: import, validate, call factory
+      const { collector } = await loadBundle(
+        bundlePath,
+        context as Record<string, unknown>,
+        logger,
+      );
 
       // Push event directly to collector (bypasses source handlers)
       logger.info(`Pushing event: ${event.name}`);
@@ -470,7 +468,7 @@ async function executeServerPush(
 
       return {
         success: true,
-        elbResult,
+        elbResult: elbResult as PushResult['elbResult'],
         duration: Date.now() - startTime,
       };
     })();

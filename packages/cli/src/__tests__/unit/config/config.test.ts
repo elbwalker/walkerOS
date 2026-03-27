@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import {
+  loadConfig,
   loadJsonConfig,
   substituteEnvVariables,
 } from '../../../config/index.js';
@@ -84,6 +85,101 @@ describe('Config utilities', () => {
       const json = '[{"name":"test"}]';
       const result = await loadJsonConfig(json);
       expect(result).toEqual([{ name: 'test' }]);
+    });
+  });
+
+  describe('loadConfig', () => {
+    it('json: true (default) with file path returns parsed object', async () => {
+      const configPath = path.join(testDir, 'config.json');
+      const config = { version: 3, flows: {} };
+
+      await fs.writeJson(configPath, config);
+
+      const result = await loadConfig(configPath);
+
+      expect(result).toEqual(config);
+    });
+
+    it('json: true with inline JSON string returns parsed object', async () => {
+      const json = '{"version":3,"flows":{"default":{"web":{}}}}';
+      const result = await loadConfig(json);
+      expect(result).toEqual({ version: 3, flows: { default: { web: {} } } });
+    });
+
+    it('json: true with explicit option parses JSON', async () => {
+      const json = '{"key":"value"}';
+      const result = await loadConfig(json, { json: true });
+      expect(result).toEqual({ key: 'value' });
+    });
+
+    it('json: false with file path returns raw string', async () => {
+      const filePath = path.join(testDir, 'bundle.js');
+      const content = 'const x = 42;\nexport default x;';
+
+      await fs.writeFile(filePath, content);
+
+      const result = await loadConfig(filePath, { json: false });
+
+      expect(result).toBe(content);
+    });
+
+    it('json: false with inline content returns raw string', async () => {
+      const content = '{"version":3}';
+      const result = await loadConfig(content, { json: false });
+      expect(result).toBe(content);
+    });
+
+    it('json: false with non-JSON file returns raw string', async () => {
+      const filePath = path.join(testDir, 'code.js');
+      const jsCode = 'function hello() { return "world"; }';
+
+      await fs.writeFile(filePath, jsCode);
+
+      const result = await loadConfig(filePath, { json: false });
+
+      expect(result).toBe(jsCode);
+    });
+
+    it('throws for invalid JSON with json: true', async () => {
+      const filePath = path.join(testDir, 'bad.json');
+      await fs.writeFile(filePath, '{ invalid json }');
+
+      await expect(loadConfig(filePath)).rejects.toThrow(
+        'Invalid JSON in config file',
+      );
+    });
+
+    it('throws for inline invalid JSON with json: true', async () => {
+      await expect(loadConfig('{ broken json')).rejects.toThrow(
+        /appears to be JSON/,
+      );
+    });
+
+    it('throws for non-existent file', async () => {
+      await expect(loadConfig('/tmp/does-not-exist-xyz.json')).rejects.toThrow(
+        /not found/,
+      );
+    });
+
+    it('throws for non-existent file with json: false', async () => {
+      await expect(
+        loadConfig('/tmp/does-not-exist-xyz.js', { json: false }),
+      ).rejects.toThrow(/not found/);
+    });
+  });
+
+  describe('loadJsonConfig backward compat', () => {
+    it('still works identically via loadConfig', async () => {
+      const configPath = path.join(testDir, 'compat.json');
+      const config = { compat: true, nested: { a: 1 } };
+
+      await fs.writeJson(configPath, config);
+
+      const viaLoadConfig = await loadConfig(configPath);
+      const viaLoadJsonConfig = await loadJsonConfig(configPath);
+
+      expect(viaLoadConfig).toEqual(viaLoadJsonConfig);
+      expect(viaLoadJsonConfig).toEqual(config);
     });
   });
 

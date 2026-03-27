@@ -261,10 +261,12 @@ describe('generatePlatformWrapper', () => {
     );
 
     expect(result).toContain('const stores = {};');
-    expect(result).toContain('(async () => {');
+    expect(result).toContain('(async (context)');
     expect(result).toContain(
       'const config = { sources: {}, destinations: {} };',
     );
+    expect(result).toContain('if (context) deepMerge(config, context)');
+    expect(result).toContain('window.__elbConfig');
     expect(result).toContain('console.log("custom code");');
     expect(result).toContain('await startFlow(config)');
     expect(result).toContain("window['collector'] = collector");
@@ -644,6 +646,80 @@ describe('Implicit Collector', () => {
     // Should have both createCollector and startFlow
     expect(result).toContain('startFlow');
     expect(result).toContain('createCollector');
+  });
+});
+
+describe('deepMerge import', () => {
+  it('auto-imports deepMerge when @walkeros/core is in packages', async () => {
+    const flowSettings: Flow.Settings = {
+      web: {},
+      packages: {
+        '@walkeros/collector': { imports: ['startFlow'] },
+        '@walkeros/core': {},
+        '@walkeros/web-source-browser': {},
+      },
+      sources: {
+        browser: {
+          package: '@walkeros/web-source-browser',
+        },
+      },
+      destinations: {},
+    };
+
+    const buildOptions = {
+      platform: 'browser',
+      format: 'esm',
+      packages: {
+        '@walkeros/collector': { imports: ['startFlow'] },
+        '@walkeros/core': {},
+        '@walkeros/web-source-browser': {},
+      },
+      output: './dist/bundle.js',
+      code: '',
+    };
+
+    const result = await createEntryPoint(
+      flowSettings,
+      buildOptions as BuildOptions,
+      new Map(),
+    );
+
+    expect(result).toContain("import { deepMerge } from '@walkeros/core'");
+  });
+
+  it('auto-imports deepMerge even when @walkeros/core is not in packages', async () => {
+    const flowSettings: Flow.Settings = {
+      web: {},
+      packages: {
+        '@walkeros/collector': { imports: ['startFlow'] },
+        '@walkeros/web-source-browser': {},
+      },
+      sources: {
+        browser: {
+          package: '@walkeros/web-source-browser',
+        },
+      },
+      destinations: {},
+    };
+
+    const buildOptions = {
+      platform: 'browser',
+      format: 'esm',
+      packages: {
+        '@walkeros/collector': { imports: ['startFlow'] },
+        '@walkeros/web-source-browser': {},
+      },
+      output: './dist/bundle.js',
+      code: '',
+    };
+
+    const result = await createEntryPoint(
+      flowSettings,
+      buildOptions as BuildOptions,
+      new Map(),
+    );
+
+    expect(result).toContain("import { deepMerge } from '@walkeros/core'");
   });
 });
 

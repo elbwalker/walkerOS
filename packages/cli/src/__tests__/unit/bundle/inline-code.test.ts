@@ -242,8 +242,8 @@ describe('generatePlatformWrapper', () => {
     // Must contain sourceSettings override block
     expect(result).toContain('context.sourceSettings');
     expect(result).toContain('config.sources');
-    // Must still contain logger override
-    expect(result).toContain('context.logger');
+    // Must contain deepMerge for context overrides
+    expect(result).toContain('deepMerge(config, context)');
     // Must export default function
     expect(result).toContain('export default async function');
   });
@@ -261,6 +261,89 @@ describe('generatePlatformWrapper', () => {
     );
 
     expect(result).not.toContain('context.sourceSettings');
+  });
+
+  it('web wrapper accepts context parameter', () => {
+    const configObject = `{ sources: {}, destinations: {} }`;
+
+    const result = generatePlatformWrapper(
+      'const stores = {};',
+      configObject,
+      '',
+      {
+        platform: 'browser',
+      },
+    );
+
+    expect(result).toContain('(async (context)');
+  });
+
+  it('web wrapper reads window.__elbConfig', () => {
+    const configObject = `{ sources: {}, destinations: {} }`;
+
+    const result = generatePlatformWrapper(
+      'const stores = {};',
+      configObject,
+      '',
+      {
+        platform: 'browser',
+      },
+    );
+
+    expect(result).toContain('window.__elbConfig');
+    expect(result).toContain("typeof window !== 'undefined'");
+  });
+
+  it('web wrapper uses deepMerge for context', () => {
+    const configObject = `{ sources: {}, destinations: {} }`;
+
+    const result = generatePlatformWrapper(
+      'const stores = {};',
+      configObject,
+      '',
+      {
+        platform: 'browser',
+      },
+    );
+
+    expect(result).toContain('deepMerge(config, context)');
+  });
+
+  it('server wrapper uses deepMerge instead of manual logger merge', () => {
+    const configObject = `{ sources: {}, destinations: {} }`;
+
+    const result = generatePlatformWrapper(
+      'const stores = {};',
+      configObject,
+      '',
+      {
+        platform: 'server',
+      },
+    );
+
+    expect(result).toContain('deepMerge(config, context)');
+    // Should NOT contain old manual logger merge
+    expect(result).not.toContain('config.logger = { ...config.logger');
+  });
+
+  it('server wrapper still has sourceSettings block after deepMerge', () => {
+    const configObject = `{ sources: {}, destinations: {} }`;
+
+    const result = generatePlatformWrapper(
+      'const stores = {};',
+      configObject,
+      '',
+      {
+        platform: 'server',
+      },
+    );
+
+    // deepMerge should come before sourceSettings
+    const deepMergeIdx = result.indexOf('deepMerge(config, context)');
+    const sourceSettingsIdx = result.indexOf('context.sourceSettings');
+    expect(deepMergeIdx).toBeGreaterThan(-1);
+    expect(sourceSettingsIdx).toBeGreaterThan(-1);
+    expect(deepMergeIdx).toBeLessThan(sourceSettingsIdx);
   });
 
   it('should apply sourceSettings spread merge to sources', () => {

@@ -68,6 +68,7 @@ export interface Config<T extends TypesGeneric = Types> {
   next?: Next; // Graph wiring to next transformer
   cache?: import('./cache').Cache; // Step-level cache config
   init?: boolean; // Track init state (like Destination)
+  disabled?: boolean; // Completely skip this transformer in chains
 }
 
 /**
@@ -108,7 +109,10 @@ export interface Result<E = WalkerOS.DeepPartialEvent> {
  * @returns void - continue with current event unchanged (passthrough)
  * @returns false - stop chain, cancel further processing
  */
-export type Fn<T extends TypesGeneric = Types, E = WalkerOS.DeepPartialEvent> = (
+export type Fn<
+  T extends TypesGeneric = Types,
+  E = WalkerOS.DeepPartialEvent,
+> = (
   event: E,
   context: Context<T>,
 ) => WalkerOS.PromiseOrValue<Result<E> | Result<E>[] | false | void>;

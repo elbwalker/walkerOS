@@ -88,7 +88,7 @@ export type { SSEEvent, SSEParseResult } from './core/sse.js';
 
 // === Utilities ===
 // Export utilities for programmatic usage
-export { loadJsonConfig } from './config/utils.js';
+export { loadConfig, loadJsonConfig } from './config/utils.js';
 export { findExample } from './commands/simulate/example-loader.js';
 export { compareOutput } from './commands/simulate/compare.js';
 

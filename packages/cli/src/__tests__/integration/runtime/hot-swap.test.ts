@@ -21,13 +21,14 @@ beforeAll(() => {
   originalCwd = process.cwd();
   mkdirSync(TEST_DIR, { recursive: true });
 
-  // Valid bundle v1 — returns collector with command
+  // Valid bundle v1 — returns collector with command and push
   writeFileSync(
     BUNDLE_V1,
     `export default function(config) {
       return {
         collector: {
           command: async (cmd) => { /* v1 */ },
+          push: async (event) => ({ id: 'v1' }),
         },
       };
     }`,
@@ -41,6 +42,7 @@ beforeAll(() => {
       return {
         collector: {
           command: async (cmd) => { /* v2 */ },
+          push: async (event) => ({ id: 'v2' }),
         },
       };
     }`,
@@ -72,7 +74,7 @@ describe('loadFlow', () => {
   it('throws on invalid bundle (no default export)', async () => {
     await expect(
       loadFlow(BUNDLE_INVALID, undefined, mockLogger),
-    ).rejects.toThrow('Invalid flow bundle');
+    ).rejects.toThrow('Invalid bundle');
   });
 });
 
@@ -114,7 +116,7 @@ describe('swapFlow', () => {
 
     await expect(
       swapFlow(oldHandle, BUNDLE_INVALID, { port: 8080 }, mockLogger),
-    ).rejects.toThrow('Invalid flow bundle');
+    ).rejects.toThrow('Invalid bundle');
 
     // Old handle should still be valid
     expect(oldHandle.collector).toBeDefined();
@@ -151,7 +153,7 @@ describe('loadFlow with HealthServer', () => {
       join(TEST_DIR, 'ctx-check.mjs'),
       `export default function(context) {
         return {
-          collector: { command: async () => {} },
+          collector: { command: async () => {}, push: async () => ({}) },
           _receivedSourceSettings: context.sourceSettings,
         };
       }`,
@@ -174,7 +176,7 @@ describe('loadFlow with HealthServer', () => {
       join(TEST_DIR, 'with-handler.mjs'),
       `export default function(context) {
         return {
-          collector: { command: async () => {} },
+          collector: { command: async () => {}, push: async () => ({}) },
           httpHandler: (req, res) => {
             res.writeHead(200);
             res.end('flow-response');
@@ -216,7 +218,7 @@ describe('swapFlow with HealthServer', () => {
       join(TEST_DIR, 'swap-v1.mjs'),
       `export default function() {
         return {
-          collector: { command: async () => {} },
+          collector: { command: async () => {}, push: async () => ({}) },
           httpHandler: (req, res) => { res.writeHead(200); res.end('v1'); },
         };
       }`,
@@ -227,7 +229,7 @@ describe('swapFlow with HealthServer', () => {
       join(TEST_DIR, 'swap-v2.mjs'),
       `export default function() {
         return {
-          collector: { command: async () => {} },
+          collector: { command: async () => {}, push: async () => ({}) },
           httpHandler: (req, res) => { res.writeHead(200); res.end('v2'); },
         };
       }`,

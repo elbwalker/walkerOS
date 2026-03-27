@@ -9,6 +9,7 @@ export * from './castValue';
 export * from './clone';
 export * from './consent';
 export * from './createDestination';
+export * from './deepMerge';
 export * from './eventGenerator';
 export * from './getId';
 export * from './getMarketingParameters';

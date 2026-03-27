@@ -5,10 +5,10 @@
  * All bundling, package downloading, and code generation happens BEFORE this runs.
  */
 
-import { pathToFileURL } from 'url';
 import { resolve, dirname } from 'path';
 import type { Collector, Logger } from '@walkeros/core';
 import type { HealthServer } from './health-server.js';
+import { loadBundle } from './load-bundle.js';
 
 export interface RuntimeConfig {
   port?: number;
@@ -38,27 +38,13 @@ export async function loadFlow(
   const flowDir = dirname(absolutePath);
   process.chdir(flowDir);
 
-  const fileUrl = pathToFileURL(absolutePath).href;
-
-  // Bust Node.js module cache by appending query param
-  const module = await import(`${fileUrl}?t=${Date.now()}`);
-
-  if (!module.default || typeof module.default !== 'function') {
-    throw new Error(
-      `Invalid flow bundle: ${file} must export a default function`,
-    );
-  }
-
   const flowContext = {
     ...config,
     ...(loggerConfig ? { logger: loggerConfig } : {}),
     ...(healthServer ? { sourceSettings: { port: undefined } } : {}),
   };
-  const result = await module.default(flowContext);
 
-  if (!result || !result.collector) {
-    throw new Error(`Invalid flow bundle: ${file} must return { collector }`);
-  }
+  const result = await loadBundle(absolutePath, flowContext, logger);
 
   // Mount flow's httpHandler onto runner's health server (opaque — no type inspection)
   if (healthServer && typeof result.httpHandler === 'function') {
@@ -67,8 +53,8 @@ export async function loadFlow(
 
   return {
     collector: {
-      command: result.collector.command,
-      status: result.collector.status,
+      command: result.collector.command as FlowHandle['collector']['command'],
+      status: result.collector.status as FlowHandle['collector']['status'],
     },
     file,
     httpHandler: result.httpHandler,
