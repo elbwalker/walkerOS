@@ -329,7 +329,7 @@ export async function bundleCore(
     }
 
     // Step 1.6: Auto-add step packages (sources, destinations, transformers, stores)
-    const stepPackages = collectStepPackages(flowSettings);
+    const stepPackages = collectAllStepPackages(flowSettings);
     for (const pkg of stepPackages) {
       if (!buildOptions.packages[pkg]) {
         buildOptions.packages[pkg] = {};
@@ -595,139 +595,35 @@ function createEsbuildOptions(
  * Detects destination packages from flow configuration.
  * Extracts package names from destinations that have explicit 'package' field.
  */
-function detectDestinationPackages(flowSettings: Flow.Settings): Set<string> {
-  const destinationPackages = new Set<string>();
-  const destinations = (
-    flowSettings as unknown as { destinations?: Record<string, unknown> }
-  ).destinations;
-
-  if (destinations) {
-    for (const [destKey, destConfig] of Object.entries(destinations)) {
-      // Skip if code: true (uses built-in inline code destination)
-      if (
-        typeof destConfig === 'object' &&
-        destConfig !== null &&
-        'code' in destConfig &&
-        destConfig.code === true
-      ) {
-        continue;
-      }
-      // Require explicit package field - no inference for any packages
-      if (
-        typeof destConfig === 'object' &&
-        destConfig !== null &&
-        'package' in destConfig &&
-        typeof destConfig.package === 'string'
-      ) {
-        destinationPackages.add(destConfig.package);
-      }
-      // If no package field, skip auto-importing examples for this destination
-    }
-  }
-
-  return destinationPackages;
-}
-
 /**
- * Detects source packages from flow configuration.
- * Extracts package names from sources that have explicit 'package' field.
+ * Detects packages from a flow config section (sources, destinations, transformers, stores).
+ * Extracts package names from steps that have an explicit 'package' field.
+ * Skips steps with code: true (inline code).
  */
-function detectSourcePackages(flowSettings: Flow.Settings): Set<string> {
-  const sourcePackages = new Set<string>();
-  const sources = (
-    flowSettings as unknown as { sources?: Record<string, unknown> }
-  ).sources;
-
-  if (sources) {
-    for (const [sourceKey, sourceConfig] of Object.entries(sources)) {
-      // Skip if code: true (uses built-in inline code source)
-      if (
-        typeof sourceConfig === 'object' &&
-        sourceConfig !== null &&
-        'code' in sourceConfig &&
-        sourceConfig.code === true
-      ) {
-        continue;
-      }
-      // Require explicit package field - no inference for any packages
-      if (
-        typeof sourceConfig === 'object' &&
-        sourceConfig !== null &&
-        'package' in sourceConfig &&
-        typeof sourceConfig.package === 'string'
-      ) {
-        sourcePackages.add(sourceConfig.package);
-      }
-    }
-  }
-
-  return sourcePackages;
-}
-
-/**
- * Detects transformer packages from flow configuration.
- * Extracts package names from transformers that have explicit 'package' field.
- */
-export function detectTransformerPackages(
+export function detectStepPackages(
   flowSettings: Flow.Settings,
+  section: 'sources' | 'destinations' | 'transformers' | 'stores',
 ): Set<string> {
-  const transformerPackages = new Set<string>();
-  const transformers = (
-    flowSettings as unknown as { transformers?: Record<string, unknown> }
-  ).transformers;
+  const packages = new Set<string>();
+  const steps = (
+    flowSettings as unknown as {
+      [key: string]: Record<string, unknown> | undefined;
+    }
+  )[section];
 
-  if (transformers) {
-    for (const [transformerKey, transformerConfig] of Object.entries(
-      transformers,
-    )) {
-      // Skip if code: true (uses built-in inline code transformer)
-      if (
-        typeof transformerConfig === 'object' &&
-        transformerConfig !== null &&
-        'code' in transformerConfig &&
-        transformerConfig.code === true
-      ) {
-        continue;
-      }
+  if (steps) {
+    for (const [, stepConfig] of Object.entries(steps)) {
+      if (typeof stepConfig !== 'object' || stepConfig === null) continue;
+      // Skip if code: true (uses built-in inline code)
+      if ('code' in stepConfig && stepConfig.code === true) continue;
       // Require explicit package field
-      if (
-        typeof transformerConfig === 'object' &&
-        transformerConfig !== null &&
-        'package' in transformerConfig &&
-        typeof transformerConfig.package === 'string'
-      ) {
-        transformerPackages.add(transformerConfig.package);
+      if ('package' in stepConfig && typeof stepConfig.package === 'string') {
+        packages.add(stepConfig.package);
       }
     }
   }
 
-  return transformerPackages;
-}
-
-/**
- * Detects store packages from flow configuration.
- * Extracts package names from stores that have explicit 'package' field.
- */
-export function detectStorePackages(flowSettings: Flow.Settings): Set<string> {
-  const storePackages = new Set<string>();
-  const stores = (
-    flowSettings as unknown as { stores?: Record<string, unknown> }
-  ).stores;
-
-  if (stores) {
-    for (const [, storeConfig] of Object.entries(stores)) {
-      if (
-        typeof storeConfig === 'object' &&
-        storeConfig !== null &&
-        'package' in storeConfig &&
-        typeof storeConfig.package === 'string'
-      ) {
-        storePackages.add(storeConfig.package);
-      }
-    }
-  }
-
-  return storePackages;
+  return packages;
 }
 
 /**
@@ -749,20 +645,21 @@ export function getNodeExternals(): string[] {
  * Filters out local paths (starting with . or /) — only npm packages.
  * Used to auto-add step packages to buildOptions.packages.
  */
-export function collectStepPackages(flowSettings: Flow.Settings): Set<string> {
+export function collectAllStepPackages(
+  flowSettings: Flow.Settings,
+): Set<string> {
   const allPackages = new Set<string>();
+  const sections = [
+    'sources',
+    'destinations',
+    'transformers',
+    'stores',
+  ] as const;
 
-  for (const pkg of detectSourcePackages(flowSettings)) {
-    allPackages.add(pkg);
-  }
-  for (const pkg of detectDestinationPackages(flowSettings)) {
-    allPackages.add(pkg);
-  }
-  for (const pkg of detectTransformerPackages(flowSettings)) {
-    allPackages.add(pkg);
-  }
-  for (const pkg of detectStorePackages(flowSettings)) {
-    allPackages.add(pkg);
+  for (const section of sections) {
+    for (const pkg of detectStepPackages(flowSettings, section)) {
+      allPackages.add(pkg);
+    }
   }
 
   // Filter: only npm packages, not local paths
@@ -1110,11 +1007,11 @@ export async function createEntryPoint(
   buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
 ): Promise<string> {
-  // Detect packages used by destinations, sources, transformers, and stores
-  const destinationPackages = detectDestinationPackages(flowSettings);
-  const sourcePackages = detectSourcePackages(flowSettings);
-  const transformerPackages = detectTransformerPackages(flowSettings);
-  const storePackages = detectStorePackages(flowSettings);
+  // Detect packages used by all step types
+  const sourcePackages = detectStepPackages(flowSettings, 'sources');
+  const destinationPackages = detectStepPackages(flowSettings, 'destinations');
+  const transformerPackages = detectStepPackages(flowSettings, 'transformers');
+  const storePackages = detectStepPackages(flowSettings, 'stores');
   const explicitCodeImports = detectExplicitCodeImports(flowSettings);
 
   // Validate $store: references before code generation

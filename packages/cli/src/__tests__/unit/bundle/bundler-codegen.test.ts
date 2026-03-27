@@ -2,7 +2,7 @@ import {
   buildConfigObject,
   generatePlatformWrapper,
   createEntryPoint,
-  detectTransformerPackages,
+  detectStepPackages,
   detectExplicitCodeImports,
   serializeWithCode,
 } from '../../../commands/bundle/bundler.js';
@@ -645,7 +645,7 @@ describe('Implicit Collector', () => {
   });
 });
 
-describe('detectTransformerPackages', () => {
+describe('detectStepPackages', () => {
   it('detects transformer packages from flow config', () => {
     const flowSettings: Flow.Settings = {
       server: {},
@@ -663,7 +663,7 @@ describe('detectTransformerPackages', () => {
       },
     };
 
-    const result = detectTransformerPackages(flowSettings);
+    const result = detectStepPackages(flowSettings, 'transformers');
 
     expect(result).toEqual(
       new Set([
@@ -673,14 +673,14 @@ describe('detectTransformerPackages', () => {
     );
   });
 
-  it('returns empty set when no transformers', () => {
+  it('returns empty set when section is missing', () => {
     const flowSettings: Flow.Settings = {
       server: {},
       sources: {},
       destinations: {},
     };
 
-    const result = detectTransformerPackages(flowSettings);
+    const result = detectStepPackages(flowSettings, 'transformers');
 
     expect(result).toEqual(new Set());
   });

@@ -1,7 +1,7 @@
 import {
   serializeWithCode,
   validateComponentNames,
-  collectStepPackages,
+  collectAllStepPackages,
 } from '../bundler';
 import type { Flow } from '@walkeros/core';
 
@@ -120,10 +120,10 @@ describe('validateComponentNames', () => {
   });
 });
 
-describe('collectStepPackages', () => {
+describe('collectAllStepPackages', () => {
   it('returns empty set for flow with no steps', () => {
     const settings = {} as Flow.Settings;
-    expect(collectStepPackages(settings)).toEqual(new Set());
+    expect(collectAllStepPackages(settings)).toEqual(new Set());
   });
 
   it('collects source packages', () => {
@@ -132,7 +132,7 @@ describe('collectStepPackages', () => {
         http: { package: '@walkeros/server-source-express' },
       },
     } as unknown as Flow.Settings;
-    expect(collectStepPackages(settings)).toEqual(
+    expect(collectAllStepPackages(settings)).toEqual(
       new Set(['@walkeros/server-source-express']),
     );
   });
@@ -143,7 +143,7 @@ describe('collectStepPackages', () => {
         bigquery: { package: '@walkeros/server-destination-bigquery' },
       },
     } as unknown as Flow.Settings;
-    expect(collectStepPackages(settings)).toEqual(
+    expect(collectAllStepPackages(settings)).toEqual(
       new Set(['@walkeros/server-destination-bigquery']),
     );
   });
@@ -154,7 +154,7 @@ describe('collectStepPackages', () => {
         fingerprint: { package: '@walkeros/server-transformer-fingerprint' },
       },
     } as unknown as Flow.Settings;
-    expect(collectStepPackages(settings)).toEqual(
+    expect(collectAllStepPackages(settings)).toEqual(
       new Set(['@walkeros/server-transformer-fingerprint']),
     );
   });
@@ -165,7 +165,7 @@ describe('collectStepPackages', () => {
         fs: { package: '@walkeros/server-store-fs' },
       },
     } as unknown as Flow.Settings;
-    expect(collectStepPackages(settings)).toEqual(
+    expect(collectAllStepPackages(settings)).toEqual(
       new Set(['@walkeros/server-store-fs']),
     );
   });
@@ -181,7 +181,7 @@ describe('collectStepPackages', () => {
       },
       stores: { fs: { package: '@walkeros/server-store-fs' } },
     } as unknown as Flow.Settings;
-    const result = collectStepPackages(settings);
+    const result = collectAllStepPackages(settings);
     expect(result.size).toBe(4);
     expect(result.has('@walkeros/server-source-express')).toBe(true);
     expect(result.has('@walkeros/server-destination-bigquery')).toBe(true);
@@ -195,7 +195,7 @@ describe('collectStepPackages', () => {
         custom: { code: { push: 'myPush()' } },
       },
     } as unknown as Flow.Settings;
-    expect(collectStepPackages(settings)).toEqual(new Set());
+    expect(collectAllStepPackages(settings)).toEqual(new Set());
   });
 
   it('skips local paths (starting with . or /)', () => {
@@ -205,7 +205,7 @@ describe('collectStepPackages', () => {
         local2: { package: '/abs/path/source' },
       },
     } as unknown as Flow.Settings;
-    expect(collectStepPackages(settings)).toEqual(new Set());
+    expect(collectAllStepPackages(settings)).toEqual(new Set());
   });
 
   it('includes scoped npm packages (starting with @)', () => {
@@ -214,7 +214,7 @@ describe('collectStepPackages', () => {
         s: { package: '@walkeros/server-source-express' },
       },
     } as unknown as Flow.Settings;
-    const result = collectStepPackages(settings);
+    const result = collectAllStepPackages(settings);
     expect(result.has('@walkeros/server-source-express')).toBe(true);
   });
 
@@ -224,7 +224,7 @@ describe('collectStepPackages', () => {
         d: { package: 'some-destination' },
       },
     } as unknown as Flow.Settings;
-    const result = collectStepPackages(settings);
+    const result = collectAllStepPackages(settings);
     expect(result.has('some-destination')).toBe(true);
   });
 
@@ -233,12 +233,12 @@ describe('collectStepPackages', () => {
       sources: { s1: { package: '@walkeros/core' } },
       destinations: { d1: { package: '@walkeros/core' } },
     } as unknown as Flow.Settings;
-    const result = collectStepPackages(settings);
+    const result = collectAllStepPackages(settings);
     expect(result.size).toBe(1);
   });
 });
 
-describe('collectStepPackages auto-add merge logic', () => {
+describe('collectAllStepPackages auto-add merge logic', () => {
   it('adds source package to buildOptions.packages when not present', () => {
     const flowSettings = {
       sources: { http: { package: '@walkeros/server-source-express' } },
@@ -246,7 +246,7 @@ describe('collectStepPackages auto-add merge logic', () => {
 
     const packages: Record<string, Record<string, unknown>> = {};
 
-    const stepPkgs = collectStepPackages(flowSettings);
+    const stepPkgs = collectAllStepPackages(flowSettings);
     for (const pkg of stepPkgs) {
       if (!packages[pkg]) {
         packages[pkg] = {};
@@ -265,7 +265,7 @@ describe('collectStepPackages auto-add merge logic', () => {
       '@walkeros/server-source-express': { version: '2.0.0' },
     };
 
-    const stepPkgs = collectStepPackages(flowSettings);
+    const stepPkgs = collectAllStepPackages(flowSettings);
     for (const pkg of stepPkgs) {
       if (!packages[pkg]) {
         packages[pkg] = {};
