@@ -1064,15 +1064,6 @@ export async function createEntryPoint(
     return importsCode ? `${importsCode}\n\n${userCode}` : userCode;
   }
 
-  // Ensure deepMerge is imported (required for context overrides in wrapper)
-  const hasDeepMergeImport = importStatements.some(
-    (s) => s.includes('deepMerge') && s.includes('@walkeros/core'),
-  );
-  if (!hasDeepMergeImport) {
-    importStatements.push(`import { deepMerge } from '@walkeros/core';`);
-  }
-  const finalImportsCode = importStatements.join('\n');
-
   // Build config object programmatically (DRY - single source of truth)
   const { storesDeclaration, configObject } = buildConfigObject(
     flowSettings,
@@ -1092,9 +1083,7 @@ export async function createEntryPoint(
   );
 
   // Assemble final code
-  return finalImportsCode
-    ? `${finalImportsCode}\n\n${wrappedCode}`
-    : wrappedCode;
+  return importsCode ? `${importsCode}\n\n${wrappedCode}` : wrappedCode;
 }
 
 interface EsbuildError {
@@ -1553,6 +1542,9 @@ export function serializeWithCode(value: unknown, indent: number): string {
   return JSON.stringify(value);
 }
 
+// Inlined deepMerge for generated bundle code (avoids @walkeros/core import resolution from temp build dir)
+const DEEP_MERGE_INLINE = `function deepMerge(t,s){if(!s||typeof s!=='object'||Array.isArray(s))return t;for(const k of Object.keys(s)){const v=s[k];if(v===undefined)continue;if(v&&typeof v==='object'&&!Array.isArray(v)&&t[k]&&typeof t[k]==='object'&&!Array.isArray(t[k])){deepMerge(t[k],v)}else{t[k]=v}}return t}`;
+
 /**
  * Generate platform-specific wrapper code.
  */
@@ -1582,7 +1574,8 @@ export function generatePlatformWrapper(
     const assignments =
       windowAssignments.length > 0 ? '\n' + windowAssignments.join('\n') : '';
 
-    return `(async (context) => {
+    return `${DEEP_MERGE_INLINE}
+(async (context) => {
   ${storesDeclaration}
 
   const config = ${configObject};
@@ -1596,7 +1589,8 @@ export function generatePlatformWrapper(
     // Server platform: Export default function
     const codeSection = userCode ? `\n  ${userCode}\n` : '';
 
-    return `export default async function(context = {}) {
+    return `${DEEP_MERGE_INLINE}
+export default async function(context = {}) {
   ${storesDeclaration}
 
   const config = ${configObject};${codeSection}

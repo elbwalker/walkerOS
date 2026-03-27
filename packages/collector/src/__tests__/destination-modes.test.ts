@@ -1,6 +1,5 @@
 import type {
   Destination,
-  WalkerOS,
   Transformer,
   Source,
   Elb,
@@ -9,7 +8,7 @@ import { createEvent, createMockLogger } from '@walkeros/core';
 import { pushToDestinations, startFlow } from '..';
 import type { Collector } from '@walkeros/core';
 
-describe('destination modes (disabled/mock/simulate)', () => {
+describe('destination modes (disabled/mock)', () => {
   let mockPush: jest.Mock;
   let mockInit: jest.Mock;
 
@@ -236,117 +235,6 @@ describe('destination modes (disabled/mock/simulate)', () => {
     });
   });
 
-  describe('simulate', () => {
-    it('should not call destination.push when simulated', async () => {
-      const { elb } = await startFlow({
-        destinations: {
-          sim: {
-            code: {
-              type: 'simulated',
-              config: { simulate: true },
-              push: mockPush,
-            },
-          },
-        },
-      });
-
-      await elb('page view');
-
-      expect(mockPush).not.toHaveBeenCalled();
-    });
-
-    it('should return simulated result with event and data', async () => {
-      const { elb } = await startFlow({
-        destinations: {
-          sim: {
-            code: {
-              type: 'simulated',
-              config: { simulate: true },
-              push: mockPush,
-            },
-          },
-        },
-      });
-
-      const result = await elb('page view');
-
-      expect(result.done?.sim?.data).toEqual(
-        expect.objectContaining({
-          simulated: true,
-          event: expect.objectContaining({ name: 'page view' }),
-        }),
-      );
-    });
-
-    it('should still call init for simulated destinations', async () => {
-      let initCalled = false;
-
-      const { elb } = await startFlow({
-        destinations: {
-          sim: {
-            code: {
-              type: 'simulated',
-              config: { simulate: true },
-              init: async () => {
-                initCalled = true;
-                // Return undefined to keep existing config (including simulate flag)
-              },
-              push: mockPush,
-            },
-          },
-        },
-      });
-
-      await elb('page view');
-
-      expect(initCalled).toBe(true);
-      expect(mockPush).not.toHaveBeenCalled();
-    });
-
-    it('should run before chain for simulated destinations', async () => {
-      let beforeRan = false;
-
-      const { collector } = await startFlow({
-        sources: {
-          s: {
-            code: async (context): Promise<Source.Instance> => ({
-              type: 'test',
-              config: context.config as Source.Config,
-              push: context.env.push as Elb.Fn,
-            }),
-          },
-        },
-        transformers: {
-          enrich: {
-            code: async (context): Promise<Transformer.Instance> => ({
-              type: 'enrich',
-              config: context.config,
-              push: async (event) => {
-                beforeRan = true;
-                return { event };
-              },
-            }),
-          },
-        },
-        destinations: {
-          sim: {
-            code: {
-              type: 'simulated',
-              config: { simulate: true },
-              push: mockPush,
-            },
-            before: 'enrich',
-          },
-        },
-      });
-
-      await collector.sources.s.push({ name: 'page view', data: {} });
-
-      expect(beforeRan).toBe(true);
-      expect(mockPush).not.toHaveBeenCalled();
-    });
-  });
-
   describe('batch routing', () => {
     beforeEach(() => {
       jest.useFakeTimers();
@@ -356,16 +244,16 @@ describe('destination modes (disabled/mock/simulate)', () => {
       jest.useRealTimers();
     });
 
-    it('should not use batch path for simulated destinations', async () => {
+    it('should not use batch path for mocked destinations', async () => {
       const mockPushBatch = jest.fn();
 
       const { elb } = await startFlow({
         destinations: {
-          batchSim: {
+          batchMock: {
             code: {
-              type: 'batchSim',
+              type: 'batchMock',
               config: {
-                simulate: true,
+                mock: {},
                 mapping: {
                   '*': { '*': { batch: 50 } },
                 },
@@ -380,22 +268,23 @@ describe('destination modes (disabled/mock/simulate)', () => {
       await elb('page view');
       jest.advanceTimersByTime(100);
 
-      // Neither push nor pushBatch should be called (simulate intercepts first)
+      // Neither push nor pushBatch should be called (mock intercepts first)
       expect(mockPush).not.toHaveBeenCalled();
       expect(mockPushBatch).not.toHaveBeenCalled();
     });
   });
 
   describe('cache', () => {
-    it('should not write to cache store for simulated pushes', async () => {
+    it('should not write to cache store for mocked pushes (mock: {})', async () => {
       let pushCount = 0;
+      const mockValue = {};
 
       const { elb } = await startFlow({
         destinations: {
-          sim: {
+          mocked: {
             code: {
-              type: 'simulated',
-              config: { simulate: true },
+              type: 'mocked',
+              config: { mock: mockValue },
               push: async () => {
                 pushCount++;
               },
@@ -407,23 +296,16 @@ describe('destination modes (disabled/mock/simulate)', () => {
         },
       });
 
-      // Push same event twice while simulated
+      // Push same event twice while mocked
       await elb({ name: 'page view', data: {} });
       await elb({ name: 'page view', data: {} });
 
-      // Push should never have been called (simulated)
+      // Push should never have been called (mocked)
       expect(pushCount).toBe(0);
 
-      // Now remove simulate flag and push the same event
-      // If cache was written during simulate, this would be a HIT and push would be skipped
-      // But since we skip cache writes for simulate, this should be a MISS and push should run
-      // We can't easily test this without modifying the config mid-test,
-      // so instead we verify the mechanism by checking that the simulated push returned
-      // a simulated result (which means it hit the simulate interception, not a cache HIT)
+      // The mock value should be returned each time (no cache interference)
       const result = await elb({ name: 'page view', data: {} });
-      expect(result.done?.sim?.data).toEqual(
-        expect.objectContaining({ simulated: true }),
-      );
+      expect(result.done?.mocked?.data).toEqual(mockValue);
     });
 
     it('should not write to cache store for mocked pushes', async () => {

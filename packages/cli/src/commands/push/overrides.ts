@@ -3,14 +3,13 @@ import type { Flow } from '@walkeros/core';
 /**
  * Overrides structure for destination config properties.
  * Shape mirrors Collector.InitConfig.destinations but without requiring `code`.
- * Used with deepMerge at runtime to overlay simulate/mock/disabled flags.
+ * Used with deepMerge at runtime to overlay mock/disabled flags.
  */
 export interface PushOverrides {
   destinations?: Record<
     string,
     {
       config?: {
-        simulate?: boolean;
         mock?: unknown;
         disabled?: boolean;
       };
@@ -49,7 +48,7 @@ export function buildOverrides(
   for (const step of simulateFlags) {
     const name = parseDestinationStep(step);
     simulateNames.add(name);
-    overrides.destinations![name] = { config: { simulate: true } };
+    overrides.destinations![name] = { config: { mock: {} } };
   }
 
   // Parse --mock flags

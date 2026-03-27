@@ -39,7 +39,7 @@ describe('buildOverrides', () => {
       threeDestFlow,
     );
 
-    expect(result.destinations!.ga4).toEqual({ config: { simulate: true } });
+    expect(result.destinations!.ga4).toEqual({ config: { mock: {} } });
   });
 
   it('simulate-implies-disabled: other destinations get disabled', () => {
@@ -48,7 +48,7 @@ describe('buildOverrides', () => {
       threeDestFlow,
     );
 
-    expect(result.destinations!.ga4).toEqual({ config: { simulate: true } });
+    expect(result.destinations!.ga4).toEqual({ config: { mock: {} } });
     expect(result.destinations!.meta).toEqual({ config: { disabled: true } });
     expect(result.destinations!.bigquery).toEqual({
       config: { disabled: true },
@@ -61,8 +61,8 @@ describe('buildOverrides', () => {
       threeDestFlow,
     );
 
-    expect(result.destinations!.ga4).toEqual({ config: { simulate: true } });
-    expect(result.destinations!.meta).toEqual({ config: { simulate: true } });
+    expect(result.destinations!.ga4).toEqual({ config: { mock: {} } });
+    expect(result.destinations!.meta).toEqual({ config: { mock: {} } });
     expect(result.destinations!.bigquery).toEqual({
       config: { disabled: true },
     });
@@ -150,7 +150,7 @@ describe('buildOverrides', () => {
     const result = buildOverrides({ simulate: ['destination.ga4'] }, emptyFlow);
 
     // ga4 gets simulate even though it's not in flow destinations
-    expect(result.destinations!.ga4).toEqual({ config: { simulate: true } });
+    expect(result.destinations!.ga4).toEqual({ config: { mock: {} } });
     // No other destinations to disable
     expect(Object.keys(result.destinations!)).toEqual(['ga4']);
   });
@@ -164,7 +164,7 @@ describe('buildOverrides', () => {
       threeDestFlow,
     );
 
-    expect(result.destinations!.ga4).toEqual({ config: { simulate: true } });
+    expect(result.destinations!.ga4).toEqual({ config: { mock: {} } });
     expect(result.destinations!.meta).toEqual({
       config: { mock: { ok: true } },
     });

@@ -372,7 +372,6 @@ export async function pushToDestinations(
           if (
             cacheMiss &&
             dCacheStore &&
-            !destination.config.simulate &&
             destination.config.mock === undefined
           ) {
             storeCache(
@@ -581,14 +580,10 @@ export async function destinationPush<Destination extends Destination.Instance>(
     },
   };
 
-  // Mock/simulate interception — replaces the actual destination.push() call
+  // Mock interception — replaces the actual destination.push() call
   if (config.mock !== undefined) {
     destLogger.debug('mock', { event: processed.event.name });
     return config.mock;
-  }
-  if (config.simulate) {
-    destLogger.debug('simulate', { event: processed.event.name });
-    return { simulated: true, event: processed.event, data: processed.data };
   }
 
   const eventMapping = processed.mapping;
@@ -597,7 +592,6 @@ export async function destinationPush<Destination extends Destination.Instance>(
   if (
     eventMapping?.batch &&
     destination.pushBatch &&
-    !config.simulate &&
     config.mock === undefined
   ) {
     // Initialize batch registry on destination (not on shared mapping config)

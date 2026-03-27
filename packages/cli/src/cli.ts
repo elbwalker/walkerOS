@@ -94,9 +94,6 @@ program
     'step target in type.name format (e.g. "source.browser", "destination.gtag")',
   )
   .action(async (file, options) => {
-    console.warn(
-      '\x1b[33m⚠ "walkeros simulate" is deprecated. Use "walkeros push --simulate" instead.\x1b[0m',
-    );
     await simulateCommand({
       config: file,
       output: options.output,

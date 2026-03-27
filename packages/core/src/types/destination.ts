@@ -110,8 +110,6 @@ export interface Config<T extends TypesGeneric = Types> {
   disabled?: boolean;
   /** Return this value instead of calling push(). Uses !== undefined check to support falsy values. */
   mock?: unknown;
-  /** Capture event+context instead of calling push(). */
-  simulate?: boolean;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
