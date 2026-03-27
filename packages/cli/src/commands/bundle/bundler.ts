@@ -1593,12 +1593,11 @@ export function generatePlatformWrapper(
     config.logger = { ...config.logger, ...context.logger };
   }
 
-  // When runner provides external server, strip port from sources
-  // so they don't self-listen (runner owns the port)
-  if (context.externalServer && config.sources) {
+  // Apply source settings overrides from runner (e.g., port: undefined to prevent self-listen)
+  if (context.sourceSettings && config.sources) {
     for (const src of Object.values(config.sources)) {
-      if (src.config && src.config.settings && 'port' in src.config.settings) {
-        delete src.config.settings.port;
+      if (src.config?.settings) {
+        src.config.settings = { ...src.config.settings, ...context.sourceSettings };
       }
     }
   }

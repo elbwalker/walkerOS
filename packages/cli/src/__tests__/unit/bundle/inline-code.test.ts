@@ -224,7 +224,7 @@ describe('Integration', () => {
 });
 
 describe('generatePlatformWrapper', () => {
-  it('should include external server port stripping in server wrapper', () => {
+  it('should include source settings override in server wrapper', () => {
     const configObject = `{
       sources: { http: { code: expressSource, config: { settings: { port: 3000 } } } },
       destinations: {}
@@ -239,8 +239,8 @@ describe('generatePlatformWrapper', () => {
       },
     );
 
-    // Must contain externalServer port stripping block
-    expect(result).toContain('context.externalServer');
+    // Must contain sourceSettings override block
+    expect(result).toContain('context.sourceSettings');
     expect(result).toContain('config.sources');
     // Must still contain logger override
     expect(result).toContain('context.logger');
@@ -248,7 +248,7 @@ describe('generatePlatformWrapper', () => {
     expect(result).toContain('export default async function');
   });
 
-  it('should not include port override in browser wrapper', () => {
+  it('should not include source settings override in browser wrapper', () => {
     const configObject = `{ sources: {}, destinations: {} }`;
 
     const result = generatePlatformWrapper(
@@ -260,10 +260,10 @@ describe('generatePlatformWrapper', () => {
       },
     );
 
-    expect(result).not.toContain('context.externalServer');
+    expect(result).not.toContain('context.sourceSettings');
   });
 
-  it('should strip port from sources when externalServer is provided', () => {
+  it('should apply sourceSettings spread merge to sources', () => {
     const configObject = `{
       sources: {
         http: { code: expressSource, config: { settings: { port: 3000 } } },
@@ -281,8 +281,10 @@ describe('generatePlatformWrapper', () => {
       },
     );
 
-    // The generated code should delete port from sources when runner owns the port
-    expect(result).toContain('context.externalServer');
-    expect(result).toContain('delete src.config.settings.port');
+    // The generated code should spread merge sourceSettings into source configs
+    expect(result).toContain('context.sourceSettings');
+    expect(result).toContain(
+      '...src.config.settings, ...context.sourceSettings',
+    );
   });
 });

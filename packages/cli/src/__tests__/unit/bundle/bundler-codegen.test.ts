@@ -293,7 +293,7 @@ describe('generatePlatformWrapper', () => {
     expect(result).not.toContain('window');
   });
 
-  it('server wrapper strips port when externalServer provided', () => {
+  it('server wrapper applies sourceSettings override', () => {
     const config =
       '{ sources: { http: { config: { settings: { port: 8080 } } } } }';
     const userCode = '';
@@ -306,8 +306,10 @@ describe('generatePlatformWrapper', () => {
       buildOptions,
     );
 
-    expect(result).toContain('context.externalServer');
-    expect(result).toContain('delete src.config.settings.port');
+    expect(result).toContain('context.sourceSettings');
+    expect(result).toContain(
+      '...src.config.settings, ...context.sourceSettings',
+    );
   });
 });
 

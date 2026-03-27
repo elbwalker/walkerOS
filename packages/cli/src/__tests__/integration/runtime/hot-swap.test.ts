@@ -146,13 +146,13 @@ describe('loadFlow with HealthServer', () => {
     await healthServer.close();
   });
 
-  it('passes externalServer:true when health server provided', async () => {
+  it('passes sourceSettings when health server provided', async () => {
     writeFileSync(
       join(TEST_DIR, 'ctx-check.mjs'),
       `export default function(context) {
         return {
           collector: { command: async () => {} },
-          _receivedExternalServer: context.externalServer,
+          _receivedSourceSettings: context.sourceSettings,
         };
       }`,
       'utf-8',

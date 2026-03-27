@@ -52,7 +52,7 @@ export async function loadFlow(
   const flowContext = {
     ...config,
     ...(loggerConfig ? { logger: loggerConfig } : {}),
-    ...(healthServer ? { externalServer: true } : {}),
+    ...(healthServer ? { sourceSettings: { port: undefined } } : {}),
   };
   const result = await module.default(flowContext);
 
