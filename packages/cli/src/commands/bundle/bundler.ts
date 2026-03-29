@@ -425,6 +425,24 @@ export async function bundleCore(
       await esbuild.stop();
     }
 
+    // Step 2: Apply platform wrapper to ESM output
+    if (!buildOptions.skipWrapper) {
+      const esmOutput = await fs.readFile(outputPath, 'utf-8');
+      let finalCode: string;
+
+      if ((buildOptions.platform || 'node') === 'browser') {
+        finalCode = await buildWebWrapper(esmOutput, {
+          windowCollector: buildOptions.windowCollector,
+          windowElb: buildOptions.windowElb,
+          minify: buildOptions.minify,
+        });
+      } else {
+        finalCode = buildServerWrapper(esmOutput);
+      }
+
+      await fs.writeFile(outputPath, finalCode);
+    }
+
     // Get file size and calculate build time
     const outputStats = await fs.stat(outputPath);
     const sizeKB = (outputStats.size / 1024).toFixed(1);
@@ -531,7 +549,7 @@ function createEsbuildOptions(
   const baseOptions: esbuild.BuildOptions = {
     entryPoints: [entryPath],
     bundle: true,
-    format: buildOptions.format as esbuild.Format,
+    format: 'esm' as esbuild.Format, // Always ESM — platform wrapper handles final format
     platform: buildOptions.platform as esbuild.Platform,
     outfile: outputPath,
     absWorkingDir: tempDir, // Resolve modules from temp directory
@@ -570,13 +588,11 @@ function createEsbuildOptions(
       ? [...nodeExternals, ...buildOptions.external]
       : nodeExternals;
 
-    // createRequire shim for ESM bundles — needed because bundled CJS packages
-    // (like express) use require() internally for Node built-ins
-    if (buildOptions.format === 'esm') {
-      baseOptions.banner = {
-        js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
-      };
-    }
+    // createRequire shim — always needed since esbuild output is ESM,
+    // and bundled CJS packages (like express) use require() for Node built-ins
+    baseOptions.banner = {
+      js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
+    };
   }
 
   // Set target if specified
@@ -1070,20 +1086,17 @@ export async function createEntryPoint(
     explicitCodeImports,
   );
 
-  // Generate platform-specific wrapper
-  const wrappedCode = generatePlatformWrapper(
+  // Generate platform-agnostic wireConfig module
+  const wireConfigModule = generateWireConfigModule(
     storesDeclaration,
     configObject,
     buildOptions.code || '',
-    buildOptions as {
-      platform: string;
-      windowCollector?: string;
-      windowElb?: string;
-    },
   );
 
-  // Assemble final code
-  return importsCode ? `${importsCode}\n\n${wrappedCode}` : wrappedCode;
+  // Return ESM module (imports + wireConfig + startFlow re-export)
+  return importsCode
+    ? `${importsCode}\n\n${wireConfigModule}`
+    : wireConfigModule;
 }
 
 interface EsbuildError {
@@ -1542,62 +1555,90 @@ export function serializeWithCode(value: unknown, indent: number): string {
   return JSON.stringify(value);
 }
 
-// Inlined deepMerge for generated bundle code (avoids @walkeros/core import resolution from temp build dir)
-const DEEP_MERGE_INLINE = `function deepMerge(t,s){if(!s||typeof s!=='object'||Array.isArray(s))return t;for(const k of Object.keys(s)){const v=s[k];if(v===undefined)continue;if(v&&typeof v==='object'&&!Array.isArray(v)&&t[k]&&typeof t[k]==='object'&&!Array.isArray(t[k])){deepMerge(t[k],v)}else{t[k]=v}}return t}`;
-
 /**
- * Generate platform-specific wrapper code.
+ * Generate platform-agnostic ESM module with wireConfig() and startFlow re-export.
+ * This is the Step 1 artifact — compiled code + config wiring, no platform wrapper.
  */
-export function generatePlatformWrapper(
+export function generateWireConfigModule(
   storesDeclaration: string,
   configObject: string,
   userCode: string,
-  buildOptions: {
-    platform: string;
-    windowCollector?: string;
-    windowElb?: string;
-  },
 ): string {
-  if (buildOptions.platform === 'browser') {
-    // Web platform: IIFE with browser globals
-    const windowAssignments = [];
-    if (buildOptions.windowCollector) {
-      windowAssignments.push(
-        `  if (typeof window !== 'undefined') window['${buildOptions.windowCollector}'] = collector;`,
-      );
-    }
-    if (buildOptions.windowElb) {
-      windowAssignments.push(
-        `  if (typeof window !== 'undefined') window['${buildOptions.windowElb}'] = elb;`,
-      );
-    }
-    const assignments =
-      windowAssignments.length > 0 ? '\n' + windowAssignments.join('\n') : '';
+  const codeSection = userCode ? `\n${userCode}\n` : '';
 
-    return `${DEEP_MERGE_INLINE}
-(async (context) => {
-  ${storesDeclaration}
-
-  const config = ${configObject};
-  if (context) deepMerge(config, context);
-
-  ${userCode}
-
-  const { collector, elb } = await startFlow(config);${assignments}
-})(typeof window !== 'undefined' && window.__elbConfig || undefined);`;
-  } else {
-    // Server platform: Export default function
-    const codeSection = userCode ? `\n  ${userCode}\n` : '';
-
-    return `${DEEP_MERGE_INLINE}
-export default async function(context = {}) {
+  return `export function wireConfig() {
   ${storesDeclaration}
 
   const config = ${configObject};${codeSection}
-  // Apply context overrides (deep merge into config)
-  if (Object.keys(context).length) deepMerge(config, context);
 
-  // Apply source settings overrides from runner (e.g., port: undefined to prevent self-listen)
+  return config;
+}
+
+export { startFlow };`;
+}
+
+/**
+ * Wrap ESM code in a web-compatible IIFE.
+ * Strips export keywords, appends IIFE invocation with window assignments.
+ */
+export async function buildWebWrapper(
+  esmCode: string,
+  options: { windowCollector?: string; windowElb?: string; minify?: boolean },
+): Promise<string> {
+  // Strip ESM export syntax (convert to local declarations)
+  let code = esmCode
+    .replace(/^export\s+function\s+/gm, 'function ')
+    .replace(/^export\s+\{[^}]*\};\s*$/gm, '')
+    .replace(/^export\s+default\s+/gm, '');
+
+  // Build window assignments
+  const assignments: string[] = [];
+  if (options.windowCollector) {
+    assignments.push(
+      `  if (typeof window !== 'undefined') window['${options.windowCollector}'] = collector;`,
+    );
+  }
+  if (options.windowElb) {
+    assignments.push(
+      `  if (typeof window !== 'undefined') window['${options.windowElb}'] = elb;`,
+    );
+  }
+  const assignmentCode =
+    assignments.length > 0 ? '\n' + assignments.join('\n') : '';
+
+  // Wrap in async IIFE
+  const wrapped = `${code}
+(async () => {
+  const { collector, elb } = await startFlow(wireConfig());${assignmentCode}
+})();`;
+
+  // Minify if requested
+  if (options.minify) {
+    const esbuild = await import('esbuild');
+    const result = await esbuild.transform(wrapped, {
+      minify: true,
+      target: 'es2018',
+    });
+    return result.code;
+  }
+
+  return wrapped;
+}
+
+/**
+ * Wrap ESM code in a server factory function.
+ * Adds export default async function with httpHandler discovery.
+ */
+export function buildServerWrapper(esmCode: string): string {
+  return `${esmCode}
+
+export default async function(context = {}) {
+  const config = wireConfig();
+
+  // Apply logger from runner context
+  if (context.logger) config.logger = context.logger;
+
+  // Apply sourceSettings from runner (e.g., port: undefined for external server)
   if (context.sourceSettings && config.sources) {
     for (const src of Object.values(config.sources)) {
       if (src.config?.settings) {
@@ -1608,11 +1649,10 @@ export default async function(context = {}) {
 
   const result = await startFlow(config);
 
-  // Discover httpHandler from initialized sources (duck-typing, no source-type coupling)
+  // Discover httpHandler from initialized sources (duck-typing)
   const httpSource = Object.values(result.collector.sources || {})
     .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
 
   return { ...result, httpHandler: httpSource ? httpSource.httpHandler : undefined };
 }`;
-  }
 }

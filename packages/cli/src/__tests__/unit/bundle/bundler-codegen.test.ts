@@ -1,10 +1,12 @@
 import {
   buildConfigObject,
-  generatePlatformWrapper,
   createEntryPoint,
   detectStepPackages,
   detectExplicitCodeImports,
   serializeWithCode,
+  generateWireConfigModule,
+  buildWebWrapper,
+  buildServerWrapper,
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
 import type { Flow } from '@walkeros/core';
@@ -243,70 +245,54 @@ describe('$code: prefix support', () => {
   });
 });
 
-describe('generatePlatformWrapper', () => {
-  it('generates web IIFE wrapper', () => {
-    const config = '{ sources: {}, destinations: {} }';
-    const userCode = 'console.log("custom code");';
-    const buildOptions = {
-      platform: 'browser',
+describe('buildWebWrapper', () => {
+  it('generates web IIFE wrapper', async () => {
+    const esmCode = generateWireConfigModule(
+      'const stores = {};',
+      '{ sources: {}, destinations: {} }',
+      'console.log("custom code");',
+    );
+
+    const result = await buildWebWrapper(esmCode, {
       windowCollector: 'collector',
       windowElb: 'elb',
-    };
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      config,
-      userCode,
-      buildOptions,
-    );
+    });
 
     expect(result).toContain('const stores = {};');
-    expect(result).toContain('(async (context)');
-    expect(result).toContain(
-      'const config = { sources: {}, destinations: {} };',
-    );
-    expect(result).toContain('if (context) deepMerge(config, context)');
-    expect(result).toContain('window.__elbConfig');
+    expect(result).toContain('(async () => {');
+    expect(result).toContain('await startFlow(wireConfig())');
     expect(result).toContain('console.log("custom code");');
-    expect(result).toContain('await startFlow(config)');
     expect(result).toContain("window['collector'] = collector");
     expect(result).toContain("window['elb'] = elb");
   });
+});
 
+describe('buildServerWrapper', () => {
   it('generates server export default wrapper', () => {
-    const config = '{ sources: {}, destinations: {} }';
-    const userCode = '';
-    const buildOptions = { platform: 'node' };
-
-    const result = generatePlatformWrapper(
+    const esmCode = generateWireConfigModule(
       'const stores = {};',
-      config,
-      userCode,
-      buildOptions,
+      '{ sources: {}, destinations: {} }',
+      '',
     );
+
+    const result = buildServerWrapper(esmCode);
 
     expect(result).toContain('const stores = {};');
     expect(result).toContain('export default async function');
-    expect(result).toContain(
-      'const config = { sources: {}, destinations: {} };',
-    );
-    expect(result).toContain('const result = await startFlow(config)');
+    expect(result).toContain('wireConfig()');
+    expect(result).toContain('await startFlow(config)');
     expect(result).toContain('httpHandler');
     expect(result).not.toContain('window');
   });
 
   it('server wrapper applies sourceSettings override', () => {
-    const config =
-      '{ sources: { http: { config: { settings: { port: 8080 } } } } }';
-    const userCode = '';
-    const buildOptions = { platform: 'node' };
-
-    const result = generatePlatformWrapper(
+    const esmCode = generateWireConfigModule(
       'const stores = {};',
-      config,
-      userCode,
-      buildOptions,
+      '{ sources: { http: { config: { settings: { port: 8080 } } } } }',
+      '',
     );
+
+    const result = buildServerWrapper(esmCode);
 
     expect(result).toContain('context.sourceSettings');
     expect(result).toContain(
@@ -457,8 +443,9 @@ describe('createEntryPoint integration', () => {
     expect(result).toContain('code: sourceExpress');
     expect(result).toContain('code: destinationDemo');
 
-    // Should have server wrapper
-    expect(result).toContain('export default async function');
+    // Should have wireConfig ESM module (not platform wrapper)
+    expect(result).toContain('export function wireConfig()');
+    expect(result).toContain('export { startFlow }');
   });
 
   it('generates valid store references in full entry point', async () => {
@@ -646,26 +633,6 @@ describe('Implicit Collector', () => {
     // Should have both createCollector and startFlow
     expect(result).toContain('startFlow');
     expect(result).toContain('createCollector');
-  });
-});
-
-describe('deepMerge inline', () => {
-  it('includes inlined deepMerge in web wrapper', () => {
-    const result = generatePlatformWrapper('', '{}', '', {
-      platform: 'browser',
-    });
-
-    expect(result).toContain('function deepMerge(t,s)');
-    expect(result).not.toContain("import { deepMerge }");
-  });
-
-  it('includes inlined deepMerge in server wrapper', () => {
-    const result = generatePlatformWrapper('', '{}', '', {
-      platform: 'node',
-    });
-
-    expect(result).toContain('function deepMerge(t,s)');
-    expect(result).not.toContain("import { deepMerge }");
   });
 });
 
@@ -1335,5 +1302,67 @@ describe('Error Handling', () => {
         { configPath: '/test/config.json' },
       );
     }).toThrow(/Invalid configuration/);
+  });
+});
+
+describe('generateWireConfigModule', () => {
+  it('generates wireConfig function with config and startFlow re-export', () => {
+    const result = generateWireConfigModule(
+      'const stores = {};',
+      '{ sources: {}, destinations: {}, stores }',
+      '',
+    );
+    expect(result).toContain('export function wireConfig()');
+    expect(result).toContain('const stores = {};');
+    expect(result).toContain('return config;');
+    expect(result).toContain('export { startFlow }');
+  });
+
+  it('includes user code inside wireConfig', () => {
+    const result = generateWireConfigModule(
+      'const stores = {};',
+      '{ stores }',
+      'console.log("custom");',
+    );
+    expect(result).toContain('console.log("custom")');
+  });
+});
+
+describe('buildWebWrapper', () => {
+  it('strips export keywords and wraps in IIFE', async () => {
+    const esm =
+      'export function wireConfig() { return {}; }\nexport { startFlow };';
+    const result = await buildWebWrapper(esm, {});
+    expect(result).toContain('function wireConfig()');
+    expect(result).not.toContain('export function');
+    expect(result).not.toContain('export {');
+    expect(result).toContain('(async () => {');
+    expect(result).toContain('await startFlow(wireConfig())');
+    expect(result).toContain('})();');
+  });
+
+  it('includes window assignments when configured', async () => {
+    const esm =
+      'export function wireConfig() { return {}; }\nexport { startFlow };';
+    const result = await buildWebWrapper(esm, {
+      windowCollector: 'collector',
+      windowElb: 'elb',
+    });
+    expect(result).toContain("window['collector'] = collector");
+    expect(result).toContain("window['elb'] = elb");
+  });
+});
+
+describe('buildServerWrapper', () => {
+  it('wraps ESM code with export default factory', () => {
+    const esm =
+      'export function wireConfig() { return {}; }\nexport { startFlow };';
+    const result = buildServerWrapper(esm);
+    expect(result).toContain('export default async function(context = {})');
+    expect(result).toContain('wireConfig()');
+    expect(result).toContain('startFlow(config)');
+    expect(result).toContain('context.logger');
+    expect(result).toContain('context.sourceSettings');
+    expect(result).toContain('httpHandler');
   });
 });

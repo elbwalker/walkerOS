@@ -1,7 +1,8 @@
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
-import { getPlatform, type Elb } from '@walkeros/core';
+import { getPlatform } from '@walkeros/core';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
   getErrorMessage,
@@ -12,14 +13,14 @@ import {
   type Platform,
 } from '../../core/index.js';
 import { validateEvent } from '../../core/event-validation.js';
-import { Level, type Logger } from '@walkeros/core';
+import type { Logger } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { bundleCore } from '../bundle/bundler.js';
 import type { PushCommandOptions, PushResult } from './types.js';
 import type { PushOptions } from '../../schemas/push.js';
 import { buildOverrides, type PushOverrides } from './overrides.js';
-import { loadBundle } from '../../runtime/load-bundle.js';
+import { applyOverrides } from './apply-overrides.js';
 
 /**
  * Core push logic without CLI concerns (no process.exit, no output formatting)
@@ -92,7 +93,6 @@ async function pushCore(
         (dir) => {
           tempDir = dir;
         },
-        { logger: { level: options.verbose ? Level.DEBUG : Level.ERROR } },
       );
     }
 
@@ -268,29 +268,22 @@ async function executeConfigPush(
     flowSettings,
   );
 
-  // Bundle to temp file in config directory (so Node.js can find node_modules)
+  // Bundle to temp file
   logger.debug('Bundling flow configuration');
-  const configDir = buildOptions.configDir || process.cwd();
   const tempDir = getTmpPath(
     undefined,
     `push-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   );
   setTempDir(tempDir);
   await fs.ensureDir(tempDir);
-  const tempPath = path.join(
-    tempDir,
-    `bundle.${platform === 'web' ? 'js' : 'mjs'}`,
-  );
+  const tempPath = path.join(tempDir, 'bundle.mjs');
 
   const pushBuildOptions = {
     ...buildOptions,
     output: tempPath,
-    format: platform === 'web' ? ('iife' as const) : ('esm' as const),
+    format: 'esm' as const,
     platform: platform === 'web' ? ('browser' as const) : ('node' as const),
-    ...(platform === 'web' && {
-      windowCollector: 'collector',
-      windowElb: 'elb',
-    }),
+    skipWrapper: true, // CLI imports ESM directly — no platform wrapper
   };
 
   await bundleCore(flowSettings, pushBuildOptions, logger, false);
@@ -303,10 +296,13 @@ async function executeConfigPush(
     return executeWebPush(tempPath, validatedEvent, logger, overrides);
   } else if (platform === 'server') {
     logger.debug('Executing in server environment (Node.js)');
-    return executeServerPush(tempPath, validatedEvent, logger, 60000, {
-      ...overrides,
-      ...(options.verbose ? { logger: { level: Level.DEBUG } } : {}),
-    });
+    return executeServerPush(
+      tempPath,
+      validatedEvent,
+      logger,
+      60000,
+      overrides,
+    );
   } else {
     throw new Error(`Unsupported platform: ${platform}`);
   }
@@ -321,7 +317,7 @@ async function executeBundlePush(
   validatedEvent: { name: string; data: Record<string, unknown> },
   logger: Logger.Instance,
   setTempDir: (dir: string) => void,
-  context: PushOverrides & { logger?: Logger.Config } = {},
+  overrides: PushOverrides = {},
 ): Promise<PushResult> {
   // Write bundle to temp file
   const tempDir = getTmpPath(
@@ -330,10 +326,7 @@ async function executeBundlePush(
   );
   setTempDir(tempDir);
   await fs.ensureDir(tempDir);
-  const tempPath = path.join(
-    tempDir,
-    `bundle.${platform === 'server' ? 'mjs' : 'js'}`,
-  );
+  const tempPath = path.join(tempDir, 'bundle.mjs');
   await fs.writeFile(tempPath, bundleContent, 'utf8');
 
   logger.debug(`Bundle written to: ${tempPath}`);
@@ -341,10 +334,16 @@ async function executeBundlePush(
   // Execute based on platform
   if (platform === 'web') {
     logger.debug('Executing in web environment (JSDOM)');
-    return executeWebPush(tempPath, validatedEvent, logger);
+    return executeWebPush(tempPath, validatedEvent, logger, overrides);
   } else {
     logger.debug('Executing in server environment (Node.js)');
-    return executeServerPush(tempPath, validatedEvent, logger, 60000, context);
+    return executeServerPush(
+      tempPath,
+      validatedEvent,
+      logger,
+      60000,
+      overrides,
+    );
   }
 }
 
@@ -357,66 +356,58 @@ interface PushEventInput {
 }
 
 /**
- * Execute push for web platform using JSDOM with real APIs
+ * Execute push for web platform using JSDOM + ESM import
  */
 async function executeWebPush(
-  bundlePath: string,
+  esmPath: string,
   event: PushEventInput,
   logger: Logger.Instance,
   overrides?: PushOverrides,
 ): Promise<PushResult> {
   const startTime = Date.now();
+  const virtualConsole = new VirtualConsole();
+  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+    url: 'http://localhost',
+    runScripts: 'dangerously',
+    resources: 'usable',
+    virtualConsole,
+  });
+
+  // Save and inject JSDOM globals before ESM import
+  const savedWindow = (global as any).window;
+  const savedDocument = (global as any).document;
+  (global as any).window = dom.window;
+  (global as any).document = dom.window.document;
 
   try {
-    // Create JSDOM with silent console
-    const virtualConsole = new VirtualConsole();
-    const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-      url: 'http://localhost',
-      runScripts: 'dangerously',
-      resources: 'usable',
-      virtualConsole,
-    });
+    const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
+    const module = await import(`${fileUrl}?t=${Date.now()}`);
+    const { wireConfig, startFlow } = module;
 
-    const { window } = dom;
-
-    // JSDOM provides fetch natively, no need to inject node-fetch
-
-    // Set overrides on window so the bundle IIFE picks them up via __elbConfig
-    if (overrides && Object.keys(overrides).length > 0) {
-      (window as unknown as Record<string, unknown>).__elbConfig = overrides;
+    if (typeof wireConfig !== 'function' || typeof startFlow !== 'function') {
+      throw new Error(
+        'Invalid ESM bundle: missing wireConfig or startFlow exports',
+      );
     }
 
-    // Load and execute bundle
-    logger.debug('Loading bundle...');
-    const bundleCode = await fs.readFile(bundlePath, 'utf8');
-    window.eval(bundleCode);
+    const config = wireConfig();
 
-    // Wait for window.collector assignment
-    logger.debug('Waiting for collector...');
-    await waitForWindowProperty(
-      window as unknown as Record<string, unknown>,
-      'collector',
-      5000,
-    );
+    // Apply overrides (disabled/mock) via direct property assignment
+    applyOverrides(config, overrides || {});
 
-    const windowObj = window as unknown as Record<string, unknown>;
-    const collector = windowObj.collector as unknown as {
-      push: (event: {
-        name: string;
-        data: Record<string, unknown>;
-      }) => Promise<Elb.PushResult>;
-    };
+    const result = await startFlow(config);
+    if (!result?.collector?.push)
+      throw new Error('Invalid bundle: collector missing push');
 
-    // Push event directly to collector (bypasses source handlers)
     logger.info(`Pushing event: ${event.name}`);
-    const elbResult = await collector.push({
+    const elbResult = await result.collector.push({
       name: event.name,
       data: event.data,
     });
 
     return {
       success: true,
-      elbResult,
+      elbResult: elbResult as PushResult['elbResult'],
       duration: Date.now() - startTime,
     };
   } catch (error) {
@@ -425,24 +416,29 @@ async function executeWebPush(
       duration: Date.now() - startTime,
       error: getErrorMessage(error),
     };
+  } finally {
+    // Restore globals
+    if (savedWindow !== undefined) (global as any).window = savedWindow;
+    else delete (global as any).window;
+    if (savedDocument !== undefined) (global as any).document = savedDocument;
+    else delete (global as any).document;
   }
 }
 
 /**
- * Execute push for server platform using Node.js
+ * Execute push for server platform using direct ESM import
  */
 async function executeServerPush(
-  bundlePath: string,
+  esmPath: string,
   event: PushEventInput,
   logger: Logger.Instance,
-  timeout: number = 60000, // 60 second default timeout
-  context: PushOverrides & { logger?: Logger.Config } = {},
+  timeout: number = 60000,
+  overrides?: PushOverrides,
 ): Promise<PushResult> {
   const startTime = Date.now();
-
   let timer: ReturnType<typeof setTimeout>;
+
   try {
-    // Create timeout promise
     const timeoutPromise = new Promise<never>((_, reject) => {
       timer = setTimeout(
         () => reject(new Error(`Server push timeout after ${timeout}ms`)),
@@ -450,18 +446,28 @@ async function executeServerPush(
       );
     });
 
-    // Execute with timeout
     const executePromise = (async () => {
-      // Load bundle: import, validate, call factory
-      const { collector } = await loadBundle(
-        bundlePath,
-        context as Record<string, unknown>,
-        logger,
-      );
+      const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
+      const module = await import(`${fileUrl}?t=${Date.now()}`);
+      const { wireConfig, startFlow } = module;
 
-      // Push event directly to collector (bypasses source handlers)
+      if (typeof wireConfig !== 'function' || typeof startFlow !== 'function') {
+        throw new Error(
+          'Invalid ESM bundle: missing wireConfig or startFlow exports',
+        );
+      }
+
+      const config = wireConfig();
+
+      // Apply overrides (disabled/mock) via direct property assignment
+      applyOverrides(config, overrides || {});
+
+      const result = await startFlow(config);
+      if (!result?.collector?.push)
+        throw new Error('Invalid bundle: collector missing push');
+
       logger.info(`Pushing event: ${event.name}`);
-      const elbResult = await collector.push({
+      const elbResult = await result.collector.push({
         name: event.name,
         data: event.data,
       });
@@ -473,7 +479,6 @@ async function executeServerPush(
       };
     })();
 
-    // Race between execution and timeout
     return await Promise.race([executePromise, timeoutPromise]);
   } catch (error) {
     return {
@@ -484,35 +489,6 @@ async function executeServerPush(
   } finally {
     clearTimeout(timer!);
   }
-}
-
-/**
- * Wait for window property to be assigned
- */
-function waitForWindowProperty(
-  window: Record<string, unknown>,
-  prop: string,
-  timeout: number = 5000,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const start = Date.now();
-
-    const check = () => {
-      if (window[prop] !== undefined) {
-        resolve();
-      } else if (Date.now() - start > timeout) {
-        reject(
-          new Error(
-            `Timeout waiting for window.${prop}. IIFE may have failed to execute.`,
-          ),
-        );
-      } else {
-        setImmediate(check);
-      }
-    };
-
-    check();
-  });
 }
 
 // Export types

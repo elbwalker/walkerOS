@@ -1,7 +1,9 @@
 import { describe, it, expect } from '@jest/globals';
 import {
   buildConfigObject,
-  generatePlatformWrapper,
+  buildServerWrapper,
+  buildWebWrapper,
+  generateWireConfigModule,
 } from '../../../commands/bundle/bundler.js';
 import type { Flow } from '@walkeros/core';
 
@@ -223,151 +225,86 @@ describe('Integration', () => {
   });
 });
 
-describe('generatePlatformWrapper', () => {
-  it('should include source settings override in server wrapper', () => {
-    const configObject = `{
-      sources: { http: { code: expressSource, config: { settings: { port: 3000 } } } },
-      destinations: {}
-    }`;
-
-    const result = generatePlatformWrapper(
+describe('buildServerWrapper', () => {
+  it('should include sourceSettings override in server wrapper', () => {
+    const esmCode = generateWireConfigModule(
       'const stores = {};',
-      configObject,
+      '{ sources: { http: { code: expressSource, config: { settings: { port: 3000 } } } }, destinations: {} }',
       '',
-      {
-        platform: 'server',
-      },
     );
+
+    const result = buildServerWrapper(esmCode);
 
     // Must contain sourceSettings override block
     expect(result).toContain('context.sourceSettings');
     expect(result).toContain('config.sources');
-    // Must contain deepMerge for context overrides
-    expect(result).toContain('deepMerge(config, context)');
     // Must export default function
     expect(result).toContain('export default async function');
   });
 
-  it('should not include source settings override in browser wrapper', () => {
-    const configObject = `{ sources: {}, destinations: {} }`;
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      configObject,
-      '',
-      {
-        platform: 'browser',
-      },
-    );
-
-    expect(result).not.toContain('context.sourceSettings');
-  });
-
-  it('web wrapper accepts context parameter', () => {
-    const configObject = `{ sources: {}, destinations: {} }`;
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      configObject,
-      '',
-      {
-        platform: 'browser',
-      },
-    );
-
-    expect(result).toContain('(async (context)');
-  });
-
-  it('web wrapper reads window.__elbConfig', () => {
-    const configObject = `{ sources: {}, destinations: {} }`;
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      configObject,
-      '',
-      {
-        platform: 'browser',
-      },
-    );
-
-    expect(result).toContain('window.__elbConfig');
-    expect(result).toContain("typeof window !== 'undefined'");
-  });
-
-  it('web wrapper uses deepMerge for context', () => {
-    const configObject = `{ sources: {}, destinations: {} }`;
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      configObject,
-      '',
-      {
-        platform: 'browser',
-      },
-    );
-
-    expect(result).toContain('deepMerge(config, context)');
-  });
-
-  it('server wrapper uses deepMerge instead of manual logger merge', () => {
-    const configObject = `{ sources: {}, destinations: {} }`;
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      configObject,
-      '',
-      {
-        platform: 'server',
-      },
-    );
-
-    expect(result).toContain('deepMerge(config, context)');
-    // Should NOT contain old manual logger merge
-    expect(result).not.toContain('config.logger = { ...config.logger');
-  });
-
-  it('server wrapper still has sourceSettings block after deepMerge', () => {
-    const configObject = `{ sources: {}, destinations: {} }`;
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      configObject,
-      '',
-      {
-        platform: 'server',
-      },
-    );
-
-    // deepMerge should come before sourceSettings
-    const deepMergeIdx = result.indexOf('deepMerge(config, context)');
-    const sourceSettingsIdx = result.indexOf('context.sourceSettings');
-    expect(deepMergeIdx).toBeGreaterThan(-1);
-    expect(sourceSettingsIdx).toBeGreaterThan(-1);
-    expect(deepMergeIdx).toBeLessThan(sourceSettingsIdx);
-  });
-
   it('should apply sourceSettings spread merge to sources', () => {
-    const configObject = `{
-      sources: {
-        http: { code: expressSource, config: { settings: { port: 3000 } } },
-        other: { code: otherSource, config: { settings: { name: "test" } } }
-      },
-      destinations: {}
-    }`;
+    const esmCode = generateWireConfigModule('const stores = {};', '{}', '');
 
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      configObject,
-      '',
-      {
-        platform: 'server',
-      },
-    );
+    const result = buildServerWrapper(esmCode);
 
     // The generated code should spread merge sourceSettings into source configs
     expect(result).toContain('context.sourceSettings');
     expect(result).toContain(
       '...src.config.settings, ...context.sourceSettings',
     );
+  });
+
+  it('applies logger from context', () => {
+    const esmCode = generateWireConfigModule('const stores = {};', '{}', '');
+
+    const result = buildServerWrapper(esmCode);
+
+    expect(result).toContain('context.logger');
+    // Should NOT contain old manual logger spread merge
+    expect(result).not.toContain('config.logger = { ...config.logger');
+  });
+
+  it('logger assignment comes before sourceSettings', () => {
+    const esmCode = generateWireConfigModule('const stores = {};', '{}', '');
+
+    const result = buildServerWrapper(esmCode);
+
+    const loggerIdx = result.indexOf('context.logger');
+    const sourceSettingsIdx = result.indexOf('context.sourceSettings');
+    expect(loggerIdx).toBeGreaterThan(-1);
+    expect(sourceSettingsIdx).toBeGreaterThan(-1);
+    expect(loggerIdx).toBeLessThan(sourceSettingsIdx);
+  });
+});
+
+describe('buildWebWrapper', () => {
+  it('should not include sourceSettings override in web wrapper', async () => {
+    const esmCode = generateWireConfigModule(
+      'const stores = {};',
+      '{ sources: {}, destinations: {} }',
+      '',
+    );
+
+    const result = await buildWebWrapper(esmCode, {});
+
+    expect(result).not.toContain('context.sourceSettings');
+  });
+
+  it('wraps code in async IIFE calling wireConfig', async () => {
+    const esmCode = generateWireConfigModule(
+      'const stores = {};',
+      '{ sources: {}, destinations: {} }',
+      '',
+    );
+
+    const result = await buildWebWrapper(esmCode, {
+      windowCollector: 'collector',
+      windowElb: 'elb',
+    });
+
+    expect(result).toContain('(async () => {');
+    expect(result).toContain('await startFlow(wireConfig())');
+    expect(result).toContain("window['collector'] = collector");
+    expect(result).toContain("window['elb'] = elb");
   });
 });

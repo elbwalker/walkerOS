@@ -115,6 +115,13 @@ export interface BuildOptions extends CLIBuildOptions {
   windowElb?: string;
 
   /**
+   * Skip platform wrapper (Step 2) and output raw ESM.
+   * Used by CLI push for direct import of the bundled module.
+   * @default false
+   */
+  skipWrapper?: boolean;
+
+  /**
    * Folders to include in the output directory.
    * These folders are copied alongside the bundle for runtime access.
    * @default ["./shared"] if folder exists
