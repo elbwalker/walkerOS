@@ -374,10 +374,11 @@ async function executeWebPush(
   });
 
   // Save and inject JSDOM globals before ESM import
-  const savedWindow = (global as any).window;
-  const savedDocument = (global as any).document;
-  (global as any).window = dom.window;
-  (global as any).document = dom.window.document;
+  const g = global as unknown as Record<string, unknown>;
+  const savedWindow = g.window;
+  const savedDocument = g.document;
+  g.window = dom.window;
+  g.document = dom.window.document;
 
   try {
     const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
@@ -418,10 +419,10 @@ async function executeWebPush(
     };
   } finally {
     // Restore globals
-    if (savedWindow !== undefined) (global as any).window = savedWindow;
-    else delete (global as any).window;
-    if (savedDocument !== undefined) (global as any).document = savedDocument;
-    else delete (global as any).document;
+    if (savedWindow !== undefined) g.window = savedWindow;
+    else delete g.window;
+    if (savedDocument !== undefined) g.document = savedDocument;
+    else delete g.document;
   }
 }
 

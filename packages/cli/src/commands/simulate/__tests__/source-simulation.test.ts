@@ -5,7 +5,6 @@ jest.mock('@walkeros/collector', () => ({
   simulate: jest.fn(),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const mockSimulate = require('@walkeros/collector').simulate as jest.Mock;
 
 describe('simulateSourceCLI', () => {
