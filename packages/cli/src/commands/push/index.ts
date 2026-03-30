@@ -32,7 +32,7 @@ import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { loadConfig } from '../../config/utils.js';
 import { bundleCore } from '../bundle/bundler.js';
-import type { PushCommandOptions, PushResult } from './types.js';
+import type { NetworkCall, PushCommandOptions, PushResult } from './types.js';
 import type { PushOptions } from '../../schemas/push.js';
 import { buildOverrides, type PushOverrides } from './overrides.js';
 import { applyOverrides } from './apply-overrides.js';
@@ -566,9 +566,10 @@ async function executeDestinationPush(
   timeout?: number,
 ): Promise<PushResult> {
   const startTime = Date.now();
+  const networkCalls: NetworkCall[] = [];
 
   return withFlowContext(
-    { esmPath, platform, logger, snapshotCode, timeout },
+    { esmPath, platform, logger, snapshotCode, timeout, networkCalls },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
       const { trackingCalls } = applyOverrides(config, overrides || {});
@@ -593,6 +594,7 @@ async function executeDestinationPush(
         success: true,
         elbResult: elbResult as PushResult['elbResult'],
         ...(Object.keys(usage).length > 0 ? { usage } : {}),
+        ...(networkCalls.length > 0 ? { networkCalls } : {}),
         duration: Date.now() - startTime,
       };
     },
@@ -615,9 +617,10 @@ async function executeSimulatedDestination(
   timeout?: number,
 ): Promise<PushResult> {
   const startTime = Date.now();
+  const networkCalls: NetworkCall[] = [];
 
   return withFlowContext(
-    { esmPath, platform, logger, snapshotCode, timeout },
+    { esmPath, platform, logger, snapshotCode, timeout, networkCalls },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
       const { trackingCalls } = applyOverrides(config, overrides);
@@ -709,6 +712,7 @@ async function executeSimulatedDestination(
         success: true,
         elbResult: pushResult as PushResult['elbResult'],
         ...(Object.keys(usage).length > 0 ? { usage } : {}),
+        ...(networkCalls.length > 0 ? { networkCalls } : {}),
         duration: Date.now() - startTime,
       };
     },
@@ -735,9 +739,10 @@ async function executeTransformerSimulation(
   snapshotCode?: string,
 ): Promise<PushResult> {
   const startTime = Date.now();
+  const networkCalls: NetworkCall[] = [];
 
   return withFlowContext(
-    { esmPath, platform, logger, snapshotCode },
+    { esmPath, platform, logger, snapshotCode, networkCalls },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
       applyOverrides(config, overrides);
@@ -844,7 +849,12 @@ async function executeTransformerSimulation(
 
       await collector.command('shutdown');
 
-      return { success: true, captured, duration: Date.now() - startTime };
+      return {
+        success: true,
+        captured,
+        ...(networkCalls.length > 0 ? { networkCalls } : {}),
+        duration: Date.now() - startTime,
+      };
     },
   );
 }
@@ -875,9 +885,10 @@ async function executeSourceSimulation(
   snapshotCode?: string,
 ): Promise<PushResult> {
   const startTime = Date.now();
+  const networkCalls: NetworkCall[] = [];
 
   return withFlowContext(
-    { esmPath, platform, logger, snapshotCode },
+    { esmPath, platform, logger, snapshotCode, networkCalls },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
       const { trackingCalls } = applyOverrides(config, overrides);
@@ -919,6 +930,7 @@ async function executeSourceSimulation(
         success: true,
         ...(captured.length > 0 ? { captured } : {}),
         ...(Object.keys(usage).length > 0 ? { usage } : {}),
+        ...(networkCalls.length > 0 ? { networkCalls } : {}),
         duration: Date.now() - startTime,
       };
     },

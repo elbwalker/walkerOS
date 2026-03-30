@@ -2,7 +2,7 @@ import path from 'path';
 import { pathToFileURL } from 'url';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import type { Logger } from '@walkeros/core';
-import type { PushResult } from './types.js';
+import type { NetworkCall, PushResult } from './types.js';
 import { getErrorMessage } from '../../core/utils.js';
 
 export interface FlowContextOptions {
@@ -11,6 +11,8 @@ export interface FlowContextOptions {
   logger: Logger.Instance;
   snapshotCode?: string;
   timeout?: number;
+  /** When provided, fetch/sendBeacon are polyfilled and calls recorded here */
+  networkCalls?: NetworkCall[];
 }
 
 /**
@@ -39,10 +41,12 @@ export async function withFlowContext(
   options: FlowContextOptions,
   fn: (module: FlowModule) => Promise<PushResult>,
 ): Promise<PushResult> {
-  const { esmPath, platform, logger, snapshotCode, timeout } = options;
+  const { esmPath, platform, logger, snapshotCode, timeout, networkCalls } =
+    options;
   const startTime = Date.now();
   const g = global as unknown as Record<string, unknown>;
   let savedWindow: unknown, savedDocument: unknown, savedNavigator: unknown;
+  let savedFetch: typeof fetch | undefined;
   let dom: JSDOM | undefined;
 
   // JSDOM setup for web platform
@@ -64,6 +68,13 @@ export async function withFlowContext(
       configurable: true,
       writable: true,
     });
+
+    // Apply network polyfills when capture array is provided
+    if (networkCalls) {
+      savedFetch = global.fetch;
+      applyNetworkPolyfills(dom, networkCalls);
+      global.fetch = dom.window.fetch as typeof fetch;
+    }
   }
 
   try {
@@ -115,6 +126,9 @@ export async function withFlowContext(
       error: getErrorMessage(error),
     };
   } finally {
+    if (savedFetch !== undefined) {
+      cleanupNetworkPolyfills(savedFetch);
+    }
     if (platform === 'web') {
       if (savedWindow !== undefined) g.window = savedWindow;
       else delete g.window;
@@ -131,4 +145,72 @@ export async function withFlowContext(
       }
     }
   }
+}
+
+/**
+ * Install no-op fetch and sendBeacon polyfills on the JSDOM window.
+ * Both record calls to the provided capture array.
+ * Also overrides global.fetch so ESM bundle code (which resolves fetch
+ * from Node's global scope, not window) gets the polyfill too.
+ */
+export function applyNetworkPolyfills(
+  dom: JSDOM,
+  networkCalls: NetworkCall[],
+): void {
+  // Polyfill fetch on the JSDOM window
+  dom.window.fetch = (async (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> => {
+    const url = typeof input === 'string' ? input : input.toString();
+    const method = init?.method || 'GET';
+    const body =
+      init?.body !== undefined && init?.body !== null
+        ? String(init.body)
+        : null;
+
+    // Extract headers
+    const headers: Record<string, string> = {};
+    if (init?.headers) {
+      if (init.headers instanceof Headers) {
+        init.headers.forEach((v, k) => {
+          headers[k] = v;
+        });
+      } else if (typeof init.headers === 'object') {
+        Object.entries(init.headers as Record<string, string>).forEach(
+          ([k, v]) => {
+            headers[k] = v;
+          },
+        );
+      }
+    }
+
+    networkCalls.push({
+      type: 'fetch',
+      url,
+      method,
+      body,
+      headers,
+      timestamp: Date.now(),
+    });
+
+    return new Response('', { status: 200, statusText: 'OK' });
+  }) as typeof fetch;
+
+  // Polyfill sendBeacon on navigator
+  dom.window.navigator.sendBeacon = (
+    url: string,
+    data?: BodyInit | null,
+  ): boolean => {
+    const body = data !== undefined && data !== null ? String(data) : null;
+    networkCalls.push({ type: 'beacon', url, body, timestamp: Date.now() });
+    return true;
+  };
+}
+
+/**
+ * Restore global.fetch to its original value.
+ */
+export function cleanupNetworkPolyfills(savedFetch: typeof fetch): void {
+  global.fetch = savedFetch;
 }

@@ -290,6 +290,12 @@ Options:
 2. **Check mapping**: Event must match entity/action in mapping
 3. **Use simulate first**: `walkeros push flow.json -e event.json --simulate destination.demo -v`
 
+### Web Simulation Transport
+
+Web simulations run in JSDOM. `fetch` and `navigator.sendBeacon` are
+polyfilled as tracked no-ops -- no real HTTP requests are made. Captured
+network calls are included in `PushResult.networkCalls` when present.
+
 ### Local Packages Not Found
 
 Use absolute or relative paths:
