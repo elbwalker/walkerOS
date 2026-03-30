@@ -173,50 +173,53 @@ tests efficiently cover variations. Contract tests catch API drift.
 
 ## Simulation Testing
 
-The collector provides a unified `simulate()` function for testing any step type
-(source, transformer, destination) without bundling or real API calls:
+Simulation testing uses the CLI `push` command with `--simulate` flags. The
+collector does not export a `simulate()` function — simulation is a CLI concern
+that maps to `mock`/`disabled` config properties at runtime.
+
+**CLI usage:**
+
+```bash
+# Simulate a destination (mocks its push, captures API calls)
+walkeros push flow.json -e '{"entity":"page","action":"view"}' --simulate destination.ga4
+
+# Simulate a source (captures events it pushes, disables all destinations)
+walkeros push flow.json --simulate source.browser
+
+# Mock a destination with a specific return value
+walkeros push flow.json -e event.json --mock destination.ga4='{"status":"ok"}'
+```
+
+**Programmatic usage:**
 
 ```typescript
-import { simulate } from '@walkeros/collector';
+import { push } from '@walkeros/cli';
 
-// Transformer simulation
-const result = await simulate({
-  step: 'transformer',
-  name: 'my-transformer',
-  code: transformerModule,
-  event: { entity: 'page', action: 'view', data: { title: 'Home' } },
+// Simulate a destination
+const result = await push('flow.json', { entity: 'page', action: 'view' }, {
+  simulate: ['destination.ga4'],
 });
-// result.events = transformed events (empty if filtered)
+// result.usage = API call tracking data from wrapEnv
 
-// Destination simulation with call tracking
-const result = await simulate({
-  step: 'destination',
-  name: 'my-destination',
-  code: destinationModule,
-  event: { entity: 'page', action: 'view' },
-  env: mockEnv,
-  track: ['window.gtag', 'dataLayer.push'], // Paths to record
+// Simulate a source
+const result = await push('flow.json', undefined, {
+  simulate: ['source.browser'],
 });
-// result.calls = [{ fn: 'window.gtag', args: [...], ts: ... }]
-
-// Source simulation — package's createTrigger manages lifecycle
-const result = await simulate({
-  step: 'source',
-  name: 'my-source',
-  code: sourceModule,
-  createTrigger, // Trigger.CreateFn from package's examples/trigger.ts
-  input: { content: myInput, trigger: { type: 'click' } },
-});
-// result.events = captured events via spy transformer
+// result.captured = events captured from source env.push
 ```
 
 **Key points:**
 
-- Destinations use `wrapEnv` for automatic call tracking on specified paths
-- Sources use `createTrigger` pattern — package manages its own lifecycle (lazy startFlow)
-- Sources capture events via a `next` spy transformer (no destinations needed)
-- Returns `Simulation.Result` with `events`, `calls`, `duration`, and optional
-  `error`
+- `--simulate destination.X` sets `config.mock = {}` on the target and
+  `config.disabled = true` on all other destinations
+- `--simulate source.X` wraps `env.push` with a capture function and disables
+  all destinations
+- Destination `/dev` env.push is auto-loaded to provide mock globals (fake
+  `window.gtag`, etc.)
+- Returns `PushResult` with `result`, `captured` (source), and `usage`
+  (destination)
+- The `mockEnv()` and env pattern examples above remain correct for unit testing
+  individual step functions directly
 
 ## Package-Specific Approaches
 

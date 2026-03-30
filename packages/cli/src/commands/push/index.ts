@@ -16,6 +16,7 @@ import { validateEvent } from '../../core/event-validation.js';
 import type { Logger } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
+import { loadConfig } from '../../config/utils.js';
 import { bundleCore } from '../bundle/bundler.js';
 import type { PushCommandOptions, PushResult } from './types.js';
 import type { PushOptions } from '../../schemas/push.js';
@@ -37,6 +38,7 @@ async function pushCore(
     platform?: string;
     simulate?: string[];
     mock?: string[];
+    snapshot?: string;
   } = {},
 ): Promise<PushResult> {
   const logger = createCLILogger({
@@ -74,6 +76,15 @@ async function pushCore(
 
     let result: PushResult;
 
+    // Load snapshot code if provided
+    let snapshotCode: string | undefined;
+    if (options.snapshot) {
+      snapshotCode = (await loadConfig(options.snapshot, {
+        json: false,
+      })) as string;
+      logger.debug(`Snapshot loaded (${snapshotCode.length} bytes)`);
+    }
+
     if (detected.type === 'config') {
       result = await executeConfigPush(
         {
@@ -88,6 +99,7 @@ async function pushCore(
         (dir) => {
           tempDir = dir;
         },
+        snapshotCode,
       );
     } else {
       result = await executeBundlePush(
@@ -98,6 +110,8 @@ async function pushCore(
         (dir) => {
           tempDir = dir;
         },
+        undefined,
+        snapshotCode,
       );
     }
 
@@ -139,6 +153,7 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
       platform: options.platform as Platform | undefined,
       simulate: options.simulate,
       mock: options.mock,
+      snapshot: options.snapshot,
     });
 
     const duration = Date.now() - startTime;
@@ -231,6 +246,7 @@ export async function push(
     platform?: Platform;
     simulate?: string[];
     mock?: string[];
+    snapshot?: string;
   } = {},
 ): Promise<PushResult> {
   if (typeof configOrPath !== 'string') {
@@ -255,6 +271,7 @@ export async function push(
     platform: options.platform,
     simulate: options.simulate,
     mock: options.mock,
+    snapshot: options.snapshot,
   });
 }
 
@@ -266,6 +283,7 @@ async function executeConfigPush(
   validatedEvent: { name: string; data: Record<string, unknown> },
   logger: Logger.Instance,
   setTempDir: (dir: string) => void,
+  snapshotCode?: string,
 ): Promise<PushResult> {
   // Load config
   logger.debug('Loading flow configuration');
@@ -364,13 +382,20 @@ async function executeConfigPush(
       overrides,
       createTrigger,
       platform,
+      snapshotCode,
     );
   }
 
   // Execute based on platform (destination push path)
   if (platform === 'web') {
     logger.debug('Executing in web environment (JSDOM)');
-    return executeWebPush(tempPath, validatedEvent, logger, overrides);
+    return executeWebPush(
+      tempPath,
+      validatedEvent,
+      logger,
+      overrides,
+      snapshotCode,
+    );
   } else if (platform === 'server') {
     logger.debug('Executing in server environment (Node.js)');
     return executeServerPush(
@@ -379,6 +404,7 @@ async function executeConfigPush(
       logger,
       60000,
       overrides,
+      snapshotCode,
     );
   } else {
     throw new Error(`Unsupported platform: ${platform}`);
@@ -395,6 +421,7 @@ async function executeBundlePush(
   logger: Logger.Instance,
   setTempDir: (dir: string) => void,
   overrides: PushOverrides = {},
+  snapshotCode?: string,
 ): Promise<PushResult> {
   // Write bundle to temp file
   const tempDir = getTmpPath(
@@ -411,7 +438,13 @@ async function executeBundlePush(
   // Execute based on platform
   if (platform === 'web') {
     logger.debug('Executing in web environment (JSDOM)');
-    return executeWebPush(tempPath, validatedEvent, logger, overrides);
+    return executeWebPush(
+      tempPath,
+      validatedEvent,
+      logger,
+      overrides,
+      snapshotCode,
+    );
   } else {
     logger.debug('Executing in server environment (Node.js)');
     return executeServerPush(
@@ -420,6 +453,7 @@ async function executeBundlePush(
       logger,
       60000,
       overrides,
+      snapshotCode,
     );
   }
 }
@@ -446,6 +480,7 @@ async function executeWebPush(
   event: PushEventInput,
   logger: Logger.Instance,
   overrides?: PushOverrides,
+  snapshotCode?: string,
 ): Promise<PushResult> {
   const startTime = Date.now();
   const virtualConsole = new VirtualConsole();
@@ -463,9 +498,19 @@ async function executeWebPush(
   const savedNavigator = g.navigator;
   g.window = dom.window;
   g.document = dom.window.document;
-  g.navigator = dom.window.navigator;
+  Object.defineProperty(global, 'navigator', {
+    value: dom.window.navigator,
+    configurable: true,
+    writable: true,
+  });
 
   try {
+    // Eval snapshot in JSDOM context before importing bundle
+    if (snapshotCode) {
+      logger.debug('Evaluating snapshot in JSDOM');
+      dom.window.eval(snapshotCode);
+    }
+
     const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
     const module = await import(`${fileUrl}?t=${Date.now()}`);
     const { wireConfig, startFlow } = module;
@@ -522,8 +567,15 @@ async function executeWebPush(
     else delete g.window;
     if (savedDocument !== undefined) g.document = savedDocument;
     else delete g.document;
-    if (savedNavigator !== undefined) g.navigator = savedNavigator;
-    else delete g.navigator;
+    if (savedNavigator !== undefined) {
+      Object.defineProperty(global, 'navigator', {
+        value: savedNavigator,
+        configurable: true,
+        writable: true,
+      });
+    } else {
+      delete g.navigator;
+    }
   }
 }
 
@@ -536,6 +588,7 @@ async function executeServerPush(
   logger: Logger.Instance,
   timeout: number = 60000,
   overrides?: PushOverrides,
+  snapshotCode?: string,
 ): Promise<PushResult> {
   const startTime = Date.now();
   let timer: ReturnType<typeof setTimeout>;
@@ -549,6 +602,13 @@ async function executeServerPush(
     });
 
     const executePromise = (async () => {
+      // Eval snapshot in Node global scope before importing bundle
+      if (snapshotCode) {
+        logger.debug('Evaluating snapshot in Node');
+        const vm = await import('vm');
+        vm.runInThisContext(snapshotCode);
+      }
+
       const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
       const module = await import(`${fileUrl}?t=${Date.now()}`);
       const { wireConfig, startFlow } = module;
@@ -634,15 +694,17 @@ async function executeSourceSimulation(
     };
   }>,
   platform: 'web' | 'server',
+  snapshotCode?: string,
 ): Promise<PushResult> {
   const startTime = Date.now();
   const g = global as unknown as Record<string, unknown>;
   let savedWindow: unknown, savedDocument: unknown, savedNavigator: unknown;
+  let dom: JSDOM | undefined;
 
   // JSDOM setup for web platform
   if (platform === 'web') {
     const virtualConsole = new VirtualConsole();
-    const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+    dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
       url: 'http://localhost',
       runScripts: 'dangerously',
       resources: 'usable',
@@ -653,10 +715,26 @@ async function executeSourceSimulation(
     savedNavigator = g.navigator;
     g.window = dom.window;
     g.document = dom.window.document;
-    g.navigator = dom.window.navigator;
+    Object.defineProperty(global, 'navigator', {
+      value: dom.window.navigator,
+      configurable: true,
+      writable: true,
+    });
   }
 
   try {
+    // Eval snapshot before importing bundle
+    if (snapshotCode) {
+      if (platform === 'web' && dom) {
+        logger.debug('Evaluating snapshot in JSDOM');
+        dom.window.eval(snapshotCode);
+      } else {
+        logger.debug('Evaluating snapshot in Node');
+        const vm = await import('vm');
+        vm.runInThisContext(snapshotCode);
+      }
+    }
+
     const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
     const module = await import(`${fileUrl}?t=${Date.now()}`);
     const { wireConfig } = module;
@@ -713,8 +791,15 @@ async function executeSourceSimulation(
       else delete g.window;
       if (savedDocument !== undefined) g.document = savedDocument;
       else delete g.document;
-      if (savedNavigator !== undefined) g.navigator = savedNavigator;
-      else delete g.navigator;
+      if (savedNavigator !== undefined) {
+        Object.defineProperty(global, 'navigator', {
+          value: savedNavigator,
+          configurable: true,
+          writable: true,
+        });
+      } else {
+        delete g.navigator;
+      }
     }
   }
 }

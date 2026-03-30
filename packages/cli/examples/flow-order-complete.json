@@ -14,7 +14,7 @@
       },
       "destinations": {
         "demo": {
-          "code": "destinationDemo",
+          "package": "@walkeros/destination-demo",
           "config": {
             "consent": {
               "marketing": true

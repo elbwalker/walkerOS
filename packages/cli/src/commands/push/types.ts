@@ -14,6 +14,7 @@ export interface PushCommandOptions {
   platform?: 'web' | 'server';
   simulate?: string[];
   mock?: string[];
+  snapshot?: string;
 }
 
 /**

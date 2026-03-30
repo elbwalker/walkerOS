@@ -248,18 +248,6 @@ describeIfBuilt('CLI E2E', () => {
     });
   });
 
-  describe('simulate command', () => {
-    it('should handle invalid config gracefully', async () => {
-      const result = await runCLI(['simulate', '/invalid/path.json']);
-
-      expect(result.code).not.toBe(0);
-      const output = `${result.stderr || ''} ${result.stdout || ''}`;
-      expect(output).toMatch(
-        /not found|no such file|ENOENT|error|failed|invalid/i,
-      );
-    }, 10000);
-  });
-
   describe('help and version', () => {
     it('should show help with --help', async () => {
       const result = await runCLI(['--help']);
@@ -267,7 +255,7 @@ describeIfBuilt('CLI E2E', () => {
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('Usage');
       expect(result.stdout).toContain('bundle');
-      expect(result.stdout).toContain('simulate');
+      expect(result.stdout).toContain('push');
       expect(result.stdout).toContain('run');
     }, 5000);
 

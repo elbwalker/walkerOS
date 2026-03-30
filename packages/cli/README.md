@@ -8,7 +8,7 @@ flows.
 The walkerOS CLI is a developer tool that:
 
 - **Bundles** flow configurations into optimized JavaScript
-- **Simulates** event processing for testing
+- **Simulates** event processing for testing (via `push --simulate`)
 - **Runs** flows locally without Docker daemon
 
 Think of it as your development toolchain for walkerOS - from config to running
@@ -46,7 +46,7 @@ npm install @walkeros/cli
 walkeros bundle flow.json
 
 # Test with simulated events (no real API calls)
-walkeros simulate flow.json --event '{"name":"product view"}'
+walkeros push flow.json --event '{"name":"product view"}' --simulate destination.demo
 
 # Push real events to destinations
 walkeros push flow.json --event '{"name":"product view"}'
@@ -99,41 +99,11 @@ walkeros bundle flow.json --dockerfile Dockerfile.custom
 The output path uses convention-based defaults: `./dist/bundle.mjs` for server,
 `./dist/walker.js` for web.
 
-### simulate
-
-Test event processing with simulated events. The config JSON gets bundled and
-executed with destination mocking.
-
-```bash
-walkeros simulate <config> --event '{"name":"page view"}' [options]
-```
-
-**Options:**
-
-- `-e, --event <json>` - Event to simulate (JSON string, file path, or URL)
-- `--flow <name>` - Flow name for multi-flow configs
-- `-p, --platform <platform>` - Platform override (`web` or `server`)
-- `--json` - Output as JSON
-- `-v, --verbose` - Verbose output
-- `-s, --silent` - Suppress output
-
-**Examples:**
-
-```bash
-# Simulate with config (auto-bundled)
-walkeros simulate examples/web-serve.json \
-  --event '{"name":"page view","data":{"title":"Home"}}' \
-  --json
-
-# Simulate specific flow from multi-flow config
-walkeros simulate flow.json --flow server --event '{"name":"test"}'
-```
-
 ### push
 
-Execute your flow with real API calls to configured destinations. Unlike
-`simulate` which mocks API calls, `push` performs actual HTTP requests. Accepts
-either a config JSON (which gets bundled) or a pre-built bundle.
+Execute your flow with real API calls, or simulate specific steps with
+`--simulate`. Accepts either a config JSON (which gets bundled) or a pre-built
+bundle.
 
 ```bash
 walkeros push <input> --event '<json>' [options]
@@ -149,9 +119,15 @@ The CLI auto-detects the input type by attempting to parse as JSON.
 **Options:**
 
 - `-e, --event <source>` - Event to push (JSON string, file path, or URL)
-  **Required**
+  **Required** (unless simulating a source)
 - `--flow <name>` - Flow name (for multi-flow configs)
 - `-p, --platform <platform>` - Platform override (`web` or `server`)
+- `--simulate <step>` - Simulate a step (repeatable). Mocks the step's push,
+  captures result. Use `destination.NAME` or `source.NAME`.
+- `--mock <step=value>` - Mock a step with a specific return value (repeatable).
+  Use `destination.NAME=VALUE`.
+- `--snapshot <source>` - JS file to eval before execution. Sets global state
+  (`window.dataLayer`, `process.env`, etc.).
 - `--json` - Output results as JSON
 - `-v, --verbose` - Verbose output
 - `-s, --silent` - Suppress output (for CI/CD)
@@ -169,6 +145,19 @@ walkeros push flow.json --event ./events/order.json
 walkeros push flow.json --event https://example.com/sample-event.json
 ```
 
+**Simulation examples:**
+
+```bash
+# Simulate a destination (mock its push, capture API calls)
+walkeros push flow.json -e event.json --simulate destination.ga4
+
+# Simulate a source (capture events, disable all destinations)
+walkeros push flow.json --simulate source.browser
+
+# Mock a destination with a specific return value
+walkeros push flow.json -e event.json --mock destination.ga4='{"status":"ok"}'
+```
+
 **Bundle input:**
 
 ```bash
@@ -179,16 +168,16 @@ walkeros push dist/bundle.mjs --event '{"name":"order complete"}'
 walkeros push dist/bundle.js --platform server --event '{"name":"order complete"}'
 ```
 
-**Push vs Simulate:**
+**Push modes:**
 
-| Feature      | `push`                              | `simulate`         |
-| ------------ | ----------------------------------- | ------------------ |
-| API Calls    | Real HTTP requests                  | Mocked (captured)  |
-| Use Case     | Integration testing                 | Safe local testing |
-| Side Effects | Full (writes to DBs, sends to APIs) | None               |
+| Mode | Flag | API Calls | Use Case |
+| ---- | ---- | --------- | -------- |
+| Real | (none) | Real HTTP requests | Integration testing |
+| Simulate | `--simulate` | Mocked (captured) | Safe local testing |
+| Mock | `--mock` | Returns mock value | Controlled testing |
 
-Use `simulate` first to validate configuration safely, then `push` to verify
-real integrations.
+Use `--simulate` first to validate safely, then push without flags for real
+integrations.
 
 ### run
 
@@ -503,7 +492,7 @@ See [examples/](./examples/) for complete working configurations.
 Use commands programmatically:
 
 ```typescript
-import { bundle, simulate, runCommand } from '@walkeros/cli';
+import { bundle, push, runCommand } from '@walkeros/cli';
 
 // Bundle
 await bundle({
@@ -511,11 +500,18 @@ await bundle({
   stats: true,
 });
 
-// Simulate
-const result = await simulate(
+// Push with simulation
+const result = await push(
   './flow.json',
   { name: 'page view', data: { title: 'Test' } },
-  { json: true },
+  { simulate: ['destination.ga4'], json: true },
+);
+// result.usage = API call tracking data
+
+// Push for real
+await push(
+  './flow.json',
+  { name: 'page view', data: { title: 'Test' } },
 );
 
 // Run
@@ -542,9 +538,10 @@ Try them:
 walkeros bundle examples/server-collect.json --stats
 
 # Simulate
-walkeros simulate \
+walkeros push \
   examples/web-serve.json \
-  --event '{"name":"product view","data":{"id":"P123"}}'
+  --event '{"name":"product view","data":{"id":"P123"}}' \
+  --simulate destination.demo
 
 # Run server
 walkeros run examples/server-collect.json --port 3000
@@ -559,9 +556,10 @@ Typical development cycle:
 vim my-flow.json
 
 # 2. Test with simulation (no real API calls)
-walkeros simulate \
+walkeros push \
   my-flow.json \
   --event '{"name":"product view"}' \
+  --simulate destination.demo \
   --verbose
 
 # 3. Bundle and check stats
@@ -581,7 +579,7 @@ curl -X POST http://localhost:3000/collect \
 ```
 CLI (downloads packages + bundles with esbuild)
  ├─ Bundle → optimized .mjs file
- ├─ Simulate → test bundle with events
+ ├─ Push → execute bundle (with optional --simulate for testing)
  └─ Run → execute bundle with built-in runtime
 ```
 

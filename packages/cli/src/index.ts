@@ -1,7 +1,6 @@
 // === CLI Commands ===
 // Export CLI command handlers
 export { bundleCommand } from './commands/bundle/index.js';
-export { simulateCommand } from './commands/simulate/index.js';
 export { pushCommand } from './commands/push/index.js';
 export { runCommand } from './commands/run/index.js';
 export { validateCommand } from './commands/validate/index.js';
@@ -39,7 +38,6 @@ export { feedbackCommand } from './commands/feedback/index.js';
 // === Programmatic API ===
 // High-level functions for library usage
 export { bundle, bundleRemote } from './commands/bundle/index.js';
-export { simulate } from './commands/simulate/index.js';
 export { push } from './commands/push/index.js';
 export { run } from './commands/run/index.js';
 export { validate } from './commands/validate/index.js';
