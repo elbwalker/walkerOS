@@ -13,6 +13,7 @@ export interface PushOverrides {
         mock?: unknown;
         disabled?: boolean;
       };
+      simulate?: boolean;
       env?: Record<string, unknown>;
       simulation?: string[];
     }
@@ -69,7 +70,7 @@ export function buildOverrides(
     if (type === 'destination') {
       simulateNames.add(name);
       if (!overrides.destinations) overrides.destinations = {};
-      overrides.destinations[name] = { config: { mock: {} } };
+      overrides.destinations[name] = { simulate: true };
     } else if (type === 'transformer') {
       if (!overrides.transformers) overrides.transformers = {};
       overrides.transformers[name] = { simulate: true };

@@ -462,22 +462,21 @@ async function executeConfigPush(
   }
 
   // Check for destination simulation
-  const hasDestinationSimulate = overrides.destinations
-    ? Object.entries(overrides.destinations).some(
-        ([, d]) => d.config?.mock !== undefined && !d.config?.disabled,
-      )
-    : false;
+  const simulatedDestEntry = overrides.destinations
+    ? Object.entries(overrides.destinations).find(([, d]) => d.simulate)
+    : undefined;
 
   logger.debug(
     `Executing in ${platform} environment (${platform === 'web' ? 'JSDOM' : 'Node.js'})`,
   );
 
-  if (hasDestinationSimulate) {
+  if (simulatedDestEntry) {
     return executeSimulatedDestination(
       tempPath,
       validatedEvent,
       logger,
       platform,
+      simulatedDestEntry[0],
       overrides,
       snapshotCode,
       platform === 'server' ? 60000 : undefined,
@@ -605,22 +604,12 @@ async function executeSimulatedDestination(
   event: PushEventInput,
   logger: Logger.Instance,
   platform: 'web' | 'server',
+  destId: string,
   overrides: PushOverrides,
   snapshotCode?: string,
   timeout?: number,
 ): Promise<PushResult> {
   const startTime = Date.now();
-
-  // Find the simulated destination (has mock set and not disabled)
-  const simulatedDestId = overrides.destinations
-    ? Object.entries(overrides.destinations).find(
-        ([, d]) => d.config?.mock !== undefined && !d.config?.disabled,
-      )?.[0]
-    : undefined;
-
-  if (!simulatedDestId) {
-    throw new Error('No simulated destination found in overrides');
-  }
 
   return withFlowContext(
     { esmPath, platform, logger, snapshotCode, timeout },
@@ -637,15 +626,15 @@ async function executeSimulatedDestination(
         throw new Error('Invalid bundle: collector not available');
 
       const collector = result.collector;
-      const destination = collector.destinations[simulatedDestId];
+      const destination = collector.destinations[destId];
       if (!destination) {
         throw new Error(
-          `Destination "${simulatedDestId}" not found in collector. ` +
+          `Destination "${destId}" not found in collector. ` +
             `Available: ${Object.keys(collector.destinations || {}).join(', ') || 'none'}`,
         );
       }
 
-      const ingest = createIngest(simulatedDestId);
+      const ingest = createIngest(destId);
 
       // Run before chain (mandatory preparation)
       let processedEvent = {
@@ -669,7 +658,7 @@ async function executeSimulatedDestination(
             processedEvent,
             ingest,
             undefined,
-            `destination.${simulatedDestId}.before`,
+            `destination.${destId}.before`,
           );
           if (beforeResult === null) {
             await collector.command('shutdown');
@@ -689,22 +678,20 @@ async function executeSimulatedDestination(
       }
 
       // Initialize and push directly
-      logger.info(`Simulating destination: ${simulatedDestId}`);
+      logger.info(`Simulating destination: ${destId}`);
       const isInitialized = await destinationInit(
         collector,
         destination,
-        simulatedDestId,
+        destId,
       );
       if (!isInitialized) {
-        throw new Error(
-          `Destination "${simulatedDestId}" failed to initialize`,
-        );
+        throw new Error(`Destination "${destId}" failed to initialize`);
       }
 
       const pushResult = await destinationPush(
         collector,
         destination,
-        simulatedDestId,
+        destId,
         processedEvent,
         ingest,
       );
