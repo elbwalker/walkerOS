@@ -1,9 +1,9 @@
 import { describe, it, expect } from '@jest/globals';
 import {
-  buildConfigObject,
+  buildSplitConfigObject,
   buildServerWrapper,
   buildWebWrapper,
-  generateWireConfigModule,
+  generateSplitWireConfigModule,
 } from '../../../commands/bundle/bundler.js';
 import type { Flow } from '@walkeros/core';
 
@@ -23,9 +23,9 @@ describe('Validation', () => {
     };
 
     const explicitCodeImports = new Map<string, Set<string>>();
-    expect(() => buildConfigObject(flowSettings, explicitCodeImports)).toThrow(
-      /both package and code/i,
-    );
+    expect(() =>
+      buildSplitConfigObject(flowSettings, explicitCodeImports),
+    ).toThrow(/both package and code/i);
   });
 
   it('should error when neither package nor code are specified', () => {
@@ -39,9 +39,9 @@ describe('Validation', () => {
     };
 
     const explicitCodeImports = new Map<string, Set<string>>();
-    expect(() => buildConfigObject(flowSettings, explicitCodeImports)).toThrow(
-      /package or code/i,
-    );
+    expect(() =>
+      buildSplitConfigObject(flowSettings, explicitCodeImports),
+    ).toThrow(/package or code/i);
   });
 });
 
@@ -61,9 +61,9 @@ describe('Inline Code Bundling', () => {
         },
       };
 
-      // buildConfigObject takes flowSettings and explicitCodeImports map
+      // buildSplitConfigObject takes flowSettings and explicitCodeImports map
       const explicitCodeImports = new Map<string, Set<string>>();
-      const { configObject: result } = buildConfigObject(
+      const { codeConfigObject: result } = buildSplitConfigObject(
         flowSettings,
         explicitCodeImports,
       );
@@ -92,7 +92,7 @@ describe('Inline Code Bundling', () => {
       };
 
       const explicitCodeImports = new Map<string, Set<string>>();
-      const { configObject: result } = buildConfigObject(
+      const { codeConfigObject: result } = buildSplitConfigObject(
         flowSettings,
         explicitCodeImports,
       );
@@ -121,7 +121,7 @@ describe('Inline Code Bundling', () => {
       };
 
       const explicitCodeImports = new Map<string, Set<string>>();
-      const { configObject: result } = buildConfigObject(
+      const { codeConfigObject: result } = buildSplitConfigObject(
         flowSettings,
         explicitCodeImports,
       );
@@ -149,7 +149,7 @@ describe('Inline Code Bundling', () => {
       };
 
       const explicitCodeImports = new Map<string, Set<string>>();
-      const { configObject: result } = buildConfigObject(
+      const { codeConfigObject: result } = buildSplitConfigObject(
         flowSettings,
         explicitCodeImports,
       );
@@ -205,7 +205,7 @@ describe('Integration', () => {
     };
 
     const explicitCodeImports = new Map<string, Set<string>>();
-    const { configObject: result } = buildConfigObject(
+    const { codeConfigObject: result } = buildSplitConfigObject(
       flowSettings,
       explicitCodeImports,
     );
@@ -227,7 +227,7 @@ describe('Integration', () => {
 
 describe('buildServerWrapper', () => {
   it('should include sourceSettings override in server wrapper', () => {
-    const esmCode = generateWireConfigModule(
+    const esmCode = generateSplitWireConfigModule(
       'const stores = {};',
       '{ sources: { http: { code: expressSource, config: { settings: { port: 3000 } } } }, destinations: {} }',
       '',
@@ -243,7 +243,11 @@ describe('buildServerWrapper', () => {
   });
 
   it('should apply sourceSettings spread merge to sources', () => {
-    const esmCode = generateWireConfigModule('const stores = {};', '{}', '');
+    const esmCode = generateSplitWireConfigModule(
+      'const stores = {};',
+      '{}',
+      '',
+    );
 
     const result = buildServerWrapper(esmCode);
 
@@ -255,7 +259,11 @@ describe('buildServerWrapper', () => {
   });
 
   it('applies logger from context', () => {
-    const esmCode = generateWireConfigModule('const stores = {};', '{}', '');
+    const esmCode = generateSplitWireConfigModule(
+      'const stores = {};',
+      '{}',
+      '',
+    );
 
     const result = buildServerWrapper(esmCode);
 
@@ -265,7 +273,11 @@ describe('buildServerWrapper', () => {
   });
 
   it('logger assignment comes before sourceSettings', () => {
-    const esmCode = generateWireConfigModule('const stores = {};', '{}', '');
+    const esmCode = generateSplitWireConfigModule(
+      'const stores = {};',
+      '{}',
+      '',
+    );
 
     const result = buildServerWrapper(esmCode);
 
@@ -279,7 +291,7 @@ describe('buildServerWrapper', () => {
 
 describe('buildWebWrapper', () => {
   it('should not include sourceSettings override in web wrapper', async () => {
-    const esmCode = generateWireConfigModule(
+    const esmCode = generateSplitWireConfigModule(
       'const stores = {};',
       '{ sources: {}, destinations: {} }',
       '',
@@ -291,7 +303,7 @@ describe('buildWebWrapper', () => {
   });
 
   it('wraps code in async IIFE calling wireConfig', async () => {
-    const esmCode = generateWireConfigModule(
+    const esmCode = generateSplitWireConfigModule(
       'const stores = {};',
       '{ sources: {}, destinations: {} }',
       '',
@@ -303,7 +315,7 @@ describe('buildWebWrapper', () => {
     });
 
     expect(result).toContain('(async () => {');
-    expect(result).toContain('await startFlow(wireConfig())');
+    expect(result).toContain('await startFlow(wireConfig(__configData))');
     expect(result).toContain("window['collector'] = collector");
     expect(result).toContain("window['elb'] = elb");
   });

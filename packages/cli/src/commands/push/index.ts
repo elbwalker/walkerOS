@@ -476,7 +476,7 @@ async function executeWebPush(
       );
     }
 
-    const config = wireConfig();
+    const config = wireConfig(module.__configData ?? undefined);
 
     // Apply overrides (disabled/mock/simulate) via direct property assignment
     const { captured, trackingCalls } = applyOverrides(config, overrides || {});
@@ -559,7 +559,7 @@ async function executeServerPush(
         );
       }
 
-      const config = wireConfig();
+      const config = wireConfig(module.__configData ?? undefined);
 
       // Apply overrides (disabled/mock/simulate) via direct property assignment
       const { captured, trackingCalls } = applyOverrides(
@@ -665,7 +665,7 @@ async function executeSourceSimulation(
       throw new Error('Invalid ESM bundle: missing wireConfig export');
     }
 
-    const config = wireConfig();
+    const config = wireConfig(module.__configData ?? undefined);
     const { captured, trackingCalls } = applyOverrides(config, overrides);
 
     // createTrigger receives the full config and calls startFlow internally (lazy)

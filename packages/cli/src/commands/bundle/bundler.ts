@@ -5,6 +5,10 @@ import path from 'path';
 import fs from 'fs-extra';
 import type { Flow } from '@walkeros/core';
 import { packageNameToVariable, ENV_MARKER_PREFIX } from '@walkeros/core';
+import {
+  classifyStepProperties,
+  containsCodeMarkers,
+} from './config-classifier.js';
 
 /**
  * Type guard to check if a code value is an InlineCode object.
@@ -112,6 +116,8 @@ import {
   isBuildCached,
   getCachedBuild,
   cacheBuild,
+  getCachedCode,
+  cacheCode,
 } from '../../core/build-cache.js';
 
 export interface BundleStats {
@@ -384,60 +390,84 @@ export async function bundleCore(
       JSON.stringify({ type: 'module' }, null, 2),
     );
 
-    // Step 4: Create entry point
+    // Step 4: Create split entry point (code skeleton + data payload)
     logger.debug('Creating entry point');
-    const entryContent = await createEntryPoint(
+    const { codeEntry, dataPayload } = await createEntryPoint(
       flowSettings,
       buildOptions,
       packagePaths,
     );
-    const entryPath = path.join(TEMP_DIR, 'entry.js');
-    await fs.writeFile(entryPath, entryContent);
 
-    // Step 4: Bundle with esbuild
-    logger.debug(
-      `Running esbuild (target: ${buildOptions.target || 'es2018'}, format: ${buildOptions.format})`,
-    );
     const outputPath = path.resolve(buildOptions.output);
 
     // Ensure output directory exists
     await fs.ensureDir(path.dirname(outputPath));
 
-    const esbuildOptions = createEsbuildOptions(
-      buildOptions,
-      entryPath,
-      outputPath,
-      TEMP_DIR,
-      packagePaths,
-      logger,
-    );
-
-    try {
-      await esbuild.build(esbuildOptions);
-    } catch (buildError) {
-      // Enhanced error handling for build failures
-      throw createBuildError(
-        buildError as EsbuildError,
-        buildOptions.code || '',
-      );
-    } finally {
-      // Clean up esbuild worker threads to allow process to exit
-      await esbuild.stop();
+    // === LEVEL 2: Two-phase build (code cache) ===
+    // Check if we have a cached compilation of this exact code entry
+    let compiledCode: string | null = null;
+    if (buildOptions.cache !== false) {
+      compiledCode = await getCachedCode(codeEntry, CACHE_DIR);
     }
 
-    // Step 2: Apply platform wrapper to ESM output
+    if (compiledCode) {
+      logger.debug('Using cached compiled code (config-only change)');
+    } else {
+      // Cache miss: run esbuild on code-only entry
+      logger.debug(
+        `Running esbuild (target: ${buildOptions.target || 'es2018'}, format: ${buildOptions.format})`,
+      );
+      const entryPath = path.join(TEMP_DIR, 'entry.js');
+      await fs.writeFile(entryPath, codeEntry);
+
+      const esbuildOptions = createEsbuildOptions(
+        { ...buildOptions, minify: false },
+        entryPath,
+        outputPath,
+        TEMP_DIR,
+        packagePaths,
+        logger,
+      );
+
+      try {
+        await esbuild.build(esbuildOptions);
+      } catch (buildError) {
+        // Enhanced error handling for build failures
+        throw createBuildError(
+          buildError as EsbuildError,
+          buildOptions.code || '',
+        );
+      } finally {
+        // Clean up esbuild worker threads to allow process to exit
+        await esbuild.stop();
+      }
+
+      compiledCode = await fs.readFile(outputPath, 'utf-8');
+
+      // Cache the compiled code for future builds
+      if (buildOptions.cache !== false) {
+        await cacheCode(codeEntry, compiledCode, CACHE_DIR);
+      }
+    }
+
+    // Concatenate code + data (instant, no esbuild)
+    const dataDeclaration = `const __configData = ${dataPayload};\nexport { __configData };`;
+    const esmOutput = `${compiledCode}\n${dataDeclaration}`;
+    await fs.writeFile(outputPath, esmOutput);
+
+    // Apply platform wrapper
     if (!buildOptions.skipWrapper) {
-      const esmOutput = await fs.readFile(outputPath, 'utf-8');
+      const wrappedInput = await fs.readFile(outputPath, 'utf-8');
       let finalCode: string;
 
       if ((buildOptions.platform || 'node') === 'browser') {
-        finalCode = await buildWebWrapper(esmOutput, {
+        finalCode = await buildWebWrapper(wrappedInput, {
           windowCollector: buildOptions.windowCollector,
           windowElb: buildOptions.windowElb,
           minify: buildOptions.minify,
         });
       } else {
-        finalCode = buildServerWrapper(esmOutput);
+        finalCode = buildServerWrapper(wrappedInput);
       }
 
       await fs.writeFile(outputPath, finalCode);
@@ -449,7 +479,7 @@ export async function bundleCore(
     const buildTime = ((Date.now() - bundleStartTime) / 1000).toFixed(1);
     logger.info(`Output: ${outputPath} (${sizeKB} KB, ${buildTime}s)`);
 
-    // Step 5: Cache the build result if caching is enabled
+    // Cache the full build result if caching is enabled (Level 1 fast path)
     if (buildOptions.cache !== false) {
       const configContent = generateCacheKeyContent(flowSettings, buildOptions);
       const buildOutput = await fs.readFile(outputPath, 'utf-8');
@@ -457,18 +487,18 @@ export async function bundleCore(
       logger.debug('Build cached for future use');
     }
 
-    // Step 6: Collect stats if requested
+    // Collect stats if requested
     let stats: BundleStats | undefined;
     if (showStats) {
       stats = await collectBundleStats(
         outputPath,
         buildOptions.packages,
         bundleStartTime,
-        entryContent,
+        codeEntry,
       );
     }
 
-    // Step 7: Copy included folders to output directory
+    // Copy included folders to output directory
     if (buildOptions.include && buildOptions.include.length > 0) {
       const outputDir = path.dirname(outputPath);
       await copyIncludes(
@@ -1022,7 +1052,7 @@ export async function createEntryPoint(
   flowSettings: Flow.Settings,
   buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
-): Promise<string> {
+): Promise<{ codeEntry: string; dataPayload: string }> {
   // Detect packages used by all step types
   const sourcePackages = detectStepPackages(flowSettings, 'sources');
   const destinationPackages = detectStepPackages(flowSettings, 'destinations');
@@ -1077,26 +1107,29 @@ export async function createEntryPoint(
   // If no sources/destinations, just return user code with imports (no flow wrapper)
   if (!hasFlow) {
     const userCode = buildOptions.code || '';
-    return importsCode ? `${importsCode}\n\n${userCode}` : userCode;
+    return {
+      codeEntry: importsCode ? `${importsCode}\n\n${userCode}` : userCode,
+      dataPayload: '{}',
+    };
   }
 
-  // Build config object programmatically (DRY - single source of truth)
-  const { storesDeclaration, configObject } = buildConfigObject(
-    flowSettings,
-    explicitCodeImports,
-  );
+  // Build split config object (code skeleton + data payload)
+  const { storesDeclaration, codeConfigObject, dataPayload } =
+    buildSplitConfigObject(flowSettings, explicitCodeImports);
 
-  // Generate platform-agnostic wireConfig module
-  const wireConfigModule = generateWireConfigModule(
+  // Generate platform-agnostic wireConfig module with __data parameter
+  const wireConfigModule = generateSplitWireConfigModule(
     storesDeclaration,
-    configObject,
+    codeConfigObject,
     buildOptions.code || '',
   );
 
   // Return ESM module (imports + wireConfig + startFlow re-export)
-  return importsCode
+  const codeEntry = importsCode
     ? `${importsCode}\n\n${wireConfigModule}`
     : wireConfigModule;
+
+  return { codeEntry, dataPayload };
 }
 
 interface EsbuildError {
@@ -1144,13 +1177,22 @@ function createBuildError(buildError: EsbuildError, code: string): Error {
 }
 
 /**
- * Build config object string from flow configuration.
- * Respects import strategy decisions from detectExplicitCodeImports.
+ * Build split config object from flow configuration.
+ * Produces TWO outputs:
+ * - codeConfigObject: skeleton with code references and __data.* placeholders
+ * - dataPayload: plain JSON-serializable object with settings, mappings, etc.
+ *
+ * Inline code steps bypass classification and go entirely to the code skeleton.
+ * Package-based steps are split via classifyStepProperties.
  */
-export function buildConfigObject(
+export function buildSplitConfigObject(
   flowSettings: Flow.Settings,
   explicitCodeImports: Map<string, Set<string>>,
-): { storesDeclaration: string; configObject: string } {
+): {
+  storesDeclaration: string;
+  codeConfigObject: string;
+  dataPayload: string;
+} {
   const flowWithProps = flowSettings as unknown as {
     sources?: Record<
       string,
@@ -1206,26 +1248,91 @@ export function buildConfigObject(
   const transformers = flowWithProps.transformers || {};
   const stores = flowWithProps.stores || {};
 
-  // Validate references before processing (skip deprecated code: true entries)
+  // Data payload accumulator
+  const dataPayloadObj: Record<string, Record<string, unknown>> = {};
+
+  // Helper to resolve the code variable for a package-based step
+  function resolveCodeVar(
+    step: { package?: string; code?: string | true },
+  ): string {
+    if (
+      step.code &&
+      typeof step.code === 'string' &&
+      step.package &&
+      explicitCodeImports.has(step.package)
+    ) {
+      return step.code;
+    }
+    return packageNameToVariable(step.package!);
+  }
+
+  // Helper to build step properties (excluding 'code' and 'package')
+  function getStepProps(
+    step: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const props: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(step)) {
+      if (key === 'code' || key === 'package') continue;
+      if (value !== undefined && value !== null) {
+        props[key] = value;
+      }
+    }
+    return props;
+  }
+
+  // Helper to build a split step entry for the code skeleton
+  function buildSplitStepEntry(
+    section: string,
+    stepId: string,
+    step: Record<string, unknown>,
+  ): string {
+    const codeVar = resolveCodeVar(
+      step as { package?: string; code?: string | true },
+    );
+    const stepProps = getStepProps(step);
+    const { codeProps, dataProps } = classifyStepProperties(stepProps);
+
+    const codeEntries: string[] = [];
+    codeEntries.push(`code: ${codeVar}`);
+
+    // Code-layer props (serialized with processConfigValue)
+    for (const [key, value] of Object.entries(codeProps)) {
+      if (key === 'code') continue; // already handled above
+      codeEntries.push(`${key}: ${processConfigValue(value)}`);
+    }
+
+    // Data-layer prop references
+    for (const key of Object.keys(dataProps)) {
+      codeEntries.push(`${key}: __data.${section}.${stepId}.${key}`);
+    }
+
+    // Accumulate data payload
+    if (Object.keys(dataProps).length > 0) {
+      if (!dataPayloadObj[section]) dataPayloadObj[section] = {};
+      dataPayloadObj[section][stepId] = dataProps;
+    }
+
+    return `    ${stepId}: {\n      ${codeEntries.join(',\n      ')}\n    }`;
+  }
+
+  // Validate references (skip deprecated code: true entries)
   Object.entries(sources).forEach(([name, source]) => {
     if ((source.code as unknown) !== true) {
       validateReference('Source', name, source);
     }
   });
-
   Object.entries(destinations).forEach(([name, dest]) => {
     if ((dest.code as unknown) !== true) {
       validateReference('Destination', name, dest);
     }
   });
-
   Object.entries(transformers).forEach(([name, transformer]) => {
     if ((transformer.code as unknown) !== true) {
       validateReference('Transformer', name, transformer);
     }
   });
 
-  // Build sources (skip deprecated code: true entries)
+  // Build sources
   const sourcesEntries = Object.entries(sources)
     .filter(
       ([, source]) =>
@@ -1233,48 +1340,13 @@ export function buildConfigObject(
         (source.package || isInlineCode(source.code)),
     )
     .map(([key, source]) => {
-      // Handle inline code object
       if (isInlineCode(source.code)) {
         return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, source.next as string | string[] | undefined, 'next')}`;
       }
-
-      // Handle package-based source
-      let codeVar: string;
-      if (
-        source.code &&
-        typeof source.code === 'string' &&
-        explicitCodeImports.has(source.package!)
-      ) {
-        codeVar = source.code;
-      } else {
-        codeVar = packageNameToVariable(source.package!);
-      }
-
-      const configStr = source.config
-        ? processConfigValue(source.config)
-        : '{}';
-      const envStr = source.env
-        ? `,\n      env: ${processConfigValue(source.env)}`
-        : '';
-      // Include 'before' for pre-source transformer chains
-      const beforeStr = source.before
-        ? `,\n      before: ${JSON.stringify(source.before)}`
-        : '';
-      // Include 'next' for source transformer chains
-      const nextStr = source.next
-        ? `,\n      next: ${JSON.stringify(source.next)}`
-        : '';
-      // Include 'cache' for source-level caching
-      const cacheStr = source.cache
-        ? `,\n      cache: ${JSON.stringify(source.cache)}`
-        : '';
-      // Include 'primary' for primary source marking
-      const primaryStr = source.primary ? `,\n      primary: true` : '';
-
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${beforeStr}${nextStr}${cacheStr}${primaryStr}\n    }`;
+      return buildSplitStepEntry('sources', key, source as Record<string, unknown>);
     });
 
-  // Build destinations (skip deprecated code: true entries)
+  // Build destinations
   const destinationsEntries = Object.entries(destinations)
     .filter(
       ([, dest]) =>
@@ -1282,44 +1354,13 @@ export function buildConfigObject(
         (dest.package || isInlineCode(dest.code)),
     )
     .map(([key, dest]) => {
-      // Handle inline code object
       if (isInlineCode(dest.code)) {
         return `    ${key}: ${generateInlineCode(dest.code, (dest.config as object) || {}, dest.env as object, dest.before, 'before', true)}`;
       }
-
-      // Handle package-based destination
-      let codeVar: string;
-      if (
-        dest.code &&
-        typeof dest.code === 'string' &&
-        explicitCodeImports.has(dest.package!)
-      ) {
-        codeVar = dest.code;
-      } else {
-        codeVar = packageNameToVariable(dest.package!);
-      }
-
-      const configStr = dest.config ? processConfigValue(dest.config) : '{}';
-      const envStr = dest.env
-        ? `,\n      env: ${processConfigValue(dest.env)}`
-        : '';
-      // Include 'before' for destination transformer chains
-      const beforeStr = dest.before
-        ? `,\n      before: ${JSON.stringify(dest.before)}`
-        : '';
-      // Include 'next' for post-push transformer chains
-      const nextStr = dest.next
-        ? `,\n      next: ${JSON.stringify(dest.next)}`
-        : '';
-      // Include 'cache' for destination-level caching
-      const destCacheStr = dest.cache
-        ? `,\n      cache: ${JSON.stringify(dest.cache)}`
-        : '';
-
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${beforeStr}${nextStr}${destCacheStr}\n    }`;
+      return buildSplitStepEntry('destinations', key, dest as Record<string, unknown>);
     });
 
-  // Build transformers (skip deprecated code: true entries)
+  // Build transformers
   const transformersEntries = Object.entries(transformers)
     .filter(
       ([, transformer]) =>
@@ -1327,43 +1368,10 @@ export function buildConfigObject(
         (transformer.package || isInlineCode(transformer.code)),
     )
     .map(([key, transformer]) => {
-      // Handle inline code object
       if (isInlineCode(transformer.code)) {
         return `    ${key}: ${generateInlineCode(transformer.code, (transformer.config as object) || {}, transformer.env as object, transformer.next, 'next')}`;
       }
-
-      // Handle package-based transformer
-      let codeVar: string;
-      if (
-        transformer.code &&
-        typeof transformer.code === 'string' &&
-        explicitCodeImports.has(transformer.package!)
-      ) {
-        codeVar = transformer.code;
-      } else {
-        codeVar = packageNameToVariable(transformer.package!);
-      }
-
-      const configStr = transformer.config
-        ? processConfigValue(transformer.config)
-        : '{}';
-      const envStr = transformer.env
-        ? `,\n      env: ${processConfigValue(transformer.env)}`
-        : '';
-      // Include 'before' for pre-transformer chains
-      const beforeStr = transformer.before
-        ? `,\n      before: ${JSON.stringify(transformer.before)}`
-        : '';
-      // Include 'next' for transformer chains (top-level, consistent with before)
-      const nextStr = transformer.next
-        ? `,\n      next: ${JSON.stringify(transformer.next)}`
-        : '';
-      // Include 'cache' for transformer-level caching
-      const tCacheStr = transformer.cache
-        ? `,\n      cache: ${JSON.stringify(transformer.cache)}`
-        : '';
-
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${beforeStr}${nextStr}${tCacheStr}\n    }`;
+      return buildSplitStepEntry('transformers', key, transformer as Record<string, unknown>);
     });
 
   // Build stores
@@ -1380,43 +1388,59 @@ export function buildConfigObject(
         return `    ${key}: ${generateInlineCode(store.code, (store.config as object) || {}, store.env as object)}`;
       }
 
-      let codeVar: string;
-      if (
-        store.code &&
-        typeof store.code === 'string' &&
-        explicitCodeImports.has(store.package!)
-      ) {
-        codeVar = store.code;
-      } else {
-        codeVar = packageNameToVariable(store.package!);
+      const codeVar = resolveCodeVar(store);
+      const storeProps = getStepProps(store as Record<string, unknown>);
+      const { codeProps, dataProps } = classifyStepProperties(storeProps);
+
+      const codeEntries: string[] = [];
+      codeEntries.push(`code: ${codeVar}`);
+
+      for (const [propKey, value] of Object.entries(codeProps)) {
+        if (propKey === 'code') continue;
+        codeEntries.push(`${propKey}: ${processConfigValue(value)}`);
       }
 
-      const configStr = store.config ? processConfigValue(store.config) : '{}';
-      const envStr = store.env
-        ? `,\n      env: ${processConfigValue(store.env)}`
-        : '';
+      for (const propKey of Object.keys(dataProps)) {
+        codeEntries.push(`${propKey}: __data.stores.${key}.${propKey}`);
+      }
 
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
+      if (Object.keys(dataProps).length > 0) {
+        if (!dataPayloadObj['stores']) dataPayloadObj['stores'] = {};
+        dataPayloadObj['stores'][key] = dataProps;
+      }
+
+      return `    ${key}: {\n      ${codeEntries.join(',\n      ')}\n    }`;
     });
 
-  // Build stores declaration (always hoisted as a variable)
+  // Build stores declaration
   const storesDeclaration =
     storesEntries.length > 0
       ? `const stores = {\n${storesEntries.join(',\n')}\n};`
       : 'const stores = {};';
 
   // Build collector
-  const collectorStr = flowWithProps.collector
-    ? `,\n  ...${processConfigValue(flowWithProps.collector)}`
-    : '';
+  let collectorStr = '';
+  if (flowWithProps.collector) {
+    if (containsCodeMarkers(flowWithProps.collector)) {
+      // Collector has code markers — keep in code skeleton
+      collectorStr = `,\n  ...${processConfigValue(flowWithProps.collector)}`;
+    } else {
+      // Plain collector — put in data payload
+      dataPayloadObj['collector'] = flowWithProps.collector as Record<
+        string,
+        unknown
+      >;
+      collectorStr = `,\n  ...__data.collector`;
+    }
+  }
 
-  // Build transformers section (only if transformers exist)
+  // Build transformers section
   const transformersStr =
     transformersEntries.length > 0
       ? `,\n  transformers: {\n${transformersEntries.join(',\n')}\n  }`
       : '';
 
-  const configObject = `{
+  const codeConfigObject = `{
   sources: {
 ${sourcesEntries.join(',\n')}
   },
@@ -1426,7 +1450,31 @@ ${destinationsEntries.join(',\n')}
   stores${collectorStr}
 }`;
 
-  return { storesDeclaration, configObject };
+  const dataPayload = JSON.stringify(dataPayloadObj, null, 2);
+
+  return { storesDeclaration, codeConfigObject, dataPayload };
+}
+
+/**
+ * Generate platform-agnostic ESM module with wireConfig(__data) and startFlow re-export.
+ * This is the split variant — code skeleton receives data payload at runtime.
+ */
+export function generateSplitWireConfigModule(
+  storesDeclaration: string,
+  codeConfigObject: string,
+  userCode: string,
+): string {
+  const codeSection = userCode ? `\n${userCode}\n` : '';
+
+  return `export function wireConfig(__data) {
+  ${storesDeclaration}
+
+  const config = ${codeConfigObject};${codeSection}
+
+  return config;
+}
+
+export { startFlow };`;
 }
 
 /**
@@ -1556,28 +1604,6 @@ export function serializeWithCode(value: unknown, indent: number): string {
 }
 
 /**
- * Generate platform-agnostic ESM module with wireConfig() and startFlow re-export.
- * This is the Step 1 artifact — compiled code + config wiring, no platform wrapper.
- */
-export function generateWireConfigModule(
-  storesDeclaration: string,
-  configObject: string,
-  userCode: string,
-): string {
-  const codeSection = userCode ? `\n${userCode}\n` : '';
-
-  return `export function wireConfig() {
-  ${storesDeclaration}
-
-  const config = ${configObject};${codeSection}
-
-  return config;
-}
-
-export { startFlow };`;
-}
-
-/**
  * Wrap ESM code in a web-compatible IIFE.
  * Strips export keywords, appends IIFE invocation with window assignments.
  */
@@ -1609,7 +1635,7 @@ export async function buildWebWrapper(
   // Wrap in async IIFE
   const wrapped = `${code}
 (async () => {
-  const { collector, elb } = await startFlow(wireConfig());${assignmentCode}
+  const { collector, elb } = await startFlow(wireConfig(__configData));${assignmentCode}
 })();`;
 
   // Minify if requested
@@ -1633,7 +1659,7 @@ export function buildServerWrapper(esmCode: string): string {
   return `${esmCode}
 
 export default async function(context = {}) {
-  const config = wireConfig();
+  const config = wireConfig(__configData);
 
   // Apply logger from runner context
   if (context.logger) config.logger = context.logger;
