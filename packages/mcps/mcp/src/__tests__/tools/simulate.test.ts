@@ -117,6 +117,63 @@ describe('flow_simulate tool', () => {
     expect(result.isError).toBeUndefined();
   });
 
+  it('returns all calls in payload when verbose', async () => {
+    mockPush.mockResolvedValue({
+      success: true,
+      usage: {
+        gtag: [
+          { fn: 'window.gtag', args: ['config', 'G-TEST123', {}], ts: 1 },
+          {
+            fn: 'window.gtag',
+            args: ['event', 'purchase', { value: 99, currency: 'EUR' }],
+            ts: 2,
+          },
+        ],
+      },
+      duration: 50,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"order complete"}',
+      flow: undefined,
+      verbose: true,
+    });
+
+    expect(result.structuredContent.destinations.gtag.calls).toBe(2);
+
+    // payload contains ALL calls, not just the last one
+    const payload = result.structuredContent.destinations.gtag.payload;
+    expect(Array.isArray(payload)).toBe(true);
+    expect(payload).toHaveLength(2);
+    expect(payload[0].args[0]).toBe('config');
+    expect(payload[1].args[0]).toBe('event');
+    expect(payload[1].args[1]).toBe('purchase');
+    expect(payload[1].args[2]).toEqual({ value: 99, currency: 'EUR' });
+  });
+
+  it('omits payload when not verbose', async () => {
+    mockPush.mockResolvedValue({
+      success: true,
+      usage: {
+        gtag: [{ fn: 'window.gtag', args: ['event', 'page_view'], ts: 1 }],
+      },
+      duration: 10,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      verbose: false,
+    });
+
+    expect(result.structuredContent.destinations.gtag.calls).toBe(1);
+    expect(result.structuredContent.destinations.gtag.payload).toBeUndefined();
+  });
+
   it('passes parameters to CLI push with simulate array', async () => {
     mockPush.mockResolvedValue({ success: true, usage: {}, duration: 10 });
 
@@ -199,7 +256,10 @@ describe('flow_simulate tool', () => {
     mockPush.mockResolvedValue({
       success: true,
       captured: [
-        { event: { name: 'cta click', data: { label: 'Sign Up' } }, timestamp: 1 },
+        {
+          event: { name: 'cta click', data: { label: 'Sign Up' } },
+          timestamp: 1,
+        },
       ],
       duration: 15,
     });

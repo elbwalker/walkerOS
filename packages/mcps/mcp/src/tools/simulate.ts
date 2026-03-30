@@ -107,7 +107,7 @@ export function registerFlowSimulateTool(server: McpServer) {
               calls: calls.length,
             };
             if (verbose && calls.length > 0) {
-              summary.payload = calls[calls.length - 1];
+              summary.payload = calls;
             }
             destinations[name] = summary;
           }
