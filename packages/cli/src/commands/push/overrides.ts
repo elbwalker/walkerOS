@@ -25,6 +25,12 @@ export interface PushOverrides {
   >;
   /** Path-specific transformer mocks: chainPath → { transformerId → mockValue } */
   transformerMocks?: Record<string, Record<string, unknown>>;
+  transformers?: Record<
+    string,
+    {
+      simulate?: boolean;
+    }
+  >;
 }
 
 /**
@@ -64,6 +70,9 @@ export function buildOverrides(
       simulateNames.add(name);
       if (!overrides.destinations) overrides.destinations = {};
       overrides.destinations[name] = { config: { mock: {} } };
+    } else if (type === 'transformer') {
+      if (!overrides.transformers) overrides.transformers = {};
+      overrides.transformers[name] = { simulate: true };
     } else {
       sourceSimulateNames.add(name);
       if (!overrides.sources) overrides.sources = {};
@@ -87,6 +96,12 @@ export function buildOverrides(
     if (parsed.type === 'source') {
       throw new Error(
         `--mock is not supported for sources. Use --simulate source.${parsed.name}`,
+      );
+    }
+
+    if (parsed.type === 'transformer' && !parsed.chainType) {
+      throw new Error(
+        `Use --mock destination.NAME.before.${parsed.name}=VALUE for path-specific transformer mocks`,
       );
     }
 
@@ -138,7 +153,7 @@ export function buildOverrides(
 }
 
 interface ParsedStep {
-  type: 'source' | 'destination';
+  type: 'source' | 'destination' | 'transformer';
   name: string;
   chainType?: 'before' | 'next';
   transformerId?: string;
@@ -159,9 +174,9 @@ function parseStep(step: string): ParsedStep {
   }
 
   const prefix = parts[0];
-  if (prefix !== 'source' && prefix !== 'destination') {
+  if (prefix !== 'source' && prefix !== 'destination' && prefix !== 'transformer') {
     throw new Error(
-      `Unsupported step type: "${prefix}". Use "source" or "destination"`,
+      `Unsupported step type: "${prefix}". Use "source", "destination", or "transformer"`,
     );
   }
 

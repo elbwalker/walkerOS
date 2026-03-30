@@ -125,9 +125,9 @@ describe('buildOverrides', () => {
 
   it('unsupported step type throws', () => {
     expect(() =>
-      buildOverrides({ simulate: ['transformer.myT'] }, threeDestFlow),
+      buildOverrides({ simulate: ['unknown.myT'] }, threeDestFlow),
     ).toThrow(
-      'Unsupported step type: "transformer". Use "source" or "destination"',
+      'Unsupported step type: "unknown". Use "source", "destination", or "transformer"',
     );
   });
 
@@ -216,6 +216,42 @@ describe('buildOverrides', () => {
       { web: {}, sources: { browser: {} }, destinations: {} } as Flow.Settings,
     );
     expect(result.sources).toEqual({ browser: { simulate: true } });
+  });
+
+  describe('transformer simulate', () => {
+    it('parses --simulate transformer.redact', () => {
+      const result = buildOverrides(
+        { simulate: ['transformer.redact'] },
+        { server: {}, transformers: { redact: {} } } as any,
+      );
+      expect(result.transformers).toEqual({ redact: { simulate: true } });
+    });
+
+    it('allows mixed transformer + destination simulate', () => {
+      const result = buildOverrides(
+        { simulate: ['transformer.redact', 'destination.ga4'] },
+        { server: {}, destinations: { ga4: {}, meta: {} }, transformers: { redact: {} } } as any,
+      );
+      expect(result.transformers).toEqual({ redact: { simulate: true } });
+      expect(result.destinations!.ga4.config!.mock).toEqual({});
+      expect(result.destinations!.meta.config!.disabled).toBe(true);
+    });
+
+    it('rejects --mock transformer.X without chain path', () => {
+      expect(() => buildOverrides(
+        { mock: ['transformer.redact={}'] },
+        { server: {}, transformers: { redact: {} } } as any,
+      )).toThrow('Use --mock destination');
+    });
+
+    it('transformer simulate does not affect destination disabled logic', () => {
+      const result = buildOverrides(
+        { simulate: ['transformer.redact'] },
+        { server: {}, destinations: { ga4: {} }, transformers: { redact: {} } } as any,
+      );
+      expect(result.transformers).toEqual({ redact: { simulate: true } });
+      expect(result.destinations).toBeUndefined();
+    });
   });
 
   describe('path-specific mocks', () => {

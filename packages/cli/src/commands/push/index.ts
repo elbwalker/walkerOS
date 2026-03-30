@@ -1,8 +1,7 @@
 import path from 'path';
-import { pathToFileURL } from 'url';
-import { JSDOM, VirtualConsole } from 'jsdom';
 import fs from 'fs-extra';
-import { getPlatform } from '@walkeros/core';
+import { createIngest, getPlatform } from '@walkeros/core';
+import { transformerInit, transformerPush } from '@walkeros/collector';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
   getErrorMessage,
@@ -13,7 +12,7 @@ import {
   type Platform,
 } from '../../core/index.js';
 import { validateEvent } from '../../core/event-validation.js';
-import type { Logger } from '@walkeros/core';
+import type { Logger, WalkerOS } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { loadConfig } from '../../config/utils.js';
@@ -23,6 +22,7 @@ import type { PushOptions } from '../../schemas/push.js';
 import { buildOverrides, type PushOverrides } from './overrides.js';
 import { applyOverrides } from './apply-overrides.js';
 import { resolvePackageImportPath } from '../../core/package-path.js';
+import { withFlowContext } from './flow-context.js';
 
 /**
  * Core push logic without CLI concerns (no process.exit, no output formatting)
@@ -386,29 +386,37 @@ async function executeConfigPush(
     );
   }
 
-  // Execute based on platform (destination push path)
-  if (platform === 'web') {
-    logger.debug('Executing in web environment (JSDOM)');
-    return executeWebPush(
+  // Check for transformer simulation
+  const transformerSimulateEntry = overrides.transformers
+    ? Object.entries(overrides.transformers).find(([, t]) => t.simulate)
+    : undefined;
+
+  if (transformerSimulateEntry) {
+    const [transformerId] = transformerSimulateEntry;
+    return executeTransformerSimulation(
       tempPath,
       validatedEvent,
       logger,
+      transformerId,
       overrides,
+      platform,
       snapshotCode,
     );
-  } else if (platform === 'server') {
-    logger.debug('Executing in server environment (Node.js)');
-    return executeServerPush(
-      tempPath,
-      validatedEvent,
-      logger,
-      60000,
-      overrides,
-      snapshotCode,
-    );
-  } else {
-    throw new Error(`Unsupported platform: ${platform}`);
   }
+
+  // Execute destination push
+  logger.debug(
+    `Executing in ${platform} environment (${platform === 'web' ? 'JSDOM' : 'Node.js'})`,
+  );
+  return executeDestinationPush(
+    tempPath,
+    validatedEvent,
+    logger,
+    platform,
+    overrides,
+    snapshotCode,
+    platform === 'server' ? 60000 : undefined,
+  );
 }
 
 /**
@@ -435,27 +443,19 @@ async function executeBundlePush(
 
   logger.debug(`Bundle written to: ${tempPath}`);
 
-  // Execute based on platform
-  if (platform === 'web') {
-    logger.debug('Executing in web environment (JSDOM)');
-    return executeWebPush(
-      tempPath,
-      validatedEvent,
-      logger,
-      overrides,
-      snapshotCode,
-    );
-  } else {
-    logger.debug('Executing in server environment (Node.js)');
-    return executeServerPush(
-      tempPath,
-      validatedEvent,
-      logger,
-      60000,
-      overrides,
-      snapshotCode,
-    );
-  }
+  // Execute destination push
+  logger.debug(
+    `Executing in ${platform} environment (${platform === 'web' ? 'JSDOM' : 'Node.js'})`,
+  );
+  return executeDestinationPush(
+    tempPath,
+    validatedEvent,
+    logger,
+    platform,
+    overrides,
+    snapshotCode,
+    platform === 'server' ? 60000 : undefined,
+  );
 }
 
 /**
@@ -473,161 +473,30 @@ interface PushEventInput {
 }
 
 /**
- * Execute push for web platform using JSDOM + ESM import
+ * Execute destination push for any platform (web or server).
+ * Uses withFlowContext for environment setup and cleanup.
  */
-async function executeWebPush(
+async function executeDestinationPush(
   esmPath: string,
   event: PushEventInput,
   logger: Logger.Instance,
+  platform: 'web' | 'server',
   overrides?: PushOverrides,
   snapshotCode?: string,
+  timeout?: number,
 ): Promise<PushResult> {
   const startTime = Date.now();
-  const virtualConsole = new VirtualConsole();
-  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-    url: 'http://localhost',
-    runScripts: 'dangerously',
-    resources: 'usable',
-    virtualConsole,
-  });
 
-  // Save and inject JSDOM globals before ESM import
-  const g = global as unknown as Record<string, unknown>;
-  const savedWindow = g.window;
-  const savedDocument = g.document;
-  const savedNavigator = g.navigator;
-  g.window = dom.window;
-  g.document = dom.window.document;
-  Object.defineProperty(global, 'navigator', {
-    value: dom.window.navigator,
-    configurable: true,
-    writable: true,
-  });
-
-  try {
-    // Eval snapshot in JSDOM context before importing bundle
-    if (snapshotCode) {
-      logger.debug('Evaluating snapshot in JSDOM');
-      dom.window.eval(snapshotCode);
-    }
-
-    const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
-    const module = await import(`${fileUrl}?t=${Date.now()}`);
-    const { wireConfig, startFlow } = module;
-
-    if (typeof wireConfig !== 'function' || typeof startFlow !== 'function') {
-      throw new Error(
-        'Invalid ESM bundle: missing wireConfig or startFlow exports',
-      );
-    }
-
-    const config = wireConfig(module.__configData ?? undefined);
-
-    // Apply overrides (disabled/mock/simulate) via direct property assignment
-    const { captured, trackingCalls } = applyOverrides(config, overrides || {});
-
-    const result = await startFlow(config);
-    if (!result?.collector?.push)
-      throw new Error('Invalid bundle: collector missing push');
-
-    logger.info(`Pushing event: ${event.name}`);
-    const elbResult = await result.collector.push({
-      name: event.name,
-      data: event.data,
-    });
-
-    // Shutdown collector before cleaning up JSDOM globals
-    await result.collector.command('shutdown');
-
-    // Build usage map from tracking calls populated during execution
-    const usage: Record<
-      string,
-      Array<{ fn: string; args: unknown[]; ts: number }>
-    > = {};
-    for (const { destId, calls } of trackingCalls) {
-      if (calls.length > 0) usage[destId] = calls;
-    }
-
-    return {
-      success: true,
-      elbResult: elbResult as PushResult['elbResult'],
-      ...(captured.length > 0 ? { captured } : {}),
-      ...(Object.keys(usage).length > 0 ? { usage } : {}),
-      duration: Date.now() - startTime,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      duration: Date.now() - startTime,
-      error: getErrorMessage(error),
-    };
-  } finally {
-    // Restore globals
-    if (savedWindow !== undefined) g.window = savedWindow;
-    else delete g.window;
-    if (savedDocument !== undefined) g.document = savedDocument;
-    else delete g.document;
-    if (savedNavigator !== undefined) {
-      Object.defineProperty(global, 'navigator', {
-        value: savedNavigator,
-        configurable: true,
-        writable: true,
-      });
-    } else {
-      delete g.navigator;
-    }
-  }
-}
-
-/**
- * Execute push for server platform using direct ESM import
- */
-async function executeServerPush(
-  esmPath: string,
-  event: PushEventInput,
-  logger: Logger.Instance,
-  timeout: number = 60000,
-  overrides?: PushOverrides,
-  snapshotCode?: string,
-): Promise<PushResult> {
-  const startTime = Date.now();
-  let timer: ReturnType<typeof setTimeout>;
-
-  try {
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timer = setTimeout(
-        () => reject(new Error(`Server push timeout after ${timeout}ms`)),
-        timeout,
-      );
-    });
-
-    const executePromise = (async () => {
-      // Eval snapshot in Node global scope before importing bundle
-      if (snapshotCode) {
-        logger.debug('Evaluating snapshot in Node');
-        const vm = await import('vm');
-        vm.runInThisContext(snapshotCode);
-      }
-
-      const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
-      const module = await import(`${fileUrl}?t=${Date.now()}`);
-      const { wireConfig, startFlow } = module;
-
-      if (typeof wireConfig !== 'function' || typeof startFlow !== 'function') {
-        throw new Error(
-          'Invalid ESM bundle: missing wireConfig or startFlow exports',
-        );
-      }
-
-      const config = wireConfig(module.__configData ?? undefined);
-
-      // Apply overrides (disabled/mock/simulate) via direct property assignment
+  return withFlowContext(
+    { esmPath, platform, logger, snapshotCode, timeout },
+    async (module) => {
+      const config = module.wireConfig(module.__configData ?? undefined);
       const { captured, trackingCalls } = applyOverrides(
         config,
         overrides || {},
       );
 
-      const result = await startFlow(config);
+      const result = await module.startFlow(config);
       if (!result?.collector?.push)
         throw new Error('Invalid bundle: collector missing push');
 
@@ -637,10 +506,8 @@ async function executeServerPush(
         data: event.data,
       });
 
-      // Shutdown collector (closes Express servers, cleans up stores, etc.)
       await result.collector.command('shutdown');
 
-      // Build usage map from tracking calls populated during execution
       const usage: Record<
         string,
         Array<{ fn: string; args: unknown[]; ts: number }>
@@ -656,26 +523,112 @@ async function executeServerPush(
         ...(Object.keys(usage).length > 0 ? { usage } : {}),
         duration: Date.now() - startTime,
       };
-    })();
+    },
+  );
+}
 
-    return await Promise.race([executePromise, timeoutPromise]);
-  } catch (error) {
-    return {
-      success: false,
-      duration: Date.now() - startTime,
-      error: getErrorMessage(error),
-    };
-  } finally {
-    clearTimeout(timer!);
-  }
+/**
+ * Execute transformer simulation.
+ *
+ * Uses withFlowContext for environment setup. Calls startFlow to get a real
+ * collector with initialized transformers, then calls transformerPush directly
+ * on the target transformer. No collector.push, no pipeline traversal.
+ *
+ * Captured array: first entry = input event, subsequent entries = output event(s).
+ * If the transformer drops the event (returns false), output event is null.
+ */
+async function executeTransformerSimulation(
+  esmPath: string,
+  event: PushEventInput,
+  logger: Logger.Instance,
+  transformerId: string,
+  overrides: PushOverrides,
+  platform: 'web' | 'server',
+  snapshotCode?: string,
+): Promise<PushResult> {
+  const startTime = Date.now();
+
+  return withFlowContext(
+    { esmPath, platform, logger, snapshotCode },
+    async (module) => {
+      const config = module.wireConfig(module.__configData ?? undefined);
+      applyOverrides(config, overrides);
+
+      const result = await module.startFlow(config);
+      if (!result?.collector)
+        throw new Error('Invalid bundle: collector not available');
+
+      const collector = result.collector;
+      const transformer = collector.transformers?.[transformerId];
+
+      if (!transformer) {
+        throw new Error(
+          `Transformer "${transformerId}" not found in collector. ` +
+            `Available: ${Object.keys(collector.transformers || {}).join(', ') || 'none'}`,
+        );
+      }
+
+      const initialized = await transformerInit(
+        collector,
+        transformer,
+        transformerId,
+      );
+      if (!initialized) {
+        throw new Error(`Transformer "${transformerId}" failed to initialize`);
+      }
+
+      const inputEvent = {
+        name: event.name,
+        data: event.data,
+      } as WalkerOS.DeepPartialEvent;
+      const ingest = createIngest(transformerId);
+      const captured: Array<{ event: unknown; timestamp: number }> = [];
+
+      captured.push({ event: { ...inputEvent }, timestamp: Date.now() });
+
+      logger.info(`Simulating transformer: ${transformerId}`);
+
+      const pushResult = await transformerPush(
+        collector,
+        transformer,
+        transformerId,
+        inputEvent,
+        ingest,
+      );
+
+      if (pushResult === false) {
+        captured.push({ event: null, timestamp: Date.now() });
+      } else if (Array.isArray(pushResult)) {
+        for (const r of pushResult) {
+          captured.push({
+            event: r.event || inputEvent,
+            timestamp: Date.now(),
+          });
+        }
+      } else if (
+        pushResult &&
+        typeof pushResult === 'object' &&
+        pushResult.event
+      ) {
+        captured.push({ event: pushResult.event, timestamp: Date.now() });
+      } else {
+        captured.push({ event: inputEvent, timestamp: Date.now() });
+      }
+
+      await collector.command('shutdown');
+
+      return { success: true, captured, duration: Date.now() - startTime };
+    },
+  );
 }
 
 /**
  * Execute source simulation using createTrigger from the source package's /dev export.
  *
- * Instead of startFlow + collector.push (destination path), this calls
- * createTrigger which owns startFlow internally (lazy init). The source's
- * env.push has been replaced by applyOverrides with a capturing wrapper.
+ * Uses withFlowContext for environment setup. Instead of startFlow + collector.push
+ * (destination path), this calls createTrigger which owns startFlow internally
+ * (lazy init). The source's env.push has been replaced by applyOverrides with a
+ * capturing wrapper.
  */
 async function executeSourceSimulation(
   esmPath: string,
@@ -697,111 +650,41 @@ async function executeSourceSimulation(
   snapshotCode?: string,
 ): Promise<PushResult> {
   const startTime = Date.now();
-  const g = global as unknown as Record<string, unknown>;
-  let savedWindow: unknown, savedDocument: unknown, savedNavigator: unknown;
-  let dom: JSDOM | undefined;
 
-  // JSDOM setup for web platform
-  if (platform === 'web') {
-    const virtualConsole = new VirtualConsole();
-    dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-      url: 'http://localhost',
-      runScripts: 'dangerously',
-      resources: 'usable',
-      virtualConsole,
-    });
-    savedWindow = g.window;
-    savedDocument = g.document;
-    savedNavigator = g.navigator;
-    g.window = dom.window;
-    g.document = dom.window.document;
-    Object.defineProperty(global, 'navigator', {
-      value: dom.window.navigator,
-      configurable: true,
-      writable: true,
-    });
-  }
+  return withFlowContext(
+    { esmPath, platform, logger, snapshotCode },
+    async (module) => {
+      const config = module.wireConfig(module.__configData ?? undefined);
+      const { captured, trackingCalls } = applyOverrides(config, overrides);
 
-  try {
-    // Eval snapshot before importing bundle
-    if (snapshotCode) {
-      if (platform === 'web' && dom) {
-        logger.debug('Evaluating snapshot in JSDOM');
-        dom.window.eval(snapshotCode);
-      } else {
-        logger.debug('Evaluating snapshot in Node');
-        const vm = await import('vm');
-        vm.runInThisContext(snapshotCode);
+      const instance = await createTrigger(config);
+      const { trigger } = instance;
+
+      logger.info('Simulating source');
+
+      const content = event.content ?? event;
+      await trigger(event.trigger?.type, event.trigger?.options)(content);
+
+      if (instance.flow?.collector?.command) {
+        await instance.flow.collector.command('shutdown');
       }
-    }
 
-    const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
-    const module = await import(`${fileUrl}?t=${Date.now()}`);
-    const { wireConfig } = module;
-
-    if (typeof wireConfig !== 'function') {
-      throw new Error('Invalid ESM bundle: missing wireConfig export');
-    }
-
-    const config = wireConfig(module.__configData ?? undefined);
-    const { captured, trackingCalls } = applyOverrides(config, overrides);
-
-    // createTrigger receives the full config and calls startFlow internally (lazy)
-    const instance = await createTrigger(config);
-    const { trigger } = instance;
-
-    logger.info('Simulating source');
-
-    // Fire the trigger — source processes input, calls env.push (captured)
-    const content = event.content ?? event;
-    const triggerType = event.trigger?.type;
-    const triggerOptions = event.trigger?.options;
-
-    await trigger(triggerType, triggerOptions)(content);
-
-    // Shutdown
-    if (instance.flow?.collector?.command) {
-      await instance.flow.collector.command('shutdown');
-    }
-
-    // Build usage map from tracking calls populated during execution
-    const usage: Record<
-      string,
-      Array<{ fn: string; args: unknown[]; ts: number }>
-    > = {};
-    for (const { destId, calls } of trackingCalls) {
-      if (calls.length > 0) usage[destId] = calls;
-    }
-
-    return {
-      success: true,
-      ...(captured.length > 0 ? { captured } : {}),
-      ...(Object.keys(usage).length > 0 ? { usage } : {}),
-      duration: Date.now() - startTime,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      duration: Date.now() - startTime,
-      error: getErrorMessage(error),
-    };
-  } finally {
-    if (platform === 'web') {
-      if (savedWindow !== undefined) g.window = savedWindow;
-      else delete g.window;
-      if (savedDocument !== undefined) g.document = savedDocument;
-      else delete g.document;
-      if (savedNavigator !== undefined) {
-        Object.defineProperty(global, 'navigator', {
-          value: savedNavigator,
-          configurable: true,
-          writable: true,
-        });
-      } else {
-        delete g.navigator;
+      const usage: Record<
+        string,
+        Array<{ fn: string; args: unknown[]; ts: number }>
+      > = {};
+      for (const { destId, calls } of trackingCalls) {
+        if (calls.length > 0) usage[destId] = calls;
       }
-    }
-  }
+
+      return {
+        success: true,
+        ...(captured.length > 0 ? { captured } : {}),
+        ...(Object.keys(usage).length > 0 ? { usage } : {}),
+        duration: Date.now() - startTime,
+      };
+    },
+  );
 }
 
 // Export types
