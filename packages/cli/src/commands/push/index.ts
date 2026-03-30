@@ -106,16 +106,21 @@ async function pushCore(
   let tempDir: string | undefined;
 
   try {
-    // Validate event format
-    const validation = validateEvent(event, 'standard');
-    if (!validation.valid) {
-      const errors = validation.errors
-        .map((e) => `${e.path}: ${e.message}`)
-        .join(', ');
-      throw new Error(`Invalid event: ${errors}`);
-    }
-    for (const w of validation.warnings) {
-      logger.info(`Warning: ${w.message}`);
+    // Validate event format (skip for source simulation — different event shape)
+    const isSourceSimulate = options.simulate?.some((s) =>
+      s.startsWith('source.'),
+    );
+    if (!isSourceSimulate) {
+      const validation = validateEvent(event, 'standard');
+      if (!validation.valid) {
+        const errors = validation.errors
+          .map((e) => `${e.path}: ${e.message}`)
+          .join(', ');
+        throw new Error(`Invalid event: ${errors}`);
+      }
+      for (const w of validation.warnings) {
+        logger.info(`Warning: ${w.message}`);
+      }
     }
 
     const eventObj = event as { name?: string; data?: Record<string, unknown> };
