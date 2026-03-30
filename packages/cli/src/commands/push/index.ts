@@ -20,7 +20,7 @@ import {
   type Platform,
 } from '../../core/index.js';
 import { validateEvent } from '../../core/event-validation.js';
-import type { Logger, WalkerOS } from '@walkeros/core';
+import type { Logger, Simulation, WalkerOS } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { loadConfig } from '../../config/utils.js';
@@ -31,6 +31,20 @@ import { buildOverrides, type PushOverrides } from './overrides.js';
 import { applyOverrides } from './apply-overrides.js';
 import { resolvePackageImportPath } from '../../core/package-path.js';
 import { withFlowContext } from './flow-context.js';
+
+/**
+ * Build usage map from tracking calls (populated by wrapEnv during execution).
+ * Returns only destinations that had actual API calls.
+ */
+function buildUsage(
+  trackingCalls: Array<{ destId: string; calls: Simulation.Call[] }>,
+): Record<string, Simulation.Call[]> {
+  const usage: Record<string, Simulation.Call[]> = {};
+  for (const { destId, calls } of trackingCalls) {
+    if (calls.length > 0) usage[destId] = calls;
+  }
+  return usage;
+}
 
 /**
  * Core push logic without CLI concerns (no process.exit, no output formatting)
@@ -592,14 +606,7 @@ async function executeDestinationPush(
 
         await collector.command('shutdown');
 
-        // Build usage from tracking calls
-        const usage: Record<
-          string,
-          Array<{ fn: string; args: unknown[]; ts: number }>
-        > = {};
-        for (const { destId, calls } of trackingCalls) {
-          if (calls.length > 0) usage[destId] = calls;
-        }
+        const usage = buildUsage(trackingCalls);
 
         return {
           success: true,
@@ -622,13 +629,7 @@ async function executeDestinationPush(
 
       await collector.command('shutdown');
 
-      const usage: Record<
-        string,
-        Array<{ fn: string; args: unknown[]; ts: number }>
-      > = {};
-      for (const { destId, calls } of trackingCalls) {
-        if (calls.length > 0) usage[destId] = calls;
-      }
+      const usage = buildUsage(trackingCalls);
 
       return {
         success: true,
@@ -811,13 +812,18 @@ async function executeSourceSimulation(
       // Override collector.push with capture-and-stop.
       // This preserves the source's wrappedPush (and its before chain)
       // while preventing events from reaching destinations.
-      if (instance.flow?.collector) {
-        const collector = instance.flow.collector as Record<string, unknown>;
-        collector.push = async (event: unknown) => {
-          captured.push({ event, timestamp: Date.now() });
-          return { ok: true };
-        };
+      if (!instance.flow?.collector) {
+        throw new Error(
+          'Source createTrigger did not expose flow.collector. ' +
+            'Cannot safely simulate without intercepting collector.push.',
+        );
       }
+
+      const collector = instance.flow.collector as Record<string, unknown>;
+      collector.push = async (event: unknown) => {
+        captured.push({ event, timestamp: Date.now() });
+        return { ok: true };
+      };
 
       logger.info('Simulating source');
 
@@ -828,13 +834,7 @@ async function executeSourceSimulation(
         await instance.flow.collector.command('shutdown');
       }
 
-      const usage: Record<
-        string,
-        Array<{ fn: string; args: unknown[]; ts: number }>
-      > = {};
-      for (const { destId, calls } of trackingCalls) {
-        if (calls.length > 0) usage[destId] = calls;
-      }
+      const usage = buildUsage(trackingCalls);
 
       return {
         success: true,

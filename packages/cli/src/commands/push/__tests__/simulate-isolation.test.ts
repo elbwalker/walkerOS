@@ -413,7 +413,7 @@ describe('destination simulation with before chain', () => {
     const inputEvent = {
       name: 'page view',
       data: { url: '/home' },
-    } as WalkerOS.Event;
+    } as unknown as WalkerOS.Event;
 
     // Initialize and push directly (isolated path)
     const isInitialized = await destinationInit(collector, destination, destId);
@@ -464,7 +464,7 @@ describe('destination simulation with before chain', () => {
     const inputEvent = {
       name: 'page view',
       data: { url: '/home' },
-    } as WalkerOS.Event;
+    } as unknown as WalkerOS.Event;
 
     // Step 1: Resolve and run before chain
     const before = destination.config.before;
@@ -540,7 +540,7 @@ describe('destination simulation with before chain', () => {
     const inputEvent = {
       name: 'page view',
       data: { url: '/home' },
-    } as WalkerOS.Event;
+    } as unknown as WalkerOS.Event;
 
     // Resolve and run before chain
     const before = destination.config.before;
@@ -581,7 +581,7 @@ describe('destination simulation with before chain', () => {
     const inputEvent = {
       name: 'product add',
       data: { id: '42', price: 29.99 },
-    } as WalkerOS.Event;
+    } as unknown as WalkerOS.Event;
 
     // No before chain — skip straight to init + push
     const before = destination.config.before;
