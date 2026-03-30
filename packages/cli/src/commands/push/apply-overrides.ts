@@ -3,37 +3,27 @@ import { wrapEnv } from '@walkeros/collector';
 import type { PushOverrides } from './overrides.js';
 
 /**
- * A captured event from a source's env.push during simulation.
- */
-export interface CapturedEvent {
-  event: unknown;
-  timestamp: number;
-}
-
-/**
  * Result of applying overrides to a collector config.
  */
 export interface OverrideResult {
-  /** Source env.push captures (populated during execution) */
-  captured: CapturedEvent[];
   /** Destination API call tracking references (populated during execution) */
   trackingCalls: Array<{ destId: string; calls: Simulation.Call[] }>;
 }
 
 /**
  * Apply push overrides (disabled/mock/simulate) to a collector config object.
- * Mutates config.destinations and config.sources in place.
+ * Mutates config.destinations in place.
  *
- * Returns an OverrideResult with:
- * - captured: mutable array populated when a simulated source calls env.push
- * - trackingCalls: references to mutable call arrays from wrapEnv,
- *   populated when destination code calls tracked env functions
+ * Returns an OverrideResult with trackingCalls: references to mutable call
+ * arrays from wrapEnv, populated when destination code calls tracked env functions.
+ *
+ * Note: Source simulation capture is handled by overriding collector.push
+ * in executeSourceSimulation, not here.
  */
 export function applyOverrides(
   config: Record<string, unknown>,
   overrides: PushOverrides,
 ): OverrideResult {
-  const captured: CapturedEvent[] = [];
   const trackingCalls: Array<{ destId: string; calls: Simulation.Call[] }> = [];
 
   // Destination overrides (existing logic)
@@ -99,5 +89,5 @@ export function applyOverrides(
     }
   }
 
-  return { captured, trackingCalls };
+  return { trackingCalls };
 }

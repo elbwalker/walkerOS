@@ -181,9 +181,7 @@ describe('applyOverrides', () => {
         },
       });
 
-      expect(result).toHaveProperty('captured');
       expect(result).toHaveProperty('trackingCalls');
-      expect(Array.isArray(result.captured)).toBe(true);
       expect(Array.isArray(result.trackingCalls)).toBe(true);
     });
   });

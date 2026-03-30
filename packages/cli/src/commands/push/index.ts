@@ -513,10 +513,7 @@ async function executeDestinationPush(
     { esmPath, platform, logger, snapshotCode, timeout },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
-      const { captured, trackingCalls } = applyOverrides(
-        config,
-        overrides || {},
-      );
+      const { trackingCalls } = applyOverrides(config, overrides || {});
 
       const result = await module.startFlow(config);
       if (!result?.collector)
@@ -611,7 +608,6 @@ async function executeDestinationPush(
         return {
           success: true,
           elbResult: pushResult as PushResult['elbResult'],
-          ...(captured.length > 0 ? { captured } : {}),
           ...(Object.keys(usage).length > 0 ? { usage } : {}),
           duration: Date.now() - startTime,
         };
@@ -634,7 +630,6 @@ async function executeDestinationPush(
       return {
         success: true,
         elbResult: elbResult as PushResult['elbResult'],
-        ...(captured.length > 0 ? { captured } : {}),
         ...(Object.keys(usage).length > 0 ? { usage } : {}),
         duration: Date.now() - startTime,
       };

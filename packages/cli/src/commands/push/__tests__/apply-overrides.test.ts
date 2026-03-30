@@ -15,7 +15,7 @@ describe('applyOverrides', () => {
         },
       };
 
-      const { captured, trackingCalls } = applyOverrides(config, overrides);
+      const { trackingCalls } = applyOverrides(config, overrides);
 
       const dest = (
         config.destinations as Record<string, Record<string, unknown>>
@@ -23,7 +23,6 @@ describe('applyOverrides', () => {
       expect((dest.config as Record<string, unknown>).mock).toEqual({
         status: 200,
       });
-      expect(captured).toEqual([]);
       expect(trackingCalls).toEqual([]);
     });
 
@@ -80,8 +79,7 @@ describe('applyOverrides', () => {
       };
 
       // Should not throw
-      const { captured } = applyOverrides(config, overrides);
-      expect(captured).toEqual([]);
+      applyOverrides(config, overrides);
     });
 
     it('handles missing destinations in config', () => {
@@ -93,8 +91,7 @@ describe('applyOverrides', () => {
       };
 
       // Should not throw
-      const { captured } = applyOverrides(config, overrides);
-      expect(captured).toEqual([]);
+      applyOverrides(config, overrides);
     });
 
     it('sets env on destination config', () => {
@@ -161,16 +158,13 @@ describe('applyOverrides', () => {
         },
       };
 
-      const { captured } = applyOverrides(config, overrides);
+      applyOverrides(config, overrides);
 
       // env.push should remain unchanged
       const source = (config.sources as Record<string, Record<string, unknown>>)
         .express;
       const env = source.env as Record<string, unknown>;
       expect(env.push).toBe(originalPush);
-
-      // Captured array is empty (populated by collector.push override, not here)
-      expect(captured).toEqual([]);
     });
 
     it('handles missing sources in config', () => {
@@ -182,8 +176,7 @@ describe('applyOverrides', () => {
       };
 
       // Should not throw
-      const { captured } = applyOverrides(config, overrides);
-      expect(captured).toEqual([]);
+      applyOverrides(config, overrides);
     });
   });
 
@@ -207,7 +200,7 @@ describe('applyOverrides', () => {
         },
       };
 
-      const { captured } = applyOverrides(config, overrides);
+      applyOverrides(config, overrides);
 
       // Destination was configured
       const dest = (
@@ -219,9 +212,6 @@ describe('applyOverrides', () => {
       const env = (config.sources as Record<string, Record<string, unknown>>)
         .express.env as Record<string, unknown>;
       expect(env.push).toBe(originalPush);
-
-      // Captured array empty
-      expect(captured).toEqual([]);
     });
   });
 
@@ -326,8 +316,7 @@ describe('applyOverrides', () => {
         destinations: { ga4: { config: {} } },
       };
 
-      const { captured, trackingCalls } = applyOverrides(config, {});
-      expect(captured).toEqual([]);
+      const { trackingCalls } = applyOverrides(config, {});
       expect(trackingCalls).toEqual([]);
     });
   });
