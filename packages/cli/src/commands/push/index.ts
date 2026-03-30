@@ -1,7 +1,15 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { createIngest, getPlatform } from '@walkeros/core';
-import { transformerInit, transformerPush } from '@walkeros/collector';
+import {
+  destinationInit,
+  destinationPush,
+  transformerInit,
+  transformerPush,
+  runTransformerChain,
+  walkChain,
+  extractTransformerNextMap,
+} from '@walkeros/collector';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
   getErrorMessage,
@@ -497,16 +505,122 @@ async function executeDestinationPush(
       );
 
       const result = await module.startFlow(config);
-      if (!result?.collector?.push)
+      if (!result?.collector)
+        throw new Error('Invalid bundle: collector not available');
+
+      const collector = result.collector;
+
+      // Check if a destination is being simulated (has mock set and not disabled)
+      const simulatedDestId = overrides?.destinations
+        ? Object.entries(overrides.destinations).find(
+            ([, d]) => d.config?.mock !== undefined && !d.config?.disabled,
+          )?.[0]
+        : undefined;
+
+      if (simulatedDestId) {
+        // ISOLATED PATH: before chain → destinationPush → capture → stop
+        const destination = collector.destinations[simulatedDestId];
+        if (!destination) {
+          throw new Error(
+            `Destination "${simulatedDestId}" not found in collector. ` +
+              `Available: ${Object.keys(collector.destinations || {}).join(', ') || 'none'}`,
+          );
+        }
+
+        const ingest = createIngest(simulatedDestId);
+
+        // Run before chain (mandatory preparation)
+        let processedEvent = {
+          name: event.name,
+          data: event.data,
+        } as WalkerOS.Event;
+        const before = destination.config.before;
+        if (before && collector.transformers) {
+          const beforeChainIds = walkChain(
+            before as string | string[],
+            extractTransformerNextMap(collector.transformers),
+          );
+          if (beforeChainIds.length > 0) {
+            logger.info(`Running before chain: ${beforeChainIds.join(' → ')}`);
+            const beforeResult = await runTransformerChain(
+              collector,
+              collector.transformers,
+              beforeChainIds,
+              processedEvent,
+              ingest,
+              undefined,
+              `destination.${simulatedDestId}.before`,
+            );
+            if (beforeResult === null) {
+              // Before chain dropped the event
+              await collector.command('shutdown');
+              return {
+                success: true,
+                captured: [
+                  { event: processedEvent, timestamp: Date.now() },
+                  { event: null, timestamp: Date.now() },
+                ],
+                duration: Date.now() - startTime,
+              };
+            }
+            processedEvent = (
+              Array.isArray(beforeResult) ? beforeResult[0] : beforeResult
+            ) as WalkerOS.Event;
+          }
+        }
+
+        // Initialize and push directly
+        logger.info(`Simulating destination: ${simulatedDestId}`);
+        const isInitialized = await destinationInit(
+          collector,
+          destination,
+          simulatedDestId,
+        );
+        if (!isInitialized) {
+          throw new Error(
+            `Destination "${simulatedDestId}" failed to initialize`,
+          );
+        }
+
+        const pushResult = await destinationPush(
+          collector,
+          destination,
+          simulatedDestId,
+          processedEvent,
+          ingest,
+        );
+
+        await collector.command('shutdown');
+
+        // Build usage from tracking calls
+        const usage: Record<
+          string,
+          Array<{ fn: string; args: unknown[]; ts: number }>
+        > = {};
+        for (const { destId, calls } of trackingCalls) {
+          if (calls.length > 0) usage[destId] = calls;
+        }
+
+        return {
+          success: true,
+          elbResult: pushResult as PushResult['elbResult'],
+          ...(captured.length > 0 ? { captured } : {}),
+          ...(Object.keys(usage).length > 0 ? { usage } : {}),
+          duration: Date.now() - startTime,
+        };
+      }
+
+      // NON-SIMULATED PATH: keep existing collector.push behavior
+      if (!collector.push)
         throw new Error('Invalid bundle: collector missing push');
 
       logger.info(`Pushing event: ${event.name}`);
-      const elbResult = await result.collector.push({
+      const elbResult = await collector.push({
         name: event.name,
         data: event.data,
       });
 
-      await result.collector.command('shutdown');
+      await collector.command('shutdown');
 
       const usage: Record<
         string,
@@ -588,11 +702,44 @@ async function executeTransformerSimulation(
 
       logger.info(`Simulating transformer: ${transformerId}`);
 
+      // Run before chain if configured (mandatory preparation)
+      let processedEvent: WalkerOS.DeepPartialEvent = inputEvent;
+      const before = transformer.config.before;
+      if (before && collector.transformers) {
+        const beforeChainIds = walkChain(
+          before as string | string[],
+          extractTransformerNextMap(collector.transformers),
+        );
+        if (beforeChainIds.length > 0) {
+          const beforeResult = await runTransformerChain(
+            collector,
+            collector.transformers,
+            beforeChainIds,
+            processedEvent,
+            ingest,
+            undefined,
+            `transformer.${transformerId}.before`,
+          );
+          if (beforeResult === null) {
+            captured.push({ event: null, timestamp: Date.now() });
+            await collector.command('shutdown');
+            return {
+              success: true,
+              captured,
+              duration: Date.now() - startTime,
+            };
+          }
+          processedEvent = (
+            Array.isArray(beforeResult) ? beforeResult[0] : beforeResult
+          ) as WalkerOS.DeepPartialEvent;
+        }
+      }
+
       const pushResult = await transformerPush(
         collector,
         transformer,
         transformerId,
-        inputEvent,
+        processedEvent,
         ingest,
       );
 
@@ -601,7 +748,7 @@ async function executeTransformerSimulation(
       } else if (Array.isArray(pushResult)) {
         for (const r of pushResult) {
           captured.push({
-            event: r.event || inputEvent,
+            event: r.event || processedEvent,
             timestamp: Date.now(),
           });
         }
@@ -612,7 +759,7 @@ async function executeTransformerSimulation(
       ) {
         captured.push({ event: pushResult.event, timestamp: Date.now() });
       } else {
-        captured.push({ event: inputEvent, timestamp: Date.now() });
+        captured.push({ event: processedEvent, timestamp: Date.now() });
       }
 
       await collector.command('shutdown');
@@ -635,9 +782,7 @@ async function executeSourceSimulation(
   event: PushEventInput,
   logger: Logger.Instance,
   overrides: PushOverrides,
-  createTrigger: (
-    ...args: unknown[]
-  ) => Promise<{
+  createTrigger: (...args: unknown[]) => Promise<{
     trigger: (
       type?: string,
       options?: unknown,

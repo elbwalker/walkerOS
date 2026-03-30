@@ -12,6 +12,7 @@ export * from './source';
 export {
   walkChain,
   extractTransformerNextMap,
+  runTransformerChain,
   transformerPush,
   transformerInit,
 } from './transformer';
