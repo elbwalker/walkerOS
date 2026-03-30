@@ -249,6 +249,35 @@ const value = collector.stores.cache.get('key');
 collector.stores.cache.delete('key');
 ```
 
+## Hooks
+
+Store operations (`get`, `set`, `delete`) are wrapped with `useHooks` during
+initialization, enabling pre/post interception via the collector's hooks system.
+
+**Available hook names:**
+
+| Hook name     | Pre hook         | Post hook         |
+| ------------- | ---------------- | ----------------- |
+| `StoreGet`    | `preStoreGet`    | `postStoreGet`    |
+| `StoreSet`    | `preStoreSet`    | `postStoreSet`    |
+| `StoreDelete` | `preStoreDelete` | `postStoreDelete` |
+
+Hooks fire on every store operation regardless of which component triggered it
+(cache system, transformer via env, destination via env, direct access on
+`collector.stores`).
+
+```typescript
+const { collector } = await startFlow({
+  stores: { cache: { code: storeMemoryInit } },
+});
+
+// Intercept all store reads
+collector.hooks.preStoreGet = ({ fn }, key) => {
+  console.log('Reading key:', key);
+  return fn(key);
+};
+```
+
 ## Key differences from other components
 
 | Aspect        | Sources/Transformers/Destinations | Stores                   |
