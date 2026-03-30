@@ -27,19 +27,27 @@ function isInlineCode(code: unknown): code is Flow.InlineCode {
  * Validates that a reference has either package XOR code, not both or neither.
  * Throws descriptive error for invalid configurations.
  */
+function hasCodeReference(code: unknown): boolean {
+  return isInlineCode(code) || typeof code === 'string';
+}
+
 function validateReference(
   type: string,
   name: string,
   ref: { package?: string; code?: unknown },
 ): void {
   const hasPackage = !!ref.package;
-  const hasCode = isInlineCode(ref.code);
+  const hasInlineCode = isInlineCode(ref.code);
+  const hasCode = hasCodeReference(ref.code);
 
-  if (hasPackage && hasCode) {
+  // Inline code object + package is invalid (ambiguous)
+  if (hasPackage && hasInlineCode) {
     throw new Error(
       `${type} "${name}": Cannot specify both package and code. Use one or the other.`,
     );
   }
+  // String code + package is valid (named import from package)
+  // Neither package nor code is invalid
   if (!hasPackage && !hasCode) {
     throw new Error(`${type} "${name}": Must specify either package or code.`);
   }
@@ -1255,6 +1263,10 @@ export function buildSplitConfigObject(
   function resolveCodeVar(
     step: { package?: string; code?: string | true },
   ): string {
+    // String code without package = named import from packages section
+    if (step.code && typeof step.code === 'string' && !step.package) {
+      return step.code;
+    }
     if (
       step.code &&
       typeof step.code === 'string' &&
@@ -1337,7 +1349,7 @@ export function buildSplitConfigObject(
     .filter(
       ([, source]) =>
         (source.code as unknown) !== true &&
-        (source.package || isInlineCode(source.code)),
+        (source.package || hasCodeReference(source.code)),
     )
     .map(([key, source]) => {
       if (isInlineCode(source.code)) {
@@ -1351,7 +1363,7 @@ export function buildSplitConfigObject(
     .filter(
       ([, dest]) =>
         (dest.code as unknown) !== true &&
-        (dest.package || isInlineCode(dest.code)),
+        (dest.package || hasCodeReference(dest.code)),
     )
     .map(([key, dest]) => {
       if (isInlineCode(dest.code)) {
@@ -1365,7 +1377,7 @@ export function buildSplitConfigObject(
     .filter(
       ([, transformer]) =>
         (transformer.code as unknown) !== true &&
-        (transformer.package || isInlineCode(transformer.code)),
+        (transformer.package || hasCodeReference(transformer.code)),
     )
     .map(([key, transformer]) => {
       if (isInlineCode(transformer.code)) {
@@ -1376,13 +1388,13 @@ export function buildSplitConfigObject(
 
   // Build stores
   Object.entries(stores).forEach(([name, store]) => {
-    if (store.package || isInlineCode(store.code)) {
+    if (store.package || hasCodeReference(store.code)) {
       validateReference('Store', name, store);
     }
   });
 
   const storesEntries = Object.entries(stores)
-    .filter(([, store]) => store.package || isInlineCode(store.code))
+    .filter(([, store]) => store.package || hasCodeReference(store.code))
     .map(([key, store]) => {
       if (isInlineCode(store.code)) {
         return `    ${key}: ${generateInlineCode(store.code, (store.config as object) || {}, store.env as object)}`;
