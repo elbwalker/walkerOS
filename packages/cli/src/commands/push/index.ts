@@ -461,10 +461,29 @@ async function executeConfigPush(
     );
   }
 
-  // Execute destination push
+  // Check for destination simulation
+  const hasDestinationSimulate = overrides.destinations
+    ? Object.entries(overrides.destinations).some(
+        ([, d]) => d.config?.mock !== undefined && !d.config?.disabled,
+      )
+    : false;
+
   logger.debug(
     `Executing in ${platform} environment (${platform === 'web' ? 'JSDOM' : 'Node.js'})`,
   );
+
+  if (hasDestinationSimulate) {
+    return executeSimulatedDestination(
+      tempPath,
+      validatedEvent,
+      logger,
+      platform,
+      overrides,
+      snapshotCode,
+      platform === 'server' ? 60000 : undefined,
+    );
+  }
+
   return executeDestinationPush(
     tempPath,
     validatedEvent,
@@ -530,7 +549,7 @@ interface PushEventInput {
 }
 
 /**
- * Execute destination push for any platform (web or server).
+ * Execute non-simulated destination push (full pipeline).
  * Uses withFlowContext for environment setup and cleanup.
  */
 async function executeDestinationPush(
@@ -551,108 +570,10 @@ async function executeDestinationPush(
       const { trackingCalls } = applyOverrides(config, overrides || {});
 
       const result = await module.startFlow(config);
-      if (!result?.collector)
-        throw new Error('Invalid bundle: collector not available');
+      if (!result?.collector?.push)
+        throw new Error('Invalid bundle: collector missing push');
 
       const collector = result.collector;
-
-      // Check if a destination is being simulated (has mock set and not disabled)
-      const simulatedDestId = overrides?.destinations
-        ? Object.entries(overrides.destinations).find(
-            ([, d]) => d.config?.mock !== undefined && !d.config?.disabled,
-          )?.[0]
-        : undefined;
-
-      if (simulatedDestId) {
-        // ISOLATED PATH: before chain → destinationPush → capture → stop
-        const destination = collector.destinations[simulatedDestId];
-        if (!destination) {
-          throw new Error(
-            `Destination "${simulatedDestId}" not found in collector. ` +
-              `Available: ${Object.keys(collector.destinations || {}).join(', ') || 'none'}`,
-          );
-        }
-
-        const ingest = createIngest(simulatedDestId);
-
-        // Run before chain (mandatory preparation)
-        let processedEvent = {
-          name: event.name,
-          data: event.data,
-        } as WalkerOS.Event;
-        const before = destination.config.before;
-        if (before && collector.transformers) {
-          const beforeChainIds = resolveBeforeChain(
-            before,
-            collector.transformers,
-            ingest,
-            processedEvent,
-          );
-          if (beforeChainIds.length > 0) {
-            logger.info(`Running before chain: ${beforeChainIds.join(' → ')}`);
-            const beforeResult = await runTransformerChain(
-              collector,
-              collector.transformers,
-              beforeChainIds,
-              processedEvent,
-              ingest,
-              undefined,
-              `destination.${simulatedDestId}.before`,
-            );
-            if (beforeResult === null) {
-              // Before chain dropped the event
-              await collector.command('shutdown');
-              return {
-                success: true,
-                captured: [
-                  { event: processedEvent, timestamp: Date.now() },
-                  { event: null, timestamp: Date.now() },
-                ],
-                duration: Date.now() - startTime,
-              };
-            }
-            processedEvent = (
-              Array.isArray(beforeResult) ? beforeResult[0] : beforeResult
-            ) as WalkerOS.Event;
-          }
-        }
-
-        // Initialize and push directly
-        logger.info(`Simulating destination: ${simulatedDestId}`);
-        const isInitialized = await destinationInit(
-          collector,
-          destination,
-          simulatedDestId,
-        );
-        if (!isInitialized) {
-          throw new Error(
-            `Destination "${simulatedDestId}" failed to initialize`,
-          );
-        }
-
-        const pushResult = await destinationPush(
-          collector,
-          destination,
-          simulatedDestId,
-          processedEvent,
-          ingest,
-        );
-
-        await collector.command('shutdown');
-
-        const usage = buildUsage(trackingCalls);
-
-        return {
-          success: true,
-          elbResult: pushResult as PushResult['elbResult'],
-          ...(Object.keys(usage).length > 0 ? { usage } : {}),
-          duration: Date.now() - startTime,
-        };
-      }
-
-      // NON-SIMULATED PATH: keep existing collector.push behavior
-      if (!collector.push)
-        throw new Error('Invalid bundle: collector missing push');
 
       logger.info(`Pushing event: ${event.name}`);
       const elbResult = await collector.push({
@@ -667,6 +588,130 @@ async function executeDestinationPush(
       return {
         success: true,
         elbResult: elbResult as PushResult['elbResult'],
+        ...(Object.keys(usage).length > 0 ? { usage } : {}),
+        duration: Date.now() - startTime,
+      };
+    },
+  );
+}
+
+/**
+ * Execute isolated destination simulation.
+ * Before chain → destinationInit → destinationPush → capture → stop.
+ * No collector.push, no next chain, no other destinations.
+ */
+async function executeSimulatedDestination(
+  esmPath: string,
+  event: PushEventInput,
+  logger: Logger.Instance,
+  platform: 'web' | 'server',
+  overrides: PushOverrides,
+  snapshotCode?: string,
+  timeout?: number,
+): Promise<PushResult> {
+  const startTime = Date.now();
+
+  // Find the simulated destination (has mock set and not disabled)
+  const simulatedDestId = overrides.destinations
+    ? Object.entries(overrides.destinations).find(
+        ([, d]) => d.config?.mock !== undefined && !d.config?.disabled,
+      )?.[0]
+    : undefined;
+
+  if (!simulatedDestId) {
+    throw new Error('No simulated destination found in overrides');
+  }
+
+  return withFlowContext(
+    { esmPath, platform, logger, snapshotCode, timeout },
+    async (module) => {
+      const config = module.wireConfig(module.__configData ?? undefined);
+      const { trackingCalls } = applyOverrides(config, overrides);
+
+      const result = await module.startFlow(config);
+      if (!result?.collector)
+        throw new Error('Invalid bundle: collector not available');
+
+      const collector = result.collector;
+      const destination = collector.destinations[simulatedDestId];
+      if (!destination) {
+        throw new Error(
+          `Destination "${simulatedDestId}" not found in collector. ` +
+            `Available: ${Object.keys(collector.destinations || {}).join(', ') || 'none'}`,
+        );
+      }
+
+      const ingest = createIngest(simulatedDestId);
+
+      // Run before chain (mandatory preparation)
+      let processedEvent = {
+        name: event.name,
+        data: event.data,
+      } as WalkerOS.Event;
+      const before = destination.config.before;
+      if (before && collector.transformers) {
+        const beforeChainIds = resolveBeforeChain(
+          before,
+          collector.transformers,
+          ingest,
+          processedEvent,
+        );
+        if (beforeChainIds.length > 0) {
+          logger.info(`Running before chain: ${beforeChainIds.join(' → ')}`);
+          const beforeResult = await runTransformerChain(
+            collector,
+            collector.transformers,
+            beforeChainIds,
+            processedEvent,
+            ingest,
+            undefined,
+            `destination.${simulatedDestId}.before`,
+          );
+          if (beforeResult === null) {
+            await collector.command('shutdown');
+            return {
+              success: true,
+              captured: [
+                { event: processedEvent, timestamp: Date.now() },
+                { event: null, timestamp: Date.now() },
+              ],
+              duration: Date.now() - startTime,
+            };
+          }
+          processedEvent = (
+            Array.isArray(beforeResult) ? beforeResult[0] : beforeResult
+          ) as WalkerOS.Event;
+        }
+      }
+
+      // Initialize and push directly
+      logger.info(`Simulating destination: ${simulatedDestId}`);
+      const isInitialized = await destinationInit(
+        collector,
+        destination,
+        simulatedDestId,
+      );
+      if (!isInitialized) {
+        throw new Error(
+          `Destination "${simulatedDestId}" failed to initialize`,
+        );
+      }
+
+      const pushResult = await destinationPush(
+        collector,
+        destination,
+        simulatedDestId,
+        processedEvent,
+        ingest,
+      );
+
+      await collector.command('shutdown');
+
+      const usage = buildUsage(trackingCalls);
+
+      return {
+        success: true,
+        elbResult: pushResult as PushResult['elbResult'],
         ...(Object.keys(usage).length > 0 ? { usage } : {}),
         duration: Date.now() - startTime,
       };
