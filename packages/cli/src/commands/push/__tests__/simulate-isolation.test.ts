@@ -605,3 +605,154 @@ describe('destination simulation with before chain', () => {
     expect(collector.push).not.toHaveBeenCalled();
   });
 });
+
+describe('transformer result handling', () => {
+  function createCollectorStub(
+    transformers: Transformer.Transformers = {},
+  ): Collector.Instance {
+    return {
+      transformers,
+      destinations: {},
+      sources: { elb: { push: jest.fn() } },
+      queue: [],
+      allowed: true,
+      consent: {},
+      globals: {},
+      user: {},
+      status: { in: 0, out: 0, failed: 0, destinations: {} },
+      pending: { sources: {}, destinations: {} },
+      hooks: {},
+      logger: createMockLogger(),
+      command: jest.fn(),
+      push: jest.fn(),
+    } as unknown as Collector.Instance;
+  }
+
+  it('returns false when transformer drops the event', async () => {
+    const transformer: Transformer.Instance = {
+      type: 'drop',
+      config: { init: true },
+      push: jest.fn(async () => false as const),
+    };
+    const collector = createCollectorStub({ drop: transformer });
+    const result = await transformerPush(
+      collector,
+      transformer,
+      'drop',
+      { name: 'page view' } as WalkerOS.DeepPartialEvent,
+      createIngest('drop'),
+    );
+    expect(result).toBe(false);
+  });
+
+  it('returns array on fan-out', async () => {
+    const transformer: Transformer.Instance = {
+      type: 'fanout',
+      config: { init: true },
+      push: jest.fn(
+        async (event: WalkerOS.DeepPartialEvent) =>
+          [
+            { event: { ...event, data: { ...event.data, variant: 'a' } } },
+            { event: { ...event, data: { ...event.data, variant: 'b' } } },
+          ] as Transformer.Result[],
+      ),
+    };
+    const collector = createCollectorStub({ fanout: transformer });
+    const result = await transformerPush(
+      collector,
+      transformer,
+      'fanout',
+      { name: 'page view', data: {} } as WalkerOS.DeepPartialEvent,
+      createIngest('fanout'),
+    );
+    expect(Array.isArray(result)).toBe(true);
+    expect((result as Transformer.Result[]).length).toBe(2);
+  });
+
+  it('returns object with event on enrichment', async () => {
+    const transformer: Transformer.Instance = {
+      type: 'enrich',
+      config: { init: true },
+      push: jest.fn(async (event: WalkerOS.DeepPartialEvent) => ({
+        event: { ...event, data: { ...event.data, enriched: true } },
+      })),
+    };
+    const collector = createCollectorStub({ enrich: transformer });
+    const result = await transformerPush(
+      collector,
+      transformer,
+      'enrich',
+      { name: 'page view', data: {} } as WalkerOS.DeepPartialEvent,
+      createIngest('enrich'),
+    );
+    expect((result as Transformer.Result).event?.data).toEqual({
+      enriched: true,
+    });
+  });
+
+  it('returns undefined on passthrough (void)', async () => {
+    const transformer: Transformer.Instance = {
+      type: 'noop',
+      config: { init: true },
+      push: jest.fn(async () => undefined),
+    };
+    const collector = createCollectorStub({ noop: transformer });
+    const result = await transformerPush(
+      collector,
+      transformer,
+      'noop',
+      { name: 'page view' } as WalkerOS.DeepPartialEvent,
+      createIngest('noop'),
+    );
+    expect(result).toBeUndefined();
+  });
+});
+
+describe('source simulation — collector.push override', () => {
+  it('capture-and-stop prevents events from reaching original push', async () => {
+    const originalPush = jest.fn();
+    const captured: Array<{ event: unknown; timestamp: number }> = [];
+
+    const collector = { push: originalPush } as Record<string, unknown>;
+    collector.push = async (event: unknown) => {
+      captured.push({ event, timestamp: Date.now() });
+      return { ok: true };
+    };
+
+    await (collector.push as (e: unknown) => Promise<unknown>)({
+      name: 'page view',
+    });
+    await (collector.push as (e: unknown) => Promise<unknown>)({
+      name: 'order complete',
+    });
+
+    expect(captured).toHaveLength(2);
+    expect(captured[0].event).toEqual({ name: 'page view' });
+    expect(captured[1].event).toEqual({ name: 'order complete' });
+    expect(originalPush).not.toHaveBeenCalled();
+  });
+
+  it('throws when flow.collector is not exposed', () => {
+    const instance = { flow: {} };
+    expect(() => {
+      if (!(instance as { flow?: { collector?: unknown } }).flow?.collector) {
+        throw new Error(
+          'Source createTrigger did not expose flow.collector. ' +
+            'Cannot safely simulate without intercepting collector.push.',
+        );
+      }
+    }).toThrow('did not expose flow.collector');
+  });
+
+  it('throws when flow itself is missing', () => {
+    const instance = {};
+    expect(() => {
+      if (!(instance as { flow?: { collector?: unknown } }).flow?.collector) {
+        throw new Error(
+          'Source createTrigger did not expose flow.collector. ' +
+            'Cannot safely simulate without intercepting collector.push.',
+        );
+      }
+    }).toThrow('did not expose flow.collector');
+  });
+});
