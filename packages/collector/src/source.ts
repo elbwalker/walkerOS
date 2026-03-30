@@ -103,6 +103,7 @@ export async function initSource(
         event,
         currentIngest,
         currentRespond,
+        `source.${sourceId}.before`,
       );
       if (beforeResult === null) {
         return { ok: true } as Elb.PushResult;

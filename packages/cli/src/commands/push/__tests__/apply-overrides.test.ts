@@ -347,6 +347,100 @@ describe('applyOverrides', () => {
     });
   });
 
+  describe('transformer mocks', () => {
+    it('sets chainMocks on transformer config', () => {
+      const config: Record<string, unknown> = {
+        destinations: { ga4: { code: {}, config: {} } },
+        transformers: { redact: { code: {}, config: {} } },
+      };
+      const overrides: PushOverrides = {
+        transformerMocks: {
+          'destination.ga4.before': { redact: { name: 'mocked' } },
+        },
+      };
+      applyOverrides(config, overrides);
+      expect(
+        (
+          (config.transformers as Record<string, Record<string, unknown>>)
+            .redact.config as Record<string, unknown>
+        ).chainMocks,
+      ).toEqual({
+        'destination.ga4.before': { name: 'mocked' },
+      });
+    });
+
+    it('creates config object on transformer if missing', () => {
+      const config: Record<string, unknown> = {
+        destinations: { ga4: { code: {}, config: {} } },
+        transformers: { redact: { code: {} } },
+      };
+      const overrides: PushOverrides = {
+        transformerMocks: {
+          'destination.ga4.before': { redact: { x: 1 } },
+        },
+      };
+      applyOverrides(config, overrides);
+      expect(
+        (
+          (config.transformers as Record<string, Record<string, unknown>>)
+            .redact.config as Record<string, unknown>
+        ).chainMocks,
+      ).toEqual({
+        'destination.ga4.before': { x: 1 },
+      });
+    });
+
+    it('skips transformers not present in config', () => {
+      const config: Record<string, unknown> = {
+        destinations: { ga4: { config: {} } },
+        transformers: {},
+      };
+      const overrides: PushOverrides = {
+        transformerMocks: {
+          'destination.ga4.before': { nonexistent: { y: 2 } },
+        },
+      };
+      // Should not throw
+      applyOverrides(config, overrides);
+    });
+
+    it('handles missing transformers section in config', () => {
+      const config: Record<string, unknown> = {
+        destinations: { ga4: { config: {} } },
+      };
+      const overrides: PushOverrides = {
+        transformerMocks: {
+          'destination.ga4.before': { redact: { z: 3 } },
+        },
+      };
+      // Should not throw
+      applyOverrides(config, overrides);
+    });
+
+    it('sets multiple chainMocks on the same transformer', () => {
+      const config: Record<string, unknown> = {
+        destinations: { ga4: { config: {} }, piwik: { config: {} } },
+        transformers: { redact: { code: {}, config: {} } },
+      };
+      const overrides: PushOverrides = {
+        transformerMocks: {
+          'destination.ga4.before': { redact: { a: 1 } },
+          'destination.piwik.next': { redact: { b: 2 } },
+        },
+      };
+      applyOverrides(config, overrides);
+      expect(
+        (
+          (config.transformers as Record<string, Record<string, unknown>>)
+            .redact.config as Record<string, unknown>
+        ).chainMocks,
+      ).toEqual({
+        'destination.ga4.before': { a: 1 },
+        'destination.piwik.next': { b: 2 },
+      });
+    });
+  });
+
   describe('empty overrides', () => {
     it('returns empty result with no overrides', () => {
       const config: Record<string, unknown> = {

@@ -23,6 +23,8 @@ export interface PushOverrides {
       simulate?: boolean;
     }
   >;
+  /** Path-specific transformer mocks: chainPath → { transformerId → mockValue } */
+  transformerMocks?: Record<string, Record<string, unknown>>;
 }
 
 /**
@@ -80,22 +82,13 @@ export function buildOverrides(
 
     const stepPart = step.slice(0, eqIndex);
     const valuePart = step.slice(eqIndex + 1);
-    const { type, name } = parseStep(stepPart);
+    const parsed = parseStep(stepPart);
 
-    if (type === 'source') {
+    if (parsed.type === 'source') {
       throw new Error(
-        `--mock is not supported for sources. Use --simulate source.${name}`,
+        `--mock is not supported for sources. Use --simulate source.${parsed.name}`,
       );
     }
-
-    // Validate: same destination cannot be in both simulate and mock
-    if (simulateNames.has(name)) {
-      throw new Error(
-        `Destination "${name}" cannot be in both --simulate and --mock`,
-      );
-    }
-
-    mockNames.add(name);
 
     let parsedValue: unknown;
     try {
@@ -105,8 +98,27 @@ export function buildOverrides(
       parsedValue = valuePart;
     }
 
-    if (!overrides.destinations) overrides.destinations = {};
-    overrides.destinations[name] = { config: { mock: parsedValue } };
+    if (parsed.chainType && parsed.transformerId) {
+      // Path-specific mock: destination.ga4.before.redact
+      const chainPath = `destination.${parsed.name}.${parsed.chainType}`;
+      if (!overrides.transformerMocks) overrides.transformerMocks = {};
+      if (!overrides.transformerMocks[chainPath])
+        overrides.transformerMocks[chainPath] = {};
+      overrides.transformerMocks[chainPath][parsed.transformerId] = parsedValue;
+    } else {
+      // Simple destination mock (existing behavior)
+      // Validate: same destination cannot be in both simulate and mock
+      if (simulateNames.has(parsed.name)) {
+        throw new Error(
+          `Destination "${parsed.name}" cannot be in both --simulate and --mock`,
+        );
+      }
+
+      mockNames.add(parsed.name);
+
+      if (!overrides.destinations) overrides.destinations = {};
+      overrides.destinations[parsed.name] = { config: { mock: parsedValue } };
+    }
   }
 
   // Simulate-implies-disabled: disable all other destinations
@@ -125,30 +137,62 @@ export function buildOverrides(
   return overrides;
 }
 
+interface ParsedStep {
+  type: 'source' | 'destination';
+  name: string;
+  chainType?: 'before' | 'next';
+  transformerId?: string;
+}
+
 /**
  * Parse a step string in `source.NAME` or `destination.NAME` format.
+ * Also supports 4-part path notation: `destination.NAME.CHAIN.TRANSFORMER`
  * @throws if format is invalid
  */
-function parseStep(step: string): { type: 'source' | 'destination'; name: string } {
-  const dotIndex = step.indexOf('.');
-  if (dotIndex === -1) {
+function parseStep(step: string): ParsedStep {
+  const parts = step.split('.');
+
+  if (parts.length < 2) {
     throw new Error(
       `Invalid step format: "${step}". Expected "source.NAME" or "destination.NAME"`,
     );
   }
 
-  const prefix = step.slice(0, dotIndex);
-  const name = step.slice(dotIndex + 1);
-
+  const prefix = parts[0];
   if (prefix !== 'source' && prefix !== 'destination') {
     throw new Error(
       `Unsupported step type: "${prefix}". Use "source" or "destination"`,
     );
   }
 
+  const name = parts[1];
   if (!name) {
     throw new Error(
       `Invalid step format: "${step}". Missing name after "${prefix}."`,
+    );
+  }
+
+  // Path-specific: destination.ga4.before.redact
+  if (parts.length >= 4) {
+    const chainType = parts[2];
+    if (chainType !== 'before' && chainType !== 'next') {
+      throw new Error(
+        `Invalid chain type: "${chainType}". Use "before" or "next"`,
+      );
+    }
+    const transformerId = parts[3];
+    if (!transformerId) {
+      throw new Error(
+        `Invalid step format: "${step}". Missing transformer name after "${chainType}."`,
+      );
+    }
+    return { type: prefix, name, chainType, transformerId };
+  }
+
+  // 3-part (destination.ga4.before without transformer) — invalid
+  if (parts.length === 3) {
+    throw new Error(
+      `Invalid step format: "${step}". Specify a transformer: "${step}.TRANSFORMER_NAME"`,
     );
   }
 

@@ -217,4 +217,72 @@ describe('buildOverrides', () => {
     );
     expect(result.sources).toEqual({ browser: { simulate: true } });
   });
+
+  describe('path-specific mocks', () => {
+    it('parses --mock destination.ga4.before.redact=value', () => {
+      const result = buildOverrides(
+        { mock: ['destination.ga4.before.redact={"name":"mocked"}'] },
+        {
+          web: {},
+          destinations: { ga4: {} },
+          transformers: { redact: {} },
+        } as any,
+      );
+      expect(result.transformerMocks).toEqual({
+        'destination.ga4.before': { redact: { name: 'mocked' } },
+      });
+    });
+
+    it('supports both global and path-specific mocks', () => {
+      const result = buildOverrides(
+        {
+          mock: [
+            'destination.ga4={}',
+            'destination.piwik.before.redact={"x":1}',
+          ],
+        },
+        {
+          web: {},
+          destinations: { ga4: {}, piwik: {} },
+          transformers: { redact: {} },
+        } as any,
+      );
+      expect(result.destinations!.ga4.config!.mock).toEqual({});
+      expect(result.transformerMocks).toEqual({
+        'destination.piwik.before': { redact: { x: 1 } },
+      });
+    });
+
+    it('rejects invalid chain type in path', () => {
+      expect(() =>
+        buildOverrides(
+          { mock: ['destination.ga4.invalid.redact={}'] },
+          { web: {}, destinations: { ga4: {} } } as any,
+        ),
+      ).toThrow('Invalid chain type');
+    });
+
+    it('rejects 3-part path without transformer', () => {
+      expect(() =>
+        buildOverrides(
+          { mock: ['destination.ga4.before={}'] },
+          { web: {}, destinations: { ga4: {} } } as any,
+        ),
+      ).toThrow('Specify a transformer');
+    });
+
+    it('path-specific mock does not disable other destinations', () => {
+      const result = buildOverrides(
+        { mock: ['destination.ga4.before.redact={}'] },
+        {
+          web: {},
+          destinations: { ga4: {}, piwik: {} },
+          transformers: { redact: {} },
+        } as any,
+      );
+      // No destination-level overrides — only transformer mocks
+      expect(result.destinations).toBeUndefined();
+      expect(result.transformerMocks).toBeDefined();
+    });
+  });
 });

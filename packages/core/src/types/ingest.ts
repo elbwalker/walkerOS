@@ -7,6 +7,8 @@ export interface IngestMeta {
   hops: number;
   /** Ordered list of step IDs visited. path[0] is always the source ID. */
   path: string[];
+  /** Current chain context, e.g., "destination.ga4.before" or "source.web.next". */
+  chainPath?: string;
 }
 
 /**

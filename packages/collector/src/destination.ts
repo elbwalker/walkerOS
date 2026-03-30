@@ -311,6 +311,7 @@ export async function pushToDestinations(
               event,
               destIngest,
               meta.respond,
+              `destination.${id}.before`,
             );
 
             if (chainResult === null) {
@@ -411,6 +412,7 @@ export async function pushToDestinations(
                 processedEvent!,
                 destIngest,
                 meta.respond,
+                `destination.${id}.next`,
               );
             }
           }

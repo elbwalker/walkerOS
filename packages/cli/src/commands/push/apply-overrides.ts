@@ -95,5 +95,27 @@ export function applyOverrides(
     }
   }
 
+  // Transformer path-specific mocks
+  if (overrides.transformerMocks) {
+    const transformers = config.transformers as
+      | Record<string, Record<string, unknown>>
+      | undefined;
+    if (transformers) {
+      for (const [chainPath, mocks] of Object.entries(
+        overrides.transformerMocks,
+      )) {
+        for (const [transformerId, mockValue] of Object.entries(mocks)) {
+          const transformer = transformers[transformerId];
+          if (!transformer) continue;
+          if (!transformer.config) transformer.config = {};
+          const tConfig = transformer.config as Record<string, unknown>;
+          if (!tConfig.chainMocks) tConfig.chainMocks = {};
+          (tConfig.chainMocks as Record<string, unknown>)[chainPath] =
+            mockValue;
+        }
+      }
+    }
+  }
+
   return { captured, trackingCalls };
 }

@@ -348,8 +348,13 @@ export async function runTransformerChain(
   event: WalkerOS.DeepPartialEvent,
   ingest?: Ingest,
   respond?: import('@walkeros/core').RespondFn,
+  chainContext?: string,
 ): Promise<WalkerOS.DeepPartialEvent | WalkerOS.DeepPartialEvent[] | null> {
   const MAX_PATH_LENGTH = 256;
+
+  if (chainContext && ingest?._meta) {
+    ingest._meta.chainPath = chainContext;
+  }
 
   let processedEvent = event;
   let currentRespond = respond;
@@ -383,6 +388,26 @@ export async function runTransformerChain(
     if (!isInitialized) {
       collector.logger.error(`Transformer init failed: ${transformerName}`);
       return null; // Stop chain on init failure
+    }
+
+    // Path-specific mock check (takes precedence)
+    if (chainContext && transformer.config?.chainMocks?.[chainContext] !== undefined) {
+      const chainMock = transformer.config.chainMocks[chainContext];
+      collector.logger.scope(`transformer:${transformer.type || 'unknown'}`).debug('chainMock', { chain: chainContext });
+      processedEvent = chainMock as WalkerOS.DeepPartialEvent;
+      continue;
+    }
+
+    // Global mock check
+    if (transformer.config?.mock !== undefined) {
+      collector.logger.scope(`transformer:${transformer.type || 'unknown'}`).debug('mock');
+      processedEvent = transformer.config.mock as WalkerOS.DeepPartialEvent;
+      continue;
+    }
+
+    // Disabled check
+    if (transformer.config?.disabled) {
+      continue;
     }
 
     // Compile transformer cache once (reused for HIT check and MISS store)
@@ -442,6 +467,7 @@ export async function runTransformerChain(
           processedEvent,
           ingest,
           currentRespond,
+          chainContext,
         );
         if (beforeResult === null) return null; // Before chain stopped
         // Before chains use first result if fan-out occurred
@@ -511,6 +537,7 @@ export async function runTransformerChain(
                   forkEvent,
                   forkIngest,
                   currentRespond,
+                  chainContext,
                 );
               }
             }
@@ -526,6 +553,7 @@ export async function runTransformerChain(
               forkEvent,
               forkIngest,
               currentRespond,
+              chainContext,
             );
           }
           return forkEvent;
@@ -582,6 +610,7 @@ export async function runTransformerChain(
             resultEvent || processedEvent,
             ingest,
             currentRespond,
+            chainContext,
           );
         }
 
@@ -629,6 +658,7 @@ export async function runTransformerChain(
             processedEvent,
             ingest,
             currentRespond,
+            chainContext,
           );
         }
       }

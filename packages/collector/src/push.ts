@@ -79,6 +79,7 @@ export function createPush<T extends Collector.Instance>(
               partialEvent,
               pipelineIngest,
               respond,
+              id ? `source.${id}.next` : undefined,
             );
 
             // Chain was stopped - event dropped

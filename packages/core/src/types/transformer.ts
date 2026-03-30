@@ -69,6 +69,10 @@ export interface Config<T extends TypesGeneric = Types> {
   cache?: import('./cache').Cache; // Step-level cache config
   init?: boolean; // Track init state (like Destination)
   disabled?: boolean; // Completely skip this transformer in chains
+  /** Return this value instead of calling push(). Global mock for all chains. */
+  mock?: unknown;
+  /** Path-specific mock values keyed by chain path (e.g., "destination.ga4.before"). Takes precedence over global mock. */
+  chainMocks?: Record<string, unknown>;
 }
 
 /**
