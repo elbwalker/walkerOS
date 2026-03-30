@@ -377,8 +377,10 @@ async function executeWebPush(
   const g = global as unknown as Record<string, unknown>;
   const savedWindow = g.window;
   const savedDocument = g.document;
+  const savedNavigator = g.navigator;
   g.window = dom.window;
   g.document = dom.window.document;
+  g.navigator = dom.window.navigator;
 
   try {
     const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
@@ -406,6 +408,9 @@ async function executeWebPush(
       data: event.data,
     });
 
+    // Shutdown collector before cleaning up JSDOM globals
+    await result.collector.command('shutdown');
+
     return {
       success: true,
       elbResult: elbResult as PushResult['elbResult'],
@@ -423,6 +428,8 @@ async function executeWebPush(
     else delete g.window;
     if (savedDocument !== undefined) g.document = savedDocument;
     else delete g.document;
+    if (savedNavigator !== undefined) g.navigator = savedNavigator;
+    else delete g.navigator;
   }
 }
 
@@ -472,6 +479,9 @@ async function executeServerPush(
         name: event.name,
         data: event.data,
       });
+
+      // Shutdown collector (closes Express servers, cleans up stores, etc.)
+      await result.collector.command('shutdown');
 
       return {
         success: true,
