@@ -772,10 +772,10 @@ async function executeTransformerSimulation(
 /**
  * Execute source simulation using createTrigger from the source package's /dev export.
  *
- * Uses withFlowContext for environment setup. Instead of startFlow + collector.push
- * (destination path), this calls createTrigger which owns startFlow internally
- * (lazy init). The source's env.push has been replaced by applyOverrides with a
- * capturing wrapper.
+ * Uses withFlowContext for environment setup. createTrigger owns startFlow internally.
+ * After createTrigger returns, we override collector.push with a capture-and-stop
+ * function. This preserves the source's wrappedPush (and its before chain) while
+ * preventing events from reaching destinations.
  */
 async function executeSourceSimulation(
   esmPath: string,
@@ -800,10 +800,24 @@ async function executeSourceSimulation(
     { esmPath, platform, logger, snapshotCode },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
-      const { captured, trackingCalls } = applyOverrides(config, overrides);
+      const { trackingCalls } = applyOverrides(config, overrides);
+
+      // Capture array for events reaching collector.push boundary
+      const captured: Array<{ event: unknown; timestamp: number }> = [];
 
       const instance = await createTrigger(config);
       const { trigger } = instance;
+
+      // Override collector.push with capture-and-stop.
+      // This preserves the source's wrappedPush (and its before chain)
+      // while preventing events from reaching destinations.
+      if (instance.flow?.collector) {
+        const collector = instance.flow.collector as Record<string, unknown>;
+        collector.push = async (event: unknown) => {
+          captured.push({ event, timestamp: Date.now() });
+          return { ok: true };
+        };
+      }
 
       logger.info('Simulating source');
 

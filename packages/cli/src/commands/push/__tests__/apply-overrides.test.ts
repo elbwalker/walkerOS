@@ -17,8 +17,12 @@ describe('applyOverrides', () => {
 
       const { captured, trackingCalls } = applyOverrides(config, overrides);
 
-      const dest = (config.destinations as Record<string, Record<string, unknown>>).ga4;
-      expect((dest.config as Record<string, unknown>).mock).toEqual({ status: 200 });
+      const dest = (
+        config.destinations as Record<string, Record<string, unknown>>
+      ).ga4;
+      expect((dest.config as Record<string, unknown>).mock).toEqual({
+        status: 200,
+      });
       expect(captured).toEqual([]);
       expect(trackingCalls).toEqual([]);
     });
@@ -37,7 +41,9 @@ describe('applyOverrides', () => {
 
       applyOverrides(config, overrides);
 
-      const dest = (config.destinations as Record<string, Record<string, unknown>>).meta;
+      const dest = (
+        config.destinations as Record<string, Record<string, unknown>>
+      ).meta;
       expect((dest.config as Record<string, unknown>).disabled).toBe(true);
     });
 
@@ -55,7 +61,9 @@ describe('applyOverrides', () => {
 
       applyOverrides(config, overrides);
 
-      const dest = (config.destinations as Record<string, Record<string, unknown>>).ga4;
+      const dest = (
+        config.destinations as Record<string, Record<string, unknown>>
+      ).ga4;
       expect((dest.config as Record<string, unknown>).mock).toEqual({});
     });
 
@@ -106,7 +114,9 @@ describe('applyOverrides', () => {
 
       applyOverrides(config, overrides);
 
-      const dest = (config.destinations as Record<string, Record<string, unknown>>).ga4;
+      const dest = (
+        config.destinations as Record<string, Record<string, unknown>>
+      ).ga4;
       expect((dest.config as Record<string, unknown>).env).toEqual({
         window: { gtag: expect.any(Function) },
       });
@@ -128,7 +138,9 @@ describe('applyOverrides', () => {
 
       applyOverrides(config, overrides);
 
-      const dest = (config.destinations as Record<string, Record<string, unknown>>).ga4;
+      const dest = (
+        config.destinations as Record<string, Record<string, unknown>>
+      ).ga4;
       expect((dest.config as Record<string, unknown>).env).toEqual({
         window: { gtag: expect.any(Function) },
       });
@@ -136,10 +148,11 @@ describe('applyOverrides', () => {
   });
 
   describe('source overrides', () => {
-    it('replaces env.push with capturing wrapper when simulate is true', () => {
+    it('does not modify source env.push (capture handled by collector.push override)', () => {
+      const originalPush = jest.fn();
       const config: Record<string, unknown> = {
         sources: {
-          express: { env: {} },
+          express: { env: { push: originalPush } },
         },
       };
       const overrides: PushOverrides = {
@@ -150,151 +163,13 @@ describe('applyOverrides', () => {
 
       const { captured } = applyOverrides(config, overrides);
 
-      // env.push should now be a function
-      const source = (config.sources as Record<string, Record<string, unknown>>).express;
+      // env.push should remain unchanged
+      const source = (config.sources as Record<string, Record<string, unknown>>)
+        .express;
       const env = source.env as Record<string, unknown>;
-      expect(typeof env.push).toBe('function');
-
-      // Calling it should populate captured
-      (env.push as (...args: unknown[]) => void)({ name: 'page view' });
-      expect(captured).toHaveLength(1);
-      expect(captured[0].event).toEqual({ name: 'page view' });
-      expect(typeof captured[0].timestamp).toBe('number');
-    });
-
-    it('creates env object if missing on source', () => {
-      const config: Record<string, unknown> = {
-        sources: {
-          express: {},
-        },
-      };
-      const overrides: PushOverrides = {
-        sources: {
-          express: { simulate: true },
-        },
-      };
-
-      applyOverrides(config, overrides);
-
-      const source = (config.sources as Record<string, Record<string, unknown>>).express;
-      expect(source.env).toBeDefined();
-      expect(typeof (source.env as Record<string, unknown>).push).toBe('function');
-    });
-
-    it('captured array populates with multiple events', () => {
-      const config: Record<string, unknown> = {
-        sources: {
-          express: { env: {} },
-        },
-      };
-      const overrides: PushOverrides = {
-        sources: {
-          express: { simulate: true },
-        },
-      };
-
-      const { captured } = applyOverrides(config, overrides);
-
-      const env = ((config.sources as Record<string, Record<string, unknown>>).express.env) as Record<string, unknown>;
-      const push = env.push as (...args: unknown[]) => void;
-
-      push({ name: 'page view' });
-      push({ name: 'product add' });
-      push({ name: 'order complete' });
-
-      expect(captured).toHaveLength(3);
-      expect(captured[0].event).toEqual({ name: 'page view' });
-      expect(captured[1].event).toEqual({ name: 'product add' });
-      expect(captured[2].event).toEqual({ name: 'order complete' });
-    });
-
-    it('calls original push as passthrough', () => {
-      const originalPush = jest.fn().mockReturnValue('original-result');
-      const config: Record<string, unknown> = {
-        sources: {
-          express: { env: { push: originalPush } },
-        },
-      };
-      const overrides: PushOverrides = {
-        sources: {
-          express: { simulate: true },
-        },
-      };
-
-      const { captured } = applyOverrides(config, overrides);
-
-      const env = ((config.sources as Record<string, Record<string, unknown>>).express.env) as Record<string, unknown>;
-      const push = env.push as (...args: unknown[]) => unknown;
-
-      const result = push({ name: 'page view' }, { extra: true });
-
-      // Original push was called with same args
-      expect(originalPush).toHaveBeenCalledWith({ name: 'page view' }, { extra: true });
-      expect(result).toBe('original-result');
-
-      // Event was also captured
-      expect(captured).toHaveLength(1);
-      expect(captured[0].event).toEqual({ name: 'page view' });
-    });
-
-    it('does not touch sources without simulate flag', () => {
-      const originalPush = jest.fn();
-      const config: Record<string, unknown> = {
-        sources: {
-          express: { env: { push: originalPush } },
-          browser: { env: { push: jest.fn() } },
-        },
-      };
-      const overrides: PushOverrides = {
-        sources: {
-          express: { simulate: true },
-        },
-      };
-
-      applyOverrides(config, overrides);
-
-      // express source should have push replaced
-      const expressEnv = ((config.sources as Record<string, Record<string, unknown>>).express.env) as Record<string, unknown>;
-      expect(expressEnv.push).not.toBe(originalPush);
-
-      // browser source should keep original push
-      const browserEnv = ((config.sources as Record<string, Record<string, unknown>>).browser.env) as Record<string, unknown>;
-      expect(typeof browserEnv.push).toBe('function');
-    });
-
-    it('does not touch source when simulate is false', () => {
-      const originalPush = jest.fn();
-      const config: Record<string, unknown> = {
-        sources: {
-          express: { env: { push: originalPush } },
-        },
-      };
-      const overrides: PushOverrides = {
-        sources: {
-          express: { simulate: false },
-        },
-      };
-
-      applyOverrides(config, overrides);
-
-      const env = ((config.sources as Record<string, Record<string, unknown>>).express.env) as Record<string, unknown>;
       expect(env.push).toBe(originalPush);
-    });
 
-    it('skips sources not present in config', () => {
-      const config: Record<string, unknown> = {
-        sources: {
-          express: { env: {} },
-        },
-      };
-      const overrides: PushOverrides = {
-        sources: {
-          nonexistent: { simulate: true },
-        },
-      };
-
-      // Should not throw
-      const { captured } = applyOverrides(config, overrides);
+      // Captured array is empty (populated by collector.push override, not here)
       expect(captured).toEqual([]);
     });
 
@@ -314,9 +189,10 @@ describe('applyOverrides', () => {
 
   describe('combined overrides', () => {
     it('handles both destination and source overrides', () => {
+      const originalPush = jest.fn();
       const config: Record<string, unknown> = {
         sources: {
-          express: { env: {} },
+          express: { env: { push: originalPush } },
         },
         destinations: {
           ga4: { config: {} },
@@ -334,16 +210,18 @@ describe('applyOverrides', () => {
       const { captured } = applyOverrides(config, overrides);
 
       // Destination was configured
-      const dest = (config.destinations as Record<string, Record<string, unknown>>).ga4;
+      const dest = (
+        config.destinations as Record<string, Record<string, unknown>>
+      ).ga4;
       expect((dest.config as Record<string, unknown>).mock).toEqual({});
 
-      // Source env.push was replaced
-      const env = ((config.sources as Record<string, Record<string, unknown>>).express.env) as Record<string, unknown>;
-      expect(typeof env.push).toBe('function');
+      // Source env.push unchanged (capture handled elsewhere)
+      const env = (config.sources as Record<string, Record<string, unknown>>)
+        .express.env as Record<string, unknown>;
+      expect(env.push).toBe(originalPush);
 
-      // Captured array works
-      (env.push as (...args: unknown[]) => void)({ name: 'test' });
-      expect(captured).toHaveLength(1);
+      // Captured array empty
+      expect(captured).toEqual([]);
     });
   });
 

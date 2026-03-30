@@ -73,27 +73,9 @@ export function applyOverrides(
     }
   }
 
-  // Source overrides (new)
-  if (overrides.sources) {
-    const sources = config.sources as
-      | Record<string, Record<string, unknown>>
-      | undefined;
-    if (sources) {
-      for (const [id, override] of Object.entries(overrides.sources)) {
-        const source = sources[id];
-        if (!source || !override.simulate) continue;
-        if (!source.env) source.env = {};
-        const env = source.env as Record<string, unknown>;
-        const originalPush = env.push as
-          | ((...args: unknown[]) => unknown)
-          | undefined;
-        env.push = (...args: unknown[]) => {
-          captured.push({ event: args[0], timestamp: Date.now() });
-          if (originalPush) return originalPush(...args);
-        };
-      }
-    }
-  }
+  // Source simulation: capture is handled by overriding collector.push
+  // in executeSourceSimulation, not here. This preserves the source's
+  // wrappedPush (and its before chain) while stopping pipeline propagation.
 
   // Transformer path-specific mocks
   if (overrides.transformerMocks) {
