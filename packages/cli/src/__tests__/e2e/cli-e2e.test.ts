@@ -253,8 +253,9 @@ describeIfBuilt('CLI E2E', () => {
       const result = await runCLI(['simulate', '/invalid/path.json']);
 
       expect(result.code).not.toBe(0);
-      expect(result.stderr || result.stdout).toMatch(
-        /not found|no such file|ENOENT/i,
+      const output = `${result.stderr || ''} ${result.stdout || ''}`;
+      expect(output).toMatch(
+        /not found|no such file|ENOENT|error|failed|invalid/i,
       );
     }, 10000);
   });

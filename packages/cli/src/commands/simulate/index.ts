@@ -1,6 +1,3 @@
-import path from 'path';
-import { simulateCore, formatSimulationResult } from './simulator.js';
-import { simulateSourceCLI } from './source-simulator.js';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
   getErrorMessage,
@@ -8,18 +5,25 @@ import {
   readStdinToTempFile,
   writeResult,
 } from '../../core/index.js';
-import {
-  loadJsonFromSource,
-  loadJsonConfig,
-  isUrl,
-} from '../../config/index.js';
-import { validateFlowConfig } from '../../config/validators.js';
-import type { SimulateCommandOptions, SimulationResult } from './types.js';
-import type { SimulateOptions, Platform } from '../../schemas/simulate.js';
-import type { Flow } from '@walkeros/core';
+import { push } from '../push/index.js';
+import type { PushResult } from '../push/types.js';
+import type { Platform } from '../../schemas/simulate.js';
+
+interface SimulateCommandOptions {
+  config?: string;
+  output?: string;
+  event?: string;
+  flow?: string;
+  json?: boolean;
+  verbose?: boolean;
+  silent?: boolean;
+  platform?: Platform;
+  step?: string;
+}
 
 /**
- * CLI command handler for simulate command
+ * CLI command handler for simulate command.
+ * Delegates to push with --simulate flag.
  */
 export async function simulateCommand(
   options: SimulateCommandOptions,
@@ -35,23 +39,21 @@ export async function simulateCommand(
       config = options.config || 'bundle.config.json';
     }
 
-    const result = await simulate(config, options.event, {
+    // Map --step to --simulate array for push
+    const simulate = options.step ? [options.step] : undefined;
+
+    const result = await push(config, options.event, {
       flow: options.flow,
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,
       platform: options.platform,
-      step: options.step,
+      simulate,
     });
 
-    const resultWithDuration = {
-      ...result,
-      duration: Date.now() - startTime,
-    };
+    const duration = Date.now() - startTime;
 
-    const formatted = formatSimulationResult(resultWithDuration, {
-      json: options.json,
-    });
+    const formatted = formatResult(result, duration, { json: options.json });
     await writeResult(formatted + '\n', { output: options.output });
 
     process.exit(result.success ? 0 : 1);
@@ -78,95 +80,73 @@ export async function simulateCommand(
 }
 
 /**
- * High-level simulate function for programmatic usage.
- *
- * For destinations/transformers: event is a walkerOS event { name, data }.
- * For sources (--step source.*): event is a SourceInput { content, trigger?, env? }.
+ * Programmatic simulate function. Delegates to push with simulate flag.
  */
 export async function simulate(
   configOrPath: string | unknown,
   event: unknown,
-  options: SimulateOptions & {
+  options: {
     flow?: string;
+    json?: boolean;
+    verbose?: boolean;
+    silent?: boolean;
     platform?: Platform;
     step?: string;
   } = {},
-): Promise<SimulationResult> {
-  if (typeof configOrPath !== 'string') {
-    throw new Error(
-      'simulate() currently only supports config file paths. ' +
-        'Please provide a path to a configuration file.',
-    );
-  }
+): Promise<PushResult> {
+  const simulate = options.step ? [options.step] : undefined;
 
-  // Resolve string event inputs (file paths, URLs, JSON strings)
-  let resolvedEvent = event;
-  if (typeof event === 'string') {
-    resolvedEvent = await loadJsonFromSource(event, { name: 'event' });
-  }
-
-  // Detect source simulation via --step
-  const isSourceSimulation = options.step?.startsWith('source.');
-
-  let result: SimulationResult;
-
-  if (isSourceSimulation) {
-    const rawConfig = await loadJsonConfig<Flow.Config>(configOrPath);
-    const setup = validateFlowConfig(rawConfig);
-    const flowNames = Object.keys(setup.flows);
-    const flowName =
-      options.flow || (flowNames.length === 1 ? flowNames[0] : undefined);
-    if (!flowName) {
-      throw new Error(
-        `Multiple flows found. Use --flow to specify which flow.\n` +
-          `Available: ${flowNames.join(', ')}`,
-      );
-    }
-    const flowSettings = setup.flows[flowName];
-    if (!flowSettings) {
-      throw new Error(
-        `Flow "${flowName}" not found. Available: ${flowNames.join(', ')}`,
-      );
-    }
-
-    // Extract packages and configDir for local package resolution
-    const packages =
-      (flowSettings as { packages?: Flow.Packages }).packages || {};
-    const configDir = isUrl(configOrPath)
-      ? process.cwd()
-      : path.dirname(configOrPath);
-
-    const sourceStep = options.step!.substring('source.'.length);
-
-    result = await simulateSourceCLI(
-      flowSettings as unknown as Record<string, unknown>,
-      resolvedEvent,
-      {
-        flow: options.flow,
-        sourceStep,
-        json: options.json,
-        verbose: options.verbose,
-        silent: options.silent,
-      },
-      packages,
-      configDir,
-    );
-  } else {
-    result = await simulateCore(configOrPath, resolvedEvent, {
-      json: options.json ?? false,
-      verbose: options.verbose ?? false,
-      silent: options.silent ?? false,
-      flow: options.flow,
-      platform: options.platform,
-      step: options.step,
-    });
-  }
-
-  return result;
+  return push(configOrPath, event, {
+    flow: options.flow,
+    json: options.json,
+    verbose: options.verbose,
+    silent: options.silent,
+    platform: options.platform,
+    simulate,
+  });
 }
 
-// Re-export types and utilities
-export * from './types.js';
-export * from './simulator.js';
+/**
+ * Format push result for simulate CLI output.
+ */
+function formatResult(
+  result: PushResult,
+  duration: number,
+  options: { json?: boolean } = {},
+): string {
+  if (options.json) {
+    return JSON.stringify(
+      {
+        success: result.success,
+        event: result.elbResult,
+        captured: result.captured,
+        usage: result.usage,
+        duration,
+      },
+      null,
+      2,
+    );
+  }
+
+  const lines: string[] = [];
+
+  if (result.success) {
+    lines.push('Simulation completed');
+  } else {
+    lines.push(`Simulation failed: ${result.error}`);
+  }
+
+  if (result.captured && result.captured.length > 0) {
+    lines.push(`Captured ${result.captured.length} event(s)`);
+    for (const evt of result.captured) {
+      const name = (evt as { event?: { name?: string } }).event?.name;
+      lines.push(`  - ${name || 'unknown'}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+// Re-export utilities that are still used
 export { findExample } from './example-loader.js';
 export { compareOutput } from './compare.js';

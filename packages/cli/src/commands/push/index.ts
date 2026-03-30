@@ -21,6 +21,7 @@ import type { PushCommandOptions, PushResult } from './types.js';
 import type { PushOptions } from '../../schemas/push.js';
 import { buildOverrides, type PushOverrides } from './overrides.js';
 import { applyOverrides } from './apply-overrides.js';
+import { resolvePackageImportPath } from '../../core/package-path.js';
 
 /**
  * Core push logic without CLI concerns (no process.exit, no output formatting)
@@ -34,6 +35,8 @@ async function pushCore(
     verbose?: boolean;
     silent?: boolean;
     platform?: string;
+    simulate?: string[];
+    mock?: string[];
   } = {},
 ): Promise<PushResult> {
   const logger = createCLILogger({
@@ -77,6 +80,8 @@ async function pushCore(
           config: inputPath,
           flow: options.flow,
           verbose: options.verbose,
+          simulate: options.simulate,
+          mock: options.mock,
         } as PushCommandOptions,
         validatedEvent,
         logger,
@@ -132,6 +137,8 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
       verbose: options.verbose,
       silent: options.silent,
       platform: options.platform as Platform | undefined,
+      simulate: options.simulate,
+      mock: options.mock,
     });
 
     const duration = Date.now() - startTime;
@@ -219,7 +226,12 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
 export async function push(
   configOrPath: string | unknown,
   event: unknown,
-  options: PushOptions & { flow?: string; platform?: Platform } = {},
+  options: PushOptions & {
+    flow?: string;
+    platform?: Platform;
+    simulate?: string[];
+    mock?: string[];
+  } = {},
 ): Promise<PushResult> {
   if (typeof configOrPath !== 'string') {
     throw new Error(
@@ -241,6 +253,8 @@ export async function push(
     silent: options.silent ?? false,
     flow: options.flow,
     platform: options.platform,
+    simulate: options.simulate,
+    mock: options.mock,
   });
 }
 
@@ -268,6 +282,25 @@ async function executeConfigPush(
     flowSettings,
   );
 
+  // Auto-load destination /dev envs for simulated/mocked destinations
+  if (overrides.destinations) {
+    const { loadDestinationEnvs } = await import('./env-loader.js');
+    const configDir = buildOptions.configDir || process.cwd();
+    const envs = await loadDestinationEnvs(
+      flowSettings.destinations ?? {},
+      flowSettings.packages,
+      configDir,
+    );
+    for (const [destId, env] of Object.entries(envs)) {
+      if (overrides.destinations[destId] && env.push) {
+        overrides.destinations[destId].env = env.push;
+        if (env.simulation && env.simulation.length > 0) {
+          overrides.destinations[destId].simulation = env.simulation;
+        }
+      }
+    }
+  }
+
   // Bundle to temp file
   logger.debug('Bundling flow configuration');
   const tempDir = getTmpPath(
@@ -290,7 +323,51 @@ async function executeConfigPush(
 
   logger.debug(`Bundle created: ${tempPath}`);
 
-  // Execute based on platform
+  // Check for source simulation
+  const sourceSimulateEntry = overrides.sources
+    ? Object.entries(overrides.sources).find(([, s]) => s.simulate)
+    : undefined;
+
+  if (sourceSimulateEntry) {
+    const [sourceId] = sourceSimulateEntry;
+    const sourceConfig = (flowSettings.sources ?? {})[sourceId] as
+      | { package?: string }
+      | undefined;
+
+    if (!sourceConfig?.package) {
+      throw new Error(`Source "${sourceId}" has no package defined`);
+    }
+
+    // Load createTrigger from source package's /dev export
+    const configDir = buildOptions.configDir || process.cwd();
+    const devPath = resolvePackageImportPath(
+      sourceConfig.package,
+      flowSettings.packages,
+      configDir,
+      '/dev',
+    );
+    const devModule = await import(devPath);
+    const createTrigger =
+      devModule.examples?.createTrigger ||
+      devModule.default?.examples?.createTrigger;
+
+    if (!createTrigger) {
+      throw new Error(
+        `Source package "${sourceConfig.package}" has no createTrigger in /dev export`,
+      );
+    }
+
+    return executeSourceSimulation(
+      tempPath,
+      validatedEvent,
+      logger,
+      overrides,
+      createTrigger,
+      platform,
+    );
+  }
+
+  // Execute based on platform (destination push path)
   if (platform === 'web') {
     logger.debug('Executing in web environment (JSDOM)');
     return executeWebPush(tempPath, validatedEvent, logger, overrides);
@@ -353,6 +430,12 @@ async function executeBundlePush(
 interface PushEventInput {
   name: string;
   data: Record<string, unknown>;
+  // Source simulation fields
+  content?: unknown;
+  trigger?: {
+    type?: string;
+    options?: unknown;
+  };
 }
 
 /**
@@ -395,8 +478,8 @@ async function executeWebPush(
 
     const config = wireConfig();
 
-    // Apply overrides (disabled/mock) via direct property assignment
-    applyOverrides(config, overrides || {});
+    // Apply overrides (disabled/mock/simulate) via direct property assignment
+    const { captured, trackingCalls } = applyOverrides(config, overrides || {});
 
     const result = await startFlow(config);
     if (!result?.collector?.push)
@@ -411,9 +494,20 @@ async function executeWebPush(
     // Shutdown collector before cleaning up JSDOM globals
     await result.collector.command('shutdown');
 
+    // Build usage map from tracking calls populated during execution
+    const usage: Record<
+      string,
+      Array<{ fn: string; args: unknown[]; ts: number }>
+    > = {};
+    for (const { destId, calls } of trackingCalls) {
+      if (calls.length > 0) usage[destId] = calls;
+    }
+
     return {
       success: true,
       elbResult: elbResult as PushResult['elbResult'],
+      ...(captured.length > 0 ? { captured } : {}),
+      ...(Object.keys(usage).length > 0 ? { usage } : {}),
       duration: Date.now() - startTime,
     };
   } catch (error) {
@@ -467,8 +561,11 @@ async function executeServerPush(
 
       const config = wireConfig();
 
-      // Apply overrides (disabled/mock) via direct property assignment
-      applyOverrides(config, overrides || {});
+      // Apply overrides (disabled/mock/simulate) via direct property assignment
+      const { captured, trackingCalls } = applyOverrides(
+        config,
+        overrides || {},
+      );
 
       const result = await startFlow(config);
       if (!result?.collector?.push)
@@ -483,9 +580,20 @@ async function executeServerPush(
       // Shutdown collector (closes Express servers, cleans up stores, etc.)
       await result.collector.command('shutdown');
 
+      // Build usage map from tracking calls populated during execution
+      const usage: Record<
+        string,
+        Array<{ fn: string; args: unknown[]; ts: number }>
+      > = {};
+      for (const { destId, calls } of trackingCalls) {
+        if (calls.length > 0) usage[destId] = calls;
+      }
+
       return {
         success: true,
         elbResult: elbResult as PushResult['elbResult'],
+        ...(captured.length > 0 ? { captured } : {}),
+        ...(Object.keys(usage).length > 0 ? { usage } : {}),
         duration: Date.now() - startTime,
       };
     })();
@@ -499,6 +607,115 @@ async function executeServerPush(
     };
   } finally {
     clearTimeout(timer!);
+  }
+}
+
+/**
+ * Execute source simulation using createTrigger from the source package's /dev export.
+ *
+ * Instead of startFlow + collector.push (destination path), this calls
+ * createTrigger which owns startFlow internally (lazy init). The source's
+ * env.push has been replaced by applyOverrides with a capturing wrapper.
+ */
+async function executeSourceSimulation(
+  esmPath: string,
+  event: PushEventInput,
+  logger: Logger.Instance,
+  overrides: PushOverrides,
+  createTrigger: (
+    ...args: unknown[]
+  ) => Promise<{
+    trigger: (
+      type?: string,
+      options?: unknown,
+    ) => (content: unknown) => Promise<unknown>;
+    flow?: {
+      collector?: { command?: (...args: unknown[]) => Promise<unknown> };
+    };
+  }>,
+  platform: 'web' | 'server',
+): Promise<PushResult> {
+  const startTime = Date.now();
+  const g = global as unknown as Record<string, unknown>;
+  let savedWindow: unknown, savedDocument: unknown, savedNavigator: unknown;
+
+  // JSDOM setup for web platform
+  if (platform === 'web') {
+    const virtualConsole = new VirtualConsole();
+    const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+      url: 'http://localhost',
+      runScripts: 'dangerously',
+      resources: 'usable',
+      virtualConsole,
+    });
+    savedWindow = g.window;
+    savedDocument = g.document;
+    savedNavigator = g.navigator;
+    g.window = dom.window;
+    g.document = dom.window.document;
+    g.navigator = dom.window.navigator;
+  }
+
+  try {
+    const fileUrl = pathToFileURL(path.resolve(esmPath)).href;
+    const module = await import(`${fileUrl}?t=${Date.now()}`);
+    const { wireConfig } = module;
+
+    if (typeof wireConfig !== 'function') {
+      throw new Error('Invalid ESM bundle: missing wireConfig export');
+    }
+
+    const config = wireConfig();
+    const { captured, trackingCalls } = applyOverrides(config, overrides);
+
+    // createTrigger receives the full config and calls startFlow internally (lazy)
+    const instance = await createTrigger(config);
+    const { trigger } = instance;
+
+    logger.info('Simulating source');
+
+    // Fire the trigger — source processes input, calls env.push (captured)
+    const content = event.content ?? event;
+    const triggerType = event.trigger?.type;
+    const triggerOptions = event.trigger?.options;
+
+    await trigger(triggerType, triggerOptions)(content);
+
+    // Shutdown
+    if (instance.flow?.collector?.command) {
+      await instance.flow.collector.command('shutdown');
+    }
+
+    // Build usage map from tracking calls populated during execution
+    const usage: Record<
+      string,
+      Array<{ fn: string; args: unknown[]; ts: number }>
+    > = {};
+    for (const { destId, calls } of trackingCalls) {
+      if (calls.length > 0) usage[destId] = calls;
+    }
+
+    return {
+      success: true,
+      ...(captured.length > 0 ? { captured } : {}),
+      ...(Object.keys(usage).length > 0 ? { usage } : {}),
+      duration: Date.now() - startTime,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      duration: Date.now() - startTime,
+      error: getErrorMessage(error),
+    };
+  } finally {
+    if (platform === 'web') {
+      if (savedWindow !== undefined) g.window = savedWindow;
+      else delete g.window;
+      if (savedDocument !== undefined) g.document = savedDocument;
+      else delete g.document;
+      if (savedNavigator !== undefined) g.navigator = savedNavigator;
+      else delete g.navigator;
+    }
   }
 }
 

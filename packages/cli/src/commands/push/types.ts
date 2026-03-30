@@ -22,6 +22,9 @@ export interface PushCommandOptions {
 export interface PushResult {
   success: boolean;
   elbResult?: Elb.PushResult;
+  captured?: Array<{ event: unknown; timestamp: number }>;
+  /** Tracked destination API calls keyed by destination ID */
+  usage?: Record<string, Array<{ fn: string; args: unknown[]; ts: number }>>;
   duration: number;
   error?: string;
 }

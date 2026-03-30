@@ -119,15 +119,15 @@ describe('buildOverrides', () => {
 
   it('invalid step format without dot throws', () => {
     expect(() => buildOverrides({ simulate: ['ga4'] }, threeDestFlow)).toThrow(
-      'Invalid step format: "ga4". Expected "destination.NAME"',
+      'Invalid step format: "ga4". Expected "source.NAME" or "destination.NAME"',
     );
   });
 
   it('unsupported step type throws', () => {
     expect(() =>
-      buildOverrides({ simulate: ['source.browser'] }, threeDestFlow),
+      buildOverrides({ simulate: ['transformer.myT'] }, threeDestFlow),
     ).toThrow(
-      'Unsupported step type: "source". Only "destination" is supported',
+      'Unsupported step type: "transformer". Use "source" or "destination"',
     );
   });
 
@@ -142,7 +142,7 @@ describe('buildOverrides', () => {
   it('destination. with empty name throws', () => {
     expect(() =>
       buildOverrides({ simulate: ['destination.'] }, threeDestFlow),
-    ).toThrow('Missing destination name after "destination."');
+    ).toThrow('Missing name after "destination."');
   });
 
   it('handles flow with no destinations', () => {
@@ -171,5 +171,50 @@ describe('buildOverrides', () => {
     expect(result.destinations!.bigquery).toEqual({
       config: { disabled: true },
     });
+  });
+
+  it('should parse --simulate source.express', () => {
+    const result = buildOverrides(
+      { simulate: ['source.express'] },
+      {
+        server: {},
+        sources: { express: { package: '@walkeros/server-source-express' } },
+        destinations: {},
+      } as Flow.Settings,
+    );
+    expect(result.sources).toEqual({ express: { simulate: true } });
+    expect(result.destinations).toBeUndefined(); // no destination overrides
+  });
+
+  it('should handle mixed source and destination simulate', () => {
+    const result = buildOverrides(
+      { simulate: ['source.express', 'destination.ga4'] },
+      {
+        server: {},
+        sources: { express: {} },
+        destinations: { ga4: {}, meta: {} },
+      } as Flow.Settings,
+    );
+    expect(result.sources).toEqual({ express: { simulate: true } });
+    expect(result.destinations!.ga4).toEqual({ config: { mock: {} } });
+    expect(result.destinations!.meta).toEqual({ config: { disabled: true } });
+  });
+
+  it('should reject --mock on source', () => {
+    expect(() =>
+      buildOverrides(
+        { mock: ['source.express={}'] },
+        { server: {}, sources: { express: {} } } as Flow.Settings,
+      ),
+    ).toThrow('--mock is not supported for sources');
+  });
+
+  it('should accept source. prefix in parseStep', () => {
+    // Test via buildOverrides since parseStep is private
+    const result = buildOverrides(
+      { simulate: ['source.browser'] },
+      { web: {}, sources: { browser: {} }, destinations: {} } as Flow.Settings,
+    );
+    expect(result.sources).toEqual({ browser: { simulate: true } });
   });
 });

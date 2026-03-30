@@ -13,6 +13,14 @@ export interface PushOverrides {
         mock?: unknown;
         disabled?: boolean;
       };
+      env?: Record<string, unknown>;
+      simulation?: string[];
+    }
+  >;
+  sources?: Record<
+    string,
+    {
+      simulate?: boolean;
     }
   >;
 }
@@ -21,12 +29,14 @@ export interface PushOverrides {
  * Build collector overrides from --simulate and --mock CLI flags.
  *
  * - `--simulate destination.NAME` sets simulate: true on NAME
+ * - `--simulate source.NAME` marks source for simulation
  * - `--mock destination.NAME=VALUE` sets mock: JSON-parsed VALUE on NAME
  * - Any destination NOT targeted by simulate or mock gets disabled: true
  * - Returns empty object if no flags are provided
  *
  * @throws if same destination appears in both simulate and mock
- * @throws if step format is invalid (missing `destination.` prefix)
+ * @throws if step format is invalid (missing `source.` or `destination.` prefix)
+ * @throws if --mock is used with a source step
  */
 export function buildOverrides(
   flags: { simulate?: string[]; mock?: string[] },
@@ -41,14 +51,22 @@ export function buildOverrides(
   }
 
   const simulateNames = new Set<string>();
+  const sourceSimulateNames = new Set<string>();
   const mockNames = new Set<string>();
-  const overrides: PushOverrides = { destinations: {} };
+  const overrides: PushOverrides = {};
 
   // Parse --simulate flags
   for (const step of simulateFlags) {
-    const name = parseDestinationStep(step);
-    simulateNames.add(name);
-    overrides.destinations![name] = { config: { mock: {} } };
+    const { type, name } = parseStep(step);
+    if (type === 'destination') {
+      simulateNames.add(name);
+      if (!overrides.destinations) overrides.destinations = {};
+      overrides.destinations[name] = { config: { mock: {} } };
+    } else {
+      sourceSimulateNames.add(name);
+      if (!overrides.sources) overrides.sources = {};
+      overrides.sources[name] = { simulate: true };
+    }
   }
 
   // Parse --mock flags
@@ -62,7 +80,13 @@ export function buildOverrides(
 
     const stepPart = step.slice(0, eqIndex);
     const valuePart = step.slice(eqIndex + 1);
-    const name = parseDestinationStep(stepPart);
+    const { type, name } = parseStep(stepPart);
+
+    if (type === 'source') {
+      throw new Error(
+        `--mock is not supported for sources. Use --simulate source.${name}`,
+      );
+    }
 
     // Validate: same destination cannot be in both simulate and mock
     if (simulateNames.has(name)) {
@@ -81,16 +105,20 @@ export function buildOverrides(
       parsedValue = valuePart;
     }
 
-    overrides.destinations![name] = { config: { mock: parsedValue } };
+    if (!overrides.destinations) overrides.destinations = {};
+    overrides.destinations[name] = { config: { mock: parsedValue } };
   }
 
   // Simulate-implies-disabled: disable all other destinations
   const allDestinations = Object.keys(flowConfig.destinations ?? {});
   const targetedNames = new Set([...simulateNames, ...mockNames]);
 
-  for (const destName of allDestinations) {
-    if (!targetedNames.has(destName)) {
-      overrides.destinations![destName] = { config: { disabled: true } };
+  if (targetedNames.size > 0) {
+    if (!overrides.destinations) overrides.destinations = {};
+    for (const destName of allDestinations) {
+      if (!targetedNames.has(destName)) {
+        overrides.destinations[destName] = { config: { disabled: true } };
+      }
     }
   }
 
@@ -98,31 +126,31 @@ export function buildOverrides(
 }
 
 /**
- * Parse a step string in `destination.NAME` format and return NAME.
+ * Parse a step string in `source.NAME` or `destination.NAME` format.
  * @throws if format is invalid
  */
-function parseDestinationStep(step: string): string {
+function parseStep(step: string): { type: 'source' | 'destination'; name: string } {
   const dotIndex = step.indexOf('.');
   if (dotIndex === -1) {
     throw new Error(
-      `Invalid step format: "${step}". Expected "destination.NAME"`,
+      `Invalid step format: "${step}". Expected "source.NAME" or "destination.NAME"`,
     );
   }
 
   const prefix = step.slice(0, dotIndex);
   const name = step.slice(dotIndex + 1);
 
-  if (prefix !== 'destination') {
+  if (prefix !== 'source' && prefix !== 'destination') {
     throw new Error(
-      `Unsupported step type: "${prefix}". Only "destination" is supported`,
+      `Unsupported step type: "${prefix}". Use "source" or "destination"`,
     );
   }
 
   if (!name) {
     throw new Error(
-      `Invalid step format: "${step}". Missing destination name after "destination."`,
+      `Invalid step format: "${step}". Missing name after "${prefix}."`,
     );
   }
 
-  return name;
+  return { type: prefix, name };
 }

@@ -102,7 +102,6 @@ export type {
   MinifyOptions,
 } from './types/bundle.js';
 export type { BundleStats } from './commands/bundle/bundler.js';
-export type { SimulationResult } from './commands/simulate/types.js';
 export type { ExampleLookupResult } from './commands/simulate/example-loader.js';
 export type { PushResult } from './commands/push/types.js';
 export type {
