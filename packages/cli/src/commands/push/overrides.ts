@@ -80,6 +80,24 @@ export function buildOverrides(
     }
   }
 
+  // Validate: only one step type can be simulated at a time
+  const hasSource = sourceSimulateNames.size > 0;
+  const hasTransformer =
+    overrides.transformers && Object.keys(overrides.transformers).length > 0;
+  const hasDestination = simulateNames.size > 0;
+  const simulatedTypes = [
+    hasSource && 'source',
+    hasTransformer && 'transformer',
+    hasDestination && 'destination',
+  ].filter(Boolean);
+
+  if (simulatedTypes.length > 1) {
+    throw new Error(
+      `Cannot simulate both ${simulatedTypes.join(' and ')} in the same invocation. ` +
+        'Run separate commands for each step type.',
+    );
+  }
+
   // Parse --mock flags
   for (const step of mockFlags) {
     const eqIndex = step.indexOf('=');
@@ -174,7 +192,11 @@ function parseStep(step: string): ParsedStep {
   }
 
   const prefix = parts[0];
-  if (prefix !== 'source' && prefix !== 'destination' && prefix !== 'transformer') {
+  if (
+    prefix !== 'source' &&
+    prefix !== 'destination' &&
+    prefix !== 'transformer'
+  ) {
     throw new Error(
       `Unsupported step type: "${prefix}". Use "source", "destination", or "transformer"`,
     );

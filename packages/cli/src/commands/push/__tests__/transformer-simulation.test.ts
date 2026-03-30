@@ -9,17 +9,19 @@ import { buildOverrides } from '../overrides';
  * decides WHETHER to call it — the same check used in executeConfigPush.
  */
 describe('transformer simulation wiring', () => {
-  function findTransformerSimulateEntry(overrides: ReturnType<typeof buildOverrides>) {
+  function findTransformerSimulateEntry(
+    overrides: ReturnType<typeof buildOverrides>,
+  ) {
     return overrides.transformers
       ? Object.entries(overrides.transformers).find(([, t]) => t.simulate)
       : undefined;
   }
 
   it('detects transformer simulate from --simulate transformer.redact', () => {
-    const overrides = buildOverrides(
-      { simulate: ['transformer.redact'] },
-      { server: {}, transformers: { redact: {} } } as any,
-    );
+    const overrides = buildOverrides({ simulate: ['transformer.redact'] }, {
+      server: {},
+      transformers: { redact: {} },
+    } as any);
 
     const entry = findTransformerSimulateEntry(overrides);
     expect(entry).toBeDefined();
@@ -28,24 +30,21 @@ describe('transformer simulation wiring', () => {
   });
 
   it('returns undefined when no transformer simulate flag', () => {
-    const overrides = buildOverrides(
-      { simulate: ['destination.ga4'] },
-      {
-        server: {},
-        destinations: { ga4: {} },
-        transformers: { redact: {} },
-      } as any,
-    );
+    const overrides = buildOverrides({ simulate: ['destination.ga4'] }, {
+      server: {},
+      destinations: { ga4: {} },
+      transformers: { redact: {} },
+    } as any);
 
     const entry = findTransformerSimulateEntry(overrides);
     expect(entry).toBeUndefined();
   });
 
   it('returns undefined with empty overrides', () => {
-    const overrides = buildOverrides(
-      {},
-      { server: {}, transformers: { redact: {} } } as any,
-    );
+    const overrides = buildOverrides({}, {
+      server: {},
+      transformers: { redact: {} },
+    } as any);
 
     const entry = findTransformerSimulateEntry(overrides);
     expect(entry).toBeUndefined();
@@ -67,43 +66,23 @@ describe('transformer simulation wiring', () => {
     expect(entry![1].simulate).toBe(true);
   });
 
-  it('does not conflict with source simulate', () => {
-    const overrides = buildOverrides(
-      { simulate: ['source.express', 'transformer.redact'] },
-      {
+  it('rejects source + transformer simulate combination', () => {
+    expect(() =>
+      buildOverrides({ simulate: ['source.express', 'transformer.redact'] }, {
         server: {},
         sources: { express: { package: '@walkeros/server-source-express' } },
         transformers: { redact: {} },
-      } as any,
-    );
-
-    // Both should be present
-    expect(overrides.sources).toEqual({ express: { simulate: true } });
-    expect(overrides.transformers).toEqual({ redact: { simulate: true } });
-
-    // Transformer entry is detected
-    const entry = findTransformerSimulateEntry(overrides);
-    expect(entry).toBeDefined();
-    expect(entry![0]).toBe('redact');
+      } as any),
+    ).toThrow('Cannot simulate both');
   });
 
-  it('does not conflict with destination simulate', () => {
-    const overrides = buildOverrides(
-      { simulate: ['destination.ga4', 'transformer.redact'] },
-      {
+  it('rejects destination + transformer simulate combination', () => {
+    expect(() =>
+      buildOverrides({ simulate: ['destination.ga4', 'transformer.redact'] }, {
         server: {},
         destinations: { ga4: {}, meta: {} },
         transformers: { redact: {} },
-      } as any,
-    );
-
-    // Destination overrides present
-    expect(overrides.destinations!.ga4.config!.mock).toEqual({});
-    expect(overrides.destinations!.meta.config!.disabled).toBe(true);
-
-    // Transformer entry is also detected
-    const entry = findTransformerSimulateEntry(overrides);
-    expect(entry).toBeDefined();
-    expect(entry![0]).toBe('redact');
+      } as any),
+    ).toThrow('Cannot simulate both');
   });
 });
