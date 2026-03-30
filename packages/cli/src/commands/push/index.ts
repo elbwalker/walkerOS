@@ -628,6 +628,10 @@ async function executeSimulatedDestination(
       const config = module.wireConfig(module.__configData ?? undefined);
       const { trackingCalls } = applyOverrides(config, overrides);
 
+      // Don't initialize sources during destination simulation — unnecessary
+      // overhead and server sources may bind ports or start listeners.
+      if (config.sources) config.sources = {};
+
       const result = await module.startFlow(config);
       if (!result?.collector)
         throw new Error('Invalid bundle: collector not available');
@@ -745,6 +749,10 @@ async function executeTransformerSimulation(
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
       applyOverrides(config, overrides);
+
+      // Don't initialize sources or destinations during transformer simulation.
+      if (config.sources) config.sources = {};
+      if (config.destinations) config.destinations = {};
 
       const result = await module.startFlow(config);
       if (!result?.collector)
