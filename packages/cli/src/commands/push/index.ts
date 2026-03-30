@@ -1,6 +1,13 @@
 import path from 'path';
 import fs from 'fs-extra';
-import { createIngest, getPlatform } from '@walkeros/core';
+import {
+  createIngest,
+  getPlatform,
+  compileNext,
+  resolveNext,
+  isRouteArray,
+  buildCacheContext,
+} from '@walkeros/core';
 import {
   destinationInit,
   destinationPush,
@@ -44,6 +51,34 @@ function buildUsage(
     if (calls.length > 0) usage[destId] = calls;
   }
   return usage;
+}
+
+/**
+ * Resolve a before chain config to an ordered array of transformer IDs.
+ * Handles both static (string/string[]) and conditional (Route[]) chains,
+ * matching the pattern used by source.ts in the collector.
+ */
+function resolveBeforeChain(
+  before: unknown,
+  transformers: import('@walkeros/core').Transformer.Transformers,
+  ingest?: import('@walkeros/core').Ingest,
+  event?: WalkerOS.DeepPartialEvent,
+): string[] {
+  if (!before) return [];
+
+  const next = before as import('@walkeros/core').Transformer.Next;
+
+  if (isRouteArray(next)) {
+    const compiled = compileNext(next);
+    const resolved = resolveNext(compiled!, buildCacheContext(ingest, event));
+    if (!resolved) return [];
+    return walkChain(resolved, extractTransformerNextMap(transformers));
+  }
+
+  return walkChain(
+    next as string | string[],
+    extractTransformerNextMap(transformers),
+  );
 }
 
 /**
@@ -547,9 +582,11 @@ async function executeDestinationPush(
         } as WalkerOS.Event;
         const before = destination.config.before;
         if (before && collector.transformers) {
-          const beforeChainIds = walkChain(
-            before as string | string[],
-            extractTransformerNextMap(collector.transformers),
+          const beforeChainIds = resolveBeforeChain(
+            before,
+            collector.transformers,
+            ingest,
+            processedEvent,
           );
           if (beforeChainIds.length > 0) {
             logger.info(`Running before chain: ${beforeChainIds.join(' → ')}`);
@@ -702,9 +739,11 @@ async function executeTransformerSimulation(
       let processedEvent: WalkerOS.DeepPartialEvent = inputEvent;
       const before = transformer.config.before;
       if (before && collector.transformers) {
-        const beforeChainIds = walkChain(
-          before as string | string[],
-          extractTransformerNextMap(collector.transformers),
+        const beforeChainIds = resolveBeforeChain(
+          before,
+          collector.transformers,
+          ingest,
+          processedEvent,
         );
         if (beforeChainIds.length > 0) {
           const beforeResult = await runTransformerChain(
