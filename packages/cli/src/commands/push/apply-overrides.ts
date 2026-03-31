@@ -1,32 +1,14 @@
-import type { Simulation } from '@walkeros/core';
-import { wrapEnv } from '@walkeros/collector';
 import type { PushOverrides } from './overrides.js';
 
 /**
- * Result of applying overrides to a collector config.
- */
-export interface OverrideResult {
-  /** Destination API call tracking references (populated during execution) */
-  trackingCalls: Array<{ destId: string; calls: Simulation.Call[] }>;
-}
-
-/**
- * Apply push overrides (disabled/mock/simulate) to a collector config object.
- * Mutates config.destinations in place.
- *
- * Returns an OverrideResult with trackingCalls: references to mutable call
- * arrays from wrapEnv, populated when destination code calls tracked env functions.
- *
- * Note: Source simulation capture is handled by overriding collector.push
- * in executeSourceSimulation, not here.
+ * Apply push overrides (disabled/mock/env) to a collector config object.
+ * Mutates config.destinations and config.transformers in place.
  */
 export function applyOverrides(
   config: Record<string, unknown>,
   overrides: PushOverrides,
-): OverrideResult {
-  const trackingCalls: Array<{ destId: string; calls: Simulation.Call[] }> = [];
-
-  // Destination overrides (existing logic)
+): void {
+  // Destination overrides: disabled, mock, env
   if (overrides.destinations) {
     const destinations = config.destinations as
       | Record<string, Record<string, unknown>>
@@ -41,31 +23,11 @@ export function applyOverrides(
         if (override.config?.mock !== undefined)
           destConfig.mock = override.config.mock;
         if (override.env) {
-          if (override.simulation && override.simulation.length > 0) {
-            // Wrap env with call tracking
-            const envWithSim = {
-              ...override.env,
-              simulation: override.simulation,
-            };
-            const { wrappedEnv, calls } = wrapEnv(
-              envWithSim as Record<string, unknown> & {
-                simulation: string[];
-              },
-            );
-            (dest.config as Record<string, unknown>).env = wrappedEnv;
-            // Keep reference to mutable calls array — populated during execution
-            trackingCalls.push({ destId: id, calls });
-          } else {
-            (dest.config as Record<string, unknown>).env = override.env;
-          }
+          destConfig.env = override.env;
         }
       }
     }
   }
-
-  // Source simulation: capture is handled by overriding collector.push
-  // in executeSourceSimulation, not here. This preserves the source's
-  // wrappedPush (and its before chain) while stopping pipeline propagation.
 
   // Transformer path-specific mocks
   if (overrides.transformerMocks) {
@@ -88,6 +50,4 @@ export function applyOverrides(
       }
     }
   }
-
-  return { trackingCalls };
 }

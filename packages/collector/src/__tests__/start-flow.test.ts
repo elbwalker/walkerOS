@@ -179,4 +179,17 @@ describe('Source Start Flow Integration', () => {
       data: { test: 'data' },
     });
   });
+
+  it('wires initConfig.hooks into collector instance', async () => {
+    const prePush = jest.fn();
+    const result = await startFlow({
+      hooks: { prePush },
+    });
+    expect(result.collector.hooks.prePush).toBe(prePush);
+  });
+
+  it('defaults to empty hooks when none provided', async () => {
+    const result = await startFlow({});
+    expect(result.collector.hooks).toEqual({});
+  });
 });

@@ -27,7 +27,7 @@ import {
   type Platform,
 } from '../../core/index.js';
 import { validateEvent } from '../../core/event-validation.js';
-import type { Logger, Simulation, WalkerOS } from '@walkeros/core';
+import type { Logger, WalkerOS } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
 import { loadConfig } from '../../config/utils.js';
@@ -38,20 +38,6 @@ import { buildOverrides, type PushOverrides } from './overrides.js';
 import { applyOverrides } from './apply-overrides.js';
 import { resolvePackageImportPath } from '../../core/package-path.js';
 import { withFlowContext } from './flow-context.js';
-
-/**
- * Build usage map from tracking calls (populated by wrapEnv during execution).
- * Returns only destinations that had actual API calls.
- */
-function buildUsage(
-  trackingCalls: Array<{ destId: string; calls: Simulation.Call[] }>,
-): Record<string, Simulation.Call[]> {
-  const usage: Record<string, Simulation.Call[]> = {};
-  for (const { destId, calls } of trackingCalls) {
-    if (calls.length > 0) usage[destId] = calls;
-  }
-  return usage;
-}
 
 /**
  * Resolve a before chain config to an ordered array of transformer IDs.
@@ -572,7 +558,7 @@ async function executeDestinationPush(
     { esmPath, platform, logger, snapshotCode, timeout, networkCalls },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
-      const { trackingCalls } = applyOverrides(config, overrides || {});
+      applyOverrides(config, overrides || {});
 
       const result = await module.startFlow(config);
       if (!result?.collector?.push)
@@ -588,12 +574,9 @@ async function executeDestinationPush(
 
       await collector.command('shutdown');
 
-      const usage = buildUsage(trackingCalls);
-
       return {
         success: true,
         elbResult: elbResult as PushResult['elbResult'],
-        ...(Object.keys(usage).length > 0 ? { usage } : {}),
         ...(networkCalls.length > 0 ? { networkCalls } : {}),
         duration: Date.now() - startTime,
       };
@@ -623,7 +606,7 @@ async function executeSimulatedDestination(
     { esmPath, platform, logger, snapshotCode, timeout, networkCalls },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
-      const { trackingCalls } = applyOverrides(config, overrides);
+      applyOverrides(config, overrides);
 
       // Don't initialize sources during destination simulation — unnecessary
       // overhead and server sources may bind ports or start listeners.
@@ -706,12 +689,9 @@ async function executeSimulatedDestination(
 
       await collector.command('shutdown');
 
-      const usage = buildUsage(trackingCalls);
-
       return {
         success: true,
         elbResult: pushResult as PushResult['elbResult'],
-        ...(Object.keys(usage).length > 0 ? { usage } : {}),
         ...(networkCalls.length > 0 ? { networkCalls } : {}),
         duration: Date.now() - startTime,
       };
@@ -891,29 +871,22 @@ async function executeSourceSimulation(
     { esmPath, platform, logger, snapshotCode, networkCalls },
     async (module) => {
       const config = module.wireConfig(module.__configData ?? undefined);
-      const { trackingCalls } = applyOverrides(config, overrides);
+      applyOverrides(config, overrides);
 
-      // Capture array for events reaching collector.push boundary
+      // Capture events at the collector.push boundary via prePush hook.
+      // Hook is wired by startFlow (inside createTrigger) before events fire.
       const captured: Array<{ event: unknown; timestamp: number }> = [];
+
+      config.hooks = {
+        ...((config.hooks as Record<string, unknown>) || {}),
+        prePush: ({ fn }: { fn: Function }, event: unknown) => {
+          captured.push({ event, timestamp: Date.now() });
+          return { ok: true }; // Stop propagation — don't call fn
+        },
+      };
 
       const instance = await createTrigger(config);
       const { trigger } = instance;
-
-      // Override collector.push with capture-and-stop.
-      // This preserves the source's wrappedPush (and its before chain)
-      // while preventing events from reaching destinations.
-      if (!instance.flow?.collector) {
-        throw new Error(
-          'Source createTrigger did not expose flow.collector. ' +
-            'Cannot safely simulate without intercepting collector.push.',
-        );
-      }
-
-      const collector = instance.flow.collector as Record<string, unknown>;
-      collector.push = async (event: unknown) => {
-        captured.push({ event, timestamp: Date.now() });
-        return { ok: true };
-      };
 
       logger.info('Simulating source');
 
@@ -924,12 +897,9 @@ async function executeSourceSimulation(
         await instance.flow.collector.command('shutdown');
       }
 
-      const usage = buildUsage(trackingCalls);
-
       return {
         success: true,
         ...(captured.length > 0 ? { captured } : {}),
-        ...(Object.keys(usage).length > 0 ? { usage } : {}),
         ...(networkCalls.length > 0 ? { networkCalls } : {}),
         duration: Date.now() - startTime,
       };

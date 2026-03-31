@@ -48,6 +48,8 @@ export interface InitConfig extends Partial<Config> {
   stores?: Store.InitStores;
   /** Initial custom properties */
   custom?: WalkerOS.Properties;
+  /** Hooks for pipeline observation and interception */
+  hooks?: Hooks.Functions;
 }
 
 export interface SessionData extends WalkerOS.Properties {

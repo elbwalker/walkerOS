@@ -15,7 +15,7 @@ describe('applyOverrides', () => {
         },
       };
 
-      const { trackingCalls } = applyOverrides(config, overrides);
+      applyOverrides(config, overrides);
 
       const dest = (
         config.destinations as Record<string, Record<string, unknown>>
@@ -23,7 +23,6 @@ describe('applyOverrides', () => {
       expect((dest.config as Record<string, unknown>).mock).toEqual({
         status: 200,
       });
-      expect(trackingCalls).toEqual([]);
     });
 
     it('sets disabled on a destination config', () => {
@@ -310,144 +309,14 @@ describe('applyOverrides', () => {
   });
 
   describe('empty overrides', () => {
-    it('returns empty result with no overrides', () => {
+    it('does not throw with no overrides', () => {
       const config: Record<string, unknown> = {
         sources: { express: { env: { push: jest.fn() } } },
         destinations: { ga4: { config: {} } },
       };
 
-      const { trackingCalls } = applyOverrides(config, {});
-      expect(trackingCalls).toEqual([]);
-    });
-  });
-
-  describe('wrapEnv integration', () => {
-    it('wraps env with call tracking when simulation paths provided', () => {
-      const config: Record<string, unknown> = {
-        destinations: {
-          gtag: { config: {} },
-        },
-      };
-
-      const { trackingCalls } = applyOverrides(config, {
-        destinations: {
-          gtag: {
-            env: { window: { gtag: (..._args: unknown[]) => {} } },
-            simulation: ['window.gtag'],
-          },
-        },
-      });
-
-      expect(trackingCalls).toHaveLength(1);
-      expect(trackingCalls[0].destId).toBe('gtag');
-      expect(trackingCalls[0].calls).toHaveLength(0); // No calls yet
-    });
-
-    it('records calls when wrapped env functions are invoked', () => {
-      const config: Record<string, unknown> = {
-        destinations: {
-          gtag: { config: {} },
-        },
-      };
-
-      const { trackingCalls } = applyOverrides(config, {
-        destinations: {
-          gtag: {
-            env: { window: { gtag: (..._args: unknown[]) => {} } },
-            simulation: ['window.gtag'],
-          },
-        },
-      });
-
-      // Simulate what a destination would do
-      const dest = (config.destinations as Record<string, any>).gtag;
-      dest.config.env.window.gtag('event', 'purchase', { value: 42 });
-
-      expect(trackingCalls[0].calls).toHaveLength(1);
-      expect(trackingCalls[0].calls[0].fn).toBe('window.gtag');
-      expect(trackingCalls[0].calls[0].args).toEqual([
-        'event',
-        'purchase',
-        { value: 42 },
-      ]);
-      expect(trackingCalls[0].calls[0].ts).toBeGreaterThan(0);
-    });
-
-    it('strips simulation key from the wrappedEnv', () => {
-      const config: Record<string, unknown> = {
-        destinations: {
-          gtag: { config: {} },
-        },
-      };
-
-      applyOverrides(config, {
-        destinations: {
-          gtag: {
-            env: { window: { gtag: () => {} } },
-            simulation: ['window.gtag'],
-          },
-        },
-      });
-
-      const dest = (config.destinations as Record<string, any>).gtag;
-      expect(dest.config.env).not.toHaveProperty('simulation');
-    });
-
-    it('does not wrap when simulation array is empty', () => {
-      const config: Record<string, unknown> = {
-        destinations: {
-          gtag: { config: {} },
-        },
-      };
-
-      const { trackingCalls } = applyOverrides(config, {
-        destinations: {
-          gtag: {
-            env: { window: { gtag: () => {} } },
-            simulation: [],
-          },
-        },
-      });
-
-      expect(trackingCalls).toHaveLength(0);
-    });
-
-    it('tracks multiple destinations independently', () => {
-      const config: Record<string, unknown> = {
-        destinations: {
-          gtag: { config: {} },
-          fbq: { config: {} },
-        },
-      };
-
-      const { trackingCalls } = applyOverrides(config, {
-        destinations: {
-          gtag: {
-            env: { window: { gtag: (..._args: unknown[]) => {} } },
-            simulation: ['window.gtag'],
-          },
-          fbq: {
-            env: { window: { fbq: (..._args: unknown[]) => {} } },
-            simulation: ['window.fbq'],
-          },
-        },
-      });
-
-      expect(trackingCalls).toHaveLength(2);
-
-      const gtagDest = (config.destinations as Record<string, any>).gtag;
-      gtagDest.config.env.window.gtag('config', 'G-123');
-
-      const fbqDest = (config.destinations as Record<string, any>).fbq;
-      fbqDest.config.env.window.fbq('track', 'Purchase');
-
-      const gtagCalls = trackingCalls.find((t) => t.destId === 'gtag')!.calls;
-      const fbqCalls = trackingCalls.find((t) => t.destId === 'fbq')!.calls;
-
-      expect(gtagCalls).toHaveLength(1);
-      expect(gtagCalls[0].fn).toBe('window.gtag');
-      expect(fbqCalls).toHaveLength(1);
-      expect(fbqCalls[0].fn).toBe('window.fbq');
+      // Should not throw
+      applyOverrides(config, {});
     });
   });
 });

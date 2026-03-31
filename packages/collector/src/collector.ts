@@ -48,7 +48,7 @@ export async function collector(
     stores: {},
     globals: finalGlobals,
     group: '',
-    hooks: {},
+    hooks: initConfig.hooks || {},
     logger,
     on: {},
     queue: [],

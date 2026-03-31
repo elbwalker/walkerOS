@@ -119,10 +119,13 @@ describe('stores in startFlow', () => {
 
     // Register a hook after init by mutating collector.hooks directly
     // useHooks reads from the hooks object at call time, so late registration works
-    (collector.hooks as Hooks.Functions).preStoreGet = (({ fn }, key) => {
+    (collector.hooks as Hooks.Functions).preStoreGet = ((
+      { fn }: { fn: (key: string) => unknown },
+      key: string,
+    ) => {
       hookCalls.push(`preStoreGet:${key}`);
       return fn(key);
-    }) as any;
+    }) as Hooks.Functions[string];
 
     await collector.push({ name: 'test event' }, { preChain: ['spy'] });
 

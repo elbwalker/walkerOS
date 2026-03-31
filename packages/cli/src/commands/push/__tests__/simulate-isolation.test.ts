@@ -708,51 +708,30 @@ describe('transformer result handling', () => {
   });
 });
 
-describe('source simulation — collector.push override', () => {
-  it('capture-and-stop prevents events from reaching original push', async () => {
-    const originalPush = jest.fn();
+describe('source simulation — prePush hook capture', () => {
+  it('prePush hook captures events and stops propagation', () => {
     const captured: Array<{ event: unknown; timestamp: number }> = [];
-
-    const collector = { push: originalPush } as Record<string, unknown>;
-    collector.push = async (event: unknown) => {
+    const prePush = ({ fn }: { fn: Function }, event: unknown) => {
       captured.push({ event, timestamp: Date.now() });
-      return { ok: true };
+      return { ok: true }; // Stop propagation
     };
 
-    await (collector.push as (e: unknown) => Promise<unknown>)({
-      name: 'page view',
-    });
-    await (collector.push as (e: unknown) => Promise<unknown>)({
-      name: 'order complete',
-    });
+    // Simulate what the hook does
+    prePush({ fn: jest.fn() }, { name: 'page view' });
+    prePush({ fn: jest.fn() }, { name: 'order complete' });
 
     expect(captured).toHaveLength(2);
     expect(captured[0].event).toEqual({ name: 'page view' });
     expect(captured[1].event).toEqual({ name: 'order complete' });
-    expect(originalPush).not.toHaveBeenCalled();
   });
 
-  it('throws when flow.collector is not exposed', () => {
-    const instance = { flow: {} };
-    expect(() => {
-      if (!(instance as { flow?: { collector?: unknown } }).flow?.collector) {
-        throw new Error(
-          'Source createTrigger did not expose flow.collector. ' +
-            'Cannot safely simulate without intercepting collector.push.',
-        );
-      }
-    }).toThrow('did not expose flow.collector');
-  });
+  it('prePush hook does not call original fn (stops propagation)', () => {
+    const originalFn = jest.fn();
+    const prePush = ({ fn }: { fn: Function }, event: unknown) => {
+      return { ok: true }; // Don't call fn
+    };
 
-  it('throws when flow itself is missing', () => {
-    const instance = {};
-    expect(() => {
-      if (!(instance as { flow?: { collector?: unknown } }).flow?.collector) {
-        throw new Error(
-          'Source createTrigger did not expose flow.collector. ' +
-            'Cannot safely simulate without intercepting collector.push.',
-        );
-      }
-    }).toThrow('did not expose flow.collector');
+    prePush({ fn: originalFn }, { name: 'test' });
+    expect(originalFn).not.toHaveBeenCalled();
   });
 });
