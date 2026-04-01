@@ -26,7 +26,7 @@ import {
   writeResult,
   type Platform,
 } from '../../core/index.js';
-import { validateEvent } from '../../core/event-validation.js';
+
 import type { Logger, WalkerOS } from '@walkeros/core';
 import { getTmpPath } from '../../core/tmp.js';
 import { loadFlowConfig, loadJsonFromSource } from '../../config/index.js';
@@ -38,6 +38,8 @@ import { buildOverrides, type PushOverrides } from './overrides.js';
 import { applyOverrides } from './apply-overrides.js';
 import { resolvePackageImportPath } from '../../core/package-path.js';
 import { withFlowContext } from './flow-context.js';
+import { prepareFlow } from './prepare.js';
+import { schemas } from '@walkeros/core/dev';
 
 /**
  * Resolve a before chain config to an ordered array of transformer IDs.
@@ -79,7 +81,6 @@ async function pushCore(
     verbose?: boolean;
     silent?: boolean;
     platform?: string;
-    simulate?: string[];
     mock?: string[];
     snapshot?: string;
   } = {},
@@ -92,25 +93,6 @@ async function pushCore(
   let tempDir: string | undefined;
 
   try {
-    // Validate event format (skip for source simulation — different event shape)
-    const isSourceSimulate = options.simulate?.some((s) =>
-      s.startsWith('source.'),
-    );
-    if (!isSourceSimulate) {
-      const validation = validateEvent(event, 'standard');
-      if (!validation.valid) {
-        const errors = validation.errors
-          .map((e) => `${e.path}: ${e.message}`)
-          .join(', ');
-        throw new Error(`Invalid event: ${errors}`);
-      }
-      for (const w of validation.warnings) {
-        logger.info(`Warning: ${w.message}`);
-      }
-    }
-
-    const validatedEvent = event as Record<string, unknown>;
-
     // Detect input type
     logger.debug('Detecting input type');
     const detected = await detectInput(
@@ -135,10 +117,9 @@ async function pushCore(
           config: inputPath,
           flow: options.flow,
           verbose: options.verbose,
-          simulate: options.simulate,
           mock: options.mock,
         } as PushCommandOptions,
-        validatedEvent,
+        event as Record<string, unknown>,
         logger,
         (dir) => {
           tempDir = dir;
@@ -149,7 +130,7 @@ async function pushCore(
       result = await executeBundlePush(
         detected.content,
         detected.platform,
-        validatedEvent,
+        event as Record<string, unknown>,
         logger,
         (dir) => {
           tempDir = dir;
@@ -307,13 +288,65 @@ export async function push(
     resolvedEvent = await loadJsonFromSource(event, { name: 'event' });
   }
 
-  return await pushCore(configOrPath, resolvedEvent, {
+  // Route to typed function based on simulate flag
+  const simulateFlag = options.simulate?.[0];
+
+  if (simulateFlag?.startsWith('source.')) {
+    return simulateSource(configOrPath, resolvedEvent, {
+      sourceId: simulateFlag.replace('source.', ''),
+      flow: options.flow,
+      silent: options.silent,
+      verbose: options.verbose,
+      snapshot: options.snapshot,
+    });
+  }
+
+  if (simulateFlag?.startsWith('transformer.')) {
+    return simulateTransformer(
+      configOrPath,
+      resolvedEvent as WalkerOS.DeepPartialEvent,
+      {
+        transformerId: simulateFlag.replace('transformer.', ''),
+        flow: options.flow,
+        mock: options.mock,
+        silent: options.silent,
+        verbose: options.verbose,
+        snapshot: options.snapshot,
+      },
+    );
+  }
+
+  if (simulateFlag?.startsWith('destination.')) {
+    return simulateDestination(
+      configOrPath,
+      resolvedEvent as WalkerOS.DeepPartialEvent,
+      {
+        destinationId: simulateFlag.replace('destination.', ''),
+        flow: options.flow,
+        mock: options.mock,
+        silent: options.silent,
+        verbose: options.verbose,
+        snapshot: options.snapshot,
+      },
+    );
+  }
+
+  // Normal push — validate with Zod, then use existing pipeline
+  const parsed = schemas.PartialEventSchema.safeParse(resolvedEvent);
+  if (!parsed.success) {
+    return {
+      success: false,
+      duration: 0,
+      error: `Invalid event: ${parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(', ')}`,
+    };
+  }
+
+  return pushCore(configOrPath, resolvedEvent, {
     json: options.json ?? false,
     verbose: options.verbose ?? false,
     silent: options.silent ?? false,
     flow: options.flow,
     platform: options.platform,
-    simulate: options.simulate,
     mock: options.mock,
     snapshot: options.snapshot,
   });
@@ -338,9 +371,9 @@ async function executeConfigPush(
 
   const platform = getPlatform(flowSettings);
 
-  // Build overrides from --simulate/--mock flags
+  // Build overrides from --mock flags (simulate is handled upstream in push())
   const overrides = buildOverrides(
-    { simulate: options.simulate, mock: options.mock },
+    { mock: options.mock },
     flowSettings,
   );
 
@@ -385,96 +418,13 @@ async function executeConfigPush(
 
   logger.debug(`Bundle created: ${tempPath}`);
 
-  // Check for source simulation
-  const sourceSimulateEntry = overrides.sources
-    ? Object.entries(overrides.sources).find(([, s]) => s.simulate)
-    : undefined;
-
-  if (sourceSimulateEntry) {
-    const [sourceId] = sourceSimulateEntry;
-    const sourceConfig = (flowSettings.sources ?? {})[sourceId] as
-      | { package?: string }
-      | undefined;
-
-    if (!sourceConfig?.package) {
-      throw new Error(`Source "${sourceId}" has no package defined`);
-    }
-
-    // Load createTrigger from source package's /dev export
-    const configDir = buildOptions.configDir || process.cwd();
-    const devPath = resolvePackageImportPath(
-      sourceConfig.package,
-      flowSettings.packages,
-      configDir,
-      '/dev',
-    );
-    const devModule = await import(devPath);
-    const createTrigger =
-      devModule.examples?.createTrigger ||
-      devModule.default?.examples?.createTrigger;
-
-    if (!createTrigger) {
-      throw new Error(
-        `Source package "${sourceConfig.package}" has no createTrigger in /dev export`,
-      );
-    }
-
-    return executeSourceSimulation(
-      tempPath,
-      validatedEvent,
-      logger,
-      overrides,
-      createTrigger,
-      platform,
-      snapshotCode,
-    );
-  }
-
-  // Check for transformer simulation
-  const transformerSimulateEntry = overrides.transformers
-    ? Object.entries(overrides.transformers).find(([, t]) => t.simulate)
-    : undefined;
-
-  if (transformerSimulateEntry) {
-    const [transformerId] = transformerSimulateEntry;
-    return executeTransformerSimulation(
-      tempPath,
-      validatedEvent as WalkerOS.DeepPartialEvent,
-      logger,
-      transformerId,
-      overrides,
-      platform,
-      snapshotCode,
-    );
-  }
-
-  // Check for destination simulation
-  const simulatedDestEntry = overrides.destinations
-    ? Object.entries(overrides.destinations).find(([, d]) => d.simulate)
-    : undefined;
-
   logger.debug(
     `Executing in ${platform} environment (${platform === 'web' ? 'JSDOM' : 'Node.js'})`,
   );
 
-  const eventInput = validatedEvent as WalkerOS.DeepPartialEvent;
-
-  if (simulatedDestEntry) {
-    return executeSimulatedDestination(
-      tempPath,
-      eventInput,
-      logger,
-      platform,
-      simulatedDestEntry[0],
-      overrides,
-      snapshotCode,
-      platform === 'server' ? 60000 : undefined,
-    );
-  }
-
   return executeDestinationPush(
     tempPath,
-    eventInput,
+    validatedEvent as WalkerOS.DeepPartialEvent,
     logger,
     platform,
     overrides,
@@ -565,324 +515,522 @@ async function executeDestinationPush(
   );
 }
 
-/**
- * Execute isolated destination simulation.
- * Before chain → destinationInit → destinationPush → capture → stop.
- * No collector.push, no next chain, no other destinations.
- */
-async function executeSimulatedDestination(
-  esmPath: string,
-  event: WalkerOS.DeepPartialEvent,
-  logger: Logger.Instance,
-  platform: 'web' | 'server',
-  destId: string,
-  overrides: PushOverrides,
-  snapshotCode?: string,
-  timeout?: number,
-): Promise<PushResult> {
-  const startTime = Date.now();
-  const networkCalls: NetworkCall[] = [];
-
-  return withFlowContext(
-    { esmPath, platform, logger, snapshotCode, timeout, networkCalls, asyncDrain: { timeout: 5000 } },
-    async (module) => {
-      const config = module.wireConfig(module.__configData ?? undefined);
-      applyOverrides(config, overrides);
-
-      // Don't initialize sources during destination simulation — unnecessary
-      // overhead and server sources may bind ports or start listeners.
-      if (config.sources) config.sources = {};
-
-      const result = await module.startFlow(config);
-      if (!result?.collector)
-        throw new Error('Invalid bundle: collector not available');
-
-      const collector = result.collector;
-      const destination = collector.destinations[destId];
-      if (!destination) {
-        throw new Error(
-          `Destination "${destId}" not found in collector. ` +
-            `Available: ${Object.keys(collector.destinations || {}).join(', ') || 'none'}`,
-        );
-      }
-
-      const ingest = createIngest(destId);
-
-      // Run before chain (mandatory preparation)
-      let processedEvent = event as WalkerOS.Event;
-      const before = destination.config.before;
-      if (before && collector.transformers) {
-        const beforeChainIds = resolveBeforeChain(
-          before,
-          collector.transformers,
-          ingest,
-          processedEvent,
-        );
-        if (beforeChainIds.length > 0) {
-          logger.info(`Running before chain: ${beforeChainIds.join(' → ')}`);
-          const beforeResult = await runTransformerChain(
-            collector,
-            collector.transformers,
-            beforeChainIds,
-            processedEvent,
-            ingest,
-            undefined,
-            `destination.${destId}.before`,
-          );
-          if (beforeResult === null) {
-            await collector.command('shutdown');
-            return {
-              success: true,
-              captured: [
-                { event: processedEvent, timestamp: Date.now() },
-                { event: null, timestamp: Date.now() },
-              ],
-              duration: Date.now() - startTime,
-            };
-          }
-          processedEvent = (
-            Array.isArray(beforeResult) ? beforeResult[0] : beforeResult
-          ) as WalkerOS.Event;
-        }
-      }
-
-      // Initialize and push directly
-      logger.info(`Simulating destination: ${destId}`);
-      const isInitialized = await destinationInit(
-        collector,
-        destination,
-        destId,
-      );
-      if (!isInitialized) {
-        throw new Error(`Destination "${destId}" failed to initialize`);
-      }
-
-      const pushResult = await destinationPush(
-        collector,
-        destination,
-        destId,
-        processedEvent,
-        ingest,
-      );
-
-      await collector.command('shutdown');
-
-      return {
-        success: true,
-        elbResult: pushResult as PushResult['elbResult'],
-        ...(networkCalls.length > 0 ? { networkCalls } : {}),
-        duration: Date.now() - startTime,
-      };
-    },
-  );
+export interface SimulateSourceOptions {
+  sourceId: string;
+  flow?: string;
+  silent?: boolean;
+  verbose?: boolean;
+  snapshot?: string;
 }
 
 /**
- * Execute transformer simulation.
+ * Self-contained source simulation.
  *
- * Uses withFlowContext for environment setup. Calls startFlow to get a real
- * collector with initialized transformers, then calls transformerPush directly
- * on the target transformer. No collector.push, no pipeline traversal.
+ * Loads the flow config, bundles it, resolves the source package's /dev export
+ * to get createTrigger, then invokes the trigger inside a flow context with a
+ * prePush hook that captures events before they reach destinations.
+ *
+ * The `input` parameter is `unknown` — the CLI is agnostic to source-specific
+ * content shapes. The source's createTrigger defines what it expects.
+ */
+export async function simulateSource(
+  configPath: string,
+  input: unknown,
+  options: SimulateSourceOptions,
+): Promise<PushResult> {
+  const startTime = Date.now();
+
+  const prepared = await prepareFlow({
+    configPath,
+    flow: options.flow,
+    simulate: ['source.' + options.sourceId],
+    silent: options.silent,
+    verbose: options.verbose,
+  });
+
+  try {
+    const logger = createCLILogger({
+      silent: options.silent,
+      verbose: options.verbose,
+    });
+
+    // Resolve source package and load createTrigger from /dev export
+    const sourceConfig = (prepared.flowSettings.sources ?? {})[
+      options.sourceId
+    ] as { package?: string } | undefined;
+
+    if (!sourceConfig?.package) {
+      throw new Error(
+        `Source "${options.sourceId}" has no package defined`,
+      );
+    }
+
+    const devPath = resolvePackageImportPath(
+      sourceConfig.package,
+      prepared.flowSettings.packages,
+      prepared.configDir,
+      '/dev',
+    );
+    const devModule = await import(devPath);
+    const createTrigger =
+      devModule.examples?.createTrigger ||
+      devModule.default?.examples?.createTrigger;
+
+    if (!createTrigger) {
+      throw new Error(
+        `Source package "${sourceConfig.package}" has no createTrigger in /dev export`,
+      );
+    }
+
+    // Load snapshot code if provided
+    let snapshotCode: string | undefined;
+    if (options.snapshot) {
+      snapshotCode = (await loadConfig(options.snapshot, {
+        json: false,
+      })) as string;
+      logger.debug(`Snapshot loaded (${snapshotCode.length} bytes)`);
+    }
+
+    const networkCalls: NetworkCall[] = [];
+
+    return await withFlowContext(
+      {
+        esmPath: prepared.bundlePath,
+        platform: prepared.platform,
+        logger,
+        snapshotCode,
+        networkCalls,
+        asyncDrain: { timeout: 5000 },
+      },
+      async (module) => {
+        const config = module.wireConfig(module.__configData ?? undefined);
+        applyOverrides(config, prepared.overrides);
+
+        // Capture events at the collector.push boundary via prePush hook.
+        // Hook is wired by startFlow (inside createTrigger) before events fire.
+        const captured: Array<{ event: unknown; timestamp: number }> = [];
+
+        config.hooks = {
+          ...((config.hooks as Record<string, unknown>) || {}),
+          prePush: ({ fn }: { fn: Function }, event: unknown) => {
+            captured.push({ event, timestamp: Date.now() });
+            return { ok: true }; // Stop propagation — don't call fn
+          },
+        };
+
+        const instance = await createTrigger(config);
+        const { trigger } = instance;
+
+        logger.info('Simulating source');
+
+        // Extract content and trigger params from input — the CLI doesn't type
+        // these, it just reads them as generic properties from the unknown input.
+        const inputRecord = (input ?? {}) as Record<string, unknown>;
+        const content = inputRecord.content ?? input;
+        const triggerOpts = inputRecord.trigger as
+          | { type?: string; options?: unknown }
+          | undefined;
+        await trigger(triggerOpts?.type, triggerOpts?.options)(content);
+
+        if (instance.flow?.collector?.command) {
+          await instance.flow.collector.command('shutdown');
+        }
+
+        return {
+          success: true,
+          ...(captured.length > 0 ? { captured } : {}),
+          ...(networkCalls.length > 0 ? { networkCalls } : {}),
+          duration: Date.now() - startTime,
+        };
+      },
+    );
+  } catch (error) {
+    return {
+      success: false,
+      duration: Date.now() - startTime,
+      error: getErrorMessage(error),
+    };
+  } finally {
+    await prepared.cleanup();
+  }
+}
+
+export interface SimulateTransformerOptions {
+  transformerId: string;
+  flow?: string;
+  mock?: string[];
+  silent?: boolean;
+  verbose?: boolean;
+  snapshot?: string;
+}
+
+/**
+ * Self-contained transformer simulation.
+ *
+ * Takes a DeepPartialEvent, validates it with Zod, loads the flow config,
+ * bundles it, starts the flow to get initialized transformers, then runs
+ * the event through the target transformer (with optional before chain).
  *
  * Captured array: first entry = input event, subsequent entries = output event(s).
  * If the transformer drops the event (returns false), output event is null.
  */
-async function executeTransformerSimulation(
-  esmPath: string,
+export async function simulateTransformer(
+  configPath: string,
   event: WalkerOS.DeepPartialEvent,
-  logger: Logger.Instance,
-  transformerId: string,
-  overrides: PushOverrides,
-  platform: 'web' | 'server',
-  snapshotCode?: string,
+  options: SimulateTransformerOptions,
 ): Promise<PushResult> {
   const startTime = Date.now();
-  const networkCalls: NetworkCall[] = [];
 
-  return withFlowContext(
-    { esmPath, platform, logger, snapshotCode, networkCalls },
-    async (module) => {
-      const config = module.wireConfig(module.__configData ?? undefined);
-      applyOverrides(config, overrides);
+  // Validate event with Zod
+  const parsed = schemas.PartialEventSchema.safeParse(event);
+  if (!parsed.success) {
+    return {
+      success: false,
+      duration: 0,
+      error: parsed.error.message,
+    };
+  }
 
-      // Don't initialize sources or destinations during transformer simulation.
-      if (config.sources) config.sources = {};
-      if (config.destinations) config.destinations = {};
+  const prepared = await prepareFlow({
+    configPath,
+    flow: options.flow,
+    simulate: ['transformer.' + options.transformerId],
+    mock: options.mock,
+    silent: options.silent,
+    verbose: options.verbose,
+  });
 
-      const result = await module.startFlow(config);
-      if (!result?.collector)
-        throw new Error('Invalid bundle: collector not available');
+  try {
+    const logger = createCLILogger({
+      silent: options.silent,
+      verbose: options.verbose,
+    });
 
-      const collector = result.collector;
-      const transformer = collector.transformers?.[transformerId];
+    // Load snapshot code if provided
+    let snapshotCode: string | undefined;
+    if (options.snapshot) {
+      snapshotCode = (await loadConfig(options.snapshot, {
+        json: false,
+      })) as string;
+      logger.debug(`Snapshot loaded (${snapshotCode.length} bytes)`);
+    }
 
-      if (!transformer) {
-        throw new Error(
-          `Transformer "${transformerId}" not found in collector. ` +
-            `Available: ${Object.keys(collector.transformers || {}).join(', ') || 'none'}`,
-        );
-      }
+    const networkCalls: NetworkCall[] = [];
 
-      const initialized = await transformerInit(
-        collector,
-        transformer,
-        transformerId,
-      );
-      if (!initialized) {
-        throw new Error(`Transformer "${transformerId}" failed to initialize`);
-      }
+    return await withFlowContext(
+      {
+        esmPath: prepared.bundlePath,
+        platform: prepared.platform,
+        logger,
+        snapshotCode,
+        networkCalls,
+      },
+      async (module) => {
+        const config = module.wireConfig(module.__configData ?? undefined);
+        applyOverrides(config, prepared.overrides);
 
-      const inputEvent = event as WalkerOS.DeepPartialEvent;
-      const ingest = createIngest(transformerId);
-      const captured: Array<{ event: unknown; timestamp: number }> = [];
+        // Don't initialize sources or destinations during transformer simulation.
+        if (config.sources) config.sources = {};
+        if (config.destinations) config.destinations = {};
 
-      captured.push({ event: { ...inputEvent }, timestamp: Date.now() });
+        const result = await module.startFlow(config);
+        if (!result?.collector)
+          throw new Error('Invalid bundle: collector not available');
 
-      logger.info(`Simulating transformer: ${transformerId}`);
+        const collector = result.collector;
+        const transformer =
+          collector.transformers?.[options.transformerId];
 
-      // Run before chain if configured (mandatory preparation)
-      let processedEvent: WalkerOS.DeepPartialEvent = inputEvent;
-      const before = transformer.config.before;
-      if (before && collector.transformers) {
-        const beforeChainIds = resolveBeforeChain(
-          before,
-          collector.transformers,
-          ingest,
-          processedEvent,
-        );
-        if (beforeChainIds.length > 0) {
-          const beforeResult = await runTransformerChain(
-            collector,
-            collector.transformers,
-            beforeChainIds,
-            processedEvent,
-            ingest,
-            undefined,
-            `transformer.${transformerId}.before`,
+        if (!transformer) {
+          throw new Error(
+            `Transformer "${options.transformerId}" not found in collector. ` +
+              `Available: ${Object.keys(collector.transformers || {}).join(', ') || 'none'}`,
           );
-          if (beforeResult === null) {
-            captured.push({ event: null, timestamp: Date.now() });
-            await collector.command('shutdown');
-            return {
-              success: true,
-              captured,
-              duration: Date.now() - startTime,
-            };
+        }
+
+        const initialized = await transformerInit(
+          collector,
+          transformer,
+          options.transformerId,
+        );
+        if (!initialized) {
+          throw new Error(
+            `Transformer "${options.transformerId}" failed to initialize`,
+          );
+        }
+
+        const inputEvent = event;
+        const ingest = createIngest(options.transformerId);
+        const captured: Array<{ event: unknown; timestamp: number }> = [];
+
+        captured.push({ event: { ...inputEvent }, timestamp: Date.now() });
+
+        logger.info(`Simulating transformer: ${options.transformerId}`);
+
+        // Run before chain if configured (mandatory preparation)
+        let processedEvent: WalkerOS.DeepPartialEvent = inputEvent;
+        const before = transformer.config.before;
+        if (before && collector.transformers) {
+          const beforeChainIds = resolveBeforeChain(
+            before,
+            collector.transformers,
+            ingest,
+            processedEvent,
+          );
+          if (beforeChainIds.length > 0) {
+            const beforeResult = await runTransformerChain(
+              collector,
+              collector.transformers,
+              beforeChainIds,
+              processedEvent,
+              ingest,
+              undefined,
+              `transformer.${options.transformerId}.before`,
+            );
+            if (beforeResult === null) {
+              captured.push({ event: null, timestamp: Date.now() });
+              await collector.command('shutdown');
+              return {
+                success: true,
+                captured,
+                duration: Date.now() - startTime,
+              };
+            }
+            processedEvent = (
+              Array.isArray(beforeResult) ? beforeResult[0] : beforeResult
+            ) as WalkerOS.DeepPartialEvent;
           }
-          processedEvent = (
-            Array.isArray(beforeResult) ? beforeResult[0] : beforeResult
-          ) as WalkerOS.DeepPartialEvent;
         }
-      }
 
-      const pushResult = await transformerPush(
-        collector,
-        transformer,
-        transformerId,
-        processedEvent,
-        ingest,
-      );
+        const pushResult = await transformerPush(
+          collector,
+          transformer,
+          options.transformerId,
+          processedEvent,
+          ingest,
+        );
 
-      if (pushResult === false) {
-        captured.push({ event: null, timestamp: Date.now() });
-      } else if (Array.isArray(pushResult)) {
-        for (const r of pushResult) {
-          captured.push({
-            event: r.event || processedEvent,
-            timestamp: Date.now(),
-          });
+        if (pushResult === false) {
+          captured.push({ event: null, timestamp: Date.now() });
+        } else if (Array.isArray(pushResult)) {
+          for (const r of pushResult) {
+            captured.push({
+              event: r.event || processedEvent,
+              timestamp: Date.now(),
+            });
+          }
+        } else if (
+          pushResult &&
+          typeof pushResult === 'object' &&
+          pushResult.event
+        ) {
+          captured.push({ event: pushResult.event, timestamp: Date.now() });
+        } else {
+          captured.push({ event: processedEvent, timestamp: Date.now() });
         }
-      } else if (
-        pushResult &&
-        typeof pushResult === 'object' &&
-        pushResult.event
-      ) {
-        captured.push({ event: pushResult.event, timestamp: Date.now() });
-      } else {
-        captured.push({ event: processedEvent, timestamp: Date.now() });
-      }
 
-      await collector.command('shutdown');
+        await collector.command('shutdown');
 
-      return {
-        success: true,
-        captured,
-        ...(networkCalls.length > 0 ? { networkCalls } : {}),
-        duration: Date.now() - startTime,
-      };
-    },
-  );
+        return {
+          success: true,
+          captured,
+          ...(networkCalls.length > 0 ? { networkCalls } : {}),
+          duration: Date.now() - startTime,
+        };
+      },
+    );
+  } catch (error) {
+    return {
+      success: false,
+      duration: Date.now() - startTime,
+      error: getErrorMessage(error),
+    };
+  } finally {
+    await prepared.cleanup();
+  }
+}
+
+export interface SimulateDestinationOptions {
+  destinationId: string;
+  flow?: string;
+  mock?: string[];
+  silent?: boolean;
+  verbose?: boolean;
+  snapshot?: string;
 }
 
 /**
- * Execute source simulation using createTrigger from the source package's /dev export.
+ * Self-contained destination simulation.
  *
- * Uses withFlowContext for environment setup. createTrigger owns startFlow internally.
- * After createTrigger returns, we override collector.push with a capture-and-stop
- * function. This preserves the source's wrappedPush (and its before chain) while
- * preventing events from reaching destinations.
+ * Takes a DeepPartialEvent, validates it with Zod, loads the flow config,
+ * bundles it, starts the flow to get initialized destinations, then pushes
+ * the event directly to the target destination (with optional before chain).
+ *
+ * Passes the event through directly rather than reconstructing it as
+ * { name, data }, preserving all fields from the original event.
  */
-async function executeSourceSimulation(
-  esmPath: string,
-  event: Record<string, unknown>,
-  logger: Logger.Instance,
-  overrides: PushOverrides,
-  createTrigger: (...args: unknown[]) => Promise<{
-    trigger: (
-      type?: string,
-      options?: unknown,
-    ) => (content: unknown) => Promise<unknown>;
-    flow?: {
-      collector?: { command?: (...args: unknown[]) => Promise<unknown> };
-    };
-  }>,
-  platform: 'web' | 'server',
-  snapshotCode?: string,
+export async function simulateDestination(
+  configPath: string,
+  event: WalkerOS.DeepPartialEvent,
+  options: SimulateDestinationOptions,
 ): Promise<PushResult> {
   const startTime = Date.now();
-  const networkCalls: NetworkCall[] = [];
 
-  return withFlowContext(
-    { esmPath, platform, logger, snapshotCode, networkCalls, asyncDrain: { timeout: 5000 } },
-    async (module) => {
-      const config = module.wireConfig(module.__configData ?? undefined);
-      applyOverrides(config, overrides);
+  // Validate event with Zod
+  const parsed = schemas.PartialEventSchema.safeParse(event);
+  if (!parsed.success) {
+    return {
+      success: false,
+      duration: 0,
+      error: parsed.error.message,
+    };
+  }
 
-      // Capture events at the collector.push boundary via prePush hook.
-      // Hook is wired by startFlow (inside createTrigger) before events fire.
-      const captured: Array<{ event: unknown; timestamp: number }> = [];
+  const prepared = await prepareFlow({
+    configPath,
+    flow: options.flow,
+    simulate: ['destination.' + options.destinationId],
+    mock: options.mock,
+    silent: options.silent,
+    verbose: options.verbose,
+  });
 
-      config.hooks = {
-        ...((config.hooks as Record<string, unknown>) || {}),
-        prePush: ({ fn }: { fn: Function }, event: unknown) => {
-          captured.push({ event, timestamp: Date.now() });
-          return { ok: true }; // Stop propagation — don't call fn
-        },
-      };
+  try {
+    const logger = createCLILogger({
+      silent: options.silent,
+      verbose: options.verbose,
+    });
 
-      const instance = await createTrigger(config);
-      const { trigger } = instance;
+    // Load snapshot code if provided
+    let snapshotCode: string | undefined;
+    if (options.snapshot) {
+      snapshotCode = (await loadConfig(options.snapshot, {
+        json: false,
+      })) as string;
+      logger.debug(`Snapshot loaded (${snapshotCode.length} bytes)`);
+    }
 
-      logger.info('Simulating source');
+    const networkCalls: NetworkCall[] = [];
 
-      const content = event.content ?? event;
-      const triggerOpts = event.trigger as
-        | { type?: string; options?: unknown }
-        | undefined;
-      await trigger(triggerOpts?.type, triggerOpts?.options)(content);
+    return await withFlowContext(
+      {
+        esmPath: prepared.bundlePath,
+        platform: prepared.platform,
+        logger,
+        snapshotCode,
+        networkCalls,
+        asyncDrain: { timeout: 5000 },
+      },
+      async (module) => {
+        const config = module.wireConfig(module.__configData ?? undefined);
+        applyOverrides(config, prepared.overrides);
 
-      if (instance.flow?.collector?.command) {
-        await instance.flow.collector.command('shutdown');
-      }
+        // Don't initialize sources during destination simulation — unnecessary
+        // overhead and server sources may bind ports or start listeners.
+        if (config.sources) config.sources = {};
 
-      return {
-        success: true,
-        ...(captured.length > 0 ? { captured } : {}),
-        ...(networkCalls.length > 0 ? { networkCalls } : {}),
-        duration: Date.now() - startTime,
-      };
-    },
-  );
+        const result = await module.startFlow(config);
+        if (!result?.collector)
+          throw new Error('Invalid bundle: collector not available');
+
+        const collector = result.collector;
+        const destination =
+          collector.destinations[options.destinationId];
+
+        if (!destination) {
+          throw new Error(
+            `Destination "${options.destinationId}" not found in collector. ` +
+              `Available: ${Object.keys(collector.destinations || {}).join(', ') || 'none'}`,
+          );
+        }
+
+        const ingest = createIngest(options.destinationId);
+
+        // Pass event through directly, cast as WalkerOS.Event for the
+        // destination push — DeepPartialEvent fields are a subset.
+        let processedEvent = event as WalkerOS.Event;
+
+        // Run before chain (mandatory preparation)
+        const before = destination.config.before;
+        if (before && collector.transformers) {
+          const beforeChainIds = resolveBeforeChain(
+            before,
+            collector.transformers,
+            ingest,
+            processedEvent,
+          );
+          if (beforeChainIds.length > 0) {
+            logger.info(
+              `Running before chain: ${beforeChainIds.join(' → ')}`,
+            );
+            const beforeResult = await runTransformerChain(
+              collector,
+              collector.transformers,
+              beforeChainIds,
+              processedEvent,
+              ingest,
+              undefined,
+              `destination.${options.destinationId}.before`,
+            );
+            if (beforeResult === null) {
+              await collector.command('shutdown');
+              return {
+                success: true,
+                captured: [
+                  { event: processedEvent, timestamp: Date.now() },
+                  { event: null, timestamp: Date.now() },
+                ],
+                duration: Date.now() - startTime,
+              };
+            }
+            processedEvent = (
+              Array.isArray(beforeResult) ? beforeResult[0] : beforeResult
+            ) as WalkerOS.Event;
+          }
+        }
+
+        // Initialize and push directly
+        logger.info(
+          `Simulating destination: ${options.destinationId}`,
+        );
+        const isInitialized = await destinationInit(
+          collector,
+          destination,
+          options.destinationId,
+        );
+        if (!isInitialized) {
+          throw new Error(
+            `Destination "${options.destinationId}" failed to initialize`,
+          );
+        }
+
+        const pushResult = await destinationPush(
+          collector,
+          destination,
+          options.destinationId,
+          processedEvent,
+          ingest,
+        );
+
+        await collector.command('shutdown');
+
+        return {
+          success: true,
+          elbResult: pushResult as PushResult['elbResult'],
+          ...(networkCalls.length > 0 ? { networkCalls } : {}),
+          duration: Date.now() - startTime,
+        };
+      },
+    );
+  } catch (error) {
+    return {
+      success: false,
+      duration: Date.now() - startTime,
+      error: getErrorMessage(error),
+    };
+  } finally {
+    await prepared.cleanup();
+  }
 }
 
 // Export types

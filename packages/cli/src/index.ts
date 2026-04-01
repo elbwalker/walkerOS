@@ -38,7 +38,17 @@ export { feedbackCommand } from './commands/feedback/index.js';
 // === Programmatic API ===
 // High-level functions for library usage
 export { bundle, bundleRemote } from './commands/bundle/index.js';
-export { push } from './commands/push/index.js';
+export {
+  push,
+  simulateSource,
+  simulateTransformer,
+  simulateDestination,
+} from './commands/push/index.js';
+export type {
+  SimulateSourceOptions,
+  SimulateTransformerOptions,
+  SimulateDestinationOptions,
+} from './commands/push/index.js';
 export { run } from './commands/run/index.js';
 export { validate } from './commands/validate/index.js';
 export { getToken, getAuthHeaders, requireProjectId } from './core/auth.js';

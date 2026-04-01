@@ -21,7 +21,7 @@ import {
  * Validates the pattern: resolve before chain -> run via runTransformerChain
  * -> then call transformerPush on the main transformer.
  *
- * This mirrors the logic in executeTransformerSimulation without requiring
+ * This mirrors the logic in simulateTransformer without requiring
  * a real ESM bundle.
  */
 describe('transformer simulation isolation — before chain', () => {
@@ -352,8 +352,8 @@ describe('transformer simulation isolation — before chain', () => {
  * Validates the pattern: before chain → destinationInit → destinationPush.
  * No collector.push call should happen — the destination is called directly.
  *
- * This mirrors the isolated path in executeDestinationPush when a simulated
- * destination is detected (overrides.destinations with mock set).
+ * This mirrors the isolated path in simulateDestination when a simulated
+ * destination is detected.
  */
 describe('destination simulation with before chain', () => {
   function createMockCollector(

@@ -4,9 +4,9 @@ import { buildOverrides } from '../overrides';
 /**
  * Tests for transformer simulation wiring.
  *
- * executeTransformerSimulation is a private function that requires a real ESM
- * bundle to execute end-to-end. These tests verify the detection logic that
- * decides WHETHER to call it — the same check used in executeConfigPush.
+ * simulateTransformer requires a real ESM bundle to execute end-to-end.
+ * These tests verify the detection logic that decides WHETHER to call it —
+ * the same check used by the push() routing logic.
  */
 describe('transformer simulation wiring', () => {
   function findTransformerSimulateEntry(
