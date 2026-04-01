@@ -232,15 +232,7 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
     // Format result
     let output: string;
     if (options.json) {
-      output = JSON.stringify(
-        {
-          success: result.success,
-          event: result.elbResult,
-          duration,
-        },
-        null,
-        2,
-      );
+      output = JSON.stringify({ ...result, duration }, null, 2);
     } else {
       const lines: string[] = [];
       if (result.success) {
