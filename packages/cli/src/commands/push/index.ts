@@ -9,8 +9,6 @@ import {
   buildCacheContext,
 } from '@walkeros/core';
 import {
-  destinationInit,
-  destinationPush,
   transformerInit,
   transformerPush,
   runTransformerChain,
@@ -600,7 +598,6 @@ export async function simulateSource(
         logger,
         snapshotCode,
         networkCalls,
-        asyncDrain: { timeout: 5000 },
       },
       async (module) => {
         const config = module.wireConfig(module.__configData ?? undefined);
@@ -863,11 +860,10 @@ export interface SimulateDestinationOptions {
  * Self-contained destination simulation.
  *
  * Takes a DeepPartialEvent, validates it with Zod, loads the flow config,
- * bundles it, starts the flow to get initialized destinations, then pushes
- * the event directly to the target destination (with optional before chain).
- *
- * Passes the event through directly rather than reconstructing it as
- * { name, data }, preserving all fields from the original event.
+ * bundles it, starts the flow, then pushes via collector.push with an include
+ * filter so only the target destination receives the event. This gives full
+ * pipeline support — consent checks, event mapping, createEvent enrichment,
+ * before chains — without manual wiring.
  */
 export async function simulateDestination(
   configPath: string,
@@ -901,13 +897,11 @@ export async function simulateDestination(
       verbose: options.verbose,
     });
 
-    // Load snapshot code if provided
     let snapshotCode: string | undefined;
     if (options.snapshot) {
       snapshotCode = (await loadConfig(options.snapshot, {
         json: false,
       })) as string;
-      logger.debug(`Snapshot loaded (${snapshotCode.length} bytes)`);
     }
 
     const networkCalls: NetworkCall[] = [];
@@ -925,8 +919,7 @@ export async function simulateDestination(
         const config = module.wireConfig(module.__configData ?? undefined);
         applyOverrides(config, prepared.overrides);
 
-        // Don't initialize sources during destination simulation — unnecessary
-        // overhead and server sources may bind ports or start listeners.
+        // Don't initialize sources — unnecessary overhead
         if (config.sources) config.sources = {};
 
         const result = await module.startFlow(config);
@@ -934,89 +927,28 @@ export async function simulateDestination(
           throw new Error('Invalid bundle: collector not available');
 
         const collector = result.collector;
-        const destination =
-          collector.destinations[options.destinationId];
 
-        if (!destination) {
+        // Verify destination exists
+        if (!collector.destinations[options.destinationId]) {
           throw new Error(
             `Destination "${options.destinationId}" not found in collector. ` +
               `Available: ${Object.keys(collector.destinations || {}).join(', ') || 'none'}`,
           );
         }
 
-        const ingest = createIngest(options.destinationId);
+        logger.info(`Simulating destination: ${options.destinationId}`);
 
-        // Pass event through directly, cast as WalkerOS.Event for the
-        // destination push — DeepPartialEvent fields are a subset.
-        let processedEvent = event as WalkerOS.Event;
-
-        // Run before chain (mandatory preparation)
-        const before = destination.config.before;
-        if (before && collector.transformers) {
-          const beforeChainIds = resolveBeforeChain(
-            before,
-            collector.transformers,
-            ingest,
-            processedEvent,
-          );
-          if (beforeChainIds.length > 0) {
-            logger.info(
-              `Running before chain: ${beforeChainIds.join(' → ')}`,
-            );
-            const beforeResult = await runTransformerChain(
-              collector,
-              collector.transformers,
-              beforeChainIds,
-              processedEvent,
-              ingest,
-              undefined,
-              `destination.${options.destinationId}.before`,
-            );
-            if (beforeResult === null) {
-              await collector.command('shutdown');
-              return {
-                success: true,
-                captured: [
-                  { event: processedEvent, timestamp: Date.now() },
-                  { event: null, timestamp: Date.now() },
-                ],
-                duration: Date.now() - startTime,
-              };
-            }
-            processedEvent = (
-              Array.isArray(beforeResult) ? beforeResult[0] : beforeResult
-            ) as WalkerOS.Event;
-          }
-        }
-
-        // Initialize and push directly
-        logger.info(
-          `Simulating destination: ${options.destinationId}`,
-        );
-        const isInitialized = await destinationInit(
-          collector,
-          destination,
-          options.destinationId,
-        );
-        if (!isInitialized) {
-          throw new Error(
-            `Destination "${options.destinationId}" failed to initialize`,
-          );
-        }
-
-        const pushResult = await destinationPush(
-          collector,
-          destination,
-          options.destinationId,
-          processedEvent,
-          ingest,
-        );
+        // Full pipeline: consent, mapping, enrichment, before chains
+        // include filter ensures only the target destination receives the event
+        const elbResult = await collector.push(event, {
+          include: [options.destinationId],
+        });
 
         await collector.command('shutdown');
 
         return {
           success: true,
-          elbResult: pushResult as PushResult['elbResult'],
+          elbResult: elbResult as PushResult['elbResult'],
           ...(networkCalls.length > 0 ? { networkCalls } : {}),
           duration: Date.now() - startTime,
         };

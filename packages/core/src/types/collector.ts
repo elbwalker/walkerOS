@@ -129,6 +129,8 @@ export interface PushOptions {
   respond?: import('../respond').RespondFn;
   mapping?: Mapping.Config;
   preChain?: string[];
+  include?: string[];
+  exclude?: string[];
 }
 
 /**

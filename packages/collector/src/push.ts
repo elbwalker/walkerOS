@@ -10,6 +10,25 @@ import { createEvent } from './handle';
 import { pushToDestinations, createPushResult } from './destination';
 import { runTransformerChain } from './transformer';
 
+function filterDestinations(
+  destinations: Collector.Destinations,
+  include?: string[],
+  exclude?: string[],
+): Collector.Destinations {
+  let filtered = destinations;
+  if (include) {
+    filtered = Object.fromEntries(
+      Object.entries(filtered).filter(([id]) => include.includes(id)),
+    );
+  }
+  if (exclude) {
+    filtered = Object.fromEntries(
+      Object.entries(filtered).filter(([id]) => !exclude.includes(id)),
+    );
+  }
+  return filtered;
+}
+
 /**
  * Creates the push function for the collector.
  * Handles source mapping, event creation, and routing to destinations.
@@ -30,8 +49,15 @@ export function createPush<T extends Collector.Instance>(
       return await tryCatchAsync(
         async (): Promise<Elb.PushResult> => {
           const pushStart = Date.now();
-          const { id, ingest, respond, mapping, preChain } = options;
+          const { id, ingest, respond, mapping, preChain, include, exclude } =
+            options;
           let partialEvent = event;
+
+          // Build filtered destination set if include/exclude specified
+          const filteredDests =
+            include || exclude
+              ? filterDestinations(collector.destinations, include, exclude)
+              : undefined;
 
           // Create mutable Ingest — accumulates context through the pipeline
           const pipelineIngest: Ingest =
@@ -94,11 +120,16 @@ export function createPush<T extends Collector.Instance>(
                 chainResult.map(async (forkEvent) => {
                   const enriched = prepareEvent(forkEvent);
                   const full = createEvent(collector, enriched);
-                  return pushToDestinations(collector, full, {
-                    id,
-                    ingest: pipelineIngest,
-                    respond,
-                  });
+                  return pushToDestinations(
+                    collector,
+                    full,
+                    {
+                      id,
+                      ingest: pipelineIngest,
+                      respond,
+                    },
+                    filteredDests,
+                  );
                 }),
               );
 
@@ -129,11 +160,16 @@ export function createPush<T extends Collector.Instance>(
           const fullEvent = createEvent(collector, enrichedEvent);
 
           // Push to destinations with id and ingest
-          const result = await pushToDestinations(collector, fullEvent, {
-            id,
-            ingest: pipelineIngest,
-            respond,
-          });
+          const result = await pushToDestinations(
+            collector,
+            fullEvent,
+            {
+              id,
+              ingest: pipelineIngest,
+              respond,
+            },
+            filteredDests,
+          );
 
           // Update source status
           if (id) {
