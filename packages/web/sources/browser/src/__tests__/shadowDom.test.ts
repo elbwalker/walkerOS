@@ -141,7 +141,7 @@ describe('Shadow DOM', () => {
         <div data-elbaction="load:show">Banner Content</div>
       `;
 
-      const events = getAllEvents();
+      const events = getAllEvents(document.body);
 
       // BUG: querySelectorAll('[data-elbaction]') on document won't find
       // elements inside shadow DOM
@@ -197,7 +197,7 @@ describe('Shadow DOM', () => {
         <div data-elbglobals="version:v2"></div>
       `;
 
-      const globals = getGlobals();
+      const globals = getGlobals(undefined, document);
 
       // Light DOM global works
       expect(globals).toHaveProperty('env', 'production');

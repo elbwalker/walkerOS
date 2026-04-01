@@ -1,4 +1,5 @@
 import type { Collector, Store } from '@walkeros/core';
+import { useHooks } from '@walkeros/core';
 
 /**
  * Initialize store instances from configuration.
@@ -25,6 +26,16 @@ export async function initStores(
     };
 
     const instance = await code(context);
+
+    // Wrap store operations with hooks for pre/post interception
+    const originalGet = instance.get;
+    const originalSet = instance.set;
+    const originalDelete = instance.delete;
+
+    instance.get = useHooks(originalGet, 'StoreGet', collector.hooks);
+    instance.set = useHooks(originalSet, 'StoreSet', collector.hooks);
+    instance.delete = useHooks(originalDelete, 'StoreDelete', collector.hooks);
+
     result[storeId] = instance;
   }
 

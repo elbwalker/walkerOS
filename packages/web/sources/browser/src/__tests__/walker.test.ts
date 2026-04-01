@@ -12,7 +12,7 @@ describe('Walker', () => {
   });
 
   test('getAllEvents', () => {
-    const events = getAllEvents();
+    const events = getAllEvents(document.body);
     expect(events.length).toBeGreaterThan(0);
     expect(events[0]).toMatchObject({
       entity: expect.any(String),
@@ -299,7 +299,7 @@ describe('Walker', () => {
   test('globalsStatic', () => {
     document.body.setAttribute('data-elbglobals', 'position:body');
 
-    expect(getGlobals()).toStrictEqual({
+    expect(getGlobals(undefined, document)).toStrictEqual({
       be: 'mindful',
       its: 'everywhere',
       position: 'body',

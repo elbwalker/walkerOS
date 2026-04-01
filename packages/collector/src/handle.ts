@@ -30,7 +30,6 @@ export async function commonHandleCommand(
   let result: Elb.PushResult | undefined;
   let onData: unknown;
   let shouldNotify = false;
-  let consentRunQueue = false;
 
   switch (action) {
     case Const.Commands.Config:
@@ -45,13 +44,9 @@ export async function commonHandleCommand(
 
     case Const.Commands.Consent:
       if (isObject(data)) {
-        const { update, runQueue } = processConsent(
-          collector,
-          data as WalkerOS.Consent,
-        );
+        const { update } = processConsent(collector, data as WalkerOS.Consent);
         onData = update;
         shouldNotify = true;
-        consentRunQueue = runQueue;
       }
       break;
 
@@ -135,13 +130,9 @@ export async function commonHandleCommand(
       break;
   }
 
-  // Single notification point for all state-mutation commands
+  // Single notification + flush point for all state-mutation commands
   if (shouldNotify) {
     await onApply(collector, action as On.Types, undefined, onData);
-  }
-
-  // Post-notification side effects
-  if (consentRunQueue) {
     result = await pushToDestinations(collector);
   }
 

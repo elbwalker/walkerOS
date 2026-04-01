@@ -1,8 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import {
-  buildConfigObject,
-  generatePlatformWrapper,
-} from '../../../commands/bundle/bundler.js';
+import { buildSplitConfigObject } from '../../../commands/bundle/bundler.js';
 import type { Flow } from '@walkeros/core';
 
 describe('Validation', () => {
@@ -21,9 +18,9 @@ describe('Validation', () => {
     };
 
     const explicitCodeImports = new Map<string, Set<string>>();
-    expect(() => buildConfigObject(flowSettings, explicitCodeImports)).toThrow(
-      /both package and code/i,
-    );
+    expect(() =>
+      buildSplitConfigObject(flowSettings, explicitCodeImports),
+    ).toThrow(/both package and code/i);
   });
 
   it('should error when neither package nor code are specified', () => {
@@ -37,9 +34,9 @@ describe('Validation', () => {
     };
 
     const explicitCodeImports = new Map<string, Set<string>>();
-    expect(() => buildConfigObject(flowSettings, explicitCodeImports)).toThrow(
-      /package or code/i,
-    );
+    expect(() =>
+      buildSplitConfigObject(flowSettings, explicitCodeImports),
+    ).toThrow(/package or code/i);
   });
 });
 
@@ -59,9 +56,9 @@ describe('Inline Code Bundling', () => {
         },
       };
 
-      // buildConfigObject takes flowSettings and explicitCodeImports map
+      // buildSplitConfigObject takes flowSettings and explicitCodeImports map
       const explicitCodeImports = new Map<string, Set<string>>();
-      const { configObject: result } = buildConfigObject(
+      const { codeConfigObject: result } = buildSplitConfigObject(
         flowSettings,
         explicitCodeImports,
       );
@@ -90,7 +87,7 @@ describe('Inline Code Bundling', () => {
       };
 
       const explicitCodeImports = new Map<string, Set<string>>();
-      const { configObject: result } = buildConfigObject(
+      const { codeConfigObject: result } = buildSplitConfigObject(
         flowSettings,
         explicitCodeImports,
       );
@@ -119,7 +116,7 @@ describe('Inline Code Bundling', () => {
       };
 
       const explicitCodeImports = new Map<string, Set<string>>();
-      const { configObject: result } = buildConfigObject(
+      const { codeConfigObject: result } = buildSplitConfigObject(
         flowSettings,
         explicitCodeImports,
       );
@@ -147,7 +144,7 @@ describe('Inline Code Bundling', () => {
       };
 
       const explicitCodeImports = new Map<string, Set<string>>();
-      const { configObject: result } = buildConfigObject(
+      const { codeConfigObject: result } = buildSplitConfigObject(
         flowSettings,
         explicitCodeImports,
       );
@@ -203,7 +200,7 @@ describe('Integration', () => {
     };
 
     const explicitCodeImports = new Map<string, Set<string>>();
-    const { configObject: result } = buildConfigObject(
+    const { codeConfigObject: result } = buildSplitConfigObject(
       flowSettings,
       explicitCodeImports,
     );
@@ -220,69 +217,5 @@ describe('Integration', () => {
 
     // Transformer chaining should be preserved
     expect(result).toContain('next');
-  });
-});
-
-describe('generatePlatformWrapper', () => {
-  it('should include external server port stripping in server wrapper', () => {
-    const configObject = `{
-      sources: { http: { code: expressSource, config: { settings: { port: 3000 } } } },
-      destinations: {}
-    }`;
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      configObject,
-      '',
-      {
-        platform: 'server',
-      },
-    );
-
-    // Must contain externalServer port stripping block
-    expect(result).toContain('context.externalServer');
-    expect(result).toContain('config.sources');
-    // Must still contain logger override
-    expect(result).toContain('context.logger');
-    // Must export default function
-    expect(result).toContain('export default async function');
-  });
-
-  it('should not include port override in browser wrapper', () => {
-    const configObject = `{ sources: {}, destinations: {} }`;
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      configObject,
-      '',
-      {
-        platform: 'browser',
-      },
-    );
-
-    expect(result).not.toContain('context.externalServer');
-  });
-
-  it('should strip port from sources when externalServer is provided', () => {
-    const configObject = `{
-      sources: {
-        http: { code: expressSource, config: { settings: { port: 3000 } } },
-        other: { code: otherSource, config: { settings: { name: "test" } } }
-      },
-      destinations: {}
-    }`;
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      configObject,
-      '',
-      {
-        platform: 'server',
-      },
-    );
-
-    // The generated code should delete port from sources when runner owns the port
-    expect(result).toContain('context.externalServer');
-    expect(result).toContain('delete src.config.settings.port');
   });
 });

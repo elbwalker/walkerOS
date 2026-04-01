@@ -10,6 +10,7 @@ import type {
   WalkerOS,
   Mapping,
 } from '.';
+import type { Ingest } from './ingest';
 
 /**
  * Core collector configuration interface
@@ -47,6 +48,8 @@ export interface InitConfig extends Partial<Config> {
   stores?: Store.InitStores;
   /** Initial custom properties */
   custom?: WalkerOS.Properties;
+  /** Hooks for pipeline observation and interception */
+  hooks?: Hooks.Functions;
 }
 
 export interface SessionData extends WalkerOS.Properties {
@@ -122,10 +125,12 @@ export type CommandType =
  */
 export interface PushOptions {
   id?: string;
-  ingest?: unknown;
+  ingest?: Ingest;
   respond?: import('../respond').RespondFn;
   mapping?: Mapping.Config;
   preChain?: string[];
+  include?: string[];
+  exclude?: string[];
 }
 
 /**

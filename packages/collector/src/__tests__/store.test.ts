@@ -6,6 +6,7 @@ function createMockCollector(): Collector.Instance {
   return {
     logger: createMockLogger(),
     stores: {},
+    hooks: {},
     // Minimal shape — other fields not needed by initStores
   } as unknown as Collector.Instance;
 }
@@ -221,5 +222,138 @@ describe('resolveStoreReferences', () => {
       { cache: storeInstance } as any,
       { transformers: { t: transformerDef } } as any,
     );
+  });
+});
+
+describe('store hooks', () => {
+  it('should call preStoreGet hook before store.get', async () => {
+    const collector = createMockCollector();
+    const preStoreGet = jest.fn(({ fn }, key) => fn(key));
+    collector.hooks = { preStoreGet } as any;
+
+    const mockInit: Store.Init = (context) => ({
+      type: 'test',
+      config: context.config as Store.Config,
+      get: jest.fn().mockReturnValue('value'),
+      set: jest.fn(),
+      delete: jest.fn(),
+    });
+
+    const stores = await initStores(collector, {
+      cache: { code: mockInit },
+    });
+
+    const result = stores.cache.get('key');
+    expect(preStoreGet).toHaveBeenCalledTimes(1);
+    expect(result).toBe('value');
+  });
+
+  it('should call postStoreGet hook after store.get', async () => {
+    const collector = createMockCollector();
+    const postStoreGet = jest.fn(({ fn, result }, key) => result);
+    collector.hooks = { postStoreGet } as any;
+
+    const mockInit: Store.Init = (context) => ({
+      type: 'test',
+      config: context.config as Store.Config,
+      get: jest.fn().mockReturnValue('value'),
+      set: jest.fn(),
+      delete: jest.fn(),
+    });
+
+    const stores = await initStores(collector, {
+      cache: { code: mockInit },
+    });
+
+    const result = stores.cache.get('key');
+    expect(postStoreGet).toHaveBeenCalledTimes(1);
+    expect(result).toBe('value');
+  });
+
+  it('should call preStoreSet hook before store.set', async () => {
+    const collector = createMockCollector();
+    const preStoreSet = jest.fn(({ fn }, key, value, ttl) => fn(key, value, ttl));
+    collector.hooks = { preStoreSet } as any;
+
+    const setFn = jest.fn();
+    const mockInit: Store.Init = (context) => ({
+      type: 'test',
+      config: context.config as Store.Config,
+      get: jest.fn(),
+      set: setFn,
+      delete: jest.fn(),
+    });
+
+    const stores = await initStores(collector, {
+      cache: { code: mockInit },
+    });
+
+    stores.cache.set('key', 'val', 1000);
+    expect(preStoreSet).toHaveBeenCalledTimes(1);
+    expect(setFn).toHaveBeenCalledWith('key', 'val', 1000);
+  });
+
+  it('should call preStoreDelete hook before store.delete', async () => {
+    const collector = createMockCollector();
+    const preStoreDelete = jest.fn(({ fn }, key) => fn(key));
+    collector.hooks = { preStoreDelete } as any;
+
+    const deleteFn = jest.fn();
+    const mockInit: Store.Init = (context) => ({
+      type: 'test',
+      config: context.config as Store.Config,
+      get: jest.fn(),
+      set: jest.fn(),
+      delete: deleteFn,
+    });
+
+    const stores = await initStores(collector, {
+      cache: { code: mockInit },
+    });
+
+    stores.cache.delete('key');
+    expect(preStoreDelete).toHaveBeenCalledTimes(1);
+    expect(deleteFn).toHaveBeenCalledWith('key');
+  });
+
+  it('should work without hooks defined (passthrough)', async () => {
+    const collector = createMockCollector();
+    collector.hooks = {};
+
+    const getFn = jest.fn().mockReturnValue('val');
+    const mockInit: Store.Init = (context) => ({
+      type: 'test',
+      config: context.config as Store.Config,
+      get: getFn,
+      set: jest.fn(),
+      delete: jest.fn(),
+    });
+
+    const stores = await initStores(collector, {
+      cache: { code: mockInit },
+    });
+
+    expect(stores.cache.get('k')).toBe('val');
+    expect(getFn).toHaveBeenCalledWith('k');
+  });
+
+  it('should allow preStoreGet to modify the return value', async () => {
+    const collector = createMockCollector();
+    const preStoreGet = jest.fn(({ fn }, key) => 'intercepted');
+    collector.hooks = { preStoreGet } as any;
+
+    const mockInit: Store.Init = (context) => ({
+      type: 'test',
+      config: context.config as Store.Config,
+      get: jest.fn().mockReturnValue('original'),
+      set: jest.fn(),
+      delete: jest.fn(),
+    });
+
+    const stores = await initStores(collector, {
+      cache: { code: mockInit },
+    });
+
+    expect(stores.cache.get('key')).toBe('intercepted');
   });
 });

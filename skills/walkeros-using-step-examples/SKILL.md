@@ -15,7 +15,7 @@ destinations) that define the expected input/output behavior of each step in a
 flow. They serve as:
 
 - **Test fixtures** for automated `it.each` testing
-- **Simulation data** for `walkeros simulate`
+- **Simulation data** for `walkeros push --simulate`
 - **MCP context** for AI-assisted development
 - **Documentation** showing real-world usage
 
@@ -208,7 +208,7 @@ Use the `--step` flag to target a specific step, then provide the event as
 
 ```bash
 # Simulate a source step with trigger metadata
-walkeros simulate flow.json --step source.browser --event '{"content":"<html>...","trigger":{"type":"click"}}'
+walkeros push flow.json --simulate source.browser --event '{"content":"<html>...","trigger":{"type":"click"}}'
 ```
 
 The MCP `flow_examples` tool returns `trigger` metadata alongside `in`/`out`,

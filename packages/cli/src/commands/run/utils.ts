@@ -18,7 +18,7 @@ import { getTmpPath } from '../../core/index.js';
  * @param options - Bundle options
  * @param options.verbose - Enable verbose logging
  * @param options.silent - Suppress output
- * @returns Path to the bundled output file
+ * @returns Object with bundlePath and cleanup function to remove temp directory
  */
 export async function prepareBundleForRun(
   configPath: string,
@@ -27,7 +27,7 @@ export async function prepareBundleForRun(
     silent?: boolean;
     flowName?: string;
   },
-): Promise<string> {
+): Promise<{ bundlePath: string; cleanup: () => Promise<void> }> {
   // Create temp directory in os.tmpdir()
   const tempDir = getTmpPath(
     undefined,
@@ -51,7 +51,12 @@ export async function prepareBundleForRun(
     },
   });
 
-  return tempPath;
+  return {
+    bundlePath: tempPath,
+    cleanup: async () => {
+      await fs.remove(tempDir);
+    },
+  };
 }
 
 /**

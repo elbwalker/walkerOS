@@ -176,6 +176,34 @@ curl -X POST http://localhost:8080/collect \
 }
 ```
 
+### POST - Non-JSON Bodies (Raw Input)
+
+For non-JSON bodies (Base64, XML, form data), the source pushes an empty event
+`{}` to the collector. Use `source.before` transformers to decode raw input
+available via ingest:
+
+```json
+{
+  "sources": {
+    "http": {
+      "package": "@walkeros/server-source-express",
+      "before": "base64Decoder",
+      "config": {
+        "ingest": {
+          "map": {
+            "rawBody": "body",
+            "contentType": "headers.content-type"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+The `base64Decoder` transformer reads `context.ingest.rawBody` and returns the
+decoded walkerOS event.
+
 ### GET - Pixel Tracking
 
 Send events as query parameters. Returns a 1x1 transparent GIF.

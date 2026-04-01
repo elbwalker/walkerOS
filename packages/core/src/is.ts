@@ -57,7 +57,9 @@ export function isDefined<T>(val: T | undefined): val is T {
  * @returns True if the value is an element or the document, false otherwise.
  */
 export function isElementOrDocument(elem: unknown): elem is Element {
-  return elem === document || elem instanceof Element;
+  if (!elem || typeof elem !== 'object') return false;
+  // Property check: Document has 'body', Element has 'tagName'
+  return 'body' in elem || 'tagName' in elem;
 }
 
 /**

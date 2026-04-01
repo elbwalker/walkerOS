@@ -38,7 +38,6 @@ export function registerFeedbackTool(server: McpServer) {
         if (anonymous === undefined && explicitAnonymous === undefined) {
           return mcpResult(
             { needsConsent: true },
-            'Before sending feedback, ask the user: "Would you like to include your user and project info with feedback? This is a one-time choice." Then call feedback again with the anonymous parameter set.',
             {
               next: [
                 'Ask the user if they want to include their info',
@@ -60,7 +59,7 @@ export function registerFeedbackTool(server: McpServer) {
 
         await feedback(text, { anonymous: isAnonymous, version: __VERSION__ });
 
-        return mcpResult({ ok: true }, 'Feedback sent. Thanks!');
+        return mcpResult({ ok: true });
       } catch (error) {
         return mcpError(error);
       }

@@ -1,5 +1,7 @@
 import type { Trigger, Collector } from '@walkeros/core';
 import { startFlow } from '@walkeros/collector';
+import { handleTrigger } from '../trigger';
+import type { Context } from '../types';
 
 type BrowserTriggerType =
   | 'load'
@@ -8,7 +10,9 @@ type BrowserTriggerType =
   | 'hover'
   | 'scroll'
   | 'impression'
-  | 'visible';
+  | 'visible'
+  | 'wait'
+  | 'pulse';
 
 interface LoadOptions {
   url?: string;
@@ -31,17 +35,24 @@ interface BrowserInput {
 /**
  * Browser source createTrigger.
  *
- * Injects HTML into the DOM, lazily starts the flow, then dispatches
- * native browser events. Mirrors real-world behavior: HTML exists on
- * the page, walker.js loads, source scans DOM and sets up listeners.
+ * Injects HTML into the DOM, lazily starts the flow, then calls
+ * handleTrigger directly — the same convergence point as production.
+ * For load triggers, the source's DOM scan during startFlow handles
+ * event capture automatically.
  *
  * @example
  * const { trigger } = await createTrigger(config);
- * await trigger('click', 'button')('<button data-elb="cta">Click</button>');
+ * await trigger('click', 'button')('<button data-elb="cta" data-elbaction="click:cta click">Click</button>');
+ *
+ * @example
+ * // Impression trigger — handleTrigger reads data-elbaction directly
+ * await trigger('impression', '[data-elb="promo"]')('<div data-elb="promo" data-elbaction="visible:promo seen">Ad</div>');
  */
 const createTrigger: Trigger.CreateFn<string, void> = async (
   config: Collector.InitConfig,
+  options?: unknown,
 ) => {
+  const sourceId = (options as { sourceId?: string } | undefined)?.sourceId || 'browser';
   let flow: Trigger.FlowHandle | undefined;
   const doc = document;
   const win = window;
@@ -80,50 +91,29 @@ const createTrigger: Trigger.CreateFn<string, void> = async (
       // 4. For load triggers, source already scanned DOM during init — done
       if (!type || type === 'load') return;
 
-      // 5. Interactive triggers — find target and dispatch event
+      // 5. Find target element
       const selector = typeof opts === 'string' ? opts : undefined;
       const target = selector ? doc.querySelector(selector) : null;
 
-      const dispatch = (event: Event) => {
-        if (!target) {
-          console.warn(`Trigger: element not found for selector "${selector}"`);
-          return;
-        }
-        target.dispatchEvent(event);
+      if (!target) {
+        console.warn(`Trigger: element not found for selector "${selector}"`);
+        return;
+      }
+
+      // 6. Build context from live source instance
+      const source = flow.collector.sources[sourceId];
+      if (!source) {
+        console.warn(`Trigger: source "${sourceId}" not found in collector`);
+        return;
+      }
+
+      const context: Context = {
+        elb: flow.elb,
+        settings: source.config.settings as Context['settings'],
       };
 
-      switch (type) {
-        case 'click':
-          dispatch(new MouseEvent('click', { bubbles: true }));
-          break;
-        case 'submit':
-          dispatch(new Event('submit', { bubbles: true }));
-          break;
-        case 'hover':
-          dispatch(new MouseEvent('mouseenter', { bubbles: true }));
-          break;
-        case 'scroll':
-          Object.defineProperty(win, 'scrollY', {
-            value:
-              typeof opts === 'object' && opts !== null
-                ? (((opts as Record<string, unknown>).distance as number) ??
-                  500)
-                : 500,
-            configurable: true,
-          });
-          win.dispatchEvent(new Event('scroll'));
-          break;
-        case 'impression':
-        case 'visible':
-          if (target) {
-            console.warn(
-              `Trigger: "${type}" requires IntersectionObserver mock in test environment`,
-            );
-          }
-          break;
-        default:
-          console.warn(`Trigger: unknown type "${type}"`);
-      }
+      // 7. Call handleTrigger directly — same convergence point as production
+      await handleTrigger(context, target, type);
     };
 
   return {

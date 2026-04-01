@@ -14,7 +14,7 @@
       },
       "destinations": {
         "demo": {
-          "code": "destinationDemo",
+          "package": "@walkeros/destination-demo",
           "config": {
             "settings": {
               "name": "Simple Demo",

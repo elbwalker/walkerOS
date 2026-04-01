@@ -195,22 +195,17 @@ The `include` field in your flow config copies folders into the bundle output di
         }
       },
       "sources": {
-        "http": { "package": "@walkeros/server-source-express" }
+        "http": {
+          "package": "@walkeros/server-source-express",
+          "next": [
+            {
+              "match": { "key": "ingest.method", "operator": "eq", "value": "GET" },
+              "next": "file"
+            }
+          ]
+        }
       },
       "transformers": {
-        "router": {
-          "package": "@walkeros/transformer-router",
-          "config": {
-            "settings": {
-              "routes": [
-                {
-                  "match": { "key": "method", "operator": "eq", "value": "GET" },
-                  "next": "file"
-                }
-              ]
-            }
-          }
-        },
         "file": {
           "package": "@walkeros/server-transformer-file",
           "config": { "settings": { "prefix": "/static" } },

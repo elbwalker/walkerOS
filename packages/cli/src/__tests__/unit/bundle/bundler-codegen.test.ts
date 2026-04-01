@@ -1,315 +1,14 @@
 import {
-  buildConfigObject,
-  generatePlatformWrapper,
+  buildSplitConfigObject,
   createEntryPoint,
-  detectTransformerPackages,
+  detectStepPackages,
   detectExplicitCodeImports,
   serializeWithCode,
+  generateSplitWireConfigModule,
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
 import type { Flow } from '@walkeros/core';
 import type { BuildOptions } from '../../../types/bundle.js';
-
-describe('buildConfigObject', () => {
-  it('uses explicit code for named imports', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      sources: {
-        http: {
-          package: '@walkeros/server-source-express',
-          code: 'sourceExpress',
-          config: { settings: { port: 8080 } },
-        },
-      },
-      destinations: {
-        demo: {
-          package: '@walkeros/destination-demo',
-          code: 'destinationDemo',
-          config: { settings: { name: 'Test' } },
-        },
-      },
-    };
-
-    const explicitCodeImports = new Map([
-      ['@walkeros/server-source-express', new Set(['sourceExpress'])],
-      ['@walkeros/destination-demo', new Set(['destinationDemo'])],
-    ]);
-
-    const { configObject: result } = buildConfigObject(
-      flowSettings,
-      explicitCodeImports,
-    );
-
-    expect(result).toContain('code: sourceExpress');
-    expect(result).toContain('code: destinationDemo');
-    expect(result).toContain('"port": 8080');
-    expect(result).toContain('"name": "Test"');
-  });
-
-  it('uses default import variable when no explicit code', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      sources: {
-        http: {
-          package: '@walkeros/server-source-express',
-          config: { settings: { port: 8080 } },
-        },
-      },
-      destinations: {},
-    };
-
-    const explicitCodeImports = new Map(); // No explicit imports
-
-    const { configObject: result } = buildConfigObject(
-      flowSettings,
-      explicitCodeImports,
-    );
-
-    expect(result).toContain('code: _walkerosServerSourceExpress');
-  });
-});
-
-describe('$code: prefix support', () => {
-  it('outputs raw JavaScript for $code: prefixed values', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      sources: {
-        http: {
-          package: '@walkeros/server-source-express',
-          code: 'sourceExpress',
-          config: {
-            settings: {
-              transform: '$code:(value) => value.toUpperCase()',
-            },
-          },
-        },
-      },
-      destinations: {},
-    };
-
-    const explicitCodeImports = new Map([
-      ['@walkeros/server-source-express', new Set(['sourceExpress'])],
-    ]);
-
-    const { configObject: result } = buildConfigObject(
-      flowSettings,
-      explicitCodeImports,
-    );
-
-    // Should contain raw JS, not quoted string
-    expect(result).toContain('"transform": (value) => value.toUpperCase()');
-    // Should NOT contain the $code: prefix
-    expect(result).not.toContain('$code:');
-  });
-
-  it('handles nested $code: values in objects', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      sources: {},
-      destinations: {
-        api: {
-          package: '@walkeros/destination-demo',
-          code: 'destinationDemo',
-          config: {
-            mapping: {
-              product: {
-                view: {
-                  data: {
-                    map: {
-                      price: {
-                        key: 'data.price',
-                        fn: '$code:(v) => Math.round(v * 100)',
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    };
-
-    const explicitCodeImports = new Map([
-      ['@walkeros/destination-demo', new Set(['destinationDemo'])],
-    ]);
-
-    const { configObject: result } = buildConfigObject(
-      flowSettings,
-      explicitCodeImports,
-    );
-
-    // Should contain raw JS function
-    expect(result).toContain('"fn": (v) => Math.round(v * 100)');
-    expect(result).not.toContain('$code:');
-  });
-
-  it('handles $code: values in arrays', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      sources: {},
-      destinations: {
-        api: {
-          package: '@walkeros/destination-demo',
-          code: 'destinationDemo',
-          config: {
-            settings: {
-              transforms: ['$code:(x) => x * 2', '$code:(x) => x.trim()'],
-            },
-          },
-        },
-      },
-    };
-
-    const explicitCodeImports = new Map([
-      ['@walkeros/destination-demo', new Set(['destinationDemo'])],
-    ]);
-
-    const { configObject: result } = buildConfigObject(
-      flowSettings,
-      explicitCodeImports,
-    );
-
-    expect(result).toContain('(x) => x * 2');
-    expect(result).toContain('(x) => x.trim()');
-    expect(result).not.toContain('$code:');
-  });
-
-  it('preserves normal strings without $code: prefix', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      sources: {},
-      destinations: {
-        api: {
-          package: '@walkeros/destination-demo',
-          code: 'destinationDemo',
-          config: {
-            settings: {
-              url: 'https://api.example.com',
-              name: 'Test API',
-            },
-          },
-        },
-      },
-    };
-
-    const explicitCodeImports = new Map([
-      ['@walkeros/destination-demo', new Set(['destinationDemo'])],
-    ]);
-
-    const { configObject: result } = buildConfigObject(
-      flowSettings,
-      explicitCodeImports,
-    );
-
-    // Normal strings should be quoted
-    expect(result).toContain('"url": "https://api.example.com"');
-    expect(result).toContain('"name": "Test API"');
-  });
-
-  it('handles mixed $code: and regular values', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      sources: {},
-      destinations: {
-        api: {
-          package: '@walkeros/destination-demo',
-          code: 'destinationDemo',
-          config: {
-            settings: {
-              name: 'Test',
-              port: 8080,
-              enabled: true,
-              transform: '$code:(x) => x',
-            },
-          },
-        },
-      },
-    };
-
-    const explicitCodeImports = new Map([
-      ['@walkeros/destination-demo', new Set(['destinationDemo'])],
-    ]);
-
-    const { configObject: result } = buildConfigObject(
-      flowSettings,
-      explicitCodeImports,
-    );
-
-    expect(result).toContain('"name": "Test"');
-    expect(result).toContain('"port": 8080');
-    expect(result).toContain('"enabled": true');
-    expect(result).toContain('"transform": (x) => x');
-  });
-});
-
-describe('generatePlatformWrapper', () => {
-  it('generates web IIFE wrapper', () => {
-    const config = '{ sources: {}, destinations: {} }';
-    const userCode = 'console.log("custom code");';
-    const buildOptions = {
-      platform: 'browser',
-      windowCollector: 'collector',
-      windowElb: 'elb',
-    };
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      config,
-      userCode,
-      buildOptions,
-    );
-
-    expect(result).toContain('const stores = {};');
-    expect(result).toContain('(async () => {');
-    expect(result).toContain(
-      'const config = { sources: {}, destinations: {} };',
-    );
-    expect(result).toContain('console.log("custom code");');
-    expect(result).toContain('await startFlow(config)');
-    expect(result).toContain("window['collector'] = collector");
-    expect(result).toContain("window['elb'] = elb");
-  });
-
-  it('generates server export default wrapper', () => {
-    const config = '{ sources: {}, destinations: {} }';
-    const userCode = '';
-    const buildOptions = { platform: 'node' };
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      config,
-      userCode,
-      buildOptions,
-    );
-
-    expect(result).toContain('const stores = {};');
-    expect(result).toContain('export default async function');
-    expect(result).toContain(
-      'const config = { sources: {}, destinations: {} };',
-    );
-    expect(result).toContain('const result = await startFlow(config)');
-    expect(result).toContain('httpHandler');
-    expect(result).not.toContain('window');
-  });
-
-  it('server wrapper strips port when externalServer provided', () => {
-    const config =
-      '{ sources: { http: { config: { settings: { port: 8080 } } } } }';
-    const userCode = '';
-    const buildOptions = { platform: 'node' };
-
-    const result = generatePlatformWrapper(
-      'const stores = {};',
-      config,
-      userCode,
-      buildOptions,
-    );
-
-    expect(result).toContain('context.externalServer');
-    expect(result).toContain('delete src.config.settings.port');
-  });
-});
 
 describe('createEntryPoint integration', () => {
   it('generates default import even when imports are specified', async () => {
@@ -339,7 +38,7 @@ describe('createEntryPoint integration', () => {
       code: '',
     };
 
-    const result = await createEntryPoint(
+    const { codeEntry: result } = await createEntryPoint(
       flowSettings,
       buildOptions as BuildOptions,
       new Map([['@walkeros/web-source-browser', '/tmp/pkg']]),
@@ -383,7 +82,7 @@ describe('createEntryPoint integration', () => {
       code: '',
     };
 
-    const result = await createEntryPoint(
+    const { codeEntry: result } = await createEntryPoint(
       flowSettings,
       buildOptions as BuildOptions,
       new Map([['@some/no-default-pkg', '/tmp/pkg']]),
@@ -434,7 +133,7 @@ describe('createEntryPoint integration', () => {
       code: '',
     };
 
-    const result = await createEntryPoint(
+    const { codeEntry: result } = await createEntryPoint(
       flowSettings,
       buildOptions as BuildOptions,
       new Map(),
@@ -453,8 +152,9 @@ describe('createEntryPoint integration', () => {
     expect(result).toContain('code: sourceExpress');
     expect(result).toContain('code: destinationDemo');
 
-    // Should have server wrapper
-    expect(result).toContain('export default async function');
+    // Should have wireConfig ESM module with __data parameter (not platform wrapper)
+    expect(result).toContain('export function wireConfig(__data)');
+    expect(result).toContain('export { startFlow }');
   });
 
   it('generates valid store references in full entry point', async () => {
@@ -463,7 +163,7 @@ describe('createEntryPoint integration', () => {
       packages: {
         '@walkeros/collector': { imports: ['startFlow'] },
         '@walkeros/server-source-express': {},
-        '@walkeros/server-transformer-cache': {},
+        '@walkeros/server-transformer-fingerprint': {},
         '@walkeros/store-memory': {},
       },
       sources: {
@@ -471,14 +171,14 @@ describe('createEntryPoint integration', () => {
           package: '@walkeros/server-source-express',
           code: 'sourceExpress',
           config: { settings: { port: 8080 } },
-          next: 'cache',
+          next: 'fp',
         },
       },
       destinations: {},
       transformers: {
-        cache: {
-          package: '@walkeros/server-transformer-cache',
-          code: 'transformerCache',
+        fp: {
+          package: '@walkeros/server-transformer-fingerprint',
+          code: 'transformerFingerprint',
           config: {},
           env: { store: '$store:cache' },
         },
@@ -498,14 +198,14 @@ describe('createEntryPoint integration', () => {
       packages: {
         '@walkeros/collector': { imports: ['startFlow'] },
         '@walkeros/server-source-express': {},
-        '@walkeros/server-transformer-cache': {},
+        '@walkeros/server-transformer-fingerprint': {},
         '@walkeros/store-memory': {},
       },
       output: './dist/bundle.mjs',
       code: '',
     };
 
-    const result = await createEntryPoint(
+    const { codeEntry: result } = await createEntryPoint(
       flowSettings,
       buildOptions as BuildOptions,
       new Map(),
@@ -552,7 +252,7 @@ describe('Implicit Collector', () => {
       code: '',
     };
 
-    const result = await createEntryPoint(
+    const { codeEntry: result } = await createEntryPoint(
       flowSettings,
       buildOptions as BuildOptions,
       new Map([
@@ -591,7 +291,7 @@ describe('Implicit Collector', () => {
       code: '',
     };
 
-    const result = await createEntryPoint(
+    const { codeEntry: result } = await createEntryPoint(
       flowSettings,
       buildOptions as BuildOptions,
       new Map([
@@ -630,7 +330,7 @@ describe('Implicit Collector', () => {
       code: '',
     };
 
-    const result = await createEntryPoint(
+    const { codeEntry: result } = await createEntryPoint(
       flowSettings,
       buildOptions as BuildOptions,
       new Map([
@@ -645,7 +345,7 @@ describe('Implicit Collector', () => {
   });
 });
 
-describe('detectTransformerPackages', () => {
+describe('detectStepPackages', () => {
   it('detects transformer packages from flow config', () => {
     const flowSettings: Flow.Settings = {
       server: {},
@@ -663,7 +363,7 @@ describe('detectTransformerPackages', () => {
       },
     };
 
-    const result = detectTransformerPackages(flowSettings);
+    const result = detectStepPackages(flowSettings, 'transformers');
 
     expect(result).toEqual(
       new Set([
@@ -673,14 +373,14 @@ describe('detectTransformerPackages', () => {
     );
   });
 
-  it('returns empty set when no transformers', () => {
+  it('returns empty set when section is missing', () => {
     const flowSettings: Flow.Settings = {
       server: {},
       sources: {},
       destinations: {},
     };
 
-    const result = detectTransformerPackages(flowSettings);
+    const result = detectStepPackages(flowSettings, 'transformers');
 
     expect(result).toEqual(new Set());
   });
@@ -709,534 +409,6 @@ describe('detectExplicitCodeImports', () => {
   });
 });
 
-describe('transformer support', () => {
-  it('includes transformers in config object', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      sources: {},
-      destinations: {},
-      transformers: {
-        fingerprint: {
-          package: '@walkeros/server-transformer-fingerprint',
-          code: 'transformerFingerprint',
-          config: {
-            settings: {
-              fields: ['ingest.ip', 'ingest.userAgent'],
-              output: 'user.hash',
-            },
-          },
-        },
-      },
-    };
-
-    const explicitCodeImports = new Map([
-      [
-        '@walkeros/server-transformer-fingerprint',
-        new Set(['transformerFingerprint']),
-      ],
-    ]);
-
-    const { configObject: result } = buildConfigObject(
-      flowSettings,
-      explicitCodeImports,
-    );
-
-    expect(result).toContain('transformers:');
-    expect(result).toContain('fingerprint:');
-    expect(result).toContain('code: transformerFingerprint');
-    expect(result).toContain('"output": "user.hash"');
-  });
-
-  it('handles transformer next field as top-level property', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      sources: {},
-      destinations: {},
-      transformers: {
-        enrich: {
-          package: '@walkeros/transformer-enricher',
-          code: 'transformerEnrich',
-          config: { apiUrl: 'https://api.example.com' },
-          next: 'validate',
-        },
-        validate: {
-          package: '@walkeros/transformer-validator',
-          code: 'transformerValidator',
-          config: {},
-        },
-      },
-    };
-
-    const explicitCodeImports = new Map([
-      ['@walkeros/transformer-enricher', new Set(['transformerEnrich'])],
-      ['@walkeros/transformer-validator', new Set(['transformerValidator'])],
-    ]);
-
-    const { configObject: result } = buildConfigObject(
-      flowSettings,
-      explicitCodeImports,
-    );
-
-    // next should be a top-level property (consistent with destination.before)
-    expect(result).toContain('next: "validate"');
-  });
-
-  it('handles $code: prefix in transformer config', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      sources: {},
-      destinations: {},
-      transformers: {
-        fingerprint: {
-          package: '@walkeros/server-transformer-fingerprint',
-          code: 'transformerFingerprint',
-          config: {
-            settings: {
-              fields: [{ fn: '$code:() => new Date().getDate()' }, 'ingest.ip'],
-            },
-          },
-        },
-      },
-    };
-
-    const explicitCodeImports = new Map([
-      [
-        '@walkeros/server-transformer-fingerprint',
-        new Set(['transformerFingerprint']),
-      ],
-    ]);
-
-    const { configObject: result } = buildConfigObject(
-      flowSettings,
-      explicitCodeImports,
-    );
-
-    expect(result).toContain('"fn": () => new Date().getDate()');
-    expect(result).not.toContain('$code:');
-  });
-});
-
-describe('chain property handling', () => {
-  describe('source.next', () => {
-    it('includes next property for package-based source', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {
-          http: {
-            package: '@walkeros/server-source-express',
-            code: 'sourceExpress',
-            next: 'validate',
-          },
-        },
-        destinations: {},
-      };
-
-      const explicitCodeImports = new Map([
-        ['@walkeros/server-source-express', new Set(['sourceExpress'])],
-      ]);
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        explicitCodeImports,
-      );
-
-      expect(result).toContain('next: "validate"');
-    });
-
-    it('includes next property for inline source', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {
-          custom: {
-            code: { type: 'test', push: '$code:(e) => e' },
-            next: 'validate',
-          },
-        },
-        destinations: {},
-      };
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        new Map(),
-      );
-
-      expect(result).toContain('next: "validate"');
-    });
-
-    it('handles array next property for source', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {
-          http: {
-            package: '@walkeros/server-source-express',
-            code: 'sourceExpress',
-            next: ['validate', 'enrich'],
-          },
-        },
-        destinations: {},
-      };
-
-      const explicitCodeImports = new Map([
-        ['@walkeros/server-source-express', new Set(['sourceExpress'])],
-      ]);
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        explicitCodeImports,
-      );
-
-      expect(result).toContain('next: ["validate","enrich"]');
-    });
-
-    it('omits next property when not specified for source', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {
-          http: {
-            package: '@walkeros/server-source-express',
-            code: 'sourceExpress',
-          },
-        },
-        destinations: {},
-      };
-
-      const explicitCodeImports = new Map([
-        ['@walkeros/server-source-express', new Set(['sourceExpress'])],
-      ]);
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        explicitCodeImports,
-      );
-
-      expect(result).not.toContain('next:');
-    });
-  });
-
-  describe('destination.before', () => {
-    it('includes before property for package-based destination', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {},
-        destinations: {
-          api: {
-            package: '@walkeros/destination-api',
-            code: 'destApi',
-            before: 'redact',
-          },
-        },
-      };
-
-      const explicitCodeImports = new Map([
-        ['@walkeros/destination-api', new Set(['destApi'])],
-      ]);
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        explicitCodeImports,
-      );
-
-      expect(result).toContain('before: "redact"');
-    });
-
-    it('includes before property for inline destination', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {},
-        destinations: {
-          custom: {
-            code: { type: 'test', push: '$code:(e) => e' },
-            before: 'redact',
-          },
-        },
-      };
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        new Map(),
-      );
-
-      expect(result).toContain('before: "redact"');
-    });
-
-    it('handles array before property for destination', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {},
-        destinations: {
-          api: {
-            package: '@walkeros/destination-api',
-            code: 'destApi',
-            before: ['redact', 'validate'],
-          },
-        },
-      };
-
-      const explicitCodeImports = new Map([
-        ['@walkeros/destination-api', new Set(['destApi'])],
-      ]);
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        explicitCodeImports,
-      );
-
-      expect(result).toContain('before: ["redact","validate"]');
-    });
-
-    it('omits before property when not specified for destination', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {},
-        destinations: {
-          api: {
-            package: '@walkeros/destination-api',
-            code: 'destApi',
-          },
-        },
-      };
-
-      const explicitCodeImports = new Map([
-        ['@walkeros/destination-api', new Set(['destApi'])],
-      ]);
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        explicitCodeImports,
-      );
-
-      expect(result).not.toContain('before:');
-    });
-  });
-
-  describe('transformer.next', () => {
-    it('includes next property for package-based transformer', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {},
-        destinations: {},
-        transformers: {
-          validate: {
-            package: '@walkeros/transformer-validator',
-            code: 'validator',
-            next: 'enrich',
-          },
-        },
-      };
-
-      const explicitCodeImports = new Map([
-        ['@walkeros/transformer-validator', new Set(['validator'])],
-      ]);
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        explicitCodeImports,
-      );
-
-      expect(result).toContain('next: "enrich"');
-    });
-
-    it('includes next property for inline transformer', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {},
-        destinations: {},
-        transformers: {
-          validate: {
-            code: { type: 'test', push: '$code:(e) => e' },
-            next: 'enrich',
-          },
-        },
-      };
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        new Map(),
-      );
-
-      expect(result).toContain('next: "enrich"');
-    });
-
-    it('handles array next property for transformer', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {},
-        destinations: {},
-        transformers: {
-          validate: {
-            package: '@walkeros/transformer-validator',
-            code: 'validator',
-            next: ['enrich', 'redact'],
-          },
-        },
-      };
-
-      const explicitCodeImports = new Map([
-        ['@walkeros/transformer-validator', new Set(['validator'])],
-      ]);
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        explicitCodeImports,
-      );
-
-      expect(result).toContain('next: ["enrich","redact"]');
-    });
-
-    it('omits next property when not specified for transformer', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {},
-        destinations: {},
-        transformers: {
-          validate: {
-            package: '@walkeros/transformer-validator',
-            code: 'validator',
-          },
-        },
-      };
-
-      const explicitCodeImports = new Map([
-        ['@walkeros/transformer-validator', new Set(['validator'])],
-      ]);
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        explicitCodeImports,
-      );
-
-      expect(result).not.toContain('next:');
-    });
-  });
-
-  describe('full chain integration', () => {
-    it('preserves all chain properties in complete flow', () => {
-      const flowSettings: Flow.Settings = {
-        server: {},
-        sources: {
-          http: {
-            package: '@walkeros/server-source-express',
-            code: 'sourceExpress',
-            next: 'validate',
-          },
-        },
-        transformers: {
-          validate: {
-            package: '@walkeros/transformer-validator',
-            code: 'validator',
-            next: 'enrich',
-          },
-          enrich: {
-            package: '@walkeros/transformer-enricher',
-            code: 'enricher',
-          },
-          redact: {
-            package: '@walkeros/transformer-redact',
-            code: 'redactor',
-          },
-        },
-        destinations: {
-          api: {
-            package: '@walkeros/destination-api',
-            code: 'destApi',
-            before: 'redact',
-          },
-        },
-      };
-
-      const explicitCodeImports = new Map([
-        ['@walkeros/server-source-express', new Set(['sourceExpress'])],
-        ['@walkeros/transformer-validator', new Set(['validator'])],
-        ['@walkeros/transformer-enricher', new Set(['enricher'])],
-        ['@walkeros/transformer-redact', new Set(['redactor'])],
-        ['@walkeros/destination-api', new Set(['destApi'])],
-      ]);
-
-      const { configObject: result } = buildConfigObject(
-        flowSettings,
-        explicitCodeImports,
-      );
-
-      // Source has pre-collector chain
-      expect(result).toMatch(/sources:[\s\S]*next: "validate"/);
-
-      // Transformer has chain link
-      expect(result).toMatch(
-        /transformers:[\s\S]*validate:[\s\S]*next: "enrich"/,
-      );
-
-      // Destination has post-collector chain
-      expect(result).toMatch(/destinations:[\s\S]*before: "redact"/);
-    });
-  });
-});
-
-describe('full flow with transformers', () => {
-  it('generates complete config with source -> transformer -> destination chain', () => {
-    const flowSettings: Flow.Settings = {
-      server: {},
-      sources: {
-        express: {
-          package: '@walkeros/server-source-express',
-          code: 'sourceExpress',
-          config: { settings: { port: 8080 } },
-          next: 'fingerprint',
-        },
-      },
-      transformers: {
-        fingerprint: {
-          package: '@walkeros/server-transformer-fingerprint',
-          code: 'transformerFingerprint',
-          config: {
-            settings: {
-              fields: [{ fn: '$code:() => new Date().getDate()' }, 'ingest.ip'],
-              output: 'user.hash',
-            },
-          },
-        },
-      },
-      destinations: {
-        bigquery: {
-          package: '@walkeros/server-destination-bigquery',
-          code: 'destinationBigQuery',
-          config: { settings: { projectId: 'my-project' } },
-        },
-      },
-    };
-
-    const explicitCodeImports = new Map([
-      ['@walkeros/server-source-express', new Set(['sourceExpress'])],
-      [
-        '@walkeros/server-transformer-fingerprint',
-        new Set(['transformerFingerprint']),
-      ],
-      [
-        '@walkeros/server-destination-bigquery',
-        new Set(['destinationBigQuery']),
-      ],
-    ]);
-
-    const { configObject: result } = buildConfigObject(
-      flowSettings,
-      explicitCodeImports,
-    );
-
-    // Sources with chain property
-    expect(result).toContain('sources:');
-    expect(result).toContain('code: sourceExpress');
-    expect(result).toContain('next: "fingerprint"');
-
-    // Transformers
-    expect(result).toContain('transformers:');
-    expect(result).toContain('code: transformerFingerprint');
-    expect(result).toContain('"fn": () => new Date().getDate()');
-
-    // Destinations
-    expect(result).toContain('destinations:');
-    expect(result).toContain('code: destinationBigQuery');
-  });
-});
-
 describe('$store: prefix', () => {
   it('should resolve $store: to stores variable reference', () => {
     const result = serializeWithCode('$store:cache', 0);
@@ -1254,9 +426,9 @@ describe('$store: prefix', () => {
       sources: {},
       destinations: {},
       transformers: {
-        cache: {
-          package: '@walkeros/server-transformer-cache',
-          code: 'transformerCache',
+        fp: {
+          package: '@walkeros/server-transformer-fingerprint',
+          code: 'transformerFingerprint',
           config: {},
           env: { store: '$store:cache' },
         },
@@ -1271,23 +443,25 @@ describe('$store: prefix', () => {
     } as Flow.Settings;
 
     const explicitCodeImports = new Map([
-      ['@walkeros/server-transformer-cache', new Set(['transformerCache'])],
+      [
+        '@walkeros/server-transformer-fingerprint',
+        new Set(['transformerFingerprint']),
+      ],
       ['@walkeros/store-memory', new Set(['storeMemory'])],
     ]);
 
-    const result = buildConfigObject(flowSettings, explicitCodeImports);
+    const result = buildSplitConfigObject(flowSettings, explicitCodeImports);
 
     // stores must be a separate declaration, not inside the config object
     expect(result.storesDeclaration).toContain('const stores = {');
     expect(result.storesDeclaration).toContain('code: storeMemory');
-    expect(result.storesDeclaration).toContain('"maxSize": 1000');
 
-    // Config object should reference stores via shorthand property
-    expect(result.configObject).toMatch(/,\n\s+stores/);
+    // Code config object should reference stores via shorthand property
+    expect(result.codeConfigObject).toMatch(/,\n\s+stores/);
     // And transformers should reference stores.cache (resolved by serializeWithCode)
-    expect(result.configObject).toContain('stores.cache');
+    expect(result.codeConfigObject).toContain('stores.cache');
     // stores section should NOT be inlined in the config object
-    expect(result.configObject).not.toMatch(
+    expect(result.codeConfigObject).not.toMatch(
       /stores:\s*\{[\s\S]*code: storeMemory/,
     );
   });
@@ -1308,5 +482,264 @@ describe('Error Handling', () => {
         { configPath: '/test/config.json' },
       );
     }).toThrow(/Invalid configuration/);
+  });
+});
+
+describe('buildSplitConfigObject', () => {
+  it('splits plain config values into data payload', () => {
+    const flowSettings = {
+      server: {},
+      packages: { '@walkeros/server-source-express': {} },
+      sources: {
+        express: {
+          package: '@walkeros/server-source-express',
+          config: { settings: { port: 8080 } },
+        },
+      },
+      destinations: {},
+    } as Flow.Settings;
+
+    const result = buildSplitConfigObject(flowSettings, new Map());
+
+    // Code skeleton references __data
+    expect(result.codeConfigObject).toContain('__data.sources.express.config');
+    // Data payload has the actual value
+    expect(result.dataPayload).toContain('8080');
+  });
+
+  it('keeps $store: env in code skeleton', () => {
+    const flowSettings = {
+      server: {},
+      packages: { '@walkeros/web-destination-ga4': {} },
+      sources: {},
+      destinations: {
+        ga4: {
+          package: '@walkeros/web-destination-ga4',
+          config: { settings: { measurementId: 'G-ABC' } },
+          env: { store: '$store:memory' },
+        },
+      },
+    } as Flow.Settings;
+
+    const result = buildSplitConfigObject(flowSettings, new Map());
+
+    // $store: stays in code skeleton
+    expect(result.codeConfigObject).toContain('stores.memory');
+    // Plain config goes to data
+    expect(result.dataPayload).toContain('G-ABC');
+  });
+
+  it('keeps $code: config in code skeleton', () => {
+    const flowSettings = {
+      server: {},
+      sources: {},
+      destinations: {
+        custom: {
+          package: '@walkeros/destination-custom',
+          config: {
+            settings: { fn: '$code:() => true' },
+          },
+        },
+      },
+    } as Flow.Settings;
+
+    const result = buildSplitConfigObject(flowSettings, new Map());
+
+    // $code: value stays in code skeleton (serialized with processConfigValue)
+    expect(result.codeConfigObject).toContain('config:');
+    expect(result.codeConfigObject).toContain('() => true');
+    // Not in data payload
+    expect(result.dataPayload).not.toContain('() => true');
+  });
+
+  it('handles inline code steps entirely in code skeleton', () => {
+    const flowSettings = {
+      server: {},
+      sources: {
+        custom: {
+          code: { type: 'test', push: '$code:(e) => e' },
+          config: { settings: { port: 3000 } },
+          next: 'validate',
+        },
+      },
+      destinations: {},
+    } as Flow.Settings;
+
+    const result = buildSplitConfigObject(flowSettings, new Map());
+
+    // Inline code goes entirely to code skeleton
+    expect(result.codeConfigObject).toContain('(e) => e');
+    // Settings baked into inline code output (not split to data)
+    expect(result.codeConfigObject).toContain('3000');
+  });
+
+  it('handles transformers section', () => {
+    const flowSettings = {
+      server: {},
+      sources: {},
+      destinations: {},
+      transformers: {
+        fingerprint: {
+          package: '@walkeros/server-transformer-fingerprint',
+          config: {
+            settings: { fields: ['ingest.ip'], output: 'user.hash' },
+          },
+        },
+      },
+    } as Flow.Settings;
+
+    const result = buildSplitConfigObject(flowSettings, new Map());
+
+    expect(result.codeConfigObject).toContain('transformers:');
+    expect(result.codeConfigObject).toContain(
+      '__data.transformers.fingerprint.config',
+    );
+    expect(result.dataPayload).toContain('user.hash');
+  });
+
+  it('handles stores with plain config in data payload', () => {
+    const flowSettings = {
+      server: {},
+      sources: {},
+      destinations: {},
+      stores: {
+        memory: {
+          package: '@walkeros/store-memory',
+          config: { settings: { maxSize: 1000 } },
+        },
+      },
+    } as Flow.Settings;
+
+    const result = buildSplitConfigObject(flowSettings, new Map());
+
+    // Store config (plain) goes to data payload
+    expect(result.dataPayload).toContain('1000');
+    // Store declaration references __data for plain config
+    expect(result.storesDeclaration).toContain('__data.stores.memory.config');
+  });
+
+  it('puts plain collector in data payload', () => {
+    const flowSettings = {
+      server: {},
+      sources: {},
+      destinations: {},
+      collector: { settings: { batchSize: 10 } },
+    } as unknown as Flow.Settings;
+
+    const result = buildSplitConfigObject(flowSettings, new Map());
+
+    expect(result.codeConfigObject).toContain('...__data.collector');
+    expect(result.dataPayload).toContain('batchSize');
+  });
+
+  it('keeps code-marker collector in code skeleton', () => {
+    const flowSettings = {
+      server: {},
+      sources: {},
+      destinations: {},
+      collector: { onError: '$code:(err) => console.error(err)' },
+    } as unknown as Flow.Settings;
+
+    const result = buildSplitConfigObject(flowSettings, new Map());
+
+    // Code-marker collector stays in code skeleton
+    expect(result.codeConfigObject).toContain('console.error');
+    expect(result.codeConfigObject).not.toContain('__data.collector');
+  });
+
+  it('handles explicit code imports', () => {
+    const flowSettings = {
+      server: {},
+      sources: {
+        http: {
+          package: '@walkeros/server-source-express',
+          code: 'sourceExpress',
+          config: { settings: { port: 8080 } },
+        },
+      },
+      destinations: {},
+    } as Flow.Settings;
+
+    const explicitCodeImports = new Map([
+      ['@walkeros/server-source-express', new Set(['sourceExpress'])],
+    ]);
+
+    const result = buildSplitConfigObject(flowSettings, explicitCodeImports);
+
+    // Should use explicit code name
+    expect(result.codeConfigObject).toContain('code: sourceExpress');
+    // Config still goes to data
+    expect(result.dataPayload).toContain('8080');
+  });
+
+  it('handles next/before/cache/primary as data props when plain', () => {
+    const flowSettings = {
+      server: {},
+      sources: {
+        http: {
+          package: '@walkeros/server-source-express',
+          config: {},
+          next: ['validate', 'enrich'],
+          cache: { rules: [{ match: '*', key: ['entity'], ttl: 60 }] },
+          primary: true,
+        },
+      },
+      destinations: {
+        ga4: {
+          package: '@walkeros/web-destination-ga4',
+          config: {},
+          before: ['fingerprint'],
+        },
+      },
+    } as Flow.Settings;
+
+    const result = buildSplitConfigObject(flowSettings, new Map());
+
+    // next, cache, primary are plain → data payload
+    expect(result.codeConfigObject).toContain('__data.sources.http.next');
+    expect(result.codeConfigObject).toContain('__data.sources.http.cache');
+    expect(result.codeConfigObject).toContain('__data.sources.http.primary');
+    expect(result.dataPayload).toContain('validate');
+    expect(result.dataPayload).toContain('60');
+
+    // before is plain → data payload
+    expect(result.codeConfigObject).toContain('__data.destinations.ga4.before');
+    expect(result.dataPayload).toContain('fingerprint');
+  });
+});
+
+describe('generateSplitWireConfigModule', () => {
+  it('generates wireConfig with __data parameter', () => {
+    const result = generateSplitWireConfigModule(
+      'const stores = {};',
+      '{ sources: { express: { code: _src, config: __data.sources.express.config } } }',
+      '',
+    );
+    expect(result).toContain('export function wireConfig(__data)');
+    expect(result).toContain('__data.sources.express.config');
+    expect(result).toContain('return config;');
+    expect(result).toContain('export { startFlow }');
+  });
+
+  it('includes user code section when provided', () => {
+    const result = generateSplitWireConfigModule(
+      'const stores = {};',
+      '{ sources: {} }',
+      'const myHelper = () => {};',
+    );
+    expect(result).toContain('const myHelper = () => {};');
+  });
+
+  it('includes stores declaration before config', () => {
+    const result = generateSplitWireConfigModule(
+      'const stores = { cache: { code: storeMemory, config: {} } };',
+      '{ sources: {}, stores }',
+      '',
+    );
+    const storesIdx = result.indexOf('const stores =');
+    const configIdx = result.indexOf('const config =');
+    expect(storesIdx).toBeGreaterThan(-1);
+    expect(configIdx).toBeGreaterThan(-1);
+    expect(storesIdx).toBeLessThan(configIdx);
   });
 });

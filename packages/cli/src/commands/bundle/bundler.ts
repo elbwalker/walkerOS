@@ -5,6 +5,10 @@ import path from 'path';
 import fs from 'fs-extra';
 import type { Flow } from '@walkeros/core';
 import { packageNameToVariable, ENV_MARKER_PREFIX } from '@walkeros/core';
+import {
+  classifyStepProperties,
+  containsCodeMarkers,
+} from './config-classifier.js';
 
 /**
  * Type guard to check if a code value is an InlineCode object.
@@ -23,19 +27,27 @@ function isInlineCode(code: unknown): code is Flow.InlineCode {
  * Validates that a reference has either package XOR code, not both or neither.
  * Throws descriptive error for invalid configurations.
  */
+function hasCodeReference(code: unknown): boolean {
+  return isInlineCode(code) || typeof code === 'string';
+}
+
 function validateReference(
   type: string,
   name: string,
   ref: { package?: string; code?: unknown },
 ): void {
   const hasPackage = !!ref.package;
-  const hasCode = isInlineCode(ref.code);
+  const hasInlineCode = isInlineCode(ref.code);
+  const hasCode = hasCodeReference(ref.code);
 
-  if (hasPackage && hasCode) {
+  // Inline code object + package is invalid (ambiguous)
+  if (hasPackage && hasInlineCode) {
     throw new Error(
       `${type} "${name}": Cannot specify both package and code. Use one or the other.`,
     );
   }
+  // String code + package is valid (named import from package)
+  // Neither package nor code is invalid
   if (!hasPackage && !hasCode) {
     throw new Error(`${type} "${name}": Must specify either package or code.`);
   }
@@ -112,6 +124,9 @@ import {
   isBuildCached,
   getCachedBuild,
   cacheBuild,
+  getCachedCode,
+  cacheCode,
+  ensureCodeOnDisk,
 } from '../../core/build-cache.js';
 
 export interface BundleStats {
@@ -329,9 +344,33 @@ export async function bundleCore(
     }
 
     // Step 1.6: Auto-add step packages (sources, destinations, transformers, stores)
-    const stepPackages = collectStepPackages(flowSettings);
+    const stepPackages = collectAllStepPackages(flowSettings);
     for (const pkg of stepPackages) {
-      if (!buildOptions.packages[pkg]) {
+      const isLocalPath = pkg.startsWith('.') || pkg.startsWith('/');
+
+      if (isLocalPath) {
+        // Normalize: convert path-based package: to packages section entry
+        // This reuses the existing local-path import machinery
+        const varName = packageNameToVariable(pkg);
+        if (!buildOptions.packages[varName]) {
+          buildOptions.packages[varName] = {
+            path: pkg,
+            imports: [`default as ${varName}`],
+          };
+        }
+
+        // Rewrite all components that reference this path to use code: instead
+        for (const section of ['sources', 'destinations', 'transformers', 'stores'] as const) {
+          const steps = (flowSettings as Record<string, Record<string, Record<string, unknown>>>)[section];
+          if (!steps) continue;
+          for (const step of Object.values(steps)) {
+            if (step.package === pkg) {
+              step.code = varName;
+              delete step.package;
+            }
+          }
+        }
+      } else if (!buildOptions.packages[pkg]) {
         buildOptions.packages[pkg] = {};
       }
     }
@@ -384,45 +423,139 @@ export async function bundleCore(
       JSON.stringify({ type: 'module' }, null, 2),
     );
 
-    // Step 4: Create entry point
+    // Step 4: Create split entry point (code skeleton + data payload)
     logger.debug('Creating entry point');
-    const entryContent = await createEntryPoint(
+    const { codeEntry, dataPayload, hasFlow } = await createEntryPoint(
       flowSettings,
       buildOptions,
       packagePaths,
     );
-    const entryPath = path.join(TEMP_DIR, 'entry.js');
-    await fs.writeFile(entryPath, entryContent);
 
-    // Step 4: Bundle with esbuild
-    logger.debug(
-      `Running esbuild (target: ${buildOptions.target || 'es2018'}, format: ${buildOptions.format})`,
-    );
     const outputPath = path.resolve(buildOptions.output);
 
     // Ensure output directory exists
     await fs.ensureDir(path.dirname(outputPath));
 
-    const esbuildOptions = createEsbuildOptions(
-      buildOptions,
-      entryPath,
-      outputPath,
-      TEMP_DIR,
-      packagePaths,
-      logger,
+    // === LEVEL 2: Two-phase build (code cache) ===
+    // Check if we have a cached compilation of this exact code entry
+    let compiledCode: string | null = null;
+    if (buildOptions.cache !== false) {
+      compiledCode = await getCachedCode(codeEntry, CACHE_DIR);
+    }
+
+    if (compiledCode) {
+      logger.debug('Using cached compiled code (config-only change)');
+    } else {
+      // Cache miss: run esbuild on code-only entry
+      logger.debug(
+        `Running esbuild (target: ${buildOptions.target || 'es2018'}, format: ${buildOptions.format})`,
+      );
+      const entryPath = path.join(TEMP_DIR, 'entry.js');
+      await fs.writeFile(entryPath, codeEntry);
+
+      // minify: false — keep identifiers readable for debugging.
+      // Stage 2 esbuild (in generateServerEntry/generateWebEntry) handles
+      // final bundling with proper import resolution, so minification here
+      // is unnecessary.
+      const esbuildOptions = createEsbuildOptions(
+        { ...buildOptions, minify: false },
+        entryPath,
+        outputPath,
+        TEMP_DIR,
+        packagePaths,
+        logger,
+      );
+
+      try {
+        await esbuild.build(esbuildOptions);
+      } catch (buildError) {
+        // Enhanced error handling for build failures
+        throw createBuildError(
+          buildError as EsbuildError,
+          buildOptions.code || '',
+        );
+      } finally {
+        // Clean up esbuild worker threads to allow process to exit
+        await esbuild.stop();
+      }
+
+      compiledCode = await fs.readFile(outputPath, 'utf-8');
+
+      // Cache the compiled code for future builds
+      if (buildOptions.cache !== false) {
+        await cacheCode(codeEntry, compiledCode, CACHE_DIR);
+      }
+    }
+
+    // Write stage 1 output to cache as importable .mjs file
+    const stage1Path = await ensureCodeOnDisk(
+      codeEntry,
+      compiledCode,
+      CACHE_DIR,
     );
 
-    try {
-      await esbuild.build(esbuildOptions);
-    } catch (buildError) {
-      // Enhanced error handling for build failures
-      throw createBuildError(
-        buildError as EsbuildError,
-        buildOptions.code || '',
-      );
-    } finally {
-      // Clean up esbuild worker threads to allow process to exit
-      await esbuild.stop();
+    if (buildOptions.skipWrapper || !hasFlow) {
+      // Simulation path or no-flow path: concatenate code + data (no wrapper, no stage 2 esbuild)
+      const dataDeclaration = `const __configData = ${dataPayload};\nexport { __configData };`;
+      // For node platform, prepend createRequire banner (stage 1 no longer adds it)
+      const banner =
+        buildOptions.platform === 'node'
+          ? `import { createRequire } from 'module';const require = createRequire(import.meta.url);\n`
+          : '';
+      const esmOutput = `${banner}${compiledCode}\n${dataDeclaration}`;
+      await fs.writeFile(outputPath, esmOutput);
+    } else {
+      // Production path: stage 2 esbuild compilation
+      const stage2Entry =
+        (buildOptions.platform || 'node') === 'browser'
+          ? generateWebEntry(stage1Path, dataPayload, {
+              windowCollector: buildOptions.windowCollector,
+              windowElb: buildOptions.windowElb,
+            })
+          : generateServerEntry(stage1Path, dataPayload);
+
+      const stage2EntryPath = path.join(TEMP_DIR, 'stage2.mjs');
+      await fs.writeFile(stage2EntryPath, stage2Entry);
+
+      // Stage 2 esbuild: resolve imports, inline stage 1, minify
+      const stage2Options: esbuild.BuildOptions = {
+        entryPoints: [stage2EntryPath],
+        bundle: true,
+        format: 'esm',
+        platform: buildOptions.platform as esbuild.Platform,
+        outfile: outputPath,
+        treeShaking: true,
+        logLevel: 'error',
+        minify: buildOptions.minify,
+        ...(buildOptions.minify && {
+          minifyWhitespace: buildOptions.minifyOptions?.whitespace ?? true,
+          minifyIdentifiers: buildOptions.minifyOptions?.identifiers ?? true,
+          minifySyntax: buildOptions.minifyOptions?.syntax ?? true,
+          legalComments: buildOptions.minifyOptions?.legalComments ?? 'none',
+          charset: 'utf8',
+        }),
+      };
+
+      // Platform-specific stage 2 options
+      if (buildOptions.platform === 'browser') {
+        stage2Options.define = {
+          'process.env.NODE_ENV': '"production"',
+          global: 'globalThis',
+        };
+        stage2Options.target = buildOptions.target || 'es2018';
+      } else {
+        stage2Options.external = getNodeExternals();
+        stage2Options.banner = {
+          js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
+        };
+        stage2Options.target = buildOptions.target || 'node18';
+      }
+
+      try {
+        await esbuild.build(stage2Options);
+      } finally {
+        await esbuild.stop();
+      }
     }
 
     // Get file size and calculate build time
@@ -431,7 +564,7 @@ export async function bundleCore(
     const buildTime = ((Date.now() - bundleStartTime) / 1000).toFixed(1);
     logger.info(`Output: ${outputPath} (${sizeKB} KB, ${buildTime}s)`);
 
-    // Step 5: Cache the build result if caching is enabled
+    // Cache the full build result if caching is enabled (Level 1 fast path)
     if (buildOptions.cache !== false) {
       const configContent = generateCacheKeyContent(flowSettings, buildOptions);
       const buildOutput = await fs.readFile(outputPath, 'utf-8');
@@ -439,18 +572,18 @@ export async function bundleCore(
       logger.debug('Build cached for future use');
     }
 
-    // Step 6: Collect stats if requested
+    // Collect stats if requested
     let stats: BundleStats | undefined;
     if (showStats) {
       stats = await collectBundleStats(
         outputPath,
         buildOptions.packages,
         bundleStartTime,
-        entryContent,
+        codeEntry,
       );
     }
 
-    // Step 7: Copy included folders to output directory
+    // Copy included folders to output directory
     if (buildOptions.include && buildOptions.include.length > 0) {
       const outputDir = path.dirname(outputPath);
       await copyIncludes(
@@ -531,7 +664,7 @@ function createEsbuildOptions(
   const baseOptions: esbuild.BuildOptions = {
     entryPoints: [entryPath],
     bundle: true,
-    format: buildOptions.format as esbuild.Format,
+    format: 'esm' as esbuild.Format, // Always ESM — platform wrapper handles final format
     platform: buildOptions.platform as esbuild.Platform,
     outfile: outputPath,
     absWorkingDir: tempDir, // Resolve modules from temp directory
@@ -570,13 +703,8 @@ function createEsbuildOptions(
       ? [...nodeExternals, ...buildOptions.external]
       : nodeExternals;
 
-    // createRequire shim for ESM bundles — needed because bundled CJS packages
-    // (like express) use require() internally for Node built-ins
-    if (buildOptions.format === 'esm') {
-      baseOptions.banner = {
-        js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
-      };
-    }
+    // createRequire shim is added in stage 2, not here.
+    // Stage 1 produces importable ESM; stage 2 wraps it with the banner.
   }
 
   // Set target if specified
@@ -595,139 +723,35 @@ function createEsbuildOptions(
  * Detects destination packages from flow configuration.
  * Extracts package names from destinations that have explicit 'package' field.
  */
-function detectDestinationPackages(flowSettings: Flow.Settings): Set<string> {
-  const destinationPackages = new Set<string>();
-  const destinations = (
-    flowSettings as unknown as { destinations?: Record<string, unknown> }
-  ).destinations;
-
-  if (destinations) {
-    for (const [destKey, destConfig] of Object.entries(destinations)) {
-      // Skip if code: true (uses built-in inline code destination)
-      if (
-        typeof destConfig === 'object' &&
-        destConfig !== null &&
-        'code' in destConfig &&
-        destConfig.code === true
-      ) {
-        continue;
-      }
-      // Require explicit package field - no inference for any packages
-      if (
-        typeof destConfig === 'object' &&
-        destConfig !== null &&
-        'package' in destConfig &&
-        typeof destConfig.package === 'string'
-      ) {
-        destinationPackages.add(destConfig.package);
-      }
-      // If no package field, skip auto-importing examples for this destination
-    }
-  }
-
-  return destinationPackages;
-}
-
 /**
- * Detects source packages from flow configuration.
- * Extracts package names from sources that have explicit 'package' field.
+ * Detects packages from a flow config section (sources, destinations, transformers, stores).
+ * Extracts package names from steps that have an explicit 'package' field.
+ * Skips steps with code: true (inline code).
  */
-function detectSourcePackages(flowSettings: Flow.Settings): Set<string> {
-  const sourcePackages = new Set<string>();
-  const sources = (
-    flowSettings as unknown as { sources?: Record<string, unknown> }
-  ).sources;
-
-  if (sources) {
-    for (const [sourceKey, sourceConfig] of Object.entries(sources)) {
-      // Skip if code: true (uses built-in inline code source)
-      if (
-        typeof sourceConfig === 'object' &&
-        sourceConfig !== null &&
-        'code' in sourceConfig &&
-        sourceConfig.code === true
-      ) {
-        continue;
-      }
-      // Require explicit package field - no inference for any packages
-      if (
-        typeof sourceConfig === 'object' &&
-        sourceConfig !== null &&
-        'package' in sourceConfig &&
-        typeof sourceConfig.package === 'string'
-      ) {
-        sourcePackages.add(sourceConfig.package);
-      }
-    }
-  }
-
-  return sourcePackages;
-}
-
-/**
- * Detects transformer packages from flow configuration.
- * Extracts package names from transformers that have explicit 'package' field.
- */
-export function detectTransformerPackages(
+export function detectStepPackages(
   flowSettings: Flow.Settings,
+  section: 'sources' | 'destinations' | 'transformers' | 'stores',
 ): Set<string> {
-  const transformerPackages = new Set<string>();
-  const transformers = (
-    flowSettings as unknown as { transformers?: Record<string, unknown> }
-  ).transformers;
+  const packages = new Set<string>();
+  const steps = (
+    flowSettings as unknown as {
+      [key: string]: Record<string, unknown> | undefined;
+    }
+  )[section];
 
-  if (transformers) {
-    for (const [transformerKey, transformerConfig] of Object.entries(
-      transformers,
-    )) {
-      // Skip if code: true (uses built-in inline code transformer)
-      if (
-        typeof transformerConfig === 'object' &&
-        transformerConfig !== null &&
-        'code' in transformerConfig &&
-        transformerConfig.code === true
-      ) {
-        continue;
-      }
+  if (steps) {
+    for (const [, stepConfig] of Object.entries(steps)) {
+      if (typeof stepConfig !== 'object' || stepConfig === null) continue;
+      // Skip if code: true (uses built-in inline code)
+      if ('code' in stepConfig && stepConfig.code === true) continue;
       // Require explicit package field
-      if (
-        typeof transformerConfig === 'object' &&
-        transformerConfig !== null &&
-        'package' in transformerConfig &&
-        typeof transformerConfig.package === 'string'
-      ) {
-        transformerPackages.add(transformerConfig.package);
+      if ('package' in stepConfig && typeof stepConfig.package === 'string') {
+        packages.add(stepConfig.package);
       }
     }
   }
 
-  return transformerPackages;
-}
-
-/**
- * Detects store packages from flow configuration.
- * Extracts package names from stores that have explicit 'package' field.
- */
-export function detectStorePackages(flowSettings: Flow.Settings): Set<string> {
-  const storePackages = new Set<string>();
-  const stores = (
-    flowSettings as unknown as { stores?: Record<string, unknown> }
-  ).stores;
-
-  if (stores) {
-    for (const [, storeConfig] of Object.entries(stores)) {
-      if (
-        typeof storeConfig === 'object' &&
-        storeConfig !== null &&
-        'package' in storeConfig &&
-        typeof storeConfig.package === 'string'
-      ) {
-        storePackages.add(storeConfig.package);
-      }
-    }
-  }
-
-  return storePackages;
+  return packages;
 }
 
 /**
@@ -745,35 +769,27 @@ export function getNodeExternals(): string[] {
 }
 
 /**
- * Collects all npm package names declared in flow steps.
- * Filters out local paths (starting with . or /) — only npm packages.
- * Used to auto-add step packages to buildOptions.packages.
+ * Collects all package names declared in flow steps.
+ * Returns both npm packages and local paths — caller handles routing.
  */
-export function collectStepPackages(flowSettings: Flow.Settings): Set<string> {
+export function collectAllStepPackages(
+  flowSettings: Flow.Settings,
+): Set<string> {
   const allPackages = new Set<string>();
+  const sections = [
+    'sources',
+    'destinations',
+    'transformers',
+    'stores',
+  ] as const;
 
-  for (const pkg of detectSourcePackages(flowSettings)) {
-    allPackages.add(pkg);
-  }
-  for (const pkg of detectDestinationPackages(flowSettings)) {
-    allPackages.add(pkg);
-  }
-  for (const pkg of detectTransformerPackages(flowSettings)) {
-    allPackages.add(pkg);
-  }
-  for (const pkg of detectStorePackages(flowSettings)) {
-    allPackages.add(pkg);
-  }
-
-  // Filter: only npm packages, not local paths
-  const npmPackages = new Set<string>();
-  for (const pkg of allPackages) {
-    if (!pkg.startsWith('.') && !pkg.startsWith('/')) {
-      npmPackages.add(pkg);
+  for (const section of sections) {
+    for (const pkg of detectStepPackages(flowSettings, section)) {
+      allPackages.add(pkg);
     }
   }
 
-  return npmPackages;
+  return allPackages;
 }
 
 /**
@@ -1109,12 +1125,12 @@ export async function createEntryPoint(
   flowSettings: Flow.Settings,
   buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
-): Promise<string> {
-  // Detect packages used by destinations, sources, transformers, and stores
-  const destinationPackages = detectDestinationPackages(flowSettings);
-  const sourcePackages = detectSourcePackages(flowSettings);
-  const transformerPackages = detectTransformerPackages(flowSettings);
-  const storePackages = detectStorePackages(flowSettings);
+): Promise<{ codeEntry: string; dataPayload: string; hasFlow: boolean }> {
+  // Detect packages used by all step types
+  const sourcePackages = detectStepPackages(flowSettings, 'sources');
+  const destinationPackages = detectStepPackages(flowSettings, 'destinations');
+  const transformerPackages = detectStepPackages(flowSettings, 'transformers');
+  const storePackages = detectStepPackages(flowSettings, 'stores');
   const explicitCodeImports = detectExplicitCodeImports(flowSettings);
 
   // Validate $store: references before code generation
@@ -1155,38 +1171,39 @@ export async function createEntryPoint(
   const importsCode = importStatements.join('\n');
   const hasFlow =
     Object.values(flowSettings.sources || {}).some(
-      (s) => s.package || isInlineCode(s.code),
+      (s) => s.package || hasCodeReference(s.code),
     ) ||
     Object.values(flowSettings.destinations || {}).some(
-      (d) => d.package || isInlineCode(d.code),
+      (d) => d.package || hasCodeReference(d.code),
     );
 
   // If no sources/destinations, just return user code with imports (no flow wrapper)
   if (!hasFlow) {
     const userCode = buildOptions.code || '';
-    return importsCode ? `${importsCode}\n\n${userCode}` : userCode;
+    return {
+      codeEntry: importsCode ? `${importsCode}\n\n${userCode}` : userCode,
+      dataPayload: '{}',
+      hasFlow: false,
+    };
   }
 
-  // Build config object programmatically (DRY - single source of truth)
-  const { storesDeclaration, configObject } = buildConfigObject(
-    flowSettings,
-    explicitCodeImports,
-  );
+  // Build split config object (code skeleton + data payload)
+  const { storesDeclaration, codeConfigObject, dataPayload } =
+    buildSplitConfigObject(flowSettings, explicitCodeImports);
 
-  // Generate platform-specific wrapper
-  const wrappedCode = generatePlatformWrapper(
+  // Generate platform-agnostic wireConfig module with __data parameter
+  const wireConfigModule = generateSplitWireConfigModule(
     storesDeclaration,
-    configObject,
+    codeConfigObject,
     buildOptions.code || '',
-    buildOptions as {
-      platform: string;
-      windowCollector?: string;
-      windowElb?: string;
-    },
   );
 
-  // Assemble final code
-  return importsCode ? `${importsCode}\n\n${wrappedCode}` : wrappedCode;
+  // Return ESM module (imports + wireConfig + startFlow re-export)
+  const codeEntry = importsCode
+    ? `${importsCode}\n\n${wireConfigModule}`
+    : wireConfigModule;
+
+  return { codeEntry, dataPayload, hasFlow: true };
 }
 
 interface EsbuildError {
@@ -1234,13 +1251,22 @@ function createBuildError(buildError: EsbuildError, code: string): Error {
 }
 
 /**
- * Build config object string from flow configuration.
- * Respects import strategy decisions from detectExplicitCodeImports.
+ * Build split config object from flow configuration.
+ * Produces TWO outputs:
+ * - codeConfigObject: skeleton with code references and __data.* placeholders
+ * - dataPayload: plain JSON-serializable object with settings, mappings, etc.
+ *
+ * Inline code steps bypass classification and go entirely to the code skeleton.
+ * Package-based steps are split via classifyStepProperties.
  */
-export function buildConfigObject(
+export function buildSplitConfigObject(
   flowSettings: Flow.Settings,
   explicitCodeImports: Map<string, Set<string>>,
-): { storesDeclaration: string; configObject: string } {
+): {
+  storesDeclaration: string;
+  codeConfigObject: string;
+  dataPayload: string;
+} {
   const flowWithProps = flowSettings as unknown as {
     sources?: Record<
       string,
@@ -1249,7 +1275,10 @@ export function buildConfigObject(
         code?: string | true;
         config?: unknown;
         env?: unknown;
-        next?: string | string[];
+        before?: string | string[];
+        next?: string | string[] | Array<{ match: unknown; next: unknown }>;
+        cache?: unknown;
+        primary?: boolean;
       }
     >;
     destinations?: Record<
@@ -1260,6 +1289,8 @@ export function buildConfigObject(
         config?: unknown;
         env?: unknown;
         before?: string | string[];
+        next?: string | string[];
+        cache?: unknown;
       }
     >;
     transformers?: Record<
@@ -1269,7 +1300,9 @@ export function buildConfigObject(
         code?: string | true;
         config?: unknown;
         env?: unknown;
+        before?: string | string[];
         next?: string;
+        cache?: unknown;
       }
     >;
     stores?: Record<
@@ -1289,191 +1322,216 @@ export function buildConfigObject(
   const transformers = flowWithProps.transformers || {};
   const stores = flowWithProps.stores || {};
 
-  // Validate references before processing (skip deprecated code: true entries)
+  // Data payload accumulator
+  const dataPayloadObj: Record<string, Record<string, unknown>> = {};
+
+  // Helper to resolve the code variable for a package-based step
+  function resolveCodeVar(step: {
+    package?: string;
+    code?: string | true;
+  }): string {
+    // String code without package = named import from packages section
+    if (step.code && typeof step.code === 'string' && !step.package) {
+      return step.code;
+    }
+    if (
+      step.code &&
+      typeof step.code === 'string' &&
+      step.package &&
+      explicitCodeImports.has(step.package)
+    ) {
+      return step.code;
+    }
+    return packageNameToVariable(step.package!);
+  }
+
+  // Helper to build step properties (excluding 'code' and 'package')
+  function getStepProps(
+    step: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const props: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(step)) {
+      if (key === 'code' || key === 'package') continue;
+      if (value !== undefined && value !== null) {
+        props[key] = value;
+      }
+    }
+    return props;
+  }
+
+  // Helper to build a split step entry for the code skeleton
+  function buildSplitStepEntry(
+    section: string,
+    stepId: string,
+    step: Record<string, unknown>,
+  ): string {
+    const codeVar = resolveCodeVar(
+      step as { package?: string; code?: string | true },
+    );
+    const stepProps = getStepProps(step);
+    const { codeProps, dataProps } = classifyStepProperties(stepProps);
+
+    const codeEntries: string[] = [];
+    codeEntries.push(`code: ${codeVar}`);
+
+    // Code-layer props (serialized with processConfigValue)
+    for (const [key, value] of Object.entries(codeProps)) {
+      if (key === 'code') continue; // already handled above
+      codeEntries.push(`${key}: ${processConfigValue(value)}`);
+    }
+
+    // Data-layer prop references
+    for (const key of Object.keys(dataProps)) {
+      codeEntries.push(`${key}: __data.${section}.${stepId}.${key}`);
+    }
+
+    // Accumulate data payload
+    if (Object.keys(dataProps).length > 0) {
+      if (!dataPayloadObj[section]) dataPayloadObj[section] = {};
+      dataPayloadObj[section][stepId] = dataProps;
+    }
+
+    return `    ${stepId}: {\n      ${codeEntries.join(',\n      ')}\n    }`;
+  }
+
+  // Validate references (skip deprecated code: true entries)
   Object.entries(sources).forEach(([name, source]) => {
     if ((source.code as unknown) !== true) {
       validateReference('Source', name, source);
     }
   });
-
   Object.entries(destinations).forEach(([name, dest]) => {
     if ((dest.code as unknown) !== true) {
       validateReference('Destination', name, dest);
     }
   });
-
   Object.entries(transformers).forEach(([name, transformer]) => {
     if ((transformer.code as unknown) !== true) {
       validateReference('Transformer', name, transformer);
     }
   });
 
-  // Build sources (skip deprecated code: true entries)
+  // Build sources
   const sourcesEntries = Object.entries(sources)
     .filter(
       ([, source]) =>
         (source.code as unknown) !== true &&
-        (source.package || isInlineCode(source.code)),
+        (source.package || hasCodeReference(source.code)),
     )
     .map(([key, source]) => {
-      // Handle inline code object
       if (isInlineCode(source.code)) {
-        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, source.next, 'next')}`;
+        return `    ${key}: ${generateInlineCode(source.code, (source.config as object) || {}, source.env as object, source.next as string | string[] | undefined, 'next')}`;
       }
-
-      // Handle package-based source
-      let codeVar: string;
-      if (
-        source.code &&
-        typeof source.code === 'string' &&
-        explicitCodeImports.has(source.package!)
-      ) {
-        codeVar = source.code;
-      } else {
-        codeVar = packageNameToVariable(source.package!);
-      }
-
-      const configStr = source.config
-        ? processConfigValue(source.config)
-        : '{}';
-      const envStr = source.env
-        ? `,\n      env: ${processConfigValue(source.env)}`
-        : '';
-      // Include 'next' for source transformer chains
-      const nextStr = source.next
-        ? `,\n      next: ${JSON.stringify(source.next)}`
-        : '';
-
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${nextStr}\n    }`;
+      return buildSplitStepEntry(
+        'sources',
+        key,
+        source as Record<string, unknown>,
+      );
     });
 
-  // Build destinations (skip deprecated code: true entries)
+  // Build destinations
   const destinationsEntries = Object.entries(destinations)
     .filter(
       ([, dest]) =>
         (dest.code as unknown) !== true &&
-        (dest.package || isInlineCode(dest.code)),
+        (dest.package || hasCodeReference(dest.code)),
     )
     .map(([key, dest]) => {
-      // Handle inline code object
       if (isInlineCode(dest.code)) {
         return `    ${key}: ${generateInlineCode(dest.code, (dest.config as object) || {}, dest.env as object, dest.before, 'before', true)}`;
       }
-
-      // Handle package-based destination
-      let codeVar: string;
-      if (
-        dest.code &&
-        typeof dest.code === 'string' &&
-        explicitCodeImports.has(dest.package!)
-      ) {
-        codeVar = dest.code;
-      } else {
-        codeVar = packageNameToVariable(dest.package!);
-      }
-
-      const configStr = dest.config ? processConfigValue(dest.config) : '{}';
-      const envStr = dest.env
-        ? `,\n      env: ${processConfigValue(dest.env)}`
-        : '';
-      // Include 'before' for destination transformer chains
-      const beforeStr = dest.before
-        ? `,\n      before: ${JSON.stringify(dest.before)}`
-        : '';
-
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${beforeStr}\n    }`;
+      return buildSplitStepEntry(
+        'destinations',
+        key,
+        dest as Record<string, unknown>,
+      );
     });
 
-  // Build transformers (skip deprecated code: true entries)
+  // Build transformers
   const transformersEntries = Object.entries(transformers)
     .filter(
       ([, transformer]) =>
         (transformer.code as unknown) !== true &&
-        (transformer.package || isInlineCode(transformer.code)),
+        (transformer.package || hasCodeReference(transformer.code)),
     )
     .map(([key, transformer]) => {
-      // Handle inline code object
       if (isInlineCode(transformer.code)) {
         return `    ${key}: ${generateInlineCode(transformer.code, (transformer.config as object) || {}, transformer.env as object, transformer.next, 'next')}`;
       }
-
-      // Handle package-based transformer
-      let codeVar: string;
-      if (
-        transformer.code &&
-        typeof transformer.code === 'string' &&
-        explicitCodeImports.has(transformer.package!)
-      ) {
-        codeVar = transformer.code;
-      } else {
-        codeVar = packageNameToVariable(transformer.package!);
-      }
-
-      const configStr = transformer.config
-        ? processConfigValue(transformer.config)
-        : '{}';
-      const envStr = transformer.env
-        ? `,\n      env: ${processConfigValue(transformer.env)}`
-        : '';
-      // Include 'next' for transformer chains (top-level, consistent with before)
-      const nextStr = transformer.next
-        ? `,\n      next: ${JSON.stringify(transformer.next)}`
-        : '';
-
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}${nextStr}\n    }`;
+      return buildSplitStepEntry(
+        'transformers',
+        key,
+        transformer as Record<string, unknown>,
+      );
     });
 
   // Build stores
   Object.entries(stores).forEach(([name, store]) => {
-    if (store.package || isInlineCode(store.code)) {
+    if (store.package || hasCodeReference(store.code)) {
       validateReference('Store', name, store);
     }
   });
 
   const storesEntries = Object.entries(stores)
-    .filter(([, store]) => store.package || isInlineCode(store.code))
+    .filter(([, store]) => store.package || hasCodeReference(store.code))
     .map(([key, store]) => {
       if (isInlineCode(store.code)) {
         return `    ${key}: ${generateInlineCode(store.code, (store.config as object) || {}, store.env as object)}`;
       }
 
-      let codeVar: string;
-      if (
-        store.code &&
-        typeof store.code === 'string' &&
-        explicitCodeImports.has(store.package!)
-      ) {
-        codeVar = store.code;
-      } else {
-        codeVar = packageNameToVariable(store.package!);
+      const codeVar = resolveCodeVar(store);
+      const storeProps = getStepProps(store as Record<string, unknown>);
+      const { codeProps, dataProps } = classifyStepProperties(storeProps);
+
+      const codeEntries: string[] = [];
+      codeEntries.push(`code: ${codeVar}`);
+
+      for (const [propKey, value] of Object.entries(codeProps)) {
+        if (propKey === 'code') continue;
+        codeEntries.push(`${propKey}: ${processConfigValue(value)}`);
       }
 
-      const configStr = store.config ? processConfigValue(store.config) : '{}';
-      const envStr = store.env
-        ? `,\n      env: ${processConfigValue(store.env)}`
-        : '';
+      for (const propKey of Object.keys(dataProps)) {
+        codeEntries.push(`${propKey}: __data.stores.${key}.${propKey}`);
+      }
 
-      return `    ${key}: {\n      code: ${codeVar},\n      config: ${configStr}${envStr}\n    }`;
+      if (Object.keys(dataProps).length > 0) {
+        if (!dataPayloadObj['stores']) dataPayloadObj['stores'] = {};
+        dataPayloadObj['stores'][key] = dataProps;
+      }
+
+      return `    ${key}: {\n      ${codeEntries.join(',\n      ')}\n    }`;
     });
 
-  // Build stores declaration (always hoisted as a variable)
+  // Build stores declaration
   const storesDeclaration =
     storesEntries.length > 0
       ? `const stores = {\n${storesEntries.join(',\n')}\n};`
       : 'const stores = {};';
 
   // Build collector
-  const collectorStr = flowWithProps.collector
-    ? `,\n  ...${processConfigValue(flowWithProps.collector)}`
-    : '';
+  let collectorStr = '';
+  if (flowWithProps.collector) {
+    if (containsCodeMarkers(flowWithProps.collector)) {
+      // Collector has code markers — keep in code skeleton
+      collectorStr = `,\n  ...${processConfigValue(flowWithProps.collector)}`;
+    } else {
+      // Plain collector — put in data payload
+      dataPayloadObj['collector'] = flowWithProps.collector as Record<
+        string,
+        unknown
+      >;
+      collectorStr = `,\n  ...__data.collector`;
+    }
+  }
 
-  // Build transformers section (only if transformers exist)
+  // Build transformers section
   const transformersStr =
     transformersEntries.length > 0
       ? `,\n  transformers: {\n${transformersEntries.join(',\n')}\n  }`
       : '';
 
-  const configObject = `{
+  const codeConfigObject = `{
   sources: {
 ${sourcesEntries.join(',\n')}
   },
@@ -1483,7 +1541,99 @@ ${destinationsEntries.join(',\n')}
   stores${collectorStr}
 }`;
 
-  return { storesDeclaration, configObject };
+  const dataPayload = JSON.stringify(dataPayloadObj, null, 2);
+
+  return { storesDeclaration, codeConfigObject, dataPayload };
+}
+
+/**
+ * Generate platform-agnostic ESM module with wireConfig(__data) and startFlow re-export.
+ * This is the split variant — code skeleton receives data payload at runtime.
+ */
+export function generateSplitWireConfigModule(
+  storesDeclaration: string,
+  codeConfigObject: string,
+  userCode: string,
+): string {
+  const codeSection = userCode ? `\n${userCode}\n` : '';
+
+  return `export function wireConfig(__data) {
+  ${storesDeclaration}
+
+  const config = ${codeConfigObject};${codeSection}
+
+  return config;
+}
+
+export { startFlow };`;
+}
+
+/**
+ * Generate a stage 2 entry file for server bundles.
+ * Imports startFlow and wireConfig from the stage 1 .mjs file,
+ * embeds the data payload, and exports a factory function.
+ */
+export function generateServerEntry(
+  stage1Path: string,
+  dataPayload: string,
+): string {
+  return `import { startFlow, wireConfig } from '${stage1Path}';
+
+const __configData = ${dataPayload};
+
+export default async function(context = {}) {
+  const config = wireConfig(__configData);
+
+  if (context.logger) config.logger = context.logger;
+
+  if (context.sourceSettings && config.sources) {
+    for (const src of Object.values(config.sources)) {
+      if (src.config?.settings) {
+        src.config.settings = { ...src.config.settings, ...context.sourceSettings };
+      }
+    }
+  }
+
+  const result = await startFlow(config);
+
+  const httpSource = Object.values(result.collector.sources || {})
+    .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
+
+  return { ...result, httpHandler: httpSource ? httpSource.httpHandler : undefined };
+}`;
+}
+
+/**
+ * Generate a stage 2 entry file for web/browser bundles.
+ * Imports startFlow and wireConfig from the stage 1 .mjs file,
+ * embeds the data payload, and wraps in an async IIFE with window assignments.
+ */
+export function generateWebEntry(
+  stage1Path: string,
+  dataPayload: string,
+  options: { windowCollector?: string; windowElb?: string } = {},
+): string {
+  const assignments: string[] = [];
+  if (options.windowCollector) {
+    assignments.push(
+      `  if (typeof window !== 'undefined') window['${options.windowCollector}'] = collector;`,
+    );
+  }
+  if (options.windowElb) {
+    assignments.push(
+      `  if (typeof window !== 'undefined') window['${options.windowElb}'] = elb;`,
+    );
+  }
+  const assignmentCode =
+    assignments.length > 0 ? '\n' + assignments.join('\n') : '';
+
+  return `import { startFlow, wireConfig } from '${stage1Path}';
+
+const __configData = ${dataPayload};
+
+(async () => {
+  const { collector, elb } = await startFlow(wireConfig(__configData));${assignmentCode}
+})();`;
 }
 
 /**
@@ -1610,76 +1760,4 @@ export function serializeWithCode(value: unknown, indent: number): string {
 
   // Handle primitives (numbers, booleans, null)
   return JSON.stringify(value);
-}
-
-/**
- * Generate platform-specific wrapper code.
- */
-export function generatePlatformWrapper(
-  storesDeclaration: string,
-  configObject: string,
-  userCode: string,
-  buildOptions: {
-    platform: string;
-    windowCollector?: string;
-    windowElb?: string;
-  },
-): string {
-  if (buildOptions.platform === 'browser') {
-    // Web platform: IIFE with browser globals
-    const windowAssignments = [];
-    if (buildOptions.windowCollector) {
-      windowAssignments.push(
-        `  if (typeof window !== 'undefined') window['${buildOptions.windowCollector}'] = collector;`,
-      );
-    }
-    if (buildOptions.windowElb) {
-      windowAssignments.push(
-        `  if (typeof window !== 'undefined') window['${buildOptions.windowElb}'] = elb;`,
-      );
-    }
-    const assignments =
-      windowAssignments.length > 0 ? '\n' + windowAssignments.join('\n') : '';
-
-    return `(async () => {
-  ${storesDeclaration}
-
-  const config = ${configObject};
-
-  ${userCode}
-
-  const { collector, elb } = await startFlow(config);${assignments}
-})();`;
-  } else {
-    // Server platform: Export default function
-    const codeSection = userCode ? `\n  ${userCode}\n` : '';
-
-    return `export default async function(context = {}) {
-  ${storesDeclaration}
-
-  const config = ${configObject};${codeSection}
-  // Apply context overrides (e.g., logger config from CLI)
-  if (context.logger) {
-    config.logger = { ...config.logger, ...context.logger };
-  }
-
-  // When runner provides external server, strip port from sources
-  // so they don't self-listen (runner owns the port)
-  if (context.externalServer && config.sources) {
-    for (const src of Object.values(config.sources)) {
-      if (src.config && src.config.settings && 'port' in src.config.settings) {
-        delete src.config.settings.port;
-      }
-    }
-  }
-
-  const result = await startFlow(config);
-
-  // Discover httpHandler from initialized sources (duck-typing, no source-type coupling)
-  const httpSource = Object.values(result.collector.sources || {})
-    .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
-
-  return { ...result, httpHandler: httpSource ? httpSource.httpHandler : undefined };
-}`;
-  }
 }

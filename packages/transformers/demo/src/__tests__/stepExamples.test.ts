@@ -1,32 +1,22 @@
 import type { WalkerOS, Transformer } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import { createMockContext } from '@walkeros/core';
 import { transformerDemo } from '../index';
 import type { Types } from '../types';
 import { examples } from '../index';
 
 describe('Step Examples', () => {
-  const mockCollector = {} as any;
-
   const createInitContext = (
     config: Partial<Transformer.Config<Types>> = {},
     env: Partial<Transformer.Env<Types>> = {},
   ) =>
-    ({
-      collector: mockCollector,
+    createMockContext<Types>({
       config,
       env,
-      logger: createMockLogger(),
       id: 'test-transformer',
-    }) as Transformer.Context<Types>;
+    });
 
   const createPushContext = () =>
-    ({
-      collector: mockCollector,
-      config: {},
-      env: {},
-      logger: createMockLogger(),
-      id: 'test-transformer',
-    }) as any;
+    createMockContext<Types>({ id: 'test-transformer' });
 
   it.each(Object.entries(examples.step))('%s', async (name, example) => {
     const event = example.in as WalkerOS.DeepPartialEvent;

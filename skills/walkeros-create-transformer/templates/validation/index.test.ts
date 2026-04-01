@@ -1,31 +1,19 @@
 import { transformerRedact } from '../transformer';
-import type { Transformer, Collector } from '@walkeros/core';
-import { createMockLogger } from '@walkeros/core';
+import type { Transformer } from '@walkeros/core';
+import { createMockContext, createMockLogger } from '@walkeros/core';
 import type { Types } from '../types';
 import { examples } from '../dev';
 
 // Helper to create transformer context for testing
 function createTransformerContext(
   config: Partial<Transformer.Config<Types>> = {},
-): Transformer.Context<Types> {
-  return {
-    config,
-    env: {} as Types['env'],
-    logger: createMockLogger(),
-    id: 'test-redact',
-    collector: {} as Collector.Instance,
-  };
+) {
+  return createMockContext<Types>({ config, id: 'test-redact' });
 }
 
 // Helper to create push context for testing
-function createPushContext(): Transformer.Context<Types> {
-  return {
-    config: {},
-    env: {} as Types['env'],
-    logger: createMockLogger(),
-    id: 'test-redact',
-    collector: {} as Collector.Instance,
-  };
+function createPushContext() {
+  return createMockContext<Types>({ id: 'test-redact' });
 }
 
 describe('Redact Transformer', () => {

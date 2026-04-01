@@ -12,11 +12,8 @@ export function initElbLayer(
   config: ELBLayerConfig & { prefix?: string; window?: Window } = {},
 ): void {
   const layerName = config.name || 'elbLayer';
-  const windowObj = config.window || window;
-
-  if (!windowObj) {
-    return; // Skip if no window available
-  }
+  const windowObj = config.window;
+  if (!windowObj) return;
 
   // Ensure elbLayer exists on window
   const windowWithLayer = windowObj as typeof windowObj &
@@ -27,6 +24,8 @@ export function initElbLayer(
 
   const elbLayer = windowWithLayer[layerName] as ELBLayer;
 
+  const scope = windowObj.document as Document;
+
   // Override the push method to process items immediately
   elbLayer.push = function (...args: Array<Elb.Layer | IArguments>) {
     // Handle arguments object
@@ -34,7 +33,7 @@ export function initElbLayer(
       const argsArray = [...Array.from(args[0])];
       const i = Array.prototype.push.apply(this, [argsArray]);
       // Process the arguments as a single command
-      pushCommand(elb, config.prefix, argsArray);
+      pushCommand(elb, config.prefix, argsArray, scope);
       return i;
     }
 
@@ -42,7 +41,7 @@ export function initElbLayer(
 
     // Process each pushed item immediately
     args.forEach((item) => {
-      pushCommand(elb, config.prefix, item);
+      pushCommand(elb, config.prefix, item, scope);
     });
 
     return i;
@@ -50,7 +49,7 @@ export function initElbLayer(
 
   // Process any existing commands that were pushed before initialization
   if (Array.isArray(elbLayer) && elbLayer.length > 0) {
-    processElbLayer(elb, config.prefix, elbLayer);
+    processElbLayer(elb, config.prefix, elbLayer, scope);
   }
 }
 
@@ -62,10 +61,11 @@ function processElbLayer(
   elb: Elb.Fn,
   prefix: string = 'data-elb',
   elbLayer: ELBLayer,
+  scope: Document,
 ): void {
   // Process in two phases: walker commands first, then events
-  processPredefined(elb, prefix, elbLayer, true); // Commands only
-  processPredefined(elb, prefix, elbLayer, false); // Events only
+  processPredefined(elb, prefix, elbLayer, true, scope); // Commands only
+  processPredefined(elb, prefix, elbLayer, false, scope); // Events only
 
   // Clear the array after processing
   elbLayer.length = 0;
@@ -79,6 +79,7 @@ function processPredefined(
   prefix: string,
   elbLayer: ELBLayer,
   commandsOnly: boolean,
+  scope: Document,
 ): void {
   const walkerCommand = 'walker '; // Space on purpose
   const events: unknown[] = [];
@@ -138,7 +139,7 @@ function processPredefined(
 
   events.forEach((item) => {
     // Use the elb push function directly to match legacy behavior
-    pushCommand(elb, prefix, item);
+    pushCommand(elb, prefix, item, scope);
   });
 }
 
@@ -149,6 +150,7 @@ function pushCommand(
   elb: Elb.Fn,
   prefix: string = 'data-elb',
   item: unknown,
+  scope?: Document,
 ): void {
   tryCatch(
     () => {
@@ -171,7 +173,7 @@ function pushCommand(
             elb,
             settings: {
               prefix,
-              scope: document,
+              scope,
               pageview: false,
               elb: '',
               elbLayer: false,

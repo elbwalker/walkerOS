@@ -46,28 +46,28 @@ describe('isVisible', () => {
     };
     document.body.appendChild(elem);
 
-    expect(isVisible(elem)).toBeTruthy();
+    expect(isVisible(elem, window, document)).toBeTruthy();
 
     elem.style.display = 'none';
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
     elem.style.display = 'block';
-    expect(isVisible(elem)).toBeTruthy();
+    expect(isVisible(elem, window, document)).toBeTruthy();
 
     elem.style.visibility = 'hidden';
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
     elem.style.visibility = 'visible';
-    expect(isVisible(elem)).toBeTruthy();
+    expect(isVisible(elem, window, document)).toBeTruthy();
 
     elem.style.opacity = '0.0';
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
     elem.style.opacity = '1';
-    expect(isVisible(elem)).toBeTruthy();
+    expect(isVisible(elem, window, document)).toBeTruthy();
 
     Object.defineProperty(elem, 'clientHeight', {
       value: 250,
       writable: true,
     });
-    expect(isVisible(elem)).toBeTruthy();
+    expect(isVisible(elem, window, document)).toBeTruthy();
 
     w.innerHeight = innerHeight;
   });
@@ -80,7 +80,7 @@ describe('isVisible', () => {
     elemZeroWidth.getBoundingClientRect = () =>
       ({ x: 10, y: 10, width: 0, height: 50 }) as DOMRect;
 
-    expect(isVisible(elemZeroWidth)).toBeFalsy();
+    expect(isVisible(elemZeroWidth, window, document)).toBeFalsy();
 
     // Test zero height
     const elemZeroHeight = document.createElement('div');
@@ -89,7 +89,7 @@ describe('isVisible', () => {
     elemZeroHeight.getBoundingClientRect = () =>
       ({ x: 10, y: 10, width: 50, height: 0 }) as DOMRect;
 
-    expect(isVisible(elemZeroHeight)).toBeFalsy();
+    expect(isVisible(elemZeroHeight, window, document)).toBeFalsy();
   });
 
   test('elements outside viewport bounds should not be visible', () => {
@@ -111,7 +111,7 @@ describe('isVisible', () => {
         width: 50,
         height: 50,
       }) as DOMRect;
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
 
     // Element too far down (center y > viewport height)
     elem.getBoundingClientRect = () =>
@@ -121,7 +121,7 @@ describe('isVisible', () => {
         width: 50,
         height: 50,
       }) as DOMRect;
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
 
     // Element too far left (center x < 0)
     elem.getBoundingClientRect = () =>
@@ -131,7 +131,7 @@ describe('isVisible', () => {
         width: 50,
         height: 50,
       }) as DOMRect;
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
 
     // Element too far up (center y < 0)
     elem.getBoundingClientRect = () =>
@@ -141,7 +141,7 @@ describe('isVisible', () => {
         width: 50,
         height: 50,
       }) as DOMRect;
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
 
     window.innerWidth = originalInnerWidth;
     window.innerHeight = originalInnerHeight;
@@ -167,7 +167,7 @@ describe('isVisible', () => {
     const originalElementFromPoint = document.elementFromPoint;
     document.elementFromPoint = () => null;
 
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
 
     // Large element entirely below viewport center - should be invisible
     elem.getBoundingClientRect = () =>
@@ -177,7 +177,7 @@ describe('isVisible', () => {
         width: 50,
         height: 150, // top=80 > center=50, bottom=230 > viewport=100
       }) as DOMRect;
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
 
     // Large element visible that spans viewport center - should call elementFromPoint at viewport center
     const largeElem = document.createElement('div');
@@ -194,7 +194,7 @@ describe('isVisible', () => {
     // Mock elementFromPoint to return the element when called at viewport center
     document.elementFromPoint = jest.fn(() => largeElem);
 
-    expect(isVisible(largeElem)).toBeTruthy();
+    expect(isVisible(largeElem, window, document)).toBeTruthy();
     expect(document.elementFromPoint).toHaveBeenCalledWith(50, 50); // center x, viewport center y
 
     document.elementFromPoint = originalElementFromPoint;
@@ -217,7 +217,7 @@ describe('isVisible', () => {
     const originalElementFromPoint = document.elementFromPoint;
     document.elementFromPoint = () => null;
 
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
 
     document.elementFromPoint = originalElementFromPoint;
   });
@@ -242,11 +242,11 @@ describe('isVisible', () => {
 
     // Test when element is found directly
     document.elementFromPoint = () => elem;
-    expect(isVisible(elem)).toBeTruthy();
+    expect(isVisible(elem, window, document)).toBeTruthy();
 
     // Test when unrelated element is found - should be invisible
     document.elementFromPoint = () => overlay;
-    expect(isVisible(elem)).toBeFalsy();
+    expect(isVisible(elem, window, document)).toBeFalsy();
 
     // Test parent chain traversal - elem should be ancestor of what elementFromPoint returns
     // Set up chain: parent -> elem -> overlay (so overlay.parentElement === elem)
@@ -264,7 +264,7 @@ describe('isVisible', () => {
     });
 
     // When elementFromPoint returns overlay, it walks: overlay -> elem (match!) -> return true
-    expect(isVisible(elem)).toBeTruthy();
+    expect(isVisible(elem, window, document)).toBeTruthy();
 
     document.elementFromPoint = originalElementFromPoint;
   });

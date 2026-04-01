@@ -31,8 +31,22 @@
  * - Transformer returns void → continue with unchanged event
  * - Transformer returns event → continue with modified event
  */
-import type { Collector, Transformer, WalkerOS } from '@walkeros/core';
-import { isObject, tryCatchAsync, useHooks } from '@walkeros/core';
+import type { Collector, Transformer, WalkerOS, Ingest } from '@walkeros/core';
+import {
+  createIngest,
+  isObject,
+  tryCatchAsync,
+  useHooks,
+  compileNext,
+  resolveNext,
+  isRouteArray,
+  compileCache,
+  checkCache,
+  storeCache,
+  buildCacheContext,
+} from '@walkeros/core';
+import { getCacheStore } from './cache';
+
 
 /**
  * Extracts transformer next configuration for chain walking.
@@ -49,8 +63,9 @@ export function extractTransformerNextMap(
 ): Record<string, { next?: string | string[] }> {
   const result: Record<string, { next?: string | string[] }> = {};
   for (const [id, transformer] of Object.entries(transformers)) {
-    if (transformer.config?.next) {
-      result[id] = { next: transformer.config.next as string | string[] };
+    const next = transformer.config?.next;
+    if (next && !isRouteArray(next)) {
+      result[id] = { next: next as string | string[] };
     } else {
       result[id] = {};
     }
@@ -169,9 +184,13 @@ export async function initTransformers(
   )) {
     const { code, env = {} } = transformerDef;
 
-    // Use unified chain property extractor
-    const { config: configWithChain } = extractChainProperty(
+    // Use unified chain property extractor for both before and next
+    const { config: configWithBefore } = extractChainProperty(
       transformerDef,
+      'before',
+    );
+    const { config: configWithChain } = extractChainProperty(
+      { ...transformerDef, config: configWithBefore },
       'next',
     );
 
@@ -182,6 +201,10 @@ export async function initTransformers(
         ? { ...configWithChain, env: env as Transformer.Env }
         : configWithChain;
 
+    // Merge definition-level cache into config for runtime access
+    const { cache } = transformerDef;
+    const configWithCache = cache ? { ...configWithEnv, cache } : configWithEnv;
+
     // Build transformer context for init
     const transformerLogger = collector.logger
       .scope('transformer')
@@ -191,7 +214,8 @@ export async function initTransformers(
       collector,
       logger: transformerLogger,
       id: transformerId,
-      config: configWithEnv,
+      ingest: createIngest(transformerId),
+      config: configWithCache,
       env: env as Transformer.Env,
     };
 
@@ -229,6 +253,7 @@ export async function transformerInit(
       collector,
       logger: transformerLogger,
       id: transformerId,
+      ingest: createIngest(transformerId),
       config: transformer.config,
       env: mergeTransformerEnvironments(transformer.config.env),
     };
@@ -266,7 +291,7 @@ export async function transformerInit(
  * @param transformer - The transformer to push to
  * @param transformerId - The transformer ID
  * @param event - The event to process
- * @param ingest - Optional ingest metadata (frozen, same reference)
+ * @param ingest - Mutable ingest context flowing through the pipeline
  * @returns The processed event, void for passthrough, or false to stop chain
  */
 export async function transformerPush(
@@ -274,9 +299,9 @@ export async function transformerPush(
   transformer: Transformer.Instance,
   transformerId: string,
   event: WalkerOS.DeepPartialEvent,
-  ingest?: unknown,
+  ingest?: Ingest,
   respond?: import('@walkeros/core').RespondFn,
-): Promise<Transformer.Result | false | void> {
+): Promise<Transformer.Result | Transformer.Result[] | false | void> {
   const transformerType = transformer.type || 'unknown';
   const transformerLogger = collector.logger.scope(
     `transformer:${transformerType}`,
@@ -286,7 +311,7 @@ export async function transformerPush(
     collector,
     logger: transformerLogger,
     id: transformerId,
-    ingest, // Same frozen reference, no copying
+    ingest: ingest!, // Mutable shared context
     config: transformer.config,
     env: {
       ...mergeTransformerEnvironments(transformer.config.env),
@@ -314,7 +339,7 @@ export async function transformerPush(
  * @param transformers - Map of transformer instances
  * @param chain - Ordered array of transformer IDs to execute
  * @param event - The event to process
- * @param ingest - Optional ingest metadata (frozen, same reference)
+ * @param ingest - Mutable ingest context flowing through the pipeline
  * @returns The processed event or null if chain was stopped
  */
 export async function runTransformerChain(
@@ -322,9 +347,16 @@ export async function runTransformerChain(
   transformers: Transformer.Transformers,
   chain: string[],
   event: WalkerOS.DeepPartialEvent,
-  ingest?: unknown,
+  ingest?: Ingest,
   respond?: import('@walkeros/core').RespondFn,
-): Promise<WalkerOS.DeepPartialEvent | null> {
+  chainContext?: string,
+): Promise<Transformer.ChainResult> {
+  const MAX_PATH_LENGTH = 256;
+
+  if (chainContext && ingest?._meta) {
+    ingest._meta.chainPath = chainContext;
+  }
+
   let processedEvent = event;
   let currentRespond = respond;
 
@@ -333,6 +365,18 @@ export async function runTransformerChain(
     if (!transformer) {
       collector.logger.warn(`Transformer not found: ${transformerName}`);
       continue;
+    }
+
+    // Safety valve: prevent unbounded path growth
+    if (ingest && ingest._meta && ingest._meta.path.length > MAX_PATH_LENGTH) {
+      collector.logger.error(`Max path length exceeded at ${transformerName}`);
+      return { event: null, respond: currentRespond };
+    }
+
+    // Track step in _meta (runtime-managed)
+    if (ingest && ingest._meta) {
+      ingest._meta.hops++;
+      ingest._meta.path.push(transformerName);
     }
 
     // Initialize transformer if needed
@@ -344,7 +388,95 @@ export async function runTransformerChain(
 
     if (!isInitialized) {
       collector.logger.error(`Transformer init failed: ${transformerName}`);
-      return null; // Stop chain on init failure
+      return { event: null, respond: currentRespond }; // Stop chain on init failure
+    }
+
+    // Path-specific mock check (takes precedence)
+    if (chainContext && transformer.config?.chainMocks?.[chainContext] !== undefined) {
+      const chainMock = transformer.config.chainMocks[chainContext];
+      collector.logger.scope(`transformer:${transformer.type || 'unknown'}`).debug('chainMock', { chain: chainContext });
+      processedEvent = chainMock as WalkerOS.DeepPartialEvent;
+      continue;
+    }
+
+    // Global mock check
+    if (transformer.config?.mock !== undefined) {
+      collector.logger.scope(`transformer:${transformer.type || 'unknown'}`).debug('mock');
+      processedEvent = transformer.config.mock as WalkerOS.DeepPartialEvent;
+      continue;
+    }
+
+    // Disabled check
+    if (transformer.config?.disabled) {
+      continue;
+    }
+
+    // Compile transformer cache once (reused for HIT check and MISS store)
+    const tCacheConfig = transformer.config?.cache;
+    const compiledTCache = tCacheConfig
+      ? compileCache(tCacheConfig)
+      : undefined;
+    const tCacheStore = compiledTCache
+      ? getCacheStore(compiledTCache, collector)
+      : undefined;
+
+    // Check transformer cache (step-level: skip push, continue chain)
+    let cacheMiss: { key: string; ttl: number } | undefined;
+    if (compiledTCache && tCacheStore) {
+      const cacheContext = buildCacheContext(ingest, processedEvent);
+      const cacheResult = checkCache(
+        compiledTCache,
+        tCacheStore,
+        cacheContext,
+        `t:${transformerName}`,
+      );
+
+      if (cacheResult?.status === 'HIT' && cacheResult.value) {
+        processedEvent = cacheResult.value as WalkerOS.DeepPartialEvent;
+        if (compiledTCache.full) return { event: processedEvent, respond: currentRespond }; // full=true → stop chain
+        continue; // full=false → next transformer
+      }
+
+      if (cacheResult?.status === 'MISS') {
+        cacheMiss = { key: cacheResult.key, ttl: cacheResult.rule.ttl };
+      }
+    }
+
+    // Run transformer.before chain if configured
+    const transformerBefore = transformer.config.before;
+    if (transformerBefore) {
+      const beforeStartId =
+        typeof transformerBefore === 'string'
+          ? transformerBefore
+          : Array.isArray(transformerBefore) && !isRouteArray(transformerBefore)
+            ? transformerBefore
+            : resolveNext(
+                compileNext(transformerBefore),
+                buildCacheContext(ingest, processedEvent),
+              ) || undefined;
+
+      const beforeChainIds = walkChain(
+        beforeStartId,
+        extractTransformerNextMap(transformers),
+      );
+
+      if (beforeChainIds.length > 0) {
+        const beforeResult = await runTransformerChain(
+          collector,
+          transformers,
+          beforeChainIds,
+          processedEvent,
+          ingest,
+          currentRespond,
+          chainContext,
+        );
+        if (beforeResult.event === null) return { event: null, respond: beforeResult.respond ?? currentRespond }; // Before chain stopped
+        if (beforeResult.respond) currentRespond = beforeResult.respond;
+        // Before chains use first result if fan-out occurred
+        processedEvent = Array.isArray(beforeResult.event)
+          ? beforeResult.event[0]
+          : beforeResult.event;
+      }
     }
 
     // Run the transformer
@@ -365,7 +497,89 @@ export async function runTransformerChain(
     // Handle result
     if (result === false) {
       // Transformer explicitly stopped the chain
-      return null;
+      return { event: null, respond: currentRespond };
+    }
+
+    // Handle Result array (fan-out) — MUST be before typeof === 'object'
+    if (Array.isArray(result)) {
+      const remainingChain = chain.slice(chain.indexOf(transformerName) + 1);
+
+      const forkResults = await Promise.all(
+        result.map(async (forkResult) => {
+          const forkEvent = forkResult.event || processedEvent;
+          // Clone ingest per fork to prevent cross-fork contamination
+          const forkIngest: Ingest = ingest
+            ? {
+                ...ingest,
+                _meta: { ...ingest._meta, path: [...ingest._meta.path] },
+              }
+            : createIngest('unknown');
+
+          if (forkResult.next) {
+            // Fork has explicit routing
+            let resolvedNext: string | string[] | undefined =
+              forkResult.next as string | string[];
+            if (isRouteArray(forkResult.next)) {
+              const compiled = compileNext(forkResult.next);
+              resolvedNext = resolveNext(
+                compiled,
+                buildCacheContext(forkIngest, forkEvent),
+              );
+            }
+            if (resolvedNext) {
+              const branchedChain = walkChain(
+                resolvedNext,
+                extractTransformerNextMap(transformers),
+              );
+              if (branchedChain.length > 0) {
+                return runTransformerChain(
+                  collector,
+                  transformers,
+                  branchedChain,
+                  forkEvent,
+                  forkIngest,
+                  currentRespond,
+                  chainContext,
+                );
+              }
+            }
+            return { event: forkEvent, respond: currentRespond };
+          }
+
+          // Fork continues through remaining chain
+          if (remainingChain.length > 0) {
+            return runTransformerChain(
+              collector,
+              transformers,
+              remainingChain,
+              forkEvent,
+              forkIngest,
+              currentRespond,
+              chainContext,
+            );
+          }
+          return { event: forkEvent, respond: currentRespond };
+        }),
+      );
+
+      // Collect events from ChainResult objects and track last respond
+      let lastForkRespond = currentRespond;
+      const flatEvents: WalkerOS.DeepPartialEvent[] = [];
+      for (const fr of forkResults.flat()) {
+        if (fr === null) continue;
+        if (fr && typeof fr === 'object' && 'event' in fr) {
+          const cr = fr as Transformer.ChainResult;
+          if (cr.respond) lastForkRespond = cr.respond;
+          if (cr.event === null) continue;
+          if (Array.isArray(cr.event)) flatEvents.push(...cr.event);
+          else flatEvents.push(cr.event);
+        } else {
+          flatEvents.push(fr as WalkerOS.DeepPartialEvent);
+        }
+      }
+      if (flatEvents.length === 0) return { event: null, respond: lastForkRespond };
+      if (flatEvents.length === 1) return { event: flatEvents[0], respond: lastForkRespond };
+      return { event: flatEvents, respond: lastForkRespond };
     }
 
     if (result && typeof result === 'object') {
@@ -379,8 +593,25 @@ export async function runTransformerChain(
 
       // Handle chain branching
       if (next) {
+        // Resolve NextRule[] if present
+        let resolvedNext: string | string[] | undefined = next as
+          | string
+          | string[];
+        if (isRouteArray(next)) {
+          const compiled = compileNext(next);
+          resolvedNext = resolveNext(
+            compiled,
+            buildCacheContext(ingest, processedEvent),
+          );
+          if (!resolvedNext) {
+            // No route matched → passthrough (continue chain)
+            if (resultEvent) processedEvent = resultEvent;
+            continue;
+          }
+        }
+
         const branchedChain = walkChain(
-          next,
+          resolvedNext,
           extractTransformerNextMap(transformers),
         );
 
@@ -392,6 +623,7 @@ export async function runTransformerChain(
             resultEvent || processedEvent,
             ingest,
             currentRespond,
+            chainContext,
           );
         }
 
@@ -399,7 +631,7 @@ export async function runTransformerChain(
         collector.logger.warn(
           `Branch target not found: ${JSON.stringify(next)}`,
         );
-        return null;
+        return { event: null, respond: currentRespond };
       }
 
       // Update event if provided
@@ -408,9 +640,47 @@ export async function runTransformerChain(
       }
     }
     // If result is undefined (void), continue with current event unchanged
+
+    // Cache MISS: store the processed event after push
+    if (cacheMiss && tCacheStore) {
+      storeCache(tCacheStore, cacheMiss.key, processedEvent, cacheMiss.ttl);
+    }
+
+    // If transformer didn't return { next } but has NextRule[] config.next, resolve it
+    if (
+      (!result || (typeof result === 'object' && !result.next)) &&
+      transformer.config.next &&
+      isRouteArray(transformer.config.next)
+    ) {
+      const configNext = transformer.config.next;
+      const compiledConfigNext = compileNext(configNext);
+      const resolvedConfigNext = resolveNext(
+        compiledConfigNext,
+        buildCacheContext(ingest, processedEvent),
+      );
+      if (resolvedConfigNext) {
+        const continuationChain = walkChain(
+          resolvedConfigNext,
+          extractTransformerNextMap(transformers),
+        );
+        if (continuationChain.length > 0) {
+          return runTransformerChain(
+            collector,
+            transformers,
+            continuationChain,
+            processedEvent,
+            ingest,
+            currentRespond,
+            chainContext,
+          );
+        }
+      }
+      // No match → chain ends here (passthrough to collector/destination)
+      return { event: processedEvent, respond: currentRespond };
+    }
   }
 
-  return processedEvent;
+  return { event: processedEvent, respond: currentRespond };
 }
 
 /**

@@ -4,10 +4,12 @@ import type {
   Logger,
   Mapping as WalkerOSMapping,
   On,
+  Transformer,
   WalkerOS,
   Context as BaseContext,
 } from '.';
 import type { DestroyFn } from './lifecycle';
+import type { Ingest } from './ingest';
 
 /**
  * Base environment requirements interface for walkerOS destinations
@@ -99,7 +101,15 @@ export interface Config<T extends TypesGeneric = Types> {
   /** Defer destination initialization until these collector events fire (e.g., `['consent']`). */
   require?: string[];
   /** Transformer chain to run after collector processing but before this destination. */
-  before?: string | string[];
+  before?: Transformer.Next;
+  /** Transformer chain to run after destination push completes. Push response available at ingest._response. */
+  next?: Transformer.Next;
+  /** Cache configuration for deduplication (step-level: skip push on HIT). */
+  cache?: import('./cache').Cache;
+  /** Completely skip this destination — no init, no push, no queuing. */
+  disabled?: boolean;
+  /** Return this value instead of calling push(). Uses !== undefined check to support falsy values. */
+  mock?: unknown;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
@@ -120,7 +130,9 @@ export type Init<T extends TypesGeneric = Types> = {
   code: Code<T>;
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
-  before?: string | string[];
+  before?: Transformer.Next;
+  next?: Transformer.Next;
+  cache?: import('./cache').Cache;
 };
 
 export interface InitDestinations {
@@ -145,14 +157,14 @@ export interface Context<
 export interface PushContext<
   T extends TypesGeneric = Types,
 > extends Context<T> {
-  ingest?: unknown;
+  ingest: Ingest;
   rule?: WalkerOSMapping.Rule<Mapping<T>>;
 }
 
 export interface PushBatchContext<
   T extends TypesGeneric = Types,
 > extends Context<T> {
-  ingest?: unknown;
+  ingest: Ingest;
   rule?: WalkerOSMapping.Rule<Mapping<T>>;
 }
 

@@ -1,7 +1,6 @@
 // === CLI Commands ===
 // Export CLI command handlers
 export { bundleCommand } from './commands/bundle/index.js';
-export { simulateCommand } from './commands/simulate/index.js';
 export { pushCommand } from './commands/push/index.js';
 export { runCommand } from './commands/run/index.js';
 export { validateCommand } from './commands/validate/index.js';
@@ -39,8 +38,17 @@ export { feedbackCommand } from './commands/feedback/index.js';
 // === Programmatic API ===
 // High-level functions for library usage
 export { bundle, bundleRemote } from './commands/bundle/index.js';
-export { simulate } from './commands/simulate/index.js';
-export { push } from './commands/push/index.js';
+export {
+  push,
+  simulateSource,
+  simulateTransformer,
+  simulateDestination,
+} from './commands/push/index.js';
+export type {
+  SimulateSourceOptions,
+  SimulateTransformerOptions,
+  SimulateDestinationOptions,
+} from './commands/push/index.js';
 export { run } from './commands/run/index.js';
 export { validate } from './commands/validate/index.js';
 export { getToken, getAuthHeaders, requireProjectId } from './core/auth.js';
@@ -88,7 +96,7 @@ export type { SSEEvent, SSEParseResult } from './core/sse.js';
 
 // === Utilities ===
 // Export utilities for programmatic usage
-export { loadJsonConfig } from './config/utils.js';
+export { loadConfig, loadJsonConfig } from './config/utils.js';
 export { findExample } from './commands/simulate/example-loader.js';
 export { compareOutput } from './commands/simulate/compare.js';
 
@@ -102,7 +110,6 @@ export type {
   MinifyOptions,
 } from './types/bundle.js';
 export type { BundleStats } from './commands/bundle/bundler.js';
-export type { SimulationResult } from './commands/simulate/types.js';
 export type { ExampleLookupResult } from './commands/simulate/example-loader.js';
 export type { PushResult } from './commands/push/types.js';
 export type {

@@ -218,7 +218,7 @@ export async function bundleCommand(
     }
 
     // Step 4: Report results
-    const duration = timer.end() / 1000;
+    const duration = timer.end();
     const successCount = results.filter((r) => r.success).length;
     const failureCount = results.filter((r) => !r.success).length;
 
@@ -261,7 +261,7 @@ export async function bundleCommand(
 
     process.exit(0);
   } catch (error) {
-    const duration = timer.getElapsed() / 1000;
+    const duration = timer.getElapsed();
     const errorMessage = getErrorMessage(error);
 
     if (options.json) {

@@ -1,7 +1,13 @@
-import type { WalkerOS, Collector } from '@walkeros/core';
+import type { WalkerOS } from '@walkeros/core';
 import type { DestinationAPI } from '.';
 import { startFlow } from '@walkeros/collector';
-import { createEvent, getEvent, clone, createMockLogger } from '@walkeros/core';
+import {
+  createEvent,
+  getEvent,
+  clone,
+  createMockContext,
+  createMockLogger,
+} from '@walkeros/core';
 import { examples } from './dev';
 
 describe('Destination API', () => {
@@ -29,13 +35,15 @@ describe('Destination API', () => {
   });
 
   test('push', () => {
-    destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: { settings: { url } },
-      env: testEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    destination.push(
+      event,
+      createMockContext({
+        config: { settings: { url } },
+        env: testEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
     expect(mockSendWeb).toHaveBeenCalledTimes(1);
 
     const [calledUrl, calledData, calledOptions] = mockSendWeb.mock.calls[0];
@@ -52,15 +60,15 @@ describe('Destination API', () => {
     const customSendWeb = jest.fn();
     const customEnv = { sendWeb: customSendWeb };
 
-    destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {
-        settings: { url },
-      },
-      env: customEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    destination.push(
+      event,
+      createMockContext({
+        config: { settings: { url } },
+        env: customEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
 
     expect(customSendWeb).toHaveBeenCalledTimes(1);
     expect(customSendWeb).toHaveBeenCalledWith(
@@ -74,15 +82,15 @@ describe('Destination API', () => {
   });
 
   test('transform', () => {
-    destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {
-        settings: { url, transform: () => 'transformed' },
-      },
-      env: testEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    destination.push(
+      event,
+      createMockContext({
+        config: { settings: { url, transform: () => 'transformed' } },
+        env: testEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
       'transformed',
@@ -91,15 +99,15 @@ describe('Destination API', () => {
   });
 
   test('headers', () => {
-    destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {
-        settings: { url, headers: { foo: 'bar' } },
-      },
-      env: testEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    destination.push(
+      event,
+      createMockContext({
+        config: { settings: { url, headers: { foo: 'bar' } } },
+        env: testEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
       expect.any(String),
@@ -110,15 +118,15 @@ describe('Destination API', () => {
   });
 
   test('method', () => {
-    destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {
-        settings: { url, method: 'POST' },
-      },
-      env: testEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    destination.push(
+      event,
+      createMockContext({
+        config: { settings: { url, method: 'POST' } },
+        env: testEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
       expect.any(String),
@@ -129,16 +137,18 @@ describe('Destination API', () => {
   });
 
   test('event entity action', () => {
-    destination.push(event, {
-      collector: {} as Collector.Instance,
-      config: {
-        settings: { url },
-        mapping: { entity: { action: { data: 'data' } } },
-      },
-      env: testEnv,
-      logger: mockLogger,
-      id: 'test-api',
-    });
+    destination.push(
+      event,
+      createMockContext({
+        config: {
+          settings: { url },
+          mapping: { entity: { action: { data: 'data' } } },
+        },
+        env: testEnv,
+        logger: mockLogger,
+        id: 'test-api',
+      }),
+    );
 
     expect(mockSendWeb).toHaveBeenCalledWith(
       url,
@@ -150,25 +160,27 @@ describe('Destination API', () => {
   describe('init', () => {
     test('throws when url missing', () => {
       expect(() =>
-        destination.init!({
-          collector: {} as Collector.Instance,
-          config: {},
-          env: testEnv,
-          logger: mockLogger,
-          id: 'test-api',
-        }),
+        destination.init!(
+          createMockContext({
+            config: {},
+            env: testEnv,
+            logger: mockLogger,
+            id: 'test-api',
+          }),
+        ),
       ).toThrow('Config settings url missing');
     });
 
     test('succeeds when url provided', () => {
       expect(() =>
-        destination.init!({
-          collector: {} as Collector.Instance,
-          config: { settings: { url } },
-          env: testEnv,
-          logger: mockLogger,
-          id: 'test-api',
-        }),
+        destination.init!(
+          createMockContext({
+            config: { settings: { url } },
+            env: testEnv,
+            logger: mockLogger,
+            id: 'test-api',
+          }),
+        ),
       ).not.toThrow();
     });
   });
@@ -182,13 +194,15 @@ describe('Destination API', () => {
         data: [],
       };
 
-      destination.pushBatch!(batch, {
-        collector: {} as Collector.Instance,
-        config: { settings: { url } },
-        env: testEnv,
-        logger: mockLogger,
-        id: 'test-api',
-      });
+      destination.pushBatch!(
+        batch,
+        createMockContext({
+          config: { settings: { url } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
 
       expect(mockSendWeb).toHaveBeenCalledTimes(1);
       const [calledUrl, calledData] = mockSendWeb.mock.calls[0];
@@ -205,13 +219,15 @@ describe('Destination API', () => {
         data: mappedData,
       };
 
-      destination.pushBatch!(batch, {
-        collector: {} as Collector.Instance,
-        config: { settings: { url } },
-        env: testEnv,
-        logger: mockLogger,
-        id: 'test-api',
-      });
+      destination.pushBatch!(
+        batch,
+        createMockContext({
+          config: { settings: { url } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
 
       expect(mockSendWeb).toHaveBeenCalledTimes(1);
       const [, calledData] = mockSendWeb.mock.calls[0];
@@ -230,13 +246,15 @@ describe('Destination API', () => {
         JSON.stringify({ transformed: true, original: data }),
       ) as DestinationAPI.Transform;
 
-      destination.pushBatch!(batch, {
-        collector: {} as Collector.Instance,
-        config: { settings: { url, transform } },
-        env: testEnv,
-        logger: mockLogger,
-        id: 'test-api',
-      });
+      destination.pushBatch!(
+        batch,
+        createMockContext({
+          config: { settings: { url, transform } },
+          env: testEnv,
+          logger: mockLogger,
+          id: 'test-api',
+        }),
+      );
 
       expect(transform).toHaveBeenCalledTimes(2);
       expect(mockSendWeb).toHaveBeenCalledTimes(1);

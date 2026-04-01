@@ -10,16 +10,13 @@ describe('mcpHelpers', () => {
       expect(result.structuredContent).toEqual(data);
     });
 
-    it('uses summary as text when provided', () => {
-      const result = mcpResult({ foo: 'bar' }, 'summary');
-      expect(result.content[0].text).toBe('summary');
-      expect(result.structuredContent).toEqual({ foo: 'bar' });
-    });
-
     it('enriches result with _hints when provided', () => {
-      const result = mcpResult({ foo: 'bar' }, 'summary', {
-        next: ['do something'],
-      });
+      const result = mcpResult(
+        { foo: 'bar' },
+        {
+          next: ['do something'],
+        },
+      );
       expect(result.structuredContent._hints).toEqual({
         next: ['do something'],
       });

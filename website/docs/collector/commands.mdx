@@ -193,8 +193,9 @@ Set global properties that are added to each event processed by the collector.
 ## hook
 
 Hooks customize the default behavior of the collector. Available hooks include
-`Push`, `DestinationInit`, and `DestinationPush`. Hooks allow for validation,
-manipulation, or cancellation of default behavior.
+`Push`, `DestinationInit`, `DestinationPush`, `StoreGet`, `StoreSet`, and
+`StoreDelete`. Hooks allow for validation, manipulation, or cancellation of
+default behavior.
 
 Add hooks to the collector to customize or enhance default processing.
 
@@ -218,6 +219,9 @@ Others are:
 
 * preSessionStart
 * postSessionStart
+* preStoreGet / postStoreGet
+* preStoreSet / postStoreSet
+* preStoreDelete / postStoreDelete
 
 ### Function signatures
 
@@ -262,6 +266,30 @@ return params.fn(event, config, mapping, runState);
 function postDestinationPushBatch(params) {
 // Custom code with a void return
 return;
+}
+
+// StoreGet
+function preStoreGet(params, key) {
+return params.fn(key);
+}
+function postStoreGet(params, key) {
+return params.result;
+}
+
+// StoreSet
+function preStoreSet(params, key, value, ttl) {
+return params.fn(key, value, ttl);
+}
+function postStoreSet(params, key, value, ttl) {
+return params.result;
+}
+
+// StoreDelete
+function preStoreDelete(params, key) {
+return params.fn(key);
+}
+function postStoreDelete(params, key) {
+return params.result;
 }`}
   language="javascript"
 />

@@ -2,7 +2,6 @@ import { Command } from 'commander';
 import { VERSION } from './version.js';
 import { printBanner } from './core/banner.js';
 import { bundleCommand } from './commands/bundle/index.js';
-import { simulateCommand } from './commands/simulate/index.js';
 import { pushCommand } from './commands/push/index.js';
 import { runCommand } from './commands/run/index.js';
 import { validateCommand } from './commands/validate/index.js';
@@ -75,38 +74,6 @@ program
     });
   });
 
-// Simulate command
-program
-  .command('simulate [file]')
-  .description('Simulate event processing and capture API calls')
-  .option('-o, --output <path>', 'write result to file')
-  .option(
-    '-e, --event <source>',
-    'event to simulate (JSON string, file path, or URL)',
-  )
-  .option('-f, --flow <name>', 'flow name for multi-flow configs')
-  .option('-p, --platform <platform>', 'platform override (web or server)')
-  .option('--json', 'output as JSON')
-  .option('-v, --verbose', 'verbose output')
-  .option('-s, --silent', 'suppress output')
-  .option(
-    '--step <target>',
-    'step target in type.name format (e.g. "source.browser", "destination.gtag")',
-  )
-  .action(async (file, options) => {
-    await simulateCommand({
-      config: file,
-      output: options.output,
-      event: options.event,
-      flow: options.flow,
-      platform: options.platform,
-      json: options.json,
-      verbose: options.verbose,
-      silent: options.silent,
-      step: options.step,
-    });
-  });
-
 // Push command
 program
   .command('push [file]')
@@ -121,6 +88,28 @@ program
   .option('--json', 'output as JSON')
   .option('-v, --verbose', 'verbose output')
   .option('-s, --silent', 'suppress output')
+  .option(
+    '--simulate <step>',
+    'simulate a destination step (repeatable)',
+    (val: string, arr: string[]) => {
+      arr.push(val);
+      return arr;
+    },
+    [] as string[],
+  )
+  .option(
+    '--mock <step=value>',
+    'mock a destination step with return value (repeatable)',
+    (val: string, arr: string[]) => {
+      arr.push(val);
+      return arr;
+    },
+    [] as string[],
+  )
+  .option(
+    '--snapshot <source>',
+    'JS file to eval before bundle execution (file path, URL, or inline code)',
+  )
   .action(async (file, options) => {
     await pushCommand({
       config: file,
@@ -131,6 +120,9 @@ program
       json: options.json,
       verbose: options.verbose,
       silent: options.silent,
+      simulate: options.simulate,
+      mock: options.mock,
+      snapshot: options.snapshot,
     });
   });
 

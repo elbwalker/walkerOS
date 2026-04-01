@@ -1,35 +1,11 @@
 import { startFlow } from '..';
-import { branch } from '@walkeros/core';
 import type { Source, Transformer, WalkerOS, Elb } from '@walkeros/core';
 
-// Inline mock router: matches ingest.path prefix and branches
-const mockRouter: Transformer.Init = (context) => {
-  const routes = (context.config.settings as any)?.routes || [];
-  return {
-    type: 'mock-router',
-    config: context.config,
-    push(event, ctx) {
-      const ingest = (ctx.ingest || {}) as Record<string, unknown>;
-      for (const route of routes) {
-        if (route.match === '*') return { next: route.next };
-        const val = String(ingest[route.match.key] || '');
-        if (
-          route.match.operator === 'prefix' &&
-          val.startsWith(route.match.value)
-        )
-          return { next: route.next };
-      }
-      return; // passthrough
-    },
-  };
-};
-
-describe('router transformer integration', () => {
-  it('should route events through branched chain to destination', async () => {
+describe('native next routing', () => {
+  it('should route events through conditional source.next', async () => {
     const order: string[] = [];
     const destinationEvents: WalkerOS.Event[] = [];
 
-    // Simple parser transformer that builds events from ingest body
     const gtagParser: Transformer.Init = (context) => ({
       type: 'gtag-parser',
       config: context.config,
@@ -59,7 +35,13 @@ describe('router transformer integration', () => {
               }) as any,
             };
           },
-          next: 'router',
+          next: [
+            {
+              match: { key: 'ingest.path', operator: 'prefix', value: '/gtag' },
+              next: 'gtag-parser',
+            },
+            { match: '*', next: [] },
+          ],
           config: {
             ingest: {
               map: {
@@ -72,27 +54,7 @@ describe('router transformer integration', () => {
         },
       },
       transformers: {
-        router: {
-          code: mockRouter,
-          config: {
-            settings: {
-              routes: [
-                {
-                  match: {
-                    key: 'path',
-                    operator: 'prefix',
-                    value: '/gtag',
-                  },
-                  next: 'gtag-parser',
-                },
-                { match: '*', next: [] }, // wildcard → no branch, passthrough
-              ],
-            },
-          },
-        },
-        'gtag-parser': {
-          code: gtagParser,
-        },
+        'gtag-parser': { code: gtagParser },
       },
       destinations: {
         spy: {
@@ -108,7 +70,6 @@ describe('router transformer integration', () => {
       },
     });
 
-    // Simulate a gtag request (raw data, not a DeepPartialEvent)
     await (collector.sources.testSource.push as any)({
       path: '/gtag/collect',
       method: 'GET',
@@ -122,7 +83,7 @@ describe('router transformer integration', () => {
     expect(destinationEvents[0].data?.value).toBe(99.9);
   });
 
-  it('should passthrough non-matching routes', async () => {
+  it('should passthrough when no route matches', async () => {
     const destinationEvents: WalkerOS.Event[] = [];
 
     const { collector } = await startFlow({
@@ -136,27 +97,23 @@ describe('router transformer integration', () => {
               push: env.push as Elb.Fn,
             };
           },
-          next: 'router',
+          next: [
+            {
+              match: { key: 'ingest.path', operator: 'prefix', value: '/gtag' },
+              next: 'parser',
+            },
+          ],
         },
       },
       transformers: {
-        router: {
-          code: mockRouter,
-          config: {
-            settings: {
-              routes: [
-                {
-                  match: {
-                    key: 'path',
-                    operator: 'prefix',
-                    value: '/gtag',
-                  },
-                  next: 'parser',
-                },
-                // No wildcard → passthrough when no match
-              ],
+        parser: {
+          code: async (context): Promise<Transformer.Instance> => ({
+            type: 'parser',
+            config: context.config,
+            push() {
+              throw new Error('should not be called');
             },
-          },
+          }),
         },
       },
       destinations: {
@@ -172,18 +129,16 @@ describe('router transformer integration', () => {
       },
     });
 
-    // Push a regular event (no ingest metadata, router won't match)
     await collector.sources.testSource.push({
       name: 'page view',
       data: { title: 'Home' },
     });
 
-    // Router doesn't match → passthrough → event reaches destination
     expect(destinationEvents).toHaveLength(1);
     expect(destinationEvents[0].name).toBe('page view');
   });
 
-  it('should support chain branching with transformer.next linking', async () => {
+  it('should support chained routes (route target with transformer.next)', async () => {
     const order: string[] = [];
     const destinationEvents: WalkerOS.Event[] = [];
 
@@ -198,20 +153,10 @@ describe('router transformer integration', () => {
               push: env.push as Elb.Fn,
             };
           },
-          next: 'brancher',
+          next: [{ match: '*', next: 'a' }],
         },
       },
       transformers: {
-        brancher: {
-          code: async (context): Promise<Transformer.Instance> => ({
-            type: 'brancher',
-            config: context.config,
-            push(event) {
-              order.push('brancher');
-              return branch(event, 'a');
-            },
-          }),
-        },
         a: {
           code: async (context): Promise<Transformer.Instance> => ({
             type: 'a',
@@ -247,12 +192,9 @@ describe('router transformer integration', () => {
       },
     });
 
-    await collector.sources.testSource.push({
-      name: 'page view',
-      data: {},
-    });
+    await collector.sources.testSource.push({ name: 'page view', data: {} });
 
-    expect(order).toEqual(['brancher', 'a', 'b']);
+    expect(order).toEqual(['a', 'b']);
     expect(destinationEvents).toHaveLength(1);
     expect(destinationEvents[0].data?.a).toBe(true);
     expect(destinationEvents[0].data?.b).toBe(true);

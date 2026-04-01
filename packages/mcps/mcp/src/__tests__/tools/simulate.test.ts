@@ -8,20 +8,30 @@ jest.mock('@walkeros/cli/dev', () => ({
       configPath: { type: 'string' },
       event: { type: 'string' },
       flow: { type: 'string' },
+      platform: { type: 'string' },
       step: { type: 'string' },
     },
   },
 }));
 
-// Mock @walkeros/cli (dynamic import target)
+// Mock @walkeros/cli simulate functions
 jest.mock('@walkeros/cli', () => ({
-  simulate: jest.fn(),
+  simulateSource: jest.fn(),
+  simulateTransformer: jest.fn(),
+  simulateDestination: jest.fn(),
 }));
 
 jest.mock('@walkeros/core', () => ({
-  mcpResult: jest.fn((result, summary, hints) => ({
+  mcpResult: jest.fn((result, hints) => ({
     content: [
-      { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
+      {
+        type: 'text',
+        text: JSON.stringify(
+          hints ? { ...result, _hints: hints } : result,
+          null,
+          2,
+        ),
+      },
     ],
     structuredContent: hints ? { ...result, _hints: hints } : result,
   })),
@@ -38,8 +48,14 @@ jest.mock('@walkeros/core', () => ({
   })),
 }));
 
-import { simulate } from '@walkeros/cli';
-const mockSimulate = jest.mocked(simulate);
+import {
+  simulateSource,
+  simulateTransformer,
+  simulateDestination,
+} from '@walkeros/cli';
+const mockSimulateSource = jest.mocked(simulateSource);
+const mockSimulateTransformer = jest.mocked(simulateTransformer);
+const mockSimulateDestination = jest.mocked(simulateDestination);
 
 function createMockServer() {
   const tools: Record<string, { config: unknown; handler: Function }> = {};
@@ -59,6 +75,7 @@ describe('flow_simulate tool', () => {
   beforeEach(() => {
     server = createMockServer();
     registerFlowSimulateTool(server as any);
+    jest.clearAllMocks();
   });
 
   it('registers with correct name, title, and annotations', () => {
@@ -82,10 +99,10 @@ describe('flow_simulate tool', () => {
   });
 
   it('summarizes per-destination results', async () => {
-    mockSimulate.mockResolvedValue({
+    mockSimulateDestination.mockResolvedValue({
       success: true,
       usage: {
-        gtag: [{ path: 'gtag', args: ['event', 'page_view'] }],
+        gtag: [{ fn: 'event', args: ['page_view'], ts: 1 }],
         meta: [],
       },
       duration: 42,
@@ -96,6 +113,7 @@ describe('flow_simulate tool', () => {
       configPath: './flow.json',
       event: '{"name":"page view"}',
       flow: undefined,
+      step: 'destination.gtag',
     });
 
     expect(result.structuredContent.success).toBe(true);
@@ -110,8 +128,71 @@ describe('flow_simulate tool', () => {
     expect(result.isError).toBeUndefined();
   });
 
-  it('passes parameters to CLI simulate', async () => {
-    mockSimulate.mockResolvedValue({ success: true, usage: {} });
+  it('returns all calls in payload when verbose', async () => {
+    mockSimulateDestination.mockResolvedValue({
+      success: true,
+      usage: {
+        gtag: [
+          { fn: 'window.gtag', args: ['config', 'G-TEST123', {}], ts: 1 },
+          {
+            fn: 'window.gtag',
+            args: ['event', 'purchase', { value: 99, currency: 'EUR' }],
+            ts: 2,
+          },
+        ],
+      },
+      duration: 50,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"order complete"}',
+      flow: undefined,
+      verbose: true,
+      step: 'destination.gtag',
+    });
+
+    expect(result.structuredContent.destinations.gtag.calls).toBe(2);
+
+    // payload contains ALL calls, not just the last one
+    const payload = result.structuredContent.destinations.gtag.payload;
+    expect(Array.isArray(payload)).toBe(true);
+    expect(payload).toHaveLength(2);
+    expect(payload[0].args[0]).toBe('config');
+    expect(payload[1].args[0]).toBe('event');
+    expect(payload[1].args[1]).toBe('purchase');
+    expect(payload[1].args[2]).toEqual({ value: 99, currency: 'EUR' });
+  });
+
+  it('omits payload when not verbose', async () => {
+    mockSimulateDestination.mockResolvedValue({
+      success: true,
+      usage: {
+        gtag: [{ fn: 'window.gtag', args: ['event', 'page_view'], ts: 1 }],
+      },
+      duration: 10,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      verbose: false,
+      step: 'destination.gtag',
+    });
+
+    expect(result.structuredContent.destinations.gtag.calls).toBe(1);
+    expect(result.structuredContent.destinations.gtag.payload).toBeUndefined();
+  });
+
+  it('passes parameters to simulateDestination with destinationId', async () => {
+    mockSimulateDestination.mockResolvedValue({
+      success: true,
+      usage: {},
+      duration: 10,
+    });
 
     const tool = server.getTool('flow_simulate');
     await tool.handler({
@@ -119,34 +200,65 @@ describe('flow_simulate tool', () => {
       event: '{"name":"page view"}',
       flow: 'production',
       platform: 'server',
-      step: undefined,
+      step: 'destination.ga4',
     });
 
-    expect(mockSimulate).toHaveBeenCalledWith(
+    expect(mockSimulateDestination).toHaveBeenCalledWith(
       './flow.json',
-      '{"name":"page view"}',
+      { name: 'page view' },
       {
-        json: true,
+        destinationId: 'ga4',
         flow: 'production',
-        platform: 'server',
-        step: undefined,
+        silent: true,
       },
     );
   });
 
-  it('returns isError on CLI failure', async () => {
-    mockSimulate.mockRejectedValue(new Error('Simulation failed'));
+  it('errors when step is not provided', async () => {
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      platform: undefined,
+      step: undefined,
+    });
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toContain('step is required');
+  });
+
+  it('returns isError when simulateDestination rejects', async () => {
+    mockSimulateDestination.mockRejectedValue(new Error('Destination failed'));
 
     const tool = server.getTool('flow_simulate');
     const result = await tool.handler({
       configPath: './flow.json',
       event: '{"name":"page view"}',
       flow: undefined,
+      step: 'destination.gtag',
     });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.error).toBe('Simulation failed');
+    expect(parsed.error).toBe('Destination failed');
+  });
+
+  it('returns isError when simulateSource rejects', async () => {
+    mockSimulateSource.mockRejectedValue(new Error('Source failed'));
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: { content: '<button>Click</button>' },
+      flow: undefined,
+      step: 'source.browser',
+    });
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toBe('Source failed');
   });
 
   it('errors when event is not provided', async () => {
@@ -156,7 +268,7 @@ describe('flow_simulate tool', () => {
       event: undefined,
       flow: undefined,
       platform: undefined,
-      step: undefined,
+      step: 'destination.gtag',
     });
 
     expect(result.isError).toBe(true);
@@ -165,9 +277,14 @@ describe('flow_simulate tool', () => {
   });
 
   it('returns capturedEvents for source simulation', async () => {
-    mockSimulate.mockResolvedValue({
+    mockSimulateSource.mockResolvedValue({
       success: true,
-      capturedEvents: [{ name: 'cta click', data: { label: 'Sign Up' } }],
+      captured: [
+        {
+          event: { name: 'cta click', data: { label: 'Sign Up' } },
+          timestamp: 1,
+        },
+      ],
       duration: 15,
     });
 
@@ -187,16 +304,64 @@ describe('flow_simulate tool', () => {
     expect(result.structuredContent.success).toBe(true);
     expect(result.structuredContent.summary).toBe('Source captured 1 event');
     expect(result.structuredContent.capturedEvents).toHaveLength(1);
+
+    expect(mockSimulateSource).toHaveBeenCalledWith(
+      './flow.json',
+      {
+        content: '<button>Sign Up</button>',
+        trigger: { type: 'click' },
+      },
+      {
+        sourceId: 'browser',
+        flow: undefined,
+        silent: true,
+      },
+    );
   });
 
-  it('handles simulation with no usage data', async () => {
-    mockSimulate.mockResolvedValue({ success: true });
+  it('calls simulateTransformer for transformer step', async () => {
+    mockSimulateTransformer.mockResolvedValue({
+      success: true,
+      duration: 8,
+    });
 
     const tool = server.getTool('flow_simulate');
     const result = await tool.handler({
       configPath: './flow.json',
       event: '{"name":"page view"}',
       flow: undefined,
+      step: 'transformer.demo',
+    });
+
+    expect(result.isError).toBeUndefined();
+    expect(result.structuredContent.success).toBe(true);
+    expect(result.structuredContent.summary).toBe(
+      'Transformer processed event',
+    );
+
+    expect(mockSimulateTransformer).toHaveBeenCalledWith(
+      './flow.json',
+      { name: 'page view' },
+      {
+        transformerId: 'demo',
+        flow: undefined,
+        silent: true,
+      },
+    );
+  });
+
+  it('handles simulation with no usage data', async () => {
+    mockSimulateDestination.mockResolvedValue({
+      success: true,
+      duration: 10,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      step: 'destination.gtag',
     });
 
     expect(result.structuredContent.success).toBe(true);
@@ -206,8 +371,8 @@ describe('flow_simulate tool', () => {
     expect(result.structuredContent.destinations).toBeUndefined();
   });
 
-  it('warns when 0/0 destinations received event', async () => {
-    mockSimulate.mockResolvedValue({
+  it('warns when destination step yields 0 destinations', async () => {
+    mockSimulateDestination.mockResolvedValue({
       success: true,
       usage: {},
       duration: 5,
@@ -218,14 +383,15 @@ describe('flow_simulate tool', () => {
       configPath: './flow.json',
       event: '{"name":"page view"}',
       flow: undefined,
+      step: 'destination.gtag',
     });
 
     expect(result.structuredContent._hints?.warnings).toBeDefined();
     expect(result.structuredContent._hints.warnings.length).toBeGreaterThan(0);
   });
 
-  it('warns when destinations exist but none received event', async () => {
-    mockSimulate.mockResolvedValue({
+  it('does not warn when destinations exist but none received event', async () => {
+    mockSimulateDestination.mockResolvedValue({
       success: true,
       usage: {
         gtag: [],
@@ -239,26 +405,116 @@ describe('flow_simulate tool', () => {
       configPath: './flow.json',
       event: '{"name":"page view"}',
       flow: undefined,
+      step: 'destination.gtag',
     });
 
-    expect(result.structuredContent._hints?.warnings).toBeDefined();
-    expect(result.structuredContent._hints.warnings[0]).toContain(
-      'No destinations received the event',
+    // Warning only fires when destCount === 0, not when destinations exist but are empty
+    expect(result.structuredContent.summary).toBe(
+      '0/2 destinations received the event',
     );
+    expect(result.structuredContent._hints?.warnings).toBeUndefined();
   });
 
   it('handles non-Error exceptions', async () => {
-    mockSimulate.mockRejectedValue(42);
+    mockSimulateDestination.mockRejectedValue(42);
 
     const tool = server.getTool('flow_simulate');
     const result = await tool.handler({
       configPath: './flow.json',
       event: '{"name":"page view"}',
       flow: undefined,
+      step: 'destination.gtag',
     });
 
     expect(result.isError).toBe(true);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.error).toBe('Unknown error');
+  });
+
+  it('uses elbResult.done as fallback when no usage data', async () => {
+    mockSimulateDestination.mockResolvedValue({
+      success: true,
+      elbResult: {
+        done: {
+          gtag: { id: '123' },
+        },
+      } as any,
+      duration: 20,
+    });
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      step: 'destination.gtag',
+    });
+
+    expect(result.structuredContent.success).toBe(true);
+    expect(result.structuredContent.summary).toBe(
+      '1/1 destinations received the event',
+    );
+    expect(result.structuredContent.destinations.gtag.received).toBe(true);
+    expect(result.structuredContent.destinations.gtag.calls).toBe(0);
+  });
+
+  it('errors on invalid step format without dot separator', async () => {
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      step: 'nodot',
+    });
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toContain('Invalid step format');
+  });
+
+  it('errors on unknown step type', async () => {
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      step: 'unknown.thing',
+    });
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toContain('Unknown step type');
+  });
+
+  it('returns require hint when destination not found in collector', async () => {
+    mockSimulateDestination.mockRejectedValue(
+      new Error('Destination "gtag" not found in collector. Available: none'),
+    );
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      step: 'destination.gtag',
+    });
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toContain('not found in collector');
+  });
+
+  it('errors on invalid JSON event string', async () => {
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: 'not-valid-json',
+      flow: undefined,
+      step: 'destination.gtag',
+    });
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toContain('Event string must be valid JSON');
   });
 });

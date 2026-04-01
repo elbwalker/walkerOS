@@ -394,7 +394,7 @@ describe('Destination', () => {
     result = await elb('walker consent', { test: false });
     expect(result.ok).toBe(true);
     expect(result.done).toBeUndefined();
-    expect(result.queued).toBeUndefined();
+    expect(result.queued).toBeDefined(); // Generalized flush retries queue on every state mutation
     expect(result.failed).toBeUndefined();
 
     result = await elb('walker consent', { test: true });

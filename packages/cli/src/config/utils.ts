@@ -2,11 +2,8 @@
  * Configuration Utility Functions
  */
 
-import crypto from 'crypto';
 import fs from 'fs-extra';
 import path from 'path';
-import { getErrorMessage } from '../core/index.js';
-import { getTmpPath } from '../core/tmp.js';
 import { mergeAuthHeaders } from '../core/http.js';
 import { resolveToken } from '../lib/config-file.js';
 
@@ -26,52 +23,24 @@ export function isUrl(str: string): boolean {
 }
 
 /**
- * Download a file from a URL to a temporary location
+ * Fetch content from a URL as a string, with auth headers.
+ * Shared helper for all URL-loading paths.
  *
- * @param url - HTTP/HTTPS URL to download
- * @returns Path to downloaded temporary file
- * @throws Error if download fails or response is not OK
- *
- * @example
- * ```typescript
- * const tempPath = await downloadFromUrl('https://example.com/config.json')
- * // Returns: "/tmp/walkeros-download-1647261462000-abc123.json"
- * ```
+ * @param url - HTTP/HTTPS URL to fetch
+ * @returns Response body as a string
+ * @throws Error if fetch fails or response is not OK
  */
-export async function downloadFromUrl(url: string): Promise<string> {
-  if (!isUrl(url)) {
-    throw new Error(`Invalid URL: ${url}`);
+export async function fetchContentString(url: string): Promise<string> {
+  const token = resolveToken()?.token;
+  const response = await fetch(url, {
+    headers: mergeAuthHeaders(token),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch ${url}: ${response.status} ${response.statusText}`,
+    );
   }
-
-  try {
-    const token = resolveToken()?.token;
-    const response = await fetch(url, {
-      headers: mergeAuthHeaders(token),
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to download ${url}: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const content = await response.text();
-
-    // Write to .tmp/downloads/ directory
-    const downloadsDir = getTmpPath(undefined, 'downloads');
-    await fs.ensureDir(downloadsDir);
-
-    const downloadId = crypto.randomUUID().slice(0, 8);
-    const tempPath = path.join(downloadsDir, `flow-${downloadId}.json`);
-    await fs.writeFile(tempPath, content, 'utf-8');
-
-    return tempPath;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to download from URL: ${error.message}`);
-    }
-    throw error;
-  }
+  return response.text();
 }
 
 /**
@@ -97,7 +66,115 @@ export function substituteEnvVariables(value: string): string {
 }
 
 /**
+ * Resolve raw string content from a URL, file path, or inline string.
+ *
+ * Detection priority:
+ * 1. URL (http://, https://) — download content
+ * 2. Existing file path — read file content
+ * 3. Inline string — return as-is
+ *
+ * @param input - URL, file path, or inline string
+ * @returns Raw string content and the resolved absolute path (if file-based)
+ * @throws Error if file not found or download fails
+ */
+async function resolveContent(input: string): Promise<string> {
+  const trimmed = input.trim();
+
+  // 1. Check if input is a URL
+  if (isUrl(trimmed)) {
+    return fetchContentString(trimmed);
+  }
+
+  // 2. Check if file path exists
+  const absolutePath = path.resolve(trimmed);
+  if (await fs.pathExists(absolutePath)) {
+    return fs.readFile(absolutePath, 'utf-8');
+  }
+
+  // 3. Inline content — return as-is
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    return trimmed;
+  }
+
+  // 4. Nothing matched — file not found
+  throw new Error(`Configuration file not found: ${absolutePath}`);
+}
+
+/**
+ * Load configuration from a file path, URL, or inline string.
+ *
+ * Supports two modes:
+ * - `json: true` (default) — resolves content and parses as JSON
+ * - `json: false` — resolves content and returns raw string
+ *
+ * Detection priority:
+ * 1. URL (http://, https://) — download content
+ * 2. Existing file path — read file content
+ * 3. Inline string (starting with { or [) — use directly
+ *
+ * @param input - Path to file, HTTP/HTTPS URL, or inline string
+ * @param options - Optional settings
+ * @param options.json - Parse as JSON (default: true)
+ * @returns Parsed object (json: true) or raw string (json: false)
+ * @throws Error if file not found, download fails, or invalid JSON
+ *
+ * @example
+ * ```typescript
+ * // JSON mode (default) — same as loadJsonConfig
+ * const config = await loadConfig('./config.json')
+ * const config = await loadConfig('https://example.com/config.json')
+ * const config = await loadConfig('{"version":3,"flows":{}}')
+ *
+ * // Raw string mode — returns file/URL content as string
+ * const code = await loadConfig('./bundle.js', { json: false })
+ * ```
+ */
+export async function loadConfig<T = unknown>(
+  input: string,
+  options?: { json?: boolean },
+): Promise<T | string> {
+  const json = options?.json !== false; // default true
+
+  if (!json) {
+    return resolveContent(input);
+  }
+
+  // JSON mode — resolve content then parse
+  const trimmed = input.trim();
+
+  try {
+    const content = await resolveContent(trimmed);
+
+    // Parse the resolved content as JSON
+    return JSON.parse(content) as T;
+  } catch (error) {
+    // Distinguish between JSON parse errors and resolution errors
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Re-throw resolution errors (file not found, fetch failed) as-is
+    if (
+      errorMessage.includes('not found') ||
+      errorMessage.includes('Failed to fetch')
+    ) {
+      throw error;
+    }
+
+    // JSON-looking inline content with parse errors
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      throw new Error(
+        `Input appears to be JSON but contains errors: ${errorMessage}`,
+      );
+    }
+
+    // File or URL with invalid JSON content
+    throw new Error(`Invalid JSON in config file: ${input}. ${errorMessage}`);
+  }
+}
+
+/**
  * Load and parse JSON configuration from a file path, URL, or inline JSON string.
+ *
+ * Thin wrapper around `loadConfig` with `json: true` (default).
  *
  * Detection priority:
  * 1. URL (http://, https://) — download and parse
@@ -121,53 +198,7 @@ export function substituteEnvVariables(value: string): string {
  * ```
  */
 export async function loadJsonConfig<T>(configPath: string): Promise<T> {
-  const trimmed = configPath.trim();
-
-  // 1. Check if input is a URL
-  if (isUrl(trimmed)) {
-    const absolutePath = await downloadFromUrl(trimmed);
-    try {
-      const rawConfig = await fs.readJson(absolutePath);
-      return rawConfig as T;
-    } catch (error) {
-      throw new Error(
-        `Invalid JSON in config file: ${configPath}. ${error instanceof Error ? error.message : error}`,
-      );
-    } finally {
-      try {
-        await fs.remove(absolutePath);
-      } catch {
-        // Ignore cleanup errors
-      }
-    }
-  }
-
-  // 2. Check if file path exists
-  const absolutePath = path.resolve(trimmed);
-  if (await fs.pathExists(absolutePath)) {
-    try {
-      const rawConfig = await fs.readJson(absolutePath);
-      return rawConfig as T;
-    } catch (error) {
-      throw new Error(
-        `Invalid JSON in config file: ${configPath}. ${error instanceof Error ? error.message : error}`,
-      );
-    }
-  }
-
-  // 3. Try inline JSON (for sandboxed environments where file paths don't resolve)
-  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-    try {
-      return JSON.parse(trimmed) as T;
-    } catch (jsonError) {
-      throw new Error(
-        `Input appears to be JSON but contains errors: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`,
-      );
-    }
-  }
-
-  // 4. Nothing matched — file not found
-  throw new Error(`Configuration file not found: ${absolutePath}`);
+  return loadConfig<T>(configPath, { json: true }) as Promise<T>;
 }
 
 /**
@@ -221,68 +252,27 @@ export async function loadJsonFromSource<T = unknown>(
 ): Promise<T> {
   const paramName = options?.name || 'input';
 
-  // Handle empty/undefined input
+  // 1. Handle empty/undefined input (pre-check)
   if (!source || source.trim() === '') {
-    if (options?.required) {
-      throw new Error(`${paramName} is required`);
-    }
-    if (options?.fallback !== undefined) {
-      return options.fallback;
-    }
+    if (options?.required) throw new Error(`${paramName} is required`);
+    if (options?.fallback !== undefined) return options.fallback;
     return {} as T;
   }
 
-  const trimmedSource = source.trim();
-
-  // 1. Check if URL
-  if (isUrl(trimmedSource)) {
-    try {
-      const tempPath = await downloadFromUrl(trimmedSource);
-      try {
-        const data = await fs.readJson(tempPath);
-        return data as T;
-      } finally {
-        // Clean up temp file
-        try {
-          await fs.remove(tempPath);
-        } catch {
-          // Ignore cleanup errors
-        }
-      }
-    } catch (error) {
-      throw new Error(
-        `Failed to load ${paramName} from URL ${trimmedSource}: ${getErrorMessage(error)}`,
-      );
-    }
-  }
-
-  // 2. Check if file path exists
-  const resolvedPath = path.resolve(trimmedSource);
-  if (await fs.pathExists(resolvedPath)) {
-    try {
-      const data = await fs.readJson(resolvedPath);
-      return data as T;
-    } catch (error) {
-      throw new Error(
-        `Failed to parse ${paramName} from file ${trimmedSource}: ${getErrorMessage(error)}`,
-      );
-    }
-  }
-
-  // 3. Try to parse as inline JSON
+  // 2. Try the strict loader (handles URL, file, inline JSON)
   try {
-    const parsed = JSON.parse(trimmedSource);
-    return parsed as T;
-  } catch (jsonError) {
-    // 4. Fallback: treat as event name string for backward compatibility
-    // This allows simple strings like "page view" to work
-    if (!trimmedSource.startsWith('{') && !trimmedSource.startsWith('[')) {
-      return { name: trimmedSource } as T;
+    return await loadJsonConfig<T>(source);
+  } catch (error) {
+    const trimmed = source.trim();
+
+    // 3. Not JSON-looking? Treat as event name (backward compat)
+    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+      return { name: trimmed } as T;
     }
 
-    // If it looks like JSON but failed to parse, throw helpful error
+    // 4. JSON-looking but invalid -- re-throw with context
     throw new Error(
-      `Failed to parse ${paramName}. Input appears to be JSON but contains errors: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`,
+      `Failed to parse ${paramName}. ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }

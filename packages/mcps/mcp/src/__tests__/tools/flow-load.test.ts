@@ -5,11 +5,18 @@ jest.mock('@walkeros/cli', () => ({
 }));
 
 jest.mock('@walkeros/core', () => ({
-  mcpResult: jest.fn((result, summary) => ({
+  mcpResult: jest.fn((result, hints) => ({
     content: [
-      { type: 'text', text: summary ?? JSON.stringify(result, null, 2) },
+      {
+        type: 'text',
+        text: JSON.stringify(
+          hints ? { ...result, _hints: hints } : result,
+          null,
+          2,
+        ),
+      },
     ],
-    structuredContent: result,
+    structuredContent: hints ? { ...result, _hints: hints } : result,
   })),
   mcpError: jest.fn((error) => ({
     content: [
@@ -70,7 +77,8 @@ describe('flow_load tool', () => {
     const result = await tool.handler({ source: './flow.json' });
 
     expect(mockLoadJsonConfig).toHaveBeenCalledWith('./flow.json');
-    expect(result.structuredContent).toEqual(mockConfig);
+    expect(result.structuredContent).toMatchObject(mockConfig);
+    expect(result.structuredContent._hints).toBeDefined();
     expect(result.isError).toBeUndefined();
   });
 
@@ -121,6 +129,6 @@ describe('flow_load tool', () => {
     });
 
     expect(mockLoadJsonConfig).toHaveBeenCalledWith('./flow.json');
-    expect(result.structuredContent).toEqual(mockConfig);
+    expect(result.structuredContent).toMatchObject(mockConfig);
   });
 });

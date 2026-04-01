@@ -1,8 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Collector, Logger, WalkerOS, Context as BaseContext } from '.';
 import type { DestroyFn } from './lifecycle';
+import type { Ingest } from './ingest';
 
-export type Next = string | string[];
+export interface NextRule {
+  match: import('./matcher').MatchExpression | '*';
+  next: Next;
+}
+
+export type Next = string | string[] | NextRule[];
 
 /**
  * Base environment interface for walkerOS transformers.
@@ -58,8 +64,15 @@ export interface Config<T extends TypesGeneric = Types> {
   env?: Env<T>;
   id?: string;
   logger?: Logger.Config;
+  before?: Next; // Pre-transformer chain (runs before push)
   next?: Next; // Graph wiring to next transformer
+  cache?: import('./cache').Cache; // Step-level cache config
   init?: boolean; // Track init state (like Destination)
+  disabled?: boolean; // Completely skip this transformer in chains
+  /** Return this value instead of calling push(). Global mock for all chains. */
+  mock?: unknown;
+  /** Path-specific mock values keyed by chain path (e.g., "destination.ga4.before"). Takes precedence over global mock. */
+  chainMocks?: Record<string, unknown>;
 }
 
 /**
@@ -70,7 +83,7 @@ export interface Context<
   T extends TypesGeneric = Types,
 > extends BaseContext.Base<Config<T>, Env<T>> {
   id: string;
-  ingest?: unknown;
+  ingest: Ingest;
 }
 
 /**
@@ -81,26 +94,42 @@ export interface Context<
  * @field respond - Wrapped respond function for downstream transformers
  * @field next - Branch to a different chain (replaces BranchResult)
  */
-export interface Result {
-  event?: WalkerOS.DeepPartialEvent;
+export interface Result<E = WalkerOS.DeepPartialEvent> {
+  event?: E;
   respond?: import('../respond').RespondFn;
   next?: Next;
 }
 
 /**
+ * Result of running a transformer chain.
+ * Returns the processed event (singular, fan-out array, or null if dropped)
+ * alongside the potentially wrapped respond function.
+ */
+export interface ChainResult {
+  event: WalkerOS.DeepPartialEvent | WalkerOS.DeepPartialEvent[] | null;
+  respond?: import('../respond').RespondFn;
+}
+
+/**
  * The main transformer function.
- * Uses DeepPartialEvent for consistency across pre/post collector.
  *
- * @param event - The event to process
- * @param context - Transformer context with collector, config, env, logger
+ * Pre-collector transformers use default E = DeepPartialEvent.
+ * Post-collector transformers can use E = Event for type-safe access.
+ * A transformer written for DeepPartialEvent works in both positions
+ * because Event is a subtype of DeepPartialEvent.
+ *
  * @returns Result - structured result with event, respond, next
+ * @returns Result[] - fan-out: each Result continues independently through remaining chain
  * @returns void - continue with current event unchanged (passthrough)
  * @returns false - stop chain, cancel further processing
  */
-export type Fn<T extends TypesGeneric = Types> = (
-  event: WalkerOS.DeepPartialEvent,
+export type Fn<
+  T extends TypesGeneric = Types,
+  E = WalkerOS.DeepPartialEvent,
+> = (
+  event: E,
   context: Context<T>,
-) => WalkerOS.PromiseOrValue<Result | false | void>;
+) => WalkerOS.PromiseOrValue<Result<E> | Result<E>[] | false | void>;
 
 /**
  * Optional initialization function.
@@ -142,7 +171,9 @@ export type InitTransformer<T extends TypesGeneric = Types> = {
   code: Init<T>;
   config?: Partial<Config<T>>;
   env?: Partial<Env<T>>;
+  before?: Next;
   next?: Next;
+  cache?: import('./cache').Cache;
 };
 
 /**

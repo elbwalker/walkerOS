@@ -169,8 +169,10 @@ describe('sourceExpress', () => {
         options: jest.fn(),
       };
 
+      const mockTextMiddleware = jest.fn();
       const mockExpress = Object.assign(jest.fn().mockReturnValue(mockApp), {
         json: jest.fn().mockReturnValue(mockJsonMiddleware),
+        text: jest.fn().mockReturnValue(mockTextMiddleware),
       });
 
       const mockCors = jest.fn().mockReturnValue(mockCorsMiddleware);
@@ -225,7 +227,7 @@ describe('sourceExpress', () => {
   });
 
   describe('POST request handling', () => {
-    it('should reject POST with missing body', async () => {
+    it('should push empty object for POST with missing body', async () => {
       const source = await sourceExpress(
         createSourceContext(
           {},
@@ -246,15 +248,11 @@ describe('sourceExpress', () => {
 
       await source.push(req, res);
 
-      expect(res.statusCode).toBe(400);
-      expect(res.responseBody).toMatchObject({
-        success: false,
-        error: expect.stringContaining('Invalid event'),
-      });
-      expect(mockPush).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(200);
+      expect(mockPush).toHaveBeenCalledWith({});
     });
 
-    it('should reject POST with invalid body type', async () => {
+    it('should push empty object for POST with invalid body type', async () => {
       const source = await sourceExpress(
         createSourceContext(
           {},
@@ -275,10 +273,87 @@ describe('sourceExpress', () => {
 
       await source.push(req, res);
 
-      expect(res.statusCode).toBe(400);
-      expect(res.responseBody).toMatchObject({
-        success: false,
-        error: expect.stringContaining('Invalid event'),
+      expect(res.statusCode).toBe(200);
+      expect(mockPush).toHaveBeenCalledWith({});
+    });
+
+    describe('raw body support', () => {
+      it('should push empty event for text/plain POST body', async () => {
+        const source = await sourceExpress(
+          createSourceContext(
+            {},
+            {
+              push: mockPush as never,
+              command: mockCommand as never,
+              elb: jest.fn() as never,
+              logger: createMockLogger(),
+            },
+          ),
+        );
+
+        // Simulates a sendBeacon POST with a Base64 text body
+        const req = createMockRequest({
+          method: 'POST',
+          body: 'SGVsbG8gV29ybGQ=', // Base64 string
+          headers: { 'content-type': 'text/plain' },
+        });
+        const res = createMockResponse();
+
+        await source.push(req, res);
+
+        expect(mockPush).toHaveBeenCalledWith({});
+        expect(res.statusCode).toBe(200);
+      });
+
+      it('should push empty event for undefined POST body', async () => {
+        const source = await sourceExpress(
+          createSourceContext(
+            {},
+            {
+              push: mockPush as never,
+              command: mockCommand as never,
+              elb: jest.fn() as never,
+              logger: createMockLogger(),
+            },
+          ),
+        );
+
+        const req = createMockRequest({
+          method: 'POST',
+          body: undefined,
+        });
+        const res = createMockResponse();
+
+        await source.push(req, res);
+
+        expect(mockPush).toHaveBeenCalledWith({});
+        expect(res.statusCode).toBe(200);
+      });
+
+      it('should still push JSON body as-is (regression)', async () => {
+        const source = await sourceExpress(
+          createSourceContext(
+            {},
+            {
+              push: mockPush as never,
+              command: mockCommand as never,
+              elb: jest.fn() as never,
+              logger: createMockLogger(),
+            },
+          ),
+        );
+
+        const eventBody = { event: 'page view', data: { title: 'Home' } };
+        const req = createMockRequest({
+          method: 'POST',
+          body: eventBody,
+        });
+        const res = createMockResponse();
+
+        await source.push(req, res);
+
+        expect(mockPush).toHaveBeenCalledWith(eventBody);
+        expect(res.statusCode).toBe(200);
       });
     });
 

@@ -142,42 +142,35 @@ export function registerApiTool(server: McpServer) {
 
       try {
         let data: unknown;
-        let summary: string;
 
         switch (action) {
           // Auth
           case 'whoami': {
             data = await whoami();
-            summary = `Authenticated as ${(data as Record<string, unknown>).email}`;
             break;
           }
 
           // Projects
           case 'project.list': {
             data = await listProjects();
-            summary = `${(((data as Record<string, unknown>).projects as unknown[]) ?? []).length} projects`;
             break;
           }
           case 'project.get': {
             data = await getProject({ projectId });
-            summary = `Project "${(data as Record<string, unknown>).name}"`;
             break;
           }
           case 'project.create': {
             if (!name) throw new Error('name required for project.create');
             data = await createProject({ name });
-            summary = `Created project "${name}"`;
             break;
           }
           case 'project.update': {
             if (!name) throw new Error('name required for project.update');
             data = await updateProject({ projectId, name });
-            summary = `Updated project "${name}"`;
             break;
           }
           case 'project.delete': {
             data = await deleteProject({ projectId });
-            summary = `Deleted project ${projectId ?? 'default'}`;
             break;
           }
 
@@ -189,20 +182,17 @@ export function registerApiTool(server: McpServer) {
               order: order as 'asc' | 'desc' | undefined,
               includeDeleted,
             });
-            summary = `${(((data as Record<string, unknown>).flows as unknown[]) ?? []).length} flows`;
             break;
           }
           case 'flow.get': {
             if (!flowId) throw new Error('flowId required for flow.get');
             data = await getFlow({ flowId, projectId, fields });
-            summary = `Flow "${(data as Record<string, unknown>).name}" (${flowId})`;
             break;
           }
           case 'flow.create': {
             if (!name) throw new Error('name required for flow.create');
             if (!content) throw new Error('content required for flow.create');
             data = await createFlow({ name, content, projectId });
-            summary = `Created flow "${name}" (${(data as Record<string, unknown>).id})`;
             break;
           }
           case 'flow.update': {
@@ -214,19 +204,16 @@ export function registerApiTool(server: McpServer) {
               projectId,
               mergePatch: patch ?? true,
             });
-            summary = `Updated flow ${flowId}`;
             break;
           }
           case 'flow.delete': {
             if (!flowId) throw new Error('flowId required for flow.delete');
             data = await deleteFlow({ flowId, projectId });
-            summary = `Deleted flow ${flowId}`;
             break;
           }
           case 'flow.duplicate': {
             if (!flowId) throw new Error('flowId required for flow.duplicate');
             data = await duplicateFlow({ flowId, name, projectId });
-            summary = `Duplicated flow ${flowId}`;
             break;
           }
 
@@ -292,12 +279,13 @@ export function registerApiTool(server: McpServer) {
             const st = (data as Record<string, unknown>).status;
             const deployData = data as Record<string, unknown>;
             if (st === 'failed') {
-              const msg = `Deploy failed: ${deployData.errorMessage ?? 'unknown error'}`;
-              return mcpResult({ action, ok: false, data }, msg, {
-                next: ['Run flow_validate to check your configuration'],
-              });
+              return mcpResult(
+                { action, ok: false, data },
+                {
+                  next: ['Run flow_validate to check your configuration'],
+                },
+              );
             } else {
-              summary = `Deployed flow ${flowId} — status: ${st}`;
               const publicUrl = deployData.publicUrl as string | undefined;
               const containerUrl = deployData.containerUrl as
                 | string
@@ -312,9 +300,12 @@ export function registerApiTool(server: McpServer) {
                 nextHints.push(`Test: curl ${containerUrl}/health`);
               }
               if (nextHints.length > 0) {
-                return mcpResult({ action, ok: true, data }, summary, {
-                  next: nextHints,
-                });
+                return mcpResult(
+                  { action, ok: true, data },
+                  {
+                    next: nextHints,
+                  },
+                );
               }
             }
             break;
@@ -331,7 +322,6 @@ export function registerApiTool(server: McpServer) {
             } catch {
               data = await getDeploymentBySlug({ slug: flowId });
             }
-            summary = `Deployment ${(data as Record<string, unknown>).slug ?? flowId} — ${(data as Record<string, unknown>).status}`;
             break;
           }
           case 'deployment.list': {
@@ -340,7 +330,6 @@ export function registerApiTool(server: McpServer) {
               type: type as 'web' | 'server' | undefined,
               status,
             });
-            summary = `${(((data as Record<string, unknown>).deployments as unknown[]) ?? []).length} deployments`;
             break;
           }
           case 'deployment.create': {
@@ -349,14 +338,12 @@ export function registerApiTool(server: McpServer) {
                 'type (web/server) required for deployment.create',
               );
             data = await createDep({ type, label: name, projectId });
-            summary = `Created ${type} deployment ${(data as Record<string, unknown>).slug}`;
             break;
           }
           case 'deployment.delete': {
             if (!flowId)
               throw new Error('flowId (slug) required for deployment.delete');
             data = await deleteDep({ slug: flowId });
-            summary = `Deleted deployment ${flowId}`;
             break;
           }
 
@@ -366,7 +353,7 @@ export function registerApiTool(server: McpServer) {
             );
         }
 
-        return mcpResult({ action, ok: true, data }, summary);
+        return mcpResult({ action, ok: true, data });
       } catch (error) {
         const msg = error instanceof Error ? error.message : '';
         const name = error instanceof Error ? error.name : '';
@@ -384,7 +371,6 @@ export function registerApiTool(server: McpServer) {
               ok: true,
               data: { status: 'deploying', flowId },
             },
-            `Deploy in progress (timed out waiting). Use deployment.list with projectId to check status.`,
             {
               next: [
                 'Use api(action: "deployment.list") to check current status',

@@ -1,13 +1,13 @@
-export function isVisible(element: HTMLElement): boolean {
+export function isVisible(element: HTMLElement, win: Window, doc: Document): boolean {
   // Check for hiding styles
-  const style = getComputedStyle(element);
+  const style = win.getComputedStyle(element);
   if (style.display === 'none') return false;
   if (style.visibility !== 'visible') return false;
   if (style.opacity && Number(style.opacity) < 0.1) return false;
 
   // Window positions
   let pointContainer;
-  const windowHeight = window.innerHeight; // Height of the viewport
+  const windowHeight = win.innerHeight; // Height of the viewport
 
   // Element positions
   const elemRectRel = element.getBoundingClientRect(); // Get the elements relative to the viewport
@@ -34,18 +34,18 @@ export function isVisible(element: HTMLElement): boolean {
     if (elemCenterRel.x < 0) return false;
     if (
       elemCenterRel.x >
-      (document.documentElement.clientWidth || window.innerWidth)
+      (doc.documentElement.clientWidth || win.innerWidth)
     )
       return false;
     if (elemCenterRel.y < 0) return false;
     if (
       elemCenterRel.y >
-      (document.documentElement.clientHeight || window.innerHeight)
+      (doc.documentElement.clientHeight || win.innerHeight)
     )
       return false;
 
     // Select the element that is at the center of the target
-    pointContainer = document.elementFromPoint(
+    pointContainer = doc.elementFromPoint(
       elemCenterRel.x,
       elemCenterRel.y,
     );
@@ -63,7 +63,7 @@ export function isVisible(element: HTMLElement): boolean {
       return false;
 
     // Select the element that is in the middle of the screen
-    pointContainer = document.elementFromPoint(
+    pointContainer = doc.elementFromPoint(
       elemCenterRel.x,
       windowHeight / 2,
     );

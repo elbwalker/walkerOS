@@ -102,6 +102,8 @@ export interface Config<
    * }
    */
   ingest?: WalkerOSMapping.Data;
+  /** Completely skip this source — no init, no event capture. */
+  disabled?: boolean;
 }
 
 export type PartialConfig<T extends TypesGeneric = Types> = Config<
@@ -154,6 +156,8 @@ export type InitSource<T extends TypesGeneric = Types> = {
   env?: Partial<Env<T>>;
   primary?: boolean;
   next?: Next;
+  before?: Next;
+  cache?: import('./cache').Cache;
 };
 
 /**

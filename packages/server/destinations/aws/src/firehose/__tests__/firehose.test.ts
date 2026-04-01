@@ -1,6 +1,6 @@
 import type { Config, Settings, Destination, Env } from '../types';
 import type { Collector } from '@walkeros/core';
-import { createEvent, createMockLogger } from '@walkeros/core';
+import { createEvent, createMockContext, createMockLogger } from '@walkeros/core';
 import * as examples from '../examples';
 
 const { env } = examples;
@@ -84,13 +84,14 @@ describe('Firehose', () => {
     const config = await getConfig(settingsConfig);
     const mockCollector = {} as Collector.Instance;
 
-    await destination.push(event, {
-      config,
-      collector: mockCollector,
-      env: testEnv,
-      logger: createMockLogger(),
-      id: 'test-firehose',
-    });
+    await destination.push(
+      event,
+      createMockContext({
+        config,
+        env: testEnv,
+        id: 'test-firehose',
+      }),
+    );
 
     // Get the client instance send method
     const clientInstance = config.settings.firehose?.client;

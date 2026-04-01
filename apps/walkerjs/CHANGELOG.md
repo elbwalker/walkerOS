@@ -1,5 +1,36 @@
 # @walkeros/walker.js
 
+## 3.2.0
+
+### Patch Changes
+
+- Updated dependencies [eb865e1]
+- Updated dependencies [c0a53f9]
+- Updated dependencies [8cdc0bb]
+- Updated dependencies [f007c9f]
+- Updated dependencies [bf2dc5b]
+- Updated dependencies [da0b640]
+- Updated dependencies [a5d25bc]
+- Updated dependencies [9a99298]
+- Updated dependencies [884527d]
+  - @walkeros/core@3.2.0
+  - @walkeros/collector@3.2.0
+  - @walkeros/web-core@3.2.0
+  - @walkeros/web-source-browser@3.2.0
+  - @walkeros/web-source-session@3.2.0
+  - @walkeros/web-source-datalayer@3.2.0
+
+## 3.1.1
+
+### Patch Changes
+
+- @walkeros/core@3.1.1
+- @walkeros/collector@3.1.1
+- @walkeros/web-core@3.1.1
+- @walkeros/web-source-browser@3.1.1
+- @walkeros/web-source-session@3.1.1
+- @walkeros/web-source-datalayer@3.1.1
+
 ## 3.1.0
 
 ### Patch Changes

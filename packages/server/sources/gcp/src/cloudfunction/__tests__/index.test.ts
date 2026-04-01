@@ -182,7 +182,7 @@ describe('sourceCloudFunction', () => {
       });
     });
 
-    it('should require request body', async () => {
+    it('should push empty event when body is missing', async () => {
       const source = await sourceCloudFunction(
         createSourceContext(
           {},
@@ -199,11 +199,29 @@ describe('sourceCloudFunction', () => {
 
       await source.push(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Request body is required',
-      });
+      expect(mockPush).toHaveBeenCalledWith({});
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('should push empty event when body is a string', async () => {
+      const source = await sourceCloudFunction(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+      const req = createMockRequest('POST', 'some random string');
+      const res = createMockResponse();
+
+      await source.push(req, res);
+
+      expect(mockPush).toHaveBeenCalledWith({});
+      expect(res.status).toHaveBeenCalledWith(200);
     });
   });
 
@@ -378,7 +396,7 @@ describe('sourceCloudFunction', () => {
   });
 
   describe('error handling', () => {
-    it('should handle invalid request format', async () => {
+    it('should push empty event for invalid request format', async () => {
       const source = await sourceCloudFunction(
         createSourceContext(
           {},
@@ -395,11 +413,8 @@ describe('sourceCloudFunction', () => {
 
       await source.push(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Invalid request format. Expected event object.',
-      });
+      expect(mockPush).toHaveBeenCalledWith({});
+      expect(res.status).toHaveBeenCalledWith(200);
     });
   });
 

@@ -147,7 +147,7 @@ describe('Transformer', () => {
 
       const result = await runTransformerChain(collector, {}, [], event);
 
-      expect(result).toEqual(event);
+      expect(result.event).toEqual(event);
     });
 
     test('passes event through transformer that returns void', async () => {
@@ -167,7 +167,7 @@ describe('Transformer', () => {
       );
 
       expect(mockPush).toHaveBeenCalledWith(event, expect.any(Object));
-      expect(result).toEqual(event);
+      expect(result.event).toEqual(event);
     });
 
     test('uses modified event from transformer', async () => {
@@ -187,7 +187,7 @@ describe('Transformer', () => {
         event,
       );
 
-      expect(result).toEqual(modifiedEvent);
+      expect(result.event).toEqual(modifiedEvent);
     });
 
     test('stops chain when transformer returns false', async () => {
@@ -208,7 +208,7 @@ describe('Transformer', () => {
         event,
       );
 
-      expect(result).toBeNull();
+      expect(result.event).toBeNull();
       expect(mockPush1).toHaveBeenCalled();
       expect(mockPush2).not.toHaveBeenCalled();
     });
@@ -231,7 +231,7 @@ describe('Transformer', () => {
         event,
       );
 
-      expect(result).toBeNull();
+      expect(result.event).toBeNull();
       expect(mockPush1).toHaveBeenCalled();
       expect(mockPush2).not.toHaveBeenCalled();
     });
@@ -262,7 +262,7 @@ describe('Transformer', () => {
       );
 
       expect(callOrder).toEqual(['first', 'second']);
-      expect(result).toEqual({
+      expect(result.event).toEqual({
         name: 'page view',
         data: { first: true, second: true },
       });
@@ -285,7 +285,7 @@ describe('Transformer', () => {
       );
 
       expect(mockPush).toHaveBeenCalled();
-      expect(result).toEqual(event);
+      expect(result.event).toEqual(event);
     });
   });
 

@@ -1,44 +1,35 @@
-import type { Collector, Logger, Transformer, WalkerOS } from '@walkeros/core';
+import type { Transformer, WalkerOS } from '@walkeros/core';
 import type { RespondFn, RespondOptions } from '@walkeros/core';
+import { createIngest, createMockContext, createMockLogger } from '@walkeros/core';
 import { createMockStore } from '@walkeros/store-memory';
 import { transformerFile } from '../transformer';
 import type { FileSettings, Types } from '../types';
 
 describe('Transformer File', () => {
-  const mockLogger: Logger.Instance = {
-    error: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    debug: jest.fn(),
-    throw: jest.fn() as unknown as Logger.ThrowFn,
-    json: jest.fn(),
-    scope: jest.fn().mockReturnThis(),
-  };
-
-  const mockCollector = {} as Collector.Instance;
+  const mockLogger = createMockLogger();
 
   const createInitContext = (
     config: Transformer.Config<Types>,
     env: Partial<Transformer.Env<Types>> = {},
-  ): Transformer.Context<Types> => ({
-    collector: mockCollector,
-    config,
-    env: env as Transformer.Env<Types>,
-    logger: mockLogger,
-    id: 'test-file',
-  });
+  ) =>
+    createMockContext<Types>({
+      config,
+      env: env as Transformer.Env<Types>,
+      logger: mockLogger,
+      id: 'test-file',
+    });
 
   const createPushContext = (
-    ingest: Record<string, unknown> = {},
+    ingestData: Record<string, unknown> = {},
     respond?: RespondFn,
-  ): Transformer.Context<Types> => ({
-    collector: mockCollector,
-    config: {},
-    env: respond ? { respond } : {},
-    logger: mockLogger,
-    id: 'test-file',
-    ingest,
-  });
+  ) =>
+    createMockContext<Types>({
+      config: {},
+      env: respond ? { respond } : {},
+      logger: mockLogger,
+      id: 'test-file',
+      ingest: { ...createIngest('test'), ...ingestData, _meta: createIngest('test')._meta },
+    });
 
   const baseEvent: WalkerOS.DeepPartialEvent = { name: 'page view' };
 

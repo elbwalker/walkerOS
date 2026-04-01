@@ -18,6 +18,8 @@
  */
 
 import { z, toJsonSchema } from './validation';
+import { RoutableNextSchema } from './matcher';
+import { CacheSchema } from './cache';
 
 // ========================================
 // Primitive Type Schemas
@@ -222,14 +224,17 @@ export const SourceReferenceSchema = z
     definitions: DefinitionsSchema.optional().describe(
       'Source-level definitions (highest priority in cascade)',
     ),
-    next: z
-      .union([z.string(), z.array(z.string())])
-      .optional()
-      .describe(
-        'Pre-collector transformer chain. Name of the first transformer to run after this source captures an event. If omitted, events go directly to the collector. Can be an array for explicit chain control.',
-      ),
+    next: RoutableNextSchema.optional().describe(
+      'Pre-collector transformer chain. String, string[], or NextRule[] for conditional routing based on ingest data.',
+    ),
+    before: RoutableNextSchema.optional().describe(
+      'Pre-source transformer chain (consent-exempt). Handles transport-level preprocessing.',
+    ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
+    ),
+    cache: CacheSchema.optional().describe(
+      'Cache configuration for this source (match → key → ttl rules)',
     ),
   })
   .describe('Source package reference with configuration');
@@ -268,12 +273,12 @@ export const TransformerReferenceSchema = z
       .unknown()
       .optional()
       .describe('Transformer environment configuration'),
-    next: z
-      .union([z.string(), z.array(z.string())])
-      .optional()
-      .describe(
-        'Next transformer in chain. If omitted: pre-collector routes to collector, post-collector routes to destination.',
-      ),
+    before: RoutableNextSchema.optional().describe(
+      'Pre-transformer chain. Runs before this transformer push function.',
+    ),
+    next: RoutableNextSchema.optional().describe(
+      'Next transformer in chain. String, string[], or NextRule[] for conditional routing.',
+    ),
     variables: VariablesSchema.optional().describe(
       'Transformer-level variables (highest priority in cascade)',
     ),
@@ -282,6 +287,9 @@ export const TransformerReferenceSchema = z
     ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
+    ),
+    cache: CacheSchema.optional().describe(
+      'Cache configuration for this transformer (match → key → ttl rules)',
     ),
   })
   .describe('Transformer package reference with configuration');
@@ -326,14 +334,17 @@ export const DestinationReferenceSchema = z
     definitions: DefinitionsSchema.optional().describe(
       'Destination-level definitions (highest priority in cascade)',
     ),
-    before: z
-      .union([z.string(), z.array(z.string())])
-      .optional()
-      .describe(
-        'Post-collector transformer chain. Name of the first transformer to run before sending events to this destination. If omitted, events come directly from the collector. Can be an array for explicit chain control.',
-      ),
+    before: RoutableNextSchema.optional().describe(
+      'Post-collector transformer chain. String, string[], or NextRule[] for conditional routing.',
+    ),
+    next: RoutableNextSchema.optional().describe(
+      'Post-push transformer chain. Push response available at context.ingest._response.',
+    ),
     examples: StepExamplesSchema.optional().describe(
       'Named step examples for testing and documentation (stripped during bundling)',
+    ),
+    cache: CacheSchema.optional().describe(
+      'Cache configuration for this destination (match → key → ttl rules)',
     ),
   })
   .describe('Destination package reference with configuration');

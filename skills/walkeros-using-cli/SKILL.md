@@ -28,7 +28,7 @@ npm install -g @walkeros/cli
 walkeros bundle flow.json
 
 # Test with simulated event
-walkeros simulate flow.json -e '{"entity":"page","action":"view"}'
+walkeros push flow.json -e '{"entity":"page","action":"view"}' --simulate destination.demo
 
 # Push real event
 walkeros push flow.json -e '{"entity":"page","action":"view"}'
@@ -39,8 +39,7 @@ walkeros push flow.json -e '{"entity":"page","action":"view"}'
 | Command    | Purpose                        | Safe? |
 | ---------- | ------------------------------ | ----- |
 | `bundle`   | Generate JS bundle from config | ✅    |
-| `simulate` | Test with mocked API calls     | ✅    |
-| `push`     | Execute with real API calls    | ⚠️    |
+| `push`     | Execute with real API calls (or `--simulate` for mocked) | ⚠️    |
 | `run`      | Local HTTP event collection    | ✅    |
 | `deploy`   | Deploy flows to cloud          | ⚠️    |
 | `validate` | Validate configs/events        | ✅    |
@@ -58,7 +57,7 @@ For detailed command reference, see
 ```
 1. Write flow.json config
 2. Bundle: walkeros bundle flow.json
-3. Simulate: walkeros simulate flow.json -e event.json
+3. Simulate: walkeros push flow.json -e event.json --simulate destination.demo
 4. Fix issues, repeat 2-3
 5. Push test: walkeros push flow.json -e event.json
 6. Deploy: walkeros deploy start <flowId>
@@ -74,7 +73,7 @@ walkeros bundle flow.json --flow myFlow
 walkeros bundle flow.json --all
 
 # Test specific flow
-walkeros simulate flow.json --flow myFlow -e event.json
+walkeros push flow.json --flow myFlow -e event.json --simulate destination.demo
 ```
 
 ### Local Development Server
@@ -148,10 +147,10 @@ Target a specific step and provide input as `SourceInput`
 
 ```bash
 # Simulate a source step with trigger metadata
-walkeros simulate flow.json --step source.browser --event '{"content":"<html>...","trigger":{"type":"click"}}'
+walkeros push flow.json --simulate source.browser --event '{"content":"<html>...","trigger":{"type":"click"}}'
 
 # Simulate a destination step with an event
-walkeros simulate flow.json --step destinations.gtag -e '{"entity":"order","action":"complete","data":{"total":149.97}}'
+walkeros push flow.json --simulate destination.gtag -e '{"entity":"order","action":"complete","data":{"total":149.97}}'
 ```
 
 Example output:
@@ -218,19 +217,6 @@ Options:
 
 Output: `./dist/walker.js` (web) or `./dist/bundle.mjs` (server)
 
-### Simulate Command
-
-```bash
-walkeros simulate <config|bundle> [options]
-
-Options:
-  -e, --event <json|file|url>   Event to process (required for bundles)
-  --step <path>                  Target a specific step (e.g. source.browser)
-  --flow <name>                  Flow to simulate
-  -p, --platform <web|server>   Platform override
-  --json                         JSON output
-```
-
 ### Push Command
 
 ```bash
@@ -240,6 +226,9 @@ Options:
   -e, --event <json|file|url>   Event to process (required)
   --flow <name>                  Flow to use
   -p, --platform <web|server>   Platform override
+  --simulate <step>              Simulate a step (repeatable). destination.NAME or source.NAME
+  --mock <step=value>            Mock a step with a specific return value (repeatable)
+  --snapshot <source>            JS file to eval before execution (sets global state)
 ```
 
 ### Validate Command
@@ -299,7 +288,47 @@ Options:
 
 1. **Validate event**: `walkeros validate event.json`
 2. **Check mapping**: Event must match entity/action in mapping
-3. **Use simulate first**: `walkeros simulate flow.json -e event.json -v`
+3. **Use simulate first**: `walkeros push flow.json -e event.json --simulate destination.demo -v`
+
+### Destination Not Found in Simulation
+
+If `--simulate destination.NAME` errors with "not found in collector", the
+destination likely has `require: ["consent"]` in its config. This delays
+initialization until a `walker consent` event fires — which doesn't happen
+during simulation.
+
+**Fix:** Remove or comment out the `require` field for simulation testing:
+
+```json
+{
+  "destinations": {
+    "gtag": {
+      "package": "@walkeros/web-destination-gtag",
+      "config": {
+        "settings": { "measurementId": "G-XXXXXX" }
+      }
+    }
+  }
+}
+```
+
+### Destination Silent (0 Events Received)
+
+If the destination is found but receives 0 events:
+
+1. **Check consent**: If destination has `consent: { marketing: true }`, the
+   event must include matching consent. Add to event JSON:
+   `{ "name": "page view", "data": {...}, "consent": { "marketing": true } }`
+2. **Check mapping**: The event name must match a mapping rule (entity/action
+   keys). Unmapped events pass through unmodified.
+3. **Check policy**: Policy runs BEFORE mapping — verify policy isn't redacting
+   fields needed by mapping rules.
+
+### Web Simulation Transport
+
+Web simulations run in JSDOM. `fetch` and `navigator.sendBeacon` are
+polyfilled as tracked no-ops -- no real HTTP requests are made. Captured
+network calls are included in `PushResult.networkCalls` when present.
 
 ### Local Packages Not Found
 

@@ -31,6 +31,7 @@ export function normalizePlatform(platform?: unknown): string[] {
 export async function fetchCatalog(filters?: {
   type?: string;
   platform?: string;
+  baseUrl?: string;
 }): Promise<CatalogEntry[]> {
   if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
     return applyFilters(cache.entries, filters);
@@ -38,14 +39,36 @@ export async function fetchCatalog(filters?: {
 
   let entries: CatalogEntry[];
   try {
-    entries = await fetchFromNpm();
+    entries = filters?.baseUrl
+      ? await fetchCatalogFrom(filters.baseUrl, filters)
+      : await fetchFromNpm();
   } catch {
-    return [];
+    try {
+      entries = await fetchFromNpm();
+    } catch {
+      return [];
+    }
   }
 
   cache = { entries, timestamp: Date.now() };
 
   return applyFilters(entries, filters);
+}
+
+async function fetchCatalogFrom(
+  baseUrl: string,
+  filters?: { type?: string; platform?: string },
+): Promise<CatalogEntry[]> {
+  const params = new URLSearchParams();
+  if (filters?.type) params.set('type', filters.type);
+  if (filters?.platform) params.set('platform', filters.platform);
+
+  const url = `${baseUrl}/api/packages${params.toString() ? `?${params}` : ''}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`Catalog fetch failed: ${res.status}`);
+
+  const data = (await res.json()) as { catalog: CatalogEntry[] };
+  return data.catalog;
 }
 
 async function fetchFromNpm(): Promise<CatalogEntry[]> {

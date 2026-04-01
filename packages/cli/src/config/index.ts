@@ -26,6 +26,7 @@ export {
 // Utility functions
 export {
   substituteEnvVariables,
+  loadConfig,
   loadJsonConfig,
   loadJsonFromSource,
   isUrl,

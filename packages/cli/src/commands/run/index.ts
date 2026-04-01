@@ -11,6 +11,7 @@ import { homedir } from 'os';
 import { join } from 'path';
 import { createCLILogger } from '../../core/cli-logger.js';
 import { createTimer, getErrorMessage } from '../../core/index.js';
+import { getTmpPath } from '../../core/tmp.js';
 import { resolveAppUrl } from '../../lib/config-file.js';
 import { resolveRunToken } from '../../core/auth.js';
 import { resolveBundle } from '../../runtime/resolve-bundle.js';
@@ -32,7 +33,7 @@ function defaultCacheDir(): string {
 async function lazyPrepareBundleForRun(
   configPath: string,
   options: { verbose?: boolean; silent?: boolean; flowName?: string },
-): Promise<string> {
+): Promise<{ bundlePath: string; cleanup: () => Promise<void> }> {
   const { prepareBundleForRun } = await import('./utils.js');
   return prepareBundleForRun(configPath, options);
 }
@@ -177,11 +178,12 @@ async function resolveBundlePath(
     // JSON config — needs bundling
     const flowFile = validateFlowFile(resolved.path);
     logger.debug('Building flow bundle');
-    return lazyPrepareBundleForRun(flowFile, {
+    const result = await lazyPrepareBundleForRun(flowFile, {
       verbose: false,
       silent: true,
       flowName: apiConfig?.flowName,
     });
+    return result.bundlePath;
   }
 
   // Case 2: Remote config fetch (no local file, but API config with flowId)
@@ -196,7 +198,10 @@ async function resolveBundlePath(
       });
 
       if (result.changed) {
-        const tmpConfigPath = `/tmp/walkeros-flow-${Date.now()}.json`;
+        const tmpConfigPath = getTmpPath(
+          undefined,
+          `walkeros-flow-${Date.now()}.json`,
+        );
         writeFileSync(
           tmpConfigPath,
           JSON.stringify(result.content, null, 2),
@@ -205,7 +210,7 @@ async function resolveBundlePath(
         logger.info(`Config version: ${result.version}`);
 
         logger.info('Building flow...');
-        const bundlePath = await lazyPrepareBundleForRun(tmpConfigPath, {
+        const bundleResult = await lazyPrepareBundleForRun(tmpConfigPath, {
           verbose: false,
           silent: true,
           flowName: apiConfig.flowName,
@@ -216,7 +221,7 @@ async function resolveBundlePath(
           const { writeCache } = await import('../../runtime/cache.js');
           writeCache(
             apiConfig.cacheDir,
-            bundlePath,
+            bundleResult.bundlePath,
             JSON.stringify(result.content),
             result.version,
           );
@@ -224,7 +229,7 @@ async function resolveBundlePath(
           logger.debug('Cache write failed (non-critical)');
         }
 
-        return bundlePath;
+        return bundleResult.bundlePath;
       }
     } catch (error) {
       logger.error(

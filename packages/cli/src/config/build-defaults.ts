@@ -20,7 +20,7 @@ export const WEB_BUILD_DEFAULTS: Omit<BuildOptions, 'output' | 'packages'> = {
   minify: true,
   sourcemap: false,
   cache: true,
-  windowCollector: 'collector',
+  windowCollector: 'walkerOS',
   windowElb: 'elb',
 };
 

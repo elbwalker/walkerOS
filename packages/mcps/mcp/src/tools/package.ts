@@ -14,8 +14,9 @@ export function registerPackageSearchTool(server: McpServer) {
     {
       title: 'Search Package',
       description:
-        'Browse walkerOS packages or look up a specific one. Without package name: returns catalog ' +
-        'filtered by type/platform. With package name: returns metadata, hint keys, and example summaries.',
+        'Start here for package discovery. Never guess package names — use this tool first to find exact names. ' +
+        'Without package name: returns catalog filtered by type/platform. ' +
+        'With package name: returns metadata, hint keys, and example summaries.',
       inputSchema: {
         package: z
           .string()
@@ -48,19 +49,20 @@ export function registerPackageSearchTool(server: McpServer) {
       },
     },
     async ({ package: packageName, type, platform, version }) => {
+      const baseUrl = process.env.APP_URL || undefined;
+
       // Browse mode: no package specified → return catalog
       if (!packageName) {
-        const catalog = await fetchCatalog({ type, platform });
+        const catalog = await fetchCatalog({ type, platform, baseUrl });
         const result = { catalog, count: catalog.length };
-        const summary = `${catalog.length} packages found`;
-        return mcpResult(result, summary, {
+        return mcpResult(result, {
           next: ['Use package_get for schemas and examples'],
         });
       }
 
       // Lookup mode: fetch specific package details
       try {
-        const info = await fetchPackage(packageName, { version });
+        const info = await fetchPackage(packageName, { version, baseUrl });
 
         const result = {
           package: info.packageName,
@@ -72,8 +74,7 @@ export function registerPackageSearchTool(server: McpServer) {
           exampleSummaries: info.exampleSummaries,
         };
 
-        const summary = `${info.packageName} v${info.version}`;
-        return mcpResult(result, summary, {
+        return mcpResult(result, {
           next: ['Use package_get for schemas and examples'],
         });
       } catch (error) {
@@ -92,9 +93,9 @@ export function registerGetPackageSchemaTool(server: McpServer) {
     {
       title: 'Get Package',
       description:
-        'Fetch walkerOS package details from npm. By default returns schemas + hint texts + example summaries (lightweight). ' +
-        'Use section parameter to get full content: "hints" (with code blocks), "examples" (full in/out data), ' +
-        'or "all" (everything). Use package_search first to browse available packages.',
+        'Requires exact package name — do not guess names, use package_search first to find them. ' +
+        'Returns schemas + hint texts + example summaries by default (lightweight). ' +
+        'Use section parameter for full content: "hints" (with code blocks), "examples" (full in/out data), or "all".',
       inputSchema: {
         package: z
           .string()
@@ -122,8 +123,10 @@ export function registerGetPackageSchemaTool(server: McpServer) {
       },
     },
     async ({ package: packageName, version, section }) => {
+      const baseUrl = process.env.APP_URL || undefined;
+
       try {
-        const info = await fetchPackage(packageName, { version });
+        const info = await fetchPackage(packageName, { version, baseUrl });
 
         // Build merged schemas: base config + package settings → schemas.config
         const mergedSchemas: Record<string, unknown> = {};
@@ -171,11 +174,7 @@ export function registerGetPackageSchemaTool(server: McpServer) {
           result.exampleSummaries = info.exampleSummaries;
         }
 
-        const schemaCount = Object.keys(info.schemas).length;
-        const exampleCount = info.exampleSummaries.length;
-        const summary = `${info.packageName} — ${schemaCount} schemas, ${exampleCount} examples`;
-
-        return mcpResult(result, summary);
+        return mcpResult(result);
       } catch (error) {
         return mcpError(
           error,

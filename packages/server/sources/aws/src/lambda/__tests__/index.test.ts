@@ -426,6 +426,29 @@ describe('sourceLambda', () => {
       });
     });
 
+    it('pushes empty event when body is not a valid JSON object', async () => {
+      const source = await sourceLambda(
+        createSourceContext(
+          {},
+          {
+            push: mockPush as never,
+            command: mockCommand as never,
+            elb: jest.fn() as never,
+            logger: mockLogger,
+          },
+        ),
+      );
+
+      // Plain string body — not valid JSON object
+      const event = createMockEventV1('POST', 'just a plain string');
+      const context = createMockContext();
+
+      const result = await source.push(event, context);
+
+      expect(mockPush).toHaveBeenCalledWith({});
+      expect(result.statusCode).toBe(200);
+    });
+
     it('should reject invalid event body', async () => {
       const source = await sourceLambda(
         createSourceContext(

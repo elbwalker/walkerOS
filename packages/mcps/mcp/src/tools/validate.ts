@@ -29,9 +29,6 @@ export function registerFlowValidateTool(server: McpServer) {
           flow,
           path,
         });
-        const summary = result.valid
-          ? 'Valid'
-          : `Invalid: ${result.errors.length} errors, ${result.warnings.length} warnings`;
         const hints = result.valid
           ? {
               next: [
@@ -45,7 +42,7 @@ export function registerFlowValidateTool(server: McpServer) {
                 'Read walkeros://reference/flow-schema for correct structure',
               ],
             };
-        return mcpResult(result, summary, hints);
+        return mcpResult(result, hints);
       } catch (error) {
         return mcpError(
           error,

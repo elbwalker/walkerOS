@@ -101,21 +101,21 @@ Use `$store:storeId` in a component's `env` to inject a store instance:
 ```json
 {
   "stores": {
-    "cache": {
+    "data": {
       "package": "@walkeros/store-memory",
       "config": { "settings": { "maxSize": 10485760 } }
     }
   },
   "transformers": {
-    "cacheResponse": {
-      "package": "@walkeros/server-transformer-cache",
-      "env": { "store": "$store:cache" }
+    "fingerprint": {
+      "package": "@walkeros/server-transformer-fingerprint",
+      "env": { "store": "$store:data" }
     }
   }
 }
 ```
 
-The bundler resolves `$store:cache` to a runtime reference. Invalid references
+The bundler resolves `$store:data` to a runtime reference. Invalid references
 are caught at build time.
 
 ### Integrated mode (TypeScript)
@@ -125,18 +125,19 @@ Pass store instances directly — no `$store:` prefix needed:
 ```typescript
 import { startFlow } from '@walkeros/collector';
 import { storeMemoryInit } from '@walkeros/store-memory';
+import { transformerFingerprint } from '@walkeros/server-transformer-fingerprint';
 
 const { collector } = await startFlow({
   stores: {
-    cache: {
+    data: {
       code: storeMemoryInit,
       config: { settings: { maxSize: 10 * 1024 * 1024 } },
     },
   },
   transformers: {
-    cacheResponse: {
-      code: transformerCache,
-      env: { store: collector.stores.cache }, // Direct reference
+    fingerprint: {
+      code: transformerFingerprint,
+      env: { store: collector.stores.data }, // Direct reference
     },
   },
 });
@@ -246,6 +247,35 @@ const { collector } = await startFlow({
 collector.stores.cache.set('key', 'value', 60000); // 60s TTL
 const value = collector.stores.cache.get('key');
 collector.stores.cache.delete('key');
+```
+
+## Hooks
+
+Store operations (`get`, `set`, `delete`) are wrapped with `useHooks` during
+initialization, enabling pre/post interception via the collector's hooks system.
+
+**Available hook names:**
+
+| Hook name     | Pre hook         | Post hook         |
+| ------------- | ---------------- | ----------------- |
+| `StoreGet`    | `preStoreGet`    | `postStoreGet`    |
+| `StoreSet`    | `preStoreSet`    | `postStoreSet`    |
+| `StoreDelete` | `preStoreDelete` | `postStoreDelete` |
+
+Hooks fire on every store operation regardless of which component triggered it
+(cache system, transformer via env, destination via env, direct access on
+`collector.stores`).
+
+```typescript
+const { collector } = await startFlow({
+  stores: { cache: { code: storeMemoryInit } },
+});
+
+// Intercept all store reads
+collector.hooks.preStoreGet = ({ fn }, key) => {
+  console.log('Reading key:', key);
+  return fn(key);
+};
 ```
 
 ## Key differences from other components

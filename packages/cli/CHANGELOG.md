@@ -1,5 +1,80 @@
 # @walkeros/cli
 
+## 3.2.0
+
+### Minor Changes
+
+- eb865e1: Add chainPath to ingest metadata and support path-specific mocks via
+  --mock destination.ga4.before.redact='...'
+- f007c9f: Wire initConfig.hooks into collector instance. Simulation uses
+  prePush/postDestinationPush hooks for event capture. Hooks are wired by
+  startFlow before events fire.
+- da0b640: Add include/exclude destination filter to collector.push PushOptions.
+  Sources can now control which destinations receive their events. Destination
+  simulation uses the full collector pipeline with include filter, giving
+  production-identical event enrichment, consent, and mapping.
+- a0b019f: Add --snapshot flag to push command for setting up global state
+  before bundle execution
+- 431be04: Refactor bundler to two-step compilation: ESM code compilation +
+  platform wrapper. Config changes no longer require full rebuilds. Production
+  bundles carry zero dev/simulate code.
+- 884527d: Unify simulation for sources, destinations, and transformers through
+  the push command.
+  - All step types simulate via `push` with auto-env loading and call tracking
+  - Add `--simulate transformer.X` to invoke a transformer directly with an
+    event
+  - Before chains run as mandatory preparation; next chains are skipped
+  - Source simulation captures at the collector.push boundary, preserving the
+    full before chain
+  - Hooks (prePush/postDestinationPush) capture events instead of manual
+    overrides
+  - Timer interception flushes setTimeout/setInterval deterministically for
+    async patterns (debounced batches, detached Promise chains)
+  - MCP migrated to the push-based simulation pipeline
+  - Legacy simulate code removed
+
+### Patch Changes
+
+- f55fc1d: Unify duplicated CLI patterns for reliability and consistency
+  - Add unified event validator with graduated levels (strict/standard/minimal)
+  - Fix package resolution in simulate to respect packages.path from flow config
+  - Extract shared readStdinToTempFile utility, remove copy-paste dynamic
+    imports
+  - Standardize duration output to milliseconds (matching MCP schema contract)
+  - Fix temp file cleanup in run command (hot-swap accumulation, shutdown
+    handler)
+  - Fix simulator bare /tmp cleanup bug
+  - Unify URL fetching into shared fetchContentString, eliminate temp file
+    roundtrip
+  - Refactor loadJsonFromSource as thin wrapper around loadJsonConfig
+  - Remove unused downloadFromUrl function
+
+- bbbeba1: Replace externalServer hack with typed sourceSettings override in
+  bundle wrapper
+- 7d1a268: Polyfill fetch and navigator.sendBeacon in JSDOM during web
+  simulation to prevent throws and capture network calls
+- 616b9b2: Resolve transitive dependencies from local path packages
+  automatically
+- 91159be: Support path-based package: references on flow config components
+- 2cc1b54: Support single .ts files and directories without package.json as
+  local packages in flow.json
+- Updated dependencies [eb865e1]
+- Updated dependencies [c0a53f9]
+- Updated dependencies [f007c9f]
+- Updated dependencies [bf2dc5b]
+- Updated dependencies [da0b640]
+  - @walkeros/core@3.2.0
+  - @walkeros/server-core@3.2.0
+
+## 3.1.1
+
+### Patch Changes
+
+- a5d98d2: Fix inline JSON config support in detectInput for MCP tools
+  (flow_simulate, flow_push)
+  - @walkeros/core@3.1.1
+  - @walkeros/server-core@3.1.1
+
 ## 3.1.0
 
 ### Minor Changes

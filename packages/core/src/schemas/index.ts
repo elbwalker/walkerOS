@@ -56,6 +56,20 @@ export {
   UtilitySchemas,
 };
 
+// Cache schemas (used by flow schemas for caching)
+import * as CacheSchemas from './cache';
+export { CacheSchemas };
+export { CacheSchema, CacheRuleSchema } from './cache';
+
+// Matcher schemas (used by flow schemas for routing)
+import * as MatcherSchemas from './matcher';
+export { MatcherSchemas };
+export {
+  MatchExpressionSchema,
+  RoutableNextSchema,
+  NextRuleSchema,
+} from './matcher';
+
 // Hint schemas (direct export — flat record, no namespace needed)
 export { CodeSchema, HintSchema, HintsSchema } from './hint';
 

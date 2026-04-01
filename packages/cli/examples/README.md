@@ -135,8 +135,9 @@ export META_PIXEL_ID="123456789"
 walkeros bundle examples/web-tracking.json --stats
 
 # Simulate events
-walkeros simulate examples/web-tracking.json \
-  --event '{"name":"product view","data":{"id":"P123","name":"Laptop","price":999}}'
+walkeros push examples/web-tracking.json \
+  --event '{"name":"product view","data":{"id":"P123","name":"Laptop","price":999}}' \
+  --simulate destination.demo
 ```
 
 ## Server Examples
@@ -382,7 +383,7 @@ The event name is parsed as: `const [entity, action] = event.split(' ')`
 
 ## Next Steps
 
-1. Try each example with `walkeros bundle` and `walkeros simulate`
+1. Try each example with `walkeros bundle` and `walkeros push --simulate`
 2. Modify examples to match your tracking requirements
 3. Create custom flow files for your use case
 4. Deploy to production

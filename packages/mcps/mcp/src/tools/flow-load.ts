@@ -67,16 +67,12 @@ export function registerFlowLoadTool(server: McpServer) {
       try {
         if (source) {
           const config = await loadJsonConfig(source);
-          return mcpResult(
-            config,
-            `Loaded flow from ${source}. Use flow_validate to check, or add-step prompt to modify.`,
-            {
-              next: [
-                'Use flow_validate to check',
-                'Use add-step prompt to modify',
-              ],
-            },
-          );
+          return mcpResult(config, {
+            next: [
+              'Use flow_validate to check',
+              'Use add-step prompt to modify',
+            ],
+          });
         }
 
         if (!platform) {
@@ -89,16 +85,12 @@ export function registerFlowLoadTool(server: McpServer) {
         }
 
         const skeleton = platform === 'web' ? WEB_SKELETON : SERVER_SKELETON;
-        return mcpResult(
-          skeleton,
-          `Created empty ${platform} flow. Use the add-step prompt to add sources, destinations, and transformers.`,
-          {
-            next: [
-              'Read walkeros://reference/flow-schema for config structure',
-              'Use add-step prompt to add sources and destinations',
-            ],
-          },
-        );
+        return mcpResult(skeleton, {
+          next: [
+            'Read walkeros://reference/flow-schema for config structure',
+            'Use add-step prompt to add sources and destinations',
+          ],
+        });
       } catch (error) {
         const msg = error instanceof Error ? error.message : '';
         if (msg.includes('not found') || msg.includes('ENOENT'))

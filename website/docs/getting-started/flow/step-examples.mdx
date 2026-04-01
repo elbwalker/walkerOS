@@ -27,7 +27,7 @@ Every source, transformer, and destination in a walkerOS flow is a **step**. Eac
 They serve multiple purposes simultaneously:
 
 - **Documentation** — developers see real data shapes, not just type signatures
-- **Testing** — CI runs examples as regression tests via `walkeros simulate`
+- **Testing** — CI runs examples as regression tests via `walkeros push --simulate`
 - **Simulation** — debug your pipeline before deployment
 - **LLM context** — AI tools use examples to suggest correct mappings
 
@@ -177,10 +177,7 @@ Run a named example through the pipeline:
 
 <CodeSnippet
   code={`# Run the "page view" example from the ga4 destination
-walkeros simulate flow.json --example "page view"
-
-# Run all examples in the flow (planned)
-walkeros simulate flow.json --all-examples`}
+walkeros push flow.json --simulate destination.ga4 --event '{"name":"page view","data":{"title":"Home"}}'`}
   language="bash"
 />
 

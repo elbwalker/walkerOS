@@ -1,3 +1,4 @@
+export * as Cache from './cache';
 export * as Collector from './collector';
 export * as Context from './context';
 export * as Destination from './destination';
@@ -24,3 +25,7 @@ export { Const } from './storage';
 
 // Export send types directly
 export type { SendDataValue, SendHeaders, SendResponse } from './send';
+
+// Export ingest types and factory directly
+export type { Ingest, IngestMeta } from './ingest';
+export { createIngest } from './ingest';

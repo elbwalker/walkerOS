@@ -55,7 +55,7 @@ Per writing-skills guidelines, technique skills require:
 
 | Feature Needed          | Covered in Skill | Location                               |
 | ----------------------- | ---------------- | -------------------------------------- |
-| simulate command        | ✅               | Commands Overview + Quick Reference    |
+| push --simulate         | ✅               | Commands Overview + Quick Reference    |
 | Safe vs unsafe commands | ✅               | Commands Overview table (Safe? column) |
 | Event input formats     | ✅               | commands-reference.md                  |
 

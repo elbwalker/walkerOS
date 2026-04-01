@@ -1,6 +1,10 @@
 import { z } from 'zod';
-import { simulate } from '@walkeros/cli';
-import type { SimulationResult } from '@walkeros/cli';
+import {
+  simulateSource,
+  simulateTransformer,
+  simulateDestination,
+} from '@walkeros/cli';
+import type { PushResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { mcpResult, mcpError } from '@walkeros/core';
@@ -22,14 +26,23 @@ export function registerFlowSimulateTool(server: McpServer) {
         'For destinations: event is a walkerOS event { name: "entity action", data: {...} }. ' +
         'For sources: event is { content: ..., trigger?: { type?, options? }, env?: {...} }. ' +
         'Use step to target a specific step. ' +
-        'Use flow_examples to discover available test data.',
+        'Use flow_examples to discover available test data. ' +
+        'IMPORTANT: Destinations with require (e.g. require: ["consent"]) stay pending until ' +
+        'that collector event fires — simulation will error "not found" if require is not satisfied. ' +
+        'Remove require from config or provide consent/user events before simulating. ' +
+        'Separately, destinations with consent (e.g. consent: { marketing: true }) only receive ' +
+        'events where the event includes matching consent. ' +
+        'Mapping transforms event names and data at the destination level. ' +
+        'Policy redacts or injects fields before mapping runs.',
       inputSchema: {
         configPath: schemas.SimulateInputShape.configPath,
         event: z
           .union([z.record(z.string(), z.unknown()), z.string()])
           .optional()
           .describe(
-            'For destinations: { name, data }. For sources: { content, trigger?, env? }. ' +
+            'For destinations: { name, data, consent? }. Include consent (e.g. { marketing: true }) ' +
+              'to satisfy destination consent requirements. ' +
+              'For sources: { content, trigger?, env? }. ' +
               'Can also be a JSON string or file path.',
           ),
         flow: schemas.SimulateInputShape.flow,
@@ -56,27 +69,89 @@ export function registerFlowSimulateTool(server: McpServer) {
           );
         }
 
-        const raw: SimulationResult = await simulate(configPath, event, {
-          json: true,
-          flow,
-          platform,
-          step,
-        });
+        if (!step) {
+          throw new Error(
+            'step is required. Specify a target like "source.browser", "destination.gtag", or "transformer.demo".',
+          );
+        }
 
-        // Source simulation returns capturedEvents
-        if (raw.capturedEvents) {
-          const eventCount = raw.capturedEvents.length;
+        // Resolve string event input (JSON string)
+        let resolvedEvent: unknown = event;
+        if (typeof event === 'string') {
+          try {
+            resolvedEvent = JSON.parse(event);
+          } catch {
+            throw new Error(
+              'Event string must be valid JSON. Got: ' +
+                event.substring(0, 50),
+            );
+          }
+        }
+
+        // Parse step into type and id
+        const dotIndex = step.indexOf('.');
+        if (dotIndex === -1) {
+          throw new Error(
+            `Invalid step format "${step}". Use "type.name" (e.g. "source.browser", "destination.gtag").`,
+          );
+        }
+        const stepType = step.substring(0, dotIndex);
+        const stepId = step.substring(dotIndex + 1);
+
+        let result: PushResult;
+
+        switch (stepType) {
+          case 'source':
+            result = await simulateSource(configPath, resolvedEvent, {
+              sourceId: stepId,
+              flow,
+              silent: true,
+            });
+            break;
+
+          case 'transformer':
+            result = await simulateTransformer(
+              configPath,
+              resolvedEvent as import('@walkeros/core').WalkerOS.DeepPartialEvent,
+              {
+                transformerId: stepId,
+                flow,
+                silent: true,
+              },
+            );
+            break;
+
+          case 'destination':
+            result = await simulateDestination(
+              configPath,
+              resolvedEvent as import('@walkeros/core').WalkerOS.DeepPartialEvent,
+              {
+                destinationId: stepId,
+                flow,
+                silent: true,
+              },
+            );
+            break;
+
+          default:
+            throw new Error(
+              `Unknown step type "${stepType}". Use "source", "transformer", or "destination".`,
+            );
+        }
+
+        // Source simulation returns captured events
+        if (result.captured && result.captured.length > 0) {
+          const eventCount = result.captured.length;
           const summary = `Source captured ${eventCount} event${eventCount !== 1 ? 's' : ''}`;
 
           return mcpResult(
             {
-              success: raw.success,
-              error: raw.error,
+              success: result.success,
+              error: result.error,
               summary,
-              capturedEvents: raw.capturedEvents,
-              duration: raw.duration,
+              capturedEvents: result.captured,
+              duration: result.duration,
             },
-            summary,
             {
               next:
                 eventCount > 0
@@ -93,14 +168,28 @@ export function registerFlowSimulateTool(server: McpServer) {
         // Destination/transformer simulation
         const destinations: Record<string, DestinationSummary> = {};
 
-        if (raw.usage) {
-          for (const [name, calls] of Object.entries(raw.usage)) {
+        // Build destinations summary from elbResult.done
+        if (
+          result.elbResult &&
+          typeof result.elbResult === 'object' &&
+          'done' in result.elbResult &&
+          result.elbResult.done
+        ) {
+          const done = result.elbResult.done as Record<string, unknown>;
+          for (const name of Object.keys(done)) {
+            destinations[name] = { received: true, calls: 0 };
+          }
+        }
+
+        // Also check usage (call tracking from mock envs)
+        if (result.usage) {
+          for (const [name, calls] of Object.entries(result.usage)) {
             const summary: DestinationSummary = {
               received: calls.length > 0,
               calls: calls.length,
             };
             if (verbose && calls.length > 0) {
-              summary.payload = calls[calls.length - 1];
+              summary.payload = calls;
             }
             destinations[name] = summary;
           }
@@ -112,31 +201,43 @@ export function registerFlowSimulateTool(server: McpServer) {
         ).length;
 
         const warnings: string[] = [];
-        if (destCount === 0) {
-          warnings.push('No destinations found in flow configuration.');
-        }
-        if (destCount > 0 && receivedCount === 0) {
+        if (stepType === 'destination' && destCount === 0) {
           warnings.push(
-            'No destinations received the event. Check: mapping keys use nested entity→action structure, event name matches, consent is granted.',
+            'Destination did not receive the event. Common causes: ' +
+              '(1) destination config has consent: { marketing: true } but event lacks matching consent, ' +
+              '(2) mapping rules do not match the event name, ' +
+              '(3) policy redacted required fields. ' +
+              'Add consent to the event: { name: "...", data: {...}, consent: { marketing: true } }.',
           );
         }
 
-        const summary = `${receivedCount}/${destCount} destinations received the event`;
+        const summary =
+          stepType === 'transformer'
+            ? `Transformer processed event`
+            : `${receivedCount}/${destCount} destinations received the event`;
 
-        const result = {
-          success: raw.success,
-          error: raw.error,
+        const resultObj = {
+          success: result.success,
+          error: result.error,
           summary,
           destinations: destCount > 0 ? destinations : undefined,
-          duration: raw.duration,
+          duration: result.duration,
         };
 
-        return mcpResult(result, summary, {
+        return mcpResult(resultObj, {
           next: ['Use flow_bundle to build for production'],
           ...(warnings.length > 0 ? { warnings } : {}),
         });
       } catch (error) {
-        return mcpError(error, 'Run flow_validate for detailed error messages');
+        const msg = error instanceof Error ? error.message : '';
+        let hint = 'Run flow_validate for detailed error messages';
+        if (msg.includes('not found in collector')) {
+          hint =
+            'If this destination has require: ["consent"] or require: ["user"], it stays ' +
+            'pending until that event fires. For simulation, either remove require from ' +
+            'the config or simulate with a flow that omits require on the target destination.';
+        }
+        return mcpError(error, hint);
       }
     },
   );

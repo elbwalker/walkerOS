@@ -9,13 +9,12 @@ export * from './destination';
 export * from './handle';
 export * from './on';
 export * from './source';
-export { walkChain, extractTransformerNextMap } from './transformer';
-
-export { simulate } from './simulation';
-export type {
-  SimulateParams,
-  SimulateSource,
-  SimulateTransformer,
-  SimulateDestination,
-} from './simulation';
+export {
+  walkChain,
+  extractTransformerNextMap,
+  runTransformerChain,
+  transformerPush,
+  transformerInit,
+} from './transformer';
 export { wrapEnv } from './wrapEnv';
+export { getCacheStore } from './cache';

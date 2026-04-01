@@ -45,16 +45,15 @@ export function registerFlowBundleTool(server: McpServer) {
             content: content as Record<string, unknown>,
             flowName: flow,
           });
-          const r = result as Record<string, unknown>;
-          const size = r.totalSize ?? r.size;
-          const time = r.buildTime;
-          const summary = `Bundled${size ? ` (${formatBytes(size as number)}` : ''}${time ? `, ${time}ms)` : size ? ')' : ''}`;
-          return mcpResult({ success: true, ...result }, summary, {
-            next: [
-              'Use flow_simulate to test',
-              "Use api({ action: 'deploy' }) to publish",
-            ],
-          });
+          return mcpResult(
+            { success: true, ...result },
+            {
+              next: [
+                'Use flow_simulate to test',
+                "Use api({ action: 'deploy' }) to publish",
+              ],
+            },
+          );
         }
 
         const result = await bundle(configPath, {
@@ -66,7 +65,6 @@ export function registerFlowBundleTool(server: McpServer) {
         if (!result) {
           return mcpResult(
             { success: false, message: 'Bundle produced no output' },
-            'Bundle produced no output',
             {
               warnings: [
                 'The build returned no result. The flow may be empty or misconfigured.',
@@ -78,24 +76,18 @@ export function registerFlowBundleTool(server: McpServer) {
 
         const output_ = result as unknown as Record<string, unknown>;
 
-        const size = output_.totalSize as number | undefined;
-        const time = output_.buildTime as number | undefined;
-        const summary = `Bundled${size ? ` (${formatBytes(size)}` : ''}${time ? `, ${time}ms)` : size ? ')' : ''}`;
-
-        return mcpResult({ success: true, ...output_ }, summary, {
-          next: [
-            'Use flow_simulate to test',
-            "Use api({ action: 'deploy' }) to publish",
-          ],
-        });
+        return mcpResult(
+          { success: true, ...output_ },
+          {
+            next: [
+              'Use flow_simulate to test',
+              "Use api({ action: 'deploy' }) to publish",
+            ],
+          },
+        );
       } catch (error) {
         return mcpError(error, 'Run flow_validate for detailed error messages');
       }
     },
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  return `${(bytes / 1024).toFixed(1)} KB`;
 }

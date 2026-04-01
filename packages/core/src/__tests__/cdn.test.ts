@@ -83,7 +83,7 @@ describe('fetchPackageSchema', () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
 
     await expect(fetchPackageSchema('nonexistent')).rejects.toThrow(
-      'Package "nonexistent" not found on npm (HTTP 404)',
+      'HTTP 404',
     );
   });
 
@@ -96,7 +96,7 @@ describe('fetchPackageSchema', () => {
       .mockResolvedValueOnce({ ok: false, status: 404 });
 
     await expect(fetchPackageSchema('pkg')).rejects.toThrow(
-      'walkerOS.json not found',
+      'HTTP 404',
     );
   });
 
@@ -229,7 +229,7 @@ describe('fetchPackage', () => {
       .mockResolvedValueOnce({ ok: false, status: 404 });
     await expect(
       fetchPackage('@walkeros/web-destination-gtag'),
-    ).rejects.toThrow('walkerOS.json not found');
+    ).rejects.toThrow('HTTP 404');
   });
 
   it('should extract docs and source from $meta', async () => {

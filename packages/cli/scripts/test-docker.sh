@@ -105,20 +105,21 @@ else
   exit 1
 fi
 
-# Test 6: Simulate command
-echo -e "${BLUE}[6/6] Testing simulate command...${NC}"
+# Test 6: Push --simulate command
+echo -e "${BLUE}[6/6] Testing push --simulate command...${NC}"
 EVENT='{"name":"page view","data":{"title":"Test"}}'
 if docker run --rm \
   --user "$(id -u):$(id -g)" \
   -v "${TEST_DIR}:/workspace" \
   -w /workspace \
   "${FULL_IMAGE}" \
-  simulate dist/bundle.mjs \
+  push dist/bundle.mjs \
   --event "${EVENT}" \
+  --simulate destination.demo \
   --json > /dev/null 2>&1; then
-  echo -e "${GREEN}✓ Simulate command works${NC}\n"
+  echo -e "${GREEN}✓ Push --simulate command works${NC}\n"
 else
-  echo -e "${YELLOW}⚠ Simulate command failed (may be expected with mocked packages)${NC}\n"
+  echo -e "${YELLOW}⚠ Push --simulate command failed (may be expected with mocked packages)${NC}\n"
 fi
 
 # Success

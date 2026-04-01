@@ -1,7 +1,7 @@
 {
   "name": "@walkeros/store-memory",
   "description": "In-memory store for walkerOS with LRU eviction, TTL support, and namespace utility",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "license": "MIT",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -31,10 +31,10 @@
     "update": "npx npm-check-updates -u && npm update"
   },
   "dependencies": {
-    "@walkeros/core": "^3.1.0"
+    "@walkeros/core": "^3.2.0"
   },
   "devDependencies": {
-    "@walkeros/core": "^3.1.0"
+    "@walkeros/core": "^3.2.0"
   },
   "repository": {
     "url": "git+https://github.com/elbwalker/walkerOS.git",

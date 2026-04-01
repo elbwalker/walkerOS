@@ -81,7 +81,7 @@ describe('chain branching', () => {
     );
 
     expect(order).toEqual(['router', 'parser']);
-    expect(result).toEqual({ name: 'routed action', data: { parsed: true } });
+    expect(result.event).toEqual({ name: 'routed action', data: { parsed: true } });
   });
 
   it('should resolve branched next through walkChain', async () => {
@@ -111,11 +111,12 @@ describe('chain branching', () => {
       undefined,
     );
 
-    expect(result?.data).toEqual({ a: true, b: true });
+    const singleResult0 = Array.isArray(result.event) ? result.event[0] : result.event;
+    expect(singleResult0?.data).toEqual({ a: true, b: true });
   });
 
   it('should pass ingest through branched chains', async () => {
-    const ingestData = { path: '/gtag', body: { en: 'purchase' } };
+    const ingestData = { _meta: { hops: 0, path: [] }, path: '/gtag', body: { en: 'purchase' } };
 
     const router = createTransformer((event, context) => {
       expect(context.ingest).toBe(ingestData);
@@ -139,7 +140,7 @@ describe('chain branching', () => {
       ingestData,
     );
 
-    expect(result?.name).toBe('page purchase');
+    expect(!Array.isArray(result.event) && result.event?.name).toBe('page purchase');
   });
 
   it('should handle branched chain returning false (drop event)', async () => {
@@ -160,7 +161,7 @@ describe('chain branching', () => {
       undefined,
     );
 
-    expect(result).toBeNull();
+    expect(result.event).toBeNull();
   });
 
   it('should continue after non-branching transformers in same chain', async () => {
@@ -194,8 +195,95 @@ describe('chain branching', () => {
     );
 
     expect(order).toEqual(['enricher', 'router', 'parser']);
-    expect(result?.data).toEqual({ enriched: true });
-    expect(result?.name).toBe('parsed action');
+    const singleResult1 = Array.isArray(result.event) ? result.event[0] : result.event;
+    expect(singleResult1?.data).toEqual({ enriched: true });
+    expect(singleResult1?.name).toBe('parsed action');
+  });
+
+  it('should resolve NextRule[] in config.next after transformer executes', async () => {
+    const order: string[] = [];
+
+    const enricher = createTransformer(
+      (event) => {
+        order.push('enricher');
+        return { event: { ...event, data: { ...event.data, enriched: true } } };
+      },
+      {
+        next: [
+          {
+            match: { key: 'ingest.type', operator: 'eq', value: 'api' },
+            next: 'api-handler',
+          },
+          { match: '*', next: 'default-handler' },
+        ] as any, // NextRule[] in config.next
+      },
+    );
+
+    const apiHandler = createTransformer((event) => {
+      order.push('api-handler');
+      return { event: { ...event, data: { ...event.data, api: true } } };
+    });
+
+    const defaultHandler = createTransformer((event) => {
+      order.push('default-handler');
+      return { event: { ...event, data: { ...event.data, default: true } } };
+    });
+
+    const transformers = {
+      enricher,
+      'api-handler': apiHandler,
+      'default-handler': defaultHandler,
+    };
+    const collector = createMockCollector(transformers);
+
+    const result = await runTransformerChain(
+      collector,
+      transformers,
+      ['enricher'],
+      { name: 'test' },
+      { _meta: { hops: 0, path: [] }, type: 'api' }, // ingest
+    );
+
+    expect(order).toEqual(['enricher', 'api-handler']);
+    const singleResult = Array.isArray(result.event) ? result.event[0] : result.event;
+    expect(singleResult?.data).toEqual({ enriched: true, api: true });
+  });
+
+  it('should resolve NextRule[] returned from transformer push (Result.next)', async () => {
+    const router = createTransformer((event) => {
+      return {
+        event,
+        next: [
+          {
+            match: { key: 'ingest.path', operator: 'prefix', value: '/api' },
+            next: 'api',
+          },
+          { match: '*', next: 'fallback' },
+        ],
+      };
+    });
+
+    const api = createTransformer((event) => {
+      return { event: { ...event, data: { handler: 'api' } } };
+    });
+
+    const fallback = createTransformer((event) => {
+      return { event: { ...event, data: { handler: 'fallback' } } };
+    });
+
+    const transformers = { router, api, fallback };
+    const collector = createMockCollector(transformers);
+
+    const result = await runTransformerChain(
+      collector,
+      transformers,
+      ['router'],
+      {},
+      { _meta: { hops: 0, path: [] }, path: '/api/data' },
+    );
+
+    const singleResult2 = Array.isArray(result.event) ? result.event[0] : result.event;
+    expect(singleResult2?.data).toEqual({ handler: 'api' });
   });
 
   it('should drop event when branch target does not exist', async () => {
@@ -215,6 +303,6 @@ describe('chain branching', () => {
     );
 
     // Branch target not found → drop event (return null), not silent continue
-    expect(result).toBeNull();
+    expect(result.event).toBeNull();
   });
 });

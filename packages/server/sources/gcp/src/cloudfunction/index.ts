@@ -56,18 +56,10 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
         return;
       }
 
-      if (!req.body) {
-        res.status(400).json({
-          success: false,
-          error: 'Request body is required',
-        });
-        return;
-      }
+      const body = req.body;
 
-      const body = req.body as RequestBody;
-
-      if (isEventRequest(body)) {
-        const result = await processEvent(body, envPush);
+      if (body && typeof body === 'object' && isEventRequest(body as RequestBody)) {
+        const result = await processEvent(body as RequestBody, envPush);
 
         if (result.error) {
           res.status(400).json({
@@ -81,10 +73,13 @@ export const sourceCloudFunction: Source.Init<Types> = async (context) => {
           } as EventResponse);
         }
       } else {
-        res.status(400).json({
-          success: false,
-          error: 'Invalid request format. Expected event object.',
-        });
+        // Push empty event for non-event bodies (enables source.before transformers to process raw input)
+        const result = await envPush({});
+
+        res.status(200).json({
+          success: true,
+          id: result?.event?.id,
+        } as EventResponse);
       }
     } catch (error) {
       res.status(500).json({

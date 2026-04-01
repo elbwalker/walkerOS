@@ -59,10 +59,13 @@ export async function ready(
     fn(context, settings);
   };
 
-  if (document.readyState !== 'loading') {
+  const scope = settings.scope;
+  if (!scope) { readyFn(); return; }
+  const doc = (scope as Element).ownerDocument || (scope as Document);
+  if (doc.readyState !== 'loading') {
     readyFn();
   } else {
-    document.addEventListener('DOMContentLoaded', readyFn);
+    doc.addEventListener('DOMContentLoaded', readyFn);
   }
 }
 
@@ -106,7 +109,8 @@ export function initScopeTrigger(context: Context, settings: Settings) {
   scrollElements = [];
 
   // Clean up any existing visibility tracking to prevent observer accumulation
-  const scope = elem || document;
+  const scope = elem;
+  if (!scope) return;
   destroyVisibilityTracking(scope);
   // Initialize visibility tracking for this scope
   initVisibilityTracking(scope, 1000);
@@ -117,7 +121,8 @@ export function initScopeTrigger(context: Context, settings: Settings) {
     Const.Commands.Action,
     false,
   );
-  if (scope !== document) {
+  const doc = (scope as Element).ownerDocument || (scope as Document);
+  if (scope !== doc) {
     // Handle the elements action(s), too
     handleActionElem(context, scope as HTMLElement, selectorAction, settings);
   }
@@ -198,7 +203,8 @@ function handleActionElem(
 function getComposedTarget(ev: Event): Element | undefined {
   const path = ev.composedPath?.();
   const target = path?.length ? path[0] : ev.target;
-  return target instanceof Element ? target : undefined;
+  if (!target || typeof target !== 'object' || !('tagName' in target)) return undefined;
+  return target as Element;
 }
 
 function triggerClick(context: Context, ev: MouseEvent) {
@@ -225,10 +231,11 @@ function triggerPulse(
   elem: HTMLElement,
   triggerParams: string = '',
 ) {
+  const doc = elem.ownerDocument;
   setInterval(
     () => {
       // Only trigger when tab is active
-      if (!document.hidden) handleTrigger(context, elem, Triggers.Pulse);
+      if (!doc.hidden) handleTrigger(context, elem, Triggers.Pulse);
     },
     parseInt(triggerParams || '') || 15000,
   );
@@ -261,13 +268,15 @@ function triggerWait(
 }
 
 function scroll(context: Context, scope: Scope, settings: Settings) {
+  const doc = (scope as Element).ownerDocument || (scope as Document);
+  const win = doc.defaultView!;
   const scrolling = (
     scrollElements: Walker.ScrollElements,
     context: Context,
   ) => {
     return scrollElements.filter(([element, depth]: [Element, number]) => {
       // Distance from top to the bottom of the visible screen
-      const windowBottom = window.scrollY + window.innerHeight;
+      const windowBottom = win.scrollY + win.innerHeight;
       // Distance from top to the elements relevant content
       const elemTop = (element as HTMLElement).offsetTop;
 

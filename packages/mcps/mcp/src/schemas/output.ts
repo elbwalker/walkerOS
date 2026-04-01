@@ -68,7 +68,7 @@ export const SimulateOutputShape = {
         payload: z
           .unknown()
           .optional()
-          .describe('Full payload (only when verbose: true)'),
+          .describe('All intercepted API calls (only when verbose: true)'),
       }),
     )
     .optional()

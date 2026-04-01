@@ -1,5 +1,51 @@
 # @walkeros/core
 
+## 3.2.0
+
+### Minor Changes
+
+- eb865e1: Add chainPath to ingest metadata and support path-specific mocks via
+  --mock destination.ga4.before.redact='...'
+- c0a53f9: Flow graph architecture: symmetric before/next hooks, mutable Ingest,
+  per-destination isolation.
+  - Add symmetric `before`/`next` to all step types (sources, transformers,
+    destinations)
+  - Add `Ingest` interface with mutable `_meta` tracking (hops, path)
+  - Parameterize `Transformer.Fn<T, E>` and `Result<E>` on event type
+  - Support `Result[]` return from transformers for fan-out
+  - Remove `Object.freeze(ingest)` — ingest is fully mutable
+  - Upgrade `setIngest` to create typed `Ingest` with `_meta`
+  - Clone ingest per destination to prevent cross-contamination
+  - Add `createMockContext` test utility for context construction
+
+- f007c9f: Wire initConfig.hooks into collector instance. Simulation uses
+  prePush/postDestinationPush hooks for event capture. Hooks are wired by
+  startFlow before events fire.
+- bf2dc5b: Add conditional routing and native cache as built-in config
+  properties on sources, transformers, and destinations.
+
+  **Routing:** NextRule[] in next/before properties enables conditional step
+  chaining, replacing @walkeros/transformer-router.
+
+  **Cache:**
+  - Cache rules use the same match syntax as routing (MatchExpression)
+  - Source cache: full pipeline caching with respond interception
+  - Transformer cache: step-level memoization, chain continues
+  - Destination cache: event deduplication
+  - Update rules modify cached results on read via getMappingValue
+  - Default per-collector memory store with namespaced keys
+
+  compileMatcher upgraded to use getByPath for scoped dot-paths (ingest.method,
+  event.name). Removed @walkeros/server-transformer-cache (replaced by native
+  cache).
+
+- da0b640: Add include/exclude destination filter to collector.push PushOptions.
+  Sources can now control which destinations receive their events. Destination
+  simulation uses the full collector pipeline with include filter, giving
+  production-identical event enrichment, consent, and mapping.
+
+## 3.1.1
+
 ## 3.1.0
 
 ### Minor Changes

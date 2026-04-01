@@ -71,10 +71,10 @@ export function getElbValues(
 }
 
 export function getAllEvents(
-  scope?: Scope,
+  scope: Scope,
   prefix: string = Const.Commands.Prefix,
 ): Walker.Events {
-  const actualScope = scope || document.body;
+  const actualScope = scope;
   if (!actualScope) return [];
   let events: Walker.Events = [];
   const action = Const.Commands.Action;
@@ -89,8 +89,9 @@ export function getAllEvents(
   };
 
   // Check if the scope element itself has action attributes
+  const doc = (actualScope as Element).ownerDocument || (actualScope as Document);
   if (
-    actualScope !== document &&
+    actualScope !== doc &&
     (actualScope as Element).matches?.(actionSelector)
   ) {
     processElementEvents(actualScope as Element);
@@ -166,8 +167,9 @@ export function getEvents(
 
 export function getGlobals(
   prefix: string = Const.Commands.Prefix,
-  scope: Scope = document,
+  scope?: Scope,
 ): WalkerOS.Properties {
+  if (!scope) return {};
   const globalsName = getElbAttributeName(
     prefix,
     Const.Commands.Globals,
@@ -191,9 +193,11 @@ export function getPageViewData(
   scope: Scope,
 ): [WalkerOS.Properties, WalkerOS.OrderedProperties] {
   // static page view
-  const loc = window.location;
+  const doc = (scope as Element).ownerDocument || (scope as Document);
+  const win = doc.defaultView!;
+  const loc = win.location;
   const page = 'page';
-  const scopeElement = scope === document ? document.body : (scope as Element);
+  const scopeElement = 'body' in scope ? (scope as Document).body : (scope as Element);
   const [data, context] = getThisAndParentProperties(
     scopeElement,
     `[${getElbAttributeName(prefix, page)}]`,
@@ -201,8 +205,8 @@ export function getPageViewData(
     page,
   );
   data.domain = loc.hostname;
-  data.title = document.title;
-  data.referrer = document.referrer;
+  data.title = doc.title;
+  data.referrer = doc.referrer;
 
   if (loc.search) data.search = loc.search;
   if (loc.hash) data.hash = loc.hash;
@@ -298,7 +302,7 @@ function getEntity(
     // Acceptable because link-parent usage is rare in practice.
     if (linkState === 'parent')
       queryAllComposed(
-        document.body,
+        element.ownerDocument.body,
         `[${linkName}="${linkId}:child"]`,
         (wormhole) => {
           scopeElems.push(wormhole);
@@ -357,8 +361,9 @@ function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
       // Link-parent lookup does not cross shadow boundaries.
       // Uses simple queryAll (no shadow recursion) since this runs
       // during per-event entity traversal.
+      const doc = elem.ownerDocument;
       let found: HTMLElement | null = null;
-      queryAll(document, `[${linkName}="${linkId}:parent"]`, (el) => {
+      queryAll(doc, `[${linkName}="${linkId}:parent"]`, (el) => {
         if (!found) found = el as HTMLElement;
       });
       return found;
@@ -366,10 +371,11 @@ function getParent(prefix: string, elem: HTMLElement): HTMLElement | null {
   }
 
   // Shadow DOM traversal
+  const win = elem.ownerDocument.defaultView!;
   if (
     !elem.parentElement &&
     elem.getRootNode &&
-    elem.getRootNode() instanceof ShadowRoot
+    elem.getRootNode() instanceof win.ShadowRoot
   ) {
     return (elem.getRootNode() as ShadowRoot).host as HTMLElement;
   }
@@ -439,7 +445,9 @@ export function queryAllComposed(
 ): void {
   scope.querySelectorAll(selector).forEach(fn);
 
-  if (scope instanceof Element && scope.shadowRoot) {
+  const doc = (scope as Element).ownerDocument || (scope as Document);
+  const win = doc.defaultView!;
+  if (scope instanceof win.Element && scope.shadowRoot) {
     queryAllComposed(scope.shadowRoot, selector, fn);
   }
   scope.querySelectorAll('*').forEach((el) => {

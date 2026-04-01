@@ -31,11 +31,15 @@ export function translateToCoreCollector(
   // Handle event objects - add source and globals if missing
   if (isObject(eventOrCommand)) {
     const event = eventOrCommand;
-    if (!event.source) event.source = getBrowserSource();
+    if (!event.source && settings.scope) {
+      const scopeDoc = ((settings.scope as Element).ownerDocument || settings.scope) as Document;
+      const scopeWin = scopeDoc.defaultView!;
+      event.source = getBrowserSource(scopeWin, scopeDoc);
+    }
 
     // Add globals if not already present
-    if (!event.globals) {
-      event.globals = getGlobals(settings.prefix, settings.scope || document);
+    if (!event.globals && settings.scope) {
+      event.globals = getGlobals(settings.prefix, settings.scope);
     }
 
     return elb(event);
@@ -78,9 +82,15 @@ export function translateToCoreCollector(
     }
   }
 
+  // Derive win/doc from scope for browser-specific APIs
+  const scopeDoc = settings.scope
+    ? (((settings.scope as Element).ownerDocument || settings.scope) as Document)
+    : undefined;
+  const scopeWin = scopeDoc?.defaultView;
+
   // Special handling for page events
-  if (entity === 'page') {
-    eventData.id = eventData.id || window.location.pathname;
+  if (entity === 'page' && scopeWin) {
+    eventData.id = eventData.id || scopeWin.location.pathname;
   }
 
   // Collect globals from the DOM scope
@@ -95,7 +105,7 @@ export function translateToCoreCollector(
     nested,
     custom,
     trigger: isString(options) ? options : '',
-    source: getBrowserSource(),
+    source: scopeWin && scopeDoc ? getBrowserSource(scopeWin, scopeDoc) : undefined,
   };
 
   return elb(event);
@@ -104,10 +114,10 @@ export function translateToCoreCollector(
 /**
  * Create source information for browser events
  */
-function getBrowserSource(): WalkerOS.Source {
+function getBrowserSource(win: Window, doc: Document): WalkerOS.Source {
   return {
     type: 'browser',
-    id: window.location.href,
-    previous_id: document.referrer,
+    id: win.location.href,
+    previous_id: doc.referrer,
   };
 }

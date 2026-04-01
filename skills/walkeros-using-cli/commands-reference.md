@@ -50,64 +50,9 @@ walkeros bundle flow.json --dockerfile
 
 ---
 
-## simulate
-
-Test event processing with mocked API calls (no real side effects).
-
-### Usage
-
-```bash
-walkeros simulate <config|bundle> [options]
-```
-
-### Options
-
-| Option                  | Description                                  |
-| ----------------------- | -------------------------------------------- |
-| `-e, --event <source>`  | Event as JSON string, file path, or URL      |
-| `--step <path>`         | Target a specific step (e.g. source.browser) |
-| `--flow <name>`         | Flow to simulate                             |
-| `-p, --platform <type>` | Platform: "web" or "server"                  |
-| `--json`                | JSON output                                  |
-| `-v, --verbose`         | Verbose logging                              |
-| `-s, --silent`          | Silent mode                                  |
-
-### Input Types
-
-1. **JSON config** - Bundles then simulates
-2. **Pre-built bundle** - Executes directly
-
-### Event Sources
-
-```bash
-# Inline JSON
-walkeros simulate flow.json -e '{"entity":"page","action":"view"}'
-
-# File path
-walkeros simulate flow.json -e ./events/pageview.json
-
-# URL
-walkeros simulate flow.json -e https://example.com/event.json
-```
-
-### Examples
-
-```bash
-# Simulate with inline event
-walkeros simulate flow.json -e '{"entity":"product","action":"add","data":{"id":"123"}}'
-
-# Simulate pre-built bundle
-walkeros simulate dist/bundle.mjs -e event.json
-
-# Verbose output for debugging
-walkeros simulate flow.json -e event.json -v
-```
-
----
-
 ## push
 
-Execute flow with real API calls (actual side effects).
+Execute flow with real API calls, or simulate specific steps with `--simulate`.
 
 ### Usage
 
@@ -117,15 +62,18 @@ walkeros push <config|bundle> [options]
 
 ### Options
 
-| Option                  | Description                                  |
-| ----------------------- | -------------------------------------------- |
-| `-e, --event <source>`  | Event (required) - JSON string, file, or URL |
-| `--flow <name>`         | Flow to use                                  |
-| `-p, --platform <type>` | Platform override                            |
-| `--json`                | JSON output                                  |
-| `-v, --verbose`         | Verbose logging                              |
+| Option                  | Description                                                     |
+| ----------------------- | --------------------------------------------------------------- |
+| `-e, --event <source>`  | Event (required) - JSON string, file, or URL                    |
+| `--flow <name>`         | Flow to use                                                     |
+| `-p, --platform <type>` | Platform override                                               |
+| `--simulate <step>`     | Simulate a step (repeatable). Use `destination.NAME` or `source.NAME` |
+| `--mock <step=value>`   | Mock a step with a specific return value (repeatable)           |
+| `--snapshot <source>`   | JS file to eval before execution (sets global state)            |
+| `--json`                | JSON output                                                     |
+| `-v, --verbose`         | Verbose logging                                                 |
 
-**Warning:** This makes real API calls. Use `simulate` first to test.
+**Without `--simulate`:** Makes real API calls. Test with `--simulate` first.
 
 ### Examples
 
@@ -135,6 +83,18 @@ walkeros push flow.json -e '{"entity":"order","action":"complete"}'
 
 # Push from file
 walkeros push flow.json -e ./events/purchase.json
+
+# Simulate a destination (mock its push, capture API calls)
+walkeros push flow.json -e event.json --simulate destination.ga4
+
+# Simulate a source (capture events, disable all destinations)
+walkeros push flow.json --simulate source.browser
+
+# Mock a destination with a specific return value
+walkeros push flow.json -e event.json --mock destination.ga4='{"status":"ok"}'
+
+# Combine simulation flags
+walkeros push flow.json -e event.json --simulate destination.ga4 --mock destination.piwik='null'
 ```
 
 ---
