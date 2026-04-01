@@ -26,14 +26,23 @@ export function registerFlowSimulateTool(server: McpServer) {
         'For destinations: event is a walkerOS event { name: "entity action", data: {...} }. ' +
         'For sources: event is { content: ..., trigger?: { type?, options? }, env?: {...} }. ' +
         'Use step to target a specific step. ' +
-        'Use flow_examples to discover available test data.',
+        'Use flow_examples to discover available test data. ' +
+        'IMPORTANT: Destinations with require (e.g. require: ["consent"]) stay pending until ' +
+        'that collector event fires — simulation will error "not found" if require is not satisfied. ' +
+        'Remove require from config or provide consent/user events before simulating. ' +
+        'Separately, destinations with consent (e.g. consent: { marketing: true }) only receive ' +
+        'events where the event includes matching consent. ' +
+        'Mapping transforms event names and data at the destination level. ' +
+        'Policy redacts or injects fields before mapping runs.',
       inputSchema: {
         configPath: schemas.SimulateInputShape.configPath,
         event: z
           .union([z.record(z.string(), z.unknown()), z.string()])
           .optional()
           .describe(
-            'For destinations: { name, data }. For sources: { content, trigger?, env? }. ' +
+            'For destinations: { name, data, consent? }. Include consent (e.g. { marketing: true }) ' +
+              'to satisfy destination consent requirements. ' +
+              'For sources: { content, trigger?, env? }. ' +
               'Can also be a JSON string or file path.',
           ),
         flow: schemas.SimulateInputShape.flow,
@@ -194,7 +203,11 @@ export function registerFlowSimulateTool(server: McpServer) {
         const warnings: string[] = [];
         if (stepType === 'destination' && destCount === 0) {
           warnings.push(
-            'Destination did not receive the event. Check: consent is granted, mapping matches.',
+            'Destination did not receive the event. Common causes: ' +
+              '(1) destination config has consent: { marketing: true } but event lacks matching consent, ' +
+              '(2) mapping rules do not match the event name, ' +
+              '(3) policy redacted required fields. ' +
+              'Add consent to the event: { name: "...", data: {...}, consent: { marketing: true } }.',
           );
         }
 
@@ -216,7 +229,15 @@ export function registerFlowSimulateTool(server: McpServer) {
           ...(warnings.length > 0 ? { warnings } : {}),
         });
       } catch (error) {
-        return mcpError(error, 'Run flow_validate for detailed error messages');
+        const msg = error instanceof Error ? error.message : '';
+        let hint = 'Run flow_validate for detailed error messages';
+        if (msg.includes('not found in collector')) {
+          hint =
+            'If this destination has require: ["consent"] or require: ["user"], it stays ' +
+            'pending until that event fires. For simulation, either remove require from ' +
+            'the config or simulate with a flow that omits require on the target destination.';
+        }
+        return mcpError(error, hint);
       }
     },
   );

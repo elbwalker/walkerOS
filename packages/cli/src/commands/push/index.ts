@@ -14,6 +14,7 @@ import {
   runTransformerChain,
   walkChain,
   extractTransformerNextMap,
+  wrapEnv,
 } from '@walkeros/collector';
 import { createCLILogger } from '../../core/cli-logger.js';
 import {
@@ -915,6 +916,31 @@ export async function simulateDestination(
         const config = module.wireConfig(module.__configData ?? undefined);
         applyOverrides(config, prepared.overrides);
 
+        // Wrap env for call tracking if simulation paths exist
+        const destOverride =
+          prepared.overrides.destinations?.[options.destinationId];
+        let trackedCalls: Array<{
+          fn: string;
+          args: unknown[];
+          ts: number;
+        }> = [];
+        if (destOverride?.simulation?.length) {
+          const destinations = config.destinations as Record<
+            string,
+            { config?: { env?: Record<string, unknown> } }
+          >;
+          const destConfig = destinations[options.destinationId]?.config;
+          if (destConfig?.env) {
+            const combined = {
+              ...destConfig.env,
+              simulation: destOverride.simulation,
+            };
+            const { wrappedEnv, calls } = wrapEnv(combined);
+            destConfig.env = wrappedEnv;
+            trackedCalls = calls;
+          }
+        }
+
         // Don't initialize sources — unnecessary overhead
         if (config.sources) config.sources = {};
 
@@ -924,8 +950,11 @@ export async function simulateDestination(
 
         const collector = result.collector;
 
-        // Verify destination exists
-        if (!collector.destinations[options.destinationId]) {
+        // Verify destination exists (check both active and pending)
+        if (
+          !collector.destinations[options.destinationId] &&
+          !collector.pending.destinations[options.destinationId]
+        ) {
           throw new Error(
             `Destination "${options.destinationId}" not found in collector. ` +
               `Available: ${Object.keys(collector.destinations || {}).join(', ') || 'none'}`,
@@ -945,6 +974,9 @@ export async function simulateDestination(
         return {
           success: true,
           elbResult: elbResult as PushResult['elbResult'],
+          ...(trackedCalls.length > 0
+            ? { usage: { [options.destinationId]: trackedCalls } }
+            : {}),
           ...(networkCalls.length > 0 ? { networkCalls } : {}),
           duration: Date.now() - startTime,
         };

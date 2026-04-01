@@ -80,6 +80,13 @@ Every component in a flow is a **step**: sources capture events, transformers pr
 - **Variables** (\$var, \$env, \$def, \$code, \$store) enable DRY, environment-aware config. Use the \`use-definitions\` prompt to extract shared patterns.
 - **Consent** gates destinations, mapping rules, and individual fields. Privacy-first by design.
 
+## Simulation Tips
+
+- Destinations with \`require: ["consent"]\` stay **pending** until a \`"walker consent"\` event fires. Simulation will error "not found" for pending destinations — remove \`require\` from config when testing with \`flow_simulate\`.
+- Destinations with \`consent: { marketing: true }\` silently skip events that lack matching consent. Include \`consent\` in the event: \`{ name: "page view", data: {...}, consent: { marketing: true } }\`.
+- **Mapping** transforms event names and data at the destination level. Events without a matching mapping rule pass through unmodified.
+- **Policy** modifies the event before mapping runs — use it to inject computed fields or redact sensitive data.
+
 ## Reference Resources
 
 Read these before constructing configs manually: \`walkeros://reference/flow-schema\`, \`walkeros://reference/mapping\`, \`walkeros://reference/event-model\`, \`walkeros://reference/consent\`, \`walkeros://reference/variables\`, \`walkeros://reference/contract\`, \`walkeros://reference/examples\`.`,

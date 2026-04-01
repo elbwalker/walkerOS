@@ -486,6 +486,24 @@ describe('flow_simulate tool', () => {
     expect(parsed.error).toContain('Unknown step type');
   });
 
+  it('returns require hint when destination not found in collector', async () => {
+    mockSimulateDestination.mockRejectedValue(
+      new Error('Destination "gtag" not found in collector. Available: none'),
+    );
+
+    const tool = server.getTool('flow_simulate');
+    const result = await tool.handler({
+      configPath: './flow.json',
+      event: '{"name":"page view"}',
+      flow: undefined,
+      step: 'destination.gtag',
+    });
+
+    expect(result.isError).toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.error).toContain('not found in collector');
+  });
+
   it('errors on invalid JSON event string', async () => {
     const tool = server.getTool('flow_simulate');
     const result = await tool.handler({

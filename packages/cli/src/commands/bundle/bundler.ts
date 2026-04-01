@@ -428,6 +428,9 @@ export async function bundleCore(
       const entryPath = path.join(TEMP_DIR, 'entry.js');
       await fs.writeFile(entryPath, codeEntry);
 
+      // minify: false is critical — the wrapper appended in step 2 references
+      // startFlow by name. Minification would rename it, breaking the reference.
+      // Final minification happens in buildWebWrapper via esbuild.transform().
       const esbuildOptions = createEsbuildOptions(
         { ...buildOptions, minify: false },
         entryPath,
@@ -1667,8 +1670,11 @@ export async function buildWebWrapper(
  * Wrap ESM code in a server factory function.
  * Adds export default async function with httpHandler discovery.
  */
-export function buildServerWrapper(esmCode: string): string {
-  return `${esmCode}
+export async function buildServerWrapper(
+  esmCode: string,
+  options: { minify?: boolean } = {},
+): Promise<string> {
+  const wrapped = `${esmCode}
 
 export default async function(context = {}) {
   const config = wireConfig(__configData);

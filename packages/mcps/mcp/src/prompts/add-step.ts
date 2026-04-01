@@ -37,9 +37,14 @@ export function registerAddStepPrompt(server: McpServer) {
               '4. Scaffold the step config using the package schemas — include required settings with placeholder values.',
               '5. Wire the step into the flow: add to packages section (with version if needed), connect via next/before chains if needed.',
               '6. For destinations: configure mapping using nested entity → action keys. Event "product add" maps to `{ "product": { "add": { name: "AddToCart" } } }`. Use the setup-mapping prompt for guidance.',
-              '7. Use flow_validate to verify the result.',
-              '8. For server sources: check if the package supports `ingest` configuration via package_get. Ingest extracts request metadata (IP, user-agent, headers) using mapping syntax. Transformers like fingerprint depend on ingest data.',
-              '9. When adding a transformer that uses ingest fields, verify the source has `ingest` configured — otherwise ingest fields resolve to empty values.',
+              '7. For destinations: if consent-gated loading is needed, add require: ["consent"] to config. ' +
+                'Note: require delays initialization until a "walker consent" event fires. ' +
+                'When simulating with flow_simulate, destinations with require will error "not found" — ' +
+                'remove require temporarily or test without it. ' +
+                'For per-event consent filtering, add consent: { marketing: true } to config.',
+              '8. Use flow_validate to verify the result.',
+              '9. For server sources: check if the package supports `ingest` configuration via package_get. Ingest extracts request metadata (IP, user-agent, headers) using mapping syntax. Transformers like fingerprint depend on ingest data.',
+              '10. When adding a transformer that uses ingest fields, verify the source has `ingest` configured — otherwise ingest fields resolve to empty values.',
               '',
               'Important:',
               '- Read the walkeros://reference/flow-schema resource to understand connection rules.',

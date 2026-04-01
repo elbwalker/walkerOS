@@ -290,6 +290,40 @@ Options:
 2. **Check mapping**: Event must match entity/action in mapping
 3. **Use simulate first**: `walkeros push flow.json -e event.json --simulate destination.demo -v`
 
+### Destination Not Found in Simulation
+
+If `--simulate destination.NAME` errors with "not found in collector", the
+destination likely has `require: ["consent"]` in its config. This delays
+initialization until a `walker consent` event fires — which doesn't happen
+during simulation.
+
+**Fix:** Remove or comment out the `require` field for simulation testing:
+
+```json
+{
+  "destinations": {
+    "gtag": {
+      "package": "@walkeros/web-destination-gtag",
+      "config": {
+        "settings": { "measurementId": "G-XXXXXX" }
+      }
+    }
+  }
+}
+```
+
+### Destination Silent (0 Events Received)
+
+If the destination is found but receives 0 events:
+
+1. **Check consent**: If destination has `consent: { marketing: true }`, the
+   event must include matching consent. Add to event JSON:
+   `{ "name": "page view", "data": {...}, "consent": { "marketing": true } }`
+2. **Check mapping**: The event name must match a mapping rule (entity/action
+   keys). Unmapped events pass through unmodified.
+3. **Check policy**: Policy runs BEFORE mapping — verify policy isn't redacting
+   fields needed by mapping rules.
+
 ### Web Simulation Transport
 
 Web simulations run in JSDOM. `fetch` and `navigator.sendBeacon` are
