@@ -499,7 +499,7 @@ export async function bundleCore(
       const dataDeclaration = `const __configData = ${dataPayload};\nexport { __configData };`;
       // For node platform, prepend createRequire banner (stage 1 no longer adds it)
       const banner =
-        buildOptions.platform === 'node' && !buildOptions.skipWrapper
+        buildOptions.platform === 'node'
           ? `import { createRequire } from 'module';const require = createRequire(import.meta.url);\n`
           : '';
       const esmOutput = `${banner}${compiledCode}\n${dataDeclaration}`;
