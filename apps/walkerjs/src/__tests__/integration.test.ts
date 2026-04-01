@@ -177,7 +177,7 @@ describe('Walker.js Integration Tests', () => {
     });
 
     test('should export working getAllEvents function', () => {
-      const events = getAllEvents();
+      const events = getAllEvents(document);
 
       expect(Array.isArray(events)).toBe(true);
       expect(events.length).toBeGreaterThan(0);
@@ -198,7 +198,7 @@ describe('Walker.js Integration Tests', () => {
     });
 
     test('should export working getGlobals function', () => {
-      const globals = getGlobals();
+      const globals = getGlobals(undefined, document);
 
       expect(typeof globals).toBe('object');
       expect(globals).toHaveProperty('site', 'test');

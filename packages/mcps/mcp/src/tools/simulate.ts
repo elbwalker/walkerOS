@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { push } from '@walkeros/cli';
+import {
+  simulateSource,
+  simulateTransformer,
+  simulateDestination,
+} from '@walkeros/cli';
 import type { PushResult } from '@walkeros/cli';
 import { schemas } from '@walkeros/cli/dev';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -56,19 +60,75 @@ export function registerFlowSimulateTool(server: McpServer) {
           );
         }
 
-        // Build simulate array from step parameter
-        // step: 'destination.ga4' → simulate: ['destination.ga4']
-        // step: 'source.browser' → simulate: ['source.browser']
-        // no step → simulate all destinations (simulate: ['destination.*'] would be ideal,
-        // but for now we pass undefined to let push handle it without --simulate flag)
-        const simulate = step ? [step] : undefined;
+        if (!step) {
+          throw new Error(
+            'step is required. Specify a target like "source.browser", "destination.gtag", or "transformer.demo".',
+          );
+        }
 
-        const result: PushResult = await push(configPath, event, {
-          json: true,
-          flow,
-          platform,
-          simulate,
-        });
+        // Resolve string event input (JSON string)
+        let resolvedEvent: unknown = event;
+        if (typeof event === 'string') {
+          try {
+            resolvedEvent = JSON.parse(event);
+          } catch {
+            throw new Error(
+              'Event string must be valid JSON. Got: ' +
+                event.substring(0, 50),
+            );
+          }
+        }
+
+        // Parse step into type and id
+        const dotIndex = step.indexOf('.');
+        if (dotIndex === -1) {
+          throw new Error(
+            `Invalid step format "${step}". Use "type.name" (e.g. "source.browser", "destination.gtag").`,
+          );
+        }
+        const stepType = step.substring(0, dotIndex);
+        const stepId = step.substring(dotIndex + 1);
+
+        let result: PushResult;
+
+        switch (stepType) {
+          case 'source':
+            result = await simulateSource(configPath, resolvedEvent, {
+              sourceId: stepId,
+              flow,
+              silent: true,
+            });
+            break;
+
+          case 'transformer':
+            result = await simulateTransformer(
+              configPath,
+              resolvedEvent as import('@walkeros/core').WalkerOS.DeepPartialEvent,
+              {
+                transformerId: stepId,
+                flow,
+                silent: true,
+              },
+            );
+            break;
+
+          case 'destination':
+            result = await simulateDestination(
+              configPath,
+              resolvedEvent as import('@walkeros/core').WalkerOS.DeepPartialEvent,
+              {
+                destinationId: stepId,
+                flow,
+                silent: true,
+              },
+            );
+            break;
+
+          default:
+            throw new Error(
+              `Unknown step type "${stepType}". Use "source", "transformer", or "destination".`,
+            );
+        }
 
         // Source simulation returns captured events
         if (result.captured && result.captured.length > 0) {
@@ -99,7 +159,20 @@ export function registerFlowSimulateTool(server: McpServer) {
         // Destination/transformer simulation
         const destinations: Record<string, DestinationSummary> = {};
 
-        // Build destinations summary from usage (call tracking)
+        // Build destinations summary from elbResult.done
+        if (
+          result.elbResult &&
+          typeof result.elbResult === 'object' &&
+          'done' in result.elbResult &&
+          result.elbResult.done
+        ) {
+          const done = result.elbResult.done as Record<string, unknown>;
+          for (const name of Object.keys(done)) {
+            destinations[name] = { received: true, calls: 0 };
+          }
+        }
+
+        // Also check usage (call tracking from mock envs)
         if (result.usage) {
           for (const [name, calls] of Object.entries(result.usage)) {
             const summary: DestinationSummary = {
@@ -113,36 +186,22 @@ export function registerFlowSimulateTool(server: McpServer) {
           }
         }
 
-        // If no usage data, check elbResult.done for mock results
-        if (
-          Object.keys(destinations).length === 0 &&
-          result.elbResult &&
-          typeof result.elbResult === 'object' &&
-          'done' in result.elbResult &&
-          result.elbResult.done
-        ) {
-          const done = result.elbResult.done as Record<string, unknown>;
-          for (const name of Object.keys(done)) {
-            destinations[name] = { received: true, calls: 0 };
-          }
-        }
-
         const destCount = Object.keys(destinations).length;
         const receivedCount = Object.values(destinations).filter(
           (d) => d.received,
         ).length;
 
         const warnings: string[] = [];
-        if (destCount === 0) {
-          warnings.push('No destinations found in flow configuration.');
-        }
-        if (destCount > 0 && receivedCount === 0) {
+        if (stepType === 'destination' && destCount === 0) {
           warnings.push(
-            'No destinations received the event. Check: mapping keys use nested entity→action structure, event name matches, consent is granted.',
+            'Destination did not receive the event. Check: consent is granted, mapping matches.',
           );
         }
 
-        const summary = `${receivedCount}/${destCount} destinations received the event`;
+        const summary =
+          stepType === 'transformer'
+            ? `Transformer processed event`
+            : `${receivedCount}/${destCount} destinations received the event`;
 
         const resultObj = {
           success: result.success,

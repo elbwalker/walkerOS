@@ -168,16 +168,63 @@ export async function pushCommand(options: PushCommandOptions): Promise<void> {
       config = options.config || 'bundle.config.json';
     }
 
-    const result = await push(config, options.event, {
-      flow: options.flow,
-      json: options.json,
-      verbose: options.verbose,
-      silent: options.silent,
-      platform: options.platform as Platform | undefined,
-      simulate: options.simulate,
-      mock: options.mock,
-      snapshot: options.snapshot,
-    });
+    // Resolve string event inputs
+    let resolvedEvent: unknown = options.event;
+    if (typeof options.event === 'string') {
+      resolvedEvent = await loadJsonFromSource(options.event, {
+        name: 'event',
+      });
+    }
+
+    // Route to typed function based on --simulate flag
+    const simulateFlag = options.simulate?.[0];
+    let result: PushResult;
+
+    if (simulateFlag?.startsWith('source.')) {
+      result = await simulateSource(config, resolvedEvent, {
+        sourceId: simulateFlag.replace('source.', ''),
+        flow: options.flow,
+        silent: options.silent,
+        verbose: options.verbose,
+        snapshot: options.snapshot,
+      });
+    } else if (simulateFlag?.startsWith('transformer.')) {
+      result = await simulateTransformer(
+        config,
+        resolvedEvent as WalkerOS.DeepPartialEvent,
+        {
+          transformerId: simulateFlag.replace('transformer.', ''),
+          flow: options.flow,
+          mock: options.mock,
+          silent: options.silent,
+          verbose: options.verbose,
+          snapshot: options.snapshot,
+        },
+      );
+    } else if (simulateFlag?.startsWith('destination.')) {
+      result = await simulateDestination(
+        config,
+        resolvedEvent as WalkerOS.DeepPartialEvent,
+        {
+          destinationId: simulateFlag.replace('destination.', ''),
+          flow: options.flow,
+          mock: options.mock,
+          silent: options.silent,
+          verbose: options.verbose,
+          snapshot: options.snapshot,
+        },
+      );
+    } else {
+      result = await push(config, resolvedEvent, {
+        flow: options.flow,
+        json: options.json,
+        verbose: options.verbose,
+        silent: options.silent,
+        platform: options.platform as Platform | undefined,
+        mock: options.mock,
+        snapshot: options.snapshot,
+      });
+    }
 
     const duration = Date.now() - startTime;
 
@@ -267,7 +314,6 @@ export async function push(
   options: PushOptions & {
     flow?: string;
     platform?: Platform;
-    simulate?: string[];
     mock?: string[];
     snapshot?: string;
   } = {},
@@ -280,57 +326,8 @@ export async function push(
     );
   }
 
-  // Resolve string event inputs (file paths, URLs, JSON strings)
-  let resolvedEvent = event;
-  if (typeof event === 'string') {
-    resolvedEvent = await loadJsonFromSource(event, { name: 'event' });
-  }
-
-  // Route to typed function based on simulate flag
-  const simulateFlag = options.simulate?.[0];
-
-  if (simulateFlag?.startsWith('source.')) {
-    return simulateSource(configOrPath, resolvedEvent, {
-      sourceId: simulateFlag.replace('source.', ''),
-      flow: options.flow,
-      silent: options.silent,
-      verbose: options.verbose,
-      snapshot: options.snapshot,
-    });
-  }
-
-  if (simulateFlag?.startsWith('transformer.')) {
-    return simulateTransformer(
-      configOrPath,
-      resolvedEvent as WalkerOS.DeepPartialEvent,
-      {
-        transformerId: simulateFlag.replace('transformer.', ''),
-        flow: options.flow,
-        mock: options.mock,
-        silent: options.silent,
-        verbose: options.verbose,
-        snapshot: options.snapshot,
-      },
-    );
-  }
-
-  if (simulateFlag?.startsWith('destination.')) {
-    return simulateDestination(
-      configOrPath,
-      resolvedEvent as WalkerOS.DeepPartialEvent,
-      {
-        destinationId: simulateFlag.replace('destination.', ''),
-        flow: options.flow,
-        mock: options.mock,
-        silent: options.silent,
-        verbose: options.verbose,
-        snapshot: options.snapshot,
-      },
-    );
-  }
-
-  // Normal push — validate with Zod, then use existing pipeline
-  const parsed = schemas.PartialEventSchema.safeParse(resolvedEvent);
+  // Validate with Zod
+  const parsed = schemas.PartialEventSchema.safeParse(event);
   if (!parsed.success) {
     return {
       success: false,
@@ -339,7 +336,7 @@ export async function push(
     };
   }
 
-  return pushCore(configOrPath, resolvedEvent, {
+  return pushCore(configOrPath, event, {
     json: options.json ?? false,
     verbose: options.verbose ?? false,
     silent: options.silent ?? false,
