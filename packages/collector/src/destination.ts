@@ -8,6 +8,7 @@ import type {
   Ingest,
 } from '@walkeros/core';
 import {
+  assign,
   buildCacheContext,
   clone,
   compileCache,
@@ -160,16 +161,16 @@ export async function pushToDestinations(
         return { id, destination, skipped: true };
       }
 
-      // Create a queue of events to be processed
+      // Queued events: refresh consent (full replace — stale consent must not persist).
+      // User/globals merge happens for all events below in allowedEvents.map.
       let currentQueue = (destination.queuePush || []).map((event) => ({
         ...event,
         consent,
-        user,
-        globals,
       }));
-
-      // Reset original queue while processing to enable async processing
       destination.queuePush = [];
+
+      // Current event: added as-is (consent is already fresh from createEvent).
+      if (event) currentQueue.push(clone(event));
 
       // Clone ingest for this destination (prevents cross-destination races in Promise.all)
       const destIngest: Ingest = meta.ingest
@@ -178,17 +179,6 @@ export async function pushToDestinations(
             _meta: { ...meta.ingest._meta, path: [...meta.ingest._meta.path] },
           }
         : createIngest('unknown');
-
-      // Add event to queue stack
-      if (event) {
-        // Clone the event to avoid mutating the original event
-        const currentEvent = clone(event);
-
-        // Note: Policy is now applied in processEventMapping() within destinationPush()
-
-        // Add event to queue stack
-        currentQueue.push(currentEvent);
-      }
 
       // If no events and no queued on events, skip this destination
       if (!currentQueue.length && !destination.queueOn?.length) {
@@ -276,6 +266,10 @@ export async function pushToDestinations(
       let totalDuration = 0;
       await Promise.all(
         allowedEvents.map(async (event) => {
+          // Merge collector state into event (collector as base, event overrides)
+          event.globals = assign(globals, event.globals);
+          event.user = assign(user, event.user);
+
           // Full cache check: before the before chain (skips everything on HIT)
           let cacheMiss: { key: string; ttl: number } | undefined;
           if (compiledDCache?.full && dCacheStore) {
@@ -323,7 +317,9 @@ export async function pushToDestinations(
             // Use the processed event (cast back to full Event type)
             // Before chains use first result if fan-out occurred
             processedEvent = (
-              Array.isArray(chainResult.event) ? chainResult.event[0] : chainResult.event
+              Array.isArray(chainResult.event)
+                ? chainResult.event[0]
+                : chainResult.event
             ) as WalkerOS.Event;
           }
 
