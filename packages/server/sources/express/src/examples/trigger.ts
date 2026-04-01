@@ -73,16 +73,26 @@ const createTrigger: Trigger.CreateFn<Content, Result> = async (
         url += `?${new URLSearchParams(content.query).toString()}`;
       }
 
-      // Build fetch options
+      // Build fetch options — only set default Content-Type if user doesn't provide one
+      const hasContentType =
+        content.headers &&
+        Object.keys(content.headers).some(
+          (k) => k.toLowerCase() === 'content-type',
+        );
       const fetchOptions: RequestInit = {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          ...(hasContentType ? {} : { 'Content-Type': 'application/json' }),
           ...content.headers,
         },
       };
       if (method !== 'GET' && method !== 'HEAD' && content.body !== undefined) {
-        fetchOptions.body = JSON.stringify(content.body);
+        // String bodies sent raw (e.g., base64 beacon with text/plain).
+        // Object bodies JSON-serialized.
+        fetchOptions.body =
+          typeof content.body === 'string'
+            ? content.body
+            : JSON.stringify(content.body);
       }
 
       // Real HTTP request

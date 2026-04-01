@@ -373,6 +373,7 @@ export function getFlowSettings(
         primary: source.primary,
         variables: source.variables,
         definitions: source.definitions,
+        before: source.before,
         next: source.next,
         cache: source.cache,
         code: finalCode,
@@ -430,6 +431,7 @@ export function getFlowSettings(
         variables: dest.variables,
         definitions: dest.definitions,
         before: dest.before,
+        next: dest.next,
         cache: dest.cache,
         code: finalCode,
       } as Flow.DestinationReference;
