@@ -296,6 +296,7 @@ export async function pushToDestinations(
 
           // Run post-collector transformer chain if configured for this destination
           let processedEvent: WalkerOS.Event | null = event;
+          let destRespond = meta.respond;
           if (
             postChain.length > 0 &&
             collector.transformers &&
@@ -311,15 +312,18 @@ export async function pushToDestinations(
               `destination.${id}.before`,
             );
 
-            if (chainResult === null) {
+            if (chainResult.event === null) {
               // Chain stopped - skip this event for this destination
               return event;
             }
 
+            // Update respond if the chain produced a wrapped one
+            if (chainResult.respond) destRespond = chainResult.respond;
+
             // Use the processed event (cast back to full Event type)
             // Before chains use first result if fan-out occurred
             processedEvent = (
-              Array.isArray(chainResult) ? chainResult[0] : chainResult
+              Array.isArray(chainResult.event) ? chainResult.event[0] : chainResult.event
             ) as WalkerOS.Event;
           }
 
@@ -362,7 +366,7 @@ export async function pushToDestinations(
             id,
             processedEvent!,
             destIngest,
-            meta.respond,
+            destRespond,
           );
           totalDuration += Date.now() - pushStart;
 
@@ -402,15 +406,16 @@ export async function pushToDestinations(
               collector.transformers &&
               Object.keys(collector.transformers).length > 0
             ) {
-              await runTransformerChain(
+              const nextResult = await runTransformerChain(
                 collector,
                 collector.transformers,
                 nextChain,
                 processedEvent!,
                 destIngest,
-                meta.respond,
+                destRespond,
                 `destination.${id}.next`,
               );
+              if (nextResult.respond) destRespond = nextResult.respond;
             }
           }
 

@@ -105,11 +105,12 @@ export async function initSource(
         currentRespond,
         `source.${sourceId}.before`,
       );
-      if (beforeResult === null) {
+      if (beforeResult.event === null) {
         return { ok: true } as Elb.PushResult;
       }
+      if (beforeResult.respond) currentRespond = beforeResult.respond;
       // Before chains use first result if fan-out occurred
-      event = Array.isArray(beforeResult) ? beforeResult[0] : beforeResult;
+      event = Array.isArray(beforeResult.event) ? beforeResult.event[0] : beforeResult.event;
     }
 
     // Source cache check (full=true by default for sources)

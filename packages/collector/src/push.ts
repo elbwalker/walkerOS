@@ -49,8 +49,9 @@ export function createPush<T extends Collector.Instance>(
       return await tryCatchAsync(
         async (): Promise<Elb.PushResult> => {
           const pushStart = Date.now();
-          const { id, ingest, respond, mapping, preChain, include, exclude } =
+          const { id, ingest, respond: initialRespond, mapping, preChain, include, exclude } =
             options;
+          let respond = initialRespond;
           let partialEvent = event;
 
           // Build filtered destination set if include/exclude specified
@@ -109,15 +110,18 @@ export function createPush<T extends Collector.Instance>(
             );
 
             // Chain was stopped - event dropped
-            if (chainResult === null) {
+            if (chainResult.event === null) {
               return createPushResult({ ok: true });
             }
 
+            // Update respond if the chain produced a wrapped one
+            if (chainResult.respond) respond = chainResult.respond;
+
             // Handle fan-out: array means multiple events from a single input
-            if (Array.isArray(chainResult)) {
+            if (Array.isArray(chainResult.event)) {
               // Process each forked event through the rest of the pipeline
               const forkResults = await Promise.all(
-                chainResult.map(async (forkEvent) => {
+                chainResult.event.map(async (forkEvent) => {
                   const enriched = prepareEvent(forkEvent);
                   const full = createEvent(collector, enriched);
                   return pushToDestinations(
@@ -142,7 +146,7 @@ export function createPush<T extends Collector.Instance>(
                   };
                 }
                 const sourceStatus = collector.status.sources[id];
-                sourceStatus.count += chainResult.length;
+                sourceStatus.count += chainResult.event.length;
                 sourceStatus.lastAt = Date.now();
                 sourceStatus.duration += Date.now() - pushStart;
               }
@@ -150,7 +154,7 @@ export function createPush<T extends Collector.Instance>(
               return forkResults[0] ?? createPushResult({ ok: true });
             }
 
-            partialEvent = chainResult;
+            partialEvent = chainResult.event;
           }
 
           // Prepare event (add timing, source info)

@@ -176,6 +176,110 @@ describe('env.respond', () => {
     });
   });
 
+  it('respond wrapper propagates from preChain back to caller', async () => {
+    const sender = jest.fn();
+    const respond = createRespond(sender);
+
+    const { collector } = await startFlow({
+      transformers: {
+        godmode: {
+          code: async (ctx) => ({
+            type: 'godmode',
+            config: ctx.config,
+            push: async (event, context) => {
+              const original = context.env.respond!;
+              return {
+                event,
+                respond: ((options?) => {
+                  original({
+                    body: { debug: true, original: options?.body },
+                  });
+                }) as RespondFn,
+              };
+            },
+          }),
+        },
+      },
+      destinations: {
+        responder: {
+          code: {
+            type: 'responder',
+            config: {},
+            push: async (event: unknown, context: any) => {
+              // Destination calls respond — should get the wrapper from preChain
+              context.env.respond?.({ body: { success: true } });
+            },
+          },
+        },
+      },
+    });
+
+    await collector.push(
+      { name: 'page view' },
+      { respond, preChain: ['godmode'] },
+    );
+
+    // The destination called respond({ body: { success: true } }),
+    // but godmode's wrapper intercepted it and wrapped it with debug info.
+    // Since createRespond is first-call-wins, the wrapper's call to original
+    // is the first call — it goes through.
+    expect(sender).toHaveBeenCalledTimes(1);
+    expect(sender).toHaveBeenCalledWith({
+      body: { debug: true, original: { success: true } },
+    });
+  });
+
+  it('respond wrapper from destination.before reaches destination push', async () => {
+    const sender = jest.fn();
+    const respond = createRespond(sender);
+    let destReceivedRespond: RespondFn | undefined;
+
+    const { collector } = await startFlow({
+      transformers: {
+        addHeader: {
+          code: async (ctx) => ({
+            type: 'addHeader',
+            config: ctx.config,
+            push: async (event, context) => {
+              const original = context.env.respond!;
+              return {
+                event,
+                respond: ((options?) => {
+                  original({
+                    ...options,
+                    headers: { ...options?.headers, 'X-Debug': 'true' },
+                  });
+                }) as RespondFn,
+              };
+            },
+          }),
+        },
+      },
+      destinations: {
+        test: {
+          code: {
+            type: 'test',
+            config: {},
+            push: async (event: unknown, context: any) => {
+              destReceivedRespond = context.env.respond;
+              context.env.respond?.({ body: 'dest-response' });
+            },
+          },
+          config: { before: ['addHeader'] },
+        },
+      },
+    });
+
+    await collector.push({ name: 'page view' }, { respond });
+
+    expect(destReceivedRespond).toBeDefined();
+    expect(destReceivedRespond).not.toBe(respond);
+    expect(sender).toHaveBeenCalledWith({
+      body: 'dest-response',
+      headers: { 'X-Debug': 'true' },
+    });
+  });
+
   it('source setRespond flows to transformer env', async () => {
     let capturedRespond: RespondFn | undefined;
     const sender = jest.fn();

@@ -101,6 +101,16 @@ export interface Result<E = WalkerOS.DeepPartialEvent> {
 }
 
 /**
+ * Result of running a transformer chain.
+ * Returns the processed event (singular, fan-out array, or null if dropped)
+ * alongside the potentially wrapped respond function.
+ */
+export interface ChainResult {
+  event: WalkerOS.DeepPartialEvent | WalkerOS.DeepPartialEvent[] | null;
+  respond?: import('../respond').RespondFn;
+}
+
+/**
  * The main transformer function.
  *
  * Pre-collector transformers use default E = DeepPartialEvent.

@@ -116,9 +116,9 @@ describe('transformer simulation isolation — before chain', () => {
       `transformer.${transformerId}.before`,
     );
 
-    expect(beforeResult).not.toBeNull();
+    expect(beforeResult.event).not.toBeNull();
     processedEvent = (
-      Array.isArray(beforeResult) ? beforeResult![0] : beforeResult
+      Array.isArray(beforeResult.event) ? beforeResult.event![0] : beforeResult.event
     ) as WalkerOS.DeepPartialEvent;
 
     // Verify enrichment was applied
@@ -244,7 +244,7 @@ describe('transformer simulation isolation — before chain', () => {
     );
 
     // Chain returned null (event was dropped)
-    expect(beforeResult).toBeNull();
+    expect(beforeResult.event).toBeNull();
 
     // Main transformer should NOT be called when before chain drops
     expect(mainPush).not.toHaveBeenCalled();
@@ -314,9 +314,9 @@ describe('transformer simulation isolation — before chain', () => {
       `transformer.${transformerId}.before`,
     );
 
-    expect(beforeResult).not.toBeNull();
+    expect(beforeResult.event).not.toBeNull();
     const processedEvent = (
-      Array.isArray(beforeResult) ? beforeResult![0] : beforeResult
+      Array.isArray(beforeResult.event) ? beforeResult.event![0] : beforeResult.event
     ) as WalkerOS.DeepPartialEvent;
 
     // Both validate and enrich ran
@@ -486,9 +486,9 @@ describe('destination simulation with before chain', () => {
         `destination.${destId}.before`,
       );
 
-      expect(beforeResult).not.toBeNull();
+      expect(beforeResult.event).not.toBeNull();
       processedEvent = (
-        Array.isArray(beforeResult) ? beforeResult![0] : beforeResult
+        Array.isArray(beforeResult.event) ? beforeResult.event![0] : beforeResult.event
       ) as WalkerOS.Event;
     }
 
@@ -561,7 +561,7 @@ describe('destination simulation with before chain', () => {
     );
 
     // Before chain dropped the event
-    expect(beforeResult).toBeNull();
+    expect(beforeResult.event).toBeNull();
 
     // destinationPush should NOT be called when before chain drops
     expect(destPushFn).not.toHaveBeenCalled();

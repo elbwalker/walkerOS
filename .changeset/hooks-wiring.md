@@ -4,4 +4,6 @@
 '@walkeros/cli': minor
 ---
 
-Wire initConfig.hooks into collector instance. Simplify simulate paths to use prePush/postDestinationPush hooks instead of manual collector.push overrides and wrapEnv tracking. Source simulation timing issue resolved — hooks are wired by startFlow before events fire.
+Wire initConfig.hooks into collector instance. Simulation uses
+prePush/postDestinationPush hooks for event capture. Hooks are wired by
+startFlow before events fire.

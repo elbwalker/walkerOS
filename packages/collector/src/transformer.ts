@@ -47,6 +47,7 @@ import {
 } from '@walkeros/core';
 import { getCacheStore } from './cache';
 
+
 /**
  * Extracts transformer next configuration for chain walking.
  * Maps transformer instances to their config.next values.
@@ -349,7 +350,7 @@ export async function runTransformerChain(
   ingest?: Ingest,
   respond?: import('@walkeros/core').RespondFn,
   chainContext?: string,
-): Promise<WalkerOS.DeepPartialEvent | WalkerOS.DeepPartialEvent[] | null> {
+): Promise<Transformer.ChainResult> {
   const MAX_PATH_LENGTH = 256;
 
   if (chainContext && ingest?._meta) {
@@ -369,7 +370,7 @@ export async function runTransformerChain(
     // Safety valve: prevent unbounded path growth
     if (ingest && ingest._meta && ingest._meta.path.length > MAX_PATH_LENGTH) {
       collector.logger.error(`Max path length exceeded at ${transformerName}`);
-      return null;
+      return { event: null, respond: currentRespond };
     }
 
     // Track step in _meta (runtime-managed)
@@ -387,7 +388,7 @@ export async function runTransformerChain(
 
     if (!isInitialized) {
       collector.logger.error(`Transformer init failed: ${transformerName}`);
-      return null; // Stop chain on init failure
+      return { event: null, respond: currentRespond }; // Stop chain on init failure
     }
 
     // Path-specific mock check (takes precedence)
@@ -432,7 +433,7 @@ export async function runTransformerChain(
 
       if (cacheResult?.status === 'HIT' && cacheResult.value) {
         processedEvent = cacheResult.value as WalkerOS.DeepPartialEvent;
-        if (compiledTCache.full) return processedEvent; // full=true → stop chain
+        if (compiledTCache.full) return { event: processedEvent, respond: currentRespond }; // full=true → stop chain
         continue; // full=false → next transformer
       }
 
@@ -469,11 +470,12 @@ export async function runTransformerChain(
           currentRespond,
           chainContext,
         );
-        if (beforeResult === null) return null; // Before chain stopped
+        if (beforeResult.event === null) return { event: null, respond: beforeResult.respond ?? currentRespond }; // Before chain stopped
+        if (beforeResult.respond) currentRespond = beforeResult.respond;
         // Before chains use first result if fan-out occurred
-        processedEvent = Array.isArray(beforeResult)
-          ? beforeResult[0]
-          : beforeResult;
+        processedEvent = Array.isArray(beforeResult.event)
+          ? beforeResult.event[0]
+          : beforeResult.event;
       }
     }
 
@@ -495,7 +497,7 @@ export async function runTransformerChain(
     // Handle result
     if (result === false) {
       // Transformer explicitly stopped the chain
-      return null;
+      return { event: null, respond: currentRespond };
     }
 
     // Handle Result array (fan-out) — MUST be before typeof === 'object'
@@ -541,7 +543,7 @@ export async function runTransformerChain(
                 );
               }
             }
-            return forkEvent;
+            return { event: forkEvent, respond: currentRespond };
           }
 
           // Fork continues through remaining chain
@@ -556,17 +558,28 @@ export async function runTransformerChain(
               chainContext,
             );
           }
-          return forkEvent;
+          return { event: forkEvent, respond: currentRespond };
         }),
       );
 
-      // Flatten nested arrays from recursive fan-out and filter nulls
-      const flatResults = forkResults
-        .flat()
-        .filter((r): r is WalkerOS.DeepPartialEvent => r !== null);
-      if (flatResults.length === 0) return null;
-      if (flatResults.length === 1) return flatResults[0];
-      return flatResults;
+      // Collect events from ChainResult objects and track last respond
+      let lastForkRespond = currentRespond;
+      const flatEvents: WalkerOS.DeepPartialEvent[] = [];
+      for (const fr of forkResults.flat()) {
+        if (fr === null) continue;
+        if (fr && typeof fr === 'object' && 'event' in fr) {
+          const cr = fr as Transformer.ChainResult;
+          if (cr.respond) lastForkRespond = cr.respond;
+          if (cr.event === null) continue;
+          if (Array.isArray(cr.event)) flatEvents.push(...cr.event);
+          else flatEvents.push(cr.event);
+        } else {
+          flatEvents.push(fr as WalkerOS.DeepPartialEvent);
+        }
+      }
+      if (flatEvents.length === 0) return { event: null, respond: lastForkRespond };
+      if (flatEvents.length === 1) return { event: flatEvents[0], respond: lastForkRespond };
+      return { event: flatEvents, respond: lastForkRespond };
     }
 
     if (result && typeof result === 'object') {
@@ -618,7 +631,7 @@ export async function runTransformerChain(
         collector.logger.warn(
           `Branch target not found: ${JSON.stringify(next)}`,
         );
-        return null;
+        return { event: null, respond: currentRespond };
       }
 
       // Update event if provided
@@ -663,11 +676,11 @@ export async function runTransformerChain(
         }
       }
       // No match → chain ends here (passthrough to collector/destination)
-      return processedEvent;
+      return { event: processedEvent, respond: currentRespond };
     }
   }
 
-  return processedEvent;
+  return { event: processedEvent, respond: currentRespond };
 }
 
 /**

@@ -6,6 +6,5 @@
 
 Add include/exclude destination filter to collector.push PushOptions.
 Sources can now control which destinations receive their events.
-Rewrite simulateDestination to use full collector pipeline with include filter,
+Destination simulation uses the full collector pipeline with include filter,
 giving production-identical event enrichment, consent, and mapping.
-Remove unnecessary async drain from simulateSource.
