@@ -190,9 +190,9 @@ describe('collectAllSpecs', () => {
       const specs = await collectAllSpecs(packages, logger, '/project');
 
       expect(specs.get('@walkeros/transformer-validator')).toHaveLength(1);
-      expect(
-        specs.get('@walkeros/transformer-validator')![0].localPath,
-      ).toBe('./packages/transformer-validator');
+      expect(specs.get('@walkeros/transformer-validator')![0].localPath).toBe(
+        './packages/transformer-validator',
+      );
       expect(specs.has('ajv')).toBe(true);
       expect(specs.get('ajv')![0]).toMatchObject({
         spec: '^8.17.0',
@@ -295,14 +295,15 @@ describe('collectAllSpecs', () => {
 
     it('should handle circular deps between local packages', async () => {
       mockPathExists.mockResolvedValue(true as never);
-      mockReadJson.mockImplementation(async (filePath: string) => {
-        if (filePath.includes('pkg-a')) {
+      mockReadJson.mockImplementation(async (filePath) => {
+        const p = String(filePath);
+        if (p.includes('pkg-a')) {
           return { name: 'pkg-a', dependencies: { 'pkg-b': '1.0.0' } };
         }
-        if (filePath.includes('pkg-b')) {
+        if (p.includes('pkg-b')) {
           return { name: 'pkg-b', dependencies: { 'pkg-a': '1.0.0' } };
         }
-        throw new Error(`Unexpected readJson: ${filePath}`);
+        throw new Error(`Unexpected readJson: ${p}`);
       });
       mockManifest.mockImplementation(async (spec: string) => {
         if (spec === 'pkg-b@1.0.0') {

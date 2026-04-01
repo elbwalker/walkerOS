@@ -1,10 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import {
-  buildSplitConfigObject,
-  buildServerWrapper,
-  buildWebWrapper,
-  generateSplitWireConfigModule,
-} from '../../../commands/bundle/bundler.js';
+import { buildSplitConfigObject } from '../../../commands/bundle/bundler.js';
 import type { Flow } from '@walkeros/core';
 
 describe('Validation', () => {
@@ -222,101 +217,5 @@ describe('Integration', () => {
 
     // Transformer chaining should be preserved
     expect(result).toContain('next');
-  });
-});
-
-describe('buildServerWrapper', () => {
-  it('should include sourceSettings override in server wrapper', async () => {
-    const esmCode = generateSplitWireConfigModule(
-      'const stores = {};',
-      '{ sources: { http: { code: expressSource, config: { settings: { port: 3000 } } } }, destinations: {} }',
-      '',
-    );
-
-    const result = await buildServerWrapper(esmCode);
-
-    // Must contain sourceSettings override block
-    expect(result).toContain('context.sourceSettings');
-    expect(result).toContain('config.sources');
-    // Must export default function
-    expect(result).toContain('export default async function');
-  });
-
-  it('should apply sourceSettings spread merge to sources', async () => {
-    const esmCode = generateSplitWireConfigModule(
-      'const stores = {};',
-      '{}',
-      '',
-    );
-
-    const result = await buildServerWrapper(esmCode);
-
-    // The generated code should spread merge sourceSettings into source configs
-    expect(result).toContain('context.sourceSettings');
-    expect(result).toContain(
-      '...src.config.settings, ...context.sourceSettings',
-    );
-  });
-
-  it('applies logger from context', async () => {
-    const esmCode = generateSplitWireConfigModule(
-      'const stores = {};',
-      '{}',
-      '',
-    );
-
-    const result = await buildServerWrapper(esmCode);
-
-    expect(result).toContain('context.logger');
-    // Should NOT contain old manual logger spread merge
-    expect(result).not.toContain('config.logger = { ...config.logger');
-  });
-
-  it('logger assignment comes before sourceSettings', async () => {
-    const esmCode = generateSplitWireConfigModule(
-      'const stores = {};',
-      '{}',
-      '',
-    );
-
-    const result = await buildServerWrapper(esmCode);
-
-    const loggerIdx = result.indexOf('context.logger');
-    const sourceSettingsIdx = result.indexOf('context.sourceSettings');
-    expect(loggerIdx).toBeGreaterThan(-1);
-    expect(sourceSettingsIdx).toBeGreaterThan(-1);
-    expect(loggerIdx).toBeLessThan(sourceSettingsIdx);
-  });
-});
-
-describe('buildWebWrapper', () => {
-  it('should not include sourceSettings override in web wrapper', async () => {
-    const esmCode = generateSplitWireConfigModule(
-      'const stores = {};',
-      '{ sources: {}, destinations: {} }',
-      '',
-    );
-
-    const result = await buildWebWrapper(esmCode, {});
-
-    expect(result).not.toContain('context.sourceSettings');
-  });
-
-  it('wraps code in async IIFE calling wireConfig', async () => {
-    const esmCode = generateSplitWireConfigModule(
-      'const stores = {};',
-      '{ sources: {}, destinations: {} }',
-      '',
-    );
-
-    const result = await buildWebWrapper(esmCode, {
-      windowCollector: 'collector',
-      windowElb: 'elb',
-    });
-
-    expect(result).toContain('(async () => {');
-    expect(result).toContain('await startFlow(wireConfig(__configData))');
-    expect(result).toContain("window['collector'] = collector");
-    expect(result).toContain("window['elb'] = elb");
   });
 });

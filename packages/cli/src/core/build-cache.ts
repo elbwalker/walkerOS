@@ -105,3 +105,25 @@ export async function getCachedCode(
   }
   return null;
 }
+
+/**
+ * Write compiled code to a .mjs file on disk and return the path.
+ * Used by the two-stage bundler so stage 2 esbuild can import from stage 1 output.
+ * Content-addressed: same code content always maps to the same file path.
+ */
+export async function ensureCodeOnDisk(
+  codeContent: string,
+  compiledCode: string,
+  tmpDir?: string,
+): Promise<string> {
+  const cacheDir = getTmpPath(tmpDir, 'cache', 'code');
+  const cacheKey = await getHashServer(codeContent, 12);
+  const cachePath = path.join(cacheDir, `${cacheKey}.mjs`);
+
+  if (!(await fs.pathExists(cachePath))) {
+    await fs.ensureDir(path.dirname(cachePath));
+    await fs.writeFile(cachePath, compiledCode, 'utf-8');
+  }
+
+  return cachePath;
+}

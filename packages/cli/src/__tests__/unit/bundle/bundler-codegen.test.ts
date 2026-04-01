@@ -5,68 +5,10 @@ import {
   detectExplicitCodeImports,
   serializeWithCode,
   generateSplitWireConfigModule,
-  buildWebWrapper,
-  buildServerWrapper,
 } from '../../../commands/bundle/bundler.js';
 import { loadBundleConfig } from '../../../config/index.js';
 import type { Flow } from '@walkeros/core';
 import type { BuildOptions } from '../../../types/bundle.js';
-
-describe('buildWebWrapper', () => {
-  it('generates web IIFE wrapper', async () => {
-    const esmCode = generateSplitWireConfigModule(
-      'const stores = {};',
-      '{ sources: {}, destinations: {} }',
-      'console.log("custom code");',
-    );
-
-    const result = await buildWebWrapper(esmCode, {
-      windowCollector: 'collector',
-      windowElb: 'elb',
-    });
-
-    expect(result).toContain('const stores = {};');
-    expect(result).toContain('(async () => {');
-    expect(result).toContain('await startFlow(wireConfig(__configData))');
-    expect(result).toContain('console.log("custom code");');
-    expect(result).toContain("window['collector'] = collector");
-    expect(result).toContain("window['elb'] = elb");
-  });
-});
-
-describe('buildServerWrapper', () => {
-  it('generates server export default wrapper', async () => {
-    const esmCode = generateSplitWireConfigModule(
-      'const stores = {};',
-      '{ sources: {}, destinations: {} }',
-      '',
-    );
-
-    const result = await buildServerWrapper(esmCode);
-
-    expect(result).toContain('const stores = {};');
-    expect(result).toContain('export default async function');
-    expect(result).toContain('wireConfig(__configData)');
-    expect(result).toContain('await startFlow(config)');
-    expect(result).toContain('httpHandler');
-    expect(result).not.toContain('window');
-  });
-
-  it('server wrapper applies sourceSettings override', async () => {
-    const esmCode = generateSplitWireConfigModule(
-      'const stores = {};',
-      '{ sources: { http: { config: { settings: { port: 8080 } } } } }',
-      '',
-    );
-
-    const result = await buildServerWrapper(esmCode);
-
-    expect(result).toContain('context.sourceSettings');
-    expect(result).toContain(
-      '...src.config.settings, ...context.sourceSettings',
-    );
-  });
-});
 
 describe('createEntryPoint integration', () => {
   it('generates default import even when imports are specified', async () => {
@@ -540,45 +482,6 @@ describe('Error Handling', () => {
         { configPath: '/test/config.json' },
       );
     }).toThrow(/Invalid configuration/);
-  });
-});
-
-describe('buildWebWrapper', () => {
-  it('strips export keywords and wraps in IIFE', async () => {
-    const esm =
-      'export function wireConfig() { return {}; }\nexport { startFlow };';
-    const result = await buildWebWrapper(esm, {});
-    expect(result).toContain('function wireConfig()');
-    expect(result).not.toContain('export function');
-    expect(result).not.toContain('export {');
-    expect(result).toContain('(async () => {');
-    expect(result).toContain('await startFlow(wireConfig(__configData))');
-    expect(result).toContain('})();');
-  });
-
-  it('includes window assignments when configured', async () => {
-    const esm =
-      'export function wireConfig() { return {}; }\nexport { startFlow };';
-    const result = await buildWebWrapper(esm, {
-      windowCollector: 'collector',
-      windowElb: 'elb',
-    });
-    expect(result).toContain("window['collector'] = collector");
-    expect(result).toContain("window['elb'] = elb");
-  });
-});
-
-describe('buildServerWrapper', () => {
-  it('wraps ESM code with export default factory', async () => {
-    const esm =
-      'export function wireConfig() { return {}; }\nexport { startFlow };';
-    const result = await buildServerWrapper(esm);
-    expect(result).toContain('export default async function(context = {})');
-    expect(result).toContain('wireConfig(__configData)');
-    expect(result).toContain('startFlow(config)');
-    expect(result).toContain('context.logger');
-    expect(result).toContain('context.sourceSettings');
-    expect(result).toContain('httpHandler');
   });
 });
 

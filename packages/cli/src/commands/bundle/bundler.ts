@@ -126,6 +126,7 @@ import {
   cacheBuild,
   getCachedCode,
   cacheCode,
+  ensureCodeOnDisk,
 } from '../../core/build-cache.js';
 
 export interface BundleStats {
@@ -400,7 +401,7 @@ export async function bundleCore(
 
     // Step 4: Create split entry point (code skeleton + data payload)
     logger.debug('Creating entry point');
-    const { codeEntry, dataPayload } = await createEntryPoint(
+    const { codeEntry, dataPayload, hasFlow } = await createEntryPoint(
       flowSettings,
       buildOptions,
       packagePaths,
@@ -428,9 +429,10 @@ export async function bundleCore(
       const entryPath = path.join(TEMP_DIR, 'entry.js');
       await fs.writeFile(entryPath, codeEntry);
 
-      // minify: false is critical — the wrapper appended in step 2 references
-      // startFlow by name. Minification would rename it, breaking the reference.
-      // Final minification happens in buildWebWrapper via esbuild.transform().
+      // minify: false — keep identifiers readable for debugging.
+      // Stage 2 esbuild (in generateServerEntry/generateWebEntry) handles
+      // final bundling with proper import resolution, so minification here
+      // is unnecessary.
       const esbuildOptions = createEsbuildOptions(
         { ...buildOptions, minify: false },
         entryPath,
@@ -461,29 +463,75 @@ export async function bundleCore(
       }
     }
 
-    // Concatenate code + data (instant, no esbuild)
-    const dataDeclaration = `const __configData = ${dataPayload};\nexport { __configData };`;
-    const esmOutput = `${compiledCode}\n${dataDeclaration}`;
-    await fs.writeFile(outputPath, esmOutput);
+    // Write stage 1 output to cache as importable .mjs file
+    const stage1Path = await ensureCodeOnDisk(
+      codeEntry,
+      compiledCode,
+      CACHE_DIR,
+    );
 
-    // Apply platform wrapper
-    if (!buildOptions.skipWrapper) {
-      const wrappedInput = await fs.readFile(outputPath, 'utf-8');
-      let finalCode: string;
+    if (buildOptions.skipWrapper || !hasFlow) {
+      // Simulation path or no-flow path: concatenate code + data (no wrapper, no stage 2 esbuild)
+      const dataDeclaration = `const __configData = ${dataPayload};\nexport { __configData };`;
+      // For node platform, prepend createRequire banner (stage 1 no longer adds it)
+      const banner =
+        buildOptions.platform === 'node' && !buildOptions.skipWrapper
+          ? `import { createRequire } from 'module';const require = createRequire(import.meta.url);\n`
+          : '';
+      const esmOutput = `${banner}${compiledCode}\n${dataDeclaration}`;
+      await fs.writeFile(outputPath, esmOutput);
+    } else {
+      // Production path: stage 2 esbuild compilation
+      const stage2Entry =
+        (buildOptions.platform || 'node') === 'browser'
+          ? generateWebEntry(stage1Path, dataPayload, {
+              windowCollector: buildOptions.windowCollector,
+              windowElb: buildOptions.windowElb,
+            })
+          : generateServerEntry(stage1Path, dataPayload);
 
-      if ((buildOptions.platform || 'node') === 'browser') {
-        finalCode = await buildWebWrapper(wrappedInput, {
-          windowCollector: buildOptions.windowCollector,
-          windowElb: buildOptions.windowElb,
-          minify: buildOptions.minify,
-        });
+      const stage2EntryPath = path.join(TEMP_DIR, 'stage2.mjs');
+      await fs.writeFile(stage2EntryPath, stage2Entry);
+
+      // Stage 2 esbuild: resolve imports, inline stage 1, minify
+      const stage2Options: esbuild.BuildOptions = {
+        entryPoints: [stage2EntryPath],
+        bundle: true,
+        format: 'esm',
+        platform: buildOptions.platform as esbuild.Platform,
+        outfile: outputPath,
+        treeShaking: true,
+        logLevel: 'error',
+        minify: buildOptions.minify,
+        ...(buildOptions.minify && {
+          minifyWhitespace: buildOptions.minifyOptions?.whitespace ?? true,
+          minifyIdentifiers: buildOptions.minifyOptions?.identifiers ?? true,
+          minifySyntax: buildOptions.minifyOptions?.syntax ?? true,
+          legalComments: buildOptions.minifyOptions?.legalComments ?? 'none',
+          charset: 'utf8',
+        }),
+      };
+
+      // Platform-specific stage 2 options
+      if (buildOptions.platform === 'browser') {
+        stage2Options.define = {
+          'process.env.NODE_ENV': '"production"',
+          global: 'globalThis',
+        };
+        stage2Options.target = buildOptions.target || 'es2018';
       } else {
-        finalCode = await buildServerWrapper(wrappedInput, {
-          minify: buildOptions.minify,
-        });
+        stage2Options.external = getNodeExternals();
+        stage2Options.banner = {
+          js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
+        };
+        stage2Options.target = buildOptions.target || 'node18';
       }
 
-      await fs.writeFile(outputPath, finalCode);
+      try {
+        await esbuild.build(stage2Options);
+      } finally {
+        await esbuild.stop();
+      }
     }
 
     // Get file size and calculate build time
@@ -631,11 +679,8 @@ function createEsbuildOptions(
       ? [...nodeExternals, ...buildOptions.external]
       : nodeExternals;
 
-    // createRequire shim — always needed since esbuild output is ESM,
-    // and bundled CJS packages (like express) use require() for Node built-ins
-    baseOptions.banner = {
-      js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
-    };
+    // createRequire shim is added in stage 2, not here.
+    // Stage 1 produces importable ESM; stage 2 wraps it with the banner.
   }
 
   // Set target if specified
@@ -1065,7 +1110,7 @@ export async function createEntryPoint(
   flowSettings: Flow.Settings,
   buildOptions: BuildOptions,
   packagePaths: Map<string, string>,
-): Promise<{ codeEntry: string; dataPayload: string }> {
+): Promise<{ codeEntry: string; dataPayload: string; hasFlow: boolean }> {
   // Detect packages used by all step types
   const sourcePackages = detectStepPackages(flowSettings, 'sources');
   const destinationPackages = detectStepPackages(flowSettings, 'destinations');
@@ -1123,6 +1168,7 @@ export async function createEntryPoint(
     return {
       codeEntry: importsCode ? `${importsCode}\n\n${userCode}` : userCode,
       dataPayload: '{}',
+      hasFlow: false,
     };
   }
 
@@ -1142,7 +1188,7 @@ export async function createEntryPoint(
     ? `${importsCode}\n\n${wireConfigModule}`
     : wireConfigModule;
 
-  return { codeEntry, dataPayload };
+  return { codeEntry, dataPayload, hasFlow: true };
 }
 
 interface EsbuildError {
@@ -1508,6 +1554,74 @@ export { startFlow };`;
 }
 
 /**
+ * Generate a stage 2 entry file for server bundles.
+ * Imports startFlow and wireConfig from the stage 1 .mjs file,
+ * embeds the data payload, and exports a factory function.
+ */
+export function generateServerEntry(
+  stage1Path: string,
+  dataPayload: string,
+): string {
+  return `import { startFlow, wireConfig } from '${stage1Path}';
+
+const __configData = ${dataPayload};
+
+export default async function(context = {}) {
+  const config = wireConfig(__configData);
+
+  if (context.logger) config.logger = context.logger;
+
+  if (context.sourceSettings && config.sources) {
+    for (const src of Object.values(config.sources)) {
+      if (src.config?.settings) {
+        src.config.settings = { ...src.config.settings, ...context.sourceSettings };
+      }
+    }
+  }
+
+  const result = await startFlow(config);
+
+  const httpSource = Object.values(result.collector.sources || {})
+    .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
+
+  return { ...result, httpHandler: httpSource ? httpSource.httpHandler : undefined };
+}`;
+}
+
+/**
+ * Generate a stage 2 entry file for web/browser bundles.
+ * Imports startFlow and wireConfig from the stage 1 .mjs file,
+ * embeds the data payload, and wraps in an async IIFE with window assignments.
+ */
+export function generateWebEntry(
+  stage1Path: string,
+  dataPayload: string,
+  options: { windowCollector?: string; windowElb?: string } = {},
+): string {
+  const assignments: string[] = [];
+  if (options.windowCollector) {
+    assignments.push(
+      `  if (typeof window !== 'undefined') window['${options.windowCollector}'] = collector;`,
+    );
+  }
+  if (options.windowElb) {
+    assignments.push(
+      `  if (typeof window !== 'undefined') window['${options.windowElb}'] = elb;`,
+    );
+  }
+  const assignmentCode =
+    assignments.length > 0 ? '\n' + assignments.join('\n') : '';
+
+  return `import { startFlow, wireConfig } from '${stage1Path}';
+
+const __configData = ${dataPayload};
+
+(async () => {
+  const { collector, elb } = await startFlow(wireConfig(__configData));${assignmentCode}
+})();`;
+}
+
+/**
  * Process config value for serialization.
  * Handles $code: prefix to output raw JavaScript instead of quoted strings.
  */
@@ -1631,98 +1745,4 @@ export function serializeWithCode(value: unknown, indent: number): string {
 
   // Handle primitives (numbers, booleans, null)
   return JSON.stringify(value);
-}
-
-/**
- * Wrap ESM code in a web-compatible IIFE.
- * Strips export keywords, appends IIFE invocation with window assignments.
- */
-export async function buildWebWrapper(
-  esmCode: string,
-  options: { windowCollector?: string; windowElb?: string; minify?: boolean },
-): Promise<string> {
-  // Strip ESM export syntax (convert to local declarations)
-  let code = esmCode
-    .replace(/^export\s+function\s+/gm, 'function ')
-    .replace(/^export\s+\{[^}]*\};\s*$/gm, '')
-    .replace(/^export\s+default\s+/gm, '');
-
-  // Build window assignments
-  const assignments: string[] = [];
-  if (options.windowCollector) {
-    assignments.push(
-      `  if (typeof window !== 'undefined') window['${options.windowCollector}'] = collector;`,
-    );
-  }
-  if (options.windowElb) {
-    assignments.push(
-      `  if (typeof window !== 'undefined') window['${options.windowElb}'] = elb;`,
-    );
-  }
-  const assignmentCode =
-    assignments.length > 0 ? '\n' + assignments.join('\n') : '';
-
-  // Wrap in async IIFE
-  const wrapped = `${code}
-(async () => {
-  const { collector, elb } = await startFlow(wireConfig(__configData));${assignmentCode}
-})();`;
-
-  // Minify if requested
-  if (options.minify) {
-    const esbuild = await import('esbuild');
-    const result = await esbuild.transform(wrapped, {
-      minify: true,
-      target: 'es2018',
-    });
-    return result.code;
-  }
-
-  return wrapped;
-}
-
-/**
- * Wrap ESM code in a server factory function.
- * Adds export default async function with httpHandler discovery.
- */
-export async function buildServerWrapper(
-  esmCode: string,
-  options: { minify?: boolean } = {},
-): Promise<string> {
-  const wrapped = `${esmCode}
-
-export default async function(context = {}) {
-  const config = wireConfig(__configData);
-
-  // Apply logger from runner context
-  if (context.logger) config.logger = context.logger;
-
-  // Apply sourceSettings from runner (e.g., port: undefined for external server)
-  if (context.sourceSettings && config.sources) {
-    for (const src of Object.values(config.sources)) {
-      if (src.config?.settings) {
-        src.config.settings = { ...src.config.settings, ...context.sourceSettings };
-      }
-    }
-  }
-
-  const result = await startFlow(config);
-
-  // Discover httpHandler from initialized sources (duck-typing)
-  const httpSource = Object.values(result.collector.sources || {})
-    .find(s => 'httpHandler' in s && typeof s.httpHandler === 'function');
-
-  return { ...result, httpHandler: httpSource ? httpSource.httpHandler : undefined };
-}`;
-
-  if (options.minify) {
-    const esbuild = await import('esbuild');
-    const result = await esbuild.transform(wrapped, {
-      minify: true,
-      target: 'node18',
-    });
-    return result.code;
-  }
-
-  return wrapped;
 }
