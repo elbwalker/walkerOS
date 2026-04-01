@@ -612,7 +612,7 @@ export async function simulateSource(
           },
         };
 
-        const instance = await createTrigger(config);
+        const instance = await createTrigger(config, { sourceId: options.sourceId });
         const { trigger } = instance;
 
         logger.info('Simulating source');
@@ -910,7 +910,6 @@ export async function simulateDestination(
         logger,
         snapshotCode,
         networkCalls,
-        asyncDrain: { timeout: 5000 },
       },
       async (module) => {
         const config = module.wireConfig(module.__configData ?? undefined);
